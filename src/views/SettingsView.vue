@@ -13,7 +13,6 @@ const { settings, user } = storeToRefs(systemStore)
 const { contacts, chatHistory } = storeToRefs(chatStore)
 
 const activeMenu = ref(null)
-const settingsPage = ref(null)
 
 const themes = [
   { id: 'day', name: '日间', preview: '#fff', darkText: true },
@@ -83,7 +82,7 @@ const exportData = () => {
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
-      <div class="bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm" @click="settingsPage = 'user'">
+      <div class="bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm">
         <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
           <img
             :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"

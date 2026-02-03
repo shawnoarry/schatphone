@@ -19,7 +19,8 @@
 - Font Awesome（图标库）
 
 工程化
-- ESLint（Vue SFC + JS）
+- ESLint + Prettier（Vue SFC + JS）
+- Vitest + Vue Test Utils
 - GitHub Actions：CI + Pages 部署
 
 ## 2. 项目结构规范
@@ -73,6 +74,18 @@ npm install
 npm run dev
 ```
 
+代码规范
+```
+npm run lint
+npm run lint:fix
+npm run format
+```
+
+测试
+```
+npm run test
+```
+
 CI
 - GitHub Actions 执行 `npm ci -> npm run lint -> npm run build`
 
@@ -80,15 +93,16 @@ Pages 部署
 - 分支 `main` 触发部署
 - 站点地址：`https://shawnoarry.github.io/schatphone/`
 
-## 7. 当前缺失与建议补齐
+## 7. 环境变量与配置
 
-必须项（建议尽快补齐）
-- Prettier（统一格式化规范）
-- `.env.example`（API Key 等敏感配置说明）
-- 基础测试（如 Vitest + Vue Test Utils）
+环境变量示例文件：`.env.example`
+
+- `VITE_API_PROVIDER`
+- `VITE_API_URL`
+- `VITE_API_MODEL`
+- `VITE_API_KEY`
 
 可选项（后续增强）
 - 类型系统（TypeScript）
 - 组件库/原子组件抽象（提升复用）
 - 用户自定义 CSS 注入（在设置中提供）
-

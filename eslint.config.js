@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import vue from 'eslint-plugin-vue'
+import prettier from 'eslint-config-prettier'
 
 export default [
   {
@@ -8,6 +9,7 @@ export default [
   },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
+  prettier,
   {
     files: ['**/*.{js,vue}'],
     languageOptions: {
@@ -17,6 +19,10 @@ export default [
         ...globals.browser,
         ...globals.node,
       },
+    },
+    rules: {
+      'vue/attributes-order': 'off',
+      'vue/no-v-html': 'off',
     },
   },
 ]

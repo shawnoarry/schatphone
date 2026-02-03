@@ -6,4 +6,8 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
   base: '/schatphone/',
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
 })

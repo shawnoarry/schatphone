@@ -1,4 +1,4 @@
-export async function callAI({ messages, systemPrompt, outputJson = false, settings }) {
+export async function callAI({ messages, systemPrompt, settings }) {
   if (!settings.api.key) {
     alert('请先在设置 -> API 接口中配置 Key！')
     throw new Error('No API Key')
@@ -47,10 +47,6 @@ export async function callAI({ messages, systemPrompt, outputJson = false, setti
     messages: fullMessages,
     temperature: 0.7,
     stream: false,
-  }
-
-  if (outputJson) {
-    // Placeholder for models that support response_format.
   }
 
   const response = await fetch(url, {
