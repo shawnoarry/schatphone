@@ -58,8 +58,7 @@ const goHome = () => {
   </div>
 
   <div class="app-shell" :data-theme="settings.appearance.currentTheme">
-    <div class="phone-frame">
-      <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
+    <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
         <div
           class="absolute top-0 w-full h-8 px-6 flex justify-between items-center text-xs text-white font-medium z-40 select-none"
         >
@@ -79,8 +78,7 @@ const goHome = () => {
           </transition>
         </RouterView>
 
-        <div class="home-indicator" @click="goHome"></div>
-      </div>
+      <div class="home-indicator" @click="goHome"></div>
     </div>
   </div>
 </template>
