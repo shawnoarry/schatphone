@@ -39,6 +39,14 @@ const LONG_PRESS_MOVE_THRESHOLD = 12
 const DRAG_EDGE_ZONE_PX = 36
 const DRAG_PAGE_SWITCH_COOLDOWN_MS = 260
 
+const CUSTOM_WIDGET_SPAN_CLASS_MAP = {
+  '1x1': 'col-span-1 row-span-1',
+  '2x1': 'col-span-2 row-span-1',
+  '2x2': 'col-span-2 row-span-2',
+  '4x2': 'col-span-4 row-span-2',
+  '4x3': 'col-span-4 row-span-3',
+}
+
 const widgetRegistry = {
   weather: { kind: 'widget', variant: 'weather', span: 'col-span-2 row-span-2' },
   calendar: { kind: 'widget', variant: 'calendar', span: 'col-span-2 row-span-2' },
@@ -67,6 +75,41 @@ const widgetRegistry = {
   app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default' },
 }
 
+const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
+const customWidgetMap = computed(() => {
+  const map = new Map()
+  customWidgets.value.forEach((widget) => {
+    map.set(widget.id, widget)
+  })
+  return map
+})
+
+const customWidgetSrcDocMap = computed(() => {
+  const map = new Map()
+  customWidgets.value.forEach((widget) => {
+    const body = typeof widget.code === 'string' ? widget.code : ''
+    map.set(
+      widget.id,
+      `<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+      body { font-family: Inter, "Noto Sans SC", sans-serif; }
+      #widget-root { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="widget-root">${body}</div>
+  </body>
+</html>`,
+    )
+  })
+  return map
+})
+
 const widgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const totalPages = computed(() => Math.max(widgetPages.value.length, 1))
 const today = computed(() => new Date())
@@ -90,6 +133,26 @@ const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(0, page))
 const setPage = (page) => {
   currentPage.value = clampPage(page)
 }
+
+const tileMeta = (tileId) => {
+  const builtIn = widgetRegistry[tileId]
+  if (builtIn) return builtIn
+
+  const customWidget = customWidgetMap.value.get(tileId)
+  if (!customWidget) return null
+
+  return {
+    kind: 'custom_widget',
+    label: customWidget.name,
+    span: CUSTOM_WIDGET_SPAN_CLASS_MAP[customWidget.size] || 'col-span-2 row-span-2',
+  }
+}
+
+const customWidgetSrcDoc = (tileId) => customWidgetSrcDocMap.value.get(tileId) || ''
+
+const isLockedEntryTile = (tileId) => typeof tileId === 'string' && tileId.startsWith('app_')
+
+const canHideTile = (tileId) => !isLockedEntryTile(tileId)
 
 const openAppById = (tileId) => {
   if (layoutEditMode.value) return
@@ -118,7 +181,7 @@ const canStartLayoutLongPress = (event) => {
   if (!(target instanceof HTMLElement)) return false
 
   return !target.closest(
-    '.home-tile, .home-app-tile, .home-widget-card, .home-dock, .home-page-dots, .home-search-pill, .home-headline, [data-no-layout-longpress]',
+    '.home-tile, .home-app-tile, .home-widget-card, .home-custom-widget-card, .home-dock, .home-page-dots, .home-search-pill, .home-headline, [data-no-layout-longpress]',
   )
 }
 
@@ -201,8 +264,6 @@ const iconStyle = (accent = 'default') => {
     color: `var(--home-icon-${accent}-fg)`,
   }
 }
-
-const tileMeta = (tileId) => widgetRegistry[tileId] || null
 
 const moveTileBeforeTarget = (movingTileId, targetTileId) => {
   if (!movingTileId || !targetTileId || movingTileId === targetTileId) return
@@ -300,6 +361,7 @@ const stopTileDrag = (event) => {
 }
 
 const hideTileFromHome = (tileId) => {
+  if (!canHideTile(tileId)) return
   const nextPages = widgetPages.value.map((page) => page.filter((id) => id !== tileId))
   systemStore.setHomeWidgetPages(nextPages)
 }
@@ -371,8 +433,9 @@ onBeforeUnmount(() => {
               @pointercancel="stopTileDrag"
             >
               <button
-                v-if="layoutEditMode"
+                v-if="layoutEditMode && canHideTile(tileId)"
                 class="home-edit-hide"
+                @pointerdown.stop
                 @click.stop="hideTileFromHome(tileId)"
                 title="隐藏"
                 data-no-layout-longpress
@@ -393,18 +456,12 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div
-                  class="home-widget-card home-widget-center"
-                  v-else-if="tileMeta(tileId)?.variant === 'calendar'"
-                >
+                <div class="home-widget-card home-widget-center" v-else-if="tileMeta(tileId)?.variant === 'calendar'">
                   <span class="home-calendar-week">{{ today.toLocaleString('en-US', { weekday: 'short' }) }}</span>
                   <span class="home-calendar-day">{{ today.getDate() }}</span>
                 </div>
 
-                <div
-                  class="home-widget-card home-widget-music"
-                  v-else-if="tileMeta(tileId)?.variant === 'music'"
-                >
+                <div class="home-widget-card home-widget-music" v-else-if="tileMeta(tileId)?.variant === 'music'">
                   <div class="home-music-cover"></div>
                   <div class="home-music-meta">
                     <span class="home-widget-topline">Now Playing</span>
@@ -416,10 +473,7 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div
-                  class="home-widget-card"
-                  v-else-if="tileMeta(tileId)?.variant === 'system'"
-                >
+                <div class="home-widget-card" v-else-if="tileMeta(tileId)?.variant === 'system'">
                   <div class="home-widget-topline">
                     <i class="fas fa-microchip"></i>
                     <span>System</span>
@@ -432,31 +486,32 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <button
-                  class="home-widget-card home-widget-quick"
-                  v-else-if="tileMeta(tileId)?.variant === 'heart'"
-                >
+                <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(tileId)?.variant === 'heart'">
                   <i class="fas fa-heart"></i>
                 </button>
 
-                <button
-                  class="home-widget-card home-widget-quick"
-                  v-else-if="tileMeta(tileId)?.variant === 'disc'"
-                >
+                <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(tileId)?.variant === 'disc'">
                   <i class="fas fa-compact-disc"></i>
                 </button>
               </template>
 
-              <button
-                class="home-app-tile"
-                v-else-if="tileMeta(tileId)?.kind === 'app'"
-                @click="openAppById(tileId)"
-              >
+              <button class="home-app-tile" v-else-if="tileMeta(tileId)?.kind === 'app'" @click="openAppById(tileId)">
                 <span class="home-app-icon" :style="iconStyle(tileMeta(tileId).accent)">
                   <i :class="tileMeta(tileId).icon"></i>
                 </span>
                 <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
               </button>
+
+              <div class="home-custom-widget-card" v-else-if="tileMeta(tileId)?.kind === 'custom_widget'">
+                <iframe
+                  class="home-custom-widget-frame"
+                  :class="{ 'is-editing': layoutEditMode }"
+                  :srcdoc="customWidgetSrcDoc(tileId)"
+                  sandbox="allow-scripts"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </div>
             </div>
           </template>
         </div>
@@ -551,6 +606,27 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.home-custom-widget-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  border: 1px solid var(--home-widget-border);
+  background: var(--home-widget-bg);
+  box-shadow: var(--home-widget-shadow);
+  overflow: hidden;
+}
+
+.home-custom-widget-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.home-custom-widget-frame.is-editing {
+  pointer-events: none;
 }
 
 .is-layout-dragging {

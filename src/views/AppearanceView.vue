@@ -4,27 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 
-const HOME_TILE_OPTIONS = [
-  { id: 'weather', label: '天气组件', kind: 'widget' },
-  { id: 'calendar', label: '日历组件', kind: 'widget' },
-  { id: 'music', label: '音乐组件', kind: 'widget' },
-  { id: 'system', label: '系统组件', kind: 'widget' },
-  { id: 'quick_heart', label: '快捷心形', kind: 'widget' },
-  { id: 'quick_disc', label: '快捷唱片', kind: 'widget' },
-  { id: 'app_network', label: 'Network', kind: 'app' },
-  { id: 'app_chat', label: 'Chat', kind: 'app' },
-  { id: 'app_wallet', label: 'Wallet', kind: 'app' },
-  { id: 'app_themes', label: 'Themes', kind: 'app' },
-  { id: 'app_phone', label: 'Phone', kind: 'app' },
-  { id: 'app_map', label: 'Map', kind: 'app' },
-  { id: 'app_calendar', label: 'Calendar', kind: 'app' },
-  { id: 'app_files', label: 'Files', kind: 'app' },
-  { id: 'app_stock', label: 'Stock', kind: 'app' },
-  { id: 'app_contacts', label: 'Contacts', kind: 'app' },
-  { id: 'app_settings', label: 'Settings', kind: 'app' },
-  { id: 'app_gallery', label: 'Photos', kind: 'app' },
-  { id: 'app_more', label: 'More', kind: 'app' },
-]
+const CUSTOM_SIZE_OPTIONS = ['1x1', '2x1', '2x2', '4x2', '4x3']
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -33,31 +13,20 @@ const { settings, availableThemes } = storeToRefs(systemStore)
 const saved = ref(false)
 let savedTimerId = null
 
+const customWidgetName = ref('')
+const customWidgetSize = ref('2x2')
+const customWidgetCode = ref('')
+const customWidgetPage = ref(0)
+const editingWidgetId = ref('')
+
+const importJsonText = ref('')
+const importTargetPage = ref(0)
+
+const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
-
-const tilePositionMap = computed(() => {
-  const map = new Map()
-  homeWidgetPages.value.forEach((page, pageIndex) => {
-    page.forEach((tileId, tileIndex) => {
-      map.set(tileId, { pageIndex, tileIndex })
-    })
-  })
-  return map
-})
-
-const visibleTiles = computed(() => {
-  return HOME_TILE_OPTIONS.filter((tile) => tilePositionMap.value.has(tile.id)).sort((a, b) => {
-    const posA = tilePositionMap.value.get(a.id)
-    const posB = tilePositionMap.value.get(b.id)
-    if (!posA || !posB) return 0
-    if (posA.pageIndex !== posB.pageIndex) return posA.pageIndex - posB.pageIndex
-    return posA.tileIndex - posB.tileIndex
-  })
-})
-
-const hiddenTiles = computed(() => {
-  return HOME_TILE_OPTIONS.filter((tile) => !tilePositionMap.value.has(tile.id))
-})
+const pageOptions = computed(() =>
+  Array.from({ length: Math.max(homeWidgetPages.value.length, 5) }, (_, index) => index),
+)
 
 const triggerSaved = () => {
   systemStore.saveNow()
@@ -88,56 +57,91 @@ const saveAppearance = () => {
   triggerSaved()
 }
 
-const saveHomeLayout = () => {
+const resetCustomWidgetForm = () => {
+  editingWidgetId.value = ''
+  customWidgetName.value = ''
+  customWidgetSize.value = '2x2'
+  customWidgetCode.value = ''
+  customWidgetPage.value = 0
+}
+
+const startEditCustomWidget = (widget) => {
+  editingWidgetId.value = widget.id
+  customWidgetName.value = widget.name || ''
+  customWidgetSize.value = widget.size || '2x2'
+  customWidgetCode.value = widget.code || ''
+
+  const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(widget.id))
+  customWidgetPage.value = pageIndex >= 0 ? pageIndex : 0
+}
+
+const submitCustomWidget = () => {
+  const code = customWidgetCode.value.trim()
+  if (!code) {
+    alert('请先填写 Widget 代码。')
+    return
+  }
+
+  const payload = {
+    name: customWidgetName.value.trim() || '自定义组件',
+    size: customWidgetSize.value,
+    code,
+  }
+
+  if (editingWidgetId.value) {
+    const ok = systemStore.updateCustomWidget(editingWidgetId.value, payload)
+    if (ok) {
+      systemStore.placeCustomWidget(editingWidgetId.value, customWidgetPage.value)
+      triggerSaved()
+      resetCustomWidgetForm()
+    }
+    return
+  }
+
+  systemStore.addCustomWidget({
+    ...payload,
+    pageIndex: customWidgetPage.value,
+  })
+  triggerSaved()
+  resetCustomWidgetForm()
+}
+
+const removeCustomWidget = (widgetId) => {
+  const ok = window.confirm('确认删除这个自定义 Widget 吗？')
+  if (!ok) return
+
+  systemStore.removeCustomWidget(widgetId)
+  if (editingWidgetId.value === widgetId) {
+    resetCustomWidgetForm()
+  }
   triggerSaved()
 }
 
-const withRemovedTile = (tileId) => {
-  return homeWidgetPages.value.map((page) => page.filter((id) => id !== tileId))
+const moveCustomWidgetToPage = (widgetId, pageIndex) => {
+  systemStore.placeCustomWidget(widgetId, pageIndex)
+  triggerSaved()
 }
 
-const assignTileToPage = (tileId, pageIndex) => {
-  const nextPages = withRemovedTile(tileId).map((page) => [...page])
-  while (nextPages.length <= pageIndex) {
-    nextPages.push([])
+const importCustomWidgets = () => {
+  const raw = importJsonText.value.trim()
+  if (!raw) {
+    alert('请先粘贴 JSON。')
+    return
   }
-  nextPages[pageIndex].push(tileId)
-  systemStore.setHomeWidgetPages(nextPages)
+
+  const importedCount = systemStore.importCustomWidgets(raw, importTargetPage.value)
+  if (importedCount <= 0) {
+    alert('导入失败：请检查 JSON 格式。')
+    return
+  }
+
+  importJsonText.value = ''
+  triggerSaved()
 }
 
-const hideTile = (tileId) => {
-  const nextPages = withRemovedTile(tileId)
-  systemStore.setHomeWidgetPages(nextPages)
-}
-
-const moveTileInPage = (tileId, direction) => {
-  const position = tilePositionMap.value.get(tileId)
-  if (!position) return
-
-  const page = [...homeWidgetPages.value[position.pageIndex]]
-  const nextIndex = position.tileIndex + direction
-  if (nextIndex < 0 || nextIndex >= page.length) return
-
-  const temp = page[position.tileIndex]
-  page[position.tileIndex] = page[nextIndex]
-  page[nextIndex] = temp
-
-  const nextPages = homeWidgetPages.value.map((items, index) =>
-    index === position.pageIndex ? page : [...items],
-  )
-  systemStore.setHomeWidgetPages(nextPages)
-}
-
-const resetHomeLayout = () => {
-  const ok = window.confirm('确认恢复 Home 默认布局吗？')
-  if (!ok) return
-  systemStore.resetHomeWidgetPages()
-}
-
-const tilePageLabel = (tileId) => {
-  const position = tilePositionMap.value.get(tileId)
-  if (!position) return '已隐藏'
-  return `第${position.pageIndex + 1}屏`
+const widgetPageLabel = (widgetId) => {
+  const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(widgetId))
+  return pageIndex >= 0 ? `第${pageIndex + 1}屏` : '未放入主屏'
 }
 
 onBeforeUnmount(() => {
@@ -201,114 +205,117 @@ onBeforeUnmount(() => {
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between mb-3">
+          <p class="text-sm font-bold">自定义 Widget</p>
+          <span class="text-[11px] text-gray-500">支持粘贴代码与导入 JSON</span>
+        </div>
+
+        <div class="space-y-3">
           <div>
-            <p class="text-sm font-bold">Home 布局管理</p>
-            <p class="text-[11px] text-gray-500">支持显示/隐藏、屏幕切换、同屏排序</p>
+            <label class="text-xs text-gray-500 block mb-1">名称</label>
+            <input
+              v-model="customWidgetName"
+              type="text"
+              class="w-full border rounded-md px-2 py-2 text-sm outline-none"
+              placeholder="例如：打卡组件 / 时间胶囊"
+            />
           </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs text-gray-500 block mb-1">尺寸</label>
+              <select v-model="customWidgetSize" class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white">
+                <option v-for="size in CUSTOM_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 block mb-1">放置到</label>
+              <select v-model.number="customWidgetPage" class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white">
+                <option v-for="pageIndex in pageOptions" :key="`create-${pageIndex}`" :value="pageIndex">
+                  第{{ pageIndex + 1 }}屏
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">Widget 代码（HTML/CSS/JS）</label>
+            <textarea
+              v-model="customWidgetCode"
+              class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+              placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
+            ></textarea>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              @click="submitCustomWidget"
+              class="flex-1 px-3 py-2 rounded-md text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition"
+            >
+              {{ editingWidgetId ? '更新 Widget' : '添加 Widget' }}
+            </button>
+            <button
+              v-if="editingWidgetId"
+              @click="resetCustomWidgetForm"
+              class="px-3 py-2 rounded-md text-sm border border-gray-200 hover:bg-gray-50"
+            >
+              取消编辑
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <label class="text-xs text-gray-500 block mb-1">导入 Widgets（JSON 数组）</label>
+        <textarea
+          v-model="importJsonText"
+          class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+          placeholder='[{"name":"天气卡","size":"2x2","code":"<div>...</div>"}]'
+        ></textarea>
+        <div class="flex items-center gap-2 mt-2">
+          <select v-model.number="importTargetPage" class="border rounded-md px-2 py-1.5 text-xs outline-none bg-white">
+            <option v-for="pageIndex in pageOptions" :key="`import-${pageIndex}`" :value="pageIndex">
+              导入到第{{ pageIndex + 1 }}屏
+            </option>
+          </select>
           <button
-            @click="resetHomeLayout"
+            @click="importCustomWidgets"
             class="px-3 py-1.5 rounded-md text-xs bg-gray-800 text-white hover:bg-black transition"
           >
-            重置默认
+            导入 JSON
           </button>
         </div>
+      </div>
 
+      <div class="bg-white rounded-xl p-4 shadow-sm" v-if="customWidgets.length > 0">
+        <p class="text-sm font-bold mb-2">已创建 Widget</p>
         <div class="space-y-2">
-          <div
-            v-for="tile in visibleTiles"
-            :key="tile.id"
-            class="rounded-lg border border-gray-200 p-2.5"
-          >
+          <div v-for="widget in customWidgets" :key="widget.id" class="rounded-lg border border-gray-200 p-2.5">
             <div class="flex items-center justify-between gap-2 mb-2">
-              <div class="flex items-center gap-2">
-                <span
-                  class="text-[10px] px-1.5 py-0.5 rounded-full"
-                  :class="tile.kind === 'app' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
-                >
-                  {{ tile.kind }}
-                </span>
-                <span class="text-sm font-medium">{{ tile.label }}</span>
-              </div>
-              <span class="text-[11px] text-gray-500">{{ tilePageLabel(tile.id) }}</span>
-            </div>
-
-            <div class="flex flex-wrap gap-1.5">
-              <button
-                @click="assignTileToPage(tile.id, 0)"
-                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-              >
-                第1屏
-              </button>
-              <button
-                @click="assignTileToPage(tile.id, 1)"
-                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-              >
-                第2屏
-              </button>
-              <button
-                @click="moveTileInPage(tile.id, -1)"
-                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-              >
-                上移
-              </button>
-              <button
-                @click="moveTileInPage(tile.id, 1)"
-                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-              >
-                下移
-              </button>
-              <button
-                @click="hideTile(tile.id)"
-                class="px-2 py-1 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50"
-              >
-                隐藏
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="hiddenTiles.length > 0" class="mt-4 pt-4 border-t border-gray-100">
-          <p class="text-xs font-semibold text-gray-600 mb-2">已隐藏入口</p>
-          <div class="space-y-2">
-            <div
-              v-for="tile in hiddenTiles"
-              :key="tile.id"
-              class="rounded-lg border border-gray-200 p-2.5 flex items-center justify-between gap-2"
-            >
-              <div class="flex items-center gap-2">
-                <span
-                  class="text-[10px] px-1.5 py-0.5 rounded-full"
-                  :class="tile.kind === 'app' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
-                >
-                  {{ tile.kind }}
-                </span>
-                <span class="text-sm font-medium">{{ tile.label }}</span>
+              <div>
+                <p class="text-sm font-semibold">{{ widget.name }}</p>
+                <p class="text-[11px] text-gray-500">尺寸 {{ widget.size }} · {{ widgetPageLabel(widget.id) }}</p>
               </div>
               <div class="flex gap-1.5">
-                <button
-                  @click="assignTileToPage(tile.id, 0)"
-                  class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-                >
-                  加到第1屏
+                <button @click="startEditCustomWidget(widget)" class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50">
+                  编辑
                 </button>
-                <button
-                  @click="assignTileToPage(tile.id, 1)"
-                  class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
-                >
-                  加到第2屏
+                <button @click="removeCustomWidget(widget.id)" class="px-2 py-1 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50">
+                  删除
                 </button>
               </div>
             </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="pageIndex in pageOptions"
+                :key="`${widget.id}-${pageIndex}`"
+                @click="moveCustomWidgetToPage(widget.id, pageIndex)"
+                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+              >
+                放到第{{ pageIndex + 1 }}屏
+              </button>
+            </div>
           </div>
         </div>
-
-        <button
-          @click="saveHomeLayout"
-          class="w-full mt-4 py-2.5 rounded-lg text-sm font-semibold transition"
-          :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-        >
-          {{ saved ? '已保存' : '保存 Home 布局' }}
-        </button>
       </div>
 
       <button
