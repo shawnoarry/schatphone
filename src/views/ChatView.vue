@@ -5,15 +5,18 @@ import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useMapStore } from '../stores/map'
 import { callAI } from '../lib/ai'
 
 const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const mapStore = useMapStore()
 
 const { settings, user } = storeToRefs(systemStore)
 const { contacts, chatHistory, loadingAI } = storeToRefs(chatStore)
+const { currentLocationText } = storeToRefs(mapStore)
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -154,6 +157,30 @@ const sendMessage = async () => {
   await generateAIResponse(chatId)
 }
 
+const sendCurrentLocation = async () => {
+  if (!activeChat.value) return
+
+  const locationText = currentLocationText.value
+  if (!locationText || locationText === '未设置当前位置') {
+    alert('请先在 Map 页面设置当前位置。')
+    return
+  }
+
+  const chatId = activeChat.value.id
+  ensureChatHistory(chatId)
+
+  const payload = `📍 位置共享\n${locationText}`
+  chatHistory.value[chatId].push({
+    role: 'user',
+    content: payload,
+  })
+
+  showSuggestions.value = false
+  scrollToBottom()
+
+  await generateAIResponse(chatId)
+}
+
 const useSuggestion = (text) => {
   inputMessage.value = text
 }
@@ -271,6 +298,13 @@ watch(activeChatId, (id) => {
       </div>
 
       <div class="p-3 chat-input flex items-center gap-2 border-t relative">
+        <button
+          @click="sendCurrentLocation"
+          class="w-8 h-8 rounded-full flex items-center justify-center transition bg-cyan-500 text-white shadow-md"
+        >
+          <i class="fas fa-location-dot text-xs"></i>
+        </button>
+
         <button
           @click="generateSmartReplies"
           class="w-8 h-8 rounded-full flex items-center justify-center transition"
