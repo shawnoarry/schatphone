@@ -1,63 +1,65 @@
 ﻿# SchatPhone 项目进度与待办
 
-更新时间：2026-02-10
+更新时间：2026-02-11
 
 ## 1. 当前项目状态
 
-项目处于“主链路可用，持续迭代优化”阶段。
+项目处于“主链路可用，核心交互打磨阶段”。
 
-主链路：
+可用主链路：
 - 锁屏 -> Home -> Chat / Settings / 功能模块跳转
-- API 配置 -> 模型拉取 -> Chat 调用链路
-- 外观主题与自定义 CSS 注入链路
+- Network API 配置 -> 模型拉取 -> Chat 调用
+- Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 
-## 2. 本轮已完成（最新）
+## 2. 本轮已完成
 
-### 2.1 Settings 分层重构
+### 2.1 Home 布局编辑系统
 
-- Settings 改为 iOS 风格分组列表
-- 用户信息从世界书拆分为独立页：`/profile`
-- 世界书页面只保留 worldBook 编辑：`/worldbook`
+- 长按桌面空白进入编辑模式
+- 同屏拖拽排序
+- 跨屏拖拽（边缘切屏）
+- 重置默认布局
+- 取消抖动动画
 
-涉及文件：
-- `src/views/SettingsView.vue`
-- `src/views/UserProfileView.vue`
-- `src/views/WorldBookView.vue`
-- `src/router/index.js`
+### 2.2 Home 规则升级
 
-### 2.2 Home 入口去重
+- 默认扩展为 5 屏结构（前 2 屏有内容，后 3 屏预留）
+- 功能入口（`app_*`）锁定：不可删除/隐藏，仅可换位置
+- Widget 与自定义 Widget 可隐藏，隐藏后无空白占位
 
-- 去除与 Settings 重叠的 Home 入口（Profile / WorldBook）
-- 默认入口改为更偏功能使用场景
-- 历史布局自动映射并去重，防止旧数据重复
+### 2.3 自定义 Widget 管理
 
-涉及文件：
-- `src/views/HomeView.vue`
-- `src/stores/system.js`
+- 支持添加/编辑/删除/放置
+- 支持 JSON 导入
+- 支持尺寸：`1x1/2x1/2x2/4x2/4x3`
+- 提供通用模板展示、复制模板、导出模板文本（TXT）
 
-### 2.3 输入页显式保存按钮
+### 2.4 Appearance 二级菜单
 
-新增“保存”反馈按钮，便于用户确认已保存：
-- 通用设置、通知设置
-- 用户信息
-- 世界书
-- 网络设置
-- 外观设置
+- Appearance 拆分为三类入口：主题美化、字体、Widget
+- 字体支持全局字体预设和自定义字体栈
+- 返回路径统一：二级页返回外观首页，外观首页返回 Settings
 
-涉及文件：
-- `src/views/SettingsView.vue`
-- `src/views/UserProfileView.vue`
-- `src/views/WorldBookView.vue`
-- `src/views/NetworkView.vue`
-- `src/views/AppearanceView.vue`
-- `src/stores/system.js`（`saveNow()`）
+### 2.5 Settings / Network / Appearance 分层
 
-### 2.4 验证结果
+- 用户信息独立为 `/profile`
+- 世界书独立为 `/worldbook`
+- 网络配置独立为 `/network`
+- 美化与 Widget 管理独立为 `/appearance`
+
+### 2.6 Network 预设与模型
+
+- URL + Key 自动识别 API 类型
+- 自动/手动刷新模型列表
+- 预设保存、切换、删除、清空
+
+### 2.7 验证结果
 
 - `npm run lint`：通过
 - `npm run build`：通过
+- `npm run test`：通过
 
-## 3. 当前 Home 默认入口清单
+## 3. 当前默认 Home 结构
 
 ### 第一屏
 
@@ -69,73 +71,71 @@
 - Widget：`system`、`quick_heart`、`quick_disc`
 - App：`Phone`、`Map`、`Calendar`、`Files`、`Stock`
 
-## 4. 当前 Settings 二级项
+### 第三至第五屏
 
-Settings 首页分组：
-- 用户卡片（进入 `Profile`）
-- 内容设置：`世界书`、`通用`、`通知`
-- 数据与安全：`备份与导出`、`关于`
+- 预留空屏，供后续模块与 Widget 扩展
 
-独立设置页：
-- `/network`（API 与模型预设）
-- `/appearance`（主题、壁纸、自定义 CSS）
+## 4. 当前 Settings 二级结构
 
-## 5. 完成度评估（当前）
+- 用户卡片 -> `/profile`
+- 世界书 -> `/worldbook`
+- 通用（内嵌二级页）
+- 通知（内嵌二级页）
+- 备份导出（JSON）
+- 关于（内嵌二级页）
 
-- Home：82%
-- Settings（含 Profile/WorldBook 拆分）：86%
-- Network：78%
-- Appearance：72%
-- Chat：74%
-- Contacts：58%
-- Map：65%
-- Phone/Calendar/Wallet/Stock：25%~40%（分模块推进）
+独立配置入口：
+- 网络与 API：`/network`
+- 外观工坊：`/appearance`
 
-## 6. 后续待办（按优先级）
+## 5. 模块完成度（当前评估）
 
-## P0（立即）
+- Home：88%
+- Settings（含 Profile/WorldBook）：88%
+- Network：82%
+- Appearance：80%
+- Chat：76%
+- Map：66%
+- Contacts：60%
+- Phone/Calendar/Wallet/Stock：30%~45%
 
-1. Home 布局编辑器
-- 用户可拖拽排序入口
-- 可隐藏/显示入口
-- 一键恢复默认布局
+## 6. 待办计划（优先级）
 
-2. Network 稳定性增强
-- 模型拉取失败原因分级提示（鉴权/CORS/URL 错误）
-- 预设导入导出
+### P0（建议先做）
 
-3. 文案与编码统一
-- 清理遗留乱码文案
-- 统一中英文术语
+1. 内置 Widget 复位/回收站能力
+- 当前可隐藏内置 Widget，但仅支持“整屏重置”恢复。
+- 建议补“内置 Widget 列表 + 单项加回”。
 
-## P1（核心体验增强）
+2. 网络错误分级反馈
+- 将模型拉取错误区分为 URL 错误、鉴权失败、CORS、服务端错误。
 
-4. Chat 能力补强
-- 会话置顶/未读
-- 会话分组或标签
-- 消息类型扩展（系统卡片/提醒/位置）
+3. 功能占位页补最小 MVP
+- `Files` / `More` 目前仍为占位交互，建议补最小可用页面。
 
-5. Appearance 用户化能力
-- 图标自定义
-- Widget 开关与排序
-- 主题变量可视化编辑
+### P1
 
-6. 世界书结构化
-- 条目化管理（标签/优先级）
-- 与聊天注入策略联动
+4. Chat 会话管理增强
+- 置顶、未读、会话标签、草稿状态。
 
-## P2（功能扩展）
+5. Widget 体系增强
+- 预置 Widget 库（官方模板）
+- 导入校验与安全隔离策略
 
-7. Phone / Wallet / Calendar / Stock 模块 MVP 化
-- 先 Mock 数据闭环
-- 再逐步接真实 API
+6. 设置体验增强
+- iOS 风格更细化（分组 footer、危险操作区、搜索入口）
+
+### P2
+
+7. Phone / Wallet / Calendar / Stock 深化
+- 先 Mock 数据闭环，再逐步接真实 API。
 
 8. 跨模块联动
-- 事件触发聊天（例如日程提醒、价格波动）
+- 例如：日程提醒触发聊天卡片、股价波动推送到 Home。
 
-## 7. 协作规则（持续生效）
+## 7. 协作规则
 
-1. 路由、入口、Store 字段发生变化时，同步更新本文件。
+1. 每次改动路由/Store 字段/Home 规则，必须同步更新本文档。
 2. 每次合并前至少执行：`npm run lint` + `npm run build`。
-3. 新页面默认不放 Home，先验证业务价值后再挂入口。
-4. Settings 负责“配置”，Home 负责“使用入口”，避免重复。
+3. 涉及交互行为改动时，补跑：`npm run test`。
+4. Home 与 Settings 职责分离：Home 偏使用入口，Settings 偏配置管理。

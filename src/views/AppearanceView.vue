@@ -5,13 +5,56 @@ import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 
 const CUSTOM_SIZE_OPTIONS = ['1x1', '2x1', '2x2', '4x2', '4x3']
+const ROOT_MENU = ''
+const FONT_VAR_NAME = '--app-font-family'
+const DEFAULT_FONT_STACK = '"Inter", "Noto Sans SC", sans-serif'
+
+const FONT_PRESETS = [
+  { id: 'system', label: '系统默认', value: DEFAULT_FONT_STACK },
+  { id: 'inter', label: 'Inter', value: '"Inter", sans-serif' },
+  { id: 'noto', label: 'Noto Sans SC', value: '"Noto Sans SC", sans-serif' },
+  { id: 'pingfang', label: 'PingFang', value: '"PingFang SC", "Noto Sans SC", sans-serif' },
+  { id: 'serif', label: '衬线 Serif', value: '"Noto Serif SC", serif' },
+]
+
+const WIDGET_TEMPLATE_CODE = `<style>
+  .widget-card {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font: 600 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+</style>
+<div class="widget-card">My Custom Widget</div>`
+
+const WIDGET_TEMPLATE_JSON = JSON.stringify(
+  [
+    {
+      name: '我的组件',
+      size: '2x2',
+      code: WIDGET_TEMPLATE_CODE,
+    },
+  ],
+  null,
+  2,
+)
 
 const router = useRouter()
 const systemStore = useSystemStore()
 
 const { settings, availableThemes } = storeToRefs(systemStore)
+
+const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
+const templateCopied = ref(false)
+
 let savedTimerId = null
+let copiedTimerId = null
 
 const customWidgetName = ref('')
 const customWidgetSize = ref('2x2')
@@ -21,12 +64,27 @@ const editingWidgetId = ref('')
 
 const importJsonText = ref('')
 const importTargetPage = ref(0)
+const customFontStackInput = ref('')
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const pageOptions = computed(() =>
   Array.from({ length: Math.max(homeWidgetPages.value.length, 5) }, (_, index) => index),
 )
+
+const pageTitle = computed(() => {
+  if (activeMenu.value === 'theme') return '主题美化'
+  if (activeMenu.value === 'font') return '字体设置'
+  if (activeMenu.value === 'widget') return 'Widget 工坊'
+  return '外观工坊'
+})
+
+const backLabel = computed(() => (activeMenu.value === ROOT_MENU ? '设置' : '外观工坊'))
+
+const currentFontStack = computed(() => {
+  const value = settings.value.appearance.customVars?.[FONT_VAR_NAME]
+  return typeof value === 'string' && value.trim() ? value.trim() : DEFAULT_FONT_STACK
+})
 
 const triggerSaved = () => {
   systemStore.saveNow()
@@ -45,16 +103,85 @@ const goSettings = () => {
   router.push('/settings')
 }
 
+const handleBack = () => {
+  if (activeMenu.value !== ROOT_MENU) {
+    activeMenu.value = ROOT_MENU
+    return
+  }
+  goSettings()
+}
+
+const openMenu = (menu) => {
+  activeMenu.value = menu
+  if (menu === 'font') {
+    customFontStackInput.value = currentFontStack.value
+  }
+}
+
 const setTheme = (themeId) => {
   systemStore.setTheme(themeId)
+  triggerSaved()
 }
 
 const clearCustomCss = () => {
   settings.value.appearance.customCss = ''
+  triggerSaved()
 }
 
 const saveAppearance = () => {
   triggerSaved()
+}
+
+const setFontPreset = (value) => {
+  systemStore.setCustomVar(FONT_VAR_NAME, value)
+  customFontStackInput.value = value
+  triggerSaved()
+}
+
+const applyCustomFontStack = () => {
+  const value = customFontStackInput.value.trim() || DEFAULT_FONT_STACK
+  systemStore.setCustomVar(FONT_VAR_NAME, value)
+  triggerSaved()
+}
+
+const resetFontStack = () => {
+  customFontStackInput.value = DEFAULT_FONT_STACK
+  systemStore.setCustomVar(FONT_VAR_NAME, DEFAULT_FONT_STACK)
+  triggerSaved()
+}
+
+const copyWidgetTemplate = async () => {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(WIDGET_TEMPLATE_JSON)
+    } else {
+      const temp = document.createElement('textarea')
+      temp.value = WIDGET_TEMPLATE_JSON
+      document.body.appendChild(temp)
+      temp.select()
+      document.execCommand('copy')
+      document.body.removeChild(temp)
+    }
+
+    templateCopied.value = true
+    if (copiedTimerId) clearTimeout(copiedTimerId)
+    copiedTimerId = setTimeout(() => {
+      templateCopied.value = false
+    }, 1200)
+  } catch {
+    alert('复制失败，请手动复制模板文本。')
+  }
+}
+
+const exportWidgetTemplate = () => {
+  const content = `# SchatPhone Widget JSON Template\n\n${WIDGET_TEMPLATE_JSON}\n`
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'schatphone-widget-template.txt'
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 const resetCustomWidgetForm = () => {
@@ -146,20 +273,65 @@ const widgetPageLabel = (widgetId) => {
 
 onBeforeUnmount(() => {
   if (savedTimerId) clearTimeout(savedTimerId)
+  if (copiedTimerId) clearTimeout(copiedTimerId)
 })
 </script>
 
 <template>
   <div class="w-full h-full bg-gray-100 flex flex-col text-black">
     <div class="pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
-      <button @click="goSettings" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
-        <i class="fas fa-chevron-left"></i> 设置
+      <button @click="handleBack" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
+        <i class="fas fa-chevron-left"></i> {{ backLabel }}
       </button>
-      <h1 class="text-2xl font-bold flex-1">外观工坊</h1>
+      <h1 class="text-2xl font-bold flex-1">{{ pageTitle }}</h1>
       <button @click="goHome" class="text-blue-500 text-sm">主页</button>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+    <div v-if="activeMenu === ROOT_MENU" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+      <button
+        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        @click="openMenu('theme')"
+      >
+        <div class="w-8 h-8 rounded-lg bg-violet-500 text-white flex items-center justify-center text-xs">
+          <i class="fas fa-palette"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold">整体主题美化</p>
+          <p class="text-[11px] text-gray-500">主题、壁纸与自定义 CSS</p>
+        </div>
+        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+      </button>
+
+      <button
+        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        @click="openMenu('font')"
+      >
+        <div class="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center text-xs">
+          <i class="fas fa-font"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold">字体</p>
+          <p class="text-[11px] text-gray-500">全局字体族与自定义字体栈</p>
+        </div>
+        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+      </button>
+
+      <button
+        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        @click="openMenu('widget')"
+      >
+        <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs">
+          <i class="fas fa-puzzle-piece"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold">Widget</p>
+          <p class="text-[11px] text-gray-500">创建、导入、模板导出与管理</p>
+        </div>
+        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+      </button>
+    </div>
+
+    <div v-else-if="activeMenu === 'theme'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="text-sm font-bold mb-3">主题（保留 Y2K / 纯白）</div>
         <div class="grid grid-cols-2 gap-3">
@@ -198,9 +370,97 @@ onBeforeUnmount(() => {
           class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
           placeholder=".app-shell { --home-widget-bg: rgba(255,255,255,0.5); }"
         ></textarea>
-        <p class="text-[10px] text-gray-400 mt-2">
-          建议优先覆盖 CSS 变量：<code>--home-widget-bg</code>、<code>--home-dock-bg</code>、<code>--home-icon-default-bg</code>
-        </p>
+      </div>
+
+      <button
+        @click="saveAppearance"
+        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+      >
+        {{ saved ? '已保存' : '保存主题设置' }}
+      </button>
+    </div>
+
+    <div v-else-if="activeMenu === 'font'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <p class="text-sm font-bold mb-3">字体预设</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="preset in FONT_PRESETS"
+            :key="preset.id"
+            @click="setFontPreset(preset.value)"
+            class="px-3 py-2 rounded-lg text-sm border transition text-left"
+            :class="currentFontStack === preset.value ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 hover:bg-gray-50'"
+          >
+            {{ preset.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <label class="text-xs text-gray-500 block mb-1">自定义字体栈（CSS font-family）</label>
+        <input
+          v-model="customFontStackInput"
+          type="text"
+          class="w-full border-b border-gray-200 py-1 outline-none text-sm font-mono"
+          placeholder='"Inter", "Noto Sans SC", sans-serif'
+        />
+        <div class="mt-3 flex gap-2">
+          <button
+            @click="applyCustomFontStack"
+            class="flex-1 px-3 py-2 rounded-md text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
+          >
+            应用字体
+          </button>
+          <button
+            @click="resetFontStack"
+            class="px-3 py-2 rounded-md text-sm border border-gray-200 hover:bg-gray-50"
+          >
+            重置
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <p class="text-xs text-gray-500 mb-1">当前字体栈</p>
+        <p class="text-xs font-mono text-gray-700 break-all">{{ currentFontStack }}</p>
+      </div>
+
+      <button
+        @click="saveAppearance"
+        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+      >
+        {{ saved ? '已保存' : '保存字体设置' }}
+      </button>
+    </div>
+
+    <div v-else-if="activeMenu === 'widget'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-bold">通用模板（可导出文本）</p>
+          <span class="text-[11px] text-gray-500">用于自定义创作</span>
+        </div>
+        <textarea
+          :value="WIDGET_TEMPLATE_JSON"
+          readonly
+          class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none bg-gray-50"
+        ></textarea>
+        <div class="mt-2 flex gap-2">
+          <button
+            @click="copyWidgetTemplate"
+            class="flex-1 px-3 py-2 rounded-md text-xs font-semibold transition"
+            :class="templateCopied ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+          >
+            {{ templateCopied ? '已复制' : '复制模板' }}
+          </button>
+          <button
+            @click="exportWidgetTemplate"
+            class="flex-1 px-3 py-2 rounded-md text-xs font-semibold bg-gray-800 text-white hover:bg-black transition"
+          >
+            导出 TXT
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
@@ -323,7 +583,7 @@ onBeforeUnmount(() => {
         class="w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
-        {{ saved ? '已保存' : '保存外观设置' }}
+        {{ saved ? '已保存' : '保存 Widget 设置' }}
       </button>
     </div>
   </div>

@@ -2,6 +2,7 @@
 @import "tailwindcss";
 
 :root {
+  --app-font-family: "Inter", "Noto Sans SC", sans-serif;
   --app-bg: #0f1220;
   --indicator-bg: rgba(255, 255, 255, 0.5);
   --status-fg: #fff;
@@ -115,7 +116,7 @@
 }
 
 body {
-  font-family: "Inter", "Noto Sans SC", sans-serif;
+  font-family: var(--app-font-family);
   background-color: var(--app-bg);
   margin: 0;
   overflow: hidden;
