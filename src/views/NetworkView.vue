@@ -14,9 +14,11 @@ const modelsLoading = ref(false)
 const modelsError = ref('')
 const presetName = ref('')
 const showApiKey = ref(false)
+const saved = ref(false)
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
+let savedTimerId = null
 
 const ensurePresetState = () => {
   if (!Array.isArray(settings.value.api.presets)) {
@@ -130,6 +132,15 @@ const goSettings = () => {
   router.push('/settings')
 }
 
+const saveNetworkSettings = () => {
+  systemStore.saveNow()
+  saved.value = true
+  if (savedTimerId) clearTimeout(savedTimerId)
+  savedTimerId = setTimeout(() => {
+    saved.value = false
+  }, 1200)
+}
+
 const clearModelState = () => {
   modelOptions.value = []
   modelsError.value = ''
@@ -211,6 +222,10 @@ onBeforeUnmount(() => {
   if (modelFetchTimerId) {
     clearTimeout(modelFetchTimerId)
     modelFetchTimerId = null
+  }
+  if (savedTimerId) {
+    clearTimeout(savedTimerId)
+    savedTimerId = null
   }
 })
 
@@ -352,6 +367,14 @@ ensurePresetState()
         />
         <p class="text-[10px] text-gray-400 mt-2">如果模型接口受限或跨域失败，可直接手动填写模型名。</p>
       </div>
+
+      <button
+        @click="saveNetworkSettings"
+        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+      >
+        {{ saved ? '已保存' : '保存网络设置' }}
+      </button>
     </div>
   </div>
 </template>

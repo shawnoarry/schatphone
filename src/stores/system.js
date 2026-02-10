@@ -22,7 +22,7 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_mail', 'app_maps', 'app_wallet', 'app_themes'],
+  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes'],
   [
     'system',
     'quick_heart',
@@ -30,10 +30,64 @@ const DEFAULT_WIDGET_PAGES = [
     'app_phone',
     'app_map',
     'app_calendar',
-    'app_worldbook',
+    'app_files',
     'app_stock',
   ],
 ]
+
+const HOME_TILE_ALIASES = {
+  app_mail: 'app_network',
+  app_maps: 'app_map',
+  app_profile: 'app_chat',
+  app_worldbook: 'app_files',
+}
+
+const VALID_HOME_TILE_IDS = [
+  'weather',
+  'calendar',
+  'music',
+  'system',
+  'quick_heart',
+  'quick_disc',
+  'app_network',
+  'app_wallet',
+  'app_themes',
+  'app_phone',
+  'app_map',
+  'app_calendar',
+  'app_stock',
+  'app_chat',
+  'app_contacts',
+  'app_settings',
+  'app_gallery',
+  'app_files',
+  'app_more',
+]
+
+const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...page])
+
+const normalizeHomeWidgetPages = (pages) => {
+  if (!Array.isArray(pages)) {
+    return cloneDefaultWidgetPages()
+  }
+
+  const seen = new Set()
+  const normalized = pages
+    .filter((page) => Array.isArray(page))
+    .map((page) =>
+      page
+        .map((tileId) => HOME_TILE_ALIASES[tileId] || tileId)
+        .filter((tileId) => {
+          if (!VALID_HOME_TILE_IDS.includes(tileId)) return false
+          if (seen.has(tileId)) return false
+          seen.add(tileId)
+          return true
+        }),
+    )
+    .filter((page) => page.length > 0)
+
+  return normalized.length > 0 ? normalized : cloneDefaultWidgetPages()
+}
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
@@ -55,7 +109,7 @@ export const useSystemStore = defineStore('system', () => {
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
       customCss: '',
       customVars: {},
-      homeWidgetPages: [...DEFAULT_WIDGET_PAGES],
+      homeWidgetPages: cloneDefaultWidgetPages(),
     },
     system: {
       language: 'zh-CN',
@@ -120,12 +174,11 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const setHomeWidgetPages = (pages) => {
-    if (!Array.isArray(pages)) return
-    settings.appearance.homeWidgetPages = pages
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(pages)
   }
 
   const resetHomeWidgetPages = () => {
-    settings.appearance.homeWidgetPages = [...DEFAULT_WIDGET_PAGES]
+    settings.appearance.homeWidgetPages = cloneDefaultWidgetPages()
   }
 
   const hydrateFromStorage = () => {
@@ -161,9 +214,7 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.customVars = { ...appearance.customVars }
       }
       if (Array.isArray(appearance.homeWidgetPages)) {
-        settings.appearance.homeWidgetPages = appearance.homeWidgetPages
-          .filter((page) => Array.isArray(page))
-          .map((page) => [...page])
+        settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(appearance.homeWidgetPages)
       }
     }
 
@@ -184,6 +235,8 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.currentTheme = availableThemes.value[0]?.id || 'y2k'
       settings.appearance.wallpaper = availableThemes.value[0]?.wallpaper || settings.appearance.wallpaper
     }
+
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(settings.appearance.homeWidgetPages)
   }
 
   const persistToStorage = () => {
@@ -206,6 +259,10 @@ export const useSystemStore = defineStore('system', () => {
     )
   }
 
+  const saveNow = () => {
+    persistToStorage()
+  }
+
   hydrateFromStorage()
   watch([settings, user, notifications], persistToStorage, { deep: true })
 
@@ -221,5 +278,6 @@ export const useSystemStore = defineStore('system', () => {
     removeCustomVar,
     setHomeWidgetPages,
     resetHomeWidgetPages,
+    saveNow,
   }
 })

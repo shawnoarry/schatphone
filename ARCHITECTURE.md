@@ -1,108 +1,125 @@
-# SchatPhone 架构说明
+﻿# SchatPhone 架构说明
 
-更新时间：2026-02-03
+更新时间：2026-02-10
 
-## 1. 技术栈概览
+## 1. 架构目标
 
-核心开发框架
-- Vue 3（Composition API + `script setup`）
-- Vite 7（开发/构建工具）
+SchatPhone 采用“可扩展移动端交互壳”架构，优先保证三件事：
+- 交互流畅：Home / Chat / Settings 主链路稳定
+- 可配置：用户可管理 API、主题、样式、基础人设
+- 可扩展：后续能接 Widget 自定义与模块扩展，不重做底层
 
-功能逻辑支撑
-- Vue Router 5（Hash 模式，适配 GitHub Pages）
-- Pinia 3（全局状态管理）
-- Marked（聊天 Markdown 渲染）
+## 2. 分层设计
 
-界面与视觉实现
-- Tailwind CSS v4 + `@tailwindcss/vite`
-- 自定义 CSS（玻璃拟态、动画、布局）
-- Font Awesome（图标库）
+### 2.1 App Shell 层
 
-工程化
-- ESLint + Prettier（Vue SFC + JS）
-- Vitest + Vue Test Utils
-- GitHub Actions：CI + Pages 部署
+职责：全局容器、状态栏、壁纸、路由切换、主题注入。
 
-## 2. 项目结构规范
+- `src/App.vue`
+- `src/main.js`
+- `src/router/index.js`
 
-```
-src/
-  App.vue                 # 应用外壳与全局布局（状态栏/壁纸/路由出口）
-  main.js                 # 入口（Pinia + Router + 样式）
-  style.css               # 全局样式与主题变量
-  router/
-    index.js              # 路由定义（Hash 模式）
-  stores/
-    system.js             # 系统/主题/用户配置
-    chat.js               # 联系人与聊天数据
-  views/
-    LockScreen.vue        # 锁屏
-    HomeView.vue          # 主屏
-    SettingsView.vue      # 设置
-    ChatView.vue          # 聊天
-    ContactsView.vue      # 联系人
-    GalleryView.vue       # 相册
-  lib/
-    ai.js                 # AI 请求封装
-```
+设计要点：
+- 使用 Hash 路由，适配 GitHub Pages 刷新场景
+- 在 App 层统一挂载自定义 CSS 注入能力
 
-## 3. 主题与样式规范
+### 2.2 业务状态层（Pinia）
 
-- 主题变量统一放在 `src/style.css` 的 `:root` 中。
-- 所有可定制颜色必须由 CSS 变量驱动（示例：`--chat-*`）。
-- 主题切换由 `App.vue` 中的 `.app-shell[data-theme="..."]` 控制。
-- 禁止在 `views` 中硬编码颜色（除非是局部特效且有注释说明原因）。
+职责：按业务域拆分状态，避免巨型单 Store。
 
-## 4. 路由规范
+- `src/stores/system.js`
+  - `settings.api`：URL / Key / model / presets
+  - `settings.appearance`：theme / wallpaper / customCss / customVars / homeWidgetPages
+  - `settings.system`：语言、时区、通知
+  - `user`：用户信息 + worldBook
+- `src/stores/chat.js`
+  - 联系人与聊天记录
+- `src/stores/map.js`
+  - 地址簿与当前位置
 
-- 采用 Hash 路由，保证 GitHub Pages 刷新不 404。
-- `HomeView` 作为入口，其他页面通过路由进入。
-- 新页面必须先注册路由，再在主屏入口中挂载。
+设计要点：
+- 通过 `watch(..., { deep: true })` 自动持久化
+- 提供 `saveNow()` 供 UI“保存按钮”显式触发
 
-## 5. 状态管理规范
+### 2.3 服务层
 
-- 系统级设置与主题配置放 `system` store。
-- 用户信息、世界观配置放 `system` store。
-- 聊天相关放 `chat` store。
-- AI 调用统一经由 `lib/ai.js`，禁止在组件内重复写 fetch 逻辑。
+职责：统一外部调用与持久化策略。
 
-## 6. 运行与部署
+- `src/lib/ai.js`
+  - 统一 AI 调用入口
+  - 基于 URL 自动识别 API 类型
+  - 拉取可用模型（失败时允许手动兜底）
+- `src/lib/persistence.js`
+  - localStorage 读写与版本封装
 
-本地开发
-```
-npm install
-npm run dev
-```
+规则：组件内不直写 fetch，统一走 `lib/ai.js`。
 
-代码规范
-```
-npm run lint
-npm run lint:fix
-npm run format
-```
+### 2.4 页面层（Views）
 
-测试
-```
-npm run test
-```
+职责：页面编排与交互，不承载底层协议逻辑。
 
-CI
-- GitHub Actions 执行 `npm ci -> npm run lint -> npm run build`
+关键页面：
+- Home：`src/views/HomeView.vue`
+- Settings（iOS 风格入口页）：`src/views/SettingsView.vue`
+- Profile：`src/views/UserProfileView.vue`
+- WorldBook：`src/views/WorldBookView.vue`
+- Network：`src/views/NetworkView.vue`
+- Appearance：`src/views/AppearanceView.vue`
+- Chat：`src/views/ChatView.vue`
 
-Pages 部署
-- 分支 `main` 触发部署
-- 站点地址：`https://shawnoarry.github.io/schatphone/`
+## 3. Home 入口策略（去重后）
 
-## 7. 环境变量与配置
+默认布局（`settings.appearance.homeWidgetPages`）：
 
-环境变量示例文件：`.env.example`
+- 第一屏 App：`Network`、`Chat`、`Wallet`、`Themes`
+- 第一屏 Widget：`weather`、`calendar`、`music`
+- 第二屏 App：`Phone`、`Map`、`Calendar`、`Files`、`Stock`
+- 第二屏 Widget：`system`、`quick_heart`、`quick_disc`
 
-- `VITE_API_PROVIDER`
-- `VITE_API_URL`
-- `VITE_API_MODEL`
-- `VITE_API_KEY`
+约束：
+- Profile 和 WorldBook 归属 Settings 体系，不再出现在 Home 入口
+- 对历史布局做自动映射与去重，避免老数据出现重复按钮
 
-可选项（后续增强）
-- 类型系统（TypeScript）
-- 组件库/原子组件抽象（提升复用）
-- 用户自定义 CSS 注入（在设置中提供）
+## 4. Settings 架构（当前）
+
+Settings 仅做“设置导航与系统项”，采用 iOS 分组风格：
+
+- 用户卡片（进入 Profile）
+- 内容设置：WorldBook、通用、通知
+- 数据与安全：备份导出、关于
+
+二级页面拆分：
+- Profile：只负责用户信息编辑
+- WorldBook：只负责世界书文本
+- Network：独立入口，负责 API 配置与预设
+- Appearance：独立入口，负责主题和样式
+
+## 5. 保存策略
+
+当前采取“双轨保存”：
+
+- 自动保存：Store watch 自动持久化
+- 显式保存：关键输入页提供“保存”按钮，调用 `systemStore.saveNow()` 并给出反馈
+
+已覆盖保存按钮页面：
+- `SettingsView.vue`（通用、通知）
+- `UserProfileView.vue`
+- `WorldBookView.vue`
+- `NetworkView.vue`
+- `AppearanceView.vue`
+
+## 6. 工程化
+
+- CI：`.github/workflows/ci.yml`（lint + build）
+- 部署：`.github/workflows/deploy.yml`（GitHub Pages）
+- 站点：`https://shawnoarry.github.io/schatphone/`
+
+## 7. 扩展规范
+
+后续新增功能时遵循：
+
+1. 新模块先建 View，再注册 Router，再决定是否放 Home 入口。
+2. 需要全局配置的数据进入 `system` store；业务数据进入对应域 store。
+3. 主题相关优先用 CSS 变量，不在页面硬编码颜色。
+4. 所有 API 调用统一走服务层，避免散落在组件。
+5. 影响布局结构时同步更新 `PROJECT_STATUS.md` 与本文件。

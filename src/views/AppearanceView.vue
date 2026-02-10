@@ -1,4 +1,5 @@
-<script setup>
+﻿<script setup>
+import { onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -7,6 +8,8 @@ const router = useRouter()
 const systemStore = useSystemStore()
 
 const { settings, availableThemes } = storeToRefs(systemStore)
+const saved = ref(false)
+let savedTimerId = null
 
 const goHome = () => {
   router.push('/home')
@@ -23,6 +26,19 @@ const setTheme = (themeId) => {
 const clearCustomCss = () => {
   settings.value.appearance.customCss = ''
 }
+
+const saveAppearance = () => {
+  systemStore.saveNow()
+  saved.value = true
+  if (savedTimerId) clearTimeout(savedTimerId)
+  savedTimerId = setTimeout(() => {
+    saved.value = false
+  }, 1200)
+}
+
+onBeforeUnmount(() => {
+  if (savedTimerId) clearTimeout(savedTimerId)
+})
 </script>
 
 <template>
@@ -75,9 +91,17 @@ const clearCustomCss = () => {
           placeholder=".app-shell { --home-widget-bg: rgba(255,255,255,0.5); }"
         ></textarea>
         <p class="text-[10px] text-gray-400 mt-2">
-          建议优先覆盖 CSS 变量：<code>--home-widget-bg</code>、<code>--home-dock-bg</code>、<code>--home-icon-default-bg</code>。
+          建议优先覆盖 CSS 变量：<code>--home-widget-bg</code>、<code>--home-dock-bg</code>、<code>--home-icon-default-bg</code>
         </p>
       </div>
+
+      <button
+        @click="saveAppearance"
+        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+      >
+        {{ saved ? '已保存' : '保存外观设置' }}
+      </button>
     </div>
   </div>
 </template>
