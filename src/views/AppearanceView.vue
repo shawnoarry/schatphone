@@ -1,8 +1,30 @@
 ﻿<script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+
+const HOME_TILE_OPTIONS = [
+  { id: 'weather', label: '天气组件', kind: 'widget' },
+  { id: 'calendar', label: '日历组件', kind: 'widget' },
+  { id: 'music', label: '音乐组件', kind: 'widget' },
+  { id: 'system', label: '系统组件', kind: 'widget' },
+  { id: 'quick_heart', label: '快捷心形', kind: 'widget' },
+  { id: 'quick_disc', label: '快捷唱片', kind: 'widget' },
+  { id: 'app_network', label: 'Network', kind: 'app' },
+  { id: 'app_chat', label: 'Chat', kind: 'app' },
+  { id: 'app_wallet', label: 'Wallet', kind: 'app' },
+  { id: 'app_themes', label: 'Themes', kind: 'app' },
+  { id: 'app_phone', label: 'Phone', kind: 'app' },
+  { id: 'app_map', label: 'Map', kind: 'app' },
+  { id: 'app_calendar', label: 'Calendar', kind: 'app' },
+  { id: 'app_files', label: 'Files', kind: 'app' },
+  { id: 'app_stock', label: 'Stock', kind: 'app' },
+  { id: 'app_contacts', label: 'Contacts', kind: 'app' },
+  { id: 'app_settings', label: 'Settings', kind: 'app' },
+  { id: 'app_gallery', label: 'Photos', kind: 'app' },
+  { id: 'app_more', label: 'More', kind: 'app' },
+]
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -10,6 +32,41 @@ const systemStore = useSystemStore()
 const { settings, availableThemes } = storeToRefs(systemStore)
 const saved = ref(false)
 let savedTimerId = null
+
+const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
+
+const tilePositionMap = computed(() => {
+  const map = new Map()
+  homeWidgetPages.value.forEach((page, pageIndex) => {
+    page.forEach((tileId, tileIndex) => {
+      map.set(tileId, { pageIndex, tileIndex })
+    })
+  })
+  return map
+})
+
+const visibleTiles = computed(() => {
+  return HOME_TILE_OPTIONS.filter((tile) => tilePositionMap.value.has(tile.id)).sort((a, b) => {
+    const posA = tilePositionMap.value.get(a.id)
+    const posB = tilePositionMap.value.get(b.id)
+    if (!posA || !posB) return 0
+    if (posA.pageIndex !== posB.pageIndex) return posA.pageIndex - posB.pageIndex
+    return posA.tileIndex - posB.tileIndex
+  })
+})
+
+const hiddenTiles = computed(() => {
+  return HOME_TILE_OPTIONS.filter((tile) => !tilePositionMap.value.has(tile.id))
+})
+
+const triggerSaved = () => {
+  systemStore.saveNow()
+  saved.value = true
+  if (savedTimerId) clearTimeout(savedTimerId)
+  savedTimerId = setTimeout(() => {
+    saved.value = false
+  }, 1200)
+}
 
 const goHome = () => {
   router.push('/home')
@@ -28,12 +85,59 @@ const clearCustomCss = () => {
 }
 
 const saveAppearance = () => {
-  systemStore.saveNow()
-  saved.value = true
-  if (savedTimerId) clearTimeout(savedTimerId)
-  savedTimerId = setTimeout(() => {
-    saved.value = false
-  }, 1200)
+  triggerSaved()
+}
+
+const saveHomeLayout = () => {
+  triggerSaved()
+}
+
+const withRemovedTile = (tileId) => {
+  return homeWidgetPages.value.map((page) => page.filter((id) => id !== tileId))
+}
+
+const assignTileToPage = (tileId, pageIndex) => {
+  const nextPages = withRemovedTile(tileId).map((page) => [...page])
+  while (nextPages.length <= pageIndex) {
+    nextPages.push([])
+  }
+  nextPages[pageIndex].push(tileId)
+  systemStore.setHomeWidgetPages(nextPages)
+}
+
+const hideTile = (tileId) => {
+  const nextPages = withRemovedTile(tileId)
+  systemStore.setHomeWidgetPages(nextPages)
+}
+
+const moveTileInPage = (tileId, direction) => {
+  const position = tilePositionMap.value.get(tileId)
+  if (!position) return
+
+  const page = [...homeWidgetPages.value[position.pageIndex]]
+  const nextIndex = position.tileIndex + direction
+  if (nextIndex < 0 || nextIndex >= page.length) return
+
+  const temp = page[position.tileIndex]
+  page[position.tileIndex] = page[nextIndex]
+  page[nextIndex] = temp
+
+  const nextPages = homeWidgetPages.value.map((items, index) =>
+    index === position.pageIndex ? page : [...items],
+  )
+  systemStore.setHomeWidgetPages(nextPages)
+}
+
+const resetHomeLayout = () => {
+  const ok = window.confirm('确认恢复 Home 默认布局吗？')
+  if (!ok) return
+  systemStore.resetHomeWidgetPages()
+}
+
+const tilePageLabel = (tileId) => {
+  const position = tilePositionMap.value.get(tileId)
+  if (!position) return '已隐藏'
+  return `第${position.pageIndex + 1}屏`
 }
 
 onBeforeUnmount(() => {
@@ -93,6 +197,118 @@ onBeforeUnmount(() => {
         <p class="text-[10px] text-gray-400 mt-2">
           建议优先覆盖 CSS 变量：<code>--home-widget-bg</code>、<code>--home-dock-bg</code>、<code>--home-icon-default-bg</code>
         </p>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-sm font-bold">Home 布局管理</p>
+            <p class="text-[11px] text-gray-500">支持显示/隐藏、屏幕切换、同屏排序</p>
+          </div>
+          <button
+            @click="resetHomeLayout"
+            class="px-3 py-1.5 rounded-md text-xs bg-gray-800 text-white hover:bg-black transition"
+          >
+            重置默认
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <div
+            v-for="tile in visibleTiles"
+            :key="tile.id"
+            class="rounded-lg border border-gray-200 p-2.5"
+          >
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-[10px] px-1.5 py-0.5 rounded-full"
+                  :class="tile.kind === 'app' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                >
+                  {{ tile.kind }}
+                </span>
+                <span class="text-sm font-medium">{{ tile.label }}</span>
+              </div>
+              <span class="text-[11px] text-gray-500">{{ tilePageLabel(tile.id) }}</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                @click="assignTileToPage(tile.id, 0)"
+                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+              >
+                第1屏
+              </button>
+              <button
+                @click="assignTileToPage(tile.id, 1)"
+                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+              >
+                第2屏
+              </button>
+              <button
+                @click="moveTileInPage(tile.id, -1)"
+                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+              >
+                上移
+              </button>
+              <button
+                @click="moveTileInPage(tile.id, 1)"
+                class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+              >
+                下移
+              </button>
+              <button
+                @click="hideTile(tile.id)"
+                class="px-2 py-1 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50"
+              >
+                隐藏
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="hiddenTiles.length > 0" class="mt-4 pt-4 border-t border-gray-100">
+          <p class="text-xs font-semibold text-gray-600 mb-2">已隐藏入口</p>
+          <div class="space-y-2">
+            <div
+              v-for="tile in hiddenTiles"
+              :key="tile.id"
+              class="rounded-lg border border-gray-200 p-2.5 flex items-center justify-between gap-2"
+            >
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-[10px] px-1.5 py-0.5 rounded-full"
+                  :class="tile.kind === 'app' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                >
+                  {{ tile.kind }}
+                </span>
+                <span class="text-sm font-medium">{{ tile.label }}</span>
+              </div>
+              <div class="flex gap-1.5">
+                <button
+                  @click="assignTileToPage(tile.id, 0)"
+                  class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+                >
+                  加到第1屏
+                </button>
+                <button
+                  @click="assignTileToPage(tile.id, 1)"
+                  class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
+                >
+                  加到第2屏
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          @click="saveHomeLayout"
+          class="w-full mt-4 py-2.5 rounded-lg text-sm font-semibold transition"
+          :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+        >
+          {{ saved ? '已保存' : '保存 Home 布局' }}
+        </button>
       </div>
 
       <button
