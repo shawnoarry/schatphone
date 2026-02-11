@@ -85,7 +85,12 @@ const goHome = () => {
     </p>
   </div>
 
-  <div class="app-shell" :data-theme="settings.appearance.currentTheme" :style="customVarStyle">
+  <div
+    class="app-shell"
+    :data-theme="settings.appearance.currentTheme"
+    :data-statusbar="showStatusBar ? 'on' : 'off'"
+    :style="customVarStyle"
+  >
     <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
       <div
         v-if="showStatusBar"
@@ -98,8 +103,6 @@ const goHome = () => {
           <i class="fas fa-battery-full"></i>
         </div>
       </div>
-
-      <div class="notch"></div>
 
       <RouterView v-slot="{ Component }">
         <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
