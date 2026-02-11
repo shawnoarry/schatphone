@@ -18,6 +18,11 @@ describe('formatApiErrorForUi', () => {
     expect(message).toContain('超时')
   })
 
+  it('maps canceled errors', () => {
+    const message = formatApiErrorForUi({ code: 'CANCELED' })
+    expect(message).toContain('取消')
+  })
+
   it('maps network errors', () => {
     const message = formatApiErrorForUi({ code: 'NETWORK' })
     expect(message).toContain('网络')

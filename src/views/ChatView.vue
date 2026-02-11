@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
@@ -15,7 +15,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 
 const { settings, user } = storeToRefs(systemStore)
-const { contacts, chatHistory, loadingAI } = storeToRefs(chatStore)
+const { contacts, contactsForList, loadingAI } = storeToRefs(chatStore)
 const { currentLocationText } = storeToRefs(mapStore)
 
 const inputMessage = ref('')
@@ -25,6 +25,13 @@ const loadingSuggestions = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
 const aiErrorMessage = ref('')
+
+const sendQueues = reactive({})
+const processingState = reactive({
+  contactId: null,
+  messageId: '',
+})
+const activeAbortController = ref(null)
 
 const activeChatId = computed(() => {
   const id = Number(route.params.id)
@@ -38,27 +45,65 @@ const activeChat = computed(() => {
 
 const activeMessages = computed(() => {
   if (!activeChat.value) return []
-  return chatHistory.value[activeChat.value.id] || []
+  return chatStore.getMessagesByContactId(activeChat.value.id) || []
 })
 
-const canRetryAi = computed(() => Boolean(aiErrorMessage.value && activeChat.value && !loadingAI.value))
+const failedUserMessage = computed(() => {
+  if (!activeMessages.value.length) return null
+  for (let i = activeMessages.value.length - 1; i >= 0; i -= 1) {
+    const message = activeMessages.value[i]
+    if (message.role === 'user' && message.status === 'failed') {
+      return message
+    }
+  }
+  return null
+})
 
-const goHome = () => {
-  router.push('/home')
+const activeQueueSize = computed(() => {
+  if (!activeChat.value) return 0
+  const queue = sendQueues[String(activeChat.value.id)]
+  return Array.isArray(queue) ? queue.length : 0
+})
+
+const canCancelAi = computed(
+  () =>
+    Boolean(
+      activeAbortController.value &&
+        activeChat.value &&
+        processingState.contactId === activeChat.value.id &&
+        loadingAI.value,
+    ),
+)
+
+const canRetryAi = computed(() =>
+  Boolean(
+    aiErrorMessage.value &&
+      activeChat.value &&
+      failedUserMessage.value &&
+      !loadingAI.value &&
+      !activeAbortController.value,
+  ),
+)
+
+const ensureQueue = (contactId) => {
+  const key = String(contactId)
+  if (!Array.isArray(sendQueues[key])) {
+    sendQueues[key] = []
+  }
+  return sendQueues[key]
 }
 
-const leaveChat = () => {
-  router.push('/chat')
+const isMessageQueued = (contactId, messageId) => {
+  if (!contactId || !messageId) return false
+  const queue = ensureQueue(contactId)
+  return queue.some((job) => job.messageId === messageId)
 }
 
-const enterChat = (contact) => {
-  ensureChatHistory(contact.id)
-  router.push(`/chat/${contact.id}`)
-}
-
-const ensureChatHistory = (contactId) => {
-  if (!chatHistory.value[contactId]) {
-    chatHistory.value[contactId] = []
+const failQueuedJobs = (contactId) => {
+  const queue = ensureQueue(contactId)
+  while (queue.length) {
+    const job = queue.shift()
+    chatStore.updateMessageStatus(contactId, job.messageId, 'failed')
   }
 }
 
@@ -70,6 +115,20 @@ const scrollToBottom = () => {
   })
 }
 
+const goHome = () => {
+  router.push('/home')
+}
+
+const leaveChat = () => {
+  router.push('/chat')
+}
+
+const enterChat = (contact) => {
+  chatStore.ensureConversationForContact(contact.id)
+  chatStore.markConversationRead(contact.id)
+  router.push(`/chat/${contact.id}`)
+}
+
 const buildSystemPrompt = (contact) => `
 世界观: ${user.value.worldBook}
 用户: ${user.value.name}, ${user.value.bio}
@@ -77,48 +136,146 @@ const buildSystemPrompt = (contact) => `
 角色设定: ${contact.bio || '无'}
 请保持角色一致，不要声明自己是 AI，回复尽量简短自然。`
 
-const generateAIResponse = async (contactId) => {
+const toAiMessages = (contactId, untilMessageId = '') => {
+  const allMessages = chatStore.getMessagesByContactId(contactId)
+  const result = []
+
+  for (const item of allMessages) {
+    if (item.status === 'failed') continue
+    result.push({ role: item.role, content: item.content })
+    if (untilMessageId && item.id === untilMessageId) {
+      break
+    }
+  }
+
+  return result.slice(-10)
+}
+
+const generateAIResponse = async (contactId, triggerMessageId, options = {}) => {
   const contact = contacts.value.find((item) => item.id === contactId)
-  if (!contact) return
+  if (!contact) throw new Error('Contact not found')
 
-  const history = chatHistory.value[contactId] || []
-  const recentMsgs = history.slice(-10)
+  const replyText = await callAI({
+    messages: toAiMessages(contactId, triggerMessageId),
+    systemPrompt: buildSystemPrompt(contact),
+    settings: settings.value,
+    signal: options.signal,
+  })
 
-  try {
-    loadingAI.value = true
-    aiErrorMessage.value = ''
+  chatStore.appendMessage(contactId, {
+    role: 'assistant',
+    content: replyText,
+    status: 'sent',
+  })
 
-    const replyText = await callAI({
-      messages: recentMsgs,
-      systemPrompt: buildSystemPrompt(contact),
-      settings: settings.value,
-    })
-
-    chatHistory.value[contactId].push({
-      role: 'assistant',
-      content: replyText,
-    })
-
-    contact.lastMessage = replyText
-    scrollToBottom()
-  } catch (error) {
-    aiErrorMessage.value = formatApiErrorForUi(error, '消息发送失败，请稍后重试。')
-  } finally {
-    loadingAI.value = false
+  if (activeChatId.value === contactId) {
+    chatStore.markConversationRead(contactId)
+  } else {
+    chatStore.incrementConversationUnread(contactId, 1)
   }
 }
 
-const retryLastMessage = async () => {
-  if (!canRetryAi.value || !activeChat.value) return
-  await generateAIResponse(activeChat.value.id)
+const processSendQueue = async (contactId) => {
+  if (!contactId) return
+  if (processingState.contactId !== null) return
+
+  const contact = contacts.value.find((item) => item.id === contactId)
+  if (!contact) return
+
+  const queue = ensureQueue(contactId)
+  if (!queue.length) return
+
+  processingState.contactId = contactId
+
+  try {
+    while (queue.length) {
+      const job = queue.shift()
+      processingState.messageId = job.messageId
+      chatStore.updateMessageStatus(contactId, job.messageId, 'sending')
+
+      const controller = new AbortController()
+      activeAbortController.value = controller
+      loadingAI.value = true
+
+      try {
+        await generateAIResponse(contactId, job.messageId, { signal: controller.signal })
+        chatStore.updateMessageStatus(contactId, job.messageId, 'sent')
+        aiErrorMessage.value = ''
+      } catch (error) {
+        chatStore.updateMessageStatus(contactId, job.messageId, 'failed')
+
+        if (error?.code === 'CANCELED') {
+          aiErrorMessage.value = formatApiErrorForUi(error, '请求已取消。')
+          failQueuedJobs(contactId)
+          break
+        }
+
+        aiErrorMessage.value = formatApiErrorForUi(error, '消息发送失败，请稍后重试。')
+        failQueuedJobs(contactId)
+        break
+      } finally {
+        loadingAI.value = false
+        activeAbortController.value = null
+        processingState.messageId = ''
+      }
+    }
+  } finally {
+    processingState.contactId = null
+
+    const nextEntry = Object.entries(sendQueues).find(([, jobs]) => Array.isArray(jobs) && jobs.length > 0)
+    if (nextEntry) {
+      const nextContactId = Number(nextEntry[0])
+      if (Number.isFinite(nextContactId)) {
+        processSendQueue(nextContactId)
+      }
+    }
+  }
+
+  scrollToBottom()
+}
+
+const enqueueSendJob = (contactId, messageId, source = 'send') => {
+  if (!contactId || !messageId) return
+
+  if (
+    processingState.contactId === contactId &&
+    processingState.messageId === messageId &&
+    activeAbortController.value
+  ) {
+    return
+  }
+
+  if (isMessageQueued(contactId, messageId)) {
+    return
+  }
+
+  const queue = ensureQueue(contactId)
+  queue.push({ messageId, source, createdAt: Date.now() })
+  processSendQueue(contactId)
+}
+
+const cancelActiveRequest = () => {
+  if (!activeAbortController.value) return
+
+  activeAbortController.value.abort()
+  if (processingState.contactId !== null) {
+    failQueuedJobs(processingState.contactId)
+  }
+}
+
+const retryLastMessage = () => {
+  if (!canRetryAi.value || !activeChat.value || !failedUserMessage.value) return
+
+  chatStore.updateMessageStatus(activeChat.value.id, failedUserMessage.value.id, 'sending')
+  aiErrorMessage.value = ''
+  enqueueSendJob(activeChat.value.id, failedUserMessage.value.id, 'retry')
 }
 
 const generateSmartReplies = async () => {
-  if (!activeChat.value || loadingAI.value) return
+  if (!activeChat.value || loadingAI.value || activeAbortController.value) return
 
   loadingSuggestions.value = true
-  const history = chatHistory.value[activeChat.value.id] || []
-  const recentHistory = history.slice(-5)
+  const recentHistory = toAiMessages(activeChat.value.id).slice(-5)
 
   const promptMsg = {
     role: 'user',
@@ -146,27 +303,29 @@ const generateSmartReplies = async () => {
   }
 }
 
-const sendMessage = async () => {
-  if (!inputMessage.value.trim() || !activeChat.value || loadingAI.value) return
+const sendMessage = () => {
+  if (!inputMessage.value.trim() || !activeChat.value) return
 
   const chatId = activeChat.value.id
-  ensureChatHistory(chatId)
+  const payload = inputMessage.value.trim()
 
-  chatHistory.value[chatId].push({
+  const pendingUserMessage = chatStore.appendMessage(chatId, {
     role: 'user',
-    content: inputMessage.value,
+    content: payload,
+    status: 'sending',
   })
 
   inputMessage.value = ''
+  chatStore.setConversationDraft(chatId, '')
   showSuggestions.value = false
   aiErrorMessage.value = ''
-  scrollToBottom()
 
-  await generateAIResponse(chatId)
+  enqueueSendJob(chatId, pendingUserMessage.id, 'send')
+  scrollToBottom()
 }
 
-const sendCurrentLocation = async () => {
-  if (!activeChat.value || loadingAI.value) return
+const sendCurrentLocation = () => {
+  if (!activeChat.value) return
 
   const locationText = currentLocationText.value
   if (!locationText || locationText.includes('未设置')) {
@@ -175,19 +334,19 @@ const sendCurrentLocation = async () => {
   }
 
   const chatId = activeChat.value.id
-  ensureChatHistory(chatId)
-
   const payload = `📍 位置共享\n${locationText}`
-  chatHistory.value[chatId].push({
+
+  const pendingUserMessage = chatStore.appendMessage(chatId, {
     role: 'user',
     content: payload,
+    status: 'sending',
   })
 
   showSuggestions.value = false
   aiErrorMessage.value = ''
-  scrollToBottom()
 
-  await generateAIResponse(chatId)
+  enqueueSendJob(chatId, pendingUserMessage.id, 'location')
+  scrollToBottom()
 }
 
 const useSuggestion = (text) => {
@@ -196,14 +355,78 @@ const useSuggestion = (text) => {
 
 const renderMarkdown = (text) => marked.parse(text || '')
 
-watch(activeChatId, (id) => {
-  if (id) {
-    ensureChatHistory(id)
+const getConversationPreview = (contactId) => {
+  return chatStore.getConversationByContactId(contactId)
+}
+
+const formatConversationTime = (timestamp) => {
+  if (!timestamp) return '昨天'
+
+  const now = new Date()
+  const target = new Date(timestamp)
+
+  const isSameDay =
+    now.getFullYear() === target.getFullYear() &&
+    now.getMonth() === target.getMonth() &&
+    now.getDate() === target.getDate()
+
+  if (isSameDay) {
+    return target.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
-  suggestions.value = []
-  showSuggestions.value = false
-  aiErrorMessage.value = ''
-  scrollToBottom()
+
+  const dayDiff = Math.floor((now.getTime() - target.getTime()) / 86400000)
+  if (dayDiff <= 1) return '昨天'
+  return `${target.getMonth() + 1}/${target.getDate()}`
+}
+
+const contactPreviewText = (contactId) => {
+  const conversation = getConversationPreview(contactId)
+  if (conversation?.draft?.trim()) {
+    return `草稿: ${conversation.draft.trim()}`
+  }
+  return conversation?.lastMessage || '点击开始聊天'
+}
+
+const messageStatusText = (message) => {
+  if (message.role !== 'user') return ''
+  if (message.status === 'failed') return '发送失败'
+  if (message.status !== 'sending') return ''
+
+  if (activeChat.value && isMessageQueued(activeChat.value.id, message.id)) {
+    return '排队中...'
+  }
+  return '发送中...'
+}
+
+watch(
+  activeChatId,
+  (id) => {
+    if (id) {
+      chatStore.ensureConversationForContact(id)
+      chatStore.markConversationRead(id)
+      inputMessage.value = chatStore.getConversationByContactId(id).draft || ''
+    } else {
+      inputMessage.value = ''
+    }
+
+    suggestions.value = []
+    showSuggestions.value = false
+    aiErrorMessage.value = ''
+    scrollToBottom()
+  },
+  { immediate: true },
+)
+
+watch(inputMessage, (text) => {
+  if (!activeChat.value) return
+  chatStore.setConversationDraft(activeChat.value.id, text)
+})
+
+onBeforeUnmount(() => {
+  cancelActiveRequest()
 })
 </script>
 
@@ -236,7 +459,7 @@ watch(activeChatId, (id) => {
       </div>
 
       <div
-        v-for="contact in contacts"
+        v-for="contact in contactsForList"
         :key="contact.id"
         @click="enterChat(contact)"
         class="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer"
@@ -247,32 +470,50 @@ watch(activeChatId, (id) => {
             class="w-full h-full object-cover"
           />
         </div>
-        <div class="flex-1">
-          <div class="flex justify-between">
-            <span class="font-bold text-sm">{{ contact.name }}</span>
-            <span class="text-[10px] text-gray-400">昨天</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between items-center gap-2">
+            <span class="font-bold text-sm truncate">{{ contact.name }}</span>
+            <span class="text-[10px] text-gray-400 shrink-0">
+              {{ formatConversationTime(getConversationPreview(contact.id)?.lastMessageAt) }}
+            </span>
           </div>
-          <div class="text-xs text-gray-500 line-clamp-1 flex items-center gap-1">
+          <div
+            class="text-xs line-clamp-1 flex items-center gap-1"
+            :class="getConversationPreview(contact.id)?.draft?.trim() ? 'text-orange-500' : 'text-gray-500'"
+          >
             <span v-if="contact.isMain" class="bg-yellow-100 text-yellow-700 px-1 rounded text-[8px]">Main</span>
-            {{ contact.lastMessage || '点击开始聊天' }}
+            {{ contactPreviewText(contact.id) }}
           </div>
         </div>
+        <span
+          v-if="getConversationPreview(contact.id)?.unread"
+          class="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] inline-flex items-center justify-center"
+        >
+          {{ Math.min(getConversationPreview(contact.id)?.unread || 0, 99) }}
+        </span>
       </div>
     </div>
 
     <div v-if="activeChat" class="flex flex-col h-full chat-thread">
       <div class="pt-12 pb-2 px-3 chat-thread-header backdrop-blur flex items-center justify-between z-10 shadow-sm">
-        <button @click="leaveChat" class="chat-ink px-2 flex items-center gap-1">
+        <button @click="leaveChat" class="chat-ink px-2 flex items-center gap-1 w-16">
           <i class="fas fa-chevron-left"></i> 返回
         </button>
-        <span class="font-bold text-sm">{{ activeChat.name }}</span>
-        <button class="chat-ink px-2"><i class="fas fa-bars"></i></button>
+        <div class="flex-1 text-center min-w-0">
+          <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
+          <p v-if="loadingAI || activeQueueSize" class="text-[10px] text-gray-500">
+            <span v-if="loadingAI">发送中</span>
+            <span v-if="loadingAI && activeQueueSize"> · </span>
+            <span v-if="activeQueueSize">队列 {{ activeQueueSize }}</span>
+          </p>
+        </div>
+        <button class="chat-ink px-2 w-16 text-right"><i class="fas fa-bars"></i></button>
       </div>
 
       <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" ref="chatContainer">
         <div
-          v-for="(msg, idx) in activeMessages"
-          :key="idx"
+          v-for="msg in activeMessages"
+          :key="msg.id"
           class="flex w-full"
           :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
         >
@@ -280,11 +521,20 @@ watch(activeChatId, (id) => {
             <img :src="activeChat.avatar" class="w-full h-full object-cover" />
           </div>
 
-          <div
-            class="max-w-[70%] px-3 py-2 text-sm rounded-xl shadow-sm relative markdown-body"
-            :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'"
-            v-html="renderMarkdown(msg.content)"
-          ></div>
+          <div class="max-w-[70%]">
+            <div
+              class="px-3 py-2 text-sm rounded-xl shadow-sm relative markdown-body"
+              :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'"
+              v-html="renderMarkdown(msg.content)"
+            ></div>
+            <p
+              v-if="messageStatusText(msg)"
+              class="text-[10px] text-right mt-1"
+              :class="msg.status === 'failed' ? 'text-red-500' : 'text-gray-400'"
+            >
+              {{ messageStatusText(msg) }}
+            </p>
+          </div>
         </div>
 
         <div v-if="loadingAI" class="flex w-full justify-start">
@@ -314,13 +564,22 @@ watch(activeChatId, (id) => {
           class="absolute -top-14 left-3 right-3 text-[11px] rounded-lg border border-red-200 bg-red-50 text-red-700 px-2.5 py-1.5 flex items-center justify-between gap-2"
         >
           <span class="line-clamp-1">{{ aiErrorMessage }}</span>
-          <button
-            v-if="canRetryAi"
-            @click="retryLastMessage"
-            class="shrink-0 px-2 py-1 rounded border border-red-300 hover:bg-red-100"
-          >
-            重试
-          </button>
+          <div class="shrink-0 flex items-center gap-1">
+            <button
+              v-if="canRetryAi"
+              @click="retryLastMessage"
+              class="px-2 py-1 rounded border border-red-300 hover:bg-red-100"
+            >
+              重试
+            </button>
+            <button
+              v-if="canCancelAi"
+              @click="cancelActiveRequest"
+              class="px-2 py-1 rounded border border-red-300 hover:bg-red-100"
+            >
+              取消
+            </button>
+          </div>
         </div>
 
         <button
@@ -333,7 +592,8 @@ watch(activeChatId, (id) => {
         <button
           @click="generateSmartReplies"
           class="w-8 h-8 rounded-full flex items-center justify-center transition"
-          :class="loadingSuggestions ? 'bg-gray-100 text-gray-400' : 'chat-magic shadow-md animate-pulse'"
+          :class="loadingSuggestions || loadingAI ? 'bg-gray-100 text-gray-400' : 'chat-magic shadow-md animate-pulse'"
+          :disabled="loadingSuggestions || loadingAI"
         >
           <i v-if="loadingSuggestions" class="fas fa-spinner fa-spin"></i>
           <i v-else class="fas fa-wand-magic-sparkles text-xs"></i>
@@ -346,6 +606,15 @@ watch(activeChatId, (id) => {
           class="flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
           placeholder="发送消息..."
         />
+
+        <button
+          v-if="canCancelAi"
+          @click="cancelActiveRequest"
+          class="h-8 px-3 rounded-full text-xs border border-gray-300 text-gray-600"
+        >
+          取消
+        </button>
+
         <button @click="sendMessage" class="w-8 h-8 chat-send rounded-full flex items-center justify-center">
           <i class="fas fa-paper-plane text-xs"></i>
         </button>

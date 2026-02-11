@@ -85,6 +85,34 @@
 - 防误触：退出编辑后短暂禁止打开 App（约 220ms）
 - 美化新增开关：顶部状态栏开关 + 触感反馈（振动）开关
 
+### 2.11 Chat 数据模型升级（本轮新增）
+
+- 聊天存储升级为会话/消息分离结构：
+  - `conversations`（会话元信息：`draft` / `unread` / `lastMessage` / `updatedAt` / `pinned`）
+  - `messagesByConversation`（消息列表：`messageId` / `createdAt` / `status`）
+- 消息状态接入：`sending` / `sent` / `failed`
+- 聊天输入框接入会话草稿（切换会话不丢输入）
+- 会话未读计数与进入会话自动已读
+- 列表排序升级：优先置顶，再按会话更新时间
+- 兼容迁移：
+  - 旧 `chatHistory` 自动迁移到新模型
+  - 保留 `chatHistory` 只读快照导出（兼容旧备份）
+- 测试新增：`tests/chat-store-model.test.js`
+
+### 2.12 Chat 发送管线统一（本轮新增）
+
+- 发送队列：同一会话消息按队列顺序处理，避免并发请求打乱上下文
+- 消息状态与队列联动：
+  - 队列中显示“排队中...”
+  - 处理中显示“发送中...”
+  - 失败显示“发送失败”
+- 失败策略：当前消息失败时自动中止后续队列并标记失败，避免脏状态扩散
+- 重试策略：失败消息可直接重试，进入同一发送管线
+- 取消策略：支持取消当前 AI 请求（AbortController），并清空待发送队列
+- 未读联动：非当前会话收到 AI 回复时自动增加 `unread`
+- 错误码扩展：新增 `CANCELED` 并完成 UI 映射
+- 测试更新：`tests/ai-error-format.test.js` 补充取消场景
+
 ## 3. 当前默认 Home 结构
 
 ### 第一屏
@@ -120,7 +148,7 @@
 - Settings（含 Profile/WorldBook）：88%
 - Network：82%
 - Appearance：80%
-- Chat：76%
+- Chat：88%
 - Map：66%
 - Contacts：60%
 - Files / More：70%

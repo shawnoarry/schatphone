@@ -12,7 +12,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 
 const { settings, user } = storeToRefs(systemStore)
-const { contacts, chatHistory } = storeToRefs(chatStore)
+const { contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
 const { addresses, currentLocation } = storeToRefs(mapStore)
 
 const activeMenu = ref('')
@@ -65,6 +65,8 @@ const exportData = () => {
     user: user.value,
     contacts: contacts.value,
     chatHistory: chatHistory.value,
+    conversations: conversations.value,
+    messagesByConversation: messagesByConversation.value,
     map: {
       addresses: addresses.value,
       currentLocation: currentLocation.value,

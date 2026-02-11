@@ -24,16 +24,32 @@ const classifyHttpCode = (status) => {
 }
 
 const fetchWithTimeout = async (url, options = {}, timeoutMs = MODELS_REQUEST_TIMEOUT_MS) => {
+  const externalSignal = options?.signal
   const controller = new AbortController()
   const timerId = setTimeout(() => controller.abort(), timeoutMs)
+  let externalAbortListener = null
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort()
+    } else {
+      externalAbortListener = () => controller.abort()
+      externalSignal.addEventListener('abort', externalAbortListener, { once: true })
+    }
+  }
 
   try {
+    const mergedOptions = { ...options }
+    delete mergedOptions.signal
     return await fetch(url, {
-      ...options,
+      ...mergedOptions,
       signal: controller.signal,
     })
   } finally {
     clearTimeout(timerId)
+    if (externalSignal && externalAbortListener) {
+      externalSignal.removeEventListener('abort', externalAbortListener)
+    }
   }
 }
 
@@ -53,6 +69,7 @@ export const formatApiErrorForUi = (error, fallbackMessage = '请求失败，请
   if (code === 'NOT_FOUND') return '接口地址不存在（404），请检查 URL 路径。'
   if (code === 'RATE_LIMIT') return '请求过于频繁（429），请稍后重试。'
   if (code === 'SERVER') return `服务端异常（${status || '5xx'}），请稍后再试。`
+  if (code === 'CANCELED') return '请求已取消。'
   if (code === 'TIMEOUT') return '请求超时，请检查网络或网关响应速度。'
   if (code === 'NETWORK') return '网络或跨域错误（可能是 CORS），请检查网关设置。'
   if (code === 'PARSE_ERROR') return '响应解析失败，请确认返回格式是否为 JSON。'
@@ -225,7 +242,7 @@ export async function fetchAvailableModels({ settings }) {
   }
 }
 
-export async function callAI({ messages, systemPrompt, settings }) {
+export async function callAI({ messages, systemPrompt, settings, signal }) {
   const key = settings.api.key?.trim()
   if (!key) {
     throw createApiError('No API Key', 'NO_API_KEY')
@@ -258,6 +275,7 @@ export async function callAI({ messages, systemPrompt, settings }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          signal,
         },
         CHAT_REQUEST_TIMEOUT_MS,
       )
@@ -298,6 +316,7 @@ export async function callAI({ messages, systemPrompt, settings }) {
           Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify(payload),
+        signal,
       },
       CHAT_REQUEST_TIMEOUT_MS,
     )
@@ -324,6 +343,9 @@ export async function callAI({ messages, systemPrompt, settings }) {
       throw createApiError('Invalid URL', 'INVALID_URL')
     }
     if (isAbortError(error)) {
+      if (signal?.aborted) {
+        throw createApiError('Request canceled', 'CANCELED')
+      }
       throw createApiError('Request timeout', 'TIMEOUT')
     }
     if (error instanceof TypeError) {

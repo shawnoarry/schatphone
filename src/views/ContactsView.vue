@@ -22,8 +22,7 @@ const goHome = () => {
 
 const saveNewContact = () => {
   if (!newContact.name.trim()) return
-  contacts.value.push({
-    id: Date.now(),
+  chatStore.addContact({
     name: newContact.name,
     role: newContact.role,
     isMain: newContact.isMain,
