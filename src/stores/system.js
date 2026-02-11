@@ -32,6 +32,7 @@ const DEFAULT_WIDGET_PAGES = [
     'app_calendar',
     'app_files',
     'app_stock',
+    'app_more',
   ],
   [],
   [],

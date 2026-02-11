@@ -13,6 +13,16 @@ describe('formatApiErrorForUi', () => {
     expect(message).toContain('URL')
   })
 
+  it('maps timeout errors', () => {
+    const message = formatApiErrorForUi({ code: 'TIMEOUT' })
+    expect(message).toContain('超时')
+  })
+
+  it('maps network errors', () => {
+    const message = formatApiErrorForUi({ code: 'NETWORK' })
+    expect(message).toContain('网络')
+  })
+
   it('falls back to given message', () => {
     const message = formatApiErrorForUi({}, 'fallback message')
     expect(message).toBe('fallback message')

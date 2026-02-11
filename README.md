@@ -15,7 +15,9 @@ SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建�
 - 支持自定义 Widget（尺寸 `1x1/2x1/2x2/4x2/4x3`），支持代码粘贴与 JSON 导入
 - Settings 已重构为 iOS 风格分层菜单；用户信息与世界书拆分为独立页面
 - Network 独立入口：URL + Key 自动识别 API 类型并拉取模型；支持预设保存与切换
+- Chat 支持错误分级提示与一键重试
 - Appearance 独立入口：二级菜单（主题美化/字体/Widget），支持模板复制与 TXT 导出
+- Files / More 已从占位入口升级为可用 MVP 页面
 - 关键输入页均有显式“保存”按钮，同时保留自动持久化
 - GitHub Actions 已接入 CI 与 GitHub Pages 自动部署
 
@@ -61,6 +63,8 @@ npm run test
 - `/calendar`
 - `/wallet`
 - `/stock`
+- `/files`
+- `/more`
 
 ## 文档索引
 

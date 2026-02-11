@@ -48,6 +48,7 @@ SchatPhone 采用“移动端交互壳 + 可配置能力中心”架构，优先
   - 基于 URL 自动识别 API 类型
   - 拉取模型列表（OpenAI-Compatible / Gemini）
   - 统一聊天调用入口
+  - 统一错误分级（URL/鉴权/404/429/5xx/超时/网络）
 - `src/lib/persistence.js`
   - localStorage 读写与版本封装
 
@@ -65,6 +66,8 @@ SchatPhone 采用“移动端交互壳 + 可配置能力中心”架构，优先
 - Network：`src/views/NetworkView.vue`
 - Appearance：`src/views/AppearanceView.vue`
 - Chat：`src/views/ChatView.vue`
+- Files：`src/views/FilesView.vue`
+- More：`src/views/MoreView.vue`
 
 ## 3. Home 布局系统
 
@@ -72,7 +75,7 @@ SchatPhone 采用“移动端交互壳 + 可配置能力中心”架构，优先
 
 默认布局（5 屏，后 3 屏初始为空）：
 - 第一屏：`weather`、`calendar`、`music`、`app_network`、`app_chat`、`app_wallet`、`app_themes`
-- 第二屏：`system`、`quick_heart`、`quick_disc`、`app_phone`、`app_map`、`app_calendar`、`app_files`、`app_stock`
+- 第二屏：`system`、`quick_heart`、`quick_disc`、`app_phone`、`app_map`、`app_calendar`、`app_files`、`app_stock`、`app_more`
 - 第三至第五屏：空
 
 交互能力：

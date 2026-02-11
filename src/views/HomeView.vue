@@ -71,8 +71,8 @@ const widgetRegistry = {
     route: '/contacts',
   },
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
-  app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool' },
-  app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default' },
+  app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
+  app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
 }
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])

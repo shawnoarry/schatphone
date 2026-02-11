@@ -1,8 +1,9 @@
-const OPENAI_DEFAULT_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
+﻿const OPENAI_DEFAULT_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini'
 const GEMINI_DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash'
 const MODELS_REQUEST_TIMEOUT_MS = 12000
+const CHAT_REQUEST_TIMEOUT_MS = 30000
 
 const normalizeUrl = (url) => (url || '').trim()
 const isAbortError = (error) => error?.name === 'AbortError'
@@ -227,70 +228,107 @@ export async function fetchAvailableModels({ settings }) {
 export async function callAI({ messages, systemPrompt, settings }) {
   const key = settings.api.key?.trim()
   if (!key) {
-    alert('Please configure API Key in Settings > API.')
-    throw new Error('No API Key')
+    throw createApiError('No API Key', 'NO_API_KEY')
   }
 
   const apiKind = detectApiKindFromUrl(settings.api.url)
   settings.api.resolvedKind = apiKind
 
-  if (apiKind === 'gemini') {
-    const url = `${toGeminiGenerateUrl(settings.api.url, settings.api.model)}?key=${encodeURIComponent(key)}`
+  try {
+    if (apiKind === 'gemini') {
+      const url = `${toGeminiGenerateUrl(settings.api.url, settings.api.model)}?key=${encodeURIComponent(key)}`
 
-    const geminiContents = messages.map((message) => ({
-      role: message.role === 'user' ? 'user' : 'model',
-      parts: [{ text: message.content }],
-    }))
+      const geminiContents = messages.map((message) => ({
+        role: message.role === 'user' ? 'user' : 'model',
+        parts: [{ text: message.content }],
+      }))
+
+      const payload = {
+        contents: geminiContents,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 500,
+        },
+      }
+
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        CHAT_REQUEST_TIMEOUT_MS,
+      )
+
+      if (!response.ok) {
+        throw createApiError(
+          `Gemini API Request Failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw createApiError('Gemini API invalid JSON', 'PARSE_ERROR')
+      }
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    }
+
+    const url = toOpenAIChatUrl(settings.api.url)
+    const fullMessages = [{ role: 'system', content: systemPrompt }, ...messages]
 
     const payload = {
-      contents: geminiContents,
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      },
+      model: settings.api.model || OPENAI_DEFAULT_MODEL,
+      messages: fullMessages,
+      temperature: 0.7,
+      stream: false,
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const response = await fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify(payload),
+      },
+      CHAT_REQUEST_TIMEOUT_MS,
+    )
 
     if (!response.ok) {
-      throw new Error(`Gemini API Request Failed: ${response.status}`)
+      throw createApiError(
+        `API Request Failed: ${response.status}`,
+        classifyHttpCode(response.status),
+        { status: response.status },
+      )
     }
 
-    const data = await response.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    let data
+    try {
+      data = await response.json()
+    } catch {
+      throw createApiError('OpenAI API invalid JSON', 'PARSE_ERROR')
+    }
+    return data.choices?.[0]?.message?.content || ''
+  } catch (error) {
+    if (error?.code) throw error
+
+    if (error instanceof TypeError && error.message.includes('Invalid URL')) {
+      throw createApiError('Invalid URL', 'INVALID_URL')
+    }
+    if (isAbortError(error)) {
+      throw createApiError('Request timeout', 'TIMEOUT')
+    }
+    if (error instanceof TypeError) {
+      throw createApiError('Network error', 'NETWORK')
+    }
+    throw createApiError(error?.message || 'API Request Failed', 'UNKNOWN')
   }
-
-  const url = toOpenAIChatUrl(settings.api.url)
-
-  const fullMessages = [{ role: 'system', content: systemPrompt }, ...messages]
-
-  const payload = {
-    model: settings.api.model || OPENAI_DEFAULT_MODEL,
-    messages: fullMessages,
-    temperature: 0.7,
-    stream: false,
-  }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const errText = await response.text()
-    console.error('OpenAI API Error', errText)
-    throw new Error(`API Request Failed: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data.choices?.[0]?.message?.content || ''
 }

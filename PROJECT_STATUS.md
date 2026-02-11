@@ -55,7 +55,18 @@
 - 预设保存、切换、删除、清空
 - 模型拉取错误分级提示（URL/鉴权/404/限流/超时/网络-CORS/服务端）
 
-### 2.7 验证结果
+### 2.7 Chat 稳定性增强
+
+- 聊天主请求（callAI）接入错误分级（URL/鉴权/404/限流/超时/网络-CORS/服务端）
+- 聊天输入区新增失败提示与“重试”按钮
+
+### 2.8 Files / More MVP
+
+- `Files` 页面补齐最小可用能力：检索、收藏筛选、删除、新建便签
+- `More` 页面补齐模块聚合能力：快捷入口、实验开关、扩展建议
+- Home 中 `app_files` / `app_more` 已接入真实路由，不再弹“开发中”
+
+### 2.9 验证结果
 
 - `npm run lint`：通过
 - `npm run build`：通过
@@ -71,7 +82,7 @@
 ### 第二屏
 
 - Widget：`system`、`quick_heart`、`quick_disc`
-- App：`Phone`、`Map`、`Calendar`、`Files`、`Stock`
+- App：`Phone`、`Map`、`Calendar`、`Files`、`Stock`、`More`
 
 ### 第三至第五屏
 
@@ -99,6 +110,7 @@
 - Chat：76%
 - Map：66%
 - Contacts：60%
+- Files / More：70%
 - Phone/Calendar/Wallet/Stock：30%~45%
 
 ## 6. 待办计划（优先级）
@@ -111,10 +123,11 @@
 
 2. 网络错误分级反馈
 - 已补：模型拉取错误分级提示。
-- 待补：聊天主请求（callAI）的同级别分级提示和重试策略。
+- 已补：聊天主请求（callAI）的同级别分级提示和重试策略。
 
 3. 功能占位页补最小 MVP
-- `Files` / `More` 目前仍为占位交互，建议补最小可用页面。
+- 已补：`Files` / `More` 最小可用页面。
+- 待补：接入真实业务数据与模块权限控制。
 
 ### P1
 

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
@@ -6,7 +6,7 @@ import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
-import { callAI } from '../lib/ai'
+import { callAI, formatApiErrorForUi } from '../lib/ai'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +24,7 @@ const chatContainer = ref(null)
 const loadingSuggestions = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
+const aiErrorMessage = ref('')
 
 const activeChatId = computed(() => {
   const id = Number(route.params.id)
@@ -39,6 +40,8 @@ const activeMessages = computed(() => {
   if (!activeChat.value) return []
   return chatHistory.value[activeChat.value.id] || []
 })
+
+const canRetryAi = computed(() => Boolean(aiErrorMessage.value && activeChat.value && !loadingAI.value))
 
 const goHome = () => {
   router.push('/home')
@@ -67,26 +70,27 @@ const scrollToBottom = () => {
   })
 }
 
+const buildSystemPrompt = (contact) => `
+世界观: ${user.value.worldBook}
+用户: ${user.value.name}, ${user.value.bio}
+你的角色: ${contact.name} (${contact.role})
+角色设定: ${contact.bio || '无'}
+请保持角色一致，不要声明自己是 AI，回复尽量简短自然。`
+
 const generateAIResponse = async (contactId) => {
   const contact = contacts.value.find((item) => item.id === contactId)
   if (!contact) return
+
   const history = chatHistory.value[contactId] || []
-
-  const systemPrompt = `
-世界观: ${user.value.worldBook}
-用户(我): ${user.value.name}, ${user.value.bio}
-你的角色: 名字是 ${contact.name}, 职业是 ${contact.role}.
-你的详细人设: ${contact.bio || '无'}
-请完全沉浸在角色中回复我。不要说自己是AI。保持回复简短、口语化。
-  `
-
   const recentMsgs = history.slice(-10)
 
   try {
     loadingAI.value = true
+    aiErrorMessage.value = ''
+
     const replyText = await callAI({
       messages: recentMsgs,
-      systemPrompt,
+      systemPrompt: buildSystemPrompt(contact),
       settings: settings.value,
     })
 
@@ -98,17 +102,19 @@ const generateAIResponse = async (contactId) => {
     contact.lastMessage = replyText
     scrollToBottom()
   } catch (error) {
-    chatHistory.value[contactId].push({
-      role: 'assistant',
-      content: `[错误: ${error.message}]`,
-    })
+    aiErrorMessage.value = formatApiErrorForUi(error, '消息发送失败，请稍后重试。')
   } finally {
     loadingAI.value = false
   }
 }
 
+const retryLastMessage = async () => {
+  if (!canRetryAi.value || !activeChat.value) return
+  await generateAIResponse(activeChat.value.id)
+}
+
 const generateSmartReplies = async () => {
-  if (!activeChat.value) return
+  if (!activeChat.value || loadingAI.value) return
 
   loadingSuggestions.value = true
   const history = chatHistory.value[activeChat.value.id] || []
@@ -116,15 +122,16 @@ const generateSmartReplies = async () => {
 
   const promptMsg = {
     role: 'user',
-    content: '请根据以上对话，生成 3 个简短的回复选项。只返回纯 JSON 数组字符串，例如 ["好的", "没问题", "不去"]。',
+    content: '请基于以上对话，生成 3 个简短回复选项。只返回 JSON 数组字符串，例如 ["好的","没问题","稍后说"]。',
   }
 
   try {
     let text = await callAI({
       messages: [...recentHistory, promptMsg],
-      systemPrompt: '你是一个辅助助手，只输出 JSON。',
+      systemPrompt: '你是一个辅助工具，仅输出合法 JSON。',
       settings: settings.value,
     })
+
     text = text.replace(/```json/g, '').replace(/```/g, '').trim()
     const suggestionsArray = JSON.parse(text)
 
@@ -140,7 +147,7 @@ const generateSmartReplies = async () => {
 }
 
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() || !activeChat.value) return
+  if (!inputMessage.value.trim() || !activeChat.value || loadingAI.value) return
 
   const chatId = activeChat.value.id
   ensureChatHistory(chatId)
@@ -152,16 +159,17 @@ const sendMessage = async () => {
 
   inputMessage.value = ''
   showSuggestions.value = false
+  aiErrorMessage.value = ''
   scrollToBottom()
 
   await generateAIResponse(chatId)
 }
 
 const sendCurrentLocation = async () => {
-  if (!activeChat.value) return
+  if (!activeChat.value || loadingAI.value) return
 
   const locationText = currentLocationText.value
-  if (!locationText || locationText === '未设置当前位置') {
+  if (!locationText || locationText.includes('未设置')) {
     alert('请先在 Map 页面设置当前位置。')
     return
   }
@@ -176,6 +184,7 @@ const sendCurrentLocation = async () => {
   })
 
   showSuggestions.value = false
+  aiErrorMessage.value = ''
   scrollToBottom()
 
   await generateAIResponse(chatId)
@@ -193,6 +202,7 @@ watch(activeChatId, (id) => {
   }
   suggestions.value = []
   showSuggestions.value = false
+  aiErrorMessage.value = ''
   scrollToBottom()
 })
 </script>
@@ -276,6 +286,7 @@ watch(activeChatId, (id) => {
             v-html="renderMarkdown(msg.content)"
           ></div>
         </div>
+
         <div v-if="loadingAI" class="flex w-full justify-start">
           <div class="w-8 h-8 rounded-xl bg-gray-200 mr-2 overflow-hidden flex-shrink-0">
             <img :src="activeChat.avatar" class="w-full h-full object-cover" />
@@ -298,6 +309,20 @@ watch(activeChatId, (id) => {
       </div>
 
       <div class="p-3 chat-input flex items-center gap-2 border-t relative">
+        <div
+          v-if="aiErrorMessage"
+          class="absolute -top-14 left-3 right-3 text-[11px] rounded-lg border border-red-200 bg-red-50 text-red-700 px-2.5 py-1.5 flex items-center justify-between gap-2"
+        >
+          <span class="line-clamp-1">{{ aiErrorMessage }}</span>
+          <button
+            v-if="canRetryAi"
+            @click="retryLastMessage"
+            class="shrink-0 px-2 py-1 rounded border border-red-300 hover:bg-red-100"
+          >
+            重试
+          </button>
+        </div>
+
         <button
           @click="sendCurrentLocation"
           class="w-8 h-8 rounded-full flex items-center justify-center transition bg-cyan-500 text-white shadow-md"
@@ -308,11 +333,7 @@ watch(activeChatId, (id) => {
         <button
           @click="generateSmartReplies"
           class="w-8 h-8 rounded-full flex items-center justify-center transition"
-          :class="
-            loadingSuggestions
-              ? 'bg-gray-100 text-gray-400'
-              : 'chat-magic shadow-md animate-pulse'
-          "
+          :class="loadingSuggestions ? 'bg-gray-100 text-gray-400' : 'chat-magic shadow-md animate-pulse'"
         >
           <i v-if="loadingSuggestions" class="fas fa-spinner fa-spin"></i>
           <i v-else class="fas fa-wand-magic-sparkles text-xs"></i>

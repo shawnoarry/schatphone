@@ -14,6 +14,8 @@ import WalletView from '../views/WalletView.vue'
 import WorldBookView from '../views/WorldBookView.vue'
 import StockView from '../views/StockView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
+import FilesView from '../views/FilesView.vue'
+import MoreView from '../views/MoreView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -35,6 +37,8 @@ const router = createRouter({
     { path: '/worldbook', component: WorldBookView },
     { path: '/profile', component: UserProfileView },
     { path: '/stock', component: StockView },
+    { path: '/files', component: FilesView },
+    { path: '/more', component: MoreView },
   ],
 })
 

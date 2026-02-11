@@ -52,8 +52,9 @@
 ## F. 验收标准
 
 - 功能验收（看到什么算完成）：
-- 回归路径至少检查：`/home`、`/settings`、`/network`、`/appearance`、`/chat`
+- 回归路径至少检查：`/home`、`/settings`、`/network`、`/appearance`、`/chat`、`/files`、`/more`
 - 是否需要移动端手势验证（长按/拖拽/滑动）：是 / 否
+- 是否需要错误提示与重试验证（Network/Chat）：是 / 否
 
 ---
 
