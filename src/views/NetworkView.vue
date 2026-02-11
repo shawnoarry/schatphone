@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { detectApiKindFromUrl, fetchAvailableModels } from '../lib/ai'
+import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -174,7 +174,7 @@ const loadModels = async () => {
   } catch (error) {
     if (currentToken !== modelFetchToken) return
     modelOptions.value = []
-    modelsError.value = error?.message || 'Load models failed'
+    modelsError.value = formatApiErrorForUi(error, '模型拉取失败，请检查设置。')
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
