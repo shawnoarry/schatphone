@@ -6,6 +6,9 @@ import './style.css'
 import '@fortawesome/fontawesome-free/css/all.css'
 
 if (typeof window !== 'undefined') {
+  const lockViewportContent =
+    'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content'
+
   const preventGestureZoom = (event) => {
     event.preventDefault()
   }
@@ -26,6 +29,18 @@ if (typeof window !== 'undefined') {
     },
     { passive: false },
   )
+
+  const viewportMeta = document.querySelector('meta[name="viewport"]')
+  if (viewportMeta) {
+    viewportMeta.setAttribute('content', lockViewportContent)
+    document.addEventListener(
+      'focusin',
+      () => {
+        viewportMeta.setAttribute('content', lockViewportContent)
+      },
+      { passive: true },
+    )
+  }
 }
 
 const app = createApp(App)

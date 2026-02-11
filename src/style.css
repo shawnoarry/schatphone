@@ -11,7 +11,7 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-dark-bg: rgba(0, 0, 0, 0.5);
   --glass-dark-border: rgba(255, 255, 255, 0.05);
-  --home-bg: linear-gradient(180deg, #2f1b58 0%, #1c1038 45%, #0a0c1d 100%);
+  --home-bg: linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
   --home-overlay-a: radial-gradient(circle at 85% 15%, rgba(255, 161, 219, 0.35), transparent 45%);
   --home-overlay-b: radial-gradient(circle at 10% 90%, rgba(149, 142, 255, 0.3), transparent 48%);
   --home-text-main: #fff;
@@ -117,7 +117,7 @@
 
 body {
   font-family: var(--app-font-family);
-  background-color: var(--app-bg);
+  background-color: #f2f2f7;
   margin: 0;
   overflow: hidden;
 }
@@ -131,6 +131,12 @@ body,
   overscroll-behavior: none;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -323,7 +329,7 @@ body,
 .home-page {
   min-width: 100%;
   height: 100%;
-  padding-top: calc(58px + env(safe-area-inset-top));
+  padding-top: calc(40px + env(safe-area-inset-top));
   padding-right: 18px;
   padding-bottom: 16px;
   padding-left: 18px;
@@ -332,7 +338,7 @@ body,
 }
 
 .app-shell[data-statusbar='off'] .home-page {
-  padding-top: calc(44px + env(safe-area-inset-top));
+  padding-top: calc(28px + env(safe-area-inset-top));
 }
 
 .home-headline {
@@ -630,14 +636,6 @@ body,
   margin-top: 7px;
   font-size: 11px;
   color: var(--home-text-sub);
-}
-
-@media (max-width: 768px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
