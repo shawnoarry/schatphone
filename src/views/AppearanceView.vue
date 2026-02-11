@@ -16,6 +16,14 @@ const FONT_PRESETS = [
   { id: 'pingfang', label: 'PingFang', value: '"PingFang SC", "Noto Sans SC", sans-serif' },
   { id: 'serif', label: '衬线 Serif', value: '"Noto Serif SC", serif' },
 ]
+const BUILT_IN_WIDGET_OPTIONS = [
+  { id: 'weather', label: '天气' },
+  { id: 'calendar', label: '日历' },
+  { id: 'music', label: '音乐' },
+  { id: 'system', label: '系统状态' },
+  { id: 'quick_heart', label: '快捷爱心' },
+  { id: 'quick_disc', label: '快捷唱片' },
+]
 
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
@@ -64,12 +72,24 @@ const editingWidgetId = ref('')
 
 const importJsonText = ref('')
 const importTargetPage = ref(0)
+const builtInWidgetPage = ref(0)
 const customFontStackInput = ref('')
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const pageOptions = computed(() =>
   Array.from({ length: Math.max(homeWidgetPages.value.length, 5) }, (_, index) => index),
+)
+const builtInWidgetStates = computed(() =>
+  BUILT_IN_WIDGET_OPTIONS.map((item) => {
+    const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(item.id))
+    return {
+      ...item,
+      pageIndex,
+      visible: pageIndex >= 0,
+      pageLabel: pageIndex >= 0 ? `第${pageIndex + 1}屏` : '已隐藏',
+    }
+  }),
 )
 
 const pageTitle = computed(() => {
@@ -263,6 +283,15 @@ const importCustomWidgets = () => {
   }
 
   importJsonText.value = ''
+  triggerSaved()
+}
+
+const restoreBuiltInWidget = (tileId) => {
+  const ok = systemStore.placeBuiltInWidgetTile(tileId, builtInWidgetPage.value)
+  if (!ok) {
+    alert('恢复失败：组件 ID 无效。')
+    return
+  }
   triggerSaved()
 }
 
@@ -460,6 +489,40 @@ onBeforeUnmount(() => {
           >
             导出 TXT
           </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-bold">内置 Widget 恢复</p>
+          <span class="text-[11px] text-gray-500">可单项加回，不用整屏重置</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <label class="text-xs text-gray-500">放置到</label>
+          <select v-model.number="builtInWidgetPage" class="border rounded-md px-2 py-1.5 text-xs outline-none bg-white">
+            <option v-for="pageIndex in pageOptions" :key="`builtin-${pageIndex}`" :value="pageIndex">
+              第{{ pageIndex + 1 }}屏
+            </option>
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <div
+            v-for="widget in builtInWidgetStates"
+            :key="widget.id"
+            class="border border-gray-200 rounded-lg p-2.5 flex items-center gap-2"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold">{{ widget.label }}</p>
+              <p class="text-[11px] text-gray-500">{{ widget.pageLabel }}</p>
+            </div>
+            <button
+              @click="restoreBuiltInWidget(widget.id)"
+              class="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
+            >
+              {{ widget.visible ? `移动到第${builtInWidgetPage + 1}屏` : `加回到第${builtInWidgetPage + 1}屏` }}
+            </button>
+          </div>
         </div>
       </div>
 

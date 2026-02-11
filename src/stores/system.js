@@ -66,6 +66,9 @@ const CORE_HOME_TILE_IDS = [
   'app_files',
   'app_more',
 ]
+const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
+  (tileId) => typeof tileId === 'string' && !tileId.startsWith('app_'),
+)
 
 const MIN_HOME_PAGES = 5
 
@@ -374,6 +377,23 @@ export const useSystemStore = defineStore('system', () => {
     return count
   }
 
+  const placeBuiltInWidgetTile = (tileId, pageIndex = 0) => {
+    if (!BUILT_IN_WIDGET_TILE_IDS.includes(tileId)) return false
+
+    const nextPages = settings.appearance.homeWidgetPages.map((page) =>
+      page.filter((itemId) => itemId !== tileId),
+    )
+
+    const targetPage = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    while (nextPages.length <= targetPage) {
+      nextPages.push([])
+    }
+
+    nextPages[targetPage].push(tileId)
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    return true
+  }
+
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
       version: SYSTEM_STORAGE_VERSION,
@@ -484,6 +504,7 @@ export const useSystemStore = defineStore('system', () => {
     removeCustomWidget,
     placeCustomWidget,
     importCustomWidgets,
+    placeBuiltInWidgetTile,
     saveNow,
   }
 })
