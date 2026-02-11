@@ -152,6 +152,17 @@ const saveAppearance = () => {
   triggerSaved()
 }
 
+const toggleStatusBar = () => {
+  settings.value.appearance.showStatusBar = settings.value.appearance.showStatusBar !== false ? false : true
+  triggerSaved()
+}
+
+const toggleHapticFeedback = () => {
+  settings.value.appearance.hapticFeedbackEnabled =
+    settings.value.appearance.hapticFeedbackEnabled !== false ? false : true
+  triggerSaved()
+}
+
 const setFontPreset = (value) => {
   systemStore.setCustomVar(FONT_VAR_NAME, value)
   customFontStackInput.value = value
@@ -387,6 +398,46 @@ onBeforeUnmount(() => {
           class="w-full border-b border-gray-200 py-1 outline-none text-sm"
           placeholder="https://..."
         />
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold">顶部状态栏</p>
+            <p class="text-[11px] text-gray-500">显示时间与信号图标</p>
+          </div>
+          <button
+            type="button"
+            class="relative w-12 h-7 rounded-full transition"
+            :class="settings.appearance.showStatusBar !== false ? 'bg-blue-500' : 'bg-gray-300'"
+            @click="toggleStatusBar"
+          >
+            <span
+              class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
+              :class="settings.appearance.showStatusBar !== false ? 'left-6' : 'left-1'"
+            ></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold">触感反馈（振动）</p>
+            <p class="text-[11px] text-gray-500">拖拽落位与点击时短震动（设备支持时）</p>
+          </div>
+          <button
+            type="button"
+            class="relative w-12 h-7 rounded-full transition"
+            :class="settings.appearance.hapticFeedbackEnabled !== false ? 'bg-blue-500' : 'bg-gray-300'"
+            @click="toggleHapticFeedback"
+          >
+            <span
+              class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
+              :class="settings.appearance.hapticFeedbackEnabled !== false ? 'left-6' : 'left-1'"
+            ></span>
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">

@@ -198,6 +198,8 @@ export const useSystemStore = defineStore('system', () => {
     appearance: {
       currentTheme: 'y2k',
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
+      showStatusBar: true,
+      hapticFeedbackEnabled: true,
       customCss: '',
       customVars: {},
       homeWidgetPages: cloneDefaultWidgetPages(),
@@ -420,6 +422,12 @@ export const useSystemStore = defineStore('system', () => {
       }
       if (typeof appearance.wallpaper === 'string') {
         settings.appearance.wallpaper = appearance.wallpaper
+      }
+      if (typeof appearance.showStatusBar === 'boolean') {
+        settings.appearance.showStatusBar = appearance.showStatusBar
+      }
+      if (typeof appearance.hapticFeedbackEnabled === 'boolean') {
+        settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled
       }
       if (typeof appearance.customCss === 'string') {
         settings.appearance.customCss = appearance.customCss

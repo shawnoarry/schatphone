@@ -127,6 +127,8 @@ body,
 #app {
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -140,14 +142,22 @@ body,
 
 .screen {
   width: 100vw;
-  height: 100dvh;
-  min-height: 100vh;
+  height: 100svh;
+  min-height: 100svh;
   border-radius: 0;
   overflow: hidden;
   position: relative;
   background-size: cover;
   background-position: center;
   transition: background-image 0.5s ease;
+  overscroll-behavior: none;
+}
+
+@supports (height: 100dvh) {
+  .screen {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
 }
 
 .notch {
@@ -289,6 +299,8 @@ body,
   height: 100%;
   color: var(--home-text-main);
   overflow: hidden;
+  touch-action: pan-x;
+  overscroll-behavior: none;
 }
 
 .home-shell::before,
@@ -326,7 +338,8 @@ body,
   padding-right: 18px;
   padding-bottom: 16px;
   padding-left: 18px;
-  overflow-y: auto;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .home-headline {
@@ -388,6 +401,8 @@ body,
   background: var(--home-widget-bg);
   box-shadow: var(--home-widget-shadow);
   backdrop-filter: blur(10px);
+  transition: transform 120ms ease, filter 120ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .home-widget-topline {
@@ -518,6 +533,7 @@ body,
   cursor: pointer;
   color: inherit;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .home-app-icon {
@@ -534,6 +550,12 @@ body,
 
 .home-app-tile:active .home-app-icon {
   transform: scale(0.92);
+}
+
+.home-tile:active .home-widget-card,
+.home-tile:active .home-custom-widget-card {
+  transform: scale(0.98);
+  filter: brightness(1.06);
 }
 
 .home-app-label {
@@ -608,6 +630,7 @@ body,
   font-size: 21px;
   cursor: pointer;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .home-theme-hint {

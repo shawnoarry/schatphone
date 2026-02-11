@@ -16,6 +16,7 @@ const currentTime = ref('')
 const currentDate = ref('')
 const currentWallpaper = computed(() => settings.value.appearance.wallpaper)
 const customVarStyle = computed(() => settings.value.appearance.customVars || {})
+const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 
 let timerId = null
 let customCssStyleEl = null
@@ -87,6 +88,7 @@ const goHome = () => {
   <div class="app-shell" :data-theme="settings.appearance.currentTheme" :style="customVarStyle">
     <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
       <div
+        v-if="showStatusBar"
         class="absolute top-0 w-full h-8 px-6 flex justify-between items-center text-xs font-medium z-40 select-none status-fg"
       >
         <span>{{ currentTime }}</span>
@@ -100,9 +102,7 @@ const goHome = () => {
       <div class="notch"></div>
 
       <RouterView v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
-        </transition>
+        <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
       </RouterView>
 
       <div class="home-indicator" @click="goHome"></div>
