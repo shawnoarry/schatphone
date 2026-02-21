@@ -6,6 +6,7 @@ const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
 const VALID_MESSAGE_ROLES = new Set(['user', 'assistant', 'system'])
 const VALID_MESSAGE_STATUS = new Set(['sending', 'sent', 'failed'])
+const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
 
 const DEFAULT_CONTACTS = [
   {
@@ -47,13 +48,16 @@ const resetReactiveObject = (obj) => {
 const normalizeContact = (rawContact, fallbackIndex = 0) => {
   const parsedId = Number(rawContact?.id)
   const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
+  const kind = VALID_CONTACT_KINDS.has(rawContact?.kind) ? rawContact.kind : 'role'
   return {
     id,
     name: typeof rawContact?.name === 'string' && rawContact.name.trim() ? rawContact.name.trim() : `联系人 ${id}`,
+    kind,
     role: typeof rawContact?.role === 'string' ? rawContact.role : '',
     isMain: Boolean(rawContact?.isMain),
     avatar: typeof rawContact?.avatar === 'string' ? rawContact.avatar : '',
     bio: typeof rawContact?.bio === 'string' ? rawContact.bio : '',
+    serviceTemplate: typeof rawContact?.serviceTemplate === 'string' ? rawContact.serviceTemplate : '',
     lastMessage: typeof rawContact?.lastMessage === 'string' ? rawContact.lastMessage : '',
   }
 }
@@ -246,6 +250,49 @@ export const useChatStore = defineStore('chat', () => {
     return nextContact
   }
 
+  const updateContact = (contactId, updates = {}) => {
+    const target = getContactById(contactId)
+    if (!target || !updates || typeof updates !== 'object') return false
+
+    if (typeof updates.name === 'string' && updates.name.trim()) {
+      target.name = updates.name.trim()
+    }
+    if (VALID_CONTACT_KINDS.has(updates.kind)) {
+      target.kind = updates.kind
+    }
+    if (typeof updates.role === 'string') {
+      target.role = updates.role
+    }
+    if (typeof updates.avatar === 'string') {
+      target.avatar = updates.avatar
+    }
+    if (typeof updates.bio === 'string') {
+      target.bio = updates.bio
+    }
+    if (typeof updates.serviceTemplate === 'string') {
+      target.serviceTemplate = updates.serviceTemplate
+    }
+    if (typeof updates.isMain === 'boolean') {
+      target.isMain = updates.isMain
+    }
+
+    syncConversationSummary(contactId)
+    return true
+  }
+
+  const removeContact = (contactId) => {
+    const numericId = Number(contactId)
+    if (!Number.isFinite(numericId)) return false
+    const index = contacts.findIndex((item) => Number(item.id) === numericId)
+    if (index < 0) return false
+
+    contacts.splice(index, 1)
+    const key = conversationKeyForContact(numericId)
+    delete conversations[key]
+    delete messagesByConversation[key]
+    return true
+  }
+
   const toLegacyChatHistory = () => {
     const output = {}
     contacts.forEach((contact) => {
@@ -385,6 +432,8 @@ export const useChatStore = defineStore('chat', () => {
     updateMessageStatus,
     updateMessageContent,
     addContact,
+    updateContact,
+    removeContact,
     saveNow,
   }
 })

@@ -46,4 +46,26 @@ describe('chat store model', () => {
     expect(conversation.unread).toBe(0)
     expect(target?.status).toBe('sent')
   })
+
+  test('supports contact kind update and remove', () => {
+    const store = useChatStore()
+    const created = store.addContact({
+      name: 'Service Bot',
+      kind: 'service',
+      role: '服务号',
+      serviceTemplate: '订单通知模板',
+    })
+
+    expect(created.kind).toBe('service')
+    expect(created.serviceTemplate).toBe('订单通知模板')
+
+    store.updateContact(created.id, { kind: 'official', serviceTemplate: '公告模板' })
+    const updated = store.contacts.find((item) => item.id === created.id)
+    expect(updated?.kind).toBe('official')
+    expect(updated?.serviceTemplate).toBe('公告模板')
+
+    const removed = store.removeContact(created.id)
+    expect(removed).toBe(true)
+    expect(store.contacts.some((item) => item.id === created.id)).toBe(false)
+  })
 })

@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
+import ChatDirectoryView from '../views/ChatDirectoryView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import AppearanceView from '../views/AppearanceView.vue'
 import NetworkView from '../views/NetworkView.vue'
@@ -27,6 +28,7 @@ const router = createRouter({
     { path: '/appearance', component: AppearanceView },
     { path: '/network', component: NetworkView },
     { path: '/chat', component: ChatView },
+    { path: '/chat-contacts', component: ChatDirectoryView },
     { path: '/chat/:id', component: ChatView },
     { path: '/contacts', component: ContactsView },
     { path: '/gallery', component: GalleryView },

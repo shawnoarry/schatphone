@@ -214,6 +214,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const user = reactive({
     name: 'V',
+    chatStatus: 'idle',
     gender: '',
     birthday: '',
     occupation: '',
@@ -449,6 +450,9 @@ export const useSystemStore = defineStore('system', () => {
 
     if (persisted.user && typeof persisted.user === 'object') {
       Object.assign(user, persisted.user)
+    }
+    if (typeof user.chatStatus !== 'string') {
+      user.chatStatus = 'idle'
     }
 
     if (Array.isArray(persisted.notifications)) {
