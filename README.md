@@ -1,44 +1,52 @@
 ﻿# SchatPhone
 
-SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建仿 iOS 的手机屏幕体验。
-当前重点聚焦在三条主线：
-- Home 可编辑布局（入口与 Widget）
-- Chat 主功能链路
-- Settings 分层与用户可配置能力（网络/主题/自定义）
+Updated / 更新时间: 2026-02-23
 
-项目已去除手机外框，采用纯屏幕交互，优先适配移动端体验和主流浏览器（Safari/Chrome/Edge）。
+SchatPhone is a Vue 3 mobile interaction shell that simulates an iOS-like full-screen phone experience.  
+SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建仿 iOS 的全屏手机体验。
 
-## 当前能力（2026-02-11）
+Current focus areas / 当前核心主线：
+- Home editable layout (entry apps + widgets) / Home 可编辑布局（入口与 Widget）
+- Chat main workflow / Chat 主功能链路
+- Settings as configuration center (network/theme/customization) / Settings 分层配置能力（网络/主题/自定义）
 
-- Home 支持 5 屏结构、左右滑动、长按空白进入编辑、跨屏拖拽排序
-- Home 规则：功能入口（`app_*`）不可删除/隐藏，仅可换位置；Widget 与自定义 Widget 可隐藏
-- 支持自定义 Widget（尺寸 `1x1/2x1/2x2/4x2/4x3`），支持代码粘贴与 JSON 导入
-- Settings 已重构为 iOS 风格分层菜单；用户信息与世界书拆分为独立页面
-- Network 独立入口：URL + Key 自动识别 API 类型并拉取模型；支持预设保存与切换
-- Chat 支持错误分级提示与一键重试
-- Appearance 独立入口：二级菜单（主题美化/字体/Widget），支持模板复制与 TXT 导出
-- Files / More 已从占位入口升级为可用 MVP 页面
-- 关键输入页均有显式“保存”按钮，同时保留自动持久化
-- GitHub Actions 已接入 CI 与 GitHub Pages 自动部署
+## Current Capabilities / 当前能力
 
-## 技术栈
+- 5-page Home layout, long-press edit mode, cross-page drag-and-drop  
+支持 5 屏 Home、长按编辑、跨屏拖拽排序
+- `app_*` entries are locked from hide/delete and can only be repositioned  
+`app_*` 功能入口不可隐藏/删除，仅可换位
+- Custom widgets support: `1x1/2x1/2x2/4x2/4x3`, code paste, JSON import  
+支持自定义 Widget 尺寸、代码粘贴与 JSON 导入
+- Network page supports API kind detection, model pull, preset save/switch  
+Network 支持 API 类型识别、模型拉取、预设保存与切换
+- Chat supports manual trigger flow, cancel/retry, and error classification  
+Chat 支持手动触发、取消/重试、错误分级提示
+- Files and More pages are available as MVP modules  
+Files / More 已升级为可用 MVP 页面
+- Key input pages provide explicit Save actions with persistence  
+关键输入页保留显式保存按钮并持久化
+- CI + GitHub Pages deployment are configured  
+已接入 CI 与 GitHub Pages 自动部署
+
+## Tech Stack / 技术栈
 
 - Vue 3 (`script setup`)
 - Vite 7
-- Vue Router（Hash 模式）
+- Vue Router (Hash mode) / Vue Router（Hash 模式）
 - Pinia
-- Tailwind CSS v4（`@tailwindcss/vite`）
+- Tailwind CSS v4 (`@tailwindcss/vite`)
 - ESLint + Prettier
 - Vitest + Vue Test Utils
 
-## 本地开发
+## Local Development / 本地开发
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 质量检查
+## Quality Checks / 质量检查
 
 ```bash
 npm run lint
@@ -46,7 +54,7 @@ npm run build
 npm run test
 ```
 
-## 当前路由
+## Routes / 当前路由
 
 - `/lock`
 - `/home`
@@ -55,7 +63,9 @@ npm run test
 - `/network`
 - `/profile`
 - `/worldbook`
-- `/chat` / `/chat/:id`
+- `/chat`
+- `/chat-contacts`
+- `/chat/:id`
 - `/contacts`
 - `/gallery`
 - `/phone`
@@ -66,12 +76,14 @@ npm run test
 - `/files`
 - `/more`
 
-## 文档索引
+## Documentation Index / 文档索引
 
-- 架构说明：`ARCHITECTURE.md`
-- 进度与待办：`PROJECT_STATUS.md`
-- 任务执行清单：`TASK_EXECUTION_PLAN.md`
-- AI 工作模式：`AI_WORK_MODE.md`
-- 操作指南：`操作指南-新版.md`
-- 需求整理模板：`Tips-需求整理模板.md`
-- AI 协作模板：`AI-需求话术模板.md`
+- `ARCHITECTURE.md`: Architecture and boundaries / 架构与边界
+- `PROJECT_STATUS.md`: Current status and roadmap / 当前状态与路线图
+- `CHAT_PROGRESS.md`: Chat-domain progress and milestones / Chat 域进展与里程碑
+- `SYNC_SNAPSHOT.md`: One-page quick snapshot / 一页快速快照
+- `操作指南-新版.md`: Operational guide / 操作流程指南
+- `TASK_EXECUTION_PLAN.md`: Task execution board / 任务执行清单
+- `AI_WORK_MODE.md`: AI collaboration operating mode / AI 协作工作模式
+- `Tips-需求整理模板.md`: Requirement self-check template / 需求自检模板
+- `AI-需求话术模板.md`: Prompt template for AI coding assistants / AI 协作话术模板

@@ -1,145 +1,136 @@
 ﻿# SchatPhone 项目进度与待办
 
-更新时间：2026-02-22
+Updated / 更新时间: 2026-02-23
 
-## 1. 当前项目状态
+## 1. Current Project Status / 当前项目状态
 
-项目处于“主链路可用 + 聊天模块进入结构化迭代”阶段。
+The project is in "stable core path + structured Chat iteration" stage.  
+项目处于“主链路可用 + Chat 结构化迭代”阶段。
 
-可用主链路：
-- 锁屏 -> Home -> Chat / Settings / 功能模块跳转
-- Network API 配置 -> 模型拉取 -> Chat 调用
-- Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
+Available core paths / 可用主链路：
+- Lock -> Home -> Chat / Settings / modules  
+锁屏 -> Home -> Chat / Settings / 功能模块
+- Network setup -> model fetch -> Chat request  
+Network 配置 -> 模型拉取 -> Chat 调用
+- Appearance setup -> theme/style/widget injection -> Home updates  
+Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 
-## 2. 已完成能力（最新）
+## 2. Completed Capabilities / 已完成能力
 
-### 2.1 Home 与外观
+### 2.1 Home and Appearance / Home 与外观
 
-- Home 长按空白进入编辑模式
-- 同屏拖拽 + 跨屏拖拽 + 5 屏布局
-- App 入口不可隐藏，仅可换位
-- Widget 可隐藏且无空白占位
-- 外观入口拆分：主题/字体/Widget
-- 顶部状态栏开关、触感开关
+- Long-press blank area to enter edit mode / 长按空白进入编辑
+- In-page and cross-page drag with 5-page layout / 同屏与跨屏拖拽、5 屏布局
+- App entries are fixed (reorder only) / App 入口不可隐藏，仅可换位
+- Widgets can be hidden without blank holes / Widget 可隐藏且无空白占位
+- Appearance split into theme/font/widget sections / 外观入口拆分为主题/字体/Widget
+- Status bar toggle and haptic toggle / 顶部状态栏与触感开关
 
 ### 2.2 Network
 
-- URL + Key 自动识别 API 类型
-- 自动/手动刷新模型列表
-- 预设保存、切换、删除、清空
-- 模型拉取错误分级提示（URL/鉴权/404/限流/超时/网络-CORS/服务端）
+- API kind auto-detection from URL + Key / URL + Key 自动识别 API 类型
+- Auto/manual model refresh / 自动与手动刷新模型
+- Preset save/switch/delete/clear / 预设保存、切换、删除、清空
+- Error grading for URL/auth/404/rate-limit/timeout/network-CORS/server  
+模型拉取错误分级：URL/鉴权/404/限流/超时/网络-CORS/服务端
 
-### 2.3 Chat 数据模型升级
+### 2.3 Chat Data Model Upgrade / Chat 数据模型升级
 
-- 会话/消息分离结构：`conversations` + `messagesByConversation`
-- 消息状态：`sending` / `sent` / `failed`
-- 草稿保存、未读计数、会话排序
-- 旧数据自动迁移兼容
+- `conversations` + `messagesByConversation`
+- Message status: `sending/sent/failed` / 消息状态
+- Draft, unread count, conversation sort / 草稿、未读、会话排序
+- Legacy data migration compatibility / 旧数据迁移兼容
 
-### 2.4 Chat 交互升级（本轮重点）
+### 2.4 Chat Interaction Upgrade / Chat 交互升级
 
-- 回复触发改为用户主导：输入消息后默认不自动调 API
-- 对话页支持“触发回复”按钮，允许连续触发
-- 支持取消当前请求、失败重试
-- 聊天列表顶部改为：返回桌面 + 用户状态 + 新建 + 添加服务号
-- 用户状态：空闲/忙碌/离开（状态灯动画）
-- 新增会话通讯录：`/chat-contacts`
-  - 分层管理：角色/群聊 与 服务号/公众号
-  - 支持新建、编辑、删除、进入会话
-- 联系人模型扩展字段：`kind`、`serviceTemplate`
-- 对话页菜单支持服务模板设置（服务号/公众号）
+- Sending a user message no longer auto-calls API / 发消息后默认不自动调 API
+- "Trigger Reply" button with continuous triggering / “触发回复”支持连续触发
+- Supports in-flight cancellation and failed retry / 支持取消与失败重试
+- Chat header: back-to-home + user status + create + add service account  
+聊天列表顶部：返回桌面 + 用户状态 + 新建 + 添加服务号
+- User status: idle/busy/away / 用户状态：空闲/忙碌/离开
+- New chat directory route: `/chat-contacts` / 新增会话通讯录
+- Contact model fields: `kind`, `serviceTemplate` / 联系人模型新增字段
 
-### 2.5 Files / More
+### 2.5 Files and More / Files 与 More
 
-- Files：检索、收藏筛选、删除、新建便签
-- More：快捷入口、实验开关、扩展建议
+- Files: search, favorite filter, delete, quick note  
+Files：检索、收藏筛选、删除、新建便签
+- More: shortcuts, feature flags, expansion suggestions  
+More：快捷入口、实验开关、扩展建议
 
-### 2.6 验证结果
+### 2.6 Validation / 验证结果
 
-- `npm run lint`：通过
-- `npm run test`：通过
-- `npm run build`：通过
+- `npm run lint`: pass / 通过
+- `npm run test`: pass / 通过
+- `npm run build`: pass / 通过
 
-## 3. 当前默认 Home 结构
+## 3. Default Home Layout / 默认 Home 结构
 
-### 第一屏
+- Page 1 / 第一屏  
+  Widgets: `weather`, `calendar`, `music`  
+  Apps: `Network`, `Chat`, `Wallet`, `Themes`
+- Page 2 / 第二屏  
+  Widgets: `system`, `quick_heart`, `quick_disc`  
+  Apps: `Phone`, `Map`, `Calendar`, `Files`, `Stock`, `More`
+- Page 3-5 reserved / 第三至第五屏预留扩展
 
-- Widget：`weather`、`calendar`、`music`
-- App：`Network`、`Chat`、`Wallet`、`Themes`
+## 4. Current Settings Structure / 当前 Settings 结构
 
-### 第二屏
+- Profile card -> `/profile`
+- Worldbook -> `/worldbook`
+- General / Notifications (embedded second-level pages)  
+通用与通知（内嵌二级页）
+- Backup export (JSON) and About / 备份导出（JSON）与关于
 
-- Widget：`system`、`quick_heart`、`quick_disc`
-- App：`Phone`、`Map`、`Calendar`、`Files`、`Stock`、`More`
+Independent entries / 独立入口：
+- Network/API: `/network`
+- Appearance studio: `/appearance`
 
-### 第三至第五屏
+## 5. Module Completion Estimate / 模块完成度评估
 
-- 预留空屏，供后续模块与 Widget 扩展
+- Home: 90%
+- Settings (+Profile/Worldbook): 89%
+- Network: 85%
+- Appearance: 83%
+- Chat: 92%
+- Chat Directory: 82%
+- Map: 66%
+- Contacts (global): 62%
+- Files/More: 72%
+- Phone/Calendar/Wallet/Stock: 30%-45%
 
-## 4. 当前 Settings 结构
-
-- 用户卡片 -> `/profile`
-- 世界书 -> `/worldbook`
-- 通用（内嵌二级页）
-- 通知（内嵌二级页）
-- 备份导出（JSON）
-- 关于（内嵌二级页）
-
-独立入口：
-- 网络与 API：`/network`
-- 外观工坊：`/appearance`
-
-## 5. 模块完成度（当前评估）
-
-- Home：90%
-- Settings（含 Profile/WorldBook）：89%
-- Network：85%
-- Appearance：83%
-- Chat：92%
-- Chat 会话通讯录：82%
-- Map：66%
-- Contacts（全局联系人）：62%
-- Files / More：72%
-- Phone/Calendar/Wallet/Stock：30%~45%
-
-## 6. 下一步待办（优先级）
+## 6. Next Roadmap / 下一步待办
 
 ### P0
 
-1. Chat 会话设置页
-- 每会话配置：手动/自动回复、回复条数、回复风格、主动开场策略。
-
-2. Chat 消息操作菜单
-- 引用、编辑、删除、复制、按轮重roll。
-
-3. Chat 调用预算控制
-- 每会话调用计数、阈值提醒、触发前二次确认（可选）。
-
-4. 文档与编码治理
-- 修复历史乱码文档，保持 UTF-8 一致。
+1. Conversation settings page / Chat 会话设置页  
+Per-thread manual/auto mode, reply count, style, proactive opening.
+2. Message action menu / Chat 消息操作菜单  
+Quote, edit, delete, copy, and re-roll.
+3. Budget control / Chat 调用预算控制  
+Per-thread usage count, threshold warning, optional confirmation.
+4. Doc and encoding hygiene / 文档与编码治理  
+Fix historical mojibake and standardize UTF-8.
 
 ### P1
 
-1. 会话通讯录增强
-- 搜索、批量管理、模板预设库。
-
-2. Widget 安全与校验
-- 导入 schema 校验、危险字段过滤、失败回退。
-
-3. 设置体验优化
-- 更贴近 iOS 分组与提示反馈。
+1. Chat directory enhancement / 会话通讯录增强（搜索、批量、模板预设）
+2. Widget import safety / Widget 安全与校验（schema、过滤、回退）
+3. Settings UX refinement / 设置体验优化（iOS 分组与反馈）
 
 ### P2
 
-1. Phone / Wallet / Calendar / Stock 深化
-- 先 Mock 业务闭环，再逐步接真实数据。
+1. Phone/Wallet/Calendar/Stock deepening / 先 Mock 业务闭环，再逐步接真实数据
+2. Cross-module linkage / 跨模块联动（聊天与 Home 事件联动）
 
-2. 跨模块联动
-- 日程/提醒/股价等事件联动到聊天和 Home。
+## 7. Collaboration Rules / 协作规则
 
-## 7. 协作规则
-
-1. 每次改动路由/Store 字段/Home 规则，必须同步更新本文档。
-2. 每次合并前至少执行：`npm run lint` + `npm run build`。
-3. 涉及交互行为改动时，补跑：`npm run test`。
-4. Home 与 Settings 职责分离：Home 偏使用入口，Settings 偏配置管理。
+1. Any route/store/home-rule change must update this file.  
+改动路由/Store/Home 规则必须同步更新本文档。
+2. Run `npm run lint` and `npm run build` before merge.  
+合并前至少执行 lint 与 build。
+3. Run `npm run test` when behavior logic changes.  
+涉及行为逻辑改动时补跑 test。
+4. Keep Home for entry usage and Settings for configuration management.  
+Home 偏使用入口，Settings 偏配置管理。

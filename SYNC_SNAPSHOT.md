@@ -1,45 +1,58 @@
 ﻿# SchatPhone 同步快照
 
-更新时间：2026-02-22
+Updated / 更新时间: 2026-02-23
 
-## 当前版本一句话
+## Purpose / 用途
 
-这是一个基于 Vue 3 + Vite + Pinia 的“移动端壳层 + AI 模拟社交聊天”项目，核心主线已可用，聊天模块正在做结构化增强。
+This file is a one-page snapshot merged from `PROJECT_STATUS.md` and `CHAT_PROGRESS.md`.  
+本文件是从 `PROJECT_STATUS.md` 与 `CHAT_PROGRESS.md` 汇总出的单页快照。
 
-## 当前技术栈
+Maintenance rule / 维护规则：  
+Detailed changes must be updated in source docs first, then reflected here.  
+详细变更先更新源文档，再同步到本快照，避免信息分叉。
 
-- Framework：Vue 3 (Composition API)
-- Build：Vite 7
-- Style：Tailwind CSS v4 + CSS Variables
-- State：Pinia
-- Router：Vue Router (Hash)
-- Test：Vitest + jsdom
-- Lint/Format：ESLint + Prettier
+## One-Line Summary / 当前版本一句话
 
-## 当前聊天设计关键点
+SchatPhone is a Vue 3 + Vite + Pinia mobile shell with AI social-chat simulation; core paths are usable and Chat is under structured enhancement.  
+SchatPhone 是基于 Vue 3 + Vite + Pinia 的移动端壳层 + AI 模拟社交聊天项目，核心主线可用，Chat 正在结构化增强。
 
-- 用户消息与 AI 回复解耦：发送不等于立即调用
-- AI 调用由“触发回复”按钮控制，支持连续触发
-- 会话对象分层：角色/群聊/服务号/公众号
-- 新增会话通讯录页统一管理会话对象
+## Stack Snapshot / 技术栈快照
 
-## 当前路由重点
+- Vue 3 (Composition API)
+- Vite 7
+- Tailwind CSS v4 + CSS Variables
+- Pinia
+- Vue Router (Hash)
+- Vitest + jsdom
+- ESLint + Prettier
 
-- `/home`：主屏
-- `/chat`：聊天列表
-- `/chat/:id`：单聊/群聊/服务号会话
-- `/chat-contacts`：会话通讯录
-- `/network`：API 配置
-- `/appearance`：主题/字体/Widget
+## Chat Key Design / Chat 关键设计
 
-## 数据与隐私边界
+- User send and AI call are decoupled / 用户发送与 AI 调用解耦
+- AI call is controlled by "Trigger Reply" and supports continuous generation  
+AI 调用由“触发回复”控制，支持连续触发
+- Conversation kinds: `role/group/service/official`  
+会话对象分层：角色/群聊/服务号/公众号
+- `/chat-contacts` manages chat contacts separately from global contacts  
+`/chat-contacts` 独立管理聊天会话对象
 
-- 默认数据存储在本地浏览器
-- 不做平台云端托管
-- 仅在用户触发时向用户配置的 API 地址发请求
+## Important Routes / 关键路由
 
-## 下一阶段推荐顺序
+- `/home`
+- `/chat`
+- `/chat/:id`
+- `/chat-contacts`
+- `/network`
+- `/appearance`
 
-1. 会话设置页（手动/自动、回复条数、风格）
-2. 消息操作菜单（引用/编辑/重roll）
-3. 调用预算控制（计数、提醒、确认）
+## Data and Privacy Boundaries / 数据与隐私边界
+
+- Local browser persistence by default / 默认本地浏览器存储
+- No platform cloud hosting / 不做平台云托管
+- API requests only on explicit user trigger / 仅在用户触发时发请求
+
+## Recommended Next Sequence / 推荐下一阶段顺序
+
+1. Conversation settings page / 会话设置页（手动/自动、回复条数、风格）
+2. Message action menu / 消息操作菜单（引用/编辑/重roll）
+3. Budget control / 调用预算控制（计数、提醒、确认）
