@@ -70,6 +70,8 @@ npm run test
 
 - 架构说明：`ARCHITECTURE.md`
 - 进度与待办：`PROJECT_STATUS.md`
+- 任务执行清单：`TASK_EXECUTION_PLAN.md`
+- AI 工作模式：`AI_WORK_MODE.md`
 - 操作指南：`操作指南-新版.md`
 - 需求整理模板：`Tips-需求整理模板.md`
 - AI 协作模板：`AI-需求话术模板.md`
