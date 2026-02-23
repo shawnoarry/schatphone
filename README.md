@@ -22,6 +22,12 @@ Current focus areas / 当前核心主线：
 Network 支持 API 类型识别、模型拉取、预设保存与切换
 - Chat supports manual trigger flow, cancel/retry, and error classification  
 Chat 支持手动触发、取消/重试、错误分级提示
+- Chat supports per-thread AI settings (suggestion toggle, context turns, bilingual output, quote mode, virtual voice)  
+Chat 支持会话级 AI 设置（可选回复开关、上下文轮数、双语输出、引用模式、虚拟语音）
+- User message status flow supports delivered/read transitions with AI-side typing indicator  
+用户消息状态支持“已送达 -> 已读”切换，并提供 AI 侧“对方正在输入”系统态提示
+- Assistant messages support structured blocks (text/virtual voice/module link/virtual transfer/virtual image/mini scene)  
+助手消息支持结构化块（文本/虚拟语音/模块链接/虚拟转账/虚拟图片/迷你互动场景）
 - Files and More pages are available as MVP modules  
 Files / More 已升级为可用 MVP 页面
 - Key input pages provide explicit Save actions with persistence  
@@ -81,6 +87,7 @@ npm run test
 - `ARCHITECTURE.md`: Architecture and boundaries / 架构与边界
 - `PROJECT_STATUS.md`: Current status and roadmap / 当前状态与路线图
 - `CHAT_PROGRESS.md`: Chat-domain progress and milestones / Chat 域进展与里程碑
+- `CHAT_FEATURE_DECISIONS.md`: Chat proposal decisions and pending items / Chat 建议决议与待确认项
 - `SYNC_SNAPSHOT.md`: One-page quick snapshot / 一页快速快照
 - `操作指南-新版.md`: Operational guide / 操作流程指南
 - `TASK_EXECUTION_PLAN.md`: Task execution board / 任务执行清单

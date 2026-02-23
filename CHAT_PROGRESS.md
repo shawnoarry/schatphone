@@ -12,6 +12,8 @@ Current baseline / 当前基线：
 - Stable manual-trigger response flow / 手动触发链路稳定
 - Contact stratification is implemented (`role/group/service/official`)  
 会话对象分层已落地（角色/群聊/服务号/公众号）
+- Thread-level AI controls baseline is implemented  
+会话级 AI 控制基础能力已落地
 - Ready for "simulated social" feature expansion  
 具备继续扩展“模拟社交”能力的基础
 
@@ -20,8 +22,11 @@ Current baseline / 当前基线：
 ### 2.1 Data Model / 数据模型
 
 - `conversations` + `messagesByConversation`
-- Message status: `sending/sent/failed` / 消息状态
+- Message status: `sending/sent/failed/delivered/read` / 消息状态
 - Draft, unread count, and sort integrated / 草稿、未读、排序已打通
+- Conversation-level AI prefs are persisted / 会话级 AI 偏好可持久化
+- Structured assistant reply model supports blocks, quote, and metadata  
+结构化助手回复模型支持 blocks、引用与元信息
 - Legacy migration compatibility / 历史数据自动迁移兼容
 
 ### 2.2 API Calls and Error Handling / 调用与错误处理
@@ -33,14 +38,24 @@ Current baseline / 当前基线：
 
 ### 2.3 Interaction and IA / 交互与信息架构
 
-- Chat header: back home + user status + create + add service account  
-聊天列表顶部：返回桌面 + 用户状态 + 新建 + 添加服务号
+- Chat list/thread headers provide core navigation and status context  
+聊天列表/会话头部提供核心导航与状态信息
 - User status: idle/busy/away with indicator light  
 用户状态：空闲/忙碌/离开（状态灯）
 - Thread behavior: send message does not auto-call AI  
 对话页发送消息后默认不自动调 AI
 - "Trigger Reply" supports continuous generation  
 “触发回复”支持连续触发（无新消息也可继续）
+- User message state transition: delivered before trigger, read on AI request start  
+用户消息状态切换：触发前已送达，发起 AI 请求后切为已读
+- Thread layered menu adds AI settings (suggestions/context turns/bilingual/quote/virtual voice)  
+会话分级菜单已支持 AI 设置（建议回复/上下文轮数/双语/引用/虚拟语音）
+- Thread layered menu now also includes reply mode/reply count/style/proactive opener strategy  
+会话分级菜单已补齐回复模式/回复条数/回复风格/主动开场策略
+- Auto mode can trigger AI after user send, and multi-message replies can be returned in one API call  
+自动模式可在用户发送后触发 AI，且可在单次调用中返回多条回复
+- Assistant typing state shown as system UI text: "对方正在输入..."  
+AI 输入中状态以系统态文本展示：“对方正在输入...”
 - New route: `/chat-contacts` with category split  
 新增 `/chat-contacts`，按角色/群聊与服务号/公众号分段管理
 - Service/official templates configured in-thread menu  
@@ -54,8 +69,6 @@ Current baseline / 当前基线：
 
 ## 3. Current Gaps / 当前限制
 
-- Per-conversation auto-reply policy not yet configurable  
-自动回复策略尚未做成每会话可配置开关
 - Message long-press actions not complete (quote/edit/re-roll)  
 消息长按操作（引用/编辑/重roll）尚未落地
 - Budget/threshold reminder not implemented  
@@ -67,12 +80,12 @@ Current baseline / 当前基线：
 
 ### P0
 
-1. Conversation settings page / 会话设置页  
-Manual/auto mode, reply count, style, proactive opening.
-2. Message action menu / 消息操作菜单  
+1. Message action menu / 消息操作菜单  
 Quote, edit, delete, copy, re-roll.
-3. Budget control / 调用预算控制  
+2. Budget control / 调用预算控制  
 Usage count, threshold warning, pre-trigger confirmation.
+3. Structured block policy hardening / 结构化消息策略加固  
+Fallback consistency, quote safety, and rendering detail polish.
 
 ### P1
 

@@ -30,10 +30,15 @@ Purpose / 用途: turn the current roadmap into an execution-ready checklist for
 
 ### P0-1 Conversation Settings / 会话设置页（每会话回复策略）
 
-- Status / 状态: `TODO`
+- Status / 状态: `DONE`
 - Goal / 目标:
 - Add per-conversation settings: manual/auto response, response count, response style, proactive opener strategy.  
 为每个会话增加独立配置：手动/自动回复、回复条数、回复风格、主动开场策略。
+- Implemented scope / 已实现范围:
+- Per-conversation controls: manual/auto mode, reply count, response style, proactive opener strategy.  
+已支持会话级控制：手动/自动模式、回复条数、回复风格、主动开场策略。
+- Existing baseline kept: suggested replies toggle, context turns, bilingual output, quote mode, virtual voice.  
+并保留基础项：可选回复开关、上下文轮数、双语输出、引用模式、虚拟语音。
 - Target files / 涉及文件:
 - `src/views/ChatView.vue`
 - `src/stores/chat.js`
@@ -97,7 +102,7 @@ Purpose / 用途: turn the current roadmap into an execution-ready checklist for
 
 ### P0-4 Encoding and Doc Hygiene / 编码与文档治理（乱码修复 + UTF-8 统一）
 
-- Status / 状态: `TODO`
+- Status / 状态: `DONE`
 - Goal / 目标:
 - Fix corrupted text and standardize encoding conventions.  
 修复乱码文本并统一编码规范。
@@ -106,6 +111,9 @@ Purpose / 用途: turn the current roadmap into an execution-ready checklist for
 - `tests/chat-store-model.test.js`
 - `README.md`
 - `PROJECT_STATUS.md`
+- `CHAT_PROGRESS.md`
+- `ARCHITECTURE.md`
+- `CHAT_FEATURE_DECISIONS.md`
 - Acceptance criteria / 验收标准:
 - Default contact text and test strings are readable.  
 默认联系人文本和测试字符串可读。
@@ -184,10 +192,10 @@ Purpose / 用途: turn the current roadmap into an execution-ready checklist for
 
 | Task ID | Owner / 负责人 | Start Date / 开始日期 | End Date / 完成日期 | Status / 状态 | Notes / 备注 |
 |---|---|---|---|---|---|
-| P0-1 | TBD |  |  | TODO |  |
+| P0-1 | Codex | 2026-02-23 | 2026-02-23 | DONE | Added auto mode, reply count/style, proactive opener strategy |
 | P0-2 | TBD |  |  | TODO |  |
 | P0-3 | TBD |  |  | TODO |  |
-| P0-4 | TBD |  |  | TODO |  |
+| P0-4 | Codex | 2026-02-23 | 2026-02-23 | DONE | UTF-8 cleanup + doc sync completed |
 | P1-1 | TBD |  |  | TODO |  |
 | P1-2 | TBD |  |  | TODO |  |
 | P1-3 | TBD |  |  | TODO |  |

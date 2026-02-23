@@ -5,8 +5,35 @@ import { readPersistedState, writePersistedState } from '../lib/persistence'
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
 const VALID_MESSAGE_ROLES = new Set(['user', 'assistant', 'system'])
-const VALID_MESSAGE_STATUS = new Set(['sending', 'sent', 'failed'])
+const VALID_MESSAGE_STATUS = new Set(['sending', 'sent', 'failed', 'delivered', 'read'])
 const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
+const VALID_REPLY_MODES = new Set(['manual', 'auto'])
+const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
+const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
+const VALID_BLOCK_TYPES = new Set([
+  'text',
+  'voice_virtual',
+  'module_link',
+  'transfer_virtual',
+  'image_virtual',
+  'mini_scene',
+])
+const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
+
+const DEFAULT_CONVERSATION_AI_PREFS = {
+  suggestedRepliesEnabled: false,
+  contextTurns: 8,
+  bilingualEnabled: false,
+  secondaryLanguage: 'en',
+  allowQuoteReply: true,
+  allowSelfQuote: false,
+  virtualVoiceEnabled: true,
+  replyMode: 'manual',
+  replyCount: 1,
+  responseStyle: 'immersive',
+  proactiveOpenerEnabled: false,
+  proactiveOpenerStrategy: 'on_enter_once',
+}
 
 const DEFAULT_CONTACTS = [
   {
@@ -16,7 +43,7 @@ const DEFAULT_CONTACTS = [
     isMain: true,
     avatar: '',
     lastMessage: '今天有什么安排吗？',
-    bio: '你是一个高度智能、温柔体贴的 AI 助手，名字叫 Eva。你会优先考虑用户(V)的安全，表达清晰简洁。',
+    bio: '你是一个高智能、温和体贴的 AI 助手，名字叫 Eva。你会优先考虑用户(V)的安全，表达清晰简洁。',
   },
   {
     id: 2,
@@ -24,14 +51,14 @@ const DEFAULT_CONTACTS = [
     role: '雇佣兵搭档',
     isMain: false,
     avatar: '',
-    lastMessage: '嘿，兄弟，今晚去来生酒吧喝一杯？',
+    lastMessage: '嗨，兄弟，今晚去来生酒吧喝一杯？',
     bio: '你是 Jackie Welles，重情重义、性格豪爽，梦想成为夜之城的传奇。你非常信任 V。',
   },
 ]
 
 const DEFAULT_CHAT_HISTORY = {
   1: [{ role: 'assistant', content: '早安，V。一切系统状态正常。' }],
-  2: [{ role: 'assistant', content: '嘿，兄弟，今晚去来生酒吧喝一杯？' }],
+  2: [{ role: 'assistant', content: '嗨，兄弟，今晚去来生酒吧喝一杯？' }],
 }
 
 const nowTs = () => Date.now()
@@ -39,10 +66,193 @@ const randomToken = () => Math.random().toString(36).slice(2, 8)
 const messageId = () => `msg_${nowTs()}_${randomToken()}`
 const fallbackConversationId = (contactId) => `conv_${contactId}`
 
+const toInt = (value, fallback = 0) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? Math.floor(num) : fallback
+}
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
 const resetReactiveObject = (obj) => {
   Object.keys(obj).forEach((key) => {
     delete obj[key]
   })
+}
+
+const normalizeConversationAiPrefs = (rawPrefs) => {
+  const input = rawPrefs && typeof rawPrefs === 'object' ? rawPrefs : {}
+  const contextTurns = clamp(toInt(input.contextTurns, DEFAULT_CONVERSATION_AI_PREFS.contextTurns), 2, 20)
+  const replyCount = clamp(toInt(input.replyCount, DEFAULT_CONVERSATION_AI_PREFS.replyCount), 1, 3)
+
+  return {
+    suggestedRepliesEnabled: Boolean(input.suggestedRepliesEnabled),
+    contextTurns,
+    bilingualEnabled: Boolean(input.bilingualEnabled),
+    secondaryLanguage:
+      typeof input.secondaryLanguage === 'string' && input.secondaryLanguage.trim()
+        ? input.secondaryLanguage.trim()
+        : DEFAULT_CONVERSATION_AI_PREFS.secondaryLanguage,
+    allowQuoteReply:
+      typeof input.allowQuoteReply === 'boolean'
+        ? input.allowQuoteReply
+        : DEFAULT_CONVERSATION_AI_PREFS.allowQuoteReply,
+    allowSelfQuote:
+      typeof input.allowSelfQuote === 'boolean'
+        ? input.allowSelfQuote
+        : DEFAULT_CONVERSATION_AI_PREFS.allowSelfQuote,
+    virtualVoiceEnabled:
+      typeof input.virtualVoiceEnabled === 'boolean'
+        ? input.virtualVoiceEnabled
+        : DEFAULT_CONVERSATION_AI_PREFS.virtualVoiceEnabled,
+    replyMode:
+      typeof input.replyMode === 'string' && VALID_REPLY_MODES.has(input.replyMode)
+        ? input.replyMode
+        : DEFAULT_CONVERSATION_AI_PREFS.replyMode,
+    replyCount,
+    responseStyle:
+      typeof input.responseStyle === 'string' && VALID_RESPONSE_STYLES.has(input.responseStyle)
+        ? input.responseStyle
+        : DEFAULT_CONVERSATION_AI_PREFS.responseStyle,
+    proactiveOpenerEnabled:
+      typeof input.proactiveOpenerEnabled === 'boolean'
+        ? input.proactiveOpenerEnabled
+        : DEFAULT_CONVERSATION_AI_PREFS.proactiveOpenerEnabled,
+    proactiveOpenerStrategy:
+      typeof input.proactiveOpenerStrategy === 'string' && VALID_PROACTIVE_STRATEGIES.has(input.proactiveOpenerStrategy)
+        ? input.proactiveOpenerStrategy
+        : DEFAULT_CONVERSATION_AI_PREFS.proactiveOpenerStrategy,
+  }
+}
+
+const normalizeMessageQuote = (rawQuote) => {
+  if (!rawQuote || typeof rawQuote !== 'object') return null
+
+  const preview = typeof rawQuote.preview === 'string' ? rawQuote.preview.trim() : ''
+  if (!preview) return null
+
+  const role = rawQuote.role === 'assistant' ? 'assistant' : 'user'
+  const messageIdValue = typeof rawQuote.messageId === 'string' ? rawQuote.messageId : ''
+
+  return {
+    messageId: messageIdValue,
+    role,
+    preview,
+  }
+}
+
+const normalizeMessageMeta = (rawMeta) => {
+  if (!rawMeta || typeof rawMeta !== 'object') return null
+
+  const replyType = VALID_REPLY_TYPES.has(rawMeta.replyType) ? rawMeta.replyType : 'plain'
+  const bilingual = Boolean(rawMeta.bilingual)
+
+  return {
+    replyType,
+    bilingual,
+  }
+}
+
+const normalizeMessageBlock = (rawBlock) => {
+  if (!rawBlock || typeof rawBlock !== 'object') return null
+  const blockType = typeof rawBlock.type === 'string' ? rawBlock.type : 'text'
+  if (!VALID_BLOCK_TYPES.has(blockType)) return null
+
+  if (blockType === 'text') {
+    const text = typeof rawBlock.text === 'string' ? rawBlock.text : ''
+    if (!text.trim()) return null
+    return {
+      type: 'text',
+      text,
+      lang: typeof rawBlock.lang === 'string' ? rawBlock.lang : 'auto',
+      variant: rawBlock.variant === 'secondary' ? 'secondary' : 'primary',
+    }
+  }
+
+  if (blockType === 'voice_virtual') {
+    return {
+      type: 'voice_virtual',
+      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '语音消息',
+      transcript: typeof rawBlock.transcript === 'string' ? rawBlock.transcript : '',
+      durationSec: clamp(toInt(rawBlock.durationSec, 8), 1, 600),
+    }
+  }
+
+  if (blockType === 'module_link') {
+    return {
+      type: 'module_link',
+      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '打开模块',
+      route: typeof rawBlock.route === 'string' && rawBlock.route.trim() ? rawBlock.route.trim() : '/home',
+      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
+    }
+  }
+
+  if (blockType === 'transfer_virtual') {
+    return {
+      type: 'transfer_virtual',
+      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '转账卡片',
+      amount: typeof rawBlock.amount === 'string' && rawBlock.amount.trim() ? rawBlock.amount.trim() : '0.00',
+      currency: typeof rawBlock.currency === 'string' && rawBlock.currency.trim() ? rawBlock.currency.trim() : 'CNY',
+      to: typeof rawBlock.to === 'string' ? rawBlock.to : '',
+      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
+      actionRoute:
+        typeof rawBlock.actionRoute === 'string' && rawBlock.actionRoute.trim() ? rawBlock.actionRoute.trim() : '/wallet',
+    }
+  }
+
+  if (blockType === 'image_virtual') {
+    return {
+      type: 'image_virtual',
+      alt: typeof rawBlock.alt === 'string' && rawBlock.alt.trim() ? rawBlock.alt.trim() : '图片消息',
+      url: typeof rawBlock.url === 'string' ? rawBlock.url : '',
+      caption: typeof rawBlock.caption === 'string' ? rawBlock.caption : '',
+    }
+  }
+
+  if (blockType === 'mini_scene') {
+    return {
+      type: 'mini_scene',
+      title: typeof rawBlock.title === 'string' && rawBlock.title.trim() ? rawBlock.title.trim() : '互动卡片',
+      description: typeof rawBlock.description === 'string' ? rawBlock.description : '',
+      htmlSnippet: typeof rawBlock.htmlSnippet === 'string' ? rawBlock.htmlSnippet : '',
+    }
+  }
+
+  return null
+}
+
+const normalizeMessageBlocks = (rawBlocks, fallbackContent = '') => {
+  const normalized = Array.isArray(rawBlocks) ? rawBlocks.map(normalizeMessageBlock).filter(Boolean) : []
+
+  if (normalized.length > 0) return normalized
+
+  if (typeof fallbackContent === 'string' && fallbackContent.trim()) {
+    return [
+      {
+        type: 'text',
+        text: fallbackContent,
+        lang: 'auto',
+        variant: 'primary',
+      },
+    ]
+  }
+
+  return []
+}
+
+const summarizeBlocks = (blocks) => {
+  if (!Array.isArray(blocks) || blocks.length === 0) return ''
+
+  const firstText = blocks.find((block) => block.type === 'text' && block.text?.trim())
+  if (firstText) return firstText.text.trim()
+
+  const first = blocks[0]
+  if (!first) return ''
+  if (first.type === 'voice_virtual') return `[语音] ${first.label}`
+  if (first.type === 'module_link') return `[链接] ${first.label}`
+  if (first.type === 'transfer_virtual') return `[转账] ${first.amount} ${first.currency}`
+  if (first.type === 'image_virtual') return `[图片] ${first.alt}`
+  if (first.type === 'mini_scene') return `[互动] ${first.title}`
+  return ''
 }
 
 const normalizeContact = (rawContact, fallbackIndex = 0) => {
@@ -64,11 +274,20 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
 
 const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
   const role = VALID_MESSAGE_ROLES.has(rawMessage?.role) ? rawMessage.role : fallbackRole
-  const status = VALID_MESSAGE_STATUS.has(rawMessage?.status) ? rawMessage.status : 'sent'
+  const content = typeof rawMessage?.content === 'string' ? rawMessage.content : ''
+  const blocks = normalizeMessageBlocks(rawMessage?.blocks, content)
+  const summaryText = summarizeBlocks(blocks)
+  const normalizedContent = content || summaryText
+  const defaultStatus = role === 'user' ? 'delivered' : 'sent'
+  const status = VALID_MESSAGE_STATUS.has(rawMessage?.status) ? rawMessage.status : defaultStatus
+
   return {
     id: typeof rawMessage?.id === 'string' && rawMessage.id ? rawMessage.id : messageId(),
     role,
-    content: typeof rawMessage?.content === 'string' ? rawMessage.content : '',
+    content: normalizedContent,
+    blocks,
+    quote: normalizeMessageQuote(rawMessage?.quote),
+    aiMeta: normalizeMessageMeta(rawMessage?.aiMeta),
     createdAt:
       typeof rawMessage?.createdAt === 'number' && Number.isFinite(rawMessage.createdAt)
         ? rawMessage.createdAt
@@ -98,12 +317,23 @@ const normalizeConversation = (rawConversation, contactId) => {
         : 0,
     draft: typeof rawConversation?.draft === 'string' ? rawConversation.draft : '',
     pinned: Boolean(rawConversation?.pinned),
+    aiPrefs: normalizeConversationAiPrefs(rawConversation?.aiPrefs),
+    proactiveOpenedAt:
+      typeof rawConversation?.proactiveOpenedAt === 'number' && Number.isFinite(rawConversation.proactiveOpenedAt)
+        ? rawConversation.proactiveOpenedAt
+        : 0,
     lastMessage: typeof rawConversation?.lastMessage === 'string' ? rawConversation.lastMessage : '',
     lastMessageAt:
       typeof rawConversation?.lastMessageAt === 'number' && Number.isFinite(rawConversation.lastMessageAt)
         ? rawConversation.lastMessageAt
         : 0,
   }
+}
+
+const summarizeMessage = (message) => {
+  if (!message) return ''
+  if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
+  return summarizeBlocks(message.blocks)
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -158,15 +388,21 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const last = messages[messages.length - 1]
-    conversation.lastMessage = last.content
+    const summary = summarizeMessage(last)
+    conversation.lastMessage = summary
     conversation.lastMessageAt = last.createdAt
     conversation.updatedAt = Math.max(conversation.updatedAt, last.createdAt)
-    syncContactLastMessage(contactId, last.content)
+    syncContactLastMessage(contactId, summary)
   }
 
   const getConversationByContactId = (contactId) => {
     const key = conversationKeyForContact(contactId)
     return conversations[key] || ensureConversationForContact(contactId)
+  }
+
+  const getConversationAiPrefs = (contactId) => {
+    const conversation = getConversationByContactId(contactId)
+    return normalizeConversationAiPrefs(conversation.aiPrefs)
   }
 
   const getMessagesByContactId = (contactId) => {
@@ -180,6 +416,28 @@ export const useChatStore = defineStore('chat', () => {
     const nextDraft = typeof draftText === 'string' ? draftText : ''
     if (conversation.draft === nextDraft) return
     conversation.draft = nextDraft
+    conversation.updatedAt = nowTs()
+  }
+
+  const setConversationAiPrefs = (contactId, partialPrefs = {}) => {
+    const conversation = ensureConversationForContact(contactId)
+    conversation.aiPrefs = normalizeConversationAiPrefs({
+      ...conversation.aiPrefs,
+      ...(partialPrefs && typeof partialPrefs === 'object' ? partialPrefs : {}),
+    })
+    conversation.updatedAt = nowTs()
+  }
+
+  const markConversationProactiveOpened = (contactId, openedAt = nowTs()) => {
+    const conversation = ensureConversationForContact(contactId)
+    const ts = typeof openedAt === 'number' && Number.isFinite(openedAt) ? openedAt : nowTs()
+    conversation.proactiveOpenedAt = Math.max(0, Math.floor(ts))
+    conversation.updatedAt = nowTs()
+  }
+
+  const resetConversationProactiveOpened = (contactId) => {
+    const conversation = ensureConversationForContact(contactId)
+    conversation.proactiveOpenedAt = 0
     conversation.updatedAt = nowTs()
   }
 
@@ -226,9 +484,23 @@ export const useChatStore = defineStore('chat', () => {
     const list = getMessagesByContactId(contactId)
     const index = list.findIndex((item) => item.id === targetMessageId)
     if (index < 0) return false
+
+    const updatedContent = typeof nextContent === 'string' ? nextContent : list[index].content
+    const existingBlocks = Array.isArray(list[index].blocks) ? list[index].blocks : []
+    const nextBlocks =
+      existingBlocks.length > 0
+        ? existingBlocks.map((block, blockIndex) => {
+            if (block.type === 'text' && blockIndex === 0) {
+              return { ...block, text: updatedContent }
+            }
+            return block
+          })
+        : normalizeMessageBlocks([], updatedContent)
+
     list[index] = {
       ...list[index],
-      content: typeof nextContent === 'string' ? nextContent : list[index].content,
+      content: updatedContent,
+      blocks: nextBlocks,
     }
     syncConversationSummary(contactId)
     return true
@@ -299,7 +571,7 @@ export const useChatStore = defineStore('chat', () => {
       const key = conversationKeyForContact(contact.id)
       output[key] = (messagesByConversation[key] || []).map((message) => ({
         role: message.role,
-        content: message.content,
+        content: summarizeMessage(message),
       }))
     })
     return output
@@ -324,7 +596,7 @@ export const useChatStore = defineStore('chat', () => {
           {
             ...item,
             createdAt: nowTs() - Math.max(0, inputHistory.length - index) * 60_000,
-            status: 'sent',
+            status: item?.role === 'user' ? 'delivered' : 'sent',
           },
           item?.role === 'user' ? 'user' : 'assistant',
         ),
@@ -379,10 +651,24 @@ export const useChatStore = defineStore('chat', () => {
   const persistToStorage = () => {
     const contactsSnapshot = contacts.map((contact) => ({ ...contact }))
     const conversationsSnapshot = Object.fromEntries(
-      Object.entries(conversations).map(([key, value]) => [key, { ...value }]),
+      Object.entries(conversations).map(([key, value]) => [
+        key,
+        {
+          ...value,
+          aiPrefs: normalizeConversationAiPrefs(value.aiPrefs),
+        },
+      ]),
     )
     const messagesSnapshot = Object.fromEntries(
-      Object.entries(messagesByConversation).map(([key, list]) => [key, list.map((message) => ({ ...message }))]),
+      Object.entries(messagesByConversation).map(([key, list]) => [
+        key,
+        list.map((message) => ({
+          ...message,
+          blocks: normalizeMessageBlocks(message.blocks, message.content),
+          quote: normalizeMessageQuote(message.quote),
+          aiMeta: normalizeMessageMeta(message.aiMeta),
+        })),
+      ]),
     )
 
     writePersistedState(
@@ -424,8 +710,12 @@ export const useChatStore = defineStore('chat', () => {
     loadingAI,
     ensureConversationForContact,
     getConversationByContactId,
+    getConversationAiPrefs,
     getMessagesByContactId,
     setConversationDraft,
+    setConversationAiPrefs,
+    markConversationProactiveOpened,
+    resetConversationProactiveOpened,
     markConversationRead,
     incrementConversationUnread,
     appendMessage,

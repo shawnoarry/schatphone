@@ -89,16 +89,34 @@ Core routes / 核心路由：
 ### 4.1 Data Structures / 数据结构
 
 - Contact / 对话对象：`id`, `name`, `kind`, `role`, `bio`, `serviceTemplate`
-- Conversation / 会话：`draft`, `unread`, `lastMessage`, `updatedAt`, `pinned`
-- Message / 消息：`id`, `role`, `content`, `createdAt`, `status`
+- Conversation / 会话：`draft`, `unread`, `lastMessage`, `updatedAt`, `pinned`, `aiPrefs`, `proactiveOpenedAt`
+- Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `status`
+- Message status / 消息状态：`sending/sent/failed/delivered/read`
+- Assistant block types / 助手消息块类型：
+  `text`, `voice_virtual`, `module_link`, `transfer_virtual`, `image_virtual`, `mini_scene`
+- Conversation AI prefs / 会话级 AI 设置：
+  `suggestedRepliesEnabled`, `contextTurns`, `bilingualEnabled`, `secondaryLanguage`,
+  `allowQuoteReply`, `allowSelfQuote`, `virtualVoiceEnabled`,
+  `replyMode`, `replyCount`, `responseStyle`, `proactiveOpenerEnabled`, `proactiveOpenerStrategy`
 
 ### 4.2 Interaction Model / 交互模型
 
 - User messages are persisted locally first / 用户消息先落本地消息流
-- AI replies are manually triggered via "触发回复" / AI 通过“触发回复”按钮显式触发
+- AI replies support manual trigger and optional auto trigger / AI 支持手动触发与可选自动触发
 - Supports continuous trigger in one thread / 支持同一会话连续触发
 - Supports cancel and retry / 支持取消与失败重试
+- One API call can produce multiple assistant messages (controlled by replyCount)  
+  单次 API 调用可生成多条助手消息（由 replyCount 控制）
+- User message state transitions / 用户消息状态切换：
+  default `delivered` before trigger, switch to `read` when AI request starts  
+  默认触发前为 `已送达`，AI 请求开始时切换为 `已读`
+- Typing indicator is system-state UI (not stored as message node)  
+  “对方正在输入”作为系统态 UI 展示，不写入消息列表数据
 - Service/official templates managed in-thread / 服务号/公众号模板在会话页内管理
+- Per-thread AI settings are edited in Chat layered menu and persisted in store  
+  会话级 AI 设置在 Chat 分级菜单中编辑并持久化
+- Proactive opener strategy is tracked by `proactiveOpenedAt` to prevent unwanted repeats  
+  主动开场通过 `proactiveOpenedAt` 记录触发状态，避免重复触发
 
 ### 4.3 Conversation Taxonomy / 会话对象分层
 
