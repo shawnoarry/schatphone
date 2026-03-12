@@ -60,6 +60,15 @@ npm run build
 npm run test
 ```
 
+## Experimental Flags / 实验开关
+
+- `VITE_ENABLE_LAYOUT_EDIT`: default `false`; keeps Home layout drag-edit hidden for normal users  
+`VITE_ENABLE_LAYOUT_EDIT`：默认 `false`，用于让 Home 拖拽布局编辑能力在普通用户场景保持关闭
+- To enable in development, set both:  
+开发调试时需同时满足两项：
+  - `.env` contains `VITE_ENABLE_LAYOUT_EDIT=true`
+  - browser `localStorage` contains `schatphone:layout_edit_enabled=true`
+
 ## Routes / 当前路由
 
 - `/lock`
@@ -93,4 +102,5 @@ npm run test
 - `TASK_EXECUTION_PLAN.md`: Task execution board / 任务执行清单
 - `AI_WORK_MODE.md`: AI collaboration operating mode / AI 协作工作模式
 - `Tips-需求整理模板.md`: Requirement self-check template / 需求自检模板
+- `PAGE_REPRO_BRIEF_TEMPLATE.md`: Reusable page recreation brief template / 页面复现需求可复用模板
 - `AI-需求话术模板.md`: Prompt template for AI coding assistants / AI 协作话术模板

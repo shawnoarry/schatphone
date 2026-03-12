@@ -1,11 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 
@@ -17,6 +18,8 @@ const currentDate = ref('')
 const currentWallpaper = computed(() => settings.value.appearance.wallpaper)
 const customVarStyle = computed(() => settings.value.appearance.customVars || {})
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
+const isLockRoute = computed(() => route.path === '/lock')
+const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
 
 let timerId = null
 let customCssStyleEl = null
@@ -72,7 +75,13 @@ onBeforeUnmount(() => {
 })
 
 const goHome = () => {
+  if (systemStore.isLocked) return
   router.push('/home')
+}
+
+const lockPhone = () => {
+  systemStore.lockPhone()
+  router.push('/lock')
 }
 </script>
 
@@ -101,6 +110,14 @@ const goHome = () => {
           <i class="fas fa-signal"></i>
           <i class="fas fa-wifi"></i>
           <i class="fas fa-battery-full"></i>
+          <button
+            v-if="!isLockRoute"
+            class="ml-1 w-5 h-5 rounded-full border border-current/30 flex items-center justify-center text-[10px] hover:bg-black/10"
+            title="Lock Screen"
+            @click.stop="lockPhone"
+          >
+            <i class="fas fa-lock"></i>
+          </button>
         </div>
       </div>
 
@@ -108,7 +125,7 @@ const goHome = () => {
         <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
       </RouterView>
 
-      <div class="home-indicator" @click="goHome"></div>
+      <div v-if="showHomeIndicator" class="home-indicator" @click="goHome"></div>
     </div>
   </div>
 </template>

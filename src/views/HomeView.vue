@@ -56,6 +56,23 @@ const LAYOUT_SLOT_COLUMNS = 4
 const LAYOUT_SLOT_ROWS = 6
 const LAYOUT_SLOT_GAP = 12
 const LAYOUT_SLOT_HEIGHT = 78
+const LAYOUT_EDIT_LOCAL_STORAGE_KEY = 'schatphone:layout_edit_enabled'
+const LAYOUT_EDIT_ENV_ENABLED =
+  typeof import.meta.env.VITE_ENABLE_LAYOUT_EDIT === 'string' &&
+  import.meta.env.VITE_ENABLE_LAYOUT_EDIT.toLowerCase() === 'true'
+
+const readLayoutEditLocalFlag = () => {
+  if (typeof window === 'undefined') return false
+  try {
+    const value = window.localStorage.getItem(LAYOUT_EDIT_LOCAL_STORAGE_KEY)
+    if (typeof value !== 'string') return false
+    return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+  } catch {
+    return false
+  }
+}
+
+const layoutEditFeatureEnabled = ref(LAYOUT_EDIT_ENV_ENABLED && readLayoutEditLocalFlag())
 
 const WIDGET_VARIANT_META = {
   weather: { label: '天气', icon: 'fas fa-cloud-sun' },
@@ -310,6 +327,7 @@ const clearLongPressTimer = () => {
 }
 
 const canStartLayoutLongPress = (event) => {
+  if (!layoutEditFeatureEnabled.value) return false
   if (layoutEditMode.value) return false
 
   const target = event.target
@@ -951,7 +969,9 @@ onBeforeUnmount(() => {
           :aria-label="`Go to page ${index}`"
         ></button>
       </div>
-      <p class="text-[10px] text-white/70 mt-1" v-if="!layoutEditMode">长按桌面空白处可进入布局编辑</p>
+      <p class="text-[10px] text-white/70 mt-1" v-if="layoutEditFeatureEnabled && !layoutEditMode">
+        长按桌面空白处可进入布局编辑
+      </p>
 
       <div class="home-dock">
         <button class="home-dock-icon" :style="iconStyle('cool')" @click="openAppById('app_chat')">

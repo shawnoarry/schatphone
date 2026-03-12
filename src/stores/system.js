@@ -82,6 +82,9 @@ const DEFAULT_TILE_PAGE_INDEX = Object.fromEntries(
 
 const CUSTOM_WIDGET_ID_PREFIX = 'custom_widget_'
 const CUSTOM_WIDGET_SIZES = ['1x1', '2x1', '2x2', '4x2', '4x3']
+const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
+const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
+const MAX_NOTIFICATIONS = 80
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
@@ -183,6 +186,48 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = []) => {
 const createCustomWidgetId = () =>
   `${CUSTOM_WIDGET_ID_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+const createNotificationId = () =>
+  `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const normalizeLockClockStyle = (value) =>
+  VALID_LOCK_CLOCK_STYLES.includes(value) ? value : DEFAULT_LOCK_CLOCK_STYLE
+
+const normalizeNotification = (rawNote) => {
+  if (!rawNote || typeof rawNote !== 'object') return null
+
+  const title = typeof rawNote.title === 'string' ? rawNote.title.trim() : ''
+  const content = typeof rawNote.content === 'string' ? rawNote.content.trim() : ''
+  if (!title && !content) return null
+
+  const createdAt =
+    typeof rawNote.createdAt === 'number' && Number.isFinite(rawNote.createdAt)
+      ? Math.max(0, Math.floor(rawNote.createdAt))
+      : Date.now()
+
+  return {
+    id:
+      typeof rawNote.id === 'string' && rawNote.id.trim()
+        ? rawNote.id.trim()
+        : createNotificationId(),
+    title: title || '系统消息',
+    content,
+    icon:
+      typeof rawNote.icon === 'string' && rawNote.icon.trim()
+        ? rawNote.icon.trim()
+        : 'fas fa-bell',
+    route:
+      typeof rawNote.route === 'string' && rawNote.route.trim()
+        ? rawNote.route.trim()
+        : '',
+    source:
+      typeof rawNote.source === 'string' && rawNote.source.trim()
+        ? rawNote.source.trim()
+        : 'system',
+    createdAt,
+    read: Boolean(rawNote.read),
+  }
+}
+
 export const useSystemStore = defineStore('system', () => {
   const availableThemes = ref(AVAILABLE_THEMES)
 
@@ -204,6 +249,7 @@ export const useSystemStore = defineStore('system', () => {
       customVars: {},
       homeWidgetPages: cloneDefaultWidgetPages(),
       customWidgets: [],
+      lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
     },
     system: {
       language: 'zh-CN',
@@ -225,14 +271,8 @@ export const useSystemStore = defineStore('system', () => {
       '这是一个赛博朋克风格的近未来世界。科技高度发达，但生活水平差距巨大。大型公司控制着资源与秩序。',
   })
 
-  const notifications = ref([
-    {
-      id: 1,
-      title: '系统',
-      content: '系统已升级到 Open API 版本',
-      icon: 'fas fa-exclamation-circle',
-    },
-  ])
+  const notifications = ref([])
+  const isLocked = ref(true)
 
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
@@ -398,6 +438,63 @@ export const useSystemStore = defineStore('system', () => {
     return true
   }
 
+  const addNotification = (rawNote = {}) => {
+    if (settings.system.notifications === false) return ''
+
+    const normalized = normalizeNotification({
+      ...rawNote,
+      id: createNotificationId(),
+      createdAt:
+        typeof rawNote.createdAt === 'number' && Number.isFinite(rawNote.createdAt)
+          ? rawNote.createdAt
+          : Date.now(),
+      read: false,
+    })
+    if (!normalized) return ''
+
+    notifications.value = [normalized, ...notifications.value].slice(0, MAX_NOTIFICATIONS)
+    return normalized.id
+  }
+
+  const markNotificationRead = (notificationId) => {
+    if (!notificationId) return false
+    const index = notifications.value.findIndex((item) => item.id === notificationId)
+    if (index < 0) return false
+    if (notifications.value[index].read) return true
+    notifications.value = notifications.value.map((item, idx) =>
+      idx === index
+        ? {
+            ...item,
+            read: true,
+          }
+        : item,
+    )
+    return true
+  }
+
+  const markAllNotificationsRead = () => {
+    notifications.value = notifications.value.map((item) => ({
+      ...item,
+      read: true,
+    }))
+  }
+
+  const removeNotification = (notificationId) => {
+    notifications.value = notifications.value.filter((item) => item.id !== notificationId)
+  }
+
+  const clearNotifications = () => {
+    notifications.value = []
+  }
+
+  const lockPhone = () => {
+    isLocked.value = true
+  }
+
+  const unlockPhone = () => {
+    isLocked.value = false
+  }
+
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
       version: SYSTEM_STORAGE_VERSION,
@@ -436,6 +533,9 @@ export const useSystemStore = defineStore('system', () => {
       if (appearance.customVars && typeof appearance.customVars === 'object') {
         settings.appearance.customVars = { ...appearance.customVars }
       }
+      if (typeof appearance.lockClockStyle === 'string') {
+        settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
+      }
 
       settings.appearance.customWidgets = normalizeCustomWidgets(appearance.customWidgets)
       settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
@@ -456,7 +556,10 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     if (Array.isArray(persisted.notifications)) {
-      notifications.value = persisted.notifications.map((note) => ({ ...note }))
+      notifications.value = persisted.notifications
+        .map((note) => normalizeNotification(note))
+        .filter(Boolean)
+        .slice(0, MAX_NOTIFICATIONS)
     }
 
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
@@ -470,6 +573,7 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )
+    settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
   }
 
   const persistToStorage = () => {
@@ -504,6 +608,7 @@ export const useSystemStore = defineStore('system', () => {
     settings,
     user,
     notifications,
+    isLocked,
     availableThemes,
     setTheme,
     cycleTheme,
@@ -518,6 +623,13 @@ export const useSystemStore = defineStore('system', () => {
     placeCustomWidget,
     importCustomWidgets,
     placeBuiltInWidgetTile,
+    addNotification,
+    markNotificationRead,
+    markAllNotificationsRead,
+    removeNotification,
+    clearNotifications,
+    lockPhone,
+    unlockPhone,
     saveNow,
   }
 })

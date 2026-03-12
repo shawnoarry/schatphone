@@ -24,6 +24,11 @@ const BUILT_IN_WIDGET_OPTIONS = [
   { id: 'quick_heart', label: '快捷爱心' },
   { id: 'quick_disc', label: '快捷唱片' },
 ]
+const LOCK_CLOCK_STYLE_OPTIONS = [
+  { id: 'classic', label: '经典细体' },
+  { id: 'outline', label: '描边样式' },
+  { id: 'mono', label: '数字等宽' },
+]
 
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
@@ -398,6 +403,19 @@ onBeforeUnmount(() => {
           class="w-full border-b border-gray-200 py-1 outline-none text-sm"
           placeholder="https://..."
         />
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <label class="text-xs text-gray-500 block mb-1">锁屏时间样式</label>
+        <select
+          v-model="settings.appearance.lockClockStyle"
+          class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
+          @change="saveAppearance"
+        >
+          <option v-for="style in LOCK_CLOCK_STYLE_OPTIONS" :key="style.id" :value="style.id">
+            {{ style.label }}
+          </option>
+        </select>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">

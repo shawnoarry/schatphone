@@ -470,6 +470,36 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
   }
 }
 
+const clampNotificationPreview = (text, max = 72) => {
+  const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
+  if (!normalized) return '你收到了一条新回复'
+  if (normalized.length <= max) return normalized
+  return `${normalized.slice(0, max)}...`
+}
+
+const summarizeAssistantMessagesForNotification = (messages = []) => {
+  if (!Array.isArray(messages) || messages.length === 0) return '你收到了一条新回复'
+
+  for (const message of messages) {
+    if (Array.isArray(message?.blocks)) {
+      const primaryTextBlock = message.blocks.find(
+        (block) =>
+          block?.type === 'text' &&
+          block?.variant !== 'secondary' &&
+          typeof block.text === 'string' &&
+          block.text.trim(),
+      )
+      if (primaryTextBlock) return clampNotificationPreview(primaryTextBlock.text)
+    }
+
+    if (typeof message?.content === 'string' && message.content.trim()) {
+      return clampNotificationPreview(message.content)
+    }
+  }
+
+  return '你收到了一条新回复'
+}
+
 const generateAIResponse = async (contactId, triggerMessageId, options = {}) => {
   const contact = contactsForList.value.find((item) => item.id === contactId)
   if (!contact) throw new Error('Contact not found')
@@ -510,7 +540,11 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     chatStore.incrementConversationUnread(contactId, parsedMessages.length || 1)
   }
 
-  return parsedMessages.length
+  return {
+    count: parsedMessages.length,
+    messages: parsedMessages,
+    contactName: contact.name || '新消息',
+  }
 }
 
 const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
@@ -531,7 +565,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
   aiErrorMessage.value = ''
 
   try {
-    await generateAIResponse(
+    const result = await generateAIResponse(
       contactId,
       normalizedTriggerId === MANUAL_TRIGGER_ID ? '' : normalizedTriggerId,
       {
@@ -540,6 +574,15 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
         isProactive: Boolean(options.isProactive),
       },
     )
+    if (systemStore.isLocked && result?.count > 0) {
+      systemStore.addNotification({
+        title: result.contactName || '新消息',
+        content: summarizeAssistantMessagesForNotification(result.messages),
+        icon: 'fas fa-comment-dots',
+        route: `/chat/${contactId}`,
+        source: 'chat_ai_reply',
+      })
+    }
     if (options.markProactiveOpened) {
       chatStore.markConversationProactiveOpened(contactId)
     }
@@ -872,7 +915,7 @@ watch(inputMessage, (text) => {
 })
 
 onBeforeUnmount(() => {
-  cancelActiveRequest()
+  // Keep in-flight AI work running so lock screen can receive completion notifications.
 })
 </script>
 

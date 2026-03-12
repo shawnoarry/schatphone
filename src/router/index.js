@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useSystemStore } from '../stores/system'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import ChatDirectoryView from '../views/ChatDirectoryView.vue'
@@ -42,6 +43,18 @@ const router = createRouter({
     { path: '/files', component: FilesView },
     { path: '/more', component: MoreView },
   ],
+})
+
+router.beforeEach((to) => {
+  const systemStore = useSystemStore()
+  if (to.path === '/lock') {
+    systemStore.lockPhone()
+    return true
+  }
+  if (systemStore.isLocked) {
+    return { path: '/lock' }
+  }
+  return true
 })
 
 export default router
