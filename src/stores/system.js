@@ -1,6 +1,7 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 import { readPersistedState, writePersistedState } from '../lib/persistence'
+import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 
 const AVAILABLE_THEMES = [
   {
@@ -252,7 +253,7 @@ export const useSystemStore = defineStore('system', () => {
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
     },
     system: {
-      language: 'zh-CN',
+      language: DEFAULT_SYSTEM_LANGUAGE,
       timezone: 'Asia/Shanghai',
       notifications: true,
     },
@@ -546,6 +547,7 @@ export const useSystemStore = defineStore('system', () => {
 
     if (persisted.settings?.system && typeof persisted.settings.system === 'object') {
       Object.assign(settings.system, persisted.settings.system)
+      settings.system.language = normalizeSystemLanguage(settings.system.language)
     }
 
     if (persisted.user && typeof persisted.user === 'object') {

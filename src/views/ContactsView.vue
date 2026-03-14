@@ -5,10 +5,12 @@ import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { callAI } from '../lib/ai'
+import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 const { user, settings } = storeToRefs(systemStore)
 const { contacts, loadingAI } = storeToRefs(chatStore)
@@ -39,7 +41,7 @@ const saveNewContact = () => {
 
 const autoGenerateContact = async () => {
   if (!newContact.name) {
-    alert('请至少输入一个名字！')
+    alert(t('请至少输入一个名字！', 'Please enter at least one name.'))
     return
   }
 
@@ -60,7 +62,7 @@ const autoGenerateContact = async () => {
     newContact.role = data.role
     newContact.bio = data.bio
   } catch (error) {
-    alert(`生成失败: ${error.message}`)
+    alert(`${t('生成失败', 'Generation failed')}: ${error.message}`)
   } finally {
     loadingAI.value = false
   }
@@ -108,7 +110,7 @@ const autoGenerateContact = async () => {
         </div>
 
         <div class="bg-gray-50 p-2 rounded-lg mt-2">
-          <label class="text-[10px] text-gray-400 uppercase font-bold">详细人设 (Prompt)</label>
+          <label class="text-[10px] text-gray-400 uppercase font-bold">{{ t('详细人设', 'Detailed Prompt') }}</label>
           <textarea
             v-model="newContact.bio"
             class="w-full bg-transparent text-xs h-20 outline-none resize-none mt-1"
@@ -159,7 +161,7 @@ const autoGenerateContact = async () => {
       </div>
 
       <div class="px-4 py-2">
-        <div class="text-xs font-bold text-gray-500 mb-2">我的 AI (Main)</div>
+        <div class="text-xs font-bold text-gray-500 mb-2">{{ t('我的 AI（主角色）', 'My AI (Main)') }}</div>
         <div v-for="contact in contacts.filter((item) => item.isMain)" :key="contact.id" class="flex items-center gap-3 py-2 border-b border-gray-50">
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
@@ -170,7 +172,7 @@ const autoGenerateContact = async () => {
           <span class="font-medium">{{ contact.name }}</span>
         </div>
 
-        <div class="text-xs font-bold text-gray-500 mt-4 mb-2">其他联系人 (NPC)</div>
+        <div class="text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('其他联系人（NPC）', 'Other Contacts (NPC)') }}</div>
         <div v-for="contact in contacts.filter((item) => !item.isMain)" :key="contact.id" class="flex items-center gap-3 py-2 border-b border-gray-50">
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img

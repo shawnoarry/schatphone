@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useI18n } from '../composables/useI18n'
 
 defineProps({
   currentTime: {
@@ -17,6 +18,7 @@ defineProps({
 
 const router = useRouter()
 const systemStore = useSystemStore()
+const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 
@@ -119,6 +121,33 @@ const widgetRegistry = {
   app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
 }
 
+const resolveAppTileLabel = (tileId, fallback = '') => {
+  if (tileId === 'app_network') return t('网络', 'Network')
+  if (tileId === 'app_wallet') return t('钱包', 'Wallet')
+  if (tileId === 'app_gallery') return t('相册', 'Photos')
+  if (tileId === 'app_themes') return t('外观', 'Themes')
+  if (tileId === 'app_phone') return t('电话', 'Phone')
+  if (tileId === 'app_map') return t('地图', 'Map')
+  if (tileId === 'app_calendar') return t('日历', 'Calendar')
+  if (tileId === 'app_stock') return t('股票', 'Stock')
+  if (tileId === 'app_chat') return t('聊天', 'Chat')
+  if (tileId === 'app_contacts') return t('联系人', 'Contacts')
+  if (tileId === 'app_settings') return t('设置', 'Settings')
+  if (tileId === 'app_files') return t('文件', 'Files')
+  if (tileId === 'app_more') return t('更多', 'More')
+  return fallback
+}
+
+const resolveWidgetVariantLabel = (variant) => {
+  if (variant === 'weather') return t('天气', 'Weather')
+  if (variant === 'calendar') return t('日历', 'Calendar')
+  if (variant === 'music') return t('音乐', 'Music')
+  if (variant === 'system') return t('系统', 'System')
+  if (variant === 'heart') return t('快捷爱心', 'Quick Heart')
+  if (variant === 'disc') return t('快捷唱片', 'Quick Disc')
+  return t('组件', 'Widget')
+}
+
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const customWidgetMap = computed(() => {
   const map = new Map()
@@ -174,6 +203,12 @@ const tilePageIndexMap = computed(() => {
 const activeTheme = computed(() => {
   return availableThemes.value.find((theme) => theme.id === settings.value.appearance.currentTheme) || null
 })
+const activeThemeName = computed(() => {
+  if (!activeTheme.value) return ''
+  if (activeTheme.value.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
+  if (activeTheme.value.id === 'zen') return t('纯白', 'Pure White')
+  return activeTheme.value.name || ''
+})
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
 
@@ -185,7 +220,15 @@ const setPage = (page) => {
 
 const tileMeta = (tileId) => {
   const builtIn = widgetRegistry[tileId]
-  if (builtIn) return builtIn
+  if (builtIn) {
+    if (builtIn.kind === 'app') {
+      return {
+        ...builtIn,
+        label: resolveAppTileLabel(tileId, builtIn.label),
+      }
+    }
+    return builtIn
+  }
 
   const customWidget = customWidgetMap.value.get(tileId)
   if (!customWidget) return null
@@ -235,18 +278,18 @@ const dragGhostMeta = computed(() => {
   if (meta.kind === 'custom_widget') {
     return {
       kind: 'custom_widget',
-      label: meta.label || 'Custom Widget',
+      label: meta.label || t('自定义组件', 'Custom Widget'),
       icon: 'fas fa-code',
     }
   }
 
   const variant = WIDGET_VARIANT_META[meta.variant] || {
-    label: 'Widget',
+    label: resolveWidgetVariantLabel(meta.variant),
     icon: 'fas fa-puzzle-piece',
   }
   return {
     kind: 'widget',
-    label: variant.label,
+    label: resolveWidgetVariantLabel(meta.variant) || variant.label,
     icon: variant.icon,
   }
 })
@@ -288,7 +331,7 @@ const maybeVibrate = (duration = 10) => {
   navigator.vibrate(duration)
 }
 
-const triggerLayoutToast = (text = '布局已保存') => {
+const triggerLayoutToast = (text = t('布局已保存', 'Layout saved')) => {
   layoutToastText.value = text
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   layoutToastTimerId = setTimeout(() => {
@@ -317,7 +360,7 @@ const openAppById = (tileId) => {
     return
   }
 
-  alert(`App "${tile.label}" 正在开发中`)
+  alert(t(`应用「${tile.label}」正在开发中`, `App "${tile.label}" is in development`))
 }
 
 const clearLongPressTimer = () => {
@@ -653,7 +696,7 @@ const stopTileDrag = (event) => {
     const moved = moveTileToSlot(dragTileId.value, dragPreviewPageIndex.value, dragPreviewSlotIndex.value)
     if (moved) {
       triggerDroppedTileFeedback(dragTileId.value)
-      triggerLayoutToast('布局已保存')
+      triggerLayoutToast(t('布局已保存', 'Layout saved'))
       maybeVibrate(12)
       systemStore.saveNow()
     }
@@ -693,7 +736,7 @@ const onGridClick = (pageIndex, event) => {
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
-    triggerLayoutToast('布局已保存')
+    triggerLayoutToast(t('布局已保存', 'Layout saved'))
     maybeVibrate(12)
     systemStore.saveNow()
   }
@@ -705,7 +748,7 @@ const onLayoutSlotClick = (pageIndex, slotIndex) => {
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
-    triggerLayoutToast('布局已保存')
+    triggerLayoutToast(t('布局已保存', 'Layout saved'))
     maybeVibrate(12)
     systemStore.saveNow()
   }
@@ -721,17 +764,17 @@ const hideTileFromHome = (tileId) => {
   if (selectedTileId.value === tileId) {
     selectedTileId.value = ''
   }
-  triggerLayoutToast('组件已隐藏')
+  triggerLayoutToast(t('组件已隐藏', 'Widget hidden'))
   maybeVibrate(10)
   systemStore.saveNow()
 }
 
 const resetHomeLayout = () => {
-  const ok = window.confirm('确认恢复 Home 默认布局吗？')
+  const ok = window.confirm(t('确认恢复主屏默认布局吗？', 'Reset Home layout to default?'))
   if (!ok) return
   systemStore.resetHomeWidgetPages()
   systemStore.saveNow()
-  triggerLayoutToast('已恢复默认布局')
+  triggerLayoutToast(t('已恢复默认布局', 'Default layout restored'))
   maybeVibrate(14)
 }
 
@@ -766,13 +809,16 @@ onBeforeUnmount(() => {
     @mouseleave="onMouseUp"
   >
     <div v-if="layoutEditMode" class="home-edit-topbar" data-no-layout-longpress>
-      <button @click="resetHomeLayout" class="home-edit-btn">重置</button>
+      <button @click="resetHomeLayout" class="home-edit-btn">{{ t('重置', 'Reset') }}</button>
       <span class="home-edit-title">
-        编辑主屏<span v-if="selectedTileId" class="home-edit-tip"> · 可拖拽吸附，也可点半透明格子投放</span>
+        {{ t('编辑主屏', 'Edit Home') }}
+        <span v-if="selectedTileId" class="home-edit-tip">
+          {{ t(' · 可拖拽吸附，也可点半透明格子投放', ' · Drag to snap or tap transparent slots to place') }}
+        </span>
       </span>
       <div class="home-edit-actions">
-        <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">取消选中</button>
-        <button @click="exitLayoutMode" class="home-edit-btn is-primary">完成</button>
+        <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">{{ t('取消选中', 'Clear Selection') }}</button>
+        <button @click="exitLayoutMode" class="home-edit-btn is-primary">{{ t('完成', 'Done') }}</button>
       </div>
     </div>
 
@@ -808,7 +854,7 @@ onBeforeUnmount(() => {
         <span v-else class="home-drag-ghost-icon is-widget">
           <i :class="dragGhostMeta?.icon || 'fas fa-puzzle-piece'"></i>
         </span>
-        <span class="home-drag-ghost-label">{{ dragGhostMeta?.label || '移动中' }}</span>
+        <span class="home-drag-ghost-label">{{ dragGhostMeta?.label || t('移动中', 'Moving') }}</span>
       </div>
     </div>
 
@@ -816,14 +862,14 @@ onBeforeUnmount(() => {
       <section v-for="(page, pageIndex) in widgetPages" :key="pageIndex" class="home-page">
         <div class="home-headline" v-if="pageIndex === 0">
           <h1 class="home-title">
-            Hello, <span class="home-accent">{{ user.name }}</span>
+            {{ t('你好，', 'Hello,') }} <span class="home-accent">{{ user.name }}</span>
           </h1>
-          <p class="home-subtitle">Everything is ready.</p>
+          <p class="home-subtitle">{{ t('一切准备就绪。', 'Everything is ready.') }}</p>
         </div>
 
         <div class="home-search-pill" v-if="pageIndex === 1">
           <i class="fas fa-search"></i>
-          <span>Search System...</span>
+          <span>{{ t('搜索系统...', 'Search System...') }}</span>
         </div>
 
         <div class="home-grid-wrap">
@@ -857,7 +903,7 @@ onBeforeUnmount(() => {
                   class="home-edit-hide"
                   @pointerdown.stop
                   @click.stop="hideTileFromHome(tileId)"
-                  title="隐藏"
+                  :title="t('隐藏', 'Hide')"
                   data-no-layout-longpress
                 >
                   <i class="fas fa-minus"></i>
@@ -870,24 +916,26 @@ onBeforeUnmount(() => {
                   <div class="home-widget-card" v-if="tileMeta(tileId)?.variant === 'weather'">
                     <div class="home-widget-topline">
                       <i class="fas fa-location-dot"></i>
-                      <span>Tokyo</span>
+                      <span>{{ t('东京', 'Tokyo') }}</span>
                     </div>
                     <div class="home-widget-temp">18°</div>
                     <div class="home-widget-bottomline">
                       <i class="fas fa-sun home-accent"></i>
-                      <span>Clear</span>
+                      <span>{{ t('晴朗', 'Clear') }}</span>
                     </div>
                   </div>
 
                   <div class="home-widget-card home-widget-center" v-else-if="tileMeta(tileId)?.variant === 'calendar'">
-                    <span class="home-calendar-week">{{ today.toLocaleString('en-US', { weekday: 'short' }) }}</span>
+                    <span class="home-calendar-week">{{
+                      today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })
+                    }}</span>
                     <span class="home-calendar-day">{{ today.getDate() }}</span>
                   </div>
 
                   <div class="home-widget-card home-widget-music" v-else-if="tileMeta(tileId)?.variant === 'music'">
                     <div class="home-music-cover"></div>
                     <div class="home-music-meta">
-                      <span class="home-widget-topline">Now Playing</span>
+                      <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
                       <h3>Cyber Heart</h3>
                       <p>Neo Tokyo 2077 Mix</p>
                       <div class="home-progress">
@@ -899,7 +947,7 @@ onBeforeUnmount(() => {
                   <div class="home-widget-card" v-else-if="tileMeta(tileId)?.variant === 'system'">
                     <div class="home-widget-topline">
                       <i class="fas fa-microchip"></i>
-                      <span>System</span>
+                      <span>{{ t('系统', 'System') }}</span>
                     </div>
                     <div class="home-widget-bottomline">
                       <span>CPU 42%</span>
@@ -966,11 +1014,11 @@ onBeforeUnmount(() => {
           class="home-dot"
           :class="{ 'is-active': currentPage === index - 1 }"
           @click="setPage(index - 1)"
-          :aria-label="`Go to page ${index}`"
+          :aria-label="`${t('前往第', 'Go to page ')}${index}${t('页', '')}`"
         ></button>
       </div>
       <p class="text-[10px] text-white/70 mt-1" v-if="layoutEditFeatureEnabled && !layoutEditMode">
-        长按桌面空白处可进入布局编辑
+        {{ t('长按桌面空白处可进入布局编辑', 'Long press an empty area to enter layout edit') }}
       </p>
 
       <div class="home-dock">
@@ -987,7 +1035,7 @@ onBeforeUnmount(() => {
           <i class="fas fa-images"></i>
         </button>
       </div>
-      <p class="home-theme-hint" v-if="activeTheme">Theme: {{ activeTheme.name }}</p>
+      <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>
     </div>
   </div>
 </template>

@@ -1,8 +1,10 @@
-﻿<script setup>
+<script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
+const { t } = useI18n()
 
 const query = ref('')
 const activeTab = ref('recent')
@@ -69,24 +71,24 @@ const createQuickNote = () => {
       <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> 首页
       </button>
-      <h1 class="font-bold">Files</h1>
+      <h1 class="font-bold">{{ t('文件', 'Files') }}</h1>
     </div>
 
     <div class="flex-1 overflow-y-auto no-scrollbar bg-gray-50 p-4 space-y-4">
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
-        <p class="text-sm font-semibold mb-2">快速检索</p>
+        <p class="text-sm font-semibold mb-2">{{ t('快速检索', 'Quick Search') }}</p>
         <input
           v-model="query"
           type="text"
           class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-          placeholder="搜索文件名"
+          :placeholder="t('搜索文件名', 'Search file name')"
         />
       </section>
 
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
         <div class="flex items-center justify-between mb-3">
-          <p class="text-sm font-semibold">文件列表</p>
-          <span class="text-[11px] text-gray-500">共 {{ files.length }} 个</span>
+          <p class="text-sm font-semibold">{{ t('文件列表', 'File List') }}</p>
+          <span class="text-[11px] text-gray-500">{{ t('共', 'Total') }} {{ files.length }} {{ t('个', '') }}</span>
         </div>
 
         <div class="flex gap-2 mb-3">
@@ -95,14 +97,14 @@ const createQuickNote = () => {
             class="px-3 py-1.5 rounded-full text-xs border"
             :class="activeTab === 'recent' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200'"
           >
-            最近
+            {{ t('最近', 'Recent') }}
           </button>
           <button
             @click="activeTab = 'favorite'"
             class="px-3 py-1.5 rounded-full text-xs border"
             :class="activeTab === 'favorite' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200'"
           >
-            收藏 {{ favoriteCount }}
+            {{ t('收藏', 'Favorites') }} {{ favoriteCount }}
           </button>
         </div>
 
@@ -123,31 +125,31 @@ const createQuickNote = () => {
               @click="toggleFavorite(item.id)"
               class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
             >
-              {{ item.favorite ? '取消收藏' : '收藏' }}
+              {{ item.favorite ? t('取消收藏', 'Unfavorite') : t('收藏', 'Favorite') }}
             </button>
             <button
               @click="removeFile(item.id)"
               class="px-2 py-1 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50"
             >
-              删除
+              {{ t('删除', 'Delete') }}
             </button>
           </div>
         </div>
 
-        <p v-else class="text-xs text-gray-500">当前筛选下没有文件。</p>
+        <p v-else class="text-xs text-gray-500">{{ t('当前筛选下没有文件。', 'No files under current filter.') }}</p>
       </section>
 
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
-        <p class="text-sm font-semibold mb-2">新建便签文件</p>
+        <p class="text-sm font-semibold mb-2">{{ t('新建便签文件', 'Create quick note') }}</p>
         <div class="flex gap-2">
           <input
             v-model="createName"
             type="text"
             class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none"
-            placeholder="例如：灵感记录.txt"
+            :placeholder="t('例如：灵感记录.txt', 'Example: inspiration-note.txt')"
           />
           <button @click="createQuickNote" class="px-3 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600">
-            新建
+            {{ t('新建', 'Create') }}
           </button>
         </div>
       </section>

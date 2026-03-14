@@ -1,6 +1,6 @@
 ﻿# SchatPhone AI Work Mode / AI 工作模式
 
-Updated / 更新时间: 2026-02-23
+Updated / 更新时间: 2026-03-14
 
 Purpose / 用途: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.  
 给后续接手的 Codex、Claude 或其他 AI 编程助手一套统一执行方式。
@@ -78,6 +78,7 @@ Each delivery should include / 每次交付统一包含：
   - `PROJECT_STATUS.md`
   - `ARCHITECTURE.md`
   - `CHAT_PROGRESS.md` (if Chat domain changed) /（若涉及 Chat）
+  - `SYNC_SNAPSHOT.md`（源文档更新后同步快照）
 
 ## 8. Definition of Done / 完成标准
 

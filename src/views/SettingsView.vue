@@ -5,11 +5,13 @@ import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
+import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
+const { t } = useI18n()
 
 const { settings, user } = storeToRefs(systemStore)
 const { contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
@@ -94,7 +96,7 @@ onBeforeUnmount(() => {
       <button @click="goHome" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
         <i class="fas fa-chevron-left"></i> 主页
       </button>
-      <h1 class="text-2xl font-bold flex-1">设置</h1>
+      <h1 class="text-2xl font-bold flex-1">{{ t('设置', 'Settings') }}</h1>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar">
@@ -107,12 +109,12 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex-1">
           <h2 class="text-lg font-semibold">{{ user.name || '未命名用户' }}</h2>
-          <p class="text-xs text-gray-500">Apple ID、头像与基础人设</p>
+          <p class="text-xs text-gray-500">{{ t('Apple ID、头像与基础人设', 'Apple ID, avatar and profile basics') }}</p>
         </div>
         <i class="fas fa-chevron-right text-gray-300"></i>
       </button>
 
-      <div class="px-1 text-[11px] text-gray-500 font-medium">内容设置</div>
+      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
         <button
           class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
@@ -121,7 +123,7 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-book-open"></i>
           </div>
-          <span class="flex-1 text-sm">世界书</span>
+          <span class="flex-1 text-sm">{{ t('世界书', 'World Book') }}</span>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -132,7 +134,7 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-gray-600 flex items-center justify-center text-white text-xs">
             <i class="fas fa-sliders"></i>
           </div>
-          <span class="flex-1 text-sm">通用</span>
+          <span class="flex-1 text-sm">{{ t('通用', 'General') }}</span>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -143,12 +145,12 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-red-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-bell"></i>
           </div>
-          <span class="flex-1 text-sm">通知</span>
+          <span class="flex-1 text-sm">{{ t('通知', 'Notifications') }}</span>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
       </div>
 
-      <div class="px-1 text-[11px] text-gray-500 font-medium">数据与安全</div>
+      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
         <button
           class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
@@ -157,7 +159,7 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-export"></i>
           </div>
-          <span class="flex-1 text-sm">备份与导出（JSON）</span>
+          <span class="flex-1 text-sm">{{ t('备份与导出（JSON）', 'Backup & Export (JSON)') }}</span>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -168,7 +170,7 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded bg-blue-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-circle-info"></i>
           </div>
-          <span class="flex-1 text-sm">关于 SchatPhone</span>
+          <span class="flex-1 text-sm">{{ t('关于 SchatPhone', 'About SchatPhone') }}</span>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
       </div>
@@ -176,23 +178,23 @@ onBeforeUnmount(() => {
       <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
           <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> 设置
+            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
-          <span class="font-bold mx-auto pr-8">通用</span>
+          <span class="font-bold mx-auto pr-8">{{ t('通用', 'General') }}</span>
         </div>
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4">
-            <label class="text-xs text-gray-500 block mb-2">语言</label>
+            <label class="text-xs text-gray-500 block mb-2">{{ t('语言', 'Language') }}</label>
             <select v-model="settings.system.language" class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white">
               <option value="zh-CN">简体中文</option>
-              <option value="en-US">English</option>
+              <option value="en-US">{{ t('英语', 'English') }}</option>
               <option value="ko-KR">한국어</option>
             </select>
           </div>
 
           <div class="bg-white rounded-2xl p-4">
-            <label class="text-xs text-gray-500 block mb-1">时区</label>
+            <label class="text-xs text-gray-500 block mb-1">{{ t('时区', 'Timezone') }}</label>
             <input
               v-model="settings.system.timezone"
               type="text"
@@ -206,7 +208,7 @@ onBeforeUnmount(() => {
             class="w-full py-3 rounded-xl text-sm font-semibold transition"
             :class="generalSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
           >
-            {{ generalSaved ? '已保存' : '保存通用设置' }}
+            {{ generalSaved ? t('已保存', 'Saved') : t('保存通用设置', 'Save general settings') }}
           </button>
         </div>
       </div>
@@ -214,16 +216,16 @@ onBeforeUnmount(() => {
       <div v-if="activeMenu === 'notification'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
           <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> 设置
+            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
-          <span class="font-bold mx-auto pr-8">通知</span>
+          <span class="font-bold mx-auto pr-8">{{ t('通知', 'Notifications') }}</span>
         </div>
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <p class="text-sm">消息通知</p>
-              <p class="text-[10px] text-gray-400">用于聊天消息与系统提醒</p>
+              <p class="text-sm">{{ t('消息通知', 'Message notifications') }}</p>
+              <p class="text-[10px] text-gray-400">{{ t('用于聊天消息与系统提醒', 'Used for chat messages and system alerts') }}</p>
             </div>
             <input v-model="settings.system.notifications" type="checkbox" class="w-5 h-5" />
           </div>
@@ -233,7 +235,7 @@ onBeforeUnmount(() => {
             class="w-full py-3 rounded-xl text-sm font-semibold transition"
             :class="notificationSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
           >
-            {{ notificationSaved ? '已保存' : '保存通知设置' }}
+            {{ notificationSaved ? t('已保存', 'Saved') : t('保存通知设置', 'Save notification settings') }}
           </button>
         </div>
       </div>
@@ -241,16 +243,16 @@ onBeforeUnmount(() => {
       <div v-if="activeMenu === 'about'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
           <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> 设置
+            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
-          <span class="font-bold mx-auto pr-8">关于</span>
+          <span class="font-bold mx-auto pr-8">{{ t('关于', 'About') }}</span>
         </div>
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4">
             <p class="text-sm font-semibold">SchatPhone</p>
-            <p class="text-xs text-gray-500 mt-1">当前版本：1.2.0</p>
-            <p class="text-xs text-gray-500 mt-1">框架：Vue 3 + Vite + Pinia + Tailwind v4</p>
+            <p class="text-xs text-gray-500 mt-1">{{ t('当前版本：1.2.0', 'Current version: 1.2.0') }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ t('框架：Vue 3 + Vite + Pinia + Tailwind v4', 'Stack: Vue 3 + Vite + Pinia + Tailwind v4') }}</p>
           </div>
         </div>
       </div>

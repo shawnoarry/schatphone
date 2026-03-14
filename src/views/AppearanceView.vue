@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useI18n } from '../composables/useI18n'
 
 const CUSTOM_SIZE_OPTIONS = ['1x1', '2x1', '2x2', '4x2', '4x3']
 const ROOT_MENU = ''
@@ -30,6 +31,10 @@ const LOCK_CLOCK_STYLE_OPTIONS = [
   { id: 'mono', label: '数字等宽' },
 ]
 
+const router = useRouter()
+const systemStore = useSystemStore()
+const { t } = useI18n()
+
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
     width: 100%;
@@ -45,20 +50,25 @@ const WIDGET_TEMPLATE_CODE = `<style>
 </style>
 <div class="widget-card">My Custom Widget</div>`
 
-const WIDGET_TEMPLATE_JSON = JSON.stringify(
-  [
-    {
-      name: '我的组件',
-      size: '2x2',
-      code: WIDGET_TEMPLATE_CODE,
-    },
-  ],
-  null,
-  2,
+const WIDGET_TEMPLATE_JSON = computed(() =>
+  JSON.stringify(
+    [
+      {
+        name: t('我的组件', 'My Widget'),
+        size: '2x2',
+        code: WIDGET_TEMPLATE_CODE,
+      },
+    ],
+    null,
+    2,
+  ),
 )
-
-const router = useRouter()
-const systemStore = useSystemStore()
+const importJsonPlaceholder = computed(() =>
+  t(
+    '[{"name":"天气卡","size":"2x2","code":"<div>...</div>"}]',
+    '[{"name":"Weather Card","size":"2x2","code":"<div>...</div>"}]',
+  ),
+)
 
 const { settings, availableThemes } = storeToRefs(systemStore)
 
@@ -85,26 +95,61 @@ const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages
 const pageOptions = computed(() =>
   Array.from({ length: Math.max(homeWidgetPages.value.length, 5) }, (_, index) => index),
 )
+
+const pageDisplayLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
+
+const fontPresetLabel = (preset) => {
+  if (preset.id === 'system') return t('系统默认', 'System default')
+  if (preset.id === 'serif') return t('衬线 Serif', 'Serif')
+  return preset.label
+}
+
+const builtInWidgetLabel = (widgetId) => {
+  if (widgetId === 'weather') return t('天气', 'Weather')
+  if (widgetId === 'calendar') return t('日历', 'Calendar')
+  if (widgetId === 'music') return t('音乐', 'Music')
+  if (widgetId === 'system') return t('系统状态', 'System Status')
+  if (widgetId === 'quick_heart') return t('快捷爱心', 'Quick Heart')
+  if (widgetId === 'quick_disc') return t('快捷唱片', 'Quick Disc')
+  return t('组件', 'Widget')
+}
+
+const lockClockStyleLabel = (styleId) => {
+  if (styleId === 'classic') return t('经典细体', 'Classic Thin')
+  if (styleId === 'outline') return t('描边样式', 'Outline')
+  if (styleId === 'mono') return t('数字等宽', 'Monospace')
+  return styleId
+}
+
+const themeDisplayName = (theme) => {
+  if (theme?.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
+  if (theme?.id === 'zen') return t('纯白', 'Pure White')
+  return theme?.name || ''
+}
+
 const builtInWidgetStates = computed(() =>
   BUILT_IN_WIDGET_OPTIONS.map((item) => {
     const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(item.id))
     return {
       ...item,
+      label: builtInWidgetLabel(item.id),
       pageIndex,
       visible: pageIndex >= 0,
-      pageLabel: pageIndex >= 0 ? `第${pageIndex + 1}屏` : '已隐藏',
+      pageLabel: pageIndex >= 0 ? pageDisplayLabel(pageIndex) : t('已隐藏', 'Hidden'),
     }
   }),
 )
 
 const pageTitle = computed(() => {
-  if (activeMenu.value === 'theme') return '主题美化'
-  if (activeMenu.value === 'font') return '字体设置'
-  if (activeMenu.value === 'widget') return 'Widget 工坊'
-  return '外观工坊'
+  if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
+  if (activeMenu.value === 'font') return t('字体设置', 'Font')
+  if (activeMenu.value === 'widget') return t('Widget 工坊', 'Widget Studio')
+  return t('外观工坊', 'Appearance Studio')
 })
 
-const backLabel = computed(() => (activeMenu.value === ROOT_MENU ? '设置' : '外观工坊'))
+const backLabel = computed(() =>
+  activeMenu.value === ROOT_MENU ? t('设置', 'Settings') : t('外观工坊', 'Appearance Studio'),
+)
 
 const currentFontStack = computed(() => {
   const value = settings.value.appearance.customVars?.[FONT_VAR_NAME]
@@ -189,10 +234,10 @@ const resetFontStack = () => {
 const copyWidgetTemplate = async () => {
   try {
     if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(WIDGET_TEMPLATE_JSON)
+      await navigator.clipboard.writeText(WIDGET_TEMPLATE_JSON.value)
     } else {
       const temp = document.createElement('textarea')
-      temp.value = WIDGET_TEMPLATE_JSON
+      temp.value = WIDGET_TEMPLATE_JSON.value
       document.body.appendChild(temp)
       temp.select()
       document.execCommand('copy')
@@ -205,12 +250,12 @@ const copyWidgetTemplate = async () => {
       templateCopied.value = false
     }, 1200)
   } catch {
-    alert('复制失败，请手动复制模板文本。')
+    alert(t('复制失败，请手动复制模板文本。', 'Copy failed. Please copy the template text manually.'))
   }
 }
 
 const exportWidgetTemplate = () => {
-  const content = `# SchatPhone Widget JSON Template\n\n${WIDGET_TEMPLATE_JSON}\n`
+  const content = `# SchatPhone Widget JSON Template\n\n${WIDGET_TEMPLATE_JSON.value}\n`
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -241,12 +286,12 @@ const startEditCustomWidget = (widget) => {
 const submitCustomWidget = () => {
   const code = customWidgetCode.value.trim()
   if (!code) {
-    alert('请先填写 Widget 代码。')
+    alert(t('请先填写 Widget 代码。', 'Please enter widget code first.'))
     return
   }
 
   const payload = {
-    name: customWidgetName.value.trim() || '自定义组件',
+    name: customWidgetName.value.trim() || t('自定义组件', 'Custom Widget'),
     size: customWidgetSize.value,
     code,
   }
@@ -270,7 +315,7 @@ const submitCustomWidget = () => {
 }
 
 const removeCustomWidget = (widgetId) => {
-  const ok = window.confirm('确认删除这个自定义 Widget 吗？')
+  const ok = window.confirm(t('确认删除这个自定义 Widget 吗？', 'Delete this custom widget?'))
   if (!ok) return
 
   systemStore.removeCustomWidget(widgetId)
@@ -288,13 +333,13 @@ const moveCustomWidgetToPage = (widgetId, pageIndex) => {
 const importCustomWidgets = () => {
   const raw = importJsonText.value.trim()
   if (!raw) {
-    alert('请先粘贴 JSON。')
+    alert(t('请先粘贴 JSON。', 'Please paste JSON first.'))
     return
   }
 
   const importedCount = systemStore.importCustomWidgets(raw, importTargetPage.value)
   if (importedCount <= 0) {
-    alert('导入失败：请检查 JSON 格式。')
+    alert(t('导入失败：请检查 JSON 格式。', 'Import failed: please check JSON format.'))
     return
   }
 
@@ -305,7 +350,7 @@ const importCustomWidgets = () => {
 const restoreBuiltInWidget = (tileId) => {
   const ok = systemStore.placeBuiltInWidgetTile(tileId, builtInWidgetPage.value)
   if (!ok) {
-    alert('恢复失败：组件 ID 无效。')
+    alert(t('恢复失败：组件 ID 无效。', 'Restore failed: invalid widget ID.'))
     return
   }
   triggerSaved()
@@ -313,7 +358,7 @@ const restoreBuiltInWidget = (tileId) => {
 
 const widgetPageLabel = (widgetId) => {
   const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(widgetId))
-  return pageIndex >= 0 ? `第${pageIndex + 1}屏` : '未放入主屏'
+  return pageIndex >= 0 ? pageDisplayLabel(pageIndex) : t('未放入主屏', 'Not placed on Home')
 }
 
 onBeforeUnmount(() => {
@@ -329,7 +374,7 @@ onBeforeUnmount(() => {
         <i class="fas fa-chevron-left"></i> {{ backLabel }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ pageTitle }}</h1>
-      <button @click="goHome" class="text-blue-500 text-sm">主页</button>
+      <button @click="goHome" class="text-blue-500 text-sm">{{ t('主页', 'Home') }}</button>
     </div>
 
     <div v-if="activeMenu === ROOT_MENU" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
@@ -341,8 +386,8 @@ onBeforeUnmount(() => {
           <i class="fas fa-palette"></i>
         </div>
         <div class="flex-1">
-          <p class="text-sm font-semibold">整体主题美化</p>
-          <p class="text-[11px] text-gray-500">主题、壁纸与自定义 CSS</p>
+          <p class="text-sm font-semibold">{{ t('整体主题美化', 'Theme Styling') }}</p>
+          <p class="text-[11px] text-gray-500">{{ t('主题、壁纸与自定义 CSS', 'Theme, wallpaper and custom CSS') }}</p>
         </div>
         <i class="fas fa-chevron-right text-xs text-gray-300"></i>
       </button>
@@ -355,8 +400,8 @@ onBeforeUnmount(() => {
           <i class="fas fa-font"></i>
         </div>
         <div class="flex-1">
-          <p class="text-sm font-semibold">字体</p>
-          <p class="text-[11px] text-gray-500">全局字体族与自定义字体栈</p>
+          <p class="text-sm font-semibold">{{ t('字体', 'Font') }}</p>
+          <p class="text-[11px] text-gray-500">{{ t('全局字体族与自定义字体栈', 'Global font family and custom stack') }}</p>
         </div>
         <i class="fas fa-chevron-right text-xs text-gray-300"></i>
       </button>
@@ -369,8 +414,8 @@ onBeforeUnmount(() => {
           <i class="fas fa-puzzle-piece"></i>
         </div>
         <div class="flex-1">
-          <p class="text-sm font-semibold">Widget</p>
-          <p class="text-[11px] text-gray-500">创建、导入、模板导出与管理</p>
+          <p class="text-sm font-semibold">{{ t('Widget', 'Widget') }}</p>
+          <p class="text-[11px] text-gray-500">{{ t('创建、导入、模板导出与管理', 'Create, import, export template, and manage') }}</p>
         </div>
         <i class="fas fa-chevron-right text-xs text-gray-300"></i>
       </button>
@@ -378,7 +423,7 @@ onBeforeUnmount(() => {
 
     <div v-else-if="activeMenu === 'theme'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <div class="text-sm font-bold mb-3">主题（保留 Y2K / 纯白）</div>
+        <div class="text-sm font-bold mb-3">{{ t('主题（保留 Y2K / 纯白）', 'Theme (Y2K / Pure White)') }}</div>
         <div class="grid grid-cols-2 gap-3">
           <button
             v-for="theme in availableThemes"
@@ -389,14 +434,14 @@ onBeforeUnmount(() => {
             :style="{ background: theme.preview }"
           >
             <span class="text-xs font-bold" :class="theme.darkText ? 'text-black' : 'text-white'">
-              {{ theme.name }}
+              {{ themeDisplayName(theme) }}
             </span>
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">壁纸 URL</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('壁纸 URL', 'Wallpaper URL') }}</label>
         <input
           v-model="settings.appearance.wallpaper"
           type="text"
@@ -406,14 +451,14 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">锁屏时间样式</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('锁屏时间样式', 'Lock Clock Style') }}</label>
         <select
           v-model="settings.appearance.lockClockStyle"
           class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
           @change="saveAppearance"
         >
           <option v-for="style in LOCK_CLOCK_STYLE_OPTIONS" :key="style.id" :value="style.id">
-            {{ style.label }}
+            {{ lockClockStyleLabel(style.id) }}
           </option>
         </select>
       </div>
@@ -421,8 +466,8 @@ onBeforeUnmount(() => {
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-semibold">顶部状态栏</p>
-            <p class="text-[11px] text-gray-500">显示时间与信号图标</p>
+            <p class="text-sm font-semibold">{{ t('顶部状态栏', 'Status Bar') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('显示时间与信号图标', 'Show time and signal icons') }}</p>
           </div>
           <button
             type="button"
@@ -441,8 +486,8 @@ onBeforeUnmount(() => {
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-semibold">触感反馈（振动）</p>
-            <p class="text-[11px] text-gray-500">拖拽落位与点击时短震动（设备支持时）</p>
+            <p class="text-sm font-semibold">{{ t('触感反馈（振动）', 'Haptic Feedback (Vibration)') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('拖拽落位与点击时短震动（设备支持时）', 'Short vibration on drag/drop and tap (if supported)') }}</p>
           </div>
           <button
             type="button"
@@ -460,8 +505,8 @@ onBeforeUnmount(() => {
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between mb-2">
-          <label class="text-xs text-gray-500 block">自定义 CSS（高级）</label>
-          <button class="text-[11px] text-blue-500" @click="clearCustomCss">清空</button>
+          <label class="text-xs text-gray-500 block">{{ t('自定义 CSS（高级）', 'Custom CSS (Advanced)') }}</label>
+          <button class="text-[11px] text-blue-500" @click="clearCustomCss">{{ t('清空', 'Clear') }}</button>
         </div>
         <textarea
           v-model="settings.appearance.customCss"
@@ -475,13 +520,13 @@ onBeforeUnmount(() => {
         class="w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
-        {{ saved ? '已保存' : '保存主题设置' }}
+        {{ saved ? t('已保存', 'Saved') : t('保存主题设置', 'Save theme settings') }}
       </button>
     </div>
 
     <div v-else-if="activeMenu === 'font'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-sm font-bold mb-3">字体预设</p>
+        <p class="text-sm font-bold mb-3">{{ t('字体预设', 'Font Presets') }}</p>
         <div class="grid grid-cols-2 gap-2">
           <button
             v-for="preset in FONT_PRESETS"
@@ -490,13 +535,13 @@ onBeforeUnmount(() => {
             class="px-3 py-2 rounded-lg text-sm border transition text-left"
             :class="currentFontStack === preset.value ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 hover:bg-gray-50'"
           >
-            {{ preset.label }}
+            {{ fontPresetLabel(preset) }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">自定义字体栈（CSS font-family）</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('自定义字体栈（CSS font-family）', 'Custom font stack (CSS font-family)') }}</label>
         <input
           v-model="customFontStackInput"
           type="text"
@@ -508,19 +553,19 @@ onBeforeUnmount(() => {
             @click="applyCustomFontStack"
             class="flex-1 px-3 py-2 rounded-md text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
           >
-            应用字体
+            {{ t('应用字体', 'Apply Font') }}
           </button>
           <button
             @click="resetFontStack"
             class="px-3 py-2 rounded-md text-sm border border-gray-200 hover:bg-gray-50"
           >
-            重置
+            {{ t('重置', 'Reset') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-xs text-gray-500 mb-1">当前字体栈</p>
+        <p class="text-xs text-gray-500 mb-1">{{ t('当前字体栈', 'Current font stack') }}</p>
         <p class="text-xs font-mono text-gray-700 break-all">{{ currentFontStack }}</p>
       </div>
 
@@ -529,15 +574,15 @@ onBeforeUnmount(() => {
         class="w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
-        {{ saved ? '已保存' : '保存字体设置' }}
+        {{ saved ? t('已保存', 'Saved') : t('保存字体设置', 'Save font settings') }}
       </button>
     </div>
 
     <div v-else-if="activeMenu === 'widget'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm font-bold">通用模板（可导出文本）</p>
-          <span class="text-[11px] text-gray-500">用于自定义创作</span>
+          <p class="text-sm font-bold">{{ t('通用模板（可导出文本）', 'General template (exportable)') }}</p>
+          <span class="text-[11px] text-gray-500">{{ t('用于自定义创作', 'For custom creation') }}</span>
         </div>
         <textarea
           :value="WIDGET_TEMPLATE_JSON"
@@ -550,27 +595,27 @@ onBeforeUnmount(() => {
             class="flex-1 px-3 py-2 rounded-md text-xs font-semibold transition"
             :class="templateCopied ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
           >
-            {{ templateCopied ? '已复制' : '复制模板' }}
+            {{ templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy Template') }}
           </button>
           <button
             @click="exportWidgetTemplate"
             class="flex-1 px-3 py-2 rounded-md text-xs font-semibold bg-gray-800 text-white hover:bg-black transition"
           >
-            导出 TXT
+            {{ t('导出 TXT', 'Export TXT') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm font-bold">内置 Widget 恢复</p>
-          <span class="text-[11px] text-gray-500">可单项加回，不用整屏重置</span>
+          <p class="text-sm font-bold">{{ t('内置 Widget 恢复', 'Built-in Widget Restore') }}</p>
+          <span class="text-[11px] text-gray-500">{{ t('可单项加回，不用整屏重置', 'Restore single widget without full reset') }}</span>
         </div>
         <div class="flex items-center gap-2 mb-2">
-          <label class="text-xs text-gray-500">放置到</label>
+          <label class="text-xs text-gray-500">{{ t('放置到', 'Place to') }}</label>
           <select v-model.number="builtInWidgetPage" class="border rounded-md px-2 py-1.5 text-xs outline-none bg-white">
             <option v-for="pageIndex in pageOptions" :key="`builtin-${pageIndex}`" :value="pageIndex">
-              第{{ pageIndex + 1 }}屏
+              {{ pageDisplayLabel(pageIndex) }}
             </option>
           </select>
         </div>
@@ -589,7 +634,7 @@ onBeforeUnmount(() => {
               @click="restoreBuiltInWidget(widget.id)"
               class="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
             >
-              {{ widget.visible ? `移动到第${builtInWidgetPage + 1}屏` : `加回到第${builtInWidgetPage + 1}屏` }}
+              {{ widget.visible ? `${t('移动到', 'Move to')} ${pageDisplayLabel(builtInWidgetPage)}` : `${t('加回到', 'Restore to')} ${pageDisplayLabel(builtInWidgetPage)}` }}
             </button>
           </div>
         </div>
@@ -597,40 +642,40 @@ onBeforeUnmount(() => {
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <div class="flex items-center justify-between mb-3">
-          <p class="text-sm font-bold">自定义 Widget</p>
-          <span class="text-[11px] text-gray-500">支持粘贴代码与导入 JSON</span>
+          <p class="text-sm font-bold">{{ t('自定义 Widget', 'Custom Widget') }}</p>
+          <span class="text-[11px] text-gray-500">{{ t('支持粘贴代码与导入 JSON', 'Support code paste and JSON import') }}</span>
         </div>
 
         <div class="space-y-3">
           <div>
-            <label class="text-xs text-gray-500 block mb-1">名称</label>
+            <label class="text-xs text-gray-500 block mb-1">{{ t('名称', 'Name') }}</label>
             <input
               v-model="customWidgetName"
               type="text"
               class="w-full border rounded-md px-2 py-2 text-sm outline-none"
-              placeholder="例如：打卡组件 / 时间胶囊"
+              :placeholder="t('例如：打卡组件 / 时间胶囊', 'Example: check-in widget / time capsule')"
             />
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-xs text-gray-500 block mb-1">尺寸</label>
+              <label class="text-xs text-gray-500 block mb-1">{{ t('尺寸', 'Size') }}</label>
               <select v-model="customWidgetSize" class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white">
                 <option v-for="size in CUSTOM_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
               </select>
             </div>
             <div>
-              <label class="text-xs text-gray-500 block mb-1">放置到</label>
+              <label class="text-xs text-gray-500 block mb-1">{{ t('放置到', 'Place to') }}</label>
               <select v-model.number="customWidgetPage" class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white">
                 <option v-for="pageIndex in pageOptions" :key="`create-${pageIndex}`" :value="pageIndex">
-                  第{{ pageIndex + 1 }}屏
+                  {{ pageDisplayLabel(pageIndex) }}
                 </option>
               </select>
             </div>
           </div>
 
           <div>
-            <label class="text-xs text-gray-500 block mb-1">Widget 代码（HTML/CSS/JS）</label>
+            <label class="text-xs text-gray-500 block mb-1">{{ t('Widget 代码（HTML/CSS/JS）', 'Widget Code (HTML/CSS/JS)') }}</label>
             <textarea
               v-model="customWidgetCode"
               class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
@@ -643,56 +688,56 @@ onBeforeUnmount(() => {
               @click="submitCustomWidget"
               class="flex-1 px-3 py-2 rounded-md text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition"
             >
-              {{ editingWidgetId ? '更新 Widget' : '添加 Widget' }}
+              {{ editingWidgetId ? t('更新 Widget', 'Update Widget') : t('添加 Widget', 'Add Widget') }}
             </button>
             <button
               v-if="editingWidgetId"
               @click="resetCustomWidgetForm"
               class="px-3 py-2 rounded-md text-sm border border-gray-200 hover:bg-gray-50"
             >
-              取消编辑
+              {{ t('取消编辑', 'Cancel Edit') }}
             </button>
           </div>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">导入 Widgets（JSON 数组）</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('导入 Widgets（JSON 数组）', 'Import Widgets (JSON Array)') }}</label>
         <textarea
           v-model="importJsonText"
           class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
-          placeholder='[{"name":"天气卡","size":"2x2","code":"<div>...</div>"}]'
+          :placeholder="importJsonPlaceholder"
         ></textarea>
         <div class="flex items-center gap-2 mt-2">
           <select v-model.number="importTargetPage" class="border rounded-md px-2 py-1.5 text-xs outline-none bg-white">
             <option v-for="pageIndex in pageOptions" :key="`import-${pageIndex}`" :value="pageIndex">
-              导入到第{{ pageIndex + 1 }}屏
+              {{ t('导入到', 'Import to') }} {{ pageDisplayLabel(pageIndex) }}
             </option>
           </select>
           <button
             @click="importCustomWidgets"
             class="px-3 py-1.5 rounded-md text-xs bg-gray-800 text-white hover:bg-black transition"
           >
-            导入 JSON
+            {{ t('导入 JSON', 'Import JSON') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm" v-if="customWidgets.length > 0">
-        <p class="text-sm font-bold mb-2">已创建 Widget</p>
+        <p class="text-sm font-bold mb-2">{{ t('已创建 Widget', 'Created Widgets') }}</p>
         <div class="space-y-2">
           <div v-for="widget in customWidgets" :key="widget.id" class="rounded-lg border border-gray-200 p-2.5">
             <div class="flex items-center justify-between gap-2 mb-2">
               <div>
                 <p class="text-sm font-semibold">{{ widget.name }}</p>
-                <p class="text-[11px] text-gray-500">尺寸 {{ widget.size }} · {{ widgetPageLabel(widget.id) }}</p>
+                <p class="text-[11px] text-gray-500">{{ t('尺寸', 'Size') }} {{ widget.size }} · {{ widgetPageLabel(widget.id) }}</p>
               </div>
               <div class="flex gap-1.5">
                 <button @click="startEditCustomWidget(widget)" class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50">
-                  编辑
+                  {{ t('编辑', 'Edit') }}
                 </button>
                 <button @click="removeCustomWidget(widget.id)" class="px-2 py-1 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50">
-                  删除
+                  {{ t('删除', 'Delete') }}
                 </button>
               </div>
             </div>
@@ -703,7 +748,7 @@ onBeforeUnmount(() => {
                 @click="moveCustomWidgetToPage(widget.id, pageIndex)"
                 class="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50"
               >
-                放到第{{ pageIndex + 1 }}屏
+                {{ t('放到', 'Move to') }} {{ pageDisplayLabel(pageIndex) }}
               </button>
             </div>
           </div>
@@ -715,7 +760,7 @@ onBeforeUnmount(() => {
         class="w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
-        {{ saved ? '已保存' : '保存 Widget 设置' }}
+        {{ saved ? t('已保存', 'Saved') : t('保存 Widget 设置', 'Save widget settings') }}
       </button>
     </div>
   </div>

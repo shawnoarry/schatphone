@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useI18n } from '../composables/useI18n'
 
 defineProps({
   currentTime: {
@@ -17,8 +18,10 @@ defineProps({
 
 const router = useRouter()
 const systemStore = useSystemStore()
+const { systemLanguage, languageBase, t } = useI18n()
 const { notifications, settings } = storeToRefs(systemStore)
 const LOCK_BANNER_HIDE_MS = 2600
+const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 
 const lockClockStyle = computed(() => settings.value.appearance.lockClockStyle || 'classic')
 const lockNotifications = computed(() => {
@@ -39,7 +42,7 @@ const formatNotificationTime = (timestamp) => {
   if (!timestamp) return ''
   const time = new Date(timestamp)
   if (Number.isNaN(time.getTime())) return ''
-  return time.toLocaleTimeString('zh-CN', {
+  return time.toLocaleTimeString(timeLocale.value, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -140,7 +143,7 @@ onBeforeUnmount(() => {
     <section class="lock-time-panel">
       <p class="lock-label">
         <i class="fas fa-lock"></i>
-        已锁定
+        {{ t('已锁定', 'Locked') }}
       </p>
       <p
         class="lock-time"
@@ -156,8 +159,8 @@ onBeforeUnmount(() => {
 
     <section class="lock-notification-stack">
       <div class="lock-notification-head">
-        <p class="font-semibold">通知中心</p>
-        <span class="text-xs opacity-80">{{ unreadCount }} 条未读</span>
+        <p class="font-semibold">{{ t('通知中心', 'Notification Center') }}</p>
+        <span class="text-xs opacity-80">{{ unreadCount }} {{ t('条未读', 'unread') }}</span>
       </div>
 
       <TransitionGroup v-if="lockNotifications.length > 0" name="lock-list" tag="div" class="space-y-2">
@@ -182,15 +185,15 @@ onBeforeUnmount(() => {
       </TransitionGroup>
 
       <div v-else class="lock-notification-empty glass">
-        暂无新消息
+        {{ t('暂无新消息', 'No new notifications') }}
       </div>
     </section>
 
     <div class="lock-unlock-area">
       <button class="lock-unlock-button" @click="unlockPhone">
-        解锁进入主屏
+        {{ t('解锁进入主屏', 'Unlock to Home') }}
       </button>
-      <p class="lock-unlock-hint">提示：通知可直接点开并解锁进入对应页面</p>
+      <p class="lock-unlock-hint">{{ t('提示：通知可直接点开并解锁进入对应页面', 'Tip: tap a notification to unlock and open its target page') }}</p>
     </div>
   </div>
 </template>

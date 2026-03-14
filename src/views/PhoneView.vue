@@ -1,7 +1,9 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
+const { t } = useI18n()
 
 const goHome = () => {
   router.push('/home')
@@ -14,13 +16,13 @@ const goHome = () => {
       <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> 首页
       </button>
-      <h1 class="font-bold">Phone</h1>
+      <h1 class="font-bold">{{ t('电话', 'Phone') }}</h1>
     </div>
 
     <div class="flex-1 px-5 py-6">
       <div class="rounded-2xl bg-gray-50 border border-gray-200 p-4">
-        <p class="font-semibold mb-2">电话模块占位页</p>
-        <p class="text-sm text-gray-600">下一步可接入联系人拨号、通话记录、AI 通话脚本生成。</p>
+        <p class="font-semibold mb-2">{{ t('电话模块占位页', 'Phone module placeholder') }}</p>
+        <p class="text-sm text-gray-600">{{ t('下一步可接入联系人拨号、通话记录、AI 通话脚本生成。', 'Next, we can add contact dialing, call logs, and AI call script generation.') }}</p>
       </div>
     </div>
   </div>

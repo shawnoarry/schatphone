@@ -4,11 +4,13 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
+import { useI18n } from './composables/useI18n'
 
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings } = storeToRefs(systemStore)
 const { loadingAI } = storeToRefs(chatStore)
@@ -20,18 +22,20 @@ const customVarStyle = computed(() => settings.value.appearance.customVars || {}
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
+const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const dateLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 
 let timerId = null
 let customCssStyleEl = null
 
 const updateTime = () => {
   const now = new Date()
-  currentTime.value = now.toLocaleTimeString('en-US', {
+  currentTime.value = now.toLocaleTimeString(timeLocale.value, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   })
-  currentDate.value = now.toLocaleDateString('zh-CN', {
+  currentDate.value = now.toLocaleDateString(dateLocale.value, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -55,6 +59,17 @@ watch(
   () => settings.value.appearance.customCss,
   (value) => {
     syncCustomCss(value)
+  },
+  { immediate: true },
+)
+
+watch(
+  systemLanguage,
+  (value) => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('lang', value)
+    }
+    updateTime()
   },
   { immediate: true },
 )
@@ -87,10 +102,10 @@ const lockPhone = () => {
 
 <template>
   <div class="fixed top-4 left-4 text-white text-xs opacity-50 hidden md:block z-[9999]">
-    <p>SchatPhone Build: 1.2.0 (Open)</p>
-    <p>Theme: {{ settings.appearance.currentTheme }}</p>
+    <p>{{ t('SchatPhone 构建版本：1.2.0（开放）', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
+    <p>{{ t('主题', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
     <p v-if="loadingAI" class="text-yellow-400 font-bold">
-      <i class="fas fa-spinner fa-spin"></i> AI Thinking...
+      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 思考中...', 'AI Thinking...') }}
     </p>
   </div>
 
@@ -113,7 +128,7 @@ const lockPhone = () => {
           <button
             v-if="!isLockRoute"
             class="ml-1 w-5 h-5 rounded-full border border-current/30 flex items-center justify-center text-[10px] hover:bg-black/10"
-            title="Lock Screen"
+            :title="t('锁屏', 'Lock Screen')"
             @click.stop="lockPhone"
           >
             <i class="fas fa-lock"></i>

@@ -4,10 +4,12 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const systemStore = useSystemStore()
 const { settings } = storeToRefs(systemStore)
+const { t } = useI18n()
 
 const modelOptions = ref([])
 const modelsLoading = ref(false)
@@ -32,8 +34,8 @@ const ensurePresetState = () => {
 const apiKindLabel = computed(() => {
   const kind = settings.value.api.resolvedKind
   if (kind === 'gemini') return 'Gemini API'
-  if (kind === 'openai_compatible') return 'OpenAI-Compatible'
-  return 'Auto'
+  if (kind === 'openai_compatible') return t('OpenAI 兼容', 'OpenAI-Compatible')
+  return t('自动识别', 'Auto')
 })
 
 const presets = computed(() => settings.value.api.presets || [])
@@ -46,11 +48,11 @@ const savePreset = () => {
   const model = settings.value.api.model?.trim()
 
   if (!name) {
-    alert('请输入预设名称。')
+    alert(t('请输入预设名称。', 'Please enter a preset name.'))
     return
   }
   if (!url || !key) {
-    alert('请先填写 URL 和 Key。')
+    alert(t('请先填写 URL 和 Key。', 'Please enter URL and Key first.'))
     return
   }
 
@@ -100,7 +102,7 @@ const removeActivePreset = () => {
   const index = presets.value.findIndex((item) => item.id === activeId)
   if (index < 0) return
 
-  const ok = window.confirm('确认删除当前预设吗？')
+  const ok = window.confirm(t('确认删除当前预设吗？', 'Delete current preset?'))
   if (!ok) return
 
   settings.value.api.presets.splice(index, 1)
@@ -117,7 +119,7 @@ const clearAllPresets = () => {
   ensurePresetState()
   if (settings.value.api.presets.length === 0) return
 
-  const ok = window.confirm('确认清空全部预设吗？此操作不可撤销。')
+  const ok = window.confirm(t('确认清空全部预设吗？此操作不可撤销。', 'Clear all presets? This action cannot be undone.'))
   if (!ok) return
 
   settings.value.api.presets.splice(0, settings.value.api.presets.length)
@@ -174,7 +176,7 @@ const loadModels = async () => {
   } catch (error) {
     if (currentToken !== modelFetchToken) return
     modelOptions.value = []
-    modelsError.value = formatApiErrorForUi(error, '模型拉取失败，请检查设置。')
+    modelsError.value = formatApiErrorForUi(error, t('模型拉取失败，请检查设置。', 'Failed to load models. Check your settings.'))
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
@@ -239,19 +241,19 @@ ensurePresetState()
         <i class="fas fa-chevron-left"></i> 主页
       </button>
       <h1 class="text-2xl font-bold flex-1">网络与 API</h1>
-      <button @click="goSettings" class="text-blue-500 text-sm">设置</button>
+      <button @click="goSettings" class="text-blue-500 text-sm">{{ t('设置', 'Settings') }}</button>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">API Endpoint URL</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('API 接口 URL', 'API Endpoint URL') }}</label>
         <input
           v-model="settings.api.url"
           type="text"
           class="w-full border-b border-gray-200 py-1 outline-none text-sm font-mono text-gray-700"
           placeholder="https://api.openai.com/v1/chat/completions"
         />
-        <p class="text-[10px] text-gray-400 mt-2">输入 URL 后会自动识别类型，并尝试拉取模型列表。</p>
+        <p class="text-[10px] text-gray-400 mt-2">{{ t('输入 URL 后会自动识别类型，并尝试拉取模型列表。', 'The type will be auto-detected after URL input, then model list will be fetched.') }}</p>
       </div>
 
       <div class="bg-white rounded-xl p-4">
@@ -267,13 +269,13 @@ ensurePresetState()
             @click="showApiKey = !showApiKey"
             class="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
-            {{ showApiKey ? '隐藏' : '显示' }}
+            {{ showApiKey ? t('隐藏', 'Hide') : t('显示', 'Show') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-2">保存为预设</label>
+        <label class="text-xs text-gray-500 block mb-2">{{ t('保存为预设', 'Save as preset') }}</label>
         <div class="flex gap-2">
           <input
             v-model="presetName"
@@ -285,18 +287,18 @@ ensurePresetState()
             @click="savePreset"
             class="px-3 py-1.5 rounded-md bg-blue-500 text-white text-xs hover:bg-blue-600 transition"
           >
-            保存
+            {{ t('保存', 'Save') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4" v-if="presets.length > 0">
-        <label class="text-xs text-gray-500 block mb-1">已存预设</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('已存预设', 'Saved presets') }}</label>
         <select
           v-model="settings.api.activePresetId"
           class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
         >
-          <option value="">请选择预设</option>
+          <option value="">{{ t('请选择预设', 'Select a preset') }}</option>
           <option v-for="preset in presets" :key="preset.id" :value="preset.id">
             {{ preset.name }}
           </option>
@@ -312,7 +314,7 @@ ensurePresetState()
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             "
           >
-            删除当前预设
+            {{ t('删除当前预设', 'Delete current preset') }}
           </button>
           <button
             @click="clearAllPresets"
@@ -324,14 +326,14 @@ ensurePresetState()
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             "
           >
-            清空全部预设
+            {{ t('清空全部预设', 'Clear all presets') }}
           </button>
         </div>
       </div>
 
       <div class="bg-white rounded-xl p-4">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-gray-500">已识别类型</span>
+          <span class="text-xs text-gray-500">{{ t('已识别类型', 'Detected type') }}</span>
           <span class="text-xs font-semibold text-gray-700">{{ apiKindLabel }}</span>
         </div>
 
@@ -341,14 +343,14 @@ ensurePresetState()
           class="w-full rounded-lg py-2 text-sm transition"
           :class="modelsLoading ? 'bg-gray-100 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'"
         >
-          {{ modelsLoading ? '拉取中...' : '刷新模型列表' }}
+          {{ modelsLoading ? t('拉取中...', 'Loading...') : t('刷新模型列表', 'Refresh model list') }}
         </button>
 
         <p v-if="modelsError" class="text-xs text-red-500 mt-2">{{ modelsError }}</p>
       </div>
 
       <div class="bg-white rounded-xl p-4" v-if="modelOptions.length > 0">
-        <label class="text-xs text-gray-500 block mb-1">可用模型（自动拉取）</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('可用模型（自动拉取）', 'Available models (auto fetched)') }}</label>
         <select
           v-model="settings.api.model"
           class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
@@ -358,14 +360,14 @@ ensurePresetState()
       </div>
 
       <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">模型名（手动兜底）</label>
+        <label class="text-xs text-gray-500 block mb-1">{{ t('模型名（手动兜底）', 'Model name (manual fallback)') }}</label>
         <input
           v-model="settings.api.model"
           type="text"
           class="w-full border-b border-gray-200 py-1 outline-none text-sm font-mono"
           placeholder="gpt-4o-mini / gemini-2.5-flash"
         />
-        <p class="text-[10px] text-gray-400 mt-2">如果模型接口受限或跨域失败，可直接手动填写模型名。</p>
+        <p class="text-[10px] text-gray-400 mt-2">{{ t('如果模型接口受限或跨域失败，可直接手动填写模型名。', 'If model API is limited or blocked by CORS, enter model name manually.') }}</p>
       </div>
 
       <button
@@ -373,7 +375,7 @@ ensurePresetState()
         class="w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
-        {{ saved ? '已保存' : '保存网络设置' }}
+        {{ saved ? t('已保存', 'Saved') : t('保存网络设置', 'Save network settings') }}
       </button>
     </div>
   </div>
