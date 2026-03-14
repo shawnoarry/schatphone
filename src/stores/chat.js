@@ -145,11 +145,15 @@ const normalizeMessageMeta = (rawMeta) => {
 
   const replyType = VALID_REPLY_TYPES.has(rawMeta.replyType) ? rawMeta.replyType : 'plain'
   const bilingual = Boolean(rawMeta.bilingual)
+  const rerollOf =
+    typeof rawMeta.rerollOf === 'string' && rawMeta.rerollOf.trim() ? rawMeta.rerollOf.trim() : ''
 
-  return {
+  const output = {
     replyType,
     bilingual,
   }
+  if (rerollOf) output.rerollOf = rerollOf
+  return output
 }
 
 const normalizeMessageBlock = (rawBlock) => {
@@ -292,6 +296,12 @@ const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
       typeof rawMessage?.createdAt === 'number' && Number.isFinite(rawMessage.createdAt)
         ? rawMessage.createdAt
         : nowTs(),
+    editedAt:
+      typeof rawMessage?.editedAt === 'number' &&
+      Number.isFinite(rawMessage.editedAt) &&
+      rawMessage.editedAt > 0
+        ? rawMessage.editedAt
+        : 0,
     status,
   }
 }
@@ -463,11 +473,16 @@ export const useChatStore = defineStore('chat', () => {
     return normalized
   }
 
+  const getMessageIndex = (contactId, targetMessageId) => {
+    const list = getMessagesByContactId(contactId)
+    const index = list.findIndex((item) => item.id === targetMessageId)
+    return { list, index }
+  }
+
   const updateMessageStatus = (contactId, targetMessageId, status) => {
     if (!VALID_MESSAGE_STATUS.has(status)) return false
     const key = conversationKeyForContact(contactId)
-    const list = getMessagesByContactId(contactId)
-    const index = list.findIndex((item) => item.id === targetMessageId)
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return false
     list[index] = {
       ...list[index],
@@ -480,13 +495,19 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
-  const updateMessageContent = (contactId, targetMessageId, nextContent) => {
-    const list = getMessagesByContactId(contactId)
-    const index = list.findIndex((item) => item.id === targetMessageId)
+  const updateMessageContent = (contactId, targetMessageId, nextContent, options = {}) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return false
 
     const updatedContent = typeof nextContent === 'string' ? nextContent : list[index].content
     const existingBlocks = Array.isArray(list[index].blocks) ? list[index].blocks : []
+    const markEdited = options?.markEdited !== false
+    const editedAt =
+      markEdited
+        ? typeof options?.editedAt === 'number' && Number.isFinite(options.editedAt)
+          ? Math.max(0, Math.floor(options.editedAt))
+          : nowTs()
+        : list[index].editedAt || 0
     const nextBlocks =
       existingBlocks.length > 0
         ? existingBlocks.map((block, blockIndex) => {
@@ -501,9 +522,42 @@ export const useChatStore = defineStore('chat', () => {
       ...list[index],
       content: updatedContent,
       blocks: nextBlocks,
+      editedAt,
     }
     syncConversationSummary(contactId)
     return true
+  }
+
+  const removeMessage = (contactId, targetMessageId) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return null
+    const [removed] = list.splice(index, 1)
+    const key = conversationKeyForContact(contactId)
+    if (removed?.role === 'assistant' && conversations[key]) {
+      conversations[key].unread = Math.max(0, conversations[key].unread - 1)
+      conversations[key].updatedAt = nowTs()
+    }
+    syncConversationSummary(contactId)
+    return removed || null
+  }
+
+  const replaceMessage = (contactId, targetMessageId, rawMessage, options = {}) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return null
+
+    const fallbackRole = list[index]?.role === 'user' ? 'user' : 'assistant'
+    const normalized = normalizeMessage(rawMessage, fallbackRole)
+
+    if (options?.keepCreatedAt !== false) {
+      normalized.createdAt = list[index]?.createdAt || normalized.createdAt
+    }
+    if (options?.keepStatus === true && VALID_MESSAGE_STATUS.has(list[index]?.status)) {
+      normalized.status = list[index].status
+    }
+
+    list[index] = normalized
+    syncConversationSummary(contactId)
+    return normalized
   }
 
   const addContact = (payload = {}) => {
@@ -721,6 +775,8 @@ export const useChatStore = defineStore('chat', () => {
     appendMessage,
     updateMessageStatus,
     updateMessageContent,
+    removeMessage,
+    replaceMessage,
     addContact,
     updateContact,
     removeContact,

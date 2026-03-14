@@ -1,6 +1,6 @@
-﻿# SchatPhone 架构说明
+# SchatPhone 架构说明
 
-Updated / 更新时间: 2026-02-23
+Updated / 更新时间: 2026-03-15
 
 ## 1. Architecture Goals / 架构目标
 
@@ -8,17 +8,18 @@ SchatPhone follows a "mobile shell + configurable capability center + AI chat do
 SchatPhone 采用“移动端交互壳 + 可配置能力中心 + AI 对话域”架构。
 
 Primary goals / 优先目标：
-- Smooth interaction on Home/Chat/Settings main path / 保证 Home/Chat/Settings 主链路流畅
-- User-configurable API/theme/layout / API、主题、布局可配置
+- Smooth interaction on Lock/Home/Chat/Settings main path / 保证 Lock/Home/Chat/Settings 主链路流畅
+- User-configurable API/theme/layout/language / API、主题、布局、系统语言可配置
 - Extensible module model without rewriting foundations / 新模块扩展不重做底层
 - Controlled AI cost with explicit user triggers / AI 调用成本可控，强调用户显式触发
+- Keep immersive lock-screen notification experience / 保持锁屏沉浸通知体验
 
 ## 2. Tech Stack and Versions / 技术栈与版本
 
 - Vue: `3.5.24`
 - Vue Router: `5.0.2` (Hash history) / Hash 模式
 - Pinia: `3.0.4`
-- Vite: `7.2.4`
+- Vite: `7.2.4+`
 - Tailwind CSS: `4.1.18` (`@tailwindcss/vite`)
 - Test: Vitest `1.6.0` + jsdom
 - Lint/Format: ESLint 9 + Prettier 3
@@ -28,8 +29,8 @@ Primary goals / 优先目标：
 
 ### 3.1 App Shell Layer / App Shell 层
 
-Responsibility / 职责：global container, route switching, theme and style injection.  
-全局容器、路由切换、主题与样式注入。
+Responsibility / 职责：global container, route switching, theme/style/language shell behavior.  
+全局容器、路由切换、主题样式与系统语言壳层行为。
 
 - `src/App.vue`
 - `src/main.js`
@@ -37,7 +38,11 @@ Responsibility / 职责：global container, route switching, theme and style inj
 
 Key points / 关键点：
 - Hash router for GitHub Pages compatibility / 使用 Hash 路由适配 GitHub Pages
-- App-level CSS variable injection / App 层统一注入主题变量与自定义 CSS
+- App-level CSS variable and custom CSS injection / App 层统一注入主题变量与自定义 CSS
+- Default entry route redirects to lock screen (`/` -> `/lock`)  
+默认入口路由重定向到锁屏（`/` -> `/lock`）
+- Lock-state route guard prevents non-lock access when device is locked  
+锁定状态下阻止访问非锁屏路由
 
 ### 3.2 State Layer (Pinia) / 状态层（Pinia）
 
@@ -46,7 +51,11 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
 
 - `src/stores/system.js`
   - `settings.api`: `url/key/model/presets`
-  - `settings.appearance`: `theme/wallpaper/customCss/customVars/homeWidgetPages/customWidgets`
+  - `settings.appearance`:  
+    `theme/wallpaper/customCss/customVars/homeWidgetPages/customWidgets/lockClockStyle`
+  - `settings.system`: `language/timezone/notifications`
+  - `notifications`: lock-screen notification queue / 锁屏通知队列
+  - `isLocked`: lock state flag / 锁定状态标记
   - `user`: profile, worldbook, chat status / 用户资料、世界书、聊天状态
 - `src/stores/chat.js`
   - contact kind: `role/group/service/official`
@@ -54,10 +63,10 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
   - messages: `messagesByConversation`
 - `src/stores/map.js`
 
-### 3.3 Service Layer / 服务层
+### 3.3 Service and Utility Layer / 服务与工具层
 
-Responsibility / 职责：external API integration and persistence abstraction.  
-统一外部调用与本地持久化。
+Responsibility / 职责：external API integration, persistence abstraction, locale utilities.  
+统一外部调用、本地持久化与语言工具能力。
 
 - `src/lib/ai.js`
   - API kind detection / API 类型识别
@@ -66,6 +75,13 @@ Responsibility / 职责：external API integration and persistence abstraction.
   - unified error mapping / 统一错误分级映射
 - `src/lib/persistence.js`
   - localStorage read/write with version envelope / localStorage 读写与版本封装
+- `src/lib/locale.js`
+  - system language normalization / 系统语言归一化
+  - language-base resolution / 语言基类解析
+  - localized text fallback / 本地化文案回退
+- `src/composables/useI18n.js`
+  - UI translation helper (`t`) and language state access  
+  UI 文案翻译方法（`t`）与系统语言状态访问
 
 Rule / 规则：components must not call AI fetch directly; use `src/lib/ai.js` only.  
 组件禁止直连 AI fetch，统一走 `src/lib/ai.js`。
@@ -76,6 +92,7 @@ Responsibility / 职责：screen orchestration and user interaction.
 负责页面编排与交互，不承载协议细节。
 
 Core routes / 核心路由：
+- Lock: `/lock`
 - Home: `/home`
 - Settings: `/settings`
 - Network: `/network`
@@ -84,22 +101,45 @@ Core routes / 核心路由：
 - Chat directory: `/chat-contacts`
 - Chat thread: `/chat/:id`
 
-## 4. Chat Domain Architecture / Chat 领域架构
+## 4. Lock and Notification Architecture / 锁屏与通知架构
 
-### 4.1 Data Structures / 数据结构
+### 4.1 Lock Flow / 锁屏流转
+
+- Enter `/lock` -> set `isLocked = true` / 进入 `/lock` 时设置 `isLocked = true`
+- Attempting to access non-lock route while locked -> redirect to `/lock`  
+锁定时访问非锁屏路由会被重定向到 `/lock`
+- Unlock action sets `isLocked = false` and navigates to target route  
+解锁动作设置 `isLocked = false` 并跳转目标页面
+
+### 4.2 Notification Flow / 通知流转
+
+- AI reply completes in locked state -> append system notification  
+锁定状态下 AI 回复完成 -> 写入系统通知
+- Lock screen shows banner animation for latest unread notification  
+锁屏对最新未读通知显示横幅动画
+- User can tap banner/list card to mark read, unlock, and open route  
+用户可点横幅或列表卡片，标记已读后解锁并进入目标页面
+- Notification data is persisted locally  
+通知数据本地持久化
+
+## 5. Chat Domain Architecture / Chat 领域架构
+
+### 5.1 Data Structures / 数据结构
 
 - Contact / 对话对象：`id`, `name`, `kind`, `role`, `bio`, `serviceTemplate`
 - Conversation / 会话：`draft`, `unread`, `lastMessage`, `updatedAt`, `pinned`, `aiPrefs`, `proactiveOpenedAt`
-- Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `status`
+- Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `editedAt`, `status`
+- `aiMeta.rerollOf` marks reroll lineage for replaced assistant messages  
+`aiMeta.rerollOf` 用于标记重roll后助手消息的来源链路
 - Message status / 消息状态：`sending/sent/failed/delivered/read`
-- Assistant block types / 助手消息块类型：
+- Assistant block types / 助手消息块类型：  
   `text`, `voice_virtual`, `module_link`, `transfer_virtual`, `image_virtual`, `mini_scene`
-- Conversation AI prefs / 会话级 AI 设置：
-  `suggestedRepliesEnabled`, `contextTurns`, `bilingualEnabled`, `secondaryLanguage`,
-  `allowQuoteReply`, `allowSelfQuote`, `virtualVoiceEnabled`,
+- Conversation AI prefs / 会话级 AI 设置：  
+  `suggestedRepliesEnabled`, `contextTurns`, `bilingualEnabled`, `secondaryLanguage`,  
+  `allowQuoteReply`, `allowSelfQuote`, `virtualVoiceEnabled`,  
   `replyMode`, `replyCount`, `responseStyle`, `proactiveOpenerEnabled`, `proactiveOpenerStrategy`
 
-### 4.2 Interaction Model / 交互模型
+### 5.2 Interaction Model / 交互模型
 
 - User messages are persisted locally first / 用户消息先落本地消息流
 - AI replies support manual trigger and optional auto trigger / AI 支持手动触发与可选自动触发
@@ -107,7 +147,12 @@ Core routes / 核心路由：
 - Supports cancel and retry / 支持取消与失败重试
 - One API call can produce multiple assistant messages (controlled by replyCount)  
   单次 API 调用可生成多条助手消息（由 replyCount 控制）
-- User message state transitions / 用户消息状态切换：
+- Message action menu is available in-thread: quote/copy/edit/delete/reroll  
+  会话页支持消息操作菜单：引用/复制/编辑/删除/重roll
+- Reroll model / 重roll模型：  
+  use context before the target assistant message, then replace target message in place  
+  读取目标助手消息之前上下文，再原位替换目标消息
+- User message state transitions / 用户消息状态切换：  
   default `delivered` before trigger, switch to `read` when AI request starts  
   默认触发前为 `已送达`，AI 请求开始时切换为 `已读`
 - Typing indicator is system-state UI (not stored as message node)  
@@ -115,16 +160,16 @@ Core routes / 核心路由：
 - Service/official templates managed in-thread / 服务号/公众号模板在会话页内管理
 - Per-thread AI settings are edited in Chat layered menu and persisted in store  
   会话级 AI 设置在 Chat 分级菜单中编辑并持久化
-- Proactive opener strategy is tracked by `proactiveOpenedAt` to prevent unwanted repeats  
-  主动开场通过 `proactiveOpenedAt` 记录触发状态，避免重复触发
 
-### 4.3 Conversation Taxonomy / 会话对象分层
+### 5.3 Language Boundary in Chat / Chat 语言边界
 
-- `role/group`: immersive role-play conversations / 角色与群聊
-- `service/official`: info and operation-driven conversations / 服务号与公众号
-- Chat directory is separate from global contacts / 会话通讯录与全局 Contacts 分离
+- System language controls UI labels and menus only / 系统语言仅控制界面标签与菜单
+- AI-generated content remains model-driven and context-driven  
+AI 生成内容保持模型与上下文驱动，不做系统语言强改写
+- Bilingual output is controlled by per-thread AI preferences  
+双语输出由会话级 AI 偏好控制
 
-## 5. Home Layout System / Home 布局系统
+## 6. Home Layout System / Home 布局系统
 
 Data model / 数据模型：`settings.appearance.homeWidgetPages` (2D array / 二维数组)
 
@@ -132,8 +177,10 @@ Rules / 规则：
 - `app_*` entries cannot be hidden/deleted / `app_*` 不可隐藏或删除
 - Widgets and custom widgets can be hidden / Widget 与自定义 Widget 可隐藏
 - Default 5 pages, with pages 3-5 reserved / 默认 5 屏，后 3 屏预留
+- Layout edit is gated by env + localStorage feature flags  
+布局编辑能力受 env + localStorage 双开关控制
 
-## 6. Data and Security Boundaries / 数据与安全边界
+## 7. Data and Security Boundaries / 数据与安全边界
 
 - Local-only persistence by default / 默认本地持久化
 - No platform-managed cloud hosting / 不做平台云托管
@@ -141,13 +188,13 @@ Rules / 规则：
 - Conversation deletion is local deletion / 删除会话对象属于本地删除
 - Future cloud sync must include auth and conflict policy / 云同步需补授权和冲突策略
 
-## 7. Engineering and Deployment / 工程化与部署
+## 8. Engineering and Deployment / 工程化与部署
 
 - CI: `.github/workflows/ci.yml` (`lint + build`)
 - Deploy: `.github/workflows/deploy.yml` (GitHub Pages)
 - URL / 部署地址：`https://shawnoarry.github.io/schatphone/`
 
-## 8. Extension Rules / 扩展规范
+## 9. Extension Rules / 扩展规范
 
 1. Create View first, then register route, then evaluate Home entry.  
 先建 View，再注册 Router，再评估是否上 Home 入口。
@@ -159,3 +206,5 @@ Rules / 规则：
 所有 AI 请求统一走 `src/lib/ai.js`。
 5. If route/schema/core interaction changes, update docs in same PR.  
 涉及路由/数据结构/主交互改动时，同步更新文档。
+6. If lock/i18n behavior changes, sync `README.md`, `PROJECT_STATUS.md`, and `SYNC_SNAPSHOT.md`.  
+涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`PROJECT_STATUS.md`、`SYNC_SNAPSHOT.md`。

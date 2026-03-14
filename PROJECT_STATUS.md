@@ -1,19 +1,23 @@
-﻿# SchatPhone 项目进度与待办
+# SchatPhone 项目进度与待办
 
-Updated / 更新时间: 2026-02-23
+Updated / 更新时间: 2026-03-15
 
 ## 1. Current Project Status / 当前项目状态
 
-The project is in "stable core path + structured Chat iteration" stage.  
-项目处于“主链路可用 + Chat 结构化迭代”阶段。
+The project is in "stable core path + lock-screen immersion + system-language UI baseline completed" stage.  
+项目处于“主链路稳定 + 锁屏沉浸态可用 + 系统语言 UI 收口基线已完成”阶段。
 
 Available core paths / 可用主链路：
 - Lock -> Home -> Chat / Settings / modules  
 锁屏 -> Home -> Chat / Settings / 功能模块
+- Locked state + AI reply -> lock notification -> tap notification -> unlock and open target route  
+锁定状态 + AI 回复 -> 锁屏通知 -> 点通知解锁并进入目标页面
 - Network setup -> model fetch -> Chat request  
 Network 配置 -> 模型拉取 -> Chat 调用
 - Appearance setup -> theme/style/widget injection -> Home updates  
 Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
+- System language setup -> unified UI labels (P0-2 baseline completed, keep incremental maintenance)  
+系统语言设置 -> 系统 UI 文案统一（P0-2 基线完成，后续增量维护）
 
 ## 2. Completed Capabilities / 已完成能力
 
@@ -25,6 +29,7 @@ Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 - Widgets can be hidden without blank holes / Widget 可隐藏且无空白占位
 - Appearance split into theme/font/widget sections / 外观入口拆分为主题/字体/Widget
 - Status bar toggle and haptic toggle / 顶部状态栏与触感开关
+- Lock clock style can be configured in Appearance / 锁屏时间样式可在外观中配置
 
 ### 2.2 Network
 
@@ -56,20 +61,47 @@ Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 会话分级菜单已支持模式/条数/风格/主动开场策略
 - Auto mode supports post-send trigger and one-call multi-message generation  
 自动模式支持发送后触发，并支持单次调用生成多条回复
+- Message action menu baseline completed: quote/copy/edit/delete/reroll with role constraints  
+消息操作菜单基线已完成：引用/复制/编辑/删除/重roll，并带角色约束
+- Reroll uses pre-target context and replaces target assistant message in place  
+重roll 使用目标消息之前的上下文，并原位替换目标助手消息
 - Chat list/thread headers support core navigation and status display  
 聊天列表/会话头部支持核心导航与状态展示
 - User status: idle/busy/away / 用户状态：空闲/忙碌/离开
 - New chat directory route: `/chat-contacts` / 新增会话通讯录
 - Contact model fields: `kind`, `serviceTemplate` / 联系人模型新增字段
 
-### 2.5 Files and More / Files 与 More
+### 2.5 Lock Screen and Notification Loop / 锁屏与通知闭环
+
+- Default route enters lock screen (`/` -> `/lock`) / 默认入口为锁屏（`/` -> `/lock`）
+- Non-lock routes are guarded by `isLocked` state / 锁定状态下阻止访问非锁屏路由
+- Chat pushes lock notifications when AI replies arrive while locked  
+设备锁定期间 AI 回复到达时，可推送锁屏通知
+- Lock screen supports banner animation, unread stack, and tap-to-open-and-unlock  
+锁屏支持横幅动画、未读堆叠和点通知解锁跳转
+- Notification queue is persisted in local storage / 通知队列可本地持久化
+
+### 2.6 System Language Rollout (UI Scope) / 系统语言统一（UI 范围）
+
+- `settings.system.language` supports `zh-CN/en-US/ko-KR` with normalization  
+`settings.system.language` 支持 `zh-CN/en-US/ko-KR` 并做归一化
+- i18n utilities are introduced (`src/lib/locale.js`, `src/composables/useI18n.js`)  
+已引入 i18n 工具（`src/lib/locale.js`、`src/composables/useI18n.js`）
+- Multiple pages are migrated to `t(...)` UI labels  
+多个页面已迁移为 `t(...)` 系统文案
+- P0-2 target pages completed: `Appearance`, `ChatDirectory`, `LockScreen`, `UserProfile`, `WorldBook`  
+P0-2 目标页面已完成：`Appearance`、`ChatDirectory`、`LockScreen`、`UserProfile`、`WorldBook`
+- Scope boundary is explicit: system language does not rewrite AI-generated content  
+边界明确：系统语言不改写 AI 生成内容
+
+### 2.7 Files and More / Files 与 More
 
 - Files: search, favorite filter, delete, quick note  
 Files：检索、收藏筛选、删除、新建便签
 - More: shortcuts, feature flags, expansion suggestions  
 More：快捷入口、实验开关、扩展建议
 
-### 2.6 Validation / 验证结果
+### 2.8 Validation / 验证结果
 
 - `npm run lint`: pass / 通过
 - `npm run test`: pass / 通过
@@ -99,12 +131,14 @@ Independent entries / 独立入口：
 
 ## 5. Module Completion Estimate / 模块完成度评估
 
+- Lock screen + notification loop: 88%
 - Home: 90%
 - Settings (+Profile/Worldbook): 89%
 - Network: 85%
-- Appearance: 83%
-- Chat: 94%
+- Appearance: 84%
+- Chat: 96%
 - Chat Directory: 82%
+- System-language rollout (UI): 90%
 - Map: 66%
 - Contacts (global): 62%
 - Files/More: 72%
@@ -114,18 +148,16 @@ Independent entries / 独立入口：
 
 ### P0
 
-1. Message action menu / Chat 消息操作菜单  
-Quote, edit, delete, copy, and re-roll.
-2. Budget control / Chat 调用预算控制  
+1. Budget control / Chat 调用预算控制  
 Per-thread usage count, threshold warning, optional confirmation.
-3. Rich block policy + rendering polish / 丰富消息块策略与渲染打磨  
-Stabilize block fallback, quote consistency, and mixed-content readability.  
-完善块级回退、引用一致性与混合内容可读性。
+2. Widget import safety baseline / Widget 导入安全基线  
+Schema validation, dangerous field filtering, and rollback on failure.  
+结构校验、危险字段过滤、失败回滚。
 
 ### P1
 
 1. Chat directory enhancement / 会话通讯录增强（搜索、批量、模板预设）
-2. Widget import safety / Widget 安全与校验（schema、过滤、回退）
+2. Rich block policy + rendering polish / 丰富消息块策略与渲染打磨
 3. Settings UX refinement / 设置体验优化（iOS 分组与反馈）
 
 ### P2
@@ -137,9 +169,11 @@ Stabilize block fallback, quote consistency, and mixed-content readability.
 
 1. Any route/store/home-rule change must update this file.  
 改动路由/Store/Home 规则必须同步更新本文档。
-2. Run `npm run lint` and `npm run build` before merge.  
+2. If lock-screen/i18n behavior changes, sync `README.md`, `ARCHITECTURE.md`, and `SYNC_SNAPSHOT.md` together.  
+若改动锁屏或系统语言行为，必须同步更新 `README.md`、`ARCHITECTURE.md`、`SYNC_SNAPSHOT.md`。
+3. Run `npm run lint` and `npm run build` before merge.  
 合并前至少执行 lint 与 build。
-3. Run `npm run test` when behavior logic changes.  
+4. Run `npm run test` when behavior logic changes.  
 涉及行为逻辑改动时补跑 test。
-4. Keep Home for entry usage and Settings for configuration management.  
+5. Keep Home for entry usage and Settings for configuration management.  
 Home 偏使用入口，Settings 偏配置管理。

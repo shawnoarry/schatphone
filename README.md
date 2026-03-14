@@ -1,6 +1,6 @@
 ﻿# SchatPhone
 
-Updated / 更新时间: 2026-02-23
+Updated / 更新时间: 2026-03-15
 
 SchatPhone is a Vue 3 mobile interaction shell that simulates an iOS-like full-screen phone experience.  
 SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建仿 iOS 的全屏手机体验。
@@ -9,6 +9,8 @@ Current focus areas / 当前核心主线：
 - Home editable layout (entry apps + widgets) / Home 可编辑布局（入口与 Widget）
 - Chat main workflow / Chat 主功能链路
 - Settings as configuration center (network/theme/customization) / Settings 分层配置能力（网络/主题/自定义）
+- Lock-screen immersion + notification loop / 锁屏沉浸态与通知闭环
+- Global system-language unification (UI only) / 全局系统语言统一（仅系统 UI）
 
 ## Current Capabilities / 当前能力
 
@@ -16,6 +18,10 @@ Current focus areas / 当前核心主线：
 支持 5 屏 Home、长按编辑、跨屏拖拽排序
 - `app_*` entries are locked from hide/delete and can only be repositioned  
 `app_*` 功能入口不可隐藏/删除，仅可换位
+- Lock screen is the default entry route (`/` -> `/lock`) with route guard by lock state  
+默认进入锁屏（`/` -> `/lock`），并由锁定状态路由守卫控制解锁前访问
+- Lock screen supports notification banner + stacked list + tap-to-open-and-unlock  
+锁屏支持通知横幅、通知堆叠列表、点击通知直接解锁并进入目标页面
 - Custom widgets support: `1x1/2x1/2x2/4x2/4x3`, code paste, JSON import  
 支持自定义 Widget 尺寸、代码粘贴与 JSON 导入
 - Network page supports API kind detection, model pull, preset save/switch  
@@ -24,10 +30,18 @@ Network 支持 API 类型识别、模型拉取、预设保存与切换
 Chat 支持手动触发、取消/重试、错误分级提示
 - Chat supports per-thread AI settings (suggestion toggle, context turns, bilingual output, quote mode, virtual voice)  
 Chat 支持会话级 AI 设置（可选回复开关、上下文轮数、双语输出、引用模式、虚拟语音）
+- Chat thread now includes message action menu (quote/edit/delete/copy/re-roll) with role-based constraints  
+Chat 对话页已支持消息操作菜单（引用/编辑/删除/复制/重 roll），并带角色约束
 - User message status flow supports delivered/read transitions with AI-side typing indicator  
 用户消息状态支持“已送达 -> 已读”切换，并提供 AI 侧“对方正在输入”系统态提示
 - Assistant messages support structured blocks (text/virtual voice/module link/virtual transfer/virtual image/mini scene)  
 助手消息支持结构化块（文本/虚拟语音/模块链接/虚拟转账/虚拟图片/迷你互动场景）
+- Global system UI language supports `zh-CN/en-US/ko-KR` with normalized persistence  
+全局系统 UI 语言支持 `zh-CN/en-US/ko-KR`，并带持久化归一化处理
+- i18n foundation is implemented via `src/lib/locale.js` + `src/composables/useI18n.js`  
+国际化基础已通过 `src/lib/locale.js` + `src/composables/useI18n.js` 落地
+- System language applies to menus/settings/UI labels only, not AI-generated chat content  
+系统语言仅作用于菜单/设置/UI 文案，不改写 AI 生成的聊天内容
 - Files and More pages are available as MVP modules  
 Files / More 已升级为可用 MVP 页面
 - Key input pages provide explicit Save actions with persistence  
@@ -68,6 +82,15 @@ npm run test
 开发调试时需同时满足两项：
   - `.env` contains `VITE_ENABLE_LAYOUT_EDIT=true`
   - browser `localStorage` contains `schatphone:layout_edit_enabled=true`
+
+## Current Gap Snapshot / 当前缺口快照
+
+- System-language UI rollout baseline is completed; new pages must follow the same i18n rule  
+系统语言 UI 收口基线已完成；后续新增页面需遵循同一 i18n 规则
+- Chat message action baseline is completed; advanced UX polish and edge-case policy continue in follow-up tasks  
+Chat 消息操作基线已完成；高级交互打磨与边界策略在后续任务持续完善
+- Widget import safety hardening (schema validation + rollback) is still pending  
+Widget 导入安全加固（结构校验 + 失败回滚）仍待完成
 
 ## Routes / 当前路由
 

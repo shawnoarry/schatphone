@@ -144,6 +144,56 @@ describe('chat store model', () => {
     expect(conversation.lastMessage).toContain('Open wallet')
   })
 
+  test('supports message edit, replace and delete operations', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    const userMessage = store.appendMessage(contactId, {
+      role: 'user',
+      content: 'Original user line',
+      status: 'delivered',
+    })
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: 'Original assistant line',
+      status: 'sent',
+    })
+
+    const editOk = store.updateMessageContent(contactId, userMessage.id, 'Edited user line', {
+      markEdited: true,
+      editedAt: 1234567890,
+    })
+    expect(editOk).toBe(true)
+
+    const replaced = store.replaceMessage(
+      contactId,
+      assistantMessage.id,
+      {
+        id: assistantMessage.id,
+        role: 'assistant',
+        content: 'Rerolled assistant line',
+        aiMeta: { replyType: 'plain', bilingual: false, rerollOf: assistantMessage.id },
+        status: 'sent',
+      },
+      { keepCreatedAt: true },
+    )
+    expect(replaced?.content).toBe('Rerolled assistant line')
+    expect(replaced?.aiMeta?.rerollOf).toBe(assistantMessage.id)
+
+    store.incrementConversationUnread(contactId, 2)
+    const removed = store.removeMessage(contactId, assistantMessage.id)
+    expect(removed?.id).toBe(assistantMessage.id)
+
+    const messages = store.getMessagesByContactId(contactId)
+    const editedUser = messages.find((item) => item.id === userMessage.id)
+    expect(editedUser?.content).toBe('Edited user line')
+    expect(editedUser?.editedAt).toBe(1234567890)
+
+    const conversation = store.getConversationByContactId(contactId)
+    expect(conversation.lastMessage).toContain('Edited user line')
+    expect(conversation.unread).toBe(1)
+  })
+
   test('supports contact kind update and remove', () => {
     const store = useChatStore()
     const created = store.addContact({

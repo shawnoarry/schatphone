@@ -7,12 +7,14 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
+import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
+const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, user } = storeToRefs(systemStore)
 const { contactsForList, loadingAI } = storeToRefs(chatStore)
@@ -33,27 +35,36 @@ const DEFAULT_THREAD_AI_PREFS = {
   proactiveOpenerStrategy: 'on_enter_once',
 }
 
-const REPLY_MODE_OPTIONS = [
-  { value: 'manual', label: 'Manual trigger' },
-  { value: 'auto', label: 'Auto trigger' },
-]
+const REPLY_MODE_OPTIONS = computed(() => [
+  { value: 'manual', label: t('手动触发', 'Manual trigger') },
+  { value: 'auto', label: t('自动触发', 'Auto trigger') },
+])
 
-const RESPONSE_STYLE_OPTIONS = [
-  { value: 'immersive', label: 'Immersive' },
-  { value: 'natural', label: 'Natural' },
-  { value: 'concise', label: 'Concise' },
-]
+const RESPONSE_STYLE_OPTIONS = computed(() => [
+  { value: 'immersive', label: t('沉浸', 'Immersive') },
+  { value: 'natural', label: t('自然', 'Natural') },
+  { value: 'concise', label: t('简洁', 'Concise') },
+])
 
-const PROACTIVE_STRATEGY_OPTIONS = [
-  { value: 'on_enter_once', label: 'First empty enter only' },
-  { value: 'on_every_enter_if_empty', label: 'Every empty enter' },
-]
+const PROACTIVE_STRATEGY_OPTIONS = computed(() => [
+  { value: 'on_enter_once', label: t('仅首次空会话进入', 'First empty enter only') },
+  { value: 'on_every_enter_if_empty', label: t('每次空会话进入', 'Every empty enter') },
+])
 
-const STATUS_OPTIONS = [
-  { id: 'idle', label: 'Idle', hint: 'Available', dotClass: 'chat-status-dot-idle' },
-  { id: 'busy', label: 'Busy', hint: 'Do not disturb', dotClass: 'chat-status-dot-busy' },
-  { id: 'away', label: 'Away', hint: 'Temporary offline', dotClass: 'chat-status-dot-away' },
-]
+// Keep AI reply content independent from global UI language.
+const AI_REPLY_FALLBACK_TEXT = Object.freeze({
+  voiceLabel: '语音消息',
+  moduleLabel: '打开模块',
+  transferLabel: '转账卡片',
+  imageAlt: '图片消息',
+  sceneTitle: '小剧场',
+})
+
+const STATUS_OPTIONS = computed(() => [
+  { id: 'idle', label: t('空闲', 'Idle'), hint: t('可联系', 'Available'), dotClass: 'chat-status-dot-idle' },
+  { id: 'busy', label: t('忙碌', 'Busy'), hint: t('勿扰', 'Do not disturb'), dotClass: 'chat-status-dot-busy' },
+  { id: 'away', label: t('离开', 'Away'), hint: t('暂时离线', 'Temporary offline'), dotClass: 'chat-status-dot-away' },
+])
 
 const SAFE_MODULE_ROUTES = new Set([
   '/home',
@@ -86,8 +97,11 @@ const aiErrorMessage = ref('')
 const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
+const retryRerollMessageId = ref('')
 const showThreadMenu = ref(false)
 const serviceTemplateDraft = ref('')
+const activeMessageActionId = ref('')
+const pendingQuote = ref(null)
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -134,7 +148,7 @@ const activeMessages = computed(() => {
 
 const currentStatus = computed(() => {
   const statusId = typeof user.value.chatStatus === 'string' ? user.value.chatStatus : 'idle'
-  return STATUS_OPTIONS.find((item) => item.id === statusId) || STATUS_OPTIONS[0]
+  return STATUS_OPTIONS.value.find((item) => item.id === statusId) || STATUS_OPTIONS.value[0]
 })
 
 const pendingReplyTriggerMessageId = computed(() => {
@@ -155,7 +169,13 @@ const pendingReplyTriggerMessageId = computed(() => {
 
 const canCancelAi = computed(() => Boolean(activeAbortController.value && activeChat.value && loadingAI.value))
 const canRetryAi = computed(() =>
-  Boolean(aiErrorMessage.value && activeChat.value && retryTriggerMessageId.value && !loadingAI.value && !activeAbortController.value),
+  Boolean(
+    aiErrorMessage.value &&
+      activeChat.value &&
+      (retryTriggerMessageId.value || retryRerollMessageId.value) &&
+      !loadingAI.value &&
+      !activeAbortController.value,
+  ),
 )
 const canRequestAiReply = computed(() => Boolean(activeChat.value && !loadingAI.value && !activeAbortController.value))
 const isActiveServiceChat = computed(() => Boolean(activeChat.value && ['service', 'official'].includes(activeChat.value.kind || 'role')))
@@ -174,13 +194,13 @@ const clampReplyCount = (value) => {
 }
 
 const normalizeReplyMode = (value) =>
-  REPLY_MODE_OPTIONS.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.replyMode
+  REPLY_MODE_OPTIONS.value.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.replyMode
 
 const normalizeResponseStyle = (value) =>
-  RESPONSE_STYLE_OPTIONS.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.responseStyle
+  RESPONSE_STYLE_OPTIONS.value.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.responseStyle
 
 const normalizeProactiveStrategy = (value) =>
-  PROACTIVE_STRATEGY_OPTIONS.some((item) => item.value === value)
+  PROACTIVE_STRATEGY_OPTIONS.value.some((item) => item.value === value)
     ? value
     : DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy
 
@@ -304,6 +324,33 @@ const extractMessageTextForContext = (message) => {
     .trim()
 }
 
+const messagePrimaryText = (message) => {
+  if (!message) return ''
+  if (Array.isArray(message.blocks)) {
+    const primary = message.blocks.find(
+      (block) =>
+        block?.type === 'text' &&
+        block?.variant !== 'secondary' &&
+        typeof block.text === 'string' &&
+        block.text.trim(),
+    )
+    if (primary) return primary.text.trim()
+    const anyText = message.blocks.find(
+      (block) => block?.type === 'text' && typeof block.text === 'string' && block.text.trim(),
+    )
+    if (anyText) return anyText.text.trim()
+  }
+  if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
+  return extractMessageTextForContext(message)
+}
+
+const truncateMessagePreview = (text, maxLength = 72) => {
+  const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
+  if (!normalized) return ''
+  if (normalized.length <= maxLength) return normalized
+  return `${normalized.slice(0, maxLength)}...`
+}
+
 const toAiMessages = (contactId, untilMessageId = '', options = {}) => {
   const allMessages = chatStore.getMessagesByContactId(contactId)
   const result = []
@@ -311,6 +358,20 @@ const toAiMessages = (contactId, untilMessageId = '', options = {}) => {
   for (const item of allMessages) {
     result.push({ role: item.role, content: extractMessageTextForContext(item) })
     if (untilMessageId && item.id === untilMessageId) break
+  }
+
+  const contextTurns = clampContextTurns(options.contextTurns ?? DEFAULT_THREAD_AI_PREFS.contextTurns)
+  const messageLimit = Math.max(6, contextTurns * 2)
+  return result.slice(-messageLimit)
+}
+
+const toAiMessagesBeforeMessage = (contactId, targetMessageId, options = {}) => {
+  const allMessages = chatStore.getMessagesByContactId(contactId)
+  const result = []
+
+  for (const item of allMessages) {
+    if (item.id === targetMessageId) break
+    result.push({ role: item.role, content: extractMessageTextForContext(item) })
   }
 
   const contextTurns = clampContextTurns(options.contextTurns ?? DEFAULT_THREAD_AI_PREFS.contextTurns)
@@ -356,7 +417,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
     if (!aiPrefs?.virtualVoiceEnabled) return null
     return {
       type: 'voice_virtual',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : 'Voice message',
+      label:
+        typeof rawBlock.label === 'string' && rawBlock.label.trim()
+          ? rawBlock.label.trim()
+          : AI_REPLY_FALLBACK_TEXT.voiceLabel,
       transcript: typeof rawBlock.transcript === 'string' ? rawBlock.transcript : '',
       durationSec: Number.isFinite(Number(rawBlock.durationSec)) ? Math.max(1, Math.floor(Number(rawBlock.durationSec))) : 8,
     }
@@ -365,7 +429,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   if (blockType === 'module_link') {
     return {
       type: 'module_link',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : 'Open module',
+      label:
+        typeof rawBlock.label === 'string' && rawBlock.label.trim()
+          ? rawBlock.label.trim()
+          : AI_REPLY_FALLBACK_TEXT.moduleLabel,
       route: typeof rawBlock.route === 'string' && rawBlock.route.trim() ? rawBlock.route.trim() : '/home',
       note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
     }
@@ -374,7 +441,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   if (blockType === 'transfer_virtual') {
     return {
       type: 'transfer_virtual',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : 'Transfer card',
+      label:
+        typeof rawBlock.label === 'string' && rawBlock.label.trim()
+          ? rawBlock.label.trim()
+          : AI_REPLY_FALLBACK_TEXT.transferLabel,
       amount: typeof rawBlock.amount === 'string' && rawBlock.amount.trim() ? rawBlock.amount.trim() : '0.00',
       currency: typeof rawBlock.currency === 'string' && rawBlock.currency.trim() ? rawBlock.currency.trim() : 'CNY',
       to: typeof rawBlock.to === 'string' ? rawBlock.to : '',
@@ -387,7 +457,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   if (blockType === 'image_virtual') {
     return {
       type: 'image_virtual',
-      alt: typeof rawBlock.alt === 'string' && rawBlock.alt.trim() ? rawBlock.alt.trim() : 'Image message',
+      alt:
+        typeof rawBlock.alt === 'string' && rawBlock.alt.trim()
+          ? rawBlock.alt.trim()
+          : AI_REPLY_FALLBACK_TEXT.imageAlt,
       url: typeof rawBlock.url === 'string' ? rawBlock.url : '',
       caption: typeof rawBlock.caption === 'string' ? rawBlock.caption : '',
     }
@@ -396,7 +469,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   if (blockType === 'mini_scene') {
     return {
       type: 'mini_scene',
-      title: typeof rawBlock.title === 'string' && rawBlock.title.trim() ? rawBlock.title.trim() : 'Mini scene',
+      title:
+        typeof rawBlock.title === 'string' && rawBlock.title.trim()
+          ? rawBlock.title.trim()
+          : AI_REPLY_FALLBACK_TEXT.sceneTitle,
       description: typeof rawBlock.description === 'string' ? rawBlock.description : '',
       htmlSnippet: typeof rawBlock.htmlSnippet === 'string' ? rawBlock.htmlSnippet : '',
     }
@@ -472,13 +548,13 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
 
 const clampNotificationPreview = (text, max = 72) => {
   const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
-  if (!normalized) return '你收到了一条新回复'
+  if (!normalized) return t('你收到了一条新回复', 'You received a new reply')
   if (normalized.length <= max) return normalized
   return `${normalized.slice(0, max)}...`
 }
 
 const summarizeAssistantMessagesForNotification = (messages = []) => {
-  if (!Array.isArray(messages) || messages.length === 0) return '你收到了一条新回复'
+  if (!Array.isArray(messages) || messages.length === 0) return t('你收到了一条新回复', 'You received a new reply')
 
   for (const message of messages) {
     if (Array.isArray(message?.blocks)) {
@@ -497,7 +573,7 @@ const summarizeAssistantMessagesForNotification = (messages = []) => {
     }
   }
 
-  return '你收到了一条新回复'
+  return t('你收到了一条新回复', 'You received a new reply')
 }
 
 const generateAIResponse = async (contactId, triggerMessageId, options = {}) => {
@@ -543,7 +619,36 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
   return {
     count: parsedMessages.length,
     messages: parsedMessages,
-    contactName: contact.name || '新消息',
+    contactName: contact.name || t('新消息', 'New Message'),
+  }
+}
+
+const generateRerollResponse = async (contactId, targetMessage, options = {}) => {
+  const contact = contactsForList.value.find((item) => item.id === contactId)
+  if (!contact || !targetMessage) throw new Error('Contact not found')
+
+  const aiPrefs = chatStore.getConversationAiPrefs(contactId)
+  const replyRaw = await callAI({
+    messages: toAiMessagesBeforeMessage(contactId, targetMessage.id, {
+      contextTurns: aiPrefs.contextTurns,
+    }),
+    systemPrompt: buildSystemPrompt(contact, aiPrefs, {
+      replyCount: 1,
+      isProactive: false,
+    }),
+    settings: settings.value,
+    signal: options.signal,
+  })
+
+  const parsed = parseAssistantResponse(replyRaw, aiPrefs, { replyCount: 1 })
+  const normalized = parsed.messages?.[0] || normalizeAssistantMessagePayload({}, aiPrefs, '...')
+  return {
+    ...normalized,
+    aiMeta: {
+      replyType: normalized.replyType,
+      bilingual: Boolean(aiPrefs.bilingualEnabled),
+      rerollOf: targetMessage.id,
+    },
   }
 }
 
@@ -576,7 +681,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     )
     if (systemStore.isLocked && result?.count > 0) {
       systemStore.addNotification({
-        title: result.contactName || '新消息',
+        title: result.contactName || t('新消息', 'New Message'),
         content: summarizeAssistantMessagesForNotification(result.messages),
         icon: 'fas fa-comment-dots',
         route: `/chat/${contactId}`,
@@ -587,13 +692,15 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
       chatStore.markConversationProactiveOpened(contactId)
     }
     retryTriggerMessageId.value = ''
+    retryRerollMessageId.value = ''
     return true
   } catch (error) {
     aiErrorMessage.value =
       error?.code === 'CANCELED'
-        ? formatApiErrorForUi(error, 'Request canceled.')
-        : formatApiErrorForUi(error, 'AI reply failed. Please retry later.')
+        ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
+        : formatApiErrorForUi(error, t('AI 回复失败，请稍后重试。', 'AI reply failed. Please retry later.'))
     retryTriggerMessageId.value = normalizedTriggerId
+    retryRerollMessageId.value = ''
     return false
   } finally {
     loadingAI.value = false
@@ -609,8 +716,17 @@ const cancelActiveRequest = () => {
 }
 
 const retryLastMessage = () => {
-  if (!canRetryAi.value || !activeChat.value || !retryTriggerMessageId.value) return
+  if (!canRetryAi.value || !activeChat.value) return
   aiErrorMessage.value = ''
+  if (retryRerollMessageId.value) {
+    const target = activeMessages.value.find((item) => item.id === retryRerollMessageId.value)
+    if (target) {
+      void rerollMessage(target)
+      return
+    }
+  }
+
+  if (!retryTriggerMessageId.value) return
   const aiPrefs = chatStore.getConversationAiPrefs(activeChat.value.id)
   requestAiReply(activeChat.value.id, retryTriggerMessageId.value, {
     replyCount: aiPrefs.replyCount,
@@ -624,6 +740,165 @@ const requestPendingAiReply = () => {
   requestAiReply(activeChat.value.id, triggerMessageId, {
     replyCount: aiPrefs.replyCount,
   })
+}
+
+const toggleMessageActions = (messageId) => {
+  activeMessageActionId.value = activeMessageActionId.value === messageId ? '' : messageId
+}
+
+const closeMessageActions = () => {
+  activeMessageActionId.value = ''
+}
+
+const copyText = async (text) => {
+  const normalized = typeof text === 'string' ? text.trim() : ''
+  if (!normalized) return false
+
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(normalized)
+      return true
+    }
+  } catch {
+    // Fallback below.
+  }
+
+  try {
+    const temp = document.createElement('textarea')
+    temp.value = normalized
+    document.body.appendChild(temp)
+    temp.select()
+    document.execCommand('copy')
+    document.body.removeChild(temp)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const copyMessage = async (message) => {
+  const text = messagePrimaryText(message) || extractMessageTextForContext(message)
+  const ok = await copyText(text)
+  if (!ok) {
+    alert(t('复制失败，请稍后重试。', 'Copy failed. Please retry.'))
+  }
+  closeMessageActions()
+}
+
+const canEditMessage = (message) => Boolean(message && message.role === 'user')
+const canRerollMessage = (message) => Boolean(message && message.role === 'assistant')
+
+const quoteMessage = (message) => {
+  if (!message) return
+  pendingQuote.value = {
+    messageId: message.id,
+    role: message.role === 'assistant' ? 'assistant' : 'user',
+    preview: truncateMessagePreview(messagePrimaryText(message), 80) || t('引用消息', 'Quoted message'),
+  }
+  closeMessageActions()
+}
+
+const clearPendingQuote = () => {
+  pendingQuote.value = null
+}
+
+const editMessage = (message) => {
+  if (!activeChat.value || !canEditMessage(message)) return
+
+  const currentText = messagePrimaryText(message)
+  const input = window.prompt(t('编辑消息', 'Edit message'), currentText)
+  if (input === null) {
+    closeMessageActions()
+    return
+  }
+
+  const nextText = input.trim()
+  if (!nextText) {
+    alert(t('消息不能为空。', 'Message cannot be empty.'))
+    return
+  }
+
+  const ok = chatStore.updateMessageContent(activeChat.value.id, message.id, nextText, {
+    markEdited: true,
+    editedAt: Date.now(),
+  })
+  if (!ok) {
+    alert(t('编辑失败，请重试。', 'Edit failed. Please retry.'))
+    return
+  }
+  closeMessageActions()
+}
+
+const deleteMessage = (message) => {
+  if (!activeChat.value || !message) return
+  const ok = window.confirm(t('确认删除这条消息吗？', 'Delete this message?'))
+  if (!ok) return
+
+  const removed = chatStore.removeMessage(activeChat.value.id, message.id)
+  if (!removed) {
+    alert(t('删除失败，请重试。', 'Delete failed. Please retry.'))
+    return
+  }
+
+  if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
+  if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
+  if (pendingQuote.value?.messageId === message.id) pendingQuote.value = null
+  closeMessageActions()
+}
+
+const rerollMessage = async (message) => {
+  if (!activeChat.value || !canRerollMessage(message)) return
+  if (loadingAI.value || activeAbortController.value) return
+
+  const target = activeMessages.value.find((item) => item.id === message.id)
+  if (!target || target.role !== 'assistant') return
+
+  const controller = new AbortController()
+  activeAbortController.value = controller
+  activeTriggerMessageId.value = target.id
+  loadingAI.value = true
+  aiErrorMessage.value = ''
+  retryTriggerMessageId.value = ''
+
+  try {
+    const replacement = await generateRerollResponse(activeChat.value.id, target, {
+      signal: controller.signal,
+    })
+
+    const replaced = chatStore.replaceMessage(
+      activeChat.value.id,
+      target.id,
+      {
+        id: target.id,
+        role: 'assistant',
+        content: replacement.content,
+        blocks: replacement.blocks,
+        quote: replacement.quote,
+        aiMeta: replacement.aiMeta,
+        status: 'sent',
+        editedAt: Date.now(),
+      },
+      { keepCreatedAt: true },
+    )
+
+    if (!replaced) {
+      throw new Error('Replace failed')
+    }
+
+    retryRerollMessageId.value = ''
+    closeMessageActions()
+  } catch (error) {
+    aiErrorMessage.value =
+      error?.code === 'CANCELED'
+        ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
+        : formatApiErrorForUi(error, t('重roll失败，请稍后重试。', 'Reroll failed. Please retry later.'))
+    retryRerollMessageId.value = target.id
+  } finally {
+    loadingAI.value = false
+    activeAbortController.value = null
+    activeTriggerMessageId.value = ''
+    scrollToBottom()
+  }
 }
 
 const shouldTriggerProactiveOpener = (contactId) => {
@@ -703,18 +978,29 @@ const sendMessage = () => {
 
   const chatId = activeChat.value.id
   const payload = inputMessage.value.trim()
+  const quotePayload = pendingQuote.value
+    ? {
+        messageId: pendingQuote.value.messageId,
+        role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
+        preview: pendingQuote.value.preview || '',
+      }
+    : null
 
   const appended = chatStore.appendMessage(chatId, {
     role: 'user',
     content: payload,
+    quote: quotePayload,
     status: 'delivered',
   })
 
   inputMessage.value = ''
+  pendingQuote.value = null
   chatStore.setConversationDraft(chatId, '')
   showSuggestions.value = false
   aiErrorMessage.value = ''
   retryTriggerMessageId.value = ''
+  retryRerollMessageId.value = ''
+  closeMessageActions()
   scrollToBottom()
 
   const aiPrefs = chatStore.getConversationAiPrefs(chatId)
@@ -727,22 +1013,33 @@ const sendCurrentLocation = () => {
   if (!activeChat.value) return
 
   const locationText = currentLocationText.value
-  if (!locationText || locationText.includes('未设置') || locationText.includes('Not set')) {
-    alert('Please set your location in Map first.')
+  if (!locationText || locationText.includes('未设置') || locationText.toLowerCase().includes('not set')) {
+    alert(t('请先在地图中设置当前位置。', 'Please set your location in Map first.'))
     return
   }
 
   const chatId = activeChat.value.id
-  const payload = `Location share\n${locationText}`
+  const payload = `${t('位置共享', 'Location share')}\n${locationText}`
+  const quotePayload = pendingQuote.value
+    ? {
+        messageId: pendingQuote.value.messageId,
+        role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
+        preview: pendingQuote.value.preview || '',
+      }
+    : null
   const appended = chatStore.appendMessage(chatId, {
     role: 'user',
     content: payload,
+    quote: quotePayload,
     status: 'delivered',
   })
 
+  pendingQuote.value = null
   showSuggestions.value = false
   aiErrorMessage.value = ''
   retryTriggerMessageId.value = ''
+  retryRerollMessageId.value = ''
+  closeMessageActions()
   scrollToBottom()
 
   const aiPrefs = chatStore.getConversationAiPrefs(chatId)
@@ -759,7 +1056,7 @@ const renderMarkdown = (text) => marked.parse(text || '')
 const getConversationPreview = (contactId) => chatStore.getConversationByContactId(contactId)
 
 const formatConversationTime = (timestamp) => {
-  if (!timestamp) return 'Yesterday'
+  if (!timestamp) return t('昨天', 'Yesterday')
   const now = new Date()
   const target = new Date(timestamp)
 
@@ -769,28 +1066,29 @@ const formatConversationTime = (timestamp) => {
     now.getDate() === target.getDate()
 
   if (isSameDay) {
-    return target.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    const locale = languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value
+    return target.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   }
 
   const dayDiff = Math.floor((now.getTime() - target.getTime()) / 86400000)
-  if (dayDiff <= 1) return 'Yesterday'
+  if (dayDiff <= 1) return t('昨天', 'Yesterday')
   return `${target.getMonth() + 1}/${target.getDate()}`
 }
 
 const contactPreviewText = (contactId) => {
   const conversation = getConversationPreview(contactId)
   if (conversation?.draft?.trim()) {
-    return `Draft: ${conversation.draft.trim()}`
+    return `${t('草稿', 'Draft')}: ${conversation.draft.trim()}`
   }
-  return conversation?.lastMessage || 'Tap to start chat'
+  return conversation?.lastMessage || t('点击开始聊天', 'Tap to start chat')
 }
 
 const contactKindTag = (contact) => {
   if (!contact) return ''
-  if (contact.kind === 'group') return 'Group'
-  if (contact.kind === 'service') return 'Service'
-  if (contact.kind === 'official') return 'Official'
-  if (contact.isMain) return 'Main'
+  if (contact.kind === 'group') return t('群聊', 'Group')
+  if (contact.kind === 'service') return t('服务号', 'Service')
+  if (contact.kind === 'official') return t('官方号', 'Official')
+  if (contact.isMain) return t('主角色', 'Main')
   return ''
 }
 
@@ -805,11 +1103,18 @@ const contactKindTagClass = (contact) => {
 
 const messageStatusText = (message) => {
   if (message.role !== 'user') return ''
-  if (message.status === 'failed') return 'Failed'
-  if (message.status === 'sending') return 'Sending...'
-  if (message.status === 'read') return 'Read'
-  if (message.status === 'delivered') return 'Delivered'
-  if (message.status === 'sent') return 'Sent'
+  if (message.status === 'failed') return t('发送失败', 'Failed')
+  if (message.status === 'sending') return t('发送中...', 'Sending...')
+  if (message.status === 'read') return t('已读', 'Read')
+  if (message.status === 'delivered') return t('已送达', 'Delivered')
+  if (message.status === 'sent') return t('已发送', 'Sent')
+  return ''
+}
+
+const messageMetaHintText = (message) => {
+  if (!message) return ''
+  if (message.role === 'assistant' && message.aiMeta?.rerollOf) return t('重roll结果', 'Rerolled')
+  if (message.editedAt) return t('已编辑', 'Edited')
   return ''
 }
 
@@ -827,16 +1132,16 @@ const formatVoiceDuration = (durationSec) => {
 
 const openModuleRoute = (routePath) => {
   if (typeof routePath !== 'string' || !SAFE_MODULE_ROUTES.has(routePath)) {
-    alert('This link is unavailable.')
+    alert(t('该链接暂不可用。', 'This link is unavailable.'))
     return
   }
   router.push(routePath)
 }
 
 const transferActionLabel = (block) => {
-  if (!block?.actionRoute) return 'Details'
-  if (block.actionRoute === '/wallet') return 'Open Wallet'
-  return 'Open'
+  if (!block?.actionRoute) return t('详情', 'Details')
+  if (block.actionRoute === '/wallet') return t('打开钱包', 'Open Wallet')
+  return t('打开', 'Open')
 }
 
 const toggleThreadMenu = () => {
@@ -887,6 +1192,8 @@ watch(
   activeChatId,
   (id) => {
     showThreadMenu.value = false
+    activeMessageActionId.value = ''
+    pendingQuote.value = null
 
     if (id) {
       chatStore.ensureConversationForContact(id)
@@ -904,6 +1211,7 @@ watch(
     showSuggestions.value = false
     aiErrorMessage.value = ''
     retryTriggerMessageId.value = ''
+    retryRerollMessageId.value = ''
     scrollToBottom()
   },
   { immediate: true },
@@ -924,8 +1232,8 @@ onBeforeUnmount(() => {
     <template v-if="!activeChat">
       <div class="pt-12 px-4 pb-2 chat-ink">
         <div class="flex items-center justify-between">
-          <button @click="goHome" class="chat-ink w-10 h-10 rounded-full hover:bg-black/5">Home</button>
-          <p class="font-bold text-sm">Chats</p>
+          <button @click="goHome" class="chat-ink w-10 h-10 rounded-full hover:bg-black/5">{{ t('主页', 'Home') }}</button>
+          <p class="font-bold text-sm">{{ t('聊天', 'Chats') }}</p>
           <span class="text-xs text-gray-500">{{ currentStatus.label }}</span>
         </div>
       </div>
@@ -964,13 +1272,13 @@ onBeforeUnmount(() => {
 
     <template v-else>
       <div class="pt-12 pb-2 px-3 chat-thread-header backdrop-blur flex items-center justify-between z-10 shadow-sm">
-        <button @click="leaveChat" class="chat-ink px-2 flex items-center gap-1 w-16">Back</button>
+        <button @click="leaveChat" class="chat-ink px-2 flex items-center gap-1 w-16">{{ t('返回', 'Back') }}</button>
         <div class="flex-1 text-center min-w-0">
           <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
           <p class="text-[10px] text-gray-500">
             <span v-if="contactKindTag(activeChat)">{{ contactKindTag(activeChat) }}</span>
             <span v-if="contactKindTag(activeChat) && loadingAI"> · </span>
-            <span v-if="loadingAI">对方正在输入...</span>
+            <span v-if="loadingAI">{{ t('对方正在输入...', 'Typing...') }}</span>
           </p>
         </div>
         <button @click="toggleThreadMenu" class="chat-ink px-2 w-16 text-right"><i class="fas fa-bars"></i></button>
@@ -979,84 +1287,86 @@ onBeforeUnmount(() => {
       <div v-if="showThreadMenu" class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
         <template v-if="isActiveServiceChat">
           <div class="space-y-2">
-            <p class="font-semibold text-sm text-gray-900">Service Template</p>
+            <p class="font-semibold text-sm text-gray-900">{{ t('服务模板', 'Service Template') }}</p>
             <textarea v-model="serviceTemplateDraft" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs resize-none outline-none" />
-            <button @click="saveServiceTemplate" class="px-2.5 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700">Save Template</button>
+            <button @click="saveServiceTemplate" class="px-2.5 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700">
+              {{ t('保存模板', 'Save Template') }}
+            </button>
           </div>
         </template>
 
         <div class="border-t border-gray-200 pt-3 space-y-2">
-          <p class="font-semibold text-sm text-gray-900">Thread AI Settings</p>
+          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话 AI 设置', 'Thread AI Settings') }}</p>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Reply Mode</span>
+            <span>{{ t('回复模式', 'Reply Mode') }}</span>
             <select v-model="threadSettingsDraft.replyMode" class="rounded-lg border border-gray-200 px-2 py-1">
               <option v-for="item in REPLY_MODE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Replies per trigger</span>
+            <span>{{ t('每次触发回复条数', 'Replies per trigger') }}</span>
             <input v-model.number="threadSettingsDraft.replyCount" type="number" min="1" max="3" class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-right" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Response style</span>
+            <span>{{ t('回复风格', 'Response style') }}</span>
             <select v-model="threadSettingsDraft.responseStyle" class="rounded-lg border border-gray-200 px-2 py-1">
               <option v-for="item in RESPONSE_STYLE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Suggested replies</span>
+            <span>{{ t('可选回复建议', 'Suggested replies') }}</span>
             <input v-model="threadSettingsDraft.suggestedRepliesEnabled" type="checkbox" class="h-4 w-4" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Bilingual output</span>
+            <span>{{ t('双语输出', 'Bilingual output') }}</span>
             <input v-model="threadSettingsDraft.bilingualEnabled" type="checkbox" class="h-4 w-4" />
           </label>
 
           <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.bilingualEnabled">
-            <span>Secondary language</span>
+            <span>{{ t('第二语言', 'Secondary language') }}</span>
             <input v-model="threadSettingsDraft.secondaryLanguage" type="text" class="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Allow quote reply</span>
+            <span>{{ t('允许引用回复', 'Allow quote reply') }}</span>
             <input v-model="threadSettingsDraft.allowQuoteReply" type="checkbox" class="h-4 w-4" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Allow self quote</span>
+            <span>{{ t('允许引用自己', 'Allow self quote') }}</span>
             <input v-model="threadSettingsDraft.allowSelfQuote" type="checkbox" class="h-4 w-4" :disabled="!threadSettingsDraft.allowQuoteReply" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Virtual voice</span>
+            <span>{{ t('虚拟语音', 'Virtual voice') }}</span>
             <input v-model="threadSettingsDraft.virtualVoiceEnabled" type="checkbox" class="h-4 w-4" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Context turns</span>
+            <span>{{ t('读取上文轮数', 'Context turns') }}</span>
             <input v-model.number="threadSettingsDraft.contextTurns" type="number" min="2" max="20" class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-right" />
           </label>
 
           <label class="flex items-center justify-between gap-3">
-            <span>Proactive opener</span>
+            <span>{{ t('主动开场', 'Proactive opener') }}</span>
             <input v-model="threadSettingsDraft.proactiveOpenerEnabled" type="checkbox" class="h-4 w-4" />
           </label>
 
           <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.proactiveOpenerEnabled">
-            <span>Proactive strategy</span>
+            <span>{{ t('主动策略', 'Proactive strategy') }}</span>
             <select v-model="threadSettingsDraft.proactiveOpenerStrategy" class="rounded-lg border border-gray-200 px-2 py-1">
               <option v-for="item in PROACTIVE_STRATEGY_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </label>
 
           <div class="flex justify-end gap-2 pt-1">
-            <button @click="showThreadMenu = false" class="px-2.5 py-1 rounded-lg border border-gray-200">Cancel</button>
-            <button @click="saveThreadSettings" class="px-2.5 py-1 rounded-lg border border-blue-300 bg-blue-50 text-blue-700">Save</button>
+            <button @click="showThreadMenu = false" class="px-2.5 py-1 rounded-lg border border-gray-200">{{ t('取消', 'Cancel') }}</button>
+            <button @click="saveThreadSettings" class="px-2.5 py-1 rounded-lg border border-blue-300 bg-blue-50 text-blue-700">{{ t('保存', 'Save') }}</button>
           </div>
         </div>
       </div>
@@ -1068,9 +1378,16 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="max-w-[70%]">
-            <div class="px-3 py-2 text-sm rounded-xl shadow-sm relative" :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'">
+            <div class="px-3 py-2 pr-8 text-sm rounded-xl shadow-sm relative" :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'">
+              <button
+                class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-[10px] inline-flex items-center justify-center border border-black/10 bg-white/60"
+                @click.stop="toggleMessageActions(msg.id)"
+              >
+                <i class="fas fa-ellipsis-h"></i>
+              </button>
+
               <div v-if="msg.quote" class="mb-2 rounded-lg border border-white/40 bg-black/5 px-2 py-1 text-[11px] leading-4">
-                <p class="font-semibold opacity-80">{{ msg.quote.role === 'assistant' ? 'Quoted assistant' : 'Quoted user' }}</p>
+                <p class="font-semibold opacity-80">{{ msg.quote.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user') }}</p>
                 <p class="line-clamp-2">{{ msg.quote.preview }}</p>
               </div>
 
@@ -1089,21 +1406,23 @@ onBeforeUnmount(() => {
                 <div v-else-if="block.type === 'module_link'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <p class="text-[12px] font-semibold">{{ block.label }}</p>
                   <p class="text-[11px] opacity-75" v-if="block.note">{{ block.note }}</p>
-                  <button @click="openModuleRoute(block.route)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">Open {{ block.route }}</button>
+                  <button @click="openModuleRoute(block.route)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">
+                    {{ t('打开', 'Open') }} {{ block.route }}
+                  </button>
                 </div>
 
                 <div v-else-if="block.type === 'transfer_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <p class="text-[12px] font-semibold">{{ block.label }}</p>
                   <p class="text-base font-bold">{{ block.amount }} {{ block.currency }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.to">To: {{ block.to }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.note">Note: {{ block.note }}</p>
+                  <p class="text-[11px] opacity-75" v-if="block.to">{{ t('收款方', 'To') }}: {{ block.to }}</p>
+                  <p class="text-[11px] opacity-75" v-if="block.note">{{ t('备注', 'Note') }}: {{ block.note }}</p>
                   <button @click="openModuleRoute(block.actionRoute)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">{{ transferActionLabel(block) }}</button>
                 </div>
 
                 <div v-else-if="block.type === 'image_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <div class="w-full h-24 rounded-md bg-black/5 overflow-hidden mb-1.5">
                     <img v-if="block.url" :src="block.url" class="w-full h-full object-cover" />
-                    <div v-else class="w-full h-full flex items-center justify-center text-[11px] opacity-70">Image preview</div>
+                    <div v-else class="w-full h-full flex items-center justify-center text-[11px] opacity-70">{{ t('图片预览', 'Image preview') }}</div>
                   </div>
                   <p class="text-[12px] font-semibold">{{ block.alt }}</p>
                   <p class="text-[11px] opacity-75" v-if="block.caption">{{ block.caption }}</p>
@@ -1117,9 +1436,51 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <p v-if="messageStatusText(msg)" class="text-[10px] text-right mt-1" :class="msg.status === 'failed' ? 'text-red-500' : 'text-gray-400'">
+            <p v-if="messageMetaHintText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? 'text-right text-gray-400' : 'text-left text-gray-400'">
+              {{ messageMetaHintText(msg) }}
+            </p>
+            <p v-if="messageStatusText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? (msg.status === 'failed' ? 'text-right text-red-500' : 'text-right text-gray-400') : (msg.status === 'failed' ? 'text-left text-red-500' : 'text-left text-gray-400')">
               {{ messageStatusText(msg) }}
             </p>
+
+            <div
+              v-if="activeMessageActionId === msg.id"
+              class="mt-1.5 flex flex-wrap gap-1.5"
+              :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+            >
+              <button
+                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
+                @click="quoteMessage(msg)"
+              >
+                {{ t('引用', 'Quote') }}
+              </button>
+              <button
+                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
+                @click="copyMessage(msg)"
+              >
+                {{ t('复制', 'Copy') }}
+              </button>
+              <button
+                v-if="canEditMessage(msg)"
+                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
+                @click="editMessage(msg)"
+              >
+                {{ t('编辑', 'Edit') }}
+              </button>
+              <button
+                v-if="canRerollMessage(msg)"
+                class="px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 text-[11px]"
+                @click="rerollMessage(msg)"
+              >
+                {{ t('重roll', 'Reroll') }}
+              </button>
+              <button
+                class="px-2 py-1 rounded-md border border-red-200 bg-red-50 text-red-600 text-[11px]"
+                @click="deleteMessage(msg)"
+              >
+                {{ t('删除', 'Delete') }}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1137,13 +1498,28 @@ onBeforeUnmount(() => {
 
       <div class="p-3 chat-input flex items-center gap-2 border-t relative">
         <div
+          v-if="pendingQuote"
+          class="absolute -top-24 left-3 right-3 text-[11px] rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 flex items-start justify-between gap-2"
+        >
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-700">
+              {{ pendingQuote.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user') }}
+            </p>
+            <p class="line-clamp-2 text-gray-600">{{ pendingQuote.preview }}</p>
+          </div>
+          <button @click="clearPendingQuote" class="shrink-0 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">
+            {{ t('取消', 'Cancel') }}
+          </button>
+        </div>
+
+        <div
           v-if="aiErrorMessage"
           class="absolute -top-14 left-3 right-3 text-[11px] rounded-lg border border-red-200 bg-red-50 text-red-700 px-2.5 py-1.5 flex items-center justify-between gap-2"
         >
           <span class="line-clamp-1">{{ aiErrorMessage }}</span>
           <div class="shrink-0 flex items-center gap-1">
-            <button v-if="canRetryAi" @click="retryLastMessage" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">Retry</button>
-            <button v-if="canCancelAi" @click="cancelActiveRequest" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">Cancel</button>
+            <button v-if="canRetryAi" @click="retryLastMessage" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('重试', 'Retry') }}</button>
+            <button v-if="canCancelAi" @click="cancelActiveRequest" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('取消', 'Cancel') }}</button>
           </div>
         </div>
 
@@ -1162,7 +1538,13 @@ onBeforeUnmount(() => {
           <i v-else class="fas fa-wand-magic-sparkles text-xs"></i>
         </button>
 
-        <input v-model="inputMessage" @keyup.enter="sendMessage" type="text" class="flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none" placeholder="Send a message..." />
+        <input
+          v-model="inputMessage"
+          @keyup.enter="sendMessage"
+          type="text"
+          class="flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
+          :placeholder="t('发送一条消息...', 'Send a message...')"
+        />
 
         <button
           @click="requestPendingAiReply"
@@ -1170,7 +1552,7 @@ onBeforeUnmount(() => {
           :class="canRequestAiReply ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-100 text-gray-400'"
           :disabled="!canRequestAiReply"
         >
-          Trigger Reply
+          {{ t('触发回复', 'Trigger Reply') }}
         </button>
 
         <button @click="sendMessage" class="w-8 h-8 chat-send rounded-full flex items-center justify-center">
