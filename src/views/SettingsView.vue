@@ -120,6 +120,10 @@ const openChatAutomation = () => {
   router.push('/chat-contacts')
 }
 
+const openNetworkReports = () => {
+  router.push('/network')
+}
+
 const exportData = () => {
   const data = JSON.stringify({
     settings: settings.value,
@@ -154,7 +158,7 @@ onBeforeUnmount(() => {
   <div class="w-full h-full bg-[#f2f2f7] flex flex-col text-black">
     <div class="pt-12 pb-4 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
       <button @click="goHome" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
-        <i class="fas fa-chevron-left"></i> 主页
+        <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('设置', 'Settings') }}</h1>
     </div>
@@ -168,7 +172,7 @@ onBeforeUnmount(() => {
           />
         </div>
         <div class="flex-1">
-          <h2 class="text-lg font-semibold">{{ user.name || '未命名用户' }}</h2>
+          <h2 class="text-lg font-semibold">{{ user.name || t('未命名用户', 'Unnamed User') }}</h2>
           <p class="text-xs text-gray-500">{{ t('Apple ID、头像与基础人设', 'Apple ID, avatar and profile basics') }}</p>
         </div>
         <i class="fas fa-chevron-right text-gray-300"></i>
@@ -362,6 +366,28 @@ onBeforeUnmount(() => {
             </p>
             <button @click="openChatAutomation" class="mt-2 px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">
               {{ t('前往会话设置', 'Go to chat settings') }}
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl p-4 space-y-2">
+            <p class="text-xs text-gray-500">
+              {{
+                t(
+                  '手动触发始终优先；若与定时自主调用接近重叠，系统会自动顺延本轮自主调用，避免重复回复。',
+                  'Manual triggers always take priority. If near overlap happens with timed auto invoke, this cycle is deferred to avoid duplicate replies.',
+                )
+              }}
+            </p>
+            <p class="text-xs text-gray-500">
+              {{
+                t(
+                  '调用失败与中断记录可在 Network 页面查看。',
+                  'Failure and cancellation logs are available on the Network page.',
+                )
+              }}
+            </p>
+            <button @click="openNetworkReports" class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">
+              {{ t('前往调用记录', 'Go to call history') }}
             </button>
           </div>
 

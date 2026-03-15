@@ -56,6 +56,10 @@ Current baseline / 当前基线：
 会话分级菜单已补齐回复模式/回复条数/回复风格/主动开场策略
 - Auto mode can trigger AI after user send, and multi-message replies can be returned in one API call  
 自动模式可在用户发送后触发 AI，且可在单次调用中返回多条回复
+- Autonomous control now supports global switch, module switch, and per-thread timed invoke interval.  
+自主调用控制已支持全局总开关、模块开关与会话级定时间隔。
+- Conflict cooldown + context dedupe are wired; manual trigger has higher priority when near overlap occurs.  
+冲突冷却与上下文去重已接入；手动触发与自动触发接近重叠时，手动优先。
 - Message action menu is now available in thread (quote/copy/edit/delete/reroll)  
 会话页消息操作菜单已可用（引用/复制/编辑/删除/重roll）
 - Reroll replaces target assistant message in-place and marks reroll metadata for traceability  
@@ -89,23 +93,25 @@ AI 生成消息内容仍由模型与上下文驱动
 
 - `tests/chat-store-model.test.js`: pass / 通过
 - `tests/ai-error-format.test.js`: pass / 通过
+- `tests/system-automation.test.js`: pass / 通过
 - Full test run: pass / 全量测试通过
 
 ## 3. Current Gaps / 当前限制
 
-- Budget/threshold reminder not implemented  
-调用预算与额度提醒尚未落地
 - Directory lacks search and batch management  
 会话通讯录缺搜索与批量管理
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
 聊天相关页面已完成系统语言迁移基线，后续新增页面需持续做回归检查
+- Quote-style diversity policy still needs product-level tuning (when to prefer quote vs plain).  
+引用型回复的触发策略仍需产品层面继续细化（何时引用、何时普通回复）。
 
 ## 4. Next Steps / 下一步建议
 
 ### P0
 
-1. Budget control / 调用预算控制  
-Usage count, threshold warning, pre-trigger confirmation.
+1. Autonomous control acceptance / 自主调用验收收口  
+Manual/auto overlap cases, timer strategy polish, and user-facing copy consistency.
+手动/自动重叠场景、计时策略细化与用户提示文案一致性。
 2. Structured block policy hardening / 结构化消息策略加固  
 Fallback consistency, quote safety, and rendering detail polish.
 

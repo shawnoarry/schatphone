@@ -92,6 +92,7 @@ const MANUAL_TRIGGER_ID = '__manual__'
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
+const MANUAL_PRIORITY_GUARD_MS = 1500
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -107,6 +108,7 @@ const showThreadMenu = ref(false)
 const serviceTemplateDraft = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
+const lastManualActionAt = ref(0)
 let autoInvokeTimerId = null
 
 const threadSettingsDraft = reactive({
@@ -192,6 +194,57 @@ const automationSettings = computed(() => settings.value.aiAutomation || null)
 const chatAutomationEnabled = computed(() =>
   systemStore.isAiAutomationEnabledForModule(CHAT_AUTOMATION_MODULE_KEY),
 )
+const autoStatusLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+
+const markManualAction = () => {
+  lastManualActionAt.value = Date.now()
+}
+
+const formatAutoStatusTime = (timestamp) => {
+  if (!timestamp) return '--:--'
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return '--:--'
+  return date.toLocaleTimeString(autoStatusLocale.value, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+const autoScheduleHintText = computed(() => {
+  if (!activeChat.value) return ''
+  if (!chatAutomationEnabled.value) {
+    return t(
+      '全局或 Chat 模块自动响应已关闭。',
+      'Global or Chat automation is currently disabled.',
+    )
+  }
+  if (!activeAiPrefs.value.autoInvokeEnabled) {
+    return t(
+      '当前会话未开启定时自主调用。',
+      'Timed autonomous invoke is disabled in this thread.',
+    )
+  }
+
+  const nextAt = activeConversation.value?.autoNextAt || 0
+  if (!nextAt) {
+    return t(
+      '定时器等待中，保存设置后会自动刷新下一次触发时间。',
+      'Timer is pending. Next invoke time refreshes after saving settings.',
+    )
+  }
+
+  return `${t('下次预计触发', 'Next planned invoke')}: ${formatAutoStatusTime(nextAt)}`
+})
+
+const autoLastTriggeredHintText = computed(() => {
+  if (!activeChat.value || !activeAiPrefs.value.autoInvokeEnabled) return ''
+  const lastAt = activeConversation.value?.autoLastTriggeredAt || 0
+  if (!lastAt) {
+    return t('尚无自动调用记录。', 'No autonomous invoke history yet.')
+  }
+  return `${t('上次自动调用', 'Last autonomous invoke')}: ${formatAutoStatusTime(lastAt)}`
+})
 
 const clampContextTurns = (value) => {
   const turns = Number(value)
@@ -491,6 +544,12 @@ const maybeRunActiveAutoInvoke = async () => {
 
   if (loadingAI.value || activeAbortController.value) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
+    scheduleActiveAutoInvoke()
+    return
+  }
+
+  if (now - lastManualActionAt.value <= MANUAL_PRIORITY_GUARD_MS) {
+    resetConversationAutoNextAt(contactId, now)
     scheduleActiveAutoInvoke()
     return
   }
@@ -818,6 +877,9 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 
   const triggerSource = typeof options.source === 'string' ? options.source : 'manual'
   const isAutoSource = triggerSource === 'auto'
+  if (!isAutoSource) {
+    markManualAction()
+  }
   const normalizedTriggerId = triggerMessageId || MANUAL_TRIGGER_ID
   if (normalizedTriggerId !== MANUAL_TRIGGER_ID) {
     chatStore.updateMessageStatus(contactId, normalizedTriggerId, 'read')
@@ -891,6 +953,14 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 
 const cancelActiveRequest = () => {
   if (!activeAbortController.value) return
+  systemStore.addApiReport({
+    level: 'info',
+    module: 'chat',
+    action: 'cancel_reply',
+    provider: settings.value.api.resolvedKind || '',
+    model: settings.value.api.model || '',
+    message: t('用户主动取消当前请求。', 'User canceled the in-flight request.'),
+  })
   activeAbortController.value.abort()
 }
 
@@ -1028,6 +1098,7 @@ const deleteMessage = (message) => {
 const rerollMessage = async (message) => {
   if (!activeChat.value || !canRerollMessage(message)) return
   if (loadingAI.value || activeAbortController.value) return
+  markManualAction()
 
   const target = activeMessages.value.find((item) => item.id === message.id)
   if (!target || target.role !== 'assistant') return
@@ -1126,6 +1197,7 @@ const maybeTriggerProactiveOpener = async (contactId) => {
     isProactive: true,
     markProactiveOpened: policy.strategy === 'on_enter_once',
     replyCount: policy.replyCount,
+    source: 'auto',
   })
 }
 
@@ -1624,6 +1696,15 @@ onBeforeUnmount(() => {
             </label>
             <p v-if="!chatAutomationEnabled" class="text-[10px] text-orange-500">
               {{ t('全局或 Chat 模块自动响应未开启，请先到设置中开启。', 'Global or Chat automation is disabled. Enable it in Settings first.') }}
+            </p>
+            <p v-else class="text-[10px] text-gray-500">
+              {{ autoScheduleHintText }}
+            </p>
+            <p v-if="chatAutomationEnabled && autoLastTriggeredHintText" class="text-[10px] text-gray-500">
+              {{ autoLastTriggeredHintText }}
+            </p>
+            <p class="text-[10px] text-gray-400">
+              {{ t('手动触发优先；若与自动触发接近重叠，自动调用会顺延到下一周期。', 'Manual trigger has priority. If it overlaps with auto invoke, autonomous call is deferred to next cycle.') }}
             </p>
           </div>
 

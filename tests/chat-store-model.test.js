@@ -94,6 +94,36 @@ describe('chat store model', () => {
     expect(prefs.proactiveOpenerStrategy).toBe('on_every_enter_if_empty')
   })
 
+  test('supports autonomous invoke prefs clamp and auto state scheduling', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    store.setConversationAiPrefs(contactId, {
+      autoInvokeEnabled: true,
+      autoInvokeIntervalSec: 1,
+    })
+
+    const prefs = store.getConversationAiPrefs(contactId)
+    expect(prefs.autoInvokeEnabled).toBe(true)
+    expect(prefs.autoInvokeIntervalSec).toBe(60)
+
+    const nextAt = store.scheduleConversationAutoInvoke(contactId, 1000, prefs.autoInvokeIntervalSec)
+    expect(nextAt).toBe(61_000)
+
+    store.setConversationAutoState(contactId, {
+      autoLastTriggeredAt: 25_000,
+      autoLastFingerprint: 'fingerprint-v1',
+    })
+
+    const conversation = store.getConversationByContactId(contactId)
+    expect(conversation.autoNextAt).toBe(61_000)
+    expect(conversation.autoLastTriggeredAt).toBe(25_000)
+    expect(conversation.autoLastFingerprint).toBe('fingerprint-v1')
+
+    store.setConversationAiPrefs(contactId, { autoInvokeEnabled: false })
+    expect(store.getConversationByContactId(contactId).autoNextAt).toBe(0)
+  })
+
   test('supports proactive opener timestamp mark/reset', () => {
     const store = useChatStore()
     const contactId = store.contacts[0].id

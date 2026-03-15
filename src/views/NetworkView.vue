@@ -9,7 +9,7 @@ import { useI18n } from '../composables/useI18n'
 const router = useRouter()
 const systemStore = useSystemStore()
 const { settings, apiReports } = storeToRefs(systemStore)
-const { t } = useI18n()
+const { t, systemLanguage, languageBase } = useI18n()
 
 const modelOptions = ref([])
 const modelsLoading = ref(false)
@@ -17,6 +17,8 @@ const modelsError = ref('')
 const presetName = ref('')
 const showApiKey = ref(false)
 const saved = ref(false)
+const reportModuleFilter = ref('all')
+const reportLevelFilter = ref('all')
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
@@ -39,9 +41,30 @@ const apiKindLabel = computed(() => {
 })
 
 const presets = computed(() => settings.value.api.presets || [])
-const networkReports = computed(() =>
-  (apiReports.value || []).filter((item) => item.module === 'network' || item.module === 'chat').slice(0, 50),
-)
+const reportModuleOptions = computed(() => [
+  { value: 'all', label: t('全部模块', 'All modules') },
+  { value: 'chat', label: t('聊天', 'Chat') },
+  { value: 'network', label: t('网络', 'Network') },
+  { value: 'map', label: t('地图', 'Map') },
+  { value: 'shopping', label: t('购物', 'Shopping') },
+])
+const reportLevelOptions = computed(() => [
+  { value: 'all', label: t('全部级别', 'All levels') },
+  { value: 'error', label: t('错误', 'Error') },
+  { value: 'info', label: t('信息', 'Info') },
+])
+const networkReports = computed(() => {
+  const moduleFilter = reportModuleFilter.value
+  const levelFilter = reportLevelFilter.value
+  return (apiReports.value || [])
+    .filter((item) => {
+      if (!item || typeof item !== 'object') return false
+      if (moduleFilter !== 'all' && item.module !== moduleFilter) return false
+      if (levelFilter !== 'all' && item.level !== levelFilter) return false
+      return true
+    })
+    .slice(0, 100)
+})
 
 const savePreset = () => {
   ensurePresetState()
@@ -146,6 +169,18 @@ const saveNetworkSettings = () => {
   }, 1200)
 }
 
+const clearApiReportHistory = () => {
+  if ((apiReports.value || []).length === 0) return
+  const ok = window.confirm(
+    t(
+      '确认清空全部调用/报错历史吗？此操作不可撤销。',
+      'Clear all call/error history? This action cannot be undone.',
+    ),
+  )
+  if (!ok) return
+  systemStore.clearApiReports()
+}
+
 const clearModelState = () => {
   modelOptions.value = []
   modelsError.value = ''
@@ -201,7 +236,8 @@ const formatReportTime = (timestamp) => {
   if (!timestamp) return '--:--'
   const date = new Date(timestamp)
   if (Number.isNaN(date.getTime())) return '--:--'
-  return date.toLocaleString('zh-CN', {
+  const locale = languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value
+  return date.toLocaleString(locale, {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -263,9 +299,9 @@ ensurePresetState()
   <div class="w-full h-full bg-gray-100 flex flex-col text-black">
     <div class="pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
       <button @click="goHome" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
-        <i class="fas fa-chevron-left"></i> 主页
+        <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
       </button>
-      <h1 class="text-2xl font-bold flex-1">网络与 API</h1>
+      <h1 class="text-2xl font-bold flex-1">{{ t('网络与 API', 'Network & API') }}</h1>
       <button @click="goSettings" class="text-blue-500 text-sm">{{ t('设置', 'Settings') }}</button>
     </div>
 
@@ -306,7 +342,7 @@ ensurePresetState()
             v-model="presetName"
             type="text"
             class="flex-1 border-b border-gray-200 py-1 outline-none text-sm"
-            placeholder="例如：主账号 / 测试网关"
+            :placeholder="t('例如：主账号 / 测试网关', 'Example: Primary / Test Gateway')"
           />
           <button
             @click="savePreset"
@@ -399,15 +435,28 @@ ensurePresetState()
         <div class="flex items-center justify-between mb-2">
           <p class="text-xs text-gray-500">{{ t('调用/报错历史', 'Call/Error History') }}</p>
           <button
-            @click="systemStore.clearApiReports()"
+            @click="clearApiReportHistory"
             class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
             {{ t('清空', 'Clear') }}
           </button>
         </div>
 
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select v-model="reportModuleFilter" class="border rounded-md px-2 py-1 text-xs bg-white outline-none">
+            <option v-for="item in reportModuleOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+          <select v-model="reportLevelFilter" class="border rounded-md px-2 py-1 text-xs bg-white outline-none">
+            <option v-for="item in reportLevelOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+        </div>
+
         <p v-if="networkReports.length === 0" class="text-xs text-gray-400">
-          {{ t('暂无调用报错记录。', 'No error records yet.') }}
+          {{ t('暂无匹配记录。', 'No matching records.') }}
         </p>
 
         <div v-else class="space-y-2 max-h-52 overflow-y-auto no-scrollbar">
@@ -420,9 +469,11 @@ ensurePresetState()
             </div>
             <p class="text-[11px] text-gray-600 mt-1 line-clamp-2">{{ item.message || t('未知错误', 'Unknown error') }}</p>
             <p class="text-[10px] text-gray-400 mt-1">
+              {{ t('级别', 'Level') }}: {{ item.level || '-' }} ·
               {{ t('状态码', 'Status') }}: {{ item.statusCode || '-' }} ·
               Code: {{ item.code || '-' }} ·
-              {{ t('模型', 'Model') }}: {{ item.model || '-' }}
+              {{ t('模型', 'Model') }}: {{ item.model || '-' }} ·
+              {{ t('供应商', 'Provider') }}: {{ item.provider || '-' }}
             </p>
           </div>
         </div>

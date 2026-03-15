@@ -37,6 +37,8 @@ AI 调用由“触发回复”控制，支持连续触发
 会话分级菜单已具备 AI 控制（建议回复/上下文轮数/双语/引用/虚拟语音）
 - Thread layered menu also includes mode/count/style/proactive opener strategy  
 会话分级菜单也已支持模式/条数/风格/主动开场策略
+- Autonomous trigger controls are available at global/module/thread levels with conflict cooldown and dedupe guard  
+自主调用已具备全局/模块/会话三级控制，并接入冲突冷却与去重保护
 - Message action menu baseline completed: quote/copy/edit/delete/reroll  
 消息操作菜单基线已完成：引用/复制/编辑/删除/重roll
 - Reroll uses pre-target context and replaces the target assistant message  
@@ -84,10 +86,10 @@ P0-2 目标页面已完成（`Appearance`、`ChatDirectory`、`LockScreen`、`Us
 
 - Local browser persistence by default / 默认本地浏览器存储
 - No platform cloud hosting / 不做平台云托管
-- API requests only on explicit user trigger / 仅在用户触发时发请求
+- API requests on explicit trigger plus optional autonomous trigger (when enabled) / 默认用户触发，开启后可按规则自主触发
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
-1. Budget control / 调用预算控制（计数、提醒、确认）
+1. Autonomous-control acceptance pass / 自主调用验收收口（手动优先、重叠冲突、文案一致性）
 2. Widget import safety baseline / Widget 导入安全基线（结构校验、失败回滚）
 3. Structured block policy hardening / 结构化消息策略加固（回退一致性、引用安全）

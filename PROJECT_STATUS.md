@@ -38,6 +38,8 @@ Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 - Preset save/switch/delete/clear / 预设保存、切换、删除、清空
 - Error grading for URL/auth/404/rate-limit/timeout/network-CORS/server  
 模型拉取错误分级：URL/鉴权/404/限流/超时/网络-CORS/服务端
+- Call/Error history center with filter and clear controls (network + chat logs)  
+调用/报错历史中心已上线（支持筛选与清空，覆盖 network + chat 记录）
 
 ### 2.3 Chat Data Model Upgrade / Chat 数据模型升级
 
@@ -61,6 +63,10 @@ Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 会话分级菜单已支持模式/条数/风格/主动开场策略
 - Auto mode supports post-send trigger and one-call multi-message generation  
 自动模式支持发送后触发，并支持单次调用生成多条回复
+- Global/module/thread autonomous controls are available (master switch, module switch, per-thread interval).  
+全局/模块/会话三级自主调用控制已可用（总开关、模块开关、会话间隔）。
+- Autonomous flow includes conflict cooldown and context dedupe guards; manual trigger keeps higher priority.  
+自主调用链路已包含冲突冷却与上下文去重保护；手动触发保持更高优先级。
 - Message action menu baseline completed: quote/copy/edit/delete/reroll with role constraints  
 消息操作菜单基线已完成：引用/复制/编辑/删除/重roll，并带角色约束
 - Reroll uses pre-target context and replaces target assistant message in place  
@@ -121,8 +127,8 @@ More：快捷入口、实验开关、扩展建议
 
 - Profile card -> `/profile`
 - Worldbook -> `/worldbook`
-- General / Notifications (embedded second-level pages)  
-通用与通知（内嵌二级页）
+- General / Notifications / AI Automation (embedded second-level pages)  
+通用 / 通知 / AI 自动响应（内嵌二级页）
 - Backup export (JSON) and About / 备份导出（JSON）与关于
 
 Independent entries / 独立入口：
@@ -148,8 +154,9 @@ Independent entries / 独立入口：
 
 ### P0
 
-1. Budget control / Chat 调用预算控制  
-Per-thread usage count, threshold warning, optional confirmation.
+1. Autonomous AI control acceptance pass / 自主调用控制验收收口  
+Manual vs auto overlap cases, cooldown/dedupe tuning, and UX copy consistency.
+手动/自动重叠场景验收、冷却与去重参数调优、用户可见文案一致性收口。
 2. Widget import safety baseline / Widget 导入安全基线  
 Schema validation, dangerous field filtering, and rollback on failure.  
 结构校验、危险字段过滤、失败回滚。

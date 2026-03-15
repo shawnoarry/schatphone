@@ -1,6 +1,6 @@
 ﻿# Chat Feature Decisions / Chat 功能决议记录
 
-Updated / 更新时间: 2026-02-23
+Updated / 更新时间: 2026-03-15
 
 Purpose / 用途: persist user feedback on Chat feature proposals, so future sessions can continue without context loss.  
 用于沉淀用户对 Chat 功能建议的反馈，便于下次对话直接续接，不丢上下文。
@@ -69,6 +69,21 @@ AI 每次回复都必须带上人设、世界书和多轮历史。
 必须保留“虚拟语音”形态（语音条外观 + 文本描述）。
 - Implementation status / 实现状态: virtual voice block rendering + per-thread enable flag are landed.  
 已落地虚拟语音消息块渲染与会话级开关。
+
+### #12 Autonomous Trigger Governance / 自主调用治理
+
+- No in-project quota counting is needed; provider-side usage pages remain source of truth.  
+项目内不做额度计数，供应商侧用量页面为唯一准绳。
+- Keep explicit entry-level reminders where AI calls are triggered (chat/manual/auto/module features).  
+在会触发 AI 调用的入口（chat 手动/自动/模块功能）保留明确提示即可。
+- Add hierarchical switches: global master switch -> module switch -> per-thread interval switch.  
+开关采用分级控制：全局总开关 -> 模块开关 -> 会话级间隔开关。
+- Manual trigger must keep higher priority than autonomous trigger when timing overlaps.  
+手动触发与自动触发时间重叠时，手动优先。
+- Keep call/error history in Network/API area for user diagnostics (400/403/429/network/cancel, etc.).  
+在 Network/API 区域保留调用/报错历史，便于用户诊断（400/403/429/网络/取消等）。
+- Implementation status / 实现状态: in progress, baseline code path landed and under acceptance tuning.  
+实现状态：进行中，基线路径已落地，正在做验收收口与体验调优。
 
 ---
 
