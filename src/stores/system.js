@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 import { readPersistedState, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
+import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 
 const AVAILABLE_THEMES = [
   {
@@ -82,7 +83,7 @@ const DEFAULT_TILE_PAGE_INDEX = Object.fromEntries(
 )
 
 const CUSTOM_WIDGET_ID_PREFIX = 'custom_widget_'
-const CUSTOM_WIDGET_SIZES = ['1x1', '2x1', '2x2', '4x2', '4x3']
+const CUSTOM_WIDGET_SIZES = [...VALID_WIDGET_SIZES]
 const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const MAX_NOTIFICATIONS = 80
@@ -522,31 +523,70 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
   }
 
-  const importCustomWidgets = (importPayload, pageIndex = 0) => {
-    let parsed = importPayload
-    if (typeof importPayload === 'string') {
-      try {
-        parsed = JSON.parse(importPayload)
-      } catch {
-        return 0
+  const importCustomWidgets = (importPayload, pageIndex = 0, options = {}) => {
+    const validation = validateWidgetImportPayload(importPayload, {
+      fallbackName: '自定义组件',
+      ...options,
+    })
+
+    if (!validation.ok) {
+      return {
+        ok: false,
+        importedCount: 0,
+        importedIds: [],
+        errors: validation.errors || [],
+        warnings: validation.warnings || [],
       }
     }
 
-    if (!Array.isArray(parsed)) return 0
+    const currentWidgetsSnapshot = settings.appearance.customWidgets.map((widget) => ({ ...widget }))
+    const currentPagesSnapshot = settings.appearance.homeWidgetPages.map((page) => [...page])
 
-    let count = 0
-    parsed.forEach((item) => {
-      if (!item || typeof item !== 'object') return
-      addCustomWidget({
+    try {
+      const now = Date.now()
+      const importedWidgets = validation.items.map((item, index) => ({
+        id: `${CUSTOM_WIDGET_ID_PREFIX}${now + index}_${Math.random().toString(36).slice(2, 8)}`,
         name: item.name,
-        size: item.size,
+        size: normalizeCustomWidgetSize(item.size),
         code: item.code,
-        pageIndex,
-      })
-      count += 1
-    })
+        createdAt: now + index,
+      }))
 
-    return count
+      const mergedWidgets = [...currentWidgetsSnapshot, ...importedWidgets]
+      const nextPages = currentPagesSnapshot.map((page) => [...page])
+      const targetPage = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+
+      while (nextPages.length <= targetPage) {
+        nextPages.push([])
+      }
+      importedWidgets.forEach((widget) => {
+        nextPages[targetPage].push(widget.id)
+      })
+
+      const mergedWidgetIds = mergedWidgets.map((widget) => widget.id)
+      const normalizedPages = normalizeHomeWidgetPages(nextPages, mergedWidgetIds)
+
+      settings.appearance.customWidgets = mergedWidgets
+      settings.appearance.homeWidgetPages = normalizedPages
+
+      return {
+        ok: true,
+        importedCount: importedWidgets.length,
+        importedIds: importedWidgets.map((widget) => widget.id),
+        errors: [],
+        warnings: validation.warnings || [],
+      }
+    } catch {
+      settings.appearance.customWidgets = currentWidgetsSnapshot
+      settings.appearance.homeWidgetPages = currentPagesSnapshot
+      return {
+        ok: false,
+        importedCount: 0,
+        importedIds: [],
+        errors: [{ index: -1, code: 'ROLLBACK_FAILED' }],
+        warnings: validation.warnings || [],
+      }
+    }
   }
 
   const placeBuiltInWidgetTile = (tileId, pageIndex = 0) => {

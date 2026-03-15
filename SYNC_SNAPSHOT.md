@@ -87,9 +87,10 @@ P0-2 目标页面已完成（`Appearance`、`ChatDirectory`、`LockScreen`、`Us
 - Local browser persistence by default / 默认本地浏览器存储
 - No platform cloud hosting / 不做平台云托管
 - API requests on explicit trigger plus optional autonomous trigger (when enabled) / 默认用户触发，开启后可按规则自主触发
+- Widget JSON import now uses schema validation + rollback-safe apply / Widget JSON 导入已接入结构校验与失败回滚保护
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
 1. Autonomous-control acceptance pass / 自主调用验收收口（手动优先、重叠冲突、文案一致性）
-2. Widget import safety baseline / Widget 导入安全基线（结构校验、失败回滚）
+2. Widget import policy tuning / Widget 导入策略调优（严格度、阈值、反馈文案）
 3. Structured block policy hardening / 结构化消息策略加固（回退一致性、引用安全）

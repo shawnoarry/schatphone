@@ -30,6 +30,8 @@ Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 - Appearance split into theme/font/widget sections / 外观入口拆分为主题/字体/Widget
 - Status bar toggle and haptic toggle / 顶部状态栏与触感开关
 - Lock clock style can be configured in Appearance / 锁屏时间样式可在外观中配置
+- Widget JSON import safety baseline completed (schema validation, danger filtering, rollback-safe apply).  
+Widget JSON 导入安全基线已完成（结构校验、危险内容拦截、失败回滚保护）。
 
 ### 2.2 Network
 
@@ -154,12 +156,12 @@ Independent entries / 独立入口：
 
 ### P0
 
-1. Autonomous AI control acceptance pass / 自主调用控制验收收口  
-Manual vs auto overlap cases, cooldown/dedupe tuning, and UX copy consistency.
-手动/自动重叠场景验收、冷却与去重参数调优、用户可见文案一致性收口。
-2. Widget import safety baseline / Widget 导入安全基线  
-Schema validation, dangerous field filtering, and rollback on failure.  
-结构校验、危险字段过滤、失败回滚。
+1. Real-usage acceptance pass / 实际使用验收收口  
+Autonomous invoke overlap cases, report readability, and user-facing copy fine-tuning.
+自主调用重叠场景、报错记录可读性与用户提示文案细化。
+2. Widget import policy tuning / Widget 导入策略调优  
+Adjust strictness, limits, and warning copy based on real user import behavior.
+根据真实导入行为，调节严格度、限制阈值与告警文案。
 
 ### P1
 

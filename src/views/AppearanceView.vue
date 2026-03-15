@@ -4,8 +4,9 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
+import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
 
-const CUSTOM_SIZE_OPTIONS = ['1x1', '2x1', '2x2', '4x2', '4x3']
+const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
 const DEFAULT_FONT_STACK = '"Inter", "Noto Sans SC", sans-serif'
@@ -63,6 +64,24 @@ const WIDGET_TEMPLATE_JSON = computed(() =>
     2,
   ),
 )
+const RECOGNIZED_IMPORT_TEMPLATE_JSON = computed(() =>
+  JSON.stringify(
+    [
+      {
+        name: t('示例天气卡', 'Sample Weather Card'),
+        size: '2x2',
+        code: "<div style='height:100%;display:flex;align-items:center;justify-content:center;border-radius:16px;background:rgba(255,255,255,.2);color:#fff;font:600 14px/1.4 \"Inter\",sans-serif;'>Weather 26°C</div>",
+      },
+      {
+        name: t('示例快捷卡', 'Sample Quick Card'),
+        size: '2x1',
+        code: "<div style='height:100%;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(0,0,0,.35);color:#fff;font:600 12px/1.4 \"Inter\",sans-serif;'>Quick Action</div>",
+      },
+    ],
+    null,
+    2,
+  ),
+)
 const importJsonPlaceholder = computed(() =>
   t(
     '[{"name":"天气卡","size":"2x2","code":"<div>...</div>"}]',
@@ -87,6 +106,9 @@ const editingWidgetId = ref('')
 
 const importJsonText = ref('')
 const importTargetPage = ref(0)
+const importFeedbackType = ref('')
+const importFeedbackMessage = ref('')
+const importFeedbackDetails = ref([])
 const builtInWidgetPage = ref(0)
 const customFontStackInput = ref('')
 
@@ -330,21 +352,120 @@ const moveCustomWidgetToPage = (widgetId, pageIndex) => {
   triggerSaved()
 }
 
+const clearImportFeedback = () => {
+  importFeedbackType.value = ''
+  importFeedbackMessage.value = ''
+  importFeedbackDetails.value = []
+}
+
+const formatImportError = (error) => {
+  const code = error?.code || 'UNKNOWN'
+  const itemNumber = Number.isInteger(error?.index) && error.index >= 0 ? error.index + 1 : 0
+  const itemPrefix = itemNumber > 0 ? `${t('第', 'Item ')}${itemNumber}${t('条', '')} ` : ''
+
+  if (code === 'EMPTY_PAYLOAD') return t('导入内容为空。', 'Import content is empty.')
+  if (code === 'INVALID_JSON') return t('JSON 格式错误。', 'Invalid JSON format.')
+  if (code === 'TOP_LEVEL_NOT_ARRAY') return t('顶层必须是 JSON 数组。', 'Top-level must be a JSON array.')
+  if (code === 'EMPTY_ARRAY') return t('数组不能为空。', 'Array cannot be empty.')
+  if (code === 'PAYLOAD_TOO_LARGE') {
+    return t(
+      `导入内容过大，最多 ${error?.max || '-'} 字符。`,
+      `Payload is too large. Max ${error?.max || '-'} chars.`,
+    )
+  }
+  if (code === 'BATCH_TOO_LARGE') {
+    return t(
+      `单次最多导入 ${error?.max || '-'} 个组件。`,
+      `Import supports up to ${error?.max || '-'} widgets per batch.`,
+    )
+  }
+  if (code === 'ITEM_NOT_OBJECT') return `${itemPrefix}${t('必须是对象。', 'must be an object.')}`
+  if (code === 'NAME_TOO_LONG') {
+    return `${itemPrefix}${t(
+      `名称过长（最多 ${error?.max || '-'} 字符）。`,
+      `name is too long (max ${error?.max || '-'} chars).`,
+    )}`
+  }
+  if (code === 'INVALID_SIZE') {
+    return `${itemPrefix}${t(
+      `尺寸无效，仅支持 ${VALID_WIDGET_SIZES.join('/')}。`,
+      `invalid size. Allowed: ${VALID_WIDGET_SIZES.join('/')}.`,
+    )}`
+  }
+  if (code === 'EMPTY_CODE') return `${itemPrefix}${t('code 不能为空。', 'code cannot be empty.')}`
+  if (code === 'CODE_TOO_LONG') {
+    return `${itemPrefix}${t(
+      `code 过长（最多 ${error?.max || '-'} 字符）。`,
+      `code is too long (max ${error?.max || '-'} chars).`,
+    )}`
+  }
+  if (code === 'DANGEROUS_CODE') {
+    return `${itemPrefix}${t(
+      `包含不安全代码模式（${error?.pattern || 'unknown'}）。`,
+      `contains unsafe code pattern (${error?.pattern || 'unknown'}).`,
+    )}`
+  }
+  if (code === 'ROLLBACK_FAILED') {
+    return t('导入失败，已触发回滚保护。', 'Import failed and rollback protection was triggered.')
+  }
+  return t('导入失败：未知错误。', 'Import failed: unknown error.')
+}
+
+const formatImportWarning = (warning) => {
+  const code = warning?.code || 'UNKNOWN'
+  const itemNumber = Number.isInteger(warning?.index) && warning.index >= 0 ? warning.index + 1 : 0
+  const itemPrefix = itemNumber > 0 ? `${t('第', 'Item ')}${itemNumber}${t('条', '')} ` : ''
+
+  if (code === 'IGNORED_FIELDS') {
+    const fields = Array.isArray(warning?.fields) ? warning.fields.join(', ') : ''
+    return `${itemPrefix}${t(
+      `已忽略不识别字段：${fields || '-'}`,
+      `Ignored unsupported fields: ${fields || '-'}`,
+    )}`
+  }
+  return `${itemPrefix}${t('有未处理的告警。', 'There are unresolved warnings.')}`
+}
+
 const importCustomWidgets = () => {
   const raw = importJsonText.value.trim()
+  clearImportFeedback()
   if (!raw) {
-    alert(t('请先粘贴 JSON。', 'Please paste JSON first.'))
+    const message = t('请先粘贴 JSON。', 'Please paste JSON first.')
+    importFeedbackType.value = 'error'
+    importFeedbackMessage.value = message
+    alert(message)
     return
   }
 
-  const importedCount = systemStore.importCustomWidgets(raw, importTargetPage.value)
-  if (importedCount <= 0) {
-    alert(t('导入失败：请检查 JSON 格式。', 'Import failed: please check JSON format.'))
+  const result = systemStore.importCustomWidgets(raw, importTargetPage.value)
+  if (!result?.ok) {
+    importFeedbackType.value = 'error'
+    importFeedbackDetails.value = (result?.errors || []).map((item) => formatImportError(item))
+    importFeedbackMessage.value = importFeedbackDetails.value[0] || t('导入失败。', 'Import failed.')
+    alert(importFeedbackMessage.value)
     return
   }
 
+  const warningCount = Array.isArray(result.warnings) ? result.warnings.length : 0
+  importFeedbackType.value = warningCount > 0 ? 'warning' : 'success'
+  importFeedbackMessage.value =
+    warningCount > 0
+      ? t(
+          `成功导入 ${result.importedCount} 个组件，含 ${warningCount} 条提醒。`,
+          `Imported ${result.importedCount} widgets with ${warningCount} warnings.`,
+        )
+      : t(
+          `成功导入 ${result.importedCount} 个组件。`,
+          `Imported ${result.importedCount} widgets successfully.`,
+        )
+  importFeedbackDetails.value = (result.warnings || []).map((item) => formatImportWarning(item))
   importJsonText.value = ''
   triggerSaved()
+}
+
+const fillRecognizedImportTemplate = () => {
+  clearImportFeedback()
+  importJsonText.value = RECOGNIZED_IMPORT_TEMPLATE_JSON.value
 }
 
 const restoreBuiltInWidget = (tileId) => {
@@ -702,7 +823,18 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('导入 Widgets（JSON 数组）', 'Import Widgets (JSON Array)') }}</label>
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <label class="text-xs text-gray-500 block">{{ t('导入 Widgets（JSON 数组）', 'Import Widgets (JSON Array)') }}</label>
+          <button
+            @click="fillRecognizedImportTemplate"
+            class="px-2.5 py-1 rounded-md text-[11px] border border-gray-200 hover:bg-gray-50"
+          >
+            {{ t('填入识别模板', 'Fill recognized template') }}
+          </button>
+        </div>
+        <p class="text-[11px] text-gray-500 mb-2">
+          {{ t('仅识别数组项中的 name / size / code 字段。', 'Only name / size / code are recognized in each array item.') }}
+        </p>
         <textarea
           v-model="importJsonText"
           class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
@@ -720,6 +852,28 @@ onBeforeUnmount(() => {
           >
             {{ t('导入 JSON', 'Import JSON') }}
           </button>
+        </div>
+        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 space-y-1">
+          <p>{{ t('识别规则', 'Recognition Rules') }}</p>
+          <p>{{ t('1. 顶层必须是 JSON 数组。', '1. Top-level must be a JSON array.') }}</p>
+          <p>{{ t('2. 每项必须包含 code，size 仅支持 1x1/2x1/2x2/4x2/4x3。', '2. Each item must include code; size supports only 1x1/2x1/2x2/4x2/4x3.') }}</p>
+          <p>{{ t('3. name 可选，不填时会自动使用“自定义组件”。', '3. name is optional; fallback name will be applied automatically.') }}</p>
+        </div>
+        <div
+          v-if="importFeedbackMessage"
+          class="mt-2 rounded-lg border px-2.5 py-2 text-[11px] space-y-1"
+          :class="
+            importFeedbackType === 'error'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : importFeedbackType === 'warning'
+                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          "
+        >
+          <p class="font-semibold">{{ importFeedbackMessage }}</p>
+          <p v-for="(detail, idx) in importFeedbackDetails" :key="`import-feedback-${idx}`">
+            {{ detail }}
+          </p>
         </div>
       </div>
 
