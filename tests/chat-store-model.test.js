@@ -245,4 +245,48 @@ describe('chat store model', () => {
     expect(removed).toBe(true)
     expect(store.contacts.some((item) => item.id === created.id)).toBe(false)
   })
+
+  test('supports role profile binding lifecycle without deleting global profile on unbind', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      name: 'Mia',
+      role: 'Mediator',
+      isMain: false,
+      bio: 'Global role profile',
+    })
+
+    const binding = store.bindRoleProfile(profile.id, {
+      relationshipLevel: 88,
+      relationshipNote: 'Thread-local note',
+    })
+    expect(binding?.profileId).toBe(profile.id)
+    expect(store.isRoleProfileBound(profile.id)).toBe(true)
+
+    store.updateRoleProfile(profile.id, { name: 'Mia Prime' })
+    const resolved = store.getContactById(binding.id)
+    expect(resolved?.name).toBe('Mia Prime')
+    expect(resolved?.relationshipLevel).toBe(88)
+
+    const unbound = store.unbindRoleContact(binding.id)
+    expect(unbound).toBe(true)
+    expect(store.contacts.some((item) => item.id === binding.id)).toBe(false)
+    expect(store.isRoleProfileBound(profile.id)).toBe(false)
+    expect(store.getRoleProfileById(profile.id)?.name).toBe('Mia Prime')
+  })
+
+  test('removing global role profile clears bound chat entries', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      name: 'Tara',
+      role: 'Guide',
+      isMain: false,
+    })
+    const binding = store.bindRoleProfile(profile.id, { relationshipLevel: 70 })
+    expect(store.contacts.some((item) => item.id === binding.id)).toBe(true)
+
+    const removed = store.removeRoleProfile(profile.id, { removeBindings: true })
+    expect(removed).toBe(true)
+    expect(store.getRoleProfileById(profile.id)).toBe(null)
+    expect(store.contacts.some((item) => Number(item.profileId) === profile.id)).toBe(false)
+  })
 })

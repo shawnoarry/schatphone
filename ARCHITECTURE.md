@@ -58,7 +58,9 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
   - `isLocked`: lock state flag / 锁定状态标记
   - `user`: profile, worldbook, chat status / 用户资料、世界书、聊天状态
 - `src/stores/chat.js`
-  - contact kind: `role/group/service/official`
+  - global role profiles: `roleProfiles`
+  - chat contact kind: `role/group/service/official`
+  - role contact bindings: `profileId`, `relationshipLevel`, `relationshipNote`
   - conversations: `conversations`
   - messages: `messagesByConversation`
 - `src/stores/map.js`
@@ -126,7 +128,8 @@ Core routes / 核心路由：
 
 ### 5.1 Data Structures / 数据结构
 
-- Contact / 对话对象：`id`, `name`, `kind`, `role`, `bio`, `serviceTemplate`
+- Role profile (global) / 全局角色档案：`id`, `name`, `role`, `isMain`, `avatar`, `bio`, `tags`
+- Chat contact (binding or service) / 会话对象（绑定或服务）：`id`, `name`, `kind`, `profileId`, `role`, `bio`, `serviceTemplate`, `relationshipLevel`, `relationshipNote`
 - Conversation / 会话：`draft`, `unread`, `lastMessage`, `updatedAt`, `pinned`, `aiPrefs`, `proactiveOpenedAt`
 - Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `editedAt`, `status`
 - `aiMeta.rerollOf` marks reroll lineage for replaced assistant messages  
@@ -160,6 +163,8 @@ Core routes / 核心路由：
 - Service/official templates managed in-thread / 服务号/公众号模板在会话页内管理
 - Per-thread AI settings are edited in Chat layered menu and persisted in store  
   会话级 AI 设置在 Chat 分级菜单中编辑并持久化
+- Responsibility split / 职责拆分：`/contacts` manages global role profiles; `/chat-contacts` manages role bindings and service account CRUD  
+  `/contacts` 负责全局角色档案；`/chat-contacts` 负责角色绑定与服务号增删改
 
 ### 5.3 Language Boundary in Chat / Chat 语言边界
 

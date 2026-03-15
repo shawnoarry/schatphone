@@ -68,6 +68,10 @@ Current baseline / 当前基线：
 AI 输入中状态以系统态文本展示：“对方正在输入...”
 - New route: `/chat-contacts` with category split  
 新增 `/chat-contacts`，按角色/群聊与服务号/公众号分段管理
+- Role directory model is now split: main contacts own global role profiles, chat directory handles binding/meta only  
+通讯录模型已拆分：主通讯录负责全局角色档案，会话通讯录仅负责绑定与会话局部变量
+- Role unbind in chat directory does not delete global profile; service/official entries remain full CRUD in chat directory  
+会话通讯录中的角色删除仅解绑不删总档案；服务号/公众号仍在会话通讯录内完整增删改
 - Service/official templates configured in-thread menu  
 服务号/公众号模板可在会话页菜单配置
 
@@ -100,6 +104,8 @@ AI 生成消息内容仍由模型与上下文驱动
 
 - Directory lacks search and batch management  
 会话通讯录缺搜索与批量管理
+- Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
+跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
 聊天相关页面已完成系统语言迁移基线，后续新增页面需持续做回归检查
 - Quote-style diversity policy still needs product-level tuning (when to prefer quote vs plain).  

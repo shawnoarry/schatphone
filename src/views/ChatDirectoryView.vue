@@ -8,69 +8,61 @@ import { useI18n } from '../composables/useI18n'
 const router = useRouter()
 const chatStore = useChatStore()
 const { t } = useI18n()
-const { contacts } = storeToRefs(chatStore)
+const { contacts, roleProfiles } = storeToRefs(chatStore)
 
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
-const activeSection = ref('social')
-const createMode = ref('role')
-const editingContactId = ref(null)
+const activeSection = ref('roles')
+const showBindModal = ref(false)
+const bindProfileId = ref(0)
 
-const draft = reactive({
+const showRoleMetaModal = ref(false)
+const editingRoleContactId = ref(0)
+const roleMetaDraft = reactive({
+  relationshipLevel: 50,
+  relationshipNote: '',
+})
+
+const showServiceModal = ref(false)
+const serviceModalMode = ref('create')
+const editingServiceId = ref(0)
+const serviceDraft = reactive({
   name: '',
-  role: '',
+  kind: 'service',
+  template: '',
   bio: '',
-  serviceTemplate: '',
 })
 
-const roleContacts = computed(() => contacts.value.filter((item) => (item.kind || 'role') === 'role'))
-const groupContacts = computed(() => contacts.value.filter((item) => item.kind === 'group'))
+const roleBindings = computed(() =>
+  contacts.value
+    .filter((item) => (item.kind || 'role') === 'role')
+    .map((item) => chatStore.getContactById(item.id))
+    .filter(Boolean),
+)
+
+const boundProfileIds = computed(() =>
+  new Set(
+    contacts.value
+      .filter((item) => (item.kind || 'role') === 'role' && Number(item.profileId) > 0)
+      .map((item) => Number(item.profileId)),
+  ),
+)
+
+const unboundRoleProfiles = computed(() =>
+  roleProfiles.value.filter((profile) => !boundProfileIds.value.has(Number(profile.id))),
+)
+
 const serviceContacts = computed(() =>
-  contacts.value.filter((item) => item.kind === 'service' || item.kind === 'official'),
+  contacts.value
+    .filter((item) => item.kind === 'service' || item.kind === 'official')
+    .map((item) => chatStore.getContactById(item.id))
+    .filter(Boolean),
 )
-
-const modeMeta = computed(() => {
-  if (createMode.value === 'group') {
-    return {
-      title: t('新建群聊', 'Create Group Chat'),
-      rolePlaceholder: t('绑定角色（逗号分隔）', 'Bind roles (comma-separated)'),
-      bioPlaceholder: t('群聊设定（可选）', 'Group setting (optional)'),
-    }
-  }
-  if (createMode.value === 'service') {
-    return {
-      title: t('添加服务号', 'Add Service Account'),
-      rolePlaceholder: t('服务模板标题', 'Service template title'),
-      bioPlaceholder: t('服务说明（可选）', 'Service description (optional)'),
-    }
-  }
-  if (createMode.value === 'official') {
-    return {
-      title: t('添加公众号', 'Add Official Account'),
-      rolePlaceholder: t('公众号模板标题', 'Official template title'),
-      bioPlaceholder: t('服务说明（可选）', 'Service description (optional)'),
-    }
-  }
-  return {
-    title: t('新建对话', 'Create Chat'),
-    rolePlaceholder: t('角色名称（如：私人助理）', 'Role name (e.g. Personal Assistant)'),
-    bioPlaceholder: t('角色设定（可选）', 'Role setting (optional)'),
-  }
-})
-
-const sectionTitle = computed(() =>
-  activeSection.value === 'service' ? t('服务生态', 'Service Hub') : t('角色会话', 'Role Chats'),
-)
-
-const resetDraft = () => {
-  draft.name = ''
-  draft.role = ''
-  draft.bio = ''
-  draft.serviceTemplate = ''
-}
 
 const goBack = () => {
   router.push('/chat')
+}
+
+const switchSection = (section) => {
+  activeSection.value = section === 'service' ? 'service' : 'roles'
 }
 
 const openChat = (contact) => {
@@ -79,97 +71,140 @@ const openChat = (contact) => {
   router.push(`/chat/${contact.id}`)
 }
 
-const openCreate = (mode) => {
-  createMode.value = mode
-  resetDraft()
-  showCreateModal.value = true
+const openBindModal = () => {
+  if (unboundRoleProfiles.value.length === 0) {
+    alert(t('暂无可绑定角色，请先在主通讯录创建角色档案。', 'No profiles available. Create role profiles in main Contacts first.'))
+    return
+  }
+  bindProfileId.value = Number(unboundRoleProfiles.value[0]?.id || 0)
+  showBindModal.value = true
 }
 
-const switchSection = (section) => {
-  activeSection.value = section === 'service' ? 'service' : 'social'
+const closeBindModal = () => {
+  showBindModal.value = false
 }
 
-const closeCreate = () => {
-  showCreateModal.value = false
+const bindSelectedProfile = () => {
+  if (!bindProfileId.value) return
+  const created = chatStore.bindRoleProfile(bindProfileId.value, {
+    relationshipLevel: 60,
+    relationshipNote: '',
+  })
+  if (!created) {
+    alert(t('绑定失败，请重试。', 'Bind failed, please retry.'))
+    return
+  }
+  closeBindModal()
 }
 
-const createContact = () => {
-  const name = draft.name.trim()
+const openRoleMetaModal = (contact) => {
+  editingRoleContactId.value = contact.id
+  roleMetaDraft.relationshipLevel = Number.isFinite(Number(contact.relationshipLevel))
+    ? Number(contact.relationshipLevel)
+    : 50
+  roleMetaDraft.relationshipNote = contact.relationshipNote || ''
+  showRoleMetaModal.value = true
+}
+
+const closeRoleMetaModal = () => {
+  showRoleMetaModal.value = false
+  editingRoleContactId.value = 0
+}
+
+const saveRoleMeta = () => {
+  if (!editingRoleContactId.value) return
+  const ok = chatStore.updateRoleBindingMeta(editingRoleContactId.value, {
+    relationshipLevel: roleMetaDraft.relationshipLevel,
+    relationshipNote: roleMetaDraft.relationshipNote,
+  })
+  if (!ok) {
+    alert(t('保存失败，请重试。', 'Save failed, please retry.'))
+    return
+  }
+  closeRoleMetaModal()
+}
+
+const unbindRole = (contact) => {
+  const ok = window.confirm(
+    `${t('确认解除会话绑定', 'Unbind this chat entry')}「${contact.name}」${t('吗？不会删除主通讯录档案。', '? Main profile will be kept.')}`,
+  )
+  if (!ok) return
+  chatStore.unbindRoleContact(contact.id)
+}
+
+const resetServiceDraft = () => {
+  serviceDraft.name = ''
+  serviceDraft.kind = 'service'
+  serviceDraft.template = ''
+  serviceDraft.bio = ''
+}
+
+const openCreateService = (kind = 'service') => {
+  serviceModalMode.value = 'create'
+  editingServiceId.value = 0
+  resetServiceDraft()
+  serviceDraft.kind = kind === 'official' ? 'official' : 'service'
+  showServiceModal.value = true
+}
+
+const openEditService = (contact) => {
+  serviceModalMode.value = 'edit'
+  editingServiceId.value = contact.id
+  serviceDraft.name = contact.name || ''
+  serviceDraft.kind = contact.kind === 'official' ? 'official' : 'service'
+  serviceDraft.template = contact.serviceTemplate || ''
+  serviceDraft.bio = contact.bio || ''
+  showServiceModal.value = true
+}
+
+const closeServiceModal = () => {
+  showServiceModal.value = false
+  editingServiceId.value = 0
+}
+
+const saveService = () => {
+  const name = serviceDraft.name.trim()
   if (!name) {
     alert(t('请输入名称。', 'Please enter a name.'))
     return
   }
 
-  const kind = createMode.value
-  const created = chatStore.addContact({
+  const payload = {
     name,
-    kind,
-    role:
-      kind === 'group'
-        ? `${t('群聊', 'Group')} · ${draft.role.trim() || t('未配置角色', 'Role not set')}`
-        : kind === 'service'
-          ? t('服务号', 'Service')
-          : kind === 'official'
-            ? t('公众号', 'Official')
-            : draft.role.trim() || t('AI角色', 'AI Role'),
-    bio: draft.bio.trim(),
-    serviceTemplate: kind === 'service' || kind === 'official' ? draft.role.trim() : '',
-    isMain: false,
-  })
-  closeCreate()
-  openChat(created)
+    kind: serviceDraft.kind === 'official' ? 'official' : 'service',
+    role: serviceDraft.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service'),
+    serviceTemplate: serviceDraft.template.trim(),
+    bio: serviceDraft.bio.trim(),
+  }
+
+  if (serviceModalMode.value === 'create') {
+    const created = chatStore.addContact(payload)
+    closeServiceModal()
+    openChat(created)
+    return
+  }
+
+  if (!editingServiceId.value) return
+  const ok = chatStore.updateContact(editingServiceId.value, payload)
+  if (!ok) {
+    alert(t('保存失败，请重试。', 'Save failed, please retry.'))
+    return
+  }
+  closeServiceModal()
 }
 
-const openEdit = (contact) => {
-  editingContactId.value = contact.id
-  draft.name = contact.name || ''
-  draft.role = contact.kind === 'service' || contact.kind === 'official' ? contact.serviceTemplate || '' : contact.role || ''
-  draft.bio = contact.bio || ''
-  draft.serviceTemplate = contact.serviceTemplate || ''
-  showEditModal.value = true
-}
-
-const closeEdit = () => {
-  showEditModal.value = false
-  editingContactId.value = null
-}
-
-const saveEdit = () => {
-  if (!editingContactId.value) return
-  const target = contacts.value.find((item) => item.id === editingContactId.value)
-  if (!target) return
-
-  chatStore.updateContact(editingContactId.value, {
-    name: draft.name.trim() || target.name,
-    role:
-      target.kind === 'service' || target.kind === 'official'
-        ? target.role
-        : draft.role.trim() || target.role,
-    bio: draft.bio.trim(),
-    serviceTemplate: target.kind === 'service' || target.kind === 'official' ? draft.role.trim() : '',
-  })
-  closeEdit()
-}
-
-const removeContact = (contact) => {
-  const ok = confirm(`${t('确定删除本地会话对象', 'Delete local chat object')}「${contact.name}」${t('吗？', '?')}`)
+const removeService = (contact) => {
+  const ok = window.confirm(
+    `${t('确认删除服务会话对象', 'Delete service chat entry')}「${contact.name}」${t('吗？', '?')}`,
+  )
   if (!ok) return
   chatStore.removeContact(contact.id)
 }
 
-const kindText = (contact) => {
-  if (contact.kind === 'group') return t('群聊', 'Group')
-  if (contact.kind === 'service') return t('服务号', 'Service')
-  if (contact.kind === 'official') return t('公众号', 'Official')
-  return t('角色', 'Role')
-}
+const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('NPC', 'NPC'))
 
-const kindClass = (contact) => {
-  if (contact.kind === 'group') return 'bg-indigo-100 text-indigo-700'
-  if (contact.kind === 'service') return 'bg-emerald-100 text-emerald-700'
-  if (contact.kind === 'official') return 'bg-sky-100 text-sky-700'
-  return 'bg-violet-100 text-violet-700'
-}
+const serviceKindTag = (contact) =>
+  contact.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')
 </script>
 
 <template>
@@ -180,24 +215,29 @@ const kindClass = (contact) => {
           <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
         </button>
         <span class="font-bold">{{ t('会话通讯录', 'Chat Directory') }}</span>
-        <span class="text-[11px] text-gray-400">{{ t('仅对话对象', 'Chat contacts only') }}</span>
+        <span class="text-[11px] text-gray-400">{{ t('绑定层', 'Binding Layer') }}</span>
       </div>
       <p class="mt-2 text-xs text-gray-500">
-        {{ t('管理角色、群聊、服务号、公众号，和项目全局联系人分离。', 'Manage role/group/service contacts separately from global contacts.') }}
+        {{
+          t(
+            '角色档案来自主通讯录；本页只做角色绑定与会话变量设置。服务号可在此新建/编辑/删除。',
+            'Role profiles come from main Contacts. This page handles bindings and thread variables only. Service accounts are managed here.',
+          )
+        }}
       </p>
     </div>
 
     <div class="px-4 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2">
       <button
-        @click="switchSection('social')"
+        @click="switchSection('roles')"
         class="px-3 py-1.5 rounded-full text-xs border"
         :class="
-          activeSection === 'social'
+          activeSection === 'roles'
             ? 'border-violet-300 bg-violet-50 text-violet-700'
             : 'border-gray-200 bg-white text-gray-600'
         "
       >
-        {{ t('角色/群聊', 'Role/Group') }}
+        {{ t('角色绑定', 'Role Bindings') }}
       </button>
       <button
         @click="switchSection('service')"
@@ -208,37 +248,25 @@ const kindClass = (contact) => {
             : 'border-gray-200 bg-white text-gray-600'
         "
       >
-        {{ t('服务号/公众号', 'Service/Official') }}
-      </button>
-      <span class="ml-auto text-[11px] text-gray-400 self-center">{{ sectionTitle }}</span>
-    </div>
-
-    <div v-if="activeSection === 'social'" class="px-4 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2">
-      <button @click="openCreate('role')" class="px-3 py-1.5 rounded-full text-xs border border-gray-200 bg-white">
-        {{ t('新建对话', 'Create Chat') }}
-      </button>
-      <button @click="openCreate('group')" class="px-3 py-1.5 rounded-full text-xs border border-gray-200 bg-white">
-        {{ t('新建群聊', 'Create Group') }}
-      </button>
-    </div>
-
-    <div v-else class="px-4 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2">
-      <button @click="openCreate('service')" class="px-3 py-1.5 rounded-full text-xs border border-gray-200 bg-white">
-        {{ t('添加服务号', 'Add Service') }}
-      </button>
-      <button @click="openCreate('official')" class="px-3 py-1.5 rounded-full text-xs border border-gray-200 bg-white">
-        {{ t('添加公众号', 'Add Official') }}
+        {{ t('服务号管理', 'Service Management') }}
       </button>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <section v-if="activeSection === 'social'" class="space-y-2">
-        <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('角色会话', 'Role Chats') }}</h3>
-        <p v-if="roleContacts.length === 0" class="text-xs text-gray-400 px-1 py-2">
-          {{ t('暂无角色会话，可先新建对话。', 'No role chats yet. Create one first.') }}
+      <section v-if="activeSection === 'roles'" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('已绑定角色', 'Bound Roles') }}</h3>
+          <button @click="openBindModal" class="px-2.5 py-1 rounded-md border border-violet-200 bg-violet-50 text-violet-700 text-xs">
+            {{ t('绑定角色', 'Bind Role') }}
+          </button>
+        </div>
+
+        <p v-if="roleBindings.length === 0" class="text-xs text-gray-400 px-1 py-2">
+          {{ t('暂无已绑定角色。', 'No role bindings yet.') }}
         </p>
+
         <div
-          v-for="contact in roleContacts"
+          v-for="contact in roleBindings"
           :key="contact.id"
           class="rounded-2xl bg-white border border-gray-100 p-3 flex items-center gap-3"
         >
@@ -250,48 +278,62 @@ const kindClass = (contact) => {
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
-            <p class="text-xs text-gray-500 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
+            <p class="text-xs text-gray-500 truncate">
+              {{ contact.role || t('未设置角色', 'Role not set') }} ·
+              {{ t('亲密度', 'Affinity') }} {{ contact.relationshipLevel ?? 50 }}
+            </p>
+            <p v-if="contact.relationshipNote" class="text-[11px] text-gray-400 truncate">
+              {{ contact.relationshipNote }}
+            </p>
           </div>
-          <span class="px-1.5 py-0.5 text-[10px] rounded font-medium" :class="kindClass(contact)">
-            {{ kindText(contact) }}
-          </span>
           <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-          <button @click="openEdit(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeContact(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          <button @click="openRoleMetaModal(contact)" class="text-xs text-gray-500">{{ t('会话设定', 'Thread Meta') }}</button>
+          <button @click="unbindRole(contact)" class="text-xs text-red-500">{{ t('解绑', 'Unbind') }}</button>
+        </div>
+
+        <div class="rounded-xl bg-white border border-gray-100 p-3">
+          <p class="text-xs font-semibold text-gray-600 mb-2">{{ t('可绑定角色档案', 'Available Profiles') }}</p>
+          <p v-if="unboundRoleProfiles.length === 0" class="text-xs text-gray-400">
+            {{ t('全部角色已绑定到会话。', 'All profiles are already bound.') }}
+          </p>
+          <div v-else class="space-y-1.5">
+            <div
+              v-for="profile in unboundRoleProfiles"
+              :key="profile.id"
+              class="flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-2.5 py-2"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium truncate">{{ profile.name }}</p>
+                <p class="text-[11px] text-gray-500 truncate">{{ roleTypeTag(profile) }} · {{ profile.role || t('未设置角色', 'Role not set') }}</p>
+              </div>
+              <button
+                @click="bindProfileId = profile.id; bindSelectedProfile()"
+                class="px-2 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+              >
+                {{ t('绑定', 'Bind') }}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section v-if="activeSection === 'social'" class="space-y-2">
-        <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('群聊', 'Groups') }}</h3>
-        <p v-if="groupContacts.length === 0" class="text-xs text-gray-400 px-1 py-2">
-          {{ t('暂无群聊，可先新建群聊。', 'No group chats yet. Create one first.') }}
-        </p>
-        <div
-          v-for="contact in groupContacts"
-          :key="contact.id"
-          class="rounded-2xl bg-white border border-gray-100 p-3 flex items-center gap-3"
-        >
-          <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
-            <i class="fas fa-users"></i>
+      <section v-if="activeSection === 'service'" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('服务号 / 公众号', 'Service / Official') }}</h3>
+          <div class="flex gap-2">
+            <button @click="openCreateService('service')" class="px-2.5 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs">
+              {{ t('新增服务号', 'Add Service') }}
+            </button>
+            <button @click="openCreateService('official')" class="px-2.5 py-1 rounded-md border border-sky-200 bg-sky-50 text-sky-700 text-xs">
+              {{ t('新增公众号', 'Add Official') }}
+            </button>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
-            <p class="text-xs text-gray-500 truncate">{{ contact.role || t('未设置成员', 'Members not set') }}</p>
-          </div>
-          <span class="px-1.5 py-0.5 text-[10px] rounded font-medium" :class="kindClass(contact)">
-            {{ kindText(contact) }}
-          </span>
-          <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-          <button @click="openEdit(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeContact(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
         </div>
-      </section>
 
-      <section v-if="activeSection === 'service'" class="space-y-2">
-        <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('服务号 / 公众号', 'Service / Official') }}</h3>
         <p v-if="serviceContacts.length === 0" class="text-xs text-gray-400 px-1 py-2">
           {{ t('暂无服务号或公众号。', 'No service or official accounts yet.') }}
         </p>
+
         <div
           v-for="contact in serviceContacts"
           :key="contact.id"
@@ -305,84 +347,124 @@ const kindClass = (contact) => {
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
-            <p class="text-xs text-gray-500 truncate">{{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}</p>
+            <p class="text-xs text-gray-500 truncate">
+              {{ serviceKindTag(contact) }} · {{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}
+            </p>
           </div>
-          <span class="px-1.5 py-0.5 text-[10px] rounded font-medium" :class="kindClass(contact)">
-            {{ kindText(contact) }}
-          </span>
           <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-          <button @click="openEdit(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeContact(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          <button @click="openEditService(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
+          <button @click="removeService(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
         </div>
       </section>
     </div>
 
     <div
-      v-if="showCreateModal"
+      v-if="showBindModal"
       class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
-      @click.self="closeCreate"
+      @click.self="closeBindModal"
     >
       <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <p class="text-base font-bold">{{ modeMeta.title }}</p>
-        <input
-          v-model="draft.name"
-          type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
-          :placeholder="createMode === 'group' ? t('群聊名称', 'Group name') : t('会话名称', 'Chat name')"
-        />
-        <input
-          v-model="draft.role"
-          type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
-          :placeholder="modeMeta.rolePlaceholder"
-        />
-        <textarea
-          v-model="draft.bio"
-          rows="3"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
-          :placeholder="modeMeta.bioPlaceholder"
-        ></textarea>
+        <p class="text-base font-bold">{{ t('绑定角色到会话', 'Bind Profile to Chat') }}</p>
+        <select v-model.number="bindProfileId" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white">
+          <option v-for="profile in unboundRoleProfiles" :key="profile.id" :value="profile.id">
+            {{ profile.name }} · {{ profile.role || t('未设置角色', 'Role not set') }}
+          </option>
+        </select>
         <div class="flex justify-end gap-2">
-          <button @click="closeCreate" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+          <button @click="closeBindModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
           <button
-            @click="createContact"
-            class="px-3 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-sm"
+            @click="bindSelectedProfile"
+            class="px-3 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-violet-700 text-sm"
           >
-            {{ t('创建', 'Create') }}
+            {{ t('确认绑定', 'Confirm Bind') }}
           </button>
         </div>
       </div>
     </div>
 
     <div
-      v-if="showEditModal"
+      v-if="showRoleMetaModal"
       class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
-      @click.self="closeEdit"
+      @click.self="closeRoleMetaModal"
     >
       <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <p class="text-base font-bold">{{ t('编辑会话对象', 'Edit chat contact') }}</p>
+        <p class="text-base font-bold">{{ t('会话变量设置', 'Thread Variable Settings') }}</p>
+        <label class="text-xs text-gray-500 block">
+          {{ t('亲密度（0-100）', 'Affinity (0-100)') }}
+        </label>
         <input
-          v-model="draft.name"
-          type="text"
+          v-model.number="roleMetaDraft.relationshipLevel"
+          type="number"
+          min="0"
+          max="100"
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
-          :placeholder="t('会话名称', 'Chat name')"
         />
-        <input
-          v-model="draft.role"
-          type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
-          :placeholder="t('角色或服务模板', 'Role or service template')"
-        />
+        <label class="text-xs text-gray-500 block">
+          {{ t('会话备注（仅本会话）', 'Thread note (chat local only)') }}
+        </label>
         <textarea
-          v-model="draft.bio"
+          v-model="roleMetaDraft.relationshipNote"
           rows="3"
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
-          :placeholder="t('说明（可选）', 'Description (optional)')"
+          :placeholder="t('例如：最近关系升温、需要更主动互动。', 'Example: relationship improved, prefer more proactive interaction.')"
         ></textarea>
         <div class="flex justify-end gap-2">
-          <button @click="closeEdit" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+          <button @click="closeRoleMetaModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
           <button
-            @click="saveEdit"
+            @click="saveRoleMeta"
+            class="px-3 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-violet-700 text-sm"
+          >
+            {{ t('保存', 'Save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showServiceModal"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      @click.self="closeServiceModal"
+    >
+      <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
+        <p class="text-base font-bold">
+          {{
+            serviceModalMode === 'create'
+              ? serviceDraft.kind === 'official'
+                ? t('新增公众号', 'Add Official')
+                : t('新增服务号', 'Add Service')
+              : t('编辑服务对象', 'Edit Service Entry')
+          }}
+        </p>
+        <input
+          v-model="serviceDraft.name"
+          type="text"
+          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          :placeholder="t('名称', 'Name')"
+        />
+        <select
+          v-model="serviceDraft.kind"
+          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white"
+          :disabled="serviceModalMode === 'edit'"
+        >
+          <option value="service">{{ t('服务号', 'Service') }}</option>
+          <option value="official">{{ t('公众号', 'Official') }}</option>
+        </select>
+        <input
+          v-model="serviceDraft.template"
+          type="text"
+          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          :placeholder="t('服务模板标题', 'Service template title')"
+        />
+        <textarea
+          v-model="serviceDraft.bio"
+          rows="3"
+          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
+          :placeholder="t('服务说明（可选）', 'Description (optional)')"
+        ></textarea>
+        <div class="flex justify-end gap-2">
+          <button @click="closeServiceModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+          <button
+            @click="saveService"
             class="px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-sm"
           >
             {{ t('保存', 'Save') }}

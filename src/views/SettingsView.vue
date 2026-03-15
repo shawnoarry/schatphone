@@ -14,7 +14,7 @@ const mapStore = useMapStore()
 const { t } = useI18n()
 
 const { settings, user } = storeToRefs(systemStore)
-const { contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
+const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
 const { addresses, currentLocation } = storeToRefs(mapStore)
 
 const activeMenu = ref('')
@@ -128,6 +128,7 @@ const exportData = () => {
   const data = JSON.stringify({
     settings: settings.value,
     user: user.value,
+    roleProfiles: roleProfiles.value,
     contacts: contacts.value,
     chatHistory: chatHistory.value,
     conversations: conversations.value,

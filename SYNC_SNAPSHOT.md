@@ -47,6 +47,8 @@ AI 调用由“触发回复”控制，支持连续触发
 助手消息支持结构化块渲染（文本/虚拟语音/链接/转账/图片/互动场景）
 - Conversation kinds: `role/group/service/official`  
 会话对象分层：角色/群聊/服务号/公众号
+- Global role archive + chat binding split is active: `/contacts` owns role profiles, `/chat-contacts` owns binding/meta and service CRUD  
+全局角色档案与会话绑定已拆分：`/contacts` 管档案，`/chat-contacts` 管绑定/会话变量与服务号增删改
 - `/chat-contacts` manages chat contacts separately from global contacts  
 `/chat-contacts` 独立管理聊天会话对象
 

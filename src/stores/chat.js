@@ -39,7 +39,7 @@ const DEFAULT_CONVERSATION_AI_PREFS = {
   autoInvokeIntervalSec: 360,
 }
 
-const DEFAULT_CONTACTS = [
+const DEFAULT_ROLE_PROFILES = [
   {
     id: 1,
     name: 'Eva',
@@ -57,6 +57,27 @@ const DEFAULT_CONTACTS = [
     avatar: '',
     lastMessage: '嗨，兄弟，今晚去来生酒吧喝一杯？',
     bio: '你是 Jackie Welles，重情重义、性格豪爽，梦想成为夜之城的传奇。你非常信任 V。',
+  },
+]
+
+const DEFAULT_CONTACTS = [
+  {
+    id: 1,
+    profileId: 1,
+    name: 'Eva',
+    kind: 'role',
+    relationshipLevel: 60,
+    relationshipNote: '',
+    lastMessage: '今天有什么安排吗？',
+  },
+  {
+    id: 2,
+    profileId: 2,
+    name: 'Jackie',
+    kind: 'role',
+    relationshipLevel: 70,
+    relationshipNote: '',
+    lastMessage: '嗨，兄弟，今晚去来生酒吧喝一杯？',
   },
 ]
 
@@ -276,19 +297,53 @@ const summarizeBlocks = (blocks) => {
   return ''
 }
 
+const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
+  const parsedId = Number(rawProfile?.id)
+  const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
+  return {
+    id,
+    name:
+      typeof rawProfile?.name === 'string' && rawProfile.name.trim()
+        ? rawProfile.name.trim()
+        : `角色 ${id}`,
+    role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
+    isMain: Boolean(rawProfile?.isMain),
+    avatar: typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : '',
+    bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
+    tags: Array.isArray(rawProfile?.tags)
+      ? rawProfile.tags
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter(Boolean)
+      : [],
+    createdAt:
+      typeof rawProfile?.createdAt === 'number' && Number.isFinite(rawProfile.createdAt)
+        ? Math.max(0, Math.floor(rawProfile.createdAt))
+        : nowTs(),
+    updatedAt:
+      typeof rawProfile?.updatedAt === 'number' && Number.isFinite(rawProfile.updatedAt)
+        ? Math.max(0, Math.floor(rawProfile.updatedAt))
+        : nowTs(),
+  }
+}
+
 const normalizeContact = (rawContact, fallbackIndex = 0) => {
   const parsedId = Number(rawContact?.id)
   const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
   const kind = VALID_CONTACT_KINDS.has(rawContact?.kind) ? rawContact.kind : 'role'
+  const relationshipLevel = clamp(toInt(rawContact?.relationshipLevel, 50), 0, 100)
+  const parsedProfileId = Number(rawContact?.profileId)
   return {
     id,
     name: typeof rawContact?.name === 'string' && rawContact.name.trim() ? rawContact.name.trim() : `联系人 ${id}`,
     kind,
+    profileId: Number.isFinite(parsedProfileId) && parsedProfileId > 0 ? Math.floor(parsedProfileId) : 0,
     role: typeof rawContact?.role === 'string' ? rawContact.role : '',
     isMain: Boolean(rawContact?.isMain),
     avatar: typeof rawContact?.avatar === 'string' ? rawContact.avatar : '',
     bio: typeof rawContact?.bio === 'string' ? rawContact.bio : '',
     serviceTemplate: typeof rawContact?.serviceTemplate === 'string' ? rawContact.serviceTemplate : '',
+    relationshipLevel,
+    relationshipNote: typeof rawContact?.relationshipNote === 'string' ? rawContact.relationshipNote : '',
     lastMessage: typeof rawContact?.lastMessage === 'string' ? rawContact.lastMessage : '',
   }
 }
@@ -377,19 +432,45 @@ const summarizeMessage = (message) => {
 }
 
 export const useChatStore = defineStore('chat', () => {
+  const roleProfiles = reactive([])
   const contacts = reactive([])
   const conversations = reactive({})
   const messagesByConversation = reactive({})
   const loadingAI = ref(false)
 
-  const getContactById = (contactId) => {
+  const getRoleProfileById = (profileId) =>
+    roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
+
+  const getRawContactById = (contactId) => {
     return contacts.find((item) => Number(item.id) === Number(contactId)) || null
+  }
+
+  const resolveContactWithProfile = (contact) => {
+    if (!contact || typeof contact !== 'object') return null
+    if (contact.kind !== 'role' || !contact.profileId) return { ...contact }
+
+    const profile = getRoleProfileById(contact.profileId)
+    if (!profile) return { ...contact }
+
+    return {
+      ...contact,
+      name: profile.name || contact.name,
+      role: profile.role || contact.role,
+      bio: profile.bio || contact.bio,
+      avatar: profile.avatar || contact.avatar,
+      isMain: Boolean(profile.isMain),
+    }
+  }
+
+  const getContactById = (contactId) => {
+    const raw = getRawContactById(contactId)
+    return resolveContactWithProfile(raw)
   }
 
   const conversationKeyForContact = (contactId) => String(Number(contactId))
 
   const syncContactLastMessage = (contactId, fallbackText = '') => {
-    const contact = getContactById(contactId)
+    const contact = getRawContactById(contactId)
     if (!contact) return
     const key = conversationKeyForContact(contactId)
     const conversation = conversations[key]
@@ -418,7 +499,7 @@ export const useChatStore = defineStore('chat', () => {
 
     if (messages.length === 0) {
       if (!conversation.lastMessage) {
-        const contact = getContactById(contactId)
+        const contact = getRawContactById(contactId)
         conversation.lastMessage = contact?.lastMessage || ''
       }
       conversation.lastMessageAt = conversation.lastMessageAt || conversation.createdAt
@@ -629,6 +710,123 @@ export const useChatStore = defineStore('chat', () => {
     return normalized
   }
 
+  const addRoleProfile = (payload = {}) => {
+    const maxProfileId = roleProfiles.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0)
+    const normalized = normalizeRoleProfile(
+      {
+        ...payload,
+        id: payload.id ?? maxProfileId + 1,
+      },
+      roleProfiles.length,
+    )
+    roleProfiles.push(normalized)
+    return normalized
+  }
+
+  const updateRoleProfile = (profileId, updates = {}) => {
+    const target = getRoleProfileById(profileId)
+    if (!target || !updates || typeof updates !== 'object') return false
+
+    if (typeof updates.name === 'string' && updates.name.trim()) {
+      target.name = updates.name.trim()
+    }
+    if (typeof updates.role === 'string') {
+      target.role = updates.role
+    }
+    if (typeof updates.avatar === 'string') {
+      target.avatar = updates.avatar
+    }
+    if (typeof updates.bio === 'string') {
+      target.bio = updates.bio
+    }
+    if (typeof updates.isMain === 'boolean') {
+      target.isMain = updates.isMain
+    }
+    if (Array.isArray(updates.tags)) {
+      target.tags = updates.tags
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean)
+    }
+    target.updatedAt = nowTs()
+    return true
+  }
+
+  const removeRoleProfile = (profileId, options = {}) => {
+    const numericId = Number(profileId)
+    if (!Number.isFinite(numericId) || numericId <= 0) return false
+    const index = roleProfiles.findIndex((item) => Number(item.id) === numericId)
+    if (index < 0) return false
+
+    roleProfiles.splice(index, 1)
+
+    const removeBindings = options?.removeBindings !== false
+    if (removeBindings) {
+      const bindingIds = contacts
+        .filter((contact) => contact.kind === 'role' && Number(contact.profileId) === numericId)
+        .map((contact) => contact.id)
+      bindingIds.forEach((contactId) => {
+        removeContact(contactId)
+      })
+    }
+    return true
+  }
+
+  const isRoleProfileBound = (profileId) =>
+    contacts.some((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId))
+
+  const bindRoleProfile = (profileId, options = {}) => {
+    const profile = getRoleProfileById(profileId)
+    if (!profile) return null
+
+    const existing = contacts.find(
+      (contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profile.id),
+    )
+    if (existing) {
+      ensureConversationForContact(existing.id)
+      return resolveContactWithProfile(existing)
+    }
+
+    const created = addContact({
+      kind: 'role',
+      profileId: profile.id,
+      name: profile.name,
+      role: profile.role,
+      avatar: profile.avatar,
+      bio: profile.bio,
+      isMain: profile.isMain,
+      relationshipLevel: clamp(toInt(options.relationshipLevel, 50), 0, 100),
+      relationshipNote:
+        typeof options.relationshipNote === 'string' ? options.relationshipNote : '',
+      lastMessage: '',
+    })
+    return created
+  }
+
+  const updateRoleBindingMeta = (contactId, updates = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'relationshipLevel')) {
+      target.relationshipLevel = clamp(toInt(updates.relationshipLevel, target.relationshipLevel), 0, 100)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'relationshipNote')) {
+      target.relationshipNote =
+        typeof updates.relationshipNote === 'string' ? updates.relationshipNote : ''
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'name') && typeof updates.name === 'string') {
+      const nextName = updates.name.trim()
+      if (nextName) target.name = nextName
+    }
+    syncConversationSummary(contactId)
+    return true
+  }
+
+  const unbindRoleContact = (contactId) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    return Boolean(removeContact(contactId))
+  }
+
   const addContact = (payload = {}) => {
     const maxContactId = contacts.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0)
     const nextContact = normalizeContact(
@@ -646,7 +844,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const updateContact = (contactId, updates = {}) => {
-    const target = getContactById(contactId)
+    const target = getRawContactById(contactId)
     if (!target || !updates || typeof updates !== 'object') return false
 
     if (typeof updates.name === 'string' && updates.name.trim()) {
@@ -669,6 +867,16 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (typeof updates.isMain === 'boolean') {
       target.isMain = updates.isMain
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'profileId')) {
+      const value = Number(updates.profileId)
+      target.profileId = Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'relationshipLevel')) {
+      target.relationshipLevel = clamp(toInt(updates.relationshipLevel, target.relationshipLevel), 0, 100)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'relationshipNote')) {
+      target.relationshipNote = typeof updates.relationshipNote === 'string' ? updates.relationshipNote : ''
     }
 
     syncConversationSummary(contactId)
@@ -704,6 +912,36 @@ export const useChatStore = defineStore('chat', () => {
     const normalizedContacts = Array.isArray(legacyContacts)
       ? legacyContacts.map((item, index) => normalizeContact(item, index))
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
+
+    resetReactiveObject(roleProfiles)
+    const sourceProfiles = Array.isArray(legacyContacts)
+      ? normalizedContacts
+          .filter((contact) => (contact.kind || 'role') === 'role')
+          .map((contact, index) =>
+            normalizeRoleProfile(
+              {
+                id: contact.profileId || contact.id,
+                name: contact.name,
+                role: contact.role,
+                avatar: contact.avatar,
+                bio: contact.bio,
+                isMain: contact.isMain,
+              },
+              index,
+            ),
+          )
+      : DEFAULT_ROLE_PROFILES.map((item, index) => normalizeRoleProfile(item, index))
+
+    roleProfiles.push(...sourceProfiles)
+
+    normalizedContacts.forEach((contact) => {
+      if ((contact.kind || 'role') !== 'role') return
+      if (contact.profileId > 0) return
+      const fallbackProfile = roleProfiles.find((profile) => profile.name === contact.name)
+      if (fallbackProfile) {
+        contact.profileId = fallbackProfile.id
+      }
+    })
 
     contacts.splice(0, contacts.length, ...normalizedContacts)
     resetReactiveObject(conversations)
@@ -748,9 +986,56 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
 
+    const normalizedProfiles = Array.isArray(persisted.roleProfiles)
+      ? persisted.roleProfiles.map((item, index) => normalizeRoleProfile(item, index))
+      : []
+    resetReactiveObject(roleProfiles)
+    if (normalizedProfiles.length > 0) {
+      roleProfiles.push(...normalizedProfiles)
+    }
+
     const normalizedContacts = Array.isArray(persisted.contacts)
       ? persisted.contacts.map((item, index) => normalizeContact(item, index))
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
+
+    if (roleProfiles.length === 0) {
+      const derivedProfiles = normalizedContacts
+        .filter((contact) => (contact.kind || 'role') === 'role')
+        .map((contact, index) =>
+          normalizeRoleProfile(
+            {
+              id: contact.profileId || contact.id,
+              name: contact.name,
+              role: contact.role,
+              avatar: contact.avatar,
+              bio: contact.bio,
+              isMain: contact.isMain,
+            },
+            index,
+          ),
+        )
+      roleProfiles.push(...derivedProfiles)
+    }
+
+    normalizedContacts.forEach((contact) => {
+      if ((contact.kind || 'role') !== 'role') return
+      if (contact.profileId > 0 && getRoleProfileById(contact.profileId)) return
+
+      const matchedProfile = roleProfiles.find((profile) => profile.name === contact.name)
+      if (matchedProfile) {
+        contact.profileId = matchedProfile.id
+        return
+      }
+
+      const createdProfile = addRoleProfile({
+        name: contact.name,
+        role: contact.role,
+        avatar: contact.avatar,
+        bio: contact.bio,
+        isMain: contact.isMain,
+      })
+      contact.profileId = createdProfile.id
+    })
 
     contacts.splice(0, contacts.length, ...normalizedContacts)
     resetReactiveObject(conversations)
@@ -797,6 +1082,7 @@ export const useChatStore = defineStore('chat', () => {
     writePersistedState(
       CHAT_STORAGE_KEY,
       {
+        roleProfiles: roleProfiles.map((profile) => ({ ...profile })),
         contacts: contactsSnapshot,
         conversations: conversationsSnapshot,
         messagesByConversation: messagesSnapshot,
@@ -810,7 +1096,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const contactsForList = computed(() => {
-    return [...contacts].sort((a, b) => {
+    return [...contacts]
+      .map((contact) => resolveContactWithProfile(contact))
+      .filter(Boolean)
+      .sort((a, b) => {
       const convA = getConversationByContactId(a.id)
       const convB = getConversationByContactId(b.id)
 
@@ -822,9 +1111,10 @@ export const useChatStore = defineStore('chat', () => {
   const chatHistory = computed(() => toLegacyChatHistory())
 
   hydrateFromStorage()
-  watch([contacts, conversations, messagesByConversation], persistToStorage, { deep: true })
+  watch([roleProfiles, contacts, conversations, messagesByConversation], persistToStorage, { deep: true })
 
   return {
+    roleProfiles,
     contacts,
     contactsForList,
     conversations,
@@ -848,6 +1138,15 @@ export const useChatStore = defineStore('chat', () => {
     updateMessageContent,
     removeMessage,
     replaceMessage,
+    getContactById,
+    getRoleProfileById,
+    addRoleProfile,
+    updateRoleProfile,
+    removeRoleProfile,
+    isRoleProfileBound,
+    bindRoleProfile,
+    updateRoleBindingMeta,
+    unbindRoleContact,
     addContact,
     updateContact,
     removeContact,
