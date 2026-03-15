@@ -10,6 +10,8 @@ const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
 const VALID_REPLY_MODES = new Set(['manual', 'auto'])
 const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
+const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
+const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const VALID_BLOCK_TYPES = new Set([
   'text',
   'voice_virtual',
@@ -33,6 +35,8 @@ const DEFAULT_CONVERSATION_AI_PREFS = {
   responseStyle: 'immersive',
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
+  autoInvokeEnabled: false,
+  autoInvokeIntervalSec: 360,
 }
 
 const DEFAULT_CONTACTS = [
@@ -83,6 +87,14 @@ const normalizeConversationAiPrefs = (rawPrefs) => {
   const input = rawPrefs && typeof rawPrefs === 'object' ? rawPrefs : {}
   const contextTurns = clamp(toInt(input.contextTurns, DEFAULT_CONVERSATION_AI_PREFS.contextTurns), 2, 20)
   const replyCount = clamp(toInt(input.replyCount, DEFAULT_CONVERSATION_AI_PREFS.replyCount), 1, 3)
+  const autoInvokeIntervalSec = clamp(
+    toInt(
+      input.autoInvokeIntervalSec,
+      DEFAULT_CONVERSATION_AI_PREFS.autoInvokeIntervalSec,
+    ),
+    MIN_AUTO_INVOKE_INTERVAL_SEC,
+    MAX_AUTO_INVOKE_INTERVAL_SEC,
+  )
 
   return {
     suggestedRepliesEnabled: Boolean(input.suggestedRepliesEnabled),
@@ -121,6 +133,11 @@ const normalizeConversationAiPrefs = (rawPrefs) => {
       typeof input.proactiveOpenerStrategy === 'string' && VALID_PROACTIVE_STRATEGIES.has(input.proactiveOpenerStrategy)
         ? input.proactiveOpenerStrategy
         : DEFAULT_CONVERSATION_AI_PREFS.proactiveOpenerStrategy,
+    autoInvokeEnabled:
+      typeof input.autoInvokeEnabled === 'boolean'
+        ? input.autoInvokeEnabled
+        : DEFAULT_CONVERSATION_AI_PREFS.autoInvokeEnabled,
+    autoInvokeIntervalSec,
   }
 }
 
@@ -332,6 +349,19 @@ const normalizeConversation = (rawConversation, contactId) => {
       typeof rawConversation?.proactiveOpenedAt === 'number' && Number.isFinite(rawConversation.proactiveOpenedAt)
         ? rawConversation.proactiveOpenedAt
         : 0,
+    autoNextAt:
+      typeof rawConversation?.autoNextAt === 'number' && Number.isFinite(rawConversation.autoNextAt)
+        ? Math.max(0, Math.floor(rawConversation.autoNextAt))
+        : 0,
+    autoLastTriggeredAt:
+      typeof rawConversation?.autoLastTriggeredAt === 'number' &&
+      Number.isFinite(rawConversation.autoLastTriggeredAt)
+        ? Math.max(0, Math.floor(rawConversation.autoLastTriggeredAt))
+        : 0,
+    autoLastFingerprint:
+      typeof rawConversation?.autoLastFingerprint === 'string'
+        ? rawConversation.autoLastFingerprint
+        : '',
     lastMessage: typeof rawConversation?.lastMessage === 'string' ? rawConversation.lastMessage : '',
     lastMessageAt:
       typeof rawConversation?.lastMessageAt === 'number' && Number.isFinite(rawConversation.lastMessageAt)
@@ -435,7 +465,46 @@ export const useChatStore = defineStore('chat', () => {
       ...conversation.aiPrefs,
       ...(partialPrefs && typeof partialPrefs === 'object' ? partialPrefs : {}),
     })
+    if (!conversation.aiPrefs.autoInvokeEnabled) {
+      conversation.autoNextAt = 0
+    }
     conversation.updatedAt = nowTs()
+  }
+
+  const setConversationAutoState = (contactId, partialState = {}) => {
+    const conversation = ensureConversationForContact(contactId)
+    const input = partialState && typeof partialState === 'object' ? partialState : {}
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoNextAt')) {
+      const value = Number(input.autoNextAt)
+      conversation.autoNextAt = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoLastTriggeredAt')) {
+      const value = Number(input.autoLastTriggeredAt)
+      conversation.autoLastTriggeredAt = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoLastFingerprint')) {
+      conversation.autoLastFingerprint =
+        typeof input.autoLastFingerprint === 'string' ? input.autoLastFingerprint : ''
+    }
+
+    conversation.updatedAt = nowTs()
+  }
+
+  const scheduleConversationAutoInvoke = (contactId, baseAt = nowTs(), intervalSec = 0) => {
+    const conversation = ensureConversationForContact(contactId)
+    const fallbackInterval = conversation.aiPrefs?.autoInvokeIntervalSec
+    const normalizedIntervalSec = clamp(
+      toInt(intervalSec || fallbackInterval, DEFAULT_CONVERSATION_AI_PREFS.autoInvokeIntervalSec),
+      MIN_AUTO_INVOKE_INTERVAL_SEC,
+      MAX_AUTO_INVOKE_INTERVAL_SEC,
+    )
+    const normalizedBaseAt = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : nowTs()
+    conversation.autoNextAt = normalizedBaseAt + normalizedIntervalSec * 1000
+    conversation.updatedAt = nowTs()
+    return conversation.autoNextAt
   }
 
   const markConversationProactiveOpened = (contactId, openedAt = nowTs()) => {
@@ -768,6 +837,8 @@ export const useChatStore = defineStore('chat', () => {
     getMessagesByContactId,
     setConversationDraft,
     setConversationAiPrefs,
+    setConversationAutoState,
+    scheduleConversationAutoInvoke,
     markConversationProactiveOpened,
     resetConversationProactiveOpened,
     markConversationRead,

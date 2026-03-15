@@ -86,11 +86,83 @@ const CUSTOM_WIDGET_SIZES = ['1x1', '2x1', '2x2', '4x2', '4x3']
 const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const MAX_NOTIFICATIONS = 80
+const MAX_API_REPORTS = 200
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
 
+const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
+const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
+  masterEnabled: false,
+  conflictCooldownSec: 20,
+  dedupeWindowSec: 120,
+  modules: {
+    chat: { enabled: true, priority: 100 },
+    map: { enabled: false, priority: 60 },
+    shopping: { enabled: false, priority: 50 },
+  },
+})
+
+const toInt = (value, fallback = 0) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? Math.floor(num) : fallback
+}
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
 const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...page])
+
+const createDefaultAiAutomationSettings = () => ({
+  masterEnabled: DEFAULT_AI_AUTOMATION_SETTINGS.masterEnabled,
+  conflictCooldownSec: DEFAULT_AI_AUTOMATION_SETTINGS.conflictCooldownSec,
+  dedupeWindowSec: DEFAULT_AI_AUTOMATION_SETTINGS.dedupeWindowSec,
+  modules: {
+    chat: { ...DEFAULT_AI_AUTOMATION_SETTINGS.modules.chat },
+    map: { ...DEFAULT_AI_AUTOMATION_SETTINGS.modules.map },
+    shopping: { ...DEFAULT_AI_AUTOMATION_SETTINGS.modules.shopping },
+  },
+})
+
+const normalizeAiAutomationSettings = (input) => {
+  const source = input && typeof input === 'object' ? input : {}
+  const moduleInput = source.modules && typeof source.modules === 'object' ? source.modules : {}
+
+  const normalizedModules = Object.fromEntries(
+    AI_AUTOMATION_MODULE_KEYS.map((moduleKey) => {
+      const fallback = DEFAULT_AI_AUTOMATION_SETTINGS.modules[moduleKey]
+      const rawModule = moduleInput[moduleKey] && typeof moduleInput[moduleKey] === 'object'
+        ? moduleInput[moduleKey]
+        : {}
+
+      return [
+        moduleKey,
+        {
+          enabled:
+            typeof rawModule.enabled === 'boolean' ? rawModule.enabled : fallback.enabled,
+          priority: clamp(toInt(rawModule.priority, fallback.priority), 1, 1000),
+        },
+      ]
+    }),
+  )
+
+  return {
+    masterEnabled:
+      typeof source.masterEnabled === 'boolean'
+        ? source.masterEnabled
+        : DEFAULT_AI_AUTOMATION_SETTINGS.masterEnabled,
+    conflictCooldownSec: clamp(
+      toInt(source.conflictCooldownSec, DEFAULT_AI_AUTOMATION_SETTINGS.conflictCooldownSec),
+      5,
+      600,
+    ),
+    dedupeWindowSec: clamp(
+      toInt(source.dedupeWindowSec, DEFAULT_AI_AUTOMATION_SETTINGS.dedupeWindowSec),
+      10,
+      1800,
+    ),
+    modules: normalizedModules,
+  }
+}
 
 const ensureMinimumHomePages = (pages) => {
   const nextPages = pages.map((page) => [...page])
@@ -190,6 +262,9 @@ const createCustomWidgetId = () =>
 const createNotificationId = () =>
   `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+const createApiReportId = () =>
+  `api_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
 const normalizeLockClockStyle = (value) =>
   VALID_LOCK_CLOCK_STYLES.includes(value) ? value : DEFAULT_LOCK_CLOCK_STYLE
 
@@ -229,6 +304,51 @@ const normalizeNotification = (rawNote) => {
   }
 }
 
+const normalizeApiReport = (rawReport) => {
+  if (!rawReport || typeof rawReport !== 'object') return null
+
+  const level = rawReport.level === 'error' ? 'error' : 'info'
+  const module = typeof rawReport.module === 'string' && rawReport.module.trim()
+    ? rawReport.module.trim()
+    : 'chat'
+  const action = typeof rawReport.action === 'string' && rawReport.action.trim()
+    ? rawReport.action.trim()
+    : 'call_ai'
+
+  const createdAt = Number(rawReport.createdAt)
+
+  return {
+    id:
+      typeof rawReport.id === 'string' && rawReport.id.trim()
+        ? rawReport.id.trim()
+        : createApiReportId(),
+    level,
+    module,
+    action,
+    provider:
+      typeof rawReport.provider === 'string' && rawReport.provider.trim()
+        ? rawReport.provider.trim()
+        : '',
+    model:
+      typeof rawReport.model === 'string' && rawReport.model.trim()
+        ? rawReport.model.trim()
+        : '',
+    statusCode:
+      Number.isFinite(Number(rawReport.statusCode)) && Number(rawReport.statusCode) > 0
+        ? Math.floor(Number(rawReport.statusCode))
+        : 0,
+    code:
+      typeof rawReport.code === 'string' && rawReport.code.trim()
+        ? rawReport.code.trim()
+        : '',
+    message:
+      typeof rawReport.message === 'string' && rawReport.message.trim()
+        ? rawReport.message.trim()
+        : '',
+    createdAt: Number.isFinite(createdAt) ? Math.max(0, Math.floor(createdAt)) : Date.now(),
+  }
+}
+
 export const useSystemStore = defineStore('system', () => {
   const availableThemes = ref(AVAILABLE_THEMES)
 
@@ -257,6 +377,7 @@ export const useSystemStore = defineStore('system', () => {
       timezone: 'Asia/Shanghai',
       notifications: true,
     },
+    aiAutomation: createDefaultAiAutomationSettings(),
   })
 
   const user = reactive({
@@ -273,7 +394,13 @@ export const useSystemStore = defineStore('system', () => {
   })
 
   const notifications = ref([])
+  const apiReports = ref([])
   const isLocked = ref(true)
+  const activeAutoExecution = reactive({
+    module: '',
+    startedAt: 0,
+    reason: '',
+  })
 
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
@@ -488,6 +615,57 @@ export const useSystemStore = defineStore('system', () => {
     notifications.value = []
   }
 
+  const isAiAutomationEnabledForModule = (moduleKey) => {
+    const moduleConfig = settings.aiAutomation.modules?.[moduleKey]
+    return Boolean(settings.aiAutomation.masterEnabled && moduleConfig?.enabled)
+  }
+
+  const getAiAutomationModulePriority = (moduleKey) => {
+    const moduleConfig = settings.aiAutomation.modules?.[moduleKey]
+    return clamp(toInt(moduleConfig?.priority, 0), 0, 1000)
+  }
+
+  const tryAcquireAutoExecution = (moduleKey, reason = '') => {
+    if (!isAiAutomationEnabledForModule(moduleKey)) return false
+
+    if (!activeAutoExecution.module) {
+      activeAutoExecution.module = moduleKey
+      activeAutoExecution.startedAt = Date.now()
+      activeAutoExecution.reason = typeof reason === 'string' ? reason : ''
+      return true
+    }
+
+    if (activeAutoExecution.module === moduleKey) return true
+    return false
+  }
+
+  const releaseAutoExecution = (moduleKey) => {
+    if (!moduleKey || activeAutoExecution.module !== moduleKey) return false
+    activeAutoExecution.module = ''
+    activeAutoExecution.startedAt = 0
+    activeAutoExecution.reason = ''
+    return true
+  }
+
+  const addApiReport = (rawReport = {}) => {
+    const normalized = normalizeApiReport({
+      ...rawReport,
+      id: createApiReportId(),
+      createdAt:
+        typeof rawReport.createdAt === 'number' && Number.isFinite(rawReport.createdAt)
+          ? rawReport.createdAt
+          : Date.now(),
+    })
+    if (!normalized) return ''
+
+    apiReports.value = [normalized, ...apiReports.value].slice(0, MAX_API_REPORTS)
+    return normalized.id
+  }
+
+  const clearApiReports = () => {
+    apiReports.value = []
+  }
+
   const lockPhone = () => {
     isLocked.value = true
   }
@@ -550,6 +728,12 @@ export const useSystemStore = defineStore('system', () => {
       settings.system.language = normalizeSystemLanguage(settings.system.language)
     }
 
+    if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
+      settings.aiAutomation = normalizeAiAutomationSettings(persisted.settings.aiAutomation)
+    } else {
+      settings.aiAutomation = normalizeAiAutomationSettings(settings.aiAutomation)
+    }
+
     if (persisted.user && typeof persisted.user === 'object') {
       Object.assign(user, persisted.user)
     }
@@ -562,6 +746,15 @@ export const useSystemStore = defineStore('system', () => {
         .map((note) => normalizeNotification(note))
         .filter(Boolean)
         .slice(0, MAX_NOTIFICATIONS)
+    }
+
+    if (Array.isArray(persisted.apiReports)) {
+      apiReports.value = persisted.apiReports
+        .map((report) => normalizeApiReport(report))
+        .filter(Boolean)
+        .slice(0, MAX_API_REPORTS)
+    } else {
+      apiReports.value = []
     }
 
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
@@ -591,9 +784,21 @@ export const useSystemStore = defineStore('system', () => {
             customWidgets: settings.appearance.customWidgets.map((widget) => ({ ...widget })),
           },
           system: { ...settings.system },
+          aiAutomation: {
+            ...settings.aiAutomation,
+            modules: Object.fromEntries(
+              AI_AUTOMATION_MODULE_KEYS.map((moduleKey) => [
+                moduleKey,
+                {
+                  ...settings.aiAutomation.modules[moduleKey],
+                },
+              ]),
+            ),
+          },
         },
         user: { ...user },
         notifications: notifications.value.map((note) => ({ ...note })),
+        apiReports: apiReports.value.map((report) => ({ ...report })),
       },
       { version: SYSTEM_STORAGE_VERSION },
     )
@@ -604,13 +809,15 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   hydrateFromStorage()
-  watch([settings, user, notifications], persistToStorage, { deep: true })
+  watch([settings, user, notifications, apiReports], persistToStorage, { deep: true })
 
   return {
     settings,
     user,
     notifications,
+    apiReports,
     isLocked,
+    activeAutoExecution,
     availableThemes,
     setTheme,
     cycleTheme,
@@ -630,6 +837,12 @@ export const useSystemStore = defineStore('system', () => {
     markAllNotificationsRead,
     removeNotification,
     clearNotifications,
+    isAiAutomationEnabledForModule,
+    getAiAutomationModulePriority,
+    tryAcquireAutoExecution,
+    releaseAutoExecution,
+    addApiReport,
+    clearApiReports,
     lockPhone,
     unlockPhone,
     saveNow,

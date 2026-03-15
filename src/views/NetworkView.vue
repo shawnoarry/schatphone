@@ -8,7 +8,7 @@ import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const systemStore = useSystemStore()
-const { settings } = storeToRefs(systemStore)
+const { settings, apiReports } = storeToRefs(systemStore)
 const { t } = useI18n()
 
 const modelOptions = ref([])
@@ -39,6 +39,9 @@ const apiKindLabel = computed(() => {
 })
 
 const presets = computed(() => settings.value.api.presets || [])
+const networkReports = computed(() =>
+  (apiReports.value || []).filter((item) => item.module === 'network' || item.module === 'chat').slice(0, 50),
+)
 
 const savePreset = () => {
   ensurePresetState()
@@ -177,11 +180,33 @@ const loadModels = async () => {
     if (currentToken !== modelFetchToken) return
     modelOptions.value = []
     modelsError.value = formatApiErrorForUi(error, t('模型拉取失败，请检查设置。', 'Failed to load models. Check your settings.'))
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'network',
+      action: 'fetch_models',
+      provider: settings.value.api.resolvedKind || '',
+      model: settings.value.api.model || '',
+      statusCode: Number.isFinite(Number(error?.status)) ? Number(error.status) : 0,
+      code: typeof error?.code === 'string' ? error.code : '',
+      message: modelsError.value || formatApiErrorForUi(error),
+    })
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
     }
   }
+}
+
+const formatReportTime = (timestamp) => {
+  if (!timestamp) return '--:--'
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return '--:--'
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 const scheduleAutoLoadModels = () => {
@@ -368,6 +393,39 @@ ensurePresetState()
           placeholder="gpt-4o-mini / gemini-2.5-flash"
         />
         <p class="text-[10px] text-gray-400 mt-2">{{ t('如果模型接口受限或跨域失败，可直接手动填写模型名。', 'If model API is limited or blocked by CORS, enter model name manually.') }}</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-gray-500">{{ t('调用/报错历史', 'Call/Error History') }}</p>
+          <button
+            @click="systemStore.clearApiReports()"
+            class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
+          >
+            {{ t('清空', 'Clear') }}
+          </button>
+        </div>
+
+        <p v-if="networkReports.length === 0" class="text-xs text-gray-400">
+          {{ t('暂无调用报错记录。', 'No error records yet.') }}
+        </p>
+
+        <div v-else class="space-y-2 max-h-52 overflow-y-auto no-scrollbar">
+          <div v-for="item in networkReports" :key="item.id" class="rounded-lg border border-gray-200 p-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[11px] font-semibold text-gray-700">
+                {{ item.module }} · {{ item.action }}
+              </p>
+              <p class="text-[10px] text-gray-400">{{ formatReportTime(item.createdAt) }}</p>
+            </div>
+            <p class="text-[11px] text-gray-600 mt-1 line-clamp-2">{{ item.message || t('未知错误', 'Unknown error') }}</p>
+            <p class="text-[10px] text-gray-400 mt-1">
+              {{ t('状态码', 'Status') }}: {{ item.statusCode || '-' }} ·
+              Code: {{ item.code || '-' }} ·
+              {{ t('模型', 'Model') }}: {{ item.model || '-' }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <button

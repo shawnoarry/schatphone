@@ -33,6 +33,8 @@ const DEFAULT_THREAD_AI_PREFS = {
   responseStyle: 'immersive',
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
+  autoInvokeEnabled: false,
+  autoInvokeIntervalSec: 360,
 }
 
 const REPLY_MODE_OPTIONS = computed(() => [
@@ -87,6 +89,9 @@ const SAFE_MODULE_ROUTES = new Set([
 ])
 
 const MANUAL_TRIGGER_ID = '__manual__'
+const CHAT_AUTOMATION_MODULE_KEY = 'chat'
+const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
+const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -102,6 +107,7 @@ const showThreadMenu = ref(false)
 const serviceTemplateDraft = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
+let autoInvokeTimerId = null
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -116,6 +122,8 @@ const threadSettingsDraft = reactive({
   responseStyle: DEFAULT_THREAD_AI_PREFS.responseStyle,
   proactiveOpenerEnabled: DEFAULT_THREAD_AI_PREFS.proactiveOpenerEnabled,
   proactiveOpenerStrategy: DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy,
+  autoInvokeEnabled: DEFAULT_THREAD_AI_PREFS.autoInvokeEnabled,
+  autoInvokeIntervalSec: DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec,
 })
 
 const activeChatId = computed(() => {
@@ -180,6 +188,10 @@ const canRetryAi = computed(() =>
 const canRequestAiReply = computed(() => Boolean(activeChat.value && !loadingAI.value && !activeAbortController.value))
 const isActiveServiceChat = computed(() => Boolean(activeChat.value && ['service', 'official'].includes(activeChat.value.kind || 'role')))
 const suggestionFeatureEnabled = computed(() => Boolean(activeAiPrefs.value.suggestedRepliesEnabled))
+const automationSettings = computed(() => settings.value.aiAutomation || null)
+const chatAutomationEnabled = computed(() =>
+  systemStore.isAiAutomationEnabledForModule(CHAT_AUTOMATION_MODULE_KEY),
+)
 
 const clampContextTurns = (value) => {
   const turns = Number(value)
@@ -191,6 +203,12 @@ const clampReplyCount = (value) => {
   const count = Number(value)
   if (!Number.isFinite(count)) return DEFAULT_THREAD_AI_PREFS.replyCount
   return Math.min(3, Math.max(1, Math.floor(count)))
+}
+
+const clampAutoInvokeInterval = (value) => {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds)) return DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec
+  return Math.min(MAX_AUTO_INVOKE_INTERVAL_SEC, Math.max(MIN_AUTO_INVOKE_INTERVAL_SEC, Math.floor(seconds)))
 }
 
 const normalizeReplyMode = (value) =>
@@ -237,6 +255,8 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.responseStyle = normalizeResponseStyle(prefs.responseStyle)
   threadSettingsDraft.proactiveOpenerEnabled = Boolean(prefs.proactiveOpenerEnabled)
   threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
+  threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
+  threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
 }
 
 const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
@@ -377,6 +397,146 @@ const toAiMessagesBeforeMessage = (contactId, targetMessageId, options = {}) => 
   const contextTurns = clampContextTurns(options.contextTurns ?? DEFAULT_THREAD_AI_PREFS.contextTurns)
   const messageLimit = Math.max(6, contextTurns * 2)
   return result.slice(-messageLimit)
+}
+
+const clearAutoInvokeTimer = () => {
+  if (!autoInvokeTimerId) return
+  clearTimeout(autoInvokeTimerId)
+  autoInvokeTimerId = null
+}
+
+const getAutomationCooldownMs = () => {
+  const value = Number(automationSettings.value?.conflictCooldownSec)
+  const seconds = Number.isFinite(value) ? Math.max(5, Math.floor(value)) : 20
+  return seconds * 1000
+}
+
+const getAutomationDedupeMs = () => {
+  const value = Number(automationSettings.value?.dedupeWindowSec)
+  const seconds = Number.isFinite(value) ? Math.max(10, Math.floor(value)) : 120
+  return seconds * 1000
+}
+
+const getAutoInvokeBaseFingerprint = (contactId) => {
+  const context = toAiMessages(contactId, '', { contextTurns: 4 }).slice(-6)
+  return context
+    .map((item) => `${item.role}:${(item.content || '').trim()}`)
+    .join('|')
+    .slice(0, 1200)
+}
+
+const resetConversationAutoNextAt = (contactId, baseAt = Date.now()) => {
+  const prefs = chatStore.getConversationAiPrefs(contactId)
+  if (!prefs.autoInvokeEnabled) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return 0
+  }
+  return chatStore.scheduleConversationAutoInvoke(
+    contactId,
+    baseAt,
+    clampAutoInvokeInterval(prefs.autoInvokeIntervalSec),
+  )
+}
+
+const shouldScheduleActiveAutoInvoke = () => {
+  if (!activeChat.value) return false
+  if (!chatAutomationEnabled.value) return false
+  const prefs = chatStore.getConversationAiPrefs(activeChat.value.id)
+  return Boolean(prefs.autoInvokeEnabled)
+}
+
+const scheduleActiveAutoInvoke = () => {
+  clearAutoInvokeTimer()
+  if (!activeChat.value) return
+  if (!shouldScheduleActiveAutoInvoke()) return
+
+  const contactId = activeChat.value.id
+  const prefs = chatStore.getConversationAiPrefs(contactId)
+  const conversation = chatStore.getConversationByContactId(contactId)
+  const intervalMs = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec) * 1000
+  const now = Date.now()
+
+  if (loadingAI.value || activeAbortController.value) {
+    autoInvokeTimerId = setTimeout(() => {
+      void maybeRunActiveAutoInvoke()
+    }, getAutomationCooldownMs())
+    return
+  }
+
+  let nextAt = conversation.autoNextAt || 0
+  if (!nextAt || nextAt < now - intervalMs * 2) {
+    const fallbackBase = Math.max(now, conversation.lastMessageAt || now)
+    nextAt = resetConversationAutoNextAt(contactId, fallbackBase)
+  }
+
+  const delay = Math.max(400, nextAt - now)
+  autoInvokeTimerId = setTimeout(() => {
+    void maybeRunActiveAutoInvoke()
+  }, delay)
+}
+
+const maybeRunActiveAutoInvoke = async () => {
+  clearAutoInvokeTimer()
+  if (!activeChat.value) return
+  if (!shouldScheduleActiveAutoInvoke()) return
+
+  const contactId = activeChat.value.id
+  const conversation = chatStore.getConversationByContactId(contactId)
+  const now = Date.now()
+
+  if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) {
+    scheduleActiveAutoInvoke()
+    return
+  }
+
+  if (loadingAI.value || activeAbortController.value) {
+    resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
+    scheduleActiveAutoInvoke()
+    return
+  }
+
+  const fingerprint = getAutoInvokeBaseFingerprint(contactId)
+  const dedupeMs = getAutomationDedupeMs()
+  if (
+    fingerprint &&
+    conversation.autoLastFingerprint &&
+    conversation.autoLastFingerprint === fingerprint &&
+    now - (conversation.autoLastTriggeredAt || 0) < dedupeMs
+  ) {
+    resetConversationAutoNextAt(contactId, now)
+    scheduleActiveAutoInvoke()
+    return
+  }
+
+  const locked = systemStore.tryAcquireAutoExecution(
+    CHAT_AUTOMATION_MODULE_KEY,
+    `contact:${contactId}`,
+  )
+  if (!locked) {
+    resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
+    scheduleActiveAutoInvoke()
+    return
+  }
+
+  try {
+    const aiPrefs = chatStore.getConversationAiPrefs(contactId)
+    const ok = await requestAiReply(contactId, MANUAL_TRIGGER_ID, {
+      replyCount: aiPrefs.replyCount,
+      source: 'auto',
+    })
+    if (ok) {
+      chatStore.setConversationAutoState(contactId, {
+        autoLastFingerprint: fingerprint,
+        autoLastTriggeredAt: Date.now(),
+      })
+      resetConversationAutoNextAt(contactId, Date.now())
+    } else {
+      resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
+    }
+  } finally {
+    systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
+    scheduleActiveAutoInvoke()
+  }
 }
 
 const normalizeAssistantReplyType = (replyType, aiPrefs) => {
@@ -656,6 +816,8 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
   if (!contactId) return false
   if (loadingAI.value || activeAbortController.value) return false
 
+  const triggerSource = typeof options.source === 'string' ? options.source : 'manual'
+  const isAutoSource = triggerSource === 'auto'
   const normalizedTriggerId = triggerMessageId || MANUAL_TRIGGER_ID
   if (normalizedTriggerId !== MANUAL_TRIGGER_ID) {
     chatStore.updateMessageStatus(contactId, normalizedTriggerId, 'read')
@@ -691,6 +853,9 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     if (options.markProactiveOpened) {
       chatStore.markConversationProactiveOpened(contactId)
     }
+    if (!isAutoSource) {
+      resetConversationAutoNextAt(contactId, Date.now())
+    }
     retryTriggerMessageId.value = ''
     retryRerollMessageId.value = ''
     return true
@@ -701,12 +866,26 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
         : formatApiErrorForUi(error, t('AI 回复失败，请稍后重试。', 'AI reply failed. Please retry later.'))
     retryTriggerMessageId.value = normalizedTriggerId
     retryRerollMessageId.value = ''
+    if (!isAutoSource) {
+      resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
+    }
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'chat',
+      action: isAutoSource ? 'auto_reply' : 'manual_reply',
+      provider: settings.value.api.resolvedKind || '',
+      model: settings.value.api.model || '',
+      statusCode: Number.isFinite(Number(error?.status)) ? Number(error.status) : 0,
+      code: typeof error?.code === 'string' ? error.code : '',
+      message: aiErrorMessage.value || formatApiErrorForUi(error),
+    })
     return false
   } finally {
     loadingAI.value = false
     activeAbortController.value = null
     activeTriggerMessageId.value = ''
     scrollToBottom()
+    scheduleActiveAutoInvoke()
   }
 }
 
@@ -885,6 +1064,7 @@ const rerollMessage = async (message) => {
       throw new Error('Replace failed')
     }
 
+    resetConversationAutoNextAt(activeChat.value.id, Date.now())
     retryRerollMessageId.value = ''
     closeMessageActions()
   } catch (error) {
@@ -893,11 +1073,23 @@ const rerollMessage = async (message) => {
         ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
         : formatApiErrorForUi(error, t('重roll失败，请稍后重试。', 'Reroll failed. Please retry later.'))
     retryRerollMessageId.value = target.id
+    resetConversationAutoNextAt(activeChat.value.id, Date.now() + getAutomationCooldownMs())
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'chat',
+      action: 'reroll_reply',
+      provider: settings.value.api.resolvedKind || '',
+      model: settings.value.api.model || '',
+      statusCode: Number.isFinite(Number(error?.status)) ? Number(error.status) : 0,
+      code: typeof error?.code === 'string' ? error.code : '',
+      message: aiErrorMessage.value || formatApiErrorForUi(error),
+    })
   } finally {
     loadingAI.value = false
     activeAbortController.value = null
     activeTriggerMessageId.value = ''
     scrollToBottom()
+    scheduleActiveAutoInvoke()
   }
 }
 
@@ -992,6 +1184,7 @@ const sendMessage = () => {
     quote: quotePayload,
     status: 'delivered',
   })
+  resetConversationAutoNextAt(chatId, Date.now())
 
   inputMessage.value = ''
   pendingQuote.value = null
@@ -1004,9 +1197,10 @@ const sendMessage = () => {
   scrollToBottom()
 
   const aiPrefs = chatStore.getConversationAiPrefs(chatId)
-  if (aiPrefs.replyMode === 'auto') {
+  if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
+  scheduleActiveAutoInvoke()
 }
 
 const sendCurrentLocation = () => {
@@ -1033,6 +1227,7 @@ const sendCurrentLocation = () => {
     quote: quotePayload,
     status: 'delivered',
   })
+  resetConversationAutoNextAt(chatId, Date.now())
 
   pendingQuote.value = null
   showSuggestions.value = false
@@ -1043,9 +1238,10 @@ const sendCurrentLocation = () => {
   scrollToBottom()
 
   const aiPrefs = chatStore.getConversationAiPrefs(chatId)
-  if (aiPrefs.replyMode === 'auto') {
+  if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
+  scheduleActiveAutoInvoke()
 }
 
 const useSuggestion = (text) => {
@@ -1179,13 +1375,22 @@ const saveThreadSettings = () => {
     responseStyle: normalizeResponseStyle(threadSettingsDraft.responseStyle),
     proactiveOpenerEnabled: Boolean(threadSettingsDraft.proactiveOpenerEnabled),
     proactiveOpenerStrategy: normalizeProactiveStrategy(threadSettingsDraft.proactiveOpenerStrategy),
+    autoInvokeEnabled: chatAutomationEnabled.value && Boolean(threadSettingsDraft.autoInvokeEnabled),
+    autoInvokeIntervalSec: clampAutoInvokeInterval(threadSettingsDraft.autoInvokeIntervalSec),
   })
+
+  if (threadSettingsDraft.autoInvokeEnabled) {
+    resetConversationAutoNextAt(activeChat.value.id, Date.now())
+  } else {
+    chatStore.setConversationAutoState(activeChat.value.id, { autoNextAt: 0 })
+  }
 
   if (!threadSettingsDraft.suggestedRepliesEnabled) {
     showSuggestions.value = false
   }
 
   showThreadMenu.value = false
+  scheduleActiveAutoInvoke()
 }
 
 watch(
@@ -1200,11 +1405,19 @@ watch(
       chatStore.markConversationRead(id)
       inputMessage.value = chatStore.getConversationByContactId(id).draft || ''
       applyThreadSettingsDraft()
+      const prefs = chatStore.getConversationAiPrefs(id)
+      if (prefs.autoInvokeEnabled) {
+        const conversation = chatStore.getConversationByContactId(id)
+        if (!conversation.autoNextAt) {
+          resetConversationAutoNextAt(id, Date.now())
+        }
+      }
       queueMicrotask(() => {
         void maybeTriggerProactiveOpener(id)
       })
     } else {
       inputMessage.value = ''
+      clearAutoInvokeTimer()
     }
 
     suggestions.value = []
@@ -1213,8 +1426,30 @@ watch(
     retryTriggerMessageId.value = ''
     retryRerollMessageId.value = ''
     scrollToBottom()
+    scheduleActiveAutoInvoke()
   },
   { immediate: true },
+)
+
+watch(
+  () => ({
+    masterEnabled: settings.value.aiAutomation?.masterEnabled,
+    chatEnabled: settings.value.aiAutomation?.modules?.chat?.enabled,
+    cooldown: settings.value.aiAutomation?.conflictCooldownSec,
+    dedupe: settings.value.aiAutomation?.dedupeWindowSec,
+  }),
+  () => {
+    if (!activeChat.value) {
+      clearAutoInvokeTimer()
+      return
+    }
+
+    if (!chatAutomationEnabled.value) {
+      chatStore.setConversationAutoState(activeChat.value.id, { autoNextAt: 0 })
+    }
+    scheduleActiveAutoInvoke()
+  },
+  { deep: true },
 )
 
 watch(inputMessage, (text) => {
@@ -1224,6 +1459,8 @@ watch(inputMessage, (text) => {
 
 onBeforeUnmount(() => {
   // Keep in-flight AI work running so lock screen can receive completion notifications.
+  clearAutoInvokeTimer()
+  systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
 })
 </script>
 
@@ -1363,6 +1600,32 @@ onBeforeUnmount(() => {
               <option v-for="item in PROACTIVE_STRATEGY_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </label>
+
+          <div class="border-t border-gray-200 pt-2 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <span>{{ t('定时自主调用', 'Timed autonomous invoke') }}</span>
+              <input
+                v-model="threadSettingsDraft.autoInvokeEnabled"
+                type="checkbox"
+                class="h-4 w-4"
+                :disabled="!chatAutomationEnabled"
+              />
+            </div>
+            <label class="flex items-center justify-between gap-3">
+              <span>{{ t('自主调用间隔（秒）', 'Invoke interval (sec)') }}</span>
+              <input
+                v-model.number="threadSettingsDraft.autoInvokeIntervalSec"
+                type="number"
+                min="60"
+                max="86400"
+                class="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right"
+                :disabled="!threadSettingsDraft.autoInvokeEnabled"
+              />
+            </label>
+            <p v-if="!chatAutomationEnabled" class="text-[10px] text-orange-500">
+              {{ t('全局或 Chat 模块自动响应未开启，请先到设置中开启。', 'Global or Chat automation is disabled. Enable it in Settings first.') }}
+            </p>
+          </div>
 
           <div class="flex justify-end gap-2 pt-1">
             <button @click="showThreadMenu = false" class="px-2.5 py-1 rounded-lg border border-gray-200">{{ t('取消', 'Cancel') }}</button>
