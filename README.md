@@ -1,6 +1,6 @@
 ﻿# SchatPhone
 
-Updated / 更新时间: 2026-03-15
+Updated / 更新时间: 2026-03-16
 
 SchatPhone is a Vue 3 mobile interaction shell that simulates an iOS-like full-screen phone experience.  
 SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建仿 iOS 的全屏手机体验。
@@ -32,6 +32,10 @@ Chat 支持手动触发、取消/重试、错误分级提示
 Chat 支持会话级 AI 设置（可选回复开关、上下文轮数、双语输出、引用模式、虚拟语音）
 - Chat thread now includes message action menu (quote/edit/delete/copy/re-roll) with role-based constraints  
 Chat 对话页已支持消息操作菜单（引用/编辑/删除/复制/重 roll），并带角色约束
+- Chat directory supports search and quick filtering for role/service entries  
+会话通讯录已支持角色/服务对象的搜索与快速筛选
+- Chat directory supports batch mode for role/service entries (multi-select + bulk actions)  
+会话通讯录已支持角色/服务对象批量模式（多选 + 批量操作）
 - User message status flow supports delivered/read transitions with AI-side typing indicator  
 用户消息状态支持“已送达 -> 已读”切换，并提供 AI 侧“对方正在输入”系统态提示
 - Assistant messages support structured blocks (text/virtual voice/module link/virtual transfer/virtual image/mini scene)  
@@ -89,8 +93,10 @@ npm run test
 系统语言 UI 收口基线已完成；后续新增页面需遵循同一 i18n 规则
 - Chat message action baseline is completed; advanced UX polish and edge-case policy continue in follow-up tasks  
 Chat 消息操作基线已完成；高级交互打磨与边界策略在后续任务持续完善
-- Widget import safety hardening (schema validation + rollback) is still pending  
-Widget 导入安全加固（结构校验 + 失败回滚）仍待完成
+- Widget import safety hardening is completed; policy tuning remains as follow-up  
+Widget 导入安全加固已完成；后续保留策略阈值调优
+- Settings backup restore import is available with rollback-safe fallback and legacy/new chat compatibility  
+Settings 备份恢复导入已可用，失败自动回滚，并兼容旧版/新版聊天数据结构
 
 ## Routes / 当前路由
 

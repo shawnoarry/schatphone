@@ -99,6 +99,10 @@ const toInt = (value, fallback = 0) => {
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 const resetReactiveObject = (obj) => {
+  if (Array.isArray(obj)) {
+    obj.splice(0, obj.length)
+    return
+  }
   Object.keys(obj).forEach((key) => {
     delete obj[key]
   })
@@ -971,20 +975,8 @@ export const useChatStore = defineStore('chat', () => {
     })
   }
 
-  const hydrateFromStorage = () => {
-    const persisted = readPersistedState(CHAT_STORAGE_KEY, {
-      version: CHAT_STORAGE_VERSION,
-    })
-    if (!persisted || typeof persisted !== 'object') {
-      hydrateFromLegacyShape(DEFAULT_CONTACTS, DEFAULT_CHAT_HISTORY)
-      return
-    }
-
-    const hasNewShape = persisted.conversations && persisted.messagesByConversation
-    if (!hasNewShape) {
-      hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
-      return
-    }
+  const hydrateFromSnapshot = (persisted = {}) => {
+    if (!persisted || typeof persisted !== 'object') return false
 
     const normalizedProfiles = Array.isArray(persisted.roleProfiles)
       ? persisted.roleProfiles.map((item, index) => normalizeRoleProfile(item, index))
@@ -1054,6 +1046,25 @@ export const useChatStore = defineStore('chat', () => {
       )
       syncConversationSummary(contact.id)
     })
+    return true
+  }
+
+  const hydrateFromStorage = () => {
+    const persisted = readPersistedState(CHAT_STORAGE_KEY, {
+      version: CHAT_STORAGE_VERSION,
+    })
+    if (!persisted || typeof persisted !== 'object') {
+      hydrateFromLegacyShape(DEFAULT_CONTACTS, DEFAULT_CHAT_HISTORY)
+      return
+    }
+
+    const hasNewShape = persisted.conversations && persisted.messagesByConversation
+    if (!hasNewShape) {
+      hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
+      return
+    }
+
+    hydrateFromSnapshot(persisted)
   }
 
   const persistToStorage = () => {
@@ -1093,6 +1104,18 @@ export const useChatStore = defineStore('chat', () => {
 
   const saveNow = () => {
     persistToStorage()
+  }
+
+  const restoreFromBackup = (snapshot = {}) => {
+    if (!snapshot || typeof snapshot !== 'object') return false
+
+    const hasNewShape = snapshot.conversations && snapshot.messagesByConversation
+    if (hasNewShape) {
+      return hydrateFromSnapshot(snapshot)
+    }
+
+    hydrateFromLegacyShape(snapshot.contacts, snapshot.chatHistory)
+    return true
   }
 
   const contactsForList = computed(() => {
@@ -1151,5 +1174,6 @@ export const useChatStore = defineStore('chat', () => {
     updateContact,
     removeContact,
     saveNow,
+    restoreFromBackup,
   }
 })

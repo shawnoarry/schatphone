@@ -714,12 +714,8 @@ export const useSystemStore = defineStore('system', () => {
     isLocked.value = false
   }
 
-  const hydrateFromStorage = () => {
-    const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
-      version: SYSTEM_STORAGE_VERSION,
-    })
-
-    if (!persisted || typeof persisted !== 'object') return
+  const applyPersistedSnapshot = (persisted = {}) => {
+    if (!persisted || typeof persisted !== 'object') return false
 
     if (persisted.settings?.api && typeof persisted.settings.api === 'object') {
       Object.assign(settings.api, persisted.settings.api)
@@ -809,6 +805,24 @@ export const useSystemStore = defineStore('system', () => {
       currentCustomWidgetIds(),
     )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
+    return true
+  }
+
+  const hydrateFromStorage = () => {
+    const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
+      version: SYSTEM_STORAGE_VERSION,
+    })
+
+    if (!persisted || typeof persisted !== 'object') return
+    applyPersistedSnapshot(persisted)
+  }
+
+  const restoreFromBackup = (snapshot = {}) => {
+    const source =
+      snapshot && typeof snapshot.system === 'object' && snapshot.system
+        ? snapshot.system
+        : snapshot
+    return applyPersistedSnapshot(source)
   }
 
   const persistToStorage = () => {
@@ -886,5 +900,6 @@ export const useSystemStore = defineStore('system', () => {
     lockPhone,
     unlockPhone,
     saveNow,
+    restoreFromBackup,
   }
 })

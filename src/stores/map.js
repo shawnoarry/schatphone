@@ -96,6 +96,56 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
+  const restoreFromBackup = (snapshot = {}) => {
+    const source =
+      snapshot && typeof snapshot.map === 'object' && snapshot.map
+        ? snapshot.map
+        : snapshot
+    if (!source || typeof source !== 'object') return false
+
+    if (Array.isArray(source.addresses)) {
+      addresses.splice(
+        0,
+        addresses.length,
+        ...source.addresses
+          .filter((item) => item && typeof item === 'object')
+          .map((item, index) => ({
+            id: Number.isFinite(Number(item.id)) ? Number(item.id) : Date.now() + index,
+            label: typeof item.label === 'string' ? item.label : '',
+            detail: typeof item.detail === 'string' ? item.detail : '',
+          }))
+          .filter((item) => item.label.trim() && item.detail.trim()),
+      )
+    }
+
+    if (source.currentLocation && typeof source.currentLocation === 'object') {
+      currentLocation.value = {
+        source:
+          typeof source.currentLocation.source === 'string'
+            ? source.currentLocation.source
+            : 'manual',
+        label:
+          typeof source.currentLocation.label === 'string'
+            ? source.currentLocation.label
+            : '当前位置',
+        detail:
+          typeof source.currentLocation.detail === 'string'
+            ? source.currentLocation.detail
+            : '',
+      }
+    }
+
+    if (source.tripForm && typeof source.tripForm === 'object') {
+      if (typeof source.tripForm.from === 'string') {
+        tripForm.from = source.tripForm.from
+      }
+      if (typeof source.tripForm.to === 'string') {
+        tripForm.to = source.tripForm.to
+      }
+    }
+    return true
+  }
+
   const persistToStorage = () => {
     writePersistedState(
       MAP_STORAGE_KEY,
@@ -106,6 +156,10 @@ export const useMapStore = defineStore('map', () => {
       },
       { version: MAP_STORAGE_VERSION },
     )
+  }
+
+  const saveNow = () => {
+    persistToStorage()
   }
 
   hydrateFromStorage()
@@ -121,5 +175,7 @@ export const useMapStore = defineStore('map', () => {
     setCurrentLocationByAddressId,
     addAddress,
     removeAddress,
+    restoreFromBackup,
+    saveNow,
   }
 })

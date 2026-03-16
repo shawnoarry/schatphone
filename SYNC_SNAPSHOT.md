@@ -1,6 +1,6 @@
 ﻿# SchatPhone 同步快照
 
-Updated / 更新时间: 2026-03-15
+Updated / 更新时间: 2026-03-16
 
 ## Purpose / 用途
 
@@ -51,6 +51,10 @@ AI 调用由“触发回复”控制，支持连续触发
 全局角色档案与会话绑定已拆分：`/contacts` 管档案，`/chat-contacts` 管绑定/会话变量与服务号增删改
 - `/chat-contacts` manages chat contacts separately from global contacts  
 `/chat-contacts` 独立管理聊天会话对象
+- Chat directory search/filter baseline is available for role and service entries  
+会话通讯录已具备角色与服务对象的搜索/筛选基线能力
+- Chat directory batch baseline is available (multi-select and bulk actions with safety confirmations)  
+会话通讯录已具备批量操作基线（多选与安全确认下的批量动作）
 
 ## Lock and Notification Key Design / 锁屏与通知关键设计
 
@@ -90,6 +94,8 @@ P0-2 目标页面已完成（`Appearance`、`ChatDirectory`、`LockScreen`、`Us
 - No platform cloud hosting / 不做平台云托管
 - API requests on explicit trigger plus optional autonomous trigger (when enabled) / 默认用户触发，开启后可按规则自主触发
 - Widget JSON import now uses schema validation + rollback-safe apply / Widget JSON 导入已接入结构校验与失败回滚保护
+- Settings backup restore (JSON) now supports rollback-safe import and legacy/new chat data compatibility  
+Settings 备份恢复（JSON）已支持失败回滚，并兼容旧版/新版聊天数据结构
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 

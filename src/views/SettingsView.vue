@@ -13,14 +13,16 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const { t } = useI18n()
 
-const { settings, user } = storeToRefs(systemStore)
+const { settings, user, notifications, apiReports } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
-const { addresses, currentLocation } = storeToRefs(mapStore)
+const { addresses, currentLocation, tripForm } = storeToRefs(mapStore)
 
 const activeMenu = ref('')
 const generalSaved = ref(false)
 const notificationSaved = ref(false)
 const automationSaved = ref(false)
+const backupImporting = ref(false)
+const backupFileInput = ref(null)
 let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
@@ -128,6 +130,8 @@ const exportData = () => {
   const data = JSON.stringify({
     settings: settings.value,
     user: user.value,
+    notifications: notifications.value,
+    apiReports: apiReports.value,
     roleProfiles: roleProfiles.value,
     contacts: contacts.value,
     chatHistory: chatHistory.value,
@@ -136,6 +140,7 @@ const exportData = () => {
     map: {
       addresses: addresses.value,
       currentLocation: currentLocation.value,
+      tripForm: tripForm.value,
     },
   })
 
@@ -146,6 +151,93 @@ const exportData = () => {
   anchor.download = 'schatphone_backup.json'
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+const deepClone = (value) => {
+  if (typeof structuredClone === 'function') return structuredClone(value)
+  return JSON.parse(JSON.stringify(value))
+}
+
+const createRollbackSnapshot = () => {
+  return {
+    system: {
+      settings: deepClone(settings.value),
+      user: deepClone(user.value),
+      notifications: deepClone(notifications.value),
+      apiReports: deepClone(apiReports.value),
+    },
+    chat: {
+      roleProfiles: deepClone(roleProfiles.value),
+      contacts: deepClone(contacts.value),
+      chatHistory: deepClone(chatHistory.value),
+      conversations: deepClone(conversations.value),
+      messagesByConversation: deepClone(messagesByConversation.value),
+    },
+    map: {
+      addresses: deepClone(addresses.value),
+      currentLocation: deepClone(currentLocation.value),
+      tripForm: deepClone(tripForm.value),
+    },
+  }
+}
+
+const triggerImportData = () => {
+  if (backupImporting.value) return
+  backupFileInput.value?.click()
+}
+
+const resetImportInput = (event) => {
+  if (!event?.target) return
+  event.target.value = ''
+}
+
+const importData = async (event) => {
+  const file = event?.target?.files?.[0]
+  resetImportInput(event)
+  if (!file || backupImporting.value) return
+
+  const confirmed = window.confirm(
+    t(
+      '导入会覆盖当前本地数据。是否继续？',
+      'Import will overwrite current local data. Continue?',
+    ),
+  )
+  if (!confirmed) return
+
+  backupImporting.value = true
+  const rollback = createRollbackSnapshot()
+
+  try {
+    const text = await file.text()
+    const parsed = JSON.parse(text)
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error(t('备份文件格式无效。', 'Invalid backup file format.'))
+    }
+
+    const systemOk = systemStore.restoreFromBackup(parsed)
+    const chatOk = chatStore.restoreFromBackup(parsed)
+    const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
+    if (!systemOk || !chatOk || !mapOk) {
+      throw new Error(t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'))
+    }
+
+    systemStore.saveNow()
+    chatStore.saveNow()
+    mapStore.saveNow()
+    alert(t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.'))
+  } catch (error) {
+    systemStore.restoreFromBackup(rollback.system)
+    chatStore.restoreFromBackup(rollback.chat)
+    mapStore.restoreFromBackup(rollback.map)
+    systemStore.saveNow()
+    chatStore.saveNow()
+    mapStore.saveNow()
+    alert(
+      `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}\n${error?.message || ''}`,
+    )
+  } finally {
+    backupImporting.value = false
+  }
 }
 
 onBeforeUnmount(() => {
@@ -240,6 +332,19 @@ onBeforeUnmount(() => {
         </button>
 
         <button
+          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
+          @click="triggerImportData"
+        >
+          <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
+            <i class="fas fa-file-import"></i>
+          </div>
+          <span class="flex-1 text-sm">
+            {{ backupImporting ? t('正在导入...', 'Importing...') : t('恢复导入（JSON）', 'Restore Import (JSON)') }}
+          </span>
+          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+        </button>
+
+        <button
           class="w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
           @click="openSubPage('about')"
         >
@@ -250,6 +355,13 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
       </div>
+      <input
+        ref="backupFileInput"
+        type="file"
+        accept="application/json"
+        class="hidden"
+        @change="importData"
+      />
 
       <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">

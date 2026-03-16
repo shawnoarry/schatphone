@@ -11,6 +11,11 @@ const { t } = useI18n()
 const { contacts, roleProfiles } = storeToRefs(chatStore)
 
 const activeSection = ref('roles')
+const searchKeyword = ref('')
+const roleFilter = ref('all')
+const serviceFilter = ref('all')
+const batchMode = ref(false)
+const selectedContactIds = ref([])
 const showBindModal = ref(false)
 const bindProfileId = ref(0)
 
@@ -46,7 +51,7 @@ const boundProfileIds = computed(() =>
   ),
 )
 
-const unboundRoleProfiles = computed(() =>
+const unboundRoleProfilesRaw = computed(() =>
   roleProfiles.value.filter((profile) => !boundProfileIds.value.has(Number(profile.id))),
 )
 
@@ -57,12 +62,154 @@ const serviceContacts = computed(() =>
     .filter(Boolean),
 )
 
+const roleFilterOptions = computed(() => [
+  { key: 'all', label: t('全部', 'All') },
+  { key: 'main', label: t('主角色', 'Main') },
+  { key: 'npc', label: t('NPC', 'NPC') },
+])
+
+const serviceFilterOptions = computed(() => [
+  { key: 'all', label: t('全部', 'All') },
+  { key: 'service', label: t('服务号', 'Service') },
+  { key: 'official', label: t('公众号', 'Official') },
+])
+
+const normalizedSearchKeyword = computed(() => searchKeyword.value.trim().toLowerCase())
+
+const includesSearch = (...fields) => {
+  if (!normalizedSearchKeyword.value) return true
+  return fields.some((field) =>
+    typeof field === 'string' && field.toLowerCase().includes(normalizedSearchKeyword.value),
+  )
+}
+
+const matchRoleType = (target) => {
+  if (roleFilter.value === 'main') return target?.isMain === true
+  if (roleFilter.value === 'npc') return target?.isMain !== true
+  return true
+}
+
+const filteredRoleBindings = computed(() =>
+  roleBindings.value.filter(
+    (contact) =>
+      matchRoleType(contact) &&
+      includesSearch(
+        contact?.name,
+        contact?.role,
+        contact?.bio,
+        contact?.relationshipNote,
+        contact?.lastMessage,
+      ),
+  ),
+)
+
+const filteredUnboundRoleProfiles = computed(() =>
+  unboundRoleProfilesRaw.value.filter(
+    (profile) =>
+      matchRoleType(profile) &&
+      includesSearch(profile?.name, profile?.role, profile?.bio, (profile?.tags || []).join(' ')),
+  ),
+)
+
+const filteredServiceContacts = computed(() =>
+  serviceContacts.value.filter((contact) => {
+    if (serviceFilter.value === 'service' && contact.kind !== 'service') return false
+    if (serviceFilter.value === 'official' && contact.kind !== 'official') return false
+    return includesSearch(
+      contact?.name,
+      contact?.role,
+      contact?.serviceTemplate,
+      contact?.bio,
+      contact?.lastMessage,
+    )
+  }),
+)
+
+const searchPlaceholder = computed(() =>
+  activeSection.value === 'roles'
+    ? t('搜索角色名/设定/备注', 'Search role name/profile/note')
+    : t('搜索服务号/模板/说明', 'Search service account/template/description'),
+)
+
+const selectedContactIdSet = computed(() =>
+  new Set(selectedContactIds.value.map((id) => Number(id)).filter((id) => Number.isFinite(id))),
+)
+
+const filteredRoleIds = computed(() =>
+  filteredRoleBindings.value.map((contact) => Number(contact.id)).filter((id) => Number.isFinite(id)),
+)
+
+const filteredServiceIds = computed(() =>
+  filteredServiceContacts.value.map((contact) => Number(contact.id)).filter((id) => Number.isFinite(id)),
+)
+
+const selectedRoleCount = computed(() =>
+  filteredRoleIds.value.filter((id) => selectedContactIdSet.value.has(id)).length,
+)
+
+const selectedServiceCount = computed(() =>
+  filteredServiceIds.value.filter((id) => selectedContactIdSet.value.has(id)).length,
+)
+
+const allFilteredSelected = computed(() => {
+  const targetIds = activeSection.value === 'roles' ? filteredRoleIds.value : filteredServiceIds.value
+  if (targetIds.length === 0) return false
+  return targetIds.every((id) => selectedContactIdSet.value.has(id))
+})
+
+const selectedCountCurrentSection = computed(() =>
+  activeSection.value === 'roles' ? selectedRoleCount.value : selectedServiceCount.value,
+)
+
 const goBack = () => {
   router.push('/chat')
 }
 
+const clearSelection = () => {
+  selectedContactIds.value = []
+}
+
+const setBatchMode = (enabled) => {
+  batchMode.value = Boolean(enabled)
+  if (!batchMode.value) clearSelection()
+}
+
+const toggleBatchMode = () => {
+  setBatchMode(!batchMode.value)
+}
+
+const isContactSelected = (contactId) => selectedContactIdSet.value.has(Number(contactId))
+
+const toggleSelectContact = (contactId) => {
+  if (!batchMode.value) return
+  const numericId = Number(contactId)
+  if (!Number.isFinite(numericId)) return
+  if (selectedContactIdSet.value.has(numericId)) {
+    selectedContactIds.value = selectedContactIds.value.filter((id) => Number(id) !== numericId)
+    return
+  }
+  selectedContactIds.value = [...selectedContactIds.value, numericId]
+}
+
+const toggleSelectAllFiltered = () => {
+  if (!batchMode.value) return
+  const targetIds = activeSection.value === 'roles' ? filteredRoleIds.value : filteredServiceIds.value
+  if (targetIds.length === 0) return
+
+  if (allFilteredSelected.value) {
+    const targetSet = new Set(targetIds)
+    selectedContactIds.value = selectedContactIds.value.filter((id) => !targetSet.has(Number(id)))
+    return
+  }
+
+  const merged = new Set([...selectedContactIds.value.map((id) => Number(id)), ...targetIds])
+  selectedContactIds.value = [...merged]
+}
+
 const switchSection = (section) => {
   activeSection.value = section === 'service' ? 'service' : 'roles'
+  searchKeyword.value = ''
+  setBatchMode(false)
 }
 
 const openChat = (contact) => {
@@ -72,11 +219,11 @@ const openChat = (contact) => {
 }
 
 const openBindModal = () => {
-  if (unboundRoleProfiles.value.length === 0) {
+  if (unboundRoleProfilesRaw.value.length === 0) {
     alert(t('暂无可绑定角色，请先在主通讯录创建角色档案。', 'No profiles available. Create role profiles in main Contacts first.'))
     return
   }
-  bindProfileId.value = Number(unboundRoleProfiles.value[0]?.id || 0)
+  bindProfileId.value = Number(unboundRoleProfilesRaw.value[0]?.id || 0)
   showBindModal.value = true
 }
 
@@ -130,6 +277,65 @@ const unbindRole = (contact) => {
   )
   if (!ok) return
   chatStore.unbindRoleContact(contact.id)
+}
+
+const batchBindFilteredProfiles = () => {
+  if (filteredUnboundRoleProfiles.value.length === 0) {
+    alert(t('当前筛选下没有可批量绑定角色。', 'No available profiles to batch bind under current filter.'))
+    return
+  }
+  const ok = window.confirm(
+    t(
+      `确认批量绑定当前筛选结果（${filteredUnboundRoleProfiles.value.length} 个角色）吗？`,
+      `Bind all filtered profiles (${filteredUnboundRoleProfiles.value.length})?`,
+    ),
+  )
+  if (!ok) return
+
+  let successCount = 0
+  filteredUnboundRoleProfiles.value.forEach((profile) => {
+    const created = chatStore.bindRoleProfile(profile.id, {
+      relationshipLevel: 60,
+      relationshipNote: '',
+    })
+    if (created) successCount += 1
+  })
+
+  alert(
+    t(
+      `已批量绑定 ${successCount} 个角色会话。`,
+      `Bound ${successCount} role chats.`,
+    ),
+  )
+}
+
+const batchUnbindSelectedRoles = () => {
+  if (selectedRoleCount.value <= 0) {
+    alert(t('请先选择要解绑的角色会话。', 'Select role chats to unbind first.'))
+    return
+  }
+
+  const targets = filteredRoleBindings.value.filter((contact) => isContactSelected(contact.id))
+  const ok = window.confirm(
+    t(
+      `确认批量解绑 ${targets.length} 个角色会话吗？不会删除主通讯录档案。`,
+      `Unbind ${targets.length} role chats? Main profiles will be kept.`,
+    ),
+  )
+  if (!ok) return
+
+  let successCount = 0
+  targets.forEach((contact) => {
+    if (chatStore.unbindRoleContact(contact.id)) successCount += 1
+  })
+
+  clearSelection()
+  alert(
+    t(
+      `已解绑 ${successCount} 个角色会话。`,
+      `Unbound ${successCount} role chats.`,
+    ),
+  )
 }
 
 const resetServiceDraft = () => {
@@ -201,6 +407,35 @@ const removeService = (contact) => {
   chatStore.removeContact(contact.id)
 }
 
+const batchDeleteSelectedServices = () => {
+  if (selectedServiceCount.value <= 0) {
+    alert(t('请先选择要删除的服务对象。', 'Select service entries to delete first.'))
+    return
+  }
+
+  const targets = filteredServiceContacts.value.filter((contact) => isContactSelected(contact.id))
+  const ok = window.confirm(
+    t(
+      `确认批量删除 ${targets.length} 个服务会话对象吗？`,
+      `Delete ${targets.length} service chat entries?`,
+    ),
+  )
+  if (!ok) return
+
+  let successCount = 0
+  targets.forEach((contact) => {
+    if (chatStore.removeContact(contact.id)) successCount += 1
+  })
+
+  clearSelection()
+  alert(
+    t(
+      `已删除 ${successCount} 个服务会话对象。`,
+      `Deleted ${successCount} service chat entries.`,
+    ),
+  )
+}
+
 const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('NPC', 'NPC'))
 
 const serviceKindTag = (contact) =>
@@ -252,24 +487,131 @@ const serviceKindTag = (contact) =>
       </button>
     </div>
 
+    <div class="px-4 py-3 bg-white border-b border-gray-100 space-y-2">
+      <div class="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+        <i class="fas fa-search text-xs text-gray-400"></i>
+        <input
+          v-model="searchKeyword"
+          type="text"
+          :placeholder="searchPlaceholder"
+          class="flex-1 bg-transparent text-sm outline-none"
+        />
+        <button
+          v-if="searchKeyword"
+          @click="searchKeyword = ''"
+          class="text-[11px] text-gray-500 hover:text-gray-700"
+        >
+          {{ t('清空', 'Clear') }}
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="option in activeSection === 'roles' ? roleFilterOptions : serviceFilterOptions"
+          :key="`${activeSection}-${option.key}`"
+          @click="activeSection === 'roles' ? (roleFilter = option.key) : (serviceFilter = option.key)"
+          class="px-2.5 py-1 rounded-full text-[11px] border"
+          :class="
+            (activeSection === 'roles' ? roleFilter : serviceFilter) === option.key
+              ? activeSection === 'roles'
+                ? 'border-violet-300 bg-violet-50 text-violet-700'
+                : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+              : 'border-gray-200 bg-white text-gray-600'
+          "
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </div>
+
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <section v-if="activeSection === 'roles'" class="space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('已绑定角色', 'Bound Roles') }}</h3>
-          <button @click="openBindModal" class="px-2.5 py-1 rounded-md border border-violet-200 bg-violet-50 text-violet-700 text-xs">
-            {{ t('绑定角色', 'Bind Role') }}
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              @click="openBindModal"
+              class="px-2.5 py-1 rounded-md border border-violet-200 bg-violet-50 text-violet-700 text-xs"
+            >
+              {{ t('绑定角色', 'Bind Role') }}
+            </button>
+            <button
+              @click="toggleBatchMode"
+              class="px-2.5 py-1 rounded-md border text-xs"
+              :class="
+                batchMode
+                  ? 'border-gray-300 bg-gray-100 text-gray-700'
+                  : 'border-gray-200 bg-white text-gray-700'
+              "
+            >
+              {{ batchMode ? t('退出批量', 'Exit Batch') : t('批量操作', 'Batch') }}
+            </button>
+          </div>
         </div>
 
         <p v-if="roleBindings.length === 0" class="text-xs text-gray-400 px-1 py-2">
           {{ t('暂无已绑定角色。', 'No role bindings yet.') }}
         </p>
+        <p v-else-if="filteredRoleBindings.length === 0" class="text-xs text-gray-400 px-1 py-2">
+          {{ t('当前筛选下没有匹配角色。', 'No role matches current filter.') }}
+        </p>
+        <div v-if="batchMode" class="rounded-xl border border-violet-100 bg-violet-50/50 p-3 space-y-2">
+          <p class="text-xs text-violet-700 font-medium">
+            {{ t('批量模式已开启，点击列表项可勾选。', 'Batch mode enabled. Tap items to select.') }}
+          </p>
+          <p class="text-xs text-violet-700">
+            {{ t('已选', 'Selected') }} {{ selectedRoleCount }} {{ t('项', 'items') }}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="toggleSelectAllFiltered"
+              class="px-2.5 py-1 rounded border border-violet-200 bg-white text-violet-700 text-[11px]"
+            >
+              {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选筛选结果', 'Select All') }}
+            </button>
+            <button
+              @click="clearSelection"
+              class="px-2.5 py-1 rounded border border-gray-200 bg-white text-gray-600 text-[11px]"
+              :disabled="selectedCountCurrentSection === 0"
+            >
+              {{ t('清空选择', 'Clear Selection') }}
+            </button>
+            <button
+              @click="batchUnbindSelectedRoles"
+              class="px-2.5 py-1 rounded border border-red-200 bg-red-50 text-red-600 text-[11px]"
+              :disabled="selectedRoleCount === 0"
+            >
+              {{ t('批量解绑', 'Batch Unbind') }}
+            </button>
+          </div>
+        </div>
 
         <div
-          v-for="contact in roleBindings"
+          v-for="contact in filteredRoleBindings"
           :key="contact.id"
-          class="rounded-2xl bg-white border border-gray-100 p-3 flex items-center gap-3"
+          class="rounded-2xl border p-3 flex items-center gap-3"
+          :class="
+            batchMode
+              ? isContactSelected(contact.id)
+                ? 'bg-violet-50 border-violet-300 cursor-pointer'
+                : 'bg-white border-violet-100 cursor-pointer'
+              : 'bg-white border-gray-100'
+          "
+          @click="batchMode && toggleSelectContact(contact.id)"
         >
+          <button
+            v-if="batchMode"
+            type="button"
+            class="w-5 h-5 rounded border flex items-center justify-center text-[10px]"
+            :class="
+              isContactSelected(contact.id)
+                ? 'border-violet-400 bg-violet-500 text-white'
+                : 'border-gray-300 bg-white text-transparent'
+            "
+            @click.stop="toggleSelectContact(contact.id)"
+          >
+            <i class="fas fa-check"></i>
+          </button>
           <div class="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden">
             <img
               :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.name"
@@ -286,19 +628,33 @@ const serviceKindTag = (contact) =>
               {{ contact.relationshipNote }}
             </p>
           </div>
-          <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-          <button @click="openRoleMetaModal(contact)" class="text-xs text-gray-500">{{ t('会话设定', 'Thread Meta') }}</button>
-          <button @click="unbindRole(contact)" class="text-xs text-red-500">{{ t('解绑', 'Unbind') }}</button>
+          <template v-if="!batchMode">
+            <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
+            <button @click="openRoleMetaModal(contact)" class="text-xs text-gray-500">{{ t('会话设定', 'Thread Meta') }}</button>
+            <button @click="unbindRole(contact)" class="text-xs text-red-500">{{ t('解绑', 'Unbind') }}</button>
+          </template>
         </div>
 
         <div class="rounded-xl bg-white border border-gray-100 p-3">
-          <p class="text-xs font-semibold text-gray-600 mb-2">{{ t('可绑定角色档案', 'Available Profiles') }}</p>
-          <p v-if="unboundRoleProfiles.length === 0" class="text-xs text-gray-400">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-xs font-semibold text-gray-600">{{ t('可绑定角色档案', 'Available Profiles') }}</p>
+            <button
+              v-if="batchMode"
+              @click="batchBindFilteredProfiles"
+              class="px-2 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+            >
+              {{ t('批量绑定筛选结果', 'Batch Bind Filtered') }}
+            </button>
+          </div>
+          <p v-if="unboundRoleProfilesRaw.length === 0" class="text-xs text-gray-400">
             {{ t('全部角色已绑定到会话。', 'All profiles are already bound.') }}
+          </p>
+          <p v-else-if="filteredUnboundRoleProfiles.length === 0" class="text-xs text-gray-400">
+            {{ t('可绑定角色中暂无匹配结果。', 'No available profile matches current filter.') }}
           </p>
           <div v-else class="space-y-1.5">
             <div
-              v-for="profile in unboundRoleProfiles"
+              v-for="profile in filteredUnboundRoleProfiles"
               :key="profile.id"
               class="flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-2.5 py-2"
             >
@@ -327,18 +683,83 @@ const serviceKindTag = (contact) =>
             <button @click="openCreateService('official')" class="px-2.5 py-1 rounded-md border border-sky-200 bg-sky-50 text-sky-700 text-xs">
               {{ t('新增公众号', 'Add Official') }}
             </button>
+            <button
+              @click="toggleBatchMode"
+              class="px-2.5 py-1 rounded-md border text-xs"
+              :class="
+                batchMode
+                  ? 'border-gray-300 bg-gray-100 text-gray-700'
+                  : 'border-gray-200 bg-white text-gray-700'
+              "
+            >
+              {{ batchMode ? t('退出批量', 'Exit Batch') : t('批量操作', 'Batch') }}
+            </button>
           </div>
         </div>
 
         <p v-if="serviceContacts.length === 0" class="text-xs text-gray-400 px-1 py-2">
           {{ t('暂无服务号或公众号。', 'No service or official accounts yet.') }}
         </p>
+        <p v-else-if="filteredServiceContacts.length === 0" class="text-xs text-gray-400 px-1 py-2">
+          {{ t('当前筛选下没有匹配服务对象。', 'No service entry matches current filter.') }}
+        </p>
+        <div v-if="batchMode" class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 space-y-2">
+          <p class="text-xs text-emerald-700 font-medium">
+            {{ t('批量模式已开启，点击列表项可勾选。', 'Batch mode enabled. Tap items to select.') }}
+          </p>
+          <p class="text-xs text-emerald-700">
+            {{ t('已选', 'Selected') }} {{ selectedServiceCount }} {{ t('项', 'items') }}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="toggleSelectAllFiltered"
+              class="px-2.5 py-1 rounded border border-emerald-200 bg-white text-emerald-700 text-[11px]"
+            >
+              {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选筛选结果', 'Select All') }}
+            </button>
+            <button
+              @click="clearSelection"
+              class="px-2.5 py-1 rounded border border-gray-200 bg-white text-gray-600 text-[11px]"
+              :disabled="selectedCountCurrentSection === 0"
+            >
+              {{ t('清空选择', 'Clear Selection') }}
+            </button>
+            <button
+              @click="batchDeleteSelectedServices"
+              class="px-2.5 py-1 rounded border border-red-200 bg-red-50 text-red-600 text-[11px]"
+              :disabled="selectedServiceCount === 0"
+            >
+              {{ t('批量删除', 'Batch Delete') }}
+            </button>
+          </div>
+        </div>
 
         <div
-          v-for="contact in serviceContacts"
+          v-for="contact in filteredServiceContacts"
           :key="contact.id"
-          class="rounded-2xl bg-white border border-gray-100 p-3 flex items-center gap-3"
+          class="rounded-2xl border p-3 flex items-center gap-3"
+          :class="
+            batchMode
+              ? isContactSelected(contact.id)
+                ? 'bg-emerald-50 border-emerald-300 cursor-pointer'
+                : 'bg-white border-emerald-100 cursor-pointer'
+              : 'bg-white border-gray-100'
+          "
+          @click="batchMode && toggleSelectContact(contact.id)"
         >
+          <button
+            v-if="batchMode"
+            type="button"
+            class="w-5 h-5 rounded border flex items-center justify-center text-[10px]"
+            :class="
+              isContactSelected(contact.id)
+                ? 'border-emerald-400 bg-emerald-500 text-white'
+                : 'border-gray-300 bg-white text-transparent'
+            "
+            @click.stop="toggleSelectContact(contact.id)"
+          >
+            <i class="fas fa-check"></i>
+          </button>
           <div
             class="w-10 h-10 rounded-xl flex items-center justify-center"
             :class="contact.kind === 'official' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
@@ -351,9 +772,11 @@ const serviceKindTag = (contact) =>
               {{ serviceKindTag(contact) }} · {{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}
             </p>
           </div>
-          <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-          <button @click="openEditService(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeService(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          <template v-if="!batchMode">
+            <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
+            <button @click="openEditService(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
+            <button @click="removeService(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          </template>
         </div>
       </section>
     </div>
@@ -366,7 +789,7 @@ const serviceKindTag = (contact) =>
       <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
         <p class="text-base font-bold">{{ t('绑定角色到会话', 'Bind Profile to Chat') }}</p>
         <select v-model.number="bindProfileId" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white">
-          <option v-for="profile in unboundRoleProfiles" :key="profile.id" :value="profile.id">
+          <option v-for="profile in unboundRoleProfilesRaw" :key="profile.id" :value="profile.id">
             {{ profile.name }} · {{ profile.role || t('未设置角色', 'Role not set') }}
           </option>
         </select>

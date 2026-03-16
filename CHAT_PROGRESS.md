@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-03-15
+Updated / 更新时间: 2026-03-16
 
 ## 1. Current Conclusion / 当前结论
 
@@ -30,6 +30,8 @@ Current baseline / 当前基线：
 - Structured assistant reply model supports blocks, quote, and metadata  
 结构化助手回复模型支持 blocks、引用与元信息
 - Legacy migration compatibility / 历史数据自动迁移兼容
+- Backup restore now supports both legacy chat backup and new role-profile binding shape  
+备份恢复现已兼容旧版聊天备份与新版角色档案绑定结构
 
 ### 2.2 API Calls and Error Handling / 调用与错误处理
 
@@ -72,6 +74,10 @@ AI 输入中状态以系统态文本展示：“对方正在输入...”
 通讯录模型已拆分：主通讯录负责全局角色档案，会话通讯录仅负责绑定与会话局部变量
 - Role unbind in chat directory does not delete global profile; service/official entries remain full CRUD in chat directory  
 会话通讯录中的角色删除仅解绑不删总档案；服务号/公众号仍在会话通讯录内完整增删改
+- Chat directory now includes search + quick filter chips for role/service sections  
+会话通讯录现已支持搜索与快速筛选标签（角色区/服务区）
+- Chat directory now supports batch mode for role/service lists (multi-select, bulk unbind/delete, filtered bulk bind).  
+会话通讯录现已支持角色/服务列表批量模式（多选、批量解绑/删除、按筛选结果批量绑定）。
 - Service/official templates configured in-thread menu  
 服务号/公众号模板可在会话页菜单配置
 
@@ -102,8 +108,8 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ## 3. Current Gaps / 当前限制
 
-- Directory lacks search and batch management  
-会话通讯录缺搜索与批量管理
+- Directory still lacks preset template center (search/filter/batch baseline completed)  
+会话通讯录仍缺模板预设中心（搜索/筛选/批量基线已完成）
 - Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
 跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  

@@ -289,4 +289,72 @@ describe('chat store model', () => {
     expect(store.getRoleProfileById(profile.id)).toBe(null)
     expect(store.contacts.some((item) => Number(item.profileId) === profile.id)).toBe(false)
   })
+
+  test('restores new-shape backup with role profile bindings', () => {
+    const store = useChatStore()
+
+    const restored = store.restoreFromBackup({
+      roleProfiles: [
+        {
+          id: 101,
+          name: 'Alpha',
+          role: 'Guide',
+          isMain: true,
+          avatar: '',
+          bio: 'Primary role profile',
+        },
+      ],
+      contacts: [
+        {
+          id: 201,
+          kind: 'role',
+          profileId: 101,
+          relationshipLevel: 66,
+          relationshipNote: 'Recovered note',
+          lastMessage: 'Recovered last message',
+        },
+      ],
+      conversations: {
+        201: {
+          id: 'conv_201',
+          contactId: 201,
+          aiPrefs: {
+            contextTurns: 6,
+          },
+        },
+      },
+      messagesByConversation: {
+        201: [{ role: 'assistant', content: 'Recovered message' }],
+      },
+    })
+
+    expect(restored).toBe(true)
+    expect(store.getRoleProfileById(101)?.name).toBe('Alpha')
+    expect(store.getContactById(201)?.name).toBe('Alpha')
+    expect(store.getContactById(201)?.relationshipLevel).toBe(66)
+    expect(store.getMessagesByContactId(201).at(-1)?.content).toContain('Recovered message')
+  })
+
+  test('restores legacy backup and derives role profiles', () => {
+    const store = useChatStore()
+
+    const restored = store.restoreFromBackup({
+      contacts: [
+        {
+          id: 301,
+          name: 'Legacy Contact',
+          kind: 'role',
+          role: 'Archivist',
+          lastMessage: 'Legacy summary',
+        },
+      ],
+      chatHistory: {
+        301: [{ role: 'assistant', content: 'Legacy message' }],
+      },
+    })
+
+    expect(restored).toBe(true)
+    expect(store.getContactById(301)?.profileId).toBeGreaterThan(0)
+    expect(store.getRoleProfileById(store.getContactById(301)?.profileId)?.name).toBe('Legacy Contact')
+  })
 })

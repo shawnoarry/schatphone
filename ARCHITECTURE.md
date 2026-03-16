@@ -1,6 +1,6 @@
 # SchatPhone 架构说明
 
-Updated / 更新时间: 2026-03-15
+Updated / 更新时间: 2026-03-16
 
 ## 1. Architecture Goals / 架构目标
 
@@ -165,6 +165,8 @@ Core routes / 核心路由：
   会话级 AI 设置在 Chat 分级菜单中编辑并持久化
 - Responsibility split / 职责拆分：`/contacts` manages global role profiles; `/chat-contacts` manages role bindings and service account CRUD  
   `/contacts` 负责全局角色档案；`/chat-contacts` 负责角色绑定与服务号增删改
+- Directory baseline / 通讯录基线：`/chat-contacts` includes search/filter and batch mode for role/service entries  
+  `/chat-contacts` 已支持角色/服务对象搜索筛选与批量操作基线
 
 ### 5.3 Language Boundary in Chat / Chat 语言边界
 
@@ -191,6 +193,8 @@ Rules / 规则：
 - No platform-managed cloud hosting / 不做平台云托管
 - Context is sent only on explicit user trigger / 仅在用户触发时发送上下文
 - Conversation deletion is local deletion / 删除会话对象属于本地删除
+- Backup import in Settings applies store-level restore with rollback-safe fallback on parse/shape failure  
+  Settings 中的备份导入采用 Store 级恢复，解析/结构失败时自动回滚
 - Future cloud sync must include auth and conflict policy / 云同步需补授权和冲突策略
 
 ## 8. Engineering and Deployment / 工程化与部署
