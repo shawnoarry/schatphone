@@ -1,0 +1,183 @@
+﻿# SchatPhone State Ownership Strategy / SchatPhone 状态归属策略
+
+Updated / 更新时间: 2026-03-29
+
+## 1. Purpose / 用途
+
+This document defines which parts of SchatPhone should be user-defined, system-owned, AI-assisted, or directly AI-generated.  
+本文用于定义 SchatPhone 中哪些内容应由用户定义、哪些应由系统保存、哪些适合 AI 辅助建立，以及哪些属于 AI 直接生成的表现层内容。
+
+Core rule / 核心规则：  
+Anything that affects continuity, save integrity, or cross-provider consistency must not rely on the AI model as the only source of truth.  
+凡是影响连续性、存档完整性或跨供应商一致性的内容，都不能把 AI 模型当作唯一真值来源。
+
+## 2. Four Ownership Categories / 四类归属
+
+### 2.1 User-Defined Core / 用户定义核心
+
+These are root settings and should not be silently changed by AI.  
+这些属于根设定，不应被 AI 静默修改。
+
+- player identity / 用户身份
+- player boundaries and preferences / 用户边界与偏好
+- worldbook assumptions / 世界书设定
+- primary role definitions / 核心角色底稿
+- important relationship starting positions / 重要关系初始定位
+- automation switches and permissions / 自动化开关与权限
+
+AI may read these, but should not rewrite them on its own.  
+AI 可以读取这些内容，但不应自行改写。
+
+### 2.2 AI-Assisted but User-Editable / AI 辅助建立但用户可编辑
+
+These are good candidates for AI drafting, but users should be able to review and edit them.  
+这些内容适合让 AI 起草，但用户应能审核和修改。
+
+- extended role profile copy / 扩展人设文案
+- relationship summaries / 关系摘要
+- memory summary drafts / 记忆摘要草稿
+- event templates / 事件模板
+- service account templates / 服务号模板
+- public-post or forum drafts / 动态或论坛草稿
+- mini-scene copy / 小剧场文案
+
+AI can speed up creation here, but the accepted result should still be stored locally by the project.  
+AI 在这里负责提效，但最终采纳结果仍应由项目本地保存。
+
+### 2.3 System-Owned Truth / 系统真值层
+
+These values must be stored and updated by project logic, not by hoping that a model remembers them.  
+这些值必须由项目逻辑保存和更新，而不是依赖模型“记住它们”。
+
+- relationship numeric values / 关系数值
+- event states / 事件状态
+- task progress / 任务进度
+- transaction states / 交易状态
+- wallet balances / 钱包余额
+- location and itinerary states / 地点与行程状态
+- notification state / 通知状态
+- delivered, read, and unread flags / 已送达、已读与未读状态
+- scheduler timestamps / 调度时间戳
+- last active time and restore-settlement state / 上次活跃时间与恢复补算状态
+
+This layer must remain stable even if the user changes AI providers from one turn to another.  
+即使用户每一轮切换不同 AI 供应商，这一层也必须保持稳定。
+
+### 2.4 AI-Generated Presentation / AI 生成表现层
+
+These are outputs, not the source of truth.  
+这些是表现层输出，不是存档真值。
+
+- chat reply text / 聊天回复正文
+- multi-message sequences / 多条连续回复
+- virtual voice wording / 虚拟语音条文案
+- image descriptions / 图片描述
+- module-link descriptions / 模块跳转描述
+- transfer card wording / 转账卡片文案
+- mini HTML interaction content / HTML 互动内容
+
+These can be regenerated later and should not be the only place where continuity lives.  
+这些内容可以后续重新生成，不应成为连续性的唯一载体。
+
+## 3. Relationship Values / 关系数值设计
+
+Relationship values should belong to the system, not to the model.  
+关系数值应归属于系统，而不是归属于模型记忆。
+
+Suggested structure / 建议结构：
+
+- `affinity`
+- `trust`
+- `distance`
+- `dependency`
+- `tension`
+- `relationshipStage`
+- `lastWarmMomentAt`
+- `lastConflictAt`
+
+Suggested rule / 建议规则：  
+The system updates the values; AI reads them to generate tone and reaction.  
+系统负责更新数值；AI 读取这些值来生成反应和语气。
+
+This makes the project stable across providers and easier to balance as a game.  
+这样既能保证跨供应商稳定，也更符合游戏系统的可调性。
+
+## 4. Memory Design / 记忆设计
+
+Memory should not be a single blob placed entirely inside prompts.  
+记忆不应只是塞进 Prompt 的一大段文本。
+
+Recommended three-layer design / 推荐采用三层设计：
+
+### 4.1 Raw Persistent Layer / 原始持久层
+
+Store structured truth locally.  
+本地保存结构化真值。
+
+Examples / 例如：
+
+- role archives / 角色档案
+- relationship values / 关系数值
+- event history / 事件历史
+- wallet and itinerary state / 钱包与行程状态
+- notification history / 通知历史
+
+### 4.2 Summary Memory Layer / 摘要记忆层
+
+Store compact summaries derived from the raw layer.  
+保存从原始层提炼出的摘要记忆。
+
+Examples / 例如：
+
+- recent important interactions / 最近的重要互动
+- current role impression of the player / 角色当前对用户的印象
+- current sensitive topics / 当前敏感点
+- current relationship direction / 当前关系走向
+
+This layer may be AI-assisted, but the accepted summary should still be saved by the project.  
+这一层可以借助 AI 辅助生成，但最终采纳的摘要仍应由项目保存。
+
+### 4.3 Prompt Assembly Layer / Prompt 组装层
+
+Each AI call should assemble only the necessary pieces from the saved layers.  
+每次调用 AI 时，只应从已保存的层中抽取必要信息进行组装。
+
+Recommended prompt inputs / 推荐输入：
+
+- current chat window context / 当前会话上下文
+- user identity / 用户身份
+- role profile / 角色档案
+- relevant worldbook fragments / 相关世界书片段
+- relationship snapshot / 关系快照
+- memory summary / 记忆摘要
+- real-time context / 现实时间上下文
+
+## 5. Cross-Provider Rule / 跨供应商规则
+
+AI providers may change from turn to turn.  
+用户每一轮可能使用不同的 AI 供应商。
+
+Therefore / 因此：
+
+- save truth locally / 真值必须本地保存
+- pass necessary state into each call / 每次调用都传入必要状态
+- never treat provider memory as the archive / 不能把供应商记忆当作存档
+
+This is essential for stability.  
+这是保持体验稳定的必要条件。
+
+## 6. Decision Heuristic / 判断准则
+
+When deciding whether something should be stored by the system or generated by AI, ask:  
+当判断某项内容应由系统保存还是交给 AI 生成时，可以用以下问题判断：
+
+1. Does it affect long-term continuity? / 它会影响长期连续性吗？
+2. Does it affect cross-module consistency? / 它会影响跨模块一致性吗？
+3. Would it drift if the AI provider changed? / 如果切换供应商，它会漂移吗？
+
+If the answer is yes, it should be system-owned.  
+如果答案是“会”，就应归系统保存。
+
+If the answer is no, it is usually safe to let AI generate it.  
+如果答案是“不会”，通常就可以交给 AI 生成。
+

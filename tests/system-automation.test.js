@@ -39,6 +39,39 @@ describe('system automation controls', () => {
     expect(store.activeAutoExecution.module).toBe('')
   })
 
+  test('supports runtime policy for quiet hours and notify-only mode', () => {
+    const store = useSystemStore()
+    store.settings.aiAutomation.masterEnabled = true
+    store.settings.aiAutomation.modules.chat.enabled = true
+    store.settings.aiAutomation.quietHoursEnabled = true
+    store.settings.aiAutomation.quietHoursStart = '23:00'
+    store.settings.aiAutomation.quietHoursEnd = '07:00'
+
+    const quietPolicy = store.getAiAutomationRuntimePolicy(
+      'chat',
+      Date.UTC(2026, 0, 1, 23, 30, 0),
+      { timezone: 'UTC' },
+    )
+    expect(quietPolicy.enabled).toBe(true)
+    expect(quietPolicy.quietHoursActive).toBe(true)
+    expect(quietPolicy.notifyOnly).toBe(true)
+    expect(quietPolicy.invokeEnabled).toBe(false)
+
+    const daytimePolicy = store.getAiAutomationRuntimePolicy(
+      'chat',
+      Date.UTC(2026, 0, 1, 12, 0, 0),
+      { timezone: 'UTC' },
+    )
+    expect(daytimePolicy.quietHoursActive).toBe(false)
+    expect(daytimePolicy.notifyOnly).toBe(false)
+    expect(daytimePolicy.invokeEnabled).toBe(true)
+
+    store.settings.aiAutomation.notifyOnlyMode = true
+    const notifyOnlyPolicy = store.getAiAutomationRuntimePolicy('chat')
+    expect(notifyOnlyPolicy.notifyOnly).toBe(true)
+    expect(store.tryAcquireAutoExecution('chat', 'notify-only-check')).toBe(false)
+  })
+
   test('keeps only latest 200 API reports and supports clear', () => {
     const store = useSystemStore()
 

@@ -113,15 +113,52 @@ describe('chat store model', () => {
     store.setConversationAutoState(contactId, {
       autoLastTriggeredAt: 25_000,
       autoLastFingerprint: 'fingerprint-v1',
+      autoLastSettledAt: 30_000,
+      autoLastSettledMissedCycles: 2,
     })
 
     const conversation = store.getConversationByContactId(contactId)
     expect(conversation.autoNextAt).toBe(61_000)
     expect(conversation.autoLastTriggeredAt).toBe(25_000)
     expect(conversation.autoLastFingerprint).toBe('fingerprint-v1')
+    expect(conversation.autoLastSettledAt).toBe(30_000)
+    expect(conversation.autoLastSettledMissedCycles).toBe(2)
 
     store.setConversationAiPrefs(contactId, { autoInvokeEnabled: false })
     expect(store.getConversationByContactId(contactId).autoNextAt).toBe(0)
+    expect(store.getConversationByContactId(contactId).autoLastSettledMissedCycles).toBe(0)
+  })
+
+  test('settles overdue autonomous invoke checkpoints on resume', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    store.setConversationAiPrefs(contactId, {
+      autoInvokeEnabled: true,
+      autoInvokeIntervalSec: 60,
+    })
+
+    store.scheduleConversationAutoInvoke(contactId, 0, 60)
+
+    const settled = store.settleAutoInvokeOnResume(250_000)
+    expect(settled.length).toBe(1)
+    expect(settled[0].contactId).toBe(contactId)
+    expect(settled[0].dueAt).toBe(60_000)
+    expect(settled[0].settledAt).toBe(250_000)
+    expect(settled[0].overdueMs).toBe(190_000)
+    expect(settled[0].missedCycles).toBe(4)
+    expect(settled[0].intervalMs).toBe(60_000)
+
+    const conversation = store.getConversationByContactId(contactId)
+    expect(conversation.autoNextAt).toBe(250_000)
+    expect(conversation.autoLastSettledAt).toBe(250_000)
+    expect(conversation.autoLastSettledMissedCycles).toBe(4)
+
+    expect(store.getDueAutoInvokeContactIds(250_000)).toContain(contactId)
+
+    const nextAt = store.scheduleConversationAutoInvoke(contactId, 250_000, 60)
+    expect(nextAt).toBe(310_000)
+    expect(store.getConversationByContactId(contactId).autoLastSettledMissedCycles).toBe(0)
   })
 
   test('supports proactive opener timestamp mark/reset', () => {

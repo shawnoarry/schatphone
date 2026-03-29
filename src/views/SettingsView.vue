@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -81,6 +81,17 @@ const clampAutomationSeconds = (value, fallback = 120) => {
   return Math.min(1800, Math.max(10, Math.floor(num)))
 }
 
+const normalizeAutomationClock = (value, fallback = '00:00') => {
+  if (typeof value !== 'string') return fallback
+  const match = value.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+  if (!match) return fallback
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+const automationRuntimePolicy = computed(() =>
+  systemStore.getAiAutomationRuntimePolicy('chat', Date.now()),
+)
+
 const saveAutomationSettings = () => {
   if (!settings.value.aiAutomation) return
 
@@ -108,6 +119,14 @@ const saveAutomationSettings = () => {
   settings.value.aiAutomation.dedupeWindowSec = clampAutomationSeconds(
     settings.value.aiAutomation.dedupeWindowSec,
     120,
+  )
+  settings.value.aiAutomation.quietHoursStart = normalizeAutomationClock(
+    settings.value.aiAutomation.quietHoursStart,
+    '23:00',
+  )
+  settings.value.aiAutomation.quietHoursEnd = normalizeAutomationClock(
+    settings.value.aiAutomation.quietHoursEnd,
+    '07:00',
   )
 
   systemStore.saveNow()
@@ -447,6 +466,51 @@ onBeforeUnmount(() => {
               </div>
               <input v-model.number="settings.aiAutomation.modules.shopping.priority" type="number" min="1" max="1000" class="border rounded px-2 py-1 text-xs text-right" />
             </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-4 space-y-3">
+            <p class="text-sm font-semibold">{{ t('执行模式与安静时段', 'Execution mode and quiet hours') }}</p>
+            <label class="flex items-center justify-between gap-2">
+              <span class="text-xs text-gray-500">{{ t('仅通知模式（不自动生成回复）', 'Notify-only mode (no auto reply generation)') }}</span>
+              <input v-model="settings.aiAutomation.notifyOnlyMode" type="checkbox" class="w-4 h-4" />
+            </label>
+            <label class="flex items-center justify-between gap-2">
+              <span class="text-xs text-gray-500">{{ t('启用安静时段（自动转为仅通知）', 'Enable quiet hours (force notify-only)') }}</span>
+              <input v-model="settings.aiAutomation.quietHoursEnabled" type="checkbox" class="w-4 h-4" />
+            </label>
+            <div v-if="settings.aiAutomation.quietHoursEnabled" class="grid grid-cols-2 gap-2">
+              <label class="flex flex-col gap-1">
+                <span class="text-[11px] text-gray-500">{{ t('开始', 'Start') }}</span>
+                <input
+                  v-model="settings.aiAutomation.quietHoursStart"
+                  type="time"
+                  class="border rounded px-2 py-1.5 text-xs"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span class="text-[11px] text-gray-500">{{ t('结束', 'End') }}</span>
+                <input
+                  v-model="settings.aiAutomation.quietHoursEnd"
+                  type="time"
+                  class="border rounded px-2 py-1.5 text-xs"
+                />
+              </label>
+            </div>
+            <p class="text-[11px] text-gray-500">
+              {{
+                t(
+                  '当前运行态：',
+                  'Current runtime mode:',
+                )
+              }}
+              {{
+                automationRuntimePolicy.notifyOnly
+                  ? automationRuntimePolicy.quietHoursActive
+                    ? t('安静时段仅通知', 'Quiet-hours notify-only')
+                    : t('全局仅通知', 'Global notify-only')
+                  : t('允许自动调用', 'Autonomous invoke enabled')
+              }}
+            </p>
           </div>
 
           <div class="bg-white rounded-2xl p-4 space-y-3">

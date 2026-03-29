@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
@@ -93,6 +93,7 @@ const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const MANUAL_PRIORITY_GUARD_MS = 1500
+const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -194,7 +195,13 @@ const automationSettings = computed(() => settings.value.aiAutomation || null)
 const chatAutomationEnabled = computed(() =>
   systemStore.isAiAutomationEnabledForModule(CHAT_AUTOMATION_MODULE_KEY),
 )
+const chatAutomationPolicyNow = computed(() =>
+  systemStore.getAiAutomationRuntimePolicy(CHAT_AUTOMATION_MODULE_KEY, Date.now()),
+)
 const autoStatusLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+
+const getChatAutomationRuntimePolicy = (baseAt = Date.now()) =>
+  systemStore.getAiAutomationRuntimePolicy(CHAT_AUTOMATION_MODULE_KEY, baseAt)
 
 const markManualAction = () => {
   lastManualActionAt.value = Date.now()
@@ -226,6 +233,18 @@ const autoScheduleHintText = computed(() => {
     )
   }
 
+  if (chatAutomationPolicyNow.value.notifyOnly) {
+    return chatAutomationPolicyNow.value.quietHoursActive
+      ? t(
+          '当前处于安静时段：仅通知，不自动生成回复。',
+          'Quiet hours active: notify-only, no autonomous AI generation.',
+        )
+      : t(
+          '当前为仅通知模式：仅推送通知，不自动生成回复。',
+          'Notify-only mode active: push notifications without autonomous AI generation.',
+        )
+  }
+
   const nextAt = activeConversation.value?.autoNextAt || 0
   if (!nextAt) {
     return t(
@@ -244,6 +263,16 @@ const autoLastTriggeredHintText = computed(() => {
     return t('尚无自动调用记录。', 'No autonomous invoke history yet.')
   }
   return `${t('上次自动调用', 'Last autonomous invoke')}: ${formatAutoStatusTime(lastAt)}`
+})
+
+const autoRestoreSettlementHintText = computed(() => {
+  if (!activeChat.value || !activeAiPrefs.value.autoInvokeEnabled) return ''
+  const missedCycles = Number(activeConversation.value?.autoLastSettledMissedCycles || 0)
+  if (!Number.isFinite(missedCycles) || missedCycles <= 0) return ''
+
+  const settledAt = Number(activeConversation.value?.autoLastSettledAt || 0)
+  const settledAtText = settledAt ? formatAutoStatusTime(settledAt) : '--:--'
+  return `${t('恢复补算', 'Resume settlement')}: ${missedCycles} ${t('个周期', 'cycle(s)')} · ${settledAtText}`
 })
 
 const clampContextTurns = (value) => {
@@ -491,66 +520,68 @@ const resetConversationAutoNextAt = (contactId, baseAt = Date.now()) => {
   )
 }
 
-const shouldScheduleActiveAutoInvoke = () => {
-  if (!activeChat.value) return false
-  if (!chatAutomationEnabled.value) return false
-  const prefs = chatStore.getConversationAiPrefs(activeChat.value.id)
-  return Boolean(prefs.autoInvokeEnabled)
-}
-
-const scheduleActiveAutoInvoke = () => {
+const scheduleAutoInvokeTick = () => {
   clearAutoInvokeTimer()
-  if (!activeChat.value) return
-  if (!shouldScheduleActiveAutoInvoke()) return
-
-  const contactId = activeChat.value.id
-  const prefs = chatStore.getConversationAiPrefs(contactId)
-  const conversation = chatStore.getConversationByContactId(contactId)
-  const intervalMs = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec) * 1000
-  const now = Date.now()
-
+  if (!chatAutomationEnabled.value) return
   if (loadingAI.value || activeAbortController.value) {
     autoInvokeTimerId = setTimeout(() => {
-      void maybeRunActiveAutoInvoke()
+      void runDueAutoInvokes()
     }, getAutomationCooldownMs())
     return
   }
 
-  let nextAt = conversation.autoNextAt || 0
-  if (!nextAt || nextAt < now - intervalMs * 2) {
-    const fallbackBase = Math.max(now, conversation.lastMessageAt || now)
-    nextAt = resetConversationAutoNextAt(contactId, fallbackBase)
-  }
+  chatStore.normalizeAutoInvokeCheckpoints(Date.now())
+  const nextAt = chatStore.getNextAutoInvokeAt()
+  if (!nextAt) return
 
-  const delay = Math.max(400, nextAt - now)
+  const delay = Math.max(400, nextAt - Date.now())
   autoInvokeTimerId = setTimeout(() => {
-    void maybeRunActiveAutoInvoke()
+    void runDueAutoInvokes()
   }, delay)
 }
 
-const maybeRunActiveAutoInvoke = async () => {
-  clearAutoInvokeTimer()
-  if (!activeChat.value) return
-  if (!shouldScheduleActiveAutoInvoke()) return
-
-  const contactId = activeChat.value.id
-  const conversation = chatStore.getConversationByContactId(contactId)
+const maybeRunAutoInvokeForContact = async (contactId) => {
   const now = Date.now()
-
-  if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) {
-    scheduleActiveAutoInvoke()
+  const runtimePolicy = getChatAutomationRuntimePolicy(now)
+  if (!runtimePolicy.enabled) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
     return
   }
 
+  const aiPrefs = chatStore.getConversationAiPrefs(contactId)
+  if (!aiPrefs.autoInvokeEnabled) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return
+  }
+
+  const conversation = chatStore.getConversationByContactId(contactId)
+  if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) return
+
   if (loadingAI.value || activeAbortController.value) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
-    scheduleActiveAutoInvoke()
     return
   }
 
   if (now - lastManualActionAt.value <= MANUAL_PRIORITY_GUARD_MS) {
     resetConversationAutoNextAt(contactId, now)
-    scheduleActiveAutoInvoke()
+    return
+  }
+
+  if (runtimePolicy.notifyOnly) {
+    pushNotifyOnlyAutoInvokeNotification(contactId, runtimePolicy, now)
+    resetConversationAutoNextAt(contactId, now)
+    chatStore.setConversationAutoState(contactId, {
+      autoLastSettledAt: now,
+      autoLastSettledMissedCycles: 1,
+    })
+    systemStore.addApiReport({
+      level: 'info',
+      module: 'chat',
+      action: 'auto_notify_only',
+      provider: settings.value.api.resolvedKind || '',
+      model: settings.value.api.model || '',
+      message: notifyOnlyHintByPolicy(runtimePolicy),
+    })
     return
   }
 
@@ -563,7 +594,6 @@ const maybeRunActiveAutoInvoke = async () => {
     now - (conversation.autoLastTriggeredAt || 0) < dedupeMs
   ) {
     resetConversationAutoNextAt(contactId, now)
-    scheduleActiveAutoInvoke()
     return
   }
 
@@ -573,15 +603,14 @@ const maybeRunActiveAutoInvoke = async () => {
   )
   if (!locked) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
-    scheduleActiveAutoInvoke()
     return
   }
 
   try {
-    const aiPrefs = chatStore.getConversationAiPrefs(contactId)
     const ok = await requestAiReply(contactId, MANUAL_TRIGGER_ID, {
       replyCount: aiPrefs.replyCount,
       source: 'auto',
+      autoSchedule: false,
     })
     if (ok) {
       chatStore.setConversationAutoState(contactId, {
@@ -594,8 +623,118 @@ const maybeRunActiveAutoInvoke = async () => {
     }
   } finally {
     systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
-    scheduleActiveAutoInvoke()
   }
+}
+
+const runDueAutoInvokes = async () => {
+  clearAutoInvokeTimer()
+  if (!chatAutomationEnabled.value) return
+
+  const now = Date.now()
+  const settledItems = chatStore.settleAutoInvokeOnResume(now)
+  pushRestoreSettlementNotifications(settledItems)
+  const dueContactIds = chatStore.getDueAutoInvokeContactIds(now)
+
+  for (const contactId of dueContactIds) {
+    // Keep execution sequential so manual-priority and dedupe decisions stay deterministic.
+    await maybeRunAutoInvokeForContact(contactId)
+  }
+
+  scheduleAutoInvokeTick()
+}
+
+const clearAllAutoInvokeSchedules = () => {
+  chatStore.contacts.forEach((contact) => {
+    if (!contact?.id) return
+    chatStore.setConversationAutoState(contact.id, {
+      autoNextAt: 0,
+      autoLastSettledMissedCycles: 0,
+    })
+  })
+}
+
+const contactNameById = (contactId) => {
+  const contact = contactsForList.value.find((item) => item.id === contactId)
+  return contact?.name || t('新消息', 'New Message')
+}
+
+const notifyOnlyHintByPolicy = (policy) => {
+  if (policy?.quietHoursActive) {
+    return t(
+      '安静时段仅通知：本轮未自动生成回复。',
+      'Quiet-hours notify-only: this cycle skipped autonomous reply generation.',
+    )
+  }
+  return t(
+    '仅通知模式：本轮未自动生成回复。',
+    'Notify-only mode: this cycle skipped autonomous reply generation.',
+  )
+}
+
+const pushNotifyOnlyAutoInvokeNotification = (contactId, policy, createdAt = Date.now()) => {
+  if (!systemStore.isLocked) return
+  systemStore.addNotification({
+    title: contactNameById(contactId),
+    content: notifyOnlyHintByPolicy(policy),
+    icon: 'fas fa-bell',
+    route: `/chat/${contactId}`,
+    source: 'chat_auto_notify_only',
+    createdAt,
+  })
+}
+
+const pushRestoreSettlementNotifications = (settledItems = []) => {
+  if (!systemStore.isLocked) return
+  if (!Array.isArray(settledItems) || settledItems.length === 0) return
+
+  settledItems.forEach((item) => {
+    const contactId = Number(item?.contactId)
+    if (!Number.isFinite(contactId) || contactId <= 0) return
+
+    const total = Number.isFinite(Number(item?.missedCycles))
+      ? Math.max(1, Math.floor(Number(item.missedCycles)))
+      : 1
+    const replayCount = Math.min(total, MAX_RESTORE_NOTIFICATIONS_PER_CONTACT)
+    const intervalMs = Number.isFinite(Number(item?.intervalMs))
+      ? Math.max(1000, Math.floor(Number(item.intervalMs)))
+      : 1000
+    const dueAt = Number.isFinite(Number(item?.dueAt))
+      ? Math.max(0, Math.floor(Number(item.dueAt)))
+      : Date.now()
+    const settledAt = Number.isFinite(Number(item?.settledAt))
+      ? Math.max(0, Math.floor(Number(item.settledAt)))
+      : Date.now()
+
+    for (let i = 0; i < replayCount; i += 1) {
+      const sequence = total - replayCount + i + 1
+      const createdAt = Math.min(settledAt, dueAt + intervalMs * i)
+      const content =
+        total === 1
+          ? t(
+              '离线期间发生 1 次自动消息事件。',
+              '1 autonomous chat event occurred while offline.',
+            )
+          : `${t('离线消息事件', 'Offline chat event')} ${sequence}/${total}`
+
+      systemStore.addNotification({
+        title: contactNameById(contactId),
+        content,
+        icon: 'fas fa-comment-dots',
+        route: `/chat/${contactId}`,
+        source: 'chat_auto_restore_settlement',
+        createdAt,
+      })
+    }
+  })
+}
+
+const handleVisibilityResume = () => {
+  if (document.visibilityState !== 'visible') return
+  void runDueAutoInvokes()
+}
+
+const handleWindowFocus = () => {
+  void runDueAutoInvokes()
 }
 
 const normalizeAssistantReplyType = (replyType, aiPrefs) => {
@@ -877,6 +1016,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 
   const triggerSource = typeof options.source === 'string' ? options.source : 'manual'
   const isAutoSource = triggerSource === 'auto'
+  const shouldAutoSchedule = options.autoSchedule !== false
   if (!isAutoSource) {
     markManualAction()
   }
@@ -947,7 +1087,9 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     activeAbortController.value = null
     activeTriggerMessageId.value = ''
     scrollToBottom()
-    scheduleActiveAutoInvoke()
+    if (shouldAutoSchedule) {
+      scheduleAutoInvokeTick()
+    }
   }
 }
 
@@ -1160,7 +1302,7 @@ const rerollMessage = async (message) => {
     activeAbortController.value = null
     activeTriggerMessageId.value = ''
     scrollToBottom()
-    scheduleActiveAutoInvoke()
+    scheduleAutoInvokeTick()
   }
 }
 
@@ -1272,7 +1414,7 @@ const sendMessage = () => {
   if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
-  scheduleActiveAutoInvoke()
+  scheduleAutoInvokeTick()
 }
 
 const sendCurrentLocation = () => {
@@ -1313,7 +1455,7 @@ const sendCurrentLocation = () => {
   if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
-  scheduleActiveAutoInvoke()
+  scheduleAutoInvokeTick()
 }
 
 const useSuggestion = (text) => {
@@ -1462,7 +1604,7 @@ const saveThreadSettings = () => {
   }
 
   showThreadMenu.value = false
-  scheduleActiveAutoInvoke()
+  scheduleAutoInvokeTick()
 }
 
 watch(
@@ -1489,7 +1631,6 @@ watch(
       })
     } else {
       inputMessage.value = ''
-      clearAutoInvokeTimer()
     }
 
     suggestions.value = []
@@ -1498,7 +1639,7 @@ watch(
     retryTriggerMessageId.value = ''
     retryRerollMessageId.value = ''
     scrollToBottom()
-    scheduleActiveAutoInvoke()
+    scheduleAutoInvokeTick()
   },
   { immediate: true },
 )
@@ -1507,19 +1648,23 @@ watch(
   () => ({
     masterEnabled: settings.value.aiAutomation?.masterEnabled,
     chatEnabled: settings.value.aiAutomation?.modules?.chat?.enabled,
+    notifyOnlyMode: settings.value.aiAutomation?.notifyOnlyMode,
+    quietHoursEnabled: settings.value.aiAutomation?.quietHoursEnabled,
+    quietHoursStart: settings.value.aiAutomation?.quietHoursStart,
+    quietHoursEnd: settings.value.aiAutomation?.quietHoursEnd,
     cooldown: settings.value.aiAutomation?.conflictCooldownSec,
     dedupe: settings.value.aiAutomation?.dedupeWindowSec,
+    timezone: settings.value.system?.timezone,
   }),
   () => {
-    if (!activeChat.value) {
+    if (!chatAutomationEnabled.value) {
+      clearAllAutoInvokeSchedules()
       clearAutoInvokeTimer()
       return
     }
 
-    if (!chatAutomationEnabled.value) {
-      chatStore.setConversationAutoState(activeChat.value.id, { autoNextAt: 0 })
-    }
-    scheduleActiveAutoInvoke()
+    chatStore.normalizeAutoInvokeCheckpoints(Date.now())
+    void runDueAutoInvokes()
   },
   { deep: true },
 )
@@ -1529,8 +1674,17 @@ watch(inputMessage, (text) => {
   chatStore.setConversationDraft(activeChat.value.id, text)
 })
 
+onMounted(() => {
+  chatStore.normalizeAutoInvokeCheckpoints(Date.now())
+  void runDueAutoInvokes()
+  window.addEventListener('focus', handleWindowFocus)
+  document.addEventListener('visibilitychange', handleVisibilityResume)
+})
+
 onBeforeUnmount(() => {
   // Keep in-flight AI work running so lock screen can receive completion notifications.
+  window.removeEventListener('focus', handleWindowFocus)
+  document.removeEventListener('visibilitychange', handleVisibilityResume)
   clearAutoInvokeTimer()
   systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
 })
@@ -1702,6 +1856,9 @@ onBeforeUnmount(() => {
             </p>
             <p v-if="chatAutomationEnabled && autoLastTriggeredHintText" class="text-[10px] text-gray-500">
               {{ autoLastTriggeredHintText }}
+            </p>
+            <p v-if="chatAutomationEnabled && autoRestoreSettlementHintText" class="text-[10px] text-gray-500">
+              {{ autoRestoreSettlementHintText }}
             </p>
             <p class="text-[10px] text-gray-400">
               {{ t('手动触发优先；若与自动触发接近重叠，自动调用会顺延到下一周期。', 'Manual trigger has priority. If it overlaps with auto invoke, autonomous call is deferred to next cycle.') }}

@@ -95,6 +95,10 @@ const SYSTEM_STORAGE_VERSION = 1
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
   masterEnabled: false,
+  notifyOnlyMode: false,
+  quietHoursEnabled: false,
+  quietHoursStart: '23:00',
+  quietHoursEnd: '07:00',
   conflictCooldownSec: 20,
   dedupeWindowSec: 120,
   modules: {
@@ -115,6 +119,10 @@ const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...pag
 
 const createDefaultAiAutomationSettings = () => ({
   masterEnabled: DEFAULT_AI_AUTOMATION_SETTINGS.masterEnabled,
+  notifyOnlyMode: DEFAULT_AI_AUTOMATION_SETTINGS.notifyOnlyMode,
+  quietHoursEnabled: DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursEnabled,
+  quietHoursStart: DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursStart,
+  quietHoursEnd: DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursEnd,
   conflictCooldownSec: DEFAULT_AI_AUTOMATION_SETTINGS.conflictCooldownSec,
   dedupeWindowSec: DEFAULT_AI_AUTOMATION_SETTINGS.dedupeWindowSec,
   modules: {
@@ -123,6 +131,55 @@ const createDefaultAiAutomationSettings = () => ({
     shopping: { ...DEFAULT_AI_AUTOMATION_SETTINGS.modules.shopping },
   },
 })
+
+const normalizeClockTime = (value, fallback = '00:00') => {
+  const fallbackMatch = typeof fallback === 'string' ? fallback.match(/^([01]?\d|2[0-3]):([0-5]\d)$/) : null
+  const fallbackNormalized = fallbackMatch
+    ? `${fallbackMatch[1].padStart(2, '0')}:${fallbackMatch[2]}`
+    : '00:00'
+
+  if (typeof value !== 'string') return fallbackNormalized
+  const match = value.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+  if (!match) return fallbackNormalized
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+const clockTimeToMinutes = (value, fallback = 0) => {
+  const match = typeof value === 'string' ? value.match(/^([01]\d|2[0-3]):([0-5]\d)$/) : null
+  if (!match) return fallback
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+const minuteOfDayInTimeZone = (baseAt = Date.now(), timeZone = '') => {
+  const ts = Number.isFinite(Number(baseAt)) ? Number(baseAt) : Date.now()
+  const zone = typeof timeZone === 'string' && timeZone.trim() ? timeZone.trim() : ''
+  const date = new Date(ts)
+  if (Number.isNaN(date.getTime())) return 0
+
+  const readFromParts = (parts) => {
+    const hourPart = parts.find((part) => part.type === 'hour')?.value
+    const minutePart = parts.find((part) => part.type === 'minute')?.value
+    const hour = Number(hourPart)
+    const minute = Number(minutePart)
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+    return hour * 60 + minute
+  }
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone || undefined,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+    const minutes = readFromParts(formatter.formatToParts(date))
+    if (minutes !== null) return minutes
+  } catch {
+    // Fall back to local time below.
+  }
+
+  return date.getHours() * 60 + date.getMinutes()
+}
 
 const normalizeAiAutomationSettings = (input) => {
   const source = input && typeof input === 'object' ? input : {}
@@ -151,6 +208,22 @@ const normalizeAiAutomationSettings = (input) => {
       typeof source.masterEnabled === 'boolean'
         ? source.masterEnabled
         : DEFAULT_AI_AUTOMATION_SETTINGS.masterEnabled,
+    notifyOnlyMode:
+      typeof source.notifyOnlyMode === 'boolean'
+        ? source.notifyOnlyMode
+        : DEFAULT_AI_AUTOMATION_SETTINGS.notifyOnlyMode,
+    quietHoursEnabled:
+      typeof source.quietHoursEnabled === 'boolean'
+        ? source.quietHoursEnabled
+        : DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursEnabled,
+    quietHoursStart: normalizeClockTime(
+      source.quietHoursStart,
+      DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursStart,
+    ),
+    quietHoursEnd: normalizeClockTime(
+      source.quietHoursEnd,
+      DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursEnd,
+    ),
     conflictCooldownSec: clamp(
       toInt(source.conflictCooldownSec, DEFAULT_AI_AUTOMATION_SETTINGS.conflictCooldownSec),
       5,
@@ -660,13 +733,70 @@ export const useSystemStore = defineStore('system', () => {
     return Boolean(settings.aiAutomation.masterEnabled && moduleConfig?.enabled)
   }
 
+  const isAiAutomationQuietHoursActive = (baseAt = Date.now(), options = {}) => {
+    if (!settings.aiAutomation?.quietHoursEnabled) return false
+
+    const timezone =
+      typeof options?.timezone === 'string' && options.timezone.trim()
+        ? options.timezone.trim()
+        : settings.system.timezone
+
+    const start = clockTimeToMinutes(
+      normalizeClockTime(
+        settings.aiAutomation.quietHoursStart,
+        DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursStart,
+      ),
+      0,
+    )
+    const end = clockTimeToMinutes(
+      normalizeClockTime(
+        settings.aiAutomation.quietHoursEnd,
+        DEFAULT_AI_AUTOMATION_SETTINGS.quietHoursEnd,
+      ),
+      0,
+    )
+
+    const minute = minuteOfDayInTimeZone(baseAt, timezone)
+    if (start === end) return true
+    if (start < end) return minute >= start && minute < end
+    return minute >= start || minute < end
+  }
+
+  const getAiAutomationRuntimePolicy = (moduleKey, baseAt = Date.now(), options = {}) => {
+    const moduleConfig = settings.aiAutomation.modules?.[moduleKey]
+    const masterEnabled = Boolean(settings.aiAutomation.masterEnabled)
+    const moduleEnabled = Boolean(moduleConfig?.enabled)
+    const enabled = Boolean(masterEnabled && moduleEnabled)
+    const quietHoursActive = enabled
+      ? isAiAutomationQuietHoursActive(baseAt, options)
+      : false
+    const notifyOnly = enabled
+      ? Boolean(settings.aiAutomation.notifyOnlyMode || quietHoursActive)
+      : false
+
+    return {
+      moduleKey,
+      enabled,
+      invokeEnabled: Boolean(enabled && !notifyOnly),
+      notifyOnly,
+      quietHoursActive,
+      masterEnabled,
+      moduleEnabled,
+    }
+  }
+
+  const isAiAutomationInvokeEnabledForModule = (moduleKey, baseAt = Date.now(), options = {}) => {
+    const policy = getAiAutomationRuntimePolicy(moduleKey, baseAt, options)
+    return Boolean(policy.invokeEnabled)
+  }
+
   const getAiAutomationModulePriority = (moduleKey) => {
     const moduleConfig = settings.aiAutomation.modules?.[moduleKey]
     return clamp(toInt(moduleConfig?.priority, 0), 0, 1000)
   }
 
   const tryAcquireAutoExecution = (moduleKey, reason = '') => {
-    if (!isAiAutomationEnabledForModule(moduleKey)) return false
+    if (!isAiAutomationInvokeEnabledForModule(moduleKey)) return false
 
     if (!activeAutoExecution.module) {
       activeAutoExecution.module = moduleKey
@@ -892,6 +1022,9 @@ export const useSystemStore = defineStore('system', () => {
     removeNotification,
     clearNotifications,
     isAiAutomationEnabledForModule,
+    isAiAutomationQuietHoursActive,
+    getAiAutomationRuntimePolicy,
+    isAiAutomationInvokeEnabledForModule,
     getAiAutomationModulePriority,
     tryAcquireAutoExecution,
     releaseAutoExecution,

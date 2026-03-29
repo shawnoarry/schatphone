@@ -36,6 +36,69 @@ const serviceDraft = reactive({
   bio: '',
 })
 
+const roleMetaTemplatePresets = [
+  {
+    id: 'polite_start',
+    titleCn: '礼貌初识',
+    titleEn: 'Polite Start',
+    relationshipLevel: 45,
+    relationshipNoteCn: '保持礼貌边界，慢速建立信任。',
+    relationshipNoteEn: 'Keep polite boundaries and build trust slowly.',
+  },
+  {
+    id: 'warm_daily',
+    titleCn: '日常升温',
+    titleEn: 'Warm Daily',
+    relationshipLevel: 65,
+    relationshipNoteCn: '日常互动偏主动，关注对方情绪变化。',
+    relationshipNoteEn: 'Use proactive daily interactions and track mood changes.',
+  },
+  {
+    id: 'close_bond',
+    titleCn: '高亲密关系',
+    titleEn: 'Close Bond',
+    relationshipLevel: 82,
+    relationshipNoteCn: '称呼更亲近，回应节奏更密集。',
+    relationshipNoteEn: 'Use closer addressing and denser reply rhythm.',
+  },
+]
+
+const serviceTemplatePresets = [
+  {
+    id: 'sys_notice',
+    kind: 'service',
+    nameCn: '系统通知',
+    nameEn: 'System Notice',
+    templateCn: '系统通知模板',
+    templateEn: 'System Notification Template',
+    bioCn: '用于发系统消息、状态变更和提醒。',
+    bioEn: 'For status updates and in-app reminders.',
+  },
+  {
+    id: 'task_assistant',
+    kind: 'service',
+    nameCn: '任务助手',
+    nameEn: 'Task Assistant',
+    templateCn: '任务流转模板',
+    templateEn: 'Task Flow Template',
+    bioCn: '用于派发任务、催办和结果反馈。',
+    bioEn: 'For task assignment, follow-up, and result feedback.',
+  },
+  {
+    id: 'world_feed',
+    kind: 'official',
+    nameCn: '世界动态',
+    nameEn: 'World Feed',
+    templateCn: '资讯播报模板',
+    templateEn: 'News Broadcast Template',
+    bioCn: '用于剧情动态、公共消息与活动公告。',
+    bioEn: 'For world events, public updates, and announcements.',
+  },
+]
+
+const selectedRoleTemplateId = ref(roleMetaTemplatePresets[0]?.id || '')
+const selectedServiceTemplateId = ref(serviceTemplatePresets[0]?.id || '')
+
 const roleBindings = computed(() =>
   contacts.value
     .filter((item) => (item.kind || 'role') === 'role')
@@ -440,6 +503,126 @@ const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('
 
 const serviceKindTag = (contact) =>
   contact.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')
+
+const roleTemplateLabel = (preset) => t(preset?.titleCn || '', preset?.titleEn || '')
+const roleTemplateNote = (preset) => t(preset?.relationshipNoteCn || '', preset?.relationshipNoteEn || '')
+const servicePresetName = (preset) => t(preset?.nameCn || '', preset?.nameEn || '')
+const servicePresetTemplate = (preset) => t(preset?.templateCn || '', preset?.templateEn || '')
+const servicePresetBio = (preset) => t(preset?.bioCn || '', preset?.bioEn || '')
+
+const getRoleTemplateById = (templateId) =>
+  roleMetaTemplatePresets.find((preset) => preset.id === templateId) || null
+
+const getServiceTemplateById = (templateId) =>
+  serviceTemplatePresets.find((preset) => preset.id === templateId) || null
+
+const applyRoleTemplateToDraft = (templateId = selectedRoleTemplateId.value) => {
+  const template = getRoleTemplateById(templateId)
+  if (!template) return
+  roleMetaDraft.relationshipLevel = template.relationshipLevel
+  roleMetaDraft.relationshipNote = roleTemplateNote(template)
+}
+
+const applyRoleTemplateToSelected = () => {
+  if (selectedRoleCount.value <= 0) {
+    alert(t('请先选择要套用模板的角色会话。', 'Select role chats before applying a template.'))
+    return
+  }
+  const template = getRoleTemplateById(selectedRoleTemplateId.value)
+  if (!template) {
+    alert(t('请选择关系模板。', 'Please select a relationship template.'))
+    return
+  }
+
+  const targets = filteredRoleBindings.value.filter((contact) => isContactSelected(contact.id))
+  if (targets.length === 0) {
+    alert(t('当前筛选中没有可套用模板的目标。', 'No selected targets under current filter.'))
+    return
+  }
+
+  const ok = window.confirm(
+    t(
+      `确认将模板「${roleTemplateLabel(template)}」批量应用到 ${targets.length} 个角色会话吗？`,
+      `Apply template "${roleTemplateLabel(template)}" to ${targets.length} role chats?`,
+    ),
+  )
+  if (!ok) return
+
+  let successCount = 0
+  targets.forEach((contact) => {
+    const applied = chatStore.updateRoleBindingMeta(contact.id, {
+      relationshipLevel: template.relationshipLevel,
+      relationshipNote: roleTemplateNote(template),
+    })
+    if (applied) successCount += 1
+  })
+
+  alert(
+    t(
+      `已应用模板到 ${successCount} 个角色会话。`,
+      `Applied template to ${successCount} role chats.`,
+    ),
+  )
+}
+
+const openCreateServiceFromPreset = (templateId) => {
+  const template = getServiceTemplateById(templateId)
+  if (!template) return
+
+  openCreateService(template.kind)
+  serviceDraft.name = servicePresetName(template)
+  serviceDraft.template = servicePresetTemplate(template)
+  serviceDraft.bio = servicePresetBio(template)
+}
+
+const applyServicePresetToSelected = () => {
+  if (selectedServiceCount.value <= 0) {
+    alert(t('请先选择要套用模板的服务对象。', 'Select service entries before applying a template.'))
+    return
+  }
+  const template = getServiceTemplateById(selectedServiceTemplateId.value)
+  if (!template) {
+    alert(t('请选择服务模板。', 'Please select a service template.'))
+    return
+  }
+
+  const targets = filteredServiceContacts.value.filter(
+    (contact) => isContactSelected(contact.id) && contact.kind === template.kind,
+  )
+  if (targets.length === 0) {
+    alert(
+      t(
+        '当前选择中没有与模板类型匹配的服务对象。',
+        'No selected entries match this template type.',
+      ),
+    )
+    return
+  }
+
+  const ok = window.confirm(
+    t(
+      `确认将模板「${servicePresetTemplate(template)}」批量应用到 ${targets.length} 个服务对象吗？`,
+      `Apply template "${servicePresetTemplate(template)}" to ${targets.length} service entries?`,
+    ),
+  )
+  if (!ok) return
+
+  let successCount = 0
+  targets.forEach((contact) => {
+    const applied = chatStore.updateContact(contact.id, {
+      serviceTemplate: servicePresetTemplate(template),
+      bio: servicePresetBio(template),
+    })
+    if (applied) successCount += 1
+  })
+
+  alert(
+    t(
+      `已应用模板到 ${successCount} 个服务对象。`,
+      `Applied template to ${successCount} service entries.`,
+    ),
+  )
+}
 </script>
 
 <template>
@@ -582,6 +765,27 @@ const serviceKindTag = (contact) =>
               :disabled="selectedRoleCount === 0"
             >
               {{ t('批量解绑', 'Batch Unbind') }}
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              v-model="selectedRoleTemplateId"
+              class="rounded border border-violet-200 bg-white px-2 py-1 text-[11px] text-violet-700 outline-none"
+            >
+              <option
+                v-for="preset in roleMetaTemplatePresets"
+                :key="`role-template-${preset.id}`"
+                :value="preset.id"
+              >
+                {{ roleTemplateLabel(preset) }}
+              </option>
+            </select>
+            <button
+              @click="applyRoleTemplateToSelected"
+              class="px-2.5 py-1 rounded border border-violet-200 bg-white text-violet-700 text-[11px]"
+              :disabled="selectedRoleCount === 0"
+            >
+              {{ t('批量套用模板', 'Apply Template') }}
             </button>
           </div>
         </div>
@@ -734,6 +938,57 @@ const serviceKindTag = (contact) =>
           </div>
         </div>
 
+        <div class="rounded-xl border border-emerald-100 bg-white p-3 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-emerald-700">
+              {{ t('模板预设中心', 'Template Preset Center') }}
+            </p>
+            <div class="flex flex-wrap items-center gap-2" v-if="batchMode">
+              <select
+                v-model="selectedServiceTemplateId"
+                class="rounded border border-emerald-200 bg-white px-2 py-1 text-[11px] text-emerald-700 outline-none"
+              >
+                <option
+                  v-for="preset in serviceTemplatePresets"
+                  :key="`service-template-${preset.id}`"
+                  :value="preset.id"
+                >
+                  {{ servicePresetTemplate(preset) }} · {{ preset.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service') }}
+                </option>
+              </select>
+              <button
+                @click="applyServicePresetToSelected"
+                class="px-2.5 py-1 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px]"
+                :disabled="selectedServiceCount === 0"
+              >
+                {{ t('批量套用模板', 'Apply Template') }}
+              </button>
+            </div>
+          </div>
+          <div class="grid gap-2">
+            <div
+              v-for="preset in serviceTemplatePresets"
+              :key="`service-preset-card-${preset.id}`"
+              class="rounded-lg border border-emerald-100 bg-emerald-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
+            >
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-emerald-800 truncate">
+                  {{ servicePresetName(preset) }} · {{ preset.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service') }}
+                </p>
+                <p class="text-[11px] text-emerald-700 truncate">
+                  {{ servicePresetTemplate(preset) }}
+                </p>
+              </div>
+              <button
+                @click="openCreateServiceFromPreset(preset.id)"
+                class="px-2 py-1 rounded border border-emerald-200 bg-white text-emerald-700 text-[11px]"
+              >
+                {{ t('按模板新建', 'Create from Preset') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div
           v-for="contact in filteredServiceContacts"
           :key="contact.id"
@@ -831,6 +1086,19 @@ const serviceKindTag = (contact) =>
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
           :placeholder="t('例如：最近关系升温、需要更主动互动。', 'Example: relationship improved, prefer more proactive interaction.')"
         ></textarea>
+        <div class="space-y-1">
+          <p class="text-xs text-gray-500">{{ t('快捷关系模板', 'Quick Relationship Templates') }}</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="preset in roleMetaTemplatePresets"
+              :key="`modal-role-template-${preset.id}`"
+              @click="applyRoleTemplateToDraft(preset.id)"
+              class="px-2.5 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+            >
+              {{ roleTemplateLabel(preset) }}
+            </button>
+          </div>
+        </div>
         <div class="flex justify-end gap-2">
           <button @click="closeRoleMetaModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
           <button

@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-03-16
+Updated / 更新时间: 2026-03-30
 
 ## 1. Current Conclusion / 当前结论
 
@@ -78,6 +78,8 @@ AI 输入中状态以系统态文本展示：“对方正在输入...”
 会话通讯录现已支持搜索与快速筛选标签（角色区/服务区）
 - Chat directory now supports batch mode for role/service lists (multi-select, bulk unbind/delete, filtered bulk bind).  
 会话通讯录现已支持角色/服务列表批量模式（多选、批量解绑/删除、按筛选结果批量绑定）。
+- Chat directory template preset center is completed (role-meta presets + service presets).  
+会话通讯录模板预设中心已完成（角色变量模板 + 服务模板）。
 - Service/official templates configured in-thread menu  
 服务号/公众号模板可在会话页菜单配置
 
@@ -108,8 +110,12 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ## 3. Current Gaps / 当前限制
 
-- Directory still lacks preset template center (search/filter/batch baseline completed)  
-会话通讯录仍缺模板预设中心（搜索/筛选/批量基线已完成）
+- Real-time scheduler baseline and restore-time settlement are wired into chat behavior loop (`P0-A1` + `P0-A2`)  
+现实时间调度器基线与恢复时补算已接入聊天行为闭环（`P0-A1` + `P0-A2`）
+- Restore-settlement outcomes can now be reconstructed into lock-style stacked notifications (`P0-A3` baseline).  
+恢复补算结果现可重建为锁屏风格堆叠通知（`P0-A3` 基线）。
+- Chat still lacks system-owned minimal truth fields for relationship/event continuity  
+聊天域尚未补齐关系/事件连续性的系统真值最小字段
 - Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
 跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
@@ -121,16 +127,18 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ### P0
 
-1. Autonomous control acceptance / 自主调用验收收口  
-Manual/auto overlap cases, timer strategy polish, and user-facing copy consistency.
-手动/自动重叠场景、计时策略细化与用户提示文案一致性。
-2. Structured block policy hardening / 结构化消息策略加固  
-Fallback consistency, quote safety, and rendering detail polish.
+1. `P1-1 M3` template preset center is completed (2026-03-30) / `P1-1 M3` 模板预设中心已完成（2026-03-30）  
+Chat-directory enhancement is now closed.
+会话通讯录增强已完成收口。
+2. `P0-A4` is completed: quiet-hours + notify-only + manual-priority consistency are integrated.  
+`P0-A4` 已完成：安静时段 + 仅通知 + 手动优先一致性已接入。
+3. Add minimal system truth fields for relationship/event continuity (`P0-B1`)  
+补齐关系/事件连续性所需的系统真值最小字段（`P0-B1`）。
 
 ### P1
 
-1. Directory enhancement / 通讯录增强（搜索、批量、模板库）
-2. Input UX / 输入体验（多行、发送策略、草稿提示）
+1. Structured block policy hardening (`P1-2`) / 结构化消息策略加固（`P1-2`）
+2. Settings and chat-adjacent UX consistency (`P1-3`) / 设置与聊天周边体验一致性（`P1-3`）
 3. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
 
 ## 5. Exit Criteria for Next Stage / 阶段验收标准

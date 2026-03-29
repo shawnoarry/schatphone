@@ -1,6 +1,6 @@
 # SchatPhone Task Execution Plan / 任务执行清单
 
-Updated / 更新时间: 2026-03-16
+Updated / 更新时间: 2026-03-30
 
 Purpose / 用途: turn the current roadmap into an execution-ready checklist for implementation, validation, and documentation sync.  
 将当前路线图落成可直接执行的清单，用于开发、验收与文档同步。
@@ -24,6 +24,12 @@ Purpose / 用途: turn the current roadmap into an execution-ready checklist for
 4. If behavior logic changes, also run:  
 涉及行为逻辑改动时补跑：
 - `npm run test`
+5. Mainline alignment rule: roadmap decisions must stay aligned with:  
+主线对齐规则：路线决策必须与以下文档保持一致：
+- `IMMERSIVE_PHONE_MASTER_BLUEPRINT.md`
+- `BACKGROUND_ACTIVITY_STRATEGY.md`
+- `STATE_OWNERSHIP_STRATEGY.md`
+- `STORAGE_STRATEGY.md`
 
 ---
 
@@ -193,11 +199,18 @@ Settings 导入流程已加入导入前快照与失败回滚机制。
 
 ---
 
-## 3. P1 (After P0) / P1（P0 完成后）
+## 3. Active Mainline (2026-03-30) / 当前主线（2026-03-30）
+
+### P0-7 Mainline Unification / 主线统一收口
+
+- Status / 状态: `DONE`
+- Goal / 目标:
+- Align execution checklist with immersive real-time direction and keep docs in one coherent route.  
+将执行清单与“现实时间驱动沉浸方向”统一，保持文档路线一致。
 
 ### P1-1 Chat Directory Enhancements / 会话通讯录增强（搜索/批量/模板）
 
-- Status / 状态: `IN_PROGRESS`
+- Status / 状态: `DONE`
 - Goal / 目标:
 - Add search, batch operations, and preset templates in chat directory.  
 在会话通讯录增加搜索、批量操作与模板预设。
@@ -207,8 +220,43 @@ M1（搜索 + 快速筛选）已于 2026-03-16 完成。
 - M2 (batch mode + bulk unbind/delete + filtered batch bind) completed on 2026-03-16.  
 M2（批量模式 + 批量解绑/删除 + 按筛选结果批量绑定）已于 2026-03-16 完成。
 - Remaining / 剩余:
-- M3 template presets.  
-M3 模板预设。
+- None. M3 template presets completed on 2026-03-30.  
+无。M3 模板预设已于 2026-03-30 完成。
+
+### P0-A1 Real-Time Scheduler Baseline / 现实时间调度器基线
+
+- Status / 状态: `DONE` (2026-03-30)
+- Goal / 目标:
+- Build time-driven trigger checkpoints for autonomous actions based on real system time.  
+基于真实系统时间建立自主触发检查点机制。
+
+### P0-A2 Restore-Time Settlement / 恢复时补算
+
+- Status / 状态: `DONE` (2026-03-30)
+- Goal / 目标:
+- Compute elapsed-time consequences when returning from inactivity.  
+在应用从不活跃状态恢复时完成离线期间事件补算。
+
+### P0-A3 Notification Reconstruction / 通知重建与堆叠
+
+- Status / 状态: `DONE` (2026-03-30)
+- Goal / 目标:
+- Reconstruct pending events into lock-screen style notifications with timeline order.  
+将补算出的待发生事项重建为带时间顺序的锁屏通知队列。
+
+### P0-A4 Autonomous Control Refinement / 自主调用控制细化
+
+- Status / 状态: `DONE` (2026-03-30)
+- Goal / 目标:
+- Finish user-facing control policy: interval/quiet-hours/notify-only/manual-priority consistency.  
+完成用户可感知控制策略：间隔、安静时段、仅通知、手动优先一致性。
+
+### P0-B1 State Truth Minimal Layer / 系统真值最小层
+
+- Status / 状态: `TODO`
+- Goal / 目标:
+- Introduce minimal system-owned truth fields for relationship/event/time continuity across providers.  
+补齐关系/事件/时间连续性的系统真值最小字段，确保跨供应商稳定。
 
 ### P1-2 Structured Block Policy Hardening / 结构化消息策略加固
 
@@ -224,14 +272,25 @@ M3 模板预设。
 - Improve grouping clarity and save-feedback consistency in settings flows.  
 提升设置流程分组清晰度和保存反馈一致性。
 
+### P1-4 Storage Layering Preparation / 分层存储迁移准备
+
+- Status / 状态: `TODO`
+- Goal / 目标:
+- Prepare migration path from localStorage-heavy records to IndexedDB-first long-term storage.  
+准备从 localStorage 偏重存储向 IndexedDB 主存档层迁移的路径。
+
 ---
 
 ## 4. Recommended Sequence / 推荐执行顺序
 
-1. Week 1+: `P1-1`  
-第 1 周起：`P1-1`
-2. Week 2+: `P1-2` -> `P1-3`  
-第 2 周起：`P1-2` -> `P1-3`
+1. Immediate: `P0-B1`.  
+立即：`P0-B1`。
+2. Then: `P0-B1`.  
+再做：`P0-B1`。
+3. Then: `P1-2 -> P1-3`.  
+之后：`P1-2 -> P1-3`。
+4. Finally: `P1-4`.  
+最后：`P1-4`。
 
 ---
 
@@ -246,6 +305,13 @@ M3 模板预设。
 | P0-4 | Codex | 2026-03-15 | 2026-03-15 | DONE | Manual-priority guard + report center UX and validation completed |
 | P0-5 | Codex | 2026-03-15 | 2026-03-15 | DONE | Widget import schema + rollback-safe transactional pipeline |
 | P0-6 | Codex | 2026-03-16 | 2026-03-16 | DONE | Backup restore import + rollback safety + legacy/new chat compatibility |
-| P1-1 | Codex | 2026-03-16 |  | IN_PROGRESS | M1+M2 done; M3 templates pending |
+| P0-7 | Codex | 2026-03-30 | 2026-03-30 | DONE | Mainline docs aligned with immersive real-time blueprint |
+| P1-1 | Codex | 2026-03-16 | 2026-03-30 | DONE | M1+M2+M3 completed |
+| P0-A1 | Codex | 2026-03-30 | 2026-03-30 | DONE | Global real-time chat scheduler baseline + focus/visibility resume checks |
+| P0-A2 | Codex | 2026-03-30 | 2026-03-30 | DONE | Resume-time elapsed settlement integrated into chat loop |
+| P0-A3 | Codex | 2026-03-30 | 2026-03-30 | DONE | Resume settlements now reconstruct lock-style stacked notifications |
+| P0-A4 | Codex | 2026-03-30 | 2026-03-30 | DONE | Quiet-hours + notify-only policy integrated across settings and chat runtime |
+| P0-B1 | Codex |  |  | TODO | System-owned truth minimal layer |
 | P1-2 | TBD |  |  | TODO | Structured block hardening |
 | P1-3 | TBD |  |  | TODO | Settings UX consistency |
+| P1-4 | TBD |  |  | TODO | Storage layering preparation (`localStorage` -> `IndexedDB`) |

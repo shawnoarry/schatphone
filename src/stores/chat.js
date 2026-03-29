@@ -421,6 +421,16 @@ const normalizeConversation = (rawConversation, contactId) => {
       typeof rawConversation?.autoLastFingerprint === 'string'
         ? rawConversation.autoLastFingerprint
         : '',
+    autoLastSettledAt:
+      typeof rawConversation?.autoLastSettledAt === 'number' &&
+      Number.isFinite(rawConversation.autoLastSettledAt)
+        ? Math.max(0, Math.floor(rawConversation.autoLastSettledAt))
+        : 0,
+    autoLastSettledMissedCycles:
+      typeof rawConversation?.autoLastSettledMissedCycles === 'number' &&
+      Number.isFinite(rawConversation.autoLastSettledMissedCycles)
+        ? Math.max(0, Math.floor(rawConversation.autoLastSettledMissedCycles))
+        : 0,
     lastMessage: typeof rawConversation?.lastMessage === 'string' ? rawConversation.lastMessage : '',
     lastMessageAt:
       typeof rawConversation?.lastMessageAt === 'number' && Number.isFinite(rawConversation.lastMessageAt)
@@ -552,6 +562,7 @@ export const useChatStore = defineStore('chat', () => {
     })
     if (!conversation.aiPrefs.autoInvokeEnabled) {
       conversation.autoNextAt = 0
+      conversation.autoLastSettledMissedCycles = 0
     }
     conversation.updatedAt = nowTs()
   }
@@ -575,6 +586,18 @@ export const useChatStore = defineStore('chat', () => {
         typeof input.autoLastFingerprint === 'string' ? input.autoLastFingerprint : ''
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'autoLastSettledAt')) {
+      const value = Number(input.autoLastSettledAt)
+      conversation.autoLastSettledAt = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoLastSettledMissedCycles')) {
+      const value = Number(input.autoLastSettledMissedCycles)
+      conversation.autoLastSettledMissedCycles = Number.isFinite(value)
+        ? Math.max(0, Math.floor(value))
+        : 0
+    }
+
     conversation.updatedAt = nowTs()
   }
 
@@ -588,8 +611,180 @@ export const useChatStore = defineStore('chat', () => {
     )
     const normalizedBaseAt = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : nowTs()
     conversation.autoNextAt = normalizedBaseAt + normalizedIntervalSec * 1000
+    conversation.autoLastSettledMissedCycles = 0
     conversation.updatedAt = nowTs()
     return conversation.autoNextAt
+  }
+
+  const listAutoInvokeContactIds = () => {
+    return contacts
+      .map((contact) => Number(contact.id))
+      .filter((contactId) => Number.isFinite(contactId) && contactId > 0)
+      .filter((contactId) => {
+        const conversation = getConversationByContactId(contactId)
+        const prefs = normalizeConversationAiPrefs(conversation.aiPrefs)
+        return Boolean(prefs.autoInvokeEnabled)
+      })
+  }
+
+  const normalizeAutoInvokeCheckpoints = (baseAt = nowTs()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : nowTs()
+    let touched = 0
+
+    contacts.forEach((contact) => {
+      const contactId = Number(contact.id)
+      if (!Number.isFinite(contactId) || contactId <= 0) return
+
+      const conversation = getConversationByContactId(contactId)
+      const prefs = normalizeConversationAiPrefs(conversation.aiPrefs)
+      if (!prefs.autoInvokeEnabled) {
+        let touchedLocal = false
+        if (conversation.autoNextAt !== 0) {
+          conversation.autoNextAt = 0
+          touchedLocal = true
+        }
+        if (conversation.autoLastSettledMissedCycles !== 0) {
+          conversation.autoLastSettledMissedCycles = 0
+          touchedLocal = true
+        }
+        if (touchedLocal) {
+          conversation.updatedAt = nowTs()
+          touched += 1
+        }
+        return
+      }
+
+      const intervalMs = clamp(
+        toInt(prefs.autoInvokeIntervalSec, DEFAULT_CONVERSATION_AI_PREFS.autoInvokeIntervalSec),
+        MIN_AUTO_INVOKE_INTERVAL_SEC,
+        MAX_AUTO_INVOKE_INTERVAL_SEC,
+      ) * 1000
+      const staleThreshold = now - intervalMs * 2
+      const anchor = Math.max(
+        now,
+        Number.isFinite(Number(conversation.lastMessageAt)) ? Number(conversation.lastMessageAt) : 0,
+        Number.isFinite(Number(conversation.autoLastTriggeredAt))
+          ? Number(conversation.autoLastTriggeredAt)
+          : 0,
+      )
+
+      if (!conversation.autoNextAt || conversation.autoNextAt < staleThreshold) {
+        conversation.autoNextAt = anchor + intervalMs
+        conversation.updatedAt = nowTs()
+        touched += 1
+      }
+    })
+
+    return touched
+  }
+
+  const settleAutoInvokeOnResume = (baseAt = nowTs(), options = {}) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : nowTs()
+    const maxRecordedMissedCycles = clamp(
+      toInt(options.maxRecordedMissedCycles, 99),
+      1,
+      999,
+    )
+    const settled = []
+
+    contacts.forEach((contact) => {
+      const contactId = Number(contact.id)
+      if (!Number.isFinite(contactId) || contactId <= 0) return
+
+      const conversation = getConversationByContactId(contactId)
+      const prefs = normalizeConversationAiPrefs(conversation.aiPrefs)
+      if (!prefs.autoInvokeEnabled) {
+        let touchedLocal = false
+        if (conversation.autoNextAt !== 0) {
+          conversation.autoNextAt = 0
+          touchedLocal = true
+        }
+        if (conversation.autoLastSettledMissedCycles !== 0) {
+          conversation.autoLastSettledMissedCycles = 0
+          touchedLocal = true
+        }
+        if (touchedLocal) {
+          conversation.updatedAt = nowTs()
+        }
+        return
+      }
+
+      const intervalMs = clamp(
+        toInt(prefs.autoInvokeIntervalSec, DEFAULT_CONVERSATION_AI_PREFS.autoInvokeIntervalSec),
+        MIN_AUTO_INVOKE_INTERVAL_SEC,
+        MAX_AUTO_INVOKE_INTERVAL_SEC,
+      ) * 1000
+
+      const fallbackAnchor = Math.max(
+        now,
+        Number.isFinite(Number(conversation.lastMessageAt)) ? Number(conversation.lastMessageAt) : 0,
+        Number.isFinite(Number(conversation.autoLastTriggeredAt))
+          ? Number(conversation.autoLastTriggeredAt)
+          : 0,
+      )
+
+      if (!conversation.autoNextAt || !Number.isFinite(Number(conversation.autoNextAt))) {
+        conversation.autoNextAt = fallbackAnchor + intervalMs
+        conversation.autoLastSettledMissedCycles = 0
+        conversation.updatedAt = nowTs()
+        return
+      }
+
+      const dueAt = Math.max(0, Math.floor(Number(conversation.autoNextAt)))
+      if (dueAt > now) {
+        if (conversation.autoLastSettledMissedCycles !== 0) {
+          conversation.autoLastSettledMissedCycles = 0
+          conversation.updatedAt = nowTs()
+        }
+        return
+      }
+
+      const overdueMs = Math.max(0, now - dueAt)
+      const missedCyclesRaw = Math.floor(overdueMs / intervalMs) + 1
+      const missedCycles = clamp(missedCyclesRaw, 1, maxRecordedMissedCycles)
+
+      conversation.autoNextAt = now
+      conversation.autoLastSettledAt = now
+      conversation.autoLastSettledMissedCycles = missedCycles
+      conversation.updatedAt = nowTs()
+
+      settled.push({
+        contactId,
+        dueAt,
+        settledAt: now,
+        overdueMs,
+        missedCycles,
+        intervalMs,
+      })
+    })
+
+    return settled.sort((a, b) => a.dueAt - b.dueAt)
+  }
+
+  const getDueAutoInvokeContactIds = (baseAt = nowTs()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : nowTs()
+    return listAutoInvokeContactIds()
+      .filter((contactId) => {
+        const conversation = getConversationByContactId(contactId)
+        return Number.isFinite(Number(conversation.autoNextAt)) && conversation.autoNextAt > 0 && conversation.autoNextAt <= now
+      })
+      .sort((leftId, rightId) => {
+        const leftAt = getConversationByContactId(leftId).autoNextAt || 0
+        const rightAt = getConversationByContactId(rightId).autoNextAt || 0
+        return leftAt - rightAt
+      })
+  }
+
+  const getNextAutoInvokeAt = () => {
+    const nextValues = listAutoInvokeContactIds()
+      .map((contactId) => {
+        const conversation = getConversationByContactId(contactId)
+        return Number.isFinite(Number(conversation.autoNextAt)) ? conversation.autoNextAt : 0
+      })
+      .filter((value) => value > 0)
+
+    if (nextValues.length === 0) return 0
+    return Math.min(...nextValues)
   }
 
   const markConversationProactiveOpened = (contactId, openedAt = nowTs()) => {
@@ -1152,6 +1347,11 @@ export const useChatStore = defineStore('chat', () => {
     setConversationAiPrefs,
     setConversationAutoState,
     scheduleConversationAutoInvoke,
+    listAutoInvokeContactIds,
+    normalizeAutoInvokeCheckpoints,
+    settleAutoInvokeOnResume,
+    getDueAutoInvokeContactIds,
+    getNextAutoInvokeAt,
     markConversationProactiveOpened,
     resetConversationProactiveOpened,
     markConversationRead,

@@ -1,6 +1,6 @@
 ﻿# SchatPhone 同步快照
 
-Updated / 更新时间: 2026-03-16
+Updated / 更新时间: 2026-03-30
 
 ## Purpose / 用途
 
@@ -13,8 +13,8 @@ Detailed changes must be updated in source docs first, then reflected here.
 
 ## One-Line Summary / 当前版本一句话
 
-SchatPhone is a Vue 3 + Vite + Pinia mobile shell with lock-screen immersion and AI social-chat simulation; core flows are stable and the system-language UI baseline is completed.  
-SchatPhone 是基于 Vue 3 + Vite + Pinia 的移动端壳层 + AI 模拟社交聊天项目，已具备锁屏沉浸主链路，系统语言 UI 收口基线已完成。
+SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement are integrated, and focus now shifts to lock-screen notification reconstruction and system-owned truth continuity.  
+SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器与恢复补算已接入，当前重点转向锁屏通知重建与系统真值连续性。
 
 ## Stack Snapshot / 技术栈快照
 
@@ -99,6 +99,8 @@ Settings 备份恢复（JSON）已支持失败回滚，并兼容旧版/新版聊
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
-1. Autonomous-control acceptance pass / 自主调用验收收口（手动优先、重叠冲突、文案一致性）
-2. Widget import policy tuning / Widget 导入策略调优（严格度、阈值、反馈文案）
-3. Structured block policy hardening / 结构化消息策略加固（回退一致性、引用安全）
+1. `P1-1 M3` template preset center is completed (2026-03-30) / `P1-1 M3` 模板预设中心已于 2026-03-30 完成
+2. `P0-A3` baseline completed: restore settlements reconstruct into lock-style stacked notifications / `P0-A3` 基线已完成：恢复补算可重建为锁屏堆叠通知
+3. `P0-A4` completed: quiet-hours + notify-only + manual-priority policy baseline / `P0-A4` 已完成：安静时段 + 仅通知 + 手动优先策略基线
+4. Add system-owned truth minimal layer (`P0-B1`) / 补齐系统真值最小层（`P0-B1`）
+5. Continue structured block hardening (`P1-2`) / 持续推进结构化消息策略加固（`P1-2`）
