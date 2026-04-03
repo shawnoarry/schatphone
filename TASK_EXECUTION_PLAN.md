@@ -1,6 +1,6 @@
 # SchatPhone Task Execution Plan / 任务执行清单
 
-Updated / 更新时间: 2026-03-30
+Updated / 更新时间: 2026-04-04
 
 Purpose / 用途: turn the current roadmap into an execution-ready checklist for implementation, validation, and documentation sync.  
 将当前路线图落成可直接执行的清单，用于开发、验收与文档同步。
@@ -253,24 +253,49 @@ M2（批量模式 + 批量解绑/删除 + 按筛选结果批量绑定）已于 2
 
 ### P0-B1 State Truth Minimal Layer / 系统真值最小层
 
-- Status / 状态: `TODO`
+- Status / 状态: `DONE` (2026-04-03)
 - Goal / 目标:
 - Introduce minimal system-owned truth fields for relationship/event/time continuity across providers.  
 补齐关系/事件/时间连续性的系统真值最小字段，确保跨供应商稳定。
+- Implemented scope / 已实现范围:
+- Added system-owned truth state in `system` store (`truthState.chatEntities/chatEvents`) with normalized metrics and stage derivation.  
+在 `system` store 中新增系统真值层（`truthState.chatEntities/chatEvents`），包含指标归一化与关系阶段推导。
+- Chat runtime now records truth events for user message, manual/auto trigger, assistant reply, reroll, notify-only skip, and resume settlement.  
+Chat 运行态已接入真值事件记录：用户发言、手动/自动触发、助手回复、重roll、仅通知跳过、恢复补算。
+- Truth snapshot is injected into prompt context and included in backup export/restore path.  
+真值快照已接入提示词上下文，并纳入备份导出/恢复链路。
+- Added dedicated tests: `tests/system-truth.test.js`.  
+已新增专项测试：`tests/system-truth.test.js`。
 
 ### P1-2 Structured Block Policy Hardening / 结构化消息策略加固
 
-- Status / 状态: `TODO`
+- Status / 状态: `IN_PROGRESS` (started 2026-04-03)
 - Goal / 目标:
 - Harden block fallback consistency, quote safety, and mixed-content readability.  
 加强块级回退一致性、引用安全、混合内容可读性。
+- Implemented in current batch / 当前批次已实现:
+- Chat/store block normalization now applies route/url safety and content-length guards.  
+Chat/store 的 block 归一化已接入 route/url 安全校验与文本长度上限。
+- Quote safety now prefers real context candidates and downgrades invalid quote replies to plain.  
+引用安全已改为优先绑定真实上下文候选，非法引用会降级为普通回复。
+- Markdown rendering now uses HTML sanitization before `v-html` mount.  
+Markdown 渲染已在 `v-html` 挂载前进行 HTML 清洗。
+- Added regression tests for block hardening and assistant fallback behavior.  
+已补充 block 加固与助手回退行为的回归测试。
 
 ### P1-3 Settings UX Refinement / 设置体验优化（分组与反馈一致性）
 
-- Status / 状态: `TODO`
+- Status / 状态: `IN_PROGRESS` (started 2026-04-04)
 - Goal / 目标:
 - Improve grouping clarity and save-feedback consistency in settings flows.  
 提升设置流程分组清晰度和保存反馈一致性。
+- Implemented in current batch / 当前批次已实现:
+- Added beginner tip and quick-access shortcuts in settings root page (Network/Chat settings/Appearance).  
+设置首页新增新手提示与快捷入口（网络、会话设置、外观工坊）。
+- Added per-item subtitles to reduce ambiguity for non-technical users.  
+为核心设置项补充说明副标题，降低新手理解成本。
+- Report center cards now include issue type, suggested fix, and one-click copy payload for support/debug handoff.  
+调用/报错中心新增“问题类型 + 建议处理 + 一键复制报告”，便于排查与反馈。
 
 ### P1-4 Storage Layering Preparation / 分层存储迁移准备
 
@@ -283,13 +308,11 @@ M2（批量模式 + 批量解绑/删除 + 按筛选结果批量绑定）已于 2
 
 ## 4. Recommended Sequence / 推荐执行顺序
 
-1. Immediate: `P0-B1`.  
-立即：`P0-B1`。
-2. Then: `P0-B1`.  
-再做：`P0-B1`。
-3. Then: `P1-2 -> P1-3`.  
-之后：`P1-2 -> P1-3`。
-4. Finally: `P1-4`.  
+1. Immediate: `P1-2`.  
+立即：`P1-2`。
+2. Then: `P1-3`.  
+再做：`P1-3`。
+3. Finally: `P1-4`.  
 最后：`P1-4`。
 
 ---
@@ -311,7 +334,7 @@ M2（批量模式 + 批量解绑/删除 + 按筛选结果批量绑定）已于 2
 | P0-A2 | Codex | 2026-03-30 | 2026-03-30 | DONE | Resume-time elapsed settlement integrated into chat loop |
 | P0-A3 | Codex | 2026-03-30 | 2026-03-30 | DONE | Resume settlements now reconstruct lock-style stacked notifications |
 | P0-A4 | Codex | 2026-03-30 | 2026-03-30 | DONE | Quiet-hours + notify-only policy integrated across settings and chat runtime |
-| P0-B1 | Codex |  |  | TODO | System-owned truth minimal layer |
-| P1-2 | TBD |  |  | TODO | Structured block hardening |
-| P1-3 | TBD |  |  | TODO | Settings UX consistency |
+| P0-B1 | Codex | 2026-04-03 | 2026-04-03 | DONE | System-owned truth state layer integrated (store + chat runtime + prompt + backup + tests) |
+| P1-2 | Codex | 2026-04-03 |  | IN_PROGRESS | Batch-1 landed: block/url sanitization + quote candidate safety + markdown sanitize |
+| P1-3 | Codex | 2026-04-04 |  | IN_PROGRESS | Batch-1 landed: beginner guidance + quick access + report readability/copy |
 | P1-4 | TBD |  |  | TODO | Storage layering preparation (`localStorage` -> `IndexedDB`) |

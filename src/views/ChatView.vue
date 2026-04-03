@@ -61,6 +61,11 @@ const AI_REPLY_FALLBACK_TEXT = Object.freeze({
   imageAlt: '图片消息',
   sceneTitle: '小剧场',
 })
+const MAX_ASSISTANT_TEXT_CHARS = 3000
+const MAX_ASSISTANT_DETAIL_CHARS = 800
+const MAX_ASSISTANT_LABEL_CHARS = 80
+const MAX_ASSISTANT_BLOCKS = 12
+const MAX_ASSISTANT_QUOTE_PREVIEW_CHARS = 240
 
 const STATUS_OPTIONS = computed(() => [
   { id: 'idle', label: t('空闲', 'Idle'), hint: t('可联系', 'Available'), dotClass: 'chat-status-dot-idle' },
@@ -304,6 +309,40 @@ const normalizeProactiveStrategy = (value) =>
     ? value
     : DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy
 
+const trimAssistantText = (value, maxLength, fallback = '') => {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (!text) return fallback
+  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) return text
+  return text.length <= maxLength ? text : text.slice(0, maxLength)
+}
+
+const trimAssistantSingleLine = (value, maxLength, fallback = '') =>
+  trimAssistantText(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
+
+const sanitizeAssistantRoute = (value, fallback = '/home') => {
+  const route = trimAssistantText(value, 200)
+  if (!route) return fallback
+  if (!route.startsWith('/') || route.startsWith('//')) return fallback
+  if (/\s/.test(route)) return fallback
+  return SAFE_MODULE_ROUTES.has(route) ? route : fallback
+}
+
+const sanitizeAssistantImageUrl = (value) => {
+  const url = trimAssistantText(value, 500)
+  if (!url) return ''
+  if (url.startsWith('/')) return url
+  if (/^https?:\/\//i.test(url)) return url
+  return ''
+}
+
+const sanitizeAssistantHtmlSnippet = (value) => {
+  const snippet = trimAssistantText(value, 4000)
+  if (!snippet) return ''
+  return snippet
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+}
+
 const stripCodeFence = (text) => (text || '').replace(/```json/gi, '').replace(/```/g, '').trim()
 
 const scrollToBottom = () => {
@@ -316,6 +355,8 @@ const scrollToBottom = () => {
 
 const goHome = () => router.push('/home')
 const leaveChat = () => router.push('/chat')
+const contactById = (contactId) =>
+  contactsForList.value.find((item) => item.id === Number(contactId)) || null
 
 const enterChat = (contact) => {
   chatStore.ensureConversationForContact(contact.id)
@@ -339,6 +380,50 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
   threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
   threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
+}
+
+const formatTruthTimestampForPrompt = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return 'none'
+  return new Date(ts).toISOString()
+}
+
+const summarizeTruthEventsForPrompt = (events = []) => {
+  if (!Array.isArray(events) || events.length === 0) return 'none'
+  return events
+    .slice(0, 4)
+    .map((event) => {
+      const at = formatTruthTimestampForPrompt(event?.at)
+      const action = typeof event?.action === 'string' ? event.action : 'interaction'
+      if (action === 'resume_settlement') {
+        const cycles = Number(event?.payload?.missedCycles)
+        const count = Number.isFinite(cycles) ? Math.max(1, Math.floor(cycles)) : 1
+        return `${at}: resume_settlement(${count})`
+      }
+      if (action === 'notify_only_skip') return `${at}: notify_only_skip`
+      if (action === 'assistant_reply') return `${at}: assistant_reply`
+      if (action === 'user_message') return `${at}: user_message`
+      return `${at}: ${action}`
+    })
+    .join('; ')
+}
+
+const buildTruthPromptBlock = (contact) => {
+  const snapshot = systemStore.getChatTruthSnapshot(contact, { eventLimit: 4 })
+  if (!snapshot) return 'Relationship truth: unavailable.'
+
+  const relationship = snapshot.relationship || {}
+  const counters = snapshot.counters || {}
+  const timestamps = snapshot.timestamps || {}
+  const eventsSummary = summarizeTruthEventsForPrompt(snapshot.recentEvents || [])
+
+  return [
+    `Relationship truth stage: ${relationship.stage || 'neutral'}.`,
+    `Metrics affinity/trust/distance/dependency/tension: ${relationship.affinity ?? 50}/${relationship.trust ?? 50}/${relationship.distance ?? 50}/${relationship.dependency ?? 20}/${relationship.tension ?? 10}.`,
+    `Counters user/assistant/manual/auto/reroll/notifyOnly/resumeSettle: ${counters.userMessageCount ?? 0}/${counters.assistantMessageCount ?? 0}/${counters.manualTriggerCount ?? 0}/${counters.autoTriggerCount ?? 0}/${counters.rerollCount ?? 0}/${counters.notifyOnlySkipCount ?? 0}/${counters.resumeSettlementCount ?? 0}.`,
+    `Last interaction/user/assistant/warm/conflict: ${formatTruthTimestampForPrompt(timestamps.lastInteractionAt)}/${formatTruthTimestampForPrompt(timestamps.lastUserMessageAt)}/${formatTruthTimestampForPrompt(timestamps.lastAssistantMessageAt)}/${formatTruthTimestampForPrompt(timestamps.lastWarmMomentAt)}/${formatTruthTimestampForPrompt(timestamps.lastConflictAt)}.`,
+    `Recent truth events: ${eventsSummary}.`,
+  ].join('\n')
 }
 
 const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
@@ -370,6 +455,7 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const proactiveInstruction = options.isProactive
     ? 'This is a proactive opener scene. Start naturally and do not mention trigger mechanics.'
     : 'This is a normal reply scene. Respond based on context naturally.'
+  const truthInstruction = buildTruthPromptBlock(contact)
 
   return `
 Worldbook: ${user.value.worldBook}
@@ -380,6 +466,7 @@ ${serviceInstruction}
 Response style: ${responseStyle}
 Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
+${truthInstruction}
 Stay in character and never claim you are an AI model.
 
 You MUST return valid JSON object and never use markdown wrappers.
@@ -453,12 +540,21 @@ const truncateMessagePreview = (text, maxLength = 72) => {
   return `${normalized.slice(0, maxLength)}...`
 }
 
-const toAiMessages = (contactId, untilMessageId = '', options = {}) => {
+const getContextSourceMessages = (contactId, options = {}) => {
   const allMessages = chatStore.getMessagesByContactId(contactId)
   const result = []
+  const untilMessageId =
+    typeof options.untilMessageId === 'string' && options.untilMessageId.trim()
+      ? options.untilMessageId
+      : ''
+  const beforeMessageId =
+    typeof options.beforeMessageId === 'string' && options.beforeMessageId.trim()
+      ? options.beforeMessageId
+      : ''
 
   for (const item of allMessages) {
-    result.push({ role: item.role, content: extractMessageTextForContext(item) })
+    if (beforeMessageId && item.id === beforeMessageId) break
+    result.push(item)
     if (untilMessageId && item.id === untilMessageId) break
   }
 
@@ -467,19 +563,24 @@ const toAiMessages = (contactId, untilMessageId = '', options = {}) => {
   return result.slice(-messageLimit)
 }
 
-const toAiMessagesBeforeMessage = (contactId, targetMessageId, options = {}) => {
-  const allMessages = chatStore.getMessagesByContactId(contactId)
-  const result = []
+const toQuoteCandidates = (messages = []) =>
+  messages
+    .filter((item) => item?.role === 'user' || item?.role === 'assistant')
+    .map((item) => ({
+      id: item.id,
+      role: item.role,
+      preview: truncateMessagePreview(messagePrimaryText(item), MAX_ASSISTANT_QUOTE_PREVIEW_CHARS),
+    }))
+    .filter((item) => item.id && item.preview)
 
-  for (const item of allMessages) {
-    if (item.id === targetMessageId) break
-    result.push({ role: item.role, content: extractMessageTextForContext(item) })
-  }
-
-  const contextTurns = clampContextTurns(options.contextTurns ?? DEFAULT_THREAD_AI_PREFS.contextTurns)
-  const messageLimit = Math.max(6, contextTurns * 2)
-  return result.slice(-messageLimit)
-}
+const toAiMessages = (contactId, untilMessageId = '', options = {}) =>
+  getContextSourceMessages(contactId, {
+    untilMessageId,
+    contextTurns: options.contextTurns,
+  }).map((item) => ({
+    role: item.role,
+    content: extractMessageTextForContext(item),
+  }))
 
 const clearAutoInvokeTimer = () => {
   if (!autoInvokeTimerId) return
@@ -568,6 +669,12 @@ const maybeRunAutoInvokeForContact = async (contactId) => {
   }
 
   if (runtimePolicy.notifyOnly) {
+    const contact = contactById(contactId)
+    if (contact) {
+      systemStore.touchChatTruth(contact, 'notify_only_skip', {
+        source: runtimePolicy.quietHoursActive ? 'quiet_hours' : 'notify_only_mode',
+      })
+    }
     pushNotifyOnlyAutoInvokeNotification(contactId, runtimePolicy, now)
     resetConversationAutoNextAt(contactId, now)
     chatStore.setConversationAutoState(contactId, {
@@ -654,7 +761,7 @@ const clearAllAutoInvokeSchedules = () => {
 }
 
 const contactNameById = (contactId) => {
-  const contact = contactsForList.value.find((item) => item.id === contactId)
+  const contact = contactById(contactId)
   return contact?.name || t('新消息', 'New Message')
 }
 
@@ -694,6 +801,12 @@ const pushRestoreSettlementNotifications = (settledItems = []) => {
     const total = Number.isFinite(Number(item?.missedCycles))
       ? Math.max(1, Math.floor(Number(item.missedCycles)))
       : 1
+    const truthContact = contactById(contactId)
+    if (truthContact) {
+      systemStore.touchChatTruth(truthContact, 'resume_settlement', {
+        missedCycles: total,
+      })
+    }
     const replayCount = Math.min(total, MAX_RESTORE_NOTIFICATIONS_PER_CONTACT)
     const intervalMs = Number.isFinite(Number(item?.intervalMs))
       ? Math.max(1000, Math.floor(Number(item.intervalMs)))
@@ -747,10 +860,10 @@ const normalizeAssistantReplyType = (replyType, aiPrefs) => {
 
 const normalizeAssistantQuote = (rawQuote) => {
   if (!rawQuote || typeof rawQuote !== 'object') return null
-  const preview = typeof rawQuote.preview === 'string' ? rawQuote.preview.trim() : ''
+  const preview = trimAssistantText(rawQuote.preview, MAX_ASSISTANT_QUOTE_PREVIEW_CHARS)
   if (!preview) return null
   return {
-    messageId: typeof rawQuote.messageId === 'string' ? rawQuote.messageId : '',
+    messageId: trimAssistantText(rawQuote.messageId, 128),
     role: rawQuote.role === 'assistant' ? 'assistant' : 'user',
     preview,
   }
@@ -761,8 +874,8 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   const blockType = typeof rawBlock.type === 'string' ? rawBlock.type : 'text'
 
   if (blockType === 'text') {
-    const text = typeof rawBlock.text === 'string' ? rawBlock.text : ''
-    if (!text.trim()) return null
+    const text = trimAssistantText(rawBlock.text, MAX_ASSISTANT_TEXT_CHARS)
+    if (!text) return null
     return {
       type: 'text',
       text,
@@ -775,11 +888,12 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
     if (!aiPrefs?.virtualVoiceEnabled) return null
     return {
       type: 'voice_virtual',
-      label:
-        typeof rawBlock.label === 'string' && rawBlock.label.trim()
-          ? rawBlock.label.trim()
-          : AI_REPLY_FALLBACK_TEXT.voiceLabel,
-      transcript: typeof rawBlock.transcript === 'string' ? rawBlock.transcript : '',
+      label: trimAssistantSingleLine(
+        rawBlock.label,
+        MAX_ASSISTANT_LABEL_CHARS,
+        AI_REPLY_FALLBACK_TEXT.voiceLabel,
+      ),
+      transcript: trimAssistantText(rawBlock.transcript, MAX_ASSISTANT_DETAIL_CHARS),
       durationSec: Number.isFinite(Number(rawBlock.durationSec)) ? Math.max(1, Math.floor(Number(rawBlock.durationSec))) : 8,
     }
   }
@@ -787,76 +901,111 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   if (blockType === 'module_link') {
     return {
       type: 'module_link',
-      label:
-        typeof rawBlock.label === 'string' && rawBlock.label.trim()
-          ? rawBlock.label.trim()
-          : AI_REPLY_FALLBACK_TEXT.moduleLabel,
-      route: typeof rawBlock.route === 'string' && rawBlock.route.trim() ? rawBlock.route.trim() : '/home',
-      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
+      label: trimAssistantSingleLine(
+        rawBlock.label,
+        MAX_ASSISTANT_LABEL_CHARS,
+        AI_REPLY_FALLBACK_TEXT.moduleLabel,
+      ),
+      route: sanitizeAssistantRoute(rawBlock.route, '/home'),
+      note: trimAssistantText(rawBlock.note, MAX_ASSISTANT_DETAIL_CHARS),
     }
   }
 
   if (blockType === 'transfer_virtual') {
     return {
       type: 'transfer_virtual',
-      label:
-        typeof rawBlock.label === 'string' && rawBlock.label.trim()
-          ? rawBlock.label.trim()
-          : AI_REPLY_FALLBACK_TEXT.transferLabel,
-      amount: typeof rawBlock.amount === 'string' && rawBlock.amount.trim() ? rawBlock.amount.trim() : '0.00',
-      currency: typeof rawBlock.currency === 'string' && rawBlock.currency.trim() ? rawBlock.currency.trim() : 'CNY',
-      to: typeof rawBlock.to === 'string' ? rawBlock.to : '',
-      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
-      actionRoute:
-        typeof rawBlock.actionRoute === 'string' && rawBlock.actionRoute.trim() ? rawBlock.actionRoute.trim() : '/wallet',
+      label: trimAssistantSingleLine(
+        rawBlock.label,
+        MAX_ASSISTANT_LABEL_CHARS,
+        AI_REPLY_FALLBACK_TEXT.transferLabel,
+      ),
+      amount: trimAssistantSingleLine(rawBlock.amount, 24, '0.00'),
+      currency: trimAssistantSingleLine(rawBlock.currency, 8, 'CNY').toUpperCase(),
+      to: trimAssistantText(rawBlock.to, 120),
+      note: trimAssistantText(rawBlock.note, MAX_ASSISTANT_DETAIL_CHARS),
+      actionRoute: sanitizeAssistantRoute(rawBlock.actionRoute, '/wallet'),
     }
   }
 
   if (blockType === 'image_virtual') {
     return {
       type: 'image_virtual',
-      alt:
-        typeof rawBlock.alt === 'string' && rawBlock.alt.trim()
-          ? rawBlock.alt.trim()
-          : AI_REPLY_FALLBACK_TEXT.imageAlt,
-      url: typeof rawBlock.url === 'string' ? rawBlock.url : '',
-      caption: typeof rawBlock.caption === 'string' ? rawBlock.caption : '',
+      alt: trimAssistantSingleLine(
+        rawBlock.alt,
+        MAX_ASSISTANT_LABEL_CHARS,
+        AI_REPLY_FALLBACK_TEXT.imageAlt,
+      ),
+      url: sanitizeAssistantImageUrl(rawBlock.url),
+      caption: trimAssistantText(rawBlock.caption, MAX_ASSISTANT_DETAIL_CHARS),
     }
   }
 
   if (blockType === 'mini_scene') {
     return {
       type: 'mini_scene',
-      title:
-        typeof rawBlock.title === 'string' && rawBlock.title.trim()
-          ? rawBlock.title.trim()
-          : AI_REPLY_FALLBACK_TEXT.sceneTitle,
-      description: typeof rawBlock.description === 'string' ? rawBlock.description : '',
-      htmlSnippet: typeof rawBlock.htmlSnippet === 'string' ? rawBlock.htmlSnippet : '',
+      title: trimAssistantSingleLine(
+        rawBlock.title,
+        MAX_ASSISTANT_LABEL_CHARS,
+        AI_REPLY_FALLBACK_TEXT.sceneTitle,
+      ),
+      description: trimAssistantText(rawBlock.description, MAX_ASSISTANT_DETAIL_CHARS),
+      htmlSnippet: sanitizeAssistantHtmlSnippet(rawBlock.htmlSnippet),
     }
   }
 
   return null
 }
 
-const resolveAssistantQuote = (rawQuote, replyType) => {
+const getQuoteTargetRole = (replyType) => (replyType === 'quote_self' ? 'assistant' : 'user')
+
+const pickQuoteCandidate = (quoteCandidates, targetRole, normalizedQuote) => {
+  const list = Array.isArray(quoteCandidates) ? quoteCandidates : []
+  if (!list.length) return null
+
+  const byMessageId =
+    normalizedQuote?.messageId &&
+    list.find((item) => item.id === normalizedQuote.messageId && item.role === targetRole)
+  if (byMessageId) return byMessageId
+
+  const byPreview =
+    normalizedQuote?.preview &&
+    list.find((item) => item.role === targetRole && item.preview === normalizedQuote.preview)
+  if (byPreview) return byPreview
+
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const candidate = list[i]
+    if (candidate?.role === targetRole) return candidate
+  }
+  return null
+}
+
+const resolveAssistantQuote = (rawQuote, replyType, quoteCandidates = []) => {
   if (replyType === 'plain') return null
+  const targetRole = getQuoteTargetRole(replyType)
   const normalizedQuote = normalizeAssistantQuote(rawQuote)
-  if (!normalizedQuote) return null
-  if (replyType === 'quote_user' && normalizedQuote.role !== 'user') return { ...normalizedQuote, role: 'user' }
-  if (replyType === 'quote_self' && normalizedQuote.role !== 'assistant') return { ...normalizedQuote, role: 'assistant' }
-  return normalizedQuote
+  const candidate = pickQuoteCandidate(quoteCandidates, targetRole, normalizedQuote)
+  if (!candidate) return null
+  return {
+    messageId: candidate.id,
+    role: targetRole,
+    preview: candidate.preview,
+  }
 }
 
 const ensureAssistantTextBlock = (blocks, fallbackText = '...') => {
-  const normalizedBlocks = Array.isArray(blocks) ? [...blocks] : []
+  const normalizedBlocks = Array.isArray(blocks) ? [...blocks].slice(0, MAX_ASSISTANT_BLOCKS) : []
   const hasTextBlock = normalizedBlocks.some((block) => block.type === 'text' && block.text?.trim())
   if (hasTextBlock) return normalizedBlocks
-  normalizedBlocks.push({ type: 'text', text: fallbackText || '...', variant: 'primary', lang: 'auto' })
+  normalizedBlocks.push({
+    type: 'text',
+    text: trimAssistantText(fallbackText, MAX_ASSISTANT_TEXT_CHARS, '...'),
+    variant: 'primary',
+    lang: 'auto',
+  })
   return normalizedBlocks
 }
 
-const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '...') => {
+const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '...', options = {}) => {
   const payload = rawMessage && typeof rawMessage === 'object' ? rawMessage : {}
   const replyType = normalizeAssistantReplyType(payload.replyType, aiPrefs)
 
@@ -870,13 +1019,19 @@ const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '.
 
   parsedBlocks = ensureAssistantTextBlock(parsedBlocks, fallbackText)
   const primaryTextBlock = parsedBlocks.find((block) => block.type === 'text' && block.variant !== 'secondary')
-  const content = primaryTextBlock?.text || parsedBlocks.find((block) => block.type === 'text')?.text || fallbackText
+  const content = trimAssistantText(
+    primaryTextBlock?.text || parsedBlocks.find((block) => block.type === 'text')?.text || fallbackText,
+    MAX_ASSISTANT_TEXT_CHARS,
+    '...',
+  )
+  const resolvedQuote = resolveAssistantQuote(payload.quote, replyType, options.quoteCandidates || [])
+  const normalizedReplyType = replyType !== 'plain' && !resolvedQuote ? 'plain' : replyType
 
   return {
-    content: content || fallbackText || '...',
+    content: content || '...',
     blocks: parsedBlocks,
-    quote: resolveAssistantQuote(payload.quote, replyType),
-    replyType,
+    quote: resolvedQuote,
+    replyType: normalizedReplyType,
   }
 }
 
@@ -884,6 +1039,8 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
   const text = typeof rawText === 'string' ? rawText : ''
   const cleanText = stripCodeFence(text)
   const expectedReplyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
+  const fallbackText = trimAssistantText(cleanText, MAX_ASSISTANT_TEXT_CHARS, '...')
+  const quoteCandidates = Array.isArray(options.quoteCandidates) ? options.quoteCandidates : []
 
   try {
     const parsed = JSON.parse(cleanText)
@@ -891,16 +1048,33 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
 
     const rawMessages = Array.isArray(parsed.messages) ? parsed.messages : [parsed]
     const normalizedMessages = rawMessages
-      .map((item) => normalizeAssistantMessagePayload(item, aiPrefs, cleanText || '...'))
+      .slice(0, expectedReplyCount)
+      .map((item) =>
+        normalizeAssistantMessagePayload(item, aiPrefs, fallbackText, {
+          quoteCandidates,
+        }),
+      )
       .filter(Boolean)
 
     if (!normalizedMessages.length) {
-      return { messages: [normalizeAssistantMessagePayload({}, aiPrefs, cleanText || '...')] }
+      return {
+        messages: [
+          normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
+            quoteCandidates,
+          }),
+        ],
+      }
     }
 
-    return { messages: normalizedMessages.slice(0, expectedReplyCount) }
+    return { messages: normalizedMessages }
   } catch {
-    return { messages: [normalizeAssistantMessagePayload({}, aiPrefs, cleanText || '...')] }
+    return {
+      messages: [
+        normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
+          quoteCandidates,
+        }),
+      ],
+    }
   }
 }
 
@@ -940,9 +1114,17 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
   const replyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
+  const contextSourceMessages = getContextSourceMessages(contactId, {
+    untilMessageId: triggerMessageId,
+    contextTurns: aiPrefs.contextTurns,
+  })
+  const quoteCandidates = toQuoteCandidates(contextSourceMessages)
 
   const replyRaw = await callAI({
-    messages: toAiMessages(contactId, triggerMessageId, { contextTurns: aiPrefs.contextTurns }),
+    messages: contextSourceMessages.map((item) => ({
+      role: item.role,
+      content: extractMessageTextForContext(item),
+    })),
     systemPrompt: buildSystemPrompt(contact, aiPrefs, {
       replyCount,
       isProactive: Boolean(options.isProactive),
@@ -951,7 +1133,10 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     signal: options.signal,
   })
 
-  const parsed = parseAssistantResponse(replyRaw, aiPrefs, { replyCount })
+  const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
+    replyCount,
+    quoteCandidates,
+  })
   const parsedMessages = parsed.messages.slice(0, replyCount)
 
   parsedMessages.forEach((item) => {
@@ -973,6 +1158,10 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
   } else {
     chatStore.incrementConversationUnread(contactId, parsedMessages.length || 1)
   }
+  systemStore.touchChatTruth(contact, 'assistant_reply', {
+    count: Math.max(1, parsedMessages.length || 1),
+    source: options.isProactive ? 'proactive' : 'reply',
+  })
 
   return {
     count: parsedMessages.length,
@@ -986,10 +1175,16 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
   if (!contact || !targetMessage) throw new Error('Contact not found')
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
+  const contextSourceMessages = getContextSourceMessages(contactId, {
+    beforeMessageId: targetMessage.id,
+    contextTurns: aiPrefs.contextTurns,
+  })
+  const quoteCandidates = toQuoteCandidates(contextSourceMessages)
   const replyRaw = await callAI({
-    messages: toAiMessagesBeforeMessage(contactId, targetMessage.id, {
-      contextTurns: aiPrefs.contextTurns,
-    }),
+    messages: contextSourceMessages.map((item) => ({
+      role: item.role,
+      content: extractMessageTextForContext(item),
+    })),
     systemPrompt: buildSystemPrompt(contact, aiPrefs, {
       replyCount: 1,
       isProactive: false,
@@ -998,8 +1193,15 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     signal: options.signal,
   })
 
-  const parsed = parseAssistantResponse(replyRaw, aiPrefs, { replyCount: 1 })
-  const normalized = parsed.messages?.[0] || normalizeAssistantMessagePayload({}, aiPrefs, '...')
+  const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
+    replyCount: 1,
+    quoteCandidates,
+  })
+  const normalized =
+    parsed.messages?.[0] ||
+    normalizeAssistantMessagePayload({}, aiPrefs, '...', {
+      quoteCandidates,
+    })
   return {
     ...normalized,
     aiMeta: {
@@ -1017,10 +1219,21 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
   const triggerSource = typeof options.source === 'string' ? options.source : 'manual'
   const isAutoSource = triggerSource === 'auto'
   const shouldAutoSchedule = options.autoSchedule !== false
+  const truthContact = contactById(contactId)
   if (!isAutoSource) {
     markManualAction()
   }
   const normalizedTriggerId = triggerMessageId || MANUAL_TRIGGER_ID
+  if (truthContact) {
+    systemStore.touchChatTruth(
+      truthContact,
+      isAutoSource ? 'auto_trigger' : 'manual_trigger',
+      {
+        triggerMessageId: normalizedTriggerId,
+        source: triggerSource,
+      },
+    )
+  }
   if (normalizedTriggerId !== MANUAL_TRIGGER_ID) {
     chatStore.updateMessageStatus(contactId, normalizedTriggerId, 'read')
   }
@@ -1277,6 +1490,11 @@ const rerollMessage = async (message) => {
       throw new Error('Replace failed')
     }
 
+    if (activeChat.value) {
+      systemStore.touchChatTruth(activeChat.value, 'reroll', {
+        targetMessageId: target.id,
+      })
+    }
     resetConversationAutoNextAt(activeChat.value.id, Date.now())
     retryRerollMessageId.value = ''
     closeMessageActions()
@@ -1398,6 +1616,13 @@ const sendMessage = () => {
     quote: quotePayload,
     status: 'delivered',
   })
+  if (activeChat.value) {
+    systemStore.touchChatTruth(activeChat.value, 'user_message', {
+      count: 1,
+      triggerMessageId: appended.id,
+      source: 'send',
+    })
+  }
   resetConversationAutoNextAt(chatId, Date.now())
 
   inputMessage.value = ''
@@ -1441,6 +1666,13 @@ const sendCurrentLocation = () => {
     quote: quotePayload,
     status: 'delivered',
   })
+  if (activeChat.value) {
+    systemStore.touchChatTruth(activeChat.value, 'user_message', {
+      count: 1,
+      triggerMessageId: appended.id,
+      source: 'location',
+    })
+  }
   resetConversationAutoNextAt(chatId, Date.now())
 
   pendingQuote.value = null
@@ -1462,7 +1694,39 @@ const useSuggestion = (text) => {
   inputMessage.value = text
 }
 
-const renderMarkdown = (text) => marked.parse(text || '')
+const sanitizeRenderedHtml = (rawHtml = '') => {
+  const html = typeof rawHtml === 'string' ? rawHtml : ''
+  if (!html.trim()) return ''
+
+  if (typeof DOMParser === 'undefined') {
+    return html
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+=(['"]).*?\1/gi, '')
+      .replace(/javascript:/gi, '')
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, style, iframe, object, embed, meta, link').forEach((node) => {
+    node.remove()
+  })
+  doc.querySelectorAll('*').forEach((node) => {
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase()
+      const value = (attr.value || '').trim().toLowerCase()
+      if (name.startsWith('on')) {
+        node.removeAttribute(attr.name)
+        return
+      }
+      if ((name === 'href' || name === 'src' || name === 'xlink:href') && value.startsWith('javascript:')) {
+        node.removeAttribute(attr.name)
+      }
+    })
+  })
+  return doc.body.innerHTML
+}
+
+const renderMarkdown = (text) => sanitizeRenderedHtml(marked.parse(text || ''))
 const getConversationPreview = (contactId) => chatStore.getConversationByContactId(contactId)
 
 const formatConversationTime = (timestamp) => {

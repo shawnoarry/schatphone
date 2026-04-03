@@ -19,10 +19,12 @@ const showApiKey = ref(false)
 const saved = ref(false)
 const reportModuleFilter = ref('all')
 const reportLevelFilter = ref('all')
+const copiedReportId = ref('')
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
 let savedTimerId = null
+let copiedReportTimerId = null
 
 const ensurePresetState = () => {
   if (!Array.isArray(settings.value.api.presets)) {
@@ -65,6 +67,112 @@ const networkReports = computed(() => {
     })
     .slice(0, 100)
 })
+
+const reportSummary = computed(() => {
+  const list = Array.isArray(apiReports.value) ? apiReports.value : []
+  const total = list.length
+  const errorCount = list.filter((item) => item?.level === 'error').length
+  const infoCount = total - errorCount
+  return {
+    total,
+    errorCount,
+    infoCount: Math.max(0, infoCount),
+  }
+})
+
+const moduleLabel = (moduleKey) => {
+  if (moduleKey === 'chat') return t('聊天', 'Chat')
+  if (moduleKey === 'network') return t('网络', 'Network')
+  if (moduleKey === 'map') return t('地图', 'Map')
+  if (moduleKey === 'shopping') return t('购物', 'Shopping')
+  return t('未知模块', 'Unknown module')
+}
+
+const actionLabel = (actionKey) => {
+  if (actionKey === 'fetch_models') return t('拉取模型列表', 'Fetch model list')
+  if (actionKey === 'call_ai') return t('调用 AI', 'Call AI')
+  if (actionKey === 'reroll_reply') return t('重生成回复', 'Reroll reply')
+  if (actionKey === 'auto_invoke') return t('自动调用', 'Autonomous invoke')
+  return actionKey || t('未知动作', 'Unknown action')
+}
+
+const reportReasonLabel = (item) => {
+  const code = (item?.code || '').toUpperCase()
+  const statusCode = Number(item?.statusCode || 0)
+
+  if (code === 'NO_API_KEY') return t('缺少 API Key', 'Missing API key')
+  if (code === 'INVALID_URL') return t('接口地址格式错误', 'Invalid endpoint URL')
+  if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
+    return t('鉴权失败（401/403）', 'Authentication failed (401/403)')
+  if (code === 'NOT_FOUND' || statusCode === 404) return t('接口不存在（404）', 'Endpoint not found (404)')
+  if (code === 'RATE_LIMIT' || statusCode === 429) return t('请求过于频繁（429）', 'Rate limit exceeded (429)')
+  if (code === 'TIMEOUT') return t('请求超时', 'Request timeout')
+  if (code === 'NETWORK') return t('网络或跨域问题', 'Network or CORS issue')
+  if (code === 'PARSE_ERROR') return t('响应格式解析失败', 'Response parsing failed')
+  if (code === 'SERVER' || statusCode >= 500) return t('服务端异常（5xx）', 'Server error (5xx)')
+  if (code === 'CANCELED') return t('请求被取消', 'Request canceled')
+  if (code === 'HTTP_ERROR') return t('HTTP 请求失败', 'HTTP request failed')
+  return t('未分类问题', 'Unclassified issue')
+}
+
+const reportSuggestionLabel = (item) => {
+  const code = (item?.code || '').toUpperCase()
+  const statusCode = Number(item?.statusCode || 0)
+
+  if (code === 'NO_API_KEY') return t('请在本页补全 API Key。', 'Please fill in API key on this page.')
+  if (code === 'INVALID_URL') return t('检查 URL 是否完整且包含正确路径。', 'Check endpoint URL and verify full path.')
+  if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
+    return t('更换可用 Key，或检查供应商权限设置。', 'Use a valid key or verify provider permissions.')
+  if (code === 'NOT_FOUND' || statusCode === 404)
+    return t('确认网关地址或接口路径是否正确。', 'Confirm gateway address and endpoint path.')
+  if (code === 'RATE_LIMIT' || statusCode === 429)
+    return t('稍后重试，或切换到其他供应商。', 'Retry later or switch to another provider.')
+  if (code === 'TIMEOUT') return t('检查网络后重试，必要时更换网关。', 'Check network and retry; switch gateway if needed.')
+  if (code === 'NETWORK')
+    return t('优先检查网络与跨域代理设置。', 'Check network first, then CORS/proxy settings.')
+  if (code === 'PARSE_ERROR')
+    return t('确认返回内容是有效 JSON。', 'Ensure upstream response is valid JSON.')
+  if (code === 'SERVER' || statusCode >= 500)
+    return t('属于服务端问题，建议稍后再试。', 'Server-side issue. Retry later.')
+  if (code === 'CANCELED')
+    return t('这是手动取消记录，无需处理。', 'This is a manual cancel record; no action needed.')
+  return t('可先复制报告并排查 URL/Key/模型三项。', 'Copy report and verify URL, key, and model first.')
+}
+
+const copyReport = async (item) => {
+  if (!item) return
+  const payload = [
+    `time: ${formatReportTime(item.createdAt)}`,
+    `module: ${item.module || '-'}`,
+    `action: ${item.action || '-'}`,
+    `level: ${item.level || '-'}`,
+    `status: ${item.statusCode || '-'}`,
+    `code: ${item.code || '-'}`,
+    `provider: ${item.provider || '-'}`,
+    `model: ${item.model || '-'}`,
+    `message: ${item.message || '-'}`,
+  ].join('\n')
+
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = payload
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+    copiedReportId.value = item.id
+    if (copiedReportTimerId) clearTimeout(copiedReportTimerId)
+    copiedReportTimerId = setTimeout(() => {
+      copiedReportId.value = ''
+    }, 1200)
+  } catch {
+    alert(t('复制失败，请手动记录。', 'Copy failed. Please record manually.'))
+  }
+}
 
 const savePreset = () => {
   ensurePresetState()
@@ -290,6 +398,10 @@ onBeforeUnmount(() => {
     clearTimeout(savedTimerId)
     savedTimerId = null
   }
+  if (copiedReportTimerId) {
+    clearTimeout(copiedReportTimerId)
+    copiedReportTimerId = null
+  }
 })
 
 ensurePresetState()
@@ -442,6 +554,21 @@ ensurePresetState()
           </button>
         </div>
 
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+            <p class="text-[10px] text-gray-500">{{ t('总记录', 'Total') }}</p>
+            <p class="text-sm font-semibold text-gray-800">{{ reportSummary.total }}</p>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-2">
+            <p class="text-[10px] text-red-500">{{ t('错误', 'Error') }}</p>
+            <p class="text-sm font-semibold text-red-700">{{ reportSummary.errorCount }}</p>
+          </div>
+          <div class="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
+            <p class="text-[10px] text-blue-500">{{ t('信息', 'Info') }}</p>
+            <p class="text-sm font-semibold text-blue-700">{{ reportSummary.infoCount }}</p>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-2 mb-2">
           <select v-model="reportModuleFilter" class="border rounded-md px-2 py-1 text-xs bg-white outline-none">
             <option v-for="item in reportModuleOptions" :key="item.value" :value="item.value">
@@ -463,18 +590,47 @@ ensurePresetState()
           <div v-for="item in networkReports" :key="item.id" class="rounded-lg border border-gray-200 p-2">
             <div class="flex items-center justify-between gap-2">
               <p class="text-[11px] font-semibold text-gray-700">
-                {{ item.module }} · {{ item.action }}
+                {{ moduleLabel(item.module) }} · {{ actionLabel(item.action) }}
               </p>
               <p class="text-[10px] text-gray-400">{{ formatReportTime(item.createdAt) }}</p>
             </div>
-            <p class="text-[11px] text-gray-600 mt-1 line-clamp-2">{{ item.message || t('未知错误', 'Unknown error') }}</p>
+
+            <div class="mt-1 flex items-center gap-1.5">
+              <span
+                class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                :class="item.level === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'"
+              >
+                {{ item.level === 'error' ? t('错误', 'Error') : t('信息', 'Info') }}
+              </span>
+              <span class="inline-flex rounded bg-gray-100 text-gray-600 px-1.5 py-0.5 text-[10px]">
+                {{ t('状态码', 'Status') }}: {{ item.statusCode || '-' }}
+              </span>
+              <span class="inline-flex rounded bg-gray-100 text-gray-600 px-1.5 py-0.5 text-[10px]">
+                Code: {{ item.code || '-' }}
+              </span>
+            </div>
+
+            <p class="text-[11px] text-gray-600 mt-1 line-clamp-2">
+              {{ item.message || t('未知错误', 'Unknown error') }}
+            </p>
+            <p class="text-[11px] text-gray-700 mt-1">
+              {{ t('问题类型', 'Issue type') }}: {{ reportReasonLabel(item) }}
+            </p>
+            <p class="text-[11px] text-blue-700 mt-1">
+              {{ t('建议处理', 'Suggested fix') }}: {{ reportSuggestionLabel(item) }}
+            </p>
             <p class="text-[10px] text-gray-400 mt-1">
-              {{ t('级别', 'Level') }}: {{ item.level || '-' }} ·
-              {{ t('状态码', 'Status') }}: {{ item.statusCode || '-' }} ·
-              Code: {{ item.code || '-' }} ·
               {{ t('模型', 'Model') }}: {{ item.model || '-' }} ·
               {{ t('供应商', 'Provider') }}: {{ item.provider || '-' }}
             </p>
+            <div class="mt-2 flex justify-end">
+              <button
+                @click="copyReport(item)"
+                class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                {{ copiedReportId === item.id ? t('已复制', 'Copied') : t('复制报告', 'Copy report') }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

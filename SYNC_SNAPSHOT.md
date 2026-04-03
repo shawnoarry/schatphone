@@ -1,6 +1,6 @@
 ﻿# SchatPhone 同步快照
 
-Updated / 更新时间: 2026-03-30
+Updated / 更新时间: 2026-04-04
 
 ## Purpose / 用途
 
@@ -13,8 +13,8 @@ Detailed changes must be updated in source docs first, then reflected here.
 
 ## One-Line Summary / 当前版本一句话
 
-SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement are integrated, and focus now shifts to lock-screen notification reconstruction and system-owned truth continuity.  
-SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器与恢复补算已接入，当前重点转向锁屏通知重建与系统真值连续性。
+SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement + system-owned truth baseline are integrated, and focus now shifts to block-policy hardening and settings UX consistency.  
+SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器、恢复补算与系统真值基线均已接入，当前重点转向结构化消息策略加固与设置体验一致性。
 
 ## Stack Snapshot / 技术栈快照
 
@@ -43,6 +43,12 @@ AI 调用由“触发回复”控制，支持连续触发
 消息操作菜单基线已完成：引用/复制/编辑/删除/重roll
 - Reroll uses pre-target context and replaces the target assistant message  
 重roll 使用目标消息之前上下文，并原位替换目标助手消息
+- System-owned truth baseline is active: relationship metrics + event timeline persist in store and are injected into prompt context.  
+系统真值基线已启用：关系指标与事件时间线已持久化到 store，并注入提示词上下文。
+- Structured block hardening batch-1 is active: route/url sanitization, quote candidate safety, and markdown sanitize are integrated.  
+结构化消息加固第一批已生效：route/url 清洗、引用候选安全、Markdown 清洗已接入。
+- Settings UX batch-1 is active: beginner guidance, quick access, and clearer report-center copy flow are integrated.  
+设置体验优化第一批已生效：新手引导、快捷入口与报错中心复制流程已接入。
 - Assistant supports structured block rendering (text/virtual voice/link/transfer/image/mini scene)  
 助手消息支持结构化块渲染（文本/虚拟语音/链接/转账/图片/互动场景）
 - Conversation kinds: `role/group/service/official`  
@@ -99,8 +105,7 @@ Settings 备份恢复（JSON）已支持失败回滚，并兼容旧版/新版聊
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
-1. `P1-1 M3` template preset center is completed (2026-03-30) / `P1-1 M3` 模板预设中心已于 2026-03-30 完成
-2. `P0-A3` baseline completed: restore settlements reconstruct into lock-style stacked notifications / `P0-A3` 基线已完成：恢复补算可重建为锁屏堆叠通知
-3. `P0-A4` completed: quiet-hours + notify-only + manual-priority policy baseline / `P0-A4` 已完成：安静时段 + 仅通知 + 手动优先策略基线
-4. Add system-owned truth minimal layer (`P0-B1`) / 补齐系统真值最小层（`P0-B1`）
-5. Continue structured block hardening (`P1-2`) / 持续推进结构化消息策略加固（`P1-2`）
+1. `P0-B1` completed (2026-04-03): system-owned truth minimal layer is integrated end-to-end / `P0-B1` 已于 2026-04-03 完成：系统真值最小层已端到端接入
+2. Continue structured block hardening (`P1-2`): batch-1 landed, batch-2 pending readability and fallback polish / 持续推进结构化消息策略加固（`P1-2`）：第一批已落地，第二批待做可读性与回退打磨
+3. Continue settings UX refinement (`P1-3`): batch-1 landed, batch-2 pending save-feedback consistency polish / 持续推进设置体验优化（`P1-3`）：第一批已落地，第二批待做保存反馈一致性打磨
+4. Prepare storage layering migration (`P1-4`) / 准备分层存储迁移（`P1-4`）

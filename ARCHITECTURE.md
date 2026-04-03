@@ -1,6 +1,6 @@
 # SchatPhone 架构说明
 
-Updated / 更新时间: 2026-03-16
+Updated / 更新时间: 2026-04-03
 
 ## 1. Architecture Goals / 架构目标
 
@@ -55,6 +55,7 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
     `theme/wallpaper/customCss/customVars/homeWidgetPages/customWidgets/lockClockStyle`
   - `settings.system`: `language/timezone/notifications`
   - `notifications`: lock-screen notification queue / 锁屏通知队列
+  - `truthState`: system-owned truth entities/events for relationship continuity / 系统真值实体与事件时间线（关系连续性）
   - `isLocked`: lock state flag / 锁定状态标记
   - `user`: profile, worldbook, chat status / 用户资料、世界书、聊天状态
 - `src/stores/chat.js`
@@ -134,6 +135,8 @@ Core routes / 核心路由：
 - Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `editedAt`, `status`
 - `aiMeta.rerollOf` marks reroll lineage for replaced assistant messages  
 `aiMeta.rerollOf` 用于标记重roll后助手消息的来源链路
+- Truth entity / 真值实体：`entityKey`, `affinity`, `trust`, `distance`, `dependency`, `tension`, `relationshipStage`, counters/timestamps
+- Truth event / 真值事件：`id`, `entityKey`, `action`, `payload`, `at`
 - Message status / 消息状态：`sending/sent/failed/delivered/read`
 - Assistant block types / 助手消息块类型：  
   `text`, `voice_virtual`, `module_link`, `transfer_virtual`, `image_virtual`, `mini_scene`
@@ -160,6 +163,14 @@ Core routes / 核心路由：
   默认触发前为 `已送达`，AI 请求开始时切换为 `已读`
 - Typing indicator is system-state UI (not stored as message node)  
   “对方正在输入”作为系统态 UI 展示，不写入消息列表数据
+- Runtime writes truth events on key actions (`user_message`, `manual_trigger`, `auto_trigger`, `assistant_reply`, `reroll`, `notify_only_skip`, `resume_settlement`).  
+  运行态会在关键动作写入真值事件（`user_message`、`manual_trigger`、`auto_trigger`、`assistant_reply`、`reroll`、`notify_only_skip`、`resume_settlement`）。
+- Prompt assembly reads a truth snapshot (`getChatTruthSnapshot`) to keep relationship continuity across providers.  
+  提示词组装会读取真值快照（`getChatTruthSnapshot`），保证跨供应商关系连续性。
+- Structured assistant payload normalization now enforces safe route/url fields and context-safe quote resolution.  
+  结构化助手消息归一化已强制 route/url 安全校验，并通过上下文候选做引用安全解析。
+- Markdown blocks are sanitized before rendering to avoid unsafe HTML execution via `v-html`.  
+  Markdown 文本块在渲染前会进行 HTML 清洗，避免 `v-html` 执行不安全内容。
 - Service/official templates managed in-thread / 服务号/公众号模板在会话页内管理
 - Per-thread AI settings are edited in Chat layered menu and persisted in store  
   会话级 AI 设置在 Chat 分级菜单中编辑并持久化

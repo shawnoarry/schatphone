@@ -13,7 +13,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const { t } = useI18n()
 
-const { settings, user, notifications, apiReports } = storeToRefs(systemStore)
+const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
 const { addresses, currentLocation, tripForm } = storeToRefs(mapStore)
 
@@ -145,12 +145,17 @@ const openNetworkReports = () => {
   router.push('/network')
 }
 
+const openAppearanceStudio = () => {
+  router.push('/appearance')
+}
+
 const exportData = () => {
   const data = JSON.stringify({
     settings: settings.value,
     user: user.value,
     notifications: notifications.value,
     apiReports: apiReports.value,
+    truthState: truthState.value,
     roleProfiles: roleProfiles.value,
     contacts: contacts.value,
     chatHistory: chatHistory.value,
@@ -184,6 +189,7 @@ const createRollbackSnapshot = () => {
       user: deepClone(user.value),
       notifications: deepClone(notifications.value),
       apiReports: deepClone(apiReports.value),
+      truthState: deepClone(truthState.value),
     },
     chat: {
       roleProfiles: deepClone(roleProfiles.value),
@@ -290,6 +296,43 @@ onBeforeUnmount(() => {
         <i class="fas fa-chevron-right text-gray-300"></i>
       </button>
 
+      <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3.5">
+        <p class="text-[11px] font-semibold text-blue-700">{{ t('新手建议', 'Beginner tip') }}</p>
+        <p class="text-[11px] text-blue-700/90 mt-1">
+          {{
+            t(
+              '推荐顺序：先配置“网络与 API”，再进入会话手动触发回复，最后按需要开启自动响应。',
+              'Recommended flow: set up Network & API first, then use manual trigger in chat, and enable automation only when needed.',
+            )
+          }}
+        </p>
+      </div>
+
+      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('快捷入口', 'Quick Access') }}</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
+          @click="openNetworkReports"
+        >
+          <p class="text-[11px] font-semibold text-gray-800">{{ t('网络与 API', 'Network & API') }}</p>
+          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('配置接口', 'Configure provider') }}</p>
+        </button>
+        <button
+          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
+          @click="openChatAutomation"
+        >
+          <p class="text-[11px] font-semibold text-gray-800">{{ t('会话设置', 'Chat settings') }}</p>
+          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('角色与会话', 'Roles and threads') }}</p>
+        </button>
+        <button
+          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
+          @click="openAppearanceStudio"
+        >
+          <p class="text-[11px] font-semibold text-gray-800">{{ t('外观工坊', 'Appearance') }}</p>
+          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('主题与壁纸', 'Theme and wallpaper') }}</p>
+        </button>
+      </div>
+
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
         <button
@@ -299,7 +342,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-book-open"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('世界书', 'World Book') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('世界书', 'World Book') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('所有对话共享的世界设定', 'Shared context for all chats') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -310,7 +356,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-gray-600 flex items-center justify-center text-white text-xs">
             <i class="fas fa-sliders"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('通用', 'General') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('通用', 'General') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('系统语言、时区等基础项', 'Language, timezone and basic system options') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -321,7 +370,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-robot"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('AI 自动响应', 'AI Automation') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('AI 自动响应', 'AI Automation') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('总开关、优先级、安静时段', 'Master switch, priorities and quiet hours') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -332,7 +384,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded-lg bg-red-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-bell"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('通知', 'Notifications') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('通知', 'Notifications') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('消息提醒与系统提示', 'Message alerts and system notifications') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
       </div>
@@ -346,7 +401,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-export"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('备份与导出（JSON）', 'Backup & Export (JSON)') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('备份与导出（JSON）', 'Backup & Export (JSON)') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('导出当前本地数据快照', 'Export a local snapshot of current data') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -357,9 +415,12 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-import"></i>
           </div>
-          <span class="flex-1 text-sm">
-            {{ backupImporting ? t('正在导入...', 'Importing...') : t('恢复导入（JSON）', 'Restore Import (JSON)') }}
-          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">
+              {{ backupImporting ? t('正在导入...', 'Importing...') : t('恢复导入（JSON）', 'Restore Import (JSON)') }}
+            </p>
+            <p class="text-[11px] text-gray-500">{{ t('导入失败会自动回滚', 'Auto rollback will run if import fails') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
 
@@ -370,7 +431,10 @@ onBeforeUnmount(() => {
           <div class="w-7 h-7 rounded bg-blue-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-circle-info"></i>
           </div>
-          <span class="flex-1 text-sm">{{ t('关于 SchatPhone', 'About SchatPhone') }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">{{ t('关于 SchatPhone', 'About SchatPhone') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('版本与框架信息', 'Version and stack information') }}</p>
+          </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
       </div>

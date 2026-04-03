@@ -1,11 +1,11 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-03-30
+Updated / 更新时间: 2026-04-03
 
 ## 1. Current Conclusion / 当前结论
 
-Chat has moved from prototype to usable beta with lock-screen notification linkage.  
-聊天模块已从原型进入可用 Beta，并已打通锁屏通知联动。
+Chat has moved from prototype to usable beta with lock-screen notification linkage and system-owned truth continuity baseline.  
+聊天模块已从原型进入可用 Beta，并已打通锁屏通知联动与系统真值连续性基线。
 
 Current baseline / 当前基线：
 - Stable core data model / 底层数据结构稳定
@@ -68,6 +68,10 @@ Current baseline / 当前基线：
 重roll 采用原位替换目标助手消息，并记录 reroll 元信息便于追踪
 - Assistant typing state shown as system UI text: "对方正在输入..."  
 AI 输入中状态以系统态文本展示：“对方正在输入...”
+- System-owned truth baseline is integrated: runtime writes relationship/event truth and prompt context reads truth snapshot.  
+系统真值基线已接入：运行态写入关系/事件真值，提示词读取真值快照。
+- Structured block hardening batch-1 is integrated: unsafe route/url fields are sanitized, quote fallback is context-safe, and markdown HTML is sanitized before render.  
+结构化消息加固第一批已接入：不安全 route/url 会被清洗，引用回退基于上下文安全候选，Markdown 渲染前做 HTML 清洗。
 - New route: `/chat-contacts` with category split  
 新增 `/chat-contacts`，按角色/群聊与服务号/公众号分段管理
 - Role directory model is now split: main contacts own global role profiles, chat directory handles binding/meta only  
@@ -106,16 +110,15 @@ AI 生成消息内容仍由模型与上下文驱动
 - `tests/chat-store-model.test.js`: pass / 通过
 - `tests/ai-error-format.test.js`: pass / 通过
 - `tests/system-automation.test.js`: pass / 通过
+- `tests/system-truth.test.js`: pass / 通过
 - Full test run: pass / 全量测试通过
 
 ## 3. Current Gaps / 当前限制
 
-- Real-time scheduler baseline and restore-time settlement are wired into chat behavior loop (`P0-A1` + `P0-A2`)  
-现实时间调度器基线与恢复时补算已接入聊天行为闭环（`P0-A1` + `P0-A2`）
-- Restore-settlement outcomes can now be reconstructed into lock-style stacked notifications (`P0-A3` baseline).  
-恢复补算结果现可重建为锁屏风格堆叠通知（`P0-A3` 基线）。
-- Chat still lacks system-owned minimal truth fields for relationship/event continuity  
-聊天域尚未补齐关系/事件连续性的系统真值最小字段
+- Truth baseline is integrated, but metric calibration and stage-threshold tuning still need product playtest feedback.  
+真值基线已接入，但指标校准与关系阶段阈值仍需结合产品实测继续调优。
+- Structured block policy is still in hardening phase (batch-2 pending mixed-content typography and richer fallback rules).  
+结构化消息策略仍在加固阶段（第二批待补：混合内容排版与更细的回退规则）。
 - Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
 跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
@@ -127,17 +130,14 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ### P0
 
-1. `P1-1 M3` template preset center is completed (2026-03-30) / `P1-1 M3` 模板预设中心已完成（2026-03-30）  
-Chat-directory enhancement is now closed.
-会话通讯录增强已完成收口。
-2. `P0-A4` is completed: quiet-hours + notify-only + manual-priority consistency are integrated.  
-`P0-A4` 已完成：安静时段 + 仅通知 + 手动优先一致性已接入。
-3. Add minimal system truth fields for relationship/event continuity (`P0-B1`)  
-补齐关系/事件连续性所需的系统真值最小字段（`P0-B1`）。
+1. `P0-B1` is completed (2026-04-03): system-owned truth minimal layer is integrated into store/runtime/prompt/backup.  
+`P0-B1` 已完成（2026-04-03）：系统真值最小层已接入 store/运行态/提示词/备份链路。
+2. Keep truth tuning loop active: adjust metric delta and stage threshold using real playtest transcripts.  
+保持真值调优回路：结合真实体验记录微调指标增量与关系阶段阈值。
 
 ### P1
 
-1. Structured block policy hardening (`P1-2`) / 结构化消息策略加固（`P1-2`）
+1. Structured block policy hardening (`P1-2`) in progress: continue batch-2 for readability and fallback consistency / 结构化消息策略加固（`P1-2`）进行中：继续第二批可读性与回退一致性补强
 2. Settings and chat-adjacent UX consistency (`P1-3`) / 设置与聊天周边体验一致性（`P1-3`）
 3. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
 

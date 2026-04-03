@@ -21,6 +21,14 @@ const VALID_BLOCK_TYPES = new Set([
   'mini_scene',
 ])
 const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
+const MAX_TEXT_BLOCK_LENGTH = 3000
+const MAX_DETAIL_TEXT_LENGTH = 800
+const MAX_SHORT_LABEL_LENGTH = 80
+const MAX_QUOTE_PREVIEW_LENGTH = 240
+const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
+const MAX_BLOCK_COUNT = 16
+const SAFE_ROUTE_FALLBACK = '/home'
+const SAFE_TRANSFER_ROUTE_FALLBACK = '/wallet'
 
 const DEFAULT_CONVERSATION_AI_PREFS = {
   suggestedRepliesEnabled: false,
@@ -98,6 +106,41 @@ const toInt = (value, fallback = 0) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
+const trimTo = (value, maxLength, fallback = '') => {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (!text) return fallback
+  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) return text
+  return text.length <= maxLength ? text : text.slice(0, maxLength)
+}
+
+const normalizeSingleLineText = (value, maxLength, fallback = '') =>
+  trimTo(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
+
+const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
+  const route = trimTo(value, 200)
+  if (!route) return fallback
+  if (!route.startsWith('/') || route.startsWith('//')) return fallback
+  if (/\s/.test(route)) return fallback
+  if (/^javascript:/i.test(route)) return fallback
+  return route
+}
+
+const sanitizeImageUrl = (value) => {
+  const url = trimTo(value, 500)
+  if (!url) return ''
+  if (url.startsWith('/')) return url
+  if (/^https?:\/\//i.test(url)) return url
+  return ''
+}
+
+const sanitizeHtmlSnippet = (value) => {
+  const html = trimTo(value, 4000)
+  if (!html) return ''
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+}
+
 const resetReactiveObject = (obj) => {
   if (Array.isArray(obj)) {
     obj.splice(0, obj.length)
@@ -169,11 +212,11 @@ const normalizeConversationAiPrefs = (rawPrefs) => {
 const normalizeMessageQuote = (rawQuote) => {
   if (!rawQuote || typeof rawQuote !== 'object') return null
 
-  const preview = typeof rawQuote.preview === 'string' ? rawQuote.preview.trim() : ''
+  const preview = trimTo(rawQuote.preview, MAX_QUOTE_PREVIEW_LENGTH)
   if (!preview) return null
 
   const role = rawQuote.role === 'assistant' ? 'assistant' : 'user'
-  const messageIdValue = typeof rawQuote.messageId === 'string' ? rawQuote.messageId : ''
+  const messageIdValue = trimTo(rawQuote.messageId, MAX_QUOTE_MESSAGE_ID_LENGTH)
 
   return {
     messageId: messageIdValue,
@@ -204,8 +247,8 @@ const normalizeMessageBlock = (rawBlock) => {
   if (!VALID_BLOCK_TYPES.has(blockType)) return null
 
   if (blockType === 'text') {
-    const text = typeof rawBlock.text === 'string' ? rawBlock.text : ''
-    if (!text.trim()) return null
+    const text = trimTo(rawBlock.text, MAX_TEXT_BLOCK_LENGTH)
+    if (!text) return null
     return {
       type: 'text',
       text,
@@ -217,8 +260,8 @@ const normalizeMessageBlock = (rawBlock) => {
   if (blockType === 'voice_virtual') {
     return {
       type: 'voice_virtual',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '语音消息',
-      transcript: typeof rawBlock.transcript === 'string' ? rawBlock.transcript : '',
+      label: normalizeSingleLineText(rawBlock.label, MAX_SHORT_LABEL_LENGTH, '语音消息'),
+      transcript: trimTo(rawBlock.transcript, MAX_DETAIL_TEXT_LENGTH),
       durationSec: clamp(toInt(rawBlock.durationSec, 8), 1, 600),
     }
   }
@@ -226,56 +269,69 @@ const normalizeMessageBlock = (rawBlock) => {
   if (blockType === 'module_link') {
     return {
       type: 'module_link',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '打开模块',
-      route: typeof rawBlock.route === 'string' && rawBlock.route.trim() ? rawBlock.route.trim() : '/home',
-      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
+      label: normalizeSingleLineText(rawBlock.label, MAX_SHORT_LABEL_LENGTH, '打开模块'),
+      route: sanitizeRoutePath(rawBlock.route, SAFE_ROUTE_FALLBACK),
+      note: trimTo(rawBlock.note, MAX_DETAIL_TEXT_LENGTH),
     }
   }
 
   if (blockType === 'transfer_virtual') {
     return {
       type: 'transfer_virtual',
-      label: typeof rawBlock.label === 'string' && rawBlock.label.trim() ? rawBlock.label.trim() : '转账卡片',
-      amount: typeof rawBlock.amount === 'string' && rawBlock.amount.trim() ? rawBlock.amount.trim() : '0.00',
-      currency: typeof rawBlock.currency === 'string' && rawBlock.currency.trim() ? rawBlock.currency.trim() : 'CNY',
-      to: typeof rawBlock.to === 'string' ? rawBlock.to : '',
-      note: typeof rawBlock.note === 'string' ? rawBlock.note : '',
-      actionRoute:
-        typeof rawBlock.actionRoute === 'string' && rawBlock.actionRoute.trim() ? rawBlock.actionRoute.trim() : '/wallet',
+      label: normalizeSingleLineText(rawBlock.label, MAX_SHORT_LABEL_LENGTH, '转账卡片'),
+      amount: normalizeSingleLineText(rawBlock.amount, 24, '0.00'),
+      currency: normalizeSingleLineText(rawBlock.currency, 8, 'CNY').toUpperCase(),
+      to: trimTo(rawBlock.to, 120),
+      note: trimTo(rawBlock.note, MAX_DETAIL_TEXT_LENGTH),
+      actionRoute: sanitizeRoutePath(rawBlock.actionRoute, SAFE_TRANSFER_ROUTE_FALLBACK),
     }
   }
 
   if (blockType === 'image_virtual') {
     return {
       type: 'image_virtual',
-      alt: typeof rawBlock.alt === 'string' && rawBlock.alt.trim() ? rawBlock.alt.trim() : '图片消息',
-      url: typeof rawBlock.url === 'string' ? rawBlock.url : '',
-      caption: typeof rawBlock.caption === 'string' ? rawBlock.caption : '',
+      alt: normalizeSingleLineText(rawBlock.alt, MAX_SHORT_LABEL_LENGTH, '图片消息'),
+      url: sanitizeImageUrl(rawBlock.url),
+      caption: trimTo(rawBlock.caption, MAX_DETAIL_TEXT_LENGTH),
     }
   }
 
   if (blockType === 'mini_scene') {
     return {
       type: 'mini_scene',
-      title: typeof rawBlock.title === 'string' && rawBlock.title.trim() ? rawBlock.title.trim() : '互动卡片',
-      description: typeof rawBlock.description === 'string' ? rawBlock.description : '',
-      htmlSnippet: typeof rawBlock.htmlSnippet === 'string' ? rawBlock.htmlSnippet : '',
+      title: normalizeSingleLineText(rawBlock.title, MAX_SHORT_LABEL_LENGTH, '互动卡片'),
+      description: trimTo(rawBlock.description, MAX_DETAIL_TEXT_LENGTH),
+      htmlSnippet: sanitizeHtmlSnippet(rawBlock.htmlSnippet),
     }
   }
 
   return null
 }
 
-const normalizeMessageBlocks = (rawBlocks, fallbackContent = '') => {
-  const normalized = Array.isArray(rawBlocks) ? rawBlocks.map(normalizeMessageBlock).filter(Boolean) : []
+const normalizeMessageBlocks = (rawBlocks, fallbackContent = '', role = 'assistant') => {
+  const normalized = Array.isArray(rawBlocks)
+    ? rawBlocks.map(normalizeMessageBlock).filter(Boolean).slice(0, MAX_BLOCK_COUNT)
+    : []
 
   if (normalized.length > 0) return normalized
 
-  if (typeof fallbackContent === 'string' && fallbackContent.trim()) {
+  const fallbackText = trimTo(fallbackContent, MAX_TEXT_BLOCK_LENGTH)
+  if (fallbackText) {
     return [
       {
         type: 'text',
-        text: fallbackContent,
+        text: fallbackText,
+        lang: 'auto',
+        variant: 'primary',
+      },
+    ]
+  }
+
+  if (role === 'assistant') {
+    return [
+      {
+        type: 'text',
+        text: '...',
         lang: 'auto',
         variant: 'primary',
       },
@@ -354,10 +410,10 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
 
 const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
   const role = VALID_MESSAGE_ROLES.has(rawMessage?.role) ? rawMessage.role : fallbackRole
-  const content = typeof rawMessage?.content === 'string' ? rawMessage.content : ''
-  const blocks = normalizeMessageBlocks(rawMessage?.blocks, content)
+  const content = trimTo(rawMessage?.content, MAX_TEXT_BLOCK_LENGTH)
+  const blocks = normalizeMessageBlocks(rawMessage?.blocks, content, role)
   const summaryText = summarizeBlocks(blocks)
-  const normalizedContent = content || summaryText
+  const normalizedContent = content || summaryText || (role === 'assistant' ? '...' : '')
   const defaultStatus = role === 'user' ? 'delivered' : 'sent'
   const status = VALID_MESSAGE_STATUS.has(rawMessage?.status) ? rawMessage.status : defaultStatus
 
@@ -865,7 +921,7 @@ export const useChatStore = defineStore('chat', () => {
             }
             return block
           })
-        : normalizeMessageBlocks([], updatedContent)
+        : normalizeMessageBlocks([], updatedContent, list[index]?.role || 'assistant')
 
     list[index] = {
       ...list[index],
@@ -1278,7 +1334,7 @@ export const useChatStore = defineStore('chat', () => {
         key,
         list.map((message) => ({
           ...message,
-          blocks: normalizeMessageBlocks(message.blocks, message.content),
+          blocks: normalizeMessageBlocks(message.blocks, message.content, message.role),
           quote: normalizeMessageQuote(message.quote),
           aiMeta: normalizeMessageMeta(message.aiMeta),
         })),

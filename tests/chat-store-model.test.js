@@ -211,6 +211,62 @@ describe('chat store model', () => {
     expect(conversation.lastMessage).toContain('Open wallet')
   })
 
+  test('hardens structured blocks and quote fields on append', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+    const longPreview = 'x'.repeat(400)
+    const longMessageId = 'm'.repeat(220)
+
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: '',
+      blocks: [
+        { type: 'module_link', label: 'Open', route: 'javascript:alert(1)', note: 'n'.repeat(1200) },
+        { type: 'transfer_virtual', label: 'Pay', amount: '  888.66 ', currency: ' usd ', actionRoute: 'https://evil.com' },
+        { type: 'image_virtual', alt: 'Pic', url: 'javascript:alert(1)', caption: 'c'.repeat(1200) },
+        { type: 'mini_scene', title: 'Scene', htmlSnippet: '<script>alert(1)</script><div>ok</div>' },
+      ],
+      quote: {
+        messageId: longMessageId,
+        role: 'assistant',
+        preview: longPreview,
+      },
+      status: 'sent',
+    })
+
+    const moduleBlock = assistantMessage.blocks.find((item) => item.type === 'module_link')
+    const transferBlock = assistantMessage.blocks.find((item) => item.type === 'transfer_virtual')
+    const imageBlock = assistantMessage.blocks.find((item) => item.type === 'image_virtual')
+    const sceneBlock = assistantMessage.blocks.find((item) => item.type === 'mini_scene')
+
+    expect(moduleBlock?.route).toBe('/home')
+    expect((moduleBlock?.note || '').length).toBeLessThanOrEqual(800)
+    expect(transferBlock?.actionRoute).toBe('/wallet')
+    expect(transferBlock?.currency).toBe('USD')
+    expect(imageBlock?.url).toBe('')
+    expect(sceneBlock?.htmlSnippet).not.toContain('<script')
+
+    expect((assistantMessage.quote?.preview || '').length).toBeLessThanOrEqual(240)
+    expect((assistantMessage.quote?.messageId || '').length).toBeLessThanOrEqual(128)
+  })
+
+  test('falls back to assistant text block when payload has no usable content', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: '   ',
+      blocks: [{ type: 'unknown' }],
+      status: 'sent',
+    })
+
+    expect(assistantMessage.content).toBe('...')
+    expect(Array.isArray(assistantMessage.blocks)).toBe(true)
+    expect(assistantMessage.blocks[0]?.type).toBe('text')
+    expect(assistantMessage.blocks[0]?.text).toBe('...')
+  })
+
   test('supports message edit, replace and delete operations', () => {
     const store = useChatStore()
     const contactId = store.contacts[0].id

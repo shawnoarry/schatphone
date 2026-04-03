@@ -88,6 +88,27 @@ const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const MAX_NOTIFICATIONS = 80
 const MAX_API_REPORTS = 200
+const MAX_CHAT_TRUTH_EVENTS = 400
+const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
+  affinity: 50,
+  trust: 50,
+  distance: 50,
+  dependency: 20,
+  tension: 10,
+  relationshipStage: 'neutral',
+  lastWarmMomentAt: 0,
+  lastConflictAt: 0,
+  lastInteractionAt: 0,
+  lastUserMessageAt: 0,
+  lastAssistantMessageAt: 0,
+  userMessageCount: 0,
+  assistantMessageCount: 0,
+  manualTriggerCount: 0,
+  autoTriggerCount: 0,
+  rerollCount: 0,
+  notifyOnlySkipCount: 0,
+  resumeSettlementCount: 0,
+})
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
@@ -423,6 +444,158 @@ const normalizeApiReport = (rawReport) => {
   }
 }
 
+const createChatTruthEventId = () =>
+  `truth_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const clampTruthMetric = (value, fallback = 0) => clamp(toInt(value, fallback), 0, 100)
+
+const normalizeRelationshipStage = (value, fallback = 'neutral') => {
+  if (value === 'distant') return 'distant'
+  if (value === 'warm') return 'warm'
+  if (value === 'close') return 'close'
+  if (value === 'strained') return 'strained'
+  return fallback
+}
+
+const deriveRelationshipStage = (rawMetrics = {}) => {
+  const affinity = clampTruthMetric(rawMetrics.affinity, DEFAULT_CHAT_TRUTH_METRICS.affinity)
+  const trust = clampTruthMetric(rawMetrics.trust, DEFAULT_CHAT_TRUTH_METRICS.trust)
+  const distance = clampTruthMetric(rawMetrics.distance, DEFAULT_CHAT_TRUTH_METRICS.distance)
+  const tension = clampTruthMetric(rawMetrics.tension, DEFAULT_CHAT_TRUTH_METRICS.tension)
+
+  if (tension >= 70) return 'strained'
+  if (affinity >= 78 && trust >= 68 && distance <= 35) return 'close'
+  if (affinity >= 62 && trust >= 55 && distance <= 50) return 'warm'
+  if (distance >= 75 || trust <= 30) return 'distant'
+  return 'neutral'
+}
+
+const normalizeChatTruthEntity = (rawEntity, fallbackKey = '') => {
+  const entity = rawEntity && typeof rawEntity === 'object' ? rawEntity : {}
+  const entityKey =
+    typeof entity.entityKey === 'string' && entity.entityKey.trim()
+      ? entity.entityKey.trim()
+      : fallbackKey
+  if (!entityKey) return null
+
+  const contactId = Number(entity.contactId)
+  const profileId = Number(entity.profileId)
+  const createdAt = Number(entity.createdAt)
+  const updatedAt = Number(entity.updatedAt)
+  const relationshipStage = normalizeRelationshipStage(
+    entity.relationshipStage,
+    deriveRelationshipStage(entity),
+  )
+
+  return {
+    entityKey,
+    contactId: Number.isFinite(contactId) && contactId > 0 ? Math.floor(contactId) : 0,
+    profileId: Number.isFinite(profileId) && profileId > 0 ? Math.floor(profileId) : 0,
+    kind:
+      typeof entity.kind === 'string' && entity.kind.trim()
+        ? entity.kind.trim()
+        : 'role',
+    displayName:
+      typeof entity.displayName === 'string' && entity.displayName.trim()
+        ? entity.displayName.trim()
+        : '',
+    affinity: clampTruthMetric(entity.affinity, DEFAULT_CHAT_TRUTH_METRICS.affinity),
+    trust: clampTruthMetric(entity.trust, DEFAULT_CHAT_TRUTH_METRICS.trust),
+    distance: clampTruthMetric(entity.distance, DEFAULT_CHAT_TRUTH_METRICS.distance),
+    dependency: clampTruthMetric(entity.dependency, DEFAULT_CHAT_TRUTH_METRICS.dependency),
+    tension: clampTruthMetric(entity.tension, DEFAULT_CHAT_TRUTH_METRICS.tension),
+    relationshipStage,
+    lastWarmMomentAt:
+      Number.isFinite(Number(entity.lastWarmMomentAt))
+        ? Math.max(0, Math.floor(Number(entity.lastWarmMomentAt)))
+        : 0,
+    lastConflictAt:
+      Number.isFinite(Number(entity.lastConflictAt))
+        ? Math.max(0, Math.floor(Number(entity.lastConflictAt)))
+        : 0,
+    lastInteractionAt:
+      Number.isFinite(Number(entity.lastInteractionAt))
+        ? Math.max(0, Math.floor(Number(entity.lastInteractionAt)))
+        : 0,
+    lastUserMessageAt:
+      Number.isFinite(Number(entity.lastUserMessageAt))
+        ? Math.max(0, Math.floor(Number(entity.lastUserMessageAt)))
+        : 0,
+    lastAssistantMessageAt:
+      Number.isFinite(Number(entity.lastAssistantMessageAt))
+        ? Math.max(0, Math.floor(Number(entity.lastAssistantMessageAt)))
+        : 0,
+    userMessageCount: Math.max(0, toInt(entity.userMessageCount, 0)),
+    assistantMessageCount: Math.max(0, toInt(entity.assistantMessageCount, 0)),
+    manualTriggerCount: Math.max(0, toInt(entity.manualTriggerCount, 0)),
+    autoTriggerCount: Math.max(0, toInt(entity.autoTriggerCount, 0)),
+    rerollCount: Math.max(0, toInt(entity.rerollCount, 0)),
+    notifyOnlySkipCount: Math.max(0, toInt(entity.notifyOnlySkipCount, 0)),
+    resumeSettlementCount: Math.max(0, toInt(entity.resumeSettlementCount, 0)),
+    createdAt: Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : Date.now(),
+    updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? Math.floor(updatedAt) : Date.now(),
+  }
+}
+
+const normalizeChatTruthEvent = (rawEvent = {}) => {
+  const event = rawEvent && typeof rawEvent === 'object' ? rawEvent : {}
+  const entityKey =
+    typeof event.entityKey === 'string' && event.entityKey.trim() ? event.entityKey.trim() : ''
+  if (!entityKey) return null
+
+  const action =
+    typeof event.action === 'string' && event.action.trim()
+      ? event.action.trim()
+      : 'interaction'
+  const at = Number(event.at)
+  const payload = event.payload && typeof event.payload === 'object' ? event.payload : {}
+
+  return {
+    id:
+      typeof event.id === 'string' && event.id.trim()
+        ? event.id.trim()
+        : createChatTruthEventId(),
+    entityKey,
+    action,
+    at: Number.isFinite(at) && at > 0 ? Math.floor(at) : Date.now(),
+    payload: {
+      ...payload,
+    },
+  }
+}
+
+const normalizeTruthState = (rawTruthState) => {
+  const input = rawTruthState && typeof rawTruthState === 'object' ? rawTruthState : {}
+  const rawEntities = input.chatEntities && typeof input.chatEntities === 'object'
+    ? input.chatEntities
+    : {}
+
+  const chatEntities = Object.fromEntries(
+    Object.entries(rawEntities)
+      .map(([entityKey, value]) => [entityKey, normalizeChatTruthEntity(value, entityKey)])
+      .filter(([, value]) => Boolean(value)),
+  )
+
+  const chatEvents = Array.isArray(input.chatEvents)
+    ? input.chatEvents
+        .map((event) => normalizeChatTruthEvent(event))
+        .filter(Boolean)
+        .sort((a, b) => b.at - a.at)
+        .slice(0, MAX_CHAT_TRUTH_EVENTS)
+    : []
+
+  const lastUpdatedAt = Number(input.lastUpdatedAt)
+
+  return {
+    chatEntities,
+    chatEvents,
+    lastUpdatedAt:
+      Number.isFinite(lastUpdatedAt) && lastUpdatedAt > 0
+        ? Math.floor(lastUpdatedAt)
+        : Date.now(),
+  }
+}
+
 export const useSystemStore = defineStore('system', () => {
   const availableThemes = ref(AVAILABLE_THEMES)
 
@@ -469,6 +642,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const notifications = ref([])
   const apiReports = ref([])
+  const truthState = reactive(normalizeTruthState())
   const isLocked = ref(true)
   const activeAutoExecution = reactive({
     module: '',
@@ -728,6 +902,207 @@ export const useSystemStore = defineStore('system', () => {
     notifications.value = []
   }
 
+  const resolveChatTruthEntityMeta = (rawContact = {}) => {
+    const contact = rawContact && typeof rawContact === 'object' ? rawContact : {}
+    const contactId = Number(contact.id)
+    const profileId = Number(contact.profileId)
+    const kind =
+      typeof contact.kind === 'string' && contact.kind.trim()
+        ? contact.kind.trim()
+        : 'role'
+    const displayName =
+      typeof contact.name === 'string' && contact.name.trim()
+        ? contact.name.trim()
+        : ''
+
+    const entityKey =
+      Number.isFinite(profileId) && profileId > 0
+        ? `role:${Math.floor(profileId)}`
+        : Number.isFinite(contactId) && contactId > 0
+          ? `contact:${Math.floor(contactId)}`
+          : ''
+
+    if (!entityKey) return null
+    return {
+      entityKey,
+      contactId: Number.isFinite(contactId) && contactId > 0 ? Math.floor(contactId) : 0,
+      profileId: Number.isFinite(profileId) && profileId > 0 ? Math.floor(profileId) : 0,
+      kind,
+      displayName,
+    }
+  }
+
+  const ensureChatTruthEntity = (rawContact = {}) => {
+    const meta = resolveChatTruthEntityMeta(rawContact)
+    if (!meta) return null
+
+    const existing = normalizeChatTruthEntity(
+      truthState.chatEntities[meta.entityKey],
+      meta.entityKey,
+    )
+    if (existing) {
+      truthState.chatEntities[meta.entityKey] = {
+        ...existing,
+        contactId: meta.contactId || existing.contactId,
+        profileId: meta.profileId || existing.profileId,
+        kind: meta.kind || existing.kind,
+        displayName: meta.displayName || existing.displayName,
+      }
+      return truthState.chatEntities[meta.entityKey]
+    }
+
+    const now = Date.now()
+    const created = normalizeChatTruthEntity({
+      ...meta,
+      ...DEFAULT_CHAT_TRUTH_METRICS,
+      relationshipStage: DEFAULT_CHAT_TRUTH_METRICS.relationshipStage,
+      createdAt: now,
+      updatedAt: now,
+    }, meta.entityKey)
+
+    truthState.chatEntities[meta.entityKey] = created
+    truthState.lastUpdatedAt = now
+    return truthState.chatEntities[meta.entityKey]
+  }
+
+  const applyMetricDelta = (entity, key, delta = 0) => {
+    const current = clampTruthMetric(entity[key], DEFAULT_CHAT_TRUTH_METRICS[key] || 0)
+    entity[key] = clampTruthMetric(current + Number(delta || 0), DEFAULT_CHAT_TRUTH_METRICS[key] || 0)
+  }
+
+  const updateRelationshipStage = (entity, now) => {
+    const nextStage = deriveRelationshipStage(entity)
+    if (nextStage !== entity.relationshipStage) {
+      entity.relationshipStage = nextStage
+    }
+    if (nextStage === 'warm' || nextStage === 'close') {
+      entity.lastWarmMomentAt = Math.max(entity.lastWarmMomentAt || 0, now)
+    }
+    if (nextStage === 'strained') {
+      entity.lastConflictAt = Math.max(entity.lastConflictAt || 0, now)
+    }
+  }
+
+  const appendChatTruthEvent = (entityKey, action = 'interaction', payload = {}, at = Date.now()) => {
+    const normalized = normalizeChatTruthEvent({
+      entityKey,
+      action,
+      payload,
+      at,
+    })
+    if (!normalized) return ''
+
+    truthState.chatEvents = [normalized, ...truthState.chatEvents].slice(0, MAX_CHAT_TRUTH_EVENTS)
+    truthState.lastUpdatedAt = Math.max(truthState.lastUpdatedAt || 0, normalized.at)
+    return normalized.id
+  }
+
+  const touchChatTruth = (rawContact = {}, action = 'interaction', rawPayload = {}, at = Date.now()) => {
+    const entity = ensureChatTruthEntity(rawContact)
+    if (!entity) return null
+
+    const now = Number.isFinite(Number(at)) ? Math.max(0, Math.floor(Number(at))) : Date.now()
+    const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {}
+    const count = Math.max(1, toInt(payload.count, 1))
+    const missedCycles = Math.max(1, toInt(payload.missedCycles, 1))
+
+    if (action === 'user_message') {
+      entity.userMessageCount += count
+      entity.lastUserMessageAt = now
+      entity.lastInteractionAt = now
+      applyMetricDelta(entity, 'affinity', count)
+      applyMetricDelta(entity, 'trust', count)
+      applyMetricDelta(entity, 'distance', -count)
+    } else if (action === 'assistant_reply') {
+      entity.assistantMessageCount += count
+      entity.lastAssistantMessageAt = now
+      entity.lastInteractionAt = now
+      applyMetricDelta(entity, 'affinity', count * 2)
+      applyMetricDelta(entity, 'trust', count)
+      applyMetricDelta(entity, 'distance', -(count + 1))
+    } else if (action === 'manual_trigger') {
+      entity.manualTriggerCount += 1
+      entity.lastInteractionAt = now
+    } else if (action === 'auto_trigger') {
+      entity.autoTriggerCount += 1
+      entity.lastInteractionAt = now
+    } else if (action === 'reroll') {
+      entity.rerollCount += 1
+      entity.lastInteractionAt = now
+      applyMetricDelta(entity, 'tension', 2)
+    } else if (action === 'notify_only_skip') {
+      entity.notifyOnlySkipCount += 1
+      entity.lastInteractionAt = now
+      applyMetricDelta(entity, 'distance', 1)
+    } else if (action === 'resume_settlement') {
+      entity.resumeSettlementCount += missedCycles
+      entity.lastInteractionAt = now
+      applyMetricDelta(entity, 'distance', Math.min(8, missedCycles))
+      applyMetricDelta(entity, 'tension', Math.min(6, Math.floor(missedCycles / 2)))
+    } else {
+      entity.lastInteractionAt = now
+    }
+
+    updateRelationshipStage(entity, now)
+    entity.updatedAt = now
+    truthState.lastUpdatedAt = now
+
+    appendChatTruthEvent(entity.entityKey, action, payload, now)
+    return getChatTruthSnapshot(rawContact)
+  }
+
+  const getChatTruthSnapshot = (rawContact = {}, options = {}) => {
+    const entity = ensureChatTruthEntity(rawContact)
+    if (!entity) return null
+
+    const eventLimit = clamp(toInt(options.eventLimit, 4), 0, 20)
+    const recentEvents = eventLimit > 0
+      ? truthState.chatEvents
+          .filter((item) => item.entityKey === entity.entityKey)
+          .slice(0, eventLimit)
+      : []
+
+    return {
+      entityKey: entity.entityKey,
+      contactId: entity.contactId,
+      profileId: entity.profileId,
+      kind: entity.kind,
+      displayName: entity.displayName,
+      relationship: {
+        stage: entity.relationshipStage,
+        affinity: entity.affinity,
+        trust: entity.trust,
+        distance: entity.distance,
+        dependency: entity.dependency,
+        tension: entity.tension,
+      },
+      timestamps: {
+        lastWarmMomentAt: entity.lastWarmMomentAt,
+        lastConflictAt: entity.lastConflictAt,
+        lastInteractionAt: entity.lastInteractionAt,
+        lastUserMessageAt: entity.lastUserMessageAt,
+        lastAssistantMessageAt: entity.lastAssistantMessageAt,
+      },
+      counters: {
+        userMessageCount: entity.userMessageCount,
+        assistantMessageCount: entity.assistantMessageCount,
+        manualTriggerCount: entity.manualTriggerCount,
+        autoTriggerCount: entity.autoTriggerCount,
+        rerollCount: entity.rerollCount,
+        notifyOnlySkipCount: entity.notifyOnlySkipCount,
+        resumeSettlementCount: entity.resumeSettlementCount,
+      },
+      recentEvents,
+      updatedAt: entity.updatedAt,
+    }
+  }
+
+  const clearChatTruthState = () => {
+    truthState.chatEntities = {}
+    truthState.chatEvents = []
+    truthState.lastUpdatedAt = Date.now()
+  }
+
   const isAiAutomationEnabledForModule = (moduleKey) => {
     const moduleConfig = settings.aiAutomation.modules?.[moduleKey]
     return Boolean(settings.aiAutomation.masterEnabled && moduleConfig?.enabled)
@@ -923,6 +1298,18 @@ export const useSystemStore = defineStore('system', () => {
       apiReports.value = []
     }
 
+    if (persisted.truthState && typeof persisted.truthState === 'object') {
+      const normalizedTruthState = normalizeTruthState(persisted.truthState)
+      truthState.chatEntities = normalizedTruthState.chatEntities
+      truthState.chatEvents = normalizedTruthState.chatEvents
+      truthState.lastUpdatedAt = normalizedTruthState.lastUpdatedAt
+    } else {
+      const normalizedTruthState = normalizeTruthState(truthState)
+      truthState.chatEntities = normalizedTruthState.chatEntities
+      truthState.chatEvents = normalizedTruthState.chatEvents
+      truthState.lastUpdatedAt = normalizedTruthState.lastUpdatedAt
+    }
+
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
     if (!hasTheme) {
       settings.appearance.currentTheme = availableThemes.value[0]?.id || 'y2k'
@@ -983,6 +1370,25 @@ export const useSystemStore = defineStore('system', () => {
         user: { ...user },
         notifications: notifications.value.map((note) => ({ ...note })),
         apiReports: apiReports.value.map((report) => ({ ...report })),
+        truthState: {
+          chatEntities: Object.fromEntries(
+            Object.entries(truthState.chatEntities).map(([entityKey, entity]) => [
+              entityKey,
+              {
+                ...entity,
+              },
+            ]),
+          ),
+          chatEvents: truthState.chatEvents.map((event) => ({
+            ...event,
+            payload: event.payload && typeof event.payload === 'object'
+              ? {
+                  ...event.payload,
+                }
+              : {},
+          })),
+          lastUpdatedAt: truthState.lastUpdatedAt,
+        },
       },
       { version: SYSTEM_STORAGE_VERSION },
     )
@@ -993,13 +1399,14 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   hydrateFromStorage()
-  watch([settings, user, notifications, apiReports], persistToStorage, { deep: true })
+  watch([settings, user, notifications, apiReports, truthState], persistToStorage, { deep: true })
 
   return {
     settings,
     user,
     notifications,
     apiReports,
+    truthState,
     isLocked,
     activeAutoExecution,
     availableThemes,
@@ -1021,6 +1428,9 @@ export const useSystemStore = defineStore('system', () => {
     markAllNotificationsRead,
     removeNotification,
     clearNotifications,
+    touchChatTruth,
+    getChatTruthSnapshot,
+    clearChatTruthState,
     isAiAutomationEnabledForModule,
     isAiAutomationQuietHoursActive,
     getAiAutomationRuntimePolicy,
