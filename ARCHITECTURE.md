@@ -1,6 +1,6 @@
 # SchatPhone 架构说明
 
-Updated / 更新时间: 2026-04-03
+Updated / 更新时间: 2026-04-04
 
 ## 1. Architecture Goals / 架构目标
 
@@ -82,6 +82,10 @@ Responsibility / 职责：external API integration, persistence abstraction, loc
   - system language normalization / 系统语言归一化
   - language-base resolution / 语言基类解析
   - localized text fallback / 本地化文案回退
+- `src/lib/chat-response.js`
+  - fenced/embedded JSON candidate extraction / 代码块与嵌入式 JSON 候选提取
+  - resilient assistant payload parsing / 助手响应稳健解析
+  - payload text fallback extraction (`content/text/message/output_text`) / payload 文本回退提取（`content/text/message/output_text`）
 - `src/composables/useI18n.js`
   - UI translation helper (`t`) and language state access  
   UI 文案翻译方法（`t`）与系统语言状态访问
@@ -169,6 +173,10 @@ Core routes / 核心路由：
   提示词组装会读取真值快照（`getChatTruthSnapshot`），保证跨供应商关系连续性。
 - Structured assistant payload normalization now enforces safe route/url fields and context-safe quote resolution.  
   结构化助手消息归一化已强制 route/url 安全校验，并通过上下文候选做引用安全解析。
+- Assistant parser now tolerates fenced/embedded JSON outputs and downgrades safely when parsing fails.  
+  助手解析器现可容错代码块/嵌入式 JSON 输出，并在解析失败时安全降级。
+- Assistant message normalization guarantees a primary text block for readability even when upstream payload only contains secondary/fallback fields.  
+  助手消息归一化保证主文本块存在，即使上游 payload 仅返回次级文本或回退字段也可稳定显示。
 - Markdown blocks are sanitized before rendering to avoid unsafe HTML execution via `v-html`.  
   Markdown 文本块在渲染前会进行 HTML 清洗，避免 `v-html` 执行不安全内容。
 - Service/official templates managed in-thread / 服务号/公众号模板在会话页内管理

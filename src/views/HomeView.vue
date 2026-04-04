@@ -360,7 +360,7 @@ const openAppById = (tileId) => {
     return
   }
 
-  alert(t(`应用「${tile.label}」正在开发中`, `App "${tile.label}" is in development`))
+  triggerLayoutToast(t(`应用「${tile.label}」正在开发中`, `App "${tile.label}" is in development`))
 }
 
 const clearLongPressTimer = () => {

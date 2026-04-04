@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-04-03
+Updated / 更新时间: 2026-04-04
 
 ## 1. Current Conclusion / 当前结论
 
@@ -72,6 +72,24 @@ AI 输入中状态以系统态文本展示：“对方正在输入...”
 系统真值基线已接入：运行态写入关系/事件真值，提示词读取真值快照。
 - Structured block hardening batch-1 is integrated: unsafe route/url fields are sanitized, quote fallback is context-safe, and markdown HTML is sanitized before render.  
 结构化消息加固第一批已接入：不安全 route/url 会被清洗，引用回退基于上下文安全候选，Markdown 渲染前做 HTML 清洗。
+- Structured block hardening batch-2 is integrated: assistant JSON parser now handles fenced/embedded payloads and secondary-language blocks are more readable.  
+结构化消息加固第二批已接入：助手 JSON 解析支持代码块/嵌入式返回，双语次级文本可读性提升。
+- Structured block hardening batch-3 is integrated: payload fallback now accepts `content/text/message/output_text` variants and guarantees a primary text block for each assistant message.  
+结构化消息加固第三批已接入：payload 回退兼容 `content/text/message/output_text` 变体，并保证每条助手消息都有主文本块。
+- Settings UX batch-2 is integrated in chat thread flow: save feedback in layered menu now mirrors settings/network patterns (`Saved` state + short header confirmation).  
+设置体验优化第二批已接入会话链路：分级菜单保存反馈已与 settings/network 模式对齐（`已保存` 状态 + 头部短暂确认）。
+- Settings backup import/export flow now uses inline feedback (success/error) instead of blocking alerts, matching the same lightweight UX direction.  
+Settings 备份导入/导出链路现已采用页内反馈（成功/失败）替代阻塞弹窗，保持同一套轻量反馈体验方向。
+- Network page now aligns with the same direction: preset validation and copy-report failure are surfaced via inline feedback.  
+Network 页面也已对齐该方向：预设校验与报告复制失败改为页内反馈提示。
+- Appearance widget page now also aligns: copy/export/import/restore feedback is rendered inline without blocking alerts.  
+Appearance Widget 页面也已对齐：复制/导出/导入/恢复反馈均改为页内提示，不再阻塞弹窗。
+- Chat thread now renders non-critical operational notices inline (copy/edit/delete failure, location missing, invalid route) to avoid interaction interruption.  
+Chat 会话页已将非关键操作提示改为页内显示（复制/编辑/删除失败、位置缺失、无效链接），减少交互中断。
+- Contacts and ChatDirectory now align as well: validation/failure/success messages are surfaced inline instead of blocking alerts (confirm dialogs kept for destructive actions).  
+Contacts 与 ChatDirectory 也已对齐：校验/失败/成功提示改为页内展示，不再使用阻塞弹窗（破坏性操作仍保留确认弹窗）。
+- Home page fallback notice now also uses inline toast for unfinished app entries, eliminating remaining non-critical blocking alerts in active views.  
+Home 页对未完成应用入口的提示也已改为页内 toast，清理了活跃页面剩余的非关键阻塞弹窗。
 - New route: `/chat-contacts` with category split  
 新增 `/chat-contacts`，按角色/群聊与服务号/公众号分段管理
 - Role directory model is now split: main contacts own global role profiles, chat directory handles binding/meta only  
@@ -117,8 +135,8 @@ AI 生成消息内容仍由模型与上下文驱动
 
 - Truth baseline is integrated, but metric calibration and stage-threshold tuning still need product playtest feedback.  
 真值基线已接入，但指标校准与关系阶段阈值仍需结合产品实测继续调优。
-- Structured block policy is still in hardening phase (batch-2 pending mixed-content typography and richer fallback rules).  
-结构化消息策略仍在加固阶段（第二批待补：混合内容排版与更细的回退规则）。
+- Structured block policy hardening baseline is completed (batch-1/2/3 landed); further tuning is now product-policy level.  
+结构化消息策略加固基线已完成（第一/二/三批已落地）；后续优化主要转向产品策略层调参。
 - Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
 跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
@@ -137,9 +155,9 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ### P1
 
-1. Structured block policy hardening (`P1-2`) in progress: continue batch-2 for readability and fallback consistency / 结构化消息策略加固（`P1-2`）进行中：继续第二批可读性与回退一致性补强
-2. Settings and chat-adjacent UX consistency (`P1-3`) / 设置与聊天周边体验一致性（`P1-3`）
-3. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
+1. Storage layering preparation (`P1-4`) / 分层存储迁移准备（`P1-4`）
+2. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
+3. Truth metric and quote-policy tuning based on playtest transcripts / 基于实测对真值指标与引用策略继续调参
 
 ## 5. Exit Criteria for Next Stage / 阶段验收标准
 

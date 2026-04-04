@@ -20,11 +20,24 @@ const saved = ref(false)
 const reportModuleFilter = ref('all')
 const reportLevelFilter = ref('all')
 const copiedReportId = ref('')
+const uiFeedbackType = ref('')
+const uiFeedbackMessage = ref('')
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
 let savedTimerId = null
 let copiedReportTimerId = null
+let uiFeedbackTimerId = null
+
+const setUiFeedback = (type, message, durationMs = 1800) => {
+  uiFeedbackType.value = type
+  uiFeedbackMessage.value = message
+  if (uiFeedbackTimerId) clearTimeout(uiFeedbackTimerId)
+  uiFeedbackTimerId = setTimeout(() => {
+    uiFeedbackType.value = ''
+    uiFeedbackMessage.value = ''
+  }, durationMs)
+}
 
 const ensurePresetState = () => {
   if (!Array.isArray(settings.value.api.presets)) {
@@ -170,7 +183,7 @@ const copyReport = async (item) => {
       copiedReportId.value = ''
     }, 1200)
   } catch {
-    alert(t('复制失败，请手动记录。', 'Copy failed. Please record manually.'))
+    setUiFeedback('error', t('复制失败，请手动记录。', 'Copy failed. Please record manually.'))
   }
 }
 
@@ -182,11 +195,11 @@ const savePreset = () => {
   const model = settings.value.api.model?.trim()
 
   if (!name) {
-    alert(t('请输入预设名称。', 'Please enter a preset name.'))
+    setUiFeedback('error', t('请输入预设名称。', 'Please enter a preset name.'))
     return
   }
   if (!url || !key) {
-    alert(t('请先填写 URL 和 Key。', 'Please enter URL and Key first.'))
+    setUiFeedback('error', t('请先填写 URL 和 Key。', 'Please enter URL and Key first.'))
     return
   }
 
@@ -213,6 +226,7 @@ const savePreset = () => {
   }
 
   presetName.value = ''
+  setUiFeedback('success', t('预设已保存。', 'Preset saved.'))
 }
 
 const applyPreset = (presetId) => {
@@ -402,6 +416,10 @@ onBeforeUnmount(() => {
     clearTimeout(copiedReportTimerId)
     copiedReportTimerId = null
   }
+  if (uiFeedbackTimerId) {
+    clearTimeout(uiFeedbackTimerId)
+    uiFeedbackTimerId = null
+  }
 })
 
 ensurePresetState()
@@ -464,6 +482,14 @@ ensurePresetState()
           </button>
         </div>
       </div>
+
+      <p
+        v-if="uiFeedbackMessage"
+        class="px-1 text-[11px]"
+        :class="uiFeedbackType === 'error' ? 'text-red-600' : 'text-emerald-600'"
+      >
+        {{ uiFeedbackMessage }}
+      </p>
 
       <div class="bg-white rounded-xl p-4" v-if="presets.length > 0">
         <label class="text-xs text-gray-500 block mb-1">{{ t('已存预设', 'Saved presets') }}</label>

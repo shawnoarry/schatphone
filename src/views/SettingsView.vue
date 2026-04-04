@@ -23,10 +23,23 @@ const notificationSaved = ref(false)
 const automationSaved = ref(false)
 const backupImporting = ref(false)
 const backupFileInput = ref(null)
+const backupFeedbackType = ref('')
+const backupFeedbackMessage = ref('')
 let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
+let backupFeedbackTimerId = null
 const automationInitialMaster = ref(false)
+
+const setBackupFeedback = (type, message, durationMs = 1800) => {
+  backupFeedbackType.value = type
+  backupFeedbackMessage.value = message
+  if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
+  backupFeedbackTimerId = setTimeout(() => {
+    backupFeedbackType.value = ''
+    backupFeedbackMessage.value = ''
+  }, durationMs)
+}
 
 const goHome = () => {
   router.push('/home')
@@ -175,6 +188,7 @@ const exportData = () => {
   anchor.download = 'schatphone_backup.json'
   anchor.click()
   URL.revokeObjectURL(url)
+  setBackupFeedback('success', t('备份文件下载已开始。', 'Backup download has started.'))
 }
 
 const deepClone = (value) => {
@@ -249,7 +263,7 @@ const importData = async (event) => {
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
-    alert(t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.'))
+    setBackupFeedback('success', t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.'), 2200)
   } catch (error) {
     systemStore.restoreFromBackup(rollback.system)
     chatStore.restoreFromBackup(rollback.chat)
@@ -257,8 +271,11 @@ const importData = async (event) => {
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
-    alert(
-      `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}\n${error?.message || ''}`,
+    const detail = typeof error?.message === 'string' && error.message.trim() ? ` ${error.message.trim()}` : ''
+    setBackupFeedback(
+      'error',
+      `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`,
+      3200,
     )
   } finally {
     backupImporting.value = false
@@ -269,6 +286,7 @@ onBeforeUnmount(() => {
   if (generalSavedTimerId) clearTimeout(generalSavedTimerId)
   if (notificationSavedTimerId) clearTimeout(notificationSavedTimerId)
   if (automationSavedTimerId) clearTimeout(automationSavedTimerId)
+  if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
 })
 </script>
 
@@ -445,6 +463,14 @@ onBeforeUnmount(() => {
         class="hidden"
         @change="importData"
       />
+
+      <p
+        v-if="backupFeedbackMessage"
+        class="px-1 text-[11px]"
+        :class="backupFeedbackType === 'error' ? 'text-red-600' : 'text-emerald-600'"
+      >
+        {{ backupFeedbackMessage }}
+      </p>
 
       <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">

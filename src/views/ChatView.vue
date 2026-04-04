@@ -7,6 +7,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
+import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
@@ -99,6 +100,7 @@ const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const MANUAL_PRIORITY_GUARD_MS = 1500
 const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
+const SAVE_FEEDBACK_DURATION_MS = 1200
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -115,7 +117,14 @@ const serviceTemplateDraft = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
 const lastManualActionAt = ref(0)
+const threadSettingsSaved = ref(false)
+const serviceTemplateSaved = ref(false)
+const uiNoticeType = ref('')
+const uiNoticeMessage = ref('')
 let autoInvokeTimerId = null
+let threadSettingsSavedTimerId = null
+let serviceTemplateSavedTimerId = null
+let uiNoticeTimerId = null
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -210,6 +219,18 @@ const getChatAutomationRuntimePolicy = (baseAt = Date.now()) =>
 
 const markManualAction = () => {
   lastManualActionAt.value = Date.now()
+}
+
+const showUiNotice = (type, message, durationMs = 1800) => {
+  const text = typeof message === 'string' ? message.trim() : ''
+  if (!text) return
+  uiNoticeType.value = type
+  uiNoticeMessage.value = text
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+  uiNoticeTimerId = setTimeout(() => {
+    uiNoticeType.value = ''
+    uiNoticeMessage.value = ''
+  }, durationMs)
 }
 
 const formatAutoStatusTime = (timestamp) => {
@@ -342,8 +363,6 @@ const sanitizeAssistantHtmlSnippet = (value) => {
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/javascript:/gi, '')
 }
-
-const stripCodeFence = (text) => (text || '').replace(/```json/gi, '').replace(/```/g, '').trim()
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -992,11 +1011,105 @@ const resolveAssistantQuote = (rawQuote, replyType, quoteCandidates = []) => {
   }
 }
 
-const ensureAssistantTextBlock = (blocks, fallbackText = '...') => {
+const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
+  if (!Array.isArray(blocks) || blocks.length === 0) return ''
+  const first = blocks.find((block) => block?.type && block.type !== 'text')
+  if (!first) return ''
+
+  if (first.type === 'voice_virtual') {
+    return trimAssistantText(
+      first.transcript ? `${first.label}：${first.transcript}` : first.label,
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'module_link') {
+    return trimAssistantText(`${first.label} (${first.route || '/home'})`, MAX_ASSISTANT_TEXT_CHARS, '')
+  }
+  if (first.type === 'transfer_virtual') {
+    return trimAssistantText(
+      `${first.label} ${first.amount || '0.00'} ${first.currency || 'CNY'}`,
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'image_virtual') {
+    return trimAssistantText(
+      first.caption ? `${first.alt}：${first.caption}` : first.alt,
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'mini_scene') {
+    return trimAssistantText(
+      first.description ? `${first.title}：${first.description}` : first.title,
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  return ''
+}
+
+const normalizeAssistantTextBlocksFlow = (blocks = [], aiPrefs) => {
+  const list = Array.isArray(blocks) ? blocks.filter(Boolean).slice(0, MAX_ASSISTANT_BLOCKS) : []
+  const primaryTextBlocks = []
+  const secondaryTextBlocks = []
+  const richBlocks = []
+
+  list.forEach((block) => {
+    if (block.type !== 'text') {
+      richBlocks.push(block)
+      return
+    }
+
+    const text = trimAssistantText(block.text, MAX_ASSISTANT_TEXT_CHARS)
+    if (!text) return
+    const normalized = {
+      ...block,
+      text,
+      variant: block.variant === 'secondary' ? 'secondary' : 'primary',
+    }
+
+    if (normalized.variant === 'secondary') {
+      secondaryTextBlocks.push(normalized)
+    } else {
+      primaryTextBlocks.push(normalized)
+    }
+  })
+
+  const primaryTextSet = new Set(primaryTextBlocks.map((item) => item.text))
+  const filteredSecondary = secondaryTextBlocks.filter((item, index) => {
+    if (!aiPrefs?.bilingualEnabled) return false
+    if (primaryTextSet.has(item.text)) return false
+    return (
+      secondaryTextBlocks.findIndex((other) => other.text === item.text && other.lang === item.lang) === index
+    )
+  })
+
+  return [...primaryTextBlocks, ...richBlocks, ...filteredSecondary.slice(0, 1)].slice(0, MAX_ASSISTANT_BLOCKS)
+}
+
+const ensureAssistantPrimaryTextBlock = (blocks, fallbackText = '...') => {
   const normalizedBlocks = Array.isArray(blocks) ? [...blocks].slice(0, MAX_ASSISTANT_BLOCKS) : []
-  const hasTextBlock = normalizedBlocks.some((block) => block.type === 'text' && block.text?.trim())
-  if (hasTextBlock) return normalizedBlocks
-  normalizedBlocks.push({
+  const hasPrimaryTextBlock = normalizedBlocks.some(
+    (block) => block.type === 'text' && block.variant !== 'secondary' && block.text?.trim(),
+  )
+  if (hasPrimaryTextBlock) return normalizedBlocks
+
+  const secondarySeed = normalizedBlocks.find(
+    (block) => block.type === 'text' && block.variant === 'secondary' && block.text?.trim(),
+  )
+  if (secondarySeed) {
+    normalizedBlocks.unshift({
+      type: 'text',
+      text: trimAssistantText(secondarySeed.text, MAX_ASSISTANT_TEXT_CHARS, fallbackText),
+      variant: 'primary',
+      lang: 'auto',
+    })
+    return normalizedBlocks.slice(0, MAX_ASSISTANT_BLOCKS)
+  }
+
+  normalizedBlocks.unshift({
     type: 'text',
     text: trimAssistantText(fallbackText, MAX_ASSISTANT_TEXT_CHARS, '...'),
     variant: 'primary',
@@ -1004,6 +1117,9 @@ const ensureAssistantTextBlock = (blocks, fallbackText = '...') => {
   })
   return normalizedBlocks
 }
+
+const resolvePayloadTextFallback = (payload, fallbackText = '...') =>
+  trimAssistantText(extractAssistantPayloadText(payload), MAX_ASSISTANT_TEXT_CHARS, fallbackText)
 
 const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '...', options = {}) => {
   const payload = rawMessage && typeof rawMessage === 'object' ? rawMessage : {}
@@ -1017,7 +1133,14 @@ const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '.
     parsedBlocks = parsedBlocks.filter((block) => !(block.type === 'text' && block.variant === 'secondary'))
   }
 
-  parsedBlocks = ensureAssistantTextBlock(parsedBlocks, fallbackText)
+  parsedBlocks = normalizeAssistantTextBlocksFlow(parsedBlocks, aiPrefs)
+  const fallbackFromRichBlock = summarizePrimaryTextFromFirstRichBlock(parsedBlocks)
+  const fallbackFromPayload = resolvePayloadTextFallback(payload, fallbackText)
+  parsedBlocks = ensureAssistantPrimaryTextBlock(
+    parsedBlocks,
+    fallbackFromRichBlock || fallbackFromPayload || fallbackText,
+  )
+  parsedBlocks = normalizeAssistantTextBlocksFlow(parsedBlocks, aiPrefs)
   const primaryTextBlock = parsedBlocks.find((block) => block.type === 'text' && block.variant !== 'secondary')
   const content = trimAssistantText(
     primaryTextBlock?.text || parsedBlocks.find((block) => block.type === 'text')?.text || fallbackText,
@@ -1041,41 +1164,31 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
   const expectedReplyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
   const fallbackText = trimAssistantText(cleanText, MAX_ASSISTANT_TEXT_CHARS, '...')
   const quoteCandidates = Array.isArray(options.quoteCandidates) ? options.quoteCandidates : []
+  const parsedPayload = parseAssistantJsonPayload(cleanText)
+  const normalizedFallback = () =>
+    normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
+      quoteCandidates,
+    })
 
-  try {
-    const parsed = JSON.parse(cleanText)
-    if (!parsed || typeof parsed !== 'object') throw new Error('Response is not object')
-
-    const rawMessages = Array.isArray(parsed.messages) ? parsed.messages : [parsed]
-    const normalizedMessages = rawMessages
-      .slice(0, expectedReplyCount)
-      .map((item) =>
-        normalizeAssistantMessagePayload(item, aiPrefs, fallbackText, {
-          quoteCandidates,
-        }),
-      )
-      .filter(Boolean)
-
-    if (!normalizedMessages.length) {
-      return {
-        messages: [
-          normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
-            quoteCandidates,
-          }),
-        ],
-      }
-    }
-
-    return { messages: normalizedMessages }
-  } catch {
-    return {
-      messages: [
-        normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
-          quoteCandidates,
-        }),
-      ],
-    }
+  if (!parsedPayload || typeof parsedPayload !== 'object') {
+    return { messages: [normalizedFallback()] }
   }
+
+  const rawMessages = Array.isArray(parsedPayload.messages) ? parsedPayload.messages : [parsedPayload]
+  const normalizedMessages = rawMessages
+    .slice(0, expectedReplyCount)
+    .map((item) =>
+      normalizeAssistantMessagePayload(item, aiPrefs, fallbackText, {
+        quoteCandidates,
+      }),
+    )
+    .filter(Boolean)
+
+  if (!normalizedMessages.length) {
+    return { messages: [normalizedFallback()] }
+  }
+
+  return { messages: normalizedMessages }
 }
 
 const clampNotificationPreview = (text, max = 72) => {
@@ -1384,7 +1497,9 @@ const copyMessage = async (message) => {
   const text = messagePrimaryText(message) || extractMessageTextForContext(message)
   const ok = await copyText(text)
   if (!ok) {
-    alert(t('复制失败，请稍后重试。', 'Copy failed. Please retry.'))
+    showUiNotice('error', t('复制失败，请稍后重试。', 'Copy failed. Please retry.'))
+  } else {
+    showUiNotice('success', t('已复制消息。', 'Message copied.'))
   }
   closeMessageActions()
 }
@@ -1418,7 +1533,7 @@ const editMessage = (message) => {
 
   const nextText = input.trim()
   if (!nextText) {
-    alert(t('消息不能为空。', 'Message cannot be empty.'))
+    showUiNotice('error', t('消息不能为空。', 'Message cannot be empty.'))
     return
   }
 
@@ -1427,7 +1542,7 @@ const editMessage = (message) => {
     editedAt: Date.now(),
   })
   if (!ok) {
-    alert(t('编辑失败，请重试。', 'Edit failed. Please retry.'))
+    showUiNotice('error', t('编辑失败，请重试。', 'Edit failed. Please retry.'))
     return
   }
   closeMessageActions()
@@ -1440,7 +1555,7 @@ const deleteMessage = (message) => {
 
   const removed = chatStore.removeMessage(activeChat.value.id, message.id)
   if (!removed) {
-    alert(t('删除失败，请重试。', 'Delete failed. Please retry.'))
+    showUiNotice('error', t('删除失败，请重试。', 'Delete failed. Please retry.'))
     return
   }
 
@@ -1647,7 +1762,7 @@ const sendCurrentLocation = () => {
 
   const locationText = currentLocationText.value
   if (!locationText || locationText.includes('未设置') || locationText.toLowerCase().includes('not set')) {
-    alert(t('请先在地图中设置当前位置。', 'Please set your location in Map first.'))
+    showUiNotice('warning', t('请先在地图中设置当前位置。', 'Please set your location in Map first.'))
     return
   }
 
@@ -1775,6 +1890,35 @@ const contactKindTagClass = (contact) => {
   return ''
 }
 
+const headerSecondaryStatusText = computed(() => {
+  if (loadingAI.value) return t('对方正在输入...', 'Typing...')
+  if (threadSettingsSaved.value) return t('会话设置已保存', 'Thread settings saved')
+  if (serviceTemplateSaved.value) return t('服务模板已保存', 'Service template saved')
+  return ''
+})
+
+const headerSecondaryStatusClass = computed(() =>
+  !loadingAI.value && (threadSettingsSaved.value || serviceTemplateSaved.value)
+    ? 'text-emerald-600 font-medium'
+    : '',
+)
+
+const triggerThreadSettingsSaved = () => {
+  threadSettingsSaved.value = true
+  if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
+  threadSettingsSavedTimerId = setTimeout(() => {
+    threadSettingsSaved.value = false
+  }, SAVE_FEEDBACK_DURATION_MS)
+}
+
+const triggerServiceTemplateSaved = () => {
+  serviceTemplateSaved.value = true
+  if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
+  serviceTemplateSavedTimerId = setTimeout(() => {
+    serviceTemplateSaved.value = false
+  }, SAVE_FEEDBACK_DURATION_MS)
+}
+
 const messageStatusText = (message) => {
   if (message.role !== 'user') return ''
   if (message.status === 'failed') return t('发送失败', 'Failed')
@@ -1797,6 +1941,14 @@ const messageBlocks = (message) => {
   return [{ type: 'text', text: message?.content || '', variant: 'primary', lang: 'auto' }]
 }
 
+const secondaryTextBadge = (block) => {
+  const lang =
+    typeof block?.lang === 'string' && block.lang.trim() && block.lang !== 'auto'
+      ? block.lang.trim().toUpperCase()
+      : t('双语', 'Bilingual')
+  return `${t('翻译', 'Translation')} · ${lang}`
+}
+
 const formatVoiceDuration = (durationSec) => {
   const total = Number.isFinite(Number(durationSec)) ? Math.max(1, Math.floor(Number(durationSec))) : 8
   const minute = Math.floor(total / 60)
@@ -1806,7 +1958,7 @@ const formatVoiceDuration = (durationSec) => {
 
 const openModuleRoute = (routePath) => {
   if (typeof routePath !== 'string' || !SAFE_MODULE_ROUTES.has(routePath)) {
-    alert(t('该链接暂不可用。', 'This link is unavailable.'))
+    showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
     return
   }
   router.push(routePath)
@@ -1829,9 +1981,12 @@ const toggleThreadMenu = () => {
 
 const saveServiceTemplate = () => {
   if (!activeChat.value || !isActiveServiceChat.value) return
-  chatStore.updateContact(activeChat.value.id, {
+  const ok = chatStore.updateContact(activeChat.value.id, {
     serviceTemplate: serviceTemplateDraft.value.trim(),
   })
+  if (!ok) return
+  chatStore.saveNow()
+  triggerServiceTemplateSaved()
 }
 
 const saveThreadSettings = () => {
@@ -1867,6 +2022,8 @@ const saveThreadSettings = () => {
     showSuggestions.value = false
   }
 
+  chatStore.saveNow()
+  triggerThreadSettingsSaved()
   showThreadMenu.value = false
   scheduleAutoInvokeTick()
 }
@@ -1877,6 +2034,10 @@ watch(
     showThreadMenu.value = false
     activeMessageActionId.value = ''
     pendingQuote.value = null
+    threadSettingsSaved.value = false
+    serviceTemplateSaved.value = false
+    uiNoticeType.value = ''
+    uiNoticeMessage.value = ''
 
     if (id) {
       chatStore.ensureConversationForContact(id)
@@ -1951,6 +2112,9 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', handleVisibilityResume)
   clearAutoInvokeTimer()
   systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
+  if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
+  if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
 })
 </script>
 
@@ -2004,8 +2168,8 @@ onBeforeUnmount(() => {
           <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
           <p class="text-[10px] text-gray-500">
             <span v-if="contactKindTag(activeChat)">{{ contactKindTag(activeChat) }}</span>
-            <span v-if="contactKindTag(activeChat) && loadingAI"> · </span>
-            <span v-if="loadingAI">{{ t('对方正在输入...', 'Typing...') }}</span>
+            <span v-if="contactKindTag(activeChat) && headerSecondaryStatusText"> · </span>
+            <span v-if="headerSecondaryStatusText" :class="headerSecondaryStatusClass">{{ headerSecondaryStatusText }}</span>
           </p>
         </div>
         <button @click="toggleThreadMenu" class="chat-ink px-2 w-16 text-right"><i class="fas fa-bars"></i></button>
@@ -2016,8 +2180,12 @@ onBeforeUnmount(() => {
           <div class="space-y-2">
             <p class="font-semibold text-sm text-gray-900">{{ t('服务模板', 'Service Template') }}</p>
             <textarea v-model="serviceTemplateDraft" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs resize-none outline-none" />
-            <button @click="saveServiceTemplate" class="px-2.5 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700">
-              {{ t('保存模板', 'Save Template') }}
+            <button
+              @click="saveServiceTemplate"
+              class="px-2.5 py-1 rounded-lg border"
+              :class="serviceTemplateSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'"
+            >
+              {{ serviceTemplateSaved ? t('已保存', 'Saved') : t('保存模板', 'Save Template') }}
             </button>
           </div>
         </template>
@@ -2131,7 +2299,13 @@ onBeforeUnmount(() => {
 
           <div class="flex justify-end gap-2 pt-1">
             <button @click="showThreadMenu = false" class="px-2.5 py-1 rounded-lg border border-gray-200">{{ t('取消', 'Cancel') }}</button>
-            <button @click="saveThreadSettings" class="px-2.5 py-1 rounded-lg border border-blue-300 bg-blue-50 text-blue-700">{{ t('保存', 'Save') }}</button>
+            <button
+              @click="saveThreadSettings"
+              class="px-2.5 py-1 rounded-lg border"
+              :class="threadSettingsSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
+            >
+              {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存会话设置', 'Save thread settings') }}
+            </button>
           </div>
         </div>
       </div>
@@ -2157,7 +2331,30 @@ onBeforeUnmount(() => {
               </div>
 
               <div v-for="(block, blockIndex) in messageBlocks(msg)" :key="`${msg.id}-block-${blockIndex}`" class="mt-1 first:mt-0">
-                <div v-if="block.type === 'text'" class="markdown-body" :class="block.variant === 'secondary' ? 'text-[12px] opacity-85 border-t border-black/10 pt-1 mt-1' : ''" v-html="renderMarkdown(block.text)"></div>
+                <div
+                  v-if="block.type === 'text'"
+                  :class="
+                    block.variant === 'secondary'
+                      ? 'rounded-lg border border-black/10 bg-white/45 px-2.5 py-2'
+                      : ''
+                  "
+                >
+                  <p
+                    v-if="block.variant === 'secondary'"
+                    class="mb-1 text-[10px] uppercase tracking-wide text-gray-500"
+                  >
+                    {{ secondaryTextBadge(block) }}
+                  </p>
+                  <div
+                    class="markdown-body"
+                    :class="
+                      block.variant === 'secondary'
+                        ? 'text-[12px] opacity-90 leading-relaxed break-words'
+                        : 'leading-relaxed break-words'
+                    "
+                    v-html="renderMarkdown(block.text)"
+                  ></div>
+                </div>
 
                 <div v-else-if="block.type === 'voice_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2 flex items-center gap-2">
                   <span class="w-6 h-6 rounded-full bg-black/10 inline-flex items-center justify-center"><i class="fas fa-play text-[10px]"></i></span>
@@ -2286,6 +2483,20 @@ onBeforeUnmount(() => {
             <button v-if="canRetryAi" @click="retryLastMessage" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('重试', 'Retry') }}</button>
             <button v-if="canCancelAi" @click="cancelActiveRequest" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('取消', 'Cancel') }}</button>
           </div>
+        </div>
+
+        <div
+          v-else-if="uiNoticeMessage"
+          class="absolute -top-10 left-3 right-3 text-[11px] rounded-lg border px-2.5 py-1.5 line-clamp-1"
+          :class="
+            uiNoticeType === 'error'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : uiNoticeType === 'warning'
+                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          "
+        >
+          {{ uiNoticeMessage }}
         </div>
 
         <button @click="sendCurrentLocation" class="w-8 h-8 rounded-full flex items-center justify-center transition bg-cyan-500 text-white shadow-md">

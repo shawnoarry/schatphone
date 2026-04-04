@@ -272,7 +272,10 @@ const copyWidgetTemplate = async () => {
       templateCopied.value = false
     }, 1200)
   } catch {
-    alert(t('复制失败，请手动复制模板文本。', 'Copy failed. Please copy the template text manually.'))
+    setImportFeedback(
+      'error',
+      t('复制失败，请手动复制模板文本。', 'Copy failed. Please copy the template text manually.'),
+    )
   }
 }
 
@@ -285,6 +288,7 @@ const exportWidgetTemplate = () => {
   anchor.download = 'schatphone-widget-template.txt'
   anchor.click()
   URL.revokeObjectURL(url)
+  setImportFeedback('success', t('模板文件下载已开始。', 'Template download has started.'))
 }
 
 const resetCustomWidgetForm = () => {
@@ -308,7 +312,7 @@ const startEditCustomWidget = (widget) => {
 const submitCustomWidget = () => {
   const code = customWidgetCode.value.trim()
   if (!code) {
-    alert(t('请先填写 Widget 代码。', 'Please enter widget code first.'))
+    setImportFeedback('error', t('请先填写 Widget 代码。', 'Please enter widget code first.'))
     return
   }
 
@@ -356,6 +360,12 @@ const clearImportFeedback = () => {
   importFeedbackType.value = ''
   importFeedbackMessage.value = ''
   importFeedbackDetails.value = []
+}
+
+const setImportFeedback = (type, message, details = []) => {
+  importFeedbackType.value = type
+  importFeedbackMessage.value = message
+  importFeedbackDetails.value = Array.isArray(details) ? details : []
 }
 
 const formatImportError = (error) => {
@@ -430,25 +440,19 @@ const importCustomWidgets = () => {
   const raw = importJsonText.value.trim()
   clearImportFeedback()
   if (!raw) {
-    const message = t('请先粘贴 JSON。', 'Please paste JSON first.')
-    importFeedbackType.value = 'error'
-    importFeedbackMessage.value = message
-    alert(message)
+    setImportFeedback('error', t('请先粘贴 JSON。', 'Please paste JSON first.'))
     return
   }
 
   const result = systemStore.importCustomWidgets(raw, importTargetPage.value)
   if (!result?.ok) {
-    importFeedbackType.value = 'error'
-    importFeedbackDetails.value = (result?.errors || []).map((item) => formatImportError(item))
-    importFeedbackMessage.value = importFeedbackDetails.value[0] || t('导入失败。', 'Import failed.')
-    alert(importFeedbackMessage.value)
+    const details = (result?.errors || []).map((item) => formatImportError(item))
+    setImportFeedback('error', details[0] || t('导入失败。', 'Import failed.'), details)
     return
   }
 
   const warningCount = Array.isArray(result.warnings) ? result.warnings.length : 0
-  importFeedbackType.value = warningCount > 0 ? 'warning' : 'success'
-  importFeedbackMessage.value =
+  const message =
     warningCount > 0
       ? t(
           `成功导入 ${result.importedCount} 个组件，含 ${warningCount} 条提醒。`,
@@ -458,7 +462,8 @@ const importCustomWidgets = () => {
           `成功导入 ${result.importedCount} 个组件。`,
           `Imported ${result.importedCount} widgets successfully.`,
         )
-  importFeedbackDetails.value = (result.warnings || []).map((item) => formatImportWarning(item))
+  const details = (result.warnings || []).map((item) => formatImportWarning(item))
+  setImportFeedback(warningCount > 0 ? 'warning' : 'success', message, details)
   importJsonText.value = ''
   triggerSaved()
 }
@@ -471,9 +476,10 @@ const fillRecognizedImportTemplate = () => {
 const restoreBuiltInWidget = (tileId) => {
   const ok = systemStore.placeBuiltInWidgetTile(tileId, builtInWidgetPage.value)
   if (!ok) {
-    alert(t('恢复失败：组件 ID 无效。', 'Restore failed: invalid widget ID.'))
+    setImportFeedback('error', t('恢复失败：组件 ID 无效。', 'Restore failed: invalid widget ID.'))
     return
   }
+  setImportFeedback('success', t('组件已恢复到目标屏幕。', 'Widget restored to target screen.'))
   triggerSaved()
 }
 

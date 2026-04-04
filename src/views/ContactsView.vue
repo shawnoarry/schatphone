@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -21,6 +21,21 @@ const editingProfileId = ref(0)
 const profileDraft = reactive({ name: '', role: '', isMain: false, bio: '' })
 const mainProfiles = computed(() => roleProfiles.value.filter((item) => Boolean(item.isMain)))
 const npcProfiles = computed(() => roleProfiles.value.filter((item) => !item.isMain))
+const uiNoticeType = ref('')
+const uiNoticeMessage = ref('')
+let uiNoticeTimerId = null
+
+const showUiNotice = (type, message, durationMs = 2000) => {
+  const text = typeof message === 'string' ? message.trim() : ''
+  if (!text) return
+  uiNoticeType.value = type
+  uiNoticeMessage.value = text
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+  uiNoticeTimerId = setTimeout(() => {
+    uiNoticeType.value = ''
+    uiNoticeMessage.value = ''
+  }, durationMs)
+}
 
 const goHome = () => {
   router.push('/home')
@@ -59,7 +74,7 @@ const closeProfileModal = () => {
 const saveProfile = () => {
   const name = profileDraft.name.trim()
   if (!name) {
-    alert(t('请填写角色名称。', 'Please enter a profile name.'))
+    showUiNotice('error', t('请填写角色名称。', 'Please enter a profile name.'))
     return
   }
 
@@ -75,6 +90,7 @@ const saveProfile = () => {
       ...payload,
       avatar: '',
     })
+    showUiNotice('success', t('角色档案已创建。', 'Role profile created.'))
     closeProfileModal()
     return
   }
@@ -82,9 +98,10 @@ const saveProfile = () => {
   if (!editingProfileId.value) return
   const ok = chatStore.updateRoleProfile(editingProfileId.value, payload)
   if (!ok) {
-    alert(t('保存失败，请重试。', 'Save failed, please retry.'))
+    showUiNotice('error', t('保存失败，请重试。', 'Save failed, please retry.'))
     return
   }
+  showUiNotice('success', t('角色档案已保存。', 'Role profile saved.'))
   closeProfileModal()
 }
 
@@ -98,11 +115,12 @@ const removeProfile = (profile) => {
   )
   if (!ok) return
   chatStore.removeRoleProfile(profile.id, { removeBindings: true })
+  showUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))
 }
 
 const autoGenerateProfile = async () => {
   if (!profileDraft.name) {
-    alert(t('请至少输入一个名字！', 'Please enter at least one name.'))
+    showUiNotice('warning', t('请至少输入一个名字！', 'Please enter at least one name.'))
     return
   }
 
@@ -122,12 +140,17 @@ const autoGenerateProfile = async () => {
 
     profileDraft.role = data.role
     profileDraft.bio = data.bio
+    showUiNotice('success', t('AI 补全成功。', 'AI profile fill completed.'))
   } catch (error) {
-    alert(`${t('生成失败', 'Generation failed')}: ${error.message}`)
+    showUiNotice('error', `${t('生成失败', 'Generation failed')}: ${error.message || ''}`)
   } finally {
     loadingAI.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+})
 </script>
 
 <template>
@@ -139,6 +162,20 @@ const autoGenerateProfile = async () => {
       <span class="font-bold">联系人</span>
       <button @click="openCreateProfile" class="text-blue-500 text-xl"><i class="fas fa-plus"></i></button>
     </div>
+
+    <p
+      v-if="uiNoticeMessage"
+      class="px-4 py-2 text-[11px]"
+      :class="
+        uiNoticeType === 'error'
+          ? 'text-red-600'
+          : uiNoticeType === 'warning'
+            ? 'text-amber-600'
+            : 'text-emerald-600'
+      "
+    >
+      {{ uiNoticeMessage }}
+    </p>
 
     <div v-if="showProfileModal" class="absolute inset-0 bg-white z-20 pt-12 px-4 flex flex-col animate-slide-in">
       <div class="flex justify-between mb-6">

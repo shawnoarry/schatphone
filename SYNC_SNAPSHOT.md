@@ -13,8 +13,8 @@ Detailed changes must be updated in source docs first, then reflected here.
 
 ## One-Line Summary / 当前版本一句话
 
-SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement + system-owned truth baseline are integrated, and focus now shifts to block-policy hardening and settings UX consistency.  
-SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器、恢复补算与系统真值基线均已接入，当前重点转向结构化消息策略加固与设置体验一致性。
+SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement + system-owned truth baseline are integrated, and focus now shifts to storage layering preparation for long-term local data growth.  
+SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器、恢复补算与系统真值基线均已接入，当前重点转向面向长期本地数据增长的分层存储准备。
 
 ## Stack Snapshot / 技术栈快照
 
@@ -47,8 +47,12 @@ AI 调用由“触发回复”控制，支持连续触发
 系统真值基线已启用：关系指标与事件时间线已持久化到 store，并注入提示词上下文。
 - Structured block hardening batch-1 is active: route/url sanitization, quote candidate safety, and markdown sanitize are integrated.  
 结构化消息加固第一批已生效：route/url 清洗、引用候选安全、Markdown 清洗已接入。
-- Settings UX batch-1 is active: beginner guidance, quick access, and clearer report-center copy flow are integrated.  
-设置体验优化第一批已生效：新手引导、快捷入口与报错中心复制流程已接入。
+- Structured block hardening batch-2 is active: assistant parser now tolerates fenced/embedded JSON payloads and mixed-content readability is improved.  
+结构化消息加固第二批已生效：助手解析器可容错代码块/嵌入式 JSON 返回，混合内容可读性已提升。
+- Structured block hardening batch-3 is active: payload fallback supports `content/text/message/output_text` and primary text block is guaranteed for stable mixed-content rendering.  
+结构化消息加固第三批已生效：payload 回退支持 `content/text/message/output_text`，并保证主文本块存在以稳定混排展示。
+- Settings UX batch-1/2 is active, and batch-3 has started: beginner guidance, quick access, clearer report-center copy flow, chat-thread save feedback consistency, inline backup import/export feedback, network inline validation/copy hints, appearance widget inline feedback, and inline non-critical notices across chat/contacts/chat-directory are integrated.  
+设置体验优化第一/二批已生效，第三批已启动：新手引导、快捷入口、报错中心复制流程、会话页保存反馈一致性、备份导入/导出页内反馈、Network 页内校验/复制提示、Appearance Widget 页内反馈，以及 chat/contacts/chat-directory 的非关键页内提示均已接入。
 - Assistant supports structured block rendering (text/virtual voice/link/transfer/image/mini scene)  
 助手消息支持结构化块渲染（文本/虚拟语音/链接/转账/图片/互动场景）
 - Conversation kinds: `role/group/service/official`  
@@ -106,6 +110,6 @@ Settings 备份恢复（JSON）已支持失败回滚，并兼容旧版/新版聊
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
 1. `P0-B1` completed (2026-04-03): system-owned truth minimal layer is integrated end-to-end / `P0-B1` 已于 2026-04-03 完成：系统真值最小层已端到端接入
-2. Continue structured block hardening (`P1-2`): batch-1 landed, batch-2 pending readability and fallback polish / 持续推进结构化消息策略加固（`P1-2`）：第一批已落地，第二批待做可读性与回退打磨
-3. Continue settings UX refinement (`P1-3`): batch-1 landed, batch-2 pending save-feedback consistency polish / 持续推进设置体验优化（`P1-3`）：第一批已落地，第二批待做保存反馈一致性打磨
+2. Structured block hardening (`P1-2`) completed: batch-1/2/3 landed with parser resilience, fallback hierarchy, and mixed-content readability polish / 结构化消息策略加固（`P1-2`）已完成：第一/二/三批已落地，覆盖解析容错、回退层级与混排可读性
+3. Settings UX refinement (`P1-3`) completed: batch-1/2/3 landed with non-critical inline feedback unified across active views / 设置体验优化（`P1-3`）已完成：第一/二/三批已落地，活跃页面非关键反馈已统一为页内提示
 4. Prepare storage layering migration (`P1-4`) / 准备分层存储迁移（`P1-4`）

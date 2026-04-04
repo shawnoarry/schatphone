@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
@@ -98,6 +98,21 @@ const serviceTemplatePresets = [
 
 const selectedRoleTemplateId = ref(roleMetaTemplatePresets[0]?.id || '')
 const selectedServiceTemplateId = ref(serviceTemplatePresets[0]?.id || '')
+const uiNoticeType = ref('')
+const uiNoticeMessage = ref('')
+let uiNoticeTimerId = null
+
+const showUiNotice = (type, message, durationMs = 2200) => {
+  const text = typeof message === 'string' ? message.trim() : ''
+  if (!text) return
+  uiNoticeType.value = type
+  uiNoticeMessage.value = text
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+  uiNoticeTimerId = setTimeout(() => {
+    uiNoticeType.value = ''
+    uiNoticeMessage.value = ''
+  }, durationMs)
+}
 
 const roleBindings = computed(() =>
   contacts.value
@@ -283,7 +298,13 @@ const openChat = (contact) => {
 
 const openBindModal = () => {
   if (unboundRoleProfilesRaw.value.length === 0) {
-    alert(t('暂无可绑定角色，请先在主通讯录创建角色档案。', 'No profiles available. Create role profiles in main Contacts first.'))
+    showUiNotice(
+      'warning',
+      t(
+        '暂无可绑定角色，请先在主通讯录创建角色档案。',
+        'No profiles available. Create role profiles in main Contacts first.',
+      ),
+    )
     return
   }
   bindProfileId.value = Number(unboundRoleProfilesRaw.value[0]?.id || 0)
@@ -301,9 +322,10 @@ const bindSelectedProfile = () => {
     relationshipNote: '',
   })
   if (!created) {
-    alert(t('绑定失败，请重试。', 'Bind failed, please retry.'))
+    showUiNotice('error', t('绑定失败，请重试。', 'Bind failed, please retry.'))
     return
   }
+  showUiNotice('success', t('绑定成功。', 'Bind succeeded.'))
   closeBindModal()
 }
 
@@ -328,9 +350,10 @@ const saveRoleMeta = () => {
     relationshipNote: roleMetaDraft.relationshipNote,
   })
   if (!ok) {
-    alert(t('保存失败，请重试。', 'Save failed, please retry.'))
+    showUiNotice('error', t('保存失败，请重试。', 'Save failed, please retry.'))
     return
   }
+  showUiNotice('success', t('会话设定已保存。', 'Thread settings saved.'))
   closeRoleMetaModal()
 }
 
@@ -340,11 +363,15 @@ const unbindRole = (contact) => {
   )
   if (!ok) return
   chatStore.unbindRoleContact(contact.id)
+  showUiNotice('success', t('角色会话已解绑。', 'Role chat unbound.'))
 }
 
 const batchBindFilteredProfiles = () => {
   if (filteredUnboundRoleProfiles.value.length === 0) {
-    alert(t('当前筛选下没有可批量绑定角色。', 'No available profiles to batch bind under current filter.'))
+    showUiNotice(
+      'warning',
+      t('当前筛选下没有可批量绑定角色。', 'No available profiles to batch bind under current filter.'),
+    )
     return
   }
   const ok = window.confirm(
@@ -364,7 +391,8 @@ const batchBindFilteredProfiles = () => {
     if (created) successCount += 1
   })
 
-  alert(
+  showUiNotice(
+    'success',
     t(
       `已批量绑定 ${successCount} 个角色会话。`,
       `Bound ${successCount} role chats.`,
@@ -374,7 +402,7 @@ const batchBindFilteredProfiles = () => {
 
 const batchUnbindSelectedRoles = () => {
   if (selectedRoleCount.value <= 0) {
-    alert(t('请先选择要解绑的角色会话。', 'Select role chats to unbind first.'))
+    showUiNotice('warning', t('请先选择要解绑的角色会话。', 'Select role chats to unbind first.'))
     return
   }
 
@@ -393,7 +421,8 @@ const batchUnbindSelectedRoles = () => {
   })
 
   clearSelection()
-  alert(
+  showUiNotice(
+    'success',
     t(
       `已解绑 ${successCount} 个角色会话。`,
       `Unbound ${successCount} role chats.`,
@@ -434,7 +463,7 @@ const closeServiceModal = () => {
 const saveService = () => {
   const name = serviceDraft.name.trim()
   if (!name) {
-    alert(t('请输入名称。', 'Please enter a name.'))
+    showUiNotice('warning', t('请输入名称。', 'Please enter a name.'))
     return
   }
 
@@ -448,6 +477,7 @@ const saveService = () => {
 
   if (serviceModalMode.value === 'create') {
     const created = chatStore.addContact(payload)
+    showUiNotice('success', t('服务对象已创建。', 'Service entry created.'))
     closeServiceModal()
     openChat(created)
     return
@@ -456,9 +486,10 @@ const saveService = () => {
   if (!editingServiceId.value) return
   const ok = chatStore.updateContact(editingServiceId.value, payload)
   if (!ok) {
-    alert(t('保存失败，请重试。', 'Save failed, please retry.'))
+    showUiNotice('error', t('保存失败，请重试。', 'Save failed, please retry.'))
     return
   }
+  showUiNotice('success', t('服务对象已保存。', 'Service entry saved.'))
   closeServiceModal()
 }
 
@@ -468,11 +499,12 @@ const removeService = (contact) => {
   )
   if (!ok) return
   chatStore.removeContact(contact.id)
+  showUiNotice('success', t('服务对象已删除。', 'Service entry deleted.'))
 }
 
 const batchDeleteSelectedServices = () => {
   if (selectedServiceCount.value <= 0) {
-    alert(t('请先选择要删除的服务对象。', 'Select service entries to delete first.'))
+    showUiNotice('warning', t('请先选择要删除的服务对象。', 'Select service entries to delete first.'))
     return
   }
 
@@ -491,7 +523,8 @@ const batchDeleteSelectedServices = () => {
   })
 
   clearSelection()
-  alert(
+  showUiNotice(
+    'success',
     t(
       `已删除 ${successCount} 个服务会话对象。`,
       `Deleted ${successCount} service chat entries.`,
@@ -525,18 +558,21 @@ const applyRoleTemplateToDraft = (templateId = selectedRoleTemplateId.value) => 
 
 const applyRoleTemplateToSelected = () => {
   if (selectedRoleCount.value <= 0) {
-    alert(t('请先选择要套用模板的角色会话。', 'Select role chats before applying a template.'))
+    showUiNotice('warning', t('请先选择要套用模板的角色会话。', 'Select role chats before applying a template.'))
     return
   }
   const template = getRoleTemplateById(selectedRoleTemplateId.value)
   if (!template) {
-    alert(t('请选择关系模板。', 'Please select a relationship template.'))
+    showUiNotice('warning', t('请选择关系模板。', 'Please select a relationship template.'))
     return
   }
 
   const targets = filteredRoleBindings.value.filter((contact) => isContactSelected(contact.id))
   if (targets.length === 0) {
-    alert(t('当前筛选中没有可套用模板的目标。', 'No selected targets under current filter.'))
+    showUiNotice(
+      'warning',
+      t('当前筛选中没有可套用模板的目标。', 'No selected targets under current filter.'),
+    )
     return
   }
 
@@ -557,7 +593,8 @@ const applyRoleTemplateToSelected = () => {
     if (applied) successCount += 1
   })
 
-  alert(
+  showUiNotice(
+    'success',
     t(
       `已应用模板到 ${successCount} 个角色会话。`,
       `Applied template to ${successCount} role chats.`,
@@ -577,12 +614,15 @@ const openCreateServiceFromPreset = (templateId) => {
 
 const applyServicePresetToSelected = () => {
   if (selectedServiceCount.value <= 0) {
-    alert(t('请先选择要套用模板的服务对象。', 'Select service entries before applying a template.'))
+    showUiNotice(
+      'warning',
+      t('请先选择要套用模板的服务对象。', 'Select service entries before applying a template.'),
+    )
     return
   }
   const template = getServiceTemplateById(selectedServiceTemplateId.value)
   if (!template) {
-    alert(t('请选择服务模板。', 'Please select a service template.'))
+    showUiNotice('warning', t('请选择服务模板。', 'Please select a service template.'))
     return
   }
 
@@ -590,7 +630,8 @@ const applyServicePresetToSelected = () => {
     (contact) => isContactSelected(contact.id) && contact.kind === template.kind,
   )
   if (targets.length === 0) {
-    alert(
+    showUiNotice(
+      'warning',
       t(
         '当前选择中没有与模板类型匹配的服务对象。',
         'No selected entries match this template type.',
@@ -616,13 +657,18 @@ const applyServicePresetToSelected = () => {
     if (applied) successCount += 1
   })
 
-  alert(
+  showUiNotice(
+    'success',
     t(
       `已应用模板到 ${successCount} 个服务对象。`,
       `Applied template to ${successCount} service entries.`,
     ),
   )
 }
+
+onBeforeUnmount(() => {
+  if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+})
 </script>
 
 <template>
@@ -644,6 +690,20 @@ const applyServicePresetToSelected = () => {
         }}
       </p>
     </div>
+
+    <p
+      v-if="uiNoticeMessage"
+      class="px-4 py-2 text-[11px]"
+      :class="
+        uiNoticeType === 'error'
+          ? 'text-red-600'
+          : uiNoticeType === 'warning'
+            ? 'text-amber-600'
+            : 'text-emerald-600'
+      "
+    >
+      {{ uiNoticeMessage }}
+    </p>
 
     <div class="px-4 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2">
       <button
