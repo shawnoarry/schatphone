@@ -1,6 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { readPersistedState, writePersistedState } from '../lib/persistence'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -506,6 +506,7 @@ export const useChatStore = defineStore('chat', () => {
   const contacts = reactive([])
   const conversations = reactive({})
   const messagesByConversation = reactive({})
+  const hasFinishedStorageHydration = ref(false)
   const loadingAI = ref(false)
 
   const getRoleProfileById = (profileId) =>
@@ -1306,16 +1307,35 @@ export const useChatStore = defineStore('chat', () => {
     })
     if (!persisted || typeof persisted !== 'object') {
       hydrateFromLegacyShape(DEFAULT_CONTACTS, DEFAULT_CHAT_HISTORY)
-      return
+      return false
     }
 
     const hasNewShape = persisted.conversations && persisted.messagesByConversation
     if (!hasNewShape) {
       hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
-      return
+      return true
     }
 
     hydrateFromSnapshot(persisted)
+    return true
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(CHAT_STORAGE_KEY, {
+      version: CHAT_STORAGE_VERSION,
+    })
+    if (!persisted || typeof persisted !== 'object') {
+      return false
+    }
+
+    const hasNewShape = persisted.conversations && persisted.messagesByConversation
+    if (!hasNewShape) {
+      hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
+      return true
+    }
+
+    hydrateFromSnapshot(persisted)
+    return true
   }
 
   const persistToStorage = () => {
@@ -1384,8 +1404,23 @@ export const useChatStore = defineStore('chat', () => {
 
   const chatHistory = computed(() => toLegacyChatHistory())
 
-  hydrateFromStorage()
-  watch([roleProfiles, contacts, conversations, messagesByConversation], persistToStorage, { deep: true })
+  const hydratedFromLocal = hydrateFromStorage()
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [roleProfiles, contacts, conversations, messagesByConversation],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
 
   return {
     roleProfiles,

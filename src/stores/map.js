@@ -1,6 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { readPersistedState, writePersistedState } from '../lib/persistence'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 
 const MAP_STORAGE_KEY = 'store:map'
 const MAP_STORAGE_VERSION = 1
@@ -24,6 +24,7 @@ export const useMapStore = defineStore('map', () => {
     from: SEED_ADDRESSES[0].detail,
     to: SEED_ADDRESSES[1].detail,
   })
+  const hasFinishedStorageHydration = ref(false)
 
   const tripEstimate = computed(() => {
     const baseKm = Math.max(3, Math.abs((tripForm.from || '').length - (tripForm.to || '').length) % 18 + 3)
@@ -72,7 +73,7 @@ export const useMapStore = defineStore('map', () => {
     const persisted = readPersistedState(MAP_STORAGE_KEY, {
       version: MAP_STORAGE_VERSION,
     })
-    if (!persisted || typeof persisted !== 'object') return
+    if (!persisted || typeof persisted !== 'object') return false
 
     if (Array.isArray(persisted.addresses)) {
       addresses.splice(0, addresses.length, ...persisted.addresses.map((item) => ({ ...item })))
@@ -94,6 +95,36 @@ export const useMapStore = defineStore('map', () => {
         tripForm.to = persisted.tripForm.to
       }
     }
+    return true
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(MAP_STORAGE_KEY, {
+      version: MAP_STORAGE_VERSION,
+    })
+    if (!persisted || typeof persisted !== 'object') return false
+
+    if (Array.isArray(persisted.addresses)) {
+      addresses.splice(0, addresses.length, ...persisted.addresses.map((item) => ({ ...item })))
+    }
+
+    if (persisted.currentLocation && typeof persisted.currentLocation === 'object') {
+      currentLocation.value = {
+        source: persisted.currentLocation.source || 'manual',
+        label: persisted.currentLocation.label || '当前位置',
+        detail: persisted.currentLocation.detail || '',
+      }
+    }
+
+    if (persisted.tripForm && typeof persisted.tripForm === 'object') {
+      if (typeof persisted.tripForm.from === 'string') {
+        tripForm.from = persisted.tripForm.from
+      }
+      if (typeof persisted.tripForm.to === 'string') {
+        tripForm.to = persisted.tripForm.to
+      }
+    }
+    return true
   }
 
   const restoreFromBackup = (snapshot = {}) => {
@@ -162,8 +193,23 @@ export const useMapStore = defineStore('map', () => {
     persistToStorage()
   }
 
-  hydrateFromStorage()
-  watch([addresses, currentLocation, tripForm], persistToStorage, { deep: true })
+  const hydratedFromLocal = hydrateFromStorage()
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [addresses, currentLocation, tripForm],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
 
   return {
     addresses,

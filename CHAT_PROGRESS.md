@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-04-04
+Updated / 更新时间: 2026-04-05
 
 ## 1. Current Conclusion / 当前结论
 
@@ -155,7 +155,7 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ### P1
 
-1. Storage layering preparation (`P1-4`) / 分层存储迁移准备（`P1-4`）
+1. Storage layering preparation (`P1-4`) in progress (batch-1/2 landed: persistence helper + async layered APIs + optional IndexedDB mirror queue + store-level sync-first/async-fallback hydration guard + fallback tests) / 分层存储迁移准备（`P1-4`）进行中（第一/二批已落地：持久化辅助 + 异步分层 API + 可选 IndexedDB 镜像队列 + store 级同步优先/异步回退与写保护 + 回退测试）
 2. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
 3. Truth metric and quote-policy tuning based on playtest transcripts / 基于实测对真值指标与引用策略继续调参
 

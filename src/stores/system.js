@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
-import { readPersistedState, writePersistedState } from '../lib/persistence'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 
@@ -1325,13 +1325,25 @@ export const useSystemStore = defineStore('system', () => {
     return true
   }
 
+  const hasFinishedStorageHydration = ref(false)
+
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
       version: SYSTEM_STORAGE_VERSION,
     })
 
-    if (!persisted || typeof persisted !== 'object') return
+    if (!persisted || typeof persisted !== 'object') return false
     applyPersistedSnapshot(persisted)
+    return true
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(SYSTEM_STORAGE_KEY, {
+      version: SYSTEM_STORAGE_VERSION,
+    })
+    if (!persisted || typeof persisted !== 'object') return false
+    applyPersistedSnapshot(persisted)
+    return true
   }
 
   const restoreFromBackup = (snapshot = {}) => {
@@ -1398,8 +1410,23 @@ export const useSystemStore = defineStore('system', () => {
     persistToStorage()
   }
 
-  hydrateFromStorage()
-  watch([settings, user, notifications, apiReports, truthState], persistToStorage, { deep: true })
+  const hydratedFromLocal = hydrateFromStorage()
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [settings, user, notifications, apiReports, truthState],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
 
   return {
     settings,

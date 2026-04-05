@@ -1,6 +1,6 @@
 # SchatPhone Task Execution Plan / 任务执行清单
 
-Updated / 更新时间: 2026-04-04
+Updated / 更新时间: 2026-04-05
 
 Purpose / 用途: turn the current roadmap into an execution-ready checklist for implementation, validation, and documentation sync.  
 将当前路线图落成可直接执行的清单，用于开发、验收与文档同步。
@@ -321,10 +321,23 @@ Home 页的“应用开发中”提示已改为页内 toast，完成当前活跃
 
 ### P1-4 Storage Layering Preparation / 分层存储迁移准备
 
-- Status / 状态: `TODO`
+- Status / 状态: `IN_PROGRESS` (started 2026-04-05)
 - Goal / 目标:
 - Prepare migration path from localStorage-heavy records to IndexedDB-first long-term storage.  
 准备从 localStorage 偏重存储向 IndexedDB 主存档层迁移的路径。
+- Implemented in current batch / 当前批次已实现:
+- Persistence layer now provides envelope encode/decode helpers and keeps backward compatibility for legacy payload shape.  
+持久化层已提供 envelope 编解码辅助，并保持对旧版数据结构的兼容读取。
+- Added async layered APIs (`read/write/clearPersistedStateAsync`) for future IndexedDB-first migration path.  
+新增异步分层 API（`read/write/clearPersistedStateAsync`），为后续 IndexedDB 主路径迁移做准备。
+- Added optional IndexedDB mirror queue (env-gated) so sync localStorage writes can be shadowed without changing current store behavior.  
+新增可选 IndexedDB 镜像队列（环境开关控制），在不改变现有 store 行为前提下为同步 localStorage 写入提供影子落盘能力。
+- Store-level hydration now adopts sync-first + async fallback (`system/chat/map`) with startup write guard, preventing default-state overwrite before mirror recovery finishes.  
+store 级 hydration 现已采用“同步优先 + 异步回退”（`system/chat/map`）并加入启动期写保护，避免镜像恢复完成前默认状态反向覆盖历史数据。
+- Added persistence helper tests (`tests/persistence-envelope.test.js`).  
+新增持久化辅助测试（`tests/persistence-envelope.test.js`）。
+- Added store hydration fallback tests (`tests/store-hydration-fallback.test.js`) covering sync-miss async recovery and sync-hit async-skip behavior.  
+新增 store hydration 回退测试（`tests/store-hydration-fallback.test.js`），覆盖同步未命中时异步恢复与同步命中时跳过异步回退两种关键行为。
 
 ---
 
@@ -359,4 +372,4 @@ Home 页的“应用开发中”提示已改为页内 toast，完成当前活跃
 | P0-B1 | Codex | 2026-04-03 | 2026-04-03 | DONE | System-owned truth state layer integrated (store + chat runtime + prompt + backup + tests) |
 | P1-2 | Codex | 2026-04-03 | 2026-04-04 | DONE | Batch-1+2+3 landed: sanitization + quote safety + markdown sanitize + robust parser + fallback hierarchy + readability polish |
 | P1-3 | Codex | 2026-04-04 | 2026-04-04 | DONE | Batch-1+2+3 landed: feedback consistency extended to chat/settings/network/appearance/contacts/chat-directory/home with inline non-critical notices |
-| P1-4 | TBD |  |  | TODO | Storage layering preparation (`localStorage` -> `IndexedDB`) |
+| P1-4 | Codex | 2026-04-05 |  | IN_PROGRESS | Batch-1+2 landed: layered persistence helpers + async APIs + optional mirror queue + store-level sync-first/async-fallback hydration guard + fallback tests |

@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { useI18n } from '../composables/useI18n'
+import { getPersistenceCapabilities } from '../lib/persistence'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -30,6 +31,9 @@ let notificationSavedTimerId = null
 let automationSavedTimerId = null
 let backupFeedbackTimerId = null
 const automationInitialMaster = ref(false)
+const persistenceCapabilities = computed(() => getPersistenceCapabilities())
+const persistenceCapabilityLabel = (available) =>
+  available ? t('可用', 'Available') : t('不可用', 'Unavailable')
 
 const setBackupFeedback = (type, message, durationMs = 1800) => {
   backupFeedbackType.value = type
@@ -708,6 +712,24 @@ onBeforeUnmount(() => {
             <p class="text-sm font-semibold">SchatPhone</p>
             <p class="text-xs text-gray-500 mt-1">{{ t('当前版本：1.2.0', 'Current version: 1.2.0') }}</p>
             <p class="text-xs text-gray-500 mt-1">{{ t('框架：Vue 3 + Vite + Pinia + Tailwind v4', 'Stack: Vue 3 + Vite + Pinia + Tailwind v4') }}</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-4">
+            <p class="text-sm font-semibold">{{ t('本地存储能力', 'Local Storage Capability') }}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              localStorage: {{ persistenceCapabilityLabel(persistenceCapabilities.localStorageAvailable) }}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">
+              IndexedDB: {{ persistenceCapabilityLabel(persistenceCapabilities.indexedDbAvailable) }}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">
+              {{ t('镜像模式', 'Mirror mode') }}: {{ persistenceCapabilityLabel(persistenceCapabilities.indexedDbMirrorEnabled) }}
+            </p>
+            <p class="text-[10px] text-gray-400 mt-2">
+              {{ t('命名空间', 'Namespace') }}: {{ persistenceCapabilities.namespace }} ·
+              DB: {{ persistenceCapabilities.indexedDbDatabaseName }} ·
+              Store: {{ persistenceCapabilities.indexedDbStoreName }}
+            </p>
           </div>
         </div>
       </div>
