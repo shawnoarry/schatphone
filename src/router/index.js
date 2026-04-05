@@ -3,6 +3,7 @@ import { useSystemStore } from '../stores/system'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import ChatDirectoryView from '../views/ChatDirectoryView.vue'
+import ChatFeaturePlaceholderView from '../views/ChatFeaturePlaceholderView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import AppearanceView from '../views/AppearanceView.vue'
 import NetworkView from '../views/NetworkView.vue'
@@ -30,6 +31,7 @@ const router = createRouter({
     { path: '/network', component: NetworkView },
     { path: '/chat', component: ChatView },
     { path: '/chat-contacts', component: ChatDirectoryView },
+    { path: '/chat-feature/:feature', component: ChatFeaturePlaceholderView },
     { path: '/chat/:id', component: ChatView },
     { path: '/contacts', component: ContactsView },
     { path: '/gallery', component: GalleryView },

@@ -1,6 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -47,6 +48,12 @@ const DEFAULT_CONVERSATION_AI_PREFS = {
   autoInvokeEnabled: false,
   autoInvokeIntervalSec: 360,
 }
+
+const DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES = Object.freeze({
+  selfAvatar: '',
+  defaultContactAvatar: '',
+  contactAvatars: {},
+})
 
 const DEFAULT_ROLE_PROFILES = [
   {
@@ -132,6 +139,41 @@ const sanitizeImageUrl = (value) => {
   if (url.startsWith('/')) return url
   if (/^https?:\/\//i.test(url)) return url
   return ''
+}
+
+const normalizeAvatarUrl = (value) => sanitizeAvatarUrl(value)
+
+const normalizeModuleContactAvatarMap = (rawMap) => {
+  if (!rawMap || typeof rawMap !== 'object') return {}
+
+  return Object.fromEntries(
+    Object.entries(rawMap)
+      .map(([rawContactId, rawAvatar]) => {
+        const contactId = toInt(rawContactId, 0)
+        if (contactId <= 0) return null
+        const avatar = normalizeAvatarUrl(rawAvatar)
+        if (!avatar) return null
+        return [String(contactId), avatar]
+      })
+      .filter(Boolean),
+  )
+}
+
+const normalizeModuleAvatarOverrides = (rawOverrides) => {
+  const input = rawOverrides && typeof rawOverrides === 'object' ? rawOverrides : {}
+  return {
+    selfAvatar: normalizeAvatarUrl(input.selfAvatar),
+    defaultContactAvatar: normalizeAvatarUrl(input.defaultContactAvatar),
+    contactAvatars: normalizeModuleContactAvatarMap(input.contactAvatars),
+  }
+}
+
+const normalizeConversationIdentityOverrides = (rawOverrides) => {
+  const input = rawOverrides && typeof rawOverrides === 'object' ? rawOverrides : {}
+  return {
+    selfAvatar: normalizeAvatarUrl(input.selfAvatar),
+    contactAvatar: normalizeAvatarUrl(input.contactAvatar),
+  }
 }
 
 const sanitizeExternalUrl = (value) => {
@@ -254,6 +296,28 @@ const normalizeMessageMeta = (rawMeta) => {
   }
   if (rerollOf) output.rerollOf = rerollOf
   return output
+}
+
+const normalizeMessageSemanticRevision = (rawRevision, fallbackOriginalText = '') => {
+  if (!rawRevision || typeof rawRevision !== 'object') return null
+
+  const fallbackOriginal = trimTo(fallbackOriginalText, MAX_TEXT_BLOCK_LENGTH)
+  const originalText = trimTo(rawRevision.originalText, MAX_TEXT_BLOCK_LENGTH) || fallbackOriginal
+  const revisedText = trimTo(rawRevision.revisedText, MAX_TEXT_BLOCK_LENGTH)
+  if (!originalText || !revisedText) return null
+  if (originalText === revisedText) return null
+
+  const revisedAtRaw = Number(rawRevision.revisedAt)
+  const revisedAt =
+    Number.isFinite(revisedAtRaw) && revisedAtRaw > 0
+      ? Math.floor(revisedAtRaw)
+      : nowTs()
+
+  return {
+    originalText,
+    revisedText,
+    revisedAt,
+  }
 }
 
 const normalizeMessageBlock = (rawBlock) => {
@@ -440,7 +504,12 @@ const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
   const content = trimTo(rawMessage?.content, MAX_TEXT_BLOCK_LENGTH)
   const blocks = normalizeMessageBlocks(rawMessage?.blocks, content, role)
   const summaryText = summarizeBlocks(blocks)
-  const normalizedContent = content || summaryText || (role === 'assistant' ? '...' : '')
+  const defaultContextText = content || summaryText || (role === 'assistant' ? '...' : '')
+  const semanticRevision = normalizeMessageSemanticRevision(
+    rawMessage?.semanticRevision,
+    defaultContextText,
+  )
+  const normalizedContent = semanticRevision?.revisedText || defaultContextText
   const defaultStatus = role === 'user' ? 'delivered' : 'sent'
   const status = VALID_MESSAGE_STATUS.has(rawMessage?.status) ? rawMessage.status : defaultStatus
 
@@ -451,6 +520,7 @@ const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
     blocks,
     quote: normalizeMessageQuote(rawMessage?.quote),
     aiMeta: normalizeMessageMeta(rawMessage?.aiMeta),
+    semanticRevision,
     createdAt:
       typeof rawMessage?.createdAt === 'number' && Number.isFinite(rawMessage.createdAt)
         ? rawMessage.createdAt
@@ -487,6 +557,7 @@ const normalizeConversation = (rawConversation, contactId) => {
     draft: typeof rawConversation?.draft === 'string' ? rawConversation.draft : '',
     pinned: Boolean(rawConversation?.pinned),
     aiPrefs: normalizeConversationAiPrefs(rawConversation?.aiPrefs),
+    identityOverrides: normalizeConversationIdentityOverrides(rawConversation?.identityOverrides),
     proactiveOpenedAt:
       typeof rawConversation?.proactiveOpenedAt === 'number' && Number.isFinite(rawConversation.proactiveOpenedAt)
         ? rawConversation.proactiveOpenedAt
@@ -524,6 +595,8 @@ const normalizeConversation = (rawConversation, contactId) => {
 
 const summarizeMessage = (message) => {
   if (!message) return ''
+  const revisedText = trimTo(message?.semanticRevision?.revisedText, MAX_TEXT_BLOCK_LENGTH)
+  if (revisedText) return revisedText
   if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
   return summarizeBlocks(message.blocks)
 }
@@ -531,6 +604,9 @@ const summarizeMessage = (message) => {
 export const useChatStore = defineStore('chat', () => {
   const roleProfiles = reactive([])
   const contacts = reactive([])
+  const moduleAvatarOverrides = reactive(
+    normalizeModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES),
+  )
   const conversations = reactive({})
   const messagesByConversation = reactive({})
   const hasFinishedStorageHydration = ref(false)
@@ -538,6 +614,13 @@ export const useChatStore = defineStore('chat', () => {
 
   const getRoleProfileById = (profileId) =>
     roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
+
+  const applyModuleAvatarOverrides = (rawOverrides) => {
+    const normalized = normalizeModuleAvatarOverrides(rawOverrides)
+    moduleAvatarOverrides.selfAvatar = normalized.selfAvatar
+    moduleAvatarOverrides.defaultContactAvatar = normalized.defaultContactAvatar
+    moduleAvatarOverrides.contactAvatars = normalized.contactAvatars
+  }
 
   const getRawContactById = (contactId) => {
     return contacts.find((item) => Number(item.id) === Number(contactId)) || null
@@ -563,6 +646,114 @@ export const useChatStore = defineStore('chat', () => {
   const getContactById = (contactId) => {
     const raw = getRawContactById(contactId)
     return resolveContactWithProfile(raw)
+  }
+
+  const getModuleAvatarOverrides = () => normalizeModuleAvatarOverrides(moduleAvatarOverrides)
+
+  const getModuleContactAvatarOverride = (contactId) => {
+    const key = String(toInt(contactId, 0))
+    if (!key || key === '0') return ''
+    return normalizeAvatarUrl(moduleAvatarOverrides.contactAvatars?.[key])
+  }
+
+  const setModuleAvatarOverrides = (updates = {}) => {
+    if (!updates || typeof updates !== 'object') return false
+    let changed = false
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'selfAvatar')) {
+      const next = normalizeAvatarUrl(updates.selfAvatar)
+      if (moduleAvatarOverrides.selfAvatar !== next) {
+        moduleAvatarOverrides.selfAvatar = next
+        changed = true
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'defaultContactAvatar')) {
+      const next = normalizeAvatarUrl(updates.defaultContactAvatar)
+      if (moduleAvatarOverrides.defaultContactAvatar !== next) {
+        moduleAvatarOverrides.defaultContactAvatar = next
+        changed = true
+      }
+    }
+
+    if (updates.contactAvatars && typeof updates.contactAvatars === 'object') {
+      const nextMap = normalizeModuleContactAvatarMap(updates.contactAvatars)
+      const existingKeys = Object.keys(moduleAvatarOverrides.contactAvatars || {})
+      const nextKeys = Object.keys(nextMap)
+      if (
+        existingKeys.length !== nextKeys.length ||
+        existingKeys.some((key) => moduleAvatarOverrides.contactAvatars[key] !== nextMap[key])
+      ) {
+        moduleAvatarOverrides.contactAvatars = nextMap
+        changed = true
+      }
+    }
+
+    return changed
+  }
+
+  const setModuleContactAvatarOverride = (contactId, avatar) => {
+    const numericContactId = toInt(contactId, 0)
+    if (numericContactId <= 0) return false
+    const key = String(numericContactId)
+    const nextAvatar = normalizeAvatarUrl(avatar)
+    const currentAvatar = normalizeAvatarUrl(moduleAvatarOverrides.contactAvatars?.[key])
+
+    if (!nextAvatar) {
+      if (!currentAvatar) return false
+      const nextMap = { ...(moduleAvatarOverrides.contactAvatars || {}) }
+      delete nextMap[key]
+      moduleAvatarOverrides.contactAvatars = nextMap
+      return true
+    }
+
+    if (currentAvatar === nextAvatar) return false
+    moduleAvatarOverrides.contactAvatars = {
+      ...(moduleAvatarOverrides.contactAvatars || {}),
+      [key]: nextAvatar,
+    }
+    return true
+  }
+
+  const getConversationIdentityOverrides = (contactId) => {
+    const conversation = getConversationByContactId(contactId)
+    return normalizeConversationIdentityOverrides(conversation?.identityOverrides)
+  }
+
+  const setConversationIdentityOverrides = (contactId, updates = {}) => {
+    const numericContactId = toInt(contactId, 0)
+    if (numericContactId <= 0) return false
+    if (!updates || typeof updates !== 'object') return false
+
+    const conversation = ensureConversationForContact(numericContactId)
+    const next = normalizeConversationIdentityOverrides({
+      ...conversation.identityOverrides,
+      ...updates,
+    })
+    const current = normalizeConversationIdentityOverrides(conversation.identityOverrides)
+
+    if (current.selfAvatar === next.selfAvatar && current.contactAvatar === next.contactAvatar) {
+      return false
+    }
+
+    conversation.identityOverrides = next
+    conversation.updatedAt = nowTs()
+    return true
+  }
+
+  const resolveContactAvatar = (contactId) => {
+    const contact = getContactById(contactId)
+    if (!contact) return resolveAvatarWithHierarchy({ fallbackSeed: 'Contact' })
+
+    const conversationOverrides = getConversationIdentityOverrides(contact.id)
+    const perContactModuleAvatar = getModuleContactAvatarOverride(contact.id)
+
+    return resolveAvatarWithHierarchy({
+      threadAvatar: conversationOverrides.contactAvatar,
+      moduleAvatar: perContactModuleAvatar || moduleAvatarOverrides.defaultContactAvatar,
+      globalAvatar: contact.avatar,
+      fallbackSeed: contact.name || `contact-${contact.id}`,
+    })
   }
 
   const conversationKeyForContact = (contactId) => String(Number(contactId))
@@ -956,6 +1147,123 @@ export const useChatStore = defineStore('chat', () => {
       content: updatedContent,
       blocks: nextBlocks,
       editedAt,
+      semanticRevision: null,
+    }
+    syncConversationSummary(contactId)
+    return true
+  }
+
+  const getMessageContextText = (message) => {
+    const revisedText = trimTo(message?.semanticRevision?.revisedText, MAX_TEXT_BLOCK_LENGTH)
+    if (revisedText) return revisedText
+    const content = trimTo(message?.content, MAX_TEXT_BLOCK_LENGTH)
+    if (content) return content
+    return summarizeBlocks(Array.isArray(message?.blocks) ? message.blocks : [])
+  }
+
+  const getPrimaryTextBlockIndex = (blocks = []) => {
+    if (!Array.isArray(blocks) || blocks.length === 0) return -1
+    const primaryIndex = blocks.findIndex(
+      (block) => block?.type === 'text' && block?.variant !== 'secondary',
+    )
+    if (primaryIndex >= 0) return primaryIndex
+    return blocks.findIndex((block) => block?.type === 'text')
+  }
+
+  const patchMessagePrimaryTextBlock = (message, nextText) => {
+    const normalizedText = trimTo(nextText, MAX_TEXT_BLOCK_LENGTH)
+    if (!normalizedText) return Array.isArray(message?.blocks) ? message.blocks : []
+
+    const role = message?.role === 'user' ? 'user' : 'assistant'
+    const cloned = Array.isArray(message?.blocks)
+      ? message.blocks.map((block) => (block && typeof block === 'object' ? { ...block } : block))
+      : []
+
+    if (cloned.length === 0) {
+      return normalizeMessageBlocks([], normalizedText, role)
+    }
+
+    const textIndex = getPrimaryTextBlockIndex(cloned)
+    if (textIndex >= 0) {
+      cloned[textIndex] = {
+        ...cloned[textIndex],
+        type: 'text',
+        text: normalizedText,
+        variant: cloned[textIndex]?.variant === 'secondary' ? 'secondary' : 'primary',
+        lang: typeof cloned[textIndex]?.lang === 'string' ? cloned[textIndex].lang : 'auto',
+      }
+      return cloned
+    }
+
+    const hasRichBlock = cloned.some((block) => block?.type && block.type !== 'text')
+    if (hasRichBlock) {
+      return cloned
+    }
+
+    return normalizeMessageBlocks([], normalizedText, role)
+  }
+
+  const reviseMessageSemantic = (contactId, targetMessageId, nextText, options = {}) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+
+    const target = list[index]
+    const revisedText = trimTo(nextText, MAX_TEXT_BLOCK_LENGTH)
+    if (!revisedText) return false
+
+    const currentContext = getMessageContextText(target)
+    const currentRevision = normalizeMessageSemanticRevision(
+      target?.semanticRevision,
+      currentContext,
+    )
+    const originalText = currentRevision?.originalText || currentContext
+    if (!originalText) return false
+
+    const revisedAtInput = Number(options?.revisedAt)
+    const revisedAt =
+      Number.isFinite(revisedAtInput) && revisedAtInput > 0
+        ? Math.floor(revisedAtInput)
+        : nowTs()
+
+    const nextRevision =
+      revisedText === originalText
+        ? null
+        : {
+            originalText,
+            revisedText,
+            revisedAt,
+          }
+
+    const nextBlocks = patchMessagePrimaryTextBlock(target, revisedText)
+    list[index] = {
+      ...target,
+      content: revisedText,
+      blocks: nextBlocks,
+      semanticRevision: nextRevision,
+    }
+    syncConversationSummary(contactId)
+    return true
+  }
+
+  const restoreMessageSemanticRevision = (contactId, targetMessageId) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+
+    const target = list[index]
+    const revision = normalizeMessageSemanticRevision(
+      target?.semanticRevision,
+      getMessageContextText(target),
+    )
+    if (!revision) return false
+
+    const restoredText = revision.originalText
+    const restoredBlocks = patchMessagePrimaryTextBlock(target, restoredText)
+
+    list[index] = {
+      ...target,
+      content: restoredText,
+      blocks: restoredBlocks,
+      semanticRevision: null,
     }
     syncConversationSummary(contactId)
     return true
@@ -1197,6 +1505,7 @@ export const useChatStore = defineStore('chat', () => {
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
 
     resetReactiveObject(roleProfiles)
+    applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
     const sourceProfiles = Array.isArray(legacyContacts)
       ? normalizedContacts
           .filter((contact) => (contact.kind || 'role') === 'role')
@@ -1256,6 +1565,12 @@ export const useChatStore = defineStore('chat', () => {
 
   const hydrateFromSnapshot = (persisted = {}) => {
     if (!persisted || typeof persisted !== 'object') return false
+
+    applyModuleAvatarOverrides(
+      persisted.moduleAvatarOverrides && typeof persisted.moduleAvatarOverrides === 'object'
+        ? persisted.moduleAvatarOverrides
+        : DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES,
+    )
 
     const normalizedProfiles = Array.isArray(persisted.roleProfiles)
       ? persisted.roleProfiles.map((item, index) => normalizeRoleProfile(item, index))
@@ -1373,6 +1688,7 @@ export const useChatStore = defineStore('chat', () => {
         {
           ...value,
           aiPrefs: normalizeConversationAiPrefs(value.aiPrefs),
+          identityOverrides: normalizeConversationIdentityOverrides(value.identityOverrides),
         },
       ]),
     )
@@ -1384,6 +1700,10 @@ export const useChatStore = defineStore('chat', () => {
           blocks: normalizeMessageBlocks(message.blocks, message.content, message.role),
           quote: normalizeMessageQuote(message.quote),
           aiMeta: normalizeMessageMeta(message.aiMeta),
+          semanticRevision: normalizeMessageSemanticRevision(
+            message.semanticRevision,
+            message.content,
+          ),
         })),
       ]),
     )
@@ -1391,6 +1711,7 @@ export const useChatStore = defineStore('chat', () => {
     writePersistedState(
       CHAT_STORAGE_KEY,
       {
+        moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
         roleProfiles: roleProfiles.map((profile) => ({ ...profile })),
         contacts: contactsSnapshot,
         conversations: conversationsSnapshot,
@@ -1441,7 +1762,7 @@ export const useChatStore = defineStore('chat', () => {
   })()
 
   watch(
-    [roleProfiles, contacts, conversations, messagesByConversation],
+    [moduleAvatarOverrides, roleProfiles, contacts, conversations, messagesByConversation],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1450,6 +1771,7 @@ export const useChatStore = defineStore('chat', () => {
   )
 
   return {
+    moduleAvatarOverrides,
     roleProfiles,
     contacts,
     contactsForList,
@@ -1477,9 +1799,18 @@ export const useChatStore = defineStore('chat', () => {
     appendMessage,
     updateMessageStatus,
     updateMessageContent,
+    reviseMessageSemantic,
+    restoreMessageSemanticRevision,
     removeMessage,
     replaceMessage,
     getContactById,
+    resolveContactAvatar,
+    getModuleAvatarOverrides,
+    setModuleAvatarOverrides,
+    getModuleContactAvatarOverride,
+    setModuleContactAvatarOverride,
+    getConversationIdentityOverrides,
+    setConversationIdentityOverrides,
     getRoleProfileById,
     addRoleProfile,
     updateRoleProfile,

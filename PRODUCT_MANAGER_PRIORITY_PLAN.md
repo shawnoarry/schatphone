@@ -241,4 +241,5 @@ Chat 一级页包含至少 3 个底部按钮，且均可跳转占位页。
 2026-04-06：确认 Chat 一级页需新增至少三个底部功能按钮，并接入真实占位路由。
 10. 2026-04-06: confirmed avatar hierarchy B (`thread > module > global`) for both user and AI identities to support immersion and future anonymous gameplay.  
 2026-04-06：确认采用头像层级 B（`会话 > 模块 > 全局`），同时作用于用户与 AI 身份，以支持沉浸及后续匿名玩法。
-
+11. 2026-04-06: `P0-3` phase-1 landed: shared avatar resolver is online (`thread > module > global > fallback`), chat module-level overrides are configurable in `/chat-feature/identity`, and thread-level self/contact overrides are configurable in chat thread menu.  
+2026-04-06：`P0-3` 第一阶段已落地：统一头像解析器上线（`会话 > 模块 > 全局 > 兜底`），Chat 模块级覆写可在 `/chat-feature/identity` 配置，会话级自己/对方覆写可在会话菜单配置。

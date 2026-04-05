@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-04-05
+Updated / 更新时间: 2026-04-06
 
 ## 1. Current Conclusion / 当前结论
 
@@ -178,3 +178,8 @@ Move to "Chat enhancement stage" once all are true:
 锁定状态通知 -> 会话打开链路稳定
 - `npm run lint`, `npm run test`, `npm run build` all pass  
 lint/test/build 全通过
+
+## 6. Latest Increment (2026-04-06) / 最新增量（2026-04-06）
+- `P0-3` phase-1 landed: shared avatar hierarchy resolver is online (`thread > module > global > fallback`) for both self and contact identity visuals.
+- Chat now supports module-level avatar overrides in `/chat-feature/identity` and thread-level self/contact overrides in the thread menu.
+- Visual layer wiring is completed on chat list, thread assistant bubble, and user bubble avatar rendering.

@@ -1,6 +1,6 @@
 # SchatPhone 项目进度与待办
 
-Updated / 更新时间: 2026-04-05
+Updated / 更新时间: 2026-04-06
 
 ## 1. Current Project Status / 当前项目状态
 
@@ -231,6 +231,8 @@ Quiet-hours + notify-only + manual-priority policy now runs through settings and
 6. `P0-C1` 已完成（2026-04-06）：Chat 交互骨架重构第一阶段已收口；消息操作改为长按 + 底部动作面板，并保留 `Trigger Reply` 常驻。
 7. `P0-C2` started (2026-04-06): user rich-message lane phase-1 is in progress (`+` panel + image/gif/link/location/transfer/voice-card).  
 7. `P0-C2` 已启动（2026-04-06）：用户富消息发送链路第一阶段进行中（`+` 面板 + 图片/gif/链接/位置/转账/语音卡片）。
+8. `P0-3` phase-1 landed (2026-04-06): avatar hierarchy baseline is integrated (`thread > module > global > fallback`), with module-level overrides in `/chat-feature/identity` and thread-level self/contact overrides in chat thread menu.  
+8. `P0-3` 第一阶段已落地（2026-04-06）：头像层级基线（`会话 > 模块 > 全局 > 兜底`）已接入，模块级覆写位于 `/chat-feature/identity`，会话级自己/对方覆写位于会话菜单。
 
 ### P1
 

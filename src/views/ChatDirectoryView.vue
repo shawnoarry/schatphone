@@ -537,6 +537,11 @@ const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('
 const serviceKindTag = (contact) =>
   contact.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')
 
+const contactAvatarForDisplay = (contact) => {
+  if (!contact?.id) return ''
+  return chatStore.resolveContactAvatar(contact.id)
+}
+
 const roleTemplateLabel = (preset) => t(preset?.titleCn || '', preset?.titleEn || '')
 const roleTemplateNote = (preset) => t(preset?.relationshipNoteCn || '', preset?.relationshipNoteEn || '')
 const servicePresetName = (preset) => t(preset?.nameCn || '', preset?.nameEn || '')
@@ -877,10 +882,7 @@ onBeforeUnmount(() => {
             <i class="fas fa-check"></i>
           </button>
           <div class="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden">
-            <img
-              :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.name"
-              class="w-full h-full object-cover"
-            />
+            <img :src="contactAvatarForDisplay(contact)" class="w-full h-full object-cover" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">{{ contact.name }}</p>

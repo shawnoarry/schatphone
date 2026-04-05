@@ -321,6 +321,153 @@ describe('chat store model', () => {
     expect(conversation.unread).toBe(1)
   })
 
+  test('supports semantic revision and restore for assistant rich message', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+    const originalText = 'A cluttered desk with warm light'
+    const revisedText = 'A desk with scores arranged neatly and dim light'
+
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: originalText,
+      blocks: [
+        {
+          type: 'text',
+          text: originalText,
+          variant: 'primary',
+          lang: 'auto',
+        },
+        {
+          type: 'image_virtual',
+          alt: 'Desk image',
+          url: 'https://example.com/desk.png',
+          caption: 'Reference image',
+        },
+      ],
+      status: 'sent',
+    })
+
+    const revised = store.reviseMessageSemantic(contactId, assistantMessage.id, revisedText, {
+      revisedAt: 999001,
+    })
+    expect(revised).toBe(true)
+
+    const revisedMessage = store
+      .getMessagesByContactId(contactId)
+      .find((item) => item.id === assistantMessage.id)
+    expect(revisedMessage?.semanticRevision?.originalText).toBe(originalText)
+    expect(revisedMessage?.semanticRevision?.revisedText).toBe(revisedText)
+    expect(revisedMessage?.semanticRevision?.revisedAt).toBe(999001)
+    expect(revisedMessage?.content).toBe(revisedText)
+    expect(revisedMessage?.blocks?.[0]?.type).toBe('text')
+    expect(revisedMessage?.blocks?.[0]?.text).toBe(revisedText)
+    expect(revisedMessage?.blocks?.[1]?.type).toBe('image_virtual')
+    expect(revisedMessage?.blocks?.[1]?.url).toContain('https://example.com/desk.png')
+    expect(store.getConversationByContactId(contactId).lastMessage).toContain(revisedText)
+
+    const restored = store.restoreMessageSemanticRevision(contactId, assistantMessage.id)
+    expect(restored).toBe(true)
+
+    const restoredMessage = store
+      .getMessagesByContactId(contactId)
+      .find((item) => item.id === assistantMessage.id)
+    expect(restoredMessage?.semanticRevision).toBe(null)
+    expect(restoredMessage?.content).toBe(originalText)
+    expect(restoredMessage?.blocks?.[0]?.text).toBe(originalText)
+    expect(restoredMessage?.blocks?.[1]?.type).toBe('image_virtual')
+  })
+
+  test('applies avatar hierarchy for contact visuals (thread > module > global > fallback)', () => {
+    const store = useChatStore()
+    const created = store.addContact({
+      name: 'Avatar Tester',
+      kind: 'role',
+      avatar: 'https://example.com/avatar-global.png',
+    })
+
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-global.png')
+
+    store.setModuleAvatarOverrides({
+      defaultContactAvatar: 'https://example.com/avatar-module-default.png',
+    })
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-module-default.png')
+
+    store.setModuleContactAvatarOverride(created.id, 'https://example.com/avatar-module-contact.png')
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-module-contact.png')
+
+    store.setConversationIdentityOverrides(created.id, {
+      contactAvatar: 'https://example.com/avatar-thread.png',
+    })
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-thread.png')
+
+    store.setConversationIdentityOverrides(created.id, { contactAvatar: '' })
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-module-contact.png')
+
+    store.setModuleContactAvatarOverride(created.id, '')
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-module-default.png')
+
+    store.setModuleAvatarOverrides({ defaultContactAvatar: '' })
+    expect(store.resolveContactAvatar(created.id)).toBe('https://example.com/avatar-global.png')
+
+    store.updateContact(created.id, { avatar: '' })
+    const fallbackAvatar = store.resolveContactAvatar(created.id)
+    expect(fallbackAvatar).toContain('https://api.dicebear.com/7.x/avataaars/svg?seed=')
+  })
+
+  test('restores module/thread avatar overrides from backup snapshot', () => {
+    const store = useChatStore()
+
+    const restored = store.restoreFromBackup({
+      moduleAvatarOverrides: {
+        selfAvatar: 'https://example.com/self-module.png',
+        defaultContactAvatar: 'https://example.com/contact-module.png',
+        contactAvatars: {
+          501: 'https://example.com/contact-module-specific.png',
+        },
+      },
+      roleProfiles: [
+        {
+          id: 301,
+          name: 'Override Role',
+          role: 'Guide',
+          isMain: false,
+          avatar: 'https://example.com/contact-global.png',
+          bio: '',
+        },
+      ],
+      contacts: [
+        {
+          id: 501,
+          kind: 'role',
+          profileId: 301,
+          relationshipLevel: 50,
+          relationshipNote: '',
+          lastMessage: '',
+        },
+      ],
+      conversations: {
+        501: {
+          id: 'conv_501',
+          contactId: 501,
+          identityOverrides: {
+            selfAvatar: 'https://example.com/self-thread.png',
+            contactAvatar: 'https://example.com/contact-thread.png',
+          },
+        },
+      },
+      messagesByConversation: {
+        501: [{ role: 'assistant', content: 'Hello' }],
+      },
+    })
+
+    expect(restored).toBe(true)
+    expect(store.getModuleAvatarOverrides().selfAvatar).toBe('https://example.com/self-module.png')
+    expect(store.getModuleContactAvatarOverride(501)).toBe('https://example.com/contact-module-specific.png')
+    expect(store.getConversationIdentityOverrides(501).selfAvatar).toBe('https://example.com/self-thread.png')
+    expect(store.getConversationIdentityOverrides(501).contactAvatar).toBe('https://example.com/contact-thread.png')
+    expect(store.resolveContactAvatar(501)).toBe('https://example.com/contact-thread.png')
+  })
+
   test('supports contact kind update and remove', () => {
     const store = useChatStore()
     const created = store.addContact({

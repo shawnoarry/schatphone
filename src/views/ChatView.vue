@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
+import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
@@ -129,11 +130,13 @@ const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
 const lastManualActionAt = ref(0)
 const threadSettingsSaved = ref(false)
+const threadIdentitySaved = ref(false)
 const serviceTemplateSaved = ref(false)
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
 let autoInvokeTimerId = null
 let threadSettingsSavedTimerId = null
+let threadIdentitySavedTimerId = null
 let serviceTemplateSavedTimerId = null
 let uiNoticeTimerId = null
 let messageLongPressTimerId = null
@@ -165,6 +168,11 @@ const threadSettingsDraft = reactive({
   proactiveOpenerStrategy: DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy,
   autoInvokeEnabled: DEFAULT_THREAD_AI_PREFS.autoInvokeEnabled,
   autoInvokeIntervalSec: DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec,
+})
+
+const threadIdentityDraft = reactive({
+  selfAvatar: '',
+  contactAvatar: '',
 })
 
 const activeChatId = computed(() => {
@@ -205,6 +213,33 @@ const hasActiveMessageActions = computed(() => Boolean(activeActionMessage.value
 const currentStatus = computed(() => {
   const statusId = typeof user.value.chatStatus === 'string' ? user.value.chatStatus : 'idle'
   return STATUS_OPTIONS.value.find((item) => item.id === statusId) || STATUS_OPTIONS.value[0]
+})
+
+const chatListDockItems = computed(() => [
+  { id: 'preferences', label: t('偏好', 'Prefs'), icon: 'fas fa-sliders-h' },
+  { id: 'identity', label: t('身份', 'Identity'), icon: 'fas fa-user-secret' },
+  { id: 'labs', label: t('实验室', 'Labs'), icon: 'fas fa-flask' },
+])
+
+const activeContactAvatar = computed(() => {
+  if (!activeChat.value) {
+    return resolveAvatarWithHierarchy({ fallbackSeed: t('联系人', 'Contact') })
+  }
+  return chatStore.resolveContactAvatar(activeChat.value.id)
+})
+
+const activeSelfAvatar = computed(() => {
+  const moduleOverrides = chatStore.getModuleAvatarOverrides()
+  const threadOverrides = activeChat.value
+    ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
+    : { selfAvatar: '' }
+
+  return resolveAvatarWithHierarchy({
+    threadAvatar: threadOverrides.selfAvatar,
+    moduleAvatar: moduleOverrides.selfAvatar,
+    globalAvatar: user.value.avatar,
+    fallbackSeed: user.value.name || t('自己', 'Me'),
+  })
 })
 
 const pendingReplyTriggerMessageId = computed(() => {
@@ -405,6 +440,11 @@ const scrollToBottom = () => {
 
 const goHome = () => router.push('/home')
 const leaveChat = () => router.push('/chat')
+const openChatDockFeature = (featureId) => {
+  const id = typeof featureId === 'string' ? featureId.trim() : ''
+  if (!id) return
+  router.push(`/chat-feature/${id}`)
+}
 const contactById = (contactId) =>
   contactsForList.value.find((item) => item.id === Number(contactId)) || null
 
@@ -430,6 +470,27 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
   threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
   threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
+}
+
+const applyThreadIdentityDraft = () => {
+  if (!activeChat.value) {
+    threadIdentityDraft.selfAvatar = ''
+    threadIdentityDraft.contactAvatar = ''
+    return
+  }
+
+  const overrides = chatStore.getConversationIdentityOverrides(activeChat.value.id)
+  threadIdentityDraft.selfAvatar = overrides.selfAvatar || ''
+  threadIdentityDraft.contactAvatar = overrides.contactAvatar || ''
+}
+
+const contactAvatarForList = (contact) => {
+  if (!contact?.id) {
+    return resolveAvatarWithHierarchy({
+      fallbackSeed: contact?.name || t('联系人', 'Contact'),
+    })
+  }
+  return chatStore.resolveContactAvatar(contact.id)
 }
 
 const formatTruthTimestampForPrompt = (timestamp) => {
@@ -545,6 +606,11 @@ Rules:
 
 const extractMessageTextForContext = (message) => {
   if (!message) return ''
+  const revisedText =
+    typeof message?.semanticRevision?.revisedText === 'string'
+      ? message.semanticRevision.revisedText.trim()
+      : ''
+  if (revisedText) return revisedText
   if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
   if (!Array.isArray(message.blocks)) return ''
 
@@ -566,6 +632,11 @@ const extractMessageTextForContext = (message) => {
 
 const messagePrimaryText = (message) => {
   if (!message) return ''
+  const revisedText =
+    typeof message?.semanticRevision?.revisedText === 'string'
+      ? message.semanticRevision.revisedText.trim()
+      : ''
+  if (revisedText) return revisedText
   if (Array.isArray(message.blocks)) {
     const primary = message.blocks.find(
       (block) =>
@@ -1634,8 +1705,16 @@ const copyMessage = async (message) => {
   closeMessageActions()
 }
 
-const canEditMessage = (message) => Boolean(message && message.role === 'user')
+const canEditMessage = (message) => Boolean(message && (message.role === 'user' || message.role === 'assistant'))
 const canRerollMessage = (message) => Boolean(message && message.role === 'assistant')
+const canRestoreSemanticRevision = (message) =>
+  Boolean(
+    message &&
+      typeof message?.semanticRevision?.revisedText === 'string' &&
+      message.semanticRevision.revisedText.trim() &&
+      typeof message?.semanticRevision?.originalText === 'string' &&
+      message.semanticRevision.originalText.trim(),
+  )
 
 const quoteMessage = (message) => {
   if (!message) return
@@ -1655,7 +1734,12 @@ const editMessage = (message) => {
   if (!activeChat.value || !canEditMessage(message)) return
 
   const currentText = messagePrimaryText(message)
-  const input = window.prompt(t('编辑消息', 'Edit message'), currentText)
+  const input = window.prompt(
+    message.role === 'assistant'
+      ? t('修订消息文本（用于后续上下文）', 'Revise message text for next context')
+      : t('编辑消息', 'Edit message'),
+    currentText,
+  )
   if (input === null) {
     closeMessageActions()
     return
@@ -1667,12 +1751,27 @@ const editMessage = (message) => {
     return
   }
 
-  const ok = chatStore.updateMessageContent(activeChat.value.id, message.id, nextText, {
-    markEdited: true,
-    editedAt: Date.now(),
-  })
+  const ok =
+    message.role === 'assistant'
+      ? chatStore.reviseMessageSemantic(activeChat.value.id, message.id, nextText, {
+          revisedAt: Date.now(),
+        })
+      : chatStore.updateMessageContent(activeChat.value.id, message.id, nextText, {
+          markEdited: true,
+          editedAt: Date.now(),
+        })
   if (!ok) {
     showUiNotice('error', t('编辑失败，请重试。', 'Edit failed. Please retry.'))
+    return
+  }
+  closeMessageActions()
+}
+
+const restoreSemanticRevision = (message) => {
+  if (!activeChat.value || !canRestoreSemanticRevision(message)) return
+  const ok = chatStore.restoreMessageSemanticRevision(activeChat.value.id, message.id)
+  if (!ok) {
+    showUiNotice('error', t('恢复失败，请重试。', 'Restore failed. Please retry.'))
     return
   }
   closeMessageActions()
@@ -2239,12 +2338,13 @@ const contactKindTagClass = (contact) => {
 const headerSecondaryStatusText = computed(() => {
   if (loadingAI.value) return t('对方正在输入...', 'Typing...')
   if (threadSettingsSaved.value) return t('会话设置已保存', 'Thread settings saved')
+  if (threadIdentitySaved.value) return t('会话身份已保存', 'Thread identity saved')
   if (serviceTemplateSaved.value) return t('服务模板已保存', 'Service template saved')
   return ''
 })
 
 const headerSecondaryStatusClass = computed(() =>
-  !loadingAI.value && (threadSettingsSaved.value || serviceTemplateSaved.value)
+  !loadingAI.value && (threadSettingsSaved.value || threadIdentitySaved.value || serviceTemplateSaved.value)
     ? 'text-emerald-600 font-medium'
     : '',
 )
@@ -2254,6 +2354,14 @@ const triggerThreadSettingsSaved = () => {
   if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
   threadSettingsSavedTimerId = setTimeout(() => {
     threadSettingsSaved.value = false
+  }, SAVE_FEEDBACK_DURATION_MS)
+}
+
+const triggerThreadIdentitySaved = () => {
+  threadIdentitySaved.value = true
+  if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
+  threadIdentitySavedTimerId = setTimeout(() => {
+    threadIdentitySaved.value = false
   }, SAVE_FEEDBACK_DURATION_MS)
 }
 
@@ -2322,6 +2430,7 @@ const toggleThreadMenu = () => {
   if (next) {
     serviceTemplateDraft.value = activeChat.value?.serviceTemplate || ''
     applyThreadSettingsDraft()
+    applyThreadIdentityDraft()
   }
 }
 
@@ -2333,6 +2442,23 @@ const saveServiceTemplate = () => {
   if (!ok) return
   chatStore.saveNow()
   triggerServiceTemplateSaved()
+}
+
+const saveThreadIdentityOverrides = () => {
+  if (!activeChat.value) return
+
+  const changed = chatStore.setConversationIdentityOverrides(activeChat.value.id, {
+    selfAvatar: threadIdentityDraft.selfAvatar,
+    contactAvatar: threadIdentityDraft.contactAvatar,
+  })
+
+  if (!changed) {
+    showUiNotice('warning', t('未检测到身份变更。', 'No identity changes detected.'))
+    return
+  }
+
+  chatStore.saveNow()
+  triggerThreadIdentitySaved()
 }
 
 const saveThreadSettings = () => {
@@ -2382,6 +2508,7 @@ watch(
     activeMessageActionId.value = ''
     pendingQuote.value = null
     threadSettingsSaved.value = false
+    threadIdentitySaved.value = false
     serviceTemplateSaved.value = false
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
@@ -2391,6 +2518,7 @@ watch(
       chatStore.markConversationRead(id)
       inputMessage.value = chatStore.getConversationByContactId(id).draft || ''
       applyThreadSettingsDraft()
+      applyThreadIdentityDraft()
       const prefs = chatStore.getConversationAiPrefs(id)
       if (prefs.autoInvokeEnabled) {
         const conversation = chatStore.getConversationByContactId(id)
@@ -2463,6 +2591,7 @@ onBeforeUnmount(() => {
   cancelMessageLongPress()
   systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
   if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
+  if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
   if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
 })
@@ -2487,7 +2616,7 @@ onBeforeUnmount(() => {
           class="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer"
         >
           <div class="w-12 h-12 rounded-[18px] overflow-hidden bg-gray-200">
-            <img :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.name" class="w-full h-full object-cover" />
+            <img :src="contactAvatarForList(contact)" class="w-full h-full object-cover" />
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-center gap-2">
@@ -2508,6 +2637,18 @@ onBeforeUnmount(() => {
             {{ Math.min(getConversationPreview(contact.id)?.unread || 0, 99) }}
           </span>
         </div>
+      </div>
+
+      <div class="border-t border-gray-200 bg-white px-3 py-2 grid grid-cols-3 gap-2">
+        <button
+          v-for="item in chatListDockItems"
+          :key="item.id"
+          @click="openChatDockFeature(item.id)"
+          class="rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-[11px] text-gray-700 flex items-center justify-center gap-1.5 hover:bg-gray-100"
+        >
+          <i :class="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </button>
       </div>
     </template>
 
@@ -2539,6 +2680,45 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </template>
+
+        <div class="border-t border-gray-200 pt-3 space-y-2">
+          <p class="font-semibold text-sm text-gray-900">{{ t('会话身份覆写', 'Thread identity overrides') }}</p>
+          <label class="block space-y-1">
+            <span class="text-[11px] text-gray-500">{{ t('我的头像（会话级）', 'My avatar (thread-level)') }}</span>
+            <input
+              v-model="threadIdentityDraft.selfAvatar"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
+              placeholder="https://..."
+            />
+          </label>
+          <label class="block space-y-1">
+            <span class="text-[11px] text-gray-500">{{ t('对方头像（会话级）', 'Contact avatar (thread-level)') }}</span>
+            <input
+              v-model="threadIdentityDraft.contactAvatar"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
+              placeholder="https://..."
+            />
+          </label>
+          <p class="text-[10px] text-gray-400">
+            {{ t('优先级：会话 > 模块 > 全局 > 默认。留空将回退到下一级。', 'Priority: thread > module > global > fallback. Leave blank to fall back.') }}
+          </p>
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              @click="threadIdentityDraft.selfAvatar = ''; threadIdentityDraft.contactAvatar = ''"
+              class="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600"
+            >
+              {{ t('清空', 'Clear') }}
+            </button>
+            <button
+              @click="saveThreadIdentityOverrides"
+              class="px-2.5 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+            >
+              {{ t('保存身份覆写', 'Save identity overrides') }}
+            </button>
+          </div>
+        </div>
 
         <div class="border-t border-gray-200 pt-3 space-y-2">
           <p class="font-semibold text-sm text-gray-900">{{ t('当前会话 AI 设置', 'Thread AI Settings') }}</p>
@@ -2663,7 +2843,7 @@ onBeforeUnmount(() => {
       <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" ref="chatContainer">
         <div v-for="msg in activeMessages" :key="msg.id" class="flex w-full" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div v-if="msg.role !== 'user'" class="w-8 h-8 rounded-xl bg-gray-200 mr-2 overflow-hidden flex-shrink-0">
-            <img :src="activeChat.avatar" class="w-full h-full object-cover" />
+            <img :src="activeContactAvatar" class="w-full h-full object-cover" />
           </div>
 
           <div class="max-w-[70%]">
@@ -2767,6 +2947,10 @@ onBeforeUnmount(() => {
             <p v-if="messageStatusText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? (msg.status === 'failed' ? 'text-right text-red-500' : 'text-right text-gray-400') : (msg.status === 'failed' ? 'text-left text-red-500' : 'text-left text-gray-400')">
               {{ messageStatusText(msg) }}
             </p>
+          </div>
+
+          <div v-if="msg.role === 'user'" class="w-8 h-8 rounded-xl bg-gray-200 ml-2 overflow-hidden flex-shrink-0">
+            <img :src="activeSelfAvatar" class="w-full h-full object-cover" />
           </div>
         </div>
 
@@ -3069,6 +3253,13 @@ onBeforeUnmount(() => {
               @click="editMessage(activeActionMessage)"
             >
               {{ t('编辑', 'Edit') }}
+            </button>
+            <button
+              v-if="canRestoreSemanticRevision(activeActionMessage)"
+              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              @click="restoreSemanticRevision(activeActionMessage)"
+            >
+              {{ t('恢复原文', 'Restore original') }}
             </button>
             <button
               v-if="canRerollMessage(activeActionMessage)"
