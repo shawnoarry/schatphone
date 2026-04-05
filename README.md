@@ -1,6 +1,6 @@
 ﻿# SchatPhone
 
-Updated / 更新时间: 2026-03-30
+Updated / 更新时间: 2026-04-05
 
 SchatPhone is a Vue 3 mobile interaction shell that simulates an iOS-like full-screen phone experience.  
 SchatPhone 是一个基于 Vue 3 的移动端交互壳项目，目标是构建仿 iOS 的全屏手机体验。
@@ -50,6 +50,12 @@ Chat 对话页已支持消息操作菜单（引用/编辑/删除/复制/重 roll
 国际化基础已通过 `src/lib/locale.js` + `src/composables/useI18n.js` 落地
 - System language applies to menus/settings/UI labels only, not AI-generated chat content  
 系统语言仅作用于菜单/设置/UI 文案，不改写 AI 生成的聊天内容
+- Settings About page now provides storage consistency check/repair for localStorage and IndexedDB mirror drift  
+Settings 关于页现已提供 localStorage 与 IndexedDB 镜像的一致性检查与漂移修复
+- Settings General supports periodic backup reminders (1 hour to 30 days) via system-style notifications instead of pop-up dialogs  
+Settings 通用页支持周期性备份提醒（1 小时到 30 天），提醒通过系统推送样式通知呈现，不使用弹窗
+- Exporting backup resets the reminder timer to avoid repeated immediate reminders  
+导出备份后会重置提醒计时，避免刚备份就重复提醒
 - Files and More pages are available as MVP modules  
 Files / More 已升级为可用 MVP 页面
 - Key input pages provide explicit Save actions with persistence  

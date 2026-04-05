@@ -26,6 +26,8 @@ const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : syste
 const dateLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 
 let timerId = null
+let backupReminderTimerId = null
+let backupReminderVisibilityHandler = null
 let customCssStyleEl = null
 
 const updateTime = () => {
@@ -74,14 +76,44 @@ watch(
   { immediate: true },
 )
 
+const runBackupReminderCheck = () => {
+  const result = systemStore.checkBackupReminderDue(Date.now(), {
+    title: t('SchatPhone 备份提醒', 'SchatPhone Backup Reminder'),
+    content: t(
+      '建议导出一次备份，防止浏览器清理导致数据丢失。',
+      'Consider exporting a backup to prevent data loss after browser cleanup.',
+    ),
+    icon: 'fas fa-shield-heart',
+    route: '/settings',
+  })
+  if (result?.triggered) {
+    systemStore.saveNow()
+  }
+}
+
 onMounted(() => {
   updateTime()
   timerId = setInterval(updateTime, 1000)
+  runBackupReminderCheck()
+  backupReminderTimerId = setInterval(runBackupReminderCheck, 60 * 1000)
+  backupReminderVisibilityHandler = () => {
+    if (document.hidden) return
+    runBackupReminderCheck()
+  }
+  document.addEventListener('visibilitychange', backupReminderVisibilityHandler, { passive: true })
 })
 
 onBeforeUnmount(() => {
   if (timerId) {
     clearInterval(timerId)
+  }
+  if (backupReminderTimerId) {
+    clearInterval(backupReminderTimerId)
+    backupReminderTimerId = null
+  }
+  if (backupReminderVisibilityHandler) {
+    document.removeEventListener('visibilitychange', backupReminderVisibilityHandler)
+    backupReminderVisibilityHandler = null
   }
   if (customCssStyleEl) {
     customCssStyleEl.remove()

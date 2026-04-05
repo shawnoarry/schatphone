@@ -6,7 +6,11 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { useI18n } from '../composables/useI18n'
-import { getPersistenceCapabilities } from '../lib/persistence'
+import {
+  getPersistenceCapabilities,
+  inspectPersistedStateLayers,
+  reconcilePersistedStateLayers,
+} from '../lib/persistence'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -30,10 +34,32 @@ let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
 let backupFeedbackTimerId = null
+let storageAuditFeedbackTimerId = null
 const automationInitialMaster = ref(false)
 const persistenceCapabilities = computed(() => getPersistenceCapabilities())
 const persistenceCapabilityLabel = (available) =>
   available ? t('可用', 'Available') : t('不可用', 'Unavailable')
+const STORAGE_AUDIT_TARGETS = Object.freeze([
+  { key: 'store:system', version: 1, labelZh: '系统存档', labelEn: 'System state' },
+  { key: 'store:chat', version: 2, labelZh: '聊天存档', labelEn: 'Chat state' },
+  { key: 'store:map', version: 1, labelZh: '地图存档', labelEn: 'Map state' },
+])
+const storageAuditRunning = ref(false)
+const storageRepairRunning = ref(false)
+const storageAuditResults = ref([])
+const storageAuditAt = ref(0)
+const storageAuditFeedbackType = ref('')
+const storageAuditFeedbackMessage = ref('')
+const backupReminderIntervalOptions = [1, 3, 6, 12, 24, 48, 72, 168, 336, 720]
+const backupReminderIntervalLabel = (hours) => {
+  const normalizedHours = Number(hours)
+  if (!Number.isFinite(normalizedHours) || normalizedHours <= 0) return t('自定义', 'Custom')
+  if (normalizedHours % 24 === 0) {
+    const days = normalizedHours / 24
+    return t(`${days} 天`, `${days} day(s)`)
+  }
+  return t(`${normalizedHours} 小时`, `${normalizedHours} hour(s)`)
+}
 
 const setBackupFeedback = (type, message, durationMs = 1800) => {
   backupFeedbackType.value = type
@@ -45,6 +71,143 @@ const setBackupFeedback = (type, message, durationMs = 1800) => {
   }, durationMs)
 }
 
+const setStorageAuditFeedback = (type, message, durationMs = 2200) => {
+  storageAuditFeedbackType.value = type
+  storageAuditFeedbackMessage.value = message
+  if (storageAuditFeedbackTimerId) clearTimeout(storageAuditFeedbackTimerId)
+  storageAuditFeedbackTimerId = setTimeout(() => {
+    storageAuditFeedbackType.value = ''
+    storageAuditFeedbackMessage.value = ''
+  }, durationMs)
+}
+
+const storageLayerLabel = (layerResult, disabledLabel) => {
+  if (!layerResult) return t('未知', 'Unknown')
+  if (layerResult.decodedOk) return t('有效', 'Valid')
+  if (layerResult.exists) return t('异常', 'Invalid')
+  return disabledLabel
+}
+
+const storageAuditStatusLabel = (result) => {
+  if (!result?.mirrorApplicable) return t('仅本地', 'Local only')
+  if (result.mirrorInSync) return t('已同步', 'Synced')
+  return t('待修复', 'Needs repair')
+}
+
+const storageAuditStatusClass = (result) => {
+  if (!result?.mirrorApplicable) return 'text-gray-500 bg-gray-100'
+  if (result.mirrorInSync) return 'text-green-600 bg-green-100'
+  return 'text-amber-700 bg-amber-100'
+}
+
+const storageAuditSourceLabel = (source) => {
+  if (source === 'local') return t('本地层', 'Local layer')
+  if (source === 'indexeddb') return 'IndexedDB'
+  return t('无可用来源', 'No valid source')
+}
+
+const formatStorageAuditTime = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return t('尚未检查', 'Not checked yet')
+  const locale = (settings.value.system?.language || '').toLowerCase().startsWith('zh')
+    ? 'zh-CN'
+    : settings.value.system?.language || 'en-US'
+  try {
+    return new Date(ts).toLocaleString(locale)
+  } catch {
+    return new Date(ts).toLocaleString()
+  }
+}
+
+const runStorageAudit = async ({ silent = false } = {}) => {
+  if (storageAuditRunning.value) return
+  storageAuditRunning.value = true
+  try {
+    const reports = await Promise.all(
+      STORAGE_AUDIT_TARGETS.map(async (target) => {
+        const inspection = await inspectPersistedStateLayers(target.key, {
+          version: target.version,
+        })
+        return {
+          ...target,
+          ...inspection,
+        }
+      }),
+    )
+    storageAuditResults.value = reports
+    storageAuditAt.value = Date.now()
+
+    if (!silent) {
+      const driftCount = reports.filter(
+        (item) => item.mirrorApplicable && !item.mirrorInSync,
+      ).length
+      if (driftCount > 0) {
+        setStorageAuditFeedback(
+          'warn',
+          t(
+            `检查完成：发现 ${driftCount} 项存储不同步，可执行修复。`,
+            `Check completed: ${driftCount} storage item(s) are out of sync and can be repaired.`,
+          ),
+        )
+      } else {
+        setStorageAuditFeedback(
+          'success',
+          t('检查完成：存储状态正常。', 'Check completed: storage state is healthy.'),
+        )
+      }
+    }
+  } finally {
+    storageAuditRunning.value = false
+  }
+}
+
+const repairStorageDrift = async () => {
+  if (storageRepairRunning.value || storageAuditRunning.value) return
+  storageRepairRunning.value = true
+  try {
+    const targets = storageAuditResults.value.length > 0
+      ? storageAuditResults.value
+      : STORAGE_AUDIT_TARGETS
+
+    let repairCount = 0
+    let failedCount = 0
+    for (const target of targets) {
+      const report = await reconcilePersistedStateLayers(target.key, {
+        version: target.version,
+        strategy: 'newest_valid',
+      })
+      if (report.action === 'repaired') {
+        repairCount += 1
+      } else if (report.ok === false) {
+        failedCount += 1
+      }
+    }
+
+    await runStorageAudit({ silent: true })
+
+    if (failedCount > 0) {
+      setStorageAuditFeedback(
+        'warn',
+        t(
+          `修复完成：成功 ${repairCount} 项，失败 ${failedCount} 项。`,
+          `Repair finished: ${repairCount} succeeded, ${failedCount} failed.`,
+        ),
+      )
+      return
+    }
+
+    setStorageAuditFeedback(
+      'success',
+      t(
+        `修复完成：已处理 ${repairCount} 项存储差异。`,
+        `Repair finished: ${repairCount} storage drift item(s) processed.`,
+      ),
+    )
+  } finally {
+    storageRepairRunning.value = false
+  }
+}
+
 const goHome = () => {
   router.push('/home')
 }
@@ -53,6 +216,9 @@ const openSubPage = (menu) => {
   activeMenu.value = menu
   if (menu === 'automation') {
     automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
+  }
+  if (menu === 'about') {
+    void runStorageAudit({ silent: true })
   }
 }
 
@@ -69,6 +235,11 @@ const openWorldBook = () => {
 }
 
 const saveGeneralSettings = () => {
+  const rawInterval = Number(settings.value.system.backupReminderIntervalHours)
+  settings.value.system.backupReminderIntervalHours = Number.isFinite(rawInterval)
+    ? Math.min(24 * 30, Math.max(1, Math.floor(rawInterval)))
+    : 24
+  settings.value.system.backupReminderEnabled = settings.value.system.backupReminderEnabled !== false
   systemStore.saveNow()
   generalSaved.value = true
   if (generalSavedTimerId) clearTimeout(generalSavedTimerId)
@@ -192,6 +363,8 @@ const exportData = () => {
   anchor.download = 'schatphone_backup.json'
   anchor.click()
   URL.revokeObjectURL(url)
+  systemStore.markBackupExported()
+  systemStore.saveNow()
   setBackupFeedback('success', t('备份文件下载已开始。', 'Backup download has started.'))
 }
 
@@ -291,6 +464,7 @@ onBeforeUnmount(() => {
   if (notificationSavedTimerId) clearTimeout(notificationSavedTimerId)
   if (automationSavedTimerId) clearTimeout(automationSavedTimerId)
   if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
+  if (storageAuditFeedbackTimerId) clearTimeout(storageAuditFeedbackTimerId)
 })
 </script>
 
@@ -502,6 +676,37 @@ onBeforeUnmount(() => {
               class="w-full border-b border-gray-200 py-1 outline-none text-sm"
               placeholder="Asia/Shanghai"
             />
+          </div>
+
+          <div class="bg-white rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">{{ t('备份提醒', 'Backup Reminder') }}</p>
+                <p class="text-[10px] text-gray-500">
+                  {{ t('通过系统通知提醒你定期导出备份，不使用弹窗。', 'Uses system-style notifications to remind regular backup export, no pop-up dialogs.') }}
+                </p>
+              </div>
+              <input v-model="settings.system.backupReminderEnabled" type="checkbox" class="w-5 h-5" />
+            </div>
+
+            <div v-if="settings.system.backupReminderEnabled" class="space-y-2">
+              <label class="text-xs text-gray-500 block mb-1">{{ t('提醒间隔', 'Reminder interval') }}</label>
+              <select
+                v-model.number="settings.system.backupReminderIntervalHours"
+                class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
+              >
+                <option
+                  v-for="hours in backupReminderIntervalOptions"
+                  :key="hours"
+                  :value="hours"
+                >
+                  {{ backupReminderIntervalLabel(hours) }}
+                </option>
+              </select>
+              <p class="text-[10px] text-gray-400">
+                {{ t('建议至少 24 小时一次。', 'Recommended: at least once every 24 hours.') }}
+              </p>
+            </div>
           </div>
 
           <button
@@ -730,6 +935,80 @@ onBeforeUnmount(() => {
               DB: {{ persistenceCapabilities.indexedDbDatabaseName }} ·
               Store: {{ persistenceCapabilities.indexedDbStoreName }}
             </p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-4 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold">{{ t('存储一致性检查', 'Storage Consistency Check') }}</p>
+                <p class="text-[10px] text-gray-500 mt-1">
+                  {{
+                    t(
+                      '检查 localStorage 与 IndexedDB 镜像是否一致，并可一键修复不同步。',
+                      'Checks whether localStorage and IndexedDB mirror stay aligned, with one-click repair for drift.',
+                    )
+                  }}
+                </p>
+                <p class="text-[10px] text-gray-400 mt-1">
+                  {{ t('最后检查', 'Last check') }}: {{ formatStorageAuditTime(storageAuditAt) }}
+                </p>
+              </div>
+              <button
+                @click="runStorageAudit()"
+                class="px-3 py-2 rounded-lg border border-gray-200 text-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="storageAuditRunning || storageRepairRunning"
+              >
+                {{ storageAuditRunning ? t('检查中...', 'Checking...') : t('运行检查', 'Run check') }}
+              </button>
+            </div>
+
+            <p
+              v-if="storageAuditFeedbackMessage"
+              class="text-[11px]"
+              :class="storageAuditFeedbackType === 'success' ? 'text-green-600' : storageAuditFeedbackType === 'warn' ? 'text-amber-600' : 'text-gray-500'"
+            >
+              {{ storageAuditFeedbackMessage }}
+            </p>
+
+            <div v-if="storageAuditResults.length" class="space-y-2">
+              <div
+                v-for="item in storageAuditResults"
+                :key="item.key"
+                class="rounded-xl border border-gray-200 p-3"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-sm font-medium">{{ t(item.labelZh, item.labelEn) }}</p>
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                    :class="storageAuditStatusClass(item)"
+                  >
+                    {{ storageAuditStatusLabel(item) }}
+                  </span>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-1">
+                  localStorage: {{ storageLayerLabel(item.local, t('缺失', 'Missing')) }} ·
+                  IndexedDB:
+                  {{
+                    item.mirrorApplicable
+                      ? storageLayerLabel(item.indexeddb, t('缺失', 'Missing'))
+                      : t('未启用', 'Disabled')
+                  }}
+                </p>
+                <p class="text-[10px] text-gray-400 mt-1">
+                  {{ t('建议修复来源', 'Recommended repair source') }}:
+                  {{ storageAuditSourceLabel(item.recommendedSource) }}
+                </p>
+              </div>
+            </div>
+
+            <button
+              @click="repairStorageDrift"
+              class="w-full py-2 rounded-lg text-xs font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="storageRepairRunning ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'"
+              :disabled="storageRepairRunning || storageAuditRunning"
+            >
+              {{ storageRepairRunning ? t('修复中...', 'Repairing...') : t('修复存储不同步', 'Repair storage drift') }}
+            </button>
           </div>
         </div>
       </div>

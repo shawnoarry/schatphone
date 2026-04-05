@@ -55,6 +55,8 @@ AI 调用由“触发回复”控制，支持连续触发
 设置体验优化第一/二批已生效，第三批已启动：新手引导、快捷入口、报错中心复制流程、会话页保存反馈一致性、备份导入/导出页内反馈、Network 页内校验/复制提示、Appearance Widget 页内反馈，以及 chat/contacts/chat-directory 的非关键页内提示均已接入。
 - Storage layering prep batch-1/2 is active: persistence layer includes async APIs and optional IndexedDB mirror queue, `system/chat/map` stores use sync-first + async-fallback hydration with startup write guard, and fallback behavior is covered by dedicated tests.  
 分层存储准备第一/二批已生效：持久化层已补齐异步 API 与可选 IndexedDB 镜像队列，`system/chat/map` store 已采用同步优先 + 异步回退 hydration 并加入启动期写保护，且关键回退行为已有专项测试覆盖。
+- Storage layering prep batch-3 is active: persistence now includes mirror drift inspection/reconcile APIs, and Settings About provides storage consistency check + repair for migration-readiness verification.  
+分层存储准备第三批已生效：持久化层新增镜像漂移检查/修复 API，Settings 关于页新增存储一致性检查与修复入口，用于迁移就绪验证。
 - Assistant supports structured block rendering (text/virtual voice/link/transfer/image/mini scene)  
 助手消息支持结构化块渲染（文本/虚拟语音/链接/转账/图片/互动场景）
 - Conversation kinds: `role/group/service/official`  
@@ -78,6 +80,8 @@ AI 调用由“触发回复”控制，支持连续触发
 锁屏支持横幅动画 + 未读堆叠 + 点击通知解锁跳转
 - Notification queue is persisted in local store  
 通知队列由本地 Store 持久化
+- Settings General supports periodic backup reminders with configurable interval, and reminders are sent as system-style notifications (no modal pop-up).  
+Settings 通用页支持可配置间隔的周期性备份提醒，提醒以系统推送样式通知发送（无弹窗）。
 
 ## System Language Snapshot / 系统语言快照
 

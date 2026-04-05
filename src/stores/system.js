@@ -89,6 +89,9 @@ const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const MAX_NOTIFICATIONS = 80
 const MAX_API_REPORTS = 200
 const MAX_CHAT_TRUTH_EVENTS = 400
+const BACKUP_REMINDER_MIN_INTERVAL_HOURS = 1
+const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
+const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
 const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
   affinity: 50,
   trust: 50,
@@ -152,6 +155,20 @@ const createDefaultAiAutomationSettings = () => ({
     shopping: { ...DEFAULT_AI_AUTOMATION_SETTINGS.modules.shopping },
   },
 })
+
+const normalizeBackupReminderIntervalHours = (value, fallback = BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS) => {
+  return clamp(
+    toInt(value, fallback),
+    BACKUP_REMINDER_MIN_INTERVAL_HOURS,
+    BACKUP_REMINDER_MAX_INTERVAL_HOURS,
+  )
+}
+
+const normalizeNonNegativeTimestamp = (value, fallback = 0) => {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num < 0) return Math.max(0, Math.floor(fallback))
+  return Math.floor(num)
+}
 
 const normalizeClockTime = (value, fallback = '00:00') => {
   const fallbackMatch = typeof fallback === 'string' ? fallback.match(/^([01]?\d|2[0-3]):([0-5]\d)$/) : null
@@ -623,6 +640,9 @@ export const useSystemStore = defineStore('system', () => {
       language: DEFAULT_SYSTEM_LANGUAGE,
       timezone: 'Asia/Shanghai',
       notifications: true,
+      backupReminderEnabled: true,
+      backupReminderIntervalHours: BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
+      backupReminderLastNotifiedAt: 0,
     },
     aiAutomation: createDefaultAiAutomationSettings(),
   })
@@ -1211,6 +1231,110 @@ export const useSystemStore = defineStore('system', () => {
     apiReports.value = []
   }
 
+  const getBackupReminderPolicy = (baseAt = Date.now()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : Date.now()
+    const enabled = settings.system.backupReminderEnabled !== false
+    const intervalHours = normalizeBackupReminderIntervalHours(
+      settings.system.backupReminderIntervalHours,
+      BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
+    )
+    const intervalMs = intervalHours * 60 * 60 * 1000
+    const lastNotifiedAt = normalizeNonNegativeTimestamp(settings.system.backupReminderLastNotifiedAt, 0)
+    const nextDueAt = lastNotifiedAt > 0 ? lastNotifiedAt + intervalMs : 0
+    const due = enabled && lastNotifiedAt > 0 && now >= nextDueAt
+
+    return {
+      enabled,
+      intervalHours,
+      intervalMs,
+      lastNotifiedAt,
+      nextDueAt,
+      due,
+      now,
+    }
+  }
+
+  const markBackupExported = (baseAt = Date.now()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : Date.now()
+    settings.system.backupReminderLastNotifiedAt = now
+    return now
+  }
+
+  const checkBackupReminderDue = (baseAt = Date.now(), options = {}) => {
+    const runtime = getBackupReminderPolicy(baseAt)
+    if (!runtime.enabled) {
+      return {
+        triggered: false,
+        initialized: false,
+        reason: 'disabled',
+        ...runtime,
+      }
+    }
+
+    if (runtime.lastNotifiedAt <= 0) {
+      settings.system.backupReminderLastNotifiedAt = runtime.now
+      return {
+        triggered: false,
+        initialized: true,
+        reason: 'initialized',
+        ...runtime,
+      }
+    }
+
+    if (!runtime.due) {
+      return {
+        triggered: false,
+        initialized: false,
+        reason: 'not_due',
+        ...runtime,
+      }
+    }
+
+    const title =
+      typeof options.title === 'string' && options.title.trim()
+        ? options.title.trim()
+        : 'SchatPhone 备份提醒'
+    const content =
+      typeof options.content === 'string' && options.content.trim()
+        ? options.content.trim()
+        : '建议导出一次备份，避免浏览器清理后数据丢失。'
+    const icon =
+      typeof options.icon === 'string' && options.icon.trim()
+        ? options.icon.trim()
+        : 'fas fa-shield-heart'
+    const route =
+      typeof options.route === 'string' && options.route.trim()
+        ? options.route.trim()
+        : '/settings'
+
+    const notificationId = addNotification({
+      title,
+      content,
+      icon,
+      route,
+      source: 'system_backup_reminder',
+      createdAt: runtime.now,
+    })
+
+    if (!notificationId) {
+      return {
+        triggered: false,
+        initialized: false,
+        reason: 'notification_blocked',
+        ...runtime,
+      }
+    }
+
+    settings.system.backupReminderLastNotifiedAt = runtime.now
+    return {
+      triggered: true,
+      initialized: false,
+      reason: 'triggered',
+      notificationId,
+      ...runtime,
+    }
+  }
+
   const lockPhone = () => {
     isLocked.value = true
   }
@@ -1267,6 +1391,16 @@ export const useSystemStore = defineStore('system', () => {
     if (persisted.settings?.system && typeof persisted.settings.system === 'object') {
       Object.assign(settings.system, persisted.settings.system)
       settings.system.language = normalizeSystemLanguage(settings.system.language)
+      settings.system.notifications = settings.system.notifications !== false
+      settings.system.backupReminderEnabled = settings.system.backupReminderEnabled !== false
+      settings.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
+        settings.system.backupReminderIntervalHours,
+        BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
+      )
+      settings.system.backupReminderLastNotifiedAt = normalizeNonNegativeTimestamp(
+        settings.system.backupReminderLastNotifiedAt,
+        0,
+      )
     }
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
@@ -1322,6 +1456,16 @@ export const useSystemStore = defineStore('system', () => {
       currentCustomWidgetIds(),
     )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
+    settings.system.notifications = settings.system.notifications !== false
+    settings.system.backupReminderEnabled = settings.system.backupReminderEnabled !== false
+    settings.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
+      settings.system.backupReminderIntervalHours,
+      BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
+    )
+    settings.system.backupReminderLastNotifiedAt = normalizeNonNegativeTimestamp(
+      settings.system.backupReminderLastNotifiedAt,
+      0,
+    )
     return true
   }
 
@@ -1467,6 +1611,9 @@ export const useSystemStore = defineStore('system', () => {
     releaseAutoExecution,
     addApiReport,
     clearApiReports,
+    getBackupReminderPolicy,
+    markBackupExported,
+    checkBackupReminderDue,
     lockPhone,
     unlockPhone,
     saveNow,

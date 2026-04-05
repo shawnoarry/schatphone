@@ -80,6 +80,7 @@ Responsibility / 职责：external API integration, persistence abstraction, loc
   - localStorage read/write with version envelope / localStorage 读写与版本封装
   - async layered APIs for storage migration prep / 面向存储迁移准备的异步分层 API
   - optional IndexedDB shadow-mirror queue (env-gated) / 可选 IndexedDB 影子镜像队列（环境开关控制）
+  - mirror drift inspect/reconcile APIs for migration-readiness drills / 面向迁移演练的镜像漂移检查与修复 API
   - store hydration strategy is sync-first with async fallback and startup write guard / store hydration 策略为同步优先 + 异步回退，并带启动期写保护
 - `src/lib/locale.js`
   - system language normalization / 系统语言归一化

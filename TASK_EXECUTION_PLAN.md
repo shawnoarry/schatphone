@@ -338,6 +338,12 @@ store 级 hydration 现已采用“同步优先 + 异步回退”（`system/chat
 新增持久化辅助测试（`tests/persistence-envelope.test.js`）。
 - Added store hydration fallback tests (`tests/store-hydration-fallback.test.js`) covering sync-miss async recovery and sync-hit async-skip behavior.  
 新增 store hydration 回退测试（`tests/store-hydration-fallback.test.js`），覆盖同步未命中时异步恢复与同步命中时跳过异步回退两种关键行为。
+- Added storage drift inspection/reconcile APIs (`inspectPersistedStateLayers`, `reconcilePersistedStateLayers`) for migration-readiness verification and mirror repair drills.  
+新增存储漂移检查/修复 API（`inspectPersistedStateLayers`、`reconcilePersistedStateLayers`），用于迁移就绪验证与镜像修复演练。
+- Settings About now exposes storage consistency check + repair action for `store:system/store:chat/store:map`, making drift diagnosis user-visible without developer tools.  
+Settings 关于页现已提供 `store:system/store:chat/store:map` 的一致性检查与修复入口，使漂移诊断无需开发者工具即可执行。
+- Added reconcile test coverage (`tests/persistence-layer-reconcile.test.js`) for local-only inspection and mirror-drift repair path.  
+新增修复链路测试覆盖（`tests/persistence-layer-reconcile.test.js`），覆盖仅本地检查与镜像漂移修复路径。
 
 ---
 
@@ -372,4 +378,4 @@ store 级 hydration 现已采用“同步优先 + 异步回退”（`system/chat
 | P0-B1 | Codex | 2026-04-03 | 2026-04-03 | DONE | System-owned truth state layer integrated (store + chat runtime + prompt + backup + tests) |
 | P1-2 | Codex | 2026-04-03 | 2026-04-04 | DONE | Batch-1+2+3 landed: sanitization + quote safety + markdown sanitize + robust parser + fallback hierarchy + readability polish |
 | P1-3 | Codex | 2026-04-04 | 2026-04-04 | DONE | Batch-1+2+3 landed: feedback consistency extended to chat/settings/network/appearance/contacts/chat-directory/home with inline non-critical notices |
-| P1-4 | Codex | 2026-04-05 |  | IN_PROGRESS | Batch-1+2 landed: layered persistence helpers + async APIs + optional mirror queue + store-level sync-first/async-fallback hydration guard + fallback tests |
+| P1-4 | Codex | 2026-04-05 |  | IN_PROGRESS | Batch-1+2+3 landed: layered helpers + async APIs + mirror queue + hydration fallback guard + storage drift inspect/reconcile + settings diagnostics + reconcile tests |

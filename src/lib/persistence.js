@@ -36,6 +36,12 @@ let indexedDbWarned = false
 const pendingIndexedDbOps = new Map()
 let indexedDbFlushTimerId = null
 
+const normalizeSavedAt = (value, fallback = 0) => {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num < 0) return Math.max(0, Math.floor(fallback))
+  return Math.floor(num)
+}
+
 const warnIndexedDb = (error) => {
   if (indexedDbWarned) return
   indexedDbWarned = true
@@ -82,6 +88,42 @@ const readPersistedStateFromLocal = (key, options = {}) => {
   } catch (error) {
     console.warn(`[persistence] read failed for "${key}"`, error)
     return null
+  }
+}
+
+const readPersistedRawFromLocal = (fullKey) => {
+  if (!canUseStorage()) return null
+  if (typeof fullKey !== 'string' || !fullKey.trim()) return null
+  try {
+    return window.localStorage.getItem(fullKey)
+  } catch (error) {
+    console.warn(`[persistence] raw-read failed for "${fullKey}"`, error)
+    return null
+  }
+}
+
+const writePersistedRawToLocal = (fullKey, rawPayload) => {
+  if (!canUseStorage()) return false
+  if (typeof fullKey !== 'string' || !fullKey.trim()) return false
+  if (typeof rawPayload !== 'string') return false
+  try {
+    window.localStorage.setItem(fullKey, rawPayload)
+    return true
+  } catch (error) {
+    console.warn(`[persistence] raw-write failed for "${fullKey}"`, error)
+    return false
+  }
+}
+
+const clearPersistedRawFromLocal = (fullKey) => {
+  if (!canUseStorage()) return false
+  if (typeof fullKey !== 'string' || !fullKey.trim()) return false
+  try {
+    window.localStorage.removeItem(fullKey)
+    return true
+  } catch (error) {
+    console.warn(`[persistence] raw-clear failed for "${fullKey}"`, error)
+    return false
   }
 }
 
@@ -202,6 +244,89 @@ const deleteFromIndexedDb = async (fullKey) => {
   })
 }
 
+const inspectRawPayload = (rawPayload, options = {}, includeRaw = false) => {
+  const result = {
+    exists: false,
+    rawSize: 0,
+    parseOk: false,
+    decodedOk: false,
+    envelope: false,
+    envelopeVersion: 0,
+    savedAt: 0,
+    issueCode: '',
+  }
+  if (typeof rawPayload !== 'string' || !rawPayload.trim()) return result
+
+  result.exists = true
+  result.rawSize = rawPayload.length
+
+  let parsed = null
+  try {
+    parsed = JSON.parse(rawPayload)
+    result.parseOk = true
+  } catch {
+    result.issueCode = 'json_parse_failed'
+    if (includeRaw) result.rawPayload = rawPayload
+    return result
+  }
+
+  const isEnvelope =
+    parsed &&
+    typeof parsed === 'object' &&
+    Object.prototype.hasOwnProperty.call(parsed, 'data')
+  result.envelope = Boolean(isEnvelope)
+  result.envelopeVersion =
+    isEnvelope && Number.isFinite(Number(parsed.version))
+      ? Math.floor(Number(parsed.version))
+      : isEnvelope
+        ? 1
+        : 0
+  result.savedAt =
+    isEnvelope && parsed && typeof parsed === 'object'
+      ? normalizeSavedAt(parsed.savedAt, 0)
+      : 0
+
+  const decoded = decodePersistedEnvelope(parsed, options)
+  result.decodedOk = decoded != null
+  if (!result.decodedOk) {
+    result.issueCode = result.envelope ? 'decode_failed' : 'legacy_payload_invalid'
+  }
+  if (includeRaw) result.rawPayload = rawPayload
+  return result
+}
+
+const selectReconcileSource = (localInspect, indexedInspect, strategy = 'newest_valid') => {
+  const normalizedStrategy = typeof strategy === 'string' ? strategy.trim() : 'newest_valid'
+  const hasInspectablePayload = (layerInspect) =>
+    typeof layerInspect?.rawPayload === 'string' || layerInspect?.exists === true
+
+  const isLocalValid =
+    localInspect?.decodedOk === true && hasInspectablePayload(localInspect)
+  const isIndexedValid =
+    indexedInspect?.decodedOk === true && hasInspectablePayload(indexedInspect)
+
+  if (normalizedStrategy === 'local') {
+    if (isLocalValid) return 'local'
+    if (isIndexedValid) return 'indexeddb'
+    return 'none'
+  }
+  if (normalizedStrategy === 'indexeddb') {
+    if (isIndexedValid) return 'indexeddb'
+    if (isLocalValid) return 'local'
+    return 'none'
+  }
+
+  if (!isLocalValid && !isIndexedValid) return 'none'
+  if (isLocalValid && !isIndexedValid) return 'local'
+  if (!isLocalValid && isIndexedValid) return 'indexeddb'
+
+  const localSavedAt = normalizeSavedAt(localInspect.savedAt, 0)
+  const indexedSavedAt = normalizeSavedAt(indexedInspect.savedAt, 0)
+  if (localSavedAt > indexedSavedAt) return 'local'
+  if (indexedSavedAt > localSavedAt) return 'indexeddb'
+  return 'local'
+}
+
 const flushIndexedDbOps = async () => {
   indexedDbFlushTimerId = null
   if (pendingIndexedDbOps.size === 0) return
@@ -286,11 +411,133 @@ export const clearPersistedStateAsync = async (key) => {
   await deleteFromIndexedDb(fullKey)
 }
 
+export const inspectPersistedStateLayers = async (key, options = {}) => {
+  if (typeof key !== 'string' || !key.trim()) {
+    return {
+      key,
+      fullKey: '',
+      mirrorApplicable: canUseLayeredPersistence(),
+      mirrorInSync: true,
+      recommendedSource: 'none',
+      local: inspectRawPayload(null, options),
+      indexeddb: inspectRawPayload(null, options),
+      issueCode: 'invalid_key',
+    }
+  }
+
+  const normalizedKey = key.trim()
+  const fullKey = buildStorageKey(normalizedKey)
+  const localRaw = readPersistedRawFromLocal(fullKey)
+  const localInspect = inspectRawPayload(localRaw, options)
+
+  const mirrorApplicable = canUseLayeredPersistence()
+  const indexedRaw = mirrorApplicable ? await readFromIndexedDb(fullKey) : null
+  const indexedInspect = inspectRawPayload(indexedRaw, options)
+
+  const mirrorInSync = mirrorApplicable ? localRaw === indexedRaw : true
+  const recommendedSource = selectReconcileSource(localInspect, indexedInspect, 'newest_valid')
+
+  let issueCode = ''
+  if (mirrorApplicable && !mirrorInSync) issueCode = 'mirror_drift'
+  else if (localInspect.exists && !localInspect.decodedOk) issueCode = localInspect.issueCode || 'local_invalid'
+  else if (indexedInspect.exists && !indexedInspect.decodedOk) issueCode = indexedInspect.issueCode || 'indexeddb_invalid'
+
+  return {
+    key: normalizedKey,
+    fullKey,
+    mirrorApplicable,
+    mirrorInSync,
+    recommendedSource,
+    local: localInspect,
+    indexeddb: indexedInspect,
+    issueCode,
+  }
+}
+
+export const reconcilePersistedStateLayers = async (key, options = {}) => {
+  const strategy = typeof options.strategy === 'string' ? options.strategy : 'newest_valid'
+  const allowClearOnInvalid = options.allowClearOnInvalid === true
+  const inspection = await inspectPersistedStateLayers(key, options)
+
+  if (!inspection.fullKey) {
+    return {
+      ok: false,
+      action: 'skipped',
+      reason: 'invalid_key',
+      ...inspection,
+    }
+  }
+
+  const fullKey = inspection.fullKey
+  const localRaw = readPersistedRawFromLocal(fullKey)
+  const indexedRaw = inspection.mirrorApplicable ? await readFromIndexedDb(fullKey) : null
+  const localInspect = inspectRawPayload(localRaw, options, true)
+  const indexedInspect = inspectRawPayload(indexedRaw, options, true)
+  const sourceLayer = selectReconcileSource(localInspect, indexedInspect, strategy)
+
+  if (sourceLayer === 'none') {
+    if (!allowClearOnInvalid) {
+      return {
+        ok: false,
+        action: 'skipped',
+        reason: 'no_valid_source',
+        ...inspection,
+      }
+    }
+
+    const localCleared = clearPersistedRawFromLocal(fullKey)
+    const indexeddbCleared = inspection.mirrorApplicable ? await deleteFromIndexedDb(fullKey) : true
+    return {
+      ok: localCleared && indexeddbCleared,
+      action: 'cleared',
+      reason: 'cleared_invalid_layers',
+      sourceLayer: 'none',
+      ...inspection,
+    }
+  }
+
+  const sourceRaw =
+    sourceLayer === 'indexeddb' ? indexedInspect.rawPayload : localInspect.rawPayload
+  if (typeof sourceRaw !== 'string') {
+    return {
+      ok: false,
+      action: 'skipped',
+      reason: 'source_payload_missing',
+      sourceLayer,
+      ...inspection,
+    }
+  }
+
+  const alreadySynced = inspection.mirrorInSync && localRaw === sourceRaw
+  if (alreadySynced) {
+    return {
+      ok: true,
+      action: 'noop',
+      reason: 'already_synced',
+      sourceLayer,
+      ...inspection,
+    }
+  }
+
+  const localWriteOk = writePersistedRawToLocal(fullKey, sourceRaw)
+  const indexeddbWriteOk = inspection.mirrorApplicable ? await writeToIndexedDb(fullKey, sourceRaw) : true
+
+  return {
+    ok: localWriteOk && indexeddbWriteOk,
+    action: localWriteOk && indexeddbWriteOk ? 'repaired' : 'partial',
+    reason: localWriteOk && indexeddbWriteOk ? 'reconciled' : 'write_failed',
+    sourceLayer,
+    ...inspection,
+  }
+}
+
 export const getPersistenceCapabilities = () => ({
   namespace: STORAGE_NAMESPACE,
   localStorageAvailable: canUseStorage(),
   indexedDbAvailable: canUseIndexedDb(),
   indexedDbMirrorEnabled: canUseLayeredPersistence(),
+  indexedDbMirrorPendingOps: pendingIndexedDbOps.size,
+  indexedDbMirrorFlushScheduled: Boolean(indexedDbFlushTimerId),
   indexedDbDatabaseName: INDEXED_DB_NAME,
   indexedDbStoreName: INDEXED_DB_STORE,
 })
