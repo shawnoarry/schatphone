@@ -1,12 +1,13 @@
 ﻿<script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const { settings, apiReports } = storeToRefs(systemStore)
 const { t, systemLanguage, languageBase } = useI18n()
@@ -39,6 +40,17 @@ const setUiFeedback = (type, message, durationMs = 1800) => {
   }, durationMs)
 }
 
+const normalizeReportModuleFilter = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  const allowed = new Set(['all', 'chat', 'network', 'storage', 'map', 'shopping'])
+  return allowed.has(raw) ? raw : 'all'
+}
+
+const normalizeReportLevelFilter = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  return raw === 'error' || raw === 'info' ? raw : 'all'
+}
+
 const ensurePresetState = () => {
   if (!Array.isArray(settings.value.api.presets)) {
     settings.value.api.presets = []
@@ -60,6 +72,7 @@ const reportModuleOptions = computed(() => [
   { value: 'all', label: t('全部模块', 'All modules') },
   { value: 'chat', label: t('聊天', 'Chat') },
   { value: 'network', label: t('网络', 'Network') },
+  { value: 'storage', label: t('存储', 'Storage') },
   { value: 'map', label: t('地图', 'Map') },
   { value: 'shopping', label: t('购物', 'Shopping') },
 ])
@@ -96,6 +109,7 @@ const reportSummary = computed(() => {
 const moduleLabel = (moduleKey) => {
   if (moduleKey === 'chat') return t('聊天', 'Chat')
   if (moduleKey === 'network') return t('网络', 'Network')
+  if (moduleKey === 'storage') return t('存储', 'Storage')
   if (moduleKey === 'map') return t('地图', 'Map')
   if (moduleKey === 'shopping') return t('购物', 'Shopping')
   return t('未知模块', 'Unknown module')
@@ -106,6 +120,8 @@ const actionLabel = (actionKey) => {
   if (actionKey === 'call_ai') return t('调用 AI', 'Call AI')
   if (actionKey === 'reroll_reply') return t('重生成回复', 'Reroll reply')
   if (actionKey === 'auto_invoke') return t('自动调用', 'Autonomous invoke')
+  if (actionKey === 'audit_storage') return t('检查存储一致性', 'Audit storage consistency')
+  if (actionKey === 'repair_storage') return t('修复存储不同步', 'Repair storage drift')
   return actionKey || t('未知动作', 'Unknown action')
 }
 
@@ -114,6 +130,12 @@ const reportReasonLabel = (item) => {
   const statusCode = Number(item?.statusCode || 0)
 
   if (code === 'NO_API_KEY') return t('缺少 API Key', 'Missing API key')
+  if (code === 'STORAGE_HEALTHY') return t('存储状态健康', 'Storage is healthy')
+  if (code === 'STORAGE_MIRROR_DRIFT') return t('存储层不同步', 'Storage mirror drift detected')
+  if (code === 'STORAGE_LAYER_INVALID') return t('存储层数据异常', 'Invalid payload in storage layer')
+  if (code === 'STORAGE_REPAIR_DONE') return t('存储修复完成', 'Storage repair completed')
+  if (code === 'STORAGE_REPAIR_NOOP') return t('无需修复', 'No repair needed')
+  if (code === 'STORAGE_REPAIR_PARTIAL') return t('存储修复部分失败', 'Storage repair partially failed')
   if (code === 'INVALID_URL') return t('接口地址格式错误', 'Invalid endpoint URL')
   if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
     return t('鉴权失败（401/403）', 'Authentication failed (401/403)')
@@ -133,6 +155,18 @@ const reportSuggestionLabel = (item) => {
   const statusCode = Number(item?.statusCode || 0)
 
   if (code === 'NO_API_KEY') return t('请在本页补全 API Key。', 'Please fill in API key on this page.')
+  if (code === 'STORAGE_HEALTHY')
+    return t('当前存储层状态正常，无需操作。', 'Storage layers are healthy; no action required.')
+  if (code === 'STORAGE_MIRROR_DRIFT')
+    return t('可在设置-关于执行一键修复。', 'Run one-click repair in Settings > About.')
+  if (code === 'STORAGE_LAYER_INVALID')
+    return t('建议先导出备份，再执行修复与重检。', 'Export backup first, then run repair and re-audit.')
+  if (code === 'STORAGE_REPAIR_DONE')
+    return t('建议再次执行检查确认一致性。', 'Run audit again to verify consistency.')
+  if (code === 'STORAGE_REPAIR_NOOP')
+    return t('当前无不同步项，可继续正常使用。', 'No drift found; continue normal usage.')
+  if (code === 'STORAGE_REPAIR_PARTIAL')
+    return t('查看报告后重试，必要时导出并恢复备份。', 'Review report and retry; export/restore backup if needed.')
   if (code === 'INVALID_URL') return t('检查 URL 是否完整且包含正确路径。', 'Check endpoint URL and verify full path.')
   if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
     return t('更换可用 Key，或检查供应商权限设置。', 'Use a valid key or verify provider permissions.')
@@ -282,6 +316,15 @@ const goSettings = () => {
   router.push('/settings')
 }
 
+const openStorageDiagnostics = () => {
+  router.push({
+    path: '/settings',
+    query: {
+      menu: 'about',
+    },
+  })
+}
+
 const saveNetworkSettings = () => {
   systemStore.saveNow()
   saved.value = true
@@ -293,14 +336,44 @@ const saveNetworkSettings = () => {
 
 const clearApiReportHistory = () => {
   if ((apiReports.value || []).length === 0) return
+  const scopedByModule = reportModuleFilter.value !== 'all'
+  const scopedByLevel = reportLevelFilter.value !== 'all'
+  const scopedClear = scopedByModule || scopedByLevel
   const ok = window.confirm(
-    t(
-      '确认清空全部调用/报错历史吗？此操作不可撤销。',
-      'Clear all call/error history? This action cannot be undone.',
-    ),
+    scopedClear
+      ? t(
+          '确认清空当前筛选结果吗？仅会删除筛选命中的记录。',
+          'Clear current filtered records only? Only matched entries will be removed.',
+        )
+      : t(
+          '确认清空全部调用/报错历史吗？此操作不可撤销。',
+          'Clear all call/error history? This action cannot be undone.',
+        ),
   )
   if (!ok) return
-  systemStore.clearApiReports()
+
+  const removed = scopedClear
+    ? systemStore.clearApiReports({
+        module: scopedByModule ? reportModuleFilter.value : '',
+        level: scopedByLevel ? reportLevelFilter.value : '',
+      })
+    : systemStore.clearApiReports()
+
+  if (removed > 0) {
+    setUiFeedback(
+      'success',
+      t(
+        `已清空 ${removed} 条记录。`,
+        `Cleared ${removed} record(s).`,
+      ),
+    )
+    return
+  }
+
+  setUiFeedback(
+    'warn',
+    t('当前筛选无可清空记录。', 'No records matched current filter.'),
+  )
 }
 
 const clearModelState = () => {
@@ -396,6 +469,19 @@ watch(
 )
 
 watch(
+  () => route.query,
+  (query) => {
+    reportModuleFilter.value = normalizeReportModuleFilter(
+      typeof query?.reportModule === 'string' ? query.reportModule : '',
+    )
+    reportLevelFilter.value = normalizeReportLevelFilter(
+      typeof query?.reportLevel === 'string' ? query.reportLevel : '',
+    )
+  },
+  { immediate: true },
+)
+
+watch(
   () => [settings.value.api.url, settings.value.api.key],
   () => {
     clearModelState()
@@ -486,7 +572,13 @@ ensurePresetState()
       <p
         v-if="uiFeedbackMessage"
         class="px-1 text-[11px]"
-        :class="uiFeedbackType === 'error' ? 'text-red-600' : 'text-emerald-600'"
+        :class="
+          uiFeedbackType === 'error'
+            ? 'text-red-600'
+            : uiFeedbackType === 'warn'
+              ? 'text-amber-600'
+              : 'text-emerald-600'
+        "
       >
         {{ uiFeedbackMessage }}
       </p>
@@ -649,7 +741,14 @@ ensurePresetState()
               {{ t('模型', 'Model') }}: {{ item.model || '-' }} ·
               {{ t('供应商', 'Provider') }}: {{ item.provider || '-' }}
             </p>
-            <div class="mt-2 flex justify-end">
+            <div class="mt-2 flex justify-end gap-2">
+              <button
+                v-if="item.module === 'storage'"
+                @click="openStorageDiagnostics"
+                class="text-[11px] px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                {{ t('前往修复', 'Go to repair') }}
+              </button>
               <button
                 @click="copyReport(item)"
                 class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"

@@ -222,6 +222,7 @@ describe('chat store model', () => {
       content: '',
       blocks: [
         { type: 'module_link', label: 'Open', route: 'javascript:alert(1)', note: 'n'.repeat(1200) },
+        { type: 'link_external', label: 'Docs', url: 'www.example.com/help', note: 'x'.repeat(1200) },
         { type: 'transfer_virtual', label: 'Pay', amount: '  888.66 ', currency: ' usd ', actionRoute: 'https://evil.com' },
         { type: 'image_virtual', alt: 'Pic', url: 'javascript:alert(1)', caption: 'c'.repeat(1200) },
         { type: 'mini_scene', title: 'Scene', htmlSnippet: '<script>alert(1)</script><div>ok</div>' },
@@ -235,12 +236,15 @@ describe('chat store model', () => {
     })
 
     const moduleBlock = assistantMessage.blocks.find((item) => item.type === 'module_link')
+    const externalLinkBlock = assistantMessage.blocks.find((item) => item.type === 'link_external')
     const transferBlock = assistantMessage.blocks.find((item) => item.type === 'transfer_virtual')
     const imageBlock = assistantMessage.blocks.find((item) => item.type === 'image_virtual')
     const sceneBlock = assistantMessage.blocks.find((item) => item.type === 'mini_scene')
 
     expect(moduleBlock?.route).toBe('/home')
     expect((moduleBlock?.note || '').length).toBeLessThanOrEqual(800)
+    expect(externalLinkBlock?.url).toContain('https://www.example.com/help')
+    expect((externalLinkBlock?.note || '').length).toBeLessThanOrEqual(800)
     expect(transferBlock?.actionRoute).toBe('/wallet')
     expect(transferBlock?.currency).toBe('USD')
     expect(imageBlock?.url).toBe('')

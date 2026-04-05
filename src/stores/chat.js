@@ -16,6 +16,7 @@ const VALID_BLOCK_TYPES = new Set([
   'text',
   'voice_virtual',
   'module_link',
+  'link_external',
   'transfer_virtual',
   'image_virtual',
   'mini_scene',
@@ -131,6 +132,20 @@ const sanitizeImageUrl = (value) => {
   if (url.startsWith('/')) return url
   if (/^https?:\/\//i.test(url)) return url
   return ''
+}
+
+const sanitizeExternalUrl = (value) => {
+  const raw = trimTo(value, 500)
+  if (!raw) return ''
+  const candidate = /^https?:\/\//i.test(raw) ? raw : /^www\./i.test(raw) ? `https://${raw}` : ''
+  if (!candidate) return ''
+  try {
+    const parsed = new URL(candidate)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+    return parsed.toString()
+  } catch {
+    return ''
+  }
 }
 
 const sanitizeHtmlSnippet = (value) => {
@@ -275,6 +290,17 @@ const normalizeMessageBlock = (rawBlock) => {
     }
   }
 
+  if (blockType === 'link_external') {
+    const url = sanitizeExternalUrl(rawBlock.url)
+    if (!url) return null
+    return {
+      type: 'link_external',
+      label: normalizeSingleLineText(rawBlock.label, MAX_SHORT_LABEL_LENGTH, '外部链接'),
+      url,
+      note: trimTo(rawBlock.note, MAX_DETAIL_TEXT_LENGTH),
+    }
+  }
+
   if (blockType === 'transfer_virtual') {
     return {
       type: 'transfer_virtual',
@@ -351,6 +377,7 @@ const summarizeBlocks = (blocks) => {
   if (!first) return ''
   if (first.type === 'voice_virtual') return `[语音] ${first.label}`
   if (first.type === 'module_link') return `[链接] ${first.label}`
+  if (first.type === 'link_external') return `[外链] ${first.label || first.url}`
   if (first.type === 'transfer_virtual') return `[转账] ${first.amount} ${first.currency}`
   if (first.type === 'image_virtual') return `[图片] ${first.alt}`
   if (first.type === 'mini_scene') return `[互动] ${first.title}`

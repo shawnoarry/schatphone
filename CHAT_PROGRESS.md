@@ -62,8 +62,12 @@ Current baseline / 当前基线：
 自主调用控制已支持全局总开关、模块开关与会话级定时间隔。
 - Conflict cooldown + context dedupe are wired; manual trigger has higher priority when near overlap occurs.  
 冲突冷却与上下文去重已接入；手动触发与自动触发接近重叠时，手动优先。
-- Message action menu is now available in thread (quote/copy/edit/delete/reroll)  
-会话页消息操作菜单已可用（引用/复制/编辑/删除/重roll）
+- Message actions are now long-press/context-menu driven: bubble top-right entry removed, and quote/copy/edit/delete/reroll are provided in bottom action sheet.  
+消息操作现已改为长按/右键触发：移除气泡右上角入口，引用/复制/编辑/删除/重roll 统一通过底部动作面板执行。
+- Input row now uses `+` action panel as user-send hub: image/gif/link/location/transfer/voice-card sending is available, and `Trigger Reply` remains persistent as a separate AI invoke lane.  
+输入区现已以 `+` 动作面板承载用户发送中枢：图片/gif/链接/位置/转账/语音卡片发送已可用，`Trigger Reply` 继续常驻并保持独立 AI 调用通道。
+- Link/transfer/voice-card composition now runs as inline forms inside `+` panel, replacing prompt-based input and improving interaction continuity.  
+链接/转账/语音卡片编辑现改为 `+` 面板内联表单，替代 prompt 输入并提升交互连续性。
 - Reroll replaces target assistant message in-place and marks reroll metadata for traceability  
 重roll 采用原位替换目标助手消息，并记录 reroll 元信息便于追踪
 - Assistant typing state shown as system UI text: "对方正在输入..."  
@@ -155,9 +159,10 @@ AI 生成消息内容仍由模型与上下文驱动
 
 ### P1
 
-1. Storage layering preparation (`P1-4`) in progress (batch-1/2 landed: persistence helper + async layered APIs + optional IndexedDB mirror queue + store-level sync-first/async-fallback hydration guard + fallback tests) / 分层存储迁移准备（`P1-4`）进行中（第一/二批已落地：持久化辅助 + 异步分层 API + 可选 IndexedDB 镜像队列 + store 级同步优先/异步回退与写保护 + 回退测试）
-2. Optional streaming response / 可选流式输出（状态扩展 `streaming`）
-3. Truth metric and quote-policy tuning based on playtest transcripts / 基于实测对真值指标与引用策略继续调参
+1. Storage layering preparation (`P1-4`) is completed (2026-04-05): layered persistence + mirror drift inspect/reconcile + diagnostics report linkage are closed. / 分层存储迁移准备（`P1-4`）已完成（2026-04-05）：分层持久化、镜像漂移检查修复与诊断报告联动已收口。
+2. `P0-C1` completed (2026-04-06): message action entry migrated to long-press + bottom-sheet flow while keeping `Trigger Reply` persistent. / `P0-C1` 已于 2026-04-06 完成：消息操作入口已迁移为长按 + 底部面板，并保留 `Trigger Reply` 常驻。
+3. `P0-C2` in progress: harden user rich-message lane (`+` panel actions, validation, and UX polish) without coupling to AI preference settings. / `P0-C2` 进行中：继续加固用户富消息链路（`+` 面板动作、校验与体验打磨），且不与 AI 偏好设置耦合。
+4. Optional streaming response and truth metric tuning based on playtest transcripts / 可选推进流式输出与基于实测的真值指标调参
 
 ## 5. Exit Criteria for Next Stage / 阶段验收标准
 

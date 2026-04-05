@@ -88,6 +88,8 @@ const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const MAX_NOTIFICATIONS = 80
 const MAX_API_REPORTS = 200
+const MAX_AI_AUTOMATION_QUEUE_SIZE = 240
+const MAX_AI_AUTOMATION_RECENT_FINGERPRINTS = 400
 const MAX_CHAT_TRUTH_EVENTS = 400
 const BACKUP_REMINDER_MIN_INTERVAL_HOURS = 1
 const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
@@ -377,6 +379,9 @@ const createNotificationId = () =>
 const createApiReportId = () =>
   `api_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+const createAiAutomationTaskId = () =>
+  `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
 const normalizeLockClockStyle = (value) =>
   VALID_LOCK_CLOCK_STYLES.includes(value) ? value : DEFAULT_LOCK_CLOCK_STYLE
 
@@ -662,6 +667,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const notifications = ref([])
   const apiReports = ref([])
+  const aiAutomationQueue = ref([])
   const truthState = reactive(normalizeTruthState())
   const isLocked = ref(true)
   const activeAutoExecution = reactive({
@@ -669,6 +675,13 @@ export const useSystemStore = defineStore('system', () => {
     startedAt: 0,
     reason: '',
   })
+  const aiAutomationRuntime = reactive({
+    lastExecutedAtByModule: Object.fromEntries(
+      AI_AUTOMATION_MODULE_KEYS.map((moduleKey) => [moduleKey, 0]),
+    ),
+    recentFingerprints: [],
+  })
+  const aiAutomationHandlers = new Map()
 
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
@@ -1190,6 +1203,329 @@ export const useSystemStore = defineStore('system', () => {
     return clamp(toInt(moduleConfig?.priority, 0), 0, 1000)
   }
 
+  const getAiAutomationConflictCooldownMs = () => {
+    const value = Number(settings.aiAutomation?.conflictCooldownSec)
+    const seconds = Number.isFinite(value)
+      ? Math.max(5, Math.floor(value))
+      : DEFAULT_AI_AUTOMATION_SETTINGS.conflictCooldownSec
+    return seconds * 1000
+  }
+
+  const getAiAutomationDedupeWindowMs = () => {
+    const value = Number(settings.aiAutomation?.dedupeWindowSec)
+    const seconds = Number.isFinite(value)
+      ? Math.max(10, Math.floor(value))
+      : DEFAULT_AI_AUTOMATION_SETTINGS.dedupeWindowSec
+    return seconds * 1000
+  }
+
+  const normalizeAiAutomationTask = (rawTask = {}, fallbackAt = Date.now()) => {
+    const input = rawTask && typeof rawTask === 'object' ? rawTask : {}
+    const moduleKey =
+      typeof input.moduleKey === 'string' && AI_AUTOMATION_MODULE_KEYS.includes(input.moduleKey)
+        ? input.moduleKey
+        : ''
+    if (!moduleKey) return null
+
+    const now = Number.isFinite(Number(fallbackAt))
+      ? Math.max(0, Math.floor(Number(fallbackAt)))
+      : Date.now()
+    const dueAtRaw = Number(input.dueAt)
+    const dueAt = Number.isFinite(dueAtRaw) ? Math.max(0, Math.floor(dueAtRaw)) : now
+    const createdAtRaw = Number(input.createdAt)
+    const createdAt = Number.isFinite(createdAtRaw) ? Math.max(0, Math.floor(createdAtRaw)) : now
+    const targetId = typeof input.targetId === 'string' ? input.targetId.trim() : ''
+    const source = typeof input.source === 'string' ? input.source.trim() : ''
+    const reason = typeof input.reason === 'string' ? input.reason.trim() : ''
+    const fingerprint = typeof input.fingerprint === 'string' ? input.fingerprint.trim() : ''
+    const payload = input.payload && typeof input.payload === 'object' ? { ...input.payload } : {}
+    const attemptsRaw = Number(input.attempts)
+    const attempts = Number.isFinite(attemptsRaw) ? Math.max(0, Math.floor(attemptsRaw)) : 0
+
+    return {
+      id:
+        typeof input.id === 'string' && input.id.trim()
+          ? input.id.trim()
+          : createAiAutomationTaskId(),
+      moduleKey,
+      targetId,
+      source,
+      reason,
+      dueAt,
+      createdAt,
+      fingerprint,
+      payload,
+      attempts,
+    }
+  }
+
+  const pruneAiAutomationFingerprints = (baseAt = Date.now()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : Date.now()
+    const dedupeWindowMs = getAiAutomationDedupeWindowMs()
+    const minAt = Math.max(0, now - dedupeWindowMs)
+    aiAutomationRuntime.recentFingerprints = aiAutomationRuntime.recentFingerprints
+      .filter((item) => {
+        const at = Number(item?.at)
+        const fingerprint = typeof item?.fingerprint === 'string' ? item.fingerprint.trim() : ''
+        const moduleKey = typeof item?.moduleKey === 'string' ? item.moduleKey.trim() : ''
+        if (!fingerprint || !moduleKey) return false
+        if (!Number.isFinite(at)) return false
+        return at >= minAt
+      })
+      .slice(0, MAX_AI_AUTOMATION_RECENT_FINGERPRINTS)
+  }
+
+  const registerAiAutomationHandler = (moduleKey, handler) => {
+    if (!AI_AUTOMATION_MODULE_KEYS.includes(moduleKey)) return false
+    if (typeof handler !== 'function') return false
+    aiAutomationHandlers.set(moduleKey, handler)
+    return true
+  }
+
+  const unregisterAiAutomationHandler = (moduleKey, handler) => {
+    if (!AI_AUTOMATION_MODULE_KEYS.includes(moduleKey)) return false
+    if (!aiAutomationHandlers.has(moduleKey)) return false
+    if (typeof handler === 'function' && aiAutomationHandlers.get(moduleKey) !== handler) {
+      return false
+    }
+    aiAutomationHandlers.delete(moduleKey)
+    return true
+  }
+
+  const getAiAutomationQueueSnapshot = (options = {}) => {
+    const baseAt = Number.isFinite(Number(options?.baseAt))
+      ? Math.max(0, Math.floor(Number(options.baseAt)))
+      : Date.now()
+    const moduleKey =
+      typeof options?.moduleKey === 'string' && AI_AUTOMATION_MODULE_KEYS.includes(options.moduleKey)
+        ? options.moduleKey
+        : ''
+    const dueOnly = Boolean(options?.dueOnly)
+    return aiAutomationQueue.value
+      .filter((item) => {
+        if (moduleKey && item.moduleKey !== moduleKey) return false
+        if (dueOnly && item.dueAt > baseAt) return false
+        return true
+      })
+      .map((item) => ({
+        ...item,
+        payload: item.payload && typeof item.payload === 'object' ? { ...item.payload } : {},
+      }))
+  }
+
+  const clearAiAutomationQueue = (options = {}) => {
+    const moduleKey =
+      typeof options?.moduleKey === 'string' && AI_AUTOMATION_MODULE_KEYS.includes(options.moduleKey)
+        ? options.moduleKey
+        : ''
+    const before = aiAutomationQueue.value.length
+    if (!moduleKey) {
+      aiAutomationQueue.value = []
+      return before
+    }
+    aiAutomationQueue.value = aiAutomationQueue.value.filter((item) => item.moduleKey !== moduleKey)
+    return Math.max(0, before - aiAutomationQueue.value.length)
+  }
+
+  const enqueueAiAutomationTask = (rawTask = {}, options = {}) => {
+    const now = Number.isFinite(Number(options?.baseAt))
+      ? Math.max(0, Math.floor(Number(options.baseAt)))
+      : Date.now()
+    const normalized = normalizeAiAutomationTask(rawTask, now)
+    if (!normalized) {
+      return {
+        accepted: false,
+        reason: 'invalid_task',
+      }
+    }
+
+    const runtimePolicy = getAiAutomationRuntimePolicy(normalized.moduleKey, now)
+    if (!runtimePolicy.enabled) {
+      return {
+        accepted: false,
+        reason: 'module_disabled',
+      }
+    }
+    if (!runtimePolicy.invokeEnabled && options?.allowNotifyOnly !== true) {
+      return {
+        accepted: false,
+        reason: 'invoke_disabled',
+      }
+    }
+
+    pruneAiAutomationFingerprints(now)
+    const dedupeWindowMs = getAiAutomationDedupeWindowMs()
+    const minAt = Math.max(0, now - dedupeWindowMs)
+    if (normalized.fingerprint) {
+      const duplicatePending = aiAutomationQueue.value.some((item) => {
+        if (item.moduleKey !== normalized.moduleKey) return false
+        if (!item.fingerprint || item.fingerprint !== normalized.fingerprint) return false
+        return item.createdAt >= minAt
+      })
+      const duplicateRecent = aiAutomationRuntime.recentFingerprints.some((item) => {
+        if (item.moduleKey !== normalized.moduleKey) return false
+        return item.fingerprint === normalized.fingerprint && item.at >= minAt
+      })
+      if (duplicatePending || duplicateRecent) {
+        return {
+          accepted: false,
+          reason: 'deduped',
+        }
+      }
+      aiAutomationRuntime.recentFingerprints = [
+        {
+          moduleKey: normalized.moduleKey,
+          fingerprint: normalized.fingerprint,
+          at: now,
+        },
+        ...aiAutomationRuntime.recentFingerprints,
+      ].slice(0, MAX_AI_AUTOMATION_RECENT_FINGERPRINTS)
+    }
+
+    aiAutomationQueue.value = [...aiAutomationQueue.value, normalized].slice(-MAX_AI_AUTOMATION_QUEUE_SIZE)
+    return {
+      accepted: true,
+      taskId: normalized.id,
+    }
+  }
+
+  const removeAiAutomationTaskById = (taskId) => {
+    if (!taskId) return false
+    const before = aiAutomationQueue.value.length
+    aiAutomationQueue.value = aiAutomationQueue.value.filter((item) => item.id !== taskId)
+    return aiAutomationQueue.value.length !== before
+  }
+
+  const pickNextDueAiAutomationTask = (baseAt = Date.now()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : Date.now()
+    const due = aiAutomationQueue.value
+      .filter((item) => item.dueAt <= now)
+      .sort((left, right) => {
+        const priorityDelta =
+          getAiAutomationModulePriority(right.moduleKey) - getAiAutomationModulePriority(left.moduleKey)
+        if (priorityDelta !== 0) return priorityDelta
+        if (left.dueAt !== right.dueAt) return left.dueAt - right.dueAt
+        return left.createdAt - right.createdAt
+      })
+    return due[0] || null
+  }
+
+  const deferAiAutomationTask = (taskId, dueAt) => {
+    const task = aiAutomationQueue.value.find((item) => item.id === taskId)
+    if (!task) return false
+    const nextDueAt = Number(dueAt)
+    task.dueAt = Number.isFinite(nextDueAt) ? Math.max(0, Math.floor(nextDueAt)) : task.dueAt
+    return true
+  }
+
+  const runAiAutomationQueueTick = async (baseAt = Date.now()) => {
+    const now = Number.isFinite(Number(baseAt)) ? Math.max(0, Math.floor(Number(baseAt))) : Date.now()
+    pruneAiAutomationFingerprints(now)
+
+    const nextTask = pickNextDueAiAutomationTask(now)
+    if (!nextTask) {
+      return {
+        handled: false,
+        reason: 'no_due_task',
+      }
+    }
+
+    const policy = getAiAutomationRuntimePolicy(nextTask.moduleKey, now)
+    if (!policy.enabled || !policy.invokeEnabled) {
+      removeAiAutomationTaskById(nextTask.id)
+      return {
+        handled: false,
+        reason: policy.enabled ? 'invoke_disabled' : 'module_disabled',
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+      }
+    }
+
+    const lastExecutedAt = Number(aiAutomationRuntime.lastExecutedAtByModule[nextTask.moduleKey]) || 0
+    const cooldownMs = getAiAutomationConflictCooldownMs()
+    if (lastExecutedAt > 0 && now - lastExecutedAt < cooldownMs) {
+      deferAiAutomationTask(nextTask.id, lastExecutedAt + cooldownMs)
+      return {
+        handled: false,
+        reason: 'cooldown',
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+      }
+    }
+
+    const handler = aiAutomationHandlers.get(nextTask.moduleKey)
+    if (typeof handler !== 'function') {
+      return {
+        handled: false,
+        reason: 'handler_missing',
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+      }
+    }
+
+    const lockReason = nextTask.reason || `queue:${nextTask.id}`
+    const locked = tryAcquireAutoExecution(nextTask.moduleKey, lockReason)
+    if (!locked) {
+      return {
+        handled: false,
+        reason: 'lock_busy',
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+      }
+    }
+
+    try {
+      const result = await handler(
+        {
+          ...nextTask,
+          payload: nextTask.payload && typeof nextTask.payload === 'object' ? { ...nextTask.payload } : {},
+        },
+        {
+          now,
+          policy,
+        },
+      )
+      removeAiAutomationTaskById(nextTask.id)
+      aiAutomationRuntime.lastExecutedAtByModule[nextTask.moduleKey] = Date.now()
+      return {
+        handled: true,
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+        result,
+      }
+    } catch (error) {
+      const attempts = Math.max(0, toInt(nextTask.attempts, 0)) + 1
+      const shouldDrop = attempts >= 3
+      if (shouldDrop) {
+        removeAiAutomationTaskById(nextTask.id)
+      } else {
+        const task = aiAutomationQueue.value.find((item) => item.id === nextTask.id)
+        if (task) {
+          task.attempts = attempts
+          task.dueAt = now + cooldownMs
+        }
+      }
+      addApiReport({
+        level: 'error',
+        module: nextTask.moduleKey,
+        action: 'auto_queue_execute',
+        code: typeof error?.code === 'string' ? error.code : '',
+        message:
+          typeof error?.message === 'string' && error.message.trim()
+            ? error.message.trim()
+            : 'Automation handler failed.',
+      })
+      return {
+        handled: false,
+        reason: shouldDrop ? 'handler_error_dropped' : 'handler_error_retry',
+        moduleKey: nextTask.moduleKey,
+        taskId: nextTask.id,
+      }
+    } finally {
+      releaseAutoExecution(nextTask.moduleKey)
+    }
+  }
+
   const tryAcquireAutoExecution = (moduleKey, reason = '') => {
     if (!isAiAutomationInvokeEnabledForModule(moduleKey)) return false
 
@@ -1227,8 +1563,28 @@ export const useSystemStore = defineStore('system', () => {
     return normalized.id
   }
 
-  const clearApiReports = () => {
-    apiReports.value = []
+  const clearApiReports = (options = {}) => {
+    const moduleFilter =
+      typeof options?.module === 'string' && options.module.trim()
+        ? options.module.trim()
+        : ''
+    const levelFilter =
+      options?.level === 'error' || options?.level === 'info' ? options.level : ''
+
+    if (!moduleFilter && !levelFilter) {
+      const removedAll = apiReports.value.length
+      apiReports.value = []
+      return removedAll
+    }
+
+    const before = apiReports.value.length
+    apiReports.value = apiReports.value.filter((item) => {
+      const moduleMatched = moduleFilter ? item?.module === moduleFilter : true
+      const levelMatched = levelFilter ? item?.level === levelFilter : true
+      const matched = moduleMatched && levelMatched
+      return !matched
+    })
+    return Math.max(0, before - apiReports.value.length)
   }
 
   const getBackupReminderPolicy = (baseAt = Date.now()) => {
@@ -1577,6 +1933,7 @@ export const useSystemStore = defineStore('system', () => {
     user,
     notifications,
     apiReports,
+    aiAutomationQueue,
     truthState,
     isLocked,
     activeAutoExecution,
@@ -1607,6 +1964,12 @@ export const useSystemStore = defineStore('system', () => {
     getAiAutomationRuntimePolicy,
     isAiAutomationInvokeEnabledForModule,
     getAiAutomationModulePriority,
+    registerAiAutomationHandler,
+    unregisterAiAutomationHandler,
+    getAiAutomationQueueSnapshot,
+    clearAiAutomationQueue,
+    enqueueAiAutomationTask,
+    runAiAutomationQueueTick,
     tryAcquireAutoExecution,
     releaseAutoExecution,
     addApiReport,

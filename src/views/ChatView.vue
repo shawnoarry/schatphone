@@ -101,12 +101,23 @@ const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const MANUAL_PRIORITY_GUARD_MS = 1500
 const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
 const SAVE_FEEDBACK_DURATION_MS = 1200
+const MESSAGE_LONG_PRESS_MS = 380
+const USER_MEDIA_KIND_IMAGE = 'image'
+const USER_MEDIA_KIND_GIF = 'gif'
+const USER_ACTION_FORM_NONE = ''
+const USER_ACTION_FORM_LINK = 'link'
+const USER_ACTION_FORM_TRANSFER = 'transfer'
+const USER_ACTION_FORM_VOICE = 'voice'
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
+const userMediaInputRef = ref(null)
 const loadingSuggestions = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
+const showUserActionPanel = ref(false)
+const pendingUserMediaKind = ref(USER_MEDIA_KIND_IMAGE)
+const userActionFormType = ref(USER_ACTION_FORM_NONE)
 const aiErrorMessage = ref('')
 const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
@@ -125,6 +136,19 @@ let autoInvokeTimerId = null
 let threadSettingsSavedTimerId = null
 let serviceTemplateSavedTimerId = null
 let uiNoticeTimerId = null
+let messageLongPressTimerId = null
+let messageLongPressTargetId = ''
+
+const userActionDraft = reactive({
+  linkUrl: 'https://',
+  linkTitle: '',
+  linkNote: '',
+  transferAmount: '',
+  transferCurrency: 'CNY',
+  transferNote: '',
+  voiceTranscript: '',
+  voiceDurationSec: 8,
+})
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -170,6 +194,13 @@ const activeMessages = computed(() => {
   if (!activeChat.value) return []
   return chatStore.getMessagesByContactId(activeChat.value.id) || []
 })
+
+const activeActionMessage = computed(() => {
+  if (!activeMessageActionId.value) return null
+  return activeMessages.value.find((item) => item.id === activeMessageActionId.value) || null
+})
+
+const hasActiveMessageActions = computed(() => Boolean(activeActionMessage.value))
 
 const currentStatus = computed(() => {
   const statusId = typeof user.value.chatStatus === 'string' ? user.value.chatStatus : 'idle'
@@ -523,6 +554,7 @@ const extractMessageTextForContext = (message) => {
       if (block.type === 'text') return block.text || ''
       if (block.type === 'voice_virtual') return `[voice] ${block.transcript || block.label || ''}`
       if (block.type === 'module_link') return `[link] ${block.label || ''}`
+      if (block.type === 'link_external') return `[external_link] ${block.label || ''} ${block.url || ''}`
       if (block.type === 'transfer_virtual') return `[transfer] ${block.amount || ''} ${block.currency || ''}`
       if (block.type === 'image_virtual') return `[image] ${block.alt || ''}`
       if (block.type === 'mini_scene') return `[scene] ${block.title || ''} ${block.description || ''}`
@@ -660,31 +692,75 @@ const scheduleAutoInvokeTick = () => {
   }, delay)
 }
 
-const maybeRunAutoInvokeForContact = async (contactId) => {
+const executeAutoInvokeForContactTask = async (contactId, options = {}) => {
   const now = Date.now()
   const runtimePolicy = getChatAutomationRuntimePolicy(now)
   if (!runtimePolicy.enabled) {
     chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
-    return
+    return false
+  }
+  if (!runtimePolicy.invokeEnabled) {
+    resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
+    return false
   }
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
   if (!aiPrefs.autoInvokeEnabled) {
     chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
-    return
+    return false
   }
-
-  const conversation = chatStore.getConversationByContactId(contactId)
-  if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) return
 
   if (loadingAI.value || activeAbortController.value) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
-    return
+    return false
+  }
+
+  const fingerprint =
+    typeof options.fingerprint === 'string' && options.fingerprint.trim()
+      ? options.fingerprint.trim()
+      : getAutoInvokeBaseFingerprint(contactId)
+  const ok = await requestAiReply(contactId, MANUAL_TRIGGER_ID, {
+    replyCount: aiPrefs.replyCount,
+    source: 'auto',
+    autoSchedule: false,
+  })
+  if (ok) {
+    chatStore.setConversationAutoState(contactId, {
+      autoLastFingerprint: fingerprint,
+      autoLastTriggeredAt: Date.now(),
+    })
+    resetConversationAutoNextAt(contactId, Date.now())
+    return true
+  }
+  resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
+  return false
+}
+
+const enqueueAutoInvokeTaskForContact = async (contactId) => {
+  const now = Date.now()
+  const runtimePolicy = getChatAutomationRuntimePolicy(now)
+  if (!runtimePolicy.enabled) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return false
+  }
+
+  const aiPrefs = chatStore.getConversationAiPrefs(contactId)
+  if (!aiPrefs.autoInvokeEnabled) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return false
+  }
+
+  const conversation = chatStore.getConversationByContactId(contactId)
+  if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) return false
+
+  if (loadingAI.value || activeAbortController.value) {
+    resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
+    return false
   }
 
   if (now - lastManualActionAt.value <= MANUAL_PRIORITY_GUARD_MS) {
     resetConversationAutoNextAt(contactId, now)
-    return
+    return false
   }
 
   if (runtimePolicy.notifyOnly) {
@@ -708,7 +784,7 @@ const maybeRunAutoInvokeForContact = async (contactId) => {
       model: settings.value.api.model || '',
       message: notifyOnlyHintByPolicy(runtimePolicy),
     })
-    return
+    return false
   }
 
   const fingerprint = getAutoInvokeBaseFingerprint(contactId)
@@ -720,35 +796,38 @@ const maybeRunAutoInvokeForContact = async (contactId) => {
     now - (conversation.autoLastTriggeredAt || 0) < dedupeMs
   ) {
     resetConversationAutoNextAt(contactId, now)
-    return
+    return false
   }
 
-  const locked = systemStore.tryAcquireAutoExecution(
-    CHAT_AUTOMATION_MODULE_KEY,
-    `contact:${contactId}`,
+  const enqueueResult = systemStore.enqueueAiAutomationTask(
+    {
+      moduleKey: CHAT_AUTOMATION_MODULE_KEY,
+      targetId: String(contactId),
+      source: 'chat_auto_timer',
+      reason: `contact:${contactId}`,
+      dueAt: now,
+      fingerprint,
+      payload: {
+        contactId,
+      },
+    },
+    {
+      baseAt: now,
+    },
   )
-  if (!locked) {
+
+  if (!enqueueResult?.accepted && enqueueResult?.reason === 'invoke_disabled') {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
-    return
   }
 
-  try {
-    const ok = await requestAiReply(contactId, MANUAL_TRIGGER_ID, {
-      replyCount: aiPrefs.replyCount,
-      source: 'auto',
-      autoSchedule: false,
-    })
-    if (ok) {
-      chatStore.setConversationAutoState(contactId, {
-        autoLastFingerprint: fingerprint,
-        autoLastTriggeredAt: Date.now(),
-      })
-      resetConversationAutoNextAt(contactId, Date.now())
-    } else {
-      resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
-    }
-  } finally {
-    systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
+  return Boolean(enqueueResult?.accepted)
+}
+
+const drainAutomationQueue = async (maxRounds = 4) => {
+  const rounds = Math.max(1, Math.floor(Number(maxRounds) || 1))
+  for (let i = 0; i < rounds; i += 1) {
+    const result = await systemStore.runAiAutomationQueueTick(Date.now())
+    if (!result?.handled) break
   }
 }
 
@@ -762,10 +841,10 @@ const runDueAutoInvokes = async () => {
   const dueContactIds = chatStore.getDueAutoInvokeContactIds(now)
 
   for (const contactId of dueContactIds) {
-    // Keep execution sequential so manual-priority and dedupe decisions stay deterministic.
-    await maybeRunAutoInvokeForContact(contactId)
+    await enqueueAutoInvokeTaskForContact(contactId)
   }
 
+  await drainAutomationQueue(4)
   scheduleAutoInvokeTick()
 }
 
@@ -867,6 +946,23 @@ const handleVisibilityResume = () => {
 
 const handleWindowFocus = () => {
   void runDueAutoInvokes()
+}
+
+const chatAutomationTaskHandler = async (task) => {
+  const payloadContactId = Number(task?.payload?.contactId ?? task?.targetId)
+  if (!Number.isFinite(payloadContactId) || payloadContactId <= 0) {
+    return {
+      skipped: 'invalid_contact',
+    }
+  }
+
+  const ok = await executeAutoInvokeForContactTask(payloadContactId, {
+    fingerprint: typeof task?.fingerprint === 'string' ? task.fingerprint : '',
+  })
+  return {
+    ok,
+    contactId: payloadContactId,
+  }
 }
 
 const normalizeAssistantReplyType = (replyType, aiPrefs) => {
@@ -1025,6 +1121,9 @@ const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
   }
   if (first.type === 'module_link') {
     return trimAssistantText(`${first.label} (${first.route || '/home'})`, MAX_ASSISTANT_TEXT_CHARS, '')
+  }
+  if (first.type === 'link_external') {
+    return trimAssistantText(`${first.label} (${first.url || ''})`, MAX_ASSISTANT_TEXT_CHARS, '')
   }
   if (first.type === 'transfer_virtual') {
     return trimAssistantText(
@@ -1459,12 +1558,43 @@ const requestPendingAiReply = () => {
   })
 }
 
-const toggleMessageActions = (messageId) => {
-  activeMessageActionId.value = activeMessageActionId.value === messageId ? '' : messageId
-}
-
 const closeMessageActions = () => {
   activeMessageActionId.value = ''
+}
+
+const clearMessageLongPressTimer = () => {
+  if (!messageLongPressTimerId) return
+  clearTimeout(messageLongPressTimerId)
+  messageLongPressTimerId = null
+}
+
+const openMessageActions = (messageId) => {
+  const id = typeof messageId === 'string' ? messageId.trim() : ''
+  if (!id) return
+  closeUserActionPanel()
+  activeMessageActionId.value = id
+}
+
+const shouldIgnoreMessageLongPressTarget = (event) => {
+  const target = event?.target
+  if (!target || typeof target.closest !== 'function') return false
+  return Boolean(target.closest('button, a, input, textarea, select, label'))
+}
+
+const startMessageLongPress = (messageId, event) => {
+  if (shouldIgnoreMessageLongPressTarget(event)) return
+  clearMessageLongPressTimer()
+  messageLongPressTargetId = typeof messageId === 'string' ? messageId : ''
+  messageLongPressTimerId = setTimeout(() => {
+    if (!messageLongPressTargetId) return
+    openMessageActions(messageLongPressTargetId)
+    clearMessageLongPressTimer()
+  }, MESSAGE_LONG_PRESS_MS)
+}
+
+const cancelMessageLongPress = () => {
+  messageLongPressTargetId = ''
+  clearMessageLongPressTimer()
 }
 
 const copyText = async (text) => {
@@ -1712,12 +1842,50 @@ const generateSmartReplies = async () => {
   }
 }
 
-const sendMessage = () => {
-  if (!inputMessage.value.trim() || !activeChat.value) return
+const resetUserActionDraft = () => {
+  userActionDraft.linkUrl = 'https://'
+  userActionDraft.linkTitle = ''
+  userActionDraft.linkNote = ''
+  userActionDraft.transferAmount = ''
+  userActionDraft.transferCurrency = 'CNY'
+  userActionDraft.transferNote = ''
+  userActionDraft.voiceTranscript = ''
+  userActionDraft.voiceDurationSec = 8
+}
 
-  const chatId = activeChat.value.id
-  const payload = inputMessage.value.trim()
-  const quotePayload = pendingQuote.value
+const backToUserActionGrid = () => {
+  userActionFormType.value = USER_ACTION_FORM_NONE
+}
+
+const closeUserActionPanel = () => {
+  showUserActionPanel.value = false
+  backToUserActionGrid()
+  resetUserActionDraft()
+}
+
+const toggleUserActionPanel = () => {
+  if (!showUserActionPanel.value) {
+    closeMessageActions()
+    showUserActionPanel.value = true
+    backToUserActionGrid()
+    return
+  }
+  closeUserActionPanel()
+}
+
+const openUserActionForm = (formType) => {
+  const nextType =
+    formType === USER_ACTION_FORM_LINK ||
+    formType === USER_ACTION_FORM_TRANSFER ||
+    formType === USER_ACTION_FORM_VOICE
+      ? formType
+      : USER_ACTION_FORM_NONE
+  showUserActionPanel.value = true
+  userActionFormType.value = nextType
+}
+
+const buildPendingQuotePayload = () =>
+  pendingQuote.value
     ? {
         messageId: pendingQuote.value.messageId,
         role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
@@ -1725,24 +1893,31 @@ const sendMessage = () => {
       }
     : null
 
+const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) => {
+  if (!activeChat.value) return null
+  const chatId = activeChat.value.id
+  const normalizedContent = typeof content === 'string' ? content.trim() : ''
+  const quotePayload = buildPendingQuotePayload()
+
   const appended = chatStore.appendMessage(chatId, {
     role: 'user',
-    content: payload,
+    content: normalizedContent,
+    blocks: Array.isArray(blocks) ? blocks : [],
     quote: quotePayload,
     status: 'delivered',
   })
+  if (!appended) return null
+
   if (activeChat.value) {
     systemStore.touchChatTruth(activeChat.value, 'user_message', {
       count: 1,
       triggerMessageId: appended.id,
-      source: 'send',
+      source,
     })
   }
   resetConversationAutoNextAt(chatId, Date.now())
 
-  inputMessage.value = ''
   pendingQuote.value = null
-  chatStore.setConversationDraft(chatId, '')
   showSuggestions.value = false
   aiErrorMessage.value = ''
   retryTriggerMessageId.value = ''
@@ -1755,6 +1930,67 @@ const sendMessage = () => {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
   scheduleAutoInvokeTick()
+  return appended
+}
+
+const normalizeExternalUrl = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  if (!raw) return ''
+  const candidate = /^https?:\/\//i.test(raw) ? raw : /^www\./i.test(raw) ? `https://${raw}` : ''
+  if (!candidate) return ''
+  try {
+    const parsed = new URL(candidate)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+    return parsed.toString()
+  } catch {
+    return ''
+  }
+}
+
+const openExternalUrl = (rawUrl) => {
+  const url = normalizeExternalUrl(rawUrl)
+  if (!url) {
+    showUiNotice('warning', t('外部链接不可用。', 'External link is unavailable.'))
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      resolve(result)
+    }
+    reader.onerror = () => reject(new Error('read_failed'))
+    reader.readAsDataURL(file)
+  })
+
+const triggerUserMediaPicker = (kind = USER_MEDIA_KIND_IMAGE) => {
+  if (!userMediaInputRef.value) return
+  pendingUserMediaKind.value = kind === USER_MEDIA_KIND_GIF ? USER_MEDIA_KIND_GIF : USER_MEDIA_KIND_IMAGE
+  userMediaInputRef.value.accept =
+    pendingUserMediaKind.value === USER_MEDIA_KIND_GIF ? 'image/gif' : 'image/*'
+  userMediaInputRef.value.value = ''
+  userMediaInputRef.value.click()
+}
+
+const sendTextMessage = () => {
+  if (!activeChat.value) return
+  const payload = inputMessage.value.trim()
+  if (!payload) return
+
+  const appended = appendUserMessage({
+    content: payload,
+    blocks: [],
+    source: 'send_text',
+  })
+  if (!appended) return
+
+  inputMessage.value = ''
+  chatStore.setConversationDraft(activeChat.value.id, '')
+  closeUserActionPanel()
 }
 
 const sendCurrentLocation = () => {
@@ -1766,43 +2002,153 @@ const sendCurrentLocation = () => {
     return
   }
 
-  const chatId = activeChat.value.id
-  const payload = `${t('位置共享', 'Location share')}\n${locationText}`
-  const quotePayload = pendingQuote.value
-    ? {
-        messageId: pendingQuote.value.messageId,
-        role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
-        preview: pendingQuote.value.preview || '',
-      }
-    : null
-  const appended = chatStore.appendMessage(chatId, {
-    role: 'user',
-    content: payload,
-    quote: quotePayload,
-    status: 'delivered',
+  appendUserMessage({
+    content: `${t('位置共享', 'Location share')} · ${locationText}`,
+    blocks: [
+      {
+        type: 'module_link',
+        label: t('位置共享', 'Location share'),
+        route: '/map',
+        note: locationText,
+      },
+    ],
+    source: 'location',
   })
-  if (activeChat.value) {
-    systemStore.touchChatTruth(activeChat.value, 'user_message', {
-      count: 1,
-      triggerMessageId: appended.id,
-      source: 'location',
+  closeUserActionPanel()
+}
+
+const submitLinkCardForm = () => {
+  if (!activeChat.value) return
+  const url = normalizeExternalUrl(userActionDraft.linkUrl)
+  if (!url) {
+    showUiNotice('error', t('链接格式无效，仅支持 http/https。', 'Invalid URL. Only http/https is supported.'))
+    return
+  }
+
+  const label =
+    typeof userActionDraft.linkTitle === 'string' && userActionDraft.linkTitle.trim()
+      ? userActionDraft.linkTitle.trim()
+      : t('外部链接', 'External link')
+  const note = typeof userActionDraft.linkNote === 'string' ? userActionDraft.linkNote.trim() : ''
+
+  appendUserMessage({
+    content: `${label}\n${url}`,
+    blocks: [
+      {
+        type: 'link_external',
+        label,
+        url,
+        note,
+      },
+    ],
+    source: 'link',
+  })
+  closeUserActionPanel()
+}
+
+const submitTransferCardForm = () => {
+  if (!activeChat.value) return
+
+  const amount = userActionDraft.transferAmount.trim()
+  if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+    showUiNotice('error', t('金额格式无效。', 'Invalid amount format.'))
+    return
+  }
+
+  const rawCurrency = userActionDraft.transferCurrency.trim()
+  const currency = rawCurrency ? rawCurrency.toUpperCase() : 'CNY'
+  if (!/^[A-Z]{2,8}$/.test(currency)) {
+    showUiNotice('error', t('币种格式无效。', 'Invalid currency format.'))
+    return
+  }
+  const note = typeof userActionDraft.transferNote === 'string' ? userActionDraft.transferNote.trim() : ''
+
+  appendUserMessage({
+    content: `${t('转账', 'Transfer')} ${amount} ${currency}`,
+    blocks: [
+      {
+        type: 'transfer_virtual',
+        label: t('转账卡片', 'Transfer card'),
+        amount,
+        currency,
+        to: activeChat.value.name || '',
+        note,
+        actionRoute: '/wallet',
+      },
+    ],
+    source: 'transfer',
+  })
+  closeUserActionPanel()
+}
+
+const submitVoiceCardForm = () => {
+  if (!activeChat.value) return
+
+  const transcript = userActionDraft.voiceTranscript.trim()
+  if (!transcript) {
+    showUiNotice('error', t('语音内容不能为空。', 'Voice transcript cannot be empty.'))
+    return
+  }
+
+  const durationSec = Number(userActionDraft.voiceDurationSec)
+  const safeDurationSec = Number.isFinite(durationSec) ? Math.min(600, Math.max(1, Math.floor(durationSec))) : 8
+
+  appendUserMessage({
+    content: transcript,
+    blocks: [
+      {
+        type: 'voice_virtual',
+        label: t('语音消息', 'Voice message'),
+        transcript,
+        durationSec: safeDurationSec,
+      },
+    ],
+    source: 'voice_card',
+  })
+  closeUserActionPanel()
+}
+
+const handleUserMediaPicked = async (event) => {
+  const inputEl = event?.target
+  const file = inputEl?.files?.[0]
+  if (!file || !activeChat.value) return
+
+  const mediaKind = pendingUserMediaKind.value === USER_MEDIA_KIND_GIF ? USER_MEDIA_KIND_GIF : USER_MEDIA_KIND_IMAGE
+  if (mediaKind === USER_MEDIA_KIND_GIF && file.type !== 'image/gif') {
+    showUiNotice('warning', t('请选择 GIF 文件。', 'Please select a GIF file.'))
+    if (inputEl) inputEl.value = ''
+    return
+  }
+
+  try {
+    const dataUrl = await readFileAsDataUrl(file)
+    if (!dataUrl) {
+      showUiNotice('error', t('图片读取失败，请重试。', 'Failed to read image. Please retry.'))
+      return
+    }
+
+    const defaultAlt = mediaKind === USER_MEDIA_KIND_GIF ? t('GIF 动图', 'GIF image') : t('图片消息', 'Image')
+    appendUserMessage({
+      content:
+        mediaKind === USER_MEDIA_KIND_GIF
+          ? `[GIF] ${file.name || defaultAlt}`
+          : `${t('图片', 'Image')}: ${file.name || defaultAlt}`,
+      blocks: [
+        {
+          type: 'image_virtual',
+          alt: file.name || defaultAlt,
+          url: dataUrl,
+          caption: mediaKind === USER_MEDIA_KIND_GIF ? t('来自本地文件', 'From local file') : '',
+        },
+      ],
+      source: mediaKind === USER_MEDIA_KIND_GIF ? 'gif' : 'image',
     })
+    closeUserActionPanel()
+  } catch {
+    showUiNotice('error', t('文件读取失败，请重试。', 'File read failed. Please retry.'))
+  } finally {
+    if (inputEl) inputEl.value = ''
   }
-  resetConversationAutoNextAt(chatId, Date.now())
-
-  pendingQuote.value = null
-  showSuggestions.value = false
-  aiErrorMessage.value = ''
-  retryTriggerMessageId.value = ''
-  retryRerollMessageId.value = ''
-  closeMessageActions()
-  scrollToBottom()
-
-  const aiPrefs = chatStore.getConversationAiPrefs(chatId)
-  if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
-    requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
-  }
-  scheduleAutoInvokeTick()
 }
 
 const useSuggestion = (text) => {
@@ -2032,6 +2378,7 @@ watch(
   activeChatId,
   (id) => {
     showThreadMenu.value = false
+    closeUserActionPanel()
     activeMessageActionId.value = ''
     pendingQuote.value = null
     threadSettingsSaved.value = false
@@ -2100,6 +2447,7 @@ watch(inputMessage, (text) => {
 })
 
 onMounted(() => {
+  systemStore.registerAiAutomationHandler(CHAT_AUTOMATION_MODULE_KEY, chatAutomationTaskHandler)
   chatStore.normalizeAutoInvokeCheckpoints(Date.now())
   void runDueAutoInvokes()
   window.addEventListener('focus', handleWindowFocus)
@@ -2110,7 +2458,9 @@ onBeforeUnmount(() => {
   // Keep in-flight AI work running so lock screen can receive completion notifications.
   window.removeEventListener('focus', handleWindowFocus)
   document.removeEventListener('visibilitychange', handleVisibilityResume)
+  systemStore.unregisterAiAutomationHandler(CHAT_AUTOMATION_MODULE_KEY, chatAutomationTaskHandler)
   clearAutoInvokeTimer()
+  cancelMessageLongPress()
   systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
   if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
   if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
@@ -2317,14 +2667,18 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="max-w-[70%]">
-            <div class="px-3 py-2 pr-8 text-sm rounded-xl shadow-sm relative" :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'">
-              <button
-                class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-[10px] inline-flex items-center justify-center border border-black/10 bg-white/60"
-                @click.stop="toggleMessageActions(msg.id)"
-              >
-                <i class="fas fa-ellipsis-h"></i>
-              </button>
-
+            <div
+              class="px-3 py-2 text-sm rounded-xl shadow-sm relative"
+              :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'"
+              @contextmenu.prevent="openMessageActions(msg.id)"
+              @mousedown.left="startMessageLongPress(msg.id, $event)"
+              @mouseup="cancelMessageLongPress"
+              @mouseleave="cancelMessageLongPress"
+              @touchstart="startMessageLongPress(msg.id, $event)"
+              @touchmove.passive="cancelMessageLongPress"
+              @touchend="cancelMessageLongPress"
+              @touchcancel="cancelMessageLongPress"
+            >
               <div v-if="msg.quote" class="mb-2 rounded-lg border border-white/40 bg-black/5 px-2 py-1 text-[11px] leading-4">
                 <p class="font-semibold opacity-80">{{ msg.quote.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user') }}</p>
                 <p class="line-clamp-2">{{ msg.quote.preview }}</p>
@@ -2373,6 +2727,15 @@ onBeforeUnmount(() => {
                   </button>
                 </div>
 
+                <div v-else-if="block.type === 'link_external'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
+                  <p class="text-[12px] font-semibold">{{ block.label }}</p>
+                  <p class="text-[11px] opacity-75 break-all">{{ block.url }}</p>
+                  <p class="text-[11px] opacity-75" v-if="block.note">{{ block.note }}</p>
+                  <button @click="openExternalUrl(block.url)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">
+                    {{ t('打开链接', 'Open link') }}
+                  </button>
+                </div>
+
                 <div v-else-if="block.type === 'transfer_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <p class="text-[12px] font-semibold">{{ block.label }}</p>
                   <p class="text-base font-bold">{{ block.amount }} {{ block.currency }}</p>
@@ -2404,45 +2767,6 @@ onBeforeUnmount(() => {
             <p v-if="messageStatusText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? (msg.status === 'failed' ? 'text-right text-red-500' : 'text-right text-gray-400') : (msg.status === 'failed' ? 'text-left text-red-500' : 'text-left text-gray-400')">
               {{ messageStatusText(msg) }}
             </p>
-
-            <div
-              v-if="activeMessageActionId === msg.id"
-              class="mt-1.5 flex flex-wrap gap-1.5"
-              :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-            >
-              <button
-                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
-                @click="quoteMessage(msg)"
-              >
-                {{ t('引用', 'Quote') }}
-              </button>
-              <button
-                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
-                @click="copyMessage(msg)"
-              >
-                {{ t('复制', 'Copy') }}
-              </button>
-              <button
-                v-if="canEditMessage(msg)"
-                class="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px]"
-                @click="editMessage(msg)"
-              >
-                {{ t('编辑', 'Edit') }}
-              </button>
-              <button
-                v-if="canRerollMessage(msg)"
-                class="px-2 py-1 rounded-md border border-blue-200 bg-blue-50 text-blue-700 text-[11px]"
-                @click="rerollMessage(msg)"
-              >
-                {{ t('重roll', 'Reroll') }}
-              </button>
-              <button
-                class="px-2 py-1 rounded-md border border-red-200 bg-red-50 text-red-600 text-[11px]"
-                @click="deleteMessage(msg)"
-              >
-                {{ t('删除', 'Delete') }}
-              </button>
-            </div>
           </div>
         </div>
 
@@ -2499,24 +2823,198 @@ onBeforeUnmount(() => {
           {{ uiNoticeMessage }}
         </div>
 
-        <button @click="sendCurrentLocation" class="w-8 h-8 rounded-full flex items-center justify-center transition bg-cyan-500 text-white shadow-md">
-          <i class="fas fa-location-dot text-xs"></i>
-        </button>
+        <div
+          v-if="showUserActionPanel"
+          class="absolute bottom-[56px] left-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-sm"
+        >
+          <div v-if="userActionFormType === USER_ACTION_FORM_NONE" class="grid grid-cols-3 gap-2">
+            <button
+              @click="triggerUserMediaPicker(USER_MEDIA_KIND_IMAGE)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('图片', 'Image') }}
+            </button>
+            <button
+              @click="triggerUserMediaPicker(USER_MEDIA_KIND_GIF)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              GIF
+            </button>
+            <button
+              @click="openUserActionForm(USER_ACTION_FORM_LINK)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('链接', 'Link') }}
+            </button>
+            <button
+              @click="sendCurrentLocation"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('位置', 'Location') }}
+            </button>
+            <button
+              @click="openUserActionForm(USER_ACTION_FORM_TRANSFER)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('转账', 'Transfer') }}
+            </button>
+            <button
+              @click="openUserActionForm(USER_ACTION_FORM_VOICE)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('语音卡片', 'Voice card') }}
+            </button>
+          </div>
+
+          <div v-else-if="userActionFormType === USER_ACTION_FORM_LINK" class="space-y-2">
+            <p class="text-[11px] font-medium text-gray-700">{{ t('发送链接', 'Send link') }}</p>
+            <input
+              v-model="userActionDraft.linkUrl"
+              @keydown.enter.prevent="submitLinkCardForm"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
+              :placeholder="t('链接地址（http/https）', 'URL (http/https)')"
+            />
+            <input
+              v-model="userActionDraft.linkTitle"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
+              :placeholder="t('链接标题（可选）', 'Link title (optional)')"
+            />
+            <input
+              v-model="userActionDraft.linkNote"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
+              :placeholder="t('附加说明（可选）', 'Note (optional)')"
+            />
+            <div class="flex items-center justify-end gap-2">
+              <button
+                @click="backToUserActionGrid"
+                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('返回', 'Back') }}
+              </button>
+              <button
+                @click="submitLinkCardForm"
+                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+              >
+                {{ t('发送链接', 'Send link') }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="userActionFormType === USER_ACTION_FORM_TRANSFER" class="space-y-2">
+            <p class="text-[11px] font-medium text-gray-700">{{ t('发送转账卡片', 'Send transfer card') }}</p>
+            <div class="grid grid-cols-3 gap-2">
+              <input
+                v-model="userActionDraft.transferAmount"
+                @keydown.enter.prevent="submitTransferCardForm"
+                type="text"
+                inputmode="decimal"
+                class="col-span-2 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
+                :placeholder="t('金额，如 88.00', 'Amount, e.g. 88.00')"
+              />
+              <input
+                v-model="userActionDraft.transferCurrency"
+                type="text"
+                class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] uppercase outline-none"
+                :placeholder="t('币种', 'Currency')"
+              />
+            </div>
+            <input
+              v-model="userActionDraft.transferNote"
+              type="text"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
+              :placeholder="t('转账备注（可选）', 'Transfer note (optional)')"
+            />
+            <div class="flex items-center justify-end gap-2">
+              <button
+                @click="backToUserActionGrid"
+                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('返回', 'Back') }}
+              </button>
+              <button
+                @click="submitTransferCardForm"
+                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+              >
+                {{ t('发送转账', 'Send transfer') }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="userActionFormType === USER_ACTION_FORM_VOICE" class="space-y-2">
+            <p class="text-[11px] font-medium text-gray-700">{{ t('发送语音卡片', 'Send voice card') }}</p>
+            <textarea
+              v-model="userActionDraft.voiceTranscript"
+              rows="2"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none resize-none"
+              :placeholder="t('输入语音内容', 'Enter voice transcript')"
+            ></textarea>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-gray-600">{{ t('时长（秒）', 'Duration (sec)') }}</span>
+              <input
+                v-model.number="userActionDraft.voiceDurationSec"
+                type="number"
+                min="1"
+                max="600"
+                class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-[11px] outline-none"
+              />
+            </div>
+            <div class="flex items-center justify-end gap-2">
+              <button
+                @click="backToUserActionGrid"
+                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('返回', 'Back') }}
+              </button>
+              <button
+                @click="submitVoiceCardForm"
+                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+              >
+                {{ t('发送语音卡片', 'Send voice card') }}
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <button
+              v-if="suggestionFeatureEnabled && userActionFormType === USER_ACTION_FORM_NONE"
+              @click="generateSmartReplies"
+              class="rounded-lg border border-emerald-200 px-2 py-1 text-[11px] text-emerald-700 hover:bg-emerald-50"
+              :disabled="loadingSuggestions || loadingAI"
+            >
+              <span v-if="loadingSuggestions">{{ t('生成中...', 'Generating...') }}</span>
+              <span v-else>{{ t('生成建议回复', 'Generate suggested replies') }}</span>
+            </button>
+            <button
+              @click="closeUserActionPanel"
+              class="ml-auto rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+            >
+              {{ t('收起', 'Collapse') }}
+            </button>
+          </div>
+        </div>
+
+        <input
+          ref="userMediaInputRef"
+          type="file"
+          class="hidden"
+          accept="image/*"
+          @change="handleUserMediaPicked"
+        />
 
         <button
-          v-if="suggestionFeatureEnabled"
-          @click="generateSmartReplies"
-          class="w-8 h-8 rounded-full flex items-center justify-center transition"
-          :class="loadingSuggestions || loadingAI ? 'bg-gray-100 text-gray-400' : 'chat-magic shadow-md animate-pulse'"
-          :disabled="loadingSuggestions || loadingAI"
+          @click="toggleUserActionPanel"
+          class="w-8 h-8 rounded-full flex items-center justify-center transition border"
+          :class="showUserActionPanel ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600'"
         >
-          <i v-if="loadingSuggestions" class="fas fa-spinner fa-spin"></i>
-          <i v-else class="fas fa-wand-magic-sparkles text-xs"></i>
+          <i class="fas fa-plus text-xs"></i>
         </button>
 
         <input
           v-model="inputMessage"
-          @keyup.enter="sendMessage"
+          @keyup.enter="sendTextMessage"
           type="text"
           class="flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
           :placeholder="t('发送一条消息...', 'Send a message...')"
@@ -2531,9 +3029,69 @@ onBeforeUnmount(() => {
           {{ t('触发回复', 'Trigger Reply') }}
         </button>
 
-        <button @click="sendMessage" class="w-8 h-8 chat-send rounded-full flex items-center justify-center">
+        <button @click="sendTextMessage" class="w-8 h-8 chat-send rounded-full flex items-center justify-center">
           <i class="fas fa-paper-plane text-xs"></i>
         </button>
+      </div>
+
+      <div
+        v-if="hasActiveMessageActions && activeActionMessage"
+        class="fixed inset-0 z-40 flex items-end"
+      >
+        <button
+          type="button"
+          class="absolute inset-0 bg-black/25"
+          @click="closeMessageActions"
+        ></button>
+
+        <div class="relative w-full rounded-t-2xl bg-white px-4 pb-4 pt-3 shadow-xl">
+          <div class="mx-auto mb-3 h-1.5 w-11 rounded-full bg-gray-300"></div>
+          <p class="mb-3 text-xs text-gray-500">
+            {{ t('消息操作', 'Message actions') }}
+          </p>
+
+          <div class="space-y-2">
+            <button
+              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              @click="quoteMessage(activeActionMessage)"
+            >
+              {{ t('引用', 'Quote') }}
+            </button>
+            <button
+              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              @click="copyMessage(activeActionMessage)"
+            >
+              {{ t('复制', 'Copy') }}
+            </button>
+            <button
+              v-if="canEditMessage(activeActionMessage)"
+              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              @click="editMessage(activeActionMessage)"
+            >
+              {{ t('编辑', 'Edit') }}
+            </button>
+            <button
+              v-if="canRerollMessage(activeActionMessage)"
+              class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-100"
+              @click="rerollMessage(activeActionMessage)"
+            >
+              {{ t('重roll', 'Reroll') }}
+            </button>
+            <button
+              class="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-100"
+              @click="deleteMessage(activeActionMessage)"
+            >
+              {{ t('删除', 'Delete') }}
+            </button>
+          </div>
+
+          <button
+            class="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            @click="closeMessageActions"
+          >
+            {{ t('取消', 'Cancel') }}
+          </button>
+        </div>
       </div>
     </template>
   </div>

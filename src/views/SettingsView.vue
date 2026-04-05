@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
@@ -13,6 +13,7 @@ import {
 } from '../lib/persistence'
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
@@ -81,6 +82,50 @@ const setStorageAuditFeedback = (type, message, durationMs = 2200) => {
   }, durationMs)
 }
 
+const writeStorageAuditReport = ({
+  level = 'info',
+  action = 'audit_storage',
+  code = '',
+  message = '',
+  statusCode = 0,
+  model = '',
+}) => {
+  systemStore.addApiReport({
+    level,
+    module: 'storage',
+    action,
+    provider: 'local_persistence',
+    model,
+    statusCode,
+    code,
+    message,
+    createdAt: Date.now(),
+  })
+}
+
+const clearStorageReports = () => {
+  const ok = window.confirm(
+    t(
+      '确认清理所有存储报告吗？此操作不会影响实际存档数据。',
+      'Clear all storage reports? This will not affect actual saved data.',
+    ),
+  )
+  if (!ok) return
+
+  const removed = systemStore.clearApiReports({ module: 'storage' })
+  if (removed > 0) {
+    setStorageAuditFeedback(
+      'success',
+      t(`已清理 ${removed} 条存储报告。`, `Cleared ${removed} storage report(s).`),
+    )
+    return
+  }
+  setStorageAuditFeedback(
+    'warn',
+    t('暂无可清理的存储报告。', 'No storage reports to clear.'),
+  )
+}
+
 const storageLayerLabel = (layerResult, disabledLabel) => {
   if (!layerResult) return t('未知', 'Unknown')
   if (layerResult.decodedOk) return t('有效', 'Valid')
@@ -119,7 +164,41 @@ const formatStorageAuditTime = (timestamp) => {
   }
 }
 
-const runStorageAudit = async ({ silent = false } = {}) => {
+const latestStorageReport = computed(() => {
+  const list = Array.isArray(apiReports.value) ? apiReports.value : []
+  return list.find((item) => item?.module === 'storage') || null
+})
+
+const storageReportErrorCount = computed(() => {
+  const list = Array.isArray(apiReports.value) ? apiReports.value : []
+  return list.filter((item) => item?.module === 'storage' && item?.level === 'error').length
+})
+
+const storageReportReasonLabel = (report) => {
+  const code = (report?.code || '').toUpperCase()
+  if (code === 'STORAGE_HEALTHY') return t('存储状态健康', 'Storage is healthy')
+  if (code === 'STORAGE_MIRROR_DRIFT') return t('存储层不同步', 'Storage mirror drift detected')
+  if (code === 'STORAGE_LAYER_INVALID') return t('存储层数据异常', 'Invalid payload in storage layer')
+  if (code === 'STORAGE_REPAIR_DONE') return t('存储修复完成', 'Storage repair completed')
+  if (code === 'STORAGE_REPAIR_NOOP') return t('无需修复', 'No repair needed')
+  if (code === 'STORAGE_REPAIR_PARTIAL') return t('存储修复部分失败', 'Storage repair partially failed')
+  return t('无存储报告', 'No storage report')
+}
+
+const formatStorageReportTime = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return t('尚无记录', 'No records yet')
+  const locale = (settings.value.system?.language || '').toLowerCase().startsWith('zh')
+    ? 'zh-CN'
+    : settings.value.system?.language || 'en-US'
+  try {
+    return new Date(ts).toLocaleString(locale)
+  } catch {
+    return new Date(ts).toLocaleString()
+  }
+}
+
+const runStorageAudit = async ({ silent = false, record = !silent } = {}) => {
   if (storageAuditRunning.value) return
   storageAuditRunning.value = true
   try {
@@ -137,10 +216,45 @@ const runStorageAudit = async ({ silent = false } = {}) => {
     storageAuditResults.value = reports
     storageAuditAt.value = Date.now()
 
+    const driftCount = reports.filter(
+      (item) => item.mirrorApplicable && !item.mirrorInSync,
+    ).length
+    const invalidCount = reports.filter(
+      (item) =>
+        (item.local?.exists && !item.local?.decodedOk) ||
+        (item.mirrorApplicable && item.indexeddb?.exists && !item.indexeddb?.decodedOk),
+    ).length
+
+    if (record) {
+      writeStorageAuditReport({
+        level: driftCount > 0 || invalidCount > 0 ? 'error' : 'info',
+        action: 'audit_storage',
+        code:
+          invalidCount > 0
+            ? 'STORAGE_LAYER_INVALID'
+            : driftCount > 0
+              ? 'STORAGE_MIRROR_DRIFT'
+              : 'STORAGE_HEALTHY',
+        message:
+          driftCount > 0 || invalidCount > 0
+            ? t(
+                `存储检查完成：不同步 ${driftCount} 项，异常 ${invalidCount} 项。`,
+                `Storage audit completed: drift ${driftCount}, invalid ${invalidCount}.`,
+              )
+            : t(
+                '存储检查完成：各层数据一致且可读。',
+                'Storage audit completed: layers are aligned and readable.',
+              ),
+        model: reports
+          .map((item) =>
+            item.mirrorApplicable && !item.mirrorInSync ? item.key : '',
+          )
+          .filter(Boolean)
+          .join(','),
+      })
+    }
+
     if (!silent) {
-      const driftCount = reports.filter(
-        (item) => item.mirrorApplicable && !item.mirrorInSync,
-      ).length
       if (driftCount > 0) {
         setStorageAuditFeedback(
           'warn',
@@ -183,7 +297,34 @@ const repairStorageDrift = async () => {
       }
     }
 
-    await runStorageAudit({ silent: true })
+    await runStorageAudit({ silent: true, record: false })
+
+    writeStorageAuditReport({
+      level: failedCount > 0 ? 'error' : 'info',
+      action: 'repair_storage',
+      code:
+        failedCount > 0
+          ? 'STORAGE_REPAIR_PARTIAL'
+          : repairCount > 0
+            ? 'STORAGE_REPAIR_DONE'
+            : 'STORAGE_REPAIR_NOOP',
+      message:
+        failedCount > 0
+          ? t(
+              `存储修复完成：成功 ${repairCount} 项，失败 ${failedCount} 项。`,
+              `Storage repair finished: ${repairCount} succeeded, ${failedCount} failed.`,
+            )
+          : repairCount > 0
+            ? t(
+                `存储修复完成：已修复 ${repairCount} 项不同步。`,
+                `Storage repair finished: ${repairCount} drift item(s) fixed.`,
+              )
+            : t(
+                '存储修复完成：未发现需要修复的项目。',
+                'Storage repair finished: no drift needed to be fixed.',
+              ),
+      model: targets.map((target) => target.key).join(','),
+    })
 
     if (failedCount > 0) {
       setStorageAuditFeedback(
@@ -210,6 +351,12 @@ const repairStorageDrift = async () => {
 
 const goHome = () => {
   router.push('/home')
+}
+
+const normalizeSettingsMenuFromQuery = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  const allowed = new Set(['general', 'notification', 'automation', 'about'])
+  return allowed.has(raw) ? raw : ''
 }
 
 const openSubPage = (menu) => {
@@ -329,8 +476,26 @@ const openChatAutomation = () => {
   router.push('/chat-contacts')
 }
 
-const openNetworkReports = () => {
-  router.push('/network')
+const openNetworkReports = (moduleKey = 'all', levelKey = 'all') => {
+  const normalizedModule = typeof moduleKey === 'string' ? moduleKey.trim() : 'all'
+  const normalizedLevel = typeof levelKey === 'string' ? levelKey.trim() : 'all'
+  if ((!normalizedModule || normalizedModule === 'all') && (!normalizedLevel || normalizedLevel === 'all')) {
+    router.push('/network')
+    return
+  }
+
+  const query = {}
+  if (normalizedModule && normalizedModule !== 'all') {
+    query.reportModule = normalizedModule
+  }
+  if (normalizedLevel && normalizedLevel !== 'all') {
+    query.reportLevel = normalizedLevel
+  }
+
+  router.push({
+    path: '/network',
+    query,
+  })
 }
 
 const openAppearanceStudio = () => {
@@ -466,6 +631,19 @@ onBeforeUnmount(() => {
   if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
   if (storageAuditFeedbackTimerId) clearTimeout(storageAuditFeedbackTimerId)
 })
+
+const initialMenu = normalizeSettingsMenuFromQuery(
+  typeof route.query?.menu === 'string' ? route.query.menu : '',
+)
+if (initialMenu) {
+  activeMenu.value = initialMenu
+  if (initialMenu === 'automation') {
+    automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
+  }
+  if (initialMenu === 'about') {
+    void runStorageAudit({ silent: true })
+  }
+}
 </script>
 
 <template>
@@ -970,6 +1148,26 @@ onBeforeUnmount(() => {
               {{ storageAuditFeedbackMessage }}
             </p>
 
+            <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+              <p class="text-[11px] text-gray-700">
+                {{ t('最近存储报告', 'Latest storage report') }}:
+                {{ storageReportReasonLabel(latestStorageReport) }}
+              </p>
+              <p class="text-[10px] text-gray-500 mt-1">
+                {{ t('记录时间', 'Recorded at') }}:
+                {{ formatStorageReportTime(latestStorageReport?.createdAt) }}
+                ·
+                {{ t('错误数', 'Errors') }}: {{ storageReportErrorCount }}
+              </p>
+            </div>
+
+            <button
+              @click="clearStorageReports"
+              class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              {{ t('清理存储报告', 'Clear storage reports') }}
+            </button>
+
             <div v-if="storageAuditResults.length" class="space-y-2">
               <div
                 v-for="item in storageAuditResults"
@@ -1009,6 +1207,21 @@ onBeforeUnmount(() => {
             >
               {{ storageRepairRunning ? t('修复中...', 'Repairing...') : t('修复存储不同步', 'Repair storage drift') }}
             </button>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                @click="openNetworkReports('storage')"
+                class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('查看全部报告', 'View all reports') }}
+              </button>
+              <button
+                @click="openNetworkReports('storage', 'error')"
+                class="w-full py-2 rounded-lg text-xs font-medium border border-amber-200 text-amber-700 hover:bg-amber-50"
+              >
+                {{ t('仅看错误', 'Errors only') }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
