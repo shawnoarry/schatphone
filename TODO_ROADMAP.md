@@ -1,232 +1,310 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
+Updated / 更新时间: 2026-04-07
 
-Updated / 更新时间: 2026-04-06
+## 0. Read First / 阅读顺序
+1. EN: This file is the live execution board for implementation order.
+   中文：本文件是实现顺序的动态执行看板。
+2. EN: For product context, read `PROJECT_MASTER_GUIDE.md` first, then return here.
+   中文：先读 `PROJECT_MASTER_GUIDE.md` 了解全局，再回到本文件执行。
+3. EN: If any old document conflicts with this file, this file wins.
+   中文：若旧文档与本文件冲突，以本文件为准。
 
-## 1. Purpose / 用途
+## 0.5 AI Quick Start (10 min) / AI 接手速览（10分钟）
+1. EN: Target task now is `P0-7` (storage and backup hardening).
+   中文：当前目标任务是 `P0-7`（存储与备份加固）。
+2. EN: Start from these files first:
+   中文：先从这些文件开始阅读与改动：
+   - `src/lib/persistence.js`
+   - `src/lib/asset-binary-storage.js`
+   - `src/stores/gallery.js`
+   - `src/views/SettingsView.vue`
+   - `src/views/NetworkView.vue`
+3. EN: Run full verification before task closure:
+   中文：收口前必须跑完整验证：
+   - `npm run lint`
+   - `npm test`
+   - `npm run build`
+4. EN: Keep docs and code in sync in the same commit batch.
+   中文：文档和代码必须在同一批提交中同步更新。
 
-This is the live execution board for next implementation steps.  
-这是项目后续实现的动态执行清单。
+## 1. Board Rules / 看板规则
+1. EN: Every task status change must be synced in this file in the same commit batch.
+   中文：任何任务状态变化都必须在同一批提交中同步到本文件。
+2. EN: Every `IN_PROGRESS` item must have clear acceptance criteria and regression checks.
+   中文：所有 `IN_PROGRESS` 任务必须有明确验收标准和回归检查点。
+3. EN: Keep wording understandable for non-coding PMs and actionable for AI engineers.
+   中文：文案需同时满足产品经理可读和 AI 工程师可执行。
+4. EN: Do not delete historical decisions; move them to change log if needed.
+   中文：不要删除历史决策，必要时转入变更记录。
 
-Use this file to decide "what to build next".  
-后续“先做什么”以本文件为准。
+## 2. Status Legend / 状态说明
+- `TODO`: EN: Not started. / 中文：未开始。
+- `IN_PROGRESS`: EN: Active development. / 中文：开发中。
+- `PARTIAL_DONE`: EN: Baseline landed, closure pending. / 中文：基线已落地，仍需收口。
+- `DONE`: EN: Accepted and closed. / 中文：验收完成并关闭。
+- `ON_HOLD`: EN: Intentionally deferred. / 中文：主动搁置。
+
+## 3. Program Snapshot / 项目快照
+1. EN: Core shell is stable (Lock/Home/Settings/Chat main path).
+   中文：核心壳层稳定（锁屏/Home/Settings/Chat 主链路）。
+2. EN: Chat rich-send lane is online and `Trigger Reply` remains persistent.
+   中文：Chat 富消息发送链路已上线，`Trigger Reply` 继续常驻。
+3. EN: Global role profile + thread binding baseline is landed.
+   中文：全局角色档案 + 会话绑定基线已落地。
+4. EN: Current main risk shifted to storage/backup closure for media-heavy usage.
+   中文：当前主风险已转为“素材重场景下的存储与备份收口”。
 
 ---
 
-## 2. Update Rules / 维护规则
+## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
-1. Any status change must update this file in the same commit batch.  
-任何任务状态变化都要在同一批提交中更新本文件。
-2. If priority conflicts appear, follow `PRODUCT_MANAGER_PRIORITY_PLAN.md` and sync here immediately.  
-如出现优先级冲突，以 `PRODUCT_MANAGER_PRIORITY_PLAN.md` 为准并立即同步到这里。
-3. Keep each task readable for non-coding product owners.  
-任务描述要保证非技术产品也能读懂。
+### P0-7 Storage and Backup Hardening / P0-7 存储与备份加固
+Status / 状态: `IN_PROGRESS`
+Priority / 优先级: `Highest now / 当前最高`
+
+#### 4.1 Problem Statement / 问题定义
+1. EN: Rich assets are now used across chat/contacts/gallery, but long-term storage safety needs final closure.
+   中文：素材已在 chat/通讯录/相册跨模块使用，但长期存储安全仍需最终收口。
+2. EN: Users can clear browser cache unexpectedly; backup strategy must remain understandable and reliable.
+   中文：用户可能清理浏览器缓存，备份策略必须对小白可理解且可靠。
+3. EN: Import/restore failures must be transparent and rollback-safe.
+   中文：导入/恢复失败必须可见、可解释、可回滚。
+
+#### 4.2 Scope / 本轮范围
+1. EN: Asset binary persistence path hardening (IndexedDB-first, with compatibility fallback).
+   中文：素材二进制持久化收口（IndexedDB 主路径，兼容回退）。
+2. EN: Metadata-first export plus optional asset package strategy clarification.
+   中文：明确“元数据优先导出 + 可选素材包”策略。
+3. EN: Restore diagnostics and error history traceability.
+   中文：恢复流程诊断与报错历史可追踪。
+4. EN: Regression-proofing for current backup/restore flows already in settings.
+   中文：为现有 Settings 备份/恢复流程补齐回归保障。
+
+#### 4.3 Out of Scope (This Step) / 本步不做
+1. EN: New social modules (forum/map deep integration).
+   中文：论坛/地图等新社交模块深度接线。
+2. EN: AI image generation feature expansion.
+   中文：AI 生图功能扩展。
+3. EN: UX redesign of unrelated settings sections.
+   中文：与存储无关的设置页 UI 重构。
+
+#### 4.4 Execution Breakdown / 执行拆分
+1. `P0-7.A` EN: Validate current binary storage path and enforce IndexedDB-first writes.
+   `P0-7.A` 中文：验证当前二进制写入路径并强制 IndexedDB 优先。
+2. `P0-7.B` EN: Define export format contract (metadata required, assets optional package).
+   `P0-7.B` 中文：定义导出格式契约（元数据必备，素材包可选）。
+3. `P0-7.C` EN: Improve restore error taxonomy and store-readable diagnostics.
+   `P0-7.C` 中文：完善恢复错误分型与可读诊断记录。
+4. `P0-7.D` EN: Add migration guards for old backups and partial import failures.
+   `P0-7.D` 中文：为旧版备份与部分导入失败增加迁移守卫。
+5. `P0-7.E` EN: Add tests and run lint/test/build full gate before close.
+   `P0-7.E` 中文：补测试并执行 lint/test/build 全量闸门后收口。
+
+#### 4.5 Acceptance Criteria / 验收标准
+1. EN: Binary asset writes no longer rely on localStorage-heavy payload paths.
+   中文：素材二进制写入不再依赖 localStorage 大载荷路径。
+2. EN: Export can always produce metadata backup, regardless of binary package choice.
+   中文：无论是否导出素材包，都能稳定导出元数据备份。
+3. EN: Import/restore failures provide readable reason + recovery suggestion.
+   中文：导入/恢复失败提供可读原因与恢复建议。
+4. EN: Restore flow is rollback-safe and does not silently corrupt state.
+   中文：恢复流程具备回滚保障，不会静默污染状态。
+5. EN: Test/build/lint all pass after integration.
+   中文：集成后测试/构建/lint 全通过。
+
+#### 4.6 Regression Checklist / 回归清单
+1. EN: Chat thread messages remain readable after restore.
+   中文：恢复后 Chat 会话消息可正常读取。
+2. EN: Role profile bindings still resolve in chat directory and thread.
+   中文：恢复后角色绑定在会话通讯录和会话页仍可正确解析。
+3. EN: Gallery assets remain selectable from chat `+` panel.
+   中文：恢复后 chat `+` 面板仍可选用相册素材。
+4. EN: Settings backup reminder and report center still function.
+   中文：恢复后设置中的备份提醒和报告中心仍可用。
 
 ---
 
-## 3. Status Legend / 状态说明
-
-- `TODO`: not started / 未开始  
-- `IN_PROGRESS`: currently active / 进行中  
-- `PARTIAL_DONE`: core baseline landed, still needs closure / 基线已落地，仍需收口  
-- `DONE`: accepted and closed / 已验收关闭  
-- `ON_HOLD`: intentionally deferred / 主动搁置
-
----
-
-## 4. Current P0 Priorities / 当前 P0 优先级主线
+## 5. P0 Board / P0 任务看板（细化版）
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
-
 Status / 状态: `TODO`
 
 Goal / 目标:
-1. Let user revise one assistant message without full reroll.  
-允许用户修订单条助手消息，而不是整轮重roll。
-2. Revised text becomes default context for later turns.  
-修订文本进入后续轮次上下文。
-3. Non-text media can stay unchanged unless user requests regeneration.  
-非文本媒体默认不重生成，除非用户主动要求。
+1. EN: Let users revise one assistant message without full reroll.
+   中文：允许用户只修订单条 AI 回复，不做整轮重 roll。
+2. EN: Revised text becomes default context in later calls.
+   中文：修订文本进入后续调用默认上下文。
+3. EN: Non-text media stays unless user explicitly asks regeneration.
+   中文：非文本媒体默认保留，除非用户主动要求重生成。
 
-Acceptance / 验收:
-1. Assistant message can be edited directly in chat UI.  
-助手消息可直接编辑。
-2. Revised content is used in next AI call context.  
-下一轮 AI 调用使用修订内容。
-3. Rollback-to-original is available.  
-可恢复原文。
+Implementation Notes / 实现要点:
+1. EN: Extend edit entry from user messages to assistant messages.
+   中文：将编辑入口从用户消息扩展到助手消息。
+2. EN: Add rollback-to-original safety path.
+   中文：提供恢复原文兜底路径。
+3. EN: Keep immersion (no persistent “revised” badge noise).
+   中文：保持沉浸（不常驻“已修订”标签）。
+
+Exit Criteria / 退出条件:
+1. EN: Assistant message edit works end-to-end.
+   中文：助手消息编辑链路完整可用。
+2. EN: Context consumes revised text by default.
+   中文：上下文默认消费修订文本。
 
 ---
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
-
 Status / 状态: `TODO`
 
 Goal / 目标:
-1. Add at least 3 fixed bottom buttons on chat list page.  
-在聊天列表一级页增加至少 3 个底部固定按钮。
-2. Keep conversation entry behavior unchanged.  
-不影响原会话入口主交互。
-3. Connect each button to stable placeholder routes first.  
-首期接入稳定占位路由。
+1. EN: Add at least 3 fixed expansion entries on `/chat` list page.
+   中文：在 `/chat` 一级列表页提供至少 3 个固定扩展入口。
+2. EN: Keep current conversation-entry behavior unchanged.
+   中文：不破坏现有会话进入主路径。
 
-Acceptance / 验收:
-1. Buttons are always visible on `/chat` top-level view.  
-在 `/chat` 一级视图始终可见。
-2. Each button route is functional.  
-每个按钮都有可用跳转。
-3. No regression in opening chat threads.  
-进入会话流程无回归。
+Implementation Notes / 实现要点:
+1. EN: First iteration can route to placeholder pages, but routes must be real.
+   中文：首版可接占位页，但路由必须真实可达。
+2. EN: Dock is only shown in chat top-level list, not thread view.
+   中文：功能位仅在 Chat 一级列表展示，不进入会话页。
+
+Exit Criteria / 退出条件:
+1. EN: Buttons always visible on `/chat`.
+   中文：`/chat` 页按钮持续可见。
+2. EN: No regression in opening chat threads.
+   中文：进入会话流程无回归。
 
 ---
 
 ### P0-3 Avatar Hierarchy B / 头像层级 B（会话 > 模块 > 全局 > 兜底）
-
 Status / 状态: `PARTIAL_DONE`
 
-Current progress / 当前进展:
-1. Shared resolver landed (`thread > module > global > fallback`).  
-统一解析器已落地（会话 > 模块 > 全局 > 兜底）。
-2. Module-level overrides available in `/chat-feature/identity`.  
-模块级覆写已在 `/chat-feature/identity` 可配。
-3. Thread-level self/contact overrides available in thread menu.  
-会话级自己/对方覆写已在会话菜单可配。
+Done / 已完成:
+1. EN: Shared resolver baseline landed.
+   中文：统一解析器基线已落地。
+2. EN: Module-level override entry available.
+   中文：模块级覆写入口已可用。
+3. EN: Thread-level self/contact override available.
+   中文：会话级自己/对方覆写已可配。
 
-Remaining closure / 剩余收口:
-1. Cross-module reuse (forum/map future modules) still pending.  
-跨模块复用（论坛/地图等）仍待接线。
-2. UX validation for edge cases (missing avatar/fallback consistency).  
-边界体验验收（缺头像时兜底一致性）。
+Remaining / 剩余:
+1. EN: Cross-module consumption contracts (forum/map future reuse).
+   中文：跨模块消费契约（论坛/地图后续复用）。
+2. EN: Edge-case UX validation (missing avatar fallback consistency).
+   中文：边界体验验收（缺失头像兜底一致性）。
 
 ---
 
 ### P0-4 User Rich Message Lane Hardening / 用户富消息链路加固
+Status / 状态: `IN_PROGRESS`
 
-Status / 状态: `IN_PROGRESS` (mapped from execution id `P0-C2`)
+Done / 已完成:
+1. EN: `+` panel lane for image/gif/link/location/transfer/voice-card.
+   中文：`+` 面板已支持图片/gif/链接/位置/转账/语音卡片。
+2. EN: Link/transfer/voice-card changed to inline forms.
+   中文：链接/转账/语音卡片已改为内联表单。
+3. EN: `Trigger Reply` kept persistent as independent AI invoke lane.
+   中文：`Trigger Reply` 保留为独立常驻 AI 调用通道。
 
-Current progress / 当前进展:
-1. `+` panel send lane landed (image/gif/link/location/transfer/voice-card).  
-`+` 面板发送链路已落地（图片/gif/链接/位置/转账/语音卡片）。
-2. Link/transfer/voice-card switched to inline forms.  
-链接/转账/语音卡片已改为内联表单。
-3. `Trigger Reply` remains separate persistent AI invoke lane.  
-`Trigger Reply` 继续保持独立常驻 AI 调用通道。
-
-Remaining closure / 剩余收口:
-1. Validation polish and failure-state UX consistency.  
-校验细节与失败态体验统一。
-2. Editing behavior alignment with P0-1 semantic revision model.  
-与 P0-1 语义修订模型对齐编辑逻辑。
+Remaining / 剩余:
+1. EN: Validation and failure-state consistency polish.
+   中文：输入校验与失败态一致性打磨。
+2. EN: Align edit behavior with P0-1 semantic revision model.
+   中文：编辑行为与 P0-1 语义修订模型对齐。
 
 ---
 
 ### P0-5 Gallery Global Asset Center v1 / 相册全局素材中心 v1
-
 Status / 状态: `PARTIAL_DONE`
 
-Goal / 目标:
-1. One-time global import (`png/jpg/webp/gif` + URL).  
-支持一次导入全局复用（`png/jpg/webp/gif` + URL）。
-2. Asset categories: wallpaper/emoji/reference/scenario.  
-素材分类：壁纸/表情/参考图/场景图。
-3. Safe dedupe and deletion flow.  
-安全去重与删除机制。
+Done / 已完成:
+1. EN: Unified gallery store with asset categories.
+   中文：统一素材 store 与分类体系已上线。
+2. EN: Local + URL import with dedupe checks.
+   中文：本地 + URL 导入与去重校验已上线。
+3. EN: Safe delete path with usage guard.
+   中文：使用守卫 + 安全删除路径已上线。
+4. EN: Backup metadata wiring and chat consumption wiring completed.
+   中文：备份元数据接线与 Chat 消费接线已完成。
 
-Current progress / 当前进展:
-1. Gallery store baseline is online with unified asset model and categories.  
-相册 store 基线已上线，具备统一素材模型与分类体系。
-2. Local (`png/jpg/webp/gif`) and URL import are available with dedupe checks.  
-本地（`png/jpg/webp/gif`）与 URL 导入已可用，并具备去重校验。
-3. Safe deletion guard is available (usage detection + force delete confirmation path).  
-安全删除守卫已接入（使用检测 + 强制删除确认路径）。
-4. Gallery metadata has been wired into backup export/import and rollback flow.  
-相册元数据已接入备份导入导出与回滚链路。
-5. Chat `+` panel now consumes gallery assets (including local image/gif routed via gallery import + reuse).  
-Chat `+` 面板已接入素材库消费（本地图片/gif 也改为先入库再复用发送）。
-
-Remaining closure / 剩余收口:
-1. Metadata-first + optional binary package export strategy still pending final UX.  
-“元数据优先 + 可选二进制素材包”导出策略仍待最终体验收口。
-2. Contacts role-binding consumption path is still pending (`/contacts` -> chat/thread binding).  
-通讯录角色绑定消费链路仍待接线（`/contacts` -> chat/会话绑定）。
+Remaining / 剩余:
+1. EN: Finalize export UX for metadata-first + optional asset package.
+   中文：完成“元数据优先 + 可选素材包”导出体验收口。
 
 ---
 
 ### P0-6 Role Binding and Asset Reuse / 角色绑定与素材复用
-
-Status / 状态: `TODO`
-
-Goal / 目标:
-1. Bind global asset packs to role profiles in `/contacts`.  
-在 `/contacts` 角色档案绑定素材包。
-2. Allow chat and later modules to consume bound packs with optional thread overrides.  
-允许 chat 及后续模块读取绑定素材包，并支持会话级覆写。
-
----
-
-### P0-7 Storage and Backup Hardening (Asset Binary Focus) / 存储与备份加固（素材二进制重点）
-
 Status / 状态: `PARTIAL_DONE`
 
-Already done / 已完成:
-1. Layered persistence preparation and mirror diagnostics are landed.  
-分层存储准备与镜像诊断已落地。
-2. Backup/restore rollback-safe baseline is available.  
-备份恢复回滚基线已可用。
+Done / 已完成:
+1. EN: `/contacts` role profile supports asset-pack binding.
+   中文：`/contacts` 角色档案支持素材包绑定。
+2. EN: Chat directory supports thread-level preferred asset override.
+   中文：会话通讯录支持会话级优先素材覆盖。
+3. EN: Chat asset selection uses role-binding context.
+   中文：Chat 素材选择已接入角色绑定上下文。
 
 Remaining / 剩余:
-1. Asset binary should move to IndexedDB-first path (avoid heavy localStorage binary writes).  
-素材二进制要切到 IndexedDB 主路径（避免 localStorage 承担大体积二进制）。
-2. Export strategy for metadata-first and optional asset package.  
-导出策略要明确“元数据优先 + 素材包可选”。
+1. EN: Reuse contract for future modules (forum/map/scenario modules).
+   中文：后续模块（论坛/地图/场景模块）复用契约待补齐。
+2. EN: Unified cross-module acceptance list.
+   中文：跨模块统一验收清单待补齐。
 
 ---
 
-## 5. P1 Backlog (After P0 Stabilizes) / P1 后续队列（P0 稳定后）
+### P0-7 Storage and Backup Hardening / 存储与备份加固
+Status / 状态: `IN_PROGRESS`
 
-1. AI image-reference pipeline (provider capability dependent).  
-AI 图生图参考链路（依赖供应商能力）。
-2. Scenario cards (pseudo video call/offline date/mini scenes) expansion.  
-场景卡片扩展（伪视频通话/线下约会/小剧场）。
-3. Cross-module role identity reuse (forum/map/future social modules).  
-跨模块角色身份复用（论坛/地图/后续社交模块）。
+Current / 当前:
+1. EN: Layered persistence baseline and diagnostics are available.
+   中文：分层持久化基线与诊断能力已可用。
+2. EN: Backup restore has rollback-safe baseline.
+   中文：备份恢复已具备回滚基线。
 
----
-
-## 6. Recently Completed Milestones / 近期完成里程碑
-
-1. Chat message action entry migrated to long-press + bottom action sheet (`P0-C1`).  
-Chat 消息操作入口已迁移为长按 + 底部动作面板（`P0-C1`）。
-2. Avatar hierarchy baseline phase-1 landed (`thread > module > global > fallback`).  
-头像层级基线第一阶段已落地（会话 > 模块 > 全局 > 兜底）。
-3. Storage layering preparation (`P1-4`) completed.  
-分层存储准备（`P1-4`）已完成。
-4. Structured block hardening (`P1-2`) completed batch-1/2/3.  
-结构化消息加固（`P1-2`）三批已完成。
-5. Settings UX refinement (`P1-3`) completed batch-1/2/3.  
-设置体验优化（`P1-3`）三批已完成。
-6. Gallery asset center phase-1 landed (`P0-5`): import/categorize/dedupe/delete + backup metadata path.  
-相册素材中心第一阶段已落地（`P0-5`）：导入/分类/去重/删除 + 备份元数据链路。
-7. Chat `+` panel now supports selecting/sending from global gallery assets.  
-Chat `+` 面板已支持从全局素材库选择并发送素材。
+Focus / 聚焦:
+1. EN: Binary path closure + export/import policy closure.
+   中文：二进制路径收口 + 导入导出策略收口。
 
 ---
 
-## 7. Known Risks to Watch / 需要持续关注的风险
-
-1. Documentation drift when old and new task IDs are mixed.  
-历史任务编号与新优先级混用导致文档漂移。
-2. Cross-module consistency risk as avatar/asset systems expand beyond chat.  
-头像/素材机制扩展到多模块后的一致性风险。
-3. Storage growth risk when rich assets are imported heavily before IndexedDB closure.  
-在 IndexedDB 收口前大量导入富素材造成存储膨胀风险。
+## 6. P1 Queue (After P0 Stabilizes) / P1 队列（P0 稳定后）
+1. EN: AI image-reference pipeline (provider capability dependent).
+   中文：AI 图生图参考链路（依赖供应商能力）。
+2. EN: Scenario cards and interactive mini-scenes.
+   中文：场景卡片与互动小剧场扩展。
+3. EN: Cross-module role/asset identity reuse.
+   中文：跨模块角色/素材身份复用。
 
 ---
 
-## 8. Change Log / 变更记录
+## 7. Risk Register / 风险清单
+1. EN: Documentation drift when IDs or priorities change without same-commit sync.
+   中文：任务编号或优先级变更若未同批同步，会引发文档漂移。
+2. EN: Storage pressure risk under heavy media usage.
+   中文：重素材使用下存在浏览器存储压力风险。
+3. EN: Cross-module divergence if binding contracts are not fixed early.
+   中文：若绑定契约不提前固定，跨模块实现会逐步失配。
+4. EN: User confusion if backup model is not clearly explained in settings/help text.
+   中文：若设置中的备份模型说明不清，小白用户易误解。
 
-1. 2026-04-06: created as consolidated live TODO board for product + AI engineer collaboration.  
-2026-04-06：创建为面向产品经理与 AI 工程师协作的动态待办主清单。
-2. 2026-04-06: `P0-5` moved to `PARTIAL_DONE` after phase-1 implementation of gallery asset center baseline.  
-2026-04-06：相册素材中心基线第一阶段落地后，`P0-5` 更新为 `PARTIAL_DONE`。
-3. 2026-04-06: chat rich-send lane wired to global gallery asset consumption path.  
-2026-04-06：聊天富消息发送链路已接入全局素材库消费通道。
+---
+
+## 8. Recent Milestones / 近期里程碑
+1. EN: Chat message action entry moved to long-press + bottom action sheet.
+   中文：Chat 消息操作入口迁移为长按 + 底部动作面板。
+2. EN: Avatar hierarchy baseline landed (`thread > module > global > fallback`).
+   中文：头像层级基线已落地（会话 > 模块 > 全局 > 兜底）。
+3. EN: Gallery phase-1 landed (import/categorize/dedupe/delete + backup metadata path).
+   中文：相册第一阶段完成（导入/分类/去重/删除 + 备份元数据接线）。
+4. EN: Role profile asset-pack binding and thread preferred asset override landed.
+   中文：角色素材包绑定与会话优先素材覆盖已落地。
+
+---
+
+## 9. Change Log / 变更记录
+1. 2026-04-07 EN: Replaced compressed TODO with detailed execution-grade bilingual board.
+   2026-04-07 中文：将过度简化版 TODO 重写为“可执行细纲双语版”。
+2. 2026-04-07 EN: Explicitly set `P0-7` as immediate next task with subtask breakdown.
+   2026-04-07 中文：明确 `P0-7` 为下一项待办，并给出子任务拆分。
+3. 2026-04-07 EN: Updated `P0-6` to `PARTIAL_DONE` and captured remaining closure points.
+   2026-04-07 中文：将 `P0-6` 更新为 `PARTIAL_DONE`，并记录剩余收口点。

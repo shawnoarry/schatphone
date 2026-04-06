@@ -1,121 +1,99 @@
-# SchatPhone TODO 产品经理视角汇报
-
-Updated / 更新时间: 2026-04-06
+# SchatPhone TODO PM Status Report / SchatPhone 待办状态（产品经理视角）
+Updated / 更新时间: 2026-04-07
 Source / 来源: `TODO_ROADMAP.md`
 
-## 1. 总体盘点
+## 1. Why this report exists / 这份报告的用途
+1. EN: This is the PM-readable mirror of the engineering TODO board.
+   中文：这是工程待办看板的产品经理可读镜像。
+2. EN: It explains what is done, what is next, why it matters, and what decisions are needed.
+   中文：它说明“做到了什么、下一步做什么、为什么重要、需要你做什么决策”。
 
-1. P0 总任务 7 项：`IN_PROGRESS` 1 项，`PARTIAL_DONE` 3 项，`TODO` 3 项。
-2. 当前主线是“继续打磨 Chat 核心体验，并把素材中心接到跨模块调用”。
-3. 当前最关键管理点：尽快启动 `P0-1`（语义修订）和 `P0-2`（Chat 一级页底部功能位）。
+## 2. Current overall judgment / 当前整体判断
+1. EN: Product direction is on track: immersive phone shell + chat-driven AI interaction.
+   中文：项目方向保持正确：沉浸式手机壳层 + Chat 驱动 AI 互动。
+2. EN: Core foundation is stable enough; current risk is no longer UI basics, but storage/backup reliability for media-heavy usage.
+   中文：核心基础已稳定，当前风险不在基础 UI，而在重素材场景下的存储与备份可靠性。
+3. EN: Therefore the immediate execution focus is `P0-7`.
+   中文：因此当前立即执行重点是 `P0-7`。
 
-## 2. P0 任务清单（产品经理视角）
+## 3. P0 status at a glance / P0 状态总览
+1. `P0-1` AI 单条语义修订: `TODO`
+2. `P0-2` Chat 一级页底部功能位: `TODO`
+3. `P0-3` 头像层级 B: `PARTIAL_DONE`
+4. `P0-4` 用户富消息链路加固: `IN_PROGRESS`
+5. `P0-5` 相册全局素材中心 v1: `PARTIAL_DONE`
+6. `P0-6` 角色绑定与素材复用: `PARTIAL_DONE`
+7. `P0-7` 存储与备份加固: `IN_PROGRESS`（Next Up）
 
-### P0-1 AI 单条语义修订
+## 4. What was completed recently / 最近完成了什么（你能感知到的）
+1. EN: Chat supports richer user-send content lanes while keeping `Trigger Reply` as a dedicated AI trigger.
+   中文：Chat 已支持更丰富的用户发送内容，同时保留 `Trigger Reply` 作为专用 AI 调用按钮。
+2. EN: Role profile and chat-thread asset binding baseline is landed.
+   中文：角色档案与会话素材绑定基线已落地。
+3. EN: Global gallery assets can now be reused in chat flows with role-aware defaults.
+   中文：全局相册素材已可在 chat 中复用，并能按角色上下文给出默认项。
 
-Status / 状态: `TODO`
+## 5. Immediate next task in plain language / 下一项待办（白话版）
+### `P0-7` Storage & Backup Hardening / 存储与备份加固
 
-价值:
-1. 避免“整轮重roll”带来的上下文污染与对话断裂。
-2. 提升文本微调效率，保持沉浸感。
+What we are solving / 我们要解决什么:
+1. EN: Prevent long-term data loss risk when users import many images/gifs and later clean browser data.
+   中文：避免用户导入大量图片/gif 后，因浏览器清理导致长期数据丢失风险。
+2. EN: Make backup and restore behavior easier to understand for non-technical users.
+   中文：让备份与恢复对非技术用户更清晰、更可控。
+3. EN: Make failures diagnosable instead of “silent weird behavior”.
+   中文：让失败可诊断，避免“莫名其妙异常”。
 
-验收标准:
-1. 可直接编辑 AI 单条消息。
-2. 后续 AI 调用默认读取修订后的文本。
-3. 可一键恢复原文。
+What will be delivered / 本步交付什么:
+1. EN: Stronger media storage path (IndexedDB-first strategy closure).
+   中文：更稳的素材存储路径（IndexedDB 主策略收口）。
+2. EN: Backup strategy clarity (metadata always exportable; asset package optional).
+   中文：备份策略清晰化（元数据始终可导出；素材包可选）。
+3. EN: Better restore error messages + rollback safety.
+   中文：更好的恢复错误提示 + 回滚安全。
 
-### P0-2 Chat 一级页底部功能位
+How you can review it / 你可以怎么验收:
+1. EN: Simulate backup, clear/replace state, and restore in settings flow.
+   中文：在设置里模拟备份、清空/替换状态、再恢复。
+2. EN: Confirm chat/contacts/gallery still correctly linked after restore.
+   中文：确认恢复后 chat/通讯录/相册绑定关系正常。
+3. EN: Confirm failures show readable reason and next-step hints.
+   中文：确认失败提示有可读原因与后续处理建议。
 
-Status / 状态: `TODO`
+## 6. Why this order is chosen / 为什么按这个顺序
+1. EN: If storage is not hardened first, later feature expansion increases migration cost and bug surface.
+   中文：若不先收口存储，后续功能越多，迁移成本和 bug 面积会更大。
+2. EN: This task improves reliability for all current modules at once.
+   中文：这个任务是全模块收益，一次收口，处处受益。
+3. EN: It protects user trust before we expand advanced immersive content.
+   中文：在扩展高级沉浸内容前，先保护用户数据可信度。
 
-价值:
-1. 为后续聊天周边能力预留稳定扩展入口。
-2. 不打断现有会话入口主路径。
+## 7. PM decisions currently needed / 当前需要你拍板的点
+1. EN: Confirm backup UX wording style: “simple and direct” vs “immersive narrative”.
+   中文：确认备份提示文案风格：偏“直接简明”还是偏“沉浸叙事”。
+2. EN: Confirm default export choice in UI: metadata-only first, asset package optional toggle.
+   中文：确认导出默认策略：是否默认仅元数据，素材包由用户手动勾选。
+3. EN: Confirm error-history entry naming for API/storage diagnostics in settings/network.
+   中文：确认设置/网络中 API 与存储报错历史入口命名（便于用户理解）。
 
-验收标准:
-1. `/chat` 一级页至少 3 个底部按钮。
-2. 每个按钮都有可用路由跳转。
-3. 不影响原有进入会话流程。
+## 8. Risk watch (PM version) / 风险提醒（产品经理版）
+1. EN: If TODO docs are not updated per commit, team alignment will drift quickly.
+   中文：若每次提交不同步 TODO，协作口径会很快漂移。
+2. EN: If backup strategy explanation is weak, users may think data is “auto-safe” and skip backup.
+   中文：若备份说明不清，用户会误以为数据“自动绝对安全”，从而不做备份。
+3. EN: If cross-module asset contracts are delayed too long, future modules may require expensive refactors.
+   中文：若跨模块素材契约迟迟不定，未来模块接入会产生高成本返工。
 
-### P0-3 头像层级 B（会话 > 模块 > 全局 > 兜底）
+## 9. Next after P0-7 (preview only) / P0-7 之后（预告）
+1. EN: Return to `P0-4` polish (rich message failure-state consistency).
+   中文：回到 `P0-4` 做富消息失败态一致性打磨。
+2. EN: Start `P0-1` single-message semantic revision.
+   中文：启动 `P0-1` 单条语义修订。
+3. EN: Then proceed with `P0-2` chat top-level bottom dock expansion entries.
+   中文：随后推进 `P0-2` Chat 一级页底部扩展入口。
 
-Status / 状态: `PARTIAL_DONE`
-
-已完成:
-1. 层级解析器已落地（会话 > 模块 > 全局 > 兜底）。
-2. 模块级覆写入口已可用（`/chat-feature/identity`）。
-3. 会话级自己/对方覆写已在会话菜单可配。
-
-剩余:
-1. 跨模块复用（论坛/地图等）待接线。
-2. 缺头像等边界场景的一致性验收待完成。
-
-### P0-4 用户富消息链路加固
-
-Status / 状态: `IN_PROGRESS`
-
-已完成:
-1. `+` 面板支持图片/gif/链接/位置/转账/语音卡片。
-2. 链接/转账/语音卡片已改为内联表单。
-3. `Trigger Reply` 保持独立常驻 AI 调用通道。
-
-剩余:
-1. 失败态与校验体验统一。
-2. 与 `P0-1` 语义修订模型做编辑行为对齐。
-
-### P0-5 相册全局素材中心 v1
-
-Status / 状态: `PARTIAL_DONE`
-
-已完成:
-1. 全局素材 store 与分类体系已落地（壁纸/表情/参考图/场景图）。
-2. 本地图片与 URL 导入已上线，并具备去重校验。
-3. 安全删除流程已上线（使用检测 + 强制删除确认路径）。
-4. 素材元数据已接入设置页备份导入/导出与回滚链路。
-5. Chat `+` 面板已支持从素材库选择并发送素材，本地图片/GIF 改为先入库再复用发送。
-
-剩余:
-1. “元数据优先 + 可选素材包”导出策略待收口。
-2. 角色绑定消费链路待接线（`/contacts` 配置素材包，并在会话侧读取）。
-
-### P0-6 角色绑定与素材复用
-
-Status / 状态: `TODO`
-
-目标:
-1. 在 `/contacts` 为角色档案绑定素材包。
-2. Chat 及后续模块可读取素材包，并支持会话级覆写。
-
-### P0-7 存储与备份加固（素材二进制）
-
-Status / 状态: `PARTIAL_DONE`
-
-已完成:
-1. 分层存储准备与镜像诊断已落地。
-2. 备份恢复回滚基线已可用。
-
-剩余:
-1. 素材二进制切换到 IndexedDB 主路径。
-2. 明确导出策略：元数据优先 + 素材包可选。
-
-## 3. P1 后续队列（P0 稳定后）
-
-1. AI 图生图参考链路（依赖供应商能力）。
-2. 场景卡片扩展（伪视频通话/线下约会/小剧场）。
-3. 跨模块角色身份复用（论坛/地图/后续社交模块）。
-
-## 4. 最近完成里程碑
-
-1. Chat 消息操作入口迁移为长按 + 底部动作面板（`P0-C1`）。
-2. 头像层级基线第一阶段落地（`P0-3` phase-1）。
-3. 分层存储准备（`P1-4`）完成。
-4. 结构化消息加固（`P1-2`）三批完成。
-5. 设置体验优化（`P1-3`）三批完成。
-6. 相册素材中心第一阶段（`P0-5`）落地：导入/分类/去重/安全删除 + 备份元数据链路。
-7. Chat `+` 面板已接入全局素材库消费链路（含本地图片/GIF复用发送）。
-
-## 5. 当前需关注风险
-
-1. 旧任务编号与新优先级并存，易造成文档口径漂移。
-2. 头像/素材机制跨模块扩展后的一致性风险。
-3. IndexedDB 收口前，大量素材导入导致本地存储膨胀风险。
+## 10. Change log / 变更记录
+1. 2026-04-07 EN: Rewrote from short summary into detailed PM-level execution report.
+   2026-04-07 中文：从简版摘要重写为详细的产品经理执行报告。
+2. 2026-04-07 EN: Synced with latest role-asset binding progress and storage-closure priority.
+   2026-04-07 中文：已同步最新角色素材绑定进度与存储收口优先级。

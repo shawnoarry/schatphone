@@ -222,7 +222,9 @@ Primary docs (use these first):
 
 1. `PROJECT_MASTER_GUIDE.md` (this file)  
 `PROJECT_MASTER_GUIDE.md`（本文件）
-2. `TODO_ROADMAP.md` (live task board)  
+2. `PRODUCT_MANAGER_PROJECT_BRIEF.md` (PM-facing one-page overview)  
+`PRODUCT_MANAGER_PROJECT_BRIEF.md`（产品经理一页式总览）
+3. `TODO_ROADMAP.md` (live task board)  
 `TODO_ROADMAP.md`（动态待办清单）
 
 Secondary/reference docs (history/detail):  
