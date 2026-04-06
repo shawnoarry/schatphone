@@ -2,6 +2,9 @@
 
 Updated / 更新时间: 2026-04-06
 
+Document position / 文档定位（2026-04-06）: secondary reference.  
+本文件现为 Chat 专项参考；全局主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
+
 ## 1. Current Conclusion / 当前结论
 
 Chat has moved from prototype to usable beta with lock-screen notification linkage and system-owned truth continuity baseline.  

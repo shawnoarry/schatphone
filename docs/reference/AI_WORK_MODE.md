@@ -18,8 +18,8 @@ Purpose / 用途: define a stable operating model for Codex, Claude, or any AI c
 
 - Track A: Immediate request track (`user-now`)  
 轨道 A：即时需求轨（用户当前请求）
-- Track B: Main roadmap track (`TASK_EXECUTION_PLAN.md`)  
-轨道 B：主线任务轨（`TASK_EXECUTION_PLAN.md`）
+- Track B: Main roadmap track (`docs/reference/TASK_EXECUTION_PLAN.md`)  
+轨道 B：主线任务轨（`docs/reference/TASK_EXECUTION_PLAN.md`）
 - Rule: user request takes priority, but roadmap status must be backfilled after each insertion.  
 规则：用户需求优先，但每次插单后必须回填主线进度，避免主线断档。
 
@@ -75,10 +75,10 @@ Each delivery should include / 每次交付统一包含：
 关键输入页必须保留显式保存动作与反馈。
 - If route/schema/core interaction changes, update:  
 若涉及路由/数据结构/核心交互改动，必须同步更新：
-  - `PROJECT_STATUS.md`
-  - `ARCHITECTURE.md`
-  - `CHAT_PROGRESS.md` (if Chat domain changed) /（若涉及 Chat）
-  - `SYNC_SNAPSHOT.md`（源文档更新后同步快照）
+  - `docs/reference/PROJECT_STATUS.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/reference/CHAT_PROGRESS.md` (if Chat domain changed) /（若涉及 Chat）
+  - `docs/reference/SYNC_SNAPSHOT.md`（源文档更新后同步快照）
 
 ## 8. Definition of Done / 完成标准
 
@@ -102,14 +102,15 @@ Execution rules:
 1) Prioritize user natural-language requests, but always translate them into: goal, scope, acceptance, risk.
 2) Use dual-track execution:
    - Immediate request track
-   - Main roadmap track (TASK_EXECUTION_PLAN.md)
+   - Main roadmap track (docs/reference/TASK_EXECUTION_PLAN.md)
 3) For every delivery, include:
    - modified files
    - key changes
    - user-visible results
    - validation results (lint/build/test)
    - impact on roadmap
-4) If route/schema/core interaction changes, update PROJECT_STATUS.md, ARCHITECTURE.md, and CHAT_PROGRESS.md (if Chat-related).
+4) If route/schema/core interaction changes, update docs/reference/PROJECT_STATUS.md, docs/reference/ARCHITECTURE.md, and docs/reference/CHAT_PROGRESS.md (if Chat-related).
 5) Route AI calls only through src/lib/ai.js (no direct AI fetch in components).
 ```
+
 

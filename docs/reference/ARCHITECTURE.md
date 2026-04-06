@@ -1,4 +1,4 @@
-# SchatPhone 架构说明
+﻿# SchatPhone 架构说明
 
 Updated / 更新时间: 2026-04-05
 
@@ -238,5 +238,6 @@ Rules / 规则：
 所有 AI 请求统一走 `src/lib/ai.js`。
 5. If route/schema/core interaction changes, update docs in same PR.  
 涉及路由/数据结构/主交互改动时，同步更新文档。
-6. If lock/i18n behavior changes, sync `README.md`, `PROJECT_STATUS.md`, and `SYNC_SNAPSHOT.md`.  
-涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`PROJECT_STATUS.md`、`SYNC_SNAPSHOT.md`。
+6. If lock/i18n behavior changes, sync `README.md`, `docs/reference/PROJECT_STATUS.md`, and `docs/reference/SYNC_SNAPSHOT.md`.  
+涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`docs/reference/PROJECT_STATUS.md`、`docs/reference/SYNC_SNAPSHOT.md`。
+

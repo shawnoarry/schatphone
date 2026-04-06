@@ -1,6 +1,9 @@
-# SchatPhone 项目进度与待办
+﻿# SchatPhone 项目进度与待办
 
 Updated / 更新时间: 2026-04-06
+
+Document position / 文档定位（2026-04-06）: secondary reference.  
+本文件现为参考文档；主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
 
 ## 1. Current Project Status / 当前项目状态
 
@@ -250,11 +253,12 @@ Quiet-hours + notify-only + manual-priority policy now runs through settings and
 
 1. Any route/store/home-rule change must update this file.  
 改动路由/Store/Home 规则必须同步更新本文档。
-2. If lock-screen/i18n behavior changes, sync `README.md`, `ARCHITECTURE.md`, and `SYNC_SNAPSHOT.md` together.  
-若改动锁屏或系统语言行为，必须同步更新 `README.md`、`ARCHITECTURE.md`、`SYNC_SNAPSHOT.md`。
+2. If lock-screen/i18n behavior changes, sync `README.md`, `docs/reference/ARCHITECTURE.md`, and `docs/reference/SYNC_SNAPSHOT.md` together.  
+若改动锁屏或系统语言行为，必须同步更新 `README.md`、`docs/reference/ARCHITECTURE.md`、`docs/reference/SYNC_SNAPSHOT.md`。
 3. Run `npm run lint` and `npm run build` before merge.  
 合并前至少执行 lint 与 build。
 4. Run `npm run test` when behavior logic changes.  
 涉及行为逻辑改动时补跑 test。
 5. Keep Home for entry usage and Settings for configuration management.  
 Home 偏使用入口，Settings 偏配置管理。
+

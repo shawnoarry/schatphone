@@ -1,6 +1,6 @@
 ﻿# Chat Feature Decisions / Chat 功能决议记录
 
-Updated / 更新时间: 2026-03-15
+Updated / 更新时间: 2026-04-06
 
 Purpose / 用途: persist user feedback on Chat feature proposals, so future sessions can continue without context loss.  
 用于沉淀用户对 Chat 功能建议的反馈，便于下次对话直接续接，不丢上下文。
@@ -9,6 +9,17 @@ Reference / 关联来源: discussion after KakaoTalk-style Chat enhancement prop
 对应“模拟 KakaoTalk 风格聊天增强建议（1-18）”后的用户逐条修正反馈。
 
 ---
+
+## 0) Status Sync (2026-04-06) / 状态同步（2026-04-06）
+
+- Message action entry migration is completed: now long-press/context-menu + bottom action sheet (bubble top-right entry removed).  
+消息操作入口迁移已完成：现为长按/右键 + 底部动作面板（气泡右上角入口已移除）。
+- User rich-send lane baseline is online in `+` panel; link/transfer/voice-card are inline forms, and hardening remains in progress.  
+用户富消息发送链路基线已在 `+` 面板上线；链接/转账/语音卡片已改为内联表单，当前仍在加固阶段。
+- Avatar hierarchy baseline is landed (`thread > module > global > fallback`) with module/thread override entries.  
+头像层级基线已落地（`会话 > 模块 > 全局 > 兜底`），并提供模块级/会话级覆写入口。
+- Autonomous trigger governance baseline is completed (global/module/thread controls + report center path).  
+自主调用治理基线已完成（全局/模块/会话控制 + 报告中心链路）。
 
 ## 1) Confirmed Directions / 已确认方向
 
@@ -82,8 +93,8 @@ AI 每次回复都必须带上人设、世界书和多轮历史。
 手动触发与自动触发时间重叠时，手动优先。
 - Keep call/error history in Network/API area for user diagnostics (400/403/429/network/cancel, etc.).  
 在 Network/API 区域保留调用/报错历史，便于用户诊断（400/403/429/网络/取消等）。
-- Implementation status / 实现状态: in progress, baseline code path landed and under acceptance tuning.  
-实现状态：进行中，基线路径已落地，正在做验收收口与体验调优。
+- Implementation status / 实现状态: baseline completed, with acceptance tuning continuing in UX details and policy thresholds.  
+实现状态：基线已完成，当前继续做体验细节与策略阈值的验收调优。
 
 ---
 
