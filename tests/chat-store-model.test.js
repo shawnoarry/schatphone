@@ -254,6 +254,29 @@ describe('chat store model', () => {
     expect((assistantMessage.quote?.messageId || '').length).toBeLessThanOrEqual(128)
   })
 
+  test('preserves valid image assetId on image_virtual blocks', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    const message = store.appendMessage(contactId, {
+      role: 'user',
+      content: 'Send from gallery',
+      blocks: [
+        {
+          type: 'image_virtual',
+          alt: 'Gallery image',
+          url: '',
+          assetId: 'asset_abc123',
+          caption: 'From asset center',
+        },
+      ],
+      status: 'delivered',
+    })
+
+    expect(message.blocks[0]?.type).toBe('image_virtual')
+    expect(message.blocks[0]?.assetId).toBe('asset_abc123')
+  })
+
   test('falls back to assistant text block when payload has no usable content', () => {
     const store = useChatStore()
     const contactId = store.contacts[0].id
@@ -516,6 +539,40 @@ describe('chat store model', () => {
     expect(store.contacts.some((item) => item.id === binding.id)).toBe(false)
     expect(store.isRoleProfileBound(profile.id)).toBe(false)
     expect(store.getRoleProfileById(profile.id)?.name).toBe('Mia Prime')
+  })
+
+  test('supports role profile asset pack binding and role chat asset context resolution', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      name: 'PackRole',
+      role: 'Guide',
+      isMain: false,
+      assetPack: {
+        wallpaperAssetIds: ['asset_wall_a'],
+        emojiAssetIds: ['asset_emoji_a'],
+        referenceAssetIds: ['asset_ref_a', 'asset_ref_b'],
+        scenarioAssetIds: ['asset_scene_a'],
+      },
+    })
+
+    const updated = store.setRoleProfileAssetPack(profile.id, {
+      referenceAssetIds: ['asset_ref_c', 'asset_ref_c'],
+    })
+    expect(updated).toBe(true)
+    const pack = store.getRoleProfileAssetPack(profile.id)
+    expect(pack.referenceAssetIds).toEqual(['asset_ref_c'])
+    expect(pack.wallpaperAssetIds).toEqual(['asset_wall_a'])
+
+    const binding = store.bindRoleProfile(profile.id, { relationshipLevel: 55 })
+    const contextBeforeOverride = store.getRoleBindingAssetContext(binding.id)
+    expect(contextBeforeOverride.profileId).toBe(profile.id)
+    expect(contextBeforeOverride.profileAssetIds).toContain('asset_ref_c')
+    expect(contextBeforeOverride.recommendedImageAssetId).toBe('asset_ref_c')
+
+    store.updateRoleBindingMeta(binding.id, { preferredImageAssetId: 'asset_scene_custom' })
+    const contextAfterOverride = store.getRoleBindingAssetContext(binding.id)
+    expect(contextAfterOverride.preferredImageAssetId).toBe('asset_scene_custom')
+    expect(contextAfterOverride.recommendedImageAssetId).toBe('asset_scene_custom')
   })
 
   test('removing global role profile clears bound chat entries', () => {

@@ -3,10 +3,12 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
+import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const chatStore = useChatStore()
+const galleryStore = useGalleryStore()
 const { t } = useI18n()
 const { contacts, roleProfiles } = storeToRefs(chatStore)
 
@@ -24,6 +26,7 @@ const editingRoleContactId = ref(0)
 const roleMetaDraft = reactive({
   relationshipLevel: 50,
   relationshipNote: '',
+  preferredImageAssetId: '',
 })
 
 const showServiceModal = ref(false)
@@ -221,6 +224,29 @@ const filteredServiceIds = computed(() =>
   filteredServiceContacts.value.map((contact) => Number(contact.id)).filter((id) => Number.isFinite(id)),
 )
 
+const roleMetaAssetOptions = computed(() => {
+  if (!editingRoleContactId.value) return []
+  const context = chatStore.getRoleBindingAssetContext(editingRoleContactId.value)
+  const ids = Array.isArray(context.profileAssetIds) ? context.profileAssetIds : []
+  return ids.map((assetId) => {
+    const asset = galleryStore.findAssetById(assetId)
+    return {
+      id: assetId,
+      label: asset?.name || assetId,
+    }
+  })
+})
+
+const roleMetaAssetContextLabel = computed(() => {
+  if (!editingRoleContactId.value) return ''
+  const context = chatStore.getRoleBindingAssetContext(editingRoleContactId.value)
+  if (!context.profileName) return ''
+  return t(
+    `来源档案：${context.profileName}`,
+    `Source profile: ${context.profileName}`,
+  )
+})
+
 const selectedRoleCount = computed(() =>
   filteredRoleIds.value.filter((id) => selectedContactIdSet.value.has(id)).length,
 )
@@ -335,12 +361,14 @@ const openRoleMetaModal = (contact) => {
     ? Number(contact.relationshipLevel)
     : 50
   roleMetaDraft.relationshipNote = contact.relationshipNote || ''
+  roleMetaDraft.preferredImageAssetId = contact.preferredImageAssetId || ''
   showRoleMetaModal.value = true
 }
 
 const closeRoleMetaModal = () => {
   showRoleMetaModal.value = false
   editingRoleContactId.value = 0
+  roleMetaDraft.preferredImageAssetId = ''
 }
 
 const saveRoleMeta = () => {
@@ -348,6 +376,7 @@ const saveRoleMeta = () => {
   const ok = chatStore.updateRoleBindingMeta(editingRoleContactId.value, {
     relationshipLevel: roleMetaDraft.relationshipLevel,
     relationshipNote: roleMetaDraft.relationshipNote,
+    preferredImageAssetId: roleMetaDraft.preferredImageAssetId,
   })
   if (!ok) {
     showUiNotice('error', t('保存失败，请重试。', 'Save failed, please retry.'))
@@ -540,6 +569,15 @@ const serviceKindTag = (contact) =>
 const contactAvatarForDisplay = (contact) => {
   if (!contact?.id) return ''
   return chatStore.resolveContactAvatar(contact.id)
+}
+
+const preferredImageAssetLabel = (contact) => {
+  if (!contact?.id) return ''
+  const context = chatStore.getRoleBindingAssetContext(contact.id)
+  const preferredId = context.preferredImageAssetId
+  if (!preferredId) return ''
+  const asset = galleryStore.findAssetById(preferredId)
+  return asset?.name || preferredId
 }
 
 const roleTemplateLabel = (preset) => t(preset?.titleCn || '', preset?.titleEn || '')
@@ -893,6 +931,9 @@ onBeforeUnmount(() => {
             <p v-if="contact.relationshipNote" class="text-[11px] text-gray-400 truncate">
               {{ contact.relationshipNote }}
             </p>
+            <p v-if="preferredImageAssetLabel(contact)" class="text-[11px] text-gray-400 truncate">
+              {{ t('会话优先素材', 'Thread preferred asset') }}: {{ preferredImageAssetLabel(contact) }}
+            </p>
           </div>
           <template v-if="!batchMode">
             <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
@@ -1148,6 +1189,29 @@ onBeforeUnmount(() => {
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
           :placeholder="t('例如：最近关系升温、需要更主动互动。', 'Example: relationship improved, prefer more proactive interaction.')"
         ></textarea>
+        <label class="text-xs text-gray-500 block">
+          {{ t('会话优先图片素材（可选）', 'Thread preferred image asset (optional)') }}
+        </label>
+        <select
+          v-model="roleMetaDraft.preferredImageAssetId"
+          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white"
+        >
+          <option value="">{{ t('不覆盖（使用档案绑定默认）', 'No override (use profile-bound default)') }}</option>
+          <option
+            v-for="asset in roleMetaAssetOptions"
+            :key="`role-meta-asset-${asset.id}`"
+            :value="asset.id"
+          >
+            {{ asset.label }}
+          </option>
+        </select>
+        <p class="text-[11px] text-gray-400">
+          {{
+            roleMetaAssetOptions.length > 0
+              ? roleMetaAssetContextLabel
+              : t('该角色档案未绑定素材包，请先在主通讯录中绑定。', 'No profile asset pack yet. Bind assets in main Contacts first.')
+          }}
+        </p>
         <div class="space-y-1">
           <p class="text-xs text-gray-500">{{ t('快捷关系模板', 'Quick Relationship Templates') }}</p>
           <div class="flex flex-wrap gap-2">

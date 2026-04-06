@@ -121,7 +121,7 @@ Remaining closure / 剩余收口:
 
 ### P0-5 Gallery Global Asset Center v1 / 相册全局素材中心 v1
 
-Status / 状态: `TODO`
+Status / 状态: `PARTIAL_DONE`
 
 Goal / 目标:
 1. One-time global import (`png/jpg/webp/gif` + URL).  
@@ -130,6 +130,24 @@ Goal / 目标:
 素材分类：壁纸/表情/参考图/场景图。
 3. Safe dedupe and deletion flow.  
 安全去重与删除机制。
+
+Current progress / 当前进展:
+1. Gallery store baseline is online with unified asset model and categories.  
+相册 store 基线已上线，具备统一素材模型与分类体系。
+2. Local (`png/jpg/webp/gif`) and URL import are available with dedupe checks.  
+本地（`png/jpg/webp/gif`）与 URL 导入已可用，并具备去重校验。
+3. Safe deletion guard is available (usage detection + force delete confirmation path).  
+安全删除守卫已接入（使用检测 + 强制删除确认路径）。
+4. Gallery metadata has been wired into backup export/import and rollback flow.  
+相册元数据已接入备份导入导出与回滚链路。
+5. Chat `+` panel now consumes gallery assets (including local image/gif routed via gallery import + reuse).  
+Chat `+` 面板已接入素材库消费（本地图片/gif 也改为先入库再复用发送）。
+
+Remaining closure / 剩余收口:
+1. Metadata-first + optional binary package export strategy still pending final UX.  
+“元数据优先 + 可选二进制素材包”导出策略仍待最终体验收口。
+2. Contacts role-binding consumption path is still pending (`/contacts` -> chat/thread binding).  
+通讯录角色绑定消费链路仍待接线（`/contacts` -> chat/会话绑定）。
 
 ---
 
@@ -186,6 +204,10 @@ Chat 消息操作入口已迁移为长按 + 底部动作面板（`P0-C1`）。
 结构化消息加固（`P1-2`）三批已完成。
 5. Settings UX refinement (`P1-3`) completed batch-1/2/3.  
 设置体验优化（`P1-3`）三批已完成。
+6. Gallery asset center phase-1 landed (`P0-5`): import/categorize/dedupe/delete + backup metadata path.  
+相册素材中心第一阶段已落地（`P0-5`）：导入/分类/去重/删除 + 备份元数据链路。
+7. Chat `+` panel now supports selecting/sending from global gallery assets.  
+Chat `+` 面板已支持从全局素材库选择并发送素材。
 
 ---
 
@@ -204,3 +226,7 @@ Chat 消息操作入口已迁移为长按 + 底部动作面板（`P0-C1`）。
 
 1. 2026-04-06: created as consolidated live TODO board for product + AI engineer collaboration.  
 2026-04-06：创建为面向产品经理与 AI 工程师协作的动态待办主清单。
+2. 2026-04-06: `P0-5` moved to `PARTIAL_DONE` after phase-1 implementation of gallery asset center baseline.  
+2026-04-06：相册素材中心基线第一阶段落地后，`P0-5` 更新为 `PARTIAL_DONE`。
+3. 2026-04-06: chat rich-send lane wired to global gallery asset consumption path.  
+2026-04-06：聊天富消息发送链路已接入全局素材库消费通道。

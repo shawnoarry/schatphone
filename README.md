@@ -154,6 +154,7 @@ Reference docs / 参考文档：
 - `docs/reference/PROJECT_STATUS.md`: Current status and roadmap / 当前状态与路线图
 - `docs/reference/CHAT_PROGRESS.md`: Chat-domain progress and milestones / Chat 域进展与里程碑
 - `docs/reference/CHAT_FEATURE_DECISIONS.md`: Chat proposal decisions and pending items / Chat 建议决议与待确认项
+- `docs/reference/TODO_PM_STATUS_REPORT.md`: Product-manager-readable TODO status report / 产品经理可读的 TODO 状态汇报
 - `docs/reference/SYNC_SNAPSHOT.md`: One-page quick snapshot / 一页快速快照
 - `docs/reference/操作指南-新版.md`: Operational guide / 操作流程指南
 - `docs/reference/TASK_EXECUTION_PLAN.md`: Task execution board / 任务执行清单

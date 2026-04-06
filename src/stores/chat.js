@@ -26,6 +26,8 @@ const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
 const MAX_TEXT_BLOCK_LENGTH = 3000
 const MAX_DETAIL_TEXT_LENGTH = 800
 const MAX_SHORT_LABEL_LENGTH = 80
+const MAX_ASSET_ID_LENGTH = 128
+const MAX_ROLE_ASSET_IDS_PER_CATEGORY = 24
 const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
 const MAX_BLOCK_COUNT = 16
@@ -123,6 +125,61 @@ const trimTo = (value, maxLength, fallback = '') => {
 
 const normalizeSingleLineText = (value, maxLength, fallback = '') =>
   trimTo(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
+
+const sanitizeAssetId = (value) => {
+  const raw = trimTo(value, MAX_ASSET_ID_LENGTH)
+  if (!raw) return ''
+  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
+}
+
+const createEmptyRoleAssetPack = () => ({
+  wallpaperAssetIds: [],
+  emojiAssetIds: [],
+  referenceAssetIds: [],
+  scenarioAssetIds: [],
+})
+
+const normalizeRoleAssetIdList = (input) => {
+  if (!Array.isArray(input)) return []
+  const uniqueIds = []
+  input.forEach((rawId) => {
+    const id = sanitizeAssetId(rawId)
+    if (!id || uniqueIds.includes(id)) return
+    uniqueIds.push(id)
+  })
+  return uniqueIds.slice(0, MAX_ROLE_ASSET_IDS_PER_CATEGORY)
+}
+
+const normalizeRoleProfileAssetPack = (rawPack) => {
+  const input = rawPack && typeof rawPack === 'object' ? rawPack : {}
+  return {
+    wallpaperAssetIds: normalizeRoleAssetIdList(input.wallpaperAssetIds),
+    emojiAssetIds: normalizeRoleAssetIdList(input.emojiAssetIds),
+    referenceAssetIds: normalizeRoleAssetIdList(input.referenceAssetIds),
+    scenarioAssetIds: normalizeRoleAssetIdList(input.scenarioAssetIds),
+  }
+}
+
+const cloneRoleProfileAssetPack = (assetPack) => {
+  const normalized = normalizeRoleProfileAssetPack(assetPack)
+  return {
+    wallpaperAssetIds: [...normalized.wallpaperAssetIds],
+    emojiAssetIds: [...normalized.emojiAssetIds],
+    referenceAssetIds: [...normalized.referenceAssetIds],
+    scenarioAssetIds: [...normalized.scenarioAssetIds],
+  }
+}
+
+const flattenRoleProfileAssetPack = (assetPack) => {
+  const normalized = normalizeRoleProfileAssetPack(assetPack)
+  const merged = [
+    ...normalized.wallpaperAssetIds,
+    ...normalized.emojiAssetIds,
+    ...normalized.referenceAssetIds,
+    ...normalized.scenarioAssetIds,
+  ]
+  return normalizeRoleAssetIdList(merged)
+}
 
 const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
   const route = trimTo(value, 200)
@@ -382,6 +439,7 @@ const normalizeMessageBlock = (rawBlock) => {
       type: 'image_virtual',
       alt: normalizeSingleLineText(rawBlock.alt, MAX_SHORT_LABEL_LENGTH, '图片消息'),
       url: sanitizeImageUrl(rawBlock.url),
+      assetId: sanitizeAssetId(rawBlock.assetId),
       caption: trimTo(rawBlock.caption, MAX_DETAIL_TEXT_LENGTH),
     }
   }
@@ -461,6 +519,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     isMain: Boolean(rawProfile?.isMain),
     avatar: typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : '',
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
+    assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
     tags: Array.isArray(rawProfile?.tags)
       ? rawProfile.tags
           .map((item) => (typeof item === 'string' ? item.trim() : ''))
@@ -493,6 +552,7 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
     avatar: typeof rawContact?.avatar === 'string' ? rawContact.avatar : '',
     bio: typeof rawContact?.bio === 'string' ? rawContact.bio : '',
     serviceTemplate: typeof rawContact?.serviceTemplate === 'string' ? rawContact.serviceTemplate : '',
+    preferredImageAssetId: sanitizeAssetId(rawContact?.preferredImageAssetId),
     relationshipLevel,
     relationshipNote: typeof rawContact?.relationshipNote === 'string' ? rawContact.relationshipNote : '',
     lastMessage: typeof rawContact?.lastMessage === 'string' ? rawContact.lastMessage : '',
@@ -615,6 +675,58 @@ export const useChatStore = defineStore('chat', () => {
   const getRoleProfileById = (profileId) =>
     roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
 
+  const getRoleProfileAssetPack = (profileId) => {
+    const profile = getRoleProfileById(profileId)
+    return cloneRoleProfileAssetPack(profile?.assetPack)
+  }
+
+  const setRoleProfileAssetPack = (profileId, nextPack = {}) => {
+    const target = getRoleProfileById(profileId)
+    if (!target) return false
+    const current = normalizeRoleProfileAssetPack(target.assetPack)
+    const normalized = normalizeRoleProfileAssetPack({
+      ...current,
+      ...(nextPack && typeof nextPack === 'object' ? nextPack : {}),
+    })
+    const changed =
+      JSON.stringify(current) !== JSON.stringify(normalized)
+    if (!changed) return false
+    target.assetPack = normalized
+    target.updatedAt = nowTs()
+    return true
+  }
+
+  const getRoleBindingAssetContext = (contactId) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') {
+      return {
+        profileId: 0,
+        profileName: '',
+        preferredImageAssetId: '',
+        recommendedImageAssetId: '',
+        profileAssetPack: createEmptyRoleAssetPack(),
+        profileAssetIds: [],
+      }
+    }
+    const profile = getRoleProfileById(target.profileId)
+    const profilePack = normalizeRoleProfileAssetPack(profile?.assetPack)
+    const preferredImageAssetId = sanitizeAssetId(target.preferredImageAssetId)
+    const fallbackRecommended =
+      profilePack.referenceAssetIds[0] ||
+      profilePack.scenarioAssetIds[0] ||
+      profilePack.emojiAssetIds[0] ||
+      profilePack.wallpaperAssetIds[0] ||
+      ''
+    return {
+      profileId: Number(profile?.id) || 0,
+      profileName: profile?.name || target.name || '',
+      preferredImageAssetId,
+      recommendedImageAssetId: preferredImageAssetId || fallbackRecommended,
+      profileAssetPack: cloneRoleProfileAssetPack(profilePack),
+      profileAssetIds: flattenRoleProfileAssetPack(profilePack),
+    }
+  }
+
   const applyModuleAvatarOverrides = (rawOverrides) => {
     const normalized = normalizeModuleAvatarOverrides(rawOverrides)
     moduleAvatarOverrides.selfAvatar = normalized.selfAvatar
@@ -640,6 +752,8 @@ export const useChatStore = defineStore('chat', () => {
       bio: profile.bio || contact.bio,
       avatar: profile.avatar || contact.avatar,
       isMain: Boolean(profile.isMain),
+      profileAssetPack: cloneRoleProfileAssetPack(profile.assetPack),
+      preferredImageAssetId: sanitizeAssetId(contact.preferredImageAssetId),
     }
   }
 
@@ -1338,6 +1452,12 @@ export const useChatStore = defineStore('chat', () => {
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter(Boolean)
     }
+    if (updates.assetPack && typeof updates.assetPack === 'object') {
+      target.assetPack = normalizeRoleProfileAssetPack({
+        ...target.assetPack,
+        ...updates.assetPack,
+      })
+    }
     target.updatedAt = nowTs()
     return true
   }
@@ -1408,6 +1528,9 @@ export const useChatStore = defineStore('chat', () => {
       const nextName = updates.name.trim()
       if (nextName) target.name = nextName
     }
+    if (Object.prototype.hasOwnProperty.call(updates, 'preferredImageAssetId')) {
+      target.preferredImageAssetId = sanitizeAssetId(updates.preferredImageAssetId)
+    }
     syncConversationSummary(contactId)
     return true
   }
@@ -1468,6 +1591,9 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'relationshipNote')) {
       target.relationshipNote = typeof updates.relationshipNote === 'string' ? updates.relationshipNote : ''
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'preferredImageAssetId')) {
+      target.preferredImageAssetId = sanitizeAssetId(updates.preferredImageAssetId)
     }
 
     syncConversationSummary(contactId)
@@ -1712,7 +1838,10 @@ export const useChatStore = defineStore('chat', () => {
       CHAT_STORAGE_KEY,
       {
         moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
-        roleProfiles: roleProfiles.map((profile) => ({ ...profile })),
+        roleProfiles: roleProfiles.map((profile) => ({
+          ...profile,
+          assetPack: cloneRoleProfileAssetPack(profile.assetPack),
+        })),
         contacts: contactsSnapshot,
         conversations: conversationsSnapshot,
         messagesByConversation: messagesSnapshot,
@@ -1812,6 +1941,9 @@ export const useChatStore = defineStore('chat', () => {
     getConversationIdentityOverrides,
     setConversationIdentityOverrides,
     getRoleProfileById,
+    getRoleProfileAssetPack,
+    setRoleProfileAssetPack,
+    getRoleBindingAssetContext,
     addRoleProfile,
     updateRoleProfile,
     removeRoleProfile,

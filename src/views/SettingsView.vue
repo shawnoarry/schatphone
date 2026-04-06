@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
+import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 import {
   getPersistenceCapabilities,
@@ -17,6 +18,7 @@ const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
+const galleryStore = useGalleryStore()
 const { t } = useI18n()
 
 const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
@@ -44,6 +46,7 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:system', version: 1, labelZh: '系统存档', labelEn: 'System state' },
   { key: 'store:chat', version: 2, labelZh: '聊天存档', labelEn: 'Chat state' },
   { key: 'store:map', version: 1, labelZh: '地图存档', labelEn: 'Map state' },
+  { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
 ])
 const storageAuditRunning = ref(false)
 const storageRepairRunning = ref(false)
@@ -519,6 +522,7 @@ const exportData = () => {
       currentLocation: currentLocation.value,
       tripForm: tripForm.value,
     },
+    gallery: galleryStore.createBackupSnapshot(),
   })
 
   const blob = new Blob([data], { type: 'application/json' })
@@ -559,6 +563,7 @@ const createRollbackSnapshot = () => {
       currentLocation: deepClone(currentLocation.value),
       tripForm: deepClone(tripForm.value),
     },
+    gallery: galleryStore.createBackupSnapshot(),
   }
 }
 
@@ -598,21 +603,25 @@ const importData = async (event) => {
     const systemOk = systemStore.restoreFromBackup(parsed)
     const chatOk = chatStore.restoreFromBackup(parsed)
     const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
-    if (!systemOk || !chatOk || !mapOk) {
+    const galleryOk = galleryStore.restoreFromBackup(parsed.gallery || parsed)
+    if (!systemOk || !chatOk || !mapOk || !galleryOk) {
       throw new Error(t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'))
     }
 
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
+    galleryStore.saveNow()
     setBackupFeedback('success', t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.'), 2200)
   } catch (error) {
     systemStore.restoreFromBackup(rollback.system)
     chatStore.restoreFromBackup(rollback.chat)
     mapStore.restoreFromBackup(rollback.map)
+    galleryStore.restoreFromBackup(rollback.gallery)
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
+    galleryStore.saveNow()
     const detail = typeof error?.message === 'string' && error.message.trim() ? ` ${error.message.trim()}` : ''
     setBackupFeedback(
       'error',

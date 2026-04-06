@@ -6,6 +6,7 @@ import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
+import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
@@ -16,6 +17,7 @@ const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
+const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, user } = storeToRefs(systemStore)
@@ -109,6 +111,7 @@ const USER_ACTION_FORM_NONE = ''
 const USER_ACTION_FORM_LINK = 'link'
 const USER_ACTION_FORM_TRANSFER = 'transfer'
 const USER_ACTION_FORM_VOICE = 'voice'
+const USER_ACTION_FORM_GALLERY = 'gallery'
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -119,6 +122,7 @@ const showSuggestions = ref(false)
 const showUserActionPanel = ref(false)
 const pendingUserMediaKind = ref(USER_MEDIA_KIND_IMAGE)
 const userActionFormType = ref(USER_ACTION_FORM_NONE)
+const galleryPickerCategory = ref('all')
 const aiErrorMessage = ref('')
 const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
@@ -152,6 +156,9 @@ const userActionDraft = reactive({
   voiceTranscript: '',
   voiceDurationSec: 8,
 })
+
+const galleryPickerPreviewMap = reactive({})
+const messageImagePreviewMap = reactive({})
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -201,6 +208,74 @@ const activeAiPrefs = computed(() => {
 const activeMessages = computed(() => {
   if (!activeChat.value) return []
   return chatStore.getMessagesByContactId(activeChat.value.id) || []
+})
+
+const galleryCategoryLabel = (categoryKey) => {
+  if (categoryKey === 'all') return t('全部', 'All')
+  if (categoryKey === 'wallpaper') return t('壁纸', 'Wallpaper')
+  if (categoryKey === 'emoji') return t('表情', 'Emoji')
+  if (categoryKey === 'reference') return t('参考图', 'Reference')
+  if (categoryKey === 'scenario') return t('场景图', 'Scenario')
+  return categoryKey
+}
+
+const galleryPickerCategoryOptions = computed(() => [
+  { value: 'all', label: galleryCategoryLabel('all') },
+  ...GALLERY_ASSET_CATEGORIES.map((categoryKey) => ({
+    value: categoryKey,
+    label: galleryCategoryLabel(categoryKey),
+  })),
+])
+
+const galleryPickerAssets = computed(() =>
+  {
+    const baseList = galleryStore.getAssetsByCategory(galleryPickerCategory.value)
+    const chatId = Number(activeChat.value?.id)
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      return baseList.slice(0, 36)
+    }
+
+    const roleAssetContext = chatStore.getRoleBindingAssetContext(chatId)
+    const preferredId = roleAssetContext.preferredImageAssetId
+    const profileIds = Array.isArray(roleAssetContext.profileAssetIds)
+      ? roleAssetContext.profileAssetIds
+      : []
+    const profileIdSet = new Set(profileIds)
+
+    const sorted = [...baseList].sort((left, right) => {
+      const leftPreferred = preferredId && left.id === preferredId ? 1 : 0
+      const rightPreferred = preferredId && right.id === preferredId ? 1 : 0
+      if (leftPreferred !== rightPreferred) return rightPreferred - leftPreferred
+
+      const leftProfile = profileIdSet.has(left.id) ? 1 : 0
+      const rightProfile = profileIdSet.has(right.id) ? 1 : 0
+      if (leftProfile !== rightProfile) return rightProfile - leftProfile
+
+      return (right.updatedAt || 0) - (left.updatedAt || 0)
+    })
+
+    return sorted.slice(0, 36)
+  },
+)
+
+const activeRoleAssetContext = computed(() => {
+  const chatId = Number(activeChat.value?.id)
+  if (!Number.isFinite(chatId) || chatId <= 0) {
+    return {
+      profileId: 0,
+      profileName: '',
+      preferredImageAssetId: '',
+      recommendedImageAssetId: '',
+      profileAssetPack: {
+        wallpaperAssetIds: [],
+        emojiAssetIds: [],
+        referenceAssetIds: [],
+        scenarioAssetIds: [],
+      },
+      profileAssetIds: [],
+    }
+  }
+  return chatStore.getRoleBindingAssetContext(chatId)
 })
 
 const activeActionMessage = computed(() => {
@@ -1959,6 +2034,8 @@ const backToUserActionGrid = () => {
 const closeUserActionPanel = () => {
   showUserActionPanel.value = false
   backToUserActionGrid()
+  galleryPickerCategory.value = 'all'
+  clearReactivePreviewMap(galleryPickerPreviewMap)
   resetUserActionDraft()
 }
 
@@ -1976,11 +2053,63 @@ const openUserActionForm = (formType) => {
   const nextType =
     formType === USER_ACTION_FORM_LINK ||
     formType === USER_ACTION_FORM_TRANSFER ||
-    formType === USER_ACTION_FORM_VOICE
+    formType === USER_ACTION_FORM_VOICE ||
+    formType === USER_ACTION_FORM_GALLERY
       ? formType
       : USER_ACTION_FORM_NONE
   showUserActionPanel.value = true
   userActionFormType.value = nextType
+  if (nextType === USER_ACTION_FORM_GALLERY) {
+    const context = activeRoleAssetContext.value
+    if (context.preferredImageAssetId) {
+      const preferredAsset = galleryStore.findAssetById(context.preferredImageAssetId)
+      if (preferredAsset?.category) {
+        galleryPickerCategory.value = preferredAsset.category
+        return
+      }
+    }
+    if ((context.profileAssetPack?.referenceAssetIds || []).length > 0) {
+      galleryPickerCategory.value = 'reference'
+      return
+    }
+    if ((context.profileAssetPack?.scenarioAssetIds || []).length > 0) {
+      galleryPickerCategory.value = 'scenario'
+      return
+    }
+    if ((context.profileAssetPack?.emojiAssetIds || []).length > 0) {
+      galleryPickerCategory.value = 'emoji'
+      return
+    }
+  }
+}
+
+const clearReactivePreviewMap = (targetMap) => {
+  Object.keys(targetMap).forEach((key) => {
+    delete targetMap[key]
+  })
+}
+
+const buildMessageImagePreviewKey = (messageId, blockIndex) => `${messageId}:${blockIndex}`
+
+const ensureGalleryPickerPreview = async (assetId) => {
+  if (!assetId || galleryPickerPreviewMap[assetId]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  if (!previewUrl) return
+  galleryPickerPreviewMap[assetId] = previewUrl
+}
+
+const ensureMessageImagePreview = async (messageId, blockIndex, assetId) => {
+  if (!messageId || !assetId) return
+  const key = buildMessageImagePreviewKey(messageId, blockIndex)
+  if (messageImagePreviewMap[key]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  if (!previewUrl) return
+  messageImagePreviewMap[key] = previewUrl
+}
+
+const resolveImageBlockUrl = (messageId, blockIndex, block) => {
+  const key = buildMessageImagePreviewKey(messageId, blockIndex)
+  return messageImagePreviewMap[key] || block?.url || ''
 }
 
 const buildPendingQuotePayload = () =>
@@ -2054,17 +2183,6 @@ const openExternalUrl = (rawUrl) => {
   }
   window.open(url, '_blank', 'noopener,noreferrer')
 }
-
-const readFileAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      resolve(result)
-    }
-    reader.onerror = () => reject(new Error('read_failed'))
-    reader.readAsDataURL(file)
-  })
 
 const triggerUserMediaPicker = (kind = USER_MEDIA_KIND_IMAGE) => {
   if (!userMediaInputRef.value) return
@@ -2207,6 +2325,42 @@ const submitVoiceCardForm = () => {
   closeUserActionPanel()
 }
 
+const submitGalleryAsset = async (asset) => {
+  if (!activeChat.value || !asset?.id) return
+
+  const fallbackAlt = t('素材图片', 'Asset image')
+  const safeName = typeof asset.name === 'string' && asset.name.trim() ? asset.name.trim() : fallbackAlt
+  const sourceUrl = asset.sourceType === 'url' ? asset.sourceUrl || '' : ''
+  const previewUrl = sourceUrl || (await galleryStore.getAssetPreviewUrl(asset.id))
+
+  if (!previewUrl) {
+    showUiNotice('error', t('素材预览不可用，请检查相册资源。', 'Asset preview is unavailable.'))
+    return
+  }
+
+  const appended = appendUserMessage({
+    content: `${t('素材', 'Asset')}: ${safeName}`,
+    blocks: [
+      {
+        type: 'image_virtual',
+        alt: safeName,
+        url: sourceUrl,
+        assetId: asset.id,
+        caption: t('来自素材中心', 'From asset center'),
+      },
+    ],
+    source: 'gallery_asset',
+  })
+  if (appended) {
+    galleryStore.bindAssetUsage(asset.id, {
+      moduleKey: 'chat',
+      targetKey: `contact:${activeChat.value.id}`,
+      label: `${t('聊天会话', 'Chat thread')} #${activeChat.value.id}`,
+    })
+  }
+  closeUserActionPanel()
+}
+
 const handleUserMediaPicked = async (event) => {
   const inputEl = event?.target
   const file = inputEl?.files?.[0]
@@ -2220,31 +2374,32 @@ const handleUserMediaPicked = async (event) => {
   }
 
   try {
-    const dataUrl = await readFileAsDataUrl(file)
-    if (!dataUrl) {
-      showUiNotice('error', t('图片读取失败，请重试。', 'Failed to read image. Please retry.'))
+    const result = await galleryStore.importAssetsFromFiles([file], {
+      category: mediaKind === USER_MEDIA_KIND_GIF ? 'emoji' : 'reference',
+    })
+
+    let targetAssetId = ''
+    if (Array.isArray(result.importedIds) && result.importedIds.length > 0) {
+      targetAssetId = result.importedIds[0]
+    } else if (Array.isArray(result.duplicateAssetIds) && result.duplicateAssetIds.length > 0) {
+      targetAssetId = result.duplicateAssetIds[0]
+      showUiNotice('success', t('素材已存在，已复用素材库资源。', 'Asset already exists and was reused from library.'))
+    }
+
+    if (!targetAssetId) {
+      showUiNotice('error', t('素材导入失败，请重试。', 'Asset import failed. Please retry.'))
       return
     }
 
-    const defaultAlt = mediaKind === USER_MEDIA_KIND_GIF ? t('GIF 动图', 'GIF image') : t('图片消息', 'Image')
-    appendUserMessage({
-      content:
-        mediaKind === USER_MEDIA_KIND_GIF
-          ? `[GIF] ${file.name || defaultAlt}`
-          : `${t('图片', 'Image')}: ${file.name || defaultAlt}`,
-      blocks: [
-        {
-          type: 'image_virtual',
-          alt: file.name || defaultAlt,
-          url: dataUrl,
-          caption: mediaKind === USER_MEDIA_KIND_GIF ? t('来自本地文件', 'From local file') : '',
-        },
-      ],
-      source: mediaKind === USER_MEDIA_KIND_GIF ? 'gif' : 'image',
-    })
-    closeUserActionPanel()
+    const targetAsset = galleryStore.findAssetById(targetAssetId)
+    if (!targetAsset) {
+      showUiNotice('error', t('素材记录异常，请前往相册检查。', 'Asset record is invalid. Please check Gallery.'))
+      return
+    }
+
+    await submitGalleryAsset(targetAsset)
   } catch {
-    showUiNotice('error', t('文件读取失败，请重试。', 'File read failed. Please retry.'))
+    showUiNotice('error', t('文件处理失败，请重试。', 'File processing failed. Please retry.'))
   } finally {
     if (inputEl) inputEl.value = ''
   }
@@ -2501,10 +2656,71 @@ const saveThreadSettings = () => {
 }
 
 watch(
+  galleryPickerAssets,
+  (assets) => {
+    if (!showUserActionPanel.value || userActionFormType.value !== USER_ACTION_FORM_GALLERY) return
+    const activeIds = new Set(assets.map((asset) => asset.id))
+    assets.forEach((asset) => {
+      void ensureGalleryPickerPreview(asset.id)
+    })
+    Object.keys(galleryPickerPreviewMap).forEach((assetId) => {
+      if (!activeIds.has(assetId)) {
+        delete galleryPickerPreviewMap[assetId]
+      }
+    })
+  },
+  { immediate: true },
+)
+
+watch(
+  () => ({
+    panelOpened: showUserActionPanel.value,
+    formType: userActionFormType.value,
+    category: galleryPickerCategory.value,
+  }),
+  () => {
+    if (!showUserActionPanel.value || userActionFormType.value !== USER_ACTION_FORM_GALLERY) return
+    galleryPickerAssets.value.forEach((asset) => {
+      void ensureGalleryPickerPreview(asset.id)
+    })
+  },
+)
+
+watch(
+  activeMessages,
+  (messages) => {
+    const validKeys = new Set()
+    messages.forEach((message) => {
+      const blocks = Array.isArray(message?.blocks) ? message.blocks : []
+      blocks.forEach((block, blockIndex) => {
+        if (block?.type !== 'image_virtual') return
+        const key = buildMessageImagePreviewKey(message.id, blockIndex)
+        validKeys.add(key)
+        if (block?.assetId) {
+          void ensureMessageImagePreview(message.id, blockIndex, block.assetId)
+          return
+        }
+        if (typeof block?.url === 'string' && block.url.trim()) {
+          messageImagePreviewMap[key] = block.url
+        }
+      })
+    })
+    Object.keys(messageImagePreviewMap).forEach((key) => {
+      if (!validKeys.has(key)) {
+        delete messageImagePreviewMap[key]
+      }
+    })
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
   activeChatId,
   (id) => {
     showThreadMenu.value = false
     closeUserActionPanel()
+    galleryPickerCategory.value = 'all'
+    clearReactivePreviewMap(galleryPickerPreviewMap)
     activeMessageActionId.value = ''
     pendingQuote.value = null
     threadSettingsSaved.value = false
@@ -2594,6 +2810,9 @@ onBeforeUnmount(() => {
   if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
   if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+  clearReactivePreviewMap(galleryPickerPreviewMap)
+  clearReactivePreviewMap(messageImagePreviewMap)
+  galleryStore.clearAssetPreviewCache()
 })
 </script>
 
@@ -2926,7 +3145,11 @@ onBeforeUnmount(() => {
 
                 <div v-else-if="block.type === 'image_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <div class="w-full h-24 rounded-md bg-black/5 overflow-hidden mb-1.5">
-                    <img v-if="block.url" :src="block.url" class="w-full h-full object-cover" />
+                    <img
+                      v-if="resolveImageBlockUrl(msg.id, blockIndex, block)"
+                      :src="resolveImageBlockUrl(msg.id, blockIndex, block)"
+                      class="w-full h-full object-cover"
+                    />
                     <div v-else class="w-full h-full flex items-center justify-center text-[11px] opacity-70">{{ t('图片预览', 'Image preview') }}</div>
                   </div>
                   <p class="text-[12px] font-semibold">{{ block.alt }}</p>
@@ -3023,6 +3246,12 @@ onBeforeUnmount(() => {
               class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
             >
               GIF
+            </button>
+            <button
+              @click="openUserActionForm(USER_ACTION_FORM_GALLERY)"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+            >
+              {{ t('素材库', 'Asset library') }}
             </button>
             <button
               @click="openUserActionForm(USER_ACTION_FORM_LINK)"
@@ -3157,6 +3386,98 @@ onBeforeUnmount(() => {
                 class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
               >
                 {{ t('发送语音卡片', 'Send voice card') }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="userActionFormType === USER_ACTION_FORM_GALLERY" class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[11px] font-medium text-gray-700">{{ t('从素材库发送', 'Send from asset library') }}</p>
+              <select
+                v-model="galleryPickerCategory"
+                class="rounded-lg border border-gray-200 px-1.5 py-1 text-[11px] bg-white"
+              >
+                <option
+                  v-for="option in galleryPickerCategoryOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <p
+              v-if="activeRoleAssetContext.profileId"
+              class="text-[10px] text-gray-500"
+            >
+              {{
+                activeRoleAssetContext.preferredImageAssetId
+                  ? t(
+                      `会话优先素材已启用（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
+                      `Thread preferred asset is enabled (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
+                    )
+                  : t(
+                      `当前会话正在读取角色档案素材包（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
+                      `This chat is using profile-bound asset pack (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
+                    )
+              }}
+            </p>
+
+            <div
+              v-if="galleryPickerAssets.length === 0"
+              class="rounded-lg border border-dashed border-gray-200 px-2 py-3 text-[11px] text-gray-500 text-center"
+            >
+              {{ t('该分类暂无素材，请先在相册导入。', 'No assets in this category. Import in Gallery first.') }}
+            </div>
+
+            <div v-else class="max-h-48 overflow-y-auto pr-0.5 grid grid-cols-2 gap-2">
+              <button
+                v-for="asset in galleryPickerAssets"
+                :key="asset.id"
+                @click="submitGalleryAsset(asset)"
+                class="rounded-lg border border-gray-200 p-1.5 text-left hover:bg-gray-50 transition"
+              >
+                <div class="w-full h-14 rounded-md bg-gray-100 overflow-hidden">
+                  <img
+                    v-if="galleryPickerPreviewMap[asset.id]"
+                    :src="galleryPickerPreviewMap[asset.id]"
+                    class="w-full h-full object-cover"
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full flex items-center justify-center text-[10px] text-gray-400"
+                  >
+                    {{ t('加载中', 'Loading') }}
+                  </div>
+                </div>
+                <p class="mt-1 text-[10px] font-medium text-gray-700 line-clamp-1">{{ asset.name }}</p>
+                <p
+                  v-if="activeRoleAssetContext.preferredImageAssetId && asset.id === activeRoleAssetContext.preferredImageAssetId"
+                  class="mt-0.5 text-[10px] text-blue-600"
+                >
+                  {{ t('会话优先', 'Thread preferred') }}
+                </p>
+                <p
+                  v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"
+                  class="mt-0.5 text-[10px] text-emerald-600"
+                >
+                  {{ t('角色素材包', 'Profile pack') }}
+                </p>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+              <button
+                @click="backToUserActionGrid"
+                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('返回', 'Back') }}
+              </button>
+              <button
+                @click="openModuleRoute('/gallery')"
+                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+              >
+                {{ t('打开相册', 'Open Gallery') }}
               </button>
             </div>
           </div>
