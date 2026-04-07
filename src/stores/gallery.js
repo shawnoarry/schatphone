@@ -15,6 +15,9 @@ const GALLERY_STORAGE_VERSION = 1
 const DEFAULT_CATEGORY = 'reference'
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
+const BACKUP_ASSET_PACKAGE_VERSION = 1
+const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
+const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -155,6 +158,96 @@ const cloneAsset = (asset) => ({
   createdAt: asset.createdAt,
   updatedAt: asset.updatedAt,
 })
+
+const clampPositiveInteger = (value, fallback, minimum = 1) => {
+  const normalizedFallback = Math.max(minimum, toInt(fallback, minimum))
+  const normalized = toInt(value, normalizedFallback)
+  if (!Number.isFinite(normalized)) return normalizedFallback
+  return Math.max(minimum, normalized)
+}
+
+const blobToDataUrl = async (blob) => {
+  if (!(blob instanceof Blob)) return ''
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve(typeof reader.result === 'string' ? reader.result : '')
+      }
+      reader.onerror = () => resolve('')
+      reader.onabort = () => resolve('')
+      reader.readAsDataURL(blob)
+    } catch {
+      resolve('')
+    }
+  })
+}
+
+const decodeBase64 = (rawValue) => {
+  const value = typeof rawValue === 'string' ? rawValue.trim() : ''
+  if (!value) return null
+  if (typeof atob === 'function') {
+    const binary = atob(value)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index)
+    }
+    return bytes
+  }
+  const runtimeBuffer =
+    typeof globalThis !== 'undefined' && globalThis && globalThis.Buffer
+      ? globalThis.Buffer
+      : null
+  if (runtimeBuffer) {
+    return Uint8Array.from(runtimeBuffer.from(value, 'base64'))
+  }
+  return null
+}
+
+const dataUrlToBlob = (dataUrl, fallbackMimeType = '') => {
+  if (typeof dataUrl !== 'string' || !dataUrl.trim()) return null
+  const matched = dataUrl.trim().match(/^data:([^;,]+)?;base64,(.+)$/i)
+  if (!matched) return null
+  const mimeType = matched[1] ? matched[1].trim().toLowerCase() : fallbackMimeType
+  const base64Payload = matched[2] || ''
+  try {
+    const decoded = decodeBase64(base64Payload)
+    if (!(decoded instanceof Uint8Array)) return null
+    return new Blob([decoded], { type: mimeType || 'application/octet-stream' })
+  } catch {
+    return null
+  }
+}
+
+const normalizeAssetPackageItem = (rawItem) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const id = typeof rawItem.id === 'string' ? rawItem.id.trim() : ''
+  if (!id) return null
+  const blobId =
+    typeof rawItem.blobId === 'string' && rawItem.blobId.trim() ? rawItem.blobId.trim() : id
+  const dataUrl = typeof rawItem.dataUrl === 'string' ? rawItem.dataUrl.trim() : ''
+  if (!dataUrl) return null
+  return {
+    id,
+    blobId,
+    dataUrl,
+    mimeType:
+      typeof rawItem.mimeType === 'string' && rawItem.mimeType.trim()
+        ? rawItem.mimeType.trim().toLowerCase()
+        : '',
+    sizeBytes: Math.max(0, toInt(rawItem.sizeBytes, 0)),
+  }
+}
+
+const normalizeAssetPackageSnapshot = (rawPackage) => {
+  const source = rawPackage && typeof rawPackage === 'object' ? rawPackage : {}
+  const sourceItems = Array.isArray(source.items) ? source.items : []
+  return {
+    version: Math.max(1, toInt(source.version, BACKUP_ASSET_PACKAGE_VERSION)),
+    exportedAt: Math.max(0, toInt(source.exportedAt, 0)),
+    items: sourceItems.map((item) => normalizeAssetPackageItem(item)).filter(Boolean),
+  }
+}
 
 const normalizeUsageItem = (rawUsage, fallbackKey) => {
   const usage = rawUsage && typeof rawUsage === 'object' ? rawUsage : {}
@@ -561,12 +654,199 @@ export const useGalleryStore = defineStore('gallery', () => {
     assets: assets.value.map((asset) => cloneAsset(asset)),
   })
 
+  const createBackupSnapshotAsync = async ({
+    includeAssetPackage = false,
+    maxPackageBytes = DEFAULT_BACKUP_ASSET_PACKAGE_MAX_BYTES,
+    maxPackageItems = DEFAULT_BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+  } = {}) => {
+    const snapshot = createBackupSnapshot()
+    const requested = includeAssetPackage === true
+    const normalizedMaxBytes = clampPositiveInteger(
+      maxPackageBytes,
+      DEFAULT_BACKUP_ASSET_PACKAGE_MAX_BYTES,
+    )
+    const normalizedMaxItems = clampPositiveInteger(
+      maxPackageItems,
+      DEFAULT_BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+    )
+    const packageSummary = {
+      requested,
+      included: false,
+      itemCount: 0,
+      totalBytes: 0,
+      skippedCount: 0,
+      missingCount: 0,
+      overflow: false,
+      maxPackageBytes: normalizedMaxBytes,
+      maxPackageItems: normalizedMaxItems,
+    }
+
+    if (!requested) {
+      return {
+        ...snapshot,
+        assetPackage: null,
+        packageSummary,
+      }
+    }
+
+    const fileAssets = snapshot.assets.filter((asset) => asset.sourceType === 'file')
+    const packageItems = []
+    let totalBytes = 0
+    let skippedCount = 0
+    let missingCount = 0
+    let overflow = false
+
+    for (const asset of fileAssets) {
+      if (packageItems.length >= normalizedMaxItems) {
+        skippedCount += 1
+        overflow = true
+        continue
+      }
+
+      const blob = await getGalleryAssetBlob(asset.blobId || asset.id)
+      if (!(blob instanceof Blob)) {
+        missingCount += 1
+        continue
+      }
+      const blobSize = Math.max(0, toInt(blob.size, 0))
+      if (totalBytes + blobSize > normalizedMaxBytes) {
+        skippedCount += 1
+        overflow = true
+        continue
+      }
+
+      const dataUrl = await blobToDataUrl(blob)
+      if (!dataUrl) {
+        missingCount += 1
+        continue
+      }
+
+      packageItems.push({
+        id: asset.id,
+        blobId: asset.blobId || asset.id,
+        dataUrl,
+        mimeType: asset.mimeType || (typeof blob.type === 'string' ? blob.type.toLowerCase() : ''),
+        sizeBytes: blobSize,
+      })
+      totalBytes += blobSize
+    }
+
+    packageSummary.included = true
+    packageSummary.itemCount = packageItems.length
+    packageSummary.totalBytes = totalBytes
+    packageSummary.skippedCount = skippedCount
+    packageSummary.missingCount = missingCount
+    packageSummary.overflow = overflow
+
+    return {
+      ...snapshot,
+      assetPackage: {
+        version: BACKUP_ASSET_PACKAGE_VERSION,
+        exportedAt: Date.now(),
+        items: packageItems,
+      },
+      packageSummary,
+    }
+  }
+
   const restoreFromBackup = (snapshot = {}) => {
     const source =
       snapshot && typeof snapshot.gallery === 'object' && snapshot.gallery
         ? snapshot.gallery
         : snapshot
     return hydrateFromSnapshot(source)
+  }
+
+  const restoreFromBackupAsync = async (
+    snapshot = {},
+    { restoreAssetPackage = true } = {},
+  ) => {
+    const source =
+      snapshot && typeof snapshot.gallery === 'object' && snapshot.gallery
+        ? snapshot.gallery
+        : snapshot
+    const restoredMetadata = hydrateFromSnapshot(source)
+    if (!restoredMetadata) {
+      return {
+        ok: false,
+        reason: 'invalid_snapshot',
+        packageApplied: false,
+        packageItemCount: 0,
+        restoredPackageCount: 0,
+        failedPackageCount: 0,
+        skippedPackageCount: 0,
+      }
+    }
+
+    if (restoreAssetPackage !== true) {
+      return {
+        ok: true,
+        reason: '',
+        packageApplied: false,
+        packageItemCount: 0,
+        restoredPackageCount: 0,
+        failedPackageCount: 0,
+        skippedPackageCount: 0,
+      }
+    }
+
+    const normalizedPackage = normalizeAssetPackageSnapshot(source?.assetPackage)
+    if (!Array.isArray(normalizedPackage.items) || normalizedPackage.items.length === 0) {
+      return {
+        ok: true,
+        reason: '',
+        packageApplied: false,
+        packageItemCount: 0,
+        restoredPackageCount: 0,
+        failedPackageCount: 0,
+        skippedPackageCount: 0,
+      }
+    }
+
+    const fileAssetIds = new Set(
+      assets.value
+        .filter((asset) => asset.sourceType === 'file')
+        .map((asset) => asset.id),
+    )
+    let restoredPackageCount = 0
+    let failedPackageCount = 0
+    let skippedPackageCount = 0
+
+    for (const item of normalizedPackage.items) {
+      if (!fileAssetIds.has(item.id)) {
+        skippedPackageCount += 1
+        continue
+      }
+
+      const target = findAssetById(item.id)
+      if (!target || target.sourceType !== 'file') {
+        skippedPackageCount += 1
+        continue
+      }
+
+      const blob = dataUrlToBlob(item.dataUrl, item.mimeType || target.mimeType)
+      if (!(blob instanceof Blob)) {
+        failedPackageCount += 1
+        continue
+      }
+
+      const writeOk = await putGalleryAssetBlob(target.blobId || target.id, blob)
+      if (writeOk) {
+        restoredPackageCount += 1
+      } else {
+        failedPackageCount += 1
+      }
+    }
+
+    return {
+      ok: true,
+      reason: failedPackageCount > 0 ? 'package_partial_failed' : '',
+      packageApplied: true,
+      packageItemCount: normalizedPackage.items.length,
+      restoredPackageCount,
+      failedPackageCount,
+      skippedPackageCount,
+    }
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -606,7 +886,9 @@ export const useGalleryStore = defineStore('gallery', () => {
     getAssetDeletionGuard,
     removeAsset,
     createBackupSnapshot,
+    createBackupSnapshotAsync,
     restoreFromBackup,
+    restoreFromBackupAsync,
     saveNow,
   }
 })

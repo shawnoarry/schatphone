@@ -55,6 +55,12 @@ Updated / 更新时间: 2026-04-07
    中文：会话级 AI 偏好可配置。
 5. EN: Structured assistant block rendering and sanitization are online.
    中文：结构化助手消息渲染与清洗已上线。
+6. EN: `+` panel now gives consistent availability guidance for gallery/location (disabled state + inline hint + guard notice).
+   中文：`+` 面板已对素材库/位置提供一致可用性引导（禁用态 + 内联提示 + 守卫提示）。
+7. EN: Message editing is now in-chat modal based (no browser prompt), keeping assistant semantic revision and restore path.
+   中文：消息编辑已改为 Chat 内弹层（不再依赖浏览器 prompt），并保留助手语义修订与恢复原文路径。
+8. EN: Message-edit validation is now isolated in a reusable helper with dedicated tests.
+   中文：消息编辑校验已拆分为可复用辅助函数，并补齐专项测试。
 
 ### 4.3 Contacts and Role Binding / 通讯录与角色绑定
 1. EN: Main contacts (`/contacts`) manage global role profiles.
@@ -79,16 +85,29 @@ Updated / 更新时间: 2026-04-07
 ### 4.5 Settings and Reliability / 设置与可靠性
 1. EN: Backup export/import flow is available with rollback-safe behavior.
    中文：备份导出/导入流程可用，具备回滚安全。
-2. EN: Storage diagnostics and repair entry are available.
+2. EN: Backup export supports metadata-first mode and optional gallery asset package mode.
+   中文：备份导出支持“元数据优先模式”与“可选相册素材包模式”。
+3. EN: Storage diagnostics and repair entry are available.
    中文：存储诊断与修复入口可用。
-3. EN: System UI language supports `zh-CN/en-US/ko-KR`.
+4. EN: System UI language supports `zh-CN/en-US/ko-KR`.
    中文：系统 UI 语言支持 `zh-CN/en-US/ko-KR`。
-4. EN: Backup reminder supports system-style notifications (non-blocking).
+5. EN: Backup reminder supports system-style notifications (non-blocking).
    中文：备份提醒支持系统式通知（非弹窗打断）。
 
 ## 5) Priority Refinement (P0) / 需细化优先级（P0）
-### P0-7 Storage & Backup Hardening / 存储与备份加固
+### P0-4 Rich Message Lane Polish / 富消息链路打磨
 Status / 状态: `IN_PROGRESS`（Current highest / 当前最高）
+1. EN: Unify validation and failure-state behavior.
+   中文：统一输入校验与失败态表现。
+2. EN: Front-load form guidance (inline hints + disabled submit before valid input).
+   中文：前置表单引导（内联提示 + 输入有效前禁用提交）。
+3. EN: Keep `Trigger Reply` lane unaffected while improving user-send quality.
+   中文：在优化用户发送质量时保持 `Trigger Reply` 通道不受影响。
+4. EN: Current pass completed for link/transfer/voice forms and gallery/location action availability; remaining work is edit-lane alignment with `P0-1`.
+   中文：当前批次已完成链接/转账/语音表单及素材库/位置动作可用性收口；剩余重点是与 `P0-1` 的编辑链路对齐。
+
+### P0-7 Storage & Backup Hardening / 存储与备份加固
+Status / 状态: `DONE`
 1. EN: Close binary storage path (IndexedDB-first).
    中文：完成二进制存储路径收口（IndexedDB 优先）。
 2. EN: Finalize metadata-first export + optional asset package policy.
@@ -96,26 +115,23 @@ Status / 状态: `IN_PROGRESS`（Current highest / 当前最高）
 3. EN: Improve restore diagnostics and keep rollback-safe behavior.
    中文：完善恢复诊断并保持回滚安全。
 
-### P0-4 Rich Message Lane Polish / 富消息链路打磨
-Status / 状态: `IN_PROGRESS`
-1. EN: Unify validation and failure-state behavior.
-   中文：统一输入校验与失败态表现。
-2. EN: Align editing behavior with semantic revision model.
-   中文：编辑行为与语义修订模型对齐。
-
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
-Status / 状态: `TODO`
-1. EN: Edit one assistant message without full reroll.
-   中文：单条助手消息可修订，不触发整轮重 roll。
-2. EN: Revised text becomes next-turn context default.
-   中文：修订文本成为后续轮次上下文默认值。
+Status / 状态: `PARTIAL_DONE`
+1. EN: Single assistant-message semantic revision path is online.
+   中文：单条助手消息语义修订路径已上线。
+2. EN: Revised text is reused as next-turn context default.
+   中文：修订文本已作为后续轮次上下文默认值复用。
+3. EN: Remaining: add dedicated UI tests and finalize revision-trace policy.
+   中文：剩余：补齐专门 UI 测试并确定修订痕迹策略。
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
-Status / 状态: `TODO`
-1. EN: Add at least 3 fixed expansion entries in chat list page.
-   中文：在 Chat 一级列表页新增至少 3 个固定扩展入口。
-2. EN: Keep current conversation entry flow unchanged.
-   中文：保持当前会话进入流程不变。
+Status / 状态: `PARTIAL_DONE`
+1. EN: Chat list page bottom dock baseline (`Prefs/Identity/Labs`) is online.
+   中文：Chat 一级列表页底部功能位基线（偏好/身份/实验室）已上线。
+2. EN: Current entries route to real placeholder pages without breaking thread entry flow.
+   中文：当前入口已路由到真实占位页，且不影响会话进入流程。
+3. EN: Remaining: replace placeholders with production module pages.
+   中文：剩余：将占位页替换为正式模块页。
 
 ### P0-3 and P0-6 Closure / P0-3 与 P0-6 收口
 Status / 状态: `PARTIAL_DONE`
@@ -141,3 +157,9 @@ Status / 状态: `PARTIAL_DONE`
 ## 8) Change Log / 变更记录
 1. 2026-04-07 EN: Created PM-focused consolidated brief.
    2026-04-07 中文：新增产品经理专用整合总览文档。
+2. 2026-04-07 EN: Synced `P0-4` progress: action-grid availability closure for gallery/location and full lint/test/build verification.
+   2026-04-07 中文：同步 `P0-4` 进展：完成素材库/位置动作网格可用性收口，并通过 lint/test/build 全量验证。
+3. 2026-04-07 EN: Added in-chat message edit modal progress and updated `P0-1/P0-2` to `PARTIAL_DONE`.
+   2026-04-07 中文：补充 Chat 内消息编辑弹层进度，并将 `P0-1/P0-2` 更新为 `PARTIAL_DONE`。
+4. 2026-04-07 EN: Added `chat-message-edit` validation helper and dedicated tests for safer future UI iteration.
+   2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，提升后续 UI 迭代安全性。

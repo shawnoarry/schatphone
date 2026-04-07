@@ -10,15 +10,15 @@ Updated / 更新时间: 2026-04-07
    中文：若旧文档与本文件冲突，以本文件为准。
 
 ## 0.5 AI Quick Start (10 min) / AI 接手速览（10分钟）
-1. EN: Target task now is `P0-7` (storage and backup hardening).
-   中文：当前目标任务是 `P0-7`（存储与备份加固）。
+1. EN: Target task now is `P0-4` (chat rich-message lane hardening).
+   中文：当前目标任务是 `P0-4`（聊天富消息链路加固）。
 2. EN: Start from these files first:
    中文：先从这些文件开始阅读与改动：
-   - `src/lib/persistence.js`
-   - `src/lib/asset-binary-storage.js`
-   - `src/stores/gallery.js`
+   - `src/views/ChatView.vue`
+   - `src/stores/chat.js`
+   - `src/views/ChatDirectoryView.vue`
+   - `src/views/GalleryView.vue`
    - `src/views/SettingsView.vue`
-   - `src/views/NetworkView.vue`
 3. EN: Run full verification before task closure:
    中文：收口前必须跑完整验证：
    - `npm run lint`
@@ -51,128 +51,112 @@ Updated / 更新时间: 2026-04-07
    中文：Chat 富消息发送链路已上线，`Trigger Reply` 继续常驻。
 3. EN: Global role profile + thread binding baseline is landed.
    中文：全局角色档案 + 会话绑定基线已落地。
-4. EN: Current main risk shifted to storage/backup closure for media-heavy usage.
-   中文：当前主风险已转为“素材重场景下的存储与备份收口”。
+4. EN: Storage/backup closure has entered completed state; current main focus returns to chat rich-message consistency.
+   中文：存储与备份收口已进入完成态，当前主焦点回到聊天富消息一致性。
 
 ---
 
 ## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
-### P0-7 Storage and Backup Hardening / P0-7 存储与备份加固
+### P0-4 User Rich Message Lane Hardening / P0-4 用户富消息链路加固
 Status / 状态: `IN_PROGRESS`
 Priority / 优先级: `Highest now / 当前最高`
 
 #### 4.1 Problem Statement / 问题定义
-1. EN: Rich assets are now used across chat/contacts/gallery, but long-term storage safety needs final closure.
-   中文：素材已在 chat/通讯录/相册跨模块使用，但长期存储安全仍需最终收口。
-2. EN: Users can clear browser cache unexpectedly; backup strategy must remain understandable and reliable.
-   中文：用户可能清理浏览器缓存，备份策略必须对小白可理解且可靠。
-3. EN: Import/restore failures must be transparent and rollback-safe.
-   中文：导入/恢复失败必须可见、可解释、可回滚。
+1. EN: Link/transfer/voice-card forms should behave consistently before submit (validation, disabled state, hint language).
+   中文：链接/转账/语音卡片表单在提交前需要统一行为（校验、禁用态、提示文案）。
+2. EN: Current rich-message lane still has scattered failure behavior and needs stronger UX consistency.
+   中文：当前富消息发送仍有分散失败态，需要进一步统一体验。
+3. EN: `Trigger Reply` must remain independent and unaffected.
+   中文：`Trigger Reply` 必须保持独立，不受影响。
 
 #### 4.2 Scope / 本轮范围
-1. EN: Asset binary persistence path hardening (IndexedDB-first, with compatibility fallback).
-   中文：素材二进制持久化收口（IndexedDB 主路径，兼容回退）。
-2. EN: Metadata-first export plus optional asset package strategy clarification.
-   中文：明确“元数据优先导出 + 可选素材包”策略。
-3. EN: Restore diagnostics and error history traceability.
-   中文：恢复流程诊断与报错历史可追踪。
-4. EN: Regression-proofing for current backup/restore flows already in settings.
-   中文：为现有 Settings 备份/恢复流程补齐回归保障。
+1. EN: Front-load validation for link/transfer/voice-card forms with shared rule source.
+   中文：为链接/转账/语音卡片前置校验，并统一规则来源。
+2. EN: Add disabled-state submit buttons and inline hint text in `+` panel forms.
+   中文：在 `+` 面板表单加入提交按钮禁用态与内联提示文案。
+3. EN: Keep click-time error feedback as fallback path (defensive UX).
+   中文：保留点击时错误提示作为兜底（防御式体验）。
+4. EN: Ensure no regression for media send, gallery send, and manual AI trigger lane.
+   中文：确保媒体发送、素材库发送与手动 AI 触发通道无回归。
 
 #### 4.3 Out of Scope (This Step) / 本步不做
-1. EN: New social modules (forum/map deep integration).
-   中文：论坛/地图等新社交模块深度接线。
-2. EN: AI image generation feature expansion.
-   中文：AI 生图功能扩展。
-3. EN: UX redesign of unrelated settings sections.
-   中文：与存储无关的设置页 UI 重构。
+1. EN: New rich-message types beyond current baseline.
+   中文：不新增当前基线以外的新富消息类型。
+2. EN: Major visual redesign of chat shell.
+   中文：不做 Chat 壳层的大改版视觉重构。
+3. EN: Cross-module social expansion.
+   中文：不推进跨模块社交扩展。
 
 #### 4.4 Execution Breakdown / 执行拆分
-1. `P0-7.A` EN: Validate current binary storage path and enforce IndexedDB-first writes.
-   `P0-7.A` 中文：验证当前二进制写入路径并强制 IndexedDB 优先。
-2. `P0-7.B` EN: Define export format contract (metadata required, assets optional package).
-   `P0-7.B` 中文：定义导出格式契约（元数据必备，素材包可选）。
-3. `P0-7.C` EN: Improve restore error taxonomy and store-readable diagnostics.
-   `P0-7.C` 中文：完善恢复错误分型与可读诊断记录。
-4. `P0-7.D` EN: Add migration guards for old backups and partial import failures.
-   `P0-7.D` 中文：为旧版备份与部分导入失败增加迁移守卫。
-5. `P0-7.E` EN: Add tests and run lint/test/build full gate before close.
-   `P0-7.E` 中文：补测试并执行 lint/test/build 全量闸门后收口。
+1. `P0-4.A` EN: Shared validation state for link/transfer/voice-card forms.
+   `P0-4.A` 中文：为链接/转账/语音卡片建立共享校验状态。
+2. `P0-4.B` EN: Button disabled-state + inline hint integration in template.
+   `P0-4.B` 中文：模板层接入按钮禁用态与内联提示。
+3. `P0-4.C` EN: Submit handler alignment with validation state.
+   `P0-4.C` 中文：提交处理函数与校验状态对齐。
+4. `P0-4.D` EN: Regression verification + docs sync.
+   `P0-4.D` 中文：回归验证并同步文档。
 
 #### 4.5 Acceptance Criteria / 验收标准
-1. EN: Binary asset writes no longer rely on localStorage-heavy payload paths.
-   中文：素材二进制写入不再依赖 localStorage 大载荷路径。
-2. EN: Export can always produce metadata backup, regardless of binary package choice.
-   中文：无论是否导出素材包，都能稳定导出元数据备份。
-3. EN: Import/restore failures provide readable reason + recovery suggestion.
-   中文：导入/恢复失败提供可读原因与恢复建议。
-4. EN: Restore flow is rollback-safe and does not silently corrupt state.
-   中文：恢复流程具备回滚保障，不会静默污染状态。
+1. EN: Invalid form input is visible before submit.
+   中文：无效输入在提交前就可见。
+2. EN: Submit button remains disabled until payload is valid.
+   中文：提交按钮在输入有效前保持禁用。
+3. EN: Click-time fallback error still works.
+   中文：点击时兜底错误提示仍正常生效。
+4. EN: `Trigger Reply` lane behavior remains unchanged.
+   中文：`Trigger Reply` 通道行为保持不变。
 5. EN: Test/build/lint all pass after integration.
    中文：集成后测试/构建/lint 全通过。
 
 #### 4.6 Regression Checklist / 回归清单
-1. EN: Chat thread messages remain readable after restore.
-   中文：恢复后 Chat 会话消息可正常读取。
-2. EN: Role profile bindings still resolve in chat directory and thread.
-   中文：恢复后角色绑定在会话通讯录和会话页仍可正确解析。
-3. EN: Gallery assets remain selectable from chat `+` panel.
-   中文：恢复后 chat `+` 面板仍可选用相册素材。
-4. EN: Settings backup reminder and report center still function.
-   中文：恢复后设置中的备份提醒和报告中心仍可用。
+1. EN: Link card send works with valid URL and remains blocked with invalid URL.
+   中文：链接卡片在 URL 有效时可发送，URL 无效时被阻止。
+2. EN: Transfer card send works with valid amount/currency and blocks malformed payload.
+   中文：转账卡片在金额/币种有效时可发送，格式错误时被阻止。
+3. EN: Voice card requires transcript and valid duration.
+   中文：语音卡片要求文本内容与有效时长。
+4. EN: Gallery/image/gif/location sends are unaffected.
+   中文：素材库/图片/gif/位置发送不受影响。
 
 ---
 
 ## 5. P0 Board / P0 任务看板（细化版）
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
-Status / 状态: `TODO`
+Status / 状态: `PARTIAL_DONE`
 
-Goal / 目标:
-1. EN: Let users revise one assistant message without full reroll.
-   中文：允许用户只修订单条 AI 回复，不做整轮重 roll。
-2. EN: Revised text becomes default context in later calls.
-   中文：修订文本进入后续调用默认上下文。
-3. EN: Non-text media stays unless user explicitly asks regeneration.
-   中文：非文本媒体默认保留，除非用户主动要求重生成。
+Done / 已完成:
+1. EN: Assistant message semantic revision is available from message actions (without full reroll).
+   中文：助手消息已支持从消息动作入口进行语义修订（不需要整轮重 roll）。
+2. EN: Revised text is persisted into message context and reused in later calls.
+   中文：修订文本会写入消息上下文，并在后续调用中继续使用。
+3. EN: Rollback path is available via `Restore original`.
+   中文：可通过 `恢复原文` 执行回滚。
+4. EN: Edit UX moved from browser prompt to in-chat modal editor for better immersion.
+   中文：编辑交互已从浏览器 `prompt` 改为 Chat 内弹层编辑，沉浸感更好。
 
-Implementation Notes / 实现要点:
-1. EN: Extend edit entry from user messages to assistant messages.
-   中文：将编辑入口从用户消息扩展到助手消息。
-2. EN: Add rollback-to-original safety path.
-   中文：提供恢复原文兜底路径。
-3. EN: Keep immersion (no persistent “revised” badge noise).
-   中文：保持沉浸（不常驻“已修订”标签）。
-
-Exit Criteria / 退出条件:
-1. EN: Assistant message edit works end-to-end.
-   中文：助手消息编辑链路完整可用。
-2. EN: Context consumes revised text by default.
-   中文：上下文默认消费修订文本。
+Remaining / 剩余:
+1. EN: Add dedicated tests for semantic-revision UI flow (open/edit/save/restore).
+   中文：补齐语义修订 UI 流程（打开/编辑/保存/恢复）的专门测试。
+2. EN: Add optional change-log annotation policy for future traceability (if PM requires).
+   中文：按需补充“修订痕迹策略”（若产品需要可追溯标记）。
 
 ---
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
-Status / 状态: `TODO`
+Status / 状态: `PARTIAL_DONE`
 
-Goal / 目标:
-1. EN: Add at least 3 fixed expansion entries on `/chat` list page.
-   中文：在 `/chat` 一级列表页提供至少 3 个固定扩展入口。
-2. EN: Keep current conversation-entry behavior unchanged.
-   中文：不破坏现有会话进入主路径。
+Done / 已完成:
+1. EN: `/chat` list page now has fixed bottom dock entries (`Prefs` / `Identity` / `Labs`).
+   中文：`/chat` 一级列表页已提供固定底部入口（`偏好` / `身份` / `实验室`）。
+2. EN: Dock routes to real pages (`/chat-feature/:feature`) and keeps chat thread entry unchanged.
+   中文：底部入口已路由到真实页面（`/chat-feature/:feature`），且不影响会话进入主流程。
 
-Implementation Notes / 实现要点:
-1. EN: First iteration can route to placeholder pages, but routes must be real.
-   中文：首版可接占位页，但路由必须真实可达。
-2. EN: Dock is only shown in chat top-level list, not thread view.
-   中文：功能位仅在 Chat 一级列表展示，不进入会话页。
-
-Exit Criteria / 退出条件:
-1. EN: Buttons always visible on `/chat`.
-   中文：`/chat` 页按钮持续可见。
-2. EN: No regression in opening chat threads.
-   中文：进入会话流程无回归。
+Remaining / 剩余:
+1. EN: Replace placeholder feature pages with production-grade module pages in later phase.
+   中文：后续阶段将占位页替换为正式模块页。
 
 ---
 
@@ -205,12 +189,18 @@ Done / 已完成:
    中文：链接/转账/语音卡片已改为内联表单。
 3. EN: `Trigger Reply` kept persistent as independent AI invoke lane.
    中文：`Trigger Reply` 保留为独立常驻 AI 调用通道。
+4. EN: Link/transfer/voice-card forms now use pre-submit validation hints and disabled-state submit buttons.
+   中文：链接/转账/语音卡片表单已接入提交前校验提示与提交按钮禁用态。
+5. EN: Gallery/location entries in `+` action grid now use availability-state guards, disabled styles, and shared inline guidance.
+   中文：`+` 动作网格中的“素材库/位置”入口已接入可用性守卫、禁用态样式与共享提示文案。
+6. EN: Message-edit validation logic is extracted into a testable helper with dedicated unit tests.
+   中文：消息编辑校验逻辑已抽离为可测试辅助函数，并补齐专门单元测试。
 
 Remaining / 剩余:
-1. EN: Validation and failure-state consistency polish.
-   中文：输入校验与失败态一致性打磨。
-2. EN: Align edit behavior with P0-1 semantic revision model.
-   中文：编辑行为与 P0-1 语义修订模型对齐。
+1. EN: Continue consistency polish for remaining rich-message interactions (focus on edge-state messaging clarity).
+   中文：继续补齐其余富消息交互的一致性打磨（重点是边界状态提示清晰度）。
+2. EN: Add dedicated regression checks for in-chat edit modal and semantic-revision restore flow.
+   中文：补齐 Chat 内编辑弹层与语义修订恢复流程的专项回归检查。
 
 ---
 
@@ -253,17 +243,17 @@ Remaining / 剩余:
 ---
 
 ### P0-7 Storage and Backup Hardening / 存储与备份加固
-Status / 状态: `IN_PROGRESS`
+Status / 状态: `DONE`
 
 Current / 当前:
 1. EN: Layered persistence baseline and diagnostics are available.
    中文：分层持久化基线与诊断能力已可用。
 2. EN: Backup restore has rollback-safe baseline.
    中文：备份恢复已具备回滚基线。
-
-Focus / 聚焦:
-1. EN: Binary path closure + export/import policy closure.
-   中文：二进制路径收口 + 导入导出策略收口。
+3. EN: Backup export/import now supports metadata-first mode with optional gallery asset package restore path and readable report codes.
+   中文：备份导入导出已支持“元数据优先 + 可选相册素材包恢复”路径，并接入可读报告编码。
+4. EN: Import preflight guard is active (invalid JSON / unsupported schema / unsupported structure are explicitly classified).
+   中文：导入预检守卫已启用（无效 JSON / 版本过高 / 结构不支持均可明确分型）。
 
 ---
 
@@ -298,6 +288,20 @@ Focus / 聚焦:
    中文：相册第一阶段完成（导入/分类/去重/删除 + 备份元数据接线）。
 4. EN: Role profile asset-pack binding and thread preferred asset override landed.
    中文：角色素材包绑定与会话优先素材覆盖已落地。
+5. EN: Storage hardening batch added optional backup asset-package mode and partial-restore diagnostics in Settings/Network reports.
+   中文：存储加固批次已新增“可选素材包备份模式”与 Settings/Network 报告中的部分恢复诊断。
+6. EN: Backup import preflight now classifies invalid JSON / unsupported schema / unsupported structure explicitly.
+   中文：备份导入预检现已可明确区分 JSON 无效 / 版本过高 / 结构不支持。
+7. EN: Chat rich-message forms now support pre-submit validation hints and disabled-state submit buttons.
+   中文：Chat 富消息表单现已支持提交前校验提示与提交按钮禁用态。
+8. EN: Chat `+` action grid now applies consistent availability guards for gallery/location with disabled states and inline hints.
+   中文：Chat `+` 动作网格现已对素材库/位置应用一致的可用性守卫、禁用态与内联提示。
+9. EN: Message edit UX moved from browser prompt to in-chat modal editor while keeping semantic revision and restore path.
+   中文：消息编辑交互已从浏览器 prompt 迁移为 Chat 内弹层，同时保留语义修订与恢复原文路径。
+10. EN: `P0-1` and `P0-2` are now tracked as `PARTIAL_DONE` based on landed baseline features.
+    中文：基于已落地基线功能，`P0-1` 与 `P0-2` 状态已更新为 `PARTIAL_DONE`。
+11. EN: Added dedicated unit tests for chat message-edit validation helper to reduce regression risk in future UI refactors.
+    中文：已为聊天消息编辑校验辅助函数新增专项单测，降低后续 UI 重构回归风险。
 
 ---
 
@@ -308,3 +312,11 @@ Focus / 聚焦:
    2026-04-07 中文：明确 `P0-7` 为下一项待办，并给出子任务拆分。
 3. 2026-04-07 EN: Updated `P0-6` to `PARTIAL_DONE` and captured remaining closure points.
    2026-04-07 中文：将 `P0-6` 更新为 `PARTIAL_DONE`，并记录剩余收口点。
+4. 2026-04-07 EN: Closed `P0-7` and switched immediate next-up to `P0-4`.
+   2026-04-07 中文：完成 `P0-7` 收口，并将下一项待办切换为 `P0-4`。
+5. 2026-04-07 EN: Completed `P0-4` action-grid availability pass for gallery/location and ran full lint/test/build verification.
+   2026-04-07 中文：完成 `P0-4` 中素材库/位置动作网格可用性收口，并完成 lint/test/build 全量回归验证。
+6. 2026-04-07 EN: Replaced browser prompt message editing with in-chat modal editor and synced `P0-1/P0-2` status updates.
+   2026-04-07 中文：将消息编辑从浏览器 prompt 升级为 Chat 内弹层编辑，并同步 `P0-1/P0-2` 状态更新。
+7. 2026-04-07 EN: Added `chat-message-edit` validation helper and dedicated tests, then passed lint/test/build full gate.
+   2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，并通过 lint/test/build 全量验证。

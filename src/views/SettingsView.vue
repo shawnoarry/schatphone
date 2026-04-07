@@ -29,10 +29,12 @@ const activeMenu = ref('')
 const generalSaved = ref(false)
 const notificationSaved = ref(false)
 const automationSaved = ref(false)
+const backupExporting = ref(false)
 const backupImporting = ref(false)
 const backupFileInput = ref(null)
 const backupFeedbackType = ref('')
 const backupFeedbackMessage = ref('')
+const backupIncludeAssetPackage = ref(false)
 let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
@@ -55,6 +57,9 @@ const storageAuditAt = ref(0)
 const storageAuditFeedbackType = ref('')
 const storageAuditFeedbackMessage = ref('')
 const backupReminderIntervalOptions = [1, 3, 6, 12, 24, 48, 72, 168, 336, 720]
+const BACKUP_SCHEMA_VERSION = 2
+const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
+const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 const backupReminderIntervalLabel = (hours) => {
   const normalizedHours = Number(hours)
   if (!Number.isFinite(normalizedHours) || normalizedHours <= 0) return t('自定义', 'Custom')
@@ -73,6 +78,14 @@ const setBackupFeedback = (type, message, durationMs = 1800) => {
     backupFeedbackType.value = ''
     backupFeedbackMessage.value = ''
   }, durationMs)
+}
+
+const formatBytes = (bytes = 0) => {
+  const normalized = Number(bytes)
+  if (!Number.isFinite(normalized) || normalized <= 0) return '0 B'
+  if (normalized < 1024) return `${Math.round(normalized)} B`
+  if (normalized < 1024 * 1024) return `${(normalized / 1024).toFixed(1)} KB`
+  return `${(normalized / (1024 * 1024)).toFixed(2)} MB`
 }
 
 const setStorageAuditFeedback = (type, message, durationMs = 2200) => {
@@ -185,6 +198,28 @@ const storageReportReasonLabel = (report) => {
   if (code === 'STORAGE_REPAIR_DONE') return t('存储修复完成', 'Storage repair completed')
   if (code === 'STORAGE_REPAIR_NOOP') return t('无需修复', 'No repair needed')
   if (code === 'STORAGE_REPAIR_PARTIAL') return t('存储修复部分失败', 'Storage repair partially failed')
+  if (code === 'BACKUP_EXPORT_METADATA_ONLY')
+    return t('备份导出成功（元数据）', 'Backup export succeeded (metadata)')
+  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
+    return t('备份导出成功（含素材包）', 'Backup export succeeded (with asset package)')
+  if (code === 'BACKUP_EXPORT_FAILED')
+    return t('备份导出失败', 'Backup export failed')
+  if (code === 'BACKUP_IMPORT_METADATA_ONLY')
+    return t('备份导入成功（元数据）', 'Backup import succeeded (metadata)')
+  if (code === 'BACKUP_IMPORT_WITH_ASSET_PACKAGE')
+    return t('备份导入成功（含素材包）', 'Backup import succeeded (with asset package)')
+  if (code === 'BACKUP_IMPORT_ASSET_PACKAGE_PARTIAL')
+    return t('备份导入部分成功（素材包有失败）', 'Backup import partially succeeded (asset package failures)')
+  if (code === 'BACKUP_IMPORT_INVALID_JSON')
+    return t('备份导入失败（JSON 无效）', 'Backup import failed (invalid JSON)')
+  if (code === 'BACKUP_IMPORT_INVALID_FORMAT')
+    return t('备份导入失败（文件格式无效）', 'Backup import failed (invalid file format)')
+  if (code === 'BACKUP_IMPORT_UNSUPPORTED_SCHEMA')
+    return t('备份导入失败（版本过高）', 'Backup import failed (unsupported schema)')
+  if (code === 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED')
+    return t('备份导入失败（结构不支持）', 'Backup import failed (unsupported structure)')
+  if (code === 'BACKUP_IMPORT_FAILED')
+    return t('备份导入失败', 'Backup import failed')
   return t('无存储报告', 'No storage report')
 }
 
@@ -505,8 +540,35 @@ const openAppearanceStudio = () => {
   router.push('/appearance')
 }
 
-const exportData = () => {
-  const data = JSON.stringify({
+const buildBackupPayload = async () => {
+  const includeAssetPackage = backupIncludeAssetPackage.value === true
+  const gallerySnapshot = await galleryStore.createBackupSnapshotAsync({
+    includeAssetPackage,
+    maxPackageBytes: BACKUP_ASSET_PACKAGE_MAX_BYTES,
+    maxPackageItems: BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+  })
+  const packageSummary =
+    gallerySnapshot && typeof gallerySnapshot.packageSummary === 'object'
+      ? gallerySnapshot.packageSummary
+      : {
+          requested: includeAssetPackage,
+          included: false,
+          itemCount: 0,
+          totalBytes: 0,
+          skippedCount: 0,
+          missingCount: 0,
+          overflow: false,
+          maxPackageBytes: BACKUP_ASSET_PACKAGE_MAX_BYTES,
+          maxPackageItems: BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+        }
+
+  return {
+    backupMeta: {
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: Date.now(),
+      exportMode: includeAssetPackage ? 'metadata_with_asset_package' : 'metadata_only',
+      galleryAssetPackage: packageSummary,
+    },
     settings: settings.value,
     user: user.value,
     notifications: notifications.value,
@@ -522,19 +584,164 @@ const exportData = () => {
       currentLocation: currentLocation.value,
       tripForm: tripForm.value,
     },
-    gallery: galleryStore.createBackupSnapshot(),
-  })
+    gallery: gallerySnapshot,
+  }
+}
 
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'schatphone_backup.json'
-  anchor.click()
-  URL.revokeObjectURL(url)
-  systemStore.markBackupExported()
-  systemStore.saveNow()
-  setBackupFeedback('success', t('备份文件下载已开始。', 'Backup download has started.'))
+const createBackupImportError = (code, message) => {
+  const error = new Error(message)
+  error.code = code
+  return error
+}
+
+const normalizeBackupSchemaVersion = (payload) => {
+  if (!payload || typeof payload !== 'object') return 1
+  const rawVersion = Number(payload?.backupMeta?.schemaVersion)
+  if (!Number.isFinite(rawVersion) || rawVersion <= 0) return 1
+  return Math.max(1, Math.floor(rawVersion))
+}
+
+const hasRecognizableBackupSections = (payload) => {
+  if (!payload || typeof payload !== 'object') return false
+  if (payload.settings && typeof payload.settings === 'object') return true
+  if (payload.user && typeof payload.user === 'object') return true
+  if (Array.isArray(payload.contacts)) return true
+  if (Array.isArray(payload.conversations)) return true
+  if (Array.isArray(payload.messagesByConversation)) return true
+  if (payload.map && typeof payload.map === 'object') return true
+  if (payload.gallery && typeof payload.gallery === 'object') return true
+  if (Array.isArray(payload.assets)) return true
+  return false
+}
+
+const validateBackupPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      ok: false,
+      code: 'BACKUP_IMPORT_INVALID_FORMAT',
+      message: t('备份文件格式无效。', 'Invalid backup file format.'),
+      schemaVersion: 1,
+    }
+  }
+
+  const schemaVersion = normalizeBackupSchemaVersion(payload)
+  if (schemaVersion > BACKUP_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      code: 'BACKUP_IMPORT_UNSUPPORTED_SCHEMA',
+      message: t(
+        `备份版本过高（v${schemaVersion}），当前仅支持到 v${BACKUP_SCHEMA_VERSION}。`,
+        `Backup schema is newer (v${schemaVersion}); current app supports up to v${BACKUP_SCHEMA_VERSION}.`,
+      ),
+      schemaVersion,
+    }
+  }
+
+  if (!hasRecognizableBackupSections(payload)) {
+    return {
+      ok: false,
+      code: 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',
+      message: t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'),
+      schemaVersion,
+    }
+  }
+
+  return {
+    ok: true,
+    code: '',
+    message: '',
+    schemaVersion,
+  }
+}
+
+const resolveBackupImportFailure = (error) => {
+  const code = (typeof error?.code === 'string' && error.code.trim()) ? error.code.trim().toUpperCase() : ''
+  if (code === 'BACKUP_IMPORT_INVALID_JSON') {
+    return {
+      code,
+      detail: t('备份文件不是有效 JSON。', 'Backup file is not valid JSON.'),
+    }
+  }
+  if (code === 'BACKUP_IMPORT_INVALID_FORMAT') {
+    return {
+      code,
+      detail: t('备份文件格式无效。', 'Invalid backup file format.'),
+    }
+  }
+  if (code === 'BACKUP_IMPORT_UNSUPPORTED_SCHEMA') {
+    return {
+      code,
+      detail:
+        typeof error?.message === 'string' && error.message.trim()
+          ? error.message.trim()
+          : t('备份版本过高，当前版本无法直接导入。', 'Backup schema is newer than this app version.'),
+    }
+  }
+  if (code === 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED') {
+    return {
+      code,
+      detail: t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'),
+    }
+  }
+  return {
+    code: code || 'BACKUP_IMPORT_FAILED',
+    detail:
+      typeof error?.message === 'string' && error.message.trim()
+        ? error.message.trim()
+        : t('发生未知错误。', 'Unknown error occurred.'),
+  }
+}
+
+const exportData = async () => {
+  if (backupExporting.value) return
+  backupExporting.value = true
+  try {
+    const payload = await buildBackupPayload()
+    const data = JSON.stringify(payload)
+
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'schatphone_backup.json'
+    anchor.click()
+    URL.revokeObjectURL(url)
+    systemStore.markBackupExported()
+    systemStore.saveNow()
+
+    const packageSummary =
+      payload?.backupMeta?.galleryAssetPackage && typeof payload.backupMeta.galleryAssetPackage === 'object'
+        ? payload.backupMeta.galleryAssetPackage
+        : null
+    const packageMsg =
+      packageSummary && packageSummary.requested
+        ? t(
+            ` 素材包：${packageSummary.itemCount} 项，约 ${formatBytes(packageSummary.totalBytes)}。`,
+            ` Asset package: ${packageSummary.itemCount} item(s), about ${formatBytes(packageSummary.totalBytes)}.`,
+          )
+        : t(' 当前为元数据备份模式。', ' Metadata-only backup mode is used.')
+    const message = `${t('备份文件下载已开始。', 'Backup download has started.')}${packageMsg}`
+    setBackupFeedback('success', message, 2600)
+    writeStorageAuditReport({
+      level: 'info',
+      action: 'export_backup',
+      code: packageSummary?.requested ? 'BACKUP_EXPORT_WITH_ASSET_PACKAGE' : 'BACKUP_EXPORT_METADATA_ONLY',
+      message,
+      model: payload?.backupMeta?.exportMode || '',
+    })
+  } catch (error) {
+    const detail = typeof error?.message === 'string' && error.message.trim() ? ` ${error.message.trim()}` : ''
+    const message = `${t('备份导出失败。', 'Backup export failed.')}${detail}`
+    setBackupFeedback('error', message, 3200)
+    writeStorageAuditReport({
+      level: 'error',
+      action: 'export_backup',
+      code: 'BACKUP_EXPORT_FAILED',
+      message,
+    })
+  } finally {
+    backupExporting.value = false
+  }
 }
 
 const deepClone = (value) => {
@@ -595,24 +802,63 @@ const importData = async (event) => {
 
   try {
     const text = await file.text()
-    const parsed = JSON.parse(text)
-    if (!parsed || typeof parsed !== 'object') {
-      throw new Error(t('备份文件格式无效。', 'Invalid backup file format.'))
+    let parsed = null
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      throw createBackupImportError(
+        'BACKUP_IMPORT_INVALID_JSON',
+        t('备份文件不是有效 JSON。', 'Backup file is not valid JSON.'),
+      )
+    }
+
+    const preflight = validateBackupPayload(parsed)
+    if (!preflight.ok) {
+      throw createBackupImportError(preflight.code, preflight.message)
     }
 
     const systemOk = systemStore.restoreFromBackup(parsed)
     const chatOk = chatStore.restoreFromBackup(parsed)
     const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
-    const galleryOk = galleryStore.restoreFromBackup(parsed.gallery || parsed)
-    if (!systemOk || !chatOk || !mapOk || !galleryOk) {
-      throw new Error(t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'))
+    const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
+      restoreAssetPackage: true,
+    })
+    if (!systemOk || !chatOk || !mapOk || !galleryRestoreResult?.ok) {
+      throw createBackupImportError(
+        'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',
+        t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'),
+      )
     }
 
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
     galleryStore.saveNow()
-    setBackupFeedback('success', t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.'), 2200)
+
+    const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
+    const failedCount = Number(galleryRestoreResult.failedPackageCount || 0)
+    const skippedCount = Number(galleryRestoreResult.skippedPackageCount || 0)
+    const hasPackageSummary = galleryRestoreResult.packageApplied === true
+    const suffix = hasPackageSummary
+      ? t(
+          ` 素材包恢复：成功 ${restoredCount}，失败 ${failedCount}，跳过 ${skippedCount}。`,
+          ` Asset package restore: ${restoredCount} succeeded, ${failedCount} failed, ${skippedCount} skipped.`,
+        )
+      : t(' 该备份不含素材包，仅恢复元数据。', ' This backup has no asset package; metadata only was restored.')
+    const message = `${t('导入成功，数据已恢复。', 'Import succeeded and data has been restored.')}${suffix}`
+    setBackupFeedback(failedCount > 0 ? 'warn' : 'success', message, 2800)
+    writeStorageAuditReport({
+      level: failedCount > 0 ? 'error' : 'info',
+      action: 'import_backup',
+      code:
+        failedCount > 0
+          ? 'BACKUP_IMPORT_ASSET_PACKAGE_PARTIAL'
+          : hasPackageSummary
+            ? 'BACKUP_IMPORT_WITH_ASSET_PACKAGE'
+            : 'BACKUP_IMPORT_METADATA_ONLY',
+      message,
+      model: parsed?.backupMeta?.exportMode || '',
+    })
   } catch (error) {
     systemStore.restoreFromBackup(rollback.system)
     chatStore.restoreFromBackup(rollback.chat)
@@ -622,12 +868,21 @@ const importData = async (event) => {
     chatStore.saveNow()
     mapStore.saveNow()
     galleryStore.saveNow()
-    const detail = typeof error?.message === 'string' && error.message.trim() ? ` ${error.message.trim()}` : ''
+    const resolved = resolveBackupImportFailure(error)
+    const detail = resolved.detail ? ` ${resolved.detail}` : ''
+    const message = `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`
     setBackupFeedback(
       'error',
-      `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`,
+      message,
       3200,
     )
+    writeStorageAuditReport({
+      level: 'error',
+      action: 'import_backup',
+      code: resolved.code || 'BACKUP_IMPORT_FAILED',
+      message,
+      model: typeof file?.name === 'string' ? file.name : '',
+    })
   } finally {
     backupImporting.value = false
   }
@@ -777,16 +1032,51 @@ if (initialMenu) {
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div class="px-3.5 py-3 border-b border-gray-100">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-medium">{{ t('导出包含素材包（可选）', 'Include asset package in export (optional)') }}</p>
+              <p class="text-[11px] text-gray-500">
+                {{
+                  t(
+                    '默认仅导出元数据。开启后会尝试打包本地素材二进制，文件体积会明显增大。',
+                    'Metadata-only is default. When enabled, local binary assets are packaged and backup size grows significantly.',
+                  )
+                }}
+              </p>
+            </div>
+            <input
+              v-model="backupIncludeAssetPackage"
+              type="checkbox"
+              class="w-5 h-5 shrink-0"
+              :disabled="backupExporting || backupImporting"
+            />
+          </div>
+        </div>
+
         <button
           class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
           @click="exportData"
+          :disabled="backupExporting"
         >
           <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-export"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('备份与导出（JSON）', 'Backup & Export (JSON)') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('导出当前本地数据快照', 'Export a local snapshot of current data') }}</p>
+            <p class="text-sm">
+              {{
+                backupExporting
+                  ? t('正在导出...', 'Exporting...')
+                  : t('备份与导出（JSON）', 'Backup & Export (JSON)')
+              }}
+            </p>
+            <p class="text-[11px] text-gray-500">
+              {{
+                backupIncludeAssetPackage
+                  ? t('将尝试附带素材包导出（体积更大）', 'Will try to include asset package (larger file size)')
+                  : t('导出当前本地数据快照（元数据模式）', 'Export current local snapshot (metadata mode)')
+              }}
+            </p>
           </div>
           <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
         </button>
@@ -832,7 +1122,7 @@ if (initialMenu) {
       <p
         v-if="backupFeedbackMessage"
         class="px-1 text-[11px]"
-        :class="backupFeedbackType === 'error' ? 'text-red-600' : 'text-emerald-600'"
+        :class="backupFeedbackType === 'error' ? 'text-red-600' : backupFeedbackType === 'warn' ? 'text-amber-600' : 'text-emerald-600'"
       >
         {{ backupFeedbackMessage }}
       </p>

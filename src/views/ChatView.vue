@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
+import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import { useI18n } from '../composables/useI18n'
@@ -132,6 +133,11 @@ const showThreadMenu = ref(false)
 const serviceTemplateDraft = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
+const showEditMessageModal = ref(false)
+const editingMessageId = ref('')
+const editingMessageRole = ref('user')
+const editingMessageOriginalText = ref('')
+const editingMessageDraftText = ref('')
 const lastManualActionAt = ref(0)
 const threadSettingsSaved = ref(false)
 const threadIdentitySaved = ref(false)
@@ -257,6 +263,42 @@ const galleryPickerAssets = computed(() =>
     return sorted.slice(0, 36)
   },
 )
+
+const gallerySendState = computed(() => {
+  const total = Array.isArray(galleryStore.assets) ? galleryStore.assets.length : 0
+  if (total > 0) {
+    return {
+      enabled: true,
+      message: t('可从素材库选择发送。', 'Assets are available to send.'),
+    }
+  }
+  return {
+    enabled: false,
+    message: t('素材库为空，请先在相册导入素材。', 'Asset library is empty. Import assets in Gallery first.'),
+  }
+})
+
+const locationShareState = computed(() => {
+  const raw = typeof currentLocationText.value === 'string' ? currentLocationText.value.trim() : ''
+  if (!raw || raw.includes('未设置') || raw.toLowerCase().includes('not set')) {
+    return {
+      enabled: false,
+      message: t('请先在地图中设置当前位置。', 'Set current location in Map first.'),
+    }
+  }
+  return {
+    enabled: true,
+    message: t('可发送当前位置。', 'Current location is ready to send.'),
+  }
+})
+
+const userActionGridHint = computed(() => {
+  const hints = []
+  if (!gallerySendState.value.enabled) hints.push(gallerySendState.value.message)
+  if (!locationShareState.value.enabled) hints.push(locationShareState.value.message)
+  if (hints.length > 0) return hints.join(' · ')
+  return t('可通过 + 面板发送图片、链接、位置、转账与语音卡片。', 'Use + panel to send images, links, location, transfer cards and voice cards.')
+})
 
 const activeRoleAssetContext = computed(() => {
   const chatId = Number(activeChat.value?.id)
@@ -514,7 +556,10 @@ const scrollToBottom = () => {
 }
 
 const goHome = () => router.push('/home')
-const leaveChat = () => router.push('/chat')
+const leaveChat = () => {
+  closeMessageEditModal()
+  router.push('/chat')
+}
 const openChatDockFeature = (featureId) => {
   const id = typeof featureId === 'string' ? featureId.trim() : ''
   if (!id) return
@@ -1791,6 +1836,37 @@ const canRestoreSemanticRevision = (message) =>
       message.semanticRevision.originalText.trim(),
   )
 
+const messageEditState = computed(() => {
+  const validation = buildMessageEditValidation({
+    draftText: editingMessageDraftText.value,
+    originalText: editingMessageOriginalText.value,
+    role: editingMessageRole.value,
+    maxChars: MAX_ASSISTANT_TEXT_CHARS,
+  })
+
+  const messageMap = {
+    [MESSAGE_EDIT_REASON.EMPTY]: t('消息不能为空。', 'Message cannot be empty.'),
+    [MESSAGE_EDIT_REASON.TOO_LONG]: t(
+      `文本不能超过 ${MAX_ASSISTANT_TEXT_CHARS} 字。`,
+      `Text cannot exceed ${MAX_ASSISTANT_TEXT_CHARS} chars.`,
+    ),
+    [MESSAGE_EDIT_REASON.UNCHANGED]: t('文本未变化。', 'Text unchanged.'),
+    [MESSAGE_EDIT_REASON.READY_ASSISTANT]: t(
+      '修订后文本将作为后续上下文。',
+      'Revised text will be used in later context.',
+    ),
+    [MESSAGE_EDIT_REASON.READY_USER]: t(
+      '将直接更新这条用户消息。',
+      'This will directly update the user message.',
+    ),
+  }
+
+  return {
+    ...validation,
+    message: messageMap[validation.reason] || '',
+  }
+})
+
 const quoteMessage = (message) => {
   if (!message) return
   pendingQuote.value = {
@@ -1805,33 +1881,47 @@ const clearPendingQuote = () => {
   pendingQuote.value = null
 }
 
+const closeMessageEditModal = () => {
+  showEditMessageModal.value = false
+  editingMessageId.value = ''
+  editingMessageRole.value = 'user'
+  editingMessageOriginalText.value = ''
+  editingMessageDraftText.value = ''
+}
+
 const editMessage = (message) => {
   if (!activeChat.value || !canEditMessage(message)) return
 
   const currentText = messagePrimaryText(message)
-  const input = window.prompt(
-    message.role === 'assistant'
-      ? t('修订消息文本（用于后续上下文）', 'Revise message text for next context')
-      : t('编辑消息', 'Edit message'),
-    currentText,
-  )
-  if (input === null) {
-    closeMessageActions()
+  editingMessageId.value = message.id || ''
+  editingMessageRole.value = message.role === 'assistant' ? 'assistant' : 'user'
+  editingMessageOriginalText.value = currentText
+  editingMessageDraftText.value = currentText
+  showEditMessageModal.value = true
+  closeMessageActions()
+}
+
+const submitMessageEdit = () => {
+  if (!activeChat.value || !showEditMessageModal.value || !editingMessageId.value) return
+  if (!messageEditState.value.valid) {
+    showUiNotice('error', messageEditState.value.message)
     return
   }
 
-  const nextText = input.trim()
-  if (!nextText) {
-    showUiNotice('error', t('消息不能为空。', 'Message cannot be empty.'))
+  const target = activeMessages.value.find((item) => item.id === editingMessageId.value)
+  if (!target || !canEditMessage(target)) {
+    showUiNotice('error', t('目标消息不存在或不可编辑。', 'Message is missing or not editable.'))
+    closeMessageEditModal()
     return
   }
 
+  const nextText = messageEditState.value.text
   const ok =
-    message.role === 'assistant'
-      ? chatStore.reviseMessageSemantic(activeChat.value.id, message.id, nextText, {
+    target.role === 'assistant'
+      ? chatStore.reviseMessageSemantic(activeChat.value.id, target.id, nextText, {
           revisedAt: Date.now(),
         })
-      : chatStore.updateMessageContent(activeChat.value.id, message.id, nextText, {
+      : chatStore.updateMessageContent(activeChat.value.id, target.id, nextText, {
           markEdited: true,
           editedAt: Date.now(),
         })
@@ -1839,7 +1929,7 @@ const editMessage = (message) => {
     showUiNotice('error', t('编辑失败，请重试。', 'Edit failed. Please retry.'))
     return
   }
-  closeMessageActions()
+  closeMessageEditModal()
 }
 
 const restoreSemanticRevision = (message) => {
@@ -2057,6 +2147,10 @@ const openUserActionForm = (formType) => {
     formType === USER_ACTION_FORM_GALLERY
       ? formType
       : USER_ACTION_FORM_NONE
+  if (nextType === USER_ACTION_FORM_GALLERY && !gallerySendState.value.enabled) {
+    showUiNotice('warning', gallerySendState.value.message)
+    return
+  }
   showUserActionPanel.value = true
   userActionFormType.value = nextType
   if (nextType === USER_ACTION_FORM_GALLERY) {
@@ -2175,6 +2269,108 @@ const normalizeExternalUrl = (value) => {
   }
 }
 
+const linkFormState = computed(() => {
+  const normalizedUrl = normalizeExternalUrl(userActionDraft.linkUrl)
+  if (!normalizedUrl) {
+    return {
+      valid: false,
+      message: t('链接格式无效，仅支持 http/https。', 'Invalid URL. Only http/https is supported.'),
+      url: '',
+      label: '',
+      note: '',
+    }
+  }
+
+  const label =
+    typeof userActionDraft.linkTitle === 'string' && userActionDraft.linkTitle.trim()
+      ? userActionDraft.linkTitle.trim()
+      : t('外部链接', 'External link')
+  const note = typeof userActionDraft.linkNote === 'string' ? userActionDraft.linkNote.trim() : ''
+  return {
+    valid: true,
+    message: t('链接格式可用。', 'URL format looks good.'),
+    url: normalizedUrl,
+    label,
+    note,
+  }
+})
+
+const transferFormState = computed(() => {
+  const amount = typeof userActionDraft.transferAmount === 'string' ? userActionDraft.transferAmount.trim() : ''
+  if (!amount) {
+    return {
+      valid: false,
+      message: t('请输入转账金额。', 'Please enter transfer amount.'),
+      amount: '',
+      currency: '',
+      note: '',
+    }
+  }
+  if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+    return {
+      valid: false,
+      message: t('金额格式无效。', 'Invalid amount format.'),
+      amount: '',
+      currency: '',
+      note: '',
+    }
+  }
+
+  const rawCurrency = typeof userActionDraft.transferCurrency === 'string'
+    ? userActionDraft.transferCurrency.trim()
+    : ''
+  const currency = rawCurrency ? rawCurrency.toUpperCase() : 'CNY'
+  if (!/^[A-Z]{2,8}$/.test(currency)) {
+    return {
+      valid: false,
+      message: t('币种格式无效。', 'Invalid currency format.'),
+      amount: '',
+      currency: '',
+      note: '',
+    }
+  }
+
+  const note = typeof userActionDraft.transferNote === 'string' ? userActionDraft.transferNote.trim() : ''
+  return {
+    valid: true,
+    message: t('转账卡片信息可发送。', 'Transfer card is ready to send.'),
+    amount,
+    currency,
+    note,
+  }
+})
+
+const voiceFormState = computed(() => {
+  const transcript = typeof userActionDraft.voiceTranscript === 'string'
+    ? userActionDraft.voiceTranscript.trim()
+    : ''
+  if (!transcript) {
+    return {
+      valid: false,
+      message: t('语音内容不能为空。', 'Voice transcript cannot be empty.'),
+      transcript: '',
+      durationSec: 0,
+    }
+  }
+
+  const duration = Number(userActionDraft.voiceDurationSec)
+  if (!Number.isFinite(duration)) {
+    return {
+      valid: false,
+      message: t('时长格式无效。', 'Invalid duration format.'),
+      transcript: '',
+      durationSec: 0,
+    }
+  }
+
+  return {
+    valid: true,
+    message: t('语音卡片信息可发送。', 'Voice card is ready to send.'),
+    transcript,
+    durationSec: Math.min(600, Math.max(1, Math.floor(duration))),
+  }
+})
+
 const openExternalUrl = (rawUrl) => {
   const url = normalizeExternalUrl(rawUrl)
   if (!url) {
@@ -2213,11 +2409,11 @@ const sendTextMessage = () => {
 const sendCurrentLocation = () => {
   if (!activeChat.value) return
 
-  const locationText = currentLocationText.value
-  if (!locationText || locationText.includes('未设置') || locationText.toLowerCase().includes('not set')) {
-    showUiNotice('warning', t('请先在地图中设置当前位置。', 'Please set your location in Map first.'))
+  if (!locationShareState.value.enabled) {
+    showUiNotice('warning', locationShareState.value.message)
     return
   }
+  const locationText = typeof currentLocationText.value === 'string' ? currentLocationText.value.trim() : ''
 
   appendUserMessage({
     content: `${t('位置共享', 'Location share')} · ${locationText}`,
@@ -2236,17 +2432,11 @@ const sendCurrentLocation = () => {
 
 const submitLinkCardForm = () => {
   if (!activeChat.value) return
-  const url = normalizeExternalUrl(userActionDraft.linkUrl)
-  if (!url) {
-    showUiNotice('error', t('链接格式无效，仅支持 http/https。', 'Invalid URL. Only http/https is supported.'))
+  if (!linkFormState.value.valid) {
+    showUiNotice('error', linkFormState.value.message)
     return
   }
-
-  const label =
-    typeof userActionDraft.linkTitle === 'string' && userActionDraft.linkTitle.trim()
-      ? userActionDraft.linkTitle.trim()
-      : t('外部链接', 'External link')
-  const note = typeof userActionDraft.linkNote === 'string' ? userActionDraft.linkNote.trim() : ''
+  const { url, label, note } = linkFormState.value
 
   appendUserMessage({
     content: `${label}\n${url}`,
@@ -2265,20 +2455,11 @@ const submitLinkCardForm = () => {
 
 const submitTransferCardForm = () => {
   if (!activeChat.value) return
-
-  const amount = userActionDraft.transferAmount.trim()
-  if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
-    showUiNotice('error', t('金额格式无效。', 'Invalid amount format.'))
+  if (!transferFormState.value.valid) {
+    showUiNotice('error', transferFormState.value.message)
     return
   }
-
-  const rawCurrency = userActionDraft.transferCurrency.trim()
-  const currency = rawCurrency ? rawCurrency.toUpperCase() : 'CNY'
-  if (!/^[A-Z]{2,8}$/.test(currency)) {
-    showUiNotice('error', t('币种格式无效。', 'Invalid currency format.'))
-    return
-  }
-  const note = typeof userActionDraft.transferNote === 'string' ? userActionDraft.transferNote.trim() : ''
+  const { amount, currency, note } = transferFormState.value
 
   appendUserMessage({
     content: `${t('转账', 'Transfer')} ${amount} ${currency}`,
@@ -2300,15 +2481,11 @@ const submitTransferCardForm = () => {
 
 const submitVoiceCardForm = () => {
   if (!activeChat.value) return
-
-  const transcript = userActionDraft.voiceTranscript.trim()
-  if (!transcript) {
-    showUiNotice('error', t('语音内容不能为空。', 'Voice transcript cannot be empty.'))
+  if (!voiceFormState.value.valid) {
+    showUiNotice('error', voiceFormState.value.message)
     return
   }
-
-  const durationSec = Number(userActionDraft.voiceDurationSec)
-  const safeDurationSec = Number.isFinite(durationSec) ? Math.min(600, Math.max(1, Math.floor(durationSec))) : 8
+  const { transcript, durationSec: safeDurationSec } = voiceFormState.value
 
   appendUserMessage({
     content: transcript,
@@ -2719,6 +2896,7 @@ watch(
   (id) => {
     showThreadMenu.value = false
     closeUserActionPanel()
+    closeMessageEditModal()
     galleryPickerCategory.value = 'all'
     clearReactivePreviewMap(galleryPickerPreviewMap)
     activeMessageActionId.value = ''
@@ -3249,7 +3427,9 @@ onBeforeUnmount(() => {
             </button>
             <button
               @click="openUserActionForm(USER_ACTION_FORM_GALLERY)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+              :disabled="!gallerySendState.enabled"
+              class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
+              :class="gallerySendState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
             >
               {{ t('素材库', 'Asset library') }}
             </button>
@@ -3261,7 +3441,9 @@ onBeforeUnmount(() => {
             </button>
             <button
               @click="sendCurrentLocation"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+              :disabled="!locationShareState.enabled"
+              class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
+              :class="locationShareState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
             >
               {{ t('位置', 'Location') }}
             </button>
@@ -3278,6 +3460,13 @@ onBeforeUnmount(() => {
               {{ t('语音卡片', 'Voice card') }}
             </button>
           </div>
+          <p
+            v-if="userActionFormType === USER_ACTION_FORM_NONE"
+            class="mt-2 text-[10px]"
+            :class="gallerySendState.enabled && locationShareState.enabled ? 'text-gray-500' : 'text-amber-600'"
+          >
+            {{ userActionGridHint }}
+          </p>
 
           <div v-else-if="userActionFormType === USER_ACTION_FORM_LINK" class="space-y-2">
             <p class="text-[11px] font-medium text-gray-700">{{ t('发送链接', 'Send link') }}</p>
@@ -3300,6 +3489,12 @@ onBeforeUnmount(() => {
               class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
               :placeholder="t('附加说明（可选）', 'Note (optional)')"
             />
+            <p
+              class="text-[10px]"
+              :class="linkFormState.valid ? 'text-gray-500' : 'text-amber-600'"
+            >
+              {{ linkFormState.message }}
+            </p>
             <div class="flex items-center justify-end gap-2">
               <button
                 @click="backToUserActionGrid"
@@ -3309,7 +3504,9 @@ onBeforeUnmount(() => {
               </button>
               <button
                 @click="submitLinkCardForm"
-                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+                :disabled="!linkFormState.valid"
+                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
+                :class="linkFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
               >
                 {{ t('发送链接', 'Send link') }}
               </button>
@@ -3340,6 +3537,12 @@ onBeforeUnmount(() => {
               class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
               :placeholder="t('转账备注（可选）', 'Transfer note (optional)')"
             />
+            <p
+              class="text-[10px]"
+              :class="transferFormState.valid ? 'text-gray-500' : 'text-amber-600'"
+            >
+              {{ transferFormState.message }}
+            </p>
             <div class="flex items-center justify-end gap-2">
               <button
                 @click="backToUserActionGrid"
@@ -3349,7 +3552,9 @@ onBeforeUnmount(() => {
               </button>
               <button
                 @click="submitTransferCardForm"
-                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+                :disabled="!transferFormState.valid"
+                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
+                :class="transferFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
               >
                 {{ t('发送转账', 'Send transfer') }}
               </button>
@@ -3374,6 +3579,12 @@ onBeforeUnmount(() => {
                 class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-[11px] outline-none"
               />
             </div>
+            <p
+              class="text-[10px]"
+              :class="voiceFormState.valid ? 'text-gray-500' : 'text-amber-600'"
+            >
+              {{ voiceFormState.message }}
+            </p>
             <div class="flex items-center justify-end gap-2">
               <button
                 @click="backToUserActionGrid"
@@ -3383,7 +3594,9 @@ onBeforeUnmount(() => {
               </button>
               <button
                 @click="submitVoiceCardForm"
-                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
+                :disabled="!voiceFormState.valid"
+                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
+                :class="voiceFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
               >
                 {{ t('发送语音卡片', 'Send voice card') }}
               </button>
@@ -3603,6 +3816,65 @@ onBeforeUnmount(() => {
           >
             {{ t('取消', 'Cancel') }}
           </button>
+        </div>
+      </div>
+
+      <div
+        v-if="showEditMessageModal"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-3 pb-4 sm:pb-0"
+      >
+        <button
+          type="button"
+          class="absolute inset-0 bg-black/35"
+          @click="closeMessageEditModal"
+        ></button>
+
+        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-2xl">
+          <p class="text-sm font-semibold text-gray-900">
+            {{
+              editingMessageRole === 'assistant'
+                ? t('修订 AI 消息', 'Revise AI message')
+                : t('编辑用户消息', 'Edit user message')
+            }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500">
+            {{
+              editingMessageRole === 'assistant'
+                ? t('修订内容会进入后续上下文，避免对话断层。', 'Revised text will be used for following context.')
+                : t('将直接更新当前消息文本。', 'This will update the current message text directly.')
+            }}
+          </p>
+
+          <textarea
+            v-model="editingMessageDraftText"
+            rows="5"
+            class="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none resize-none"
+            :placeholder="t('输入修订后的消息文本', 'Enter revised message text')"
+          ></textarea>
+
+          <p
+            class="mt-2 text-[11px]"
+            :class="messageEditState.valid ? 'text-gray-500' : 'text-amber-600'"
+          >
+            {{ messageEditState.message }}
+          </p>
+
+          <div class="mt-3 flex items-center justify-end gap-2">
+            <button
+              class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+              @click="closeMessageEditModal"
+            >
+              {{ t('取消', 'Cancel') }}
+            </button>
+            <button
+              class="rounded-lg border px-3 py-1.5 text-xs transition disabled:cursor-not-allowed disabled:opacity-50"
+              :class="messageEditState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
+              :disabled="!messageEditState.valid"
+              @click="submitMessageEdit"
+            >
+              {{ t('保存', 'Save') }}
+            </button>
+          </div>
         </div>
       </div>
     </template>

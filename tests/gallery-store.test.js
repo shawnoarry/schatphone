@@ -80,4 +80,109 @@ describe('gallery store', () => {
     expect(forcedRemoval.ok).toBe(true)
     expect(store.findAssetById(asset.id)).toBe(null)
   })
+
+  test('creates backup snapshot in metadata mode by default and can include asset package', async () => {
+    const store = useGalleryStore()
+    const file = new File(['asset-binary-sample'], 'sample.png', {
+      type: 'image/png',
+      lastModified: 321,
+    })
+    const imported = await store.importAssetsFromFiles([file], { category: 'reference' })
+    expect(imported.ok).toBe(true)
+
+    const metadataOnly = await store.createBackupSnapshotAsync()
+    expect(Array.isArray(metadataOnly.assets)).toBe(true)
+    expect(metadataOnly.assetPackage).toBe(null)
+    expect(metadataOnly.packageSummary.requested).toBe(false)
+
+    const withPackage = await store.createBackupSnapshotAsync({
+      includeAssetPackage: true,
+    })
+    expect(withPackage.packageSummary.requested).toBe(true)
+    expect(withPackage.assetPackage).not.toBe(null)
+    expect(Array.isArray(withPackage.assetPackage.items)).toBe(true)
+    expect(withPackage.assetPackage.items.length).toBeGreaterThanOrEqual(1)
+  })
+
+  test('restores file blobs from backup asset package in a fresh runtime', async () => {
+    const store = useGalleryStore()
+    const file = new File(['blob-rehydrate-sample'], 'rehydrate.png', {
+      type: 'image/png',
+      lastModified: 999,
+    })
+    const imported = await store.importAssetsFromFiles([file], { category: 'emoji' })
+    expect(imported.ok).toBe(true)
+
+    const snapshot = await store.createBackupSnapshotAsync({
+      includeAssetPackage: true,
+      maxPackageBytes: 10 * 1024 * 1024,
+      maxPackageItems: 10,
+    })
+    expect(snapshot.assetPackage?.items?.length).toBeGreaterThan(0)
+
+    clearGalleryAssetBlobFallback()
+    localStorage.clear()
+    setActivePinia(createPinia())
+
+    const nextStore = useGalleryStore()
+    const restored = await nextStore.restoreFromBackupAsync(snapshot, {
+      restoreAssetPackage: true,
+    })
+    expect(restored.ok).toBe(true)
+    expect(restored.packageApplied).toBe(true)
+    expect(restored.restoredPackageCount).toBeGreaterThan(0)
+
+    const exportedAgain = await nextStore.createBackupSnapshotAsync({
+      includeAssetPackage: true,
+      maxPackageBytes: 10 * 1024 * 1024,
+      maxPackageItems: 10,
+    })
+    expect(exportedAgain.assetPackage?.items?.length).toBeGreaterThan(0)
+  })
+
+  test('keeps metadata restore working when asset package contains invalid items', async () => {
+    const store = useGalleryStore()
+    const file = new File(['invalid-package-case'], 'broken.png', {
+      type: 'image/png',
+      lastModified: 777,
+    })
+    const imported = await store.importAssetsFromFiles([file], { category: 'scenario' })
+    expect(imported.ok).toBe(true)
+
+    const metadataSnapshot = store.createBackupSnapshot()
+    const assetId = metadataSnapshot.assets[0]?.id
+    expect(typeof assetId).toBe('string')
+
+    const malformedSnapshot = {
+      ...metadataSnapshot,
+      assetPackage: {
+        version: 1,
+        exportedAt: Date.now(),
+        items: [
+          {
+            id: assetId,
+            blobId: assetId,
+            dataUrl: 'data:image/png;base64,@@invalid@@',
+            mimeType: 'image/png',
+          },
+        ],
+      },
+    }
+
+    clearGalleryAssetBlobFallback()
+    localStorage.clear()
+    setActivePinia(createPinia())
+
+    const nextStore = useGalleryStore()
+    const restored = await nextStore.restoreFromBackupAsync(malformedSnapshot, {
+      restoreAssetPackage: true,
+    })
+    expect(restored.ok).toBe(true)
+    expect(restored.packageApplied).toBe(true)
+    expect(restored.failedPackageCount).toBe(1)
+    expect(restored.reason).toBe('package_partial_failed')
+
+    expect(nextStore.assets.length).toBe(1)
+    expect(nextStore.assets[0].id).toBe(assetId)
+  })
 })
