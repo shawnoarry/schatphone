@@ -54,6 +54,19 @@ describe('chat store model', () => {
     const store = useChatStore()
     const contactId = store.contacts[0].id
 
+    const defaultPrefs = store.getDefaultConversationAiPrefs()
+    expect(defaultPrefs.suggestedRepliesEnabled).toBe(false)
+    expect(defaultPrefs.contextTurns).toBe(8)
+    expect(defaultPrefs.bilingualEnabled).toBe(false)
+    expect(defaultPrefs.replyMode).toBe('manual')
+    expect(defaultPrefs.replyCount).toBe(1)
+    expect(defaultPrefs.responseStyle).toBe('immersive')
+    expect(defaultPrefs.proactiveOpenerEnabled).toBe(false)
+    expect(defaultPrefs.proactiveOpenerStrategy).toBe('on_enter_once')
+
+    defaultPrefs.replyCount = 99
+    expect(store.getDefaultConversationAiPrefs().replyCount).toBe(1)
+
     const defaults = store.getConversationAiPrefs(contactId)
     expect(defaults.suggestedRepliesEnabled).toBe(false)
     expect(defaults.contextTurns).toBe(8)

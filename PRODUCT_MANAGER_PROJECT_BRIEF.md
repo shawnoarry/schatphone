@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-07
+Updated / 更新时间: 2026-04-08
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -61,6 +61,8 @@ Updated / 更新时间: 2026-04-07
    中文：消息编辑已改为 Chat 内弹层（不再依赖浏览器 prompt），并保留助手语义修订与恢复原文路径。
 8. EN: Message-edit validation is now isolated in a reusable helper with dedicated tests.
    中文：消息编辑校验已拆分为可复用辅助函数，并补齐专项测试。
+9. EN: Chat dock pages `preferences/identity/labs` are now usable management tools instead of pure placeholders.
+   中文：Chat 底部 `preferences/identity/labs` 页面已是可用管理工具，而非纯占位页。
 
 ### 4.3 Contacts and Role Binding / 通讯录与角色绑定
 1. EN: Main contacts (`/contacts`) manage global role profiles.
@@ -125,13 +127,13 @@ Status / 状态: `PARTIAL_DONE`
    中文：剩余：补齐专门 UI 测试并确定修订痕迹策略。
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 1. EN: Chat list page bottom dock baseline (`Prefs/Identity/Labs`) is online.
    中文：Chat 一级列表页底部功能位基线（偏好/身份/实验室）已上线。
-2. EN: Current entries route to real placeholder pages without breaking thread entry flow.
-   中文：当前入口已路由到真实占位页，且不影响会话进入流程。
-3. EN: Remaining: replace placeholders with production module pages.
-   中文：剩余：将占位页替换为正式模块页。
+2. EN: `preferences/labs` now provide production-usable settings and maintenance actions.
+   中文：`preferences/labs` 现已提供可用的设置与运维动作。
+3. EN: Thread entry flow remains unchanged after dock feature expansion.
+   中文：底部功能位扩展后，会话进入主流程保持不变。
 
 ### P0-3 and P0-6 Closure / P0-3 与 P0-6 收口
 Status / 状态: `PARTIAL_DONE`
@@ -163,3 +165,5 @@ Status / 状态: `PARTIAL_DONE`
    2026-04-07 中文：补充 Chat 内消息编辑弹层进度，并将 `P0-1/P0-2` 更新为 `PARTIAL_DONE`。
 4. 2026-04-07 EN: Added `chat-message-edit` validation helper and dedicated tests for safer future UI iteration.
    2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，提升后续 UI 迭代安全性。
+5. 2026-04-08 EN: Implemented production-ready `preferences/labs` pages and closed `P0-2`.
+   2026-04-08 中文：实装 `preferences/labs` 可用页面并完成 `P0-2` 收口。

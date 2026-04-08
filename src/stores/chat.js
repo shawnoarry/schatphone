@@ -929,6 +929,9 @@ export const useChatStore = defineStore('chat', () => {
     return normalizeConversationAiPrefs(conversation.aiPrefs)
   }
 
+  const getDefaultConversationAiPrefs = () =>
+    normalizeConversationAiPrefs(DEFAULT_CONVERSATION_AI_PREFS)
+
   const getMessagesByContactId = (contactId) => {
     const key = conversationKeyForContact(contactId)
     ensureConversationForContact(contactId)
@@ -1911,6 +1914,7 @@ export const useChatStore = defineStore('chat', () => {
     ensureConversationForContact,
     getConversationByContactId,
     getConversationAiPrefs,
+    getDefaultConversationAiPrefs,
     getMessagesByContactId,
     setConversationDraft,
     setConversationAiPrefs,

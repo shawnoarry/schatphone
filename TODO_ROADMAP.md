@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-07
+Updated / 更新时间: 2026-04-08
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -146,17 +146,19 @@ Remaining / 剩余:
 ---
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: `/chat` list page now has fixed bottom dock entries (`Prefs` / `Identity` / `Labs`).
    中文：`/chat` 一级列表页已提供固定底部入口（`偏好` / `身份` / `实验室`）。
 2. EN: Dock routes to real pages (`/chat-feature/:feature`) and keeps chat thread entry unchanged.
    中文：底部入口已路由到真实页面（`/chat-feature/:feature`），且不影响会话进入主流程。
+3. EN: `preferences` and `labs` pages are now production-usable (batch conversation preference apply + maintenance utilities).
+   中文：`preferences` 与 `labs` 页面已实装可用（会话偏好批量应用 + 运维清理工具）。
 
 Remaining / 剩余:
-1. EN: Replace placeholder feature pages with production-grade module pages in later phase.
-   中文：后续阶段将占位页替换为正式模块页。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
@@ -302,6 +304,8 @@ Current / 当前:
     中文：基于已落地基线功能，`P0-1` 与 `P0-2` 状态已更新为 `PARTIAL_DONE`。
 11. EN: Added dedicated unit tests for chat message-edit validation helper to reduce regression risk in future UI refactors.
     中文：已为聊天消息编辑校验辅助函数新增专项单测，降低后续 UI 重构回归风险。
+12. EN: Chat dock feature pages were upgraded from placeholders to usable `preferences/labs` tools, closing `P0-2`.
+    中文：Chat 底部功能页已从占位升级为可用 `preferences/labs` 工具，`P0-2` 正式收口。
 
 ---
 
@@ -320,3 +324,5 @@ Current / 当前:
    2026-04-07 中文：将消息编辑从浏览器 prompt 升级为 Chat 内弹层编辑，并同步 `P0-1/P0-2` 状态更新。
 7. 2026-04-07 EN: Added `chat-message-edit` validation helper and dedicated tests, then passed lint/test/build full gate.
    2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，并通过 lint/test/build 全量验证。
+8. 2026-04-08 EN: Implemented production-ready `preferences/labs` pages for chat dock and marked `P0-2` as `DONE`.
+   2026-04-08 中文：实装 Chat 底部 `preferences/labs` 页面并将 `P0-2` 标记为 `DONE`。

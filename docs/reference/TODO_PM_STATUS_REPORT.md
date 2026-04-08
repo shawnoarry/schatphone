@@ -1,5 +1,5 @@
 # SchatPhone TODO PM Status Report / SchatPhone 待办状态（产品经理视角）
-Updated / 更新时间: 2026-04-07
+Updated / 更新时间: 2026-04-08
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 这份报告的用途
@@ -18,7 +18,7 @@ Source / 来源: `TODO_ROADMAP.md`
 
 ## 3. P0 status at a glance / P0 状态总览
 1. `P0-1` AI 单条语义修订: `PARTIAL_DONE`
-2. `P0-2` Chat 一级页底部功能位: `PARTIAL_DONE`
+2. `P0-2` Chat 一级页底部功能位: `DONE`
 3. `P0-3` 头像层级 B: `PARTIAL_DONE`
 4. `P0-4` 用户富消息链路加固: `IN_PROGRESS`
 5. `P0-5` 相册全局素材中心 v1: `PARTIAL_DONE`
@@ -46,6 +46,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：Chat 一级页底部功能位基线（偏好/身份/实验室）已上线并可路由跳转。
 10. EN: Added dedicated unit tests for message-edit validation rules to reduce regressions in later UI updates.
     中文：已补齐消息编辑校验规则的专项单测，降低后续 UI 更新时的回归风险。
+11. EN: `preferences/labs` dock pages are now production-usable (batch preference apply + maintenance tools), closing `P0-2`.
+    中文：`preferences/labs` 底部功能页已实装可用（偏好批量应用 + 运维工具），`P0-2` 已收口。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P0-4` Rich Message Lane Hardening / 富消息链路加固
@@ -103,10 +105,10 @@ How you can review it / 你可以怎么验收:
 ## 9. Next after P0-4 (preview only) / P0-4 之后（预告）
 1. EN: Close remaining `P0-1` items (tests and revision trace policy).
    中文：收口 `P0-1` 剩余项（测试与修订痕迹策略）。
-2. EN: Close remaining `P0-2` items (replace placeholders with production module pages).
-   中文：收口 `P0-2` 剩余项（占位页替换为正式模块页）。
-3. EN: Continue cross-module closure for `P0-3` and `P0-6`.
+2. EN: Continue cross-module closure for `P0-3` and `P0-6`.
    中文：继续 `P0-3` 与 `P0-6` 的跨模块收口。
+3. EN: Keep polishing `P0-4` edge-state messaging clarity until acceptance.
+   中文：持续打磨 `P0-4` 边界状态提示清晰度直到验收。
 
 ## 10. Change log / 变更记录
 1. 2026-04-07 EN: Rewrote from short summary into detailed PM-level execution report.
@@ -121,3 +123,5 @@ How you can review it / 你可以怎么验收:
    2026-04-07 中文：同步 Chat 内消息编辑弹层进度，并将 `P0-1/P0-2` 更新为 `PARTIAL_DONE`。
 6. 2026-04-07 EN: Added `chat-message-edit` helper tests and passed lint/test/build full gate.
    2026-04-07 中文：新增 `chat-message-edit` 辅助测试并通过 lint/test/build 全量闸门。
+7. 2026-04-08 EN: Upgraded chat dock `preferences/labs` from placeholders to production-usable tools and closed `P0-2`.
+   2026-04-08 中文：将 Chat 底部 `preferences/labs` 从占位页升级为可用工具，并完成 `P0-2` 收口。
