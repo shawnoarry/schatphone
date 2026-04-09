@@ -1,5 +1,5 @@
 # SchatPhone TODO PM Status Report / SchatPhone 待办状态（产品经理视角）
-Updated / 更新时间: 2026-04-08
+Updated / 更新时间: 2026-04-09
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 这份报告的用途
@@ -13,16 +13,16 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：项目方向保持正确：沉浸式手机壳层 + Chat 驱动 AI 互动。
 2. EN: Core foundation is stable enough; storage/backup closure is completed for current scope.
    中文：核心基础已稳定；当前范围内的存储与备份收口已完成。
-3. EN: Therefore the immediate execution focus is now `P0-4` (rich-message lane consistency).
-   中文：因此当前立即执行重点切换为 `P0-4`（富消息链路一致性）。
+3. EN: `P0-1` to `P0-7` are now closed; immediate focus moves to P1 kickoff.
+   中文：`P0-1` 至 `P0-7` 已全部收口；当前立即执行重点切换为 P1 启动阶段。
 
 ## 3. P0 status at a glance / P0 状态总览
-1. `P0-1` AI 单条语义修订: `PARTIAL_DONE`
+1. `P0-1` AI 单条语义修订: `DONE`
 2. `P0-2` Chat 一级页底部功能位: `DONE`
-3. `P0-3` 头像层级 B: `PARTIAL_DONE`
-4. `P0-4` 用户富消息链路加固: `IN_PROGRESS`
-5. `P0-5` 相册全局素材中心 v1: `PARTIAL_DONE`
-6. `P0-6` 角色绑定与素材复用: `PARTIAL_DONE`
+3. `P0-3` 头像层级 B: `DONE`
+4. `P0-4` 用户富消息链路加固: `DONE`
+5. `P0-5` 相册全局素材中心 v1: `DONE`
+6. `P0-6` 角色绑定与素材复用: `DONE`
 7. `P0-7` 存储与备份加固: `DONE`
 
 ## 4. What was completed recently / 最近完成了什么（你能感知到的）
@@ -48,67 +48,67 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：已补齐消息编辑校验规则的专项单测，降低后续 UI 更新时的回归风险。
 11. EN: `preferences/labs` dock pages are now production-usable (batch preference apply + maintenance tools), closing `P0-2`.
     中文：`preferences/labs` 底部功能页已实装可用（偏好批量应用 + 运维工具），`P0-2` 已收口。
+12. EN: Added component-level semantic-revision regression tests (open/edit/save/restore), closing `P0-1`.
+    中文：已补齐语义修订组件级回归测试（打开/编辑/保存/恢复），`P0-1` 已收口。
+13. EN: Added configurable semantic-revision trace policy (`silent` default, optional `meta_hint`) and edge-state success feedback, closing `P0-4`.
+    中文：已加入可配置语义修订痕迹策略（默认 `silent`，可选 `meta_hint`）与边界成功提示，`P0-4` 已收口。
+14. EN: Closed `P0-3/P0-6` by landing unified role-binding contract APIs, compatibility mapping, and contract checklist doc.
+    中文：已通过统一角色绑定契约 API、兼容映射与契约清单文档完成 `P0-3/P0-6` 收口。
+15. EN: `P0-5` export UX hardening pass is landed: mode summary, package limit hint, partial-package warning code, and export/import mutual exclusion.
+    中文：`P0-5` 导出体验加固批次已落地：模式摘要、素材包上限提示、部分打包告警编码、导入导出互斥保护。
+16. EN: `P0-5` closure is complete: backup copy style switch (`direct`/`immersive`) and diagnostics-center naming are now live.
+    中文：`P0-5` 已完成最终收口：备份文案风格切换（`直白`/`沉浸`）与“诊断报告中心”命名已上线。
+17. EN: Added regression tests for backup copy-tone default/restore/invalid fallback behavior.
+    中文：新增备份文案风格默认值/恢复值/非法值回退的回归测试。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
-### `P0-4` Rich Message Lane Hardening / 富消息链路加固
+### `P1` Kickoff (Preview) / `P1` 启动预览
 
 What we are solving / 我们要解决什么:
-1. EN: Rich-message forms should be consistent before submit (validation, disabled state, guidance).
-   中文：富消息表单在提交前应保持一致体验（校验、禁用态、提示文案）。
-2. EN: Reduce trial-and-error by making invalid input visible early.
-   中文：让无效输入提前可见，减少“点了才知道错”的试错感。
-3. EN: Keep manual AI trigger lane unaffected while improving user send UX.
-   中文：在优化用户发送体验的同时，保持手动 AI 触发通道不受影响。
+1. EN: P0 closure is complete; next priority is adding immersive modules without breaking stable core paths.
+   中文：P0 已收口；下一优先级是在不破坏稳定主链路的前提下扩展沉浸模块。
+2. EN: New modules should reuse role/asset contracts and current storage/backup diagnostics.
+   中文：新模块需复用现有角色/素材契约与存储/备份诊断体系。
 
 What will be delivered / 本步交付什么:
-1. EN: Shared validation state for link/transfer/voice-card forms.
-   中文：链接/转账/语音卡片统一校验状态。
-2. EN: Disabled submit buttons until input becomes valid.
-   中文：输入有效前提交按钮保持禁用。
-3. EN: Inline hints plus fallback error notices.
-   中文：内联提示 + 兜底错误提示并存。
-4. EN: Gallery/location actions in `+` panel follow the same availability-state logic and guidance.
-   中文：`+` 面板中的素材库/位置动作已按同一可用性逻辑与提示策略执行。
+1. EN: Kick off P1 item-1 (AI image-reference pipeline, provider-capability dependent).
+   中文：启动 P1 第 1 项（AI 图生图参考链路，依赖供应商能力）。
+2. EN: Preserve existing backup/reporting behavior while adding new immersive capabilities.
+   中文：新增沉浸能力时保持现有备份与诊断行为稳定。
+3. EN: Keep PM-facing wording bilingual and non-technical.
+   中文：持续保持产品侧文档双语且非技术可读。
 
 How you can review it / 你可以怎么验收:
-1. EN: In chat `+` panel, try invalid and valid link/transfer/voice inputs.
-   中文：在 chat `+` 面板分别输入无效和有效的链接/转账/语音数据。
-2. EN: Confirm button disable/enable transitions are intuitive.
-   中文：确认按钮禁用/启用切换符合直觉。
-3. EN: Confirm `Trigger Reply` and other send paths still work.
-   中文：确认 `Trigger Reply` 与其他发送通道不受影响。
+1. EN: Verify P0 backup flows still pass in Settings/Network after P1 kickoff changes.
+   中文：确认 P1 启动后，Settings/Network 的 P0 备份链路仍稳定。
+2. EN: Verify new module changes do not break role-binding contract behavior.
+   中文：确认新模块改动不破坏角色绑定契约行为。
 
 ## 6. Why this order is chosen / 为什么按这个顺序
-1. EN: Storage risk has been reduced, so user-facing chat consistency now has higher product impact.
-   中文：存储风险已下降，因此用户可感知的聊天一致性现在更有产品影响力。
-2. EN: This step improves daily usage feel without adding new complexity to users.
-   中文：这一步提升日常使用手感，同时不增加用户认知负担。
-3. EN: It prepares a cleaner base for upcoming semantic revision (`P0-1`).
-   中文：这为后续语义修订（`P0-1`）打下更干净的交互基础。
+1. EN: P0 export UX risks are now closed, so P1 can focus on feature depth.
+   中文：P0 导出体验风险已关闭，P1 可以聚焦功能深度。
+2. EN: Reusing existing contracts/persistence policies keeps delivery speed high and regression risk low.
+   中文：复用既有契约与持久化策略可兼顾开发速度与回归风险控制。
 
 ## 7. PM decisions currently needed / 当前需要你拍板的点
-1. EN: Confirm backup UX wording style: “simple and direct” vs “immersive narrative”.
-   中文：确认备份提示文案风格：偏“直接简明”还是偏“沉浸叙事”。
-2. EN: Confirm default export choice in UI: metadata-only first, asset package optional toggle.
-   中文：确认导出默认策略：是否默认仅元数据，素材包由用户手动勾选。
-3. EN: Confirm error-history entry naming for API/storage diagnostics in settings/network.
-   中文：确认设置/网络中 API 与存储报错历史入口命名（便于用户理解）。
+1. EN: No blocking PM decision for P0 closure; current defaults are active (`direct` tone + metadata-first).
+   中文：P0 收口无阻塞决策；当前默认策略已生效（`直白文案` + `元数据优先`）。
+2. EN: For P1, prioritize module order (image-reference vs mini-scene vs cross-module role reuse).
+   中文：P1 需拍板模块优先顺序（图生图参考链路 / 互动小剧场 / 跨模块角色复用）。
 
 ## 8. Risk watch (PM version) / 风险提醒（产品经理版）
 1. EN: If TODO docs are not updated per commit, team alignment will drift quickly.
    中文：若每次提交不同步 TODO，协作口径会很快漂移。
 2. EN: If backup strategy explanation is weak, users may think data is “auto-safe” and skip backup.
    中文：若备份说明不清，用户会误以为数据“自动绝对安全”，从而不做备份。
-3. EN: If cross-module asset contracts are delayed too long, future modules may require expensive refactors.
-   中文：若跨模块素材契约迟迟不定，未来模块接入会产生高成本返工。
+3. EN: If new modules bypass current role/storage contracts, future maintenance cost will rise sharply.
+   中文：若新模块绕过现有角色/存储契约，后续维护成本会明显上升。
 
-## 9. Next after P0-4 (preview only) / P0-4 之后（预告）
-1. EN: Close remaining `P0-1` items (tests and revision trace policy).
-   中文：收口 `P0-1` 剩余项（测试与修订痕迹策略）。
-2. EN: Continue cross-module closure for `P0-3` and `P0-6`.
-   中文：继续 `P0-3` 与 `P0-6` 的跨模块收口。
-3. EN: Keep polishing `P0-4` edge-state messaging clarity until acceptance.
-   中文：持续打磨 `P0-4` 边界状态提示清晰度直到验收。
+## 9. Next after current phase (preview only) / 当前阶段之后（预告）
+1. EN: Start P1 immersive modules in staged order with strict reuse of existing contracts.
+   中文：按阶段启动 P1 沉浸模块，并严格复用既有契约。
+2. EN: Keep diagnostics readability and backup reliability as non-regression baseline.
+   中文：将“诊断可读性 + 备份可靠性”作为不可回退基线。
 
 ## 10. Change log / 变更记录
 1. 2026-04-07 EN: Rewrote from short summary into detailed PM-level execution report.
@@ -125,3 +125,11 @@ How you can review it / 你可以怎么验收:
    2026-04-07 中文：新增 `chat-message-edit` 辅助测试并通过 lint/test/build 全量闸门。
 7. 2026-04-08 EN: Upgraded chat dock `preferences/labs` from placeholders to production-usable tools and closed `P0-2`.
    2026-04-08 中文：将 Chat 底部 `preferences/labs` 从占位页升级为可用工具，并完成 `P0-2` 收口。
+8. 2026-04-09 EN: Closed `P0-1` with component-level semantic revision flow tests.
+   2026-04-09 中文：通过组件级语义修订流程测试完成 `P0-1` 收口。
+9. 2026-04-09 EN: Closed `P0-4` with edge-state messaging polish and revision-trace policy.
+   2026-04-09 中文：通过边界状态提示打磨与修订痕迹策略完成 `P0-4` 收口。
+10. 2026-04-09 EN: Closed `P0-3/P0-6` with unified role-binding contract API + checklist documentation.
+    2026-04-09 中文：通过统一角色绑定契约 API 与接入清单文档完成 `P0-3/P0-6` 收口。
+11. 2026-04-09 EN: Closed `P0-5` with backup copy-tone switch, diagnostics-center naming, and regression tests.
+    2026-04-09 中文：通过备份文案风格切换、诊断中心命名统一与回归测试完成 `P0-5` 收口。

@@ -60,6 +60,8 @@ const backupReminderIntervalOptions = [1, 3, 6, 12, 24, 48, 72, 168, 336, 720]
 const BACKUP_SCHEMA_VERSION = 2
 const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
 const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
+const BACKUP_COPY_TONE_DIRECT = 'direct'
+const BACKUP_COPY_TONE_IMMERSIVE = 'immersive'
 const backupReminderIntervalLabel = (hours) => {
   const normalizedHours = Number(hours)
   if (!Number.isFinite(normalizedHours) || normalizedHours <= 0) return t('自定义', 'Custom')
@@ -87,6 +89,129 @@ const formatBytes = (bytes = 0) => {
   if (normalized < 1024 * 1024) return `${(normalized / 1024).toFixed(1)} KB`
   return `${(normalized / (1024 * 1024)).toFixed(2)} MB`
 }
+
+const backupCopyTone = computed(() =>
+  settings.value.system?.backupCopyTone === BACKUP_COPY_TONE_IMMERSIVE
+    ? BACKUP_COPY_TONE_IMMERSIVE
+    : BACKUP_COPY_TONE_DIRECT,
+)
+
+const useImmersiveBackupCopy = computed(
+  () => backupCopyTone.value === BACKUP_COPY_TONE_IMMERSIVE,
+)
+
+const resolveBackupCopy = (directZh, directEn, immersiveZh, immersiveEn) =>
+  useImmersiveBackupCopy.value
+    ? t(immersiveZh, immersiveEn)
+    : t(directZh, directEn)
+
+const backupExportModeLabel = computed(() =>
+  backupIncludeAssetPackage.value
+    ? resolveBackupCopy(
+        '导出模式：元数据 + 素材包',
+        'Export mode: metadata + asset package',
+        '导出模式：完整行李（元数据 + 素材包）',
+        'Export mode: full luggage (metadata + asset package)',
+      )
+    : resolveBackupCopy(
+        '导出模式：仅元数据（推荐）',
+        'Export mode: metadata only (recommended)',
+        '导出模式：轻装出行（仅元数据，推荐）',
+        'Export mode: travel-light (metadata only, recommended)',
+      ),
+)
+
+const backupExportModeHint = computed(() =>
+  backupIncludeAssetPackage.value
+    ? resolveBackupCopy(
+        '会尝试打包本地文件素材二进制；URL 素材仍以元数据形式记录。',
+        'Will try to package local file-asset binaries; URL assets remain metadata entries.',
+        '会尽量把本地素材一起装箱；URL 素材仍只记录来源信息。',
+        'Local assets are packed when possible; URL assets still keep source metadata only.',
+      )
+    : resolveBackupCopy(
+        '包含设置、角色档案、会话、世界书等核心数据，文件更小更快。',
+        'Includes settings, role profiles, chats, worldbook and other core metadata with smaller file size.',
+        '会保存角色、会话和世界书等关键记忆，体积更轻、恢复更快。',
+        'Keeps core memories (profiles, chats, worldbook) with a lighter and faster backup.',
+      ),
+)
+
+const backupPackageLimitHint = computed(() =>
+  resolveBackupCopy(
+    `素材包上限：最多 ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} 项，约 ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}。`,
+    `Asset package limits: up to ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} item(s), about ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}.`,
+    `行李舱上限：最多 ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} 项，约 ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}。`,
+    `Luggage cap: up to ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} item(s), about ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}.`,
+  ),
+)
+
+const buildBackupPackageSummaryMessage = (packageSummary) => {
+  if (!packageSummary || packageSummary.requested !== true) {
+    return resolveBackupCopy(
+      ' 当前为元数据备份模式。',
+      ' Metadata-only backup mode is used.',
+      ' 当前按轻装模式备份（仅元数据）。',
+      ' Backup used travel-light mode (metadata only).',
+    )
+  }
+
+  const itemCount = Math.max(0, Number(packageSummary.itemCount || 0))
+  const totalBytes = Math.max(0, Number(packageSummary.totalBytes || 0))
+  const skippedCount = Math.max(0, Number(packageSummary.skippedCount || 0))
+  const missingCount = Math.max(0, Number(packageSummary.missingCount || 0))
+  const overflow = Boolean(packageSummary.overflow)
+  const details = []
+
+  if (skippedCount > 0) {
+    details.push(
+      resolveBackupCopy(
+        `超限跳过 ${skippedCount} 项`,
+        `${skippedCount} skipped by limits`,
+        `超出上限未装箱 ${skippedCount} 项`,
+        `${skippedCount} left unpacked by limits`,
+      ),
+    )
+  }
+  if (missingCount > 0) {
+    details.push(
+      resolveBackupCopy(
+        `缺失二进制 ${missingCount} 项`,
+        `${missingCount} missing binaries`,
+        `缺少本地文件 ${missingCount} 项`,
+        `${missingCount} local binaries missing`,
+      ),
+    )
+  }
+  if (overflow) {
+    details.push(
+      resolveBackupCopy(
+        '已触发体积或数量上限',
+        'size/item limit reached',
+        '已触发行李舱容量上限',
+        'luggage capacity limit reached',
+      ),
+    )
+  }
+
+  const base = resolveBackupCopy(
+    ` 素材包：${itemCount} 项，约 ${formatBytes(totalBytes)}。`,
+    ` Asset package: ${itemCount} item(s), about ${formatBytes(totalBytes)}.`,
+    ` 素材行李：${itemCount} 项，约 ${formatBytes(totalBytes)}。`,
+    ` Asset luggage: ${itemCount} item(s), about ${formatBytes(totalBytes)}.`,
+  )
+  if (details.length === 0) return base
+  return `${base}${resolveBackupCopy(' 注意：', ' Note: ', ' 留意：', ' Heads up: ')}${details.join(', ')}。`
+}
+
+const backupExportStartedMessage = computed(() =>
+  resolveBackupCopy(
+    '备份文件下载已开始。',
+    'Backup download has started.',
+    '备份列车已发车，文件开始下载。',
+    'Backup train departed; download has started.',
+  ),
+)
 
 const setStorageAuditFeedback = (type, message, durationMs = 2200) => {
   storageAuditFeedbackType.value = type
@@ -202,6 +327,8 @@ const storageReportReasonLabel = (report) => {
     return t('备份导出成功（元数据）', 'Backup export succeeded (metadata)')
   if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
     return t('备份导出成功（含素材包）', 'Backup export succeeded (with asset package)')
+  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL')
+    return t('备份导出完成（素材包部分缺失）', 'Backup export completed (asset package partial)')
   if (code === 'BACKUP_EXPORT_FAILED')
     return t('备份导出失败', 'Backup export failed')
   if (code === 'BACKUP_IMPORT_METADATA_ONLY')
@@ -713,19 +840,23 @@ const exportData = async () => {
       payload?.backupMeta?.galleryAssetPackage && typeof payload.backupMeta.galleryAssetPackage === 'object'
         ? payload.backupMeta.galleryAssetPackage
         : null
-    const packageMsg =
-      packageSummary && packageSummary.requested
-        ? t(
-            ` 素材包：${packageSummary.itemCount} 项，约 ${formatBytes(packageSummary.totalBytes)}。`,
-            ` Asset package: ${packageSummary.itemCount} item(s), about ${formatBytes(packageSummary.totalBytes)}.`,
-          )
-        : t(' 当前为元数据备份模式。', ' Metadata-only backup mode is used.')
-    const message = `${t('备份文件下载已开始。', 'Backup download has started.')}${packageMsg}`
-    setBackupFeedback('success', message, 2600)
+    const packageMsg = buildBackupPackageSummaryMessage(packageSummary)
+    const packageHasPartial =
+      Boolean(packageSummary?.requested) &&
+      (Number(packageSummary?.skippedCount || 0) > 0 ||
+        Number(packageSummary?.missingCount || 0) > 0 ||
+        Boolean(packageSummary?.overflow))
+    const reportCode = packageSummary?.requested
+      ? packageHasPartial
+        ? 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL'
+        : 'BACKUP_EXPORT_WITH_ASSET_PACKAGE'
+      : 'BACKUP_EXPORT_METADATA_ONLY'
+    const message = `${backupExportStartedMessage.value}${packageMsg}`
+    setBackupFeedback(packageHasPartial ? 'warn' : 'success', message, 2800)
     writeStorageAuditReport({
-      level: 'info',
+      level: packageHasPartial ? 'warn' : 'info',
       action: 'export_backup',
-      code: packageSummary?.requested ? 'BACKUP_EXPORT_WITH_ASSET_PACKAGE' : 'BACKUP_EXPORT_METADATA_ONLY',
+      code: reportCode,
       message,
       model: payload?.backupMeta?.exportMode || '',
     })
@@ -775,7 +906,7 @@ const createRollbackSnapshot = () => {
 }
 
 const triggerImportData = () => {
-  if (backupImporting.value) return
+  if (backupImporting.value || backupExporting.value) return
   backupFileInput.value?.click()
 }
 
@@ -787,7 +918,7 @@ const resetImportInput = (event) => {
 const importData = async (event) => {
   const file = event?.target?.files?.[0]
   resetImportInput(event)
-  if (!file || backupImporting.value) return
+  if (!file || backupImporting.value || backupExporting.value) return
 
   const confirmed = window.confirm(
     t(
@@ -1032,15 +1163,53 @@ if (initialMenu) {
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div class="px-3.5 py-3 border-b border-gray-100 space-y-2.5">
+          <p class="text-sm font-medium">{{ t('备份提示风格', 'Backup copy style') }}</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              class="py-2 rounded-lg text-xs font-medium border transition"
+              :class="
+                backupCopyTone === 'direct'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              "
+              @click="settings.system.backupCopyTone = 'direct'"
+            >
+              {{ t('直白说明', 'Direct') }}
+            </button>
+            <button
+              class="py-2 rounded-lg text-xs font-medium border transition"
+              :class="
+                backupCopyTone === 'immersive'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              "
+              @click="settings.system.backupCopyTone = 'immersive'"
+            >
+              {{ t('沉浸叙事', 'Immersive') }}
+            </button>
+          </div>
+          <p class="text-[11px] text-gray-500">
+            {{
+              t(
+                '仅影响系统提示文案，不影响 AI 回复内容。',
+                'Only affects system copy, not AI-generated replies.',
+              )
+            }}
+          </p>
+        </div>
+
         <div class="px-3.5 py-3 border-b border-gray-100">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <p class="text-sm font-medium">{{ t('导出包含素材包（可选）', 'Include asset package in export (optional)') }}</p>
+              <p class="text-sm font-medium">{{ resolveBackupCopy('导出包含素材包（可选）', 'Include asset package in export (optional)', '导出时附带素材行李（可选）', 'Include asset luggage in export (optional)') }}</p>
               <p class="text-[11px] text-gray-500">
                 {{
-                  t(
+                  resolveBackupCopy(
                     '默认仅导出元数据。开启后会尝试打包本地素材二进制，文件体积会明显增大。',
                     'Metadata-only is default. When enabled, local binary assets are packaged and backup size grows significantly.',
+                    '默认轻装模式仅导出元数据。开启后会尽量装入本地素材，备份体积会明显变大。',
+                    'Travel-light (metadata-only) is default. Enabling this packs local assets when possible and increases backup size.',
                   )
                 }}
               </p>
@@ -1054,10 +1223,16 @@ if (initialMenu) {
           </div>
         </div>
 
+        <div class="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 space-y-1">
+          <p class="text-[11px] font-medium text-gray-700">{{ backupExportModeLabel }}</p>
+          <p class="text-[10px] text-gray-500">{{ backupExportModeHint }}</p>
+          <p class="text-[10px] text-gray-400">{{ backupPackageLimitHint }}</p>
+        </div>
+
         <button
           class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
           @click="exportData"
-          :disabled="backupExporting"
+          :disabled="backupExporting || backupImporting"
         >
           <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-export"></i>
@@ -1067,14 +1242,24 @@ if (initialMenu) {
               {{
                 backupExporting
                   ? t('正在导出...', 'Exporting...')
-                  : t('备份与导出（JSON）', 'Backup & Export (JSON)')
+                  : resolveBackupCopy('备份与导出（JSON）', 'Backup & Export (JSON)', '打包并导出（JSON）', 'Pack & Export (JSON)')
               }}
             </p>
             <p class="text-[11px] text-gray-500">
               {{
                 backupIncludeAssetPackage
-                  ? t('将尝试附带素材包导出（体积更大）', 'Will try to include asset package (larger file size)')
-                  : t('导出当前本地数据快照（元数据模式）', 'Export current local snapshot (metadata mode)')
+                  ? resolveBackupCopy(
+                      '将尝试附带素材包导出（体积更大）',
+                      'Will try to include asset package (larger file size)',
+                      '将尝试附带素材行李导出（文件更大）',
+                      'Will try to include asset luggage (larger file size)',
+                    )
+                  : resolveBackupCopy(
+                      '导出当前本地数据快照（元数据模式）',
+                      'Export current local snapshot (metadata mode)',
+                      '导出当前本地快照（轻装模式）',
+                      'Export current local snapshot (travel-light mode)',
+                    )
               }}
             </p>
           </div>
@@ -1084,6 +1269,7 @@ if (initialMenu) {
         <button
           class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
           @click="triggerImportData"
+          :disabled="backupImporting || backupExporting"
         >
           <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-import"></i>
@@ -1334,13 +1520,13 @@ if (initialMenu) {
             <p class="text-xs text-gray-500">
               {{
                 t(
-                  '调用失败与中断记录可在 Network 页面查看。',
-                  'Failure and cancellation logs are available on the Network page.',
+                  '调用失败与中断记录可在 Network 的诊断报告中心查看。',
+                  'Failure and cancellation logs are available in Network diagnostics center.',
                 )
               }}
             </p>
             <button @click="openNetworkReports" class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">
-              {{ t('前往调用记录', 'Go to call history') }}
+              {{ t('前往诊断记录', 'Go to diagnostics') }}
             </button>
           </div>
 

@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-08
+Updated / 更新时间: 2026-04-09
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -63,6 +63,8 @@ Updated / 更新时间: 2026-04-08
    中文：消息编辑校验已拆分为可复用辅助函数，并补齐专项测试。
 9. EN: Chat dock pages `preferences/identity/labs` are now usable management tools instead of pure placeholders.
    中文：Chat 底部 `preferences/identity/labs` 页面已是可用管理工具，而非纯占位页。
+10. EN: Semantic revision trace policy is configurable (`silent` default, optional `meta_hint`).
+    中文：语义修订痕迹策略已可配置（默认 `silent`，可选 `meta_hint`）。
 
 ### 4.3 Contacts and Role Binding / 通讯录与角色绑定
 1. EN: Main contacts (`/contacts`) manage global role profiles.
@@ -98,15 +100,15 @@ Updated / 更新时间: 2026-04-08
 
 ## 5) Priority Refinement (P0) / 需细化优先级（P0）
 ### P0-4 Rich Message Lane Polish / 富消息链路打磨
-Status / 状态: `IN_PROGRESS`（Current highest / 当前最高）
+Status / 状态: `DONE`
 1. EN: Unify validation and failure-state behavior.
    中文：统一输入校验与失败态表现。
 2. EN: Front-load form guidance (inline hints + disabled submit before valid input).
    中文：前置表单引导（内联提示 + 输入有效前禁用提交）。
 3. EN: Keep `Trigger Reply` lane unaffected while improving user-send quality.
    中文：在优化用户发送质量时保持 `Trigger Reply` 通道不受影响。
-4. EN: Current pass completed for link/transfer/voice forms and gallery/location action availability; remaining work is edit-lane alignment with `P0-1`.
-   中文：当前批次已完成链接/转账/语音表单及素材库/位置动作可用性收口；剩余重点是与 `P0-1` 的编辑链路对齐。
+4. EN: In-chat edit modal regression flow is covered by component tests and accepted.
+   中文：Chat 内编辑弹层流程已由组件测试覆盖并通过验收。
 
 ### P0-7 Storage & Backup Hardening / 存储与备份加固
 Status / 状态: `DONE`
@@ -117,14 +119,23 @@ Status / 状态: `DONE`
 3. EN: Improve restore diagnostics and keep rollback-safe behavior.
    中文：完善恢复诊断并保持回滚安全。
 
+### P0-5 Gallery Export UX Closure / 相册导出体验收口
+Status / 状态: `DONE`
+1. EN: Metadata-first export and optional asset package flow are now clearly explained in UI.
+   中文：元数据优先导出与可选素材包流程已在 UI 中清晰说明。
+2. EN: Backup copy style switch is now available (`direct` / `immersive`) for non-technical readability.
+   中文：备份提示文案现支持风格切换（`直白` / `沉浸`），提升非技术可读性。
+3. EN: Network report history naming is unified as diagnostics center (`API/Storage`).
+   中文：Network 历史入口命名已统一为“诊断报告中心（API/存储）”。
+
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 1. EN: Single assistant-message semantic revision path is online.
    中文：单条助手消息语义修订路径已上线。
 2. EN: Revised text is reused as next-turn context default.
    中文：修订文本已作为后续轮次上下文默认值复用。
-3. EN: Remaining: add dedicated UI tests and finalize revision-trace policy.
-   中文：剩余：补齐专门 UI 测试并确定修订痕迹策略。
+3. EN: Dedicated UI tests and revision-trace policy are now completed.
+   中文：专项 UI 测试与修订痕迹策略已完成。
 
 ### P0-2 Chat Top-Level Bottom Dock / Chat 一级页底部功能位
 Status / 状态: `DONE`
@@ -136,17 +147,19 @@ Status / 状态: `DONE`
    中文：底部功能位扩展后，会话进入主流程保持不变。
 
 ### P0-3 and P0-6 Closure / P0-3 与 P0-6 收口
-Status / 状态: `PARTIAL_DONE`
-1. EN: Complete cross-module reuse contract and acceptance list.
-   中文：补齐跨模块复用契约与统一验收清单。
+Status / 状态: `DONE`
+1. EN: Cross-module role/avatar/asset contract APIs are now landed in chat store.
+   中文：跨模块角色/头像/素材契约 API 已在 chat store 落地。
+2. EN: Contract acceptance checklist is documented in `docs/reference/ROLE_BINDING_CONTRACT.md`.
+   中文：契约验收清单已沉淀到 `docs/reference/ROLE_BINDING_CONTRACT.md`。
+3. EN: P0 closure is complete; next focus moves to P1 immersive module kickoff.
+   中文：P0 收口已完成；下一阶段聚焦 P1 沉浸模块启动。
 
 ## 6) PM Decision Checklist / 产品经理待决策清单
-1. EN: Backup wording style in UI: direct style vs immersive narrative style.
-   中文：备份相关 UI 文案风格：直接说明 vs 沉浸叙事。
-2. EN: Default export option: metadata-only by default or include asset package by default.
-   中文：导出默认项：仅元数据默认，还是默认包含素材包。
-3. EN: Error history naming for user clarity (API/storage reports).
-   中文：报错历史入口命名（API/存储报告）是否足够用户可理解。
+1. EN: P0 has no blocking decision now; keep defaults (`direct` copy tone + metadata-first export).
+   中文：P0 当前无阻塞决策，保持默认（`直白文案` + `元数据优先导出`）。
+2. EN: For P1, confirm implementation order among image-reference, mini-scene, and cross-module role reuse.
+   中文：P1 需拍板图生图参考链路、互动小剧场、跨模块角色复用的实现顺序。
 
 ## 7) Quick Read Path / 快速阅读路径
 1. EN: Product overview and architecture: `PROJECT_MASTER_GUIDE.md`.
@@ -167,3 +180,9 @@ Status / 状态: `PARTIAL_DONE`
    2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，提升后续 UI 迭代安全性。
 5. 2026-04-08 EN: Implemented production-ready `preferences/labs` pages and closed `P0-2`.
    2026-04-08 中文：实装 `preferences/labs` 可用页面并完成 `P0-2` 收口。
+6. 2026-04-09 EN: Closed `P0-1` and `P0-4` with component-level regression tests and semantic-revision trace policy.
+   2026-04-09 中文：通过组件级回归测试与语义修订痕迹策略，完成 `P0-1` 与 `P0-4` 收口。
+7. 2026-04-09 EN: Closed `P0-3/P0-6` by landing role-binding contract APIs and integration checklist docs.
+   2026-04-09 中文：通过角色绑定契约 API 与接入清单文档落地，完成 `P0-3/P0-6` 收口。
+8. 2026-04-09 EN: Closed `P0-5` with backup copy-style switch, diagnostics naming unification, and regression tests.
+   2026-04-09 中文：通过备份文案风格切换、诊断命名统一与回归测试，完成 `P0-5` 收口。

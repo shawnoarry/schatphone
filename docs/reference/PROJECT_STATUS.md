@@ -126,6 +126,8 @@ Settings 存储诊断现已包含最近存储报告摘要，并提供到 Network
 - Chat directory now has batch-mode baseline (multi-select, bulk unbind/delete, filtered bulk bind) / 会话通讯录已补齐批量模式基线（多选、批量解绑/删除、按筛选批量绑定）
 - Chat directory template preset center is completed (role-meta presets + service presets) / 会话通讯录模板预设中心已完成（角色变量模板 + 服务模板）
 - Contact model fields: `kind`, `serviceTemplate`, `profileId`, `relationshipLevel`, `relationshipNote` / 联系人模型新增字段
+- Cross-module role contract baseline is landed: `chatStore.getRoleBindingContract(...)` and `chatStore.listRoleBindingContracts(...)` are now the unified role/avatar/asset context entry, with backward-compatible `getRoleBindingAssetContext(...)` kept for existing chat flows.  
+跨模块角色契约基线已落地：`chatStore.getRoleBindingContract(...)` 与 `chatStore.listRoleBindingContracts(...)` 已成为统一角色/头像/素材上下文入口，并保留 `getRoleBindingAssetContext(...)` 兼容既有聊天链路。
 
 ### 2.5 Lock Screen and Notification Loop / 锁屏与通知闭环
 

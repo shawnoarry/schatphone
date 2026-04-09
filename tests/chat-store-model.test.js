@@ -588,6 +588,74 @@ describe('chat store model', () => {
     expect(contextAfterOverride.recommendedImageAssetId).toBe('asset_scene_custom')
   })
 
+  test('exposes cross-module role binding contract with stable avatar and asset fields', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      name: 'Contract Role',
+      role: 'Navigator',
+      isMain: false,
+      avatar: 'https://example.com/global-avatar.png',
+      assetPack: {
+        referenceAssetIds: ['asset_ref_1'],
+      },
+    })
+
+    const binding = store.bindRoleProfile(profile.id, {
+      relationshipLevel: 72,
+      relationshipNote: 'Contract note',
+    })
+
+    store.setModuleAvatarOverrides({
+      defaultContactAvatar: 'https://example.com/module-default.png',
+    })
+    store.setModuleContactAvatarOverride(binding.id, 'https://example.com/module-contact.png')
+    store.setConversationIdentityOverrides(binding.id, {
+      contactAvatar: 'https://example.com/thread-contact.png',
+    })
+    store.updateRoleBindingMeta(binding.id, {
+      preferredImageAssetId: 'asset_pref_1',
+    })
+
+    const contract = store.getRoleBindingContract(binding.id, {
+      moduleKey: 'map',
+    })
+    expect(contract.moduleKey).toBe('map')
+    expect(contract.roleBound).toBe(true)
+    expect(contract.contact.id).toBe(binding.id)
+    expect(contract.profile.id).toBe(profile.id)
+    expect(contract.relationship.level).toBe(72)
+    expect(contract.relationship.note).toBe('Contract note')
+    expect(contract.assets.preferredImageAssetId).toBe('asset_pref_1')
+    expect(contract.assets.recommendedImageAssetId).toBe('asset_pref_1')
+    expect(contract.assets.profileAssetIds).toContain('asset_ref_1')
+    expect(contract.avatar.activeLayer).toBe('thread')
+    expect(contract.avatar.resolved).toBe('https://example.com/thread-contact.png')
+
+    store.setConversationIdentityOverrides(binding.id, { contactAvatar: '' })
+    const moduleLayerContract = store.getRoleBindingContract(binding.id, {
+      moduleKey: 'forum',
+    })
+    expect(moduleLayerContract.avatar.activeLayer).toBe('module')
+    expect(moduleLayerContract.avatar.resolved).toBe('https://example.com/module-contact.png')
+
+    const list = store.listRoleBindingContracts([binding.id], { moduleKey: 'forum' })
+    expect(Array.isArray(list)).toBe(true)
+    expect(list).toHaveLength(1)
+    expect(list[0].moduleKey).toBe('forum')
+
+    const service = store.addContact({
+      name: 'Service Entry',
+      kind: 'service',
+      role: 'Service',
+    })
+    const serviceContract = store.getRoleBindingContract(service.id, {
+      moduleKey: 'map',
+    })
+    expect(serviceContract.roleBound).toBe(false)
+    expect(serviceContract.contact.kind).toBe('service')
+    expect(serviceContract.assets.profileAssetIds).toEqual([])
+  })
+
   test('removing global role profile clears bound chat entries', () => {
     const store = useChatStore()
     const profile = store.addRoleProfile({

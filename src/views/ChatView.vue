@@ -11,6 +11,11 @@ import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
+import {
+  SEMANTIC_REVISION_TRACE_MODES,
+  normalizeSemanticRevisionTraceMode,
+  shouldShowSemanticRevisionHint,
+} from '../lib/semantic-revision-policy'
 import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
@@ -71,6 +76,10 @@ const MAX_ASSISTANT_DETAIL_CHARS = 800
 const MAX_ASSISTANT_LABEL_CHARS = 80
 const MAX_ASSISTANT_BLOCKS = 12
 const MAX_ASSISTANT_QUOTE_PREVIEW_CHARS = 240
+const SEMANTIC_REVISION_TRACE_MODE = normalizeSemanticRevisionTraceMode(
+  import.meta?.env?.VITE_SEMANTIC_REVISION_TRACE_MODE,
+  SEMANTIC_REVISION_TRACE_MODES.SILENT,
+)
 
 const STATUS_OPTIONS = computed(() => [
   { id: 'idle', label: t('空闲', 'Idle'), hint: t('可联系', 'Available'), dotClass: 'chat-status-dot-idle' },
@@ -241,10 +250,12 @@ const galleryPickerAssets = computed(() =>
       return baseList.slice(0, 36)
     }
 
-    const roleAssetContext = chatStore.getRoleBindingAssetContext(chatId)
-    const preferredId = roleAssetContext.preferredImageAssetId
-    const profileIds = Array.isArray(roleAssetContext.profileAssetIds)
-      ? roleAssetContext.profileAssetIds
+    const roleBindingContract = chatStore.getRoleBindingContract(chatId, {
+      moduleKey: 'chat',
+    })
+    const preferredId = roleBindingContract.assets?.preferredImageAssetId || ''
+    const profileIds = Array.isArray(roleBindingContract.assets?.profileAssetIds)
+      ? roleBindingContract.assets.profileAssetIds
       : []
     const profileIdSet = new Set(profileIds)
 
@@ -317,7 +328,40 @@ const activeRoleAssetContext = computed(() => {
       profileAssetIds: [],
     }
   }
-  return chatStore.getRoleBindingAssetContext(chatId)
+  const contract = chatStore.getRoleBindingContract(chatId, {
+    moduleKey: 'chat',
+  })
+  if (!contract?.roleBound) {
+    return {
+      profileId: 0,
+      profileName: '',
+      preferredImageAssetId: '',
+      recommendedImageAssetId: '',
+      profileAssetPack: {
+        wallpaperAssetIds: [],
+        emojiAssetIds: [],
+        referenceAssetIds: [],
+        scenarioAssetIds: [],
+      },
+      profileAssetIds: [],
+    }
+  }
+
+  return {
+    profileId: Number(contract.profile?.id) || 0,
+    profileName: contract.profile?.name || contract.contact?.name || '',
+    preferredImageAssetId: contract.assets?.preferredImageAssetId || '',
+    recommendedImageAssetId: contract.assets?.recommendedImageAssetId || '',
+    profileAssetPack: contract.assets?.profileAssetPack || {
+      wallpaperAssetIds: [],
+      emojiAssetIds: [],
+      referenceAssetIds: [],
+      scenarioAssetIds: [],
+    },
+    profileAssetIds: Array.isArray(contract.assets?.profileAssetIds)
+      ? contract.assets.profileAssetIds
+      : [],
+  }
 })
 
 const activeActionMessage = computed(() => {
@@ -1929,6 +1973,12 @@ const submitMessageEdit = () => {
     showUiNotice('error', t('编辑失败，请重试。', 'Edit failed. Please retry.'))
     return
   }
+  showUiNotice(
+    'success',
+    target.role === 'assistant'
+      ? t('已保存语义修订。', 'Semantic revision saved.')
+      : t('消息已更新。', 'Message updated.'),
+  )
   closeMessageEditModal()
 }
 
@@ -1939,6 +1989,7 @@ const restoreSemanticRevision = (message) => {
     showUiNotice('error', t('恢复失败，请重试。', 'Restore failed. Please retry.'))
     return
   }
+  showUiNotice('success', t('已恢复原文。', 'Original text restored.'))
   closeMessageActions()
 }
 
@@ -2719,6 +2770,9 @@ const messageMetaHintText = (message) => {
   if (!message) return ''
   if (message.role === 'assistant' && message.aiMeta?.rerollOf) return t('重roll结果', 'Rerolled')
   if (message.editedAt) return t('已编辑', 'Edited')
+  if (shouldShowSemanticRevisionHint({ mode: SEMANTIC_REVISION_TRACE_MODE, message })) {
+    return t('已修订', 'Revised')
+  }
   return ''
 }
 

@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-08
+Updated / 更新时间: 2026-04-09
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -10,15 +10,15 @@ Updated / 更新时间: 2026-04-08
    中文：若旧文档与本文件冲突，以本文件为准。
 
 ## 0.5 AI Quick Start (10 min) / AI 接手速览（10分钟）
-1. EN: Target task now is `P0-4` (chat rich-message lane hardening).
-   中文：当前目标任务是 `P0-4`（聊天富消息链路加固）。
+1. EN: Current target moved to P1 kickoff after closing all P0 items.
+   中文：当前目标已切换为 P1 启动阶段（P0 已全部收口）。
 2. EN: Start from these files first:
    中文：先从这些文件开始阅读与改动：
-   - `src/views/ChatView.vue`
    - `src/stores/chat.js`
+   - `src/views/ContactsView.vue`
    - `src/views/ChatDirectoryView.vue`
    - `src/views/GalleryView.vue`
-   - `src/views/SettingsView.vue`
+   - `src/views/ChatView.vue`
 3. EN: Run full verification before task closure:
    中文：收口前必须跑完整验证：
    - `npm run lint`
@@ -51,81 +51,39 @@ Updated / 更新时间: 2026-04-08
    中文：Chat 富消息发送链路已上线，`Trigger Reply` 继续常驻。
 3. EN: Global role profile + thread binding baseline is landed.
    中文：全局角色档案 + 会话绑定基线已落地。
-4. EN: Storage/backup closure has entered completed state; current main focus returns to chat rich-message consistency.
-   中文：存储与备份收口已进入完成态，当前主焦点回到聊天富消息一致性。
+4. EN: `P0-4` rich-message lane and `P0-1` semantic revision are now closed in P0 scope.
+   中文：`P0-4` 富消息链路与 `P0-1` 语义修订已在 P0 范围内完成收口。
+5. EN: `P0-3` and `P0-6` cross-module role/avatar/asset contract closure is completed with reusable API + tests.
+   中文：`P0-3` 与 `P0-6` 的跨模块角色/头像/素材契约收口已完成，包含可复用 API 与测试。
 
 ---
 
 ## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
-### P0-4 User Rich Message Lane Hardening / P0-4 用户富消息链路加固
-Status / 状态: `IN_PROGRESS`
-Priority / 优先级: `Highest now / 当前最高`
+### P1 Kickoff Preview / P1 启动预览
+Status / 状态: `TODO`
+Priority / 优先级: `Highest next / 下一阶段最高`
 
 #### 4.1 Problem Statement / 问题定义
-1. EN: Link/transfer/voice-card forms should behave consistently before submit (validation, disabled state, hint language).
-   中文：链接/转账/语音卡片表单在提交前需要统一行为（校验、禁用态、提示文案）。
-2. EN: Current rich-message lane still has scattered failure behavior and needs stronger UX consistency.
-   中文：当前富消息发送仍有分散失败态，需要进一步统一体验。
-3. EN: `Trigger Reply` must remain independent and unaffected.
-   中文：`Trigger Reply` 必须保持独立，不受影响。
+1. EN: With P0 closed, the next risk is keeping immersive features extensible without breaking stable core paths.
+   中文：P0 收口后，下一风险是扩展沉浸功能时不破坏稳定主链路。
+2. EN: P1 should prioritize modules that increase immersion while reusing existing contracts and storage policies.
+   中文：P1 需优先推进能提升沉浸感且可复用现有契约与存储策略的模块。
 
 #### 4.2 Scope / 本轮范围
-1. EN: Front-load validation for link/transfer/voice-card forms with shared rule source.
-   中文：为链接/转账/语音卡片前置校验，并统一规则来源。
-2. EN: Add disabled-state submit buttons and inline hint text in `+` panel forms.
-   中文：在 `+` 面板表单加入提交按钮禁用态与内联提示文案。
-3. EN: Keep click-time error feedback as fallback path (defensive UX).
-   中文：保留点击时错误提示作为兜底（防御式体验）。
-4. EN: Ensure no regression for media send, gallery send, and manual AI trigger lane.
-   中文：确保媒体发送、素材库发送与手动 AI 触发通道无回归。
-
-#### 4.3 Out of Scope (This Step) / 本步不做
-1. EN: New rich-message types beyond current baseline.
-   中文：不新增当前基线以外的新富消息类型。
-2. EN: Major visual redesign of chat shell.
-   中文：不做 Chat 壳层的大改版视觉重构。
-3. EN: Cross-module social expansion.
-   中文：不推进跨模块社交扩展。
-
-#### 4.4 Execution Breakdown / 执行拆分
-1. `P0-4.A` EN: Shared validation state for link/transfer/voice-card forms.
-   `P0-4.A` 中文：为链接/转账/语音卡片建立共享校验状态。
-2. `P0-4.B` EN: Button disabled-state + inline hint integration in template.
-   `P0-4.B` 中文：模板层接入按钮禁用态与内联提示。
-3. `P0-4.C` EN: Submit handler alignment with validation state.
-   `P0-4.C` 中文：提交处理函数与校验状态对齐。
-4. `P0-4.D` EN: Regression verification + docs sync.
-   `P0-4.D` 中文：回归验证并同步文档。
-
-#### 4.5 Acceptance Criteria / 验收标准
-1. EN: Invalid form input is visible before submit.
-   中文：无效输入在提交前就可见。
-2. EN: Submit button remains disabled until payload is valid.
-   中文：提交按钮在输入有效前保持禁用。
-3. EN: Click-time fallback error still works.
-   中文：点击时兜底错误提示仍正常生效。
-4. EN: `Trigger Reply` lane behavior remains unchanged.
-   中文：`Trigger Reply` 通道行为保持不变。
-5. EN: Test/build/lint all pass after integration.
-   中文：集成后测试/构建/lint 全通过。
-
-#### 4.6 Regression Checklist / 回归清单
-1. EN: Link card send works with valid URL and remains blocked with invalid URL.
-   中文：链接卡片在 URL 有效时可发送，URL 无效时被阻止。
-2. EN: Transfer card send works with valid amount/currency and blocks malformed payload.
-   中文：转账卡片在金额/币种有效时可发送，格式错误时被阻止。
-3. EN: Voice card requires transcript and valid duration.
-   中文：语音卡片要求文本内容与有效时长。
-4. EN: Gallery/image/gif/location sends are unaffected.
-   中文：素材库/图片/gif/位置发送不受影响。
+1. EN: Start P1 item-1: AI image-reference pipeline (provider-capability dependent).
+   中文：启动 P1 第 1 项：AI 图生图参考链路（依赖供应商能力）。
+2. EN: Keep role/asset contract reuse as mandatory baseline for new modules.
+   中文：新模块必须复用现有角色/素材契约基线。
+3. EN: Keep backup/reporting behavior unchanged while adding new immersion features.
+   中文：新增沉浸功能时保持备份与诊断报告行为稳定不回退。
 
 ---
 
 ## 5. P0 Board / P0 任务看板（细化版）
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: Assistant message semantic revision is available from message actions (without full reroll).
@@ -136,12 +94,14 @@ Done / 已完成:
    中文：可通过 `恢复原文` 执行回滚。
 4. EN: Edit UX moved from browser prompt to in-chat modal editor for better immersion.
    中文：编辑交互已从浏览器 `prompt` 改为 Chat 内弹层编辑，沉浸感更好。
+5. EN: Added dedicated regression tests for semantic-revision UI flow (open/edit/save/restore).
+   中文：已补齐语义修订 UI 流程（打开/编辑/保存/恢复）的专项回归测试。
+6. EN: Added configurable trace policy (`silent` by default, optional `meta_hint`) for future revision visibility strategy.
+   中文：已加入可配置修订痕迹策略（默认 `silent`，可选 `meta_hint`），便于后续可见性策略调整。
 
 Remaining / 剩余:
-1. EN: Add dedicated tests for semantic-revision UI flow (open/edit/save/restore).
-   中文：补齐语义修订 UI 流程（打开/编辑/保存/恢复）的专门测试。
-2. EN: Add optional change-log annotation policy for future traceability (if PM requires).
-   中文：按需补充“修订痕迹策略”（若产品需要可追溯标记）。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
@@ -163,7 +123,7 @@ Remaining / 剩余:
 ---
 
 ### P0-3 Avatar Hierarchy B / 头像层级 B（会话 > 模块 > 全局 > 兜底）
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: Shared resolver baseline landed.
@@ -172,17 +132,19 @@ Done / 已完成:
    中文：模块级覆写入口已可用。
 3. EN: Thread-level self/contact override available.
    中文：会话级自己/对方覆写已可配。
+4. EN: Avatar hierarchy layer trace is now available in role-binding contract (`thread/module/global/fallback`).
+   中文：角色绑定契约中已提供头像层级命中信息（`会话/模块/全局/兜底`）。
+5. EN: Added contract-level regression tests for hierarchy stability.
+   中文：已补齐契约级头像层级稳定性回归测试。
 
 Remaining / 剩余:
-1. EN: Cross-module consumption contracts (forum/map future reuse).
-   中文：跨模块消费契约（论坛/地图后续复用）。
-2. EN: Edge-case UX validation (missing avatar fallback consistency).
-   中文：边界体验验收（缺失头像兜底一致性）。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
 ### P0-4 User Rich Message Lane Hardening / 用户富消息链路加固
-Status / 状态: `IN_PROGRESS`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: `+` panel lane for image/gif/link/location/transfer/voice-card.
@@ -197,17 +159,19 @@ Done / 已完成:
    中文：`+` 动作网格中的“素材库/位置”入口已接入可用性守卫、禁用态样式与共享提示文案。
 6. EN: Message-edit validation logic is extracted into a testable helper with dedicated unit tests.
    中文：消息编辑校验逻辑已抽离为可测试辅助函数，并补齐专门单元测试。
+7. EN: Added success-state notices for edit-save and restore actions to improve edge-state feedback clarity.
+   中文：已补充编辑保存与恢复原文的成功提示，增强边界状态反馈清晰度。
+8. EN: Added component-level regression tests for in-chat edit modal and restore flow.
+   中文：已补齐 Chat 组件级编辑弹层与恢复流程回归测试。
 
 Remaining / 剩余:
-1. EN: Continue consistency polish for remaining rich-message interactions (focus on edge-state messaging clarity).
-   中文：继续补齐其余富消息交互的一致性打磨（重点是边界状态提示清晰度）。
-2. EN: Add dedicated regression checks for in-chat edit modal and semantic-revision restore flow.
-   中文：补齐 Chat 内编辑弹层与语义修订恢复流程的专项回归检查。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
 ### P0-5 Gallery Global Asset Center v1 / 相册全局素材中心 v1
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: Unified gallery store with asset categories.
@@ -218,15 +182,27 @@ Done / 已完成:
    中文：使用守卫 + 安全删除路径已上线。
 4. EN: Backup metadata wiring and chat consumption wiring completed.
    中文：备份元数据接线与 Chat 消费接线已完成。
+5. EN: Settings export panel now clearly exposes backup mode summary (metadata-only vs metadata+asset-package) and package size/item limits.
+   中文：Settings 导出面板已清晰展示备份模式摘要（仅元数据 vs 元数据+素材包）与素材包体积/数量上限。
+6. EN: Export result now reports partial asset-package packaging (skipped/missing/limit-hit) as warning with dedicated report code.
+   中文：导出结果已支持“素材包部分打包”告警（跳过/缺失/超限），并写入独立报告编码。
+7. EN: Export/import actions now enforce mutual exclusion to avoid overlapping operations.
+   中文：导出与导入动作已加入互斥保护，避免并发操作冲突。
+8. EN: Added backup copy style switch (`direct` / `immersive`) in Settings and normalized persistence fallback.
+   中文：在 Settings 新增备份文案风格开关（`直白` / `沉浸`），并补齐持久化归一化回退。
+9. EN: Network history entry naming is unified to diagnostics center (`API/Storage`) for non-technical readability.
+   中文：Network 历史入口命名统一为“诊断报告中心（API/存储）”，提升非技术用户可读性。
+10. EN: Added store-level regression tests for backup copy tone default/restore/invalid fallback.
+    中文：新增 store 级回归测试，覆盖备份文案风格默认值/恢复值/非法值回退。
 
 Remaining / 剩余:
-1. EN: Finalize export UX for metadata-first + optional asset package.
-   中文：完成“元数据优先 + 可选素材包”导出体验收口。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
 ### P0-6 Role Binding and Asset Reuse / 角色绑定与素材复用
-Status / 状态: `PARTIAL_DONE`
+Status / 状态: `DONE`
 
 Done / 已完成:
 1. EN: `/contacts` role profile supports asset-pack binding.
@@ -235,12 +211,19 @@ Done / 已完成:
    中文：会话通讯录支持会话级优先素材覆盖。
 3. EN: Chat asset selection uses role-binding context.
    中文：Chat 素材选择已接入角色绑定上下文。
+4. EN: Added unified cross-module role binding contract APIs in chat store:
+   中文：已在 chat store 新增统一跨模块角色绑定契约 API：
+   - `getRoleBindingContract(contactId, { moduleKey })`
+   - `listRoleBindingContracts(contactIds?, { moduleKey })`
+5. EN: Added contract reference document with integration checklist:
+   中文：已补齐契约参考文档与接入清单：
+   - `docs/reference/ROLE_BINDING_CONTRACT.md`
+6. EN: Existing chat flow remains backward compatible via `getRoleBindingAssetContext`.
+   中文：现有 Chat 流程保持向后兼容，继续可用 `getRoleBindingAssetContext`。
 
 Remaining / 剩余:
-1. EN: Reuse contract for future modules (forum/map/scenario modules).
-   中文：后续模块（论坛/地图/场景模块）复用契约待补齐。
-2. EN: Unified cross-module acceptance list.
-   中文：跨模块统一验收清单待补齐。
+1. EN: No remaining P0 closure items for this task.
+   中文：该任务在 P0 范围内无剩余收口项。
 
 ---
 
@@ -274,8 +257,8 @@ Current / 当前:
    中文：任务编号或优先级变更若未同批同步，会引发文档漂移。
 2. EN: Storage pressure risk under heavy media usage.
    中文：重素材使用下存在浏览器存储压力风险。
-3. EN: Cross-module divergence if binding contracts are not fixed early.
-   中文：若绑定契约不提前固定，跨模块实现会逐步失配。
+3. EN: If future modules bypass the unified role-binding contract API, cross-module behavior may diverge again.
+   中文：若后续模块绕过统一角色绑定契约 API，跨模块行为仍可能再次失配。
 4. EN: User confusion if backup model is not clearly explained in settings/help text.
    中文：若设置中的备份模型说明不清，小白用户易误解。
 
@@ -300,12 +283,16 @@ Current / 当前:
    中文：Chat `+` 动作网格现已对素材库/位置应用一致的可用性守卫、禁用态与内联提示。
 9. EN: Message edit UX moved from browser prompt to in-chat modal editor while keeping semantic revision and restore path.
    中文：消息编辑交互已从浏览器 prompt 迁移为 Chat 内弹层，同时保留语义修订与恢复原文路径。
-10. EN: `P0-1` and `P0-2` are now tracked as `PARTIAL_DONE` based on landed baseline features.
-    中文：基于已落地基线功能，`P0-1` 与 `P0-2` 状态已更新为 `PARTIAL_DONE`。
+10. EN: `P0-1`, `P0-2`, and `P0-4` are now closed in P0 scope.
+    中文：`P0-1`、`P0-2` 与 `P0-4` 已在 P0 范围内完成收口。
 11. EN: Added dedicated unit tests for chat message-edit validation helper to reduce regression risk in future UI refactors.
     中文：已为聊天消息编辑校验辅助函数新增专项单测，降低后续 UI 重构回归风险。
 12. EN: Chat dock feature pages were upgraded from placeholders to usable `preferences/labs` tools, closing `P0-2`.
     中文：Chat 底部功能页已从占位升级为可用 `preferences/labs` 工具，`P0-2` 正式收口。
+13. EN: Closed `P0-3/P0-6` contract closure: unified role-binding contract APIs + checklist doc + regression tests are landed.
+    中文：`P0-3/P0-6` 契约收口已完成：统一角色绑定契约 API、接入清单文档与回归测试已落地。
+14. EN: Closed `P0-5` by landing backup copy-style switch and diagnostics-center naming polish.
+    中文：通过落地备份文案风格切换与诊断中心命名优化，`P0-5` 已完成收口。
 
 ---
 
@@ -326,3 +313,11 @@ Current / 当前:
    2026-04-07 中文：新增 `chat-message-edit` 校验辅助与专项测试，并通过 lint/test/build 全量验证。
 8. 2026-04-08 EN: Implemented production-ready `preferences/labs` pages for chat dock and marked `P0-2` as `DONE`.
    2026-04-08 中文：实装 Chat 底部 `preferences/labs` 页面并将 `P0-2` 标记为 `DONE`。
+9. 2026-04-09 EN: Added component-level semantic revision regression tests (open/edit/save/restore) and closed `P0-1`.
+   2026-04-09 中文：补齐语义修订组件级回归测试（打开/编辑/保存/恢复）并完成 `P0-1` 收口。
+10. 2026-04-09 EN: Added configurable semantic-revision trace policy (`silent` default, optional `meta_hint`) and closed `P0-4`.
+    2026-04-09 中文：新增可配置语义修订痕迹策略（默认 `silent`，可选 `meta_hint`）并完成 `P0-4` 收口。
+11. 2026-04-09 EN: Closed `P0-3/P0-6` by landing cross-module role-binding contract APIs and contract reference doc.
+    2026-04-09 中文：通过落地跨模块角色绑定契约 API 与契约参考文档，完成 `P0-3/P0-6` 收口。
+12. 2026-04-09 EN: Closed `P0-5` with backup copy-style toggle, diagnostics naming unification, and regression tests.
+    2026-04-09 中文：通过备份文案风格切换、诊断命名统一与回归测试，完成 `P0-5` 收口。

@@ -224,10 +224,15 @@ const filteredServiceIds = computed(() =>
   filteredServiceContacts.value.map((contact) => Number(contact.id)).filter((id) => Number.isFinite(id)),
 )
 
+const getRoleBindingContract = (contactId) =>
+  chatStore.getRoleBindingContract(contactId, {
+    moduleKey: 'chat',
+  })
+
 const roleMetaAssetOptions = computed(() => {
   if (!editingRoleContactId.value) return []
-  const context = chatStore.getRoleBindingAssetContext(editingRoleContactId.value)
-  const ids = Array.isArray(context.profileAssetIds) ? context.profileAssetIds : []
+  const contract = getRoleBindingContract(editingRoleContactId.value)
+  const ids = Array.isArray(contract.assets?.profileAssetIds) ? contract.assets.profileAssetIds : []
   return ids.map((assetId) => {
     const asset = galleryStore.findAssetById(assetId)
     return {
@@ -239,11 +244,12 @@ const roleMetaAssetOptions = computed(() => {
 
 const roleMetaAssetContextLabel = computed(() => {
   if (!editingRoleContactId.value) return ''
-  const context = chatStore.getRoleBindingAssetContext(editingRoleContactId.value)
-  if (!context.profileName) return ''
+  const contract = getRoleBindingContract(editingRoleContactId.value)
+  const profileName = contract.profile?.name || contract.contact?.name || ''
+  if (!profileName) return ''
   return t(
-    `来源档案：${context.profileName}`,
-    `Source profile: ${context.profileName}`,
+    `来源档案：${profileName}`,
+    `Source profile: ${profileName}`,
   )
 })
 
@@ -573,8 +579,8 @@ const contactAvatarForDisplay = (contact) => {
 
 const preferredImageAssetLabel = (contact) => {
   if (!contact?.id) return ''
-  const context = chatStore.getRoleBindingAssetContext(contact.id)
-  const preferredId = context.preferredImageAssetId
+  const contract = getRoleBindingContract(contact.id)
+  const preferredId = contract.assets?.preferredImageAssetId || ''
   if (!preferredId) return ''
   const asset = galleryStore.findAssetById(preferredId)
   return asset?.name || preferredId

@@ -152,6 +152,10 @@ Core routes / 核心路由：
   `suggestedRepliesEnabled`, `contextTurns`, `bilingualEnabled`, `secondaryLanguage`,  
   `allowQuoteReply`, `allowSelfQuote`, `virtualVoiceEnabled`,  
   `replyMode`, `replyCount`, `responseStyle`, `proactiveOpenerEnabled`, `proactiveOpenerStrategy`
+- Cross-module role binding contract entry / 跨模块角色绑定契约入口：  
+  `chatStore.getRoleBindingContract(contactId, { moduleKey })` and `chatStore.listRoleBindingContracts(...)`  
+  with compatibility path `chatStore.getRoleBindingAssetContext(contactId)`  
+  (see `docs/reference/ROLE_BINDING_CONTRACT.md`).
 
 ### 5.2 Interaction Model / 交互模型
 

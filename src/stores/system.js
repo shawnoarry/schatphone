@@ -94,6 +94,8 @@ const MAX_CHAT_TRUTH_EVENTS = 400
 const BACKUP_REMINDER_MIN_INTERVAL_HOURS = 1
 const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
 const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
+const BACKUP_COPY_TONE_VALUES = ['direct', 'immersive']
+const DEFAULT_BACKUP_COPY_TONE = 'direct'
 const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
   affinity: 50,
   trust: 50,
@@ -164,6 +166,10 @@ const normalizeBackupReminderIntervalHours = (value, fallback = BACKUP_REMINDER_
     BACKUP_REMINDER_MIN_INTERVAL_HOURS,
     BACKUP_REMINDER_MAX_INTERVAL_HOURS,
   )
+}
+
+const normalizeBackupCopyTone = (value, fallback = DEFAULT_BACKUP_COPY_TONE) => {
+  return BACKUP_COPY_TONE_VALUES.includes(value) ? value : fallback
 }
 
 const normalizeNonNegativeTimestamp = (value, fallback = 0) => {
@@ -648,6 +654,7 @@ export const useSystemStore = defineStore('system', () => {
       backupReminderEnabled: true,
       backupReminderIntervalHours: BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
       backupReminderLastNotifiedAt: 0,
+      backupCopyTone: DEFAULT_BACKUP_COPY_TONE,
     },
     aiAutomation: createDefaultAiAutomationSettings(),
   })
@@ -1757,6 +1764,10 @@ export const useSystemStore = defineStore('system', () => {
         settings.system.backupReminderLastNotifiedAt,
         0,
       )
+      settings.system.backupCopyTone = normalizeBackupCopyTone(
+        settings.system.backupCopyTone,
+        DEFAULT_BACKUP_COPY_TONE,
+      )
     }
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
@@ -1821,6 +1832,10 @@ export const useSystemStore = defineStore('system', () => {
     settings.system.backupReminderLastNotifiedAt = normalizeNonNegativeTimestamp(
       settings.system.backupReminderLastNotifiedAt,
       0,
+    )
+    settings.system.backupCopyTone = normalizeBackupCopyTone(
+      settings.system.backupCopyTone,
+      DEFAULT_BACKUP_COPY_TONE,
     )
     return true
   }

@@ -2,6 +2,14 @@ import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
+import {
+  cloneRoleAssetPack as cloneRoleProfileAssetPackShared,
+  createEmptyRoleAssetPack as createEmptyRoleAssetPackShared,
+  createRoleBindingContract,
+  normalizeRoleAssetPack as normalizeRoleProfileAssetPackShared,
+  sanitizeRoleBindingAssetId,
+  toRoleBindingAssetContext,
+} from '../lib/role-binding-contract'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -26,8 +34,6 @@ const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
 const MAX_TEXT_BLOCK_LENGTH = 3000
 const MAX_DETAIL_TEXT_LENGTH = 800
 const MAX_SHORT_LABEL_LENGTH = 80
-const MAX_ASSET_ID_LENGTH = 128
-const MAX_ROLE_ASSET_IDS_PER_CATEGORY = 24
 const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
 const MAX_BLOCK_COUNT = 16
@@ -126,60 +132,13 @@ const trimTo = (value, maxLength, fallback = '') => {
 const normalizeSingleLineText = (value, maxLength, fallback = '') =>
   trimTo(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
 
-const sanitizeAssetId = (value) => {
-  const raw = trimTo(value, MAX_ASSET_ID_LENGTH)
-  if (!raw) return ''
-  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
-}
+const sanitizeAssetId = (value) => sanitizeRoleBindingAssetId(value)
 
-const createEmptyRoleAssetPack = () => ({
-  wallpaperAssetIds: [],
-  emojiAssetIds: [],
-  referenceAssetIds: [],
-  scenarioAssetIds: [],
-})
+const createEmptyRoleAssetPack = () => createEmptyRoleAssetPackShared()
 
-const normalizeRoleAssetIdList = (input) => {
-  if (!Array.isArray(input)) return []
-  const uniqueIds = []
-  input.forEach((rawId) => {
-    const id = sanitizeAssetId(rawId)
-    if (!id || uniqueIds.includes(id)) return
-    uniqueIds.push(id)
-  })
-  return uniqueIds.slice(0, MAX_ROLE_ASSET_IDS_PER_CATEGORY)
-}
+const normalizeRoleProfileAssetPack = (rawPack) => normalizeRoleProfileAssetPackShared(rawPack)
 
-const normalizeRoleProfileAssetPack = (rawPack) => {
-  const input = rawPack && typeof rawPack === 'object' ? rawPack : {}
-  return {
-    wallpaperAssetIds: normalizeRoleAssetIdList(input.wallpaperAssetIds),
-    emojiAssetIds: normalizeRoleAssetIdList(input.emojiAssetIds),
-    referenceAssetIds: normalizeRoleAssetIdList(input.referenceAssetIds),
-    scenarioAssetIds: normalizeRoleAssetIdList(input.scenarioAssetIds),
-  }
-}
-
-const cloneRoleProfileAssetPack = (assetPack) => {
-  const normalized = normalizeRoleProfileAssetPack(assetPack)
-  return {
-    wallpaperAssetIds: [...normalized.wallpaperAssetIds],
-    emojiAssetIds: [...normalized.emojiAssetIds],
-    referenceAssetIds: [...normalized.referenceAssetIds],
-    scenarioAssetIds: [...normalized.scenarioAssetIds],
-  }
-}
-
-const flattenRoleProfileAssetPack = (assetPack) => {
-  const normalized = normalizeRoleProfileAssetPack(assetPack)
-  const merged = [
-    ...normalized.wallpaperAssetIds,
-    ...normalized.emojiAssetIds,
-    ...normalized.referenceAssetIds,
-    ...normalized.scenarioAssetIds,
-  ]
-  return normalizeRoleAssetIdList(merged)
-}
+const cloneRoleProfileAssetPack = (assetPack) => cloneRoleProfileAssetPackShared(assetPack)
 
 const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
   const route = trimTo(value, 200)
@@ -696,9 +655,87 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  const getRoleBindingContract = (contactId, options = {}) => {
+    const numericContactId = toInt(contactId, 0)
+    const target = getRawContactById(numericContactId)
+    const moduleKey =
+      typeof options.moduleKey === 'string' && options.moduleKey.trim()
+        ? options.moduleKey.trim()
+        : 'chat'
+
+    if (!target) {
+      return createRoleBindingContract({
+        moduleKey,
+        contact: {
+          id: numericContactId,
+          kind: 'role',
+          name: '',
+          profileId: 0,
+        },
+        relationshipLevel: 0,
+        relationshipNote: '',
+        preferredImageAssetId: '',
+        profileAssetPack: createEmptyRoleAssetPack(),
+        avatarSources: {
+          fallbackSeed: numericContactId > 0 ? `contact-${numericContactId}` : 'Contact',
+        },
+      })
+    }
+
+    const resolved = resolveContactWithProfile(target) || { ...target }
+    const profile = getRoleProfileById(resolved.profileId)
+    const key = String(Number(target.id))
+    const conversation = conversations[key]
+    const conversationOverrides = normalizeConversationIdentityOverrides(conversation?.identityOverrides)
+    const perContactModuleAvatar = getModuleContactAvatarOverride(resolved.id)
+
+    return createRoleBindingContract({
+      moduleKey,
+      contact: {
+        id: resolved.id,
+        kind: resolved.kind,
+        name: resolved.name,
+        profileId: resolved.profileId,
+      },
+      profile:
+        profile || {
+          id: resolved.profileId,
+          name: resolved.name,
+          role: resolved.role,
+          isMain: resolved.isMain,
+          tags: [],
+        },
+      relationshipLevel: resolved.relationshipLevel,
+      relationshipNote: resolved.relationshipNote,
+      preferredImageAssetId: sanitizeAssetId(resolved.preferredImageAssetId),
+      profileAssetPack: profile?.assetPack || resolved.profileAssetPack,
+      avatarSources: {
+        threadAvatar: conversationOverrides.contactAvatar,
+        moduleAvatar: perContactModuleAvatar || moduleAvatarOverrides.defaultContactAvatar,
+        globalAvatar: resolved.avatar,
+        fallbackSeed: resolved.name || `contact-${resolved.id}`,
+      },
+    })
+  }
+
+  const listRoleBindingContracts = (contactIds = [], options = {}) => {
+    const ids = Array.isArray(contactIds)
+      ? contactIds
+          .map((id) => toInt(id, 0))
+          .filter((id) => id > 0)
+      : []
+    const sourceIds =
+      ids.length > 0
+        ? ids
+        : contacts
+            .map((item) => toInt(item.id, 0))
+            .filter((id) => id > 0)
+    return sourceIds.map((id) => getRoleBindingContract(id, options))
+  }
+
   const getRoleBindingAssetContext = (contactId) => {
-    const target = getRawContactById(contactId)
-    if (!target || target.kind !== 'role') {
+    const contract = getRoleBindingContract(contactId, { moduleKey: 'chat' })
+    if (!contract.roleBound) {
       return {
         profileId: 0,
         profileName: '',
@@ -708,23 +745,7 @@ export const useChatStore = defineStore('chat', () => {
         profileAssetIds: [],
       }
     }
-    const profile = getRoleProfileById(target.profileId)
-    const profilePack = normalizeRoleProfileAssetPack(profile?.assetPack)
-    const preferredImageAssetId = sanitizeAssetId(target.preferredImageAssetId)
-    const fallbackRecommended =
-      profilePack.referenceAssetIds[0] ||
-      profilePack.scenarioAssetIds[0] ||
-      profilePack.emojiAssetIds[0] ||
-      profilePack.wallpaperAssetIds[0] ||
-      ''
-    return {
-      profileId: Number(profile?.id) || 0,
-      profileName: profile?.name || target.name || '',
-      preferredImageAssetId,
-      recommendedImageAssetId: preferredImageAssetId || fallbackRecommended,
-      profileAssetPack: cloneRoleProfileAssetPack(profilePack),
-      profileAssetIds: flattenRoleProfileAssetPack(profilePack),
-    }
+    return toRoleBindingAssetContext(contract)
   }
 
   const applyModuleAvatarOverrides = (rawOverrides) => {
@@ -856,18 +877,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const resolveContactAvatar = (contactId) => {
-    const contact = getContactById(contactId)
-    if (!contact) return resolveAvatarWithHierarchy({ fallbackSeed: 'Contact' })
-
-    const conversationOverrides = getConversationIdentityOverrides(contact.id)
-    const perContactModuleAvatar = getModuleContactAvatarOverride(contact.id)
-
-    return resolveAvatarWithHierarchy({
-      threadAvatar: conversationOverrides.contactAvatar,
-      moduleAvatar: perContactModuleAvatar || moduleAvatarOverrides.defaultContactAvatar,
-      globalAvatar: contact.avatar,
-      fallbackSeed: contact.name || `contact-${contact.id}`,
-    })
+    const contract = getRoleBindingContract(contactId, { moduleKey: 'chat' })
+    return contract.avatar.resolved || resolveAvatarWithHierarchy({ fallbackSeed: 'Contact' })
   }
 
   const conversationKeyForContact = (contactId) => String(Number(contactId))
@@ -1947,6 +1958,8 @@ export const useChatStore = defineStore('chat', () => {
     getRoleProfileById,
     getRoleProfileAssetPack,
     setRoleProfileAssetPack,
+    getRoleBindingContract,
+    listRoleBindingContracts,
     getRoleBindingAssetContext,
     addRoleProfile,
     updateRoleProfile,

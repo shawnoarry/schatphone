@@ -142,6 +142,8 @@ const reportReasonLabel = (item) => {
     return t('备份导出成功（元数据）', 'Backup export succeeded (metadata)')
   if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
     return t('备份导出成功（含素材包）', 'Backup export succeeded (with asset package)')
+  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL')
+    return t('备份导出完成（素材包部分缺失）', 'Backup export completed (asset package partial)')
   if (code === 'BACKUP_EXPORT_FAILED') return t('备份导出失败', 'Backup export failed')
   if (code === 'BACKUP_IMPORT_METADATA_ONLY')
     return t('备份导入成功（元数据）', 'Backup import succeeded (metadata)')
@@ -193,6 +195,8 @@ const reportSuggestionLabel = (item) => {
     return t('这是轻量备份，恢复时不含本地素材二进制。', 'This is a lightweight backup and does not include local binary assets.')
   if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
     return t('已导出素材包，建议同时保留近期元数据备份。', 'Asset package exported. Keep a recent metadata backup as well.')
+  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL')
+    return t('素材包未完整打包，请留意导出提示中的跳过/缺失数量。', 'Asset package is partial; check skipped/missing counts in export feedback.')
   if (code === 'BACKUP_EXPORT_FAILED')
     return t('请检查浏览器存储权限后重试导出。', 'Check browser storage permissions and retry export.')
   if (code === 'BACKUP_IMPORT_METADATA_ONLY')
@@ -390,8 +394,8 @@ const clearApiReportHistory = () => {
           'Clear current filtered records only? Only matched entries will be removed.',
         )
       : t(
-          '确认清空全部调用/报错历史吗？此操作不可撤销。',
-          'Clear all call/error history? This action cannot be undone.',
+          '确认清空全部诊断记录吗？此操作不可撤销。',
+          'Clear all diagnostics records? This action cannot be undone.',
         ),
   )
   if (!ok) return
@@ -707,7 +711,7 @@ ensurePresetState()
 
       <div class="bg-white rounded-xl p-4">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-xs text-gray-500">{{ t('调用/报错历史', 'Call/Error History') }}</p>
+          <p class="text-xs text-gray-500">{{ t('诊断报告中心（API/存储）', 'Diagnostics Center (API/Storage)') }}</p>
           <button
             @click="clearApiReportHistory"
             class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"

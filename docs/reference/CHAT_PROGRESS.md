@@ -144,8 +144,8 @@ AI 生成消息内容仍由模型与上下文驱动
 真值基线已接入，但指标校准与关系阶段阈值仍需结合产品实测继续调优。
 - Structured block policy hardening baseline is completed (batch-1/2/3 landed); further tuning is now product-policy level.  
 结构化消息策略加固基线已完成（第一/二/三批已落地）；后续优化主要转向产品策略层调参。
-- Cross-module role binding (forum/map etc.) is not wired yet, currently chat-first  
-跨模块角色绑定（论坛/地图等）尚未接线，目前优先落在 Chat
+- Cross-module role binding contract baseline is landed (unified APIs + checklist doc), while non-chat modules are pending direct consumption integration.  
+跨模块角色绑定契约基线已落地（统一 API + 清单文档），非 Chat 模块的直接消费接线仍待逐步接入。
 - Chat-adjacent pages are now covered by system-language migration baseline; keep regression checks for new pages  
 聊天相关页面已完成系统语言迁移基线，后续新增页面需持续做回归检查
 - Quote-style diversity policy still needs product-level tuning (when to prefer quote vs plain).  
@@ -186,3 +186,4 @@ lint/test/build 全通过
 - `P0-3` phase-1 landed: shared avatar hierarchy resolver is online (`thread > module > global > fallback`) for both self and contact identity visuals.
 - Chat now supports module-level avatar overrides in `/chat-feature/identity` and thread-level self/contact overrides in the thread menu.
 - Visual layer wiring is completed on chat list, thread assistant bubble, and user bubble avatar rendering.
+- `P0-3/P0-6` closure landed (2026-04-09): chat store now exposes unified role-binding contract APIs (`getRoleBindingContract` / `listRoleBindingContracts`) and keeps compatibility via `getRoleBindingAssetContext`.

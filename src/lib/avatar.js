@@ -21,16 +21,35 @@ export const fallbackAvatarUrl = (seed) => {
   return `${DICEBEAR_BASE_URL}${encodeURIComponent(safeSeed)}`
 }
 
-export const resolveAvatarWithHierarchy = (input = {}) => {
+export const resolveAvatarHierarchy = (input = {}) => {
   const threadAvatar = sanitizeAvatarUrl(input.threadAvatar)
-  if (threadAvatar) return threadAvatar
+  if (threadAvatar) {
+    return {
+      avatar: threadAvatar,
+      layer: 'thread',
+    }
+  }
 
   const moduleAvatar = sanitizeAvatarUrl(input.moduleAvatar)
-  if (moduleAvatar) return moduleAvatar
+  if (moduleAvatar) {
+    return {
+      avatar: moduleAvatar,
+      layer: 'module',
+    }
+  }
 
   const globalAvatar = sanitizeAvatarUrl(input.globalAvatar)
-  if (globalAvatar) return globalAvatar
+  if (globalAvatar) {
+    return {
+      avatar: globalAvatar,
+      layer: 'global',
+    }
+  }
 
-  return fallbackAvatarUrl(input.fallbackSeed)
+  return {
+    avatar: fallbackAvatarUrl(input.fallbackSeed),
+    layer: 'fallback',
+  }
 }
 
+export const resolveAvatarWithHierarchy = (input = {}) => resolveAvatarHierarchy(input).avatar
