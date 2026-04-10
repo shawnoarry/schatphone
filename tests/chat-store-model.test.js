@@ -601,6 +601,12 @@ describe('chat store model', () => {
         referenceAssetIds: ['asset_ref_a', 'asset_ref_b'],
         scenarioAssetIds: ['asset_scene_a'],
       },
+      assetFolderBindings: {
+        imageReference: {
+          folderId: 'folder_ref_default',
+          folderPriority: 10,
+        },
+      },
     })
 
     const updated = store.setRoleProfileAssetPack(profile.id, {
@@ -611,11 +617,28 @@ describe('chat store model', () => {
     expect(pack.referenceAssetIds).toEqual(['asset_ref_c'])
     expect(pack.wallpaperAssetIds).toEqual(['asset_wall_a'])
 
+    const folderBindingsUpdated = store.setRoleProfileAssetFolderBindings(profile.id, {
+      imageReference: {
+        folderId: 'folder_ref_override',
+      },
+      emojiPack: {
+        folderId: 'folder_emoji_pack',
+      },
+    })
+    expect(folderBindingsUpdated).toBe(true)
+    const folderBindings = store.getRoleProfileAssetFolderBindings(profile.id)
+    expect(folderBindings.imageReference.folderId).toBe('folder_ref_override')
+    expect(folderBindings.emojiPack.folderId).toBe('folder_emoji_pack')
+    expect(folderBindings.imageReference.folderPriority).toBe(10)
+
     const binding = store.bindRoleProfile(profile.id, { relationshipLevel: 55 })
     const contextBeforeOverride = store.getRoleBindingAssetContext(binding.id)
     expect(contextBeforeOverride.profileId).toBe(profile.id)
     expect(contextBeforeOverride.profileAssetIds).toContain('asset_ref_c')
     expect(contextBeforeOverride.recommendedImageAssetId).toBe('asset_ref_c')
+    expect(contextBeforeOverride.profileAssetFolderBindings.imageReference.folderId).toBe(
+      'folder_ref_override',
+    )
 
     store.updateRoleBindingMeta(binding.id, { preferredImageAssetId: 'asset_scene_custom' })
     const contextAfterOverride = store.getRoleBindingAssetContext(binding.id)
@@ -632,6 +655,11 @@ describe('chat store model', () => {
       avatar: 'https://example.com/global-avatar.png',
       assetPack: {
         referenceAssetIds: ['asset_ref_1'],
+      },
+      assetFolderBindings: {
+        profileImage: {
+          folderId: 'folder_profile_main',
+        },
       },
     })
 
@@ -663,6 +691,9 @@ describe('chat store model', () => {
     expect(contract.assets.preferredImageAssetId).toBe('asset_pref_1')
     expect(contract.assets.recommendedImageAssetId).toBe('asset_pref_1')
     expect(contract.assets.profileAssetIds).toContain('asset_ref_1')
+    expect(contract.assets.profileAssetFolderBindings.profileImage.folderId).toBe(
+      'folder_profile_main',
+    )
     expect(contract.avatar.activeLayer).toBe('thread')
     expect(contract.avatar.resolved).toBe('https://example.com/thread-contact.png')
 

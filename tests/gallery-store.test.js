@@ -82,6 +82,46 @@ describe('gallery store', () => {
     expect(blocked.reason).toBe('blob_too_large')
   })
 
+  test('supports custom folder CRUD and asset assignment lifecycle', async () => {
+    const store = useGalleryStore()
+    const first = store.importAssetFromUrl({
+      url: 'https://example.com/ref/alpha.png',
+      category: 'reference',
+      name: 'Alpha',
+    })
+    const second = store.importAssetFromUrl({
+      url: 'https://example.com/ref/beta.png',
+      category: 'reference',
+      name: 'Beta',
+    })
+    expect(first.ok).toBe(true)
+    expect(second.ok).toBe(true)
+
+    const createdFolder = store.createFolder({
+      name: 'Role References',
+      category: 'reference',
+      assetIds: [first.assetId, 'missing_asset_id'],
+    })
+    expect(createdFolder.name).toBe('Role References')
+    expect(createdFolder.assetIds).toEqual([first.assetId])
+
+    expect(store.addAssetToFolder(createdFolder.id, second.assetId)).toBe(true)
+    expect(store.findFolderById(createdFolder.id)?.assetIds).toEqual([first.assetId, second.assetId])
+
+    expect(store.renameFolder(createdFolder.id, 'Role Ref Pack')).toBe(true)
+    expect(store.findFolderById(createdFolder.id)?.name).toBe('Role Ref Pack')
+
+    expect(store.setFolderCategory(createdFolder.id, 'scenario')).toBe(true)
+    expect(store.findFolderById(createdFolder.id)?.category).toBe('scenario')
+
+    expect(store.removeAssetFromFolder(createdFolder.id, first.assetId)).toBe(true)
+    expect(store.findFolderById(createdFolder.id)?.assetIds).toEqual([second.assetId])
+
+    const removedAsset = await store.removeAsset(second.assetId, { force: true })
+    expect(removedAsset.ok).toBe(true)
+    expect(store.findFolderById(createdFolder.id)?.assetIds).toEqual([])
+  })
+
   test('blocks deletion when URL asset is currently used as system wallpaper', async () => {
     const systemStore = useSystemStore()
     const store = useGalleryStore()
@@ -106,6 +146,42 @@ describe('gallery store', () => {
     const forcedRemoval = await store.removeAsset(asset.id, { force: true })
     expect(forcedRemoval.ok).toBe(true)
     expect(store.findAssetById(asset.id)).toBe(null)
+  })
+
+  test('persists and restores folders with snapshot and storage hydration', () => {
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/emoji/mood.png',
+      category: 'emoji',
+      name: 'Mood',
+    })
+    expect(imported.ok).toBe(true)
+
+    const folder = store.createFolder({
+      name: 'Mood Pack',
+      category: 'emoji',
+      assetIds: [imported.assetId],
+    })
+    expect(folder.assetIds).toEqual([imported.assetId])
+
+    store.saveNow()
+    const backup = store.createBackupSnapshot()
+    expect(Array.isArray(backup.folders)).toBe(true)
+    expect(backup.folders.length).toBe(1)
+
+    setActivePinia(createPinia())
+    const restoredFromStorage = useGalleryStore()
+    expect(restoredFromStorage.folders.length).toBe(1)
+    expect(restoredFromStorage.folders[0].name).toBe('Mood Pack')
+    expect(restoredFromStorage.folders[0].assetIds).toEqual([imported.assetId])
+
+    setActivePinia(createPinia())
+    const restoredFromBackup = useGalleryStore()
+    const ok = restoredFromBackup.restoreFromBackup(backup)
+    expect(ok).toBe(true)
+    expect(restoredFromBackup.folders.length).toBe(1)
+    expect(restoredFromBackup.folders[0].name).toBe('Mood Pack')
+    expect(restoredFromBackup.folders[0].assetIds).toEqual([imported.assetId])
   })
 
   test('creates backup snapshot in metadata mode by default and can include asset package', async () => {

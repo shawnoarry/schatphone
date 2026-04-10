@@ -265,18 +265,18 @@ Current / 当前:
 ## 6. P1 Queue (After P0 Stabilizes) / P1 队列（P0 稳定后）
 1. EN: AI image-reference pipeline (provider capability dependent) — `IN_PROGRESS` (phase-1/2 baseline landed + local-file data URL path + in-thread result hints).
    中文：AI 图生图参考链路（依赖供应商能力）— `IN_PROGRESS`（第一/二阶段基线已落地 + 本地图 data URL 路径 + 会话内结果提示）。
-2. EN: Global asset hub V2 (PM-locked) — `TODO` (custom folders + module-slot binding + fallback defaults + delete/replace confirmation).
-   中文：全局素材中台 V2（产品已冻结）— `TODO`（自定义文件夹 + 模块槽位绑定 + 默认回退 + 删除/替换确认）。
+2. EN: Global asset hub V2 (PM-locked) — `IN_PROGRESS` (data schema landed; UI/safety/fallback tasks pending).
+   中文：全局素材中台 V2（产品已冻结）— `IN_PROGRESS`（数据结构已落地；UI/安全/回退任务待完成）。
 3. EN: Scenario cards and interactive mini-scenes.
    中文：场景卡片与互动小剧场扩展。
 4. EN: Cross-module role/asset identity reuse.
    中文：跨模块角色/素材身份复用。
 
 ### 6.1 Asset Hub V2 Execution Checklist / 素材中台 V2 执行清单
-Status / 状态: `TODO`
+Status / 状态: `IN_PROGRESS`
 
-1. EN: Data schema task — add custom folders and slot-binding records (V1 = single folder per slot, reserve priority fields).
-   中文：数据结构任务——增加自定义文件夹与槽位绑定记录（V1=单文件夹绑定，同时预留优先级字段）。
+1. EN: Data schema task — `DONE`: custom folders + role slot-binding records are landed (V1 = single folder per slot, reserved priority fields + backward-compatible migration + tests).
+   中文：数据结构任务——`DONE`：已落地自定义文件夹与角色槽位绑定记录（V1=单文件夹绑定，并预留优先级字段 + 向后兼容迁移 + 测试）。
 2. EN: Gallery UI task — provide folder CRUD and folder picker entries for role-facing slots (profile image source, dynamic pack, emoji pack, etc.).
    中文：相册 UI 任务——提供文件夹增删改，并为角色相关槽位提供文件夹选择入口（形象照来源、动态图包、表情包等）。
 3. EN: Safety task — enforce second confirmation for bound asset/folder delete and replace; keep force-delete path.
@@ -397,3 +397,5 @@ Acceptance / 验收标准:
     2026-04-10 中文：产品侧冻结全局素材中台 V2 需求（自定义文件夹、槽位绑定、删除/替换确认、默认回退、单次上传可选入库）。
 18. 2026-04-10 EN: Added asset hub V2 execution checklist and acceptance criteria for AI engineer handoff.
     2026-04-10 中文：新增素材中台 V2 执行清单与验收标准，用于 AI 程序员接手执行。
+19. 2026-04-10 EN: Landed asset hub V2 data layer baseline: custom folder model in gallery + role slot-folder bindings in chat/contract with backward-compatible tests.
+    2026-04-10 中文：已落地素材中台 V2 数据层基线：相册自定义文件夹模型 + chat/contract 角色槽位文件夹绑定（含向后兼容测试）。

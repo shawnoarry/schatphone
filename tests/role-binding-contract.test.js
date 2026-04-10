@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import {
+  createEmptyRoleAssetFolderBindings,
   createEmptyRoleAssetPack,
   createRoleBindingContract,
+  normalizeRoleAssetFolderBindings,
   normalizeRoleAssetPack,
   toRoleBindingAssetContext,
 } from '../src/lib/role-binding-contract'
@@ -43,6 +45,13 @@ describe('role binding contract helpers', () => {
         referenceAssetIds: ['asset_ref_1'],
         scenarioAssetIds: ['asset_scene_1'],
       },
+      profileAssetFolderBindings: {
+        imageReference: {
+          folderId: 'folder_ref',
+          folderPriority: 15,
+          folderPriorityChain: ['folder_ref', 'folder_ref_backup'],
+        },
+      },
       avatarSources: {
         threadAvatar: 'https://example.com/thread.png',
         moduleAvatar: 'https://example.com/module.png',
@@ -58,6 +67,8 @@ describe('role binding contract helpers', () => {
     expect(contract.relationship.level).toBe(88)
     expect(contract.assets.recommendedImageAssetId).toBe('asset_ref_1')
     expect(contract.assets.profileAssetIds).toContain('asset_ref_1')
+    expect(contract.assets.profileAssetFolderBindings.imageReference.folderId).toBe('folder_ref')
+    expect(contract.assets.profileAssetFolderBindings.imageReference.folderPriority).toBe(15)
   })
 
   test('maps contract to legacy-friendly role asset context shape', () => {
@@ -88,6 +99,7 @@ describe('role binding contract helpers', () => {
     expect(context.recommendedImageAssetId).toBe('asset_custom')
     expect(context.profileAssetPack.wallpaperAssetIds).toEqual(['asset_wall'])
     expect(context.profileAssetIds).toEqual(['asset_wall'])
+    expect(context.profileAssetFolderBindings.profileImage.folderId).toBe('')
   })
 
   test('empty pack helper always returns all expected categories', () => {
@@ -97,6 +109,56 @@ describe('role binding contract helpers', () => {
       emojiAssetIds: [],
       referenceAssetIds: [],
       scenarioAssetIds: [],
+    })
+  })
+
+  test('normalizes role folder bindings with v1 single-folder schema and reserved priority fields', () => {
+    const normalized = normalizeRoleAssetFolderBindings({
+      profileImage: {
+        folderId: 'folder_profile',
+        folderPriority: 10,
+        folderPriorityChain: ['folder_profile', 'folder_backup', 'folder_profile'],
+      },
+      emojiPack: {
+        folderId: 'invalid folder id',
+        folderPriority: -100,
+        folderPriorityChain: ['folder_emoji', 'invalid folder'],
+      },
+    })
+
+    expect(normalized.profileImage.folderId).toBe('folder_profile')
+    expect(normalized.profileImage.folderPriority).toBe(10)
+    expect(normalized.profileImage.folderPriorityChain).toEqual(['folder_profile', 'folder_backup'])
+    expect(normalized.emojiPack.folderId).toBe('')
+    expect(normalized.emojiPack.folderPriority).toBe(0)
+    expect(normalized.emojiPack.folderPriorityChain).toEqual(['folder_emoji'])
+    expect(normalized.dynamicMedia.folderId).toBe('')
+    expect(normalized.imageReference.folderPriorityChain).toEqual([])
+  })
+
+  test('empty folder bindings helper returns all expected slots', () => {
+    const empty = createEmptyRoleAssetFolderBindings()
+    expect(empty).toEqual({
+      profileImage: {
+        folderId: '',
+        folderPriority: 0,
+        folderPriorityChain: [],
+      },
+      dynamicMedia: {
+        folderId: '',
+        folderPriority: 0,
+        folderPriorityChain: [],
+      },
+      emojiPack: {
+        folderId: '',
+        folderPriority: 0,
+        folderPriorityChain: [],
+      },
+      imageReference: {
+        folderId: '',
+        folderPriority: 0,
+        folderPriorityChain: [],
+      },
     })
   })
 })

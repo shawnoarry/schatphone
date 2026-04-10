@@ -13,12 +13,14 @@ export const GALLERY_ASSET_CATEGORIES = Object.freeze(['wallpaper', 'emoji', 're
 const GALLERY_STORAGE_KEY = 'store:gallery'
 const GALLERY_STORAGE_VERSION = 1
 const DEFAULT_CATEGORY = 'reference'
+const DEFAULT_FOLDER_CATEGORY = 'all'
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 const BACKUP_ASSET_PACKAGE_VERSION = 1
 const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
 const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 const DEFAULT_AI_REFERENCE_MAX_BYTES = 1_500_000
+const MAX_FOLDER_ASSET_IDS = 500
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -30,11 +32,24 @@ const normalizeCategory = (value, fallback = DEFAULT_CATEGORY) => {
   return GALLERY_ASSET_CATEGORIES.includes(raw) ? raw : fallback
 }
 
+const normalizeFolderCategory = (value, fallback = DEFAULT_FOLDER_CATEGORY) => {
+  if (typeof value === 'string' && value.trim().toLowerCase() === 'all') return 'all'
+  if (fallback === 'all') return normalizeCategory(value, 'all')
+  return normalizeCategory(value, normalizeCategory(fallback))
+}
+
 const normalizeAssetName = (value, fallback = 'Untitled Asset') => {
   if (typeof value !== 'string') return fallback
   const trimmed = value.trim().replace(/\s+/g, ' ')
   if (!trimmed) return fallback
   return trimmed.slice(0, 80)
+}
+
+const normalizeFolderName = (value, fallback = 'Untitled Folder') => {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  if (!trimmed) return fallback
+  return trimmed.slice(0, 64)
 }
 
 const readExtension = (value = '') => {
@@ -62,8 +77,22 @@ const normalizeHttpUrl = (value) => {
 }
 
 const createAssetId = () => `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createFolderId = () => `folder_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const buildUrlFingerprint = (url) => `url:${url.toLowerCase()}`
+
+const normalizeAssetIdList = (rawIds, { existingAssetIds } = {}) => {
+  if (!Array.isArray(rawIds)) return []
+  const existingSet = existingAssetIds instanceof Set ? existingAssetIds : null
+  const unique = []
+  rawIds.forEach((rawId) => {
+    const id = typeof rawId === 'string' ? rawId.trim() : ''
+    if (!id || unique.includes(id)) return
+    if (existingSet && !existingSet.has(id)) return
+    unique.push(id)
+  })
+  return unique.slice(0, MAX_FOLDER_ASSET_IDS)
+}
 
 const arrayBufferToHex = (buffer) =>
   Array.from(new Uint8Array(buffer))
@@ -145,6 +174,22 @@ const normalizeAssetRecord = (rawAsset, index = 0) => {
   return normalized
 }
 
+const normalizeFolderRecord = (rawFolder, index = 0, { existingAssetIds } = {}) => {
+  if (!rawFolder || typeof rawFolder !== 'object') return null
+  const id =
+    typeof rawFolder.id === 'string' && rawFolder.id.trim()
+      ? rawFolder.id.trim()
+      : `folder_legacy_${Date.now()}_${index}`
+  return {
+    id,
+    name: normalizeFolderName(rawFolder.name),
+    category: normalizeFolderCategory(rawFolder.category, 'all'),
+    assetIds: normalizeAssetIdList(rawFolder.assetIds, { existingAssetIds }),
+    createdAt: Math.max(0, toInt(rawFolder.createdAt, Date.now())),
+    updatedAt: Math.max(0, toInt(rawFolder.updatedAt, Date.now())),
+  }
+}
+
 const cloneAsset = (asset) => ({
   id: asset.id,
   name: asset.name,
@@ -158,6 +203,15 @@ const cloneAsset = (asset) => ({
   fingerprint: asset.fingerprint,
   createdAt: asset.createdAt,
   updatedAt: asset.updatedAt,
+})
+
+const cloneFolder = (folder) => ({
+  id: folder.id,
+  name: folder.name,
+  category: folder.category,
+  assetIds: [...folder.assetIds],
+  createdAt: folder.createdAt,
+  updatedAt: folder.updatedAt,
 })
 
 const clampPositiveInteger = (value, fallback, minimum = 1) => {
@@ -276,6 +330,7 @@ const normalizeUsageItem = (rawUsage, fallbackKey) => {
 export const useGalleryStore = defineStore('gallery', () => {
   const systemStore = useSystemStore()
   const assets = ref([])
+  const folders = ref([])
   const usageRegistry = reactive({})
   const hasFinishedStorageHydration = ref(false)
   const previewObjectUrlCache = new Map()
@@ -303,6 +358,13 @@ export const useGalleryStore = defineStore('gallery', () => {
     }),
   )
 
+  const sortedFolders = computed(() =>
+    [...folders.value].sort((left, right) => {
+      if (right.updatedAt !== left.updatedAt) return right.updatedAt - left.updatedAt
+      return right.createdAt - left.createdAt
+    }),
+  )
+
   const getAssetsByCategory = (category = 'all') => {
     const normalizedCategory = category === 'all' ? 'all' : normalizeCategory(category)
     if (normalizedCategory === 'all') return sortedAssets.value
@@ -313,6 +375,99 @@ export const useGalleryStore = defineStore('gallery', () => {
     if (typeof assetId !== 'string' || !assetId.trim()) return null
     const normalizedId = assetId.trim()
     return assets.value.find((item) => item.id === normalizedId) || null
+  }
+
+  const findFolderById = (folderId) => {
+    if (typeof folderId !== 'string' || !folderId.trim()) return null
+    const normalizedId = folderId.trim()
+    return folders.value.find((item) => item.id === normalizedId) || null
+  }
+
+  const listFolders = ({ category = 'all' } = {}) => {
+    const normalizedCategory = normalizeFolderCategory(category, 'all')
+    if (normalizedCategory === 'all') return sortedFolders.value
+    return sortedFolders.value.filter((folder) => folder.category === normalizedCategory)
+  }
+
+  const createFolder = ({
+    name = '',
+    category = DEFAULT_FOLDER_CATEGORY,
+    assetIds = [],
+  } = {}) => {
+    const now = Date.now()
+    const existingAssetIds = new Set(assets.value.map((asset) => asset.id))
+    const folder = {
+      id: createFolderId(),
+      name: normalizeFolderName(name, 'Untitled Folder'),
+      category: normalizeFolderCategory(category, 'all'),
+      assetIds: normalizeAssetIdList(assetIds, { existingAssetIds }),
+      createdAt: now,
+      updatedAt: now,
+    }
+    folders.value = [folder, ...folders.value]
+    return folder
+  }
+
+  const renameFolder = (folderId, nextName) => {
+    const folder = findFolderById(folderId)
+    if (!folder) return false
+    const normalizedName = normalizeFolderName(nextName, folder.name)
+    if (folder.name === normalizedName) return true
+    folder.name = normalizedName
+    folder.updatedAt = Date.now()
+    return true
+  }
+
+  const setFolderCategory = (folderId, category) => {
+    const folder = findFolderById(folderId)
+    if (!folder) return false
+    const normalizedCategory = normalizeFolderCategory(category, folder.category)
+    if (folder.category === normalizedCategory) return true
+    folder.category = normalizedCategory
+    folder.updatedAt = Date.now()
+    return true
+  }
+
+  const setFolderAssetIds = (folderId, assetIds = []) => {
+    const folder = findFolderById(folderId)
+    if (!folder) return false
+    const existingAssetIds = new Set(assets.value.map((asset) => asset.id))
+    const normalizedIds = normalizeAssetIdList(assetIds, { existingAssetIds })
+    const changed = JSON.stringify(folder.assetIds) !== JSON.stringify(normalizedIds)
+    if (!changed) return true
+    folder.assetIds = normalizedIds
+    folder.updatedAt = Date.now()
+    return true
+  }
+
+  const addAssetToFolder = (folderId, assetId) => {
+    const folder = findFolderById(folderId)
+    const asset = findAssetById(assetId)
+    if (!folder || !asset) return false
+    if (folder.assetIds.includes(asset.id)) return true
+    folder.assetIds = [...folder.assetIds, asset.id].slice(0, MAX_FOLDER_ASSET_IDS)
+    folder.updatedAt = Date.now()
+    return true
+  }
+
+  const removeAssetFromFolder = (folderId, assetId) => {
+    const folder = findFolderById(folderId)
+    if (!folder) return false
+    const normalizedAssetId = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalizedAssetId) return false
+    const before = folder.assetIds.length
+    folder.assetIds = folder.assetIds.filter((id) => id !== normalizedAssetId)
+    if (folder.assetIds.length === before) return false
+    folder.updatedAt = Date.now()
+    return true
+  }
+
+  const removeFolder = (folderId) => {
+    if (typeof folderId !== 'string' || !folderId.trim()) return false
+    const normalizedFolderId = folderId.trim()
+    const before = folders.value.length
+    folders.value = folders.value.filter((folder) => folder.id !== normalizedFolderId)
+    return folders.value.length !== before
   }
 
   const findAssetByFingerprint = (fingerprint) => {
@@ -690,6 +845,13 @@ export const useGalleryStore = defineStore('gallery', () => {
     }
 
     assets.value = assets.value.filter((item) => item.id !== normalizedId)
+    folders.value.forEach((folder) => {
+      if (!Array.isArray(folder.assetIds) || folder.assetIds.length === 0) return
+      const nextAssetIds = folder.assetIds.filter((id) => id !== normalizedId)
+      if (nextAssetIds.length === folder.assetIds.length) return
+      folder.assetIds = nextAssetIds
+      folder.updatedAt = Date.now()
+    })
     revokeAssetPreviewUrl(normalizedId)
     delete usageRegistry[normalizedId]
     if (target.sourceType === 'file') {
@@ -708,9 +870,21 @@ export const useGalleryStore = defineStore('gallery', () => {
     const nextAssets = sourceAssets
       .map((asset, index) => normalizeAssetRecord(asset, index))
       .filter(Boolean)
+    const existingAssetIds = new Set(nextAssets.map((asset) => asset.id))
+    const sourceFolders = Array.isArray(snapshot.folders) ? snapshot.folders : []
+    const seenFolderIds = new Set()
+    const nextFolders = sourceFolders
+      .map((folder, index) => normalizeFolderRecord(folder, index, { existingAssetIds }))
+      .filter((folder) => {
+        if (!folder) return false
+        if (seenFolderIds.has(folder.id)) return false
+        seenFolderIds.add(folder.id)
+        return true
+      })
 
     clearAssetPreviewCache()
     assets.value = nextAssets
+    folders.value = nextFolders
     return true
   }
 
@@ -735,6 +909,7 @@ export const useGalleryStore = defineStore('gallery', () => {
       GALLERY_STORAGE_KEY,
       {
         assets: assets.value.map((asset) => cloneAsset(asset)),
+        folders: folders.value.map((folder) => cloneFolder(folder)),
       },
       { version: GALLERY_STORAGE_VERSION },
     )
@@ -746,6 +921,7 @@ export const useGalleryStore = defineStore('gallery', () => {
 
   const createBackupSnapshot = () => ({
     assets: assets.value.map((asset) => cloneAsset(asset)),
+    folders: folders.value.map((folder) => cloneFolder(folder)),
   })
 
   const createBackupSnapshotAsync = async ({
@@ -953,7 +1129,7 @@ export const useGalleryStore = defineStore('gallery', () => {
   })()
 
   watch(
-    assets,
+    [assets, folders],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -963,10 +1139,21 @@ export const useGalleryStore = defineStore('gallery', () => {
 
   return {
     assets,
+    folders,
     categoryCounts,
     sortedAssets,
+    sortedFolders,
     getAssetsByCategory,
     findAssetById,
+    findFolderById,
+    listFolders,
+    createFolder,
+    renameFolder,
+    setFolderCategory,
+    setFolderAssetIds,
+    addAssetToFolder,
+    removeAssetFromFolder,
+    removeFolder,
     getAssetPreviewUrl,
     getAssetAiReferenceUrl,
     revokeAssetPreviewUrl,

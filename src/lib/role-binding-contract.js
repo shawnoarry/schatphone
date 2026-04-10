@@ -4,6 +4,16 @@ export const ROLE_BINDING_CONTRACT_VERSION = '1.0.0'
 
 const MAX_ASSET_ID_LENGTH = 128
 const MAX_ASSET_IDS_PER_CATEGORY = 24
+const MAX_FOLDER_ID_LENGTH = 128
+const MAX_FOLDER_IDS_PER_SLOT = 8
+const MAX_SLOT_PRIORITY = 999
+
+export const ROLE_ASSET_FOLDER_SLOT_KEYS = Object.freeze([
+  'profileImage',
+  'dynamicMedia',
+  'emojiPack',
+  'imageReference',
+])
 
 const trimTo = (value, maxLength = 500) => {
   const text = typeof value === 'string' ? value.trim() : ''
@@ -25,12 +35,29 @@ export const sanitizeRoleBindingAssetId = (value) => {
   return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
 }
 
+export const sanitizeRoleBindingFolderId = (value) => {
+  const raw = trimTo(value, MAX_FOLDER_ID_LENGTH)
+  if (!raw) return ''
+  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
+}
+
 export const createEmptyRoleAssetPack = () => ({
   wallpaperAssetIds: [],
   emojiAssetIds: [],
   referenceAssetIds: [],
   scenarioAssetIds: [],
 })
+
+const createEmptyRoleAssetFolderSlotBinding = () => ({
+  folderId: '',
+  folderPriority: 0,
+  folderPriorityChain: [],
+})
+
+export const createEmptyRoleAssetFolderBindings = () =>
+  Object.fromEntries(
+    ROLE_ASSET_FOLDER_SLOT_KEYS.map((slotKey) => [slotKey, createEmptyRoleAssetFolderSlotBinding()]),
+  )
 
 const normalizeRoleAssetIdList = (input) => {
   if (!Array.isArray(input)) return []
@@ -43,6 +70,17 @@ const normalizeRoleAssetIdList = (input) => {
   return uniqueIds.slice(0, MAX_ASSET_IDS_PER_CATEGORY)
 }
 
+const normalizeRoleFolderIdList = (input) => {
+  if (!Array.isArray(input)) return []
+  const uniqueIds = []
+  input.forEach((rawId) => {
+    const id = sanitizeRoleBindingFolderId(rawId)
+    if (!id || uniqueIds.includes(id)) return
+    uniqueIds.push(id)
+  })
+  return uniqueIds.slice(0, MAX_FOLDER_IDS_PER_SLOT)
+}
+
 export const normalizeRoleAssetPack = (rawPack) => {
   const input = rawPack && typeof rawPack === 'object' ? rawPack : {}
   return {
@@ -53,6 +91,22 @@ export const normalizeRoleAssetPack = (rawPack) => {
   }
 }
 
+export const normalizeRoleAssetFolderBindings = (rawBindings) => {
+  const source = rawBindings && typeof rawBindings === 'object' ? rawBindings : {}
+  const output = {}
+
+  ROLE_ASSET_FOLDER_SLOT_KEYS.forEach((slotKey) => {
+    const slotInput = source[slotKey] && typeof source[slotKey] === 'object' ? source[slotKey] : {}
+    output[slotKey] = {
+      folderId: sanitizeRoleBindingFolderId(slotInput.folderId),
+      folderPriority: clamp(toInt(slotInput.folderPriority, 0), 0, MAX_SLOT_PRIORITY),
+      folderPriorityChain: normalizeRoleFolderIdList(slotInput.folderPriorityChain),
+    }
+  })
+
+  return output
+}
+
 export const cloneRoleAssetPack = (assetPack) => {
   const normalized = normalizeRoleAssetPack(assetPack)
   return {
@@ -61,6 +115,20 @@ export const cloneRoleAssetPack = (assetPack) => {
     referenceAssetIds: [...normalized.referenceAssetIds],
     scenarioAssetIds: [...normalized.scenarioAssetIds],
   }
+}
+
+export const cloneRoleAssetFolderBindings = (bindings) => {
+  const normalized = normalizeRoleAssetFolderBindings(bindings)
+  const output = {}
+  ROLE_ASSET_FOLDER_SLOT_KEYS.forEach((slotKey) => {
+    const slotBinding = normalized[slotKey]
+    output[slotKey] = {
+      folderId: slotBinding.folderId,
+      folderPriority: slotBinding.folderPriority,
+      folderPriorityChain: [...slotBinding.folderPriorityChain],
+    }
+  })
+  return output
 }
 
 export const flattenRoleAssetPack = (assetPack) => {
@@ -96,6 +164,9 @@ export const createRoleBindingContract = (input = {}) => {
   const contactName = trimTo(contactInput.name, 120)
   const profileId = Math.max(0, toInt(contactInput.profileId ?? profileInput.id, 0))
   const profileAssetPack = normalizeRoleAssetPack(input.profileAssetPack ?? profileInput.assetPack)
+  const profileAssetFolderBindings = normalizeRoleAssetFolderBindings(
+    input.profileAssetFolderBindings ?? profileInput.assetFolderBindings,
+  )
 
   const preferredImageAssetId = sanitizeRoleBindingAssetId(input.preferredImageAssetId)
   const recommendedImageAssetId = getRecommendedImageAssetId(
@@ -151,6 +222,7 @@ export const createRoleBindingContract = (input = {}) => {
       recommendedImageAssetId,
       profileAssetPack: cloneRoleAssetPack(profileAssetPack),
       profileAssetIds: flattenRoleAssetPack(profileAssetPack),
+      profileAssetFolderBindings: cloneRoleAssetFolderBindings(profileAssetFolderBindings),
     },
   }
 }
@@ -167,5 +239,6 @@ export const toRoleBindingAssetContext = (contract) => {
     recommendedImageAssetId: sanitizeRoleBindingAssetId(assets.recommendedImageAssetId),
     profileAssetPack: cloneRoleAssetPack(assets.profileAssetPack),
     profileAssetIds: flattenRoleAssetPack(assets.profileAssetPack),
+    profileAssetFolderBindings: cloneRoleAssetFolderBindings(assets.profileAssetFolderBindings),
   }
 }

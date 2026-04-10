@@ -3,9 +3,13 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
 import {
+  ROLE_ASSET_FOLDER_SLOT_KEYS,
+  cloneRoleAssetFolderBindings as cloneRoleProfileAssetFolderBindingsShared,
   cloneRoleAssetPack as cloneRoleProfileAssetPackShared,
+  createEmptyRoleAssetFolderBindings as createEmptyRoleProfileAssetFolderBindingsShared,
   createEmptyRoleAssetPack as createEmptyRoleAssetPackShared,
   createRoleBindingContract,
+  normalizeRoleAssetFolderBindings as normalizeRoleProfileAssetFolderBindingsShared,
   normalizeRoleAssetPack as normalizeRoleProfileAssetPackShared,
   sanitizeRoleBindingAssetId,
   toRoleBindingAssetContext,
@@ -143,6 +147,31 @@ const createEmptyRoleAssetPack = () => createEmptyRoleAssetPackShared()
 const normalizeRoleProfileAssetPack = (rawPack) => normalizeRoleProfileAssetPackShared(rawPack)
 
 const cloneRoleProfileAssetPack = (assetPack) => cloneRoleProfileAssetPackShared(assetPack)
+
+const createEmptyRoleProfileAssetFolderBindings = () =>
+  createEmptyRoleProfileAssetFolderBindingsShared()
+
+const normalizeRoleProfileAssetFolderBindings = (rawBindings) =>
+  normalizeRoleProfileAssetFolderBindingsShared(rawBindings)
+
+const cloneRoleProfileAssetFolderBindings = (bindings) =>
+  cloneRoleProfileAssetFolderBindingsShared(bindings)
+
+const mergeRoleProfileAssetFolderBindings = (currentBindings, updates) => {
+  const base = normalizeRoleProfileAssetFolderBindings(currentBindings)
+  if (!updates || typeof updates !== 'object') return base
+
+  const merged = {}
+  ROLE_ASSET_FOLDER_SLOT_KEYS.forEach((slotKey) => {
+    const currentSlot = base[slotKey] && typeof base[slotKey] === 'object' ? base[slotKey] : {}
+    const nextSlot = updates[slotKey] && typeof updates[slotKey] === 'object' ? updates[slotKey] : {}
+    merged[slotKey] = {
+      ...currentSlot,
+      ...nextSlot,
+    }
+  })
+  return normalizeRoleProfileAssetFolderBindings(merged)
+}
 
 const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
   const route = trimTo(value, 200)
@@ -502,6 +531,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     avatar: typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : '',
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
+    assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
     tags: Array.isArray(rawProfile?.tags)
       ? rawProfile.tags
           .map((item) => (typeof item === 'string' ? item.trim() : ''))
@@ -662,6 +692,11 @@ export const useChatStore = defineStore('chat', () => {
     return cloneRoleProfileAssetPack(profile?.assetPack)
   }
 
+  const getRoleProfileAssetFolderBindings = (profileId) => {
+    const profile = getRoleProfileById(profileId)
+    return cloneRoleProfileAssetFolderBindings(profile?.assetFolderBindings)
+  }
+
   const setRoleProfileAssetPack = (profileId, nextPack = {}) => {
     const target = getRoleProfileById(profileId)
     if (!target) return false
@@ -674,6 +709,18 @@ export const useChatStore = defineStore('chat', () => {
       JSON.stringify(current) !== JSON.stringify(normalized)
     if (!changed) return false
     target.assetPack = normalized
+    target.updatedAt = nowTs()
+    return true
+  }
+
+  const setRoleProfileAssetFolderBindings = (profileId, nextBindings = {}) => {
+    const target = getRoleProfileById(profileId)
+    if (!target) return false
+    const current = normalizeRoleProfileAssetFolderBindings(target.assetFolderBindings)
+    const normalized = mergeRoleProfileAssetFolderBindings(current, nextBindings)
+    const changed = JSON.stringify(current) !== JSON.stringify(normalized)
+    if (!changed) return false
+    target.assetFolderBindings = normalized
     target.updatedAt = nowTs()
     return true
   }
@@ -699,6 +746,7 @@ export const useChatStore = defineStore('chat', () => {
         relationshipNote: '',
         preferredImageAssetId: '',
         profileAssetPack: createEmptyRoleAssetPack(),
+        profileAssetFolderBindings: createEmptyRoleProfileAssetFolderBindings(),
         avatarSources: {
           fallbackSeed: numericContactId > 0 ? `contact-${numericContactId}` : 'Contact',
         },
@@ -732,6 +780,8 @@ export const useChatStore = defineStore('chat', () => {
       relationshipNote: resolved.relationshipNote,
       preferredImageAssetId: sanitizeAssetId(resolved.preferredImageAssetId),
       profileAssetPack: profile?.assetPack || resolved.profileAssetPack,
+      profileAssetFolderBindings:
+        profile?.assetFolderBindings || resolved.profileAssetFolderBindings,
       avatarSources: {
         threadAvatar: conversationOverrides.contactAvatar,
         moduleAvatar: perContactModuleAvatar || moduleAvatarOverrides.defaultContactAvatar,
@@ -766,6 +816,7 @@ export const useChatStore = defineStore('chat', () => {
         recommendedImageAssetId: '',
         profileAssetPack: createEmptyRoleAssetPack(),
         profileAssetIds: [],
+        profileAssetFolderBindings: createEmptyRoleProfileAssetFolderBindings(),
       }
     }
     return toRoleBindingAssetContext(contract)
@@ -797,6 +848,7 @@ export const useChatStore = defineStore('chat', () => {
       avatar: profile.avatar || contact.avatar,
       isMain: Boolean(profile.isMain),
       profileAssetPack: cloneRoleProfileAssetPack(profile.assetPack),
+      profileAssetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
       preferredImageAssetId: sanitizeAssetId(contact.preferredImageAssetId),
     }
   }
@@ -1495,6 +1547,12 @@ export const useChatStore = defineStore('chat', () => {
         ...updates.assetPack,
       })
     }
+    if (updates.assetFolderBindings && typeof updates.assetFolderBindings === 'object') {
+      target.assetFolderBindings = mergeRoleProfileAssetFolderBindings(
+        target.assetFolderBindings,
+        updates.assetFolderBindings,
+      )
+    }
     target.updatedAt = nowTs()
     return true
   }
@@ -1878,6 +1936,7 @@ export const useChatStore = defineStore('chat', () => {
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
           assetPack: cloneRoleProfileAssetPack(profile.assetPack),
+          assetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
         })),
         contacts: contactsSnapshot,
         conversations: conversationsSnapshot,
@@ -1980,7 +2039,9 @@ export const useChatStore = defineStore('chat', () => {
     setConversationIdentityOverrides,
     getRoleProfileById,
     getRoleProfileAssetPack,
+    getRoleProfileAssetFolderBindings,
     setRoleProfileAssetPack,
+    setRoleProfileAssetFolderBindings,
     getRoleBindingContract,
     listRoleBindingContracts,
     getRoleBindingAssetContext,
