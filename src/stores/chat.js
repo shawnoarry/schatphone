@@ -19,6 +19,7 @@ const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
 const VALID_REPLY_MODES = new Set(['manual', 'auto'])
 const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
+const VALID_IMAGE_REFERENCE_MODES = new Set(['auto', 'context_only', 'native_url'])
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const VALID_BLOCK_TYPES = new Set([
@@ -31,11 +32,13 @@ const VALID_BLOCK_TYPES = new Set([
   'mini_scene',
 ])
 const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
+const VALID_IMAGE_REFERENCE_TRANSPORT_MODES = new Set(['none', 'context_only', 'native_url'])
 const MAX_TEXT_BLOCK_LENGTH = 3000
 const MAX_DETAIL_TEXT_LENGTH = 800
 const MAX_SHORT_LABEL_LENGTH = 80
 const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
+const MAX_AI_META_PROVIDER_LENGTH = 32
 const MAX_BLOCK_COUNT = 16
 const SAFE_ROUTE_FALLBACK = '/home'
 const SAFE_TRANSFER_ROUTE_FALLBACK = '/wallet'
@@ -53,6 +56,7 @@ const DEFAULT_CONVERSATION_AI_PREFS = {
   responseStyle: 'immersive',
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
+  imageReferenceMode: 'auto',
   autoInvokeEnabled: false,
   autoInvokeIntervalSec: 360,
 }
@@ -274,6 +278,10 @@ const normalizeConversationAiPrefs = (rawPrefs) => {
       typeof input.proactiveOpenerStrategy === 'string' && VALID_PROACTIVE_STRATEGIES.has(input.proactiveOpenerStrategy)
         ? input.proactiveOpenerStrategy
         : DEFAULT_CONVERSATION_AI_PREFS.proactiveOpenerStrategy,
+    imageReferenceMode:
+      typeof input.imageReferenceMode === 'string' && VALID_IMAGE_REFERENCE_MODES.has(input.imageReferenceMode)
+        ? input.imageReferenceMode
+        : DEFAULT_CONVERSATION_AI_PREFS.imageReferenceMode,
     autoInvokeEnabled:
       typeof input.autoInvokeEnabled === 'boolean'
         ? input.autoInvokeEnabled
@@ -305,12 +313,27 @@ const normalizeMessageMeta = (rawMeta) => {
   const bilingual = Boolean(rawMeta.bilingual)
   const rerollOf =
     typeof rawMeta.rerollOf === 'string' && rawMeta.rerollOf.trim() ? rawMeta.rerollOf.trim() : ''
+  const imageReferenceMode =
+    typeof rawMeta.imageReferenceMode === 'string' &&
+    VALID_IMAGE_REFERENCE_TRANSPORT_MODES.has(rawMeta.imageReferenceMode)
+      ? rawMeta.imageReferenceMode
+      : 'none'
+  const imageReferenceCount = clamp(toInt(rawMeta.imageReferenceCount, 0), 0, 3)
+  const imageReferenceFallback = Boolean(rawMeta.imageReferenceFallback)
+  const imageReferenceProvider =
+    typeof rawMeta.imageReferenceProvider === 'string' && rawMeta.imageReferenceProvider.trim()
+      ? rawMeta.imageReferenceProvider.trim().slice(0, MAX_AI_META_PROVIDER_LENGTH)
+      : ''
 
   const output = {
     replyType,
     bilingual,
+    imageReferenceMode,
+    imageReferenceCount,
+    imageReferenceFallback,
   }
   if (rerollOf) output.rerollOf = rerollOf
+  if (imageReferenceProvider) output.imageReferenceProvider = imageReferenceProvider
   return output
 }
 

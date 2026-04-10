@@ -63,6 +63,7 @@ describe('chat store model', () => {
     expect(defaultPrefs.responseStyle).toBe('immersive')
     expect(defaultPrefs.proactiveOpenerEnabled).toBe(false)
     expect(defaultPrefs.proactiveOpenerStrategy).toBe('on_enter_once')
+    expect(defaultPrefs.imageReferenceMode).toBe('auto')
 
     defaultPrefs.replyCount = 99
     expect(store.getDefaultConversationAiPrefs().replyCount).toBe(1)
@@ -76,6 +77,7 @@ describe('chat store model', () => {
     expect(defaults.responseStyle).toBe('immersive')
     expect(defaults.proactiveOpenerEnabled).toBe(false)
     expect(defaults.proactiveOpenerStrategy).toBe('on_enter_once')
+    expect(defaults.imageReferenceMode).toBe('auto')
 
     store.setConversationAiPrefs(contactId, {
       suggestedRepliesEnabled: true,
@@ -90,6 +92,7 @@ describe('chat store model', () => {
       responseStyle: 'concise',
       proactiveOpenerEnabled: true,
       proactiveOpenerStrategy: 'on_every_enter_if_empty',
+      imageReferenceMode: 'native_url',
     })
 
     const prefs = store.getConversationAiPrefs(contactId)
@@ -105,6 +108,7 @@ describe('chat store model', () => {
     expect(prefs.responseStyle).toBe('concise')
     expect(prefs.proactiveOpenerEnabled).toBe(true)
     expect(prefs.proactiveOpenerStrategy).toBe('on_every_enter_if_empty')
+    expect(prefs.imageReferenceMode).toBe('native_url')
   })
 
   test('supports autonomous invoke prefs clamp and auto state scheduling', () => {
@@ -212,6 +216,10 @@ describe('chat store model', () => {
       aiMeta: {
         replyType: 'quote_user',
         bilingual: true,
+        imageReferenceMode: 'native_url',
+        imageReferenceCount: 2,
+        imageReferenceFallback: false,
+        imageReferenceProvider: 'openai_compatible',
       },
       status: 'sent',
     })
@@ -221,6 +229,9 @@ describe('chat store model', () => {
     expect(assistantMessage.blocks[0]?.type).toBe('module_link')
     expect(assistantMessage.quote?.role).toBe('user')
     expect(assistantMessage.aiMeta?.replyType).toBe('quote_user')
+    expect(assistantMessage.aiMeta?.imageReferenceMode).toBe('native_url')
+    expect(assistantMessage.aiMeta?.imageReferenceCount).toBe(2)
+    expect(assistantMessage.aiMeta?.imageReferenceProvider).toBe('openai_compatible')
     expect(conversation.lastMessage).toContain('Open wallet')
   })
 
@@ -265,6 +276,30 @@ describe('chat store model', () => {
 
     expect((assistantMessage.quote?.preview || '').length).toBeLessThanOrEqual(240)
     expect((assistantMessage.quote?.messageId || '').length).toBeLessThanOrEqual(128)
+  })
+
+  test('normalizes ai meta image-reference fields on append', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: 'Meta test',
+      aiMeta: {
+        replyType: 'plain',
+        bilingual: false,
+        imageReferenceMode: 'unsupported_mode',
+        imageReferenceCount: 88,
+        imageReferenceFallback: 'yes',
+        imageReferenceProvider: 'provider-name-with-very-very-long-suffix-exceeds-limit',
+      },
+      status: 'sent',
+    })
+
+    expect(assistantMessage.aiMeta?.imageReferenceMode).toBe('none')
+    expect(assistantMessage.aiMeta?.imageReferenceCount).toBe(3)
+    expect(assistantMessage.aiMeta?.imageReferenceFallback).toBe(true)
+    expect((assistantMessage.aiMeta?.imageReferenceProvider || '').length).toBeLessThanOrEqual(32)
   })
 
   test('preserves valid image assetId on image_virtual blocks', () => {

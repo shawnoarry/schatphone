@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-09
+Updated / 更新时间: 2026-04-10
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -61,7 +61,7 @@ Updated / 更新时间: 2026-04-09
 ## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
 ### P1 Kickoff Preview / P1 启动预览
-Status / 状态: `TODO`
+Status / 状态: `IN_PROGRESS`
 Priority / 优先级: `Highest next / 下一阶段最高`
 
 #### 4.1 Problem Statement / 问题定义
@@ -77,6 +77,26 @@ Priority / 优先级: `Highest next / 下一阶段最高`
    中文：新模块必须复用现有角色/素材契约基线。
 3. EN: Keep backup/reporting behavior unchanged while adding new immersion features.
    中文：新增沉浸功能时保持备份与诊断报告行为稳定不回退。
+4. EN: Baseline landed in this round: chat now extracts recent user image blocks as references and injects them into one AI call with provider-aware transport + fallback.
+   中文：本轮已落地基线：Chat 会提取近期用户图片消息作为参考图，并在一次 AI 调用中按供应商能力进行传输与回退。
+5. EN: Thread-level image-reference mode control is now available (`auto` / `context_only` / `native_url`) and persisted in conversation AI prefs.
+   中文：会话级参考图模式已可配置并持久化（`auto` / `context_only` / `native_url`）。
+6. EN: Local gallery file assets can now be converted to image data URLs (size-guarded) for the same AI call; oversized files downgrade to text-only cues automatically.
+   中文：本地相册文件素材现可在大小守卫下转为 data URL 参与同轮 AI 调用；超限文件会自动降级为文字线索。
+7. EN: Assistant message metadata now records image-reference transport result (`mode/count/fallback/provider`) and exposes lightweight in-thread hints.
+   中文：助手消息元信息现会记录参考图传输结果（`模式/数量/回退/供应商`），并在会话内提供轻量提示。
+8. EN: PM locked the next feature family: global asset hub V2 with custom folders and cross-module binding.
+   中文：产品侧已锁定下一组功能：全局素材中台 V2（自定义文件夹 + 跨模块绑定）。
+9. EN: Binding model for V1 execution is fixed to single-folder-per-slot; schema must reserve future folder-priority chain extension.
+   中文：V1 执行模型固定为“每槽位单文件夹绑定”；数据结构必须预留未来“文件夹优先级链”扩展。
+10. EN: Bound asset/folder delete and replace must require second confirmation; force-delete is allowed.
+    中文：被绑定素材/文件夹的删除与替换必须二次确认；允许强制删除。
+11. EN: Each module that consumes visuals must define fallback defaults so missing assets never break baseline flows.
+    中文：凡消费视觉素材的模块都必须有默认回退，确保缺少素材时不破坏基础流程。
+12. EN: Not all uploads are forced into gallery: one-off upload/one-off AI generate lanes are allowed for module-local content, with optional "import to gallery" prompt.
+    中文：并非所有上传都强制入相册：模块本地内容可走单次上传/单次 AI 生成，并提供“是否导入素材库”弹窗。
+13. EN: Runtime smoothness policy is mandatory: broad format support with media-type size limits.
+    中文：运行流畅性策略为强制项：格式支持尽量广，但需按媒体类型限制体积上限。
 
 ---
 
@@ -243,12 +263,46 @@ Current / 当前:
 ---
 
 ## 6. P1 Queue (After P0 Stabilizes) / P1 队列（P0 稳定后）
-1. EN: AI image-reference pipeline (provider capability dependent).
-   中文：AI 图生图参考链路（依赖供应商能力）。
-2. EN: Scenario cards and interactive mini-scenes.
+1. EN: AI image-reference pipeline (provider capability dependent) — `IN_PROGRESS` (phase-1/2 baseline landed + local-file data URL path + in-thread result hints).
+   中文：AI 图生图参考链路（依赖供应商能力）— `IN_PROGRESS`（第一/二阶段基线已落地 + 本地图 data URL 路径 + 会话内结果提示）。
+2. EN: Global asset hub V2 (PM-locked) — `TODO` (custom folders + module-slot binding + fallback defaults + delete/replace confirmation).
+   中文：全局素材中台 V2（产品已冻结）— `TODO`（自定义文件夹 + 模块槽位绑定 + 默认回退 + 删除/替换确认）。
+3. EN: Scenario cards and interactive mini-scenes.
    中文：场景卡片与互动小剧场扩展。
-3. EN: Cross-module role/asset identity reuse.
+4. EN: Cross-module role/asset identity reuse.
    中文：跨模块角色/素材身份复用。
+
+### 6.1 Asset Hub V2 Execution Checklist / 素材中台 V2 执行清单
+Status / 状态: `TODO`
+
+1. EN: Data schema task — add custom folders and slot-binding records (V1 = single folder per slot, reserve priority fields).
+   中文：数据结构任务——增加自定义文件夹与槽位绑定记录（V1=单文件夹绑定，同时预留优先级字段）。
+2. EN: Gallery UI task — provide folder CRUD and folder picker entries for role-facing slots (profile image source, dynamic pack, emoji pack, etc.).
+   中文：相册 UI 任务——提供文件夹增删改，并为角色相关槽位提供文件夹选择入口（形象照来源、动态图包、表情包等）。
+3. EN: Safety task — enforce second confirmation for bound asset/folder delete and replace; keep force-delete path.
+   中文：安全任务——被绑定素材/文件夹删除与替换均需二次确认，保留强制删除路径。
+4. EN: Fallback task — module-level default policies:
+   中文：回退任务——模块级默认策略：
+   - EN: role lanes fallback to text-first/no-pack/no-pad-image baseline (optional AI image-generation switch).
+     中文：角色链路回退到文字优先/无包/无垫图基线（可选 AI 生图开关）。
+   - EN: appearance fallback to built-in wallpaper.
+     中文：美化链路回退到内置壁纸。
+   - EN: map fallback (future) to icon/default image with first-use optional AI generate prompt.
+     中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
+5. EN: Module-local upload task — allow one-off upload or one-off AI generation for independent modules (e.g., shopping/takeout) and ask whether to import to gallery.
+   中文：模块本地上传任务——独立模块（如购物/外卖）支持单次上传或单次 AI 生成，并询问是否入库到相册。
+6. EN: Performance policy task — define media-type size limits and rejection/degrade copy for image/animation/video paths.
+   中文：性能策略任务——定义图片/动图/视频的体积上限与拒绝/降级提示文案。
+
+Acceptance / 验收标准:
+1. EN: Missing assets do not block baseline module usage.
+   中文：缺少素材不阻塞任何基础模块使用。
+2. EN: Role-bound slots can switch folder bindings without data corruption.
+   中文：角色槽位可切换文件夹绑定且不损坏数据。
+3. EN: Delete/replace confirmation is always visible before destructive actions.
+   中文：删除/替换前始终有明确二次确认。
+4. EN: One-off upload flow can finish without gallery import, while optional import remains available.
+   中文：单次上传可不入库完成流程，同时保留可选入库。
 
 ---
 
@@ -261,6 +315,8 @@ Current / 当前:
    中文：若后续模块绕过统一角色绑定契约 API，跨模块行为仍可能再次失配。
 4. EN: User confusion if backup model is not clearly explained in settings/help text.
    中文：若设置中的备份模型说明不清，小白用户易误解。
+5. EN: If gallery is over-centralized without one-off upload paths, module iteration speed and UX flexibility may regress.
+   中文：若素材库过度中心化而缺少单次上传路径，模块迭代效率与体验灵活性会下降。
 
 ---
 
@@ -293,6 +349,14 @@ Current / 当前:
     中文：`P0-3/P0-6` 契约收口已完成：统一角色绑定契约 API、接入清单文档与回归测试已落地。
 14. EN: Closed `P0-5` by landing backup copy-style switch and diagnostics-center naming polish.
     中文：通过落地备份文案风格切换与诊断中心命名优化，`P0-5` 已完成收口。
+15. EN: Started `P1-1` phase-1: AI calls now support provider-aware image-reference transport with automatic context fallback.
+    中文：已启动 `P1-1` 第一阶段：AI 调用已支持按供应商能力处理参考图，并在不支持时自动回退上下文注入。
+16. EN: Added thread-level image-reference mode setting and persisted it in conversation AI prefs.
+    中文：新增会话级参考图模式设置，并写入会话 AI 偏好持久化。
+17. EN: Added local file-reference conversion for AI calls: gallery file assets now resolve to data URLs under size guard, with automatic text-cue downgrade on overflow.
+    中文：新增本地文件参考图转换：相册文件素材在大小守卫下可转为 data URL 参与 AI 调用，超限自动降级为文字线索。
+18. EN: Added assistant image-reference telemetry in message metadata (`mode/count/fallback/provider`) and surfaced compact thread hints.
+    中文：新增助手参考图调用遥测元信息（`模式/数量/回退/供应商`），并在会话中展示精简提示。
 
 ---
 
@@ -321,3 +385,15 @@ Current / 当前:
     2026-04-09 中文：通过落地跨模块角色绑定契约 API 与契约参考文档，完成 `P0-3/P0-6` 收口。
 12. 2026-04-09 EN: Closed `P0-5` with backup copy-style toggle, diagnostics naming unification, and regression tests.
     2026-04-09 中文：通过备份文案风格切换、诊断命名统一与回归测试，完成 `P0-5` 收口。
+13. 2026-04-10 EN: Started `P1-1` phase-1 with provider-aware image-reference transport and fallback, plus helper regression tests.
+    2026-04-10 中文：启动 `P1-1` 第一阶段：接入按供应商能力的参考图传输与回退，并补齐辅助函数回归测试。
+14. 2026-04-10 EN: Added thread-level image-reference mode control (`auto/context_only/native_url`) in chat menu and wired store normalization.
+    2026-04-10 中文：在 Chat 会话菜单新增参考图模式控制（`auto/context_only/native_url`），并完成 store 归一化接线。
+15. 2026-04-10 EN: Extended `P1-1` with local gallery file-reference conversion (data URL path with size guard + overflow fallback).
+    2026-04-10 中文：扩展 `P1-1`：新增本地相册文件参考图转换（data URL 路径 + 大小守卫 + 超限回退）。
+16. 2026-04-10 EN: Added image-reference execution metadata into assistant messages and exposed compact in-thread hints.
+    2026-04-10 中文：新增助手消息的参考图执行元信息，并在会话内展示精简提示。
+17. 2026-04-10 EN: PM locked global asset hub V2 requirements (custom folders, slot binding, delete/replace confirmation, fallback defaults, one-off upload optional import).
+    2026-04-10 中文：产品侧冻结全局素材中台 V2 需求（自定义文件夹、槽位绑定、删除/替换确认、默认回退、单次上传可选入库）。
+18. 2026-04-10 EN: Added asset hub V2 execution checklist and acceptance criteria for AI engineer handoff.
+    2026-04-10 中文：新增素材中台 V2 执行清单与验收标准，用于 AI 程序员接手执行。

@@ -1,6 +1,6 @@
 # SchatPhone Chat 进度说明
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-10
 
 Document position / 文档定位（2026-04-06）: secondary reference.  
 本文件现为 Chat 专项参考；全局主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
@@ -163,9 +163,9 @@ AI 生成消息内容仍由模型与上下文驱动
 ### P1
 
 1. Storage layering preparation (`P1-4`) is completed (2026-04-05): layered persistence + mirror drift inspect/reconcile + diagnostics report linkage are closed. / 分层存储迁移准备（`P1-4`）已完成（2026-04-05）：分层持久化、镜像漂移检查修复与诊断报告联动已收口。
-2. `P0-C1` completed (2026-04-06): message action entry migrated to long-press + bottom-sheet flow while keeping `Trigger Reply` persistent. / `P0-C1` 已于 2026-04-06 完成：消息操作入口已迁移为长按 + 底部面板，并保留 `Trigger Reply` 常驻。
-3. `P0-C2` in progress: harden user rich-message lane (`+` panel actions, validation, and UX polish) without coupling to AI preference settings. / `P0-C2` 进行中：继续加固用户富消息链路（`+` 面板动作、校验与体验打磨），且不与 AI 偏好设置耦合。
-4. Optional streaming response and truth metric tuning based on playtest transcripts / 可选推进流式输出与基于实测的真值指标调参
+2. `P1-1` phase-1/2 baseline is in progress: provider-aware transport + thread-level reference-mode controls are landed. / `P1-1` 第一/二阶段基线进行中：按供应商传输回退 + 会话级参考图模式控制已落地。
+3. Current focus in `P1-1`: provider-depth hardening for local-file references (data URL size policy + fallback readability). / `P1-1` 当前重点：本地文件参考图的供应商深度加固（data URL 大小策略 + 回退可读性）。
+4. Continue truth metric tuning based on playtest transcripts / 持续基于实测记录调优真值指标
 
 ## 5. Exit Criteria for Next Stage / 阶段验收标准
 
@@ -182,8 +182,12 @@ Move to "Chat enhancement stage" once all are true:
 - `npm run lint`, `npm run test`, `npm run build` all pass  
 lint/test/build 全通过
 
-## 6. Latest Increment (2026-04-06) / 最新增量（2026-04-06）
+## 6. Latest Increment (2026-04-10) / 最新增量（2026-04-10）
 - `P0-3` phase-1 landed: shared avatar hierarchy resolver is online (`thread > module > global > fallback`) for both self and contact identity visuals.
 - Chat now supports module-level avatar overrides in `/chat-feature/identity` and thread-level self/contact overrides in the thread menu.
 - Visual layer wiring is completed on chat list, thread assistant bubble, and user bubble avatar rendering.
 - `P0-3/P0-6` closure landed (2026-04-09): chat store now exposes unified role-binding contract APIs (`getRoleBindingContract` / `listRoleBindingContracts`) and keeps compatibility via `getRoleBindingAssetContext`.
+- `P1-1` phase-1 landed baseline (2026-04-10): chat extracts recent user image blocks as references; OpenAI-compatible requests attempt native URL image transport and auto-fallback to context-only mode on unsupported responses.
+- `P1-1` phase-2 landed (2026-04-10): thread menu now supports user-facing reference mode control (`auto/context_only/native_url`) with persisted aiPrefs.
+- `P1-1` phase-3 baseline landed (2026-04-10): local gallery file assets can be converted to data URLs for same-call references under size guard, with automatic text-cue downgrade on overflow.
+- Assistant message metadata now stores image-reference execution result (`mode/count/fallback/provider`) and exposes compact in-thread hints for traceability.

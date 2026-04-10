@@ -1,6 +1,6 @@
 ﻿# SchatPhone 架构说明
 
-Updated / 更新时间: 2026-04-05
+Updated / 更新时间: 2026-04-10
 
 ## 1. Architecture Goals / 架构目标
 
@@ -75,6 +75,7 @@ Responsibility / 职责：external API integration, persistence abstraction, loc
   - API kind detection / API 类型识别
   - model fetching / 模型拉取
   - unified chat call entry / 统一聊天调用入口
+  - provider-aware image-reference transport with context fallback / 按供应商能力处理参考图并自动回退到上下文模式
   - unified error mapping / 统一错误分级映射
 - `src/lib/persistence.js`
   - localStorage read/write with version envelope / localStorage 读写与版本封装
@@ -143,6 +144,8 @@ Core routes / 核心路由：
 - Message / 消息：`id`, `role`, `content`, `blocks`, `quote`, `aiMeta`, `createdAt`, `editedAt`, `status`
 - `aiMeta.rerollOf` marks reroll lineage for replaced assistant messages  
 `aiMeta.rerollOf` 用于标记重roll后助手消息的来源链路
+- `aiMeta` now also records image-reference execution summary: `imageReferenceMode`, `imageReferenceCount`, `imageReferenceFallback`, `imageReferenceProvider`  
+`aiMeta` 现还记录参考图执行摘要：`imageReferenceMode`、`imageReferenceCount`、`imageReferenceFallback`、`imageReferenceProvider`
 - Truth entity / 真值实体：`entityKey`, `affinity`, `trust`, `distance`, `dependency`, `tension`, `relationshipStage`, counters/timestamps
 - Truth event / 真值事件：`id`, `entityKey`, `action`, `payload`, `at`
 - Message status / 消息状态：`sending/sent/failed/delivered/read`
@@ -179,6 +182,12 @@ Core routes / 核心路由：
   运行态会在关键动作写入真值事件（`user_message`、`manual_trigger`、`auto_trigger`、`assistant_reply`、`reroll`、`notify_only_skip`、`resume_settlement`）。
 - Prompt assembly reads a truth snapshot (`getChatTruthSnapshot`) to keep relationship continuity across providers.  
   提示词组装会读取真值快照（`getChatTruthSnapshot`），保证跨供应商关系连续性。
+- Chat context can attach recent user image references in the same AI request (OpenAI-compatible path attempts native URL transport, unsupported cases fall back to context-only cues).  
+  Chat 上下文可在同一轮 AI 请求中附带近期用户参考图（OpenAI 兼容路径先尝试原生 URL，遇到不支持会自动回退为仅上下文线索）。
+- Local gallery file assets can be converted to data URLs under size guard and joined into the same request; overflow cases are downgraded to text-only cues.  
+  本地相册文件素材可在大小守卫下转为 data URL 并进入同轮请求；超限会降级为仅文字线索。
+- Chat thread UI reads `aiMeta` image-reference fields to show compact non-blocking hints (`image refs on` / `image fallback`).  
+  Chat 会话 UI 会读取 `aiMeta` 的参考图字段，展示精简非阻塞提示（如“参考图已启用/参考图回退”）。
 - Structured assistant payload normalization now enforces safe route/url fields and context-safe quote resolution.  
   结构化助手消息归一化已强制 route/url 安全校验，并通过上下文候选做引用安全解析。
 - Assistant parser now tolerates fenced/embedded JSON outputs and downgrades safely when parsing fails.  

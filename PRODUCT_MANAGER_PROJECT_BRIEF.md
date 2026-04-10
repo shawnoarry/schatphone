@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-09
+Updated / 更新时间: 2026-04-10
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -16,6 +16,28 @@ Updated / 更新时间: 2026-04-09
    中文：产品目标：通过 AI 交互实现关系养成和叙事连续性。
 4. EN: Product principle: continuity and immersion quality are more important than feature quantity.
    中文：产品原则：连续性和沉浸感优先于功能数量。
+
+## 2.1 Requirement Freeze: Global Asset Hub / 需求冻结：全局素材中台
+1. EN: Gallery is the global asset hub, not a chat-only helper.
+   中文：相册是全局素材中台，不是仅服务聊天的附属功能。
+2. EN: Assets must support cross-module reuse: appearance wallpaper, chat image references, map location visuals, emoji/stickers, role dynamic posts (future forum/IG-like modules), and other immersive visual lanes.
+   中文：素材必须支持跨模块复用：美化壁纸、聊天参考图、地图地点图、表情包、角色动态内容（后续论坛/IG类模块）及其他沉浸视觉链路。
+3. EN: Custom folders are required. Role-facing lanes (profile photo source, dynamic image pack, emoji/sticker pack, etc.) must support dropdown binding to user-defined folders.
+   中文：必须支持自定义文件夹。角色相关链路（形象照来源、动态图包、表情包等）需支持下拉绑定到用户自定义文件夹。
+4. EN: Upload is not forced into gallery for every module. Some scenarios can use one-off upload or one-off AI generation; after upload, system should ask whether to import into gallery.
+   中文：并非所有场景都强制进相册。部分场景可走单次上传或单次 AI 生图；上传后应询问是否导入素材库。
+5. EN: Asset format support should be broad, with enforced size limits for smooth runtime performance.
+   中文：素材格式应尽量广泛支持，但必须有体积上限以保证运行流畅性。
+6. EN: Bound assets remain deletable/replaceable with explicit second confirmation; if removed, each module must fall back to its own default mode without blocking baseline gameplay.
+   中文：被绑定素材允许删除/替换，但需二次确认；删除后各模块必须回退到默认模式，不得阻塞基础玩法。
+
+## 2.2 Binding Model Decision / 绑定模型决策
+1. EN: V1 uses "single-folder binding per slot" for stability and maintainability.
+   中文：V1 采用“每个槽位绑定单个文件夹”，优先稳定和可维护。
+2. EN: "Folder + priority chain" is a reserved extension for V2+, allowing fallback order (e.g., role folder first, shared folder second).
+   中文：“文件夹 + 优先级链”作为 V2+ 预留扩展，用于按顺序回退（如先角色文件夹，再公共文件夹）。
+3. EN: Data schema must reserve future priority fields even if UI remains single-folder in V1.
+   中文：即使 V1 UI 保持单文件夹绑定，数据结构也要预留优先级字段。
 
 ## 3) Tech Stack (PM-readable) / 技术栈（PM可读版）
 1. EN: UI Framework: Vue 3.
@@ -128,6 +150,42 @@ Status / 状态: `DONE`
 3. EN: Network report history naming is unified as diagnostics center (`API/Storage`).
    中文：Network 历史入口命名已统一为“诊断报告中心（API/存储）”。
 
+### P1-1 AI Image-Reference Pipeline (Phase-1/2+) / P1-1 AI 参考图链路（第一/二阶段+）
+Status / 状态: `IN_PROGRESS`
+1. EN: Chat now extracts recent user image messages as reference cues for the same AI call.
+   中文：Chat 现可提取近期用户图片消息作为同轮 AI 调用的参考线索。
+2. EN: OpenAI-compatible path attempts native URL image transport first; on unsupported response it falls back to context-only reference injection automatically.
+   中文：OpenAI 兼容路径先尝试原生 URL 图输入；若不支持会自动回退为“上下文参考图注入”。
+3. EN: Gemini path currently uses context-only reference injection to keep compatibility.
+   中文：Gemini 路径当前使用“仅上下文参考图注入”，以保证兼容性。
+4. EN: Local gallery file assets can now be converted to data URLs (size-guarded) and included as same-call references.
+   中文：本地相册文件素材现可在大小守卫下转为 data URL，并作为同轮参考图输入。
+5. EN: If local file size exceeds the guard, the pipeline downgrades to text-only cues instead of hard failure.
+   中文：当本地文件超过大小上限时，链路会自动降级为文字线索，而不是直接失败。
+6. EN: Assistant message metadata now records reference execution result (`mode/count/fallback/provider`) and exposes compact in-thread hints.
+   中文：助手消息元信息现会记录参考图执行结果（`模式/数量/回退/供应商`），并在会话里展示精简提示。
+
+### P1-2 Global Asset Hub V2 (Requirement Locked) / P1-2 全局素材中台 V2（需求已冻结）
+Status / 状态: `TODO`
+1. EN: Add custom folder model in gallery and make folders bindable by module slots (role profile image source, dynamic image pack, emoji/sticker pack, etc.).
+   中文：在相册增加自定义文件夹模型，并让文件夹可绑定到模块槽位（角色形象照来源、动态图包、表情包等）。
+2. EN: Implement deletion/replacement second-confirmation flow for bound assets/folders; keep forced delete allowed.
+   中文：实现被绑定素材/文件夹的删除与替换二次确认流程；保留强制删除能力。
+3. EN: Implement per-module fallback defaults so missing assets never break baseline usage:
+   中文：实现按模块的默认回退策略，确保缺少素材不影响基础使用：
+   - EN: role lane fallback = no emoji pack, no image pad/reference, text-first dynamic posts (optional AI image generation switch).
+     中文：角色链路回退 = 无表情包、无垫图参考、动态以文字优先（可选 AI 生图开关）。
+   - EN: appearance fallback = built-in default wallpaper.
+     中文：美化链路回退 = 内置默认壁纸。
+   - EN: map fallback (future) = icon/default image with optional first-time AI generation prompt.
+     中文：地图链路回退（后续）= icon/默认图，首次可询问是否 AI 生图。
+4. EN: Add one-off upload / one-off AI generate lanes for modules like shopping/takeout; after one-off upload, ask whether to import into gallery.
+   中文：为购物/外卖等模块增加“单次上传 / 单次 AI 生成”链路；单次上传后询问是否导入素材库。
+5. EN: Keep V1 binding simple (single-folder per slot) while reserving schema fields for future folder-priority chain.
+   中文：V1 绑定保持简单（每槽位单文件夹），同时在 schema 中预留未来“文件夹优先级链”字段。
+6. EN: Define size limit policy by media type for runtime smoothness (images/animations/video).
+   中文：按媒体类型定义体积上限策略（图片/动图/视频）以保障运行流畅性。
+
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
 1. EN: Single assistant-message semantic revision path is online.
@@ -158,8 +216,10 @@ Status / 状态: `DONE`
 ## 6) PM Decision Checklist / 产品经理待决策清单
 1. EN: P0 has no blocking decision now; keep defaults (`direct` copy tone + metadata-first export).
    中文：P0 当前无阻塞决策，保持默认（`直白文案` + `元数据优先导出`）。
-2. EN: For P1, confirm implementation order among image-reference, mini-scene, and cross-module role reuse.
-   中文：P1 需拍板图生图参考链路、互动小剧场、跨模块角色复用的实现顺序。
+2. EN: Asset-hub requirement is now locked by PM (custom folders, cross-module reuse, fallback defaults, one-off upload optional import).
+   中文：素材中台需求已由产品侧冻结（自定义文件夹、跨模块复用、默认回退、单次上传可选入库）。
+3. EN: Remaining PM decision: choose rollout order between `P1-2` asset hub execution and `P1-3` scenario-card expansion.
+   中文：剩余待决策：`P1-2` 素材中台执行与 `P1-3` 场景卡片扩展的上线顺序。
 
 ## 7) Quick Read Path / 快速阅读路径
 1. EN: Product overview and architecture: `PROJECT_MASTER_GUIDE.md`.
@@ -186,3 +246,9 @@ Status / 状态: `DONE`
    2026-04-09 中文：通过角色绑定契约 API 与接入清单文档落地，完成 `P0-3/P0-6` 收口。
 8. 2026-04-09 EN: Closed `P0-5` with backup copy-style switch, diagnostics naming unification, and regression tests.
    2026-04-09 中文：通过备份文案风格切换、诊断命名统一与回归测试，完成 `P0-5` 收口。
+9. 2026-04-10 EN: Started `P1-1` phase-1 by landing provider-aware image-reference transport and fallback baseline.
+   2026-04-10 中文：通过落地按供应商能力的参考图传输与回退基线，启动 `P1-1` 第一阶段。
+10. 2026-04-10 EN: Extended `P1-1` with local file-reference data URL path (size guard + overflow downgrade) and assistant metadata hints.
+    2026-04-10 中文：扩展 `P1-1`：新增本地文件参考图 data URL 路径（大小守卫 + 超限降级）与助手元信息提示。
+11. 2026-04-10 EN: Locked PM requirements for global asset hub V2 (custom folders, module-slot binding, delete/replace confirmation, fallback defaults, one-off upload optional import).
+    2026-04-10 中文：冻结全局素材中台 V2 产品需求（自定义文件夹、模块槽位绑定、删除/替换确认、默认回退、单次上传可选入库）。

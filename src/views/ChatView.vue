@@ -7,7 +7,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
-import { callAI, formatApiErrorForUi } from '../lib/ai'
+import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
@@ -43,6 +43,7 @@ const DEFAULT_THREAD_AI_PREFS = {
   responseStyle: 'immersive',
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
+  imageReferenceMode: 'auto',
   autoInvokeEnabled: false,
   autoInvokeIntervalSec: 360,
 }
@@ -63,6 +64,12 @@ const PROACTIVE_STRATEGY_OPTIONS = computed(() => [
   { value: 'on_every_enter_if_empty', label: t('每次空会话进入', 'Every empty enter') },
 ])
 
+const IMAGE_REFERENCE_MODE_OPTIONS = computed(() => [
+  { value: 'auto', label: t('自动（推荐）', 'Auto (recommended)') },
+  { value: 'context_only', label: t('仅上下文线索', 'Context cues only') },
+  { value: 'native_url', label: t('偏好原生图输入', 'Prefer native image input') },
+])
+
 // Keep AI reply content independent from global UI language.
 const AI_REPLY_FALLBACK_TEXT = Object.freeze({
   voiceLabel: '语音消息',
@@ -76,6 +83,9 @@ const MAX_ASSISTANT_DETAIL_CHARS = 800
 const MAX_ASSISTANT_LABEL_CHARS = 80
 const MAX_ASSISTANT_BLOCKS = 12
 const MAX_ASSISTANT_QUOTE_PREVIEW_CHARS = 240
+const MAX_CONTEXT_REFERENCE_IMAGES = 3
+const MAX_CONTEXT_REFERENCE_IMAGE_BYTES = 1_500_000
+const IMAGE_REFERENCE_TRANSPORT_MODES = new Set(['none', 'context_only', 'native_url'])
 const SEMANTIC_REVISION_TRACE_MODE = normalizeSemanticRevisionTraceMode(
   import.meta?.env?.VITE_SEMANTIC_REVISION_TRACE_MODE,
   SEMANTIC_REVISION_TRACE_MODES.SILENT,
@@ -188,6 +198,7 @@ const threadSettingsDraft = reactive({
   responseStyle: DEFAULT_THREAD_AI_PREFS.responseStyle,
   proactiveOpenerEnabled: DEFAULT_THREAD_AI_PREFS.proactiveOpenerEnabled,
   proactiveOpenerStrategy: DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy,
+  imageReferenceMode: DEFAULT_THREAD_AI_PREFS.imageReferenceMode,
   autoInvokeEnabled: DEFAULT_THREAD_AI_PREFS.autoInvokeEnabled,
   autoInvokeIntervalSec: DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec,
 })
@@ -557,6 +568,36 @@ const normalizeProactiveStrategy = (value) =>
     ? value
     : DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy
 
+const normalizeImageReferenceMode = (value) =>
+  IMAGE_REFERENCE_MODE_OPTIONS.value.some((item) => item.value === value)
+    ? value
+    : DEFAULT_THREAD_AI_PREFS.imageReferenceMode
+
+const normalizeImageReferenceTransportMode = (value) =>
+  IMAGE_REFERENCE_TRANSPORT_MODES.has(value) ? value : 'none'
+
+const normalizeImageReferenceCount = (value) => {
+  const count = Number(value)
+  if (!Number.isFinite(count)) return 0
+  return Math.min(MAX_CONTEXT_REFERENCE_IMAGES, Math.max(0, Math.floor(count)))
+}
+
+const normalizeImageReferenceProvider = (value) =>
+  typeof value === 'string' && value.trim() ? value.trim().slice(0, 32) : ''
+
+const buildAssistantImageReferenceMeta = (
+  callMeta = null,
+  fallbackReferenceCount = 0,
+  fallbackProvider = '',
+) => ({
+  imageReferenceMode: normalizeImageReferenceTransportMode(callMeta?.finalTransportMode),
+  imageReferenceCount: normalizeImageReferenceCount(
+    callMeta?.referenceCount ?? fallbackReferenceCount,
+  ),
+  imageReferenceFallback: Boolean(callMeta?.fallbackUsed),
+  imageReferenceProvider: normalizeImageReferenceProvider(callMeta?.apiKind || fallbackProvider),
+})
+
 const trimAssistantText = (value, maxLength, fallback = '') => {
   const text = typeof value === 'string' ? value.trim() : ''
   if (!text) return fallback
@@ -632,6 +673,7 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.responseStyle = normalizeResponseStyle(prefs.responseStyle)
   threadSettingsDraft.proactiveOpenerEnabled = Boolean(prefs.proactiveOpenerEnabled)
   threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
+  threadSettingsDraft.imageReferenceMode = normalizeImageReferenceMode(prefs.imageReferenceMode)
   threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
   threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
 }
@@ -731,6 +773,20 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     ? 'This is a proactive opener scene. Start naturally and do not mention trigger mechanics.'
     : 'This is a normal reply scene. Respond based on context naturally.'
   const truthInstruction = buildTruthPromptBlock(contact)
+  const imageReferenceCount = Array.isArray(options.imageReferences)
+    ? options.imageReferences.length
+    : 0
+  const providerCapabilities =
+    options.providerCapabilities && typeof options.providerCapabilities === 'object'
+      ? options.providerCapabilities
+      : null
+  const imageReferenceInstruction =
+    imageReferenceCount > 0
+      ? `Image references available in user context: ${imageReferenceCount}. Treat them as visual cues and avoid hallucinating details not supported by cues.`
+      : 'No explicit image references were provided in this turn.'
+  const providerCapabilityInstruction = providerCapabilities
+    ? `Image-reference transport mode: ${providerCapabilities.preferredImageReferenceMode || 'none'} (provider: ${providerCapabilities.kind || 'unknown'}).`
+    : 'Image-reference transport mode: unknown.'
 
   return `
 Worldbook: ${user.value.worldBook}
@@ -742,6 +798,8 @@ Response style: ${responseStyle}
 Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
 ${truthInstruction}
+${imageReferenceInstruction}
+${providerCapabilityInstruction}
 Stay in character and never claim you are an AI model.
 
 You MUST return valid JSON object and never use markdown wrappers.
@@ -867,6 +925,65 @@ const toAiMessages = (contactId, untilMessageId = '', options = {}) =>
     role: item.role,
     content: extractMessageTextForContext(item),
   }))
+
+const collectImageReferencesFromContextMessages = async (messages = []) => {
+  if (!Array.isArray(messages) || messages.length === 0) return []
+  const collected = []
+  const seen = new Set()
+
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (collected.length >= MAX_CONTEXT_REFERENCE_IMAGES) break
+    const message = messages[i]
+    if (message?.role !== 'user' || !Array.isArray(message.blocks)) continue
+
+    for (const block of message.blocks) {
+      if (collected.length >= MAX_CONTEXT_REFERENCE_IMAGES) break
+      if (!block || block.type !== 'image_virtual') continue
+
+      const assetId =
+        typeof block.assetId === 'string' && block.assetId.trim()
+          ? block.assetId.trim()
+          : ''
+      const asset = assetId ? galleryStore.findAssetById(assetId) : null
+      let sourceUrl = typeof block.url === 'string' ? block.url.trim() : ''
+      let sourceReason = ''
+
+      if (!sourceUrl && assetId) {
+        const resolved = await galleryStore.getAssetAiReferenceUrl(assetId, {
+          maxBytes: MAX_CONTEXT_REFERENCE_IMAGE_BYTES,
+        })
+        if (resolved?.ok && typeof resolved.url === 'string' && resolved.url.trim()) {
+          sourceUrl = resolved.url.trim()
+        } else if (resolved?.reason) {
+          sourceReason = resolved.reason
+        }
+      }
+
+      const label =
+        (typeof block.alt === 'string' && block.alt.trim()) ||
+        (typeof asset?.name === 'string' && asset.name.trim()) ||
+        t('参考图', 'Reference image')
+      const noteBase =
+        (typeof block.caption === 'string' && block.caption.trim()) ||
+        t('来自聊天上下文', 'From chat context')
+      const note =
+        sourceReason === 'blob_too_large'
+          ? `${noteBase} · ${t('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
+          : noteBase
+      const sourceKey = `${label}|${assetId}|${sourceUrl.slice(0, 120)}`
+      if (seen.has(sourceKey)) continue
+      seen.add(sourceKey)
+      collected.push({
+        label,
+        note,
+        sourceUrl,
+        assetId,
+      })
+    }
+  }
+
+  return collected
+}
 
 const clearAutoInvokeTimer = () => {
   if (!autoInvokeTimerId) return
@@ -1566,8 +1683,14 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     contextTurns: aiPrefs.contextTurns,
   })
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
+  const imageReferences = await collectImageReferencesFromContextMessages(contextSourceMessages)
+  const providerCapabilities = getAiProviderCapabilities({
+    settings: settings.value,
+    imageReferences,
+  })
+  const requestedReferenceMode = normalizeImageReferenceMode(aiPrefs.imageReferenceMode)
 
-  const replyRaw = await callAI({
+  const replyResult = await callAI({
     messages: contextSourceMessages.map((item) => ({
       role: item.role,
       content: extractMessageTextForContext(item),
@@ -1575,10 +1698,24 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     systemPrompt: buildSystemPrompt(contact, aiPrefs, {
       replyCount,
       isProactive: Boolean(options.isProactive),
+      imageReferences,
+      providerCapabilities,
     }),
     settings: settings.value,
     signal: options.signal,
+    imageReferences,
+    imageReferenceMode: requestedReferenceMode,
+    withMeta: true,
   })
+  const replyRaw =
+    typeof replyResult === 'string' ? replyResult : replyResult?.text || ''
+  const callMeta =
+    replyResult && typeof replyResult === 'object' ? replyResult.meta || null : null
+  const imageReferenceMeta = buildAssistantImageReferenceMeta(
+    callMeta,
+    imageReferences.length,
+    providerCapabilities.kind,
+  )
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
     replyCount,
@@ -1595,6 +1732,7 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
       aiMeta: {
         replyType: item.replyType,
         bilingual: Boolean(aiPrefs.bilingualEnabled),
+        ...imageReferenceMeta,
       },
       status: 'sent',
     })
@@ -1627,7 +1765,13 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     contextTurns: aiPrefs.contextTurns,
   })
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
-  const replyRaw = await callAI({
+  const imageReferences = await collectImageReferencesFromContextMessages(contextSourceMessages)
+  const providerCapabilities = getAiProviderCapabilities({
+    settings: settings.value,
+    imageReferences,
+  })
+  const requestedReferenceMode = normalizeImageReferenceMode(aiPrefs.imageReferenceMode)
+  const replyResult = await callAI({
     messages: contextSourceMessages.map((item) => ({
       role: item.role,
       content: extractMessageTextForContext(item),
@@ -1635,10 +1779,24 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     systemPrompt: buildSystemPrompt(contact, aiPrefs, {
       replyCount: 1,
       isProactive: false,
+      imageReferences,
+      providerCapabilities,
     }),
     settings: settings.value,
     signal: options.signal,
+    imageReferences,
+    imageReferenceMode: requestedReferenceMode,
+    withMeta: true,
   })
+  const replyRaw =
+    typeof replyResult === 'string' ? replyResult : replyResult?.text || ''
+  const callMeta =
+    replyResult && typeof replyResult === 'object' ? replyResult.meta || null : null
+  const imageReferenceMeta = buildAssistantImageReferenceMeta(
+    callMeta,
+    imageReferences.length,
+    providerCapabilities.kind,
+  )
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
     replyCount: 1,
@@ -1654,6 +1812,7 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     aiMeta: {
       replyType: normalized.replyType,
       bilingual: Boolean(aiPrefs.bilingualEnabled),
+      ...imageReferenceMeta,
       rerollOf: targetMessage.id,
     },
   }
@@ -2768,12 +2927,26 @@ const messageStatusText = (message) => {
 
 const messageMetaHintText = (message) => {
   if (!message) return ''
-  if (message.role === 'assistant' && message.aiMeta?.rerollOf) return t('重roll结果', 'Rerolled')
-  if (message.editedAt) return t('已编辑', 'Edited')
-  if (shouldShowSemanticRevisionHint({ mode: SEMANTIC_REVISION_TRACE_MODE, message })) {
-    return t('已修订', 'Revised')
+  const hints = []
+  if (message.role === 'assistant' && message.aiMeta?.rerollOf) {
+    hints.push(t('重roll结果', 'Rerolled'))
   }
-  return ''
+  if (message.role === 'assistant' && Number(message.aiMeta?.imageReferenceCount) > 0) {
+    if (message.aiMeta?.imageReferenceFallback) {
+      hints.push(t('参考图回退', 'Image fallback'))
+    } else if (message.aiMeta?.imageReferenceMode === 'native_url') {
+      hints.push(t('参考图已启用', 'Image refs on'))
+    } else {
+      hints.push(t('参考图线索', 'Image cues'))
+    }
+  }
+  if (message.editedAt) {
+    hints.push(t('已编辑', 'Edited'))
+  }
+  if (shouldShowSemanticRevisionHint({ mode: SEMANTIC_REVISION_TRACE_MODE, message })) {
+    hints.push(t('已修订', 'Revised'))
+  }
+  return hints.join(' · ')
 }
 
 const messageBlocks = (message) => {
@@ -2866,6 +3039,7 @@ const saveThreadSettings = () => {
     responseStyle: normalizeResponseStyle(threadSettingsDraft.responseStyle),
     proactiveOpenerEnabled: Boolean(threadSettingsDraft.proactiveOpenerEnabled),
     proactiveOpenerStrategy: normalizeProactiveStrategy(threadSettingsDraft.proactiveOpenerStrategy),
+    imageReferenceMode: normalizeImageReferenceMode(threadSettingsDraft.imageReferenceMode),
     autoInvokeEnabled: chatAutomationEnabled.value && Boolean(threadSettingsDraft.autoInvokeEnabled),
     autoInvokeIntervalSec: clampAutoInvokeInterval(threadSettingsDraft.autoInvokeIntervalSec),
   })
@@ -3227,6 +3401,29 @@ onBeforeUnmount(() => {
             <span>{{ t('读取上文轮数', 'Context turns') }}</span>
             <input v-model.number="threadSettingsDraft.contextTurns" type="number" min="2" max="20" class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-right" />
           </label>
+
+          <label class="flex items-center justify-between gap-3">
+            <span>{{ t('参考图模式', 'Image reference mode') }}</span>
+            <select v-model="threadSettingsDraft.imageReferenceMode" class="rounded-lg border border-gray-200 px-2 py-1">
+              <option v-for="item in IMAGE_REFERENCE_MODE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
+            </select>
+          </label>
+          <p class="text-[10px] text-gray-500">
+            {{
+              t(
+                '自动模式会按供应商能力优先使用原生图输入，失败时自动回退为上下文线索。',
+                'Auto mode prefers native image input when supported and falls back to context cues on unsupported responses.',
+              )
+            }}
+          </p>
+          <p class="text-[10px] text-gray-400">
+            {{
+              t(
+                '本地素材会在大小允许时转为参考图输入；超出上限时会仅作为文字线索。',
+                'Local assets are converted to reference images when size allows; oversized files degrade to text-only cues.',
+              )
+            }}
+          </p>
 
           <label class="flex items-center justify-between gap-3">
             <span>{{ t('主动开场', 'Proactive opener') }}</span>

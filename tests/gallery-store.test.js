@@ -55,6 +55,33 @@ describe('gallery store', () => {
     expect(store.categoryCounts.emoji).toBe(1)
   })
 
+  test('resolves AI reference url for local assets with size guard', async () => {
+    const store = useGalleryStore()
+    const file = new File(['small-binary'], 'small.png', {
+      type: 'image/png',
+      lastModified: 456,
+    })
+
+    const imported = await store.importAssetsFromFiles([file], {
+      category: 'reference',
+    })
+    expect(imported.ok).toBe(true)
+    const assetId = imported.importedIds[0]
+
+    const resolved = await store.getAssetAiReferenceUrl(assetId, {
+      maxBytes: 1024 * 1024,
+    })
+    expect(resolved.ok).toBe(true)
+    expect(resolved.sourceType).toBe('file')
+    expect(resolved.url.startsWith('data:image/png;base64,')).toBe(true)
+
+    const blocked = await store.getAssetAiReferenceUrl(assetId, {
+      maxBytes: 1,
+    })
+    expect(blocked.ok).toBe(false)
+    expect(blocked.reason).toBe('blob_too_large')
+  })
+
   test('blocks deletion when URL asset is currently used as system wallpaper', async () => {
     const systemStore = useSystemStore()
     const store = useGalleryStore()

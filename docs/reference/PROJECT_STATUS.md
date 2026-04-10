@@ -1,6 +1,6 @@
 ﻿# SchatPhone 项目进度与待办
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-10
 
 Document position / 文档定位（2026-04-06）: secondary reference.  
 本文件现为参考文档；主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
@@ -91,6 +91,14 @@ Chat 输入区现以 `+` 动作面板作为用户发送中枢，已支持图片/
 结构化消息加固第二批已接入：助手响应解析可处理代码块/嵌入式 JSON，混合内容可读性进一步提升。
 - Structured block hardening batch-3 is integrated: payload text fallback now covers `content/text/message/output_text`, and assistant messages always keep a primary text block for stable rendering.  
 结构化消息加固第三批已接入：payload 文本回退已覆盖 `content/text/message/output_text`，且助手消息始终保证主文本块存在以确保显示稳定。
+- P1-1 phase-1 baseline is integrated: chat can extract recent user image blocks as references, then AI request uses provider-aware transport (OpenAI-compatible native URL attempt with automatic context fallback; Gemini uses context fallback path).  
+P1-1 第一阶段基线已接入：Chat 可提取近期用户图片消息作为参考图，并在 AI 请求中按供应商能力传输（OpenAI 兼容先尝试原生 URL，失败自动回退上下文；Gemini 走上下文回退路径）。
+- P1-1 phase-2 control is integrated: thread-level image-reference mode switch (`auto/context_only/native_url`) is available and persisted in conversation preferences.  
+P1-1 第二阶段控制已接入：会话级参考图模式开关（`auto/context_only/native_url`）已可用并持久化。
+- P1-1 local-file reference path is integrated: gallery file assets now convert to data URLs under size guard and degrade to text cues on overflow.  
+P1-1 本地文件参考图路径已接入：相册文件素材可在大小守卫下转为 data URL，超限自动降级为文字线索。
+- Assistant messages now store image-reference execution metadata and surface compact in-thread hints for runtime traceability.  
+助手消息现已记录参考图执行元信息，并在会话中提供精简提示以便运行态追踪。
 - Settings UX batch-2 is integrated in chat-adjacent flow: thread layered menu now provides explicit saved-state feedback and header-level save confirmation.  
 设置体验优化第二批已接入聊天周边链路：会话分级菜单现已提供显式保存状态反馈，并在头部给出保存确认提示。
 - Settings data-security flow now exposes inline backup import/export status feedback (with rollback-aware error text), reducing blocking alerts.  

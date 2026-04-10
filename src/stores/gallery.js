@@ -18,6 +18,7 @@ const ALLOWED_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 const BACKUP_ASSET_PACKAGE_VERSION = 1
 const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
 const DEFAULT_BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
+const DEFAULT_AI_REFERENCE_MAX_BYTES = 1_500_000
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -354,6 +355,99 @@ export const useGalleryStore = defineStore('gallery', () => {
     const objectUrl = URL.createObjectURL(blob)
     previewObjectUrlCache.set(normalizedId, objectUrl)
     return objectUrl
+  }
+
+  const getAssetAiReferenceUrl = async (
+    assetId,
+    { maxBytes = DEFAULT_AI_REFERENCE_MAX_BYTES } = {},
+  ) => {
+    const normalizedMaxBytes = clampPositiveInteger(
+      maxBytes,
+      DEFAULT_AI_REFERENCE_MAX_BYTES,
+    )
+    const asset = findAssetById(assetId)
+    if (!asset) {
+      return {
+        ok: false,
+        reason: 'not_found',
+        url: '',
+        sourceType: 'none',
+        sizeBytes: 0,
+        maxBytes: normalizedMaxBytes,
+      }
+    }
+
+    if (asset.sourceType === 'url') {
+      const remoteUrl =
+        typeof asset.sourceUrl === 'string' ? asset.sourceUrl.trim() : ''
+      if (!remoteUrl) {
+        return {
+          ok: false,
+          reason: 'missing_url',
+          url: '',
+          sourceType: 'url',
+          sizeBytes: 0,
+          maxBytes: normalizedMaxBytes,
+        }
+      }
+      return {
+        ok: true,
+        reason: '',
+        url: remoteUrl,
+        sourceType: 'url',
+        sizeBytes: Math.max(0, toInt(asset.sizeBytes, 0)),
+        maxBytes: normalizedMaxBytes,
+      }
+    }
+
+    const blob = await getGalleryAssetBlob(asset.blobId || asset.id)
+    if (!(blob instanceof Blob)) {
+      return {
+        ok: false,
+        reason: 'blob_missing',
+        url: '',
+        sourceType: 'file',
+        sizeBytes: 0,
+        maxBytes: normalizedMaxBytes,
+      }
+    }
+
+    const blobSize = Math.max(0, toInt(blob.size, 0))
+    if (blobSize > normalizedMaxBytes) {
+      return {
+        ok: false,
+        reason: 'blob_too_large',
+        url: '',
+        sourceType: 'file',
+        sizeBytes: blobSize,
+        maxBytes: normalizedMaxBytes,
+      }
+    }
+
+    const dataUrl = await blobToDataUrl(blob)
+    if (!dataUrl) {
+      return {
+        ok: false,
+        reason: 'blob_read_failed',
+        url: '',
+        sourceType: 'file',
+        sizeBytes: blobSize,
+        maxBytes: normalizedMaxBytes,
+      }
+    }
+
+    return {
+      ok: true,
+      reason: '',
+      url: dataUrl,
+      sourceType: 'file',
+      sizeBytes: blobSize,
+      maxBytes: normalizedMaxBytes,
+      mimeType:
+        typeof blob.type === 'string'
+          ? blob.type.trim().toLowerCase()
+          : '',
+    }
   }
 
   const importAssetFromUrl = ({ url, name = '', category = DEFAULT_CATEGORY } = {}) => {
@@ -874,6 +968,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     getAssetsByCategory,
     findAssetById,
     getAssetPreviewUrl,
+    getAssetAiReferenceUrl,
     revokeAssetPreviewUrl,
     clearAssetPreviewCache,
     importAssetFromUrl,
