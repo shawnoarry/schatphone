@@ -30,11 +30,26 @@ const createEmptyAssetPack = () => ({
   scenarioAssetIds: [],
 })
 
+const createEmptyAssetFolderBindings = () => ({
+  imageReference: {
+    folderId: '',
+  },
+})
+
 const cloneAssetPack = (assetPack = {}) => ({
   wallpaperAssetIds: Array.isArray(assetPack.wallpaperAssetIds) ? [...new Set(assetPack.wallpaperAssetIds)] : [],
   emojiAssetIds: Array.isArray(assetPack.emojiAssetIds) ? [...new Set(assetPack.emojiAssetIds)] : [],
   referenceAssetIds: Array.isArray(assetPack.referenceAssetIds) ? [...new Set(assetPack.referenceAssetIds)] : [],
   scenarioAssetIds: Array.isArray(assetPack.scenarioAssetIds) ? [...new Set(assetPack.scenarioAssetIds)] : [],
+})
+
+const cloneAssetFolderBindings = (bindings = {}) => ({
+  imageReference: {
+    folderId:
+      typeof bindings?.imageReference?.folderId === 'string'
+        ? bindings.imageReference.folderId.trim()
+        : '',
+  },
 })
 
 const profileDraft = reactive({
@@ -43,6 +58,7 @@ const profileDraft = reactive({
   isMain: false,
   bio: '',
   assetPack: createEmptyAssetPack(),
+  assetFolderBindings: createEmptyAssetFolderBindings(),
 })
 
 const showUiNoticeType = ref('')
@@ -85,6 +101,9 @@ const availableAssets = computed(() =>
 )
 
 const hasAnyGalleryAsset = computed(() => galleryStore.assets.length > 0)
+const referenceFolderOptions = computed(() =>
+  galleryStore.listFolders({ category: 'reference' }).slice(0, 120),
+)
 
 const draftAssetCountMap = computed(() => ({
   wallpaper: profileDraft.assetPack.wallpaperAssetIds.length,
@@ -136,6 +155,7 @@ const resetProfileDraft = () => {
   profileDraft.bio = ''
   profileDraft.isMain = false
   profileDraft.assetPack = createEmptyAssetPack()
+  profileDraft.assetFolderBindings = createEmptyAssetFolderBindings()
   assetPackCategory.value = 'reference'
   clearDraftPreviewMap()
 }
@@ -156,6 +176,7 @@ const openEditProfile = (profile) => {
   profileDraft.bio = profile.bio || ''
   profileDraft.isMain = Boolean(profile.isMain)
   profileDraft.assetPack = cloneAssetPack(profile.assetPack || {})
+  profileDraft.assetFolderBindings = cloneAssetFolderBindings(profile.assetFolderBindings || {})
   assetPackCategory.value = 'reference'
   clearDraftPreviewMap()
   showProfileModal.value = true
@@ -208,6 +229,7 @@ const saveProfile = () => {
     isMain: profileDraft.isMain,
     bio: profileDraft.bio,
     assetPack: cloneAssetPack(profileDraft.assetPack),
+    assetFolderBindings: cloneAssetFolderBindings(profileDraft.assetFolderBindings),
   }
 
   if (profileModalMode.value === 'create') {
@@ -439,6 +461,43 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('参考图文件夹绑定（全局档案）', 'Reference Folder Binding (Global Profile)') }}
+            </p>
+            <span class="text-[10px] text-gray-500">
+              {{
+                profileDraft.assetFolderBindings.imageReference.folderId
+                  ? t('已绑定', 'Bound')
+                  : t('未绑定', 'Unbound')
+              }}
+            </span>
+          </div>
+
+          <select
+            v-model="profileDraft.assetFolderBindings.imageReference.folderId"
+            class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] bg-white outline-none"
+          >
+            <option value="">{{ t('不绑定文件夹（默认）', 'No folder binding (default)') }}</option>
+            <option
+              v-for="folder in referenceFolderOptions"
+              :key="`ref-folder-${folder.id}`"
+              :value="folder.id"
+            >
+              {{ folder.name }}
+            </option>
+          </select>
+
+          <p class="text-[11px] text-gray-500">
+            {{
+              referenceFolderOptions.length > 0
+                ? t('用于 AI 参考图优先来源（按档案全局生效）。', 'Used as preferred source for AI image references (global profile scope).')
+                : t('暂无“参考图”文件夹。可先在相册创建后再绑定。', 'No reference folders yet. Create one in Gallery first.')
+            }}
+          </p>
         </div>
       </div>
     </div>
