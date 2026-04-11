@@ -31,6 +31,9 @@ const createEmptyAssetPack = () => ({
 })
 
 const createEmptyAssetFolderBindings = () => ({
+  emojiPack: {
+    folderId: '',
+  },
   imageReference: {
     folderId: '',
   },
@@ -44,6 +47,12 @@ const cloneAssetPack = (assetPack = {}) => ({
 })
 
 const cloneAssetFolderBindings = (bindings = {}) => ({
+  emojiPack: {
+    folderId:
+      typeof bindings?.emojiPack?.folderId === 'string'
+        ? bindings.emojiPack.folderId.trim()
+        : '',
+  },
   imageReference: {
     folderId:
       typeof bindings?.imageReference?.folderId === 'string'
@@ -101,6 +110,9 @@ const availableAssets = computed(() =>
 )
 
 const hasAnyGalleryAsset = computed(() => galleryStore.assets.length > 0)
+const emojiFolderOptions = computed(() =>
+  galleryStore.listFolders({ category: 'emoji' }).slice(0, 120),
+)
 const referenceFolderOptions = computed(() =>
   galleryStore.listFolders({ category: 'reference' }).slice(0, 120),
 )
@@ -461,6 +473,43 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('表情包文件夹绑定（全局档案）', 'Emoji Folder Binding (Global Profile)') }}
+            </p>
+            <span class="text-[10px] text-gray-500">
+              {{
+                profileDraft.assetFolderBindings.emojiPack.folderId
+                  ? t('已绑定', 'Bound')
+                  : t('未绑定', 'Unbound')
+              }}
+            </span>
+          </div>
+
+          <select
+            v-model="profileDraft.assetFolderBindings.emojiPack.folderId"
+            class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] bg-white outline-none"
+          >
+            <option value="">{{ t('不绑定文件夹（默认）', 'No folder binding (default)') }}</option>
+            <option
+              v-for="folder in emojiFolderOptions"
+              :key="`emoji-folder-${folder.id}`"
+              :value="folder.id"
+            >
+              {{ folder.name }}
+            </option>
+          </select>
+
+          <p class="text-[11px] text-gray-500">
+            {{
+              emojiFolderOptions.length > 0
+                ? t('用于角色发送表情时的优先素材来源（按档案全局生效）。', 'Used as preferred source when role sends emoji (global profile scope).')
+                : t('暂无“表情”文件夹。可先在相册创建后再绑定。', 'No emoji folders yet. Create one in Gallery first.')
+            }}
+          </p>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
