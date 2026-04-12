@@ -96,6 +96,15 @@ const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
 const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
 const BACKUP_COPY_TONE_VALUES = ['direct', 'immersive']
 const DEFAULT_BACKUP_COPY_TONE = 'direct'
+const MAX_GLOBAL_WORLDVIEW_CHARS = 6000
+const MAX_KNOWLEDGE_POINTS = 200
+const MAX_KNOWLEDGE_POINT_ID_CHARS = 64
+const MAX_KNOWLEDGE_POINT_TITLE_CHARS = 80
+const MAX_KNOWLEDGE_POINT_CONTENT_CHARS = 1600
+const MAX_KNOWLEDGE_POINT_TAGS = 12
+const MAX_KNOWLEDGE_POINT_TAG_CHARS = 24
+const DEFAULT_GLOBAL_WORLDVIEW =
+  '这是一个赛博朋克风格的近未来世界。科技高度发达，但生活水平差距巨大。大型公司控制着资源与秩序。'
 const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
   affinity: 50,
   trust: 50,
@@ -170,6 +179,95 @@ const normalizeBackupReminderIntervalHours = (value, fallback = BACKUP_REMINDER_
 
 const normalizeBackupCopyTone = (value, fallback = DEFAULT_BACKUP_COPY_TONE) => {
   return BACKUP_COPY_TONE_VALUES.includes(value) ? value : fallback
+}
+
+const sanitizeKnowledgePointId = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  if (!raw) return ''
+  const normalized = raw.slice(0, MAX_KNOWLEDGE_POINT_ID_CHARS)
+  return /^[a-z0-9_-]+$/i.test(normalized) ? normalized : ''
+}
+
+const createKnowledgePointId = () => `kp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const normalizeWorldText = (value, fallback = '') => {
+  if (typeof value !== 'string') return typeof fallback === 'string' ? fallback : ''
+  const trimmed = value.trim()
+  return trimmed.length <= MAX_GLOBAL_WORLDVIEW_CHARS
+    ? trimmed
+    : trimmed.slice(0, MAX_GLOBAL_WORLDVIEW_CHARS)
+}
+
+const normalizeKnowledgePointTags = (rawTags) => {
+  if (!Array.isArray(rawTags)) return []
+  const unique = []
+  rawTags.forEach((item) => {
+    const tag = typeof item === 'string' ? item.trim().slice(0, MAX_KNOWLEDGE_POINT_TAG_CHARS) : ''
+    if (!tag || unique.includes(tag)) return
+    unique.push(tag)
+  })
+  return unique.slice(0, MAX_KNOWLEDGE_POINT_TAGS)
+}
+
+const normalizeKnowledgePoint = (rawPoint = {}, fallbackIndex = 0) => {
+  const source = rawPoint && typeof rawPoint === 'object' ? rawPoint : {}
+  const title =
+    typeof source.title === 'string'
+      ? source.title.trim().slice(0, MAX_KNOWLEDGE_POINT_TITLE_CHARS)
+      : ''
+  const content =
+    typeof source.content === 'string'
+      ? source.content.trim().slice(0, MAX_KNOWLEDGE_POINT_CONTENT_CHARS)
+      : ''
+  if (!title && !content) return null
+
+  const id =
+    sanitizeKnowledgePointId(source.id) ||
+    `kp_${Date.now()}_${fallbackIndex}_${Math.random().toString(36).slice(2, 6)}`
+  const createdAtRaw = Number(source.createdAt)
+  const updatedAtRaw = Number(source.updatedAt)
+  const now = Date.now()
+
+  return {
+    id,
+    title: title || '知识点',
+    content: content || title,
+    tags: normalizeKnowledgePointTags(source.tags),
+    enabled: source.enabled !== false,
+    createdAt:
+      Number.isFinite(createdAtRaw) && createdAtRaw > 0 ? Math.floor(createdAtRaw) : now,
+    updatedAt:
+      Number.isFinite(updatedAtRaw) && updatedAtRaw > 0 ? Math.floor(updatedAtRaw) : now,
+  }
+}
+
+const normalizeKnowledgePointList = (rawPoints) => {
+  if (!Array.isArray(rawPoints)) return []
+  const output = []
+  const seen = new Set()
+  rawPoints.forEach((item, index) => {
+    const normalized = normalizeKnowledgePoint(item, index)
+    if (!normalized) return
+    if (seen.has(normalized.id)) return
+    seen.add(normalized.id)
+    output.push(normalized)
+  })
+  return output.slice(0, MAX_KNOWLEDGE_POINTS)
+}
+
+const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAULT_GLOBAL_WORLDVIEW) => {
+  const source = rawUser && typeof rawUser === 'object' ? rawUser : {}
+  const rawGlobalWorldview =
+    typeof source.globalWorldview === 'string'
+      ? source.globalWorldview
+      : typeof source.worldBook === 'string'
+        ? source.worldBook
+        : fallbackGlobalWorldview
+
+  return {
+    globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
+    knowledgePoints: normalizeKnowledgePointList(source.knowledgePoints),
+  }
 }
 
 const normalizeNonNegativeTimestamp = (value, fallback = 0) => {
@@ -668,8 +766,9 @@ export const useSystemStore = defineStore('system', () => {
     relationship: '',
     bio: '夜之城的自由佣兵。',
     avatar: '',
-    worldBook:
-      '这是一个赛博朋克风格的近未来世界。科技高度发达，但生活水平差距巨大。大型公司控制着资源与秩序。',
+    worldBook: DEFAULT_GLOBAL_WORLDVIEW,
+    globalWorldview: DEFAULT_GLOBAL_WORLDVIEW,
+    knowledgePoints: [],
   })
 
   const notifications = ref([])
@@ -940,6 +1039,80 @@ export const useSystemStore = defineStore('system', () => {
 
   const clearNotifications = () => {
     notifications.value = []
+  }
+
+  const setGlobalWorldview = (value = '') => {
+    const normalized = normalizeWorldText(value, '')
+    user.globalWorldview = normalized
+    user.worldBook = normalized
+    return normalized
+  }
+
+  const getKnowledgePointById = (knowledgePointId) => {
+    const id = sanitizeKnowledgePointId(knowledgePointId)
+    if (!id) return null
+    return user.knowledgePoints.find((item) => item.id === id) || null
+  }
+
+  const listKnowledgePoints = (options = {}) => {
+    const enabledOnly = Boolean(options.enabledOnly)
+    const keywordRaw = typeof options.keyword === 'string' ? options.keyword.trim().toLowerCase() : ''
+    return user.knowledgePoints.filter((item) => {
+      if (enabledOnly && item.enabled === false) return false
+      if (!keywordRaw) return true
+      const haystack = `${item.title || ''}\n${item.content || ''}\n${Array.isArray(item.tags) ? item.tags.join(' ') : ''}`.toLowerCase()
+      return haystack.includes(keywordRaw)
+    })
+  }
+
+  const upsertKnowledgePoint = (payload = {}) => {
+    const input = payload && typeof payload === 'object' ? payload : {}
+    const requestedId = sanitizeKnowledgePointId(input.id)
+    const normalized = normalizeKnowledgePoint(input, user.knowledgePoints.length)
+    if (!normalized) return null
+
+    if (requestedId) {
+      const index = user.knowledgePoints.findIndex((item) => item.id === requestedId)
+      if (index >= 0) {
+        const existing = user.knowledgePoints[index]
+        const next = {
+          ...existing,
+          ...normalized,
+          id: requestedId,
+          createdAt: existing.createdAt,
+          updatedAt: Date.now(),
+        }
+        user.knowledgePoints.splice(index, 1, next)
+        return next
+      }
+    }
+
+    if (user.knowledgePoints.length >= MAX_KNOWLEDGE_POINTS) return null
+    const created = {
+      ...normalized,
+      id: requestedId || normalized.id || createKnowledgePointId(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    user.knowledgePoints.push(created)
+    return created
+  }
+
+  const setKnowledgePointEnabled = (knowledgePointId, enabled) => {
+    const item = getKnowledgePointById(knowledgePointId)
+    if (!item) return false
+    item.enabled = enabled !== false
+    item.updatedAt = Date.now()
+    return true
+  }
+
+  const removeKnowledgePoint = (knowledgePointId) => {
+    const id = sanitizeKnowledgePointId(knowledgePointId)
+    if (!id) return false
+    const index = user.knowledgePoints.findIndex((item) => item.id === id)
+    if (index < 0) return false
+    user.knowledgePoints.splice(index, 1)
+    return true
   }
 
   const resolveChatTruthEntityMeta = (rawContact = {}) => {
@@ -1776,9 +1949,17 @@ export const useSystemStore = defineStore('system', () => {
       settings.aiAutomation = normalizeAiAutomationSettings(settings.aiAutomation)
     }
 
-    if (persisted.user && typeof persisted.user === 'object') {
-      Object.assign(user, persisted.user)
+    const persistedUser = persisted.user && typeof persisted.user === 'object' ? persisted.user : null
+    if (persistedUser) {
+      Object.assign(user, persistedUser)
     }
+    const normalizedWorldKernel = normalizeUserWorldKernel(
+      persistedUser || user,
+      user.globalWorldview || DEFAULT_GLOBAL_WORLDVIEW,
+    )
+    user.globalWorldview = normalizedWorldKernel.globalWorldview
+    user.worldBook = normalizedWorldKernel.globalWorldview
+    user.knowledgePoints = normalizedWorldKernel.knowledgePoints
     if (typeof user.chatStatus !== 'string') {
       user.chatStatus = 'idle'
     }
@@ -1894,7 +2075,17 @@ export const useSystemStore = defineStore('system', () => {
             ),
           },
         },
-        user: { ...user },
+        user: {
+          ...user,
+          worldBook: user.globalWorldview,
+          globalWorldview: user.globalWorldview,
+          knowledgePoints: Array.isArray(user.knowledgePoints)
+            ? user.knowledgePoints.map((item) => ({
+                ...item,
+                tags: Array.isArray(item.tags) ? [...item.tags] : [],
+              }))
+            : [],
+        },
         notifications: notifications.value.map((note) => ({ ...note })),
         apiReports: apiReports.value.map((report) => ({ ...report })),
         truthState: {
@@ -1971,6 +2162,12 @@ export const useSystemStore = defineStore('system', () => {
     markAllNotificationsRead,
     removeNotification,
     clearNotifications,
+    setGlobalWorldview,
+    getKnowledgePointById,
+    listKnowledgePoints,
+    upsertKnowledgePoint,
+    setKnowledgePointEnabled,
+    removeKnowledgePoint,
     touchChatTruth,
     getChatTruthSnapshot,
     clearChatTruthState,

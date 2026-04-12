@@ -209,15 +209,17 @@ Status / 状态: `IN_PROGRESS`
    中文：按媒体类型定义体积上限策略（图片/动图/视频）以保障运行流畅性。
 
 ### P1-3 World Kernel + Map Baseline Refactor / P1-3 世界内核 + 地图基线重构
-Status / 状态: `TODO`
-1. EN: Split worldbook into global worldview + bindable knowledge points, and wire deterministic prompt assembly order.
-   中文：将世界书拆分为“全局世界观 + 可绑定知识点”，并落地固定顺序的提示词组装。
-2. EN: Add role-level knowledge-point binding in contacts, with safe unbind (unbind does not delete source records).
-   中文：在通讯录中新增角色级知识点绑定，并保证安全解绑（解绑不删除源记录）。
-3. EN: Keep map baseline runnable without mandatory external API, and use AI only as optional enhancement lane.
-   中文：保证地图基线在不依赖外部 API 的情况下可运行，AI 仅作为可选增强通道。
-4. EN: Keep module fallback defaults so missing visuals or disabled AI never blocks map interaction.
-   中文：保持模块默认回退，确保缺少视觉素材或关闭 AI 时不阻塞地图交互。
+Status / 状态: `IN_PROGRESS`
+1. EN: `DONE (phase-1)` world-kernel data split is landed in store: `globalWorldview` + `knowledgePoints`, with backward compatibility for legacy `worldBook`.
+   中文：`DONE（第一阶段）` 世界内核数据拆分已在 store 落地：`globalWorldview` + `knowledgePoints`，并兼容旧版 `worldBook`。
+2. EN: `DONE (phase-1)` contacts now support role-level knowledge-point binding, and unbind does not delete source knowledge-point records.
+   中文：`DONE（第一阶段）` 通讯录已支持角色级知识点绑定，且解绑不会删除源知识点记录。
+3. EN: `DONE (phase-1)` chat prompt assembly is now deterministic: global worldview -> role profile -> bound knowledge points -> conversation context.
+   中文：`DONE（第一阶段）` Chat 提示词组装已固定顺序：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
+4. EN: `TODO` map baseline loop must remain runnable without mandatory external API, with AI kept as optional visual/event enhancement.
+   中文：`TODO` 地图基线循环需在不依赖外部 API 的情况下可运行，AI 仅作为可选视觉/事件增强。
+5. EN: `TODO` map fallback defaults must ensure missing visual assets or disabled AI never blocks map interaction.
+   中文：`TODO` 地图默认回退需确保缺少视觉素材或关闭 AI 时不阻塞地图交互。
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
@@ -251,8 +253,8 @@ Status / 状态: `DONE`
    中文：P0 当前无阻塞决策，保持默认（`直白文案` + `元数据优先导出`）。
 2. EN: Asset-hub requirement is now locked by PM (custom folders, cross-module reuse, fallback defaults, one-off upload optional import).
    中文：素材中台需求已由产品侧冻结（自定义文件夹、跨模块复用、默认回退、单次上传可选入库）。
-3. EN: Remaining PM decision: choose rollout order between `P1-2` asset hub closure and `P1-3` world-kernel/map baseline refactor.
-   中文：剩余待决策：`P1-2` 素材中台收口与 `P1-3` 世界内核/地图基线重构的上线顺序。
+3. EN: Current decision focus moved from "rollout order" to "map baseline rules" (travel-time model, default location set, and fallback visuals) under the already-started `P1-3`.
+   中文：当前决策重点已从“上线顺序”转为已启动 `P1-3` 下的“地图基线规则”（行程时间模型、默认地点集、视觉回退方案）。
 4. EN: Future naming decision (non-blocking): whether to rename "WorldBook" in UI to a more immersive but understandable label.
    中文：后续命名决策（非阻塞）：是否将 UI 中的“世界书”改为更沉浸且易懂的名称。
 
@@ -297,3 +299,5 @@ Status / 状态: `DONE`
     2026-04-12 中文：已落地 Chat 单次媒体上传链路：发送本地媒体时，用户可选择“先入库后发送”或“不入库单次发送”。
 16. 2026-04-12 EN: PM confirmed world-map direction: split world kernel into global worldview + bindable knowledge points, and keep map simulation-first with optional AI enhancement.
     2026-04-12 中文：产品侧确认世界观-地图方向：世界内核拆分为全局世界观 + 可绑定知识点，地图采用模拟优先并将 AI 作为可选增强。
+17. 2026-04-12 EN: Landed `P1-3` phase-1: system store world-kernel split, contacts knowledge-point binding, and deterministic chat prompt injection order.
+    2026-04-12 中文：已落地 `P1-3` 第一阶段：system store 世界内核拆分、通讯录知识点绑定、Chat 固定顺序提示词注入。

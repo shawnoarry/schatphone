@@ -44,6 +44,8 @@ const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
 const MAX_AI_META_PROVIDER_LENGTH = 32
 const MAX_BLOCK_COUNT = 16
+const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
+const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const SAFE_ROUTE_FALLBACK = '/home'
 const SAFE_TRANSFER_ROUTE_FALLBACK = '/wallet'
 
@@ -142,6 +144,23 @@ const normalizeSingleLineText = (value, maxLength, fallback = '') =>
   trimTo(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
 
 const sanitizeAssetId = (value) => sanitizeRoleBindingAssetId(value)
+
+const sanitizeKnowledgePointId = (value) => {
+  const raw = trimTo(value, MAX_KNOWLEDGE_POINT_ID_LENGTH)
+  if (!raw) return ''
+  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
+}
+
+const normalizeKnowledgePointIds = (rawIds) => {
+  if (!Array.isArray(rawIds)) return []
+  const unique = []
+  rawIds.forEach((rawId) => {
+    const id = sanitizeKnowledgePointId(rawId)
+    if (!id || unique.includes(id)) return
+    unique.push(id)
+  })
+  return unique.slice(0, MAX_ROLE_KNOWLEDGE_POINT_IDS)
+}
 
 const createEmptyRoleAssetPack = () => createEmptyRoleAssetPackShared()
 
@@ -535,6 +554,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     isMain: Boolean(rawProfile?.isMain),
     avatar: typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : '',
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
+    knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
     assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
     tags: Array.isArray(rawProfile?.tags)
@@ -1545,6 +1565,9 @@ export const useChatStore = defineStore('chat', () => {
       target.tags = updates.tags
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter(Boolean)
+    }
+    if (Array.isArray(updates.knowledgePointIds)) {
+      target.knowledgePointIds = normalizeKnowledgePointIds(updates.knowledgePointIds)
     }
     if (updates.assetPack && typeof updates.assetPack === 'object') {
       target.assetPack = normalizeRoleProfileAssetPack({

@@ -831,6 +831,57 @@ const buildTruthPromptBlock = (contact) => {
   ].join('\n')
 }
 
+const getGlobalWorldviewText = () => {
+  const fromGlobal =
+    typeof user.value.globalWorldview === 'string' ? user.value.globalWorldview.trim() : ''
+  if (fromGlobal) return fromGlobal
+  return typeof user.value.worldBook === 'string' ? user.value.worldBook.trim() : ''
+}
+
+const resolveBoundKnowledgePointsForContact = (contact) => {
+  if (!contact || (contact.kind || 'role') !== 'role') return []
+  const profileId = Number(contact.profileId)
+  if (!Number.isFinite(profileId) || profileId <= 0) return []
+  const profile = chatStore.getRoleProfileById(profileId)
+  if (!profile || !Array.isArray(profile.knowledgePointIds) || profile.knowledgePointIds.length === 0) {
+    return []
+  }
+
+  const sourcePoints = Array.isArray(user.value.knowledgePoints) ? user.value.knowledgePoints : []
+  if (sourcePoints.length === 0) return []
+  const pointMap = new Map(
+    sourcePoints
+      .filter((item) => item && typeof item === 'object' && typeof item.id === 'string')
+      .map((item) => [item.id, item]),
+  )
+
+  return profile.knowledgePointIds
+    .map((id) => pointMap.get(id))
+    .filter((item) => item && item.enabled !== false)
+    .slice(0, 8)
+}
+
+const buildWorldKernelPromptBlock = (contact) => {
+  const worldview = getGlobalWorldviewText() || 'none'
+  const boundPoints = resolveBoundKnowledgePointsForContact(contact)
+  const boundSummary =
+    boundPoints.length > 0
+      ? boundPoints
+          .map((item) => {
+            const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : 'Knowledge'
+            const content = typeof item.content === 'string' ? item.content.trim() : ''
+            const tags = Array.isArray(item.tags) && item.tags.length > 0 ? ` [tags: ${item.tags.join(', ')}]` : ''
+            return `${title}: ${content || title}${tags}`
+          })
+          .join('; ')
+      : 'none'
+
+  return [
+    `Global worldview: ${worldview}`,
+    `Role-bound knowledge points: ${boundSummary}.`,
+  ].join('\n')
+}
+
 const resolveAssistantImageBlockPolicy = (aiPrefs, imageReferences = []) => {
   const referenceCount = Array.isArray(imageReferences) ? imageReferences.length : 0
   const allowWithoutReference = Boolean(aiPrefs?.allowImageVirtualWithoutReference)
@@ -870,6 +921,7 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const proactiveInstruction = options.isProactive
     ? 'This is a proactive opener scene. Start naturally and do not mention trigger mechanics.'
     : 'This is a normal reply scene. Respond based on context naturally.'
+  const worldKernelInstruction = buildWorldKernelPromptBlock(contact)
   const truthInstruction = buildTruthPromptBlock(contact)
   const imagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, options.imageReferences)
   const imageReferenceCount = imagePolicy.referenceCount
@@ -891,7 +943,7 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     : 'Image-reference transport mode: unknown.'
 
   return `
-Worldbook: ${user.value.worldBook}
+${worldKernelInstruction}
 User: ${user.value.name}, ${user.value.bio}
 Conversation type: ${typeLabel}
 Your role: ${contact.name} (${contact.role})
@@ -923,6 +975,7 @@ Rules:
 - ${quoteRule}
 - ${bilingualRule}
 - ${voiceRule}
+- Always respect the global worldview and role-bound knowledge points.
 - ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
 - Each message must include at least one text block.

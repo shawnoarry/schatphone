@@ -311,21 +311,21 @@ Acceptance / 验收标准:
 ---
 
 ### 6.2 World Kernel + Map Alignment Checklist / 世界内核 + 地图对齐清单
-Status / 状态: `TODO`
+Status / 状态: `IN_PROGRESS`
 
-1. EN: Data-schema task: split current single `worldBook` text into two layers:
+1. EN: Data-schema task — `DONE (phase-1)`: split current single `worldBook` text into two layers:
    中文：数据结构任务：将当前单一 `worldBook` 文本拆分为两层：
    - EN: `globalWorldview` (mandatory global baseline).
       中文：`globalWorldview`（全局必备基线）。
    - EN: `knowledgePoints[]` (targeted patches, bindable by role/module).
       中文：`knowledgePoints[]`（定向补丁，可按角色/模块绑定）。
-2. EN: Binding task: contacts must support role-level knowledge-point binding (single/multi-select), and unbinding must not delete source knowledge points.
+2. EN: Binding task — `DONE (phase-1)`: contacts must support role-level knowledge-point binding (single/multi-select), and unbinding must not delete source knowledge points.
    中文：绑定任务：通讯录需支持角色级知识点绑定（单选/多选），解绑不删除知识点源数据。
-3. EN: Prompt-assembly task: chat call context order must be deterministic:
+3. EN: Prompt-assembly task — `DONE (phase-1)`: chat call context order must be deterministic:
    中文：提示词组装任务：Chat 调用上下文顺序必须固定：
    - EN: global worldview -> role profile -> bound knowledge points -> conversation context/memory.
       中文：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文/记忆。
-4. EN: Map baseline task: map core loop must be runnable without mandatory external map API.
+4. EN: Map baseline task — `TODO`: map core loop must be runnable without mandatory external map API.
    中文：地图基线任务：地图核心循环必须在不依赖外部地图 API 的情况下可运行。
 5. EN: Map-mode task: keep two routes in architecture plan (not both required in first release):
    中文：地图模式任务：架构上保留两条路线（首发不要求同时实现）：
@@ -409,6 +409,8 @@ Acceptance / 验收标准:
     中文：已启动素材中台 V2 UI 落地：Gallery 现支持文件夹增删改与素材快速归档；通讯录已提供形象照/动态图/表情包/参考图槽位绑定选择。
 20. EN: PM confirmed world-map adjustment direction: split world kernel into global worldview + bindable knowledge points, and keep map on simulation-first low-API baseline.
     中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图基线采用“模拟优先、低 API 依赖”。
+21. EN: Started world-kernel phase-1 implementation: system store now supports `globalWorldview + knowledgePoints`, contacts role profiles now support knowledge-point binding, and chat prompt now injects bound knowledge points in deterministic order.
+    中文：已启动世界内核第一阶段实现：system store 已支持 `globalWorldview + knowledgePoints`，通讯录角色档案已支持知识点绑定，Chat 提示词已按固定顺序注入绑定知识点。
 
 ---
 

@@ -13,8 +13,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：项目方向保持正确：沉浸式手机壳层 + Chat 驱动 AI 互动。
 2. EN: Core foundation is stable enough; storage/backup closure is completed for current scope.
    中文：核心基础已稳定；当前范围内的存储与备份收口已完成。
-3. EN: `P0-1` to `P0-7` are closed; current active work is `P1-1` AI image-reference pipeline phase-2+ hardening.
-   中文：`P0-1` 至 `P0-7` 已收口；当前进入 `P1-1` AI 参考图链路第二阶段+加固。
+3. EN: `P0-1` to `P0-7` are closed; active work is now dual-track: `P1-2` asset-hub closure + `P1-3` world-kernel/map baseline rollout.
+   中文：`P0-1` 至 `P0-7` 已收口；当前进入双主线：`P1-2` 素材中台收口 + `P1-3` 世界内核/地图基线推进。
 
 ## 3. P0 status at a glance / P0 状态总览
 1. `P0-1` AI 单条语义修订: `DONE`
@@ -70,39 +70,35 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：产品侧已冻结下一阶段素材中台需求（自定义文件夹、槽位绑定、删除/替换确认、模块默认回退、单次上传可选入库）。
 22. EN: PM confirmed world-map adjustment direction: split world kernel into global worldview + bindable knowledge points, and keep map simulation-first with optional AI enhancement.
     中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图保持模拟优先并将 AI 作为可选增强。
+23. EN: Landed `P1-3` phase-1: system store now supports `globalWorldview + knowledgePoints`, contacts support role-level knowledge-point binding, and chat prompts inject bound knowledge points in deterministic order.
+    中文：已落地 `P1-3` 第一阶段：system store 已支持 `globalWorldview + knowledgePoints`，通讯录已支持角色级知识点绑定，Chat 已按固定顺序注入绑定知识点。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
-### `P1-1` AI Image-Reference Pipeline / `P1-1` AI 参考图链路
+### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
 
 What we are solving / 我们要解决什么:
-1. EN: We need image-reference support for AI replies while keeping one-call flow and broad provider compatibility.
-   中文：需要在保持“一次调用”体验的前提下，为 AI 回复加入参考图能力并兼容不同供应商。
-2. EN: Native multimodal support differs by provider, so fallback behavior and user mode controls must stay explicit.
-   中文：不同供应商的原生多模态支持差异大，因此回退策略与用户模式控制都必须明确。
+1. EN: World context must be controllable and clean: global worldview and role-targeted knowledge patches should no longer be mixed in one text blob.
+   中文：世界设定必须可控且干净：全局世界观与角色定向知识补丁不能长期混在一段文本里。
+2. EN: The map baseline must run without mandatory external map API, so immersion does not depend on third-party service stability or quota.
+   中文：地图基线必须在不依赖外部地图 API 的情况下可运行，避免沉浸体验受第三方稳定性和额度影响。
 
 What will be delivered / 本步交付什么:
-1. EN: Phase-1 landed: chat extracts recent user image blocks as references and sends them in the same AI call.
-   中文：第一阶段已落地：Chat 会提取近期用户图片消息作为参考图，并在同一轮 AI 调用中发送。
-2. EN: OpenAI-compatible path now attempts native URL image transport, then auto-falls back to context-only mode on unsupported status.
-   中文：OpenAI 兼容路径会先尝试原生 URL 图输入，若不支持会自动回退到“上下文参考图”模式。
-3. EN: Thread-level image-reference mode is configurable in chat settings (`auto/context_only/native_url`).
-   中文：会话内已支持参考图模式配置（`auto/context_only/native_url`）。
-4. EN: Added helper tests for reference normalization/capability resolution/context text generation.
-   中文：已补齐参考图归一化、能力判定、上下文文本生成的辅助函数测试。
-5. EN: Local file references now have a production path: convert image blob -> data URL under size guard -> include in one call when possible.
-   中文：本地文件参考图现已有生产路径：图片 blob ->（大小守卫）-> data URL -> 条件满足时进入同轮调用。
-6. EN: Reference execution outcome is written into assistant metadata and surfaced as lightweight in-thread hints.
-   中文：参考图执行结果会写入助手元信息，并在会话中以轻量提示展示。
-7. EN: Next delivery block is asset hub V2 execution: custom folder model + slot binding + fallback defaults + safe delete/replace + optional gallery import prompt for one-off uploads.
-   中文：下一交付块为素材中台 V2 执行：自定义文件夹模型 + 槽位绑定 + 默认回退 + 安全删除/替换 + 单次上传可选入库弹窗。
-8. EN: Follow-up block after asset hub closure: world-kernel split + map baseline refactor (no mandatory map API in baseline loop).
-   中文：素材中台收口后的后续任务：世界内核拆分 + 地图基线重构（基础循环不强依赖地图 API）。
+1. EN: `DONE (phase-1)` store data layer now has `globalWorldview + knowledgePoints` with compatibility migration from legacy `worldBook`.
+   中文：`DONE（第一阶段）` store 数据层已具备 `globalWorldview + knowledgePoints`，并支持旧版 `worldBook` 兼容迁移。
+2. EN: `DONE (phase-1)` contacts now support role-level knowledge-point binding and safe unbind.
+   中文：`DONE（第一阶段）` 通讯录已支持角色级知识点绑定与安全解绑。
+3. EN: `DONE (phase-1)` chat prompt assembly now injects world kernel in deterministic order: worldview -> role profile -> bound knowledge points -> conversation context.
+   中文：`DONE（第一阶段）` Chat 提示词已按固定顺序注入世界内核：世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
+4. EN: `NEXT` implement map baseline simulation loop (location setup -> travel timer -> arrival state) without mandatory external map API.
+   中文：`NEXT` 实现地图基线模拟循环（地点设定 -> 行程计时 -> 到达状态），且不强依赖外部地图 API。
+5. EN: `NEXT` define map fallback visuals and default behavior when AI/image assets are unavailable.
+   中文：`NEXT` 定义地图在 AI/图片素材不可用时的默认视觉回退与行为规则。
 
 How you can review it / 你可以怎么验收:
-1. EN: Verify replies still work with and without image references in manual trigger/reroll paths.
-   中文：确认手动触发与重 roll 场景下，“有参考图/无参考图”都能稳定回复。
-2. EN: Verify provider fallback works (native attempt -> context-only) without extra user action.
-   中文：确认供应商回退链路（原生尝试 -> 上下文回退）可自动完成，不需要用户额外操作。
+1. EN: In chat with one role bound to knowledge points and another unbound, verify the two roles produce clearly different, stable replies under the same worldview.
+   中文：在同一世界观下，给一个角色绑定知识点、另一个不绑定，确认两者回复风格和信息有稳定差异。
+2. EN: After deleting a role binding, verify source knowledge-point records still exist in world-kernel management.
+   中文：删除角色绑定后，确认世界内核管理中的知识点源记录仍存在。
 
 ## 6. Why this order is chosen / 为什么按这个顺序
 1. EN: P0 export UX risks are now closed, so P1 can focus on feature depth.
@@ -113,8 +109,8 @@ How you can review it / 你可以怎么验收:
 ## 7. PM decisions currently needed / 当前需要你拍板的点
 1. EN: Confirm default recommendation copy for reference-mode switch (`auto` currently recommended).
    中文：确认参考图模式开关的默认推荐文案（当前推荐 `auto`）。
-2. EN: Confirm rollout order between `P1-2` asset hub execution and scenario-card expansion (`P1-3`).
-   中文：确认 `P1-2` 素材中台执行与 `P1-3` 场景卡片扩展的上线顺序。
+2. EN: Confirm map baseline rule set for `P1-3` (default locations, travel-time scale, and whether first-run should offer optional AI-generated map visuals).
+   中文：确认 `P1-3` 地图基线规则集（默认地点、行程时间比例、首启是否提供可选 AI 生成地图视觉）。
 3. EN: Naming-only decision (non-blocking): whether to keep "Worldbook" wording or rename to a more immersive label while preserving user clarity.
    中文：命名层决策（非阻塞）：是否保留“世界书”文案，或改为更沉浸但仍易懂的名称。
 
@@ -167,3 +163,5 @@ How you can review it / 你可以怎么验收:
     2026-04-10 中文：冻结全局素材中台 V2 产品需求，并在 roadmap 增加可交接执行清单。
 17. 2026-04-12 EN: Added world-map confirmed direction (world kernel split + simulation-first map baseline) to PM execution narrative.
     2026-04-12 中文：已将世界观-地图确认方向（世界内核拆分 + 地图模拟优先基线）同步到产品执行叙述。
+18. 2026-04-12 EN: Synced `P1-3` phase-1 delivery: world-kernel split in store, role knowledge-point binding, and deterministic chat prompt injection are now marked completed.
+    2026-04-12 中文：已同步 `P1-3` 第一阶段交付：store 世界内核拆分、角色知识点绑定与 Chat 固定顺序注入均已标记完成。

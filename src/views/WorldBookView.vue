@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -10,21 +10,91 @@ const systemStore = useSystemStore()
 const { t } = useI18n()
 const { user } = storeToRefs(systemStore)
 
-const worldBookCount = computed(() => (user.value.worldBook || '').length)
+const globalWorldview = computed({
+  get: () =>
+    typeof user.value.globalWorldview === 'string'
+      ? user.value.globalWorldview
+      : user.value.worldBook || '',
+  set: (value) => {
+    systemStore.setGlobalWorldview(value)
+  },
+})
+
+const worldBookCount = computed(() => (globalWorldview.value || '').length)
+const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
 const saved = ref(false)
+const uiNotice = ref('')
+const knowledgeDraft = reactive({
+  title: '',
+  content: '',
+  tags: '',
+})
 let savedTimerId = null
 
 const goSettings = () => {
   router.push('/settings')
 }
 
-const saveWorldBook = () => {
-  systemStore.saveNow()
+const pulseSaved = (message = '') => {
+  if (message) uiNotice.value = message
   saved.value = true
   if (savedTimerId) clearTimeout(savedTimerId)
   savedTimerId = setTimeout(() => {
     saved.value = false
-  }, 1200)
+    uiNotice.value = ''
+  }, 1400)
+}
+
+const saveWorldBook = () => {
+  systemStore.saveNow()
+  pulseSaved(t('世界观已保存。', 'Worldview saved.'))
+}
+
+const parseTagDraft = (raw) =>
+  raw
+    .split(/[，,]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+const addKnowledgePoint = () => {
+  const title = knowledgeDraft.title.trim()
+  const content = knowledgeDraft.content.trim()
+  if (!title && !content) {
+    uiNotice.value = t('请先输入标题或内容。', 'Please enter title or content first.')
+    return
+  }
+  const created = systemStore.upsertKnowledgePoint({
+    title,
+    content,
+    tags: parseTagDraft(knowledgeDraft.tags),
+    enabled: true,
+  })
+  if (!created) {
+    uiNotice.value = t('知识点保存失败（可能已达上限）。', 'Knowledge point save failed (limit reached).')
+    return
+  }
+  knowledgeDraft.title = ''
+  knowledgeDraft.content = ''
+  knowledgeDraft.tags = ''
+  systemStore.saveNow()
+  pulseSaved(t('知识点已添加。', 'Knowledge point added.'))
+}
+
+const toggleKnowledgePoint = (point) => {
+  if (!point?.id) return
+  systemStore.setKnowledgePointEnabled(point.id, !point.enabled)
+  systemStore.saveNow()
+}
+
+const removeKnowledgePoint = (point) => {
+  if (!point?.id) return
+  const ok = window.confirm(
+    `${t('确认删除知识点', 'Delete knowledge point')}「${point.title || ''}」？`,
+  )
+  if (!ok) return
+  systemStore.removeKnowledgePoint(point.id)
+  systemStore.saveNow()
+  pulseSaved(t('知识点已删除。', 'Knowledge point deleted.'))
 }
 
 onBeforeUnmount(() => {
@@ -43,24 +113,113 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
       <div class="rounded-2xl bg-white border border-gray-200 p-4">
-        <p class="text-sm font-semibold">{{ t('全局世界观（World Book）', 'Global World Book') }}</p>
+        <p class="text-sm font-semibold">{{ t('全局世界观（必选）', 'Global worldview (required)') }}</p>
         <p class="text-xs text-gray-500 mt-1">
-          {{ t('这里的内容会作为所有聊天的全局背景设定。用户信息已拆分到“设置 > 用户信息”。', 'This content is used as global context for all chats. User profile is now separated in Settings > Profile.') }}
+          {{
+            t(
+              '全局世界观会作为所有聊天和模块生成的基础背景。',
+              'Global worldview is used as the base context for all chats and modules.',
+            )
+          }}
         </p>
         <textarea
-          v-model="user.worldBook"
-          class="w-full h-56 mt-3 border border-gray-200 rounded-lg p-3 text-sm outline-none resize-none"
-          :placeholder="t('例如：世界规则、时代背景、组织结构、角色关系约束...', 'Example: world rules, era background, organization structure, and role relationship constraints...')"
+          v-model="globalWorldview"
+          class="w-full h-48 mt-3 border border-gray-200 rounded-lg p-3 text-sm outline-none resize-none"
+          :placeholder="
+            t(
+              '例如：世界规则、时代背景、组织结构、角色关系约束...',
+              'Example: world rules, era background, organization structure, and role constraints...',
+            )
+          "
         ></textarea>
-        <p class="text-[11px] text-gray-400 mt-2">{{ t('当前字数：', 'Current count: ') }}{{ worldBookCount }}</p>
+        <p class="text-[11px] text-gray-400 mt-2">
+          {{ t('当前字数：', 'Current count: ') }}{{ worldBookCount }}
+        </p>
         <button
           @click="saveWorldBook"
           class="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold transition"
           :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
         >
-          {{ saved ? t('已保存', 'Saved') : t('保存世界书', 'Save world book') }}
+          {{ saved ? t('已保存', 'Saved') : t('保存世界观', 'Save worldview') }}
         </button>
       </div>
+
+      <div class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold">{{ t('知识点（可绑定角色）', 'Knowledge points (bindable)') }}</p>
+          <span class="text-[11px] text-gray-400">
+            {{ t('总数', 'Count') }} {{ knowledgePoints.length }}
+          </span>
+        </div>
+        <p class="text-xs text-gray-500">
+          {{
+            t(
+              '知识点用于角色级补丁（如语言规范、额外设定、模型偏好），可在通讯录绑定到指定角色。',
+              'Knowledge points are role-level patches (language rules, extra lore, model hints) and can be bound in Contacts.',
+            )
+          }}
+        </p>
+
+        <div class="space-y-2 rounded-xl border border-gray-200 p-3">
+          <input
+            v-model="knowledgeDraft.title"
+            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+            :placeholder="t('知识点标题（如：角色A语言规范）', 'Point title (e.g. Role A language rule)')"
+          />
+          <textarea
+            v-model="knowledgeDraft.content"
+            class="w-full h-20 border rounded-lg px-3 py-2 text-sm outline-none resize-none"
+            :placeholder="t('知识点内容', 'Knowledge point content')"
+          ></textarea>
+          <input
+            v-model="knowledgeDraft.tags"
+            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+            :placeholder="t('标签（逗号分隔）', 'Tags (comma separated)')"
+          />
+          <button
+            @click="addKnowledgePoint"
+            class="w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
+          >
+            {{ t('新增知识点', 'Add knowledge point') }}
+          </button>
+        </div>
+
+        <div v-if="knowledgePoints.length === 0" class="text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center">
+          {{ t('暂无知识点。', 'No knowledge points yet.') }}
+        </div>
+
+        <div v-else class="space-y-2">
+          <div
+            v-for="point in knowledgePoints"
+            :key="point.id"
+            class="rounded-xl border border-gray-200 p-3 space-y-1"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-semibold truncate">{{ point.title }}</p>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  @click="toggleKnowledgePoint(point)"
+                  class="px-2 py-0.5 rounded text-[11px] border"
+                  :class="point.enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-600'"
+                >
+                  {{ point.enabled ? t('启用', 'Enabled') : t('停用', 'Disabled') }}
+                </button>
+                <button @click="removeKnowledgePoint(point)" class="text-[11px] text-red-500">
+                  {{ t('删除', 'Delete') }}
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-600 whitespace-pre-wrap">{{ point.content }}</p>
+            <p v-if="Array.isArray(point.tags) && point.tags.length > 0" class="text-[11px] text-gray-400">
+              #{{ point.tags.join(' #') }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="uiNotice" class="text-[12px]" :class="saved ? 'text-emerald-600' : 'text-amber-600'">
+        {{ uiNotice }}
+      </p>
     </div>
   </div>
 </template>

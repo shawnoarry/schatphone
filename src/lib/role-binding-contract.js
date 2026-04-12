@@ -7,6 +7,8 @@ const MAX_ASSET_IDS_PER_CATEGORY = 24
 const MAX_FOLDER_ID_LENGTH = 128
 const MAX_FOLDER_IDS_PER_SLOT = 8
 const MAX_SLOT_PRIORITY = 999
+const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
+const MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE = 80
 
 export const ROLE_ASSET_FOLDER_SLOT_KEYS = Object.freeze([
   'profileImage',
@@ -79,6 +81,23 @@ const normalizeRoleFolderIdList = (input) => {
     uniqueIds.push(id)
   })
   return uniqueIds.slice(0, MAX_FOLDER_IDS_PER_SLOT)
+}
+
+const sanitizeKnowledgePointId = (value) => {
+  const raw = trimTo(value, MAX_KNOWLEDGE_POINT_ID_LENGTH)
+  if (!raw) return ''
+  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
+}
+
+const normalizeKnowledgePointIdList = (input) => {
+  if (!Array.isArray(input)) return []
+  const uniqueIds = []
+  input.forEach((rawId) => {
+    const id = sanitizeKnowledgePointId(rawId)
+    if (!id || uniqueIds.includes(id)) return
+    uniqueIds.push(id)
+  })
+  return uniqueIds.slice(0, MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE)
 }
 
 export const normalizeRoleAssetPack = (rawPack) => {
@@ -199,6 +218,7 @@ export const createRoleBindingContract = (input = {}) => {
       name: trimTo(profileInput.name, 120),
       role: trimTo(profileInput.role, 120),
       isMain: Boolean(profileInput.isMain),
+      knowledgePointIds: normalizeKnowledgePointIdList(profileInput.knowledgePointIds),
       tags: Array.isArray(profileInput.tags)
         ? profileInput.tags
             .map((item) => trimTo(item, 80))

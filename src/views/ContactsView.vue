@@ -84,6 +84,7 @@ const profileDraft = reactive({
   role: '',
   isMain: false,
   bio: '',
+  knowledgePointIds: [],
   assetPack: createEmptyAssetPack(),
   assetFolderBindings: createEmptyAssetFolderBindings(),
 })
@@ -148,6 +149,11 @@ const draftAssetCountMap = computed(() => ({
   scenario: profileDraft.assetPack.scenarioAssetIds.length,
 }))
 
+const availableKnowledgePoints = computed(() => {
+  const source = Array.isArray(user.value.knowledgePoints) ? user.value.knowledgePoints : []
+  return source.slice(0, 160)
+})
+
 const mainProfiles = computed(() => roleProfiles.value.filter((item) => Boolean(item.isMain)))
 const npcProfiles = computed(() => roleProfiles.value.filter((item) => !item.isMain))
 
@@ -190,6 +196,7 @@ const resetProfileDraft = () => {
   profileDraft.role = ''
   profileDraft.bio = ''
   profileDraft.isMain = false
+  profileDraft.knowledgePointIds = []
   profileDraft.assetPack = createEmptyAssetPack()
   profileDraft.assetFolderBindings = createEmptyAssetFolderBindings()
   assetPackCategory.value = 'reference'
@@ -211,6 +218,9 @@ const openEditProfile = (profile) => {
   profileDraft.role = profile.role || ''
   profileDraft.bio = profile.bio || ''
   profileDraft.isMain = Boolean(profile.isMain)
+  profileDraft.knowledgePointIds = Array.isArray(profile.knowledgePointIds)
+    ? [...new Set(profile.knowledgePointIds)]
+    : []
   profileDraft.assetPack = cloneAssetPack(profile.assetPack || {})
   profileDraft.assetFolderBindings = cloneAssetFolderBindings(profile.assetFolderBindings || {})
   assetPackCategory.value = 'reference'
@@ -252,6 +262,34 @@ const clearDraftCategoryAssets = () => {
   profileDraft.assetPack[categoryKey] = []
 }
 
+const isDraftKnowledgePointSelected = (knowledgePointId) =>
+  Array.isArray(profileDraft.knowledgePointIds) && profileDraft.knowledgePointIds.includes(knowledgePointId)
+
+const toggleDraftKnowledgePoint = (knowledgePointId) => {
+  const current = Array.isArray(profileDraft.knowledgePointIds)
+    ? [...profileDraft.knowledgePointIds]
+    : []
+  if (current.includes(knowledgePointId)) {
+    profileDraft.knowledgePointIds = current.filter((id) => id !== knowledgePointId)
+    return
+  }
+  if (current.length >= 40) {
+    setUiNotice(
+      'warning',
+      t(
+        '单个角色最多绑定 40 条知识点。',
+        'Each role profile supports up to 40 knowledge points.',
+      ),
+    )
+    return
+  }
+  profileDraft.knowledgePointIds = [...current, knowledgePointId]
+}
+
+const clearDraftKnowledgePoints = () => {
+  profileDraft.knowledgePointIds = []
+}
+
 const saveProfile = () => {
   const name = profileDraft.name.trim()
   if (!name) {
@@ -264,6 +302,7 @@ const saveProfile = () => {
     role: profileDraft.role,
     isMain: profileDraft.isMain,
     bio: profileDraft.bio,
+    knowledgePointIds: [...new Set(profileDraft.knowledgePointIds)],
     assetPack: cloneAssetPack(profileDraft.assetPack),
     assetFolderBindings: cloneAssetFolderBindings(profileDraft.assetFolderBindings),
   }
@@ -310,6 +349,12 @@ const profileAssetSummary = (profile) => {
     pack.scenarioAssetIds.length
   if (total <= 0) return t('未绑定素材包', 'No asset pack bound')
   return t(`素材 ${total} 项`, `${total} assets bound`)
+}
+
+const profileKnowledgeSummary = (profile) => {
+  const count = Array.isArray(profile?.knowledgePointIds) ? profile.knowledgePointIds.length : 0
+  if (count <= 0) return t('未绑定知识点', 'No knowledge points bound')
+  return t(`知识点 ${count} 条`, `${count} knowledge points`)
 }
 
 const autoGenerateProfile = async () => {
@@ -436,6 +481,70 @@ onBeforeUnmount(() => {
               class="px-3 py-1 rounded text-xs"
             >
               NPC
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('知识点绑定（全局档案）', 'Knowledge Binding (Global Profile)') }}
+            </p>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-gray-500">
+                {{ t('已选', 'Selected') }} {{ profileDraft.knowledgePointIds.length }}
+              </span>
+              <button
+                @click="clearDraftKnowledgePoints"
+                class="px-2 py-0.5 rounded border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50"
+              >
+                {{ t('清空', 'Clear') }}
+              </button>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-gray-500">
+            {{
+              t(
+                '绑定后，该角色在 Chat 中会注入对应知识点（仅注入启用项）。',
+                'Bound points are injected for this role in Chat (enabled points only).',
+              )
+            }}
+          </p>
+
+          <div
+            v-if="availableKnowledgePoints.length === 0"
+            class="text-[11px] text-gray-500 rounded-lg border border-dashed border-gray-200 px-2 py-3 text-center"
+          >
+            {{
+              t(
+                '暂无知识点。请先在世界书中新增知识点。',
+                'No knowledge points yet. Add them in World Book first.',
+              )
+            }}
+          </div>
+
+          <div v-else class="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-0.5">
+            <button
+              v-for="point in availableKnowledgePoints"
+              :key="point.id"
+              @click="toggleDraftKnowledgePoint(point.id)"
+              class="rounded-lg border px-2.5 py-2 text-left"
+              :class="
+                isDraftKnowledgePointSelected(point.id)
+                  ? 'border-blue-300 bg-blue-50'
+                  : point.enabled === false
+                    ? 'border-gray-200 bg-gray-50 opacity-70'
+                    : 'border-gray-200 bg-white'
+              "
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[12px] font-semibold truncate">{{ point.title }}</p>
+                <span class="text-[10px] text-gray-500">
+                  {{ point.enabled === false ? t('停用', 'Disabled') : t('启用', 'Enabled') }}
+                </span>
+              </div>
+              <p class="text-[11px] text-gray-600 line-clamp-2 mt-1">{{ point.content }}</p>
             </button>
           </div>
         </div>
@@ -686,6 +795,7 @@ onBeforeUnmount(() => {
             <p class="font-medium truncate">{{ contact.name }}</p>
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
@@ -707,6 +817,7 @@ onBeforeUnmount(() => {
             <p class="font-medium truncate">{{ contact.name }}</p>
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
