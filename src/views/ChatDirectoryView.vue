@@ -4,6 +4,10 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
+import {
+  getRoleAssetFolderSlotKeysByCategory,
+  resolveFolderBoundAssetIds,
+} from '../lib/role-asset-folder-resolver'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
@@ -229,15 +233,75 @@ const getRoleBindingContract = (contactId) =>
     moduleKey: 'chat',
   })
 
+const roleFolderSlotShortLabel = (slotKey) => {
+  if (slotKey === 'imageReference') return t('参考', 'Reference')
+  if (slotKey === 'dynamicMedia') return t('动态', 'Dynamic')
+  if (slotKey === 'profileImage') return t('形象', 'Profile')
+  if (slotKey === 'emojiPack') return t('表情', 'Emoji')
+  return slotKey || ''
+}
+
 const roleMetaAssetOptions = computed(() => {
   if (!editingRoleContactId.value) return []
   const contract = getRoleBindingContract(editingRoleContactId.value)
-  const ids = Array.isArray(contract.assets?.profileAssetIds) ? contract.assets.profileAssetIds : []
-  return ids.map((assetId) => {
+  const preferredId =
+    typeof contract.assets?.preferredImageAssetId === 'string'
+      ? contract.assets.preferredImageAssetId.trim()
+      : ''
+  const profileAssetIds = Array.isArray(contract.assets?.profileAssetIds)
+    ? contract.assets.profileAssetIds
+    : []
+  const profileAssetSet = new Set(profileAssetIds)
+  const folderResolved = resolveFolderBoundAssetIds(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+    getRoleAssetFolderSlotKeysByCategory('reference'),
+    {
+      category: 'all',
+      limit: 96,
+    },
+  )
+  const folderAssetSet = new Set(folderResolved.assetIds)
+
+  const mergedIds = []
+  const pushAssetId = (assetId) => {
+    const normalized =
+      typeof assetId === 'string'
+        ? assetId.trim()
+        : ''
+    if (!normalized || mergedIds.includes(normalized)) return
+    mergedIds.push(normalized)
+  }
+
+  pushAssetId(preferredId)
+  profileAssetIds.forEach((assetId) => pushAssetId(assetId))
+  folderResolved.assetIds.forEach((assetId) => pushAssetId(assetId))
+
+  return mergedIds.map((assetId) => {
     const asset = galleryStore.findAssetById(assetId)
+    const fromPack = profileAssetSet.has(assetId)
+    const fromFolder = folderAssetSet.has(assetId)
+    const isPreferred = preferredId && assetId === preferredId
+    const sourceEntry = folderResolved.sourceByAssetId[assetId]
+    const folderSlotText =
+      Array.isArray(sourceEntry?.slotKeys) && sourceEntry.slotKeys.length > 0
+        ? sourceEntry.slotKeys.map((slotKey) => roleFolderSlotShortLabel(slotKey)).join('/')
+        : ''
+    const folderSlotLabel = folderSlotText || t('角色槽位', 'Role slot')
+
+    const sourceLabel = isPreferred
+      ? t('会话优先', 'Thread preferred')
+      : fromFolder && fromPack
+        ? t('档案+文件夹', 'Pack + Folder')
+        : fromFolder
+          ? t(`文件夹(${folderSlotLabel})`, `Folder (${folderSlotLabel})`)
+          : fromPack
+            ? t('档案素材包', 'Profile pack')
+            : ''
+
     return {
       id: assetId,
-      label: asset?.name || assetId,
+      label: sourceLabel ? `${asset?.name || assetId} · ${sourceLabel}` : asset?.name || assetId,
     }
   })
 })
@@ -247,9 +311,21 @@ const roleMetaAssetContextLabel = computed(() => {
   const contract = getRoleBindingContract(editingRoleContactId.value)
   const profileName = contract.profile?.name || contract.contact?.name || ''
   if (!profileName) return ''
+  const packCount = Array.isArray(contract.assets?.profileAssetIds)
+    ? contract.assets.profileAssetIds.length
+    : 0
+  const folderCount = resolveFolderBoundAssetIds(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+    getRoleAssetFolderSlotKeysByCategory('reference'),
+    {
+      category: 'all',
+      limit: 96,
+    },
+  ).assetIds.length
   return t(
-    `来源档案：${profileName}`,
-    `Source profile: ${profileName}`,
+    `来源档案：${profileName}（素材包 ${packCount} · 文件夹 ${folderCount}）`,
+    `Source profile: ${profileName} (pack ${packCount} · folder ${folderCount})`,
   )
 })
 

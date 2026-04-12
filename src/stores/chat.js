@@ -61,6 +61,7 @@ const DEFAULT_CONVERSATION_AI_PREFS = {
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
   imageReferenceMode: 'auto',
+  allowImageVirtualWithoutReference: false,
   autoInvokeEnabled: false,
   autoInvokeIntervalSec: 360,
 }
@@ -311,6 +312,10 @@ const normalizeConversationAiPrefs = (rawPrefs) => {
       typeof input.imageReferenceMode === 'string' && VALID_IMAGE_REFERENCE_MODES.has(input.imageReferenceMode)
         ? input.imageReferenceMode
         : DEFAULT_CONVERSATION_AI_PREFS.imageReferenceMode,
+    allowImageVirtualWithoutReference:
+      typeof input.allowImageVirtualWithoutReference === 'boolean'
+        ? input.allowImageVirtualWithoutReference
+        : DEFAULT_CONVERSATION_AI_PREFS.allowImageVirtualWithoutReference,
     autoInvokeEnabled:
       typeof input.autoInvokeEnabled === 'boolean'
         ? input.autoInvokeEnabled

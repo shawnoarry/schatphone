@@ -12,6 +12,10 @@ import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-mes
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import {
+  getRoleAssetFolderSlotKeysByCategory,
+  resolveFolderBoundAssetIds,
+} from '../lib/role-asset-folder-resolver'
+import {
   SEMANTIC_REVISION_TRACE_MODES,
   normalizeSemanticRevisionTraceMode,
   shouldShowSemanticRevisionHint,
@@ -44,6 +48,7 @@ const DEFAULT_THREAD_AI_PREFS = {
   proactiveOpenerEnabled: false,
   proactiveOpenerStrategy: 'on_enter_once',
   imageReferenceMode: 'auto',
+  allowImageVirtualWithoutReference: false,
   autoInvokeEnabled: false,
   autoInvokeIntervalSec: 360,
 }
@@ -132,6 +137,7 @@ const USER_ACTION_FORM_LINK = 'link'
 const USER_ACTION_FORM_TRANSFER = 'transfer'
 const USER_ACTION_FORM_VOICE = 'voice'
 const USER_ACTION_FORM_GALLERY = 'gallery'
+const MAX_ONE_OFF_MEDIA_INLINE_BYTES = 512 * 1024
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -199,6 +205,7 @@ const threadSettingsDraft = reactive({
   proactiveOpenerEnabled: DEFAULT_THREAD_AI_PREFS.proactiveOpenerEnabled,
   proactiveOpenerStrategy: DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy,
   imageReferenceMode: DEFAULT_THREAD_AI_PREFS.imageReferenceMode,
+  allowImageVirtualWithoutReference: DEFAULT_THREAD_AI_PREFS.allowImageVirtualWithoutReference,
   autoInvokeEnabled: DEFAULT_THREAD_AI_PREFS.autoInvokeEnabled,
   autoInvokeIntervalSec: DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec,
 })
@@ -253,38 +260,86 @@ const galleryPickerCategoryOptions = computed(() => [
   })),
 ])
 
-const galleryPickerAssets = computed(() =>
-  {
-    const baseList = galleryStore.getAssetsByCategory(galleryPickerCategory.value)
-    const chatId = Number(activeChat.value?.id)
-    if (!Number.isFinite(chatId) || chatId <= 0) {
-      return baseList.slice(0, 36)
+const createEmptyProfileAssetPack = () => ({
+  wallpaperAssetIds: [],
+  emojiAssetIds: [],
+  referenceAssetIds: [],
+  scenarioAssetIds: [],
+})
+
+const createEmptyProfileAssetFolderBindings = () => ({
+  profileImage: { folderId: '', folderPriority: 0, folderPriorityChain: [] },
+  dynamicMedia: { folderId: '', folderPriority: 0, folderPriorityChain: [] },
+  emojiPack: { folderId: '', folderPriority: 0, folderPriorityChain: [] },
+  imageReference: { folderId: '', folderPriority: 0, folderPriorityChain: [] },
+})
+
+const createEmptyRoleAssetContext = () => ({
+  profileId: 0,
+  profileName: '',
+  preferredImageAssetId: '',
+  recommendedImageAssetId: '',
+  profileAssetPack: createEmptyProfileAssetPack(),
+  profileAssetIds: [],
+  profileAssetFolderBindings: createEmptyProfileAssetFolderBindings(),
+  profileFolderAssetIds: [],
+  profileFolderAssetSourceById: {},
+})
+
+const resolveRoleFolderAssetsByCategory = (contract, category = 'all') => {
+  if (!contract?.roleBound) {
+    return {
+      assetIds: [],
+      sourceByAssetId: {},
     }
+  }
+  return resolveFolderBoundAssetIds(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+    getRoleAssetFolderSlotKeysByCategory(category),
+    {
+      category,
+      limit: 120,
+    },
+  )
+}
 
-    const roleBindingContract = chatStore.getRoleBindingContract(chatId, {
-      moduleKey: 'chat',
-    })
-    const preferredId = roleBindingContract.assets?.preferredImageAssetId || ''
-    const profileIds = Array.isArray(roleBindingContract.assets?.profileAssetIds)
-      ? roleBindingContract.assets.profileAssetIds
-      : []
-    const profileIdSet = new Set(profileIds)
+const galleryPickerAssets = computed(() => {
+  const baseList = galleryStore.getAssetsByCategory(galleryPickerCategory.value)
+  const chatId = Number(activeChat.value?.id)
+  if (!Number.isFinite(chatId) || chatId <= 0) {
+    return baseList.slice(0, 36)
+  }
 
-    const sorted = [...baseList].sort((left, right) => {
-      const leftPreferred = preferredId && left.id === preferredId ? 1 : 0
-      const rightPreferred = preferredId && right.id === preferredId ? 1 : 0
-      if (leftPreferred !== rightPreferred) return rightPreferred - leftPreferred
+  const roleBindingContract = chatStore.getRoleBindingContract(chatId, {
+    moduleKey: 'chat',
+  })
+  const preferredId = roleBindingContract.assets?.preferredImageAssetId || ''
+  const profileIds = Array.isArray(roleBindingContract.assets?.profileAssetIds)
+    ? roleBindingContract.assets.profileAssetIds
+    : []
+  const profileIdSet = new Set(profileIds)
+  const folderResolved = resolveRoleFolderAssetsByCategory(
+    roleBindingContract,
+    galleryPickerCategory.value,
+  )
+  const folderIdSet = new Set(folderResolved.assetIds)
 
-      const leftProfile = profileIdSet.has(left.id) ? 1 : 0
-      const rightProfile = profileIdSet.has(right.id) ? 1 : 0
-      if (leftProfile !== rightProfile) return rightProfile - leftProfile
+  const sorted = [...baseList].sort((left, right) => {
+    const getPriority = (asset) => {
+      const preferredBoost = preferredId && asset.id === preferredId ? 100 : 0
+      const folderBoost = folderIdSet.has(asset.id) ? 10 : 0
+      const profileBoost = profileIdSet.has(asset.id) ? 1 : 0
+      return preferredBoost + folderBoost + profileBoost
+    }
+    const leftPriority = getPriority(left)
+    const rightPriority = getPriority(right)
+    if (leftPriority !== rightPriority) return rightPriority - leftPriority
+    return (right.updatedAt || 0) - (left.updatedAt || 0)
+  })
 
-      return (right.updatedAt || 0) - (left.updatedAt || 0)
-    })
-
-    return sorted.slice(0, 36)
-  },
-)
+  return sorted.slice(0, 36)
+})
 
 const gallerySendState = computed(() => {
   const total = Array.isArray(galleryStore.assets) ? galleryStore.assets.length : 0
@@ -325,54 +380,73 @@ const userActionGridHint = computed(() => {
 const activeRoleAssetContext = computed(() => {
   const chatId = Number(activeChat.value?.id)
   if (!Number.isFinite(chatId) || chatId <= 0) {
-    return {
-      profileId: 0,
-      profileName: '',
-      preferredImageAssetId: '',
-      recommendedImageAssetId: '',
-      profileAssetPack: {
-        wallpaperAssetIds: [],
-        emojiAssetIds: [],
-        referenceAssetIds: [],
-        scenarioAssetIds: [],
-      },
-      profileAssetIds: [],
-    }
+    return createEmptyRoleAssetContext()
   }
   const contract = chatStore.getRoleBindingContract(chatId, {
     moduleKey: 'chat',
   })
   if (!contract?.roleBound) {
-    return {
-      profileId: 0,
-      profileName: '',
-      preferredImageAssetId: '',
-      recommendedImageAssetId: '',
-      profileAssetPack: {
-        wallpaperAssetIds: [],
-        emojiAssetIds: [],
-        referenceAssetIds: [],
-        scenarioAssetIds: [],
-      },
-      profileAssetIds: [],
-    }
+    return createEmptyRoleAssetContext()
   }
+  const folderResolved = resolveRoleFolderAssetsByCategory(contract, 'all')
 
   return {
     profileId: Number(contract.profile?.id) || 0,
     profileName: contract.profile?.name || contract.contact?.name || '',
     preferredImageAssetId: contract.assets?.preferredImageAssetId || '',
     recommendedImageAssetId: contract.assets?.recommendedImageAssetId || '',
-    profileAssetPack: contract.assets?.profileAssetPack || {
-      wallpaperAssetIds: [],
-      emojiAssetIds: [],
-      referenceAssetIds: [],
-      scenarioAssetIds: [],
-    },
+    profileAssetPack: contract.assets?.profileAssetPack || createEmptyProfileAssetPack(),
     profileAssetIds: Array.isArray(contract.assets?.profileAssetIds)
       ? contract.assets.profileAssetIds
       : [],
+    profileAssetFolderBindings:
+      contract.assets?.profileAssetFolderBindings || createEmptyProfileAssetFolderBindings(),
+    profileFolderAssetIds: folderResolved.assetIds,
+    profileFolderAssetSourceById: folderResolved.sourceByAssetId,
   }
+})
+
+const roleImageReferenceAvailability = computed(() => {
+  const context = activeRoleAssetContext.value
+  const pack = context.profileAssetPack || createEmptyProfileAssetPack()
+  const referencePackCount =
+    (Array.isArray(pack.referenceAssetIds) ? pack.referenceAssetIds.length : 0) +
+    (Array.isArray(pack.scenarioAssetIds) ? pack.scenarioAssetIds.length : 0)
+  const folderImageCount = (Array.isArray(context.profileFolderAssetIds)
+    ? context.profileFolderAssetIds
+    : []
+  ).filter((assetId) => {
+    const asset = galleryStore.findAssetById(assetId)
+    return asset && asset.category !== 'emoji'
+  }).length
+  const total = referencePackCount + folderImageCount
+  return {
+    total,
+    referencePackCount,
+    folderImageCount,
+    hasAny: total > 0,
+  }
+})
+
+const threadImageBlockPolicyHint = computed(() => {
+  const availability = roleImageReferenceAvailability.value
+  const allowWithoutReference = Boolean(threadSettingsDraft.allowImageVirtualWithoutReference)
+  if (availability.hasAny) {
+    return t(
+      `当前角色已绑定 ${availability.total} 项可用图像素材（素材包 ${availability.referencePackCount} / 文件夹 ${availability.folderImageCount}）。`,
+      `Role has ${availability.total} usable image assets (pack ${availability.referencePackCount} / folder ${availability.folderImageCount}).`,
+    )
+  }
+  if (allowWithoutReference) {
+    return t(
+      '当前角色未绑定参考图，已允许 AI 在无参考图时生成图片消息。',
+      'No role image references are bound; AI-generated image blocks are allowed without references.',
+    )
+  }
+  return t(
+    '当前角色未绑定参考图，系统将回退为文字优先（不输出图片消息）。',
+    'No role image references are bound; system falls back to text-first replies (no image blocks).',
+  )
 })
 
 const activeActionMessage = computed(() => {
@@ -632,6 +706,19 @@ const sanitizeAssistantHtmlSnippet = (value) => {
     .replace(/javascript:/gi, '')
 }
 
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader()
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+      reader.onerror = () => reject(new Error('read_failed'))
+      reader.onabort = () => reject(new Error('read_aborted'))
+      reader.readAsDataURL(file)
+    } catch (error) {
+      reject(error)
+    }
+  })
+
 const scrollToBottom = () => {
   nextTick(() => {
     if (chatContainer.value) {
@@ -674,6 +761,7 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.proactiveOpenerEnabled = Boolean(prefs.proactiveOpenerEnabled)
   threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
   threadSettingsDraft.imageReferenceMode = normalizeImageReferenceMode(prefs.imageReferenceMode)
+  threadSettingsDraft.allowImageVirtualWithoutReference = Boolean(prefs.allowImageVirtualWithoutReference)
   threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
   threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
 }
@@ -743,6 +831,16 @@ const buildTruthPromptBlock = (contact) => {
   ].join('\n')
 }
 
+const resolveAssistantImageBlockPolicy = (aiPrefs, imageReferences = []) => {
+  const referenceCount = Array.isArray(imageReferences) ? imageReferences.length : 0
+  const allowWithoutReference = Boolean(aiPrefs?.allowImageVirtualWithoutReference)
+  return {
+    referenceCount,
+    allowWithoutReference,
+    allowImageVirtual: referenceCount > 0 || allowWithoutReference,
+  }
+}
+
 const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const contactKind = contact.kind || 'role'
   const typeLabel =
@@ -773,9 +871,8 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     ? 'This is a proactive opener scene. Start naturally and do not mention trigger mechanics.'
     : 'This is a normal reply scene. Respond based on context naturally.'
   const truthInstruction = buildTruthPromptBlock(contact)
-  const imageReferenceCount = Array.isArray(options.imageReferences)
-    ? options.imageReferences.length
-    : 0
+  const imagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, options.imageReferences)
+  const imageReferenceCount = imagePolicy.referenceCount
   const providerCapabilities =
     options.providerCapabilities && typeof options.providerCapabilities === 'object'
       ? options.providerCapabilities
@@ -784,6 +881,11 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     imageReferenceCount > 0
       ? `Image references available in user context: ${imageReferenceCount}. Treat them as visual cues and avoid hallucinating details not supported by cues.`
       : 'No explicit image references were provided in this turn.'
+  const imageBlockInstruction = imagePolicy.allowImageVirtual
+    ? imagePolicy.allowWithoutReference
+      ? 'image_virtual blocks are allowed. Even without explicit references, generated visual imagination is permitted for this thread.'
+      : 'image_virtual blocks are allowed only when reference cues are present in this turn.'
+    : 'image_virtual blocks are disallowed in this turn. Describe visuals in text instead of sending image_virtual blocks.'
   const providerCapabilityInstruction = providerCapabilities
     ? `Image-reference transport mode: ${providerCapabilities.preferredImageReferenceMode || 'none'} (provider: ${providerCapabilities.kind || 'unknown'}).`
     : 'Image-reference transport mode: unknown.'
@@ -821,6 +923,7 @@ Rules:
 - ${quoteRule}
 - ${bilingualRule}
 - ${voiceRule}
+- ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
 - Each message must include at least one text block.
 `
@@ -926,6 +1029,60 @@ const toAiMessages = (contactId, untilMessageId = '', options = {}) =>
     content: extractMessageTextForContext(item),
   }))
 
+const roleFolderSlotHintLabel = (slotKey) => {
+  if (slotKey === 'imageReference') return t('参考图', 'Reference')
+  if (slotKey === 'dynamicMedia') return t('动态图', 'Dynamic')
+  if (slotKey === 'profileImage') return t('形象照', 'Profile image')
+  if (slotKey === 'emojiPack') return t('表情包', 'Emoji')
+  return slotKey || ''
+}
+
+const buildRoleBoundReferenceCandidates = (contactId) => {
+  const contract = chatStore.getRoleBindingContract(contactId, {
+    moduleKey: 'chat',
+  })
+  if (!contract?.roleBound) {
+    return {
+      profileName: '',
+      candidateAssetIds: [],
+      sourceByAssetId: {},
+    }
+  }
+
+  const profilePack = contract.assets?.profileAssetPack || createEmptyProfileAssetPack()
+  const folderResolved = resolveFolderBoundAssetIds(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+    getRoleAssetFolderSlotKeysByCategory('reference'),
+    {
+      category: 'all',
+      limit: 80,
+    },
+  )
+
+  const candidateAssetIds = []
+  const pushAssetId = (assetId) => {
+    const normalized = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalized || candidateAssetIds.includes(normalized)) return
+    candidateAssetIds.push(normalized)
+  }
+
+  pushAssetId(contract.assets?.preferredImageAssetId)
+  ;(Array.isArray(profilePack.referenceAssetIds) ? profilePack.referenceAssetIds : []).forEach((id) =>
+    pushAssetId(id),
+  )
+  ;(Array.isArray(profilePack.scenarioAssetIds) ? profilePack.scenarioAssetIds : []).forEach((id) =>
+    pushAssetId(id),
+  )
+  folderResolved.assetIds.forEach((id) => pushAssetId(id))
+
+  return {
+    profileName: contract.profile?.name || contract.contact?.name || '',
+    candidateAssetIds,
+    sourceByAssetId: folderResolved.sourceByAssetId || {},
+  }
+}
+
 const collectImageReferencesFromContextMessages = async (messages = []) => {
   if (!Array.isArray(messages) || messages.length === 0) return []
   const collected = []
@@ -983,6 +1140,93 @@ const collectImageReferencesFromContextMessages = async (messages = []) => {
   }
 
   return collected
+}
+
+const collectImageReferencesFromRoleBindings = async (
+  contactId,
+  { limit = MAX_CONTEXT_REFERENCE_IMAGES, excludeAssetIds = [] } = {},
+) => {
+  const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.floor(Number(limit))) : 0
+  if (normalizedLimit <= 0) return []
+
+  const excludeSet = new Set(
+    Array.isArray(excludeAssetIds)
+      ? excludeAssetIds
+          .map((assetId) => (typeof assetId === 'string' ? assetId.trim() : ''))
+          .filter(Boolean)
+      : [],
+  )
+  const { profileName, candidateAssetIds, sourceByAssetId } =
+    buildRoleBoundReferenceCandidates(contactId)
+  if (!candidateAssetIds.length) return []
+
+  const collected = []
+  const seen = new Set()
+
+  for (const assetId of candidateAssetIds) {
+    if (collected.length >= normalizedLimit) break
+    if (excludeSet.has(assetId)) continue
+
+    const asset = galleryStore.findAssetById(assetId)
+    if (!asset) continue
+    if (asset.category === 'emoji') continue
+
+    const resolved = await galleryStore.getAssetAiReferenceUrl(assetId, {
+      maxBytes: MAX_CONTEXT_REFERENCE_IMAGE_BYTES,
+    })
+    const sourceUrl = resolved?.ok && typeof resolved.url === 'string' ? resolved.url.trim() : ''
+    const sourceReason = typeof resolved?.reason === 'string' ? resolved.reason : ''
+
+    const sourceEntry = sourceByAssetId?.[assetId]
+    const slotLabels =
+      Array.isArray(sourceEntry?.slotKeys) && sourceEntry.slotKeys.length > 0
+        ? sourceEntry.slotKeys.map((slotKey) => roleFolderSlotHintLabel(slotKey)).filter(Boolean)
+        : []
+    const slotHint = slotLabels.length > 0 ? slotLabels.join('/') : ''
+    const noteBase = slotHint
+      ? t(
+          `来自角色绑定素材（${slotHint}${profileName ? ` · ${profileName}` : ''}）`,
+          `From role-bound asset (${slotHint}${profileName ? ` · ${profileName}` : ''})`,
+        )
+      : t(
+          `来自角色绑定素材${profileName ? `（${profileName}）` : ''}`,
+          `From role-bound asset${profileName ? ` (${profileName})` : ''}`,
+        )
+    const note =
+      sourceReason === 'blob_too_large'
+        ? `${noteBase} · ${t('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
+        : noteBase
+    const label =
+      (typeof asset?.name === 'string' && asset.name.trim()) ||
+      t('角色参考图', 'Profile reference image')
+
+    const sourceKey = `${label}|${assetId}|${sourceUrl.slice(0, 120)}`
+    if (seen.has(sourceKey)) continue
+    seen.add(sourceKey)
+    collected.push({
+      label,
+      note,
+      sourceUrl,
+      assetId,
+    })
+  }
+
+  return collected
+}
+
+const collectImageReferencesForAiCall = async (contactId, contextMessages = []) => {
+  const contextReferences = await collectImageReferencesFromContextMessages(contextMessages)
+  const remain = Math.max(0, MAX_CONTEXT_REFERENCE_IMAGES - contextReferences.length)
+  if (remain <= 0) return contextReferences.slice(0, MAX_CONTEXT_REFERENCE_IMAGES)
+
+  const roleReferences = await collectImageReferencesFromRoleBindings(contactId, {
+    limit: remain,
+    excludeAssetIds: contextReferences
+      .map((item) => (typeof item?.assetId === 'string' ? item.assetId.trim() : ''))
+      .filter(Boolean),
+  })
+
+  return [...contextReferences, ...roleReferences].slice(0, MAX_CONTEXT_REFERENCE_IMAGES)
 }
 
 const clearAutoInvokeTimer = () => {
@@ -1336,7 +1580,7 @@ const normalizeAssistantQuote = (rawQuote) => {
   }
 }
 
-const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
+const normalizeAssistantBlock = (rawBlock, aiPrefs, options = {}) => {
   if (!rawBlock || typeof rawBlock !== 'object') return null
   const blockType = typeof rawBlock.type === 'string' ? rawBlock.type : 'text'
 
@@ -1395,6 +1639,7 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs) => {
   }
 
   if (blockType === 'image_virtual') {
+    if (options.allowImageVirtual === false) return null
     return {
       type: 'image_virtual',
       alt: trimAssistantSingleLine(
@@ -1575,9 +1820,15 @@ const resolvePayloadTextFallback = (payload, fallbackText = '...') =>
 const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '...', options = {}) => {
   const payload = rawMessage && typeof rawMessage === 'object' ? rawMessage : {}
   const replyType = normalizeAssistantReplyType(payload.replyType, aiPrefs)
+  const messagePolicy =
+    options.messagePolicy && typeof options.messagePolicy === 'object'
+      ? options.messagePolicy
+      : {}
 
   let parsedBlocks = Array.isArray(payload.blocks)
-    ? payload.blocks.map((block) => normalizeAssistantBlock(block, aiPrefs)).filter(Boolean)
+    ? payload.blocks
+        .map((block) => normalizeAssistantBlock(block, aiPrefs, messagePolicy))
+        .filter(Boolean)
     : []
 
   if (!aiPrefs.bilingualEnabled) {
@@ -1615,10 +1866,15 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
   const expectedReplyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
   const fallbackText = trimAssistantText(cleanText, MAX_ASSISTANT_TEXT_CHARS, '...')
   const quoteCandidates = Array.isArray(options.quoteCandidates) ? options.quoteCandidates : []
+  const messagePolicy =
+    options.messagePolicy && typeof options.messagePolicy === 'object'
+      ? options.messagePolicy
+      : {}
   const parsedPayload = parseAssistantJsonPayload(cleanText)
   const normalizedFallback = () =>
     normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
       quoteCandidates,
+      messagePolicy,
     })
 
   if (!parsedPayload || typeof parsedPayload !== 'object') {
@@ -1631,6 +1887,7 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
     .map((item) =>
       normalizeAssistantMessagePayload(item, aiPrefs, fallbackText, {
         quoteCandidates,
+        messagePolicy,
       }),
     )
     .filter(Boolean)
@@ -1683,7 +1940,7 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     contextTurns: aiPrefs.contextTurns,
   })
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
-  const imageReferences = await collectImageReferencesFromContextMessages(contextSourceMessages)
+  const imageReferences = await collectImageReferencesForAiCall(contactId, contextSourceMessages)
   const providerCapabilities = getAiProviderCapabilities({
     settings: settings.value,
     imageReferences,
@@ -1716,10 +1973,14 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     imageReferences.length,
     providerCapabilities.kind,
   )
+  const assistantImagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, imageReferences)
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
     replyCount,
     quoteCandidates,
+    messagePolicy: {
+      allowImageVirtual: assistantImagePolicy.allowImageVirtual,
+    },
   })
   const parsedMessages = parsed.messages.slice(0, replyCount)
 
@@ -1765,7 +2026,7 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     contextTurns: aiPrefs.contextTurns,
   })
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
-  const imageReferences = await collectImageReferencesFromContextMessages(contextSourceMessages)
+  const imageReferences = await collectImageReferencesForAiCall(contactId, contextSourceMessages)
   const providerCapabilities = getAiProviderCapabilities({
     settings: settings.value,
     imageReferences,
@@ -1797,15 +2058,22 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     imageReferences.length,
     providerCapabilities.kind,
   )
+  const assistantImagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, imageReferences)
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
     replyCount: 1,
     quoteCandidates,
+    messagePolicy: {
+      allowImageVirtual: assistantImagePolicy.allowImageVirtual,
+    },
   })
   const normalized =
     parsed.messages?.[0] ||
     normalizeAssistantMessagePayload({}, aiPrefs, '...', {
       quoteCandidates,
+      messagePolicy: {
+        allowImageVirtual: assistantImagePolicy.allowImageVirtual,
+      },
     })
   return {
     ...normalized,
@@ -2761,6 +3029,58 @@ const handleUserMediaPicked = async (event) => {
   }
 
   try {
+    const shouldImportToGallery = window.confirm(
+      t(
+        '是否导入素材库后发送？点击“取消”将仅本次发送，不入库。',
+        'Import to asset library before sending? Click "Cancel" to send one-off without importing.',
+      ),
+    )
+
+    if (!shouldImportToGallery) {
+      const fileSize = Number(file.size)
+      if (Number.isFinite(fileSize) && fileSize > MAX_ONE_OFF_MEDIA_INLINE_BYTES) {
+        showUiNotice(
+          'warning',
+          t(
+            '单次发送文件过大，请改为“导入素材库后发送”。',
+            'One-off file is too large. Please use import-then-send mode.',
+          ),
+        )
+        return
+      }
+
+      const inlineDataUrl = await readFileAsDataUrl(file)
+      if (!inlineDataUrl) {
+        showUiNotice('error', t('文件读取失败，请重试。', 'File read failed. Please retry.'))
+        return
+      }
+
+      const fallbackAlt = mediaKind === USER_MEDIA_KIND_GIF ? t('单次 GIF', 'One-off GIF') : t('单次图片', 'One-off image')
+      const safeName = typeof file.name === 'string' && file.name.trim() ? file.name.trim() : fallbackAlt
+      appendUserMessage({
+        content: `${fallbackAlt}: ${safeName}`,
+        blocks: [
+          {
+            type: 'image_virtual',
+            alt: safeName,
+            url: inlineDataUrl,
+            assetId: '',
+            caption: t('一次性发送（未入库）', 'One-off send (not imported)'),
+          },
+        ],
+        source: 'one_off_media',
+      })
+      showUiNotice(
+        'success',
+        t(
+          '已按一次性素材发送（未入库）。如需复用可在相册再导入。',
+          'Sent as one-off media (not imported). Import in Gallery later if you need reuse.',
+        ),
+      )
+      closeUserActionPanel()
+      return
+    }
+
     const result = await galleryStore.importAssetsFromFiles([file], {
       category: mediaKind === USER_MEDIA_KIND_GIF ? 'emoji' : 'reference',
     })
@@ -3040,6 +3360,9 @@ const saveThreadSettings = () => {
     proactiveOpenerEnabled: Boolean(threadSettingsDraft.proactiveOpenerEnabled),
     proactiveOpenerStrategy: normalizeProactiveStrategy(threadSettingsDraft.proactiveOpenerStrategy),
     imageReferenceMode: normalizeImageReferenceMode(threadSettingsDraft.imageReferenceMode),
+    allowImageVirtualWithoutReference: Boolean(
+      threadSettingsDraft.allowImageVirtualWithoutReference,
+    ),
     autoInvokeEnabled: chatAutomationEnabled.value && Boolean(threadSettingsDraft.autoInvokeEnabled),
     autoInvokeIntervalSec: clampAutoInvokeInterval(threadSettingsDraft.autoInvokeIntervalSec),
   })
@@ -3408,6 +3731,10 @@ onBeforeUnmount(() => {
               <option v-for="item in IMAGE_REFERENCE_MODE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </label>
+          <label class="flex items-center justify-between gap-3">
+            <span>{{ t('无参考图时允许图片消息', 'Allow image blocks without references') }}</span>
+            <input v-model="threadSettingsDraft.allowImageVirtualWithoutReference" type="checkbox" class="h-4 w-4" />
+          </label>
           <p class="text-[10px] text-gray-500">
             {{
               t(
@@ -3415,6 +3742,12 @@ onBeforeUnmount(() => {
                 'Auto mode prefers native image input when supported and falls back to context cues on unsupported responses.',
               )
             }}
+          </p>
+          <p
+            class="text-[10px]"
+            :class="roleImageReferenceAvailability.hasAny ? 'text-gray-500' : threadSettingsDraft.allowImageVirtualWithoutReference ? 'text-orange-500' : 'text-emerald-600'"
+          >
+            {{ threadImageBlockPolicyHint }}
           </p>
           <p class="text-[10px] text-gray-400">
             {{
@@ -3880,6 +4213,11 @@ onBeforeUnmount(() => {
                       `会话优先素材已启用（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
                       `Thread preferred asset is enabled (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
                     )
+                  : activeRoleAssetContext.profileFolderAssetIds.length > 0
+                    ? t(
+                        `当前会话正在读取角色档案素材包与文件夹绑定（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
+                        `This chat is using profile pack + folder bindings (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
+                      )
                   : t(
                       `当前会话正在读取角色档案素材包（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
                       `This chat is using profile-bound asset pack (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
@@ -3920,6 +4258,12 @@ onBeforeUnmount(() => {
                   class="mt-0.5 text-[10px] text-blue-600"
                 >
                   {{ t('会话优先', 'Thread preferred') }}
+                </p>
+                <p
+                  v-else-if="activeRoleAssetContext.profileFolderAssetIds.includes(asset.id)"
+                  class="mt-0.5 text-[10px] text-amber-600"
+                >
+                  {{ t('文件夹绑定', 'Folder bound') }}
                 </p>
                 <p
                   v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"

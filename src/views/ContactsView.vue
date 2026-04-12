@@ -31,6 +31,12 @@ const createEmptyAssetPack = () => ({
 })
 
 const createEmptyAssetFolderBindings = () => ({
+  profileImage: {
+    folderId: '',
+  },
+  dynamicMedia: {
+    folderId: '',
+  },
   emojiPack: {
     folderId: '',
   },
@@ -47,6 +53,18 @@ const cloneAssetPack = (assetPack = {}) => ({
 })
 
 const cloneAssetFolderBindings = (bindings = {}) => ({
+  profileImage: {
+    folderId:
+      typeof bindings?.profileImage?.folderId === 'string'
+        ? bindings.profileImage.folderId.trim()
+        : '',
+  },
+  dynamicMedia: {
+    folderId:
+      typeof bindings?.dynamicMedia?.folderId === 'string'
+        ? bindings.dynamicMedia.folderId.trim()
+        : '',
+  },
   emojiPack: {
     folderId:
       typeof bindings?.emojiPack?.folderId === 'string'
@@ -110,6 +128,12 @@ const availableAssets = computed(() =>
 )
 
 const hasAnyGalleryAsset = computed(() => galleryStore.assets.length > 0)
+const profileImageFolderOptions = computed(() =>
+  galleryStore.listFolders({ category: 'all' }).slice(0, 120),
+)
+const dynamicMediaFolderOptions = computed(() =>
+  galleryStore.listFolders({ category: 'scenario' }).slice(0, 120),
+)
 const emojiFolderOptions = computed(() =>
   galleryStore.listFolders({ category: 'emoji' }).slice(0, 120),
 )
@@ -473,6 +497,80 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('形象照文件夹绑定（全局档案）', 'Profile Image Folder Binding (Global Profile)') }}
+            </p>
+            <span class="text-[10px] text-gray-500">
+              {{
+                profileDraft.assetFolderBindings.profileImage.folderId
+                  ? t('已绑定', 'Bound')
+                  : t('未绑定', 'Unbound')
+              }}
+            </span>
+          </div>
+
+          <select
+            v-model="profileDraft.assetFolderBindings.profileImage.folderId"
+            class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] bg-white outline-none"
+          >
+            <option value="">{{ t('不绑定文件夹（默认）', 'No folder binding (default)') }}</option>
+            <option
+              v-for="folder in profileImageFolderOptions"
+              :key="`profile-image-folder-${folder.id}`"
+              :value="folder.id"
+            >
+              {{ folder.name }}
+            </option>
+          </select>
+
+          <p class="text-[11px] text-gray-500">
+            {{
+              profileImageFolderOptions.length > 0
+                ? t('用于角色形象照/自拍图的优先素材来源（按档案全局生效）。', 'Used as preferred source for role profile photos/selfies (global profile scope).')
+                : t('暂无可用文件夹。可先在相册创建后再绑定。', 'No folders available yet. Create one in Gallery first.')
+            }}
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('动态图文件夹绑定（全局档案）', 'Dynamic Media Folder Binding (Global Profile)') }}
+            </p>
+            <span class="text-[10px] text-gray-500">
+              {{
+                profileDraft.assetFolderBindings.dynamicMedia.folderId
+                  ? t('已绑定', 'Bound')
+                  : t('未绑定', 'Unbound')
+              }}
+            </span>
+          </div>
+
+          <select
+            v-model="profileDraft.assetFolderBindings.dynamicMedia.folderId"
+            class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] bg-white outline-none"
+          >
+            <option value="">{{ t('不绑定文件夹（默认）', 'No folder binding (default)') }}</option>
+            <option
+              v-for="folder in dynamicMediaFolderOptions"
+              :key="`dynamic-folder-${folder.id}`"
+              :value="folder.id"
+            >
+              {{ folder.name }}
+            </option>
+          </select>
+
+          <p class="text-[11px] text-gray-500">
+            {{
+              dynamicMediaFolderOptions.length > 0
+                ? t('用于角色动态图/动态内容的优先素材来源（按档案全局生效）。', 'Used as preferred source for role dynamic media/posts (global profile scope).')
+                : t('暂无“场景图”文件夹。可先在相册创建后再绑定。', 'No scenario folders yet. Create one in Gallery first.')
+            }}
+          </p>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">

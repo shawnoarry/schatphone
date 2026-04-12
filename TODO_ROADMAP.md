@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-10
+Updated / 更新时间: 2026-04-12
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -277,20 +277,20 @@ Status / 状态: `IN_PROGRESS`
 
 1. EN: Data schema task — `DONE`: custom folders + role slot-binding records are landed (V1 = single folder per slot, reserved priority fields + backward-compatible migration + tests).
    中文：数据结构任务——`DONE`：已落地自定义文件夹与角色槽位绑定记录（V1=单文件夹绑定，并预留优先级字段 + 向后兼容迁移 + 测试）。
-2. EN: Gallery UI task — provide folder CRUD and folder picker entries for role-facing slots (profile image source, dynamic pack, emoji pack, etc.).
-   中文：相册 UI 任务——提供文件夹增删改，并为角色相关槽位提供文件夹选择入口（形象照来源、动态图包、表情包等）。
+2. EN: Gallery + Chat consumption task — `DONE`: Gallery folder CRUD is landed; Contacts exposes profile-image/dynamic-media/emoji/reference slot pickers; Chat now consumes folder-bound assets in thread preferred list, gallery send ranking, and AI image-reference collection fallback.
+   中文：相册 + Chat 消费任务——`DONE`：Gallery 文件夹增删改已落地；通讯录已提供形象照/动态图/表情包/参考图槽位选择；Chat 已接入文件夹绑定素材用于会话优先素材列表、发送素材排序与 AI 参考图回退采样。
 3. EN: Safety task — enforce second confirmation for bound asset/folder delete and replace; keep force-delete path.
    中文：安全任务——被绑定素材/文件夹删除与替换均需二次确认，保留强制删除路径。
-4. EN: Fallback task — module-level default policies:
-   中文：回退任务——模块级默认策略：
+4. EN: Fallback task — `IN_PROGRESS` module-level default policies:
+   中文：回退任务——`IN_PROGRESS` 模块级默认策略：
    - EN: role lanes fallback to text-first/no-pack/no-pad-image baseline (optional AI image-generation switch).
-     中文：角色链路回退到文字优先/无包/无垫图基线（可选 AI 生图开关）。
+      中文：角色链路回退到文字优先/无包/无垫图基线（可选 AI 生图开关）。
    - EN: appearance fallback to built-in wallpaper.
-     中文：美化链路回退到内置壁纸。
+      中文：美化链路回退到内置壁纸。
    - EN: map fallback (future) to icon/default image with first-use optional AI generate prompt.
-     中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
-5. EN: Module-local upload task — allow one-off upload or one-off AI generation for independent modules (e.g., shopping/takeout) and ask whether to import to gallery.
-   中文：模块本地上传任务——独立模块（如购物/外卖）支持单次上传或单次 AI 生成，并询问是否入库到相册。
+      中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
+5. EN: Module-local upload task — `IN_PROGRESS`: Chat now supports one-off media send without gallery import (with size guard) plus import-before-send path; other modules (shopping/takeout/etc.) remain pending.
+   中文：模块本地上传任务——`IN_PROGRESS`：Chat 已支持“单次发送不入库”（带体积守卫）与“先入库再发送”双路径；购物/外卖等模块待接入。
 6. EN: Performance policy task — define media-type size limits and rejection/degrade copy for image/animation/video paths.
    中文：性能策略任务——定义图片/动图/视频的体积上限与拒绝/降级提示文案。
 
@@ -357,6 +357,8 @@ Acceptance / 验收标准:
     中文：新增本地文件参考图转换：相册文件素材在大小守卫下可转为 data URL 参与 AI 调用，超限自动降级为文字线索。
 18. EN: Added assistant image-reference telemetry in message metadata (`mode/count/fallback/provider`) and surfaced compact thread hints.
     中文：新增助手参考图调用遥测元信息（`模式/数量/回退/供应商`），并在会话中展示精简提示。
+19. EN: Started asset hub V2 UI rollout: Gallery now has folder CRUD + per-asset add-to-folder quick action; Contacts now exposes folder-slot binding pickers for profile-image/dynamic-media/emoji/reference.
+    中文：已启动素材中台 V2 UI 落地：Gallery 现支持文件夹增删改与素材快速归档；通讯录已提供形象照/动态图/表情包/参考图槽位绑定选择。
 
 ---
 
@@ -399,3 +401,11 @@ Acceptance / 验收标准:
     2026-04-10 中文：新增素材中台 V2 执行清单与验收标准，用于 AI 程序员接手执行。
 19. 2026-04-10 EN: Landed asset hub V2 data layer baseline: custom folder model in gallery + role slot-folder bindings in chat/contract with backward-compatible tests.
     2026-04-10 中文：已落地素材中台 V2 数据层基线：相册自定义文件夹模型 + chat/contract 角色槽位文件夹绑定（含向后兼容测试）。
+20. 2026-04-12 EN: Landed asset hub V2 UI phase-1: Contacts folder-slot pickers (profile-image/dynamic-media/emoji/reference) and Gallery folder CRUD + quick add/remove asset actions.
+    2026-04-12 中文：已落地素材中台 V2 UI 第一阶段：通讯录槽位文件夹选择（形象照/动态图/表情包/参考图）与 Gallery 文件夹增删改 + 素材快速归档/移除。
+21. 2026-04-12 EN: Landed asset hub V2 consumption phase-1 in Chat: folder-bound assets are now consumed by thread preferred options, gallery picker ranking badges, and role-bound AI image-reference fallback.
+    2026-04-12 中文：已落地素材中台 V2 在 Chat 侧的第一阶段消费：文件夹绑定素材已用于会话优先素材候选、素材发送面板排序标识，以及角色绑定参考图回退链路。
+22. 2026-04-12 EN: Landed role-lane fallback control in Chat thread settings: when no references are available, image blocks now default to text-first fallback, with an optional per-thread override to allow AI-generated image blocks.
+    2026-04-12 中文：已落地 Chat 会话级角色回退控制：当无参考图时默认回退为文字优先（不输出图片消息），并提供每会话可选开关以允许 AI 图片消息生成。
+23. 2026-04-12 EN: Landed module-local one-off media path in Chat: users can now choose import-before-send or one-off send without gallery import (with inline-size guard).
+    2026-04-12 中文：已落地 Chat 模块本地单次媒体链路：用户可选择“先入库后发送”或“单次发送不入库”（含内联体积守卫）。

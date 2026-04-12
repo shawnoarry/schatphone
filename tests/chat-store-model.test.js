@@ -64,6 +64,7 @@ describe('chat store model', () => {
     expect(defaultPrefs.proactiveOpenerEnabled).toBe(false)
     expect(defaultPrefs.proactiveOpenerStrategy).toBe('on_enter_once')
     expect(defaultPrefs.imageReferenceMode).toBe('auto')
+    expect(defaultPrefs.allowImageVirtualWithoutReference).toBe(false)
 
     defaultPrefs.replyCount = 99
     expect(store.getDefaultConversationAiPrefs().replyCount).toBe(1)
@@ -78,6 +79,7 @@ describe('chat store model', () => {
     expect(defaults.proactiveOpenerEnabled).toBe(false)
     expect(defaults.proactiveOpenerStrategy).toBe('on_enter_once')
     expect(defaults.imageReferenceMode).toBe('auto')
+    expect(defaults.allowImageVirtualWithoutReference).toBe(false)
 
     store.setConversationAiPrefs(contactId, {
       suggestedRepliesEnabled: true,
@@ -93,6 +95,7 @@ describe('chat store model', () => {
       proactiveOpenerEnabled: true,
       proactiveOpenerStrategy: 'on_every_enter_if_empty',
       imageReferenceMode: 'native_url',
+      allowImageVirtualWithoutReference: true,
     })
 
     const prefs = store.getConversationAiPrefs(contactId)
@@ -109,6 +112,7 @@ describe('chat store model', () => {
     expect(prefs.proactiveOpenerEnabled).toBe(true)
     expect(prefs.proactiveOpenerStrategy).toBe('on_every_enter_if_empty')
     expect(prefs.imageReferenceMode).toBe('native_url')
+    expect(prefs.allowImageVirtualWithoutReference).toBe(true)
   })
 
   test('supports autonomous invoke prefs clamp and auto state scheduling', () => {
