@@ -1,6 +1,6 @@
 ﻿# SchatPhone 同步快照
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-12
 
 Document position / 文档定位（2026-04-06）: snapshot reference.  
 本文件用于快照复核；主说明与动态待办请以 PROJECT_MASTER_GUIDE.md 与 TODO_ROADMAP.md 为准。
@@ -16,8 +16,8 @@ Detailed changes must be updated in source docs first, then reflected here.
 
 ## One-Line Summary / 当前版本一句话
 
-SchatPhone has stable lock/home/chat/settings core flows; scheduler + restore-time settlement + system-owned truth + storage-layering prep are integrated, and current focus is chat semantic revision, chat-list dock, and gallery-centered asset reuse.  
-SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；调度器、恢复补算、系统真值与分层存储准备均已接入，当前重点转向 Chat 语义修订、聊天一级页底部功能位与相册素材中心复用。
+SchatPhone has stable lock/home/chat/settings core flows; current focus is asset-hub closure plus world-kernel and map-baseline refactor (`global worldview + bindable knowledge points`, `simulation-first map`).  
+SchatPhone 已稳定锁屏/Home/Chat/Settings 主链路；当前重点为素材中台收口与世界内核、地图基线重构（`全局世界观 + 可绑定知识点`、`地图模拟优先`）。
 
 ## Stack Snapshot / 技术栈快照
 
@@ -132,10 +132,10 @@ Settings 备份恢复（JSON）已支持失败回滚，并兼容旧版/新版聊
 
 ## Recommended Next Sequence / 推荐下一阶段顺序
 
-1. `P0-1`: AI single-message semantic revision (edit assistant message without full reroll; revised text becomes default context). / `P0-1`：AI 单条语义修订（可编辑助手消息且不需整轮重roll；修订文本作为默认上下文）。
-2. `P0-2`: Chat top-level bottom dock (at least 3 stable bottom actions with real placeholder routes). / `P0-2`：Chat 一级页底部 Dock（至少 3 个稳定按钮并接入真实占位路由）。
-3. Continue `P0-C2` / PM `P0-4`: rich-message lane hardening in `+` panel while keeping `Trigger Reply` as separate AI invoke lane. / 持续推进 `P0-C2` / 产品经理优先级 `P0-4`：加固 `+` 面板富消息链路，并保持 `Trigger Reply` 独立调用通道。
-4. `P0-5` + `P0-6`: Gallery global asset center and role-bound reuse across chat/appearance/scenarios. / `P0-5` + `P0-6`：相册全局素材中心与角色绑定复用（覆盖 chat/外观/场景）。
-5. `P0-7`: storage and backup hardening for asset binaries (IndexedDB-first and export strategy). / `P0-7`：素材二进制存储与备份加固（IndexedDB 主路径与导出策略）。
+1. Close `P1-2` remaining safety/fallback details for global asset hub V2. / 收口 `P1-2` 素材中台 V2 的安全与回退细节。
+2. Start world-kernel split: single worldbook text -> `global worldview + bindable knowledge points`. / 启动世界内核拆分：单世界书文本 -> `全局世界观 + 可绑定知识点`。
+3. Add role-level knowledge-point binding in contacts and wire deterministic chat prompt assembly order. / 在通讯录落地角色级知识点绑定，并接入固定顺序的 Chat 提示词组装。
+4. Refactor map baseline to simulation-first core (location/travel/time by system logic). / 重构地图基线为模拟优先核心（地点/行程/时间由系统逻辑计算）。
+5. Keep map AI as optional enhancement only (visual/event flavor), with deterministic fallback when disabled or unavailable. / 地图 AI 保持可选增强（视觉/事件文案），关闭或不可用时走确定性回退。
 
 

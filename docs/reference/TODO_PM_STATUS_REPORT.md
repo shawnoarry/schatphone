@@ -1,5 +1,5 @@
 # SchatPhone TODO PM Status Report / SchatPhone 待办状态（产品经理视角）
-Updated / 更新时间: 2026-04-10
+Updated / 更新时间: 2026-04-12
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 这份报告的用途
@@ -68,6 +68,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：助手消息元信息现可记录参考图执行结果（`模式/数量/回退/供应商`），并在会话内展示精简提示。
 21. EN: PM has now locked global asset hub requirements for next phase (custom folders, slot binding, delete/replace confirmation, module fallback defaults, one-off upload optional import).
     中文：产品侧已冻结下一阶段素材中台需求（自定义文件夹、槽位绑定、删除/替换确认、模块默认回退、单次上传可选入库）。
+22. EN: PM confirmed world-map adjustment direction: split world kernel into global worldview + bindable knowledge points, and keep map simulation-first with optional AI enhancement.
+    中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图保持模拟优先并将 AI 作为可选增强。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-1` AI Image-Reference Pipeline / `P1-1` AI 参考图链路
@@ -93,6 +95,8 @@ What will be delivered / 本步交付什么:
    中文：参考图执行结果会写入助手元信息，并在会话中以轻量提示展示。
 7. EN: Next delivery block is asset hub V2 execution: custom folder model + slot binding + fallback defaults + safe delete/replace + optional gallery import prompt for one-off uploads.
    中文：下一交付块为素材中台 V2 执行：自定义文件夹模型 + 槽位绑定 + 默认回退 + 安全删除/替换 + 单次上传可选入库弹窗。
+8. EN: Follow-up block after asset hub closure: world-kernel split + map baseline refactor (no mandatory map API in baseline loop).
+   中文：素材中台收口后的后续任务：世界内核拆分 + 地图基线重构（基础循环不强依赖地图 API）。
 
 How you can review it / 你可以怎么验收:
 1. EN: Verify replies still work with and without image references in manual trigger/reroll paths.
@@ -111,6 +115,8 @@ How you can review it / 你可以怎么验收:
    中文：确认参考图模式开关的默认推荐文案（当前推荐 `auto`）。
 2. EN: Confirm rollout order between `P1-2` asset hub execution and scenario-card expansion (`P1-3`).
    中文：确认 `P1-2` 素材中台执行与 `P1-3` 场景卡片扩展的上线顺序。
+3. EN: Naming-only decision (non-blocking): whether to keep "Worldbook" wording or rename to a more immersive label while preserving user clarity.
+   中文：命名层决策（非阻塞）：是否保留“世界书”文案，或改为更沉浸但仍易懂的名称。
 
 ## 8. Risk watch (PM version) / 风险提醒（产品经理版）
 1. EN: If TODO docs are not updated per commit, team alignment will drift quickly.
@@ -159,3 +165,5 @@ How you can review it / 你可以怎么验收:
     2026-04-10 中文：新增参考图执行结果的助手元信息与会话提示展示。
 16. 2026-04-10 EN: Locked global asset hub V2 PM requirements and added handoff-ready execution checklist in roadmap.
     2026-04-10 中文：冻结全局素材中台 V2 产品需求，并在 roadmap 增加可交接执行清单。
+17. 2026-04-12 EN: Added world-map confirmed direction (world kernel split + simulation-first map baseline) to PM execution narrative.
+    2026-04-12 中文：已将世界观-地图确认方向（世界内核拆分 + 地图模拟优先基线）同步到产品执行叙述。

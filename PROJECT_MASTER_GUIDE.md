@@ -1,6 +1,6 @@
 ﻿# SchatPhone Project Master Guide / SchatPhone 项目总说明
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-12
 
 ## 1. Why This File Exists / 这份文档的用途
 
@@ -56,6 +56,10 @@ Chat 手动触发链路，`Trigger Reply` 按钮常驻。
 锁定状态下 AI 回复通知回流到锁屏。
 5. Backup/restore + storage diagnostics baseline.  
 备份恢复与存储诊断基线。
+6. Worldbook entry is online and injected into chat prompt as current global lore baseline.  
+世界书入口已上线，并作为当前全局设定基线注入 Chat 提示词。
+7. Map module is currently local simulation baseline (address book + travel estimate), without mandatory external map API dependency.  
+地图模块当前为本地模拟基线（地址簿 + 行程估算），不依赖外部地图 API 才能运行。
 
 Current active priorities are tracked in `TODO_ROADMAP.md`.  
 当前进行中优先级见 `TODO_ROADMAP.md`。
@@ -98,8 +102,10 @@ Key files / 关键文件:
 `src/stores/system.js`：设置、锁定状态、通知、自主调用策略、系统真值、持久化与诊断钩子。
 2. `src/stores/chat.js`: contacts/profiles/conversations/messages, chat preferences, avatar override hierarchy, message semantics.  
 `src/stores/chat.js`：联系人/角色档案/会话/消息、会话偏好、头像层级覆写、消息语义能力。
-3. `src/stores/map.js`: map-module state baseline.  
-`src/stores/map.js`：地图模块状态基线。
+3. `src/stores/map.js`: map-module local simulation state baseline.  
+`src/stores/map.js`：地图模块本地模拟状态基线。
+4. `src/stores/system.js` `user.worldBook`: current global lore text source (planned split in P1: global worldview + bindable knowledge points).  
+`src/stores/system.js` 的 `user.worldBook`：当前全局设定文本来源（P1 计划拆分为全局世界观 + 可绑定知识点）。
 
 ### 6.3 Service/Utility Layer / 服务与工具层
 
@@ -145,6 +151,8 @@ Profile/WorldBook/通用/通知/AI 自动响应结构。
 备份导出/导入，失败可回滚。
 3. Storage consistency diagnostics and repair entry.  
 存储一致性诊断与修复入口。
+4. WorldBook is currently the global lore setting entry; naming can be adjusted later for immersion, but semantic role should remain clear for users.
+世界书当前是全局设定入口；名称后续可做沉浸化调整，但语义角色必须保持用户可理解。
 
 ### 7.4 Network / 网络配置
 
@@ -177,6 +185,24 @@ Profile/WorldBook/通用/通知/AI 自动响应结构。
 3. Unbind in chat directory does not delete global profile.  
 会话通讯录中的解绑不会删除全局档案。
 
+### 7.7 World Kernel and Map (Current + Next) / 世界内核与地图（当前 + 下一步）
+
+Current / 当前：
+1. World context uses single-text `worldBook` as global baseline injected into chat prompts.  
+世界上下文当前使用单文本 `worldBook`，并注入聊天提示词。
+2. Map runs as local simulation (address management + travel estimate), independent of external map-provider availability.  
+地图当前为本地模拟（地址管理 + 行程估算），不依赖外部地图服务可用性。
+
+Next confirmed direction / 已确认下一方向：
+1. Split world kernel into:
+   - global worldview (always-on global context)
+   - bindable knowledge points (role/module scoped targeted patches)
+   将世界内核拆分为：
+   - 全局世界观（全局常驻上下文）
+   - 可绑定知识点（按角色/模块生效的定向补丁）
+2. Keep map baseline in simulation-first mode; AI usage in map should be optional enhancement for visuals/events, not mandatory for core progress.
+   地图基线保持模拟优先；地图内 AI 调用仅作视觉/事件增强，不作为核心进度必需依赖。
+
 ---
 
 ## 8. Data and Storage Model / 数据与存储模型
@@ -190,6 +216,12 @@ Profile/WorldBook/通用/通知/AI 自动响应结构。
 
 Message includes status + blocks + quote + `semanticRevision` support.  
 消息结构包含状态、块、引用和 `semanticRevision` 语义修订支持。
+
+World kernel note / 世界内核说明：
+1. Current persisted shape: `user.worldBook` (single text).  
+当前持久化形态：`user.worldBook`（单文本）。
+2. Planned shape (P1): `globalWorldview` + `knowledgePoints[]` + role/module bindings.
+规划形态（P1）：`globalWorldview` + `knowledgePoints[]` + 角色/模块绑定关系。
 
 ### 8.2 Persistence Strategy / 持久化策略
 
@@ -212,6 +244,10 @@ Message includes status + blocks + quote + `semanticRevision` support.
 发生重叠风险时，手动触发优先。
 4. System language does not rewrite AI-generated content.  
 系统语言不会改写 AI 生成内容。
+5. Prompt assembly must preserve worldview layering: global worldview always-on, role-bound knowledge points selectively injected.
+提示词组装必须保持世界观分层：全局世界观始终注入，角色绑定知识点按需注入。
+6. Map core progression (location/travel/time) should remain system-computed even when map AI enhancements are enabled.
+即使开启地图 AI 增强，地图核心进度（地点/移动/时间）也必须由系统计算。
 
 ---
 
@@ -256,4 +292,6 @@ Secondary/reference docs (history/detail):
 
 1. 2026-04-06: created as consolidated master guide from previously split status/architecture/progress docs.  
 2026-04-06：由原先分散的状态/架构/进度文档整合生成本主说明。
+2. 2026-04-12: synced confirmed world-map direction (world kernel split plan + map simulation-first baseline) and clarified current-vs-target data model.
+2026-04-12：同步世界观-地图已确认方向（世界内核拆分计划 + 地图模拟优先基线），并明确当前与目标数据模型差异。
 

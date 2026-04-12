@@ -1,6 +1,6 @@
 ﻿# SchatPhone 架构说明
 
-Updated / 更新时间: 2026-04-10
+Updated / 更新时间: 2026-04-12
 
 ## 1. Architecture Goals / 架构目标
 
@@ -58,6 +58,7 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
   - `truthState`: system-owned truth entities/events for relationship continuity / 系统真值实体与事件时间线（关系连续性）
   - `isLocked`: lock state flag / 锁定状态标记
   - `user`: profile, worldbook, chat status / 用户资料、世界书、聊天状态
+  - world-kernel planning note: current `user.worldBook` is single-text; target shape is `globalWorldview + knowledgePoints[] + bindings` / 世界内核规划说明：当前 `user.worldBook` 为单文本；目标形态是 `globalWorldview + knowledgePoints[] + 绑定关系`
 - `src/stores/chat.js`
   - global role profiles: `roleProfiles`
   - chat contact kind: `role/group/service/official`
@@ -65,6 +66,8 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
   - conversations: `conversations`
   - messages: `messagesByConversation`
 - `src/stores/map.js`
+  - current baseline: local simulation (addresses + travel estimate) / 当前基线：本地模拟（地址簿 + 行程估算）
+  - principle: core map progression must not depend on mandatory external map API / 原则：地图核心进度不可强依赖外部地图 API
 
 ### 3.3 Service and Utility Layer / 服务与工具层
 
@@ -182,12 +185,16 @@ Core routes / 核心路由：
   运行态会在关键动作写入真值事件（`user_message`、`manual_trigger`、`auto_trigger`、`assistant_reply`、`reroll`、`notify_only_skip`、`resume_settlement`）。
 - Prompt assembly reads a truth snapshot (`getChatTruthSnapshot`) to keep relationship continuity across providers.  
   提示词组装会读取真值快照（`getChatTruthSnapshot`），保证跨供应商关系连续性。
+- Prompt assembly currently injects worldbook text and should evolve to layered world-kernel assembly: `global worldview -> role-bound knowledge points -> conversation context`.  
+  提示词组装当前会注入世界书文本，后续应演进为分层世界内核组装：`全局世界观 -> 角色绑定知识点 -> 会话上下文`。
 - Chat context can attach recent user image references in the same AI request (OpenAI-compatible path attempts native URL transport, unsupported cases fall back to context-only cues).  
   Chat 上下文可在同一轮 AI 请求中附带近期用户参考图（OpenAI 兼容路径先尝试原生 URL，遇到不支持会自动回退为仅上下文线索）。
 - Local gallery file assets can be converted to data URLs under size guard and joined into the same request; overflow cases are downgraded to text-only cues.  
   本地相册文件素材可在大小守卫下转为 data URL 并进入同轮请求；超限会降级为仅文字线索。
 - Chat thread UI reads `aiMeta` image-reference fields to show compact non-blocking hints (`image refs on` / `image fallback`).  
   Chat 会话 UI 会读取 `aiMeta` 的参考图字段，展示精简非阻塞提示（如“参考图已启用/参考图回退”）。
+- Map AI usage (future) should follow the same guardrail style: optional enhancement only, with deterministic fallback when AI is disabled/unavailable.  
+  地图 AI 使用（后续）应遵循同类守卫：仅可选增强，且在 AI 关闭/不可用时有确定性回退。
 - Structured assistant payload normalization now enforces safe route/url fields and context-safe quote resolution.  
   结构化助手消息归一化已强制 route/url 安全校验，并通过上下文候选做引用安全解析。
 - Assistant parser now tolerates fenced/embedded JSON outputs and downgrades safely when parsing fails.  

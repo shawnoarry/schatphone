@@ -39,6 +39,24 @@ Updated / 更新时间: 2026-04-12
 3. EN: Data schema must reserve future priority fields even if UI remains single-folder in V1.
    中文：即使 V1 UI 保持单文件夹绑定，数据结构也要预留优先级字段。
 
+## 2.3 Worldview and Map Direction (PM Confirmed) / 世界观与地图方向（产品确认）
+1. EN: Current baseline is a single worldbook text, but next iteration must split it into:
+   中文：当前基线是单段世界书文本，下一轮必须拆分为：
+   - EN: global worldview (always-on global context).
+     中文：全局世界观（全局常驻上下文）。
+   - EN: knowledge points (targeted patches bindable per role/module).
+     中文：知识点（可按角色/模块绑定的定向补丁）。
+2. EN: Knowledge points are role-bindable assets and should be managed like reusable data, not hard-coded per chat turn.
+   中文：知识点属于可绑定复用的数据资产，不应在每轮对话里手工硬编码。
+3. EN: Map module baseline should be simulation-first and low-API:
+   中文：地图模块基线应采用模拟优先、低 API 依赖：
+   - EN: travel/time/progression must run from system logic.
+     中文：移动/时间/进度必须由系统逻辑计算。
+   - EN: AI generation in map is optional enhancement (visual/event flavor), not mandatory for baseline gameplay.
+     中文：地图中的 AI 生成仅为可选增强（视觉/事件文案），不是基础玩法必需。
+4. EN: Architecture should reserve future real-map integration mode, but first release must not depend on external map provider availability.
+   中文：架构可预留现实地图接入模式，但首发不可依赖外部地图服务可用性。
+
 ## 3) Tech Stack (PM-readable) / 技术栈（PM可读版）
 1. EN: UI Framework: Vue 3.
    中文：界面框架：Vue 3。
@@ -119,6 +137,8 @@ Updated / 更新时间: 2026-04-12
    中文：系统 UI 语言支持 `zh-CN/en-US/ko-KR`。
 5. EN: Backup reminder supports system-style notifications (non-blocking).
    中文：备份提醒支持系统式通知（非弹窗打断）。
+6. EN: Worldbook entry is already online in Settings and acts as current global context source.
+   中文：设置内已提供世界书入口，当前作为全局上下文来源。
 
 ## 5) Priority Refinement (P0) / 需细化优先级（P0）
 ### P0-4 Rich Message Lane Polish / 富消息链路打磨
@@ -188,6 +208,17 @@ Status / 状态: `IN_PROGRESS`
 7. EN: Define size limit policy by media type for runtime smoothness (images/animations/video).
    中文：按媒体类型定义体积上限策略（图片/动图/视频）以保障运行流畅性。
 
+### P1-3 World Kernel + Map Baseline Refactor / P1-3 世界内核 + 地图基线重构
+Status / 状态: `TODO`
+1. EN: Split worldbook into global worldview + bindable knowledge points, and wire deterministic prompt assembly order.
+   中文：将世界书拆分为“全局世界观 + 可绑定知识点”，并落地固定顺序的提示词组装。
+2. EN: Add role-level knowledge-point binding in contacts, with safe unbind (unbind does not delete source records).
+   中文：在通讯录中新增角色级知识点绑定，并保证安全解绑（解绑不删除源记录）。
+3. EN: Keep map baseline runnable without mandatory external API, and use AI only as optional enhancement lane.
+   中文：保证地图基线在不依赖外部 API 的情况下可运行，AI 仅作为可选增强通道。
+4. EN: Keep module fallback defaults so missing visuals or disabled AI never blocks map interaction.
+   中文：保持模块默认回退，确保缺少视觉素材或关闭 AI 时不阻塞地图交互。
+
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
 1. EN: Single assistant-message semantic revision path is online.
@@ -220,8 +251,10 @@ Status / 状态: `DONE`
    中文：P0 当前无阻塞决策，保持默认（`直白文案` + `元数据优先导出`）。
 2. EN: Asset-hub requirement is now locked by PM (custom folders, cross-module reuse, fallback defaults, one-off upload optional import).
    中文：素材中台需求已由产品侧冻结（自定义文件夹、跨模块复用、默认回退、单次上传可选入库）。
-3. EN: Remaining PM decision: choose rollout order between `P1-2` asset hub execution and `P1-3` scenario-card expansion.
-   中文：剩余待决策：`P1-2` 素材中台执行与 `P1-3` 场景卡片扩展的上线顺序。
+3. EN: Remaining PM decision: choose rollout order between `P1-2` asset hub closure and `P1-3` world-kernel/map baseline refactor.
+   中文：剩余待决策：`P1-2` 素材中台收口与 `P1-3` 世界内核/地图基线重构的上线顺序。
+4. EN: Future naming decision (non-blocking): whether to rename "WorldBook" in UI to a more immersive but understandable label.
+   中文：后续命名决策（非阻塞）：是否将 UI 中的“世界书”改为更沉浸且易懂的名称。
 
 ## 7) Quick Read Path / 快速阅读路径
 1. EN: Product overview and architecture: `PROJECT_MASTER_GUIDE.md`.
@@ -262,3 +295,5 @@ Status / 状态: `DONE`
     2026-04-12 中文：已落地 Chat 会话级角色回退控制：无参考图时默认文字优先（禁用图片消息），并提供每会话可选开关允许 AI 图片消息生成。
 15. 2026-04-12 EN: Landed Chat one-off media upload lane: when sending local media, user can choose import-before-send or one-off send without importing to gallery.
     2026-04-12 中文：已落地 Chat 单次媒体上传链路：发送本地媒体时，用户可选择“先入库后发送”或“不入库单次发送”。
+16. 2026-04-12 EN: PM confirmed world-map direction: split world kernel into global worldview + bindable knowledge points, and keep map simulation-first with optional AI enhancement.
+    2026-04-12 中文：产品侧确认世界观-地图方向：世界内核拆分为全局世界观 + 可绑定知识点，地图采用模拟优先并将 AI 作为可选增强。

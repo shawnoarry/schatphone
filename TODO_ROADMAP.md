@@ -271,6 +271,10 @@ Current / 当前:
    中文：场景卡片与互动小剧场扩展。
 4. EN: Cross-module role/asset identity reuse.
    中文：跨模块角色/素材身份复用。
+5. EN: World-kernel split (`global worldview` + `bindable knowledge points`) with chat prompt assembly wiring.
+   中文：世界内核拆分（`全局世界观` + `可绑定知识点`）与 Chat 提示词组装接线。
+6. EN: Map foundation v2 (`simulation-first, low-API`) with optional AI visuals/events as add-ons.
+   中文：地图基础 v2（`模拟优先、低 API 依赖`），AI 视觉/事件仅作为可选增强层。
 
 ### 6.1 Asset Hub V2 Execution Checklist / 素材中台 V2 执行清单
 Status / 状态: `IN_PROGRESS`
@@ -306,6 +310,46 @@ Acceptance / 验收标准:
 
 ---
 
+### 6.2 World Kernel + Map Alignment Checklist / 世界内核 + 地图对齐清单
+Status / 状态: `TODO`
+
+1. EN: Data-schema task: split current single `worldBook` text into two layers:
+   中文：数据结构任务：将当前单一 `worldBook` 文本拆分为两层：
+   - EN: `globalWorldview` (mandatory global baseline).
+      中文：`globalWorldview`（全局必备基线）。
+   - EN: `knowledgePoints[]` (targeted patches, bindable by role/module).
+      中文：`knowledgePoints[]`（定向补丁，可按角色/模块绑定）。
+2. EN: Binding task: contacts must support role-level knowledge-point binding (single/multi-select), and unbinding must not delete source knowledge points.
+   中文：绑定任务：通讯录需支持角色级知识点绑定（单选/多选），解绑不删除知识点源数据。
+3. EN: Prompt-assembly task: chat call context order must be deterministic:
+   中文：提示词组装任务：Chat 调用上下文顺序必须固定：
+   - EN: global worldview -> role profile -> bound knowledge points -> conversation context/memory.
+      中文：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文/记忆。
+4. EN: Map baseline task: map core loop must be runnable without mandatory external map API.
+   中文：地图基线任务：地图核心循环必须在不依赖外部地图 API 的情况下可运行。
+5. EN: Map-mode task: keep two routes in architecture plan (not both required in first release):
+   中文：地图模式任务：架构上保留两条路线（首发不要求同时实现）：
+   - EN: fictional simulation mode (default, no-API first).
+      中文：架空模拟模式（默认，无 API 优先）。
+   - EN: real-map integration mode (optional future extension).
+      中文：现实地图接入模式（后续可选扩展）。
+6. EN: AI-usage guard task: map AI calls are optional for visual/event flavor only; travel/time/progression must be system-computed.
+   中文：AI 调用守卫任务：地图 AI 调用仅用于视觉/事件文案增强；移动时间/进度必须由系统计算。
+7. EN: Fallback task: if map visuals are not bound/generated, use module defaults (icon/default image) without blocking gameplay loop.
+   中文：回退任务：地图视觉素材未绑定/未生成时，使用模块默认图标/图片，不阻塞玩法循环。
+
+Acceptance / 验收标准:
+1. EN: With all map AI toggles off, user can still complete location setup, travel simulation, and arrival-state progression.
+   中文：在地图 AI 开关全部关闭时，用户仍可完成地点设置、行程模拟和到达状态推进。
+2. EN: Chat always receives global worldview context, and only receives knowledge points explicitly bound to the active role/thread.
+   中文：Chat 始终注入全局世界观上下文，且仅注入当前角色/会话显式绑定的知识点。
+3. EN: Deleting a role binding never deletes global knowledge-point records.
+   中文：删除角色绑定不会删除全局知识点记录。
+4. EN: No mandatory extra AI call is introduced for baseline map progression.
+   中文：地图基础进度推进不引入强制额外 AI 调用。
+
+---
+
 ## 7. Risk Register / 风险清单
 1. EN: Documentation drift when IDs or priorities change without same-commit sync.
    中文：任务编号或优先级变更若未同批同步，会引发文档漂移。
@@ -317,6 +361,10 @@ Acceptance / 验收标准:
    中文：若设置中的备份模型说明不清，小白用户易误解。
 5. EN: If gallery is over-centralized without one-off upload paths, module iteration speed and UX flexibility may regress.
    中文：若素材库过度中心化而缺少单次上传路径，模块迭代效率与体验灵活性会下降。
+6. EN: If global worldview and role-targeted knowledge points remain mixed in one text blob, prompt pollution and maintenance cost will increase quickly.
+   中文：若全局世界观与角色定向知识点长期混在一段文本中，提示词污染与维护成本会快速上升。
+7. EN: If map baseline depends on external provider APIs too early, runtime stability and usage-cost predictability will degrade.
+   中文：若地图基线过早依赖外部供应商 API，会降低运行稳定性并增加调用成本不确定性。
 
 ---
 
@@ -359,6 +407,8 @@ Acceptance / 验收标准:
     中文：新增助手参考图调用遥测元信息（`模式/数量/回退/供应商`），并在会话中展示精简提示。
 19. EN: Started asset hub V2 UI rollout: Gallery now has folder CRUD + per-asset add-to-folder quick action; Contacts now exposes folder-slot binding pickers for profile-image/dynamic-media/emoji/reference.
     中文：已启动素材中台 V2 UI 落地：Gallery 现支持文件夹增删改与素材快速归档；通讯录已提供形象照/动态图/表情包/参考图槽位绑定选择。
+20. EN: PM confirmed world-map adjustment direction: split world kernel into global worldview + bindable knowledge points, and keep map on simulation-first low-API baseline.
+    中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图基线采用“模拟优先、低 API 依赖”。
 
 ---
 

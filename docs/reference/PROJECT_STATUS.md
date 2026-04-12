@@ -1,6 +1,6 @@
 ﻿# SchatPhone 项目进度与待办
 
-Updated / 更新时间: 2026-04-10
+Updated / 更新时间: 2026-04-12
 
 Document position / 文档定位（2026-04-06）: secondary reference.  
 本文件现为参考文档；主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
@@ -21,6 +21,10 @@ Network 配置 -> 模型拉取 -> Chat 调用
 Appearance 配置 -> 主题/样式/Widget 注入 -> Home 实时生效
 - System language setup -> unified UI labels (P0-2 baseline completed, keep incremental maintenance)  
 系统语言设置 -> 系统 UI 文案统一（P0-2 基线完成，后续增量维护）
+- Worldbook setup -> global lore baseline for chat context (current single-text mode)  
+世界书设置 -> 作为聊天上下文的全局设定基线（当前为单文本模式）
+- Map baseline -> local simulation loop without mandatory external map API  
+地图基线 -> 本地模拟循环，不强依赖外部地图 API
 
 ## 2. Completed Capabilities / 已完成能力
 
@@ -99,6 +103,8 @@ P1-1 第二阶段控制已接入：会话级参考图模式开关（`auto/contex
 P1-1 本地文件参考图路径已接入：相册文件素材可在大小守卫下转为 data URL，超限自动降级为文字线索。
 - Assistant messages now store image-reference execution metadata and surface compact in-thread hints for runtime traceability.  
 助手消息现已记录参考图执行元信息，并在会话中提供精简提示以便运行态追踪。
+- Chat prompt currently injects global worldbook text; next phase will split to global worldview + role-bound knowledge points.
+  Chat 提示词当前会注入全局世界书文本；下一阶段将拆分为全局世界观 + 角色绑定知识点。
 - Settings UX batch-2 is integrated in chat-adjacent flow: thread layered menu now provides explicit saved-state feedback and header-level save confirmation.  
 设置体验优化第二批已接入聊天周边链路：会话分级菜单现已提供显式保存状态反馈，并在头部给出保存确认提示。
 - Settings data-security flow now exposes inline backup import/export status feedback (with rollback-aware error text), reducing blocking alerts.  
@@ -189,6 +195,8 @@ More：快捷入口、实验开关、扩展建议
 
 - Profile card -> `/profile`
 - Worldbook -> `/worldbook`
+- Worldbook direction (next): split into global worldview + knowledge-point management with role binding support.
+  世界书下一阶段方向：拆分为全局世界观 + 知识点管理，并支持角色绑定。
 - General / Notifications / AI Automation (embedded second-level pages)  
 通用 / 通知 / AI 自动响应（内嵌二级页）
 - Beginner guidance + quick-access entry set is now available on settings root.  
@@ -252,6 +260,10 @@ Quiet-hours + notify-only + manual-priority policy now runs through settings and
 1. Structured block policy hardening (`P1-2`) is completed (batch-1/2/3 landed) / 结构化消息策略加固（`P1-2`）已完成（第一/二/三批已落地）
 2. Settings UX refinement (`P1-3`) is completed (batch-1/2/3 landed) / 设置体验优化（`P1-3`）已完成（第一/二/三批已落地）
 3. Storage layering preparation (`P1-4`) is completed (2026-04-05, batch-1/2/3 closed) / 分层存储迁移准备（`P1-4`）已完成（2026-04-05，第一/二/三批已收口）
+4. World-kernel refactor (planned): split single worldbook text into global worldview + bindable knowledge points.
+   世界内核重构（规划中）：将单段世界书拆分为全局世界观 + 可绑定知识点。
+5. Map refactor (planned): keep simulation-first no-API baseline; AI in map remains optional enhancement only.
+   地图重构（规划中）：保持模拟优先、无 API 依赖的基线；地图内 AI 仅作为可选增强。
 
 ### P2
 

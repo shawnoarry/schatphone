@@ -1,6 +1,6 @@
 ﻿# SchatPhone State Ownership Strategy / SchatPhone 状态归属策略
 
-Updated / 更新时间: 2026-03-29
+Updated / 更新时间: 2026-04-12
 
 ## 1. Purpose / 用途
 
@@ -20,7 +20,8 @@ These are root settings and should not be silently changed by AI.
 
 - player identity / 用户身份
 - player boundaries and preferences / 用户边界与偏好
-- worldbook assumptions / 世界书设定
+- global worldview baseline / 全局世界观基线
+- knowledge-point library (bindable patches) / 知识点库（可绑定补丁）
 - primary role definitions / 核心角色底稿
 - important relationship starting positions / 重要关系初始定位
 - automation switches and permissions / 自动化开关与权限
@@ -147,10 +148,19 @@ Recommended prompt inputs / 推荐输入：
 - current chat window context / 当前会话上下文
 - user identity / 用户身份
 - role profile / 角色档案
-- relevant worldbook fragments / 相关世界书片段
+- global worldview baseline / 全局世界观基线
+- role-bound knowledge points / 角色绑定知识点
 - relationship snapshot / 关系快照
 - memory summary / 记忆摘要
 - real-time context / 现实时间上下文
+
+World-kernel rule / 世界内核规则：
+1. Global worldview is always-on context for every AI call.  
+   全局世界观是每次 AI 调用的常驻上下文。
+2. Knowledge points are selectively injected by role/module/thread bindings.  
+   知识点按角色/模块/会话绑定选择性注入。
+3. Unbinding a role must never delete global knowledge-point records.  
+   角色解绑绝不能删除全局知识点记录。
 
 ## 5. Cross-Provider Rule / 跨供应商规则
 
@@ -180,4 +190,3 @@ If the answer is yes, it should be system-owned.
 
 If the answer is no, it is usually safe to let AI generate it.  
 如果答案是“不会”，通常就可以交给 AI 生成。
-

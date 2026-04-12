@@ -1,6 +1,6 @@
 # Product Manager Priority Plan / 产品经理优先级任务单
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-12
 
 ## 1. Purpose / 用途
 This document captures product-level priorities in plain language and aligns them with current implementation constraints.  
@@ -116,6 +116,20 @@ Chat 输入区 `+` 面板只调用全局素材库。
 4. Emoji packs become one asset type inside Gallery (not a separate import system).  
 表情包作为相册素材中心中的一种类型，不再做独立导入体系。
 
+### 4.6 World Kernel + Map Baseline Direction / 世界内核 + 地图基线方向
+Goal / 目标: keep world coherence while controlling API cost and implementation complexity.  
+目标：在保证世界观连贯性的同时，控制 API 成本与实现复杂度。
+
+Key decisions / 关键决策:
+1. Split world context into two layers: global worldview + bindable knowledge points.
+   世界设定拆分为两层：全局世界观 + 可绑定知识点。
+2. Global worldview is always injected; knowledge points are selectively injected by role/module bindings.
+   全局世界观始终注入；知识点按角色/模块绑定选择性注入。
+3. Map core loop must be simulation-first and system-computed (location/travel/time progression), not mandatory AI-generated.
+   地图核心循环必须是模拟优先并由系统计算（地点/行程/时间推进），不可强制依赖 AI 生成。
+4. AI in map is optional enhancement only (visual/event flavor), with deterministic fallback when disabled/unavailable.
+   地图内 AI 仅作可选增强（视觉/事件文案），关闭或不可用时必须有确定性回退。
+
 ## 5. Priority Roadmap (Reordered) / 优先级路线（重排后）
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
@@ -173,6 +187,10 @@ Chat 输入区 `+` 面板只调用全局素材库。
 AI 图生图参考链路（依赖供应商图片输入能力）。
 2. Scenario cards for pseudo video-call/offline-date immersive scenes.  
 伪视频通话/线下约会等场景卡片能力。
+3. World-kernel split (`global worldview` + `knowledge points`) and role-level binding in contacts.
+   世界内核拆分（`全局世界观` + `知识点`）并在通讯录提供角色级绑定。
+4. Map baseline refactor (simulation-first, low-API) with optional AI enhancement switches.
+   地图基线重构（模拟优先、低 API）并提供可选 AI 增强开关。
 
 ## 6. Tech-Stack Feasibility Mapping / 技术栈可行性映射
 1. UI restructuring: Vue 3 + Tailwind is fully sufficient.  
@@ -243,3 +261,5 @@ Chat 一级页包含至少 3 个底部按钮，且均可跳转占位页。
 2026-04-06：确认采用头像层级 B（`会话 > 模块 > 全局`），同时作用于用户与 AI 身份，以支持沉浸及后续匿名玩法。
 11. 2026-04-06: `P0-3` phase-1 landed: shared avatar resolver is online (`thread > module > global > fallback`), chat module-level overrides are configurable in `/chat-feature/identity`, and thread-level self/contact overrides are configurable in chat thread menu.  
 2026-04-06：`P0-3` 第一阶段已落地：统一头像解析器上线（`会话 > 模块 > 全局 > 兜底`），Chat 模块级覆写可在 `/chat-feature/identity` 配置，会话级自己/对方覆写可在会话菜单配置。
+12. 2026-04-12: confirmed world-map direction: split world kernel into global worldview + bindable knowledge points, and keep map simulation-first with optional AI enhancement.
+2026-04-12：确认世界观-地图方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图保持模拟优先并将 AI 作为可选增强。

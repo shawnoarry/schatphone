@@ -1,6 +1,6 @@
 ﻿# SchatPhone Immersive Phone Master Blueprint / SchatPhone 沉浸式虚拟手机总蓝图
 
-Updated / 更新时间: 2026-03-29
+Updated / 更新时间: 2026-04-12
 
 ## 1. Purpose / 用途
 
@@ -53,6 +53,15 @@ The same role should appear consistently across chat, map, wallet, calendar, fil
 
 Autonomous AI actions should always be governed by explicit user switches and intervals.  
 AI 自主行为必须始终受用户明确的开关和间隔控制。
+
+### 3.5 Layered World Kernel Over Single Text Blob / 分层世界内核优先于单文本堆叠
+
+Global worldview should be separated from role-targeted knowledge patches.  
+全局世界观应与角色定向知识补丁分离管理。
+
+Why / 作用：  
+This keeps prompts cleaner, reduces drift, and improves cross-module reuse.  
+这样可降低提示词污染，减少漂移，并提升跨模块复用效率。
 
 ## 4. What the Project Already Has / 当前项目已具备的基础
 
@@ -134,6 +143,13 @@ The project should continue supporting more than plain text.
 - transfer cards / 转账卡片
 - mini HTML scenes / HTML 小互动
 
+### 5.7 World Kernel and Map Baseline Layer / 世界内核与地图基线层
+
+- global worldview (always-on context) / 全局世界观（常驻上下文）
+- bindable knowledge points / 可绑定知识点
+- simulation-first map core (location/travel/time by system logic) / 模拟优先地图核心（地点/行程/时间由系统逻辑计算）
+- optional AI map enhancements (visual/event flavor only) / 可选地图 AI 增强（仅视觉/事件文案）
+
 ## 6. Ownership Rules / 数据归属规则
 
 The project must distinguish between user-defined data, system-owned truth, AI-assisted drafts, and AI-generated presentation.  
@@ -142,7 +158,8 @@ The project must distinguish between user-defined data, system-owned truth, AI-a
 ### 6.1 Must Be User-Defined / 必须由用户定义
 
 - user identity / 用户身份
-- world assumptions / 世界设定
+- global worldview / 全局世界观
+- knowledge-point library / 知识点库
 - boundaries and preferences / 边界与偏好
 - primary role foundations / 核心角色底稿
 - high-level automation permissions / 自动化权限
@@ -261,7 +278,7 @@ Narrative interaction layer / 叙事互动层：
 
 Ecosystem expansion layer / 生态扩展层：
 
-- map and itinerary loops / 地图与行程闭环
+- map and itinerary loops (simulation-first, low-API baseline) / 地图与行程闭环（模拟优先、低 API 基线）
 - wallet and gift loops / 钱包与礼物闭环
 - gallery/files evidence chain / 相册与文件证据链
 - future public-social modules / 未来公共社交模块

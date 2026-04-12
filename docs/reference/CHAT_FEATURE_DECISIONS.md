@@ -1,6 +1,6 @@
 ﻿# Chat Feature Decisions / Chat 功能决议记录
 
-Updated / 更新时间: 2026-04-06
+Updated / 更新时间: 2026-04-12
 
 Purpose / 用途: persist user feedback on Chat feature proposals, so future sessions can continue without context loss.  
 用于沉淀用户对 Chat 功能建议的反馈，便于下次对话直接续接，不丢上下文。
@@ -47,8 +47,10 @@ Reference / 关联来源: discussion after KakaoTalk-style Chat enhancement prop
 
 - Quote is a **focus anchor**, not a standalone-context generation mode.  
 “引用”应是**焦点锚点**，不是“脱离上下文的单句生成”。
-- AI reply must always include persona + worldbook + multi-turn history.  
-AI 每次回复都必须带上人设、世界书和多轮历史。
+- AI reply must always include persona + world context + multi-turn history.  
+AI 每次回复都必须带上人设、世界上下文和多轮历史。
+- World context direction is now layered: global worldview is always-on, and role-bound knowledge points are selectively injected.
+  世界上下文现已明确为分层方向：全局世界观常驻注入，角色绑定知识点按需注入。
 - Reading window size (how many previous turns) must be configurable in layered settings.  
 “读取几轮上文”需要在分级菜单中可配置。
 - Implementation status / 实现状态: context window turns are now configurable per conversation.  
