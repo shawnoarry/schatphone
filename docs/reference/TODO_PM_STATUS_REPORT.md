@@ -76,6 +76,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（`待出发 -> 进行中 -> 到达/取消`），并具备系统时间倒计时、行程记录与备份连续性。
 25. EN: Landed map fallback phase-1: map visual mode switch (`default/gallery`), onboarding hint, gallery binding, and auto fallback to default visual when bound asset is missing.
     中文：已落地地图回退第一阶段：地图视觉模式切换（`默认/素材库`）、首启引导、素材绑定，以及绑定素材缺失时自动回退默认视觉。
+26. EN: Landed map automation-alignment baseline: AI visual refresh now follows system automation runtime policy (`master/module/notify-only/quiet-hours`) and exposes manual trigger with policy feedback in map UI.
+    中文：已落地地图自动化对齐基线：AI 视觉刷新现遵循系统自动化运行策略（`总开关/模块开关/仅通知/安静时段`），并在地图 UI 提供手动触发与策略反馈。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
@@ -97,8 +99,10 @@ What will be delivered / 本步交付什么:
    中文：`DONE（第一阶段）` 地图基线模拟循环已上线（地点设定 -> 行程计时 -> 到达状态），且不强依赖外部地图 API。
 5. EN: `DONE (phase-1)` map fallback visuals are online: `default/gallery` visual mode + onboarding prompt + auto fallback when selected gallery asset is unavailable.
    中文：`DONE（第一阶段）` 地图视觉回退已上线：`默认/素材库` 视觉模式 + 首启提示 + 选定素材不可用时自动回退。
-6. EN: `NEXT` align map visual AI toggle and fallback policy with module-level automation settings.
-   中文：`NEXT` 将地图视觉 AI 开关与回退策略进一步对齐到模块级自动化设置。
+6. EN: `DONE (phase-2 baseline)` map visual AI toggle and runtime policy are now aligned with module-level automation settings.
+   中文：`DONE（第二阶段基线）` 地图视觉 AI 开关与运行策略已对齐到模块级自动化设置。
+7. EN: `NEXT` evaluate optional provider-backed map-visual generation under current policy guard (without breaking no-API baseline).
+   中文：`NEXT` 在当前策略守卫下评估可选的供应商地图视觉生成路径（且不破坏无 API 基线）。
 
 How you can review it / 你可以怎么验收:
 1. EN: In chat with one role bound to knowledge points and another unbound, verify the two roles produce clearly different, stable replies under the same worldview.
@@ -175,3 +179,5 @@ How you can review it / 你可以怎么验收:
     2026-04-14 中文：已同步 `P1-3` 地图基线第一阶段交付：行程生命周期循环、系统时间倒计时、行程记录与备份连续性均已标记完成。
 20. 2026-04-14 EN: Synced map fallback phase-1 delivery: visual mode switch, onboarding prompt, gallery binding, and missing-asset auto fallback are now marked completed.
     2026-04-14 中文：已同步地图回退第一阶段交付：视觉模式切换、首启提示、素材绑定与缺失素材自动回退均已标记完成。
+21. 2026-04-14 EN: Synced map automation-alignment baseline delivery: runtime policy wiring, manual trigger entry, and policy feedback are now marked completed.
+    2026-04-14 中文：已同步地图自动化对齐基线交付：运行策略接线、手动触发入口与策略反馈均已标记完成。

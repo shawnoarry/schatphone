@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useMapStore } from '../src/stores/map'
+import { useSystemStore } from '../src/stores/system'
 
 describe('map trip baseline loop', () => {
   beforeEach(() => {
@@ -101,5 +102,33 @@ describe('map trip baseline loop', () => {
     expect(storeB.mapVisualSettings.assetId).toBe('asset_abc')
     expect(storeB.mapVisualSettings.aiVisualEnabled).toBe(true)
     expect(storeB.mapVisualSettings.onboardingPromptPending).toBe(false)
+  })
+
+  test('map AI visual refresh executes when system automation policy allows it', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    mapStore.setMapAiVisualEnabled(true)
+    systemStore.settings.aiAutomation.masterEnabled = true
+    systemStore.settings.aiAutomation.modules.map.enabled = true
+
+    const result = await mapStore.requestMapAiVisualRefresh({ source: 'test' })
+    expect(result.ok).toBe(true)
+    expect(['executed', 'queued']).toContain(result.runtimeResult)
+    expect(mapStore.mapAutomationRuntime.lastExecuteAt > 0).toBe(true)
+  })
+
+  test('map AI visual refresh enters notify-only when system is notify-only', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    mapStore.setMapAiVisualEnabled(true)
+    systemStore.settings.aiAutomation.masterEnabled = true
+    systemStore.settings.aiAutomation.modules.map.enabled = true
+    systemStore.settings.aiAutomation.notifyOnlyMode = true
+
+    const result = await mapStore.requestMapAiVisualRefresh({ source: 'test' })
+    expect(result.ok).toBe(false)
+    expect(result.notifyOnly).toBe(true)
+    expect(result.reason).toBe('notify_only_mode')
+    expect(mapStore.mapAutomationRuntime.lastNotifyOnlyAt > 0).toBe(true)
   })
 })

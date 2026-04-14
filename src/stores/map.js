@@ -1,6 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
 const MAP_STORAGE_VERSION = 2
@@ -8,6 +9,7 @@ const TRIP_STATUS_IDLE = 'idle'
 const TRIP_STATUS_TRAVELING = 'traveling'
 const TRIP_STATUS_ARRIVED = 'arrived'
 const TRIP_HISTORY_LIMIT = 40
+const MAP_AUTOMATION_MODULE_KEY = 'map'
 const MAP_VISUAL_MODE_DEFAULT = 'default'
 const MAP_VISUAL_MODE_GALLERY = 'gallery'
 
@@ -52,6 +54,15 @@ const createDefaultMapVisualSettings = () => ({
   assetId: '',
   aiVisualEnabled: false,
   onboardingPromptPending: true,
+})
+
+const createDefaultMapAutomationRuntime = () => ({
+  lastRequestAt: 0,
+  lastExecuteAt: 0,
+  lastNotifyOnlyAt: 0,
+  lastResult: '',
+  lastReason: '',
+  lastTaskId: '',
 })
 
 const computeTripEstimate = (fromText = '', toText = '') => {
@@ -181,6 +192,7 @@ const normalizeMapVisualSettings = (raw) => {
 }
 
 export const useMapStore = defineStore('map', () => {
+  const getSystemStore = () => useSystemStore()
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
   const currentLocation = ref(createDefaultCurrentLocation())
@@ -189,8 +201,10 @@ export const useMapStore = defineStore('map', () => {
   const tripState = ref(createIdleTripState())
   const tripHistory = ref([])
   const mapVisualSettings = ref(createDefaultMapVisualSettings())
+  const mapAutomationRuntime = ref(createDefaultMapAutomationRuntime())
   const runtimeNow = ref(Date.now())
   let tripArrivalTimer = null
+  let mapAutomationHandlerRegistered = false
   const hasFinishedStorageHydration = ref(false)
 
   const tripEstimate = computed(() => {
@@ -237,6 +251,50 @@ export const useMapStore = defineStore('map', () => {
       remainingSeconds,
     }
   })
+
+  const mapAiVisualAutomationPolicy = computed(() => {
+    const systemStore = getSystemStore()
+    const now = Date.now()
+    const systemPolicy = systemStore.getAiAutomationRuntimePolicy(
+      MAP_AUTOMATION_MODULE_KEY,
+      now,
+    )
+    const toggleEnabled = mapVisualSettings.value.aiVisualEnabled === true
+    const invokeEnabled = Boolean(systemPolicy.invokeEnabled && toggleEnabled)
+    let reason = ''
+    if (!toggleEnabled) {
+      reason = 'map_ai_visual_disabled'
+    } else if (!systemPolicy.masterEnabled) {
+      reason = 'master_disabled'
+    } else if (!systemPolicy.moduleEnabled) {
+      reason = 'module_disabled'
+    } else if (systemPolicy.notifyOnly) {
+      reason = systemPolicy.quietHoursActive ? 'quiet_hours_notify_only' : 'notify_only_mode'
+    }
+
+    return {
+      moduleKey: MAP_AUTOMATION_MODULE_KEY,
+      toggleEnabled,
+      masterEnabled: systemPolicy.masterEnabled,
+      moduleEnabled: systemPolicy.moduleEnabled,
+      quietHoursActive: systemPolicy.quietHoursActive,
+      notifyOnly: systemPolicy.notifyOnly,
+      enabled: Boolean(systemPolicy.enabled && toggleEnabled),
+      invokeEnabled,
+      reason,
+    }
+  })
+
+  const ensureMapAutomationHandlerRegistered = () => {
+    if (mapAutomationHandlerRegistered) return true
+    const systemStore = getSystemStore()
+    const ok = systemStore.registerAiAutomationHandler(
+      MAP_AUTOMATION_MODULE_KEY,
+      mapAutomationTaskHandler,
+    )
+    mapAutomationHandlerRegistered = Boolean(ok)
+    return mapAutomationHandlerRegistered
+  }
 
   const clearTripArrivalTimer = () => {
     if (tripArrivalTimer === null) return
@@ -310,6 +368,170 @@ export const useMapStore = defineStore('map', () => {
     refreshTripState(runtimeNow.value)
   }
 
+  const buildMapVisualRefreshFingerprint = (baseAt = Date.now()) => {
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    const minuteSlot = Math.floor(baseAt / 60_000)
+    return [
+      'map_visual',
+      settings.mode,
+      settings.assetId || 'none',
+      minuteSlot,
+    ].join(':')
+  }
+
+  const mapAutomationTaskHandler = async (task, context = {}) => {
+    const systemStore = getSystemStore()
+    const now = Number.isFinite(Number(context?.now)) ? Number(context.now) : Date.now()
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    const assetAvailable = Boolean(settings.assetId)
+    mapAutomationRuntime.value = {
+      ...mapAutomationRuntime.value,
+      lastExecuteAt: now,
+      lastResult: 'executed',
+      lastReason: '',
+      lastTaskId: typeof task?.id === 'string' ? task.id : '',
+    }
+
+    if (systemStore.isLocked) {
+      systemStore.addNotification({
+        title: 'Map',
+        content:
+          settings.mode === MAP_VISUAL_MODE_GALLERY && assetAvailable
+            ? 'Map visual refresh completed (gallery mode).'
+            : 'Map visual refresh completed (default mode).',
+        icon: 'fas fa-map-location-dot',
+        route: '/map',
+        source: 'map_ai_visual_refresh_done',
+        createdAt: now,
+      })
+    }
+
+    return {
+      ok: true,
+      mode: settings.mode,
+      assetId: settings.assetId,
+    }
+  }
+
+  const drainMapAutomationQueue = async (maxRounds = 2) => {
+    const systemStore = getSystemStore()
+    const rounds = Math.max(1, toInt(maxRounds, 2))
+    for (let i = 0; i < rounds; i += 1) {
+      const result = await systemStore.runAiAutomationQueueTick(Date.now())
+      if (!result?.handled) break
+    }
+  }
+
+  const requestMapAiVisualRefresh = async (options = {}) => {
+    ensureMapAutomationHandlerRegistered()
+    const systemStore = getSystemStore()
+    const now = Date.now()
+    const source = typeof options?.source === 'string' ? options.source.trim() : 'map_manual'
+    const policy = mapAiVisualAutomationPolicy.value
+    mapAutomationRuntime.value = {
+      ...mapAutomationRuntime.value,
+      lastRequestAt: now,
+    }
+
+    if (!policy.toggleEnabled) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastResult: 'blocked',
+        lastReason: 'map_ai_visual_disabled',
+      }
+      return { ok: false, reason: 'map_ai_visual_disabled', policy }
+    }
+
+    if (!policy.masterEnabled) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastResult: 'blocked',
+        lastReason: 'master_disabled',
+      }
+      return { ok: false, reason: 'master_disabled', policy }
+    }
+
+    if (!policy.moduleEnabled) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastResult: 'blocked',
+        lastReason: 'module_disabled',
+      }
+      return { ok: false, reason: 'module_disabled', policy }
+    }
+
+    if (policy.notifyOnly) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastNotifyOnlyAt: now,
+        lastResult: 'notify_only',
+        lastReason: policy.quietHoursActive ? 'quiet_hours_notify_only' : 'notify_only_mode',
+      }
+      if (systemStore.isLocked) {
+        systemStore.addNotification({
+          title: 'Map',
+          content: policy.quietHoursActive
+            ? 'Quiet-hours notify-only: skipped AI visual refresh.'
+            : 'Notify-only mode: skipped AI visual refresh.',
+          icon: 'fas fa-bell',
+          route: '/map',
+          source: 'map_ai_visual_notify_only',
+          createdAt: now,
+        })
+      }
+      return { ok: false, reason: mapAutomationRuntime.value.lastReason, policy, notifyOnly: true }
+    }
+
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    const enqueueResult = systemStore.enqueueAiAutomationTask(
+      {
+        moduleKey: MAP_AUTOMATION_MODULE_KEY,
+        targetId: 'map_visual',
+        source,
+        reason: 'map_visual_refresh',
+        dueAt: now,
+        fingerprint: buildMapVisualRefreshFingerprint(now),
+        payload: {
+          mode: settings.mode,
+          assetId: settings.assetId,
+        },
+      },
+      {
+        baseAt: now,
+      },
+    )
+
+    if (!enqueueResult?.accepted) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastResult: 'enqueue_rejected',
+        lastReason: typeof enqueueResult?.reason === 'string' ? enqueueResult.reason : 'enqueue_failed',
+      }
+      return {
+        ok: false,
+        reason: mapAutomationRuntime.value.lastReason,
+        policy,
+      }
+    }
+
+    mapAutomationRuntime.value = {
+      ...mapAutomationRuntime.value,
+      lastTaskId: enqueueResult.taskId || '',
+      lastResult: 'queued',
+      lastReason: '',
+    }
+
+    await drainMapAutomationQueue(2)
+    const runtimeResult = mapAutomationRuntime.value.lastResult || 'queued'
+    return {
+      ok: runtimeResult === 'executed' || runtimeResult === 'queued',
+      reason: mapAutomationRuntime.value.lastReason || '',
+      taskId: enqueueResult.taskId || '',
+      policy,
+      runtimeResult,
+    }
+  }
+
   const setMapVisualMode = (nextMode) => {
     const normalizedMode =
       nextMode === MAP_VISUAL_MODE_GALLERY
@@ -334,6 +556,13 @@ export const useMapStore = defineStore('map', () => {
     mapVisualSettings.value = {
       ...mapVisualSettings.value,
       aiVisualEnabled: enabled === true,
+    }
+    if (mapVisualSettings.value.aiVisualEnabled !== true) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastResult: '',
+        lastReason: '',
+      }
     }
     return mapVisualSettings.value.aiVisualEnabled
   }
@@ -511,6 +740,7 @@ export const useMapStore = defineStore('map', () => {
     }
 
     mapVisualSettings.value = normalizeMapVisualSettings(source.mapVisualSettings)
+    mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
 
     runtimeNow.value = Date.now()
     refreshTripState(runtimeNow.value)
@@ -556,6 +786,7 @@ export const useMapStore = defineStore('map', () => {
     tripState.value = createIdleTripState()
     tripHistory.value = []
     mapVisualSettings.value = createDefaultMapVisualSettings()
+    mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     runtimeNow.value = Date.now()
   }
 
@@ -601,6 +832,8 @@ export const useMapStore = defineStore('map', () => {
     tripRuntime,
     tripHistory,
     mapVisualSettings,
+    mapAutomationRuntime,
+    mapAiVisualAutomationPolicy,
     setCurrentLocation,
     setCurrentLocationByAddressId,
     setTripEndpoint,
@@ -618,6 +851,8 @@ export const useMapStore = defineStore('map', () => {
     dismissMapVisualOnboardingPrompt,
     resolveMapVisualMode,
     enforceMapVisualFallback,
+    ensureMapAutomationHandlerRegistered,
+    requestMapAiVisualRefresh,
     restoreFromBackup,
     createBackupSnapshot,
     createBackupSnapshotAsync,

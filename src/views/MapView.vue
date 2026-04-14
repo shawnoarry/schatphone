@@ -11,7 +11,18 @@ const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
 
-const { addresses, currentLocation, currentLocationText, tripForm, tripEstimate, tripRuntime, tripHistory, mapVisualSettings } =
+const {
+  addresses,
+  currentLocation,
+  currentLocationText,
+  tripForm,
+  tripEstimate,
+  tripRuntime,
+  tripHistory,
+  mapVisualSettings,
+  mapAutomationRuntime,
+  mapAiVisualAutomationPolicy,
+} =
   storeToRefs(mapStore)
 
 const addressForm = reactive({
@@ -28,6 +39,7 @@ const mapVisualHint = ref({
 })
 const mapVisualPreviewUrl = ref('')
 const mapVisualLoading = ref(false)
+const mapAiVisualRefreshing = ref(false)
 let runtimeTimer = null
 
 const goHome = () => {
@@ -126,12 +138,94 @@ const onMapVisualAssetChange = (event) => {
 
 const onMapAiVisualToggle = (event) => {
   mapStore.setMapAiVisualEnabled(event?.target?.checked === true)
-  mapVisualHint.value = {
-    tone: 'info',
-    message: t(
-      'AI 地图视觉入口已预留，当前版本仍以默认/素材库模式为主。',
-      'AI map visual entry is reserved; current version still uses default/gallery modes.',
-    ),
+  mapVisualHint.value = { tone: '', message: '' }
+}
+
+const mapAiPolicySummary = computed(() => {
+  const policy = mapAiVisualAutomationPolicy.value || {}
+  if (policy.invokeEnabled) return t('可执行', 'Ready')
+  if (policy.notifyOnly) return t('仅通知', 'Notify-only')
+  if (!policy.masterEnabled) return t('总开关关闭', 'Master off')
+  if (!policy.moduleEnabled) return t('地图模块关闭', 'Map module off')
+  if (!policy.toggleEnabled) return t('地图内 AI 关闭', 'Map AI off')
+  return t('不可执行', 'Blocked')
+})
+
+const mapAiPolicyHint = computed(() => {
+  const policy = mapAiVisualAutomationPolicy.value || {}
+  if (policy.invokeEnabled) {
+    return t('当前可触发 AI 地图视觉刷新。', 'AI map visual refresh is available now.')
+  }
+  if (policy.reason === 'quiet_hours_notify_only') {
+    return t('安静时段仅通知，不执行 AI 刷新。', 'Quiet hours are notify-only, AI refresh is skipped.')
+  }
+  if (policy.reason === 'notify_only_mode') {
+    return t('仅通知模式开启，不执行 AI 刷新。', 'Notify-only mode is active, AI refresh is skipped.')
+  }
+  if (policy.reason === 'master_disabled') {
+    return t('系统自动化总开关已关闭。', 'System automation master switch is off.')
+  }
+  if (policy.reason === 'module_disabled') {
+    return t('设置中地图自动化模块未开启。', 'Map automation module is off in settings.')
+  }
+  if (policy.reason === 'map_ai_visual_disabled') {
+    return t('当前页面的 AI 地图视觉开关未开启。', 'Map AI visual toggle is off on this page.')
+  }
+  return t('当前不可执行 AI 刷新。', 'AI refresh is currently unavailable.')
+})
+
+const openAutomationSettings = () => {
+  router.push({ path: '/settings', query: { menu: 'automation' } })
+}
+
+const triggerMapAiVisualRefresh = async () => {
+  if (mapAiVisualRefreshing.value) return
+  mapAiVisualRefreshing.value = true
+  try {
+    const result = await mapStore.requestMapAiVisualRefresh({ source: 'map_manual_refresh' })
+    if (result?.ok && result?.runtimeResult === 'executed') {
+      mapVisualHint.value = {
+        tone: 'success',
+        message: t('AI 地图视觉刷新完成。', 'AI map visual refresh completed.'),
+      }
+      return
+    }
+    if (result?.ok) {
+      mapVisualHint.value = {
+        tone: 'info',
+        message: t('刷新请求已进入队列。', 'Refresh request has been queued.'),
+      }
+      return
+    }
+
+    const reason = result?.reason || ''
+    if (reason === 'quiet_hours_notify_only' || reason === 'notify_only_mode') {
+      mapVisualHint.value = {
+        tone: 'warn',
+        message: t('当前仅通知模式，已跳过执行。', 'Notify-only mode active, execution skipped.'),
+      }
+      return
+    }
+    if (reason === 'master_disabled' || reason === 'module_disabled') {
+      mapVisualHint.value = {
+        tone: 'warn',
+        message: t('系统自动化策略阻止了本次刷新。', 'System automation policy blocked this refresh.'),
+      }
+      return
+    }
+    if (reason === 'map_ai_visual_disabled') {
+      mapVisualHint.value = {
+        tone: 'warn',
+        message: t('请先开启“AI 地图视觉”。', 'Please enable "AI map visual" first.'),
+      }
+      return
+    }
+    mapVisualHint.value = {
+      tone: 'warn',
+      message: t('刷新请求未成功，请稍后重试。', 'Refresh request failed, please try again later.'),
+    }
+  } finally {
+    mapAiVisualRefreshing.value = false
   }
 }
 
@@ -351,8 +445,31 @@ onBeforeUnmount(() => {
             :checked="mapVisualSettings.aiVisualEnabled === true"
             @change="onMapAiVisualToggle"
           />
-          {{ t('启用 AI 地图视觉（预留）', 'Enable AI map visual (reserved)') }}
+          {{ t('启用 AI 地图视觉', 'Enable AI map visual') }}
         </label>
+
+        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
+          <p class="font-medium text-gray-700">
+            {{ t('自动化策略状态', 'Automation policy') }}: {{ mapAiPolicySummary }}
+          </p>
+          <p class="mt-1">{{ mapAiPolicyHint }}</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button
+              @click="triggerMapAiVisualRefresh"
+              class="px-2 py-1 rounded border"
+              :class="mapAiVisualAutomationPolicy.invokeEnabled ? 'border-blue-300 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-500 bg-gray-100'"
+              :disabled="mapAiVisualRefreshing"
+            >
+              {{ mapAiVisualRefreshing ? t('刷新中…', 'Refreshing...') : t('触发 AI 刷新', 'Trigger AI refresh') }}
+            </button>
+            <button @click="openAutomationSettings" class="px-2 py-1 rounded border border-gray-300">
+              {{ t('前往自动化设置', 'Open automation settings') }}
+            </button>
+          </div>
+          <p v-if="mapAutomationRuntime.lastExecuteAt > 0" class="mt-1 text-[11px] text-gray-500">
+            {{ t('上次执行', 'Last executed') }}: {{ formatTime(mapAutomationRuntime.lastExecuteAt) }}
+          </p>
+        </div>
 
         <div class="mt-3 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
           <div v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl" class="aspect-[16/8] bg-black">

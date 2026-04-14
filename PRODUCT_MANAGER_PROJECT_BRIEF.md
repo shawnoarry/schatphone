@@ -220,8 +220,10 @@ Status / 状态: `IN_PROGRESS`
    中文：`DONE（第一阶段）` 地图基线循环已可在不依赖外部 API 的情况下运行：地点设置 + 行程生命周期（`待出发 -> 进行中 -> 到达/取消`）+ 系统时间推进 + 行程记录持久化。
 5. EN: `DONE (phase-1)` map fallback defaults are now online: map supports `default/gallery` visual mode and auto-falls back to default icon/visual when bound gallery asset is unavailable.
    中文：`DONE（第一阶段）` 地图默认回退已上线：地图支持 `默认/素材库` 视觉模式，并在绑定素材不可用时自动回退到默认图标/视觉。
-6. EN: `NEXT` map fallback phase-2 should define first-run AI visual prompt policy and settings-entry alignment with module-level AI automation rules.
-   中文：`NEXT` 地图回退第二阶段需定义首启 AI 视觉提示策略，以及与模块级 AI 自动化规则的设置入口对齐。
+6. EN: `DONE (phase-2 baseline)` map AI visual controls are now aligned with module-level automation runtime policy (`master/module/notify-only/quiet-hours`) and include map-side manual trigger + policy feedback.
+   中文：`DONE（第二阶段基线）` 地图 AI 视觉控制已与模块级自动化运行策略对齐（`总开关/模块开关/仅通知/安静时段`），并具备地图侧手动触发与策略反馈。
+7. EN: `NEXT` connect real provider-side map visual generation path (optional) under current policy gate, while keeping no-API baseline intact.
+   中文：`NEXT` 在现有策略守卫下接入可选的供应商地图视觉生成路径，同时保持无 API 基线可用。
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
@@ -307,3 +309,5 @@ Status / 状态: `DONE`
     2026-04-14 中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（开始/进行中/到达/取消）、系统时间倒计时、行程记录与备份快照连续性。
 19. 2026-04-14 EN: Landed map fallback phase-1: visual mode switch (`default/gallery`), onboarding guidance, gallery asset binding, and auto fallback when bound asset is missing.
     2026-04-14 中文：已落地地图回退第一阶段：视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及绑定素材缺失时的自动回退。
+20. 2026-04-14 EN: Landed map automation-alignment baseline: map AI visual refresh now follows system automation runtime policy and supports manual trigger with in-page policy hints.
+    2026-04-14 中文：已落地地图自动化对齐基线：地图 AI 视觉刷新现遵循系统自动化运行策略，并支持手动触发与页面内策略提示。

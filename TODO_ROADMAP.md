@@ -337,6 +337,8 @@ Status / 状态: `IN_PROGRESS`
    中文：AI 调用守卫任务：地图 AI 调用仅用于视觉/事件文案增强；移动时间/进度必须由系统计算。
 7. EN: Fallback task — `DONE (phase-1)`: map now supports default visual mode + gallery visual mode, and auto-falls back to default icon/visual when bound asset is missing.
    中文：回退任务 — `DONE（第一阶段）`：地图现支持默认视觉模式 + 素材库视觉模式，且在绑定素材缺失时会自动回退到默认图标/视觉。
+8. EN: Map automation-alignment task — `DONE (phase-2 baseline)`: map AI visual refresh now respects system automation runtime policy (`master/module/notify-only/quiet-hours`) and provides manual trigger + status feedback in map UI.
+   中文：地图自动化对齐任务 — `DONE（第二阶段基线）`：地图 AI 视觉刷新现已遵循系统自动化运行策略（`总开关/模块开关/仅通知/安静时段`），并在地图页面提供手动触发与状态反馈。
 
 Acceptance / 验收标准:
 1. EN: With all map AI toggles off, user can still complete location setup, travel simulation, and arrival-state progression.
@@ -415,6 +417,8 @@ Acceptance / 验收标准:
     中文：已落地地图基线第一阶段循环：Map 现支持行程生命周期（`待出发 -> 进行中 -> 到达/取消`）、基于系统时间的倒计时、行程记录，以及不依赖外部地图 API 的备份恢复连续性。
 23. EN: Landed map fallback phase-1: added map visual mode switch (`default/gallery`), onboarding hint, gallery-asset binding, and automatic fallback to default when asset is unavailable.
     中文：已落地地图回退第一阶段：新增地图视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及素材不可用时自动回退默认模式。
+24. EN: Landed map automation-alignment baseline: map store now exposes AI-visual runtime policy and queue trigger, wired to system automation controls and map manual refresh entry.
+    中文：已落地地图自动化对齐基线：map store 已提供 AI 视觉运行策略与队列触发能力，并接入系统自动化控制与地图手动刷新入口。
 
 ---
 
