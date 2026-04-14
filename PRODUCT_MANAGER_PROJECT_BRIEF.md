@@ -216,10 +216,10 @@ Status / 状态: `IN_PROGRESS`
    中文：`DONE（第一阶段）` 通讯录已支持角色级知识点绑定，且解绑不会删除源知识点记录。
 3. EN: `DONE (phase-1)` chat prompt assembly is now deterministic: global worldview -> role profile -> bound knowledge points -> conversation context.
    中文：`DONE（第一阶段）` Chat 提示词组装已固定顺序：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
-4. EN: `TODO` map baseline loop must remain runnable without mandatory external API, with AI kept as optional visual/event enhancement.
-   中文：`TODO` 地图基线循环需在不依赖外部 API 的情况下可运行，AI 仅作为可选视觉/事件增强。
-5. EN: `TODO` map fallback defaults must ensure missing visual assets or disabled AI never blocks map interaction.
-   中文：`TODO` 地图默认回退需确保缺少视觉素材或关闭 AI 时不阻塞地图交互。
+4. EN: `DONE (phase-1)` map baseline loop is now runnable without mandatory external API: location setup + trip lifecycle (`ready -> traveling -> arrived/cancelled`) + system-time progression + persisted trip history.
+   中文：`DONE（第一阶段）` 地图基线循环已可在不依赖外部 API 的情况下运行：地点设置 + 行程生命周期（`待出发 -> 进行中 -> 到达/取消`）+ 系统时间推进 + 行程记录持久化。
+5. EN: `IN_PROGRESS` map fallback defaults remain as next closure task: when future map visuals are unavailable, interaction must continue on text/icon defaults.
+   中文：`IN_PROGRESS` 地图默认回退仍是下一收口任务：当后续地图视觉素材不可用时，交互需继续基于文字/图标默认态运行。
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
@@ -301,3 +301,5 @@ Status / 状态: `DONE`
     2026-04-12 中文：产品侧确认世界观-地图方向：世界内核拆分为全局世界观 + 可绑定知识点，地图采用模拟优先并将 AI 作为可选增强。
 17. 2026-04-12 EN: Landed `P1-3` phase-1: system store world-kernel split, contacts knowledge-point binding, and deterministic chat prompt injection order.
     2026-04-12 中文：已落地 `P1-3` 第一阶段：system store 世界内核拆分、通讯录知识点绑定、Chat 固定顺序提示词注入。
+18. 2026-04-14 EN: Landed map baseline phase-1 for `P1-3`: no-external-API trip loop (start/travel/arrive/cancel), system-time countdown, trip history, and backup snapshot continuity.
+    2026-04-14 中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（开始/进行中/到达/取消）、系统时间倒计时、行程记录与备份快照连续性。

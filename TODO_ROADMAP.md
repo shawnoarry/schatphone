@@ -325,8 +325,8 @@ Status / 状态: `IN_PROGRESS`
    中文：提示词组装任务：Chat 调用上下文顺序必须固定：
    - EN: global worldview -> role profile -> bound knowledge points -> conversation context/memory.
       中文：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文/记忆。
-4. EN: Map baseline task — `TODO`: map core loop must be runnable without mandatory external map API.
-   中文：地图基线任务：地图核心循环必须在不依赖外部地图 API 的情况下可运行。
+4. EN: Map baseline task — `DONE (phase-1)`: map core loop now runs without mandatory external map API (`location setup -> start trip -> in-transit timer -> arrival state`), with persisted trip state/history.
+   中文：地图基线任务 — `DONE（第一阶段）`：地图核心循环已可在不依赖外部地图 API 的情况下运行（`地点设置 -> 开始行程 -> 进行中计时 -> 到达状态`），并支持行程状态/记录持久化。
 5. EN: Map-mode task: keep two routes in architecture plan (not both required in first release):
    中文：地图模式任务：架构上保留两条路线（首发不要求同时实现）：
    - EN: fictional simulation mode (default, no-API first).
@@ -411,6 +411,8 @@ Acceptance / 验收标准:
     中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图基线采用“模拟优先、低 API 依赖”。
 21. EN: Started world-kernel phase-1 implementation: system store now supports `globalWorldview + knowledgePoints`, contacts role profiles now support knowledge-point binding, and chat prompt now injects bound knowledge points in deterministic order.
     中文：已启动世界内核第一阶段实现：system store 已支持 `globalWorldview + knowledgePoints`，通讯录角色档案已支持知识点绑定，Chat 提示词已按固定顺序注入绑定知识点。
+22. EN: Landed map baseline phase-1 loop: Map now supports trip lifecycle (`ready -> traveling -> arrived/cancelled`), real-time countdown by system clock, trip history, and backup restore continuity without external map API.
+    中文：已落地地图基线第一阶段循环：Map 现支持行程生命周期（`待出发 -> 进行中 -> 到达/取消`）、基于系统时间的倒计时、行程记录，以及不依赖外部地图 API 的备份恢复连续性。
 
 ---
 

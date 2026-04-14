@@ -23,7 +23,6 @@ const { t } = useI18n()
 
 const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
-const { addresses, currentLocation, tripForm } = storeToRefs(mapStore)
 
 const activeMenu = ref('')
 const generalSaved = ref(false)
@@ -707,9 +706,7 @@ const buildBackupPayload = async () => {
     conversations: conversations.value,
     messagesByConversation: messagesByConversation.value,
     map: {
-      addresses: addresses.value,
-      currentLocation: currentLocation.value,
-      tripForm: tripForm.value,
+      ...mapStore.createBackupSnapshot(),
     },
     gallery: gallerySnapshot,
   }
@@ -897,9 +894,7 @@ const createRollbackSnapshot = () => {
       messagesByConversation: deepClone(messagesByConversation.value),
     },
     map: {
-      addresses: deepClone(addresses.value),
-      currentLocation: deepClone(currentLocation.value),
-      tripForm: deepClone(tripForm.value),
+      ...deepClone(mapStore.createBackupSnapshot()),
     },
     gallery: galleryStore.createBackupSnapshot(),
   }

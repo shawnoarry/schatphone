@@ -13,8 +13,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：项目方向保持正确：沉浸式手机壳层 + Chat 驱动 AI 互动。
 2. EN: Core foundation is stable enough; storage/backup closure is completed for current scope.
    中文：核心基础已稳定；当前范围内的存储与备份收口已完成。
-3. EN: `P0-1` to `P0-7` are closed; active work is now dual-track: `P1-2` asset-hub closure + `P1-3` world-kernel/map baseline rollout.
-   中文：`P0-1` 至 `P0-7` 已收口；当前进入双主线：`P1-2` 素材中台收口 + `P1-3` 世界内核/地图基线推进。
+3. EN: `P0-1` to `P0-7` are closed; active work is now dual-track: `P1-2` asset-hub closure + `P1-3` map fallback/default closure after baseline loop landed.
+   中文：`P0-1` 至 `P0-7` 已收口；当前进入双主线：`P1-2` 素材中台收口 + `P1-3` 地图默认回退收口（基线循环已落地）。
 
 ## 3. P0 status at a glance / P0 状态总览
 1. `P0-1` AI 单条语义修订: `DONE`
@@ -72,6 +72,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：产品侧确认世界观-地图调整方向：世界内核拆分为“全局世界观 + 可绑定知识点”，地图保持模拟优先并将 AI 作为可选增强。
 23. EN: Landed `P1-3` phase-1: system store now supports `globalWorldview + knowledgePoints`, contacts support role-level knowledge-point binding, and chat prompts inject bound knowledge points in deterministic order.
     中文：已落地 `P1-3` 第一阶段：system store 已支持 `globalWorldview + knowledgePoints`，通讯录已支持角色级知识点绑定，Chat 已按固定顺序注入绑定知识点。
+24. EN: Landed map baseline phase-1 in `P1-3`: no-external-API trip loop (`ready -> traveling -> arrived/cancelled`) with system-time countdown, trip history, and backup continuity.
+    中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（`待出发 -> 进行中 -> 到达/取消`），并具备系统时间倒计时、行程记录与备份连续性。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
@@ -89,8 +91,8 @@ What will be delivered / 本步交付什么:
    中文：`DONE（第一阶段）` 通讯录已支持角色级知识点绑定与安全解绑。
 3. EN: `DONE (phase-1)` chat prompt assembly now injects world kernel in deterministic order: worldview -> role profile -> bound knowledge points -> conversation context.
    中文：`DONE（第一阶段）` Chat 提示词已按固定顺序注入世界内核：世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
-4. EN: `NEXT` implement map baseline simulation loop (location setup -> travel timer -> arrival state) without mandatory external map API.
-   中文：`NEXT` 实现地图基线模拟循环（地点设定 -> 行程计时 -> 到达状态），且不强依赖外部地图 API。
+4. EN: `DONE (phase-1)` map baseline simulation loop is online (location setup -> travel timer -> arrival state) without mandatory external map API.
+   中文：`DONE（第一阶段）` 地图基线模拟循环已上线（地点设定 -> 行程计时 -> 到达状态），且不强依赖外部地图 API。
 5. EN: `NEXT` define map fallback visuals and default behavior when AI/image assets are unavailable.
    中文：`NEXT` 定义地图在 AI/图片素材不可用时的默认视觉回退与行为规则。
 
@@ -109,8 +111,8 @@ How you can review it / 你可以怎么验收:
 ## 7. PM decisions currently needed / 当前需要你拍板的点
 1. EN: Confirm default recommendation copy for reference-mode switch (`auto` currently recommended).
    中文：确认参考图模式开关的默认推荐文案（当前推荐 `auto`）。
-2. EN: Confirm map baseline rule set for `P1-3` (default locations, travel-time scale, and whether first-run should offer optional AI-generated map visuals).
-   中文：确认 `P1-3` 地图基线规则集（默认地点、行程时间比例、首启是否提供可选 AI 生成地图视觉）。
+2. EN: Confirm map fallback/default rule set for `P1-3` phase-2 (default visual style, first-run prompt behavior, and future AI visual toggle entry).
+   中文：确认 `P1-3` 第二阶段地图默认回退规则（默认视觉样式、首启提示行为、未来 AI 视觉开关入口）。
 3. EN: Naming-only decision (non-blocking): whether to keep "Worldbook" wording or rename to a more immersive label while preserving user clarity.
    中文：命名层决策（非阻塞）：是否保留“世界书”文案，或改为更沉浸但仍易懂的名称。
 
@@ -165,3 +167,5 @@ How you can review it / 你可以怎么验收:
     2026-04-12 中文：已将世界观-地图确认方向（世界内核拆分 + 地图模拟优先基线）同步到产品执行叙述。
 18. 2026-04-12 EN: Synced `P1-3` phase-1 delivery: world-kernel split in store, role knowledge-point binding, and deterministic chat prompt injection are now marked completed.
     2026-04-12 中文：已同步 `P1-3` 第一阶段交付：store 世界内核拆分、角色知识点绑定与 Chat 固定顺序注入均已标记完成。
+19. 2026-04-14 EN: Synced `P1-3` map baseline phase-1 delivery: trip lifecycle loop, system-time countdown, trip history, and backup continuity are now marked completed.
+    2026-04-14 中文：已同步 `P1-3` 地图基线第一阶段交付：行程生命周期循环、系统时间倒计时、行程记录与备份连续性均已标记完成。
