@@ -1,15 +1,17 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
+import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const mapStore = useMapStore()
+const galleryStore = useGalleryStore()
 const { t } = useI18n()
 
-const { addresses, currentLocation, currentLocationText, tripForm, tripEstimate, tripRuntime, tripHistory } =
+const { addresses, currentLocation, currentLocationText, tripForm, tripEstimate, tripRuntime, tripHistory, mapVisualSettings } =
   storeToRefs(mapStore)
 
 const addressForm = reactive({
@@ -20,6 +22,12 @@ const tripActionHint = ref({
   tone: '',
   message: '',
 })
+const mapVisualHint = ref({
+  tone: '',
+  message: '',
+})
+const mapVisualPreviewUrl = ref('')
+const mapVisualLoading = ref(false)
 let runtimeTimer = null
 
 const goHome = () => {
@@ -56,6 +64,111 @@ const setTripToAddress = (addressId) => {
   mapStore.applyAddressToTripEndpoint(addressId, 'to')
   tripActionHint.value = { tone: '', message: '' }
 }
+
+const mapVisualAssetOptions = computed(() =>
+  galleryStore
+    .getAssetsByCategory('scenario')
+    .concat(galleryStore.getAssetsByCategory('reference'))
+    .filter((asset, index, list) => list.findIndex((item) => item.id === asset.id) === index)
+    .slice(0, 200),
+)
+
+const mapVisualSelectedAsset = computed(() => {
+  const assetId =
+    typeof mapVisualSettings.value?.assetId === 'string'
+      ? mapVisualSettings.value.assetId.trim()
+      : ''
+  if (!assetId) return null
+  return galleryStore.findAssetById(assetId)
+})
+
+const resolvedMapVisualMode = computed(() =>
+  mapStore.resolveMapVisualMode({
+    assetAvailable: Boolean(mapVisualSelectedAsset.value),
+  }),
+)
+
+const showMapVisualOnboarding = computed(
+  () => mapVisualSettings.value?.onboardingPromptPending === true,
+)
+
+const useDefaultMapVisual = () => {
+  mapStore.setMapVisualMode('default')
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = {
+    tone: 'success',
+    message: t('已使用默认地图视觉。', 'Using default map visual style.'),
+  }
+}
+
+const useGalleryMapVisual = () => {
+  mapStore.setMapVisualMode('gallery')
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = {
+    tone: 'info',
+    message: t('请从素材库选择地图背景图。', 'Please choose a map visual from gallery assets.'),
+  }
+}
+
+const onMapVisualModeChange = (event) => {
+  const mode = event?.target?.value
+  mapStore.setMapVisualMode(mode)
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = { tone: '', message: '' }
+}
+
+const onMapVisualAssetChange = (event) => {
+  const assetId = event?.target?.value || ''
+  mapStore.setMapVisualAssetId(assetId)
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = { tone: '', message: '' }
+}
+
+const onMapAiVisualToggle = (event) => {
+  mapStore.setMapAiVisualEnabled(event?.target?.checked === true)
+  mapVisualHint.value = {
+    tone: 'info',
+    message: t(
+      'AI 地图视觉入口已预留，当前版本仍以默认/素材库模式为主。',
+      'AI map visual entry is reserved; current version still uses default/gallery modes.',
+    ),
+  }
+}
+
+const refreshMapVisualPreview = async () => {
+  const selected = mapVisualSelectedAsset.value
+  if (!selected) {
+    mapVisualPreviewUrl.value = ''
+    return
+  }
+  mapVisualLoading.value = true
+  try {
+    const previewUrl = await galleryStore.getAssetPreviewUrl(selected.id)
+    mapVisualPreviewUrl.value = typeof previewUrl === 'string' ? previewUrl : ''
+  } finally {
+    mapVisualLoading.value = false
+  }
+}
+
+watch(
+  [() => mapVisualSettings.value?.mode, () => mapVisualSettings.value?.assetId, mapVisualSelectedAsset],
+  async () => {
+    if (mapVisualSettings.value?.mode === 'gallery' && !mapVisualSelectedAsset.value) {
+      const fallbackApplied = mapStore.enforceMapVisualFallback({ assetAvailable: false })
+      if (fallbackApplied) {
+        mapVisualHint.value = {
+          tone: 'warn',
+          message: t(
+            '绑定素材不可用，已自动回退为默认地图视觉。',
+            'Bound asset is unavailable; auto-fallback switched to default map visual.',
+          ),
+        }
+      }
+    }
+    await refreshMapVisualPreview()
+  },
+  { immediate: true },
+)
 
 const isTripTraveling = computed(() => tripRuntime.value.status === 'traveling')
 const isTripArrived = computed(() => tripRuntime.value.status === 'arrived')
@@ -170,6 +283,105 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4 bg-gray-50">
+      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold">{{ t('地图视觉', 'Map visual') }}</h2>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            {{ resolvedMapVisualMode === 'gallery' ? t('素材库', 'Gallery') : t('默认', 'Default') }}
+          </span>
+        </div>
+
+        <div v-if="showMapVisualOnboarding" class="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 space-y-2">
+          <p>
+            {{ t('首次可选择地图视觉模式：默认样式或素材库背景。未配置素材时会自动回退为默认。', 'Choose map visual mode on first use: default style or gallery background. Missing assets auto-fallback to default.') }}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button @click="useDefaultMapVisual" class="px-2 py-1 rounded bg-gray-900 text-white">
+              {{ t('保持默认', 'Keep default') }}
+            </button>
+            <button @click="useGalleryMapVisual" class="px-2 py-1 rounded border border-gray-300">
+              {{ t('使用素材库', 'Use gallery') }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <label class="inline-flex items-center gap-2 mr-4">
+            <input
+              type="radio"
+              name="mapVisualMode"
+              value="default"
+              :checked="mapVisualSettings.mode === 'default'"
+              @change="onMapVisualModeChange"
+            />
+            {{ t('默认视觉', 'Default visual') }}
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input
+              type="radio"
+              name="mapVisualMode"
+              value="gallery"
+              :checked="mapVisualSettings.mode === 'gallery'"
+              @change="onMapVisualModeChange"
+            />
+            {{ t('素材库视觉', 'Gallery visual') }}
+          </label>
+        </div>
+
+        <div v-if="mapVisualSettings.mode === 'gallery'" class="mt-3 space-y-2">
+          <select
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            :value="mapVisualSettings.assetId"
+            @change="onMapVisualAssetChange"
+          >
+            <option value="">{{ t('选择地图背景素材', 'Choose map background asset') }}</option>
+            <option v-for="asset in mapVisualAssetOptions" :key="asset.id" :value="asset.id">
+              {{ asset.name }}
+            </option>
+          </select>
+          <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-gray-500">
+            {{ t('素材库暂无可用背景图，已自动回退默认模式。', 'No gallery asset available for map background; fallback stays on default mode.') }}
+          </p>
+        </div>
+
+        <label class="mt-3 inline-flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            class="w-4 h-4"
+            :checked="mapVisualSettings.aiVisualEnabled === true"
+            @change="onMapAiVisualToggle"
+          />
+          {{ t('启用 AI 地图视觉（预留）', 'Enable AI map visual (reserved)') }}
+        </label>
+
+        <div class="mt-3 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
+          <div v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl" class="aspect-[16/8] bg-black">
+            <img
+              :src="mapVisualPreviewUrl"
+              class="w-full h-full object-cover"
+              :alt="t('地图视觉预览', 'Map visual preview')"
+            />
+          </div>
+          <div v-else class="aspect-[16/8] bg-gradient-to-br from-slate-200 via-slate-100 to-blue-100 flex items-center justify-center">
+            <div class="text-center text-gray-600">
+              <i class="fas fa-map-location-dot text-3xl mb-2"></i>
+              <p class="text-xs">{{ t('默认地图视觉（可继续使用，不影响功能）', 'Default map visual (fully usable)') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="mapVisualLoading" class="mt-2 text-xs text-gray-500">
+          {{ t('正在加载素材预览…', 'Loading asset preview...') }}
+        </p>
+        <p
+          v-if="mapVisualHint.message"
+          class="mt-2 text-xs"
+          :class="mapVisualHint.tone === 'success' ? 'text-emerald-700' : mapVisualHint.tone === 'warn' ? 'text-amber-700' : 'text-gray-600'"
+        >
+          {{ mapVisualHint.message }}
+        </p>
+      </section>
+
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
         <div class="flex items-center justify-between mb-2">
           <h2 class="font-semibold">{{ t('当前位置', 'Current location') }}</h2>

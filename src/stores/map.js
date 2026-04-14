@@ -8,6 +8,8 @@ const TRIP_STATUS_IDLE = 'idle'
 const TRIP_STATUS_TRAVELING = 'traveling'
 const TRIP_STATUS_ARRIVED = 'arrived'
 const TRIP_HISTORY_LIMIT = 40
+const MAP_VISUAL_MODE_DEFAULT = 'default'
+const MAP_VISUAL_MODE_GALLERY = 'gallery'
 
 const SEED_ADDRESSES = [
   { id: 1, label: '家', detail: '首尔市江南区清潭洞 88-1' },
@@ -43,6 +45,13 @@ const createIdleTripState = () => ({
   startedAt: 0,
   etaAt: 0,
   arrivedAt: 0,
+})
+
+const createDefaultMapVisualSettings = () => ({
+  mode: MAP_VISUAL_MODE_DEFAULT,
+  assetId: '',
+  aiVisualEnabled: false,
+  onboardingPromptPending: true,
 })
 
 const computeTripEstimate = (fromText = '', toText = '') => {
@@ -150,6 +159,27 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
   }
 }
 
+const normalizeMapVisualSettings = (raw) => {
+  const fallback = createDefaultMapVisualSettings()
+  if (!raw || typeof raw !== 'object') return fallback
+  const mode =
+    raw.mode === MAP_VISUAL_MODE_GALLERY
+      ? MAP_VISUAL_MODE_GALLERY
+      : MAP_VISUAL_MODE_DEFAULT
+  return {
+    mode,
+    assetId:
+      typeof raw.assetId === 'string' && raw.assetId.trim()
+        ? raw.assetId.trim()
+        : '',
+    aiVisualEnabled: raw.aiVisualEnabled === true,
+    onboardingPromptPending:
+      typeof raw.onboardingPromptPending === 'boolean'
+        ? raw.onboardingPromptPending
+        : fallback.onboardingPromptPending,
+  }
+}
+
 export const useMapStore = defineStore('map', () => {
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
@@ -158,6 +188,7 @@ export const useMapStore = defineStore('map', () => {
   const tripForm = reactive(createDefaultTripForm())
   const tripState = ref(createIdleTripState())
   const tripHistory = ref([])
+  const mapVisualSettings = ref(createDefaultMapVisualSettings())
   const runtimeNow = ref(Date.now())
   let tripArrivalTimer = null
   const hasFinishedStorageHydration = ref(false)
@@ -277,6 +308,63 @@ export const useMapStore = defineStore('map', () => {
   const tickTripRuntime = (nowInput = Date.now()) => {
     runtimeNow.value = Math.max(0, toInt(nowInput, Date.now()))
     refreshTripState(runtimeNow.value)
+  }
+
+  const setMapVisualMode = (nextMode) => {
+    const normalizedMode =
+      nextMode === MAP_VISUAL_MODE_GALLERY
+        ? MAP_VISUAL_MODE_GALLERY
+        : MAP_VISUAL_MODE_DEFAULT
+    mapVisualSettings.value = {
+      ...mapVisualSettings.value,
+      mode: normalizedMode,
+    }
+    return normalizedMode
+  }
+
+  const setMapVisualAssetId = (assetId = '') => {
+    mapVisualSettings.value = {
+      ...mapVisualSettings.value,
+      assetId: typeof assetId === 'string' ? assetId.trim() : '',
+    }
+    return mapVisualSettings.value.assetId
+  }
+
+  const setMapAiVisualEnabled = (enabled) => {
+    mapVisualSettings.value = {
+      ...mapVisualSettings.value,
+      aiVisualEnabled: enabled === true,
+    }
+    return mapVisualSettings.value.aiVisualEnabled
+  }
+
+  const dismissMapVisualOnboardingPrompt = () => {
+    if (mapVisualSettings.value.onboardingPromptPending === false) return false
+    mapVisualSettings.value = {
+      ...mapVisualSettings.value,
+      onboardingPromptPending: false,
+    }
+    return true
+  }
+
+  const resolveMapVisualMode = ({ assetAvailable = false } = {}) => {
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    if (settings.mode === MAP_VISUAL_MODE_GALLERY && assetAvailable) {
+      return MAP_VISUAL_MODE_GALLERY
+    }
+    return MAP_VISUAL_MODE_DEFAULT
+  }
+
+  const enforceMapVisualFallback = ({ assetAvailable = false } = {}) => {
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    if (settings.mode !== MAP_VISUAL_MODE_GALLERY) return false
+    if (assetAvailable) return false
+    mapVisualSettings.value = {
+      ...settings,
+      mode: MAP_VISUAL_MODE_DEFAULT,
+      assetId: '',
+    }
+    return true
   }
 
   const setCurrentLocation = ({ label, detail, source = 'manual' }) => {
@@ -422,6 +510,8 @@ export const useMapStore = defineStore('map', () => {
         .slice(0, TRIP_HISTORY_LIMIT)
     }
 
+    mapVisualSettings.value = normalizeMapVisualSettings(source.mapVisualSettings)
+
     runtimeNow.value = Date.now()
     refreshTripState(runtimeNow.value)
     scheduleTripArrivalCheck()
@@ -456,6 +546,7 @@ export const useMapStore = defineStore('map', () => {
     tripForm: { ...tripForm },
     tripState: { ...tripState.value },
     tripHistory: tripHistory.value.map((item) => ({ ...item })),
+    mapVisualSettings: { ...mapVisualSettings.value },
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()
@@ -464,6 +555,7 @@ export const useMapStore = defineStore('map', () => {
     clearTripArrivalTimer()
     tripState.value = createIdleTripState()
     tripHistory.value = []
+    mapVisualSettings.value = createDefaultMapVisualSettings()
     runtimeNow.value = Date.now()
   }
 
@@ -491,7 +583,7 @@ export const useMapStore = defineStore('map', () => {
   })()
 
   watch(
-    [addresses, currentLocation, tripForm, tripState, tripHistory],
+    [addresses, currentLocation, tripForm, tripState, tripHistory, mapVisualSettings],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -508,6 +600,7 @@ export const useMapStore = defineStore('map', () => {
     tripState,
     tripRuntime,
     tripHistory,
+    mapVisualSettings,
     setCurrentLocation,
     setCurrentLocationByAddressId,
     setTripEndpoint,
@@ -519,6 +612,12 @@ export const useMapStore = defineStore('map', () => {
     acknowledgeTripArrival,
     refreshTripState,
     tickTripRuntime,
+    setMapVisualMode,
+    setMapVisualAssetId,
+    setMapAiVisualEnabled,
+    dismissMapVisualOnboardingPrompt,
+    resolveMapVisualMode,
+    enforceMapVisualFallback,
     restoreFromBackup,
     createBackupSnapshot,
     createBackupSnapshotAsync,

@@ -335,8 +335,8 @@ Status / 状态: `IN_PROGRESS`
       中文：现实地图接入模式（后续可选扩展）。
 6. EN: AI-usage guard task: map AI calls are optional for visual/event flavor only; travel/time/progression must be system-computed.
    中文：AI 调用守卫任务：地图 AI 调用仅用于视觉/事件文案增强；移动时间/进度必须由系统计算。
-7. EN: Fallback task: if map visuals are not bound/generated, use module defaults (icon/default image) without blocking gameplay loop.
-   中文：回退任务：地图视觉素材未绑定/未生成时，使用模块默认图标/图片，不阻塞玩法循环。
+7. EN: Fallback task — `DONE (phase-1)`: map now supports default visual mode + gallery visual mode, and auto-falls back to default icon/visual when bound asset is missing.
+   中文：回退任务 — `DONE（第一阶段）`：地图现支持默认视觉模式 + 素材库视觉模式，且在绑定素材缺失时会自动回退到默认图标/视觉。
 
 Acceptance / 验收标准:
 1. EN: With all map AI toggles off, user can still complete location setup, travel simulation, and arrival-state progression.
@@ -413,6 +413,8 @@ Acceptance / 验收标准:
     中文：已启动世界内核第一阶段实现：system store 已支持 `globalWorldview + knowledgePoints`，通讯录角色档案已支持知识点绑定，Chat 提示词已按固定顺序注入绑定知识点。
 22. EN: Landed map baseline phase-1 loop: Map now supports trip lifecycle (`ready -> traveling -> arrived/cancelled`), real-time countdown by system clock, trip history, and backup restore continuity without external map API.
     中文：已落地地图基线第一阶段循环：Map 现支持行程生命周期（`待出发 -> 进行中 -> 到达/取消`）、基于系统时间的倒计时、行程记录，以及不依赖外部地图 API 的备份恢复连续性。
+23. EN: Landed map fallback phase-1: added map visual mode switch (`default/gallery`), onboarding hint, gallery-asset binding, and automatic fallback to default when asset is unavailable.
+    中文：已落地地图回退第一阶段：新增地图视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及素材不可用时自动回退默认模式。
 
 ---
 

@@ -74,6 +74,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：已落地 `P1-3` 第一阶段：system store 已支持 `globalWorldview + knowledgePoints`，通讯录已支持角色级知识点绑定，Chat 已按固定顺序注入绑定知识点。
 24. EN: Landed map baseline phase-1 in `P1-3`: no-external-API trip loop (`ready -> traveling -> arrived/cancelled`) with system-time countdown, trip history, and backup continuity.
     中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（`待出发 -> 进行中 -> 到达/取消`），并具备系统时间倒计时、行程记录与备份连续性。
+25. EN: Landed map fallback phase-1: map visual mode switch (`default/gallery`), onboarding hint, gallery binding, and auto fallback to default visual when bound asset is missing.
+    中文：已落地地图回退第一阶段：地图视觉模式切换（`默认/素材库`）、首启引导、素材绑定，以及绑定素材缺失时自动回退默认视觉。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
@@ -93,8 +95,10 @@ What will be delivered / 本步交付什么:
    中文：`DONE（第一阶段）` Chat 提示词已按固定顺序注入世界内核：世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
 4. EN: `DONE (phase-1)` map baseline simulation loop is online (location setup -> travel timer -> arrival state) without mandatory external map API.
    中文：`DONE（第一阶段）` 地图基线模拟循环已上线（地点设定 -> 行程计时 -> 到达状态），且不强依赖外部地图 API。
-5. EN: `NEXT` define map fallback visuals and default behavior when AI/image assets are unavailable.
-   中文：`NEXT` 定义地图在 AI/图片素材不可用时的默认视觉回退与行为规则。
+5. EN: `DONE (phase-1)` map fallback visuals are online: `default/gallery` visual mode + onboarding prompt + auto fallback when selected gallery asset is unavailable.
+   中文：`DONE（第一阶段）` 地图视觉回退已上线：`默认/素材库` 视觉模式 + 首启提示 + 选定素材不可用时自动回退。
+6. EN: `NEXT` align map visual AI toggle and fallback policy with module-level automation settings.
+   中文：`NEXT` 将地图视觉 AI 开关与回退策略进一步对齐到模块级自动化设置。
 
 How you can review it / 你可以怎么验收:
 1. EN: In chat with one role bound to knowledge points and another unbound, verify the two roles produce clearly different, stable replies under the same worldview.
@@ -169,3 +173,5 @@ How you can review it / 你可以怎么验收:
     2026-04-12 中文：已同步 `P1-3` 第一阶段交付：store 世界内核拆分、角色知识点绑定与 Chat 固定顺序注入均已标记完成。
 19. 2026-04-14 EN: Synced `P1-3` map baseline phase-1 delivery: trip lifecycle loop, system-time countdown, trip history, and backup continuity are now marked completed.
     2026-04-14 中文：已同步 `P1-3` 地图基线第一阶段交付：行程生命周期循环、系统时间倒计时、行程记录与备份连续性均已标记完成。
+20. 2026-04-14 EN: Synced map fallback phase-1 delivery: visual mode switch, onboarding prompt, gallery binding, and missing-asset auto fallback are now marked completed.
+    2026-04-14 中文：已同步地图回退第一阶段交付：视觉模式切换、首启提示、素材绑定与缺失素材自动回退均已标记完成。

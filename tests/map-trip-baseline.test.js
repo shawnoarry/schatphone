@@ -71,4 +71,35 @@ describe('map trip baseline loop', () => {
     expect(storeB.tripState.status).toBe('arrived')
     expect(storeB.currentLocation.detail).toBe('公司')
   })
+
+  test('map visual falls back to default when gallery asset is unavailable', () => {
+    const store = useMapStore()
+    store.setMapVisualMode('gallery')
+    store.setMapVisualAssetId('asset_missing')
+
+    expect(store.resolveMapVisualMode({ assetAvailable: false })).toBe('default')
+    const changed = store.enforceMapVisualFallback({ assetAvailable: false })
+    expect(changed).toBe(true)
+    expect(store.mapVisualSettings.mode).toBe('default')
+    expect(store.mapVisualSettings.assetId).toBe('')
+  })
+
+  test('backup snapshot persists map visual settings', () => {
+    const storeA = useMapStore()
+    storeA.setMapVisualMode('gallery')
+    storeA.setMapVisualAssetId('asset_abc')
+    storeA.setMapAiVisualEnabled(true)
+    storeA.dismissMapVisualOnboardingPrompt()
+
+    const snapshot = storeA.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const storeB = useMapStore()
+    const restored = storeB.restoreFromBackup({ map: snapshot })
+
+    expect(restored).toBe(true)
+    expect(storeB.mapVisualSettings.mode).toBe('gallery')
+    expect(storeB.mapVisualSettings.assetId).toBe('asset_abc')
+    expect(storeB.mapVisualSettings.aiVisualEnabled).toBe(true)
+    expect(storeB.mapVisualSettings.onboardingPromptPending).toBe(false)
+  })
 })

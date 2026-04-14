@@ -218,8 +218,10 @@ Status / 状态: `IN_PROGRESS`
    中文：`DONE（第一阶段）` Chat 提示词组装已固定顺序：全局世界观 -> 角色档案 -> 绑定知识点 -> 会话上下文。
 4. EN: `DONE (phase-1)` map baseline loop is now runnable without mandatory external API: location setup + trip lifecycle (`ready -> traveling -> arrived/cancelled`) + system-time progression + persisted trip history.
    中文：`DONE（第一阶段）` 地图基线循环已可在不依赖外部 API 的情况下运行：地点设置 + 行程生命周期（`待出发 -> 进行中 -> 到达/取消`）+ 系统时间推进 + 行程记录持久化。
-5. EN: `IN_PROGRESS` map fallback defaults remain as next closure task: when future map visuals are unavailable, interaction must continue on text/icon defaults.
-   中文：`IN_PROGRESS` 地图默认回退仍是下一收口任务：当后续地图视觉素材不可用时，交互需继续基于文字/图标默认态运行。
+5. EN: `DONE (phase-1)` map fallback defaults are now online: map supports `default/gallery` visual mode and auto-falls back to default icon/visual when bound gallery asset is unavailable.
+   中文：`DONE（第一阶段）` 地图默认回退已上线：地图支持 `默认/素材库` 视觉模式，并在绑定素材不可用时自动回退到默认图标/视觉。
+6. EN: `NEXT` map fallback phase-2 should define first-run AI visual prompt policy and settings-entry alignment with module-level AI automation rules.
+   中文：`NEXT` 地图回退第二阶段需定义首启 AI 视觉提示策略，以及与模块级 AI 自动化规则的设置入口对齐。
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
@@ -303,3 +305,5 @@ Status / 状态: `DONE`
     2026-04-12 中文：已落地 `P1-3` 第一阶段：system store 世界内核拆分、通讯录知识点绑定、Chat 固定顺序提示词注入。
 18. 2026-04-14 EN: Landed map baseline phase-1 for `P1-3`: no-external-API trip loop (start/travel/arrive/cancel), system-time countdown, trip history, and backup snapshot continuity.
     2026-04-14 中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（开始/进行中/到达/取消）、系统时间倒计时、行程记录与备份快照连续性。
+19. 2026-04-14 EN: Landed map fallback phase-1: visual mode switch (`default/gallery`), onboarding guidance, gallery asset binding, and auto fallback when bound asset is missing.
+    2026-04-14 中文：已落地地图回退第一阶段：视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及绑定素材缺失时的自动回退。
