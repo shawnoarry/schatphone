@@ -20,9 +20,9 @@ const MEDIA_LIMIT_BYTES_BY_SCENE = Object.freeze({
     [MEDIA_KIND.VIDEO]: 40 * MB,
   }),
   [MEDIA_SIZE_SCENE.ONE_OFF_INLINE]: Object.freeze({
-    [MEDIA_KIND.IMAGE]: 600 * KB,
-    [MEDIA_KIND.GIF]: 2 * MB,
-    [MEDIA_KIND.VIDEO]: 5 * MB,
+    [MEDIA_KIND.IMAGE]: 2 * MB,
+    [MEDIA_KIND.GIF]: 6 * MB,
+    [MEDIA_KIND.VIDEO]: 12 * MB,
   }),
 })
 
@@ -121,4 +121,3 @@ export const formatBytesCompact = (bytes = 0) => {
   if (normalized >= KB) return `${Math.round(normalized / KB)} KB`
   return `${Math.round(normalized)} B`
 }
-
