@@ -105,8 +105,8 @@ What will be delivered / 本步交付什么:
    中文：`DONE（第一阶段）` 地图视觉回退已上线：`默认/素材库` 视觉模式 + 首启提示 + 选定素材不可用时自动回退。
 6. EN: `DONE (phase-2 baseline)` map visual AI toggle and runtime policy are now aligned with module-level automation settings.
    中文：`DONE（第二阶段基线）` 地图视觉 AI 开关与运行策略已对齐到模块级自动化设置。
-7. EN: `NEXT` evaluate optional provider-backed map-visual generation under current policy guard (without breaking no-API baseline).
-   中文：`NEXT` 在当前策略守卫下评估可选的供应商地图视觉生成路径（且不破坏无 API 基线）。
+7. EN: `DONE (phase-3 baseline)` optional provider-backed map-visual generation is now wired under current policy guard, with deterministic fallback when API key/provider generation is unavailable.
+   中文：`DONE（第三阶段基线）` 可选供应商地图视觉生成已接入当前策略守卫，并在 API key 缺失或供应商生成失败时保持确定性回退。
 
 How you can review it / 你可以怎么验收:
 1. EN: In chat with one role bound to knowledge points and another unbound, verify the two roles produce clearly different, stable replies under the same worldview.
@@ -123,8 +123,8 @@ How you can review it / 你可以怎么验收:
 ## 7. PM decisions currently needed / 当前需要你拍板的点
 1. EN: Confirm default recommendation copy for reference-mode switch (`auto` currently recommended).
    中文：确认参考图模式开关的默认推荐文案（当前推荐 `auto`）。
-2. EN: Confirm rollout policy for optional provider-backed map-visual generation (entry location, quota提示 wording, and fallback behavior on provider failure).
-   中文：确认可选“供应商地图视觉生成”上线策略（入口位置、额度提示文案、供应商失败时回退行为）。
+2. EN: Fine-tune provider visual copy/prompt style and image-host safety policy (non-blocking polish after baseline landing).
+   中文：细化供应商视觉的提示文案/提示词风格与图片来源安全策略（基线落地后的非阻塞打磨）。
 3. EN: Naming-only decision (non-blocking): whether to keep "Worldbook" wording or rename to a more immersive label while preserving user clarity.
    中文：命名层决策（非阻塞）：是否保留“世界书”文案，或改为更沉浸但仍易懂的名称。
 
@@ -189,3 +189,5 @@ How you can review it / 你可以怎么验收:
     2026-04-15 中文：已同步 Gallery 安全第一阶段交付：绑定素材替换（`URL/文件`）已具备双重确认与保留绑定关系的替换路径。
 23. 2026-04-15 EN: Synced media-size policy phase-1 delivery: Chat/Gallery now enforce centralized size limits for one-off send/import/replace with explicit oversize feedback.
     2026-04-15 中文：已同步媒体体积策略第一阶段交付：Chat/Gallery 现对单次发送/导入/替换执行统一体积上限，并提供明确超限提示。
+24. 2026-04-15 EN: Synced map provider-visual phase-3 baseline delivery: map now supports optional provider visual generation under policy gate, with runtime status/preview and deterministic fallback on missing key or provider failure.
+    2026-04-15 中文：已同步地图供应商视觉第三阶段基线交付：地图现支持在策略守卫下启用可选供应商视觉生成，并提供运行状态/预览与缺少 key 或供应商失败时的确定性回退。

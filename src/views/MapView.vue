@@ -141,6 +141,11 @@ const onMapAiVisualToggle = (event) => {
   mapVisualHint.value = { tone: '', message: '' }
 }
 
+const onMapProviderVisualToggle = (event) => {
+  mapStore.setMapProviderVisualEnabled(event?.target?.checked === true)
+  mapVisualHint.value = { tone: '', message: '' }
+}
+
 const mapAiPolicySummary = computed(() => {
   const policy = mapAiVisualAutomationPolicy.value || {}
   if (policy.invokeEnabled) return t('可执行', 'Ready')
@@ -174,6 +179,27 @@ const mapAiPolicyHint = computed(() => {
   return t('当前不可执行 AI 刷新。', 'AI refresh is currently unavailable.')
 })
 
+const mapProviderStatusLabel = computed(() => {
+  const mode = mapAutomationRuntime.value?.lastProviderMode || ''
+  if (mode === 'provider_image_url') return t('已生成图片链接', 'Generated image link')
+  if (mode === 'provider_text') return t('已生成视觉描述', 'Generated visual note')
+  if (mode === 'provider_failed') return t('供应商调用失败', 'Provider failed')
+  if (mode === 'skipped_no_key') return t('缺少 API Key', 'API key missing')
+  if (mode === 'disabled') return t('未启用', 'Disabled')
+  if (mode === 'skipped_no_runner') return t('运行器不可用', 'Runner unavailable')
+  return t('未执行', 'Not executed')
+})
+
+const mapProviderGeneratedImageUrl = computed(() => {
+  const raw =
+    typeof mapAutomationRuntime.value?.lastProviderImageUrl === 'string'
+      ? mapAutomationRuntime.value.lastProviderImageUrl.trim()
+      : ''
+  if (!raw) return ''
+  if (!/^https?:\/\//i.test(raw)) return ''
+  return raw
+})
+
 const openAutomationSettings = () => {
   router.push({ path: '/settings', query: { menu: 'automation' } })
 }
@@ -184,6 +210,23 @@ const triggerMapAiVisualRefresh = async () => {
   try {
     const result = await mapStore.requestMapAiVisualRefresh({ source: 'map_manual_refresh' })
     if (result?.ok && result?.runtimeResult === 'executed') {
+      const providerMode = mapAutomationRuntime.value?.lastProviderMode || ''
+      if (providerMode === 'provider_failed') {
+        mapVisualHint.value = {
+          tone: 'warn',
+          message:
+            mapAutomationRuntime.value?.lastProviderMessage ||
+            t('供应商视觉生成失败，已自动回退默认视觉。', 'Provider visual failed; fallback remains available.'),
+        }
+        return
+      }
+      if (providerMode === 'skipped_no_key') {
+        mapVisualHint.value = {
+          tone: 'warn',
+          message: t('未配置 API Key，已跳过供应商视觉生成。', 'API key missing. Provider visual step was skipped.'),
+        }
+        return
+      }
       mapVisualHint.value = {
         tone: 'success',
         message: t('AI 地图视觉刷新完成。', 'AI map visual refresh completed.'),
@@ -448,11 +491,30 @@ onBeforeUnmount(() => {
           {{ t('启用 AI 地图视觉', 'Enable AI map visual') }}
         </label>
 
+        <label class="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            class="w-4 h-4"
+            :checked="mapVisualSettings.providerVisualEnabled === true"
+            @change="onMapProviderVisualToggle"
+          />
+          {{ t('启用供应商视觉生成（可选）', 'Enable provider visual generation (optional)') }}
+        </label>
+
         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
           <p class="font-medium text-gray-700">
             {{ t('自动化策略状态', 'Automation policy') }}: {{ mapAiPolicySummary }}
           </p>
           <p class="mt-1">{{ mapAiPolicyHint }}</p>
+          <p class="mt-1">
+            {{ t('供应商状态', 'Provider status') }}: {{ mapProviderStatusLabel }}
+          </p>
+          <p
+            v-if="mapAutomationRuntime.lastProviderSummary"
+            class="mt-1 text-[11px] text-gray-500"
+          >
+            {{ mapAutomationRuntime.lastProviderSummary }}
+          </p>
           <div class="mt-2 flex flex-wrap gap-2">
             <button
               @click="triggerMapAiVisualRefresh"
@@ -477,6 +539,13 @@ onBeforeUnmount(() => {
               :src="mapVisualPreviewUrl"
               class="w-full h-full object-cover"
               :alt="t('地图视觉预览', 'Map visual preview')"
+            />
+          </div>
+          <div v-else-if="mapProviderGeneratedImageUrl" class="aspect-[16/8] bg-black">
+            <img
+              :src="mapProviderGeneratedImageUrl"
+              class="w-full h-full object-cover"
+              :alt="t('供应商视觉预览', 'Provider visual preview')"
             />
           </div>
           <div v-else class="aspect-[16/8] bg-gradient-to-br from-slate-200 via-slate-100 to-blue-100 flex items-center justify-center">

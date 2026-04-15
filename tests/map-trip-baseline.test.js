@@ -90,6 +90,7 @@ describe('map trip baseline loop', () => {
     storeA.setMapVisualMode('gallery')
     storeA.setMapVisualAssetId('asset_abc')
     storeA.setMapAiVisualEnabled(true)
+    storeA.setMapProviderVisualEnabled(true)
     storeA.dismissMapVisualOnboardingPrompt()
 
     const snapshot = storeA.createBackupSnapshot()
@@ -101,6 +102,7 @@ describe('map trip baseline loop', () => {
     expect(storeB.mapVisualSettings.mode).toBe('gallery')
     expect(storeB.mapVisualSettings.assetId).toBe('asset_abc')
     expect(storeB.mapVisualSettings.aiVisualEnabled).toBe(true)
+    expect(storeB.mapVisualSettings.providerVisualEnabled).toBe(true)
     expect(storeB.mapVisualSettings.onboardingPromptPending).toBe(false)
   })
 
@@ -130,5 +132,46 @@ describe('map trip baseline loop', () => {
     expect(result.notifyOnly).toBe(true)
     expect(result.reason).toBe('notify_only_mode')
     expect(mapStore.mapAutomationRuntime.lastNotifyOnlyAt > 0).toBe(true)
+  })
+
+  test('provider visual step is skipped when API key is missing', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    mapStore.setMapAiVisualEnabled(true)
+    mapStore.setMapProviderVisualEnabled(true)
+    systemStore.settings.aiAutomation.masterEnabled = true
+    systemStore.settings.aiAutomation.modules.map.enabled = true
+    systemStore.settings.api.key = ''
+
+    const result = await mapStore.requestMapAiVisualRefresh({ source: 'test_provider_skip' })
+    expect(result.ok).toBe(true)
+    expect(mapStore.mapAutomationRuntime.lastProviderMode).toBe('skipped_no_key')
+    expect(mapStore.mapAutomationRuntime.lastProviderErrorCode).toBe('NO_API_KEY')
+  })
+
+  test('provider visual step can apply image url via test runner override', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    mapStore.setMapAiVisualEnabled(true)
+    mapStore.setMapProviderVisualEnabled(true)
+    systemStore.settings.aiAutomation.masterEnabled = true
+    systemStore.settings.aiAutomation.modules.map.enabled = true
+    systemStore.settings.api.key = 'sk-test-provider'
+
+    mapStore.setMapAiProviderRunnerForTesting(async () => ({
+      text: JSON.stringify({
+        sceneLabel: 'Rain City',
+        visualNote: 'Wet roads with neon reflections.',
+        imageUrl: 'https://example.com/map-ai-visual.png',
+      }),
+    }))
+
+    const result = await mapStore.requestMapAiVisualRefresh({ source: 'test_provider_image' })
+    expect(result.ok).toBe(true)
+    expect(mapStore.mapAutomationRuntime.lastProviderMode).toBe('provider_image_url')
+    expect(mapStore.mapAutomationRuntime.lastProviderImageUrl).toBe(
+      'https://example.com/map-ai-visual.png',
+    )
+    expect(mapStore.mapAutomationRuntime.lastProviderSummary).toContain('Wet roads')
   })
 })

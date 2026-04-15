@@ -1,6 +1,8 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { callAI, formatApiErrorForUi } from '../lib/ai'
+import { extractAssistantPayloadText, parseAssistantJsonPayload } from '../lib/chat-response'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -12,6 +14,12 @@ const TRIP_HISTORY_LIMIT = 40
 const MAP_AUTOMATION_MODULE_KEY = 'map'
 const MAP_VISUAL_MODE_DEFAULT = 'default'
 const MAP_VISUAL_MODE_GALLERY = 'gallery'
+const MAP_PROVIDER_VISUAL_MODE_DISABLED = 'disabled'
+const MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_KEY = 'skipped_no_key'
+const MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_RUNNER = 'skipped_no_runner'
+const MAP_PROVIDER_VISUAL_MODE_FAILED = 'provider_failed'
+const MAP_PROVIDER_VISUAL_MODE_TEXT = 'provider_text'
+const MAP_PROVIDER_VISUAL_MODE_IMAGE_URL = 'provider_image_url'
 
 const SEED_ADDRESSES = [
   { id: 1, label: '家', detail: '首尔市江南区清潭洞 88-1' },
@@ -53,6 +61,7 @@ const createDefaultMapVisualSettings = () => ({
   mode: MAP_VISUAL_MODE_DEFAULT,
   assetId: '',
   aiVisualEnabled: false,
+  providerVisualEnabled: false,
   onboardingPromptPending: true,
 })
 
@@ -63,6 +72,13 @@ const createDefaultMapAutomationRuntime = () => ({
   lastResult: '',
   lastReason: '',
   lastTaskId: '',
+  lastProviderAttemptAt: 0,
+  lastProviderSuccessAt: 0,
+  lastProviderMode: MAP_PROVIDER_VISUAL_MODE_DISABLED,
+  lastProviderErrorCode: '',
+  lastProviderMessage: '',
+  lastProviderSummary: '',
+  lastProviderImageUrl: '',
 })
 
 const computeTripEstimate = (fromText = '', toText = '') => {
@@ -184,10 +200,67 @@ const normalizeMapVisualSettings = (raw) => {
         ? raw.assetId.trim()
         : '',
     aiVisualEnabled: raw.aiVisualEnabled === true,
+    providerVisualEnabled: raw.providerVisualEnabled === true,
     onboardingPromptPending:
       typeof raw.onboardingPromptPending === 'boolean'
         ? raw.onboardingPromptPending
         : fallback.onboardingPromptPending,
+  }
+}
+
+const sanitizeHttpUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  const normalized = value.trim()
+  if (!normalized) return ''
+  try {
+    const parsed = new URL(normalized)
+    const protocol = parsed.protocol.toLowerCase()
+    if (protocol !== 'http:' && protocol !== 'https:') return ''
+    return parsed.href
+  } catch {
+    return ''
+  }
+}
+
+const trimLine = (value, max = 200) => {
+  if (typeof value !== 'string') return ''
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  if (!normalized) return ''
+  return normalized.slice(0, max)
+}
+
+const buildMapProviderVisualPrompt = ({ settings, locationText, tripSnapshot }) => {
+  const mode = settings?.mode === MAP_VISUAL_MODE_GALLERY ? 'gallery' : 'default'
+  const tripText = tripSnapshot?.status === TRIP_STATUS_TRAVELING
+    ? `Traveling from ${tripSnapshot.fromLabel || tripSnapshot.from || 'Unknown'} to ${tripSnapshot.toLabel || tripSnapshot.to || 'Unknown'}`
+    : tripSnapshot?.status === TRIP_STATUS_ARRIVED
+      ? `Arrived at ${tripSnapshot.toLabel || tripSnapshot.to || 'destination'}`
+      : 'No active trip'
+  const location = trimLine(locationText, 160)
+  return [
+    'Generate one compact map visual brief for an immersive mobile map UI.',
+    `Visual mode: ${mode}`,
+    `Current location: ${location || 'Unknown location'}`,
+    `Trip status: ${tripText}`,
+    'Return strict JSON only with keys:',
+    '{"sceneLabel":"...","visualNote":"...","imageUrl":"https://... or empty"}',
+    'Rules:',
+    '- sceneLabel <= 40 chars',
+    '- visualNote <= 180 chars',
+    '- imageUrl can be empty if unavailable',
+  ].join('\n')
+}
+
+const normalizeMapProviderVisualResult = (rawText) => {
+  const payload = parseAssistantJsonPayload(rawText)
+  const fromObject = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null
+  const sceneLabel = trimLine(fromObject?.sceneLabel || fromObject?.title || '', 40)
+  const visualNote = trimLine(fromObject?.visualNote || fromObject?.note || rawText, 180)
+  const imageUrl = sanitizeHttpUrl(fromObject?.imageUrl || fromObject?.image || '')
+  return {
+    sceneLabel,
+    visualNote: visualNote || sceneLabel || 'Map visual refreshed.',
+    imageUrl,
   }
 }
 
@@ -205,6 +278,7 @@ export const useMapStore = defineStore('map', () => {
   const runtimeNow = ref(Date.now())
   let tripArrivalTimer = null
   let mapAutomationHandlerRegistered = false
+  let mapProviderRunnerOverride = null
   const hasFinishedStorageHydration = ref(false)
 
   const tripEstimate = computed(() => {
@@ -379,26 +453,139 @@ export const useMapStore = defineStore('map', () => {
     ].join(':')
   }
 
+  const executeMapProviderVisualRefresh = async ({ now = Date.now(), task } = {}) => {
+    const systemStore = getSystemStore()
+    const settings = normalizeMapVisualSettings(mapVisualSettings.value)
+    if (!settings.providerVisualEnabled) {
+      return {
+        ok: false,
+        mode: MAP_PROVIDER_VISUAL_MODE_DISABLED,
+        summary: '',
+        imageUrl: '',
+        errorCode: '',
+      }
+    }
+
+    const apiKey = typeof systemStore.settings?.api?.key === 'string'
+      ? systemStore.settings.api.key.trim()
+      : ''
+    if (!apiKey) {
+      return {
+        ok: false,
+        mode: MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_KEY,
+        summary: 'Provider visual refresh skipped: missing API key.',
+        imageUrl: '',
+        errorCode: 'NO_API_KEY',
+      }
+    }
+
+    const runner = typeof mapProviderRunnerOverride === 'function'
+      ? mapProviderRunnerOverride
+      : async (context) => {
+          const rawPayload = await callAI({
+            settings: systemStore.settings,
+            systemPrompt:
+              'You generate compact map visual guidance for a mobile app. Output strict JSON only.',
+            messages: [
+              {
+                role: 'user',
+                content: context.prompt,
+              },
+            ],
+            withMeta: true,
+          })
+          const text = typeof rawPayload?.text === 'string'
+            ? rawPayload.text
+            : extractAssistantPayloadText(rawPayload)
+          return {
+            text,
+            meta: rawPayload?.meta || {},
+          }
+        }
+
+    if (typeof runner !== 'function') {
+      return {
+        ok: false,
+        mode: MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_RUNNER,
+        summary: '',
+        imageUrl: '',
+        errorCode: 'NO_RUNNER',
+      }
+    }
+
+    try {
+      const prompt = buildMapProviderVisualPrompt({
+        settings,
+        locationText: currentLocationText.value,
+        tripSnapshot: normalizeTripState(tripState.value),
+      })
+      const generated = await runner({
+        now,
+        task,
+        settings,
+        prompt,
+        currentLocation: { ...currentLocation.value },
+        tripState: normalizeTripState(tripState.value),
+      })
+      const text = typeof generated?.text === 'string'
+        ? generated.text
+        : extractAssistantPayloadText(generated)
+      const normalized = normalizeMapProviderVisualResult(text)
+      const appliedMode = normalized.imageUrl
+        ? MAP_PROVIDER_VISUAL_MODE_IMAGE_URL
+        : MAP_PROVIDER_VISUAL_MODE_TEXT
+      return {
+        ok: true,
+        mode: appliedMode,
+        summary: normalized.visualNote,
+        imageUrl: normalized.imageUrl,
+        errorCode: '',
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        mode: MAP_PROVIDER_VISUAL_MODE_FAILED,
+        summary: formatApiErrorForUi(error, 'Map visual refresh failed.'),
+        imageUrl: '',
+        errorCode: typeof error?.code === 'string' ? error.code : 'UNKNOWN',
+      }
+    }
+  }
+
   const mapAutomationTaskHandler = async (task, context = {}) => {
     const systemStore = getSystemStore()
     const now = Number.isFinite(Number(context?.now)) ? Number(context.now) : Date.now()
     const settings = normalizeMapVisualSettings(mapVisualSettings.value)
     const assetAvailable = Boolean(settings.assetId)
+    const providerResult = await executeMapProviderVisualRefresh({ now, task })
     mapAutomationRuntime.value = {
       ...mapAutomationRuntime.value,
       lastExecuteAt: now,
       lastResult: 'executed',
       lastReason: '',
       lastTaskId: typeof task?.id === 'string' ? task.id : '',
+      lastProviderAttemptAt: now,
+      lastProviderSuccessAt: providerResult.ok ? now : mapAutomationRuntime.value.lastProviderSuccessAt,
+      lastProviderMode: providerResult.mode,
+      lastProviderErrorCode: providerResult.errorCode || '',
+      lastProviderMessage: providerResult.ok ? '' : providerResult.summary,
+      lastProviderSummary: providerResult.summary,
+      lastProviderImageUrl: providerResult.imageUrl || '',
     }
 
     if (systemStore.isLocked) {
+      const providerHint =
+        providerResult.mode === MAP_PROVIDER_VISUAL_MODE_IMAGE_URL
+          ? ' Provider image applied.'
+          : providerResult.mode === MAP_PROVIDER_VISUAL_MODE_TEXT
+            ? ' Provider style note updated.'
+            : ''
       systemStore.addNotification({
         title: 'Map',
         content:
           settings.mode === MAP_VISUAL_MODE_GALLERY && assetAvailable
             ? 'Map visual refresh completed (gallery mode).'
-            : 'Map visual refresh completed (default mode).',
+            : `Map visual refresh completed (default mode).${providerHint}`,
         icon: 'fas fa-map-location-dot',
         route: '/map',
         source: 'map_ai_visual_refresh_done',
@@ -410,6 +597,8 @@ export const useMapStore = defineStore('map', () => {
       ok: true,
       mode: settings.mode,
       assetId: settings.assetId,
+      providerMode: providerResult.mode,
+      providerApplied: providerResult.ok,
     }
   }
 
@@ -565,6 +754,24 @@ export const useMapStore = defineStore('map', () => {
       }
     }
     return mapVisualSettings.value.aiVisualEnabled
+  }
+
+  const setMapProviderVisualEnabled = (enabled) => {
+    mapVisualSettings.value = {
+      ...mapVisualSettings.value,
+      providerVisualEnabled: enabled === true,
+    }
+    if (!mapVisualSettings.value.providerVisualEnabled) {
+      mapAutomationRuntime.value = {
+        ...mapAutomationRuntime.value,
+        lastProviderMode: MAP_PROVIDER_VISUAL_MODE_DISABLED,
+        lastProviderSummary: '',
+        lastProviderImageUrl: '',
+        lastProviderMessage: '',
+        lastProviderErrorCode: '',
+      }
+    }
+    return mapVisualSettings.value.providerVisualEnabled
   }
 
   const dismissMapVisualOnboardingPrompt = () => {
@@ -790,6 +997,10 @@ export const useMapStore = defineStore('map', () => {
     runtimeNow.value = Date.now()
   }
 
+  const setMapAiProviderRunnerForTesting = (runner) => {
+    mapProviderRunnerOverride = typeof runner === 'function' ? runner : null
+  }
+
   const persistToStorage = () => {
     writePersistedState(
       MAP_STORAGE_KEY,
@@ -848,6 +1059,7 @@ export const useMapStore = defineStore('map', () => {
     setMapVisualMode,
     setMapVisualAssetId,
     setMapAiVisualEnabled,
+    setMapProviderVisualEnabled,
     dismissMapVisualOnboardingPrompt,
     resolveMapVisualMode,
     enforceMapVisualFallback,
@@ -857,6 +1069,7 @@ export const useMapStore = defineStore('map', () => {
     createBackupSnapshot,
     createBackupSnapshotAsync,
     resetTripRuntimeForTesting,
+    setMapAiProviderRunnerForTesting,
     saveNow,
   }
 })

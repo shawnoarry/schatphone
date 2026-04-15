@@ -222,8 +222,8 @@ Status / 状态: `IN_PROGRESS`
    中文：`DONE（第一阶段）` 地图默认回退已上线：地图支持 `默认/素材库` 视觉模式，并在绑定素材不可用时自动回退到默认图标/视觉。
 6. EN: `DONE (phase-2 baseline)` map AI visual controls are now aligned with module-level automation runtime policy (`master/module/notify-only/quiet-hours`) and include map-side manual trigger + policy feedback.
    中文：`DONE（第二阶段基线）` 地图 AI 视觉控制已与模块级自动化运行策略对齐（`总开关/模块开关/仅通知/安静时段`），并具备地图侧手动触发与策略反馈。
-7. EN: `NEXT` connect real provider-side map visual generation path (optional) under current policy gate, while keeping no-API baseline intact.
-   中文：`NEXT` 在现有策略守卫下接入可选的供应商地图视觉生成路径，同时保持无 API 基线可用。
+7. EN: `DONE (phase-3 baseline)` optional provider-side map visual generation is now connected under the current policy gate, with deterministic fallback when API key/provider generation is unavailable.
+   中文：`DONE（第三阶段基线）` 可选的供应商地图视觉生成已接入当前策略守卫，并在 API key 缺失或供应商生成失败时保持确定性回退。
 
 ### P0-1 AI Single-Message Semantic Revision / AI 单条语义修订
 Status / 状态: `DONE`
@@ -309,9 +309,11 @@ Status / 状态: `DONE`
     2026-04-14 中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（开始/进行中/到达/取消）、系统时间倒计时、行程记录与备份快照连续性。
 19. 2026-04-14 EN: Landed map fallback phase-1: visual mode switch (`default/gallery`), onboarding guidance, gallery asset binding, and auto fallback when bound asset is missing.
     2026-04-14 中文：已落地地图回退第一阶段：视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及绑定素材缺失时的自动回退。
-20. 2026-04-14 EN: Landed map automation-alignment baseline: map AI visual refresh now follows system automation runtime policy and supports manual trigger with in-page policy hints.
+20. 2026-04-15 EN: Landed map provider-visual phase-3 baseline: optional provider visual generation is now wired under policy guard with deterministic fallback (`no key`/`provider failed`) and runtime status surfaced in map UI.
+    2026-04-15 中文：已落地地图供应商视觉第三阶段基线：可选供应商视觉生成已接入策略守卫，并在 `缺少 key`/`供应商失败` 时保持确定性回退，同时在地图 UI 展示运行状态。
+21. 2026-04-14 EN: Landed map automation-alignment baseline: map AI visual refresh now follows system automation runtime policy and supports manual trigger with in-page policy hints.
     2026-04-14 中文：已落地地图自动化对齐基线：地图 AI 视觉刷新现遵循系统自动化运行策略，并支持手动触发与页面内策略提示。
-21. 2026-04-15 EN: Landed asset safety phase-1 in Gallery: bound asset replacement (`URL/file`) now uses two-step confirmation and preserves existing bindings by keeping asset IDs stable.
+22. 2026-04-15 EN: Landed asset safety phase-1 in Gallery: bound asset replacement (`URL/file`) now uses two-step confirmation and preserves existing bindings by keeping asset IDs stable.
     2026-04-15 中文：已落地 Gallery 素材安全第一阶段：绑定素材替换（`URL/文件`）采用双重确认，并通过保持素材 ID 稳定来保留现有绑定关系。
-22. 2026-04-15 EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size limits and oversize copy for one-off send, import and replacement paths.
+23. 2026-04-15 EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size limits and oversize copy for one-off send, import and replacement paths.
     2026-04-15 中文：已落地媒体体积策略第一阶段：Chat/Gallery 现统一单次发送、导入、替换的体积上限与超限提示文案。
