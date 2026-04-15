@@ -122,6 +122,76 @@ describe('gallery store', () => {
     expect(store.findFolderById(createdFolder.id)?.assetIds).toEqual([])
   })
 
+  test('replaces asset content while keeping same asset id and folder links', async () => {
+    const store = useGalleryStore()
+    const first = store.importAssetFromUrl({
+      url: 'https://example.com/ref/replace-before.png',
+      category: 'reference',
+      name: 'Replace Before',
+    })
+    const second = store.importAssetFromUrl({
+      url: 'https://example.com/ref/duplicate-target.png',
+      category: 'reference',
+      name: 'Duplicate Target',
+    })
+    expect(first.ok).toBe(true)
+    expect(second.ok).toBe(true)
+
+    const folder = store.createFolder({
+      name: 'Replace Folder',
+      category: 'reference',
+      assetIds: [first.assetId],
+    })
+    expect(folder.assetIds).toEqual([first.assetId])
+
+    const replaced = await store.replaceAssetFromUrl(first.assetId, {
+      url: 'https://example.com/ref/replace-after.png',
+    })
+    expect(replaced.ok).toBe(true)
+    expect(replaced.assetId).toBe(first.assetId)
+    const replacedAsset = store.findAssetById(first.assetId)
+    expect(replacedAsset?.sourceType).toBe('url')
+    expect(replacedAsset?.sourceUrl).toBe('https://example.com/ref/replace-after.png')
+    expect(store.findFolderById(folder.id)?.assetIds).toEqual([first.assetId])
+
+    const duplicated = await store.replaceAssetFromUrl(first.assetId, {
+      url: 'https://example.com/ref/duplicate-target.png',
+    })
+    expect(duplicated.ok).toBe(false)
+    expect(duplicated.reason).toBe('duplicate')
+  })
+
+  test('supports replacing URL asset with file and switching back to URL', async () => {
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/emoji/legacy.png',
+      category: 'emoji',
+      name: 'Legacy Emoji',
+    })
+    expect(imported.ok).toBe(true)
+
+    const replacementFile = new File(['new-emoji-binary'], 'new-emoji.png', {
+      type: 'image/png',
+      lastModified: 222,
+    })
+    const replacedWithFile = await store.replaceAssetFromFile(imported.assetId, replacementFile)
+    expect(replacedWithFile.ok).toBe(true)
+
+    const nextAsset = store.findAssetById(imported.assetId)
+    expect(nextAsset?.sourceType).toBe('file')
+    expect(nextAsset?.blobId).toBe(imported.assetId)
+    expect(nextAsset?.sizeBytes).toBeGreaterThan(0)
+
+    const replacedBackToUrl = await store.replaceAssetFromUrl(imported.assetId, {
+      url: 'https://example.com/emoji/after-replace.png',
+    })
+    expect(replacedBackToUrl.ok).toBe(true)
+    expect(store.findAssetById(imported.assetId)?.sourceType).toBe('url')
+    expect(store.findAssetById(imported.assetId)?.sourceUrl).toBe(
+      'https://example.com/emoji/after-replace.png',
+    )
+  })
+
   test('blocks deletion when URL asset is currently used as system wallpaper', async () => {
     const systemStore = useSystemStore()
     const store = useGalleryStore()

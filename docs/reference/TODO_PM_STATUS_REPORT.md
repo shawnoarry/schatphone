@@ -1,5 +1,5 @@
 # SchatPhone TODO PM Status Report / SchatPhone 待办状态（产品经理视角）
-Updated / 更新时间: 2026-04-12
+Updated / 更新时间: 2026-04-15
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 这份报告的用途
@@ -78,6 +78,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：已落地地图回退第一阶段：地图视觉模式切换（`默认/素材库`）、首启引导、素材绑定，以及绑定素材缺失时自动回退默认视觉。
 26. EN: Landed map automation-alignment baseline: AI visual refresh now follows system automation runtime policy (`master/module/notify-only/quiet-hours`) and exposes manual trigger with policy feedback in map UI.
     中文：已落地地图自动化对齐基线：AI 视觉刷新现遵循系统自动化运行策略（`总开关/模块开关/仅通知/安静时段`），并在地图 UI 提供手动触发与策略反馈。
+27. EN: Landed gallery safety phase-1: bound asset replacement (`URL/file`) now requires two-step confirmation and keeps existing bindings by preserving asset IDs.
+    中文：已落地 Gallery 安全第一阶段：绑定素材替换（`URL/文件`）现要求双重确认，并通过保持素材 ID 来保留既有绑定关系。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
@@ -119,8 +121,8 @@ How you can review it / 你可以怎么验收:
 ## 7. PM decisions currently needed / 当前需要你拍板的点
 1. EN: Confirm default recommendation copy for reference-mode switch (`auto` currently recommended).
    中文：确认参考图模式开关的默认推荐文案（当前推荐 `auto`）。
-2. EN: Confirm map fallback/default rule set for `P1-3` phase-2 (default visual style, first-run prompt behavior, and future AI visual toggle entry).
-   中文：确认 `P1-3` 第二阶段地图默认回退规则（默认视觉样式、首启提示行为、未来 AI 视觉开关入口）。
+2. EN: Confirm rollout policy for optional provider-backed map-visual generation (entry location, quota提示 wording, and fallback behavior on provider failure).
+   中文：确认可选“供应商地图视觉生成”上线策略（入口位置、额度提示文案、供应商失败时回退行为）。
 3. EN: Naming-only decision (non-blocking): whether to keep "Worldbook" wording or rename to a more immersive label while preserving user clarity.
    中文：命名层决策（非阻塞）：是否保留“世界书”文案，或改为更沉浸但仍易懂的名称。
 
@@ -181,3 +183,5 @@ How you can review it / 你可以怎么验收:
     2026-04-14 中文：已同步地图回退第一阶段交付：视觉模式切换、首启提示、素材绑定与缺失素材自动回退均已标记完成。
 21. 2026-04-14 EN: Synced map automation-alignment baseline delivery: runtime policy wiring, manual trigger entry, and policy feedback are now marked completed.
     2026-04-14 中文：已同步地图自动化对齐基线交付：运行策略接线、手动触发入口与策略反馈均已标记完成。
+22. 2026-04-15 EN: Synced gallery safety phase-1 delivery: bound asset replacement (`URL/file`) now has two-step confirmation and binding-preserving replacement path.
+    2026-04-15 中文：已同步 Gallery 安全第一阶段交付：绑定素材替换（`URL/文件`）已具备双重确认与保留绑定关系的替换路径。

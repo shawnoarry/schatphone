@@ -736,6 +736,110 @@ export const useGalleryStore = defineStore('gallery', () => {
     return true
   }
 
+  const replaceAssetFromUrl = async (assetId, { url, name = '' } = {}) => {
+    const asset = findAssetById(assetId)
+    if (!asset) {
+      return {
+        ok: false,
+        reason: 'not_found',
+      }
+    }
+
+    const normalizedUrl = normalizeHttpUrl(url)
+    if (!normalizedUrl) {
+      return {
+        ok: false,
+        reason: 'invalid_url',
+      }
+    }
+
+    const fingerprint = buildUrlFingerprint(normalizedUrl)
+    const duplicated = findAssetByFingerprint(fingerprint)
+    if (duplicated && duplicated.id !== asset.id) {
+      return {
+        ok: false,
+        reason: 'duplicate',
+        duplicatedAssetId: duplicated.id,
+      }
+    }
+
+    if (asset.sourceType === 'file') {
+      await deleteGalleryAssetBlob(asset.blobId || asset.id)
+      revokeAssetPreviewUrl(asset.id)
+    }
+
+    asset.sourceType = 'url'
+    asset.sourceUrl = normalizedUrl
+    asset.blobId = ''
+    asset.mimeType = ''
+    asset.extension = readExtension(normalizedUrl)
+    asset.sizeBytes = 0
+    asset.fingerprint = fingerprint
+    if (typeof name === 'string' && name.trim()) {
+      asset.name = normalizeAssetName(name, asset.name)
+    }
+    asset.updatedAt = Date.now()
+    revokeAssetPreviewUrl(asset.id)
+
+    return {
+      ok: true,
+      assetId: asset.id,
+    }
+  }
+
+  const replaceAssetFromFile = async (assetId, file, { renameToFileName = false } = {}) => {
+    const asset = findAssetById(assetId)
+    if (!asset) {
+      return {
+        ok: false,
+        reason: 'not_found',
+      }
+    }
+    if (!(file instanceof File) || !fileLooksLikeSupportedImage(file)) {
+      return {
+        ok: false,
+        reason: 'unsupported_file',
+      }
+    }
+
+    const fingerprint = await buildFileFingerprint(file)
+    const duplicated = findAssetByFingerprint(fingerprint)
+    if (duplicated && duplicated.id !== asset.id) {
+      return {
+        ok: false,
+        reason: 'duplicate',
+        duplicatedAssetId: duplicated.id,
+      }
+    }
+
+    const blobId = asset.id
+    const storageOk = await putGalleryAssetBlob(blobId, file)
+    if (!storageOk) {
+      return {
+        ok: false,
+        reason: 'storage_failed',
+      }
+    }
+
+    asset.sourceType = 'file'
+    asset.sourceUrl = ''
+    asset.blobId = blobId
+    asset.mimeType = (file.type || '').toLowerCase()
+    asset.extension = readExtension(file.name)
+    asset.sizeBytes = Math.max(0, toInt(file.size, 0))
+    asset.fingerprint = fingerprint
+    if (renameToFileName) {
+      asset.name = normalizeAssetName(file.name, asset.name)
+    }
+    asset.updatedAt = Date.now()
+    revokeAssetPreviewUrl(asset.id)
+
+    return {
+      ok: true,
+      assetId: asset.id,
+    }
+  }
+
   const moveAssetToCategory = (assetId, category) => {
     const asset = findAssetById(assetId)
     if (!asset) return false
@@ -1160,6 +1264,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     clearAssetPreviewCache,
     importAssetFromUrl,
     importAssetsFromFiles,
+    replaceAssetFromUrl,
+    replaceAssetFromFile,
     renameAsset,
     moveAssetToCategory,
     bindAssetUsage,

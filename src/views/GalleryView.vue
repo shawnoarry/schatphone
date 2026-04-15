@@ -13,6 +13,8 @@ const { t } = useI18n()
 const activeCategory = ref('all')
 const localImportCategory = ref('reference')
 const localFileInput = ref(null)
+const replaceFileInput = ref(null)
+const replaceTargetAssetId = ref('')
 const feedback = reactive({
   type: '',
   text: '',
@@ -433,6 +435,114 @@ const removeAsset = async (asset) => {
   )
 }
 
+const buildAssetBindingSummary = (asset) => {
+  const guard = galleryStore.getAssetDeletionGuard(asset.id)
+  const roleBindingHits = getAssetRoleBindingHits(asset.id)
+  const usageText = guard.usages?.length
+    ? `${t('当前被使用于', 'Currently used by')}: ${guard.usages.map((item) => item.label).join(', ')}`
+    : ''
+  const roleBindText = roleBindingHits.length
+    ? `${t('角色档案绑定', 'Role profile binding')}: ${roleBindingHits.map((hit) => `${hit.profileName}(${hit.slotLabel})`).join(', ')}`
+    : ''
+  return {
+    guard,
+    roleBindingHits,
+    usageText,
+    roleBindText,
+    hasBindingRisk: Boolean(roleBindingHits.length > 0 || guard.blocked),
+  }
+}
+
+const confirmAssetReplace = (asset, modeLabel) => {
+  const summary = buildAssetBindingSummary(asset)
+  const firstConfirmed = window.confirm(
+    [
+      t(
+        `确认替换素材“${asset.name}”(${modeLabel}) 吗？`,
+        `Replace "${asset.name}" (${modeLabel})?`,
+      ),
+      t('替换后素材 ID 与绑定关系会保留。', 'Asset ID and bindings will be preserved after replace.'),
+      summary.usageText,
+      summary.roleBindText,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  )
+  if (!firstConfirmed) return false
+
+  if (!summary.hasBindingRisk) return true
+  return window.confirm(
+    t(
+      '该素材存在绑定/使用关系。确认继续替换？',
+      'This asset is bound/in use. Confirm replacement?',
+    ),
+  )
+}
+
+const replaceAssetByUrl = async (asset) => {
+  if (!asset?.id) return
+  const nextUrl = window.prompt(
+    t('输入新的 URL（http/https）：', 'Input new URL (http/https):'),
+    asset.sourceType === 'url' ? asset.sourceUrl || '' : '',
+  )
+  if (nextUrl == null) return
+  if (!confirmAssetReplace(asset, t('URL 替换', 'URL replace'))) return
+
+  const result = await galleryStore.replaceAssetFromUrl(asset.id, {
+    url: nextUrl,
+  })
+  if (!result.ok) {
+    if (result.reason === 'invalid_url') {
+      setFeedback('error', t('URL 无效，仅支持 http/https。', 'Invalid URL, only http/https is supported.'))
+      return
+    }
+    if (result.reason === 'duplicate') {
+      setFeedback('warn', t('该素材与现有素材重复，替换已取消。', 'Duplicate asset found, replacement canceled.'))
+      return
+    }
+    setFeedback('error', t('替换失败，请重试。', 'Replacement failed, please retry.'))
+    return
+  }
+  previewMap[asset.id] = ''
+  void hydrateAssetPreview(asset.id)
+  setFeedback('success', t('素材已替换（URL）。', 'Asset replaced (URL).'))
+}
+
+const openReplaceAssetFile = (asset) => {
+  if (!asset?.id) return
+  if (!confirmAssetReplace(asset, t('本地文件替换', 'Local file replace'))) return
+  replaceTargetAssetId.value = asset.id
+  replaceFileInput.value?.click()
+}
+
+const handleReplaceFileChange = async (event) => {
+  const file = event?.target?.files?.[0]
+  const assetId = replaceTargetAssetId.value
+  replaceTargetAssetId.value = ''
+  if (event?.target) event.target.value = ''
+  if (!file || !assetId) return
+
+  const result = await galleryStore.replaceAssetFromFile(assetId, file, {
+    renameToFileName: false,
+  })
+  if (!result.ok) {
+    if (result.reason === 'unsupported_file') {
+      setFeedback('error', t('文件格式不支持，仅允许 png/jpg/webp/gif。', 'Unsupported file type. Only png/jpg/webp/gif are allowed.'))
+      return
+    }
+    if (result.reason === 'duplicate') {
+      setFeedback('warn', t('该素材与现有素材重复，替换已取消。', 'Duplicate asset found, replacement canceled.'))
+      return
+    }
+    setFeedback('error', t('文件替换失败，请重试。', 'File replacement failed, please retry.'))
+    return
+  }
+
+  previewMap[assetId] = ''
+  void hydrateAssetPreview(assetId)
+  setFeedback('success', t('素材已替换（本地文件）。', 'Asset replaced (local file).'))
+}
+
 const hydrateAssetPreview = async (assetId) => {
   if (!assetId || previewMap[assetId]) return
   const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
@@ -528,6 +638,13 @@ onBeforeUnmount(() => {
           accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
           multiple
           @change="handleLocalImport"
+        />
+        <input
+          ref="replaceFileInput"
+          type="file"
+          class="hidden"
+          accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
+          @change="handleReplaceFileChange"
         />
       </div>
 
@@ -768,6 +885,21 @@ onBeforeUnmount(() => {
                 class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
                 >
                   {{ t('改名', 'Rename') }}
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="replaceAssetByUrl(asset)"
+                  class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
+                >
+                  {{ t('替换URL', 'Replace URL') }}
+                </button>
+                <button
+                  @click="openReplaceAssetFile(asset)"
+                  class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
+                >
+                  {{ t('替换文件', 'Replace file') }}
                 </button>
               </div>
 

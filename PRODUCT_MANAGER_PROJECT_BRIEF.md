@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-12
+Updated / 更新时间: 2026-04-15
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -191,8 +191,8 @@ Status / 状态: `IN_PROGRESS`
    中文：`DONE` 数据与基础 UI：自定义文件夹模型已上线；Gallery 已支持文件夹增删改和素材快速归档/移除。
 2. EN: `PARTIAL_DONE` role-slot + chat consumption: Contacts supports profile-image/dynamic-media/emoji/reference folder bindings; Chat now consumes folder-bound assets in preferred-asset options, gallery-send ranking, and AI image-reference fallback.
    中文：`PARTIAL_DONE` 角色槽位 + Chat 消费：通讯录已支持形象照/动态图/表情包/参考图文件夹绑定；Chat 已接入文件夹绑定素材用于会话优先素材候选、素材发送排序与 AI 参考图回退。
-3. EN: Implement deletion/replacement second-confirmation flow for bound assets/folders; keep forced delete allowed.
-   中文：实现被绑定素材/文件夹的删除与替换二次确认流程；保留强制删除能力。
+3. EN: `DONE (phase-1)` deletion/replacement second-confirmation flow is now online in Gallery for bound folders and bound assets (`delete + URL/file replace`), while forced delete remains available.
+   中文：`DONE（第一阶段）` Gallery 已上线绑定文件夹与绑定素材（`删除 + URL/文件替换`）的二次确认流程，同时保留强制删除能力。
 4. EN: Implement per-module fallback defaults so missing assets never break baseline usage:
    中文：实现按模块的默认回退策略，确保缺少素材不影响基础使用：
    - EN: role lane fallback = `PARTIAL_DONE` in Chat: when no references are available, thread now defaults to text-first (no image block output), with optional per-thread override for AI-generated image blocks.
@@ -311,3 +311,5 @@ Status / 状态: `DONE`
     2026-04-14 中文：已落地地图回退第一阶段：视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及绑定素材缺失时的自动回退。
 20. 2026-04-14 EN: Landed map automation-alignment baseline: map AI visual refresh now follows system automation runtime policy and supports manual trigger with in-page policy hints.
     2026-04-14 中文：已落地地图自动化对齐基线：地图 AI 视觉刷新现遵循系统自动化运行策略，并支持手动触发与页面内策略提示。
+21. 2026-04-15 EN: Landed asset safety phase-1 in Gallery: bound asset replacement (`URL/file`) now uses two-step confirmation and preserves existing bindings by keeping asset IDs stable.
+    2026-04-15 中文：已落地 Gallery 素材安全第一阶段：绑定素材替换（`URL/文件`）采用双重确认，并通过保持素材 ID 稳定来保留现有绑定关系。

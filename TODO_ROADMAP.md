@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-12
+Updated / 更新时间: 2026-04-15
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -283,8 +283,8 @@ Status / 状态: `IN_PROGRESS`
    中文：数据结构任务——`DONE`：已落地自定义文件夹与角色槽位绑定记录（V1=单文件夹绑定，并预留优先级字段 + 向后兼容迁移 + 测试）。
 2. EN: Gallery + Chat consumption task — `DONE`: Gallery folder CRUD is landed; Contacts exposes profile-image/dynamic-media/emoji/reference slot pickers; Chat now consumes folder-bound assets in thread preferred list, gallery send ranking, and AI image-reference collection fallback.
    中文：相册 + Chat 消费任务——`DONE`：Gallery 文件夹增删改已落地；通讯录已提供形象照/动态图/表情包/参考图槽位选择；Chat 已接入文件夹绑定素材用于会话优先素材列表、发送素材排序与 AI 参考图回退采样。
-3. EN: Safety task — enforce second confirmation for bound asset/folder delete and replace; keep force-delete path.
-   中文：安全任务——被绑定素材/文件夹删除与替换均需二次确认，保留强制删除路径。
+3. EN: Safety task — `DONE (phase-1)`: bound folder delete + bound asset delete/replace now enforce second confirmation in Gallery UI; force-delete path remains available.
+   中文：安全任务——`DONE（第一阶段）`：Gallery UI 中已对绑定文件夹删除与绑定素材删除/替换统一执行二次确认，并保留强制删除路径。
 4. EN: Fallback task — `IN_PROGRESS` module-level default policies:
    中文：回退任务——`IN_PROGRESS` 模块级默认策略：
    - EN: role lanes fallback to text-first/no-pack/no-pad-image baseline (optional AI image-generation switch).
@@ -419,6 +419,8 @@ Acceptance / 验收标准:
     中文：已落地地图回退第一阶段：新增地图视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及素材不可用时自动回退默认模式。
 24. EN: Landed map automation-alignment baseline: map store now exposes AI-visual runtime policy and queue trigger, wired to system automation controls and map manual refresh entry.
     中文：已落地地图自动化对齐基线：map store 已提供 AI 视觉运行策略与队列触发能力，并接入系统自动化控制与地图手动刷新入口。
+25. EN: Landed asset safety phase-1 in Gallery: in-use asset replace flow (`URL/file`) is now available with two-step confirmation and binding-preserving replacement.
+    中文：已落地素材安全第一阶段：Gallery 新增“使用中素材替换”（`URL/文件`）流程，带双重确认并保持绑定关系不丢失。
 
 ---
 
