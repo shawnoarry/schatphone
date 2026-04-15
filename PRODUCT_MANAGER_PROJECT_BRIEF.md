@@ -205,8 +205,8 @@ Status / 状态: `IN_PROGRESS`
    中文：`IN_PROGRESS` 单次上传链路：Chat 已支持“先入库再发送”或“单次发送不入库”（带体积守卫）；购物/外卖等模块待接入。
 6. EN: Keep V1 binding simple (single-folder per slot) while reserving schema fields for future folder-priority chain.
    中文：V1 绑定保持简单（每槽位单文件夹），同时在 schema 中预留未来“文件夹优先级链”字段。
-7. EN: Define size limit policy by media type for runtime smoothness (images/animations/video).
-   中文：按媒体类型定义体积上限策略（图片/动图/视频）以保障运行流畅性。
+7. EN: `DONE (phase-1)` media-size policy is now centralized for Chat/Gallery: import, replace and one-off send all use unified limits with explicit oversize guidance; video limits are reserved for future modules.
+   中文：`DONE（第一阶段）` Chat/Gallery 已统一媒体体积策略：导入、替换、单次发送均接入同一上限与超限提示；视频上限已预留给后续模块。
 
 ### P1-3 World Kernel + Map Baseline Refactor / P1-3 世界内核 + 地图基线重构
 Status / 状态: `IN_PROGRESS`
@@ -313,3 +313,5 @@ Status / 状态: `DONE`
     2026-04-14 中文：已落地地图自动化对齐基线：地图 AI 视觉刷新现遵循系统自动化运行策略，并支持手动触发与页面内策略提示。
 21. 2026-04-15 EN: Landed asset safety phase-1 in Gallery: bound asset replacement (`URL/file`) now uses two-step confirmation and preserves existing bindings by keeping asset IDs stable.
     2026-04-15 中文：已落地 Gallery 素材安全第一阶段：绑定素材替换（`URL/文件`）采用双重确认，并通过保持素材 ID 稳定来保留现有绑定关系。
+22. 2026-04-15 EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size limits and oversize copy for one-off send, import and replacement paths.
+    2026-04-15 中文：已落地媒体体积策略第一阶段：Chat/Gallery 现统一单次发送、导入、替换的体积上限与超限提示文案。

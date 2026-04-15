@@ -80,6 +80,8 @@ Source / 来源: `TODO_ROADMAP.md`
     中文：已落地地图自动化对齐基线：AI 视觉刷新现遵循系统自动化运行策略（`总开关/模块开关/仅通知/安静时段`），并在地图 UI 提供手动触发与策略反馈。
 27. EN: Landed gallery safety phase-1: bound asset replacement (`URL/file`) now requires two-step confirmation and keeps existing bindings by preserving asset IDs.
     中文：已落地 Gallery 安全第一阶段：绑定素材替换（`URL/文件`）现要求双重确认，并通过保持素材 ID 来保留既有绑定关系。
+28. EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size guards and user copy for one-off send, local import, and file replacement.
+    中文：已落地媒体体积策略第一阶段：Chat/Gallery 现统一单次发送、本地导入、文件替换的体积守卫与提示文案。
 
 ## 5. Immediate next task in plain language / 下一项待办（白话版）
 ### `P1-3` World Kernel + Map Baseline / `P1-3` 世界内核 + 地图基线
@@ -185,3 +187,5 @@ How you can review it / 你可以怎么验收:
     2026-04-14 中文：已同步地图自动化对齐基线交付：运行策略接线、手动触发入口与策略反馈均已标记完成。
 22. 2026-04-15 EN: Synced gallery safety phase-1 delivery: bound asset replacement (`URL/file`) now has two-step confirmation and binding-preserving replacement path.
     2026-04-15 中文：已同步 Gallery 安全第一阶段交付：绑定素材替换（`URL/文件`）已具备双重确认与保留绑定关系的替换路径。
+23. 2026-04-15 EN: Synced media-size policy phase-1 delivery: Chat/Gallery now enforce centralized size limits for one-off send/import/replace with explicit oversize feedback.
+    2026-04-15 中文：已同步媒体体积策略第一阶段交付：Chat/Gallery 现对单次发送/导入/替换执行统一体积上限，并提供明确超限提示。

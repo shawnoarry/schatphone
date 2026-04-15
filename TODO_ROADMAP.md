@@ -295,8 +295,8 @@ Status / 状态: `IN_PROGRESS`
       中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
 5. EN: Module-local upload task — `IN_PROGRESS`: Chat now supports one-off media send without gallery import (with size guard) plus import-before-send path; other modules (shopping/takeout/etc.) remain pending.
    中文：模块本地上传任务——`IN_PROGRESS`：Chat 已支持“单次发送不入库”（带体积守卫）与“先入库再发送”双路径；购物/外卖等模块待接入。
-6. EN: Performance policy task — define media-type size limits and rejection/degrade copy for image/animation/video paths.
-   中文：性能策略任务——定义图片/动图/视频的体积上限与拒绝/降级提示文案。
+6. EN: Performance policy task — `DONE (phase-1)`: centralized media-size policy is now wired in Chat/Gallery (import + replace + one-off send) with explicit oversize rejection copy for image/animation and reserved video limits.
+   中文：性能策略任务——`DONE（第一阶段）`：Chat/Gallery 已接入统一媒体体积策略（导入 + 替换 + 单次发送），并提供图片/动图超限拒绝提示，同时预留视频上限规则。
 
 Acceptance / 验收标准:
 1. EN: Missing assets do not block baseline module usage.
@@ -421,6 +421,8 @@ Acceptance / 验收标准:
     中文：已落地地图自动化对齐基线：map store 已提供 AI 视觉运行策略与队列触发能力，并接入系统自动化控制与地图手动刷新入口。
 25. EN: Landed asset safety phase-1 in Gallery: in-use asset replace flow (`URL/file`) is now available with two-step confirmation and binding-preserving replacement.
     中文：已落地素材安全第一阶段：Gallery 新增“使用中素材替换”（`URL/文件`）流程，带双重确认并保持绑定关系不丢失。
+26. EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size guards for import/replace/one-off media, with explicit oversize feedback and deterministic reject reasons.
+    中文：已落地媒体体积策略第一阶段：Chat/Gallery 现共用统一的导入/替换/单次媒体体积守卫，并提供明确超限提示与可追踪拒绝原因。
 
 ---
 

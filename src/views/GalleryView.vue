@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
 import { useChatStore } from '../stores/chat'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 
@@ -60,6 +61,13 @@ const folderCategoryTabs = computed(() => [
 ])
 const visibleFolders = computed(() => galleryStore.listFolders({ category: activeFolderCategory.value }))
 const allFolderOptions = computed(() => galleryStore.listFolders({ category: 'all' }).slice(0, 200))
+const galleryImportLimitPolicy = summarizeMediaLimitPolicy(MEDIA_SIZE_SCENE.GALLERY_IMPORT)
+const importLimitHint = computed(() =>
+  t(
+    `导入上限：图片 ${formatBytesCompact(galleryImportLimitPolicy.image)} / GIF ${formatBytesCompact(galleryImportLimitPolicy.gif)}。`,
+    `Import limits: image ${formatBytesCompact(galleryImportLimitPolicy.image)} / GIF ${formatBytesCompact(galleryImportLimitPolicy.gif)}.`,
+  ),
+)
 
 const setFeedback = (type, text) => {
   feedback.type = type
@@ -94,6 +102,16 @@ const handleLocalImport = async (event) => {
   }
 
   if (!result.ok) {
+    if (result.reason === 'all_too_large' || result.skippedTooLargeCount > 0) {
+      setFeedback(
+        'warn',
+        t(
+          `文件超过大小上限（图片 ${formatBytesCompact(galleryImportLimitPolicy.image)} / GIF ${formatBytesCompact(galleryImportLimitPolicy.gif)}）。`,
+          `File exceeds size limit (image ${formatBytesCompact(galleryImportLimitPolicy.image)} / GIF ${formatBytesCompact(galleryImportLimitPolicy.gif)}).`,
+        ),
+      )
+      return
+    }
     setFeedback('error', t('没有可导入的有效图片文件。', 'No valid image file was imported.'))
     return
   }
@@ -107,6 +125,14 @@ const handleLocalImport = async (event) => {
   if (result.skippedUnsupportedCount > 0) {
     parts.push(
       t(`跳过不支持格式 ${result.skippedUnsupportedCount} 项`, `${result.skippedUnsupportedCount} unsupported skipped`),
+    )
+  }
+  if (result.skippedTooLargeCount > 0) {
+    parts.push(
+      t(
+        `跳过超限 ${result.skippedTooLargeCount} 项`,
+        `${result.skippedTooLargeCount} oversize skipped`,
+      ),
     )
   }
   setFeedback('success', parts.join(' · '))
@@ -530,6 +556,16 @@ const handleReplaceFileChange = async (event) => {
       setFeedback('error', t('文件格式不支持，仅允许 png/jpg/webp/gif。', 'Unsupported file type. Only png/jpg/webp/gif are allowed.'))
       return
     }
+    if (result.reason === 'too_large') {
+      setFeedback(
+        'warn',
+        t(
+          `文件超过大小上限（${formatBytesCompact(result.maxBytes)}）。`,
+          `File exceeds size limit (${formatBytesCompact(result.maxBytes)}).`,
+        ),
+      )
+      return
+    }
     if (result.reason === 'duplicate') {
       setFeedback('warn', t('该素材与现有素材重复，替换已取消。', 'Duplicate asset found, replacement canceled.'))
       return
@@ -631,6 +667,9 @@ onBeforeUnmount(() => {
           <i class="fas fa-upload mr-1"></i>
           {{ t('导入 png/jpg/webp/gif', 'Import png/jpg/webp/gif') }}
         </button>
+        <p class="text-[11px] text-gray-500">
+          {{ importLimitHint }}
+        </p>
         <input
           ref="localFileInput"
           type="file"

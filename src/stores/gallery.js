@@ -6,6 +6,12 @@ import {
   getGalleryAssetBlob,
   putGalleryAssetBlob,
 } from '../lib/asset-binary-storage'
+import {
+  MEDIA_KIND,
+  MEDIA_SIZE_SCENE,
+  summarizeMediaLimitPolicy,
+  validateMediaFileBySize,
+} from '../lib/media-policy'
 import { useSystemStore } from './system'
 
 export const GALLERY_ASSET_CATEGORIES = Object.freeze(['wallpaper', 'emoji', 'reference', 'scenario'])
@@ -652,14 +658,17 @@ export const useGalleryStore = defineStore('gallery', () => {
   const importAssetsFromFiles = async (files, { category = DEFAULT_CATEGORY } = {}) => {
     const normalizedCategory = normalizeCategory(category)
     const list = Array.from(files || []).filter((item) => item instanceof File)
+    const sizeLimitByKind = summarizeMediaLimitPolicy(MEDIA_SIZE_SCENE.GALLERY_IMPORT)
     if (list.length === 0) {
       return {
         ok: false,
         reason: 'empty',
         importedCount: 0,
         skippedUnsupportedCount: 0,
+        skippedTooLargeCount: 0,
         skippedDuplicateCount: 0,
         duplicateAssetIds: [],
+        sizeLimitByKind,
       }
     }
 
@@ -667,12 +676,21 @@ export const useGalleryStore = defineStore('gallery', () => {
     const importedAssets = []
     const duplicateAssetIds = []
     let skippedUnsupportedCount = 0
+    let skippedTooLargeCount = 0
     let skippedDuplicateCount = 0
     let failedStorageCount = 0
 
     for (const file of list) {
       if (!fileLooksLikeSupportedImage(file)) {
         skippedUnsupportedCount += 1
+        continue
+      }
+      const sizeGuard = validateMediaFileBySize(file, {
+        scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+        fallbackKind: MEDIA_KIND.IMAGE,
+      })
+      if (!sizeGuard.ok && sizeGuard.reason === 'too_large') {
+        skippedTooLargeCount += 1
         continue
       }
 
@@ -718,13 +736,23 @@ export const useGalleryStore = defineStore('gallery', () => {
 
     return {
       ok: importedAssets.length > 0,
-      reason: importedAssets.length > 0 ? '' : 'no_valid_file',
+      reason:
+        importedAssets.length > 0
+          ? ''
+          : skippedTooLargeCount > 0 &&
+              skippedUnsupportedCount === 0 &&
+              skippedDuplicateCount === 0 &&
+              failedStorageCount === 0
+            ? 'all_too_large'
+            : 'no_valid_file',
       importedCount: importedAssets.length,
       importedIds,
       skippedUnsupportedCount,
+      skippedTooLargeCount,
       skippedDuplicateCount,
       duplicateAssetIds,
       failedStorageCount,
+      sizeLimitByKind,
     }
   }
 
@@ -799,6 +827,19 @@ export const useGalleryStore = defineStore('gallery', () => {
       return {
         ok: false,
         reason: 'unsupported_file',
+      }
+    }
+    const sizeGuard = validateMediaFileBySize(file, {
+      scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+      fallbackKind: MEDIA_KIND.IMAGE,
+    })
+    if (!sizeGuard.ok && sizeGuard.reason === 'too_large') {
+      return {
+        ok: false,
+        reason: 'too_large',
+        sizeBytes: sizeGuard.sizeBytes,
+        maxBytes: sizeGuard.maxBytes,
+        mediaKind: sizeGuard.mediaKind,
       }
     }
 

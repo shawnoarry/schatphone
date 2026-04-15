@@ -20,6 +20,13 @@ import {
   normalizeSemanticRevisionTraceMode,
   shouldShowSemanticRevisionHint,
 } from '../lib/semantic-revision-policy'
+import {
+  MEDIA_KIND,
+  MEDIA_SIZE_SCENE,
+  formatBytesCompact,
+  resolveMediaSizeLimitBytes,
+  validateMediaFileBySize,
+} from '../lib/media-policy'
 import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
@@ -137,7 +144,6 @@ const USER_ACTION_FORM_LINK = 'link'
 const USER_ACTION_FORM_TRANSFER = 'transfer'
 const USER_ACTION_FORM_VOICE = 'voice'
 const USER_ACTION_FORM_GALLERY = 'gallery'
-const MAX_ONE_OFF_MEDIA_INLINE_BYTES = 512 * 1024
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -3090,13 +3096,18 @@ const handleUserMediaPicked = async (event) => {
     )
 
     if (!shouldImportToGallery) {
-      const fileSize = Number(file.size)
-      if (Number.isFinite(fileSize) && fileSize > MAX_ONE_OFF_MEDIA_INLINE_BYTES) {
+      const expectedMediaKind =
+        mediaKind === USER_MEDIA_KIND_GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
+      const sizeGuard = validateMediaFileBySize(file, {
+        scene: MEDIA_SIZE_SCENE.ONE_OFF_INLINE,
+        fallbackKind: expectedMediaKind,
+      })
+      if (!sizeGuard.ok && sizeGuard.reason === 'too_large') {
         showUiNotice(
           'warning',
           t(
-            '单次发送文件过大，请改为“导入素材库后发送”。',
-            'One-off file is too large. Please use import-then-send mode.',
+            `单次发送文件过大（上限 ${formatBytesCompact(sizeGuard.maxBytes)}），请改为“导入素材库后发送”。`,
+            `One-off file is too large (limit ${formatBytesCompact(sizeGuard.maxBytes)}). Please use import-then-send mode.`,
           ),
         )
         return
@@ -3147,6 +3158,20 @@ const handleUserMediaPicked = async (event) => {
     }
 
     if (!targetAssetId) {
+      if (result.skippedTooLargeCount > 0) {
+        const expectedKind = mediaKind === USER_MEDIA_KIND_GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
+        const limitBytes = resolveMediaSizeLimitBytes(expectedKind, {
+          scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+        })
+        showUiNotice(
+          'warning',
+          t(
+            `素材文件超过导入上限（${formatBytesCompact(limitBytes)}），请压缩后重试。`,
+            `File is over import limit (${formatBytesCompact(limitBytes)}). Compress and retry.`,
+          ),
+        )
+        return
+      }
       showUiNotice('error', t('素材导入失败，请重试。', 'Asset import failed. Please retry.'))
       return
     }

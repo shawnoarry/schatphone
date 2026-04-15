@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
 import { clearGalleryAssetBlobFallback } from '../src/lib/asset-binary-storage'
+import { MEDIA_KIND, MEDIA_SIZE_SCENE, resolveMediaSizeLimitBytes } from '../src/lib/media-policy'
 
 describe('gallery store', () => {
   beforeEach(() => {
@@ -53,6 +54,25 @@ describe('gallery store', () => {
     expect(duplicated.ok).toBe(false)
     expect(duplicated.skippedDuplicateCount).toBe(1)
     expect(store.categoryCounts.emoji).toBe(1)
+  })
+
+  test('rejects oversized file import with explicit reason and counters', async () => {
+    const store = useGalleryStore()
+    const maxBytes = resolveMediaSizeLimitBytes(MEDIA_KIND.IMAGE, {
+      scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+    })
+    const oversized = new File([new Uint8Array(maxBytes + 1)], 'too-large.png', {
+      type: 'image/png',
+      lastModified: 111,
+    })
+
+    const result = await store.importAssetsFromFiles([oversized], {
+      category: 'reference',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('all_too_large')
+    expect(result.skippedTooLargeCount).toBe(1)
+    expect(store.categoryCounts.reference).toBe(0)
   })
 
   test('resolves AI reference url for local assets with size guard', async () => {
@@ -189,6 +209,32 @@ describe('gallery store', () => {
     expect(store.findAssetById(imported.assetId)?.sourceType).toBe('url')
     expect(store.findAssetById(imported.assetId)?.sourceUrl).toBe(
       'https://example.com/emoji/after-replace.png',
+    )
+  })
+
+  test('blocks oversized file replacement and keeps previous source', async () => {
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/reference/original.png',
+      category: 'reference',
+      name: 'Original Ref',
+    })
+    expect(imported.ok).toBe(true)
+    const maxBytes = resolveMediaSizeLimitBytes(MEDIA_KIND.IMAGE, {
+      scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+    })
+    const oversized = new File([new Uint8Array(maxBytes + 2)], 'too-large-replace.png', {
+      type: 'image/png',
+      lastModified: 202,
+    })
+
+    const result = await store.replaceAssetFromFile(imported.assetId, oversized)
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('too_large')
+    expect(result.maxBytes).toBe(maxBytes)
+    expect(store.findAssetById(imported.assetId)?.sourceType).toBe('url')
+    expect(store.findAssetById(imported.assetId)?.sourceUrl).toBe(
+      'https://example.com/reference/original.png',
     )
   })
 
