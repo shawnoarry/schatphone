@@ -191,3 +191,5 @@ How you can review it / 你可以怎么验收:
     2026-04-15 中文：已同步媒体体积策略第一阶段交付：Chat/Gallery 现对单次发送/导入/替换执行统一体积上限，并提供明确超限提示。
 24. 2026-04-15 EN: Synced map provider-visual phase-3 baseline delivery: map now supports optional provider visual generation under policy gate, with runtime status/preview and deterministic fallback on missing key or provider failure.
     2026-04-15 中文：已同步地图供应商视觉第三阶段基线交付：地图现支持在策略守卫下启用可选供应商视觉生成，并提供运行状态/预览与缺少 key 或供应商失败时的确定性回退。
+25. 2026-04-15 EN: Synced module-local one-off upload expansion: Map now supports import-before-apply or one-off local visual apply (without gallery import) with size guard, aligned with Chat dual-path behavior.
+    2026-04-15 中文：已同步模块本地单次上传扩展：Map 现支持“先入库再应用”或“单次本地应用不入库”（带体积守卫），与 Chat 的双路径行为对齐。

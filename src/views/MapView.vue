@@ -5,6 +5,13 @@ import { useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
+import {
+  MEDIA_KIND,
+  MEDIA_SIZE_SCENE,
+  formatBytesCompact,
+  resolveMediaSizeLimitBytes,
+  validateMediaFileBySize,
+} from '../lib/media-policy'
 
 const router = useRouter()
 const mapStore = useMapStore()
@@ -38,6 +45,9 @@ const mapVisualHint = ref({
   message: '',
 })
 const mapVisualPreviewUrl = ref('')
+const mapOneOffVisualUrl = ref('')
+const mapOneOffVisualName = ref('')
+const mapVisualFileInputRef = ref(null)
 const mapVisualLoading = ref(false)
 const mapAiVisualRefreshing = ref(false)
 let runtimeTimer = null
@@ -134,6 +144,144 @@ const onMapVisualAssetChange = (event) => {
   mapStore.setMapVisualAssetId(assetId)
   mapStore.dismissMapVisualOnboardingPrompt()
   mapVisualHint.value = { tone: '', message: '' }
+}
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve) => {
+    if (!(file instanceof File)) {
+      resolve('')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      resolve(typeof reader.result === 'string' ? reader.result : '')
+    }
+    reader.onerror = () => resolve('')
+    reader.readAsDataURL(file)
+  })
+
+const openMapVisualUploadPicker = () => {
+  const input = mapVisualFileInputRef.value
+  if (!(input instanceof HTMLInputElement)) return
+  input.value = ''
+  input.click()
+}
+
+const clearMapOneOffVisual = () => {
+  if (!mapOneOffVisualUrl.value) return
+  mapOneOffVisualUrl.value = ''
+  mapOneOffVisualName.value = ''
+  mapVisualHint.value = {
+    tone: 'info',
+    message: t('已清除本次地图背景。', 'One-off map visual was cleared.'),
+  }
+}
+
+const onMapVisualFilePicked = async (event) => {
+  const inputEl = event?.target
+  const file = inputEl?.files?.[0]
+  if (!(file instanceof File)) return
+
+  try {
+    const shouldImportToGallery = window.confirm(
+      t(
+        '是否先导入素材库再应用？点击“取消”将仅本次使用，不入库。',
+        'Import to gallery before applying? Click "Cancel" to apply as one-off without importing.',
+      ),
+    )
+
+    if (!shouldImportToGallery) {
+      const sizeGuard = validateMediaFileBySize(file, {
+        scene: MEDIA_SIZE_SCENE.ONE_OFF_INLINE,
+        fallbackKind: MEDIA_KIND.IMAGE,
+      })
+      if (!sizeGuard.ok && sizeGuard.reason === 'too_large') {
+        mapVisualHint.value = {
+          tone: 'warn',
+          message: t(
+            `单次地图背景过大（上限 ${formatBytesCompact(sizeGuard.maxBytes)}），请改为“导入素材库后应用”。`,
+            `One-off map visual is too large (limit ${formatBytesCompact(sizeGuard.maxBytes)}). Use import-then-apply mode.`,
+          ),
+        }
+        return
+      }
+
+      const dataUrl = await readFileAsDataUrl(file)
+      if (!dataUrl) {
+        mapVisualHint.value = {
+          tone: 'warn',
+          message: t('读取本地文件失败，请重试。', 'Failed to read local file. Please retry.'),
+        }
+        return
+      }
+
+      mapOneOffVisualUrl.value = dataUrl
+      mapOneOffVisualName.value =
+        typeof file.name === 'string' && file.name.trim()
+          ? file.name.trim()
+          : t('单次地图背景', 'One-off map visual')
+      mapStore.setMapVisualMode('default')
+      mapStore.dismissMapVisualOnboardingPrompt()
+      mapVisualHint.value = {
+        tone: 'success',
+        message: t(
+          '已应用本次地图背景（未入库，刷新后不会保留）。',
+          'Applied as one-off map visual (not imported, not persisted after refresh).',
+        ),
+      }
+      return
+    }
+
+    const result = await galleryStore.importAssetsFromFiles([file], {
+      category: 'scenario',
+    })
+
+    let targetAssetId = ''
+    if (Array.isArray(result?.importedIds) && result.importedIds.length > 0) {
+      targetAssetId = result.importedIds[0]
+    } else if (Array.isArray(result?.duplicateAssetIds) && result.duplicateAssetIds.length > 0) {
+      targetAssetId = result.duplicateAssetIds[0]
+      mapVisualHint.value = {
+        tone: 'info',
+        message: t('素材已存在，已复用素材库资源。', 'Asset already exists and was reused from gallery.'),
+      }
+    }
+
+    if (!targetAssetId) {
+      if (Number(result?.skippedTooLargeCount || 0) > 0) {
+        const sizeLimitByKind = result?.sizeLimitByKind || {}
+        const fallbackLimit = resolveMediaSizeLimitBytes(MEDIA_KIND.IMAGE, {
+          scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
+        })
+        const imageLimit = Number(sizeLimitByKind.image || fallbackLimit)
+        mapVisualHint.value = {
+          tone: 'warn',
+          message: t(
+            `文件超过素材导入上限（${formatBytesCompact(imageLimit)}），请压缩后重试。`,
+            `File exceeds gallery import limit (${formatBytesCompact(imageLimit)}). Compress and retry.`,
+          ),
+        }
+        return
+      }
+      mapVisualHint.value = {
+        tone: 'warn',
+        message: t('导入素材库失败，请重试。', 'Failed to import into gallery. Please retry.'),
+      }
+      return
+    }
+
+    mapOneOffVisualUrl.value = ''
+    mapOneOffVisualName.value = ''
+    mapStore.setMapVisualMode('gallery')
+    mapStore.setMapVisualAssetId(targetAssetId)
+    mapStore.dismissMapVisualOnboardingPrompt()
+    mapVisualHint.value = {
+      tone: 'success',
+      message: t('已导入素材库并应用到地图背景。', 'Imported to gallery and applied as map visual.'),
+    }
+  } finally {
+    if (inputEl) inputEl.value = ''
+  }
 }
 
 const onMapAiVisualToggle = (event) => {
@@ -481,6 +629,34 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            ref="mapVisualFileInputRef"
+            type="file"
+            class="hidden"
+            accept="image/*"
+            @change="onMapVisualFilePicked"
+          />
+          <button @click="openMapVisualUploadPicker" class="px-2 py-1 rounded border border-gray-300 text-xs">
+            {{ t('上传地图背景', 'Upload map visual') }}
+          </button>
+          <button
+            v-if="mapOneOffVisualUrl"
+            @click="clearMapOneOffVisual"
+            class="px-2 py-1 rounded border border-amber-300 text-amber-700 bg-amber-50 text-xs"
+          >
+            {{ t('清除本次背景', 'Clear one-off visual') }}
+          </button>
+        </div>
+        <p class="mt-1 text-[11px] text-gray-500">
+          {{
+            t(
+              '支持“先入库再应用”与“单次应用不入库”双路径；单次背景只在当前会话可见。',
+              'Supports both import-then-apply and one-off apply without import; one-off visual is session-only.',
+            )
+          }}
+        </p>
+
         <label class="mt-3 inline-flex items-center gap-2 text-xs text-gray-600">
           <input
             type="checkbox"
@@ -539,6 +715,13 @@ onBeforeUnmount(() => {
               :src="mapVisualPreviewUrl"
               class="w-full h-full object-cover"
               :alt="t('地图视觉预览', 'Map visual preview')"
+            />
+          </div>
+          <div v-else-if="mapOneOffVisualUrl" class="aspect-[16/8] bg-black">
+            <img
+              :src="mapOneOffVisualUrl"
+              class="w-full h-full object-cover"
+              :alt="mapOneOffVisualName || t('单次地图背景预览', 'One-off map visual preview')"
             />
           </div>
           <div v-else-if="mapProviderGeneratedImageUrl" class="aspect-[16/8] bg-black">

@@ -293,8 +293,8 @@ Status / 状态: `IN_PROGRESS`
       中文：美化链路回退到内置壁纸。
    - EN: map fallback (future) to icon/default image with first-use optional AI generate prompt.
       中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
-5. EN: Module-local upload task — `IN_PROGRESS`: Chat now supports one-off media send without gallery import (with size guard) plus import-before-send path; other modules (shopping/takeout/etc.) remain pending.
-   中文：模块本地上传任务——`IN_PROGRESS`：Chat 已支持“单次发送不入库”（带体积守卫）与“先入库再发送”双路径；购物/外卖等模块待接入。
+5. EN: Module-local upload task — `IN_PROGRESS`: Chat and Map now support one-off local media apply/send without gallery import (with size guard) plus import-before-use path; other modules (shopping/takeout/etc.) remain pending.
+   中文：模块本地上传任务——`IN_PROGRESS`：Chat 与 Map 已支持“单次本地应用/发送不入库”（带体积守卫）与“先入库再使用”双路径；购物/外卖等模块待接入。
 6. EN: Performance policy task — `DONE (phase-1)`: centralized media-size policy is now wired in Chat/Gallery (import + replace + one-off send) with explicit oversize rejection copy for image/animation and reserved video limits.
    中文：性能策略任务——`DONE（第一阶段）`：Chat/Gallery 已接入统一媒体体积策略（导入 + 替换 + 单次发送），并提供图片/动图超限拒绝提示，同时预留视频上限规则。
 

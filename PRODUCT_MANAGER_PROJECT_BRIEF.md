@@ -201,8 +201,8 @@ Status / 状态: `IN_PROGRESS`
      中文：美化链路回退 = 内置默认壁纸。
    - EN: map fallback (future) = icon/default image with optional first-time AI generation prompt.
      中文：地图链路回退（后续）= icon/默认图，首次可询问是否 AI 生图。
-5. EN: `IN_PROGRESS` one-off upload lane: Chat now supports "import before send" or "one-off send without import" (with size guard); shopping/takeout and other modules remain pending.
-   中文：`IN_PROGRESS` 单次上传链路：Chat 已支持“先入库再发送”或“单次发送不入库”（带体积守卫）；购物/外卖等模块待接入。
+5. EN: `IN_PROGRESS` one-off upload lane: Chat and Map now support "import before apply/send" or "one-off without import" (with size guard); shopping/takeout and other modules remain pending.
+   中文：`IN_PROGRESS` 单次上传链路：Chat 与 Map 已支持“先入库再应用/发送”或“单次不入库”（带体积守卫）；购物/外卖等模块待接入。
 6. EN: Keep V1 binding simple (single-folder per slot) while reserving schema fields for future folder-priority chain.
    中文：V1 绑定保持简单（每槽位单文件夹），同时在 schema 中预留未来“文件夹优先级链”字段。
 7. EN: `DONE (phase-1)` media-size policy is now centralized for Chat/Gallery: import, replace and one-off send all use unified limits with explicit oversize guidance; video limits are reserved for future modules.
@@ -317,3 +317,5 @@ Status / 状态: `DONE`
     2026-04-15 中文：已落地 Gallery 素材安全第一阶段：绑定素材替换（`URL/文件`）采用双重确认，并通过保持素材 ID 稳定来保留现有绑定关系。
 23. 2026-04-15 EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size limits and oversize copy for one-off send, import and replacement paths.
     2026-04-15 中文：已落地媒体体积策略第一阶段：Chat/Gallery 现统一单次发送、导入、替换的体积上限与超限提示文案。
+24. 2026-04-15 EN: Expanded module-local one-off upload lane to Map: users can now choose import-before-apply or one-off local visual apply without gallery import, with unified size-guard feedback.
+    2026-04-15 中文：已将模块本地单次上传链路扩展到 Map：用户现可选择“先入库再应用”或“单次本地应用不入库”，并具备统一体积守卫反馈。
