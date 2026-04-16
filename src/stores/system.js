@@ -2,6 +2,13 @@ import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
+import {
+  normalizePushPermission,
+  normalizePushServerUrl,
+  readPushPermission,
+  relayNotificationToPush,
+  syncExistingWebPushSubscription,
+} from '../lib/push'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 
 const AVAILABLE_THEMES = [
@@ -96,6 +103,10 @@ const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
 const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
 const BACKUP_COPY_TONE_VALUES = ['direct', 'immersive']
 const DEFAULT_BACKUP_COPY_TONE = 'direct'
+const DEFAULT_PUSH_SERVER_URL = normalizePushServerUrl(
+  typeof import.meta !== 'undefined' ? import.meta?.env?.VITE_PUSH_SERVER_URL : '',
+  'http://localhost:8787',
+)
 const MAX_GLOBAL_WORLDVIEW_CHARS = 6000
 const MAX_KNOWLEDGE_POINTS = 200
 const MAX_KNOWLEDGE_POINT_ID_CHARS = 64
@@ -179,6 +190,12 @@ const normalizeBackupReminderIntervalHours = (value, fallback = BACKUP_REMINDER_
 
 const normalizeBackupCopyTone = (value, fallback = DEFAULT_BACKUP_COPY_TONE) => {
   return BACKUP_COPY_TONE_VALUES.includes(value) ? value : fallback
+}
+
+const normalizePushError = (value, fallback = '') => {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  return trimmed.length > 240 ? trimmed.slice(0, 240) : trimmed
 }
 
 const sanitizeKnowledgePointId = (value) => {
@@ -749,6 +766,14 @@ export const useSystemStore = defineStore('system', () => {
       language: DEFAULT_SYSTEM_LANGUAGE,
       timezone: 'Asia/Shanghai',
       notifications: true,
+      realPushEnabled: false,
+      pushServerUrl: DEFAULT_PUSH_SERVER_URL,
+      pushPermission: normalizePushPermission(readPushPermission(), 'default'),
+      pushDeviceId: '',
+      pushSubscriptionActive: false,
+      pushLastSyncedAt: 0,
+      pushLastError: '',
+      pushVapidPublicKey: '',
       backupReminderEnabled: true,
       backupReminderIntervalHours: BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
       backupReminderLastNotifiedAt: 0,
@@ -791,6 +816,167 @@ export const useSystemStore = defineStore('system', () => {
 
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
+
+  const syncPushPermissionFromBrowser = () => {
+    settings.system.pushPermission = normalizePushPermission(
+      readPushPermission(),
+      settings.system.pushPermission || 'default',
+    )
+    return settings.system.pushPermission
+  }
+
+  const setPushState = (rawPatch = {}) => {
+    const patch = rawPatch && typeof rawPatch === 'object' ? rawPatch : {}
+    if ('realPushEnabled' in patch) {
+      settings.system.realPushEnabled = patch.realPushEnabled === true
+    }
+    if ('pushServerUrl' in patch) {
+      settings.system.pushServerUrl = normalizePushServerUrl(
+        patch.pushServerUrl,
+        settings.system.pushServerUrl || DEFAULT_PUSH_SERVER_URL,
+      )
+    }
+    if ('pushPermission' in patch) {
+      settings.system.pushPermission = normalizePushPermission(
+        patch.pushPermission,
+        settings.system.pushPermission || 'default',
+      )
+    }
+    if ('pushDeviceId' in patch) {
+      settings.system.pushDeviceId =
+        typeof patch.pushDeviceId === 'string' ? patch.pushDeviceId.trim().slice(0, 120) : ''
+    }
+    if ('pushSubscriptionActive' in patch) {
+      settings.system.pushSubscriptionActive = patch.pushSubscriptionActive === true
+    }
+    if ('pushLastSyncedAt' in patch) {
+      settings.system.pushLastSyncedAt = normalizeNonNegativeTimestamp(
+        patch.pushLastSyncedAt,
+        settings.system.pushLastSyncedAt,
+      )
+    }
+    if ('pushLastError' in patch) {
+      settings.system.pushLastError = normalizePushError(
+        patch.pushLastError,
+        settings.system.pushLastError || '',
+      )
+    }
+    if ('pushVapidPublicKey' in patch) {
+      settings.system.pushVapidPublicKey =
+        typeof patch.pushVapidPublicKey === 'string'
+          ? patch.pushVapidPublicKey.trim().slice(0, 160)
+          : ''
+    }
+    return {
+      realPushEnabled: settings.system.realPushEnabled,
+      pushServerUrl: settings.system.pushServerUrl,
+      pushPermission: settings.system.pushPermission,
+      pushDeviceId: settings.system.pushDeviceId,
+      pushSubscriptionActive: settings.system.pushSubscriptionActive,
+      pushLastSyncedAt: settings.system.pushLastSyncedAt,
+      pushLastError: settings.system.pushLastError,
+      pushVapidPublicKey: settings.system.pushVapidPublicKey,
+    }
+  }
+
+  const canDispatchRealPush = () => {
+    if (settings.system.notifications === false) return false
+    if (settings.system.realPushEnabled !== true) return false
+    if (settings.system.pushSubscriptionActive !== true) return false
+    if (!settings.system.pushServerUrl || !settings.system.pushDeviceId) return false
+    if (typeof document === 'undefined') return false
+    return document.hidden === true
+  }
+
+  const dispatchNotificationToRealPush = async (notification) => {
+    if (!notification || typeof notification !== 'object') {
+      return {
+        ok: false,
+        reason: 'invalid_notification',
+      }
+    }
+    if (!canDispatchRealPush()) {
+      return {
+        ok: false,
+        reason: 'disabled',
+      }
+    }
+
+    const result = await relayNotificationToPush({
+      serverUrl: settings.system.pushServerUrl,
+      deviceId: settings.system.pushDeviceId,
+      notification,
+    })
+
+    if (result?.ok) {
+      setPushState({
+        pushLastSyncedAt: Date.now(),
+        pushLastError: '',
+      })
+      return result
+    }
+
+    let nextResult = result
+    let reason =
+      typeof nextResult?.reason === 'string' ? nextResult.reason : 'push_delivery_failed'
+    let message =
+      typeof nextResult?.message === 'string' && nextResult.message.trim()
+        ? nextResult.message.trim()
+        : 'Real push delivery failed.'
+
+    if (reason === 'subscription_not_found') {
+      const resyncResult = await syncExistingWebPushSubscription({
+        serverUrl: settings.system.pushServerUrl,
+        deviceId: settings.system.pushDeviceId,
+      })
+
+      if (resyncResult?.ok) {
+        setPushState({
+          pushDeviceId: resyncResult.deviceId,
+          pushSubscriptionActive: true,
+          pushLastSyncedAt: Date.now(),
+          pushLastError: '',
+        })
+        nextResult = await relayNotificationToPush({
+          serverUrl: settings.system.pushServerUrl,
+          deviceId: settings.system.pushDeviceId,
+          notification,
+        })
+        if (nextResult?.ok) {
+          setPushState({
+            pushLastSyncedAt: Date.now(),
+            pushLastError: '',
+          })
+          return nextResult
+        }
+        reason =
+          typeof nextResult?.reason === 'string' ? nextResult.reason : 'push_delivery_failed'
+        message =
+          typeof nextResult?.message === 'string' && nextResult.message.trim()
+            ? nextResult.message.trim()
+            : 'Real push delivery failed after resync.'
+      }
+    }
+
+    const shouldDeactivate =
+      reason === 'subscription_not_found' || reason === 'subscription_expired'
+
+    setPushState({
+      pushLastError: message,
+      pushSubscriptionActive: shouldDeactivate ? false : settings.system.pushSubscriptionActive,
+    })
+
+    addApiReport({
+      level: 'error',
+      module: 'push',
+      action: 'relay_notification',
+      code: reason,
+      message,
+      createdAt: Date.now(),
+    })
+
+    return result
+  }
 
   const setTheme = (themeId) => {
     const theme = availableThemes.value.find((item) => item.id === themeId)
@@ -1007,6 +1193,7 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalized) return ''
 
     notifications.value = [normalized, ...notifications.value].slice(0, MAX_NOTIFICATIONS)
+    void dispatchNotificationToRealPush(normalized)
     return normalized.id
   }
 
@@ -1928,6 +2115,29 @@ export const useSystemStore = defineStore('system', () => {
       Object.assign(settings.system, persisted.settings.system)
       settings.system.language = normalizeSystemLanguage(settings.system.language)
       settings.system.notifications = settings.system.notifications !== false
+      settings.system.realPushEnabled = settings.system.realPushEnabled === true
+      settings.system.pushServerUrl = normalizePushServerUrl(
+        settings.system.pushServerUrl,
+        DEFAULT_PUSH_SERVER_URL,
+      )
+      settings.system.pushPermission = normalizePushPermission(
+        settings.system.pushPermission,
+        syncPushPermissionFromBrowser(),
+      )
+      settings.system.pushDeviceId =
+        typeof settings.system.pushDeviceId === 'string'
+          ? settings.system.pushDeviceId.trim().slice(0, 120)
+          : ''
+      settings.system.pushSubscriptionActive = settings.system.pushSubscriptionActive === true
+      settings.system.pushLastSyncedAt = normalizeNonNegativeTimestamp(
+        settings.system.pushLastSyncedAt,
+        0,
+      )
+      settings.system.pushLastError = normalizePushError(settings.system.pushLastError, '')
+      settings.system.pushVapidPublicKey =
+        typeof settings.system.pushVapidPublicKey === 'string'
+          ? settings.system.pushVapidPublicKey.trim().slice(0, 160)
+          : ''
       settings.system.backupReminderEnabled = settings.system.backupReminderEnabled !== false
       settings.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
         settings.system.backupReminderIntervalHours,
@@ -2005,6 +2215,29 @@ export const useSystemStore = defineStore('system', () => {
     )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.system.notifications = settings.system.notifications !== false
+    settings.system.realPushEnabled = settings.system.realPushEnabled === true
+    settings.system.pushServerUrl = normalizePushServerUrl(
+      settings.system.pushServerUrl,
+      DEFAULT_PUSH_SERVER_URL,
+    )
+    settings.system.pushPermission = normalizePushPermission(
+      settings.system.pushPermission,
+      syncPushPermissionFromBrowser(),
+    )
+    settings.system.pushDeviceId =
+      typeof settings.system.pushDeviceId === 'string'
+        ? settings.system.pushDeviceId.trim().slice(0, 120)
+        : ''
+    settings.system.pushSubscriptionActive = settings.system.pushSubscriptionActive === true
+    settings.system.pushLastSyncedAt = normalizeNonNegativeTimestamp(
+      settings.system.pushLastSyncedAt,
+      0,
+    )
+    settings.system.pushLastError = normalizePushError(settings.system.pushLastError, '')
+    settings.system.pushVapidPublicKey =
+      typeof settings.system.pushVapidPublicKey === 'string'
+        ? settings.system.pushVapidPublicKey.trim().slice(0, 160)
+        : ''
     settings.system.backupReminderEnabled = settings.system.backupReminderEnabled !== false
     settings.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
       settings.system.backupReminderIntervalHours,
@@ -2162,6 +2395,8 @@ export const useSystemStore = defineStore('system', () => {
     markAllNotificationsRead,
     removeNotification,
     clearNotifications,
+    syncPushPermissionFromBrowser,
+    setPushState,
     setGlobalWorldview,
     getKnowledgePointById,
     listKnowledgePoints,
@@ -2186,6 +2421,7 @@ export const useSystemStore = defineStore('system', () => {
     releaseAutoExecution,
     addApiReport,
     clearApiReports,
+    dispatchNotificationToRealPush,
     getBackupReminderPolicy,
     markBackupExported,
     checkBackupReminderDue,

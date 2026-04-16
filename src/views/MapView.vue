@@ -476,6 +476,22 @@ const tripProgressPercent = computed(() => {
   return Math.max(0, Math.min(100, Math.round(progress * 100)))
 })
 
+const tripArrivalPushStatusLabel = computed(() => {
+  if (!isTripTraveling.value) return t('未布置', 'Not armed')
+  if (tripRuntime.value?.scheduledPushId) return t('已布置', 'Armed')
+  return t('未布置', 'Not armed')
+})
+
+const tripArrivalPushHint = computed(() => {
+  if (!isTripTraveling.value) {
+    return t('开始行程后，可在支持真推送时布置后台到达提醒。', 'Once a trip starts, a background arrival reminder can be armed when real push is available.')
+  }
+  if (tripRuntime.value?.scheduledPushId) {
+    return t('即使页面关闭，只要推送服务可达，到点后仍可收到系统通知。', 'Even with the page closed, a system notification can still arrive when the schedule is due.')
+  }
+  return t('当前未布置后台到达提醒；请检查真推送订阅与服务状态。', 'Background arrival reminder is not armed yet; check real push subscription and server status.')
+})
+
 const formatSeconds = (seconds) => {
   const total = Math.max(0, Math.floor(Number(seconds) || 0))
   const minutes = Math.floor(total / 60)
@@ -490,12 +506,40 @@ const formatTime = (timestamp) => {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-const startTrip = () => {
+const startTrip = async () => {
   const result = mapStore.startTrip()
   if (result?.ok) {
     tripActionHint.value = {
       tone: 'success',
       message: t('行程已开始，系统会按真实时间推进。', 'Trip started. Progress now follows real time.'),
+    }
+    if (result?.remotePushPromise) {
+      const remoteResult = await result.remotePushPromise
+      if (remoteResult?.ok) {
+        tripActionHint.value = {
+          tone: 'success',
+          message: t(
+            '行程已开始，后台到达提醒也已布置。',
+            'Trip started and background arrival push is armed.',
+          ),
+        }
+      } else if (remoteResult?.reason === 'real_push_disabled') {
+        tripActionHint.value = {
+          tone: 'info',
+          message: t(
+            '行程已开始，但当前未满足真推送条件，未布置后台到达提醒。',
+            'Trip started, but real push is not ready, so no background arrival push was armed.',
+          ),
+        }
+      } else if (remoteResult?.reason) {
+        tripActionHint.value = {
+          tone: 'warn',
+          message: t(
+            '行程已开始，但后台到达提醒布置失败，请检查推送服务。',
+            'Trip started, but background arrival push failed to arm. Please check push service.',
+          ),
+        }
+      }
     }
     return
   }
@@ -838,6 +882,12 @@ onBeforeUnmount(() => {
           </p>
           <p class="text-xs text-gray-600">
             {{ t('预计到达', 'ETA') }} {{ formatTime(tripRuntime.etaAt) }}
+          </p>
+          <p class="text-xs text-gray-600">
+            {{ t('后台到达提醒', 'Background arrival push') }} {{ tripArrivalPushStatusLabel }}
+          </p>
+          <p class="text-[11px] text-gray-500">
+            {{ tripArrivalPushHint }}
           </p>
           <p v-if="isTripArrived" class="text-xs text-emerald-700">
             {{ t('已在系统时间到达目的地。', 'Destination reached according to system time.') }}

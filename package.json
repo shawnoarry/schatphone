@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "push:server": "node server/push-server.mjs",
+    "push:keys": "node server/generate-vapid.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -19,7 +21,8 @@
     "pinia": "^3.0.4",
     "postcss": "^8.5.6",
     "vue": "^3.5.24",
-    "vue-router": "^5.0.2"
+    "vue-router": "^5.0.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",

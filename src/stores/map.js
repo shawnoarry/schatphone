@@ -3,6 +3,10 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { extractAssistantPayloadText, parseAssistantJsonPayload } from '../lib/chat-response'
+import {
+  cancelScheduledPushNotification,
+  schedulePushNotification,
+} from '../lib/push'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -55,6 +59,7 @@ const createIdleTripState = () => ({
   startedAt: 0,
   etaAt: 0,
   arrivedAt: 0,
+  scheduledPushId: '',
 })
 
 const createDefaultMapVisualSettings = () => ({
@@ -157,6 +162,10 @@ const normalizeTripState = (raw) => {
     startedAt: Math.max(0, toInt(raw.startedAt, 0)),
     etaAt: Math.max(0, toInt(raw.etaAt, 0)),
     arrivedAt: Math.max(0, toInt(raw.arrivedAt, 0)),
+    scheduledPushId:
+      typeof raw.scheduledPushId === 'string' && raw.scheduledPushId.trim()
+        ? raw.scheduledPushId.trim().slice(0, 120)
+        : '',
   }
 }
 
@@ -206,6 +215,14 @@ const normalizeMapVisualSettings = (raw) => {
         ? raw.onboardingPromptPending
         : fallback.onboardingPromptPending,
   }
+}
+
+const createMapTripScheduleId = (startedAt = 0) => {
+  const normalizedStartedAt = Math.max(0, toInt(startedAt, 0))
+  if (!normalizedStartedAt) {
+    return `map_trip_${Date.now()}`
+  }
+  return `map_trip_${normalizedStartedAt}`
 }
 
 const sanitizeHttpUrl = (value) => {
@@ -277,6 +294,8 @@ export const useMapStore = defineStore('map', () => {
   const mapAutomationRuntime = ref(createDefaultMapAutomationRuntime())
   const runtimeNow = ref(Date.now())
   let tripArrivalTimer = null
+  let tripPushSchedulePromise = null
+  let tripPushCancelPromise = null
   let mapAutomationHandlerRegistered = false
   let mapProviderRunnerOverride = null
   const hasFinishedStorageHydration = ref(false)
@@ -376,6 +395,185 @@ export const useMapStore = defineStore('map', () => {
     tripArrivalTimer = null
   }
 
+  const canUseTripArrivalRealPush = () => {
+    const systemStore = getSystemStore()
+    const systemSettings = systemStore.settings?.system || {}
+    return (
+      systemSettings.notifications !== false &&
+      systemSettings.realPushEnabled === true &&
+      systemSettings.pushSubscriptionActive === true &&
+      typeof systemSettings.pushServerUrl === 'string' &&
+      systemSettings.pushServerUrl.trim() &&
+      typeof systemSettings.pushDeviceId === 'string' &&
+      systemSettings.pushDeviceId.trim()
+    )
+  }
+
+  const buildTripArrivalNotification = (state) => {
+    const systemStore = getSystemStore()
+    const useChinese = String(systemStore.settings?.system?.language || '').toLowerCase().startsWith('zh')
+    const destination = state.toLabel || resolveAddressLabel(state.to, useChinese ? '目的地' : 'destination')
+
+    return {
+      id: `map_trip_arrival_${state.startedAt || Date.now()}`,
+      title: useChinese ? '地图' : 'Map',
+      content: useChinese ? `已到达 ${destination}。` : `Arrived at ${destination}.`,
+      route: '/map',
+      source: 'map_trip_arrival',
+      createdAt: state.etaAt || Date.now(),
+    }
+  }
+
+  const cancelTripArrivalPushScheduled = async ({ scheduleId = '', source = '' } = {}) => {
+    const systemStore = getSystemStore()
+    const state = normalizeTripState(tripState.value)
+    const nextScheduleId =
+      (typeof scheduleId === 'string' && scheduleId.trim()) ||
+      state.scheduledPushId ||
+      (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
+
+    if (!nextScheduleId) {
+      return { ok: false, reason: 'schedule_missing' }
+    }
+
+    if (tripPushCancelPromise) return tripPushCancelPromise
+
+    tripPushCancelPromise = (async () => {
+      try {
+        const serverUrl = systemStore.settings?.system?.pushServerUrl || ''
+        if (!serverUrl) {
+          if (normalizeTripState(tripState.value).scheduledPushId === nextScheduleId) {
+            tripState.value = {
+              ...normalizeTripState(tripState.value),
+              scheduledPushId: '',
+            }
+          }
+          return { ok: false, reason: 'server_url_missing' }
+        }
+
+        const result = await cancelScheduledPushNotification({
+          serverUrl,
+          scheduleId: nextScheduleId,
+        })
+
+        if (normalizeTripState(tripState.value).scheduledPushId === nextScheduleId) {
+          tripState.value = {
+            ...normalizeTripState(tripState.value),
+            scheduledPushId: '',
+          }
+        }
+
+        if (!result.ok) {
+          systemStore.addApiReport({
+            level: 'error',
+            module: 'push',
+            action: 'cancel_schedule',
+            provider: 'push_relay',
+            model: source || 'map_trip_arrival',
+            code: result.reason || 'cancel_schedule_failed',
+            message: result.message || 'Failed to cancel scheduled push notification.',
+            createdAt: Date.now(),
+          })
+          return result
+        }
+
+        return {
+          ok: true,
+          removed: result.removed === true,
+          scheduleId: nextScheduleId,
+        }
+      } finally {
+        tripPushCancelPromise = null
+      }
+    })()
+
+    return tripPushCancelPromise
+  }
+
+  const ensureTripArrivalPushScheduled = async ({ force = false, source = '' } = {}) => {
+    const systemStore = getSystemStore()
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_TRAVELING || !state.etaAt) {
+      return { ok: false, reason: 'no_active_trip' }
+    }
+
+    if (!canUseTripArrivalRealPush()) {
+      return { ok: false, reason: 'real_push_disabled' }
+    }
+
+    if (tripPushSchedulePromise) return tripPushSchedulePromise
+    if (!force && state.scheduledPushId) {
+      return {
+        ok: true,
+        reason: 'already_scheduled',
+        scheduleId: state.scheduledPushId,
+        deliverAt: state.etaAt,
+      }
+    }
+
+    const scheduleId = state.scheduledPushId || createMapTripScheduleId(state.startedAt)
+    const notification = buildTripArrivalNotification(state)
+
+    tripPushSchedulePromise = (async () => {
+      try {
+        const result = await schedulePushNotification({
+          serverUrl: systemStore.settings.system.pushServerUrl,
+          deviceId: systemStore.settings.system.pushDeviceId,
+          deliverAt: state.etaAt,
+          scheduleId,
+          source: source || 'map_trip_arrival',
+          category: 'map_trip',
+          notification,
+        })
+
+        if (!result.ok) {
+          systemStore.addApiReport({
+            level: 'error',
+            module: 'push',
+            action: 'schedule',
+            provider: 'push_relay',
+            model: source || 'map_trip_arrival',
+            code: result.reason || 'schedule_failed',
+            message: result.message || 'Failed to schedule map arrival push.',
+            createdAt: Date.now(),
+          })
+          return result
+        }
+
+        const latestState = normalizeTripState(tripState.value)
+        if (
+          latestState.status === TRIP_STATUS_TRAVELING &&
+          latestState.startedAt === state.startedAt
+        ) {
+          tripState.value = {
+            ...latestState,
+            scheduledPushId: result.scheduleId || scheduleId,
+          }
+        }
+
+        systemStore.addApiReport({
+          level: 'info',
+          module: 'push',
+          action: 'schedule',
+          provider: 'push_relay',
+          model: source || 'map_trip_arrival',
+          message: 'Map arrival push scheduled.',
+          createdAt: Date.now(),
+        })
+
+        return {
+          ok: true,
+          scheduleId: result.scheduleId || scheduleId,
+          deliverAt: result.deliverAt || state.etaAt,
+        }
+      } finally {
+        tripPushSchedulePromise = null
+      }
+    })()
+
+    return tripPushSchedulePromise
+  }
+
   const resolveAddressLabel = (detailText, fallbackLabel) => {
     const detail = typeof detailText === 'string' ? detailText.trim() : ''
     if (!detail) return fallbackLabel
@@ -399,10 +597,12 @@ export const useMapStore = defineStore('map', () => {
     if (!state.etaAt || runtimeNow.value < state.etaAt) return false
 
     const arrivedAt = runtimeNow.value
+    const scheduleId = state.scheduledPushId || (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
     tripState.value = {
       ...state,
       status: TRIP_STATUS_ARRIVED,
       arrivedAt,
+      scheduledPushId: '',
     }
     currentLocation.value = {
       source: 'trip_arrived',
@@ -423,6 +623,12 @@ export const useMapStore = defineStore('map', () => {
       endedAt: arrivedAt,
     })
     clearTripArrivalTimer()
+    if (scheduleId) {
+      void cancelTripArrivalPushScheduled({
+        scheduleId,
+        source: 'map_trip_arrived',
+      })
+    }
     return true
   }
 
@@ -874,13 +1080,18 @@ export const useMapStore = defineStore('map', () => {
       startedAt,
       etaAt,
       arrivedAt: 0,
+      scheduledPushId: '',
     }
     runtimeNow.value = startedAt
     scheduleTripArrivalCheck()
+    const remotePushPromise = ensureTripArrivalPushScheduled({
+      source: 'map_trip_start',
+    })
     return {
       ok: true,
       etaAt,
       durationSeconds: estimate.durationSeconds,
+      remotePushPromise,
     }
   }
 
@@ -889,6 +1100,7 @@ export const useMapStore = defineStore('map', () => {
     const state = normalizeTripState(tripState.value)
     if (state.status !== TRIP_STATUS_TRAVELING) return false
     const endedAt = Date.now()
+    const scheduleId = state.scheduledPushId || (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
     appendTripHistory({
       id: `trip_hist_${endedAt}`,
       status: 'cancelled',
@@ -908,6 +1120,12 @@ export const useMapStore = defineStore('map', () => {
     tripState.value = createIdleTripState()
     runtimeNow.value = endedAt
     clearTripArrivalTimer()
+    if (scheduleId) {
+      void cancelTripArrivalPushScheduled({
+        scheduleId,
+        source: 'map_trip_cancel',
+      })
+    }
     return true
   }
 
@@ -952,6 +1170,11 @@ export const useMapStore = defineStore('map', () => {
     runtimeNow.value = Date.now()
     refreshTripState(runtimeNow.value)
     scheduleTripArrivalCheck()
+    if (normalizeTripState(tripState.value).status === TRIP_STATUS_TRAVELING) {
+      void ensureTripArrivalPushScheduled({
+        source: 'map_trip_restore',
+      })
+    }
     return true
   }
 
@@ -1033,6 +1256,40 @@ export const useMapStore = defineStore('map', () => {
     { deep: true },
   )
 
+  watch(
+    () => {
+      const systemStore = getSystemStore()
+      const systemSettings = systemStore.settings?.system || {}
+      return [
+        systemSettings.realPushEnabled === true,
+        systemSettings.pushSubscriptionActive === true,
+        typeof systemSettings.pushServerUrl === 'string' ? systemSettings.pushServerUrl : '',
+        typeof systemSettings.pushDeviceId === 'string' ? systemSettings.pushDeviceId : '',
+        normalizeTripState(tripState.value).status,
+        normalizeTripState(tripState.value).startedAt,
+        normalizeTripState(tripState.value).etaAt,
+      ]
+    },
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      const state = normalizeTripState(tripState.value)
+      if (state.status !== TRIP_STATUS_TRAVELING) return
+      if (canUseTripArrivalRealPush()) {
+        void ensureTripArrivalPushScheduled({
+          source: 'map_trip_runtime_sync',
+        })
+        return
+      }
+      if (state.scheduledPushId) {
+        void cancelTripArrivalPushScheduled({
+          scheduleId: state.scheduledPushId,
+          source: 'map_trip_push_disabled',
+        })
+      }
+    },
+    { deep: false },
+  )
+
   return {
     addresses,
     currentLocation,
@@ -1065,6 +1322,8 @@ export const useMapStore = defineStore('map', () => {
     enforceMapVisualFallback,
     ensureMapAutomationHandlerRegistered,
     requestMapAiVisualRefresh,
+    ensureTripArrivalPushScheduled,
+    cancelTripArrivalPushScheduled,
     restoreFromBackup,
     createBackupSnapshot,
     createBackupSnapshotAsync,

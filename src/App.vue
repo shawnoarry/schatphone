@@ -6,6 +6,12 @@ import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useMapStore } from './stores/map'
 import { useI18n } from './composables/useI18n'
+import {
+  checkPushServerHealth,
+  normalizePushServerUrl,
+  readPushPermission,
+  syncExistingWebPushSubscription,
+} from './lib/push'
 
 const router = useRouter()
 const route = useRoute()
@@ -38,6 +44,8 @@ let mapAutoNextAt = 0
 const MAP_AUTOMATION_MODULE_KEY = 'map'
 const MAP_AUTOMATION_INTERVAL_MS = 6 * 60 * 1000
 const ROOT_AUTOMATION_TICK_MS = 1500
+const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
+const PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC = 'resync'
 
 const updateTime = () => {
   const now = new Date()
@@ -213,9 +221,89 @@ const runAutomationRootTick = async () => {
   }
 }
 
+const runPushStartupSelfHeal = async () => {
+  systemStore.syncPushPermissionFromBrowser()
+  if (settings.value.system?.notifications === false) return
+  if (settings.value.system?.realPushEnabled !== true) return
+
+  const serverUrl = normalizePushServerUrl(settings.value.system?.pushServerUrl, '')
+  if (!serverUrl) {
+    systemStore.setPushState({
+      pushLastError: t('请先填写 Push Server 地址。', 'Enter a Push Server URL first.'),
+    })
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'push',
+      action: PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH,
+      code: 'server_url_missing',
+      message: t('真推送已开启，但 Push Server 地址为空。', 'Real push is enabled, but Push Server URL is empty.'),
+    })
+    return
+  }
+
+  const healthResult = await checkPushServerHealth({ serverUrl })
+  if (!healthResult.ok) {
+    systemStore.setPushState({
+      pushServerUrl: serverUrl,
+      pushLastError:
+        healthResult.message || t('Push Server 不可达。', 'Push Server is unreachable.'),
+    })
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'push',
+      action: PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH,
+      code: healthResult.reason || 'health_check_failed',
+      message:
+        healthResult.message || t('Push Server 不可达。', 'Push Server is unreachable.'),
+    })
+    return
+  }
+
+  const resyncResult = await syncExistingWebPushSubscription({
+    serverUrl,
+    deviceId: settings.value.system?.pushDeviceId || '',
+  })
+  if (!resyncResult.ok) {
+    const permission = readPushPermission()
+    const missingLocalSubscription = resyncResult.reason === 'subscription_missing'
+    systemStore.setPushState({
+      pushServerUrl: serverUrl,
+      pushPermission: permission,
+      pushSubscriptionActive: missingLocalSubscription
+        ? false
+        : settings.value.system?.pushSubscriptionActive,
+      pushLastError:
+        resyncResult.message || t('启动时重同步订阅失败。', 'Startup subscription resync failed.'),
+    })
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'push',
+      action: PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC,
+      code: resyncResult.reason || 'resync_failed',
+      message:
+        resyncResult.message || t('启动时重同步订阅失败。', 'Startup subscription resync failed.'),
+    })
+    return
+  }
+
+  systemStore.setPushState({
+    pushServerUrl: resyncResult.serverUrl,
+    pushDeviceId: resyncResult.deviceId,
+    pushPermission: readPushPermission(),
+    pushSubscriptionActive: true,
+    pushLastSyncedAt: Date.now(),
+    pushLastError: '',
+  })
+}
+
 onMounted(() => {
   updateTime()
   timerId = setInterval(updateTime, 1000)
+  void runPushStartupSelfHeal().finally(() => {
+    void mapStore.ensureTripArrivalPushScheduled({
+      source: 'app_startup',
+    })
+  })
   runBackupReminderCheck()
   backupReminderTimerId = setInterval(runBackupReminderCheck, 60 * 1000)
   backupReminderVisibilityHandler = () => {

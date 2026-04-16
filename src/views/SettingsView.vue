@@ -12,6 +12,16 @@ import {
   inspectPersistedStateLayers,
   reconcilePersistedStateLayers,
 } from '../lib/persistence'
+import {
+  checkPushServerHealth,
+  isWebPushSupported,
+  normalizePushServerUrl,
+  readPushPermission,
+  sendTestPush,
+  subscribeWebPush,
+  syncExistingWebPushSubscription,
+  unsubscribeWebPush,
+} from '../lib/push'
 
 const router = useRouter()
 const route = useRoute()
@@ -34,11 +44,19 @@ const backupFileInput = ref(null)
 const backupFeedbackType = ref('')
 const backupFeedbackMessage = ref('')
 const backupIncludeAssetPackage = ref(false)
+const pushActionRunning = ref(false)
+const pushHealthRunning = ref(false)
+const pushFeedbackType = ref('')
+const pushFeedbackMessage = ref('')
+const pushServerHealthState = ref('idle')
+const pushServerHealthMessage = ref('')
+const pushLastHealthCheckAt = ref(0)
 let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
 let backupFeedbackTimerId = null
 let storageAuditFeedbackTimerId = null
+let pushFeedbackTimerId = null
 const automationInitialMaster = ref(false)
 const persistenceCapabilities = computed(() => getPersistenceCapabilities())
 const persistenceCapabilityLabel = (available) =>
@@ -69,6 +87,16 @@ const backupReminderIntervalLabel = (hours) => {
     return t(`${days} 天`, `${days} day(s)`)
   }
   return t(`${normalizedHours} 小时`, `${normalizedHours} hour(s)`)
+}
+
+const setPushFeedback = (type, message, durationMs = 2200) => {
+  pushFeedbackType.value = type
+  pushFeedbackMessage.value = message
+  if (pushFeedbackTimerId) clearTimeout(pushFeedbackTimerId)
+  pushFeedbackTimerId = setTimeout(() => {
+    pushFeedbackType.value = ''
+    pushFeedbackMessage.value = ''
+  }, durationMs)
 }
 
 const setBackupFeedback = (type, message, durationMs = 1800) => {
@@ -517,6 +545,39 @@ const goHome = () => {
   router.push('/home')
 }
 
+const webPushSupported = computed(() => isWebPushSupported())
+const normalizedPushServerUrl = computed(() =>
+  normalizePushServerUrl(settings.value.system?.pushServerUrl, ''),
+)
+const pushPermissionLabel = computed(() => {
+  const permission = settings.value.system?.pushPermission || 'default'
+  if (permission === 'granted') return t('已授权', 'Granted')
+  if (permission === 'denied') return t('已拒绝', 'Denied')
+  if (permission === 'unsupported') return t('当前环境不支持', 'Unsupported here')
+  return t('未决定', 'Default')
+})
+const pushSubscriptionLabel = computed(() =>
+  settings.value.system?.pushSubscriptionActive
+    ? t('已连接', 'Connected')
+    : t('未连接', 'Not connected'),
+)
+const pushServerHealthLabel = computed(() => {
+  if (pushServerHealthState.value === 'ok') return t('服务可达', 'Reachable')
+  if (pushServerHealthState.value === 'error') return t('服务不可达', 'Unreachable')
+  return t('尚未检查', 'Not checked')
+})
+const pushCapabilityHint = computed(() =>
+  webPushSupported.value
+    ? t(
+        '当前浏览器支持系统推送；在手机上建议安装到主屏幕后再开启。',
+        'This browser supports system push; on mobile, install to home screen before enabling.',
+      )
+    : t(
+        '当前环境不满足真推送条件，需要 HTTPS 或 localhost，并且浏览器支持 Service Worker / Push。',
+        'True push needs HTTPS or localhost plus browser support for Service Worker and Push.',
+      ),
+)
+
 const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
   const allowed = new Set(['general', 'notification', 'automation', 'about'])
@@ -527,6 +588,13 @@ const openSubPage = (menu) => {
   activeMenu.value = menu
   if (menu === 'automation') {
     automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
+  }
+  if (menu === 'notification') {
+    systemStore.syncPushPermissionFromBrowser()
+    void checkPushServerHealthNow({ silent: true })
+    if (settings.value.system?.realPushEnabled && settings.value.system?.pushDeviceId) {
+      void resyncRealPushNow({ silent: true })
+    }
   }
   if (menu === 'about') {
     void runStorageAudit({ silent: true })
@@ -560,12 +628,338 @@ const saveGeneralSettings = () => {
 }
 
 const saveNotificationSettings = () => {
+  settings.value.system.pushServerUrl = normalizePushServerUrl(
+    settings.value.system.pushServerUrl,
+    settings.value.system.pushServerUrl || '',
+  )
+  systemStore.syncPushPermissionFromBrowser()
   systemStore.saveNow()
   notificationSaved.value = true
   if (notificationSavedTimerId) clearTimeout(notificationSavedTimerId)
   notificationSavedTimerId = setTimeout(() => {
     notificationSaved.value = false
   }, 1200)
+}
+
+const checkPushServerHealthNow = async ({ silent = false } = {}) => {
+  const serverUrl = normalizePushServerUrl(settings.value.system.pushServerUrl, '')
+  if (!serverUrl) {
+    pushServerHealthState.value = 'error'
+    pushServerHealthMessage.value = t(
+      '请先填写 Push Server 地址。',
+      'Enter a Push Server URL first.',
+    )
+    pushLastHealthCheckAt.value = Date.now()
+    if (!silent) {
+      setPushFeedback('warn', pushServerHealthMessage.value)
+    }
+    return
+  }
+
+  pushHealthRunning.value = true
+  try {
+    const result = await checkPushServerHealth({ serverUrl })
+    pushLastHealthCheckAt.value = Date.now()
+    if (!result.ok) {
+      systemStore.setPushState({
+        pushLastError: result.message || '',
+      })
+      systemStore.addApiReport({
+        level: 'error',
+        module: 'push',
+        action: 'health_check',
+        code: result.reason || 'health_check_failed',
+        message: result.message || t('Push Server 不可达。', 'Push Server is unreachable.'),
+      })
+      pushServerHealthState.value = 'error'
+      pushServerHealthMessage.value =
+        result.message || t('Push Server 不可达。', 'Push Server is unreachable.')
+      if (!silent) {
+        setPushFeedback('warn', pushServerHealthMessage.value)
+      }
+      return
+    }
+
+    pushServerHealthState.value = 'ok'
+    systemStore.setPushState({
+      pushServerUrl: result.serverUrl,
+      pushLastError: '',
+    })
+    if (!silent) {
+      systemStore.addApiReport({
+        level: 'info',
+        module: 'push',
+        action: 'health_check',
+        message: t('Push Server 健康检查通过。', 'Push Server health check passed.'),
+      })
+    }
+    pushServerHealthMessage.value = t(
+      `Push Server 已连通，当前记录 ${result.subscriptionCount} 条订阅、${result.scheduledCount} 条计划任务。`,
+      `Push Server reachable with ${result.subscriptionCount} subscription(s) and ${result.scheduledCount} scheduled job(s).`,
+    )
+    if (!silent) {
+      setPushFeedback('success', pushServerHealthMessage.value)
+    }
+  } finally {
+    pushHealthRunning.value = false
+  }
+}
+
+const resyncRealPushNow = async ({ silent = false } = {}) => {
+  const serverUrl = normalizePushServerUrl(settings.value.system.pushServerUrl, '')
+  if (!serverUrl) {
+    if (!silent) {
+      setPushFeedback(
+        'warn',
+        t('请先填写 Push Server 地址。', 'Enter a Push Server URL first.'),
+      )
+    }
+    return
+  }
+
+  pushActionRunning.value = true
+  try {
+    const result = await syncExistingWebPushSubscription({
+      serverUrl,
+      deviceId: settings.value.system.pushDeviceId || '',
+    })
+
+    if (!result.ok) {
+      const permission = readPushPermission()
+      const hasMissingLocalSubscription = result.reason === 'subscription_missing'
+      systemStore.setPushState({
+        pushPermission: permission,
+        pushSubscriptionActive: hasMissingLocalSubscription ? false : settings.value.system.pushSubscriptionActive,
+        pushLastError: result.message || '',
+      })
+      systemStore.addApiReport({
+        level: 'error',
+        module: 'push',
+        action: 'resync',
+        code: result.reason || 'resync_failed',
+        message: result.message || t('重同步订阅失败。', 'Failed to resync subscription.'),
+      })
+      if (!silent) {
+        setPushFeedback(
+          'warn',
+          result.message || t('重同步订阅失败。', 'Failed to resync subscription.'),
+        )
+      }
+      return
+    }
+
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: result.serverUrl,
+      pushDeviceId: result.deviceId,
+      pushPermission: readPushPermission(),
+      pushSubscriptionActive: true,
+      pushLastSyncedAt: Date.now(),
+      pushLastError: '',
+    })
+    if (!silent) {
+      systemStore.addApiReport({
+        level: 'info',
+        module: 'push',
+        action: 'resync',
+        message: t('浏览器订阅已重新同步。', 'Browser subscription resynced.'),
+      })
+    }
+    if (!silent) {
+      setPushFeedback(
+        'success',
+        t('当前浏览器订阅已重新同步到 Push Server。', 'Current browser subscription has been resynced to Push Server.'),
+      )
+    }
+  } finally {
+    pushActionRunning.value = false
+  }
+}
+
+const subscribeRealPushNow = async () => {
+  systemStore.syncPushPermissionFromBrowser()
+  if (!webPushSupported.value) {
+    setPushFeedback('warn', pushCapabilityHint.value)
+    return
+  }
+
+  const serverUrl = normalizePushServerUrl(settings.value.system.pushServerUrl, '')
+  if (!serverUrl) {
+    setPushFeedback(
+      'warn',
+      t(
+        '请先填写可访问的 Push Server 地址，再进行订阅。',
+        'Enter a reachable push server URL before subscribing.',
+      ),
+    )
+    return
+  }
+
+  pushActionRunning.value = true
+  try {
+    const result = await subscribeWebPush({
+      serverUrl,
+      deviceId: settings.value.system.pushDeviceId || '',
+    })
+
+    if (!result.ok) {
+      systemStore.setPushState({
+        pushPermission: readPushPermission(),
+        pushLastError: result.message || '',
+      })
+      systemStore.addApiReport({
+        level: 'error',
+        module: 'push',
+        action: 'subscribe',
+        code: result.reason || 'subscribe_failed',
+        message: result.message || t('订阅真推送失败。', 'Failed to subscribe real push.'),
+      })
+      setPushFeedback(
+        'warn',
+        result.message || t('订阅真推送失败。', 'Failed to subscribe real push.'),
+      )
+      return
+    }
+
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: result.serverUrl,
+      pushPermission: result.permission,
+      pushDeviceId: result.deviceId,
+      pushSubscriptionActive: true,
+      pushLastSyncedAt: Date.now(),
+      pushLastError: '',
+      pushVapidPublicKey: result.publicKey,
+    })
+    systemStore.addApiReport({
+      level: 'info',
+      module: 'push',
+      action: 'subscribe',
+      message: t('真推送订阅成功。', 'Real push subscribed successfully.'),
+    })
+    setPushFeedback(
+      'success',
+      t('真推送已连接，现在可以发送系统级测试通知。', 'Real push connected. You can send a system-level test now.'),
+    )
+  } finally {
+    pushActionRunning.value = false
+  }
+}
+
+const unsubscribeRealPushNow = async () => {
+  if (!settings.value.system.pushDeviceId && !settings.value.system.pushSubscriptionActive) {
+    systemStore.setPushState({
+      realPushEnabled: false,
+      pushSubscriptionActive: false,
+      pushLastError: '',
+    })
+    setPushFeedback('success', t('真推送已关闭。', 'Real push disabled.'))
+    return
+  }
+
+  const ok = window.confirm(
+    t(
+      '确认取消这台设备的真推送订阅吗？取消后将不再收到系统级推送。',
+      'Unsubscribe this device from real push? System notifications will stop.',
+    ),
+  )
+  if (!ok) return
+
+  pushActionRunning.value = true
+  try {
+    const result = await unsubscribeWebPush({
+      serverUrl: settings.value.system.pushServerUrl,
+      deviceId: settings.value.system.pushDeviceId,
+    })
+    if (!result.ok) {
+      systemStore.setPushState({
+        pushLastError: result.message || '',
+      })
+      systemStore.addApiReport({
+        level: 'error',
+        module: 'push',
+        action: 'unsubscribe',
+        code: result.reason || 'unsubscribe_failed',
+        message: result.message || t('取消真推送失败。', 'Failed to unsubscribe real push.'),
+      })
+      setPushFeedback(
+        'warn',
+        result.message || t('取消真推送失败。', 'Failed to unsubscribe real push.'),
+      )
+      return
+    }
+
+    systemStore.setPushState({
+      realPushEnabled: false,
+      pushPermission: readPushPermission(),
+      pushSubscriptionActive: false,
+      pushLastSyncedAt: Date.now(),
+      pushLastError: '',
+      pushVapidPublicKey: '',
+    })
+    systemStore.addApiReport({
+      level: 'info',
+      module: 'push',
+      action: 'unsubscribe',
+      message: t('真推送已取消订阅。', 'Real push unsubscribed.'),
+    })
+    setPushFeedback('success', t('真推送已取消订阅。', 'Real push unsubscribed.'))
+  } finally {
+    pushActionRunning.value = false
+  }
+}
+
+const sendRealPushTestNow = async () => {
+  const serverUrl = normalizePushServerUrl(settings.value.system.pushServerUrl, '')
+  if (!serverUrl || !settings.value.system.pushDeviceId) {
+    setPushFeedback(
+      'warn',
+      t('请先完成真推送订阅，再发送测试通知。', 'Subscribe real push before sending a test.'),
+    )
+    return
+  }
+
+  pushActionRunning.value = true
+  try {
+    const result = await sendTestPush({
+      serverUrl,
+      deviceId: settings.value.system.pushDeviceId,
+    })
+    if (!result.ok) {
+      systemStore.setPushState({
+        pushLastError: result.message || '',
+      })
+      systemStore.addApiReport({
+        level: 'error',
+        module: 'push',
+        action: 'test',
+        code: result.reason || 'push_test_failed',
+        message: result.message || t('测试推送发送失败。', 'Failed to send test push.'),
+      })
+      setPushFeedback(
+        'warn',
+        result.message || t('测试推送发送失败。', 'Failed to send test push.'),
+      )
+      return
+    }
+
+    systemStore.setPushState({
+      pushLastSyncedAt: Date.now(),
+      pushLastError: '',
+    })
+    systemStore.addApiReport({
+      level: 'info',
+      module: 'push',
+      action: 'test',
+      message: t('测试推送已发送，请查看系统通知。', 'Test push sent. Check system notifications.'),
+    })
+    setPushFeedback(
+      'success',
+      t('测试推送已发送，请查看系统通知。', 'Test push sent. Check system notifications.'),
+    )
+  } finally {
+    pushActionRunning.value = false
+  }
 }
 
 const clampAutomationPriority = (value) => {
@@ -1020,6 +1414,7 @@ onBeforeUnmount(() => {
   if (automationSavedTimerId) clearTimeout(automationSavedTimerId)
   if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
   if (storageAuditFeedbackTimerId) clearTimeout(storageAuditFeedbackTimerId)
+  if (pushFeedbackTimerId) clearTimeout(pushFeedbackTimerId)
 })
 
 const initialMenu = normalizeSettingsMenuFromQuery(
@@ -1029,6 +1424,9 @@ if (initialMenu) {
   activeMenu.value = initialMenu
   if (initialMenu === 'automation') {
     automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
+  }
+  if (initialMenu === 'notification') {
+    systemStore.syncPushPermissionFromBrowser()
   }
   if (initialMenu === 'about') {
     void runStorageAudit({ silent: true })
@@ -1550,6 +1948,143 @@ if (initialMenu) {
               <p class="text-[10px] text-gray-400">{{ t('用于聊天消息与系统提醒', 'Used for chat messages and system alerts') }}</p>
             </div>
             <input v-model="settings.system.notifications" type="checkbox" class="w-5 h-5" />
+          </div>
+
+          <div class="bg-white rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold">{{ t('真推送', 'Real Push') }}</p>
+                <p class="text-[10px] text-gray-500">
+                  {{
+                    t(
+                      '让项目通知进入手机系统通知层。需要 HTTPS 或 localhost、已授权通知、且建议安装到主屏幕。',
+                      'Delivers project notifications into the phone system layer. Requires HTTPS or localhost, granted permission, and is best after install-to-home-screen.',
+                    )
+                  }}
+                </p>
+              </div>
+              <input v-model="settings.system.realPushEnabled" type="checkbox" class="w-5 h-5" />
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
+              <p class="text-[11px] text-gray-700">
+                {{ t('环境能力', 'Environment capability') }}:
+                <span class="font-medium">{{ webPushSupported ? t('支持', 'Supported') : t('不支持', 'Not supported') }}</span>
+              </p>
+              <p class="text-[11px] text-gray-700">
+                {{ t('通知权限', 'Notification permission') }}:
+                <span class="font-medium">{{ pushPermissionLabel }}</span>
+              </p>
+              <p class="text-[11px] text-gray-700">
+                {{ t('订阅状态', 'Subscription status') }}:
+                <span class="font-medium">{{ pushSubscriptionLabel }}</span>
+              </p>
+              <p class="text-[11px] text-gray-700">
+                {{ t('服务状态', 'Server status') }}:
+                <span class="font-medium">{{ pushServerHealthLabel }}</span>
+              </p>
+              <p class="text-[10px] text-gray-500">{{ pushCapabilityHint }}</p>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs text-gray-500 block">{{ t('Push Server 地址', 'Push Server URL') }}</label>
+              <input
+                v-model="settings.system.pushServerUrl"
+                type="text"
+                class="w-full border rounded-xl px-3 py-2 text-sm outline-none bg-white"
+                placeholder="http://localhost:8787"
+              />
+              <p class="text-[10px] text-gray-400">
+                {{
+                  t(
+                    '开发期可使用本机或局域网地址；真正手机测试时，手机必须能访问这个地址。',
+                    'Use localhost or LAN address in development; on a real phone, the phone must be able to reach this URL.',
+                  )
+                }}
+              </p>
+            </div>
+
+            <div class="space-y-1 text-[11px] text-gray-500">
+              <p>
+                {{ t('当前有效地址', 'Effective URL') }}:
+                <span class="font-medium text-gray-700">{{ normalizedPushServerUrl || t('未设置', 'Not set') }}</span>
+              </p>
+              <p>
+                {{ t('设备标识', 'Device ID') }}:
+                <span class="font-medium text-gray-700">{{ settings.system.pushDeviceId || t('未分配', 'Not assigned') }}</span>
+              </p>
+              <p v-if="settings.system.pushLastSyncedAt > 0">
+                {{ t('最后同步', 'Last sync') }}:
+                <span class="font-medium text-gray-700">{{ formatStorageReportTime(settings.system.pushLastSyncedAt) }}</span>
+              </p>
+              <p v-if="pushLastHealthCheckAt > 0">
+                {{ t('最后检查', 'Last check') }}:
+                <span class="font-medium text-gray-700">{{ formatStorageReportTime(pushLastHealthCheckAt) }}</span>
+              </p>
+              <p v-if="pushServerHealthMessage">
+                {{ t('服务详情', 'Server detail') }}:
+                <span
+                  class="font-medium"
+                  :class="pushServerHealthState === 'ok' ? 'text-green-700' : pushServerHealthState === 'error' ? 'text-amber-700' : 'text-gray-700'"
+                >
+                  {{ pushServerHealthMessage }}
+                </span>
+              </p>
+              <p v-if="settings.system.pushLastError" class="text-amber-700">
+                {{ t('最近错误', 'Last error') }}:
+                <span class="font-medium">{{ settings.system.pushLastError }}</span>
+              </p>
+            </div>
+
+            <p
+              v-if="pushFeedbackMessage"
+              class="text-[11px]"
+              :class="pushFeedbackType === 'success' ? 'text-green-600' : pushFeedbackType === 'warn' ? 'text-amber-600' : 'text-gray-500'"
+            >
+              {{ pushFeedbackMessage }}
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                @click="checkPushServerHealthNow()"
+                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="pushActionRunning || pushHealthRunning"
+              >
+                {{
+                  pushHealthRunning
+                    ? t('检查中...', 'Checking...')
+                    : t('检查服务连接', 'Check server')
+                }}
+              </button>
+              <button
+                @click="resyncRealPushNow()"
+                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="pushActionRunning || !settings.system.realPushEnabled"
+              >
+                {{ t('重同步订阅', 'Resync subscription') }}
+              </button>
+              <button
+                @click="subscribeRealPushNow"
+                class="px-3 py-2 rounded-lg border border-blue-200 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="pushActionRunning"
+              >
+                {{ pushActionRunning ? t('处理中...', 'Working...') : t('授权并订阅', 'Authorize & subscribe') }}
+              </button>
+              <button
+                @click="sendRealPushTestNow"
+                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="pushActionRunning || !settings.system.pushSubscriptionActive"
+              >
+                {{ t('发送测试推送', 'Send test push') }}
+              </button>
+              <button
+                @click="unsubscribeRealPushNow"
+                class="px-3 py-2 rounded-lg border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="pushActionRunning"
+              >
+                {{ t('取消订阅', 'Unsubscribe') }}
+              </button>
+            </div>
           </div>
 
           <button

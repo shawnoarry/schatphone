@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import './style.css'
 import '@fortawesome/fontawesome-free/css/all.css'
+import { ensurePushServiceWorkerRegistration } from './lib/push'
 
 if (typeof window !== 'undefined') {
   const lockViewportContent =
@@ -48,3 +49,9 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.mount('#app')
+
+if (typeof window !== 'undefined' && window.isSecureContext === true) {
+  void ensurePushServiceWorkerRegistration().catch(() => {
+    // Notification subscription is still user-driven in Settings.
+  })
+}

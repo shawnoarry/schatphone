@@ -1,6 +1,6 @@
 ﻿# SchatPhone Background Activity Strategy / SchatPhone 后台活动策略
 
-Updated / 更新时间: 2026-03-29
+Updated / 更新时间: 2026-04-15
 
 ## 1. Purpose / 用途
 
@@ -25,7 +25,7 @@ The practical solution is a layered model:
 1. Real-time scheduler / 现实时间调度器
 2. Restore-time settlement / 恢复时补算
 3. Notification layer / 通知层
-4. Optional PWA push enhancement / 可选的 PWA 推送增强
+4. PWA push delivery enhancement / PWA 推送送达增强
 5. Future app-shell upgrade if strong background execution is required / 若未来必须强后台，再升级到应用壳
 
 ## 3. What Pure Web Can and Cannot Do / 纯 Web 能做与不能做的事
@@ -104,20 +104,29 @@ Must-have behaviors / 建议必须具备的行为：
 - stacked notification display / 通知堆叠显示
 - summary of what happened while the user was away / 用户离开期间发生事项的摘要
 
-### 4.4 Layer D: Optional PWA Push / 第四层：可选 PWA 推送增强
+### 4.4 Layer D: PWA Push Delivery / 第四层：PWA 推送送达层
 
-If the product later needs stronger off-page notifications, PWA push can be added.  
-如果后续需要更强的离页通知能力，可以增加 PWA 推送。
+This layer is now available as a baseline in the project.  
+这一层现在已经作为项目基线接入。
 
 This requires / 需要具备：
 
 - HTTPS
 - notification permission / 通知权限
 - service worker / 服务工作线程
-- backend push delivery / 后端推送通道
+- backend push relay / 后端推送中继通道
 
-This should be treated as an enhancement layer, not the current baseline assumption.  
-这应被视为增强层，而不是当前阶段的默认前提。
+Current landed scope / 当前已落地范围：
+
+- frontend manifest + service worker registration / 前端 manifest + service worker 注册
+- Settings-based permission/subscription flow / Settings 内的授权与订阅流程
+- lightweight Node push relay server / 轻量 Node 推送中继服务
+- real system-notification delivery for events that are generated while the web app is active and can relay them / 对“网页仍在生成事件”的场景提供真正的系统通知送达
+
+Important limitation / 重要边界：
+
+True delivery is now available, but fully closed-page event generation still needs future server-side scheduling/orchestration.  
+真正的“送达”现在已经可用，但“页面完全关闭后仍自动生成事件”仍需要后续服务端调度/编排。
 
 ### 4.5 Layer E: Future App-Shell Upgrade / 第五层：未来应用壳升级
 
@@ -168,7 +177,7 @@ Without this, AI replies will lose temporal continuity.
 2. Add restore-time settlement / 再做恢复时补算
 3. Connect lock-screen and notification presentation / 接入锁屏与通知呈现
 4. Add per-role and per-feature user controls / 补齐按角色和按功能的用户控制
-5. Consider PWA push as an optional later enhancement / 最后把 PWA 推送作为可选增强
+5. Extend server-side event generation later if full off-page autonomy is required / 若需要完整离页自主活动，再扩展服务端事件生成
 
 ## 8. Practical Product Rule / 实际产品规则
 
@@ -185,4 +194,3 @@ The correct goal is:
 - believable restore behavior / 可信的恢复补算
 - strong notification immersion / 强化通知沉浸感
 - controllable autonomous activity / 可控的自主活动
-

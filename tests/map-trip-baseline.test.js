@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
+import * as pushLib from '../src/lib/push'
 
 describe('map trip baseline loop', () => {
   beforeEach(() => {
@@ -13,6 +14,7 @@ describe('map trip baseline loop', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   test('starts trip and auto-arrives by system time timer', () => {
@@ -173,5 +175,65 @@ describe('map trip baseline loop', () => {
       'https://example.com/map-ai-visual.png',
     )
     expect(mapStore.mapAutomationRuntime.lastProviderSummary).toContain('Wet roads')
+  })
+
+  test('startTrip can arm a background arrival push when real push is ready', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_1',
+      pushSubscriptionActive: true,
+    })
+
+    const scheduleSpy = vi.spyOn(pushLib, 'schedulePushNotification').mockResolvedValue({
+      ok: true,
+      scheduleId: 'map_trip_1',
+      deliverAt: Date.now() + 60_000,
+    })
+
+    mapStore.setTripEndpoint('from', 'Home')
+    mapStore.setTripEndpoint('to', 'Office')
+    const started = mapStore.startTrip()
+    await started.remotePushPromise
+
+    expect(started.ok).toBe(true)
+    expect(scheduleSpy).toHaveBeenCalledTimes(1)
+    expect(mapStore.tripState.scheduledPushId).toBe('map_trip_1')
+  })
+
+  test('cancelTrip clears an armed background arrival push schedule', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_1',
+      pushSubscriptionActive: true,
+    })
+
+    vi.spyOn(pushLib, 'schedulePushNotification').mockResolvedValue({
+      ok: true,
+      scheduleId: 'map_trip_cancel_1',
+      deliverAt: Date.now() + 60_000,
+    })
+    const cancelSpy = vi.spyOn(pushLib, 'cancelScheduledPushNotification').mockResolvedValue({
+      ok: true,
+      removed: true,
+      scheduleId: 'map_trip_cancel_1',
+    })
+
+    mapStore.setTripEndpoint('from', 'Home')
+    mapStore.setTripEndpoint('to', 'Cafe')
+    const started = mapStore.startTrip()
+    await started.remotePushPromise
+
+    const cancelled = mapStore.cancelTrip()
+    await Promise.resolve()
+
+    expect(cancelled).toBe(true)
+    expect(cancelSpy).toHaveBeenCalledTimes(1)
+    expect(mapStore.tripState.status).toBe('idle')
   })
 })

@@ -42,7 +42,7 @@ const setUiFeedback = (type, message, durationMs = 1800) => {
 
 const normalizeReportModuleFilter = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
-  const allowed = new Set(['all', 'chat', 'network', 'storage', 'map', 'shopping'])
+  const allowed = new Set(['all', 'chat', 'network', 'storage', 'push', 'map', 'shopping'])
   return allowed.has(raw) ? raw : 'all'
 }
 
@@ -73,6 +73,7 @@ const reportModuleOptions = computed(() => [
   { value: 'chat', label: t('聊天', 'Chat') },
   { value: 'network', label: t('网络', 'Network') },
   { value: 'storage', label: t('存储', 'Storage') },
+  { value: 'push', label: t('推送', 'Push') },
   { value: 'map', label: t('地图', 'Map') },
   { value: 'shopping', label: t('购物', 'Shopping') },
 ])
@@ -110,6 +111,7 @@ const moduleLabel = (moduleKey) => {
   if (moduleKey === 'chat') return t('聊天', 'Chat')
   if (moduleKey === 'network') return t('网络', 'Network')
   if (moduleKey === 'storage') return t('存储', 'Storage')
+  if (moduleKey === 'push') return t('推送', 'Push')
   if (moduleKey === 'map') return t('地图', 'Map')
   if (moduleKey === 'shopping') return t('购物', 'Shopping')
   return t('未知模块', 'Unknown module')
@@ -124,6 +126,14 @@ const actionLabel = (actionKey) => {
   if (actionKey === 'repair_storage') return t('修复存储不同步', 'Repair storage drift')
   if (actionKey === 'export_backup') return t('导出备份', 'Export backup')
   if (actionKey === 'import_backup') return t('导入备份', 'Import backup')
+  if (actionKey === 'subscribe') return t('订阅真推送', 'Subscribe real push')
+  if (actionKey === 'unsubscribe') return t('取消真推送', 'Unsubscribe real push')
+  if (actionKey === 'test') return t('发送测试推送', 'Send test push')
+  if (actionKey === 'relay_notification') return t('转发系统通知', 'Relay system notification')
+  if (actionKey === 'health_check') return t('检查推送服务', 'Check push service')
+  if (actionKey === 'resync') return t('重同步订阅', 'Resync subscription')
+  if (actionKey === 'schedule') return t('安排定时推送', 'Schedule push delivery')
+  if (actionKey === 'cancel_schedule') return t('取消定时推送', 'Cancel scheduled push')
   return actionKey || t('未知动作', 'Unknown action')
 }
 
@@ -160,6 +170,24 @@ const reportReasonLabel = (item) => {
   if (code === 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED')
     return t('备份导入失败（结构不支持）', 'Backup import failed (unsupported structure)')
   if (code === 'BACKUP_IMPORT_FAILED') return t('备份导入失败', 'Backup import failed')
+  if (code === 'SERVER_URL_MISSING') return t('缺少 Push Server 地址', 'Push server URL missing')
+  if (code === 'CONFIG_MISSING') return t('推送配置不完整', 'Push configuration incomplete')
+  if (code === 'DELIVER_AT_INVALID') return t('计划时间无效', 'Scheduled time is invalid')
+  if (code === 'PUBLIC_KEY_MISSING' || code === 'PUBLIC_KEY_FAILED')
+    return t('推送公钥不可用', 'Push public key unavailable')
+  if (code === 'PERMISSION_DENIED' || code === 'PERMISSION_NOT_GRANTED')
+    return t('系统通知权限未授权', 'System notification permission not granted')
+  if (code === 'UNSUPPORTED') return t('当前环境不支持真推送', 'Real push unsupported here')
+  if (code === 'SUBSCRIPTION_MISSING')
+    return t('浏览器本地订阅不存在', 'Browser subscription missing')
+  if (code === 'SUBSCRIPTION_NOT_FOUND')
+    return t('服务端未找到该设备订阅', 'Server subscription record missing')
+  if (code === 'SUBSCRIPTION_EXPIRED')
+    return t('推送订阅已失效', 'Push subscription expired')
+  if (code === 'SUBSCRIPTION_READ_FAILED')
+    return t('读取浏览器订阅失败', 'Failed to read browser subscription')
+  if (code === 'FETCH_UNAVAILABLE' || code === 'NETWORK_ERROR')
+    return t('无法连接 Push Server', 'Unable to reach Push Server')
   if (code === 'INVALID_URL') return t('接口地址格式错误', 'Invalid endpoint URL')
   if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
     return t('鉴权失败（401/403）', 'Authentication failed (401/403)')
@@ -215,6 +243,28 @@ const reportSuggestionLabel = (item) => {
     return t('备份结构不完整，建议重新导出后再导入。', 'Backup structure is incomplete; re-export and import again.')
   if (code === 'BACKUP_IMPORT_FAILED')
     return t('导入失败已回滚，请检查备份文件结构后重试。', 'Import failed and rolled back. Validate backup file structure and retry.')
+  if (code === 'SERVER_URL_MISSING')
+    return t('前往设置-通知，先填写可访问的 Push Server 地址。', 'Open Settings > Notifications and enter a reachable Push Server URL.')
+  if (code === 'CONFIG_MISSING')
+    return t('先完成服务地址与设备订阅，再尝试发送推送。', 'Complete server URL and device subscription before sending push.')
+  if (code === 'DELIVER_AT_INVALID')
+    return t('请检查计划触发时间，确保它是有效的未来时间戳。', 'Check the scheduled trigger time and make sure it is a valid future timestamp.')
+  if (code === 'PUBLIC_KEY_MISSING' || code === 'PUBLIC_KEY_FAILED')
+    return t('检查 Push Server 是否已生成并暴露 VAPID 公钥。', 'Check whether the Push Server exposes a valid VAPID public key.')
+  if (code === 'PERMISSION_DENIED' || code === 'PERMISSION_NOT_GRANTED')
+    return t('到浏览器或系统设置里允许通知权限，然后重新订阅。', 'Allow browser/system notification permission, then subscribe again.')
+  if (code === 'UNSUPPORTED')
+    return t('请使用支持 Service Worker/Push 的 HTTPS 或 localhost 环境。', 'Use HTTPS or localhost in a browser that supports Service Worker and Push.')
+  if (code === 'SUBSCRIPTION_MISSING')
+    return t('在设置-通知执行“重同步订阅”或重新订阅真推送。', 'Use “Resync subscription” in Settings > Notifications or subscribe again.')
+  if (code === 'SUBSCRIPTION_NOT_FOUND')
+    return t('服务端记录已丢失，前往设置-通知执行“重同步订阅”。', 'Server record is missing. Go to Settings > Notifications and run “Resync subscription”.')
+  if (code === 'SUBSCRIPTION_EXPIRED')
+    return t('当前订阅已过期，建议取消后重新订阅真推送。', 'Current subscription expired. Unsubscribe then subscribe again.')
+  if (code === 'SUBSCRIPTION_READ_FAILED')
+    return t('刷新页面后重试；若仍失败，可重新订阅真推送。', 'Reload and retry. If it still fails, subscribe to real push again.')
+  if (code === 'FETCH_UNAVAILABLE' || code === 'NETWORK_ERROR')
+    return t('确认 Push Server 正在运行，且当前网络可访问该地址。', 'Make sure the Push Server is running and reachable from the current network.')
   if (code === 'INVALID_URL') return t('检查 URL 是否完整且包含正确路径。', 'Check endpoint URL and verify full path.')
   if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
     return t('更换可用 Key，或检查供应商权限设置。', 'Use a valid key or verify provider permissions.')
@@ -369,6 +419,15 @@ const openStorageDiagnostics = () => {
     path: '/settings',
     query: {
       menu: 'about',
+    },
+  })
+}
+
+const openPushSettings = () => {
+  router.push({
+    path: '/settings',
+    query: {
+      menu: 'notification',
     },
   })
 }
@@ -711,7 +770,7 @@ ensurePresetState()
 
       <div class="bg-white rounded-xl p-4">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-xs text-gray-500">{{ t('诊断报告中心（API/存储）', 'Diagnostics Center (API/Storage)') }}</p>
+          <p class="text-xs text-gray-500">{{ t('诊断报告中心（API/推送/存储）', 'Diagnostics Center (API/Push/Storage)') }}</p>
           <button
             @click="clearApiReportHistory"
             class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -796,6 +855,13 @@ ensurePresetState()
                 class="text-[11px] px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-50"
               >
                 {{ t('前往修复', 'Go to repair') }}
+              </button>
+              <button
+                v-if="item.module === 'push'"
+                @click="openPushSettings"
+                class="text-[11px] px-2 py-1 rounded border border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                {{ t('前往推送设置', 'Go to push settings') }}
               </button>
               <button
                 @click="copyReport(item)"

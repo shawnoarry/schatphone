@@ -221,6 +221,47 @@ describe('system automation controls', () => {
     expect(store.apiReports[0].code).toBe('STORAGE_MIRROR_DRIFT')
   })
 
+  test('accepts push module reports for unified diagnostics', () => {
+    const store = useSystemStore()
+
+    store.addApiReport({
+      level: 'error',
+      module: 'push',
+      action: 'resync',
+      code: 'subscription_not_found',
+      message: 'Push subscription record missing on server.',
+    })
+
+    expect(store.apiReports.length).toBe(1)
+    expect(store.apiReports[0].module).toBe('push')
+    expect(store.apiReports[0].action).toBe('resync')
+    expect(store.apiReports[0].code).toBe('subscription_not_found')
+  })
+
+  test('normalizes push runtime state through setPushState', () => {
+    const store = useSystemStore()
+
+    store.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787/',
+      pushPermission: 'granted',
+      pushDeviceId: ' device-1 ',
+      pushSubscriptionActive: true,
+      pushLastSyncedAt: 1234.8,
+      pushLastError: ' subscription failed ',
+      pushVapidPublicKey: ' key ',
+    })
+
+    expect(store.settings.system.realPushEnabled).toBe(true)
+    expect(store.settings.system.pushServerUrl).toBe('http://localhost:8787')
+    expect(store.settings.system.pushPermission).toBe('granted')
+    expect(store.settings.system.pushDeviceId).toBe('device-1')
+    expect(store.settings.system.pushSubscriptionActive).toBe(true)
+    expect(store.settings.system.pushLastSyncedAt).toBe(1234)
+    expect(store.settings.system.pushLastError).toBe('subscription failed')
+    expect(store.settings.system.pushVapidPublicKey).toBe('key')
+  })
+
   test('supports scoped report clear by module and level', () => {
     const store = useSystemStore()
 
