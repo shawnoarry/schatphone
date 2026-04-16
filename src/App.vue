@@ -6,10 +6,13 @@ import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useMapStore } from './stores/map'
 import { useI18n } from './composables/useI18n'
+import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from './lib/notification-presentation'
 import {
+  cancelScheduledPushNotification,
   checkPushServerHealth,
   normalizePushServerUrl,
   readPushPermission,
+  schedulePushNotification,
   syncExistingWebPushSubscription,
 } from './lib/push'
 
@@ -20,7 +23,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
-const { settings } = storeToRefs(systemStore)
+const { settings, notifications } = storeToRefs(systemStore)
 const { loadingAI } = storeToRefs(chatStore)
 
 const currentTime = ref('')
@@ -32,6 +35,20 @@ const isLockRoute = computed(() => route.path === '/lock')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
 const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const dateLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const notificationLocale = computed(() =>
+  languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
+)
+const resolveNotificationModuleMeta = (note) =>
+  resolveNotificationModuleMetaBase(
+    note,
+    notificationLocale.value,
+    settings.value.appearance?.appIconOverrides || {},
+  )
+const shellBannerVisible = ref(false)
+const shellBannerNote = ref(null)
+const showShellBanner = computed(
+  () => Boolean(shellBannerVisible.value && shellBannerNote.value && !isLockRoute.value && !systemStore.isLocked),
+)
 
 let timerId = null
 let backupReminderTimerId = null
@@ -40,8 +57,13 @@ let automationTickTimerId = null
 let automationVisibilityHandler = null
 let customCssStyleEl = null
 let mapAutoNextAt = 0
+let chatAutoPushSyncPromise = null
+let chatAutoPushVisibilityHandler = null
+let shellBannerTimerId = null
+let seenShellNotificationIds = new Set()
 
 const MAP_AUTOMATION_MODULE_KEY = 'map'
+const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MAP_AUTOMATION_INTERVAL_MS = 6 * 60 * 1000
 const ROOT_AUTOMATION_TICK_MS = 1500
 const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
@@ -59,6 +81,49 @@ const updateTime = () => {
     month: 'long',
     day: 'numeric',
   })
+}
+
+const formatBannerTime = (timestamp) => {
+  if (!timestamp) return ''
+  const time = new Date(timestamp)
+  if (Number.isNaN(time.getTime())) return ''
+  return time.toLocaleTimeString(timeLocale.value, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+const clearShellBannerTimer = () => {
+  if (!shellBannerTimerId) return
+  clearTimeout(shellBannerTimerId)
+  shellBannerTimerId = null
+}
+
+const hideShellBanner = () => {
+  shellBannerVisible.value = false
+}
+
+const showForegroundBanner = (note) => {
+  if (!note) return
+  shellBannerNote.value = note
+  shellBannerVisible.value = true
+  clearShellBannerTimer()
+  shellBannerTimerId = setTimeout(() => {
+    shellBannerVisible.value = false
+  }, 2800)
+}
+
+const openShellBannerNotification = () => {
+  const note = shellBannerNote.value
+  if (!note) return
+  hideShellBanner()
+  systemStore.markNotificationRead(note.id)
+  if (typeof note.route === 'string' && note.route.trim()) {
+    router.push(note.route)
+    return
+  }
+  router.push('/home')
 }
 
 const ensureCustomCssStyleEl = () => {
@@ -109,6 +174,85 @@ watch(
       mapAutoNextAt = 0
     }
     void runAutomationRootTick()
+  },
+  { deep: true },
+)
+
+watch(
+  notifications,
+  (list, prevList) => {
+    if (!Array.isArray(list) || list.length === 0) return
+
+    if (seenShellNotificationIds.size === 0 && (!Array.isArray(prevList) || prevList.length === 0)) {
+      seenShellNotificationIds = new Set(list.map((item) => item.id))
+      return
+    }
+
+    const newest = list[0]
+    const canPresent =
+      newest &&
+      !seenShellNotificationIds.has(newest.id) &&
+      !newest.read &&
+      !systemStore.isLocked &&
+      route.path !== '/lock' &&
+      typeof document !== 'undefined' &&
+      document.visibilityState === 'visible'
+
+    if (canPresent) {
+      showForegroundBanner(newest)
+    }
+
+    list.forEach((item) => {
+      if (item?.id) seenShellNotificationIds.add(item.id)
+    })
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  () => [route.path, systemStore.isLocked],
+  () => {
+    if (route.path === '/lock' || systemStore.isLocked) {
+      hideShellBanner()
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => ({
+    pushEnabled: settings.value.system?.realPushEnabled,
+    pushActive: settings.value.system?.pushSubscriptionActive,
+    pushServerUrl: settings.value.system?.pushServerUrl,
+    pushDeviceId: settings.value.system?.pushDeviceId,
+    chatMasterEnabled: settings.value.aiAutomation?.masterEnabled,
+    chatModuleEnabled: settings.value.aiAutomation?.modules?.chat?.enabled,
+    notifyOnlyMode: settings.value.aiAutomation?.notifyOnlyMode,
+    quietHoursEnabled: settings.value.aiAutomation?.quietHoursEnabled,
+    quietHoursStart: settings.value.aiAutomation?.quietHoursStart,
+    quietHoursEnd: settings.value.aiAutomation?.quietHoursEnd,
+    chatThreads: chatStore.contacts
+      .map((contact) => {
+        const contactId = Number(contact?.id)
+        if (!Number.isFinite(contactId) || contactId <= 0) return ''
+        const resolved = chatStore.getContactById(contactId)
+        const conversation = chatStore.getConversationByContactId(contactId)
+        const prefs = chatStore.getConversationAiPrefs(contactId)
+        return [
+          contactId,
+          resolved?.name || '',
+          resolved?.kind || '',
+          prefs.autoInvokeEnabled ? 1 : 0,
+          prefs.autoInvokeIntervalSec || 0,
+          conversation.autoNextAt || 0,
+          conversation.autoPushScheduleId || '',
+          conversation.autoPushScheduledAt || 0,
+        ].join(':')
+      })
+      .join('|'),
+  }),
+  () => {
+    void syncChatAutoPushSchedules()
   },
   { deep: true },
 )
@@ -296,12 +440,189 @@ const runPushStartupSelfHeal = async () => {
   })
 }
 
+const canUseRemotePushScheduling = () => {
+  const systemSettings = settings.value.system || {}
+  return (
+    systemSettings.notifications !== false &&
+    systemSettings.realPushEnabled === true &&
+    systemSettings.pushSubscriptionActive === true &&
+    typeof systemSettings.pushServerUrl === 'string' &&
+    systemSettings.pushServerUrl.trim() &&
+    typeof systemSettings.pushDeviceId === 'string' &&
+    systemSettings.pushDeviceId.trim()
+  )
+}
+
+const buildChatAutoPushScheduleId = (contactId) => `chat_auto_${contactId}`
+
+const buildChatAutoPushNotification = (contactId) => {
+  const contact = chatStore.getContactById(contactId)
+  const contactName = contact?.name || t('新消息', 'New message')
+  const contactKind = contact?.kind || 'role'
+  const serviceLike = contactKind === 'service' || contactKind === 'official'
+
+  return {
+    id: `chat_auto_note_${contactId}`,
+    title: contactName,
+    content: serviceLike
+      ? t('有一条新的提醒，返回会话查看。', 'There is a new reminder. Open the thread to check it.')
+      : t('想找你聊聊，返回会话查看。', 'Wants to talk to you. Open the thread to check in.'),
+    route: `/chat/${contactId}`,
+    source: 'chat_auto_schedule',
+    createdAt: Date.now(),
+  }
+}
+
+const cancelChatAutoPushForContact = async (contactId, options = {}) => {
+  const conversation = chatStore.getConversationByContactId(contactId)
+  const scheduleId =
+    (typeof options.scheduleId === 'string' && options.scheduleId.trim()) ||
+    conversation.autoPushScheduleId ||
+    buildChatAutoPushScheduleId(contactId)
+
+  if (!scheduleId) return { ok: false, reason: 'schedule_missing' }
+  const serverUrl = normalizePushServerUrl(settings.value.system?.pushServerUrl, '')
+  if (!serverUrl) {
+    chatStore.setConversationAutoState(contactId, {
+      autoPushScheduleId: '',
+      autoPushScheduledAt: 0,
+    })
+    return { ok: false, reason: 'server_url_missing' }
+  }
+
+  const result = await cancelScheduledPushNotification({
+    serverUrl,
+    scheduleId,
+  })
+
+  chatStore.setConversationAutoState(contactId, {
+    autoPushScheduleId: '',
+    autoPushScheduledAt: 0,
+  })
+
+  if (!result.ok) {
+    systemStore.addApiReport({
+      level: 'error',
+      module: 'push',
+      action: 'cancel_schedule',
+      provider: 'push_relay',
+      model: `chat:${contactId}`,
+      code: result.reason || 'cancel_schedule_failed',
+      message: result.message || t('取消聊天定时推送失败。', 'Failed to cancel scheduled chat push.'),
+      createdAt: Date.now(),
+    })
+  }
+
+  return result
+}
+
+const syncChatAutoPushSchedules = async ({ force = false } = {}) => {
+  if (chatAutoPushSyncPromise) return chatAutoPushSyncPromise
+
+  chatAutoPushSyncPromise = (async () => {
+    const now = Date.now()
+    const remotePushReady = canUseRemotePushScheduling()
+    const serverUrl = normalizePushServerUrl(settings.value.system?.pushServerUrl, '')
+    const deviceId = typeof settings.value.system?.pushDeviceId === 'string'
+      ? settings.value.system.pushDeviceId.trim()
+      : ''
+
+    const contactIds = chatStore.contacts
+      .map((contact) => Number(contact?.id))
+      .filter((contactId) => Number.isFinite(contactId) && contactId > 0)
+
+    for (const contactId of contactIds) {
+      const conversation = chatStore.getConversationByContactId(contactId)
+      const prefs = chatStore.getConversationAiPrefs(contactId)
+      const dueAt = Number.isFinite(Number(conversation.autoNextAt))
+        ? Math.max(0, Math.floor(Number(conversation.autoNextAt)))
+        : 0
+      const runtimePolicy = systemStore.getAiAutomationRuntimePolicy(
+        CHAT_AUTOMATION_MODULE_KEY,
+        dueAt || now,
+      )
+
+      const eligible =
+        remotePushReady &&
+        prefs.autoInvokeEnabled === true &&
+        dueAt > now + 1000 &&
+        runtimePolicy.invokeEnabled === true
+
+      if (!eligible) {
+        if (conversation.autoPushScheduleId) {
+          await cancelChatAutoPushForContact(contactId, {
+            scheduleId: conversation.autoPushScheduleId,
+          })
+        }
+        continue
+      }
+
+      if (
+        !force &&
+        conversation.autoPushScheduleId &&
+        Number(conversation.autoPushScheduledAt) === dueAt
+      ) {
+        continue
+      }
+
+      if (
+        conversation.autoPushScheduleId &&
+        Number(conversation.autoPushScheduledAt) > 0 &&
+        Number(conversation.autoPushScheduledAt) !== dueAt
+      ) {
+        await cancelChatAutoPushForContact(contactId, {
+          scheduleId: conversation.autoPushScheduleId,
+        })
+      }
+
+      const result = await schedulePushNotification({
+        serverUrl,
+        deviceId,
+        deliverAt: dueAt,
+        scheduleId: buildChatAutoPushScheduleId(contactId),
+        source: 'chat_auto_invoke',
+        category: 'chat_auto',
+        notification: {
+          ...buildChatAutoPushNotification(contactId),
+          pushDisplayMode: systemStore.settings.system.pushDisplayMode || 'minimal',
+        },
+      })
+
+      if (!result.ok) {
+        systemStore.addApiReport({
+          level: 'error',
+          module: 'push',
+          action: 'schedule',
+          provider: 'push_relay',
+          model: `chat:${contactId}`,
+          code: result.reason || 'schedule_failed',
+          message: result.message || t('安排聊天定时推送失败。', 'Failed to schedule chat push.'),
+          createdAt: Date.now(),
+        })
+        continue
+      }
+
+      chatStore.setConversationAutoState(contactId, {
+        autoPushScheduleId: result.scheduleId || buildChatAutoPushScheduleId(contactId),
+        autoPushScheduledAt: result.deliverAt || dueAt,
+      })
+    }
+  })().finally(() => {
+    chatAutoPushSyncPromise = null
+  })
+
+  return chatAutoPushSyncPromise
+}
+
 onMounted(() => {
   updateTime()
   timerId = setInterval(updateTime, 1000)
   void runPushStartupSelfHeal().finally(() => {
     void mapStore.ensureTripArrivalPushScheduled({
       source: 'app_startup',
+    })
+    void syncChatAutoPushSchedules({
+      force: true,
     })
   })
   runBackupReminderCheck()
@@ -321,9 +642,16 @@ onMounted(() => {
     void runAutomationRootTick()
   }
   document.addEventListener('visibilitychange', automationVisibilityHandler, { passive: true })
+  chatAutoPushVisibilityHandler = () => {
+    void syncChatAutoPushSchedules({
+      force: document.hidden === true,
+    })
+  }
+  document.addEventListener('visibilitychange', chatAutoPushVisibilityHandler, { passive: true })
 })
 
 onBeforeUnmount(() => {
+  clearShellBannerTimer()
   if (timerId) {
     clearInterval(timerId)
   }
@@ -343,6 +671,10 @@ onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', automationVisibilityHandler)
     automationVisibilityHandler = null
   }
+  if (chatAutoPushVisibilityHandler) {
+    document.removeEventListener('visibilitychange', chatAutoPushVisibilityHandler)
+    chatAutoPushVisibilityHandler = null
+  }
   systemStore.unregisterAiAutomationHandler(MAP_AUTOMATION_MODULE_KEY, mapAutomationTaskHandler)
   if (customCssStyleEl) {
     customCssStyleEl.remove()
@@ -352,10 +684,12 @@ onBeforeUnmount(() => {
 
 const goHome = () => {
   if (systemStore.isLocked) return
+  hideShellBanner()
   router.push('/home')
 }
 
 const lockPhone = () => {
+  hideShellBanner()
   systemStore.lockPhone()
   router.push('/lock')
 }
@@ -397,6 +731,34 @@ const lockPhone = () => {
         </div>
       </div>
 
+      <transition name="shell-banner">
+        <button
+          v-if="showShellBanner && shellBannerNote"
+          class="app-shell-banner glass"
+          @click="openShellBannerNotification"
+        >
+          <div
+            class="app-shell-banner-icon"
+            :class="resolveNotificationModuleMeta(shellBannerNote).toneClass"
+          >
+            <i :class="resolveNotificationModuleMeta(shellBannerNote).icon"></i>
+          </div>
+          <div class="min-w-0 flex-1 text-left">
+            <div class="app-shell-banner-head">
+              <span
+                class="app-shell-banner-chip"
+                :class="resolveNotificationModuleMeta(shellBannerNote).toneClass"
+              >
+                {{ resolveNotificationModuleMeta(shellBannerNote).label }}
+              </span>
+              <span class="app-shell-banner-time">{{ formatBannerTime(shellBannerNote.createdAt) }}</span>
+            </div>
+            <p class="app-shell-banner-title">{{ shellBannerNote.title }}</p>
+            <p class="app-shell-banner-body">{{ shellBannerNote.content }}</p>
+          </div>
+        </button>
+      </transition>
+
       <RouterView v-slot="{ Component }">
         <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
       </RouterView>
@@ -405,3 +767,121 @@ const lockPhone = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.app-shell-banner {
+  position: absolute;
+  top: 38px;
+  left: 12px;
+  right: 12px;
+  z-index: 45;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 0;
+  border-radius: 18px;
+  padding: 10px 11px;
+  color: var(--status-fg);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.2);
+}
+
+.app-shell-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.app-shell-banner-icon.accent-default,
+.app-shell-banner-chip.accent-default {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.94) 0%, rgba(79, 70, 229, 0.9) 100%);
+  color: #fff;
+}
+
+.app-shell-banner-icon.accent-cool,
+.app-shell-banner-chip.accent-cool {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.94) 0%, rgba(14, 165, 233, 0.9) 100%);
+  color: #fff;
+}
+
+.app-shell-banner-icon.accent-warm,
+.app-shell-banner-chip.accent-warm {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.94) 0%, rgba(249, 115, 22, 0.9) 100%);
+  color: #fff;
+}
+
+.app-shell-banner-icon.accent-light,
+.app-shell-banner-chip.accent-light {
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+}
+
+.app-shell-banner-icon.accent-dark,
+.app-shell-banner-chip.accent-dark {
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+}
+
+.app-shell-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-shell-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.app-shell-banner-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  opacity: 0.72;
+}
+
+.app-shell-banner-title {
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-shell-banner-body {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.9;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shell-banner-enter-active,
+.shell-banner-leave-active {
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.shell-banner-enter-from,
+.shell-banner-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+}
+</style>

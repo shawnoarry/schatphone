@@ -4,6 +4,15 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
+import {
+  APP_ICON_ACCENT_OPTIONS,
+  APP_ICON_CUSTOMIZATION_TARGET_IDS,
+  APP_ICON_PRESET_OPTIONS,
+  normalizeAppIconOverrides,
+  resolveAppAccentLabel,
+  resolveAppCustomizationTargetMeta,
+  resolveAppIconPresetLabel,
+} from '../lib/app-icon-presentation'
 import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
 
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
@@ -34,7 +43,7 @@ const LOCK_CLOCK_STYLE_OPTIONS = [
 
 const router = useRouter()
 const systemStore = useSystemStore()
-const { t } = useI18n()
+const { t, systemLanguage, languageBase } = useI18n()
 
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
@@ -90,6 +99,7 @@ const importJsonPlaceholder = computed(() =>
 )
 
 const { settings, availableThemes } = storeToRefs(systemStore)
+const appearanceLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 
 const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
@@ -162,9 +172,31 @@ const builtInWidgetStates = computed(() =>
   }),
 )
 
+const appIconOverrides = computed(() =>
+  normalizeAppIconOverrides(settings.value.appearance.appIconOverrides),
+)
+const appIconPresetOptions = computed(() =>
+  APP_ICON_PRESET_OPTIONS.map((item) => ({
+    value: item.value,
+    label: resolveAppIconPresetLabel(item.value, appearanceLocale.value),
+  })),
+)
+const appIconAccentOptions = computed(() =>
+  APP_ICON_ACCENT_OPTIONS.map((item) => ({
+    value: item.value,
+    label: resolveAppAccentLabel(item.value, appearanceLocale.value),
+  })),
+)
+const appIconCustomizationTargets = computed(() =>
+  APP_ICON_CUSTOMIZATION_TARGET_IDS.map((appId) =>
+    resolveAppCustomizationTargetMeta(appId, appearanceLocale.value, appIconOverrides.value),
+  ),
+)
+
 const pageTitle = computed(() => {
   if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
   if (activeMenu.value === 'font') return t('字体设置', 'Font')
+  if (activeMenu.value === 'icons') return t('功能图标', 'App Icons')
   if (activeMenu.value === 'widget') return t('Widget 工坊', 'Widget Studio')
   return t('外观工坊', 'Appearance Studio')
 })
@@ -221,6 +253,26 @@ const clearCustomCss = () => {
 }
 
 const saveAppearance = () => {
+  triggerSaved()
+}
+
+const setAppIconOverrideField = (appId, field, value) => {
+  const currentOverrides = normalizeAppIconOverrides(settings.value.appearance.appIconOverrides)
+  const current = currentOverrides[appId] || {}
+  settings.value.appearance.appIconOverrides = normalizeAppIconOverrides({
+    ...currentOverrides,
+    [appId]: {
+      ...current,
+      [field]: value,
+    },
+  })
+}
+
+const resetAppIconOverride = (appId) => {
+  const currentOverrides = normalizeAppIconOverrides(settings.value.appearance.appIconOverrides)
+  const nextOverrides = { ...currentOverrides }
+  delete nextOverrides[appId]
+  settings.value.appearance.appIconOverrides = normalizeAppIconOverrides(nextOverrides)
   triggerSaved()
 }
 
@@ -535,6 +587,20 @@ onBeforeUnmount(() => {
 
       <button
         class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        @click="openMenu('icons')"
+      >
+        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs">
+          <i class="fas fa-icons"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold">{{ t('功能图标', 'App Icons') }}</p>
+          <p class="text-[11px] text-gray-500">{{ t('调整核心功能入口的图标与色系', 'Adjust icon glyphs and accent colors for core app entries') }}</p>
+        </div>
+        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+      </button>
+
+      <button
+        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
         @click="openMenu('widget')"
       >
         <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs">
@@ -702,6 +768,77 @@ onBeforeUnmount(() => {
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
         {{ saved ? t('已保存', 'Saved') : t('保存字体设置', 'Save font settings') }}
+      </button>
+    </div>
+
+    <div v-else-if="activeMenu === 'icons'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <p class="text-sm font-bold mb-2">{{ t('核心功能图标', 'Core App Icons') }}</p>
+        <p class="text-[11px] text-gray-500">
+          {{ t('本轮先开放 Chat / Map / Gallery / Settings / Contacts 的预设图标与色系，后续可扩展为图片图标。', 'This phase opens preset glyph and accent customization for Chat / Map / Gallery / Settings / Contacts, with room to upgrade to image icons later.') }}
+        </p>
+      </div>
+
+      <div
+        v-for="target in appIconCustomizationTargets"
+        :key="target.appId"
+        class="bg-white rounded-xl p-4 shadow-sm space-y-3"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            class="w-11 h-11 rounded-2xl inline-flex items-center justify-center text-lg"
+            :style="{
+              background: `var(--home-icon-${target.accent}-bg)`,
+              color: `var(--home-icon-${target.accent}-fg)`,
+            }"
+          >
+            <i :class="target.icon"></i>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold">{{ target.title }}</p>
+            <p class="text-[11px] text-gray-500">{{ target.appId }}</p>
+          </div>
+          <button
+            @click="resetAppIconOverride(target.appId)"
+            class="px-2.5 py-1 rounded-lg border border-gray-200 text-[11px] text-gray-600 hover:bg-gray-50"
+          >
+            {{ t('恢复默认', 'Reset') }}
+          </button>
+        </div>
+
+        <label class="block space-y-1">
+          <span class="text-xs text-gray-500">{{ t('图标样式', 'Icon Glyph') }}</span>
+          <select
+            :value="target.icon"
+            class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
+            @change="setAppIconOverrideField(target.appId, 'icon', $event.target.value); triggerSaved()"
+          >
+            <option v-for="option in appIconPresetOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="block space-y-1">
+          <span class="text-xs text-gray-500">{{ t('色系', 'Accent') }}</span>
+          <select
+            :value="target.accent"
+            class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
+            @change="setAppIconOverrideField(target.appId, 'accent', $event.target.value); triggerSaved()"
+          >
+            <option v-for="option in appIconAccentOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <button
+        @click="saveAppearance"
+        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+      >
+        {{ saved ? t('已保存', 'Saved') : t('保存图标设置', 'Save icon settings') }}
       </button>
     </div>
 

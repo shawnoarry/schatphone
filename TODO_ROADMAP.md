@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-15
+Updated / 更新时间: 2026-04-16
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -55,6 +55,10 @@ Updated / 更新时间: 2026-04-15
    中文：`P0-4` 富消息链路与 `P0-1` 语义修订已在 P0 范围内完成收口。
 5. EN: `P0-3` and `P0-6` cross-module role/avatar/asset contract closure is completed with reusable API + tests.
    中文：`P0-3` 与 `P0-6` 的跨模块角色/头像/素材契约收口已完成，包含可复用 API 与测试。
+6. EN: Real-push reliability + scheduling baseline is landed: health check, resync, startup self-heal, timed delivery, and Chat/Map scheduled reminders are now online.
+   中文：真推送可靠性 + 定时基线已落地：健康检查、重同步、启动自愈、定时送达，以及 Chat/地图的定时提醒现已上线。
+7. EN: Notification-surface split and app-icon identity baseline is landed: external push modes are selectable, while all built-in home modules now support preset-based icon customization shared by shell notifications.
+   中文：通知分层与功能身份基线已落地：外部推送模式现可切换，且全部内建首页模块都已支持预设型图标自定义，并与壳内通知共用。
 
 ---
 

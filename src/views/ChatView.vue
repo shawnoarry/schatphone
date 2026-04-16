@@ -619,6 +619,120 @@ const autoRestoreSettlementHintText = computed(() => {
   return `${t('恢复补算', 'Resume settlement')}: ${missedCycles} ${t('个周期', 'cycle(s)')} · ${settledAtText}`
 })
 
+const autoBackgroundReminderHint = computed(() => {
+  if (!activeChat.value) {
+    return { text: '', tone: 'muted' }
+  }
+
+  if (!chatAutomationEnabled.value) {
+    return {
+      text: t(
+        '后台提醒未启用：全局或 Chat 自动响应关闭。',
+        'Background reminder is off because global or Chat automation is disabled.',
+      ),
+      tone: 'warning',
+    }
+  }
+
+  if (!activeAiPrefs.value.autoInvokeEnabled) {
+    return {
+      text: t(
+        '后台提醒未启用：当前会话未开启定时自主调用。',
+        'Background reminder is off because timed invoke is disabled in this thread.',
+      ),
+      tone: 'muted',
+    }
+  }
+
+  const systemSettings = settings.value.system || {}
+  const remotePushReady =
+    systemSettings.notifications !== false &&
+    systemSettings.realPushEnabled === true &&
+    systemSettings.pushSubscriptionActive === true &&
+    typeof systemSettings.pushServerUrl === 'string' &&
+    systemSettings.pushServerUrl.trim() &&
+    typeof systemSettings.pushDeviceId === 'string' &&
+    systemSettings.pushDeviceId.trim()
+
+  if (!remotePushReady) {
+    return {
+      text: t(
+        '后台提醒未布置：真推送尚未完成授权或订阅。',
+        'Background reminder is not armed because real push is not fully authorized or subscribed.',
+      ),
+      tone: 'warning',
+    }
+  }
+
+  const nextAt = Number(activeConversation.value?.autoNextAt || 0)
+  if (!nextAt) {
+    return {
+      text: t(
+        '后台提醒等待同步：保存设置后会自动刷新。',
+        'Background reminder is waiting to sync and will refresh after saving.',
+      ),
+      tone: 'muted',
+    }
+  }
+
+  if (nextAt <= Date.now() + 1000) {
+    return {
+      text: t(
+        '当前已进入触发窗口：前台处理优先，本轮不再单独布置后台提醒。',
+        'This cycle is already due, so foreground handling takes priority instead of a separate background reminder.',
+      ),
+      tone: 'muted',
+    }
+  }
+
+  const duePolicy = getChatAutomationRuntimePolicy(nextAt)
+  if (duePolicy.invokeEnabled !== true) {
+    return duePolicy.notifyOnly
+      ? {
+          text: duePolicy.quietHoursActive
+            ? t(
+                '下个周期落在安静时段：不会自动生成回复，也不会提前布置后台提醒。',
+                'The next cycle falls in quiet hours, so no autonomous reply or background reminder is armed.',
+              )
+            : t(
+                '当前为仅通知模式：本轮不会布置后台提醒。',
+                'Notify-only mode is active, so no background reminder is armed for this cycle.',
+              ),
+          tone: 'warning',
+        }
+      : {
+          text: t(
+            '后台提醒未布置：当前自动响应策略不允许该周期执行。',
+            'Background reminder is not armed because the current automation policy blocks this cycle.',
+          ),
+          tone: 'warning',
+        }
+  }
+
+  const scheduleId =
+    typeof activeConversation.value?.autoPushScheduleId === 'string'
+      ? activeConversation.value.autoPushScheduleId.trim()
+      : ''
+  const scheduledAt = Number(activeConversation.value?.autoPushScheduledAt || 0)
+
+  if (scheduleId && scheduledAt > Date.now()) {
+    return {
+      text: `${t('后台提醒已布置', 'Background reminder armed')}: ${formatAutoStatusTime(
+        scheduledAt,
+      )}`,
+      tone: 'success',
+    }
+  }
+
+  return {
+    text: t(
+      '后台提醒等待同步：系统会自动校准下一次远程提醒。',
+      'Background reminder is waiting to sync. The system will auto-calibrate the next remote reminder.',
+    ),
+    tone: 'muted',
+  }
+})
+
 const clampContextTurns = (value) => {
   const turns = Number(value)
   if (!Number.isFinite(turns)) return DEFAULT_THREAD_AI_PREFS.contextTurns
@@ -3874,6 +3988,19 @@ onBeforeUnmount(() => {
             </p>
             <p v-else class="text-[10px] text-gray-500">
               {{ autoScheduleHintText }}
+            </p>
+            <p
+              v-if="chatAutomationEnabled && autoBackgroundReminderHint.text"
+              class="text-[10px]"
+              :class="
+                autoBackgroundReminderHint.tone === 'success'
+                  ? 'text-emerald-600'
+                  : autoBackgroundReminderHint.tone === 'warning'
+                    ? 'text-orange-500'
+                    : 'text-gray-500'
+              "
+            >
+              {{ autoBackgroundReminderHint.text }}
             </p>
             <p v-if="chatAutomationEnabled && autoLastTriggeredHintText" class="text-[10px] text-gray-500">
               {{ autoLastTriggeredHintText }}

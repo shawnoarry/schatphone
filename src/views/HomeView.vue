@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
+import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 
 defineProps({
   currentTime: {
@@ -21,6 +22,8 @@ const systemStore = useSystemStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
+const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
 
 const currentPage = ref(0)
 const touchStartX = ref(0)
@@ -222,9 +225,12 @@ const tileMeta = (tileId) => {
   const builtIn = widgetRegistry[tileId]
   if (builtIn) {
     if (builtIn.kind === 'app') {
+      const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
       return {
         ...builtIn,
-        label: resolveAppTileLabel(tileId, builtIn.label),
+        icon: resolvedIconMeta.icon,
+        accent: resolvedIconMeta.accent,
+        label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
       }
     }
     return builtIn
@@ -463,6 +469,8 @@ const iconStyle = (accent = 'default') => {
     color: `var(--home-icon-${accent}-fg)`,
   }
 }
+
+const dockAppMeta = (appId) => resolveAppIconMeta(appId, appIconOverrides.value, homeLocale.value)
 
 const moveTileToSlot = (tileId, targetPageIndex, slotIndex) => {
   if (!tileId || !Number.isInteger(targetPageIndex) || !Number.isInteger(slotIndex)) return false
@@ -1022,17 +1030,17 @@ onBeforeUnmount(() => {
       </p>
 
       <div class="home-dock">
-        <button class="home-dock-icon" :style="iconStyle('cool')" @click="openAppById('app_chat')">
-          <i class="fas fa-comment"></i>
+        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_chat').accent)" @click="openAppById('app_chat')">
+          <i :class="dockAppMeta('app_chat').icon"></i>
         </button>
-        <button class="home-dock-icon" :style="iconStyle('light')" @click="openAppById('app_contacts')">
-          <i class="fas fa-address-book"></i>
+        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_contacts').accent)" @click="openAppById('app_contacts')">
+          <i :class="dockAppMeta('app_contacts').icon"></i>
         </button>
-        <button class="home-dock-icon" :style="iconStyle('dark')" @click="openAppById('app_settings')">
-          <i class="fas fa-cog"></i>
+        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_settings').accent)" @click="openAppById('app_settings')">
+          <i :class="dockAppMeta('app_settings').icon"></i>
         </button>
-        <button class="home-dock-icon" :style="iconStyle('warm')" @click="openAppById('app_gallery')">
-          <i class="fas fa-images"></i>
+        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_gallery').accent)" @click="openAppById('app_gallery')">
+          <i :class="dockAppMeta('app_gallery').icon"></i>
         </button>
       </div>
       <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>

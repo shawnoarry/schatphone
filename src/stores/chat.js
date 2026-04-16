@@ -682,6 +682,15 @@ const normalizeConversation = (rawConversation, contactId) => {
       Number.isFinite(rawConversation.autoLastSettledMissedCycles)
         ? Math.max(0, Math.floor(rawConversation.autoLastSettledMissedCycles))
         : 0,
+    autoPushScheduleId:
+      typeof rawConversation?.autoPushScheduleId === 'string'
+        ? rawConversation.autoPushScheduleId.trim().slice(0, 120)
+        : '',
+    autoPushScheduledAt:
+      typeof rawConversation?.autoPushScheduledAt === 'number' &&
+      Number.isFinite(rawConversation.autoPushScheduledAt)
+        ? Math.max(0, Math.floor(rawConversation.autoPushScheduledAt))
+        : 0,
     lastMessage: typeof rawConversation?.lastMessage === 'string' ? rawConversation.lastMessage : '',
     lastMessageAt:
       typeof rawConversation?.lastMessageAt === 'number' && Number.isFinite(rawConversation.lastMessageAt)
@@ -1097,6 +1106,20 @@ export const useChatStore = defineStore('chat', () => {
     if (Object.prototype.hasOwnProperty.call(input, 'autoLastSettledMissedCycles')) {
       const value = Number(input.autoLastSettledMissedCycles)
       conversation.autoLastSettledMissedCycles = Number.isFinite(value)
+        ? Math.max(0, Math.floor(value))
+        : 0
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoPushScheduleId')) {
+      conversation.autoPushScheduleId =
+        typeof input.autoPushScheduleId === 'string'
+          ? input.autoPushScheduleId.trim().slice(0, 120)
+          : ''
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'autoPushScheduledAt')) {
+      const value = Number(input.autoPushScheduledAt)
+      conversation.autoPushScheduledAt = Number.isFinite(value)
         ? Math.max(0, Math.floor(value))
         : 0
     }

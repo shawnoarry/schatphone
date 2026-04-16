@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-15
+Updated / 更新时间: 2026-04-16
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -139,6 +139,22 @@ Updated / 更新时间: 2026-04-15
    中文：备份提醒支持系统式通知（非弹窗打断）。
 6. EN: Worldbook entry is already online in Settings and acts as current global context source.
    中文：设置内已提供世界书入口，当前作为全局上下文来源。
+7. EN: Real web-push baseline is online, including subscription, health check, resync, diagnostics, and timed delivery support.
+   中文：真实 Web Push 基线已上线，包含订阅、健康检查、重同步、诊断接入与定时送达能力。
+8. EN: External system push now supports user-selectable display modes: `minimal / standard / preview`.
+   中文：外部系统推送现已支持用户可选显示模式：`极简 / 标准 / 预览`。
+
+### 4.6 Notification and App Identity / 通知与功能身份
+1. EN: In-shell notifications are now split from external system push at the presentation level.
+   中文：壳内通知与外部系统推送现在已经在展示层正式分流。
+2. EN: Lock screen and unlocked shell banner both show module identity such as `Chat / Map / System`.
+   中文：锁屏通知与解锁状态下的壳内横幅都会显示 `Chat / Map / System` 等模块身份。
+3. EN: External real-device push defaults to `SchatPhone`-level presentation instead of exposing internal module details.
+   中文：真实移动端通知默认采用 `SchatPhone` 级展示，不直接暴露内部模块细节。
+4. EN: Appearance now supports preset-based app icon customization for all built-in home modules.
+   中文：外观页现已支持全部内建首页模块的预设型功能图标自定义。
+5. EN: The chosen icon/accent now flows through home tiles, dock, and in-shell notification surfaces.
+   中文：所选图标与色系会同步作用于首页图标、Dock 与壳内通知界面。
 
 ## 5) Priority Refinement (P0) / 需细化优先级（P0）
 ### P0-4 Rich Message Lane Polish / 富消息链路打磨
@@ -307,6 +323,10 @@ Status / 状态: `DONE`
     2026-04-12 中文：已落地 `P1-3` 第一阶段：system store 世界内核拆分、通讯录知识点绑定、Chat 固定顺序提示词注入。
 18. 2026-04-14 EN: Landed map baseline phase-1 for `P1-3`: no-external-API trip loop (start/travel/arrive/cancel), system-time countdown, trip history, and backup snapshot continuity.
     2026-04-14 中文：已落地 `P1-3` 地图基线第一阶段：无外部 API 的行程循环（开始/进行中/到达/取消）、系统时间倒计时、行程记录与备份快照连续性。
+19. 2026-04-16 EN: Landed real-push reliability and scheduling baseline: health check, resync, diagnostics integration, startup self-heal, timed delivery, and chat/map scheduled reminders are now available.
+    2026-04-16 中文：已落地真推送可靠性与定时基线：健康检查、重同步、诊断接入、启动自愈、定时送达，以及 Chat/地图的定时提醒现均已可用。
+20. 2026-04-16 EN: Landed notification-surface split and app-identity polish: external push modes (`minimal/standard/preview`) and full built-in app icon customization are now online.
+    2026-04-16 中文：已落地通知分层与功能身份打磨：外部推送模式（`极简/标准/预览`）与全部内建模块的功能图标自定义现已上线。
 19. 2026-04-14 EN: Landed map fallback phase-1: visual mode switch (`default/gallery`), onboarding guidance, gallery asset binding, and auto fallback when bound asset is missing.
     2026-04-14 中文：已落地地图回退第一阶段：视觉模式切换（`默认/素材库`）、首启引导、素材库绑定，以及绑定素材缺失时的自动回退。
 20. 2026-04-15 EN: Landed map provider-visual phase-3 baseline: optional provider visual generation is now wired under policy guard with deterministic fallback (`no key`/`provider failed`) and runtime status surfaced in map UI.

@@ -15,6 +15,7 @@ import {
 import {
   checkPushServerHealth,
   isWebPushSupported,
+  normalizePushDisplayMode,
   normalizePushServerUrl,
   readPushPermission,
   sendTestPush,
@@ -577,6 +578,25 @@ const pushCapabilityHint = computed(() =>
         'True push needs HTTPS or localhost plus browser support for Service Worker and Push.',
       ),
 )
+const pushDisplayModeHint = computed(() => {
+  const mode = normalizePushDisplayMode(settings.value.system?.pushDisplayMode, 'minimal')
+  if (mode === 'preview') {
+    return t(
+      '预览：外部系统通知会尽量显示消息正文预览，最接近聊天软件提醒。',
+      'Preview: external system notifications try to show message preview text, closest to chat app behavior.',
+    )
+  }
+  if (mode === 'standard') {
+    return t(
+      '标准：外部系统通知仍显示 SchatPhone，但会区分聊天、地图等模块类型，不直接暴露正文。',
+      'Standard: external system notifications still show SchatPhone, but distinguish chat/map module types without exposing message text.',
+    )
+  }
+  return t(
+    '极简：外部系统通知仅提示 SchatPhone 有新提醒，最克制也最隐私。',
+    'Minimal: external system notifications only say SchatPhone has a new reminder, the most private option.',
+  )
+})
 
 const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
@@ -628,6 +648,10 @@ const saveGeneralSettings = () => {
 }
 
 const saveNotificationSettings = () => {
+  settings.value.system.pushDisplayMode = normalizePushDisplayMode(
+    settings.value.system.pushDisplayMode,
+    'minimal',
+  )
   settings.value.system.pushServerUrl = normalizePushServerUrl(
     settings.value.system.pushServerUrl,
     settings.value.system.pushServerUrl || '',
@@ -1984,6 +2008,23 @@ if (initialMenu) {
                 <span class="font-medium">{{ pushServerHealthLabel }}</span>
               </p>
               <p class="text-[10px] text-gray-500">{{ pushCapabilityHint }}</p>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs text-gray-500 block">
+                {{ t('外部系统通知样式', 'External push style') }}
+              </label>
+              <select
+                v-model="settings.system.pushDisplayMode"
+                class="w-full border rounded-xl px-3 py-2 text-sm outline-none bg-white"
+              >
+                <option value="minimal">{{ t('极简', 'Minimal') }}</option>
+                <option value="standard">{{ t('标准', 'Standard') }}</option>
+                <option value="preview">{{ t('预览', 'Preview') }}</option>
+              </select>
+              <p class="text-[10px] text-gray-400">
+                {{ pushDisplayModeHint }}
+              </p>
             </div>
 
             <div class="space-y-2">

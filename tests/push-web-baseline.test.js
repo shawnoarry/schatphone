@@ -23,22 +23,61 @@ describe('push web baseline helpers', () => {
     expect(normalizePushPermission('other')).toBe('default')
   })
 
-  test('builds stable push payload with defaults and truncation', () => {
+  test('builds stable push payload with minimal external fallback by default', () => {
     const payload = buildPushNotificationPayload({
       title: 'A'.repeat(80),
       content: 'B'.repeat(200),
       route: '/chat/1',
       source: 'chat_ai_reply',
       createdAt: 123,
+      pushLocale: 'zh-CN',
     })
 
-    expect(payload.title.length).toBeLessThanOrEqual(60)
-    expect(payload.body.length).toBeLessThanOrEqual(160)
+    expect(payload.title).toBe('SchatPhone')
+    expect(payload.body).toBe('你有一条新的提醒')
     expect(payload.route).toBe('/chat/1')
     expect(payload.source).toBe('chat_ai_reply')
     expect(payload.createdAt).toBe(123)
     expect(payload.icon).toContain('icons/pwa-icon.svg')
     expect(payload.badge).toContain('icons/pwa-icon.svg')
+  })
+
+  test('builds module-aware copy when standard mode is requested', () => {
+    const payload = buildPushNotificationPayload({
+      title: 'Ignored internal title',
+      content: 'Ignored internal body',
+      route: '/map',
+      source: 'map_trip_arrival',
+      createdAt: 456,
+      pushLocale: 'en-US',
+      pushDisplayMode: 'standard',
+    })
+
+    expect(payload.title).toBe('SchatPhone')
+    expect(payload.body).toBe('You have a new trip reminder.')
+    expect(payload.route).toBe('/map')
+    expect(payload.createdAt).toBe(456)
+  })
+
+  test('uses preview text only when preview mode is enabled', () => {
+    const payload = buildPushNotificationPayload({
+      title: 'Ignored internal title',
+      content: 'A'.repeat(220),
+      pushTitle: 'SchatPhone Custom',
+      pushBody: 'B'.repeat(220),
+      pushIconUrl: 'https://cdn.example.com/icon.png',
+      route: '/map',
+      source: 'map_trip_arrival',
+      createdAt: 456,
+      pushDisplayMode: 'preview',
+    })
+
+    expect(payload.title).toBe('SchatPhone Custom')
+    expect(payload.body.length).toBeLessThanOrEqual(160)
+    expect(payload.body.startsWith('B')).toBe(true)
+    expect(payload.icon).toBe('https://cdn.example.com/icon.png')
+    expect(payload.route).toBe('/map')
+    expect(payload.createdAt).toBe(456)
   })
 
   test('guards health check and resync when server url is missing', async () => {

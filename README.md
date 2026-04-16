@@ -77,6 +77,12 @@ PWA/Web Push 基线现已上线：应用会注册 service worker、提供 manife
 推送诊断现已接入统一诊断中心；对于已开启的真推送配置，应用启动时也会执行静默健康检查与重同步自愈
 - Scheduled real-push baseline is now online: the push server can queue timed deliveries, and Map trips can arm a background arrival reminder that still lands after the page is closed  
 真推送定时基线现已上线：推送服务端可排队定时送达，地图行程也可布置后台到达提醒，即使页面关闭后仍可按时落到系统通知
+- Chat scheduled-push baseline is now online: auto-invoke threads can mirror their next trigger into the push queue, so role reminders can still arrive as system notifications after the page is closed  
+Chat 定时推送基线现已上线：启用自动触发的会话会将下一次触发时间镜像到推送队列，因此页面关闭后角色提醒仍可作为系统通知到达
+- External push display modes are now user-selectable in Settings (`Minimal / Standard / Preview`) and apply to both instant relays and scheduled deliveries  
+外部系统推送显示模式现已可在 Settings 中切换（`极简 / 标准 / 预览`），并同时作用于即时推送与定时推送
+- App-icon customization now covers all built-in home modules, and the selected glyph/accent also flows into in-shell notification rendering  
+功能图标自定义现已覆盖全部内建首页模块，所选图标与色系也会同步影响壳内通知渲染
 - Current scope note: real push delivery is available, but fully closed-page event generation still depends on future server-side automation/orchestration  
 当前范围说明：真正的推送送达已经可用，但“页面完全关闭后仍自动生成事件”仍依赖后续服务端自动化/编排
 - Exporting backup resets the reminder timer to avoid repeated immediate reminders  

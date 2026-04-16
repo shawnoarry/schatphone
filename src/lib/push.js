@@ -1,3 +1,5 @@
+import { buildExternalPushFallback } from './notification-presentation'
+
 const PUSH_SERVER_FALLBACK_URL =
   typeof import.meta !== 'undefined' && import.meta?.env?.VITE_PUSH_SERVER_URL
     ? import.meta.env.VITE_PUSH_SERVER_URL
@@ -21,6 +23,8 @@ const normalizeBaseAssetPath = (path = '') => {
 const SERVICE_WORKER_URL = normalizeBaseAssetPath('service-worker.js')
 const DEFAULT_PUSH_ICON = normalizeBaseAssetPath('icons/pwa-icon.svg')
 const MAX_PUSH_TEXT_LENGTH = 160
+const PUSH_DISPLAY_MODE_VALUES = ['minimal', 'standard', 'preview']
+const DEFAULT_PUSH_DISPLAY_MODE = 'minimal'
 
 let registrationPromise = null
 
@@ -104,6 +108,11 @@ export const normalizePushPermission = (value, fallback = 'default') => {
   if (value === 'granted') return 'granted'
   if (value === 'denied') return 'denied'
   if (value === 'unsupported') return 'unsupported'
+  return fallback
+}
+
+export const normalizePushDisplayMode = (value, fallback = DEFAULT_PUSH_DISPLAY_MODE) => {
+  if (PUSH_DISPLAY_MODE_VALUES.includes(value)) return value
   return fallback
 }
 
@@ -434,8 +443,20 @@ export const unsubscribeWebPush = async ({ serverUrl, deviceId = '' } = {}) => {
 }
 
 export const buildPushNotificationPayload = (notification = {}) => {
-  const title = clampText(notification.title, 60, 'SchatPhone')
-  const body = clampText(notification.content || notification.body, 160, '')
+  const pushLocale =
+    typeof notification.pushLocale === 'string' && notification.pushLocale.trim()
+      ? notification.pushLocale.trim()
+      : 'en-US'
+  const pushDisplayMode = normalizePushDisplayMode(notification.pushDisplayMode)
+  const fallback = buildExternalPushFallback(notification, pushLocale, {
+    displayMode: pushDisplayMode,
+  })
+  const title = clampText(notification.pushTitle, 60, fallback.title)
+  const previewBody =
+    pushDisplayMode === 'preview'
+      ? notification.pushBody || notification.pushContent || notification.content
+      : ''
+  const body = clampText(previewBody, 160, fallback.body)
   const route =
     typeof notification.route === 'string' && notification.route.trim()
       ? notification.route.trim()
@@ -446,8 +467,10 @@ export const buildPushNotificationPayload = (notification = {}) => {
     body,
     route,
     icon:
-      typeof notification.iconUrl === 'string' && notification.iconUrl.trim()
-        ? notification.iconUrl.trim()
+      typeof notification.pushIconUrl === 'string' && notification.pushIconUrl.trim()
+        ? notification.pushIconUrl.trim()
+        : typeof notification.iconUrl === 'string' && notification.iconUrl.trim()
+          ? notification.iconUrl.trim()
         : DEFAULT_PUSH_ICON,
     badge: DEFAULT_PUSH_ICON,
     tag:

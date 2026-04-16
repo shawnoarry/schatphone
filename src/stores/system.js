@@ -3,12 +3,14 @@ import { reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import {
+  normalizePushDisplayMode,
   normalizePushPermission,
   normalizePushServerUrl,
   readPushPermission,
   relayNotificationToPush,
   syncExistingWebPushSubscription,
 } from '../lib/push'
+import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 
 const AVAILABLE_THEMES = [
@@ -537,6 +539,18 @@ const normalizeNotification = (rawNote) => {
       typeof rawNote.source === 'string' && rawNote.source.trim()
         ? rawNote.source.trim()
         : 'system',
+    pushTitle:
+      typeof rawNote.pushTitle === 'string' && rawNote.pushTitle.trim()
+        ? rawNote.pushTitle.trim()
+        : '',
+    pushBody:
+      typeof rawNote.pushBody === 'string' && rawNote.pushBody.trim()
+        ? rawNote.pushBody.trim()
+        : '',
+    pushIconUrl:
+      typeof rawNote.pushIconUrl === 'string' && rawNote.pushIconUrl.trim()
+        ? rawNote.pushIconUrl.trim()
+        : '',
     createdAt,
     read: Boolean(rawNote.read),
   }
@@ -758,6 +772,7 @@ export const useSystemStore = defineStore('system', () => {
       hapticFeedbackEnabled: true,
       customCss: '',
       customVars: {},
+      appIconOverrides: {},
       homeWidgetPages: cloneDefaultWidgetPages(),
       customWidgets: [],
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
@@ -767,6 +782,7 @@ export const useSystemStore = defineStore('system', () => {
       timezone: 'Asia/Shanghai',
       notifications: true,
       realPushEnabled: false,
+      pushDisplayMode: 'minimal',
       pushServerUrl: DEFAULT_PUSH_SERVER_URL,
       pushPermission: normalizePushPermission(readPushPermission(), 'default'),
       pushDeviceId: '',
@@ -830,6 +846,12 @@ export const useSystemStore = defineStore('system', () => {
     if ('realPushEnabled' in patch) {
       settings.system.realPushEnabled = patch.realPushEnabled === true
     }
+    if ('pushDisplayMode' in patch) {
+      settings.system.pushDisplayMode = normalizePushDisplayMode(
+        patch.pushDisplayMode,
+        settings.system.pushDisplayMode || 'minimal',
+      )
+    }
     if ('pushServerUrl' in patch) {
       settings.system.pushServerUrl = normalizePushServerUrl(
         patch.pushServerUrl,
@@ -869,6 +891,7 @@ export const useSystemStore = defineStore('system', () => {
     }
     return {
       realPushEnabled: settings.system.realPushEnabled,
+      pushDisplayMode: settings.system.pushDisplayMode,
       pushServerUrl: settings.system.pushServerUrl,
       pushPermission: settings.system.pushPermission,
       pushDeviceId: settings.system.pushDeviceId,
@@ -905,7 +928,11 @@ export const useSystemStore = defineStore('system', () => {
     const result = await relayNotificationToPush({
       serverUrl: settings.system.pushServerUrl,
       deviceId: settings.system.pushDeviceId,
-      notification,
+      notification: {
+        ...notification,
+        pushLocale: settings.system.language || 'zh-CN',
+        pushDisplayMode: settings.system.pushDisplayMode || 'minimal',
+      },
     })
 
     if (result?.ok) {
@@ -940,7 +967,11 @@ export const useSystemStore = defineStore('system', () => {
         nextResult = await relayNotificationToPush({
           serverUrl: settings.system.pushServerUrl,
           deviceId: settings.system.pushDeviceId,
-          notification,
+          notification: {
+            ...notification,
+            pushLocale: settings.system.language || 'zh-CN',
+            pushDisplayMode: settings.system.pushDisplayMode || 'minimal',
+          },
         })
         if (nextResult?.ok) {
           setPushState({
@@ -2100,6 +2131,9 @@ export const useSystemStore = defineStore('system', () => {
       if (appearance.customVars && typeof appearance.customVars === 'object') {
         settings.appearance.customVars = { ...appearance.customVars }
       }
+      settings.appearance.appIconOverrides = normalizeAppIconOverrides(
+        appearance.appIconOverrides,
+      )
       if (typeof appearance.lockClockStyle === 'string') {
         settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
       }
@@ -2116,6 +2150,10 @@ export const useSystemStore = defineStore('system', () => {
       settings.system.language = normalizeSystemLanguage(settings.system.language)
       settings.system.notifications = settings.system.notifications !== false
       settings.system.realPushEnabled = settings.system.realPushEnabled === true
+      settings.system.pushDisplayMode = normalizePushDisplayMode(
+        settings.system.pushDisplayMode,
+        'minimal',
+      )
       settings.system.pushServerUrl = normalizePushServerUrl(
         settings.system.pushServerUrl,
         DEFAULT_PUSH_SERVER_URL,
@@ -2209,6 +2247,9 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     settings.appearance.customWidgets = normalizeCustomWidgets(settings.appearance.customWidgets)
+    settings.appearance.appIconOverrides = normalizeAppIconOverrides(
+      settings.appearance.appIconOverrides,
+    )
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
@@ -2216,6 +2257,10 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true
+    settings.system.pushDisplayMode = normalizePushDisplayMode(
+      settings.system.pushDisplayMode,
+      'minimal',
+    )
     settings.system.pushServerUrl = normalizePushServerUrl(
       settings.system.pushServerUrl,
       DEFAULT_PUSH_SERVER_URL,
@@ -2292,6 +2337,7 @@ export const useSystemStore = defineStore('system', () => {
           appearance: {
             ...settings.appearance,
             customVars: { ...settings.appearance.customVars },
+            appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
             customWidgets: settings.appearance.customWidgets.map((widget) => ({ ...widget })),
           },

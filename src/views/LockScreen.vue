@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
+import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from '../lib/notification-presentation'
 
 defineProps({
   currentTime: {
@@ -22,6 +23,9 @@ const { systemLanguage, languageBase, t } = useI18n()
 const { notifications, settings } = storeToRefs(systemStore)
 const LOCK_BANNER_HIDE_MS = 2600
 const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const notificationLocale = computed(() =>
+  languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
+)
 
 const lockClockStyle = computed(() => settings.value.appearance.lockClockStyle || 'classic')
 const lockNotifications = computed(() => {
@@ -32,6 +36,30 @@ const lockNotifications = computed(() => {
 const unreadCount = computed(() =>
   lockNotifications.value.reduce((count, note) => count + (note.read ? 0 : 1), 0),
 )
+const lockNotificationGroups = computed(() => {
+  const groups = new Map()
+
+  lockNotifications.value.forEach((note) => {
+    const meta = resolveNotificationModuleMeta(note)
+    const existing = groups.get(meta.key)
+    if (existing) {
+      existing.notes.push(note)
+      existing.latestAt = Math.max(existing.latestAt, note.createdAt || 0)
+      existing.unreadCount += note.read ? 0 : 1
+      return
+    }
+
+    groups.set(meta.key, {
+      key: meta.key,
+      meta,
+      notes: [note],
+      latestAt: note.createdAt || 0,
+      unreadCount: note.read ? 0 : 1,
+    })
+  })
+
+  return [...groups.values()].sort((a, b) => b.latestAt - a.latestAt)
+})
 const lockBannerVisible = ref(false)
 const lockBannerNote = ref(null)
 
@@ -48,6 +76,13 @@ const formatNotificationTime = (timestamp) => {
     hour12: false,
   })
 }
+
+const resolveNotificationModuleMeta = (note) =>
+  resolveNotificationModuleMetaBase(
+    note,
+    notificationLocale.value,
+    settings.value.appearance?.appIconOverrides || {},
+  )
 
 const unlockPhone = () => {
   lockBannerVisible.value = false
@@ -127,13 +162,18 @@ onBeforeUnmount(() => {
         class="lock-banner glass"
         @click="openBannerNotification"
       >
-        <div class="lock-banner-icon">
-          <i :class="lockBannerNote.icon"></i>
+        <div class="lock-banner-icon" :class="resolveNotificationModuleMeta(lockBannerNote).toneClass">
+          <i :class="resolveNotificationModuleMeta(lockBannerNote).icon"></i>
         </div>
         <div class="min-w-0 flex-1 text-left">
+          <div class="lock-app-row">
+            <span class="lock-app-chip" :class="resolveNotificationModuleMeta(lockBannerNote).toneClass">
+              {{ resolveNotificationModuleMeta(lockBannerNote).label }}
+            </span>
+            <p class="lock-banner-time">{{ formatNotificationTime(lockBannerNote.createdAt) }}</p>
+          </div>
           <div class="lock-banner-meta">
             <p class="lock-banner-title">{{ lockBannerNote.title }}</p>
-            <p class="lock-banner-time">{{ formatNotificationTime(lockBannerNote.createdAt) }}</p>
           </div>
           <p class="lock-banner-content">{{ lockBannerNote.content }}</p>
         </div>
@@ -163,26 +203,53 @@ onBeforeUnmount(() => {
         <span class="text-xs opacity-80">{{ unreadCount }} {{ t('条未读', 'unread') }}</span>
       </div>
 
-      <TransitionGroup v-if="lockNotifications.length > 0" name="lock-list" tag="div" class="space-y-2">
-        <button
-          v-for="note in lockNotifications"
-          :key="note.id"
-          class="lock-notification-card glass text-left"
-          :class="{ 'is-read': note.read }"
-          @click="openNotification(note)"
+      <div v-if="lockNotificationGroups.length > 0" class="space-y-3">
+        <section
+          v-for="group in lockNotificationGroups"
+          :key="group.key"
+          class="lock-notification-group"
         >
-          <div class="lock-notification-icon">
-            <i :class="note.icon"></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="lock-notification-meta">
-              <p class="lock-notification-title">{{ note.title }}</p>
-              <p class="lock-notification-time">{{ formatNotificationTime(note.createdAt) }}</p>
+          <div class="lock-notification-group-head">
+            <div class="lock-notification-group-meta">
+              <span class="lock-app-chip" :class="group.meta.toneClass">
+                {{ group.meta.label }}
+              </span>
+              <span class="lock-notification-group-count">
+                {{ group.notes.length }} {{ t('条', 'items') }}
+              </span>
             </div>
-            <p class="lock-notification-content">{{ note.content }}</p>
+            <span v-if="group.unreadCount > 0" class="lock-notification-group-unread">
+              {{ group.unreadCount }} {{ t('未读', 'unread') }}
+            </span>
           </div>
-        </button>
-      </TransitionGroup>
+
+          <TransitionGroup name="lock-list" tag="div" class="space-y-2">
+            <button
+              v-for="note in group.notes"
+              :key="note.id"
+              class="lock-notification-card glass text-left"
+              :class="{ 'is-read': note.read }"
+              @click="openNotification(note)"
+            >
+              <div class="lock-notification-icon" :class="group.meta.toneClass">
+                <i :class="resolveNotificationModuleMeta(note).icon"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="lock-notification-row">
+                  <span class="lock-notification-group-tag">
+                    {{ group.meta.label }}
+                  </span>
+                  <p class="lock-notification-time">{{ formatNotificationTime(note.createdAt) }}</p>
+                </div>
+                <div class="lock-notification-meta">
+                  <p class="lock-notification-title">{{ note.title }}</p>
+                </div>
+                <p class="lock-notification-content">{{ note.content }}</p>
+              </div>
+            </button>
+          </TransitionGroup>
+        </section>
+      </div>
 
       <div v-else class="lock-notification-empty glass">
         {{ t('暂无新消息', 'No new notifications') }}
@@ -246,11 +313,88 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+.lock-banner-icon.accent-default,
+.lock-notification-icon.accent-default,
+.lock-app-chip.accent-default {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.92) 0%, rgba(79, 70, 229, 0.88) 100%);
+  color: #fff;
+}
+
+.lock-banner-icon.accent-cool,
+.lock-notification-icon.accent-cool,
+.lock-app-chip.accent-cool {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.92) 0%, rgba(14, 165, 233, 0.88) 100%);
+  color: #fff;
+}
+
+.lock-banner-icon.accent-warm,
+.lock-notification-icon.accent-warm,
+.lock-app-chip.accent-warm {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.92) 0%, rgba(249, 115, 22, 0.88) 100%);
+  color: #fff;
+}
+
+.lock-banner-icon.accent-light,
+.lock-notification-icon.accent-light,
+.lock-app-chip.accent-light {
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+}
+
+.lock-banner-icon.accent-dark,
+.lock-notification-icon.accent-dark,
+.lock-app-chip.accent-dark {
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+}
+
+.lock-banner-icon.is-shopping,
+.lock-notification-icon.is-shopping,
+.lock-app-chip.is-shopping {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.92) 0%, rgba(239, 68, 68, 0.88) 100%);
+  color: #fff;
+}
+
+.lock-banner-icon.is-forum,
+.lock-notification-icon.is-forum,
+.lock-app-chip.is-forum {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.92) 0%, rgba(129, 140, 248, 0.88) 100%);
+  color: #fff;
+}
+
+.lock-banner-icon.is-system,
+.lock-notification-icon.is-system,
+.lock-app-chip.is-system {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.lock-app-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lock-app-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
 .lock-banner-meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  margin-top: 5px;
 }
 
 .lock-banner-title {
@@ -337,6 +481,36 @@ onBeforeUnmount(() => {
   padding: 0 4px;
 }
 
+.lock-notification-group {
+  display: block;
+}
+
+.lock-notification-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.lock-notification-group-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lock-notification-group-count,
+.lock-notification-group-unread {
+  font-size: 10px;
+  opacity: 0.78;
+}
+
+.lock-notification-group-unread {
+  flex-shrink: 0;
+}
+
 .lock-notification-card {
   width: 100%;
   border: 0;
@@ -367,6 +541,19 @@ onBeforeUnmount(() => {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+}
+
+.lock-notification-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lock-notification-group-tag {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.78;
 }
 
 .lock-notification-title {

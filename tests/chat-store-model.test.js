@@ -136,6 +136,8 @@ describe('chat store model', () => {
       autoLastFingerprint: 'fingerprint-v1',
       autoLastSettledAt: 30_000,
       autoLastSettledMissedCycles: 2,
+      autoPushScheduleId: 'chat_auto_1',
+      autoPushScheduledAt: 61_000,
     })
 
     const conversation = store.getConversationByContactId(contactId)
@@ -144,10 +146,13 @@ describe('chat store model', () => {
     expect(conversation.autoLastFingerprint).toBe('fingerprint-v1')
     expect(conversation.autoLastSettledAt).toBe(30_000)
     expect(conversation.autoLastSettledMissedCycles).toBe(2)
+    expect(conversation.autoPushScheduleId).toBe('chat_auto_1')
+    expect(conversation.autoPushScheduledAt).toBe(61_000)
 
     store.setConversationAiPrefs(contactId, { autoInvokeEnabled: false })
     expect(store.getConversationByContactId(contactId).autoNextAt).toBe(0)
     expect(store.getConversationByContactId(contactId).autoLastSettledMissedCycles).toBe(0)
+    expect(store.getConversationByContactId(contactId).autoPushScheduleId).toBe('chat_auto_1')
   })
 
   test('settles overdue autonomous invoke checkpoints on resume', () => {

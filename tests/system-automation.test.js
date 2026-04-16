@@ -243,6 +243,7 @@ describe('system automation controls', () => {
 
     store.setPushState({
       realPushEnabled: true,
+      pushDisplayMode: 'preview',
       pushServerUrl: 'http://localhost:8787/',
       pushPermission: 'granted',
       pushDeviceId: ' device-1 ',
@@ -253,6 +254,7 @@ describe('system automation controls', () => {
     })
 
     expect(store.settings.system.realPushEnabled).toBe(true)
+    expect(store.settings.system.pushDisplayMode).toBe('preview')
     expect(store.settings.system.pushServerUrl).toBe('http://localhost:8787')
     expect(store.settings.system.pushPermission).toBe('granted')
     expect(store.settings.system.pushDeviceId).toBe('device-1')

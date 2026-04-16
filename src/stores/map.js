@@ -512,7 +512,10 @@ export const useMapStore = defineStore('map', () => {
     }
 
     const scheduleId = state.scheduledPushId || createMapTripScheduleId(state.startedAt)
-    const notification = buildTripArrivalNotification(state)
+    const notification = {
+      ...buildTripArrivalNotification(state),
+      pushDisplayMode: systemStore.settings.system.pushDisplayMode || 'minimal',
+    }
 
     tripPushSchedulePromise = (async () => {
       try {
