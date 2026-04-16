@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { callAI } from '../lib/ai'
+import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
@@ -148,6 +149,93 @@ const draftAssetCountMap = computed(() => ({
   reference: profileDraft.assetPack.referenceAssetIds.length,
   scenario: profileDraft.assetPack.scenarioAssetIds.length,
 }))
+
+const roleFolderSlotLabel = (slotKey) => {
+  if (slotKey === 'profileImage') return t('形象照', 'Profile image')
+  if (slotKey === 'dynamicMedia') return t('动态图', 'Dynamic media')
+  if (slotKey === 'emojiPack') return t('表情包', 'Emoji pack')
+  if (slotKey === 'imageReference') return t('参考图', 'Reference image')
+  return slotKey || ''
+}
+
+const roleFolderFallbackCopy = (slotKey) => {
+  if (slotKey === 'profileImage') {
+    return t(
+      '未绑定时回退到默认头像/文字模式，不影响角色基础使用。',
+      'When unbound, role falls back to default avatar/text mode.',
+    )
+  }
+  if (slotKey === 'dynamicMedia') {
+    return t(
+      '未绑定时回退到纯文字动态，不影响基础互动。',
+      'When unbound, dynamic posts fall back to text-first mode.',
+    )
+  }
+  if (slotKey === 'emojiPack') {
+    return t(
+      '未绑定时回退到不使用表情包，仅保留基础消息类型。',
+      'When unbound, emoji pack is skipped and baseline messages remain.',
+    )
+  }
+  if (slotKey === 'imageReference') {
+    return t(
+      '未绑定时回退到无参考图模式，不影响基础 AI 调用。',
+      'When unbound, AI falls back to no-reference mode.',
+    )
+  }
+  return t('未绑定时回退到默认模式。', 'When unbound, fallback mode stays active.')
+}
+
+const getRoleFolderBindingSummaries = (bindings) =>
+  summarizeRoleAssetFolderBindings(galleryStore, bindings).map((item) => ({
+    ...item,
+    label: roleFolderSlotLabel(item.slotKey),
+  }))
+
+const draftFolderBindingSummaryMap = computed(() =>
+  Object.fromEntries(
+    getRoleFolderBindingSummaries(profileDraft.assetFolderBindings).map((item) => [item.slotKey, item]),
+  ),
+)
+
+const getDraftFolderBindingSummary = (slotKey) =>
+  draftFolderBindingSummaryMap.value[slotKey] || {
+    slotKey,
+    folderId: '',
+    folderName: '',
+    assetCount: 0,
+    status: 'unbound',
+    fallbackActive: true,
+  }
+
+const folderBindingStatusClass = (summary) => {
+  if (summary?.status === 'ready') return 'text-emerald-600'
+  if (summary?.status === 'missing_folder') return 'text-red-500'
+  return 'text-amber-600'
+}
+
+const describeFolderBindingSummary = (summary) => {
+  if (!summary || typeof summary !== 'object') return t('未绑定', 'Unbound')
+  if (summary.status === 'ready') {
+    return t(
+      `已连接文件夹“${summary.folderName || roleFolderSlotLabel(summary.slotKey)}” · ${summary.assetCount} 项素材`,
+      `Folder "${summary.folderName || roleFolderSlotLabel(summary.slotKey)}" ready · ${summary.assetCount} assets`,
+    )
+  }
+  if (summary.status === 'empty') {
+    return t(
+      `已绑定文件夹“${summary.folderName || roleFolderSlotLabel(summary.slotKey)}”，但当前没有可用素材，将回退默认模式。`,
+      `Folder "${summary.folderName || roleFolderSlotLabel(summary.slotKey)}" is bound but has no usable assets, so fallback mode stays active.`,
+    )
+  }
+  if (summary.status === 'missing_folder') {
+    return t(
+      '原绑定文件夹已不存在，将回退默认模式。可重新选择新的文件夹。',
+      'The previously bound folder no longer exists, so fallback mode stays active. Rebind a new folder if needed.',
+    )
+  }
+  return roleFolderFallbackCopy(summary.slotKey)
+}
 
 const availableKnowledgePoints = computed(() => {
   const source = Array.isArray(user.value.knowledgePoints) ? user.value.knowledgePoints : []
@@ -355,6 +443,25 @@ const profileKnowledgeSummary = (profile) => {
   const count = Array.isArray(profile?.knowledgePointIds) ? profile.knowledgePointIds.length : 0
   if (count <= 0) return t('未绑定知识点', 'No knowledge points bound')
   return t(`知识点 ${count} 条`, `${count} knowledge points`)
+}
+
+const profileFolderBindingSummary = (profile) => {
+  const summaries = getRoleFolderBindingSummaries(profile?.assetFolderBindings || {})
+  const boundCount = summaries.filter((item) => item.isBound).length
+  const readyCount = summaries.filter((item) => item.status === 'ready').length
+  const totalAssets = summaries.reduce((sum, item) => sum + (item.assetCount || 0), 0)
+
+  if (boundCount <= 0) return t('文件夹绑定未启用', 'Folder bindings not enabled')
+  if (readyCount <= 0) {
+    return t(
+      `文件夹已绑定 ${boundCount} 个槽位 · 当前走默认模式`,
+      `${boundCount} folder slots bound · fallback mode active`,
+    )
+  }
+  return t(
+    `文件夹就绪 ${readyCount}/${boundCount} · 素材 ${totalAssets} 项`,
+    `Folders ready ${readyCount}/${boundCount} · ${totalAssets} assets`,
+  )
 }
 
 const autoGenerateProfile = async () => {
@@ -643,6 +750,18 @@ onBeforeUnmount(() => {
                 : t('暂无可用文件夹。可先在相册创建后再绑定。', 'No folders available yet. Create one in Gallery first.')
             }}
           </p>
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-[11px]" :class="folderBindingStatusClass(getDraftFolderBindingSummary('profileImage'))">
+              {{ describeFolderBindingSummary(getDraftFolderBindingSummary('profileImage')) }}
+            </p>
+            <button
+              type="button"
+              class="shrink-0 text-[11px] text-blue-500"
+              @click="router.push('/gallery')"
+            >
+              {{ t('前往相册', 'Open Gallery') }}
+            </button>
+          </div>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -680,6 +799,18 @@ onBeforeUnmount(() => {
                 : t('暂无“场景图”文件夹。可先在相册创建后再绑定。', 'No scenario folders yet. Create one in Gallery first.')
             }}
           </p>
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-[11px]" :class="folderBindingStatusClass(getDraftFolderBindingSummary('dynamicMedia'))">
+              {{ describeFolderBindingSummary(getDraftFolderBindingSummary('dynamicMedia')) }}
+            </p>
+            <button
+              type="button"
+              class="shrink-0 text-[11px] text-blue-500"
+              @click="router.push('/gallery')"
+            >
+              {{ t('前往相册', 'Open Gallery') }}
+            </button>
+          </div>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -717,6 +848,18 @@ onBeforeUnmount(() => {
                 : t('暂无“表情”文件夹。可先在相册创建后再绑定。', 'No emoji folders yet. Create one in Gallery first.')
             }}
           </p>
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-[11px]" :class="folderBindingStatusClass(getDraftFolderBindingSummary('emojiPack'))">
+              {{ describeFolderBindingSummary(getDraftFolderBindingSummary('emojiPack')) }}
+            </p>
+            <button
+              type="button"
+              class="shrink-0 text-[11px] text-blue-500"
+              @click="router.push('/gallery')"
+            >
+              {{ t('前往相册', 'Open Gallery') }}
+            </button>
+          </div>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -754,6 +897,18 @@ onBeforeUnmount(() => {
                 : t('暂无“参考图”文件夹。可先在相册创建后再绑定。', 'No reference folders yet. Create one in Gallery first.')
             }}
           </p>
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-[11px]" :class="folderBindingStatusClass(getDraftFolderBindingSummary('imageReference'))">
+              {{ describeFolderBindingSummary(getDraftFolderBindingSummary('imageReference')) }}
+            </p>
+            <button
+              type="button"
+              class="shrink-0 text-[11px] text-blue-500"
+              @click="router.push('/gallery')"
+            >
+              {{ t('前往相册', 'Open Gallery') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -796,6 +951,7 @@ onBeforeUnmount(() => {
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
@@ -818,6 +974,7 @@ onBeforeUnmount(() => {
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>

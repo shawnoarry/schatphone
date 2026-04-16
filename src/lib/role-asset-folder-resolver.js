@@ -152,3 +152,67 @@ export const resolveFolderBoundAssetIds = (
   }
 }
 
+export const summarizeRoleAssetFolderBindings = (
+  galleryStore,
+  bindings,
+  slotKeys = ROLE_ASSET_FOLDER_SLOT_KEYS,
+  options = {},
+) => {
+  const category = normalizeCategory(options.category)
+  const resolvedSlotKeys = normalizeSlotKeys(slotKeys)
+  const normalizedBindings = normalizeRoleAssetFolderBindings(bindings)
+
+  return resolvedSlotKeys.map((slotKey) => {
+    const folderChain = getRoleAssetFolderIdChain(normalizedBindings, slotKey)
+    const primaryFolderId = folderChain[0] || ''
+    const folder =
+      primaryFolderId && galleryStore && typeof galleryStore.findFolderById === 'function'
+        ? galleryStore.findFolderById(primaryFolderId)
+        : null
+
+    const rawFolderAssetIds = Array.isArray(folder?.assetIds) ? folder.assetIds : []
+    const assetIds = []
+    const missingAssetIds = []
+
+    rawFolderAssetIds.forEach((rawAssetId) => {
+      const assetId = sanitizeRoleBindingAssetId(rawAssetId)
+      if (!assetId || assetIds.includes(assetId) || missingAssetIds.includes(assetId)) return
+
+      const asset =
+        galleryStore && typeof galleryStore.findAssetById === 'function'
+          ? galleryStore.findAssetById(assetId)
+          : null
+
+      if (!asset) {
+        missingAssetIds.push(assetId)
+        return
+      }
+
+      if (category !== 'all' && asset.category !== category) return
+      assetIds.push(assetId)
+    })
+
+    const status = !primaryFolderId
+      ? 'unbound'
+      : !folder
+        ? 'missing_folder'
+        : assetIds.length > 0
+          ? 'ready'
+          : 'empty'
+
+    return {
+      slotKey,
+      folderId: primaryFolderId,
+      folderName: folder?.name || '',
+      folderCategory: folder?.category || 'all',
+      folderPriorityChain: folderChain.slice(1),
+      assetIds,
+      assetCount: assetIds.length,
+      missingAssetIds,
+      missingAssetCount: missingAssetIds.length,
+      isBound: Boolean(primaryFolderId),
+      status,
+      fallbackActive: status !== 'ready',
+    }
+  })
+}

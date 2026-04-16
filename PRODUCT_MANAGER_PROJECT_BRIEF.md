@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-16
+Updated / 更新时间: 2026-04-17
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -205,8 +205,8 @@ Status / 状态: `IN_PROGRESS`
 Status / 状态: `IN_PROGRESS`
 1. EN: `DONE` data + baseline UI: custom folder model is online; Gallery has folder CRUD and per-asset quick add/remove folder actions.
    中文：`DONE` 数据与基础 UI：自定义文件夹模型已上线；Gallery 已支持文件夹增删改和素材快速归档/移除。
-2. EN: `PARTIAL_DONE` role-slot + chat consumption: Contacts supports profile-image/dynamic-media/emoji/reference folder bindings; Chat now consumes folder-bound assets in preferred-asset options, gallery-send ranking, and AI image-reference fallback.
-   中文：`PARTIAL_DONE` 角色槽位 + Chat 消费：通讯录已支持形象照/动态图/表情包/参考图文件夹绑定；Chat 已接入文件夹绑定素材用于会话优先素材候选、素材发送排序与 AI 参考图回退。
+2. EN: `PARTIAL_DONE` role-slot + chat consumption: Contacts supports profile-image/dynamic-media/emoji/reference folder bindings with live state/fallback hints and direct Gallery jump; Chat now consumes folder-bound assets in preferred-asset options, gallery-send ranking, and AI image-reference fallback; Chat Directory now surfaces profile-folder readiness summary.
+   中文：`PARTIAL_DONE` 角色槽位 + Chat 消费：通讯录已支持形象照/动态图/表情包/参考图文件夹绑定，并补齐实时状态/默认回退提示与相册直达入口；Chat 已接入文件夹绑定素材用于会话优先素材候选、素材发送排序与 AI 参考图回退；会话通讯录现已显示档案文件夹就绪摘要。
 3. EN: `DONE (phase-1)` deletion/replacement second-confirmation flow is now online in Gallery for bound folders and bound assets (`delete + URL/file replace`), while forced delete remains available.
    中文：`DONE（第一阶段）` Gallery 已上线绑定文件夹与绑定素材（`删除 + URL/文件替换`）的二次确认流程，同时保留强制删除能力。
 4. EN: Implement per-module fallback defaults so missing assets never break baseline usage:
@@ -339,3 +339,7 @@ Status / 状态: `DONE`
     2026-04-15 中文：已落地媒体体积策略第一阶段：Chat/Gallery 现统一单次发送、导入、替换的体积上限与超限提示文案。
 24. 2026-04-15 EN: Expanded module-local one-off upload lane to Map: users can now choose import-before-apply or one-off local visual apply without gallery import, with unified size-guard feedback.
     2026-04-15 中文：已将模块本地单次上传链路扩展到 Map：用户现可选择“先入库再应用”或“单次本地应用不入库”，并具备统一体积守卫反馈。
+25. 2026-04-17 EN: Landed asset-hub visibility polish: Contacts now exposes live folder-binding state/fallback hints plus direct Gallery jump, and Chat Directory now surfaces profile-folder readiness summary.
+    2026-04-17 中文：已落地素材中台可视化打磨：主通讯录现提供实时文件夹绑定状态/默认回退提示与相册直达入口；会话通讯录现显示档案文件夹就绪摘要。
+26. 2026-04-17 EN: Landed package-size optimization phase-1: page routes now lazy-load view modules, and Vite now separates framework/icons/markdown/vendor chunks to reduce main-bundle pressure.
+    2026-04-17 中文：已落地包体优化第一阶段：页面路由现按需懒加载视图模块，Vite 现对 framework/icons/markdown/vendor 进行拆包，以降低主包压力。

@@ -7,6 +7,7 @@ import { useGalleryStore } from '../stores/gallery'
 import {
   getRoleAssetFolderSlotKeysByCategory,
   resolveFolderBoundAssetIds,
+  summarizeRoleAssetFolderBindings,
 } from '../lib/role-asset-folder-resolver'
 import { useI18n } from '../composables/useI18n'
 
@@ -239,6 +240,30 @@ const roleFolderSlotShortLabel = (slotKey) => {
   if (slotKey === 'profileImage') return t('形象', 'Profile')
   if (slotKey === 'emojiPack') return t('表情', 'Emoji')
   return slotKey || ''
+}
+
+const roleFolderBindingSummary = (contact) => {
+  if (!contact?.id) return ''
+  const contract = getRoleBindingContract(contact.id)
+  const summaries = summarizeRoleAssetFolderBindings(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+  )
+  const boundCount = summaries.filter((item) => item.isBound).length
+  const readyCount = summaries.filter((item) => item.status === 'ready').length
+  const totalAssets = summaries.reduce((sum, item) => sum + (item.assetCount || 0), 0)
+
+  if (boundCount <= 0) return t('档案文件夹未启用', 'Profile folders not enabled')
+  if (readyCount <= 0) {
+    return t(
+      `档案文件夹已绑定 ${boundCount} 个槽位 · 当前走默认模式`,
+      `${boundCount} profile folders bound · fallback mode active`,
+    )
+  }
+  return t(
+    `档案文件夹就绪 ${readyCount}/${boundCount} · 素材 ${totalAssets} 项`,
+    `Profile folders ready ${readyCount}/${boundCount} · ${totalAssets} assets`,
+  )
 }
 
 const roleMetaAssetOptions = computed(() => {
@@ -1012,6 +1037,9 @@ onBeforeUnmount(() => {
             </p>
             <p v-if="contact.relationshipNote" class="text-[11px] text-gray-400 truncate">
               {{ contact.relationshipNote }}
+            </p>
+            <p class="text-[11px] text-gray-400 truncate">
+              {{ roleFolderBindingSummary(contact) }}
             </p>
             <p v-if="preferredImageAssetLabel(contact)" class="text-[11px] text-gray-400 truncate">
               {{ t('会话优先素材', 'Thread preferred asset') }}: {{ preferredImageAssetLabel(contact) }}

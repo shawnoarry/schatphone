@@ -3,6 +3,7 @@ import {
   getRoleAssetFolderIdChain,
   getRoleAssetFolderSlotKeysByCategory,
   resolveFolderBoundAssetIds,
+  summarizeRoleAssetFolderBindings,
 } from '../src/lib/role-asset-folder-resolver'
 
 const createMockGalleryStore = () => {
@@ -24,6 +25,10 @@ const createMockGalleryStore = () => {
     folder_chain: {
       id: 'folder_chain',
       assetIds: ['asset_wall_1'],
+    },
+    folder_empty: {
+      id: 'folder_empty',
+      assetIds: [],
     },
   }
   return {
@@ -91,5 +96,40 @@ describe('role asset folder resolver', () => {
     )
     expect(emojiOnly.assetIds).toEqual(['asset_emoji_1'])
   })
-})
 
+  test('summarizes binding state for ready, empty, missing and unbound slots', () => {
+    const galleryStore = createMockGalleryStore()
+
+    const summaries = summarizeRoleAssetFolderBindings(galleryStore, {
+      profileImage: { folderId: 'folder_chain' },
+      dynamicMedia: { folderId: 'folder_missing' },
+      emojiPack: { folderId: 'folder_empty' },
+      imageReference: { folderId: '' },
+    })
+
+    expect(summaries.find((item) => item.slotKey === 'profileImage')).toMatchObject({
+      status: 'ready',
+      assetCount: 1,
+      fallbackActive: false,
+      folderId: 'folder_chain',
+    })
+    expect(summaries.find((item) => item.slotKey === 'dynamicMedia')).toMatchObject({
+      status: 'missing_folder',
+      assetCount: 0,
+      fallbackActive: true,
+      folderId: 'folder_missing',
+    })
+    expect(summaries.find((item) => item.slotKey === 'emojiPack')).toMatchObject({
+      status: 'empty',
+      assetCount: 0,
+      fallbackActive: true,
+      folderId: 'folder_empty',
+    })
+    expect(summaries.find((item) => item.slotKey === 'imageReference')).toMatchObject({
+      status: 'unbound',
+      assetCount: 0,
+      fallbackActive: true,
+      folderId: '',
+    })
+  })
+})

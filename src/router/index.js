@@ -1,24 +1,25 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import HomeView from '../views/HomeView.vue'
-import ChatView from '../views/ChatView.vue'
-import ChatDirectoryView from '../views/ChatDirectoryView.vue'
-import ChatFeaturePlaceholderView from '../views/ChatFeaturePlaceholderView.vue'
-import SettingsView from '../views/SettingsView.vue'
-import AppearanceView from '../views/AppearanceView.vue'
-import NetworkView from '../views/NetworkView.vue'
-import LockScreen from '../views/LockScreen.vue'
-import ContactsView from '../views/ContactsView.vue'
-import GalleryView from '../views/GalleryView.vue'
-import PhoneView from '../views/PhoneView.vue'
-import MapView from '../views/MapView.vue'
-import CalendarView from '../views/CalendarView.vue'
-import WalletView from '../views/WalletView.vue'
-import WorldBookView from '../views/WorldBookView.vue'
-import StockView from '../views/StockView.vue'
-import UserProfileView from '../views/UserProfileView.vue'
-import FilesView from '../views/FilesView.vue'
-import MoreView from '../views/MoreView.vue'
+
+const LockScreen = () => import('../views/LockScreen.vue')
+const HomeView = () => import('../views/HomeView.vue')
+const SettingsView = () => import('../views/SettingsView.vue')
+const AppearanceView = () => import('../views/AppearanceView.vue')
+const NetworkView = () => import('../views/NetworkView.vue')
+const ChatView = () => import('../views/ChatView.vue')
+const ChatDirectoryView = () => import('../views/ChatDirectoryView.vue')
+const ChatFeaturePlaceholderView = () => import('../views/ChatFeaturePlaceholderView.vue')
+const ContactsView = () => import('../views/ContactsView.vue')
+const GalleryView = () => import('../views/GalleryView.vue')
+const PhoneView = () => import('../views/PhoneView.vue')
+const MapView = () => import('../views/MapView.vue')
+const CalendarView = () => import('../views/CalendarView.vue')
+const WalletView = () => import('../views/WalletView.vue')
+const WorldBookView = () => import('../views/WorldBookView.vue')
+const StockView = () => import('../views/StockView.vue')
+const UserProfileView = () => import('../views/UserProfileView.vue')
+const FilesView = () => import('../views/FilesView.vue')
+const MoreView = () => import('../views/MoreView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),

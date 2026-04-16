@@ -1,5 +1,5 @@
 ﻿# SchatPhone TODO PM Status Report / SchatPhone 待办状态报告（产品经理视角）
-Updated / 更新时间: 2026-04-16
+Updated / 更新时间: 2026-04-17
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 为什么有这份报告
@@ -52,6 +52,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：Chat 和地图都已支持“先入库再使用”与“不入库单次使用”两种本地媒体路径。
 4. EN: Safety guards are online for media size and for deleting/replacing in-use assets.
    中文：媒体体积守卫以及“使用中素材删除/替换”的安全确认机制已上线。
+5. EN: Contacts and Chat Directory now expose asset-folder readiness/fallback summaries, so folder bindings are no longer hidden inside pickers only.
+   中文：主通讯录与会话通讯录现在都会显示素材文件夹的就绪/回退摘要，因此文件夹绑定不再只是藏在选择框里的配置。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -90,6 +92,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：外部系统推送现在支持 `极简 / 标准 / 预览` 三种显示模式。
 7. EN: Appearance now supports preset-based app icon customization for all built-in home modules, and that choice also affects shell notifications.
    中文：外观页现在支持全部内建首页模块的预设型功能图标自定义，并且这个选择也会影响壳内通知。
+8. EN: Route-level lazy loading and vendor chunk split are now online as the first package-size optimization pass, reducing pressure on the main entry bundle.
+   中文：路由级懒加载与依赖拆包已作为第一阶段包体优化上线，用于降低主入口包体压力。
 
 ## 5. What the PM can already feel in the product / 产品侧现在能直接感知到的东西
 1. EN: The phone shell now feels more like a real phone because lock-screen notifications and unlocked banners are separated from the real-device push surface.
@@ -166,3 +170,7 @@ Source / 来源: `TODO_ROADMAP.md`
    2026-04-12 中文：将世界观拆分与地图基线方向同步进产品叙述。
 5. 2026-04-16 EN: Rebuilt this document as clean UTF-8 bilingual content and synced the latest push / notification / app-identity progress.
    2026-04-16 中文：将本文件重建为干净的 UTF-8 双语内容，并同步最新的推送 / 通知 / 功能身份进展。
+6. 2026-04-17 EN: Synced asset-hub visibility polish: Contacts now shows slot-level folder state/fallback hints, and Chat Directory surfaces profile-folder readiness.
+   2026-04-17 中文：同步素材中台可视化打磨：主通讯录新增槽位级文件夹状态/默认回退提示，会话通讯录新增档案文件夹就绪摘要。
+7. 2026-04-17 EN: Synced package-size optimization phase-1: router now lazy-loads page views and Vite now splits framework/icons/markdown/vendor chunks.
+   2026-04-17 中文：同步包体优化第一阶段：路由现按需懒加载页面视图，Vite 现对 framework/icons/markdown/vendor 进行拆包。

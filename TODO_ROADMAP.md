@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-16
+Updated / 更新时间: 2026-04-17
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -285,8 +285,8 @@ Status / 状态: `IN_PROGRESS`
 
 1. EN: Data schema task — `DONE`: custom folders + role slot-binding records are landed (V1 = single folder per slot, reserved priority fields + backward-compatible migration + tests).
    中文：数据结构任务——`DONE`：已落地自定义文件夹与角色槽位绑定记录（V1=单文件夹绑定，并预留优先级字段 + 向后兼容迁移 + 测试）。
-2. EN: Gallery + Chat consumption task — `DONE`: Gallery folder CRUD is landed; Contacts exposes profile-image/dynamic-media/emoji/reference slot pickers; Chat now consumes folder-bound assets in thread preferred list, gallery send ranking, and AI image-reference collection fallback.
-   中文：相册 + Chat 消费任务——`DONE`：Gallery 文件夹增删改已落地；通讯录已提供形象照/动态图/表情包/参考图槽位选择；Chat 已接入文件夹绑定素材用于会话优先素材列表、发送素材排序与 AI 参考图回退采样。
+2. EN: Gallery + Chat consumption task — `DONE`: Gallery folder CRUD is landed; Contacts exposes profile-image/dynamic-media/emoji/reference slot pickers with live binding-state/fallback hints and Gallery jump entry; Chat now consumes folder-bound assets in thread preferred list, gallery send ranking, and AI image-reference collection fallback; Chat Directory also surfaces profile-folder readiness summary.
+   中文：相册 + Chat 消费任务——`DONE`：Gallery 文件夹增删改已落地；通讯录已提供形象照/动态图/表情包/参考图槽位选择，并补齐实时绑定状态/默认回退提示与跳转相册入口；Chat 已接入文件夹绑定素材用于会话优先素材列表、发送素材排序与 AI 参考图回退采样；会话通讯录也已显示档案文件夹就绪摘要。
 3. EN: Safety task — `DONE (phase-1)`: bound folder delete + bound asset delete/replace now enforce second confirmation in Gallery UI; force-delete path remains available.
    中文：安全任务——`DONE（第一阶段）`：Gallery UI 中已对绑定文件夹删除与绑定素材删除/替换统一执行二次确认，并保留强制删除路径。
 4. EN: Fallback task — `IN_PROGRESS` module-level default policies:
@@ -477,3 +477,7 @@ Acceptance / 验收标准:
     2026-04-12 中文：已落地 Chat 会话级角色回退控制：当无参考图时默认回退为文字优先（不输出图片消息），并提供每会话可选开关以允许 AI 图片消息生成。
 23. 2026-04-12 EN: Landed module-local one-off media path in Chat: users can now choose import-before-send or one-off send without gallery import (with inline-size guard).
     2026-04-12 中文：已落地 Chat 模块本地单次媒体链路：用户可选择“先入库后发送”或“单次发送不入库”（含内联体积守卫）。
+24. 2026-04-17 EN: Landed asset-hub visibility polish: Contacts now shows per-slot folder binding status/fallback hints plus direct Gallery jump, and Chat Directory now surfaces profile-folder readiness summaries.
+    2026-04-17 中文：已落地素材中台可视化打磨：主通讯录现显示各槽位文件夹绑定状态/默认回退提示并提供相册直达入口；会话通讯录现显示档案文件夹就绪摘要。
+25. 2026-04-17 EN: Landed package-size optimization phase-1: router now lazy-loads page views, and Vite now separates framework/icons/markdown/vendor chunks to reduce main-bundle pressure while keeping runtime behavior unchanged.
+    2026-04-17 中文：已落地包体优化第一阶段：路由现按需懒加载页面视图，Vite 现对 framework/icons/markdown/vendor 进行拆包，在不改变运行逻辑的前提下降低主包压力。
