@@ -45,6 +45,7 @@ const mapVisualHint = ref({
   message: '',
 })
 const mapVisualPreviewUrl = ref('')
+const mapVisualQuickPreviewMap = reactive({})
 const mapOneOffVisualUrl = ref('')
 const mapOneOffVisualName = ref('')
 const mapVisualFileInputRef = ref(null)
@@ -104,6 +105,73 @@ const mapVisualSelectedAsset = computed(() => {
   return galleryStore.findAssetById(assetId)
 })
 
+const mapVisualQuickAssetOptions = computed(() => {
+  const merged = []
+  const pushAsset = (asset) => {
+    if (!asset?.id || merged.some((item) => item.id === asset.id)) return
+    merged.push(asset)
+  }
+
+  pushAsset(mapVisualSelectedAsset.value)
+  mapVisualAssetOptions.value.forEach((asset) => pushAsset(asset))
+  return merged.slice(0, 5)
+})
+
+const mapVisualQuickOverflowCount = computed(() =>
+  Math.max(0, mapVisualAssetOptions.value.length - mapVisualQuickAssetOptions.value.length),
+)
+
+const mapVisualQuickPreviewAssetIds = computed(() =>
+  mapVisualQuickAssetOptions.value
+    .map((asset) => (typeof asset?.id === 'string' ? asset.id.trim() : ''))
+    .filter(Boolean),
+)
+
+const mapVisualSelectionTitle = computed(() => {
+  if (mapVisualSelectedAsset.value) {
+    return t('当前地图背景素材', 'Current map background asset')
+  }
+  return t('尚未选择地图背景', 'No map background selected yet')
+})
+
+const mapVisualSelectionDescription = computed(() => {
+  if (mapVisualSelectedAsset.value) {
+    return t(
+      '当前地图会优先使用这张图作为背景；你可以点下方缩略图快速切换。',
+      'This asset is currently used as the map background. Tap a thumbnail below to switch quickly.',
+    )
+  }
+  return t(
+    '你可以直接点下方缩略图快速绑定地图背景，也可以继续去相册管理素材。',
+    'Tap a thumbnail below to bind a map background quickly, or continue managing assets in Gallery.',
+  )
+})
+
+const mapVisualBindingStatusText = computed(() => {
+  if (mapOneOffVisualUrl.value) {
+    return t(
+      '当前正在使用本次会话的单次背景；刷新页面后不会保留。',
+      'A one-off visual is active for this session and will not persist after refresh.',
+    )
+  }
+  if (resolvedMapVisualMode.value === 'gallery' && mapVisualSelectedAsset.value) {
+    return t(
+      '当前地图已启用素材库背景。',
+      'The map is currently using a gallery-backed visual.',
+    )
+  }
+  if (mapVisualSelectedAsset.value) {
+    return t(
+      '当前已记住一张素材库背景，但页面仍在默认视觉模式。',
+      'A gallery background is remembered, but the page is still using default visual mode.',
+    )
+  }
+  return t(
+    '当前没有记住任何素材库背景，地图会继续使用默认视觉。',
+    'No gallery background is remembered, so the map will continue using the default visual.',
+  )
+})
+
 const resolvedMapVisualMode = computed(() =>
   mapStore.resolveMapVisualMode({
     assetAvailable: Boolean(mapVisualSelectedAsset.value),
@@ -144,6 +212,51 @@ const onMapVisualAssetChange = (event) => {
   mapStore.setMapVisualAssetId(assetId)
   mapStore.dismissMapVisualOnboardingPrompt()
   mapVisualHint.value = { tone: '', message: '' }
+}
+
+const applyQuickMapVisualAsset = (assetId) => {
+  if (typeof assetId !== 'string' || !assetId.trim()) return
+  mapStore.setMapVisualMode('gallery')
+  mapStore.setMapVisualAssetId(assetId.trim())
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = { tone: '', message: '' }
+}
+
+const openGallery = () => {
+  router.push('/gallery')
+}
+
+const restoreDefaultMapVisual = () => {
+  if (mapOneOffVisualUrl.value) {
+    mapOneOffVisualUrl.value = ''
+    mapOneOffVisualName.value = ''
+  }
+  mapStore.setMapVisualMode('default')
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = {
+    tone: 'info',
+    message: t('已切回默认地图视觉。', 'Switched back to default map visual.'),
+  }
+}
+
+const clearMapVisualBinding = () => {
+  const assetId =
+    typeof mapVisualSettings.value?.assetId === 'string'
+      ? mapVisualSettings.value.assetId.trim()
+      : ''
+  if (!assetId) return
+  mapStore.setMapVisualAssetId('')
+  if (mapVisualSettings.value?.mode === 'gallery') {
+    mapStore.setMapVisualMode('default')
+  }
+  mapStore.dismissMapVisualOnboardingPrompt()
+  mapVisualHint.value = {
+    tone: 'info',
+    message: t(
+      '已清除地图背景绑定，当前回退为默认视觉。',
+      'Cleared map background binding; default visual is now active.',
+    ),
+  }
 }
 
 const readFileAsDataUrl = (file) =>
@@ -435,6 +548,13 @@ const refreshMapVisualPreview = async () => {
   }
 }
 
+const ensureMapVisualQuickPreview = async (assetId) => {
+  if (!assetId || mapVisualQuickPreviewMap[assetId]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  if (!previewUrl) return
+  mapVisualQuickPreviewMap[assetId] = previewUrl
+}
+
 watch(
   [() => mapVisualSettings.value?.mode, () => mapVisualSettings.value?.assetId, mapVisualSelectedAsset],
   async () => {
@@ -451,6 +571,22 @@ watch(
       }
     }
     await refreshMapVisualPreview()
+  },
+  { immediate: true },
+)
+
+watch(
+  mapVisualQuickPreviewAssetIds,
+  (assetIds) => {
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      void ensureMapVisualQuickPreview(assetId)
+    })
+    Object.keys(mapVisualQuickPreviewMap).forEach((assetId) => {
+      if (!activeSet.has(assetId)) {
+        delete mapVisualQuickPreviewMap[assetId]
+      }
+    })
   },
   { immediate: true },
 )
@@ -599,6 +735,9 @@ onBeforeUnmount(() => {
     clearInterval(runtimeTimer)
     runtimeTimer = null
   }
+  Object.keys(mapVisualQuickPreviewMap).forEach((assetId) => {
+    delete mapVisualQuickPreviewMap[assetId]
+  })
 })
 </script>
 
@@ -671,6 +810,92 @@ onBeforeUnmount(() => {
           <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-gray-500">
             {{ t('素材库暂无可用背景图，已自动回退默认模式。', 'No gallery asset available for map background; fallback stays on default mode.') }}
           </p>
+
+          <div
+            v-else
+            class="rounded-2xl border border-violet-100 bg-violet-50/40 p-3 space-y-3"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs font-semibold text-violet-800">{{ mapVisualSelectionTitle }}</p>
+                <p
+                  v-if="mapVisualSelectedAsset"
+                  class="mt-1 text-[11px] text-violet-700 truncate"
+                >
+                  {{ mapVisualSelectedAsset.name }}
+                </p>
+                <p class="mt-1 text-[11px] text-gray-500">
+                  {{ mapVisualSelectionDescription }}
+                </p>
+                <p class="mt-1 text-[11px] text-violet-700">
+                  {{ mapVisualBindingStatusText }}
+                </p>
+              </div>
+              <button
+                type="button"
+                @click="openGallery"
+                class="shrink-0 rounded-xl border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] text-violet-700"
+              >
+                {{ t('打开相册', 'Open Gallery') }}
+              </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="restoreDefaultMapVisual"
+                class="rounded-xl border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-600"
+              >
+                {{ t('恢复默认视觉', 'Use default visual') }}
+              </button>
+              <button
+                v-if="mapVisualSelectedAsset"
+                type="button"
+                @click="clearMapVisualBinding"
+                class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700"
+              >
+                {{ t('清除背景绑定', 'Clear bound asset') }}
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                v-for="asset in mapVisualQuickAssetOptions"
+                :key="`map-visual-chip-${asset.id}`"
+                type="button"
+                class="shrink-0 w-16"
+                @click="applyQuickMapVisualAsset(asset.id)"
+              >
+                <div
+                  class="w-16 h-16 rounded-xl overflow-hidden border bg-white"
+                  :class="
+                    mapVisualSelectedAsset?.id === asset.id
+                      ? 'border-violet-400 ring-2 ring-violet-100'
+                      : 'border-gray-200'
+                  "
+                >
+                  <img
+                    v-if="mapVisualQuickPreviewMap[asset.id]"
+                    :src="mapVisualQuickPreviewMap[asset.id]"
+                    class="w-full h-full object-cover"
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full flex items-center justify-center text-[9px] text-gray-400 bg-gray-50"
+                  >
+                    {{ t('加载中', 'Loading') }}
+                  </div>
+                </div>
+                <p class="mt-1 text-[10px] text-gray-500 line-clamp-2 text-left">{{ asset.name }}</p>
+              </button>
+              <div
+                v-if="mapVisualQuickOverflowCount > 0"
+                class="shrink-0 rounded-xl border border-dashed border-violet-200 px-3 py-2 text-[11px] text-violet-700"
+              >
+                +{{ mapVisualQuickOverflowCount }}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="mt-3 flex flex-wrap items-center gap-2">

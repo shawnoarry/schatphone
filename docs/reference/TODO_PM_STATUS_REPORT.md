@@ -54,6 +54,12 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：媒体体积守卫以及“使用中素材删除/替换”的安全确认机制已上线。
 5. EN: Contacts and Chat Directory now expose asset-folder readiness/fallback summaries, so folder bindings are no longer hidden inside pickers only.
    中文：主通讯录与会话通讯录现在都会显示素材文件夹的就绪/回退摘要，因此文件夹绑定不再只是藏在选择框里的配置。
+6. EN: Contacts folder-slot binding now also shows thumbnail previews for the first few bound assets, making it easier to verify the correct folder visually.
+   中文：主通讯录的文件夹槽位绑定现在还会显示前几张已绑定素材的缩略图，便于用户直接肉眼确认是否绑定正确。
+7. EN: Chat Directory role cards now also show a lightweight thumbnail strip for profile-bound folders, so thread-side asset readiness is visible at a glance.
+   中文：会话通讯录中的角色卡片现在也会显示一条轻量缩略图预览带，用来一眼确认档案绑定素材是否就绪。
+8. EN: Thread settings inside Chat Directory now show the active preferred-image preview plus a quick thumbnail strip for fast switching.
+   中文：会话通讯录中的“会话设定”弹层现在会显示当前优先图片预览，并提供一排缩略图用于快速切换。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -64,6 +70,10 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：地图基线已经可以在不依赖外部地图 API 的前提下运行。
 4. EN: Trip lifecycle, countdown, history, backup continuity, default/gallery visual modes, and optional provider-side visuals are already online.
    中文：行程生命周期、倒计时、历史记录、备份连续性、默认/素材库视觉模式，以及可选供应商视觉，都已上线。
+5. EN: Map visual settings now also surface the current bound background state plus a thumbnail strip for quick switching, so users can swap map visuals without leaving Map.
+   中文：地图视觉设置现在还会显示当前绑定背景的状态，并提供缩略图快速切换，因此用户无需离开地图页即可更换地图视觉。
+6. EN: Map now also supports one-tap default restore and clearing the remembered gallery binding, so users can recover to baseline visuals without manual cleanup.
+   中文：地图现在还支持一键恢复默认视觉，以及清除已记住的素材库背景绑定，因此用户无需手动清理也能快速回到基础视觉。
 
 ### 3.5 Storage, backup, and language / 存储、备份与语言
 1. EN: Local persistence baseline is stable with backup export/import and diagnostics.
@@ -174,3 +184,13 @@ Source / 来源: `TODO_ROADMAP.md`
    2026-04-17 中文：同步素材中台可视化打磨：主通讯录新增槽位级文件夹状态/默认回退提示，会话通讯录新增档案文件夹就绪摘要。
 7. 2026-04-17 EN: Synced package-size optimization phase-1: router now lazy-loads page views and Vite now splits framework/icons/markdown/vendor chunks.
    2026-04-17 中文：同步包体优化第一阶段：路由现按需懒加载页面视图，Vite 现对 framework/icons/markdown/vendor 进行拆包。
+8. 2026-04-17 EN: Synced asset-hub preview polish: Contacts folder-slot binding now shows the first few bound thumbnails as direct visual confirmation.
+   2026-04-17 中文：同步素材中台预览打磨：主通讯录的文件夹槽位绑定现会显示前几张已绑定缩略图，作为直接视觉确认。
+9. 2026-04-17 EN: Synced Chat Directory preview polish: role cards now surface profile-folder thumbnails in addition to text summaries.
+   2026-04-17 中文：同步会话通讯录预览打磨：角色卡片现已在文字摘要之外显示档案文件夹缩略图。
+10. 2026-04-17 EN: Synced thread-meta preview polish: thread settings now show active preferred-image preview and quick thumbnail switching.
+    2026-04-17 中文：同步会话设定预览打磨：会话设定现显示当前优先图片预览，并支持缩略图快速切换。
+11. 2026-04-17 EN: Synced map-visual quick-switch polish: Map now shows current background state, direct Gallery jump, and thumbnail-based quick switching.
+    2026-04-17 中文：同步地图视觉快速切换打磨：地图现显示当前背景状态、相册直达入口，以及基于缩略图的快速切换。
+12. 2026-04-17 EN: Synced map-visual recovery polish: Map now supports one-tap default restore plus clearing remembered gallery binding in place.
+    2026-04-17 中文：同步地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。

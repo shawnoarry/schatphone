@@ -481,3 +481,13 @@ Acceptance / 验收标准:
     2026-04-17 中文：已落地素材中台可视化打磨：主通讯录现显示各槽位文件夹绑定状态/默认回退提示并提供相册直达入口；会话通讯录现显示档案文件夹就绪摘要。
 25. 2026-04-17 EN: Landed package-size optimization phase-1: router now lazy-loads page views, and Vite now separates framework/icons/markdown/vendor chunks to reduce main-bundle pressure while keeping runtime behavior unchanged.
     2026-04-17 中文：已落地包体优化第一阶段：路由现按需懒加载页面视图，Vite 现对 framework/icons/markdown/vendor 进行拆包，在不改变运行逻辑的前提下降低主包压力。
+26. 2026-04-17 EN: Landed asset-hub preview polish in Contacts: each folder-slot binding now shows the first few bound thumbnails so users can visually confirm the correct folder content.
+    2026-04-17 中文：已落地主通讯录中的素材中台预览打磨：每个文件夹槽位绑定现在会显示前几张缩略图，方便用户直接确认是否绑定到正确内容。
+27. 2026-04-17 EN: Landed Chat Directory preview polish: each bound role card now surfaces a lightweight thumbnail strip for profile-folder assets.
+    2026-04-17 中文：已落地会话通讯录预览打磨：每个已绑定角色卡片现会显示档案文件夹素材的轻量缩略图带。
+28. 2026-04-17 EN: Landed thread-meta preview polish in Chat Directory: thread settings now show the active preferred-image preview plus a quick thumbnail strip for override switching.
+    2026-04-17 中文：已落地会话通讯录中的会话设定预览打磨：会话设定现显示当前优先图片预览，并提供覆写切换用的缩略图带。
+29. 2026-04-17 EN: Landed map-visual quick-switch polish: Map visual settings now show current background state, direct Gallery jump, and thumbnail-based quick switching.
+    2026-04-17 中文：已落地地图视觉快速切换打磨：地图视觉设置现显示当前背景状态、相册直达入口，以及基于缩略图的快速切换。
+30. 2026-04-17 EN: Landed map-visual recovery polish: Map now supports one-tap default restore and clearing the remembered gallery binding in place.
+    2026-04-17 中文：已落地地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。

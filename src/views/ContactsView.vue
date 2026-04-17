@@ -198,6 +198,29 @@ const draftFolderBindingSummaryMap = computed(() =>
   ),
 )
 
+const getDraftFolderPreviewAssetIds = (slotKey, limit = 3) => {
+  const summary = draftFolderBindingSummaryMap.value[slotKey]
+  if (!summary || !Array.isArray(summary.assetIds)) return []
+  return summary.assetIds.slice(0, limit)
+}
+
+const getDraftFolderPreviewOverflowCount = (slotKey, limit = 3) => {
+  const summary = draftFolderBindingSummaryMap.value[slotKey]
+  const count = Number(summary?.assetCount) || 0
+  return Math.max(0, count - limit)
+}
+
+const draftPreviewKeepAliveAssetIds = computed(() => {
+  const previewIds = [
+    ...availableAssets.value.map((asset) => asset.id),
+    ...Object.keys(draftFolderBindingSummaryMap.value).flatMap((slotKey) =>
+      getDraftFolderPreviewAssetIds(slotKey, 3),
+    ),
+  ]
+
+  return [...new Set(previewIds.filter((assetId) => typeof assetId === 'string' && assetId.trim()))]
+})
+
 const getDraftFolderBindingSummary = (slotKey) =>
   draftFolderBindingSummaryMap.value[slotKey] || {
     slotKey,
@@ -263,12 +286,12 @@ const ensureDraftAssetPreview = async (assetId) => {
 }
 
 watch(
-  availableAssets,
-  (assets) => {
+  draftPreviewKeepAliveAssetIds,
+  (assetIds) => {
     if (!showProfileModal.value) return
-    const activeSet = new Set(assets.map((item) => item.id))
-    assets.forEach((asset) => {
-      void ensureDraftAssetPreview(asset.id)
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      void ensureDraftAssetPreview(assetId)
     })
     Object.keys(draftPreviewMap).forEach((assetId) => {
       if (!activeSet.has(assetId)) {
@@ -762,6 +785,28 @@ onBeforeUnmount(() => {
               {{ t('前往相册', 'Open Gallery') }}
             </button>
           </div>
+          <div v-if="getDraftFolderPreviewAssetIds('profileImage').length > 0" class="flex items-center gap-1.5">
+            <div
+              v-for="assetId in getDraftFolderPreviewAssetIds('profileImage')"
+              :key="`profileImage-preview-${assetId}`"
+              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+            >
+              <img
+                v-if="draftPreviewMap[assetId]"
+                :src="draftPreviewMap[assetId]"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                {{ t('加载中', 'Loading') }}
+              </div>
+            </div>
+            <span
+              v-if="getDraftFolderPreviewOverflowCount('profileImage') > 0"
+              class="text-[10px] text-gray-500"
+            >
+              +{{ getDraftFolderPreviewOverflowCount('profileImage') }}
+            </span>
+          </div>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -810,6 +855,28 @@ onBeforeUnmount(() => {
             >
               {{ t('前往相册', 'Open Gallery') }}
             </button>
+          </div>
+          <div v-if="getDraftFolderPreviewAssetIds('dynamicMedia').length > 0" class="flex items-center gap-1.5">
+            <div
+              v-for="assetId in getDraftFolderPreviewAssetIds('dynamicMedia')"
+              :key="`dynamicMedia-preview-${assetId}`"
+              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+            >
+              <img
+                v-if="draftPreviewMap[assetId]"
+                :src="draftPreviewMap[assetId]"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                {{ t('加载中', 'Loading') }}
+              </div>
+            </div>
+            <span
+              v-if="getDraftFolderPreviewOverflowCount('dynamicMedia') > 0"
+              class="text-[10px] text-gray-500"
+            >
+              +{{ getDraftFolderPreviewOverflowCount('dynamicMedia') }}
+            </span>
           </div>
         </div>
 
@@ -860,6 +927,28 @@ onBeforeUnmount(() => {
               {{ t('前往相册', 'Open Gallery') }}
             </button>
           </div>
+          <div v-if="getDraftFolderPreviewAssetIds('emojiPack').length > 0" class="flex items-center gap-1.5">
+            <div
+              v-for="assetId in getDraftFolderPreviewAssetIds('emojiPack')"
+              :key="`emojiPack-preview-${assetId}`"
+              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+            >
+              <img
+                v-if="draftPreviewMap[assetId]"
+                :src="draftPreviewMap[assetId]"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                {{ t('加载中', 'Loading') }}
+              </div>
+            </div>
+            <span
+              v-if="getDraftFolderPreviewOverflowCount('emojiPack') > 0"
+              class="text-[10px] text-gray-500"
+            >
+              +{{ getDraftFolderPreviewOverflowCount('emojiPack') }}
+            </span>
+          </div>
         </div>
 
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -908,6 +997,28 @@ onBeforeUnmount(() => {
             >
               {{ t('前往相册', 'Open Gallery') }}
             </button>
+          </div>
+          <div v-if="getDraftFolderPreviewAssetIds('imageReference').length > 0" class="flex items-center gap-1.5">
+            <div
+              v-for="assetId in getDraftFolderPreviewAssetIds('imageReference')"
+              :key="`imageReference-preview-${assetId}`"
+              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+            >
+              <img
+                v-if="draftPreviewMap[assetId]"
+                :src="draftPreviewMap[assetId]"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
+                {{ t('加载中', 'Loading') }}
+              </div>
+            </div>
+            <span
+              v-if="getDraftFolderPreviewOverflowCount('imageReference') > 0"
+              class="text-[10px] text-gray-500"
+            >
+              +{{ getDraftFolderPreviewOverflowCount('imageReference') }}
+            </span>
           </div>
         </div>
       </div>

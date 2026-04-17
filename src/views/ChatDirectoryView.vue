@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
@@ -108,6 +108,7 @@ const selectedRoleTemplateId = ref(roleMetaTemplatePresets[0]?.id || '')
 const selectedServiceTemplateId = ref(serviceTemplatePresets[0]?.id || '')
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
+const rolePreviewMap = reactive({})
 let uiNoticeTimerId = null
 
 const showUiNotice = (type, message, durationMs = 2200) => {
@@ -266,6 +267,117 @@ const roleFolderBindingSummary = (contact) => {
   )
 }
 
+const buildRoleFolderPreviewMeta = (contact, limit = 3) => {
+  if (!contact?.id) {
+    return {
+      assetIds: [],
+      totalCount: 0,
+    }
+  }
+
+  const contract = getRoleBindingContract(contact.id)
+  const summaries = summarizeRoleAssetFolderBindings(
+    galleryStore,
+    contract.assets?.profileAssetFolderBindings,
+  )
+
+  const assetIds = []
+  summaries.forEach((summary) => {
+    if (assetIds.length >= limit || !Array.isArray(summary.assetIds)) return
+    summary.assetIds.forEach((assetId) => {
+      if (assetIds.length >= limit) return
+      if (typeof assetId !== 'string' || !assetId.trim() || assetIds.includes(assetId)) return
+      assetIds.push(assetId)
+    })
+  })
+
+  const totalCount = summaries.reduce((sum, summary) => sum + (summary.assetCount || 0), 0)
+
+  return {
+    assetIds,
+    totalCount,
+  }
+}
+
+const visibleRolePreviewMetaMap = computed(() =>
+  Object.fromEntries(
+    filteredRoleBindings.value.map((contact) => [Number(contact.id), buildRoleFolderPreviewMeta(contact, 3)]),
+  ),
+)
+
+const getRolePreviewAssetIds = (contactId) => {
+  const meta = visibleRolePreviewMetaMap.value[Number(contactId)]
+  return Array.isArray(meta?.assetIds) ? meta.assetIds : []
+}
+
+const getRolePreviewOverflowCount = (contactId) => {
+  const meta = visibleRolePreviewMetaMap.value[Number(contactId)]
+  const totalCount = Number(meta?.totalCount) || 0
+  const previewCount = Array.isArray(meta?.assetIds) ? meta.assetIds.length : 0
+  return Math.max(0, totalCount - previewCount)
+}
+
+const ensureRolePreview = async (assetId) => {
+  if (!assetId || rolePreviewMap[assetId]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  if (!previewUrl) return
+  rolePreviewMap[assetId] = previewUrl
+}
+
+const roleMetaSelectedAssetOption = computed(() => {
+  const selectedId =
+    typeof roleMetaDraft.preferredImageAssetId === 'string' ? roleMetaDraft.preferredImageAssetId.trim() : ''
+  if (!selectedId) return null
+  return roleMetaAssetOptions.value.find((asset) => asset.id === selectedId) || null
+})
+
+const roleMetaDefaultAssetOption = computed(() => roleMetaAssetOptions.value[0] || null)
+
+const roleMetaPreviewLeadOption = computed(
+  () => roleMetaSelectedAssetOption.value || roleMetaDefaultAssetOption.value,
+)
+
+const roleMetaPreviewTitle = computed(() => {
+  if (roleMetaSelectedAssetOption.value) {
+    return t('当前会话优先素材', 'Current thread preferred asset')
+  }
+  if (roleMetaDefaultAssetOption.value) {
+    return t('当前使用档案默认素材', 'Currently using profile default asset')
+  }
+  return ''
+})
+
+const roleMetaPreviewDescription = computed(() => {
+  if (roleMetaSelectedAssetOption.value) {
+    return t(
+      '这张图会优先作为本会话的图片参考与预览来源。',
+      'This asset is currently preferred for this chat thread.',
+    )
+  }
+  if (roleMetaDefaultAssetOption.value) {
+    return t(
+      '当前没有单独覆盖，会沿用角色档案绑定的默认素材。',
+      'No thread-level override is active, so the profile-bound default remains in use.',
+    )
+  }
+  return ''
+})
+
+const roleMetaQuickPreviewOptions = computed(() => roleMetaAssetOptions.value.slice(0, 4))
+
+const roleMetaPreviewKeepAliveAssetIds = computed(() => {
+  const ids = []
+  const pushAssetId = (assetId) => {
+    const normalized = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalized || ids.includes(normalized)) return
+    ids.push(normalized)
+  }
+
+  pushAssetId(roleMetaPreviewLeadOption.value?.id)
+  roleMetaQuickPreviewOptions.value.forEach((asset) => pushAssetId(asset.id))
+  return ids
+})
+
 const roleMetaAssetOptions = computed(() => {
   if (!editingRoleContactId.value) return []
   const contract = getRoleBindingContract(editingRoleContactId.value)
@@ -353,6 +465,28 @@ const roleMetaAssetContextLabel = computed(() => {
     `Source profile: ${profileName} (pack ${packCount} · folder ${folderCount})`,
   )
 })
+
+watch(
+  () =>
+    [...new Set(
+      [
+        ...filteredRoleBindings.value.flatMap((contact) => getRolePreviewAssetIds(contact.id)),
+        ...roleMetaPreviewKeepAliveAssetIds.value,
+      ],
+    )],
+  (assetIds) => {
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      void ensureRolePreview(assetId)
+    })
+    Object.keys(rolePreviewMap).forEach((assetId) => {
+      if (!activeSet.has(assetId)) {
+        delete rolePreviewMap[assetId]
+      }
+    })
+  },
+  { immediate: true },
+)
 
 const selectedRoleCount = computed(() =>
   filteredRoleIds.value.filter((id) => selectedContactIdSet.value.has(id)).length,
@@ -818,6 +952,9 @@ const applyServicePresetToSelected = () => {
 
 onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
+  Object.keys(rolePreviewMap).forEach((assetId) => {
+    delete rolePreviewMap[assetId]
+  })
 })
 </script>
 
@@ -1041,6 +1178,28 @@ onBeforeUnmount(() => {
             <p class="text-[11px] text-gray-400 truncate">
               {{ roleFolderBindingSummary(contact) }}
             </p>
+            <div v-if="getRolePreviewAssetIds(contact.id).length > 0" class="mt-1 flex items-center gap-1.5">
+              <div
+                v-for="assetId in getRolePreviewAssetIds(contact.id)"
+                :key="`chat-role-preview-${contact.id}-${assetId}`"
+                class="w-7 h-7 rounded-md overflow-hidden bg-gray-100 border border-gray-200"
+              >
+                <img
+                  v-if="rolePreviewMap[assetId]"
+                  :src="rolePreviewMap[assetId]"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-[8px] text-gray-400">
+                  {{ t('加载中', 'Loading') }}
+                </div>
+              </div>
+              <span
+                v-if="getRolePreviewOverflowCount(contact.id) > 0"
+                class="text-[10px] text-gray-500"
+              >
+                +{{ getRolePreviewOverflowCount(contact.id) }}
+              </span>
+            </div>
             <p v-if="preferredImageAssetLabel(contact)" class="text-[11px] text-gray-400 truncate">
               {{ t('会话优先素材', 'Thread preferred asset') }}: {{ preferredImageAssetLabel(contact) }}
             </p>
@@ -1322,6 +1481,67 @@ onBeforeUnmount(() => {
               : t('该角色档案未绑定素材包，请先在主通讯录中绑定。', 'No profile asset pack yet. Bind assets in main Contacts first.')
           }}
         </p>
+        <div v-if="roleMetaPreviewLeadOption" class="space-y-2">
+          <div class="rounded-2xl border border-violet-100 bg-violet-50/40 p-3 flex items-center gap-3">
+            <div class="w-16 h-16 rounded-xl overflow-hidden bg-white border border-violet-100 shrink-0">
+              <img
+                v-if="rolePreviewMap[roleMetaPreviewLeadOption.id]"
+                :src="rolePreviewMap[roleMetaPreviewLeadOption.id]"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                {{ t('加载中', 'Loading') }}
+              </div>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-violet-800 truncate">{{ roleMetaPreviewTitle }}</p>
+              <p class="text-[11px] text-violet-700 truncate">{{ roleMetaPreviewLeadOption.label }}</p>
+              <p class="text-[11px] text-gray-500 mt-1">{{ roleMetaPreviewDescription }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              type="button"
+              @click="roleMetaDraft.preferredImageAssetId = ''"
+              class="shrink-0 rounded-xl border px-2.5 py-2 text-[11px]"
+              :class="
+                roleMetaSelectedAssetOption
+                  ? 'border-gray-200 bg-white text-gray-600'
+                  : 'border-violet-300 bg-violet-50 text-violet-700'
+              "
+            >
+              {{ t('跟随档案默认', 'Use profile default') }}
+            </button>
+
+            <button
+              v-for="asset in roleMetaQuickPreviewOptions"
+              :key="`role-meta-preview-chip-${asset.id}`"
+              type="button"
+              @click="roleMetaDraft.preferredImageAssetId = asset.id"
+              class="shrink-0 w-14"
+            >
+              <div
+                class="w-14 h-14 rounded-xl overflow-hidden border"
+                :class="
+                  roleMetaDraft.preferredImageAssetId === asset.id
+                    ? 'border-violet-400 ring-2 ring-violet-100'
+                    : 'border-gray-200'
+                "
+              >
+                <img
+                  v-if="rolePreviewMap[asset.id]"
+                  :src="rolePreviewMap[asset.id]"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400 bg-gray-50">
+                  {{ t('加载中', 'Loading') }}
+                </div>
+              </div>
+              <p class="mt-1 text-[10px] text-gray-500 line-clamp-2 text-left">{{ asset.label }}</p>
+            </button>
+          </div>
+        </div>
         <div class="space-y-1">
           <p class="text-xs text-gray-500">{{ t('快捷关系模板', 'Quick Relationship Templates') }}</p>
           <div class="flex flex-wrap gap-2">
