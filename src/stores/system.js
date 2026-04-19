@@ -1825,6 +1825,7 @@ export const useSystemStore = defineStore('system', () => {
       return {
         handled: false,
         reason: 'no_due_task',
+        queueAdvanced: false,
       }
     }
 
@@ -1836,6 +1837,7 @@ export const useSystemStore = defineStore('system', () => {
         reason: policy.enabled ? 'invoke_disabled' : 'module_disabled',
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
+        queueAdvanced: true,
       }
     }
 
@@ -1848,16 +1850,19 @@ export const useSystemStore = defineStore('system', () => {
         reason: 'cooldown',
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
+        queueAdvanced: true,
       }
     }
 
     const handler = aiAutomationHandlers.get(nextTask.moduleKey)
     if (typeof handler !== 'function') {
+      deferAiAutomationTask(nextTask.id, now + cooldownMs)
       return {
         handled: false,
-        reason: 'handler_missing',
+        reason: 'handler_missing_deferred',
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
+        queueAdvanced: true,
       }
     }
 
@@ -1869,6 +1874,7 @@ export const useSystemStore = defineStore('system', () => {
         reason: 'lock_busy',
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
+        queueAdvanced: false,
       }
     }
 
@@ -1890,6 +1896,7 @@ export const useSystemStore = defineStore('system', () => {
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
         result,
+        queueAdvanced: true,
       }
     } catch (error) {
       const attempts = Math.max(0, toInt(nextTask.attempts, 0)) + 1
@@ -1918,6 +1925,7 @@ export const useSystemStore = defineStore('system', () => {
         reason: shouldDrop ? 'handler_error_dropped' : 'handler_error_retry',
         moduleKey: nextTask.moduleKey,
         taskId: nextTask.id,
+        queueAdvanced: true,
       }
     } finally {
       releaseAutoExecution(nextTask.moduleKey)

@@ -205,6 +205,49 @@ describe('system automation controls', () => {
     expect(store.getAiAutomationQueueSnapshot().length).toBe(0)
   })
 
+  test('defers handler-missing tasks so later modules can continue', async () => {
+    const store = useSystemStore()
+    store.settings.aiAutomation.masterEnabled = true
+    store.settings.aiAutomation.modules.chat.enabled = true
+    store.settings.aiAutomation.modules.map.enabled = true
+    store.settings.aiAutomation.modules.chat.priority = 100
+    store.settings.aiAutomation.modules.map.priority = 10
+
+    const handledModules = []
+    store.registerAiAutomationHandler('map', async () => {
+      handledModules.push('map')
+      return { ok: true }
+    })
+
+    const now = Date.now()
+    const queuedChat = store.enqueueAiAutomationTask({
+      moduleKey: 'chat',
+      targetId: 'contact:9',
+      dueAt: now,
+    })
+    const queuedMap = store.enqueueAiAutomationTask({
+      moduleKey: 'map',
+      targetId: 'map:auto',
+      dueAt: now,
+    })
+
+    expect(queuedChat.accepted).toBe(true)
+    expect(queuedMap.accepted).toBe(true)
+
+    const first = await store.runAiAutomationQueueTick(now)
+    expect(first.handled).toBe(false)
+    expect(first.reason).toBe('handler_missing_deferred')
+    expect(first.queueAdvanced).toBe(true)
+
+    const deferredChat = store.getAiAutomationQueueSnapshot({ moduleKey: 'chat' })[0]
+    expect(deferredChat?.dueAt).toBeGreaterThan(now)
+
+    const second = await store.runAiAutomationQueueTick(now)
+    expect(second.handled).toBe(true)
+    expect(second.moduleKey).toBe('map')
+    expect(handledModules).toEqual(['map'])
+  })
+
   test('supports runtime policy for quiet hours and notify-only mode', () => {
     const store = useSystemStore()
     store.settings.aiAutomation.masterEnabled = true

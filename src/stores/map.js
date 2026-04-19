@@ -378,6 +378,23 @@ export const useMapStore = defineStore('map', () => {
     }
   })
 
+  const useChineseSystemCopy = () =>
+    String(getSystemStore().settings?.system?.language || '').toLowerCase().startsWith('zh')
+
+  const resolveMapAutomationTaskKind = (task = {}) => {
+    const reason = typeof task?.reason === 'string' ? task.reason.trim() : ''
+    const source = typeof task?.source === 'string' ? task.source.trim() : ''
+    const targetId = typeof task?.targetId === 'string' ? task.targetId.trim() : ''
+
+    if (reason === 'map_visual_refresh' || targetId === 'map_visual' || source.startsWith('map_manual')) {
+      return 'visual'
+    }
+    if (reason === 'map:auto' || targetId === 'map:auto' || source === 'map_background_tick') {
+      return 'background'
+    }
+    return 'background'
+  }
+
   const ensureMapAutomationHandlerRegistered = () => {
     if (mapAutomationHandlerRegistered) return true
     const systemStore = getSystemStore()
@@ -761,7 +778,7 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
-  const mapAutomationTaskHandler = async (task, context = {}) => {
+  const executeMapVisualAutomationTask = async (task, context = {}) => {
     const systemStore = getSystemStore()
     const now = Number.isFinite(Number(context?.now)) ? Number(context.now) : Date.now()
     const settings = normalizeMapVisualSettings(mapVisualSettings.value)
@@ -804,6 +821,7 @@ export const useMapStore = defineStore('map', () => {
 
     return {
       ok: true,
+      kind: 'visual',
       mode: settings.mode,
       assetId: settings.assetId,
       providerMode: providerResult.mode,
@@ -811,12 +829,68 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
+  const executeMapBackgroundAutomationTask = async (task, context = {}) => {
+    const systemStore = getSystemStore()
+    const now = Number.isFinite(Number(context?.now)) ? Number(context.now) : Date.now()
+    const useChinese = useChineseSystemCopy()
+    const locationText =
+      typeof task?.payload?.locationText === 'string' && task.payload.locationText.trim()
+        ? task.payload.locationText.trim()
+        : currentLocationText.value || ''
+    const minutes = Number(task?.payload?.minutes)
+    const distanceKm = Number(task?.payload?.distanceKm)
+    const summary = [
+      locationText || (useChinese ? '定位状态已同步。' : 'Location status synced.'),
+      Number.isFinite(distanceKm) && distanceKm > 0
+        ? `${useChinese ? '预计距离' : 'Distance'}: ${distanceKm}km`
+        : '',
+      Number.isFinite(minutes) && minutes > 0
+        ? `${useChinese ? '预计时长' : 'ETA'}: ${minutes}${useChinese ? '分钟' : 'min'}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+
+    if (systemStore.isLocked) {
+      systemStore.addNotification({
+        title: useChinese ? '地图后台更新' : 'Map background update',
+        content: summary || (useChinese ? '地图状态已更新。' : 'Map status updated.'),
+        icon: 'fas fa-map-location-dot',
+        route: '/map',
+        source: 'map_auto_update',
+        createdAt: now,
+      })
+    }
+
+    systemStore.addApiReport({
+      level: 'info',
+      module: 'map',
+      action: 'auto_background_update',
+      message: summary || (useChinese ? '地图后台状态已更新。' : 'Map background status updated.'),
+      createdAt: now,
+    })
+
+    return {
+      ok: true,
+      kind: 'background',
+      summary,
+    }
+  }
+
+  const mapAutomationTaskHandler = async (task, context = {}) => {
+    const taskKind = resolveMapAutomationTaskKind(task)
+    if (taskKind === 'visual') {
+      return executeMapVisualAutomationTask(task, context)
+    }
+    return executeMapBackgroundAutomationTask(task, context)
+  }
+
   const drainMapAutomationQueue = async (maxRounds = 2) => {
     const systemStore = getSystemStore()
     const rounds = Math.max(1, toInt(maxRounds, 2))
     for (let i = 0; i < rounds; i += 1) {
       const result = await systemStore.runAiAutomationQueueTick(Date.now())
-      if (!result?.handled) break
+      if (!result?.handled && !result?.queueAdvanced) break
     }
   }
 
@@ -1292,6 +1366,8 @@ export const useMapStore = defineStore('map', () => {
     },
     { deep: false },
   )
+
+  ensureMapAutomationHandlerRegistered()
 
   return {
     addresses,

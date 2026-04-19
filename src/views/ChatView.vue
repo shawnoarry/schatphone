@@ -1598,7 +1598,7 @@ const drainAutomationQueue = async (maxRounds = 4) => {
   const rounds = Math.max(1, Math.floor(Number(maxRounds) || 1))
   for (let i = 0; i < rounds; i += 1) {
     const result = await systemStore.runAiAutomationQueueTick(Date.now())
-    if (!result?.handled) break
+    if (!result?.handled && !result?.queueAdvanced) break
   }
 }
 
@@ -3756,7 +3756,6 @@ onBeforeUnmount(() => {
   systemStore.unregisterAiAutomationHandler(CHAT_AUTOMATION_MODULE_KEY, chatAutomationTaskHandler)
   clearAutoInvokeTimer()
   cancelMessageLongPress()
-  systemStore.releaseAutoExecution(CHAT_AUTOMATION_MODULE_KEY)
   if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
   if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
   if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)

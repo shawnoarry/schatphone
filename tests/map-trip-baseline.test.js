@@ -177,6 +177,76 @@ describe('map trip baseline loop', () => {
     expect(mapStore.mapAutomationRuntime.lastProviderSummary).toContain('Wet roads')
   })
 
+  test('map background tasks and visual refresh share one dispatcher without overriding each other', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    systemStore.settings.aiAutomation.masterEnabled = true
+    systemStore.settings.aiAutomation.modules.map.enabled = true
+
+    const now = Date.now()
+    const queuedBackground = systemStore.enqueueAiAutomationTask(
+      {
+        moduleKey: 'map',
+        targetId: 'map:auto',
+        source: 'map_background_tick',
+        reason: 'map:auto',
+        dueAt: now,
+        payload: {
+          locationText: 'Seoul | Gangnam',
+          minutes: 12,
+          distanceKm: 4,
+        },
+      },
+      {
+        baseAt: now,
+      },
+    )
+    expect(queuedBackground.accepted).toBe(true)
+
+    const backgroundRun = await systemStore.runAiAutomationQueueTick(now)
+    expect(backgroundRun.handled).toBe(true)
+    expect(backgroundRun.result?.kind).toBe('background')
+    expect(systemStore.apiReports.some((item) => item.action === 'auto_background_update')).toBe(true)
+
+    mapStore.setMapAiVisualEnabled(true)
+    const visualResult = await mapStore.requestMapAiVisualRefresh({ source: 'test_dispatch' })
+    expect(visualResult.ok).toBe(true)
+    expect(['executed', 'queued']).toContain(visualResult.runtimeResult)
+
+    const visualTickAt = now + 30_000
+    const visualRun = await systemStore.runAiAutomationQueueTick(visualTickAt)
+    expect(visualRun.handled).toBe(true)
+    expect(visualRun.result?.kind).toBe('visual')
+    expect(mapStore.mapAutomationRuntime.lastExecuteAt).toBeGreaterThan(0)
+
+    const nextTickAt = visualTickAt + 30_000
+    const queuedBackgroundAgain = systemStore.enqueueAiAutomationTask(
+      {
+        moduleKey: 'map',
+        targetId: 'map:auto',
+        source: 'map_background_tick',
+        reason: 'map:auto',
+        dueAt: nextTickAt,
+        payload: {
+          locationText: 'Seoul | Mapo',
+          minutes: 18,
+          distanceKm: 7,
+        },
+      },
+      {
+        baseAt: nextTickAt,
+      },
+    )
+    expect(queuedBackgroundAgain.accepted).toBe(true)
+
+    const backgroundRunAgain = await systemStore.runAiAutomationQueueTick(nextTickAt)
+    expect(backgroundRunAgain.handled).toBe(true)
+    expect(backgroundRunAgain.result?.kind).toBe('background')
+    expect(
+      systemStore.apiReports.filter((item) => item.action === 'auto_background_update').length,
+    ).toBeGreaterThanOrEqual(2)
+  })
+
   test('startTrip can arm a background arrival push when real push is ready', async () => {
     const mapStore = useMapStore()
     const systemStore = useSystemStore()

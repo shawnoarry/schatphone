@@ -286,7 +286,7 @@ watch(
 
 const runBackupReminderCheck = () => {
   const result = systemStore.checkBackupReminderDue(Date.now(), {
-    title: t('SchatPhone 备份提醒', 'SchatPhone Backup Reminder'),
+    title: t('SchatPhone 澶囦唤鎻愰啋', 'SchatPhone Backup Reminder'),
     content: t(
       '建议导出一次备份，防止浏览器清理导致数据丢失。',
       'Consider exporting a backup to prevent data loss after browser cleanup.',
@@ -342,53 +342,11 @@ const enqueueMapAutomationTaskIfDue = (baseAt = Date.now()) => {
   return Boolean(result?.accepted)
 }
 
-const mapAutomationTaskHandler = async (task) => {
-  const locationText =
-    typeof task?.payload?.locationText === 'string' && task.payload.locationText.trim()
-      ? task.payload.locationText.trim()
-      : mapStore.currentLocationText || ''
-  const minutes = Number(task?.payload?.minutes)
-  const distanceKm = Number(task?.payload?.distanceKm)
-  const summary = [
-    locationText || t('定位状态已同步。', 'Location status synced.'),
-    Number.isFinite(distanceKm) && distanceKm > 0
-      ? `${t('预计距离', 'Distance')}: ${distanceKm}km`
-      : '',
-    Number.isFinite(minutes) && minutes > 0
-      ? `${t('预计时长', 'ETA')}: ${minutes}${t('分钟', 'min')}`
-      : '',
-  ]
-    .filter(Boolean)
-    .join(' · ')
-
-  if (systemStore.isLocked) {
-    systemStore.addNotification({
-      title: t('地图后台更新', 'Map background update'),
-      content: summary || t('地图状态已更新。', 'Map status updated.'),
-      icon: 'fas fa-map-location-dot',
-      route: '/map',
-      source: 'map_auto_update',
-      createdAt: Date.now(),
-    })
-  }
-
-  systemStore.addApiReport({
-    level: 'info',
-    module: 'map',
-    action: 'auto_background_update',
-    message: summary || t('地图后台状态已更新。', 'Map background status updated.'),
-  })
-
-  return {
-    ok: true,
-  }
-}
-
 const runAutomationRootTick = async () => {
   enqueueMapAutomationTaskIfDue(Date.now())
   for (let i = 0; i < 4; i += 1) {
     const result = await systemStore.runAiAutomationQueueTick(Date.now())
-    if (!result?.handled) break
+    if (!result?.handled && !result?.queueAdvanced) break
   }
 }
 
@@ -492,7 +450,7 @@ const buildChatAutoPushNotification = (contactId) => {
     id: `chat_auto_note_${contactId}`,
     title: contactName,
     content: serviceLike
-      ? t('有一条新的提醒，返回会话查看。', 'There is a new reminder. Open the thread to check it.')
+      ? t('有一条新提醒，返回会话查看。', 'There is a new reminder. Open the thread to check it.')
       : t('想找你聊聊，返回会话查看。', 'Wants to talk to you. Open the thread to check in.'),
     route: `/chat/${contactId}`,
     source: 'chat_auto_schedule',
@@ -659,7 +617,7 @@ onMounted(() => {
     runBackupReminderCheck()
   }
   document.addEventListener('visibilitychange', backupReminderVisibilityHandler, { passive: true })
-  systemStore.registerAiAutomationHandler(MAP_AUTOMATION_MODULE_KEY, mapAutomationTaskHandler)
+  mapStore.ensureMapAutomationHandlerRegistered()
   void runAutomationRootTick()
   automationTickTimerId = setInterval(() => {
     void runAutomationRootTick()
@@ -711,7 +669,6 @@ onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', shellBannerVisibilityHandler)
     shellBannerVisibilityHandler = null
   }
-  systemStore.unregisterAiAutomationHandler(MAP_AUTOMATION_MODULE_KEY, mapAutomationTaskHandler)
   if (customCssStyleEl) {
     customCssStyleEl.remove()
     customCssStyleEl = null
@@ -733,10 +690,10 @@ const lockPhone = () => {
 
 <template>
   <div class="fixed top-4 left-4 text-white text-xs opacity-50 hidden md:block z-[9999]">
-    <p>{{ t('SchatPhone 构建版本：1.2.0（开放）', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
-    <p>{{ t('主题', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
+    <p>{{ t('SchatPhone 鏋勫缓鐗堟湰锛?.2.0锛堝紑鏀撅級', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
+    <p>{{ t('涓婚', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
     <p v-if="loadingAI" class="text-yellow-400 font-bold">
-      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 思考中...', 'AI Thinking...') }}
+      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 鎬濊€冧腑...', 'AI Thinking...') }}
     </p>
   </div>
 
@@ -759,7 +716,7 @@ const lockPhone = () => {
           <button
             v-if="!isLockRoute"
             class="ml-1 w-5 h-5 rounded-full border border-current/30 flex items-center justify-center text-[10px] hover:bg-black/10"
-            :title="t('锁屏', 'Lock Screen')"
+            :title="t('閿佸睆', 'Lock Screen')"
             @click.stop="lockPhone"
           >
             <i class="fas fa-lock"></i>
@@ -921,3 +878,5 @@ const lockPhone = () => {
   transform: translateY(-10px) scale(0.98);
 }
 </style>
+
+
