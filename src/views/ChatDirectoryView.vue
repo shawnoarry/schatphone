@@ -9,12 +9,14 @@ import {
   resolveFolderBoundAssetIds,
   summarizeRoleAssetFolderBindings,
 } from '../lib/role-asset-folder-resolver'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 const { contacts, roleProfiles } = storeToRefs(chatStore)
 
 const activeSection = ref('roles')
@@ -631,16 +633,20 @@ const saveRoleMeta = () => {
   closeRoleMetaModal()
 }
 
-const unbindRole = (contact) => {
-  const ok = window.confirm(
-    `${t('确认解除会话绑定', 'Unbind this chat entry')}「${contact.name}」${t('吗？不会删除主通讯录档案。', '? Main profile will be kept.')}`,
-  )
+const unbindRole = async (contact) => {
+  const ok = await confirmDialog({
+    title: t('解除会话绑定', 'Unbind chat entry'),
+    message: `${t('确认解除会话绑定', 'Unbind this chat entry')}「${contact.name}」${t('吗？不会删除主通讯录档案。', '? Main profile will be kept.')}`,
+    confirmText: t('解除绑定', 'Unbind'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
   chatStore.unbindRoleContact(contact.id)
   showUiNotice('success', t('角色会话已解绑。', 'Role chat unbound.'))
 }
 
-const batchBindFilteredProfiles = () => {
+const batchBindFilteredProfiles = async () => {
   if (filteredUnboundRoleProfiles.value.length === 0) {
     showUiNotice(
       'warning',
@@ -648,12 +654,16 @@ const batchBindFilteredProfiles = () => {
     )
     return
   }
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('批量绑定角色会话', 'Batch bind role chats'),
+    message: t(
       `确认批量绑定当前筛选结果（${filteredUnboundRoleProfiles.value.length} 个角色）吗？`,
       `Bind all filtered profiles (${filteredUnboundRoleProfiles.value.length})?`,
     ),
-  )
+    confirmText: t('批量绑定', 'Bind all'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (!ok) return
 
   let successCount = 0
@@ -674,19 +684,23 @@ const batchBindFilteredProfiles = () => {
   )
 }
 
-const batchUnbindSelectedRoles = () => {
+const batchUnbindSelectedRoles = async () => {
   if (selectedRoleCount.value <= 0) {
     showUiNotice('warning', t('请先选择要解绑的角色会话。', 'Select role chats to unbind first.'))
     return
   }
 
   const targets = filteredRoleBindings.value.filter((contact) => isContactSelected(contact.id))
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('批量解绑角色会话', 'Batch unbind role chats'),
+    message: t(
       `确认批量解绑 ${targets.length} 个角色会话吗？不会删除主通讯录档案。`,
       `Unbind ${targets.length} role chats? Main profiles will be kept.`,
     ),
-  )
+    confirmText: t('批量解绑', 'Unbind all'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   let successCount = 0
@@ -767,28 +781,36 @@ const saveService = () => {
   closeServiceModal()
 }
 
-const removeService = (contact) => {
-  const ok = window.confirm(
-    `${t('确认删除服务会话对象', 'Delete service chat entry')}「${contact.name}」${t('吗？', '?')}`,
-  )
+const removeService = async (contact) => {
+  const ok = await confirmDialog({
+    title: t('删除服务对象', 'Delete service entry'),
+    message: `${t('确认删除服务会话对象', 'Delete service chat entry')}「${contact.name}」${t('吗？', '?')}`,
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
   chatStore.removeContact(contact.id)
   showUiNotice('success', t('服务对象已删除。', 'Service entry deleted.'))
 }
 
-const batchDeleteSelectedServices = () => {
+const batchDeleteSelectedServices = async () => {
   if (selectedServiceCount.value <= 0) {
     showUiNotice('warning', t('请先选择要删除的服务对象。', 'Select service entries to delete first.'))
     return
   }
 
   const targets = filteredServiceContacts.value.filter((contact) => isContactSelected(contact.id))
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('批量删除服务对象', 'Batch delete service entries'),
+    message: t(
       `确认批量删除 ${targets.length} 个服务会话对象吗？`,
       `Delete ${targets.length} service chat entries?`,
     ),
-  )
+    confirmText: t('批量删除', 'Delete all'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   let successCount = 0
@@ -844,7 +866,7 @@ const applyRoleTemplateToDraft = (templateId = selectedRoleTemplateId.value) => 
   roleMetaDraft.relationshipNote = roleTemplateNote(template)
 }
 
-const applyRoleTemplateToSelected = () => {
+const applyRoleTemplateToSelected = async () => {
   if (selectedRoleCount.value <= 0) {
     showUiNotice('warning', t('请先选择要套用模板的角色会话。', 'Select role chats before applying a template.'))
     return
@@ -864,12 +886,16 @@ const applyRoleTemplateToSelected = () => {
     return
   }
 
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('批量应用关系模板', 'Batch apply relationship template'),
+    message: t(
       `确认将模板「${roleTemplateLabel(template)}」批量应用到 ${targets.length} 个角色会话吗？`,
       `Apply template "${roleTemplateLabel(template)}" to ${targets.length} role chats?`,
     ),
-  )
+    confirmText: t('应用模板', 'Apply template'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (!ok) return
 
   let successCount = 0
@@ -900,7 +926,7 @@ const openCreateServiceFromPreset = (templateId) => {
   serviceDraft.bio = servicePresetBio(template)
 }
 
-const applyServicePresetToSelected = () => {
+const applyServicePresetToSelected = async () => {
   if (selectedServiceCount.value <= 0) {
     showUiNotice(
       'warning',
@@ -928,12 +954,16 @@ const applyServicePresetToSelected = () => {
     return
   }
 
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('批量应用服务模板', 'Batch apply service template'),
+    message: t(
       `确认将模板「${servicePresetTemplate(template)}」批量应用到 ${targets.length} 个服务对象吗？`,
       `Apply template "${servicePresetTemplate(template)}" to ${targets.length} service entries?`,
     ),
-  )
+    confirmText: t('应用模板', 'Apply template'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (!ok) return
 
   let successCount = 0

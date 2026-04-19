@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import AppDialogHost from './components/AppDialogHost.vue'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useMapStore } from './stores/map'
@@ -286,7 +287,7 @@ watch(
 
 const runBackupReminderCheck = () => {
   const result = systemStore.checkBackupReminderDue(Date.now(), {
-    title: t('SchatPhone 澶囦唤鎻愰啋', 'SchatPhone Backup Reminder'),
+    title: t('SchatPhone 备份提醒', 'SchatPhone Backup Reminder'),
     content: t(
       '建议导出一次备份，防止浏览器清理导致数据丢失。',
       'Consider exporting a backup to prevent data loss after browser cleanup.',
@@ -690,10 +691,10 @@ const lockPhone = () => {
 
 <template>
   <div class="fixed top-4 left-4 text-white text-xs opacity-50 hidden md:block z-[9999]">
-    <p>{{ t('SchatPhone 鏋勫缓鐗堟湰锛?.2.0锛堝紑鏀撅級', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
-    <p>{{ t('涓婚', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
+    <p>{{ t('SchatPhone 构建版本：1.2.0（开放）', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
+    <p>{{ t('主题', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
     <p v-if="loadingAI" class="text-yellow-400 font-bold">
-      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 鎬濊€冧腑...', 'AI Thinking...') }}
+      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 思考中...', 'AI Thinking...') }}
     </p>
   </div>
 
@@ -716,7 +717,7 @@ const lockPhone = () => {
           <button
             v-if="!isLockRoute"
             class="ml-1 w-5 h-5 rounded-full border border-current/30 flex items-center justify-center text-[10px] hover:bg-black/10"
-            :title="t('閿佸睆', 'Lock Screen')"
+            :title="t('锁屏', 'Lock Screen')"
             @click.stop="lockPhone"
           >
             <i class="fas fa-lock"></i>
@@ -759,6 +760,8 @@ const lockPhone = () => {
       <div v-if="showHomeIndicator" class="home-indicator" @click="goHome"></div>
     </div>
   </div>
+
+  <AppDialogHost />
 </template>
 
 <style scoped>

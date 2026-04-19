@@ -1,6 +1,6 @@
 ﻿# SchatPhone 架构说明
 
-Updated / 更新时间: 2026-04-12
+Updated / 更新时间: 2026-04-19
 
 ## 1. Architecture Goals / 架构目标
 
@@ -57,8 +57,8 @@ Responsibility / 职责：domain-split stores to avoid one oversized store.
   - `notifications`: lock-screen notification queue / 锁屏通知队列
   - `truthState`: system-owned truth entities/events for relationship continuity / 系统真值实体与事件时间线（关系连续性）
   - `isLocked`: lock state flag / 锁定状态标记
-  - `user`: profile, worldbook, chat status / 用户资料、世界书、聊天状态
-  - world-kernel planning note: current `user.worldBook` is single-text; target shape is `globalWorldview + knowledgePoints[] + bindings` / 世界内核规划说明：当前 `user.worldBook` 为单文本；目标形态是 `globalWorldview + knowledgePoints[] + 绑定关系`
+  - `user`: profile, `globalWorldview`, `knowledgePoints`, legacy `worldBook` alias, chat status / 用户资料、`globalWorldview`、`knowledgePoints`、旧 `worldBook` 别名、聊天状态
+  - world-kernel note: current production shape is `globalWorldview + knowledgePoints[] + bindings`, while `worldBook` stays mirrored only for backward compatibility / 世界内核说明：当前生产形态已是 `globalWorldview + knowledgePoints[] + bindings`，`worldBook` 仅作向后兼容镜像
 - `src/stores/chat.js`
   - global role profiles: `roleProfiles`
   - chat contact kind: `role/group/service/official`
@@ -185,8 +185,8 @@ Core routes / 核心路由：
   运行态会在关键动作写入真值事件（`user_message`、`manual_trigger`、`auto_trigger`、`assistant_reply`、`reroll`、`notify_only_skip`、`resume_settlement`）。
 - Prompt assembly reads a truth snapshot (`getChatTruthSnapshot`) to keep relationship continuity across providers.  
   提示词组装会读取真值快照（`getChatTruthSnapshot`），保证跨供应商关系连续性。
-- Prompt assembly currently injects worldbook text and should evolve to layered world-kernel assembly: `global worldview -> role-bound knowledge points -> conversation context`.  
-  提示词组装当前会注入世界书文本，后续应演进为分层世界内核组装：`全局世界观 -> 角色绑定知识点 -> 会话上下文`。
+- Prompt assembly now follows layered world-kernel assembly: `global worldview -> role-bound knowledge points -> conversation context`; `worldBook` is only a compatibility alias.  
+  提示词组装现已按分层世界内核执行：`全局世界观 -> 角色绑定知识点 -> 会话上下文`；`worldBook` 仅是兼容别名。
 - Chat context can attach recent user image references in the same AI request (OpenAI-compatible path attempts native URL transport, unsupported cases fall back to context-only cues).  
   Chat 上下文可在同一轮 AI 请求中附带近期用户参考图（OpenAI 兼容路径先尝试原生 URL，遇到不支持会自动回退为仅上下文线索）。
 - Local gallery file assets can be converted to data URLs under size guard and joined into the same request; overflow cases are downgraded to text-only cues.  
@@ -258,6 +258,6 @@ Rules / 规则：
 所有 AI 请求统一走 `src/lib/ai.js`。
 5. If route/schema/core interaction changes, update docs in same PR.  
 涉及路由/数据结构/主交互改动时，同步更新文档。
-6. If lock/i18n behavior changes, sync `README.md`, `docs/reference/PROJECT_STATUS.md`, and `docs/reference/SYNC_SNAPSHOT.md`.  
-涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`docs/reference/PROJECT_STATUS.md`、`docs/reference/SYNC_SNAPSHOT.md`。
+6. If lock/i18n behavior changes, sync `README.md`, `PROJECT_MASTER_GUIDE.md`, and `docs/reference/TODO_PM_STATUS_REPORT.md`.  
+涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`PROJECT_MASTER_GUIDE.md` 与 `docs/reference/TODO_PM_STATUS_REPORT.md`。
 

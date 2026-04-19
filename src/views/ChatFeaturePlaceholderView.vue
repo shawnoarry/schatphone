@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
@@ -15,6 +16,7 @@ const router = useRouter()
 const chatStore = useChatStore()
 const { contactsForList } = storeToRefs(chatStore)
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const featureMeta = computed(() => {
   const id = typeof route.params.feature === 'string' ? route.params.feature.trim() : ''
@@ -291,17 +293,21 @@ const normalizeAutoInvokeCheckpointsNow = () => {
   )
 }
 
-const clearAllThreadIdentityOverrides = () => {
+const clearAllThreadIdentityOverrides = async () => {
   if (!contacts.value.length) {
     showActionFeedback('warning', t('暂无会话可清理。', 'No conversations available.'))
     return
   }
-  const confirmed = window.confirm(
-    t(
+  const confirmed = await confirmDialog({
+    title: t('清理会话级身份覆写', 'Clear thread identity overrides'),
+    message: t(
       '确认清理全部会话级身份覆写吗？该操作不会删除主档案。',
       'Clear all thread-level identity overrides? Main profiles will be kept.',
     ),
-  )
+    confirmText: t('清理', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   let touched = 0
@@ -321,17 +327,21 @@ const clearAllThreadIdentityOverrides = () => {
   )
 }
 
-const clearAllModuleAvatarOverrides = () => {
+const clearAllModuleAvatarOverrides = async () => {
   if (!contacts.value.length) {
     showActionFeedback('warning', t('暂无联系人可清理。', 'No contacts available.'))
     return
   }
-  const confirmed = window.confirm(
-    t(
+  const confirmed = await confirmDialog({
+    title: t('清理模块级头像覆写', 'Clear module avatar overrides'),
+    message: t(
       '确认清理模块级头像覆写吗？会话级覆写与主档案不会被删除。',
       'Clear module-level avatar overrides? Thread overrides and main profiles are kept.',
     ),
-  )
+    confirmText: t('清理', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   let touched = 0
@@ -718,4 +728,3 @@ watch(
     </div>
   </div>
 </template>
-

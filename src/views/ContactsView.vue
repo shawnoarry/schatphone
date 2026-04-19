@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
@@ -14,6 +15,7 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const { user, settings } = storeToRefs(systemStore)
 const { roleProfiles, loadingAI } = storeToRefs(chatStore)
@@ -443,14 +445,19 @@ const saveProfile = () => {
   closeProfileModal()
 }
 
-const removeProfile = (profile) => {
+const removeProfile = async (profile) => {
   if (!profile?.id) return
   const boundHint = chatStore.isRoleProfileBound(profile.id)
     ? t('该角色已绑定会话，删除后会同步移除会话侧绑定。', 'This profile is bound to chat entries. Deleting it will remove those bindings too.')
     : t('删除后不可恢复。', 'This action cannot be undone.')
-  const ok = window.confirm(
-    `${t('确认删除角色档案', 'Delete role profile')}「${profile.name || ''}」？\n${boundHint}`,
-  )
+  const ok = await confirmDialog({
+    title: t('删除角色档案', 'Delete role profile'),
+    message: `${t('确认删除角色档案', 'Delete role profile')}「${profile.name || ''}」？`,
+    details: [boundHint],
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
   chatStore.removeRoleProfile(profile.id, { removeBindings: true })
   setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
+import { useDialog } from '../composables/useDialog'
 import {
   MEDIA_KIND,
   MEDIA_SIZE_SCENE,
@@ -17,6 +18,7 @@ const router = useRouter()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const {
   addresses,
@@ -297,12 +299,16 @@ const onMapVisualFilePicked = async (event) => {
   if (!(file instanceof File)) return
 
   try {
-    const shouldImportToGallery = window.confirm(
-      t(
+    const shouldImportToGallery = await confirmDialog({
+      title: t('应用地图背景', 'Apply map visual'),
+      message: t(
         '是否先导入素材库再应用？点击“取消”将仅本次使用，不入库。',
         'Import to gallery before applying? Click "Cancel" to apply as one-off without importing.',
       ),
-    )
+      confirmText: t('导入后应用', 'Import first'),
+      cancelText: t('仅本次使用', 'One-off use'),
+      tone: 'accent',
+    })
 
     if (!shouldImportToGallery) {
       const sizeGuard = validateMediaFileBySize(file, {

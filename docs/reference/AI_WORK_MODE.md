@@ -1,6 +1,6 @@
 ﻿# SchatPhone AI Work Mode / AI 工作模式
 
-Updated / 更新时间: 2026-03-14
+Updated / 更新时间: 2026-04-19
 
 Purpose / 用途: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.  
 给后续接手的 Codex、Claude 或其他 AI 编程助手一套统一执行方式。
@@ -18,8 +18,8 @@ Purpose / 用途: define a stable operating model for Codex, Claude, or any AI c
 
 - Track A: Immediate request track (`user-now`)  
 轨道 A：即时需求轨（用户当前请求）
-- Track B: Main roadmap track (`docs/reference/TASK_EXECUTION_PLAN.md`)  
-轨道 B：主线任务轨（`docs/reference/TASK_EXECUTION_PLAN.md`）
+- Track B: Main roadmap track (`TODO_ROADMAP.md`)  
+轨道 B：主线任务轨（`TODO_ROADMAP.md`）
 - Rule: user request takes priority, but roadmap status must be backfilled after each insertion.  
 规则：用户需求优先，但每次插单后必须回填主线进度，避免主线断档。
 
@@ -75,10 +75,11 @@ Each delivery should include / 每次交付统一包含：
 关键输入页必须保留显式保存动作与反馈。
 - If route/schema/core interaction changes, update:  
 若涉及路由/数据结构/核心交互改动，必须同步更新：
-  - `docs/reference/PROJECT_STATUS.md`
+  - `PROJECT_MASTER_GUIDE.md`
+  - `TODO_ROADMAP.md`
+  - `docs/reference/TODO_PM_STATUS_REPORT.md`
   - `docs/reference/ARCHITECTURE.md`
-  - `docs/reference/CHAT_PROGRESS.md` (if Chat domain changed) /（若涉及 Chat）
-  - `docs/reference/SYNC_SNAPSHOT.md`（源文档更新后同步快照）
+  - domain-specific reference docs when the change is feature-specific / 若变更只影响某一专题，再补对应专题参考文档
 
 ## 8. Definition of Done / 完成标准
 
@@ -102,14 +103,14 @@ Execution rules:
 1) Prioritize user natural-language requests, but always translate them into: goal, scope, acceptance, risk.
 2) Use dual-track execution:
    - Immediate request track
-   - Main roadmap track (docs/reference/TASK_EXECUTION_PLAN.md)
+   - Main roadmap track (`TODO_ROADMAP.md`)
 3) For every delivery, include:
    - modified files
    - key changes
    - user-visible results
    - validation results (lint/build/test)
    - impact on roadmap
-4) If route/schema/core interaction changes, update docs/reference/PROJECT_STATUS.md, docs/reference/ARCHITECTURE.md, and docs/reference/CHAT_PROGRESS.md (if Chat-related).
+4) If route/schema/core interaction changes, update `PROJECT_MASTER_GUIDE.md`, `TODO_ROADMAP.md`, `docs/reference/TODO_PM_STATUS_REPORT.md`, and `docs/reference/ARCHITECTURE.md`; add topic docs only when needed.
 5) Route AI calls only through src/lib/ai.js (no direct AI fetch in components).
 ```
 

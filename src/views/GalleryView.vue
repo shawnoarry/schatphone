@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
 import { useChatStore } from '../stores/chat'
@@ -10,6 +11,7 @@ const router = useRouter()
 const galleryStore = useGalleryStore()
 const chatStore = useChatStore()
 const { t } = useI18n()
+const { confirmDialog, promptDialog } = useDialog()
 
 const activeCategory = ref('all')
 const localImportCategory = ref('reference')
@@ -159,11 +161,16 @@ const importFromUrl = () => {
   setFeedback('success', t('URL 素材导入成功。', 'URL asset imported.'))
 }
 
-const renameAsset = (asset) => {
-  const nextName = window.prompt(
-    t('输入新的素材名称：', 'Input new asset name:'),
-    asset?.name || '',
-  )
+const renameAsset = async (asset) => {
+  const nextName = await promptDialog({
+    title: t('重命名素材', 'Rename asset'),
+    message: t('输入新的素材名称。', 'Input a new asset name.'),
+    inputPlaceholder: t('素材名称', 'Asset name'),
+    initialValue: asset?.name || '',
+    confirmText: t('保存', 'Save'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (nextName == null) return
   const ok = galleryStore.renameAsset(asset.id, nextName)
   if (ok) {
@@ -196,11 +203,16 @@ const createFolder = () => {
   setFeedback('success', t('文件夹已创建。', 'Folder created.'))
 }
 
-const renameFolder = (folder) => {
-  const nextName = window.prompt(
-    t('输入新的文件夹名称：', 'Input new folder name:'),
-    folder?.name || '',
-  )
+const renameFolder = async (folder) => {
+  const nextName = await promptDialog({
+    title: t('重命名文件夹', 'Rename folder'),
+    message: t('输入新的文件夹名称。', 'Input a new folder name.'),
+    inputPlaceholder: t('文件夹名称', 'Folder name'),
+    initialValue: folder?.name || '',
+    confirmText: t('保存', 'Save'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (nextName == null) return
   const ok = galleryStore.renameFolder(folder.id, nextName)
   if (ok) {
@@ -215,12 +227,16 @@ const updateFolderCategory = (folderId, category) => {
   }
 }
 
-const removeFolder = (folder) => {
+const removeFolder = async (folder) => {
   const assetCount = Array.isArray(folder?.assetIds) ? folder.assetIds.length : 0
   const roleBindingHits = getFolderRoleBindingHits(folder.id)
-  const confirmed = window.confirm(
-    [
-      t(`确认删除文件夹“${folder?.name || ''}”吗？`, `Delete folder "${folder?.name || ''}"?`),
+  const confirmed = await confirmDialog({
+    title: t('删除文件夹', 'Delete folder'),
+    message: t(
+      `确认删除文件夹“${folder?.name || ''}”吗？`,
+      `Delete folder "${folder?.name || ''}"?`,
+    ),
+    details: [
       assetCount > 0
         ? t(
             `该文件夹包含 ${assetCount} 项素材引用，删除后不会删除素材本体。`,
@@ -230,17 +246,24 @@ const removeFolder = (folder) => {
       roleBindingHits.length > 0
         ? `${t('角色档案绑定', 'Role profile binding')}: ${roleBindingHits.map((hit) => `${hit.profileName}(${hit.slotLabel})`).join(', ')}`
         : '',
-    ].join('\n'),
-  )
+    ],
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   if (roleBindingHits.length > 0) {
-    const secondConfirmed = window.confirm(
-      t(
+    const secondConfirmed = await confirmDialog({
+      title: t('解除绑定并继续', 'Unbind and continue'),
+      message: t(
         '该文件夹已绑定角色档案。继续删除将自动解除这些绑定，是否继续？',
         'This folder is bound to role profiles. Continue will auto-unbind these links. Continue?',
       ),
-    )
+      confirmText: t('继续删除', 'Continue'),
+      cancelText: t('取消', 'Cancel'),
+      tone: 'danger',
+    })
     if (!secondConfirmed) return
   }
 
@@ -420,27 +443,33 @@ const removeAsset = async (asset) => {
     ? `${t('角色档案绑定', 'Role profile binding')}: ${roleBindingHits.map((hit) => `${hit.profileName}(${hit.slotLabel})`).join(', ')}`
     : ''
 
-  const confirmed = window.confirm(
-    [
-      t(`确认删除素材“${asset.name}”吗？`, `Delete "${asset.name}"?`),
+  const confirmed = await confirmDialog({
+    title: t('删除素材', 'Delete asset'),
+    message: t(`确认删除素材“${asset.name}”吗？`, `Delete "${asset.name}"?`),
+    details: [
       usageText,
       roleBindText,
       guard.blocked
         ? t('该素材正在被使用，确认后将强制删除。', 'This asset is in use and will be force removed.')
         : t('删除后不可恢复。', 'Deletion cannot be undone.'),
-    ]
-      .filter(Boolean)
-      .join('\n'),
-  )
+    ],
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   if (roleBindingHits.length > 0) {
-    const secondConfirmed = window.confirm(
-      t(
+    const secondConfirmed = await confirmDialog({
+      title: t('解除绑定并继续', 'Unbind and continue'),
+      message: t(
         '该素材已绑定角色档案。继续删除将自动解除这些绑定，是否继续？',
         'This asset is bound to role profiles. Continue will auto-unbind these links. Continue?',
       ),
-    )
+      confirmText: t('继续删除', 'Continue'),
+      cancelText: t('取消', 'Cancel'),
+      tone: 'danger',
+    })
     if (!secondConfirmed) return
   }
 
@@ -481,40 +510,53 @@ const buildAssetBindingSummary = (asset) => {
   }
 }
 
-const confirmAssetReplace = (asset, modeLabel) => {
+const confirmAssetReplace = async (asset, modeLabel) => {
   const summary = buildAssetBindingSummary(asset)
-  const firstConfirmed = window.confirm(
-    [
-      t(
-        `确认替换素材“${asset.name}”(${modeLabel}) 吗？`,
-        `Replace "${asset.name}" (${modeLabel})?`,
-      ),
+  const firstConfirmed = await confirmDialog({
+    title: t('替换素材', 'Replace asset'),
+    message: t(
+      `确认替换素材“${asset.name}”(${modeLabel}) 吗？`,
+      `Replace "${asset.name}" (${modeLabel})?`,
+    ),
+    details: [
       t('替换后素材 ID 与绑定关系会保留。', 'Asset ID and bindings will be preserved after replace.'),
       summary.usageText,
       summary.roleBindText,
-    ]
-      .filter(Boolean)
-      .join('\n'),
-  )
+    ],
+    confirmText: t('继续', 'Continue'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
   if (!firstConfirmed) return false
 
   if (!summary.hasBindingRisk) return true
-  return window.confirm(
-    t(
+  return confirmDialog({
+    title: t('确认替换', 'Confirm replacement'),
+    message: t(
       '该素材存在绑定/使用关系。确认继续替换？',
       'This asset is bound/in use. Confirm replacement?',
     ),
-  )
+    confirmText: t('确认替换', 'Replace'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
 }
 
 const replaceAssetByUrl = async (asset) => {
   if (!asset?.id) return
-  const nextUrl = window.prompt(
-    t('输入新的 URL（http/https）：', 'Input new URL (http/https):'),
-    asset.sourceType === 'url' ? asset.sourceUrl || '' : '',
-  )
+  const nextUrl = await promptDialog({
+    title: t('URL 替换', 'Replace by URL'),
+    message: t('输入新的 URL（仅支持 http/https）。', 'Input a new URL (http/https only).'),
+    inputPlaceholder: 'https://',
+    initialValue: asset.sourceType === 'url' ? asset.sourceUrl || '' : '',
+    confirmText: t('保存并替换', 'Save and replace'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+    inputRequired: true,
+    inputRequiredMessage: t('请先输入 URL。', 'Please enter a URL first.'),
+  })
   if (nextUrl == null) return
-  if (!confirmAssetReplace(asset, t('URL 替换', 'URL replace'))) return
+  if (!(await confirmAssetReplace(asset, t('URL 替换', 'URL replace')))) return
 
   const result = await galleryStore.replaceAssetFromUrl(asset.id, {
     url: nextUrl,
@@ -538,9 +580,11 @@ const replaceAssetByUrl = async (asset) => {
 
 const openReplaceAssetFile = (asset) => {
   if (!asset?.id) return
-  if (!confirmAssetReplace(asset, t('本地文件替换', 'Local file replace'))) return
-  replaceTargetAssetId.value = asset.id
-  replaceFileInput.value?.click()
+  void (async () => {
+    if (!(await confirmAssetReplace(asset, t('本地文件替换', 'Local file replace')))) return
+    replaceTargetAssetId.value = asset.id
+    replaceFileInput.value?.click()
+  })()
 }
 
 const handleReplaceFileChange = async (event) => {

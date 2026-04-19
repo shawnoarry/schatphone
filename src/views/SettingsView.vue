@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import {
   getPersistenceCapabilities,
@@ -31,6 +32,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
@@ -272,13 +274,17 @@ const writeStorageAuditReport = ({
   })
 }
 
-const clearStorageReports = () => {
-  const ok = window.confirm(
-    t(
+const clearStorageReports = async () => {
+  const ok = await confirmDialog({
+    title: t('清理存储报告', 'Clear storage reports'),
+    message: t(
       '确认清理所有存储报告吗？此操作不会影响实际存档数据。',
       'Clear all storage reports? This will not affect actual saved data.',
     ),
-  )
+    confirmText: t('清理', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   const removed = systemStore.clearApiReports({ module: 'storage' })
@@ -881,12 +887,16 @@ const unsubscribeRealPushNow = async () => {
     return
   }
 
-  const ok = window.confirm(
-    t(
+  const ok = await confirmDialog({
+    title: t('取消真推送', 'Disable real push'),
+    message: t(
       '确认取消这台设备的真推送订阅吗？取消后将不再收到系统级推送。',
       'Unsubscribe this device from real push? System notifications will stop.',
     ),
-  )
+    confirmText: t('取消订阅', 'Unsubscribe'),
+    cancelText: t('保留', 'Keep enabled'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   pushActionRunning.value = true
@@ -1009,16 +1019,20 @@ const automationRuntimePolicy = computed(() =>
   systemStore.getAiAutomationRuntimePolicy('chat', Date.now()),
 )
 
-const saveAutomationSettings = () => {
+const saveAutomationSettings = async () => {
   if (!settings.value.aiAutomation) return
 
   if (!automationInitialMaster.value && settings.value.aiAutomation.masterEnabled) {
-    const ok = window.confirm(
-      t(
+    const ok = await confirmDialog({
+      title: t('开启 AI 自动响应', 'Enable AI automation'),
+      message: t(
         '开启后会允许系统按配置自主触发 AI 调用，可能消耗 API 供应商额度。确认继续？',
         'Enabling this allows autonomous AI calls by configuration and may consume provider quota. Continue?',
       ),
-    )
+      confirmText: t('确认开启', 'Enable'),
+      cancelText: t('取消', 'Cancel'),
+      tone: 'accent',
+    })
     if (!ok) {
       settings.value.aiAutomation.masterEnabled = false
       return
@@ -1333,12 +1347,16 @@ const importData = async (event) => {
   resetImportInput(event)
   if (!file || backupImporting.value || backupExporting.value) return
 
-  const confirmed = window.confirm(
-    t(
+  const confirmed = await confirmDialog({
+    title: t('导入备份', 'Import backup'),
+    message: t(
       '导入会覆盖当前本地数据。是否继续？',
       'Import will overwrite current local data. Continue?',
     ),
-  )
+    confirmText: t('继续导入', 'Continue import'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   backupImporting.value = true

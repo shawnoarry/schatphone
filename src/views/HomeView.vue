@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 
@@ -20,6 +21,7 @@ defineProps({
 const router = useRouter()
 const systemStore = useSystemStore()
 const { systemLanguage, languageBase, t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
@@ -777,8 +779,14 @@ const hideTileFromHome = (tileId) => {
   systemStore.saveNow()
 }
 
-const resetHomeLayout = () => {
-  const ok = window.confirm(t('确认恢复主屏默认布局吗？', 'Reset Home layout to default?'))
+const resetHomeLayout = async () => {
+  const ok = await confirmDialog({
+    title: t('恢复主屏默认布局', 'Reset Home layout'),
+    message: t('确认恢复主屏默认布局吗？', 'Reset Home layout to default?'),
+    confirmText: t('恢复默认', 'Reset'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
   systemStore.resetHomeWidgetPages()
   systemStore.saveNow()

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import {
   APP_ICON_ACCENT_OPTIONS,
@@ -44,6 +45,7 @@ const LOCK_CLOCK_STYLE_OPTIONS = [
 const router = useRouter()
 const systemStore = useSystemStore()
 const { t, systemLanguage, languageBase } = useI18n()
+const { confirmDialog } = useDialog()
 
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
@@ -392,8 +394,14 @@ const submitCustomWidget = () => {
   resetCustomWidgetForm()
 }
 
-const removeCustomWidget = (widgetId) => {
-  const ok = window.confirm(t('确认删除这个自定义 Widget 吗？', 'Delete this custom widget?'))
+const removeCustomWidget = async (widgetId) => {
+  const ok = await confirmDialog({
+    title: t('删除自定义 Widget', 'Delete custom widget'),
+    message: t('确认删除这个自定义 Widget 吗？', 'Delete this custom widget?'),
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   systemStore.removeCustomWidget(widgetId)

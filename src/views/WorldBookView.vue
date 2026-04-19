@@ -4,10 +4,12 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
+import { useDialog } from '../composables/useDialog'
 
 const router = useRouter()
 const systemStore = useSystemStore()
 const { t } = useI18n()
+const { confirmDialog } = useDialog()
 const { user } = storeToRefs(systemStore)
 
 const globalWorldview = computed({
@@ -86,11 +88,15 @@ const toggleKnowledgePoint = (point) => {
   systemStore.saveNow()
 }
 
-const removeKnowledgePoint = (point) => {
+const removeKnowledgePoint = async (point) => {
   if (!point?.id) return
-  const ok = window.confirm(
-    `${t('确认删除知识点', 'Delete knowledge point')}「${point.title || ''}」？`,
-  )
+  const ok = await confirmDialog({
+    title: t('删除知识点', 'Delete knowledge point'),
+    message: `${t('确认删除知识点', 'Delete knowledge point')}「${point.title || ''}」？`,
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
   systemStore.removeKnowledgePoint(point.id)
   systemStore.saveNow()

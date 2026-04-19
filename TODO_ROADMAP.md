@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-17
+Updated / 更新时间: 2026-04-19
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -59,6 +59,8 @@ Updated / 更新时间: 2026-04-17
    中文：真推送可靠性 + 定时基线已落地：健康检查、重同步、启动自愈、定时送达，以及 Chat/地图的定时提醒现已上线。
 7. EN: Notification-surface split and app-icon identity baseline is landed: external push modes are selectable, while all built-in home modules now support preset-based icon customization shared by shell notifications.
    中文：通知分层与功能身份基线已落地：外部推送模式现可切换，且全部内建首页模块都已支持预设型图标自定义，并与壳内通知共用。
+8. EN: Shared in-app dialog cleanup is fully landed across `src/views`: all current page-level confirm/prompt flows now use the in-app dialog layer instead of browser-native UI.
+   中文：共享页内对话框清理已在 `src/views` 全面落地：当前所有页面级 confirm/prompt 流程均已改为使用页内对话框层，不再依赖浏览器原生 UI。
 
 ---
 
@@ -427,6 +429,12 @@ Acceptance / 验收标准:
     中文：已落地素材安全第一阶段：Gallery 新增“使用中素材替换”（`URL/文件`）流程，带双重确认并保持绑定关系不丢失。
 26. EN: Landed media-size policy phase-1: Chat/Gallery now share centralized size guards for import/replace/one-off media, with explicit oversize feedback and deterministic reject reasons.
     中文：已落地媒体体积策略第一阶段：Chat/Gallery 现共用统一的导入/替换/单次媒体体积守卫，并提供明确超限提示与可追踪拒绝原因。
+27. EN: Landed shared in-app dialog phase-1: added a global promise-based dialog host and replaced browser-native prompt/confirm in Gallery, Chat message delete, Chat one-off media import choice, Map one-off visual choice, and WorldBook knowledge-point delete.
+    中文：已落地共享页内对话框第一阶段：新增全局 Promise 式对话框宿主，并替换了 Gallery、Chat 消息删除、Chat 单次媒体导入选择、Map 单次视觉选择，以及 WorldBook 知识点删除中的浏览器原生 prompt/confirm。
+28. EN: Landed shared in-app dialog phase-2: Chat Directory, Settings, and Network now also use the shared dialog layer for destructive and batch-confirmation flows.
+    中文：已落地共享页内对话框第二阶段：ChatDirectory、Settings 与 Network 现也已在删除、批量操作与高风险确认流程中接入共享对话框层。
+29. EN: Closed the dialog cleanup pass across the remaining page views: Appearance, Chat feature tools, Contacts, and Home now also use the shared in-app dialog path; `src/views` no longer contains browser-native `confirm/prompt`.
+    中文：已完成剩余页面视图的对话框清理：Appearance、Chat 功能工具页、Contacts 与 Home 现也已接入共享页内对话框路径；`src/views` 中已不再包含浏览器原生 `confirm/prompt`。
 
 ---
 
@@ -491,3 +499,9 @@ Acceptance / 验收标准:
     2026-04-17 中文：已落地地图视觉快速切换打磨：地图视觉设置现显示当前背景状态、相册直达入口，以及基于缩略图的快速切换。
 30. 2026-04-17 EN: Landed map-visual recovery polish: Map now supports one-tap default restore and clearing the remembered gallery binding in place.
     2026-04-17 中文：已落地地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。
+31. 2026-04-19 EN: Landed shared in-app dialog phase-1: added a reusable promise-based dialog layer and replaced the first batch of browser-native prompt/confirm flows in Gallery/Chat/Map/WorldBook; remaining pages are queued for later cleanup.
+    2026-04-19 中文：已落地共享页内对话框第一阶段：新增可复用的 Promise 式对话框层，并替换了 Gallery/Chat/Map/WorldBook 的第一批浏览器原生 prompt/confirm；其余页面仍排队待清理。
+32. 2026-04-19 EN: Landed shared in-app dialog phase-2: removed browser-native confirm usage from Chat Directory, Settings, and Network while preserving original success/failure and batch-action behavior.
+    2026-04-19 中文：已落地共享页内对话框第二阶段：在保持原有成功/失败提示与批量操作行为不变的前提下，移除了 ChatDirectory、Settings 与 Network 中的浏览器原生 confirm。
+33. 2026-04-19 EN: Finished the remaining dialog cleanup in Appearance, Chat feature tools, Contacts, and Home, and verified that `src/views` no longer uses browser-native `window.confirm/window.prompt`.
+    2026-04-19 中文：完成了 Appearance、Chat 功能工具页、Contacts 与 Home 的剩余对话框清理，并已验证 `src/views` 不再使用浏览器原生 `window.confirm/window.prompt`。

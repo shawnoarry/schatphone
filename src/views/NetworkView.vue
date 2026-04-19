@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
 const router = useRouter()
@@ -11,6 +12,7 @@ const route = useRoute()
 const systemStore = useSystemStore()
 const { settings, apiReports } = storeToRefs(systemStore)
 const { t, systemLanguage, languageBase } = useI18n()
+const { confirmDialog } = useDialog()
 
 const modelOptions = ref([])
 const modelsLoading = ref(false)
@@ -374,7 +376,7 @@ const applyPreset = (presetId) => {
   settings.value.api.activePresetId = selected.id
 }
 
-const removeActivePreset = () => {
+const removeActivePreset = async () => {
   ensurePresetState()
   const activeId = settings.value.api.activePresetId
   if (!activeId) return
@@ -382,7 +384,13 @@ const removeActivePreset = () => {
   const index = presets.value.findIndex((item) => item.id === activeId)
   if (index < 0) return
 
-  const ok = window.confirm(t('确认删除当前预设吗？', 'Delete current preset?'))
+  const ok = await confirmDialog({
+    title: t('删除当前预设', 'Delete current preset'),
+    message: t('确认删除当前预设吗？', 'Delete current preset?'),
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   settings.value.api.presets.splice(index, 1)
@@ -395,11 +403,17 @@ const removeActivePreset = () => {
   }
 }
 
-const clearAllPresets = () => {
+const clearAllPresets = async () => {
   ensurePresetState()
   if (settings.value.api.presets.length === 0) return
 
-  const ok = window.confirm(t('确认清空全部预设吗？此操作不可撤销。', 'Clear all presets? This action cannot be undone.'))
+  const ok = await confirmDialog({
+    title: t('清空全部预设', 'Clear all presets'),
+    message: t('确认清空全部预设吗？此操作不可撤销。', 'Clear all presets? This action cannot be undone.'),
+    confirmText: t('清空', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   settings.value.api.presets.splice(0, settings.value.api.presets.length)
@@ -441,13 +455,14 @@ const saveNetworkSettings = () => {
   }, 1200)
 }
 
-const clearApiReportHistory = () => {
+const clearApiReportHistory = async () => {
   if ((apiReports.value || []).length === 0) return
   const scopedByModule = reportModuleFilter.value !== 'all'
   const scopedByLevel = reportLevelFilter.value !== 'all'
   const scopedClear = scopedByModule || scopedByLevel
-  const ok = window.confirm(
-    scopedClear
+  const ok = await confirmDialog({
+    title: scopedClear ? t('清空筛选记录', 'Clear filtered diagnostics') : t('清空全部诊断记录', 'Clear all diagnostics'),
+    message: scopedClear
       ? t(
           '确认清空当前筛选结果吗？仅会删除筛选命中的记录。',
           'Clear current filtered records only? Only matched entries will be removed.',
@@ -456,7 +471,10 @@ const clearApiReportHistory = () => {
           '确认清空全部诊断记录吗？此操作不可撤销。',
           'Clear all diagnostics records? This action cannot be undone.',
         ),
-  )
+    confirmText: t('清空', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   const removed = scopedClear

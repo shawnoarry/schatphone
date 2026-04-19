@@ -1,5 +1,5 @@
 ﻿# SchatPhone TODO PM Status Report / SchatPhone 待办状态报告（产品经理视角）
-Updated / 更新时间: 2026-04-17
+Updated / 更新时间: 2026-04-19
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 为什么有这份报告
@@ -42,6 +42,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：长按消息操作、语义修订、恢复原文，以及 Chat 内编辑弹层都已可用。
 5. EN: Conversation-level AI preferences and auto-invoke timing controls are already connected.
    中文：会话级 AI 偏好和自动触发时间控制都已接通。
+6. EN: Chat confirmation, edit, import-choice, and management flows now use the same in-app dialog style as the rest of the shell, so the conversation experience no longer jumps out to browser UI.
+   中文：Chat 中的确认、编辑、导入选择和管理流程现已统一使用壳层内的页内对话框样式，因此会话体验不再突然跳到浏览器原生 UI。
 
 ### 3.3 Global assets / 全局素材
 1. EN: Gallery works as the global asset hub instead of a chat-only helper.
@@ -60,6 +62,10 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：会话通讯录中的角色卡片现在也会显示一条轻量缩略图预览带，用来一眼确认档案绑定素材是否就绪。
 8. EN: Thread settings inside Chat Directory now show the active preferred-image preview plus a quick thumbnail strip for fast switching.
    中文：会话通讯录中的“会话设定”弹层现在会显示当前优先图片预览，并提供一排缩略图用于快速切换。
+9. EN: All current page-level confirm/prompt flows inside `src/views` now share one in-app dialog layer for rename, delete, batch action, import choice, overwrite, unsubscribe, and diagnostics-clear flows.
+   中文：`src/views` 内当前所有页面级 confirm/prompt 流程现已统一接入同一套页内对话框层，覆盖重命名、删除、批量操作、导入选择、覆盖导入、取消订阅与诊断清理等场景。
+10. EN: That means Gallery, Chat, Map, WorldBook, Chat Directory, Settings, Network, Contacts, Appearance, Home, and Chat feature tools now feel visually consistent with the shell instead of dropping into browser-native popups.
+   中文：这意味着 Gallery、Chat、Map、WorldBook、ChatDirectory、Settings、Network、Contacts、Appearance、Home 与 Chat 功能工具页，现都能保持与壳层一致的视觉体验，而不会掉回浏览器原生弹窗。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -104,6 +110,10 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：外观页现在支持全部内建首页模块的预设型功能图标自定义，并且这个选择也会影响壳内通知。
 8. EN: Route-level lazy loading and vendor chunk split are now online as the first package-size optimization pass, reducing pressure on the main entry bundle.
    中文：路由级懒加载与依赖拆包已作为第一阶段包体优化上线，用于降低主入口包体压力。
+9. EN: A reusable in-app dialog layer is now online and has completed its current page-level rollout, replacing browser-native popup usage across all current `src/views`.
+   中文：可复用的页内对话框层现已上线，并完成了当前页面级铺开，已替换全部现有 `src/views` 中的浏览器原生弹窗用法。
+10. EN: This gives the shell a much more consistent tone in destructive and management-heavy flows, because confirmations no longer jump to the browser layer.
+   中文：这让壳层在删除和管理类高敏感流程中的语气更加统一，因为确认步骤不再跳到浏览器层。
 
 ## 5. What the PM can already feel in the product / 产品侧现在能直接感知到的东西
 1. EN: The phone shell now feels more like a real phone because lock-screen notifications and unlocked banners are separated from the real-device push surface.
@@ -136,6 +146,10 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：外部推送正文目前仍主要按模式控制；更细的自定义推送文案还不是正式功能。
 5. EN: The project still has large bundle warnings during build, so package-size optimization remains future engineering work.
    中文：项目构建时仍有较大的包体警告，因此包体优化仍是后续工程任务。
+6. EN: Dialog unification is complete for the current page layer (`src/views`), but future new modules still need to follow the same shared-dialog rule by default.
+   中文：当前页面层（`src/views`）的对话框统一已经完成，但后续新增模块仍需默认遵循这套共享对话框规则。
+7. EN: Future work is no longer “replace old browser popups”, but “keep new pages from reintroducing them”.
+   中文：后续工作重点已不再是“清理旧浏览器弹窗”，而是“防止新页面重新引入它们”。 
 
 ## 8. Current product decisions that are already locked / 当前已经锁定的产品决策
 1. EN: Gallery is the global asset hub.
@@ -194,3 +208,9 @@ Source / 来源: `TODO_ROADMAP.md`
     2026-04-17 中文：同步地图视觉快速切换打磨：地图现显示当前背景状态、相册直达入口，以及基于缩略图的快速切换。
 12. 2026-04-17 EN: Synced map-visual recovery polish: Map now supports one-tap default restore plus clearing remembered gallery binding in place.
     2026-04-17 中文：同步地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。
+13. 2026-04-19 EN: Synced in-app dialog phase-1: shared dialog infrastructure is online, and the first browser-popup replacements landed in Gallery/Chat/Map/WorldBook.
+   2026-04-19 中文：同步页内对话框第一阶段：共享对话框基础设施已上线，且第一批浏览器弹窗替换已在 Gallery/Chat/Map/WorldBook 落地。
+14. 2026-04-19 EN: Synced in-app dialog phase-2: Chat Directory, Settings, and Network now also use the shared dialog layer for batch, destructive, and overwrite confirmations.
+   2026-04-19 中文：同步页内对话框第二阶段：ChatDirectory、Settings 与 Network 现也已在批量操作、删除与覆盖确认流程中接入共享对话框层。
+15. 2026-04-19 EN: Synced dialog cleanup closure: remaining view pages were migrated as well, and current `src/views` no longer uses browser-native `confirm/prompt`.
+   2026-04-19 中文：同步对话框清理收口：剩余页面也已完成迁移，当前 `src/views` 已不再使用浏览器原生 `confirm/prompt`。

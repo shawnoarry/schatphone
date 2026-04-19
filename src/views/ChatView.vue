@@ -28,6 +28,7 @@ import {
   validateMediaFileBySize,
 } from '../lib/media-policy'
 import { useI18n } from '../composables/useI18n'
+import { useDialog } from '../composables/useDialog'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +37,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const { settings, user } = storeToRefs(systemStore)
 const { contactsForList, loadingAI } = storeToRefs(chatStore)
@@ -2595,9 +2597,15 @@ const restoreSemanticRevision = (message) => {
   closeMessageActions()
 }
 
-const deleteMessage = (message) => {
+const deleteMessage = async (message) => {
   if (!activeChat.value || !message) return
-  const ok = window.confirm(t('确认删除这条消息吗？', 'Delete this message?'))
+  const ok = await confirmDialog({
+    title: t('删除消息', 'Delete message'),
+    message: t('确认删除这条消息吗？', 'Delete this message?'),
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
   if (!ok) return
 
   const removed = chatStore.removeMessage(activeChat.value.id, message.id)
@@ -3225,12 +3233,16 @@ const handleUserMediaPicked = async (event) => {
   }
 
   try {
-    const shouldImportToGallery = window.confirm(
-      t(
+    const shouldImportToGallery = await confirmDialog({
+      title: t('发送图片', 'Send image'),
+      message: t(
         '是否导入素材库后发送？点击“取消”将仅本次发送，不入库。',
         'Import to asset library before sending? Click "Cancel" to send one-off without importing.',
       ),
-    )
+      confirmText: t('导入后发送', 'Import first'),
+      cancelText: t('仅本次发送', 'One-off send'),
+      tone: 'accent',
+    })
 
     if (!shouldImportToGallery) {
       const expectedMediaKind =
