@@ -6,6 +6,10 @@ import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useMapStore } from './stores/map'
 import { useI18n } from './composables/useI18n'
+import {
+  appendForegroundBannerQueue,
+  collectForegroundBannerNotes,
+} from './lib/foreground-banner-queue'
 import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from './lib/notification-presentation'
 import {
   cancelScheduledPushNotification,
@@ -46,6 +50,7 @@ const resolveNotificationModuleMeta = (note) =>
   )
 const shellBannerVisible = ref(false)
 const shellBannerNote = ref(null)
+const shellBannerQueue = ref([])
 const showShellBanner = computed(
   () => Boolean(shellBannerVisible.value && shellBannerNote.value && !isLockRoute.value && !systemStore.isLocked),
 )
@@ -60,6 +65,7 @@ let mapAutoNextAt = 0
 let chatAutoPushSyncPromise = null
 let chatAutoPushVisibilityHandler = null
 let shellBannerTimerId = null
+let shellBannerVisibilityHandler = null
 let seenShellNotificationIds = new Set()
 
 const MAP_AUTOMATION_MODULE_KEY = 'map'
@@ -100,8 +106,29 @@ const clearShellBannerTimer = () => {
   shellBannerTimerId = null
 }
 
-const hideShellBanner = () => {
+const canPresentForegroundBanner = () =>
+  !systemStore.isLocked &&
+  route.path !== '/lock' &&
+  typeof document !== 'undefined' &&
+  document.visibilityState === 'visible'
+
+const hideShellBanner = ({ clearQueue = false } = {}) => {
+  clearShellBannerTimer()
   shellBannerVisible.value = false
+  shellBannerNote.value = null
+  if (clearQueue) {
+    shellBannerQueue.value = []
+  }
+}
+
+const flushShellBannerQueue = () => {
+  if (shellBannerVisible.value) return
+  if (!canPresentForegroundBanner()) return
+  if (!Array.isArray(shellBannerQueue.value) || shellBannerQueue.value.length === 0) return
+
+  const [nextNote, ...rest] = shellBannerQueue.value
+  shellBannerQueue.value = rest
+  showForegroundBanner(nextNote)
 }
 
 const showForegroundBanner = (note) => {
@@ -110,7 +137,8 @@ const showForegroundBanner = (note) => {
   shellBannerVisible.value = true
   clearShellBannerTimer()
   shellBannerTimerId = setTimeout(() => {
-    shellBannerVisible.value = false
+    hideShellBanner()
+    flushShellBannerQueue()
   }, 2800)
 }
 
@@ -154,6 +182,7 @@ watch(
       document.documentElement.setAttribute('lang', value)
     }
     updateTime()
+    flushShellBannerQueue()
   },
   { immediate: true },
 )
@@ -188,18 +217,14 @@ watch(
       return
     }
 
-    const newest = list[0]
-    const canPresent =
-      newest &&
-      !seenShellNotificationIds.has(newest.id) &&
-      !newest.read &&
-      !systemStore.isLocked &&
-      route.path !== '/lock' &&
-      typeof document !== 'undefined' &&
-      document.visibilityState === 'visible'
-
-    if (canPresent) {
-      showForegroundBanner(newest)
+    const incomingNotes = collectForegroundBannerNotes(list, seenShellNotificationIds)
+    if (incomingNotes.length > 0 && canPresentForegroundBanner()) {
+      shellBannerQueue.value = appendForegroundBannerQueue(
+        shellBannerQueue.value,
+        incomingNotes,
+        shellBannerNote.value,
+      )
+      flushShellBannerQueue()
     }
 
     list.forEach((item) => {
@@ -213,8 +238,10 @@ watch(
   () => [route.path, systemStore.isLocked],
   () => {
     if (route.path === '/lock' || systemStore.isLocked) {
-      hideShellBanner()
+      hideShellBanner({ clearQueue: true })
+      return
     }
+    flushShellBannerQueue()
   },
   { immediate: true },
 )
@@ -648,6 +675,11 @@ onMounted(() => {
     })
   }
   document.addEventListener('visibilitychange', chatAutoPushVisibilityHandler, { passive: true })
+  shellBannerVisibilityHandler = () => {
+    if (document.hidden) return
+    flushShellBannerQueue()
+  }
+  document.addEventListener('visibilitychange', shellBannerVisibilityHandler, { passive: true })
 })
 
 onBeforeUnmount(() => {
@@ -674,6 +706,10 @@ onBeforeUnmount(() => {
   if (chatAutoPushVisibilityHandler) {
     document.removeEventListener('visibilitychange', chatAutoPushVisibilityHandler)
     chatAutoPushVisibilityHandler = null
+  }
+  if (shellBannerVisibilityHandler) {
+    document.removeEventListener('visibilitychange', shellBannerVisibilityHandler)
+    shellBannerVisibilityHandler = null
   }
   systemStore.unregisterAiAutomationHandler(MAP_AUTOMATION_MODULE_KEY, mapAutomationTaskHandler)
   if (customCssStyleEl) {

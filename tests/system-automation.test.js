@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSystemStore } from '../src/stores/system'
 
@@ -32,11 +32,69 @@ describe('system automation controls', () => {
     expect(store.activeAutoExecution.module).toBe('chat')
 
     expect(store.tryAcquireAutoExecution('map', 'map:auto')).toBe(false)
-    expect(store.tryAcquireAutoExecution('chat', 'contact:1:retry')).toBe(true)
+    expect(store.tryAcquireAutoExecution('chat', 'contact:1:retry')).toBe(false)
 
     expect(store.releaseAutoExecution('map')).toBe(false)
     expect(store.releaseAutoExecution('chat')).toBe(true)
     expect(store.activeAutoExecution.module).toBe('')
+  })
+
+  test('prevents same-module queue reentry while a handler is still running', async () => {
+    const store = useSystemStore()
+    store.settings.aiAutomation.masterEnabled = true
+    store.settings.aiAutomation.modules.chat.enabled = true
+
+    let firstInvocationPending = true
+    let releaseHandler = () => {}
+    const runningHandler = vi.fn(
+      () => {
+        if (!firstInvocationPending) {
+          return Promise.resolve({ ok: true })
+        }
+        return new Promise((resolve) => {
+          releaseHandler = () => {
+            firstInvocationPending = false
+            resolve({ ok: true })
+          }
+        })
+      },
+    )
+
+    store.registerAiAutomationHandler('chat', runningHandler)
+
+    const now = Date.now()
+    expect(
+      store.enqueueAiAutomationTask({
+        moduleKey: 'chat',
+        targetId: 'contact:1',
+        dueAt: now,
+      }).accepted,
+    ).toBe(true)
+    expect(
+      store.enqueueAiAutomationTask({
+        moduleKey: 'chat',
+        targetId: 'contact:2',
+        dueAt: now,
+      }).accepted,
+    ).toBe(true)
+
+    const firstRunPromise = store.runAiAutomationQueueTick(now)
+    await Promise.resolve()
+
+    const secondRun = await store.runAiAutomationQueueTick(now)
+    expect(secondRun.handled).toBe(false)
+    expect(secondRun.reason).toBe('lock_busy')
+    expect(secondRun.moduleKey).toBe('chat')
+    expect(runningHandler).toHaveBeenCalledTimes(1)
+
+    releaseHandler()
+    const firstRun = await firstRunPromise
+    expect(firstRun.handled).toBe(true)
+    expect(firstRun.moduleKey).toBe('chat')
+
+    const thirdRun = await store.runAiAutomationQueueTick(now + 30_000)
+    expect(thirdRun.handled).toBe(true)
+    expect(runningHandler).toHaveBeenCalledTimes(2)
   })
 
   test('executes queued tasks by module priority', async () => {

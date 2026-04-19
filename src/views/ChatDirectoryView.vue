@@ -109,6 +109,7 @@ const selectedServiceTemplateId = ref(serviceTemplatePresets[0]?.id || '')
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
 const rolePreviewMap = reactive({})
+const CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID = 'chat-directory-view'
 let uiNoticeTimerId = null
 
 const showUiNotice = (type, message, durationMs = 2200) => {
@@ -319,7 +320,9 @@ const getRolePreviewOverflowCount = (contactId) => {
 
 const ensureRolePreview = async (assetId) => {
   if (!assetId || rolePreviewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID,
+  })
   if (!previewUrl) return
   rolePreviewMap[assetId] = previewUrl
 }
@@ -481,6 +484,7 @@ watch(
     })
     Object.keys(rolePreviewMap).forEach((assetId) => {
       if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID)
         delete rolePreviewMap[assetId]
       }
     })
@@ -953,8 +957,10 @@ const applyServicePresetToSelected = () => {
 onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   Object.keys(rolePreviewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID)
     delete rolePreviewMap[assetId]
   })
+  galleryStore.releaseAssetPreviewScope(CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
 

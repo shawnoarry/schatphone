@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
@@ -10,6 +10,10 @@ describe('gallery store', () => {
     localStorage.clear()
     clearGalleryAssetBlobFallback()
     setActivePinia(createPinia())
+    if (typeof URL !== 'undefined') {
+      URL.createObjectURL = vi.fn(() => 'blob:gallery-preview')
+      URL.revokeObjectURL = vi.fn()
+    }
   })
 
   test('imports URL assets with category and dedupes by normalized url', () => {
@@ -140,6 +144,37 @@ describe('gallery store', () => {
     const removedAsset = await store.removeAsset(second.assetId, { force: true })
     expect(removedAsset.ok).toBe(true)
     expect(store.findFolderById(createdFolder.id)?.assetIds).toEqual([])
+  })
+
+  test('keeps local preview alive until every consumer scope releases it', async () => {
+    const store = useGalleryStore()
+    const file = new File(['preview-binary'], 'preview.png', {
+      type: 'image/png',
+      lastModified: 999,
+    })
+
+    const imported = await store.importAssetsFromFiles([file], {
+      category: 'reference',
+    })
+    expect(imported.ok).toBe(true)
+    const assetId = imported.importedIds[0]
+
+    const chatPreview = await store.getAssetPreviewUrl(assetId, {
+      scopeId: 'chat-view',
+    })
+    const contactsPreview = await store.getAssetPreviewUrl(assetId, {
+      scopeId: 'contacts-view',
+    })
+
+    expect(chatPreview).toBe('blob:gallery-preview')
+    expect(contactsPreview).toBe(chatPreview)
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+
+    expect(store.releaseAssetPreviewScope('chat-view')).toBe(0)
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(0)
+
+    expect(store.releaseAssetPreviewScope('contacts-view')).toBe(1)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:gallery-preview')
   })
 
   test('replaces asset content while keeping same asset id and folder links', async () => {

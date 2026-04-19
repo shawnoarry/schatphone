@@ -340,6 +340,8 @@ export const useGalleryStore = defineStore('gallery', () => {
   const usageRegistry = reactive({})
   const hasFinishedStorageHydration = ref(false)
   const previewObjectUrlCache = new Map()
+  const previewScopeAssetIds = new Map()
+  const previewAssetScopes = new Map()
 
   const categoryCounts = computed(() => {
     const counts = {
@@ -482,9 +484,45 @@ export const useGalleryStore = defineStore('gallery', () => {
     return assets.value.find((item) => item.fingerprint === normalized) || null
   }
 
-  const revokeAssetPreviewUrl = (assetId) => {
+  const trackAssetPreviewScope = (assetId, scopeId) => {
+    const normalizedAssetId = typeof assetId === 'string' ? assetId.trim() : ''
+    const normalizedScopeId = typeof scopeId === 'string' ? scopeId.trim() : ''
+    if (!normalizedAssetId || !normalizedScopeId) return false
+
+    const scopeAssetIds = previewScopeAssetIds.get(normalizedScopeId) || new Set()
+    scopeAssetIds.add(normalizedAssetId)
+    previewScopeAssetIds.set(normalizedScopeId, scopeAssetIds)
+
+    const assetScopes = previewAssetScopes.get(normalizedAssetId) || new Set()
+    assetScopes.add(normalizedScopeId)
+    previewAssetScopes.set(normalizedAssetId, assetScopes)
+    return true
+  }
+
+  const forgetAssetPreviewScopeMembership = (assetId) => {
+    const normalizedAssetId = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalizedAssetId) return false
+    const assetScopes = previewAssetScopes.get(normalizedAssetId)
+    if (!assetScopes) return false
+
+    Array.from(assetScopes).forEach((scopeId) => {
+      const scopeAssetIds = previewScopeAssetIds.get(scopeId)
+      if (!scopeAssetIds) return
+      scopeAssetIds.delete(normalizedAssetId)
+      if (scopeAssetIds.size === 0) {
+        previewScopeAssetIds.delete(scopeId)
+      }
+    })
+    previewAssetScopes.delete(normalizedAssetId)
+    return true
+  }
+
+  const revokeAssetPreviewUrl = (assetId, options = {}) => {
     if (typeof assetId !== 'string' || !assetId.trim()) return false
     const normalizedId = assetId.trim()
+    if (options.clearScopeRefs !== false) {
+      forgetAssetPreviewScopeMembership(normalizedId)
+    }
     const cachedUrl = previewObjectUrlCache.get(normalizedId)
     if (!cachedUrl) return false
     previewObjectUrlCache.delete(normalizedId)
@@ -495,19 +533,73 @@ export const useGalleryStore = defineStore('gallery', () => {
   }
 
   const clearAssetPreviewCache = () => {
+    previewScopeAssetIds.clear()
+    previewAssetScopes.clear()
     Array.from(previewObjectUrlCache.keys()).forEach((assetId) => {
-      revokeAssetPreviewUrl(assetId)
+      revokeAssetPreviewUrl(assetId, { clearScopeRefs: false })
     })
   }
 
-  const getAssetPreviewUrl = async (assetId) => {
+  const releaseAssetPreview = (assetId, scopeId) => {
+    const normalizedAssetId = typeof assetId === 'string' ? assetId.trim() : ''
+    const normalizedScopeId = typeof scopeId === 'string' ? scopeId.trim() : ''
+    if (!normalizedAssetId || !normalizedScopeId) return false
+
+    const scopeAssetIds = previewScopeAssetIds.get(normalizedScopeId)
+    const assetScopes = previewAssetScopes.get(normalizedAssetId)
+    if (!scopeAssetIds || !assetScopes) return false
+
+    const hadScope = scopeAssetIds.delete(normalizedAssetId) || assetScopes.has(normalizedScopeId)
+    assetScopes.delete(normalizedScopeId)
+
+    if (scopeAssetIds.size === 0) {
+      previewScopeAssetIds.delete(normalizedScopeId)
+    }
+    if (assetScopes.size === 0) {
+      previewAssetScopes.delete(normalizedAssetId)
+      revokeAssetPreviewUrl(normalizedAssetId, { clearScopeRefs: false })
+    }
+
+    return hadScope
+  }
+
+  const releaseAssetPreviewScope = (scopeId) => {
+    const normalizedScopeId = typeof scopeId === 'string' ? scopeId.trim() : ''
+    if (!normalizedScopeId) return 0
+    const scopeAssetIds = previewScopeAssetIds.get(normalizedScopeId)
+    if (!scopeAssetIds || scopeAssetIds.size === 0) return 0
+
+    const assetIds = Array.from(scopeAssetIds)
+    previewScopeAssetIds.delete(normalizedScopeId)
+
+    let revokedCount = 0
+    assetIds.forEach((assetId) => {
+      const assetScopes = previewAssetScopes.get(assetId)
+      if (!assetScopes) return
+      assetScopes.delete(normalizedScopeId)
+      if (assetScopes.size === 0) {
+        previewAssetScopes.delete(assetId)
+        if (revokeAssetPreviewUrl(assetId, { clearScopeRefs: false })) {
+          revokedCount += 1
+        }
+      }
+    })
+
+    return revokedCount
+  }
+
+  const getAssetPreviewUrl = async (assetId, options = {}) => {
     const asset = findAssetById(assetId)
     if (!asset) return ''
+    const scopeId = typeof options?.scopeId === 'string' ? options.scopeId.trim() : ''
     if (asset.sourceType === 'url') return asset.sourceUrl
 
     const normalizedId = asset.id
     const cachedUrl = previewObjectUrlCache.get(normalizedId)
-    if (cachedUrl) return cachedUrl
+    if (cachedUrl) {
+      trackAssetPreviewScope(normalizedId, scopeId)
+      return cachedUrl
+    }
 
     const blob = await getGalleryAssetBlob(asset.blobId || asset.id)
     if (!(blob instanceof Blob)) return ''
@@ -515,6 +607,7 @@ export const useGalleryStore = defineStore('gallery', () => {
 
     const objectUrl = URL.createObjectURL(blob)
     previewObjectUrlCache.set(normalizedId, objectUrl)
+    trackAssetPreviewScope(normalizedId, scopeId)
     return objectUrl
   }
 
@@ -1301,6 +1394,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     removeFolder,
     getAssetPreviewUrl,
     getAssetAiReferenceUrl,
+    releaseAssetPreview,
+    releaseAssetPreviewScope,
     revokeAssetPreviewUrl,
     clearAssetPreviewCache,
     importAssetFromUrl,

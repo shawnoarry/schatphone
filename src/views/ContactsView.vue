@@ -23,6 +23,7 @@ const profileModalMode = ref('create')
 const editingProfileId = ref(0)
 const assetPackCategory = ref('reference')
 const draftPreviewMap = reactive({})
+const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
 
 const createEmptyAssetPack = () => ({
   wallpaperAssetIds: [],
@@ -274,13 +275,16 @@ const goHome = () => {
 
 const clearDraftPreviewMap = () => {
   Object.keys(draftPreviewMap).forEach((key) => {
+    galleryStore.releaseAssetPreview(key, CONTACTS_ASSET_PREVIEW_SCOPE_ID)
     delete draftPreviewMap[key]
   })
 }
 
 const ensureDraftAssetPreview = async (assetId) => {
   if (!assetId || draftPreviewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: CONTACTS_ASSET_PREVIEW_SCOPE_ID,
+  })
   if (!previewUrl) return
   draftPreviewMap[assetId] = previewUrl
 }
@@ -295,6 +299,7 @@ watch(
     })
     Object.keys(draftPreviewMap).forEach((assetId) => {
       if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, CONTACTS_ASSET_PREVIEW_SCOPE_ID)
         delete draftPreviewMap[assetId]
       }
     })
@@ -518,6 +523,7 @@ const autoGenerateProfile = async () => {
 onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearDraftPreviewMap()
+  galleryStore.releaseAssetPreviewScope(CONTACTS_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
 

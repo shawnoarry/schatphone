@@ -196,6 +196,8 @@ const userActionDraft = reactive({
 
 const galleryPickerPreviewMap = reactive({})
 const messageImagePreviewMap = reactive({})
+const messageImagePreviewAssetIdMap = reactive({})
+const CHAT_ASSET_PREVIEW_SCOPE_ID = 'chat-view'
 
 const threadSettingsDraft = reactive({
   suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
@@ -2776,7 +2778,7 @@ const closeUserActionPanel = () => {
   showUserActionPanel.value = false
   backToUserActionGrid()
   galleryPickerCategory.value = 'all'
-  clearReactivePreviewMap(galleryPickerPreviewMap)
+  clearGalleryPickerPreviewMap()
   resetUserActionDraft()
 }
 
@@ -2828,17 +2830,31 @@ const openUserActionForm = (formType) => {
   }
 }
 
-const clearReactivePreviewMap = (targetMap) => {
-  Object.keys(targetMap).forEach((key) => {
-    delete targetMap[key]
+const buildMessageImagePreviewKey = (messageId, blockIndex) => `${messageId}:${blockIndex}`
+
+const clearGalleryPickerPreviewMap = () => {
+  Object.keys(galleryPickerPreviewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
+    delete galleryPickerPreviewMap[assetId]
   })
 }
 
-const buildMessageImagePreviewKey = (messageId, blockIndex) => `${messageId}:${blockIndex}`
+const clearMessageImagePreviewMap = () => {
+  Object.keys(messageImagePreviewMap).forEach((key) => {
+    const assetId = messageImagePreviewAssetIdMap[key]
+    if (assetId) {
+      galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
+      delete messageImagePreviewAssetIdMap[key]
+    }
+    delete messageImagePreviewMap[key]
+  })
+}
 
 const ensureGalleryPickerPreview = async (assetId) => {
   if (!assetId || galleryPickerPreviewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
+  })
   if (!previewUrl) return
   galleryPickerPreviewMap[assetId] = previewUrl
 }
@@ -2847,9 +2863,12 @@ const ensureMessageImagePreview = async (messageId, blockIndex, assetId) => {
   if (!messageId || !assetId) return
   const key = buildMessageImagePreviewKey(messageId, blockIndex)
   if (messageImagePreviewMap[key]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
+  })
   if (!previewUrl) return
   messageImagePreviewMap[key] = previewUrl
+  messageImagePreviewAssetIdMap[key] = assetId
 }
 
 const resolveImageBlockUrl = (messageId, blockIndex, block) => {
@@ -3159,7 +3178,11 @@ const submitGalleryAsset = async (asset) => {
   const fallbackAlt = t('素材图片', 'Asset image')
   const safeName = typeof asset.name === 'string' && asset.name.trim() ? asset.name.trim() : fallbackAlt
   const sourceUrl = asset.sourceType === 'url' ? asset.sourceUrl || '' : ''
-  const previewUrl = sourceUrl || (await galleryStore.getAssetPreviewUrl(asset.id))
+  const previewUrl =
+    sourceUrl ||
+    (await galleryStore.getAssetPreviewUrl(asset.id, {
+      scopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
+    }))
 
   if (!previewUrl) {
     showUiNotice('error', t('素材预览不可用，请检查相册资源。', 'Asset preview is unavailable.'))
@@ -3585,6 +3608,7 @@ watch(
     })
     Object.keys(galleryPickerPreviewMap).forEach((assetId) => {
       if (!activeIds.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
         delete galleryPickerPreviewMap[assetId]
       }
     })
@@ -3622,11 +3646,17 @@ watch(
         }
         if (typeof block?.url === 'string' && block.url.trim()) {
           messageImagePreviewMap[key] = block.url
+          delete messageImagePreviewAssetIdMap[key]
         }
       })
     })
     Object.keys(messageImagePreviewMap).forEach((key) => {
       if (!validKeys.has(key)) {
+        const assetId = messageImagePreviewAssetIdMap[key]
+        if (assetId) {
+          galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
+          delete messageImagePreviewAssetIdMap[key]
+        }
         delete messageImagePreviewMap[key]
       }
     })
@@ -3641,7 +3671,7 @@ watch(
     closeUserActionPanel()
     closeMessageEditModal()
     galleryPickerCategory.value = 'all'
-    clearReactivePreviewMap(galleryPickerPreviewMap)
+    clearGalleryPickerPreviewMap()
     activeMessageActionId.value = ''
     pendingQuote.value = null
     threadSettingsSaved.value = false
@@ -3731,9 +3761,9 @@ onBeforeUnmount(() => {
   if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
   if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
-  clearReactivePreviewMap(galleryPickerPreviewMap)
-  clearReactivePreviewMap(messageImagePreviewMap)
-  galleryStore.clearAssetPreviewCache()
+  clearGalleryPickerPreviewMap()
+  clearMessageImagePreviewMap()
+  galleryStore.releaseAssetPreviewScope(CHAT_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
 

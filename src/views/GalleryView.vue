@@ -26,6 +26,7 @@ const urlForm = reactive({
   category: 'reference',
 })
 const previewMap = reactive({})
+const GALLERY_ASSET_PREVIEW_SCOPE_ID = 'gallery-view'
 const activeFolderCategory = ref('all')
 const assetFolderDraftMap = reactive({})
 const folderForm = reactive({
@@ -452,6 +453,7 @@ const removeAsset = async (asset) => {
   }
 
   const clearedCount = clearDeletedAssetFromRoleProfiles(asset.id)
+  galleryStore.releaseAssetPreview(asset.id, GALLERY_ASSET_PREVIEW_SCOPE_ID)
   delete previewMap[asset.id]
   setFeedback(
     'success',
@@ -581,7 +583,9 @@ const handleReplaceFileChange = async (event) => {
 
 const hydrateAssetPreview = async (assetId) => {
   if (!assetId || previewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: GALLERY_ASSET_PREVIEW_SCOPE_ID,
+  })
   previewMap[assetId] = previewUrl || ''
 }
 
@@ -594,6 +598,7 @@ watch(
     })
     Object.keys(previewMap).forEach((assetId) => {
       if (!nextIds.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, GALLERY_ASSET_PREVIEW_SCOPE_ID)
         delete previewMap[assetId]
       }
     })
@@ -607,7 +612,10 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  galleryStore.clearAssetPreviewCache()
+  Object.keys(previewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, GALLERY_ASSET_PREVIEW_SCOPE_ID)
+  })
+  galleryStore.releaseAssetPreviewScope(GALLERY_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
 

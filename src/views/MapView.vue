@@ -46,6 +46,7 @@ const mapVisualHint = ref({
 })
 const mapVisualPreviewUrl = ref('')
 const mapVisualQuickPreviewMap = reactive({})
+const MAP_ASSET_PREVIEW_SCOPE_ID = 'map-view'
 const mapOneOffVisualUrl = ref('')
 const mapOneOffVisualName = ref('')
 const mapVisualFileInputRef = ref(null)
@@ -541,7 +542,9 @@ const refreshMapVisualPreview = async () => {
   }
   mapVisualLoading.value = true
   try {
-    const previewUrl = await galleryStore.getAssetPreviewUrl(selected.id)
+    const previewUrl = await galleryStore.getAssetPreviewUrl(selected.id, {
+      scopeId: MAP_ASSET_PREVIEW_SCOPE_ID,
+    })
     mapVisualPreviewUrl.value = typeof previewUrl === 'string' ? previewUrl : ''
   } finally {
     mapVisualLoading.value = false
@@ -550,7 +553,9 @@ const refreshMapVisualPreview = async () => {
 
 const ensureMapVisualQuickPreview = async (assetId) => {
   if (!assetId || mapVisualQuickPreviewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId)
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: MAP_ASSET_PREVIEW_SCOPE_ID,
+  })
   if (!previewUrl) return
   mapVisualQuickPreviewMap[assetId] = previewUrl
 }
@@ -584,6 +589,7 @@ watch(
     })
     Object.keys(mapVisualQuickPreviewMap).forEach((assetId) => {
       if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, MAP_ASSET_PREVIEW_SCOPE_ID)
         delete mapVisualQuickPreviewMap[assetId]
       }
     })
@@ -736,8 +742,10 @@ onBeforeUnmount(() => {
     runtimeTimer = null
   }
   Object.keys(mapVisualQuickPreviewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, MAP_ASSET_PREVIEW_SCOPE_ID)
     delete mapVisualQuickPreviewMap[assetId]
   })
+  galleryStore.releaseAssetPreviewScope(MAP_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
 

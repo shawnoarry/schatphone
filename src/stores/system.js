@@ -1934,7 +1934,6 @@ export const useSystemStore = defineStore('system', () => {
       return true
     }
 
-    if (activeAutoExecution.module === moduleKey) return true
     return false
   }
 
