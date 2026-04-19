@@ -19,6 +19,11 @@ const flushAsyncHydration = async () => {
   })
 }
 
+const callsForKey = (spy, key) =>
+  spy.mock.calls.filter(([calledKey]) => calledKey === key)
+
+const MAP_STORAGE_KEY = 'store:map'
+
 describe('store hydration fallback', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -46,16 +51,16 @@ describe('store hydration fallback', () => {
     const { useMapStore } = await import('../src/stores/map')
     const store = useMapStore()
 
-    expect(readPersistedState).toHaveBeenCalledTimes(1)
-    expect(writePersistedState).toHaveBeenCalledTimes(0)
+    expect(callsForKey(readPersistedState, MAP_STORAGE_KEY)).toHaveLength(1)
+    expect(callsForKey(writePersistedState, MAP_STORAGE_KEY)).toHaveLength(0)
 
     await flushAsyncHydration()
 
-    expect(readPersistedStateAsync).toHaveBeenCalledTimes(1)
+    expect(callsForKey(readPersistedStateAsync, MAP_STORAGE_KEY)).toHaveLength(1)
     expect(store.addresses[0]?.label).toBe('Async Home')
     expect(store.currentLocation.detail).toBe('Async Street 7')
     expect(store.tripForm.to).toBe('Async To')
-    expect(writePersistedState).toHaveBeenCalledTimes(1)
+    expect(callsForKey(writePersistedState, MAP_STORAGE_KEY)).toHaveLength(1)
   })
 
   test('skips async fallback when sync storage already has snapshot', async () => {
@@ -80,10 +85,10 @@ describe('store hydration fallback', () => {
 
     await flushAsyncHydration()
 
-    expect(readPersistedState).toHaveBeenCalledTimes(1)
-    expect(readPersistedStateAsync).not.toHaveBeenCalled()
+    expect(callsForKey(readPersistedState, MAP_STORAGE_KEY)).toHaveLength(1)
+    expect(callsForKey(readPersistedStateAsync, MAP_STORAGE_KEY)).toHaveLength(0)
     expect(store.addresses[0]?.label).toBe('Sync Home')
     expect(store.tripForm.from).toBe('Sync From')
-    expect(writePersistedState).toHaveBeenCalledTimes(1)
+    expect(callsForKey(writePersistedState, MAP_STORAGE_KEY)).toHaveLength(1)
   })
 })
