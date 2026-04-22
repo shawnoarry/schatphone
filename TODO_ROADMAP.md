@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-04-22
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -295,8 +295,10 @@ Status / 状态: `IN_PROGRESS`
    中文：回退任务——`IN_PROGRESS` 模块级默认策略：
    - EN: role lanes fallback to text-first/no-pack/no-pad-image baseline (optional AI image-generation switch).
       中文：角色链路回退到文字优先/无包/无垫图基线（可选 AI 生图开关）。
-   - EN: appearance fallback to built-in wallpaper.
-      中文：美化链路回退到内置壁纸。
+   - EN: appearance fallback — `DONE (phase-1)`: Appearance wallpaper now supports `theme / gallery asset / custom URL` sources, shell background resolves gallery wallpaper assets directly, and missing/deleted wallpaper assets fall back to theme wallpaper automatically.
+      中文：美化链路回退——`DONE（第一阶段）`：Appearance 壁纸现支持 `主题 / 相册素材 / 自定义 URL` 三种来源，壳层背景可直接解析相册壁纸素材，且在壁纸素材缺失或被删除时会自动回退到主题壁纸。
+   - EN: appearance safety — `DONE (phase-1)`: Gallery now blocks deleting assets currently used as system wallpaper, and forced delete clears wallpaper binding to avoid broken background state.
+      中文：美化链路安全——`DONE（第一阶段）`：Gallery 现会阻止删除正在作为系统壁纸使用的素材；若执行强制删除，也会自动清除壁纸绑定，避免出现损坏背景状态。
    - EN: map fallback (future) to icon/default image with first-use optional AI generate prompt.
       中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
 5. EN: Module-local upload task — `IN_PROGRESS`: Chat and Map now support one-off local media apply/send without gallery import (with size guard) plus import-before-use path; other modules (shopping/takeout/etc.) remain pending.
@@ -505,3 +507,5 @@ Acceptance / 验收标准:
     2026-04-19 中文：已落地共享页内对话框第二阶段：在保持原有成功/失败提示与批量操作行为不变的前提下，移除了 ChatDirectory、Settings 与 Network 中的浏览器原生 confirm。
 33. 2026-04-19 EN: Finished the remaining dialog cleanup in Appearance, Chat feature tools, Contacts, and Home, and verified that `src/views` no longer uses browser-native `window.confirm/window.prompt`.
     2026-04-19 中文：完成了 Appearance、Chat 功能工具页、Contacts 与 Home 的剩余对话框清理，并已验证 `src/views` 不再使用浏览器原生 `window.confirm/window.prompt`。
+34. 2026-04-22 EN: Landed asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and Gallery deletion safeguards now protect or safely clear active wallpaper bindings.
+    2026-04-22 中文：已落地素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL`，App 壳层可直接解析相册壁纸素材，且 Gallery 删除守卫现会保护或安全清除正在使用中的壁纸绑定。

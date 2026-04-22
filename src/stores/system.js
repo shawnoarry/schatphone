@@ -95,6 +95,8 @@ const CUSTOM_WIDGET_ID_PREFIX = 'custom_widget_'
 const CUSTOM_WIDGET_SIZES = [...VALID_WIDGET_SIZES]
 const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
+const VALID_WALLPAPER_MODES = ['theme', 'url', 'gallery']
+const DEFAULT_WALLPAPER_MODE = 'theme'
 const MAX_NOTIFICATIONS = 80
 const MAX_API_REPORTS = 200
 const MAX_AI_AUTOMATION_QUEUE_SIZE = 240
@@ -508,6 +510,12 @@ const createAiAutomationTaskId = () =>
 const normalizeLockClockStyle = (value) =>
   VALID_LOCK_CLOCK_STYLES.includes(value) ? value : DEFAULT_LOCK_CLOCK_STYLE
 
+const normalizeWallpaperMode = (value, fallback = DEFAULT_WALLPAPER_MODE) =>
+  VALID_WALLPAPER_MODES.includes(value) ? value : fallback
+
+const normalizeWallpaperAssetId = (value) =>
+  typeof value === 'string' ? value.trim().slice(0, 160) : ''
+
 const normalizeNotification = (rawNote) => {
   if (!rawNote || typeof rawNote !== 'object') return null
 
@@ -767,6 +775,8 @@ export const useSystemStore = defineStore('system', () => {
     },
     appearance: {
       currentTheme: 'y2k',
+      wallpaperMode: DEFAULT_WALLPAPER_MODE,
+      wallpaperAssetId: '',
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
       showStatusBar: true,
       hapticFeedbackEnabled: true,
@@ -832,6 +842,57 @@ export const useSystemStore = defineStore('system', () => {
 
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
+
+  const getThemeById = (themeId = '') => {
+    const normalizedThemeId = typeof themeId === 'string' ? themeId.trim() : ''
+    if (!normalizedThemeId) return availableThemes.value[0] || null
+    return availableThemes.value.find((item) => item.id === normalizedThemeId) || null
+  }
+
+  const getThemeWallpaper = (themeId = '') => {
+    return getThemeById(themeId || settings.appearance.currentTheme)?.wallpaper || ''
+  }
+
+  const useThemeWallpaper = () => {
+    settings.appearance.wallpaperMode = DEFAULT_WALLPAPER_MODE
+    settings.appearance.wallpaperAssetId = ''
+    settings.appearance.wallpaper = getThemeWallpaper(settings.appearance.currentTheme) || ''
+    return settings.appearance.wallpaper
+  }
+
+  const setAppearanceWallpaperUrl = (nextUrl = '') => {
+    const normalizedUrl = typeof nextUrl === 'string' ? nextUrl.trim() : ''
+    if (!normalizedUrl) {
+      return useThemeWallpaper()
+    }
+
+    settings.appearance.wallpaperMode = 'url'
+    settings.appearance.wallpaperAssetId = ''
+    settings.appearance.wallpaper = normalizedUrl
+    return settings.appearance.wallpaper
+  }
+
+  const setAppearanceWallpaperAsset = (assetId = '') => {
+    const normalizedAssetId = normalizeWallpaperAssetId(assetId)
+    if (!normalizedAssetId) {
+      useThemeWallpaper()
+      return ''
+    }
+
+    settings.appearance.wallpaperMode = 'gallery'
+    settings.appearance.wallpaperAssetId = normalizedAssetId
+    return normalizedAssetId
+  }
+
+  const clearAppearanceWallpaperAsset = ({ fallbackToTheme = true } = {}) => {
+    settings.appearance.wallpaperAssetId = ''
+    if (fallbackToTheme) {
+      useThemeWallpaper()
+    } else if (settings.appearance.wallpaperMode === 'gallery') {
+      settings.appearance.wallpaperMode = 'url'
+    }
+    return true
+  }
 
   const syncPushPermissionFromBrowser = () => {
     settings.system.pushPermission = normalizePushPermission(
@@ -1010,10 +1071,13 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const setTheme = (themeId) => {
-    const theme = availableThemes.value.find((item) => item.id === themeId)
+    const theme = getThemeById(themeId)
     if (!theme) return
     settings.appearance.currentTheme = theme.id
-    settings.appearance.wallpaper = theme.wallpaper
+    if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
+      settings.appearance.wallpaperAssetId = ''
+      settings.appearance.wallpaper = theme.wallpaper
+    }
   }
 
   const cycleTheme = () => {
@@ -2123,6 +2187,16 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof appearance.currentTheme === 'string') {
         settings.appearance.currentTheme = appearance.currentTheme
       }
+      const inferredThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
+      settings.appearance.wallpaperMode =
+        typeof appearance.wallpaperMode === 'string'
+          ? normalizeWallpaperMode(appearance.wallpaperMode, settings.appearance.wallpaperMode)
+          : typeof appearance.wallpaper === 'string' && appearance.wallpaper.trim()
+            ? appearance.wallpaper.trim() === inferredThemeWallpaper
+              ? DEFAULT_WALLPAPER_MODE
+              : 'url'
+            : DEFAULT_WALLPAPER_MODE
+      settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(appearance.wallpaperAssetId)
       if (typeof appearance.wallpaper === 'string') {
         settings.appearance.wallpaper = appearance.wallpaper
       }
@@ -2250,7 +2324,31 @@ export const useSystemStore = defineStore('system', () => {
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
     if (!hasTheme) {
       settings.appearance.currentTheme = availableThemes.value[0]?.id || 'y2k'
-      settings.appearance.wallpaper = availableThemes.value[0]?.wallpaper || settings.appearance.wallpaper
+    }
+
+    settings.appearance.wallpaperMode = normalizeWallpaperMode(
+      settings.appearance.wallpaperMode,
+      DEFAULT_WALLPAPER_MODE,
+    )
+    settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(
+      settings.appearance.wallpaperAssetId,
+    )
+    const resolvedThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
+    if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
+      settings.appearance.wallpaperAssetId = ''
+      settings.appearance.wallpaper = resolvedThemeWallpaper || settings.appearance.wallpaper
+    } else if (settings.appearance.wallpaperMode === 'gallery') {
+      if (!settings.appearance.wallpaperAssetId) {
+        useThemeWallpaper()
+      }
+    } else {
+      settings.appearance.wallpaper = typeof settings.appearance.wallpaper === 'string'
+        ? settings.appearance.wallpaper.trim()
+        : ''
+      settings.appearance.wallpaperAssetId = ''
+      if (!settings.appearance.wallpaper) {
+        useThemeWallpaper()
+      }
     }
 
     settings.appearance.customWidgets = normalizeCustomWidgets(settings.appearance.customWidgets)
@@ -2431,6 +2529,11 @@ export const useSystemStore = defineStore('system', () => {
     activeAutoExecution,
     availableThemes,
     setTheme,
+    getThemeWallpaper,
+    useThemeWallpaper,
+    setAppearanceWallpaperUrl,
+    setAppearanceWallpaperAsset,
+    clearAppearanceWallpaperAsset,
     cycleTheme,
     setCustomCss,
     setCustomVar,

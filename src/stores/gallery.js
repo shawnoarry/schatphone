@@ -1021,11 +1021,27 @@ export const useGalleryStore = defineStore('gallery', () => {
     if (!asset) return []
 
     const runtimeUsages = Array.isArray(usageRegistry[asset.id]) ? [...usageRegistry[asset.id]] : []
+    const wallpaperMode = typeof systemStore.settings?.appearance?.wallpaperMode === 'string'
+      ? systemStore.settings.appearance.wallpaperMode.trim()
+      : 'theme'
+    const wallpaperAssetId = typeof systemStore.settings?.appearance?.wallpaperAssetId === 'string'
+      ? systemStore.settings.appearance.wallpaperAssetId.trim()
+      : ''
     const wallpaper = typeof systemStore.settings?.appearance?.wallpaper === 'string'
       ? systemStore.settings.appearance.wallpaper.trim()
       : ''
 
-    if (asset.sourceType === 'url' && asset.sourceUrl && wallpaper && wallpaper === asset.sourceUrl) {
+    if (wallpaperMode === 'gallery' && wallpaperAssetId && wallpaperAssetId === asset.id) {
+      runtimeUsages.push({
+        id: 'system:appearance.wallpaper',
+        moduleKey: 'system',
+        targetKey: 'appearance.wallpaper',
+        label: 'System wallpaper',
+      })
+      return runtimeUsages
+    }
+
+    if (wallpaperMode === 'url' && asset.sourceType === 'url' && asset.sourceUrl && wallpaper && wallpaper === asset.sourceUrl) {
       runtimeUsages.push({
         id: 'system:appearance.wallpaper',
         moduleKey: 'system',
@@ -1092,6 +1108,11 @@ export const useGalleryStore = defineStore('gallery', () => {
     })
     revokeAssetPreviewUrl(normalizedId)
     delete usageRegistry[normalizedId]
+    if (systemStore.settings?.appearance?.wallpaperAssetId === normalizedId) {
+      systemStore.clearAppearanceWallpaperAsset({
+        fallbackToTheme: true,
+      })
+    }
     if (target.sourceType === 'file') {
       await deleteGalleryAssetBlob(target.blobId || target.id)
     }
@@ -1378,6 +1399,7 @@ export const useGalleryStore = defineStore('gallery', () => {
   return {
     assets,
     folders,
+    hasFinishedStorageHydration,
     categoryCounts,
     sortedAssets,
     sortedFolders,

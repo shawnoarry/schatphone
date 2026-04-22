@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-17
+Updated / 更新时间: 2026-04-22
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -125,6 +125,8 @@ Updated / 更新时间: 2026-04-17
    中文：去重和安全删除守卫已实现。
 4. EN: Chat can consume gallery assets with role-aware defaults.
    中文：Chat 可消费相册素材，并支持角色上下文默认项。
+5. EN: Appearance wallpaper now also consumes the same asset hub: users can switch between theme wallpaper, gallery wallpaper assets, and custom URL wallpaper, while missing/deleted wallpaper assets fall back safely.
+   中文：Appearance 壁纸现在也已接入同一套素材中台：用户可在主题壁纸、相册壁纸素材和自定义 URL 壁纸之间切换，且在壁纸素材缺失或被删除时会安全回退。
 
 ### 4.5 Settings and Reliability / 设置与可靠性
 1. EN: Backup export/import flow is available with rollback-safe behavior.
@@ -353,3 +355,5 @@ Status / 状态: `DONE`
     2026-04-17 中文：已落地地图视觉快速切换打磨：地图视觉设置现显示当前背景状态、相册直达入口，以及基于缩略图的快速切换。
 31. 2026-04-17 EN: Landed map-visual recovery polish: Map now also supports one-tap default restore and clearing the remembered gallery binding without leaving the page.
     2026-04-17 中文：已落地地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。
+32. 2026-04-22 EN: Landed asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and Gallery now protects or safely clears active wallpaper bindings during deletion.
+    2026-04-22 中文：已落地素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL`，App 壳层可直接解析相册壁纸素材，且 Gallery 在删除时会保护或安全清除正在使用中的壁纸绑定。

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppDialogHost from './components/AppDialogHost.vue'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
+import { useGalleryStore } from './stores/gallery'
 import { useMapStore } from './stores/map'
 import { useI18n } from './composables/useI18n'
 import {
@@ -25,6 +26,7 @@ const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
@@ -33,7 +35,7 @@ const { loadingAI } = storeToRefs(chatStore)
 
 const currentTime = ref('')
 const currentDate = ref('')
-const currentWallpaper = computed(() => settings.value.appearance.wallpaper)
+const currentWallpaper = ref('')
 const customVarStyle = computed(() => settings.value.appearance.customVars || {})
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
@@ -75,6 +77,9 @@ const MAP_AUTOMATION_INTERVAL_MS = 6 * 60 * 1000
 const ROOT_AUTOMATION_TICK_MS = 1500
 const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
 const PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC = 'resync'
+const SHELL_WALLPAPER_PREVIEW_SCOPE = 'app-shell-wallpaper'
+
+let wallpaperResolveVersion = 0
 
 const updateTime = () => {
   const now = new Date()
@@ -88,6 +93,74 @@ const updateTime = () => {
     month: 'long',
     day: 'numeric',
   })
+}
+
+const resolveCurrentWallpaper = async () => {
+  wallpaperResolveVersion += 1
+  const resolveVersion = wallpaperResolveVersion
+  const appearance = settings.value.appearance || {}
+  const wallpaperMode =
+    typeof appearance.wallpaperMode === 'string' && appearance.wallpaperMode.trim()
+      ? appearance.wallpaperMode.trim()
+      : 'theme'
+  const wallpaperAssetId =
+    typeof appearance.wallpaperAssetId === 'string' ? appearance.wallpaperAssetId.trim() : ''
+  const customWallpaperUrl =
+    typeof appearance.wallpaper === 'string' ? appearance.wallpaper.trim() : ''
+  const themeWallpaper =
+    systemStore.getThemeWallpaper(appearance.currentTheme) || customWallpaperUrl || ''
+
+  galleryStore.releaseAssetPreviewScope(SHELL_WALLPAPER_PREVIEW_SCOPE)
+
+  if (wallpaperMode === 'gallery') {
+    if (!wallpaperAssetId) {
+      systemStore.useThemeWallpaper()
+      currentWallpaper.value = themeWallpaper
+      return
+    }
+
+    const asset = galleryStore.findAssetById(wallpaperAssetId)
+    if (!asset) {
+      if (galleryStore.hasFinishedStorageHydration === true) {
+        systemStore.clearAppearanceWallpaperAsset({
+          fallbackToTheme: true,
+        })
+      }
+      currentWallpaper.value = themeWallpaper
+      return
+    }
+
+    const previewUrl = await galleryStore.getAssetPreviewUrl(wallpaperAssetId, {
+      scopeId: SHELL_WALLPAPER_PREVIEW_SCOPE,
+    })
+    if (resolveVersion !== wallpaperResolveVersion) {
+      galleryStore.releaseAssetPreview(wallpaperAssetId, SHELL_WALLPAPER_PREVIEW_SCOPE)
+      return
+    }
+
+    if (previewUrl) {
+      currentWallpaper.value = previewUrl
+      return
+    }
+
+    systemStore.clearAppearanceWallpaperAsset({
+      fallbackToTheme: true,
+    })
+    currentWallpaper.value = themeWallpaper
+    return
+  }
+
+  if (wallpaperMode === 'url') {
+    if (customWallpaperUrl) {
+      currentWallpaper.value = customWallpaperUrl
+      return
+    }
+    systemStore.useThemeWallpaper()
+    currentWallpaper.value = themeWallpaper
+    return
+  }
+
+  currentWallpaper.value = themeWallpaper
 }
 
 const formatBannerTime = (timestamp) => {
@@ -174,6 +247,37 @@ watch(
     syncCustomCss(value)
   },
   { immediate: true },
+)
+
+watch(
+  () => [
+    settings.value.appearance?.currentTheme,
+    settings.value.appearance?.wallpaperMode,
+    settings.value.appearance?.wallpaperAssetId,
+    settings.value.appearance?.wallpaper,
+    galleryStore.hasFinishedStorageHydration,
+  ],
+  () => {
+    void resolveCurrentWallpaper()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => {
+    const wallpaperAssetId =
+      typeof settings.value.appearance?.wallpaperAssetId === 'string'
+        ? settings.value.appearance.wallpaperAssetId.trim()
+        : ''
+    const asset = wallpaperAssetId ? galleryStore.findAssetById(wallpaperAssetId) : null
+    return asset
+      ? `${asset.id}:${asset.updatedAt}:${asset.sourceType}:${asset.sourceUrl}:${asset.blobId}`
+      : ''
+  },
+  () => {
+    if (settings.value.appearance?.wallpaperMode !== 'gallery') return
+    void resolveCurrentWallpaper()
+  },
 )
 
 watch(
@@ -674,6 +778,7 @@ onBeforeUnmount(() => {
     customCssStyleEl.remove()
     customCssStyleEl = null
   }
+  galleryStore.releaseAssetPreviewScope(SHELL_WALLPAPER_PREVIEW_SCOPE)
 })
 
 const goHome = () => {

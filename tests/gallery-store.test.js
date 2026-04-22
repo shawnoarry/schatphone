@@ -273,18 +273,20 @@ describe('gallery store', () => {
     )
   })
 
-  test('blocks deletion when URL asset is currently used as system wallpaper', async () => {
+  test('blocks deletion when gallery asset is currently used as system wallpaper', async () => {
     const systemStore = useSystemStore()
     const store = useGalleryStore()
-    const imported = store.importAssetFromUrl({
-      url: 'https://example.com/wallpaper/main.webp',
+    const file = new File(['wallpaper-binary'], 'main-wallpaper.png', {
+      type: 'image/png',
+      lastModified: 444,
+    })
+    const imported = await store.importAssetsFromFiles([file], {
       category: 'wallpaper',
-      name: 'Main wallpaper',
     })
     expect(imported.ok).toBe(true)
 
-    const asset = store.findAssetById(imported.assetId)
-    systemStore.settings.appearance.wallpaper = asset.sourceUrl
+    const asset = store.findAssetById(imported.importedIds[0])
+    systemStore.setAppearanceWallpaperAsset(asset.id)
 
     const guard = store.getAssetDeletionGuard(asset.id)
     expect(guard.blocked).toBe(true)
@@ -297,6 +299,26 @@ describe('gallery store', () => {
     const forcedRemoval = await store.removeAsset(asset.id, { force: true })
     expect(forcedRemoval.ok).toBe(true)
     expect(store.findAssetById(asset.id)).toBe(null)
+    expect(systemStore.settings.appearance.wallpaperMode).toBe('theme')
+    expect(systemStore.settings.appearance.wallpaperAssetId).toBe('')
+  })
+
+  test('keeps legacy URL wallpaper guard for custom-url mode', async () => {
+    const systemStore = useSystemStore()
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/wallpaper/main.webp',
+      category: 'wallpaper',
+      name: 'Main wallpaper',
+    })
+    expect(imported.ok).toBe(true)
+
+    const asset = store.findAssetById(imported.assetId)
+    systemStore.setAppearanceWallpaperUrl(asset.sourceUrl)
+
+    const guard = store.getAssetDeletionGuard(asset.id)
+    expect(guard.blocked).toBe(true)
+    expect(guard.reason).toBe('in_use')
   })
 
   test('persists and restores folders with snapshot and storage hydration', () => {

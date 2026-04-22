@@ -1,5 +1,5 @@
 ﻿# SchatPhone TODO PM Status Report / SchatPhone 待办状态报告（产品经理视角）
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-04-22
 Source / 来源: `TODO_ROADMAP.md`
 
 ## 1. Why this report exists / 为什么有这份报告
@@ -66,6 +66,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：`src/views` 内当前所有页面级 confirm/prompt 流程现已统一接入同一套页内对话框层，覆盖重命名、删除、批量操作、导入选择、覆盖导入、取消订阅与诊断清理等场景。
 10. EN: That means Gallery, Chat, Map, WorldBook, Chat Directory, Settings, Network, Contacts, Appearance, Home, and Chat feature tools now feel visually consistent with the shell instead of dropping into browser-native popups.
    中文：这意味着 Gallery、Chat、Map、WorldBook、ChatDirectory、Settings、Network、Contacts、Appearance、Home 与 Chat 功能工具页，现都能保持与壳层一致的视觉体验，而不会掉回浏览器原生弹窗。
+11. EN: Appearance wallpaper now truly consumes the global asset hub: users can switch between theme wallpaper, gallery-backed wallpaper assets, and custom URL wallpaper; shell background resolution and delete-safety fallback are both connected.
+   中文：外观壁纸现在已经真正接入全局素材中台：用户可在主题壁纸、相册素材壁纸和自定义 URL 壁纸之间切换；壳层背景解析与删除安全回退也已接通。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -214,3 +216,5 @@ Source / 来源: `TODO_ROADMAP.md`
    2026-04-19 中文：同步页内对话框第二阶段：ChatDirectory、Settings 与 Network 现也已在批量操作、删除与覆盖确认流程中接入共享对话框层。
 15. 2026-04-19 EN: Synced dialog cleanup closure: remaining view pages were migrated as well, and current `src/views` no longer uses browser-native `confirm/prompt`.
    2026-04-19 中文：同步对话框清理收口：剩余页面也已完成迁移，当前 `src/views` 已不再使用浏览器原生 `confirm/prompt`。
+16. 2026-04-22 EN: Synced asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and deleting a wallpaper asset now falls back safely instead of leaving a broken background.
+   2026-04-22 中文：同步素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL` 三种来源，App 壳层可直接解析相册壁纸素材，且删除壁纸素材时会安全回退，不再留下损坏背景。
