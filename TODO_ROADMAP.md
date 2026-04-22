@@ -509,3 +509,7 @@ Acceptance / 验收标准:
     2026-04-19 中文：完成了 Appearance、Chat 功能工具页、Contacts 与 Home 的剩余对话框清理，并已验证 `src/views` 不再使用浏览器原生 `window.confirm/window.prompt`。
 34. 2026-04-22 EN: Landed asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and Gallery deletion safeguards now protect or safely clear active wallpaper bindings.
     2026-04-22 中文：已落地素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL`，App 壳层可直接解析相册壁纸素材，且 Gallery 删除守卫现会保护或安全清除正在使用中的壁纸绑定。
+35. 2026-04-22 EN: Landed Appearance wallpaper quick-switch polish: gallery wallpaper assets now expose a thumbnail preview strip in Appearance for direct apply, while preserving the existing dropdown selection path and safe preview cleanup.
+    2026-04-22 中文：已落地 Appearance 壁纸快速切换打磨：相册壁纸素材现会在外观页提供缩略图预览条，可直接点选应用，同时保留原有下拉选择路径，并补齐预览资源的安全释放。
+36. 2026-04-23 EN: Landed Appearance wallpaper-state polish: Appearance now shows a direct current-wallpaper preview card and clearer reset-to-theme wording, so users can understand the active wallpaper mode and the reset result at a glance.
+    2026-04-23 中文：已落地 Appearance 壁纸状态打磨：外观页现已提供当前壁纸预览卡，并使用更清晰的恢复主题文案，让用户能一眼理解当前壁纸模式以及恢复后的结果。

@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -127,6 +127,9 @@ const builtInWidgetPage = ref(0)
 const customFontStackInput = ref('')
 const customWallpaperUrlInput = ref('')
 const selectedWallpaperAssetId = ref('')
+const wallpaperQuickPreviewMap = reactive({})
+
+const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
@@ -224,6 +227,82 @@ const currentWallpaperAsset = computed(() => {
       : ''
   return assetId ? galleryStore.findAssetById(assetId) : null
 })
+const currentThemeMeta = computed(
+  () =>
+    availableThemes.value.find((item) => item.id === settings.value.appearance.currentTheme) || null,
+)
+const selectedWallpaperAsset = computed(() => {
+  const assetId =
+    typeof selectedWallpaperAssetId.value === 'string' ? selectedWallpaperAssetId.value.trim() : ''
+  return assetId ? galleryStore.findAssetById(assetId) : null
+})
+const wallpaperQuickAssetOptions = computed(() => {
+  const merged = []
+  const pushAsset = (asset) => {
+    if (!asset?.id || merged.some((item) => item.id === asset.id)) return
+    merged.push(asset)
+  }
+
+  pushAsset(currentWallpaperAsset.value)
+  pushAsset(selectedWallpaperAsset.value)
+  wallpaperAssets.value.forEach((asset) => pushAsset(asset))
+  return merged.slice(0, 6)
+})
+const wallpaperQuickOverflowCount = computed(() =>
+  Math.max(0, wallpaperAssets.value.length - wallpaperQuickAssetOptions.value.length),
+)
+const wallpaperQuickPreviewAssetIds = computed(() =>
+  wallpaperQuickAssetOptions.value
+    .map((asset) => (typeof asset?.id === 'string' ? asset.id.trim() : ''))
+    .filter(Boolean),
+)
+const currentWallpaperPreviewUrl = computed(() => {
+  if (currentWallpaperMode.value === 'gallery') {
+    const assetId =
+      typeof currentWallpaperAsset.value?.id === 'string' ? currentWallpaperAsset.value.id.trim() : ''
+    return assetId ? wallpaperQuickPreviewMap[assetId] || '' : ''
+  }
+  if (currentWallpaperMode.value === 'url') {
+    return typeof settings.value.appearance.wallpaper === 'string'
+      ? settings.value.appearance.wallpaper.trim()
+      : ''
+  }
+  return systemStore.getThemeWallpaper(settings.value.appearance.currentTheme) || ''
+})
+const currentWallpaperModeLabel = computed(() => {
+  if (currentWallpaperMode.value === 'gallery') return t('相册', 'Gallery')
+  if (currentWallpaperMode.value === 'url') return t('URL', 'URL')
+  return t('主题', 'Theme')
+})
+const currentWallpaperPreviewDescription = computed(() => {
+  if (currentWallpaperMode.value === 'gallery') {
+    if (currentWallpaperAsset.value) {
+      return t(
+        `当前使用相册素材「${currentWallpaperAsset.value.name}」作为壁纸。`,
+        `Currently using gallery asset "${currentWallpaperAsset.value.name}" as wallpaper.`,
+      )
+    }
+    return t(
+      '当前相册壁纸素材缺失，系统会回退到主题壁纸。',
+      'The current gallery wallpaper asset is missing and will fall back to theme wallpaper.',
+    )
+  }
+  if (currentWallpaperMode.value === 'url') {
+    return t(
+      '当前使用自定义 URL 壁纸。若链接失效，建议切回主题或相册素材。',
+      'A custom URL wallpaper is active. If the link breaks, switch back to theme or gallery wallpaper.',
+    )
+  }
+  return t(
+    `当前跟随主题壁纸：${themeDisplayName(currentThemeMeta.value) || settings.value.appearance.currentTheme}`,
+    `Currently following theme wallpaper: ${themeDisplayName(currentThemeMeta.value) || settings.value.appearance.currentTheme}`,
+  )
+})
+const resetWallpaperButtonLabel = computed(() =>
+  currentWallpaperMode.value === 'theme'
+    ? t('跟随主题', 'Use Theme')
+    : t('恢复主题', 'Reset to Theme'),
+)
 const currentWallpaperSourceSummary = computed(() => {
   if (currentWallpaperMode.value === 'gallery') {
     return currentWallpaperAsset.value
@@ -301,6 +380,32 @@ watch(
   { immediate: true },
 )
 
+const ensureWallpaperQuickPreview = async (assetId) => {
+  if (!assetId || wallpaperQuickPreviewMap[assetId]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID,
+  })
+  if (!previewUrl) return
+  wallpaperQuickPreviewMap[assetId] = previewUrl
+}
+
+watch(
+  wallpaperQuickPreviewAssetIds,
+  (assetIds) => {
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      void ensureWallpaperQuickPreview(assetId)
+    })
+    Object.keys(wallpaperQuickPreviewMap).forEach((assetId) => {
+      if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID)
+        delete wallpaperQuickPreviewMap[assetId]
+      }
+    })
+  },
+  { immediate: true },
+)
+
 const triggerSaved = () => {
   systemStore.saveNow()
   saved.value = true
@@ -355,6 +460,13 @@ const applyGalleryWallpaper = () => {
   const assetId =
     typeof selectedWallpaperAssetId.value === 'string' ? selectedWallpaperAssetId.value.trim() : ''
   if (!assetId) return
+  systemStore.setAppearanceWallpaperAsset(assetId)
+  triggerSaved()
+}
+
+const applyQuickWallpaperAsset = (assetId) => {
+  if (typeof assetId !== 'string' || !assetId.trim()) return
+  selectedWallpaperAssetId.value = assetId
   systemStore.setAppearanceWallpaperAsset(assetId)
   triggerSaved()
 }
@@ -674,6 +786,11 @@ const widgetPageLabel = (widgetId) => {
 onBeforeUnmount(() => {
   if (savedTimerId) clearTimeout(savedTimerId)
   if (copiedTimerId) clearTimeout(copiedTimerId)
+  Object.keys(wallpaperQuickPreviewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID)
+    delete wallpaperQuickPreviewMap[assetId]
+  })
+  galleryStore.releaseAssetPreviewScope(APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID)
 })
 </script>
 
@@ -774,8 +891,54 @@ onBeforeUnmount(() => {
             @click="useThemeWallpaperSource"
             class="shrink-0 px-3 py-1.5 rounded-md text-[11px] font-semibold border border-gray-200 hover:bg-gray-50"
           >
-            {{ t('跟随主题', 'Use Theme') }}
+            {{ resetWallpaperButtonLabel }}
           </button>
+        </div>
+        <div class="rounded-2xl border border-violet-100 bg-violet-50/50 p-3 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-violet-800">
+                {{ t('当前壁纸预览', 'Current Wallpaper Preview') }}
+              </p>
+              <p class="mt-1 text-[11px] text-violet-700">
+                {{ currentWallpaperPreviewDescription }}
+              </p>
+            </div>
+            <span
+              class="shrink-0 rounded-full border border-violet-100 bg-white px-2 py-1 text-[10px] font-semibold text-violet-700"
+            >
+              {{ currentWallpaperModeLabel }}
+            </span>
+          </div>
+          <div class="h-36 rounded-2xl overflow-hidden border border-white/80 bg-gray-100">
+            <img
+              v-if="currentWallpaperPreviewUrl"
+              :src="currentWallpaperPreviewUrl"
+              :alt="t('当前壁纸预览', 'Current Wallpaper Preview')"
+              class="w-full h-full object-cover"
+            />
+            <div
+              v-else
+              class="w-full h-full flex items-center justify-center bg-gray-50 text-[11px] text-gray-400"
+            >
+              {{
+                currentWallpaperMode === 'gallery'
+                  ? t('正在载入壁纸预览', 'Loading wallpaper preview')
+                  : t('暂无可用预览', 'No preview available')
+              }}
+            </div>
+          </div>
+          <p
+            v-if="currentWallpaperMode === 'gallery'"
+            class="text-[11px] text-violet-700"
+          >
+            {{
+              t(
+                '切回主题时会同步清除当前相册壁纸绑定，不会留下旧素材状态。',
+                'Switching back to theme also clears the current gallery wallpaper binding.',
+              )
+            }}
+          </p>
         </div>
       </div>
 
@@ -797,6 +960,83 @@ onBeforeUnmount(() => {
           >
             {{ t('打开相册', 'Open Gallery') }}
           </button>
+        </div>
+        <div
+          v-if="wallpaperQuickAssetOptions.length > 0"
+          class="rounded-2xl border border-sky-100 bg-sky-50/50 p-3 space-y-3"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-sky-800">
+                {{
+                  currentWallpaperMode === 'gallery' && currentWallpaperAsset
+                    ? t('当前正在使用相册壁纸', 'Gallery wallpaper in use')
+                    : t('快捷切换壁纸', 'Quick wallpaper switch')
+                }}
+              </p>
+              <p class="mt-1 text-[11px] text-sky-700">
+                {{
+                  currentWallpaperMode === 'gallery' && currentWallpaperAsset
+                    ? t(
+                        `已应用：${currentWallpaperAsset.name}。点下方缩略图可直接切换。`,
+                        `Applied: ${currentWallpaperAsset.name}. Tap a thumbnail below to switch instantly.`,
+                      )
+                    : t(
+                        '点下方缩略图可直接应用为壁纸，也可以继续用下拉框精确选择。',
+                        'Tap a thumbnail below to apply it instantly, or keep using the picker for precise selection.',
+                      )
+                }}
+              </p>
+            </div>
+            <span
+              v-if="wallpaperQuickOverflowCount > 0"
+              class="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-sky-700 border border-sky-100"
+            >
+              {{ t(`另有 ${wallpaperQuickOverflowCount} 张`, `+${wallpaperQuickOverflowCount}`) }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              v-for="asset in wallpaperQuickAssetOptions"
+              :key="`wallpaper-chip-${asset.id}`"
+              type="button"
+              class="shrink-0 w-16"
+              @click="applyQuickWallpaperAsset(asset.id)"
+            >
+              <div
+                class="relative w-16 h-24 rounded-2xl overflow-hidden border bg-white"
+                :class="
+                  currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id
+                    ? 'border-sky-400 ring-2 ring-sky-100'
+                    : selectedWallpaperAssetId === asset.id
+                      ? 'border-slate-400'
+                      : 'border-gray-200'
+                "
+              >
+                <img
+                  v-if="wallpaperQuickPreviewMap[asset.id]"
+                  :src="wallpaperQuickPreviewMap[asset.id]"
+                  :alt="asset.name"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-full h-full flex items-center justify-center bg-gray-50 text-[9px] text-gray-400"
+                >
+                  {{ t('加载中', 'Loading') }}
+                </div>
+                <div
+                  v-if="currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id"
+                  class="absolute left-1.5 top-1.5 rounded-full bg-sky-500/90 px-1.5 py-0.5 text-[9px] font-semibold text-white"
+                >
+                  {{ t('使用中', 'Live') }}
+                </div>
+              </div>
+              <p class="mt-1 text-[10px] text-gray-600 truncate">
+                {{ asset.name }}
+              </p>
+            </button>
+          </div>
         </div>
         <select
           v-model="selectedWallpaperAssetId"

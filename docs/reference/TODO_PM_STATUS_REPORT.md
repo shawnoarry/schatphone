@@ -68,6 +68,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：这意味着 Gallery、Chat、Map、WorldBook、ChatDirectory、Settings、Network、Contacts、Appearance、Home 与 Chat 功能工具页，现都能保持与壳层一致的视觉体验，而不会掉回浏览器原生弹窗。
 11. EN: Appearance wallpaper now truly consumes the global asset hub: users can switch between theme wallpaper, gallery-backed wallpaper assets, and custom URL wallpaper; shell background resolution and delete-safety fallback are both connected.
    中文：外观壁纸现在已经真正接入全局素材中台：用户可在主题壁纸、相册素材壁纸和自定义 URL 壁纸之间切换；壳层背景解析与删除安全回退也已接通。
+12. EN: Appearance wallpaper selection now also supports thumbnail-based quick switching, so users can preview and apply gallery wallpapers without relying only on a dropdown picker.
+   中文：外观壁纸选择现也支持基于缩略图的快速切换，用户无需只依赖下拉框，就可以直接预览并应用相册壁纸。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -218,3 +220,7 @@ Source / 来源: `TODO_ROADMAP.md`
    2026-04-19 中文：同步对话框清理收口：剩余页面也已完成迁移，当前 `src/views` 已不再使用浏览器原生 `confirm/prompt`。
 16. 2026-04-22 EN: Synced asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and deleting a wallpaper asset now falls back safely instead of leaving a broken background.
    2026-04-22 中文：同步素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL` 三种来源，App 壳层可直接解析相册壁纸素材，且删除壁纸素材时会安全回退，不再留下损坏背景。
+17. 2026-04-22 EN: Synced Appearance thumbnail quick-switch polish: gallery wallpaper assets now expose a lightweight preview strip inside Appearance so users can swap wallpapers faster while keeping the existing picker path.
+   2026-04-22 中文：同步 Appearance 缩略图快速切换打磨：相册壁纸素材现已在外观页内提供轻量预览条，用户可更快切换壁纸，同时保留原有下拉选择路径。
+18. 2026-04-23 EN: Synced Appearance wallpaper-state polish: Appearance now shows a direct current-wallpaper preview card and clearer reset-to-theme wording, so users can immediately understand the active wallpaper mode and what the reset action will do.
+   2026-04-23 中文：同步 Appearance 壁纸状态打磨：外观页现已提供当前壁纸预览卡，并将恢复主题的操作文案说得更清楚，方便用户立刻理解当前壁纸模式以及恢复操作会产生的效果。
