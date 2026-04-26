@@ -193,6 +193,9 @@ Reference docs / 参考文档：
 - `docs/templates/Tips-需求整理模板.md`: Requirement self-check template / 需求自检模板
 - `docs/templates/PAGE_REPRO_BRIEF_TEMPLATE.md`: Reusable page recreation brief template / 页面复现需求可复用模板
 - `docs/templates/AI-需求话术模板.md`: Prompt template for AI coding assistants / AI 协作话术模板
+- `docs/templates/PM_REQUIREMENT_TEMPLATE.md`: PM-facing reusable requirement brief template / 面向产品经理的通用需求模板
+- `docs/templates/VISUAL_REDESIGN_BRIEF_TEMPLATE.md`: Visual redesign requirement template / 视觉改版需求模板
+- `docs/templates/ENTRY_NAVIGATION_AUDIT_TEMPLATE.md`: Entry and navigation issue template / 入口与导航问题模板
 
 Archived docs / 已归档文档：
 - `docs/archive/2026-04-19-doc-audit/`: superseded planning/status docs kept for historical lookup only / 已被替代的计划与状态文档，仅保留历史参考
