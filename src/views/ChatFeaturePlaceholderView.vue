@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
+import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
@@ -14,7 +15,9 @@ const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
+const systemStore = useSystemStore()
 const { contactsForList } = storeToRefs(chatStore)
+const { user } = storeToRefs(systemStore)
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -36,8 +39,8 @@ const featureMeta = computed(() => {
       id,
       title: t('身份与头像', 'Identity & Avatar'),
       description: t(
-        '这里可配置 Chat 模块级身份头像覆写；会话级覆写请在具体会话菜单中设置。',
-        'Configure module-level identity avatar overrides here. Thread-level overrides are in each chat menu.',
+        '这里配置 Chat 模块内的用户身份：头像、昵称和匿名策略。',
+        'Configure user-side Chat module identity here: avatar, nickname, and anonymity policy.',
       ),
       icon: 'fas fa-user-secret',
     }
@@ -47,7 +50,7 @@ const featureMeta = computed(() => {
       id,
       title: t('聊天实验室', 'Chat Labs'),
       description: t(
-        '提供会话自动调度修复与头像/身份覆写清理等运维工具。',
+        '提供会话自动调度修复与头像/身份覆写清理等维护工具。',
         'Provides maintenance utilities such as auto-schedule normalization and avatar/identity override cleanup.',
       ),
       icon: 'fas fa-flask',
@@ -110,12 +113,6 @@ const contactKindTag = (contact) => {
 
 const goBack = () => {
   router.push('/chat')
-}
-
-const openThread = (contactId) => {
-  const id = Number(contactId)
-  if (!Number.isFinite(id) || id <= 0) return
-  router.push(`/chat/${id}`)
 }
 
 const openNetworkCenter = () => {
@@ -212,75 +209,77 @@ const resetPreferenceTemplate = () => {
   showActionFeedback('success', t('模板已恢复默认。', 'Template reset to defaults.'))
 }
 
-const moduleAvatarDraft = reactive({
-  selfAvatar: '',
-  defaultContactAvatar: '',
+const moduleIdentityDraft = reactive({
+  avatar: '',
+  nickname: '',
+  anonymityEnabled: false,
+  anonymityScope: 'all',
+  anonymityContactIds: [],
 })
 
-const contactOverrideDrafts = reactive({})
+const anonymityScopeOptions = computed(() => [
+  { value: 'all', label: t('全部匿名', 'Anonymous to all') },
+  { value: 'selected', label: t('定向匿名', 'Anonymous to selected') },
+])
 
 const syncIdentityDraft = () => {
-  const moduleOverrides = chatStore.getModuleAvatarOverrides()
-  moduleAvatarDraft.selfAvatar = moduleOverrides.selfAvatar || ''
-  moduleAvatarDraft.defaultContactAvatar = moduleOverrides.defaultContactAvatar || ''
+  const moduleIdentity = chatStore.getModuleIdentity()
+  moduleIdentityDraft.avatar = moduleIdentity.avatar || ''
+  moduleIdentityDraft.nickname = moduleIdentity.nickname || ''
+  moduleIdentityDraft.anonymityEnabled = Boolean(moduleIdentity.anonymityEnabled)
+  moduleIdentityDraft.anonymityScope = moduleIdentity.anonymityScope || 'all'
+  moduleIdentityDraft.anonymityContactIds = Array.isArray(moduleIdentity.anonymityContactIds)
+    ? [...moduleIdentity.anonymityContactIds]
+    : []
+}
 
-  Object.keys(contactOverrideDrafts).forEach((key) => {
-    delete contactOverrideDrafts[key]
+const saveModuleIdentity = () => {
+  const changed = chatStore.setModuleIdentity({
+    avatar: moduleIdentityDraft.avatar,
+    nickname: moduleIdentityDraft.nickname,
+    anonymityEnabled: Boolean(moduleIdentityDraft.anonymityEnabled),
+    anonymityScope: moduleIdentityDraft.anonymityScope,
+    anonymityContactIds: [...moduleIdentityDraft.anonymityContactIds],
   })
-}
-
-const saveModuleOverrides = () => {
-  const changed = chatStore.setModuleAvatarOverrides({
-    selfAvatar: moduleAvatarDraft.selfAvatar,
-    defaultContactAvatar: moduleAvatarDraft.defaultContactAvatar,
-  })
   if (!changed) {
-    showActionFeedback('warning', t('模块覆写无变化。', 'No module override changes detected.'))
+    showActionFeedback('warning', t('Chat 身份无变化。', 'No Chat identity changes detected.'))
     return
   }
   chatStore.saveNow()
-  showActionFeedback('success', t('模块覆写已保存。', 'Module overrides saved.'))
+  showActionFeedback('success', t('Chat 身份已保存。', 'Chat identity saved.'))
 }
 
-const draftKey = (contactId) => String(Number(contactId) || 0)
+const moduleIdentityPreviewName = computed(
+  () => moduleIdentityDraft.nickname || user.value.name || t('自己', 'Me'),
+)
 
-const moduleContactOverrideInputValue = (contactId) => {
-  const key = draftKey(contactId)
-  if (!Object.prototype.hasOwnProperty.call(contactOverrideDrafts, key)) {
-    contactOverrideDrafts[key] = chatStore.getModuleContactAvatarOverride(contactId) || ''
+const targetedAnonymousContacts = computed(() => {
+  const selected = new Set(moduleIdentityDraft.anonymityContactIds.map((id) => Number(id)))
+  return contacts.value.filter((contact) => selected.has(Number(contact.id)))
+})
+
+const resetModuleIdentityDraft = () => {
+  moduleIdentityDraft.avatar = ''
+  moduleIdentityDraft.nickname = ''
+  moduleIdentityDraft.anonymityEnabled = false
+  moduleIdentityDraft.anonymityScope = 'all'
+  moduleIdentityDraft.anonymityContactIds = []
+}
+
+const toggleAnonymousContact = (contactId) => {
+  const numericId = Number(contactId)
+  if (!Number.isFinite(numericId) || numericId <= 0) return
+  const next = new Set(moduleIdentityDraft.anonymityContactIds.map((id) => Number(id)))
+  if (next.has(numericId)) {
+    next.delete(numericId)
+  } else {
+    next.add(numericId)
   }
-  return contactOverrideDrafts[key] || ''
+  moduleIdentityDraft.anonymityContactIds = [...next]
 }
 
-const updateModuleContactOverrideInput = (contactId, event) => {
-  const key = draftKey(contactId)
-  const nextValue =
-    event?.target && typeof event.target.value === 'string' ? event.target.value : ''
-  contactOverrideDrafts[key] = nextValue
-}
-
-const saveModuleContactOverride = (contactId) => {
-  const key = draftKey(contactId)
-  const changed = chatStore.setModuleContactAvatarOverride(contactId, contactOverrideDrafts[key] || '')
-  if (!changed) {
-    showActionFeedback('warning', t('该联系人覆写无变化。', 'No override change for this contact.'))
-    return
-  }
-  chatStore.saveNow()
-  showActionFeedback('success', t('联系人覆写已保存。', 'Contact override saved.'))
-}
-
-const clearModuleContactOverride = (contactId) => {
-  const key = draftKey(contactId)
-  contactOverrideDrafts[key] = ''
-  const changed = chatStore.setModuleContactAvatarOverride(contactId, '')
-  if (!changed) {
-    showActionFeedback('warning', t('该联系人无可清除覆写。', 'No contact override to clear.'))
-    return
-  }
-  chatStore.saveNow()
-  showActionFeedback('success', t('联系人覆写已清除。', 'Contact override cleared.'))
-}
+const isAnonymousContactSelected = (contactId) =>
+  moduleIdentityDraft.anonymityContactIds.includes(Number(contactId))
 
 const normalizeAutoInvokeCheckpointsNow = () => {
   const touched = chatStore.normalizeAutoInvokeCheckpoints(Date.now())
@@ -515,7 +514,7 @@ watch(
           <p class="text-[10px] text-gray-500">
             {{
               t(
-                '这里只会覆盖本页展示的偏好字段，不会改写上下文轮数与翻译语言等其他项。',
+                '这里只会覆盖当前页面展示的偏好字段，不会改写上下文轮数与翻译语言等其他项。',
                 'Only fields shown here will be overwritten. Context turns and translation language are kept.',
               )
             }}
@@ -573,98 +572,117 @@ watch(
 
       <template v-else-if="isIdentityFeature">
         <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
-          <p class="text-sm font-semibold text-gray-900">{{ t('模块级覆写', 'Module-level overrides') }}</p>
+          <p class="text-[11px] text-gray-500">
+            {{
+              t(
+                '这里现在只管理 Chat 内的用户身份，不再在此处配置 AI 角色的模块级头像。',
+                'This page now manages only the user identity inside Chat and no longer configures AI-role module avatars here.',
+              )
+            }}
+          </p>
+          <p class="text-sm font-semibold text-gray-900">{{ t('Chat 用户身份', 'Chat user identity') }}</p>
           <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('我的头像（模块级）', 'My avatar (module-level)') }}</span>
+            <span class="text-[11px] text-gray-500">{{ t('模块头像', 'Module avatar') }}</span>
             <input
-              v-model="moduleAvatarDraft.selfAvatar"
+              v-model="moduleIdentityDraft.avatar"
               type="text"
               class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
               placeholder="https://..."
             />
           </label>
           <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('默认对方头像（模块级）', 'Default contact avatar (module-level)') }}</span>
+            <span class="text-[11px] text-gray-500">{{ t('模块昵称', 'Module nickname') }}</span>
             <input
-              v-model="moduleAvatarDraft.defaultContactAvatar"
+              v-model="moduleIdentityDraft.nickname"
               type="text"
               class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
-              placeholder="https://..."
+              :placeholder="user.name || t('默认使用全局昵称', 'Falls back to global profile name')"
             />
           </label>
           <p class="text-[10px] text-gray-400">
-            {{ t('优先级：会话 > 模块 > 全局 > 默认。', 'Priority: thread > module > global > fallback.') }}
+            {{ t(`当前 Chat 默认昵称：${moduleIdentityPreviewName}`, `Current Chat display name: ${moduleIdentityPreviewName}`) }}
           </p>
           <div class="flex justify-end gap-2 pt-1">
             <button
-              @click="moduleAvatarDraft.selfAvatar = ''; moduleAvatarDraft.defaultContactAvatar = ''"
+              @click="resetModuleIdentityDraft"
               class="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600"
             >
               {{ t('清空', 'Clear') }}
             </button>
             <button
-              @click="saveModuleOverrides"
+              @click="saveModuleIdentity"
               class="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700"
             >
-              {{ t('保存模块覆写', 'Save module overrides') }}
+              {{ t('保存 Chat 身份', 'Save Chat identity') }}
             </button>
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+        <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <p class="text-sm font-semibold text-gray-900">{{ t('按联系人覆写（模块级）', 'Per-contact overrides (module-level)') }}</p>
-            <p class="text-[11px] text-gray-400">{{ t('会话级请在聊天内设置', 'Use chat menu for thread-level') }}</p>
+            <p class="text-sm font-semibold text-gray-900">{{ t('匿名模式', 'Anonymous mode') }}</p>
+            <input v-model="moduleIdentityDraft.anonymityEnabled" type="checkbox" class="accent-blue-500" />
           </div>
-
-          <div v-if="contacts.length === 0" class="text-xs text-gray-400 py-2">
-            {{ t('暂无联系人。', 'No contacts yet.') }}
-          </div>
-
-          <div v-else class="space-y-2">
-            <div
-              v-for="contact in contacts"
-              :key="contact.id"
-              class="rounded-xl border border-gray-100 bg-white p-2.5 space-y-2"
+          <p class="text-[11px] text-gray-500">
+            {{
+              t(
+                '开启后，AI 默认不知道你的真实身份，会按陌生人关系开始互动。',
+                'When enabled, AI will not assume it knows the real user identity and should start from a stranger baseline.',
+              )
+            }}
+          </p>
+          <label class="block space-y-1" v-if="moduleIdentityDraft.anonymityEnabled">
+            <span class="text-[11px] text-gray-500">{{ t('匿名范围', 'Anonymity scope') }}</span>
+            <select
+              v-model="moduleIdentityDraft.anonymityScope"
+              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs bg-white outline-none"
             >
-              <div class="flex items-center gap-2">
+              <option v-for="option in anonymityScopeOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+          <div
+            v-if="moduleIdentityDraft.anonymityEnabled && moduleIdentityDraft.anonymityScope === 'selected'"
+            class="space-y-2"
+          >
+            <div v-if="contacts.length === 0" class="text-xs text-gray-400 py-2">
+              {{ t('暂无可选的会话对象。', 'No chat contacts available yet.') }}
+            </div>
+            <div v-else class="space-y-2">
+              <label
+                v-for="contact in contacts"
+                :key="contact.id"
+                class="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-2"
+              >
+                <input
+                  :checked="isAnonymousContactSelected(contact.id)"
+                  @change="toggleAnonymousContact(contact.id)"
+                  type="checkbox"
+                  class="accent-blue-500"
+                />
                 <div class="w-8 h-8 rounded-lg overflow-hidden bg-gray-200">
                   <img :src="chatStore.resolveContactAvatar(contact.id)" class="w-full h-full object-cover" />
                 </div>
-                <p class="text-sm font-medium truncate flex-1">{{ contact.name }}</p>
-                <button
-                  @click="openThread(contact.id)"
-                  class="px-2 py-1 rounded border border-blue-200 bg-blue-50 text-blue-700 text-[11px]"
-                >
-                  {{ t('进会话设置', 'Open thread') }}
-                </button>
-              </div>
-
-              <input
-                :value="moduleContactOverrideInputValue(contact.id)"
-                @input="updateModuleContactOverrideInput(contact.id, $event)"
-                type="text"
-                class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
-                placeholder="https://..."
-              />
-
-              <div class="flex justify-end gap-2">
-                <button
-                  @click="clearModuleContactOverride(contact.id)"
-                  class="px-2 py-1 rounded border border-gray-200 text-gray-600 text-[11px]"
-                >
-                  {{ t('清除该联系人覆写', 'Clear override') }}
-                </button>
-                <button
-                  @click="saveModuleContactOverride(contact.id)"
-                  class="px-2 py-1 rounded border border-blue-200 bg-blue-50 text-blue-700 text-[11px]"
-                >
-                  {{ t('保存', 'Save') }}
-                </button>
-              </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium truncate">{{ contact.name }}</p>
+                  <p class="text-[10px] text-gray-500">{{ contactKindTag(contact) }}</p>
+                </div>
+              </label>
             </div>
+            <p class="text-[10px] text-gray-400">
+              {{
+                targetedAnonymousContacts.length > 0
+                  ? t(
+                      `已选择 ${targetedAnonymousContacts.length} 个对象启用匿名。`,
+                      `${targetedAnonymousContacts.length} contacts will use anonymous mode.`,
+                    )
+                  : t('当前还没有选择定向匿名对象。', 'No targeted anonymous contacts selected yet.')
+              }}
+            </p>
           </div>
         </div>
+
       </template>
 
       <template v-else-if="isLabsFeature">
@@ -691,7 +709,7 @@ watch(
           <p class="text-[11px] text-gray-500">
             {{
               t(
-                '用于重置头像/身份覆写，不会删除主通讯录档案与消息记录。',
+                '用于重置头像或身份覆写，不会删除主通讯录档案与消息记录。',
                 'Resets avatar/identity overrides without deleting global profile records or messages.',
               )
             }}
@@ -715,16 +733,19 @@ watch(
         <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
           <p class="text-sm font-semibold text-gray-900">{{ t('诊断入口', 'Diagnostics entry') }}</p>
           <p class="text-[11px] text-gray-500">
-            {{ t('可跳转到网络页查看 API/存储报告。', 'Open Network page for API/storage reports.') }}
+            {{ t('可跳转到网络页查看 API / 存储报告。', 'Open Network page for API/storage reports.') }}
           </p>
           <button
             @click="openNetworkCenter"
             class="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-[11px] hover:bg-blue-100"
           >
-            {{ t('打开网络与报错中心', 'Open network & reports') }}
+            {{ t('打开网络与报告中心', 'Open network & reports') }}
           </button>
         </div>
       </template>
     </div>
   </div>
 </template>
+
+
+

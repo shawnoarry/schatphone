@@ -494,6 +494,68 @@ describe('chat store model', () => {
     expect(fallbackAvatar).toContain('https://api.dicebear.com/7.x/avataaars/svg?seed=')
   })
 
+  test('supports chat module user identity and anonymity scope', () => {
+    const store = useChatStore()
+    const firstContactId = store.contacts[0].id
+    const secondContactId = store.contacts[1].id
+
+    const defaults = store.getModuleIdentity()
+    expect(defaults.avatar).toBe('')
+    expect(defaults.nickname).toBe('')
+    expect(defaults.anonymityEnabled).toBe(false)
+    expect(defaults.anonymityScope).toBe('all')
+    expect(defaults.anonymityContactIds).toEqual([])
+
+    expect(
+      store.setModuleIdentity({
+        avatar: 'https://example.com/chat-self.png',
+        nickname: 'Runner',
+        anonymityEnabled: true,
+        anonymityScope: 'selected',
+        anonymityContactIds: [firstContactId, firstContactId, secondContactId, '0'],
+      }),
+    ).toBe(true)
+
+    const updated = store.getModuleIdentity()
+    expect(updated.avatar).toBe('https://example.com/chat-self.png')
+    expect(updated.nickname).toBe('Runner')
+    expect(updated.anonymityEnabled).toBe(true)
+    expect(updated.anonymityScope).toBe('selected')
+    expect(updated.anonymityContactIds).toEqual([firstContactId, secondContactId])
+    expect(store.isModuleIdentityAnonymousForContact(firstContactId)).toBe(true)
+    expect(store.isModuleIdentityAnonymousForContact(secondContactId)).toBe(true)
+    expect(store.setModuleIdentity({ anonymityScope: 'all' })).toBe(true)
+    expect(store.isModuleIdentityAnonymousForContact(firstContactId)).toBe(true)
+  })
+
+  test('keeps chat module identity avatar independent from legacy selfAvatar override', () => {
+    const store = useChatStore()
+
+    expect(
+      store.setModuleAvatarOverrides({
+        selfAvatar: 'https://example.com/legacy-self.png',
+      }),
+    ).toBe(true)
+
+    expect(store.getModuleAvatarOverrides().selfAvatar).toBe('https://example.com/legacy-self.png')
+    expect(store.getModuleIdentity().avatar).toBe('')
+
+    expect(
+      store.setModuleIdentity({
+        avatar: 'https://example.com/new-chat-self.png',
+      }),
+    ).toBe(true)
+    expect(store.getModuleIdentity().avatar).toBe('https://example.com/new-chat-self.png')
+
+    expect(
+      store.setModuleIdentity({
+        avatar: '',
+      }),
+    ).toBe(true)
+    expect(store.getModuleIdentity().avatar).toBe('')
+    expect(store.getModuleAvatarOverrides().selfAvatar).toBe('https://example.com/legacy-self.png')
+  })
+
   test('restores module/thread avatar overrides from backup snapshot', () => {
     const store = useChatStore()
 
@@ -504,6 +566,13 @@ describe('chat store model', () => {
         contactAvatars: {
           501: 'https://example.com/contact-module-specific.png',
         },
+      },
+      moduleIdentity: {
+        avatar: 'https://example.com/chat-module-self.png',
+        nickname: 'Ghost',
+        anonymityEnabled: true,
+        anonymityScope: 'selected',
+        anonymityContactIds: [501],
       },
       roleProfiles: [
         {
@@ -542,10 +611,30 @@ describe('chat store model', () => {
 
     expect(restored).toBe(true)
     expect(store.getModuleAvatarOverrides().selfAvatar).toBe('https://example.com/self-module.png')
+    expect(store.getModuleIdentity().avatar).toBe('https://example.com/chat-module-self.png')
+    expect(store.getModuleIdentity().nickname).toBe('Ghost')
+    expect(store.isModuleIdentityAnonymousForContact(501)).toBe(true)
     expect(store.getModuleContactAvatarOverride(501)).toBe('https://example.com/contact-module-specific.png')
     expect(store.getConversationIdentityOverrides(501).selfAvatar).toBe('https://example.com/self-thread.png')
     expect(store.getConversationIdentityOverrides(501).contactAvatar).toBe('https://example.com/contact-thread.png')
     expect(store.resolveContactAvatar(501)).toBe('https://example.com/contact-thread.png')
+  })
+
+  test('migrates legacy selfAvatar into chat module identity only when moduleIdentity is missing', () => {
+    const store = useChatStore()
+
+    const restored = store.restoreFromBackup({
+      moduleAvatarOverrides: {
+        selfAvatar: 'https://example.com/legacy-self-only.png',
+      },
+      contacts: store.contacts,
+      conversations: {},
+      messagesByConversation: {},
+    })
+
+    expect(restored).toBe(true)
+    expect(store.getModuleAvatarOverrides().selfAvatar).toBe('https://example.com/legacy-self-only.png')
+    expect(store.getModuleIdentity().avatar).toBe('https://example.com/legacy-self-only.png')
   })
 
   test('supports contact kind update and remove', () => {

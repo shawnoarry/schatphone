@@ -24,6 +24,7 @@ const VALID_REPLY_MODES = new Set(['manual', 'auto'])
 const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
 const VALID_IMAGE_REFERENCE_MODES = new Set(['auto', 'context_only', 'native_url'])
+const VALID_MODULE_ANONYMITY_SCOPES = new Set(['all', 'selected'])
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const VALID_BLOCK_TYPES = new Set([
@@ -72,6 +73,14 @@ const DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES = Object.freeze({
   selfAvatar: '',
   defaultContactAvatar: '',
   contactAvatars: {},
+})
+
+const DEFAULT_CHAT_MODULE_IDENTITY = Object.freeze({
+  avatar: '',
+  nickname: '',
+  anonymityEnabled: false,
+  anonymityScope: 'all',
+  anonymityContactIds: [],
 })
 
 const DEFAULT_ROLE_PROFILES = [
@@ -243,6 +252,43 @@ const normalizeConversationIdentityOverrides = (rawOverrides) => {
     selfAvatar: normalizeAvatarUrl(input.selfAvatar),
     contactAvatar: normalizeAvatarUrl(input.contactAvatar),
   }
+}
+
+const normalizeModuleIdentityContactIds = (rawIds) => {
+  if (!Array.isArray(rawIds)) return []
+  const unique = []
+  rawIds.forEach((value) => {
+    const id = toInt(value, 0)
+    if (id <= 0 || unique.includes(id)) return
+    unique.push(id)
+  })
+  return unique
+}
+
+const normalizeModuleIdentity = (rawIdentity) => {
+  const input = rawIdentity && typeof rawIdentity === 'object' ? rawIdentity : {}
+  return {
+    avatar: normalizeAvatarUrl(input.avatar),
+    nickname: normalizeSingleLineText(input.nickname, MAX_SHORT_LABEL_LENGTH),
+    anonymityEnabled: Boolean(input.anonymityEnabled),
+    anonymityScope:
+      typeof input.anonymityScope === 'string' && VALID_MODULE_ANONYMITY_SCOPES.has(input.anonymityScope)
+        ? input.anonymityScope
+        : DEFAULT_CHAT_MODULE_IDENTITY.anonymityScope,
+    anonymityContactIds: normalizeModuleIdentityContactIds(input.anonymityContactIds),
+  }
+}
+
+const normalizeRestoredModuleIdentity = (rawIdentity, legacySelfAvatar = '') => {
+  const normalized = normalizeModuleIdentity(rawIdentity)
+  const hasExplicitAvatar =
+    rawIdentity && typeof rawIdentity === 'object' && Object.prototype.hasOwnProperty.call(rawIdentity, 'avatar')
+
+  if (!hasExplicitAvatar && !normalized.avatar) {
+    normalized.avatar = normalizeAvatarUrl(legacySelfAvatar)
+  }
+
+  return normalized
 }
 
 const sanitizeExternalUrl = (value) => {
@@ -713,6 +759,7 @@ export const useChatStore = defineStore('chat', () => {
   const moduleAvatarOverrides = reactive(
     normalizeModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES),
   )
+  const moduleIdentity = reactive(normalizeModuleIdentity(DEFAULT_CHAT_MODULE_IDENTITY))
   const conversations = reactive({})
   const messagesByConversation = reactive({})
   const hasFinishedStorageHydration = ref(false)
@@ -863,6 +910,24 @@ export const useChatStore = defineStore('chat', () => {
     moduleAvatarOverrides.contactAvatars = normalized.contactAvatars
   }
 
+  const applyModuleIdentity = (rawIdentity) => {
+    const normalized = normalizeModuleIdentity(rawIdentity)
+    moduleIdentity.avatar = normalized.avatar
+    moduleIdentity.nickname = normalized.nickname
+    moduleIdentity.anonymityEnabled = normalized.anonymityEnabled
+    moduleIdentity.anonymityScope = normalized.anonymityScope
+    moduleIdentity.anonymityContactIds = normalized.anonymityContactIds
+  }
+
+  const applyRestoredModuleIdentity = (rawIdentity, legacySelfAvatar = moduleAvatarOverrides.selfAvatar) => {
+    const normalized = normalizeRestoredModuleIdentity(rawIdentity, legacySelfAvatar)
+    moduleIdentity.avatar = normalized.avatar
+    moduleIdentity.nickname = normalized.nickname
+    moduleIdentity.anonymityEnabled = normalized.anonymityEnabled
+    moduleIdentity.anonymityScope = normalized.anonymityScope
+    moduleIdentity.anonymityContactIds = normalized.anonymityContactIds
+  }
+
   const getRawContactById = (contactId) => {
     return contacts.find((item) => Number(item.id) === Number(contactId)) || null
   }
@@ -893,6 +958,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const getModuleAvatarOverrides = () => normalizeModuleAvatarOverrides(moduleAvatarOverrides)
+
+  const getModuleIdentity = () => normalizeModuleIdentity(moduleIdentity)
 
   const getModuleContactAvatarOverride = (contactId) => {
     const key = String(toInt(contactId, 0))
@@ -934,6 +1001,41 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     return changed
+  }
+
+  const setModuleIdentity = (updates = {}) => {
+    if (!updates || typeof updates !== 'object') return false
+
+    const current = getModuleIdentity()
+    const next = normalizeModuleIdentity(
+      {
+        ...current,
+        ...updates,
+      },
+    )
+
+    if (
+      current.avatar === next.avatar &&
+      current.nickname === next.nickname &&
+      current.anonymityEnabled === next.anonymityEnabled &&
+      current.anonymityScope === next.anonymityScope &&
+      current.anonymityContactIds.length === next.anonymityContactIds.length &&
+      current.anonymityContactIds.every((id, index) => id === next.anonymityContactIds[index])
+    ) {
+      return false
+    }
+    applyModuleIdentity(next)
+    return true
+  }
+
+  const isModuleIdentityAnonymousForContact = (contactId) => {
+    const numericContactId = toInt(contactId, 0)
+    if (numericContactId <= 0) return false
+
+    const identity = getModuleIdentity()
+    if (!identity.anonymityEnabled) return false
+    if (identity.anonymityScope === 'all') return true
+    return identity.anonymityContactIds.includes(numericContactId)
   }
 
   const setModuleContactAvatarOverride = (contactId, avatar) => {
@@ -1778,6 +1880,7 @@ export const useChatStore = defineStore('chat', () => {
 
     resetReactiveObject(roleProfiles)
     applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
+    applyModuleIdentity(DEFAULT_CHAT_MODULE_IDENTITY)
     const sourceProfiles = Array.isArray(legacyContacts)
       ? normalizedContacts
           .filter((contact) => (contact.kind || 'role') === 'role')
@@ -1842,6 +1945,12 @@ export const useChatStore = defineStore('chat', () => {
       persisted.moduleAvatarOverrides && typeof persisted.moduleAvatarOverrides === 'object'
         ? persisted.moduleAvatarOverrides
         : DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES,
+    )
+    applyRestoredModuleIdentity(
+      persisted.moduleIdentity && typeof persisted.moduleIdentity === 'object'
+        ? persisted.moduleIdentity
+        : null,
+      persisted.moduleAvatarOverrides?.selfAvatar,
     )
 
     const normalizedProfiles = Array.isArray(persisted.roleProfiles)
@@ -1984,6 +2093,7 @@ export const useChatStore = defineStore('chat', () => {
       CHAT_STORAGE_KEY,
       {
         moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
+        moduleIdentity: normalizeModuleIdentity(moduleIdentity),
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
           assetPack: cloneRoleProfileAssetPack(profile.assetPack),
@@ -2038,7 +2148,7 @@ export const useChatStore = defineStore('chat', () => {
   })()
 
   watch(
-    [moduleAvatarOverrides, roleProfiles, contacts, conversations, messagesByConversation],
+    [moduleAvatarOverrides, moduleIdentity, roleProfiles, contacts, conversations, messagesByConversation],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -2048,6 +2158,7 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     moduleAvatarOverrides,
+    moduleIdentity,
     roleProfiles,
     contacts,
     contactsForList,
@@ -2083,6 +2194,9 @@ export const useChatStore = defineStore('chat', () => {
     getContactById,
     resolveContactAvatar,
     getModuleAvatarOverrides,
+    getModuleIdentity,
+    setModuleIdentity,
+    isModuleIdentityAnonymousForContact,
     setModuleAvatarOverrides,
     getModuleContactAvatarOverride,
     setModuleContactAvatarOverride,

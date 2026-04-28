@@ -484,17 +484,22 @@ const activeContactAvatar = computed(() => {
   return chatStore.resolveContactAvatar(activeChat.value.id)
 })
 
+const activeModuleIdentity = computed(() => chatStore.getModuleIdentity())
+const activeModuleNickname = computed(
+  () => activeModuleIdentity.value.nickname || user.value.name || t('自己', 'Me'),
+)
+
 const activeSelfAvatar = computed(() => {
-  const moduleOverrides = chatStore.getModuleAvatarOverrides()
+  const moduleIdentity = activeModuleIdentity.value
   const threadOverrides = activeChat.value
     ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
     : { selfAvatar: '' }
 
   return resolveAvatarWithHierarchy({
     threadAvatar: threadOverrides.selfAvatar,
-    moduleAvatar: moduleOverrides.selfAvatar,
+    moduleAvatar: moduleIdentity.avatar,
     globalAvatar: user.value.avatar,
-    fallbackSeed: user.value.name || t('自己', 'Me'),
+    fallbackSeed: activeModuleNickname.value,
   })
 })
 
@@ -1020,6 +1025,10 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const contactKind = contact.kind || 'role'
   const typeLabel =
     contactKind === 'group' ? 'group chat' : contactKind === 'service' ? 'service account' : contactKind === 'official' ? 'official account' : 'role chat'
+  const moduleIdentity = chatStore.getModuleIdentity()
+  const anonymousIdentity = chatStore.isModuleIdentityAnonymousForContact(contact.id)
+  const userDisplayName = moduleIdentity.nickname || user.value.name || 'User'
+  const userBio = typeof user.value.bio === 'string' ? user.value.bio.trim() : ''
 
   const serviceInstruction =
     contactKind === 'service' || contactKind === 'official'
@@ -1065,10 +1074,17 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const providerCapabilityInstruction = providerCapabilities
     ? `Image-reference transport mode: ${providerCapabilities.preferredImageReferenceMode || 'none'} (provider: ${providerCapabilities.kind || 'unknown'}).`
     : 'Image-reference transport mode: unknown.'
+  const userIdentityBlock = anonymousIdentity
+    ? [
+        'User identity: hidden.',
+        'Treat the user as a stranger by default.',
+        'Do not assume you know their name, background, occupation, or prior relationship unless this conversation explicitly reveals it.',
+      ].join('\n')
+    : `User: ${userDisplayName}, ${userBio || 'none'}`
 
   return `
 ${worldKernelInstruction}
-User: ${user.value.name}, ${user.value.bio}
+${userIdentityBlock}
 Conversation type: ${typeLabel}
 Your role: ${contact.name} (${contact.role})
 ${serviceInstruction}
