@@ -756,38 +756,77 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-white text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 flex items-center gap-3">
-      <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> 首页
+  <div class="map-immersive-root w-full h-full text-slate-100 flex flex-col">
+    <div class="map-topbar pt-12 pb-3 px-4 flex items-center justify-between gap-3">
+      <button @click="goHome" class="text-cyan-100 text-sm flex items-center gap-1">
+        <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
-      <h1 class="font-bold">{{ t('地图', 'Map') }}</h1>
+      <h1 class="font-bold tracking-[0.28em] text-xs uppercase">{{ t('地图', 'Map') }}</h1>
+      <span class="text-[10px] px-2 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-50">
+        {{ tripStatusLabel }}
+      </span>
     </div>
 
-    <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4 bg-gray-50">
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+      <section class="map-visual-panel rounded-[2rem] p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="font-semibold">{{ t('地图视觉', 'Map visual') }}</h2>
-          <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+          <div>
+            <p class="text-[10px] uppercase tracking-[0.24em] text-cyan-100/70">{{ t('实时视野', 'Live view') }}</p>
+            <h2 class="text-xl font-semibold">{{ t('地图视觉', 'Map visual') }}</h2>
+          </div>
+          <span class="text-[11px] px-2 py-1 rounded-full bg-white/12 border border-white/15 text-cyan-50">
             {{ resolvedMapVisualMode === 'gallery' ? t('素材库', 'Gallery') : t('默认', 'Default') }}
           </span>
         </div>
 
-        <div v-if="showMapVisualOnboarding" class="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 space-y-2">
+        <div class="map-preview-stage mb-4">
+          <img
+            v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl"
+            :src="mapVisualPreviewUrl"
+            class="w-full h-full object-cover"
+            :alt="t('地图视觉预览', 'Map visual preview')"
+          />
+          <img
+            v-else-if="mapOneOffVisualUrl"
+            :src="mapOneOffVisualUrl"
+            class="w-full h-full object-cover"
+            :alt="mapOneOffVisualName || t('单次地图背景预览', 'One-off map visual preview')"
+          />
+          <img
+            v-else-if="mapProviderGeneratedImageUrl"
+            :src="mapProviderGeneratedImageUrl"
+            class="w-full h-full object-cover"
+            :alt="t('供应商视觉预览', 'Provider visual preview')"
+          />
+          <div v-else class="map-default-canvas w-full h-full">
+            <div class="map-grid-lines"></div>
+            <div class="map-route-line"></div>
+            <div class="map-pin map-pin-a"></div>
+            <div class="map-pin map-pin-b"></div>
+          </div>
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/15 to-transparent"></div>
+          <div class="absolute left-4 right-4 bottom-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">{{ t('当前位置', 'Current location') }}</p>
+            <p class="mt-1 text-lg font-semibold line-clamp-2">{{ currentLocationText }}</p>
+            <p class="mt-1 text-xs text-cyan-50/75">{{ mapVisualBindingStatusText }}</p>
+          </div>
+        </div>
+
+        <div v-if="showMapVisualOnboarding" class="mb-3 rounded-2xl border border-amber-200/40 bg-amber-300/15 p-3 text-xs text-amber-50 space-y-2">
           <p>
             {{ t('首次可选择地图视觉模式：默认样式或素材库背景。未配置素材时会自动回退为默认。', 'Choose map visual mode on first use: default style or gallery background. Missing assets auto-fallback to default.') }}
           </p>
           <div class="flex flex-wrap gap-2">
-            <button @click="useDefaultMapVisual" class="px-2 py-1 rounded bg-gray-900 text-white">
+            <button @click="useDefaultMapVisual" class="px-2 py-1 rounded bg-white text-slate-950">
               {{ t('保持默认', 'Keep default') }}
             </button>
-            <button @click="useGalleryMapVisual" class="px-2 py-1 rounded border border-gray-300">
+            <button @click="useGalleryMapVisual" class="px-2 py-1 rounded border border-white/25">
               {{ t('使用素材库', 'Use gallery') }}
             </button>
           </div>
         </div>
 
-        <div class="space-y-2 text-xs">
+        <div class="space-y-2 text-xs text-cyan-50/80">
           <label class="inline-flex items-center gap-2 mr-4">
             <input
               type="radio"
@@ -812,7 +851,7 @@ onBeforeUnmount(() => {
 
         <div v-if="mapVisualSettings.mode === 'gallery'" class="mt-3 space-y-2">
           <select
-            class="w-full border rounded-lg px-3 py-2 text-sm"
+            class="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-white outline-none"
             :value="mapVisualSettings.assetId"
             @change="onMapVisualAssetChange"
           >
@@ -821,34 +860,34 @@ onBeforeUnmount(() => {
               {{ asset.name }}
             </option>
           </select>
-          <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-gray-500">
+          <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-cyan-50/60">
             {{ t('素材库暂无可用背景图，已自动回退默认模式。', 'No gallery asset available for map background; fallback stays on default mode.') }}
           </p>
 
           <div
             v-else
-            class="rounded-2xl border border-violet-100 bg-violet-50/40 p-3 space-y-3"
+            class="rounded-3xl border border-white/12 bg-white/10 p-3 space-y-3 backdrop-blur"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-xs font-semibold text-violet-800">{{ mapVisualSelectionTitle }}</p>
+                <p class="text-xs font-semibold text-cyan-50">{{ mapVisualSelectionTitle }}</p>
                 <p
                   v-if="mapVisualSelectedAsset"
-                  class="mt-1 text-[11px] text-violet-700 truncate"
+                  class="mt-1 text-[11px] text-cyan-100 truncate"
                 >
                   {{ mapVisualSelectedAsset.name }}
                 </p>
-                <p class="mt-1 text-[11px] text-gray-500">
+                <p class="mt-1 text-[11px] text-cyan-50/60">
                   {{ mapVisualSelectionDescription }}
                 </p>
-                <p class="mt-1 text-[11px] text-violet-700">
+                <p class="mt-1 text-[11px] text-cyan-100">
                   {{ mapVisualBindingStatusText }}
                 </p>
               </div>
               <button
                 type="button"
                 @click="openGallery"
-                class="shrink-0 rounded-xl border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] text-violet-700"
+                class="shrink-0 rounded-xl border border-white/15 bg-white/12 px-2.5 py-1.5 text-[11px] text-cyan-50"
               >
                 {{ t('打开相册', 'Open Gallery') }}
               </button>
@@ -858,7 +897,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 @click="restoreDefaultMapVisual"
-                class="rounded-xl border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-600"
+                class="rounded-xl border border-white/15 bg-white/10 px-2.5 py-1.5 text-[11px] text-cyan-50"
               >
                 {{ t('恢复默认视觉', 'Use default visual') }}
               </button>
@@ -866,7 +905,7 @@ onBeforeUnmount(() => {
                 v-if="mapVisualSelectedAsset"
                 type="button"
                 @click="clearMapVisualBinding"
-                class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700"
+                class="rounded-xl border border-amber-200/40 bg-amber-300/15 px-2.5 py-1.5 text-[11px] text-amber-50"
               >
                 {{ t('清除背景绑定', 'Clear bound asset') }}
               </button>
@@ -881,11 +920,11 @@ onBeforeUnmount(() => {
                 @click="applyQuickMapVisualAsset(asset.id)"
               >
                 <div
-                  class="w-16 h-16 rounded-xl overflow-hidden border bg-white"
+                  class="w-16 h-16 rounded-2xl overflow-hidden border bg-white/10"
                   :class="
                     mapVisualSelectedAsset?.id === asset.id
-                      ? 'border-violet-400 ring-2 ring-violet-100'
-                      : 'border-gray-200'
+                      ? 'border-cyan-200 ring-2 ring-cyan-200/25'
+                      : 'border-white/15'
                   "
                 >
                   <img
@@ -895,16 +934,16 @@ onBeforeUnmount(() => {
                   />
                   <div
                     v-else
-                    class="w-full h-full flex items-center justify-center text-[9px] text-gray-400 bg-gray-50"
+                    class="w-full h-full flex items-center justify-center text-[9px] text-cyan-50/50 bg-white/10"
                   >
                     {{ t('加载中', 'Loading') }}
                   </div>
                 </div>
-                <p class="mt-1 text-[10px] text-gray-500 line-clamp-2 text-left">{{ asset.name }}</p>
+                <p class="mt-1 text-[10px] text-cyan-50/65 line-clamp-2 text-left">{{ asset.name }}</p>
               </button>
               <div
                 v-if="mapVisualQuickOverflowCount > 0"
-                class="shrink-0 rounded-xl border border-dashed border-violet-200 px-3 py-2 text-[11px] text-violet-700"
+                class="shrink-0 rounded-xl border border-dashed border-white/20 px-3 py-2 text-[11px] text-cyan-50"
               >
                 +{{ mapVisualQuickOverflowCount }}
               </div>
@@ -920,18 +959,18 @@ onBeforeUnmount(() => {
             accept="image/*"
             @change="onMapVisualFilePicked"
           />
-          <button @click="openMapVisualUploadPicker" class="px-2 py-1 rounded border border-gray-300 text-xs">
+          <button @click="openMapVisualUploadPicker" class="px-3 py-1.5 rounded-full border border-white/15 bg-white/10 text-xs text-cyan-50">
             {{ t('上传地图背景', 'Upload map visual') }}
           </button>
           <button
             v-if="mapOneOffVisualUrl"
             @click="clearMapOneOffVisual"
-            class="px-2 py-1 rounded border border-amber-300 text-amber-700 bg-amber-50 text-xs"
+            class="px-3 py-1.5 rounded-full border border-amber-200/40 text-amber-50 bg-amber-300/15 text-xs"
           >
             {{ t('清除本次背景', 'Clear one-off visual') }}
           </button>
         </div>
-        <p class="mt-1 text-[11px] text-gray-500">
+        <p class="mt-1 text-[11px] text-cyan-50/55">
           {{
             t(
               '支持“先入库再应用”与“单次应用不入库”双路径；单次背景只在当前会话可见。',
@@ -940,7 +979,7 @@ onBeforeUnmount(() => {
           }}
         </p>
 
-        <label class="mt-3 inline-flex items-center gap-2 text-xs text-gray-600">
+        <label class="mt-3 inline-flex items-center gap-2 text-xs text-cyan-50/75">
           <input
             type="checkbox"
             class="w-4 h-4"
@@ -950,7 +989,7 @@ onBeforeUnmount(() => {
           {{ t('启用 AI 地图视觉', 'Enable AI map visual') }}
         </label>
 
-        <label class="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
+        <label class="mt-2 inline-flex items-center gap-2 text-xs text-cyan-50/75">
           <input
             type="checkbox"
             class="w-4 h-4"
@@ -960,8 +999,8 @@ onBeforeUnmount(() => {
           {{ t('启用供应商视觉生成（可选）', 'Enable provider visual generation (optional)') }}
         </label>
 
-        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
-          <p class="font-medium text-gray-700">
+        <div class="mt-3 rounded-2xl border border-white/12 bg-slate-950/25 p-3 text-xs text-cyan-50/70">
+          <p class="font-medium text-cyan-50">
             {{ t('自动化策略状态', 'Automation policy') }}: {{ mapAiPolicySummary }}
           </p>
           <p class="mt-1">{{ mapAiPolicyHint }}</p>
@@ -970,7 +1009,7 @@ onBeforeUnmount(() => {
           </p>
           <p
             v-if="mapAutomationRuntime.lastProviderSummary"
-            class="mt-1 text-[11px] text-gray-500"
+            class="mt-1 text-[11px] text-cyan-50/55"
           >
             {{ mapAutomationRuntime.lastProviderSummary }}
           </p>
@@ -978,21 +1017,21 @@ onBeforeUnmount(() => {
             <button
               @click="triggerMapAiVisualRefresh"
               class="px-2 py-1 rounded border"
-              :class="mapAiVisualAutomationPolicy.invokeEnabled ? 'border-blue-300 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-500 bg-gray-100'"
+              :class="mapAiVisualAutomationPolicy.invokeEnabled ? 'border-cyan-200/60 text-cyan-50 bg-cyan-300/15' : 'border-white/15 text-cyan-50/50 bg-white/5'"
               :disabled="mapAiVisualRefreshing"
             >
               {{ mapAiVisualRefreshing ? t('刷新中…', 'Refreshing...') : t('触发 AI 刷新', 'Trigger AI refresh') }}
             </button>
-            <button @click="openAutomationSettings" class="px-2 py-1 rounded border border-gray-300">
+            <button @click="openAutomationSettings" class="px-2 py-1 rounded border border-white/15">
               {{ t('前往自动化设置', 'Open automation settings') }}
             </button>
           </div>
-          <p v-if="mapAutomationRuntime.lastExecuteAt > 0" class="mt-1 text-[11px] text-gray-500">
+          <p v-if="mapAutomationRuntime.lastExecuteAt > 0" class="mt-1 text-[11px] text-cyan-50/55">
             {{ t('上次执行', 'Last executed') }}: {{ formatTime(mapAutomationRuntime.lastExecuteAt) }}
           </p>
         </div>
 
-        <div class="mt-3 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
+        <div class="hidden">
           <div v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl" class="aspect-[16/8] bg-black">
             <img
               :src="mapVisualPreviewUrl"
@@ -1022,19 +1061,19 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <p v-if="mapVisualLoading" class="mt-2 text-xs text-gray-500">
+        <p v-if="mapVisualLoading" class="mt-2 text-xs text-cyan-50/60">
           {{ t('正在加载素材预览…', 'Loading asset preview...') }}
         </p>
         <p
           v-if="mapVisualHint.message"
           class="mt-2 text-xs"
-          :class="mapVisualHint.tone === 'success' ? 'text-emerald-700' : mapVisualHint.tone === 'warn' ? 'text-amber-700' : 'text-gray-600'"
+          :class="mapVisualHint.tone === 'success' ? 'text-emerald-200' : mapVisualHint.tone === 'warn' ? 'text-amber-200' : 'text-cyan-50/70'"
         >
           {{ mapVisualHint.message }}
         </p>
       </section>
 
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="flex items-center justify-between mb-2">
           <h2 class="font-semibold">{{ t('当前位置', 'Current location') }}</h2>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
@@ -1065,7 +1104,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-3">{{ t('新增地址 / 手动定位', 'Add address / set manually') }}</h2>
         <div class="space-y-2">
           <input
@@ -1085,7 +1124,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="flex items-center justify-between mb-3">
           <h2 class="font-semibold">{{ t('出行模拟', 'Trip simulation') }}</h2>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ tripStatusLabel }}</span>
@@ -1167,7 +1206,7 @@ onBeforeUnmount(() => {
         </p>
       </section>
 
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-2">{{ t('行程记录', 'Trip history') }}</h2>
         <p v-if="tripHistory.length === 0" class="text-xs text-gray-500">
           {{ t('暂无记录。', 'No records yet.') }}
@@ -1192,7 +1231,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="bg-white rounded-2xl border border-gray-200 p-4">
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-2">{{ t('地址簿管理', 'Address book') }}</h2>
         <div class="space-y-2">
           <div v-for="item in addresses" :key="`row-${item.id}`" class="flex items-center justify-between border rounded-lg p-2">
@@ -1207,3 +1246,131 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.map-immersive-root {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(56, 189, 248, 0.28), transparent 30%),
+    radial-gradient(circle at 84% 18%, rgba(45, 212, 191, 0.22), transparent 28%),
+    linear-gradient(160deg, #07111f 0%, #0d1b2f 48%, #101827 100%);
+}
+
+.map-topbar {
+  background: linear-gradient(180deg, rgba(7, 17, 31, 0.92), rgba(7, 17, 31, 0.42));
+  backdrop-filter: blur(18px);
+}
+
+.map-visual-panel,
+.map-glass-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(24px);
+}
+
+.map-visual-panel::before,
+.map-glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 42%);
+}
+
+.map-preview-stage {
+  position: relative;
+  height: 310px;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #07111f;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.map-default-canvas {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(125, 211, 252, 0.35), transparent 22%),
+    radial-gradient(circle at 78% 66%, rgba(20, 184, 166, 0.32), transparent 26%),
+    linear-gradient(145deg, #10243a, #102033 46%, #0b1525);
+}
+
+.map-grid-lines {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.38;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 34px 34px;
+  transform: rotate(-13deg) scale(1.15);
+}
+
+.map-route-line {
+  position: absolute;
+  left: 18%;
+  top: 58%;
+  width: 66%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #67e8f9, #fef3c7, #2dd4bf);
+  box-shadow: 0 0 24px rgba(103, 232, 249, 0.55);
+  transform: rotate(-24deg);
+}
+
+.map-pin {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.82);
+  background: #22d3ee;
+  box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.16), 0 0 24px rgba(34, 211, 238, 0.55);
+}
+
+.map-pin-a {
+  left: 20%;
+  top: 56%;
+}
+
+.map-pin-b {
+  right: 18%;
+  top: 33%;
+  background: #fbbf24;
+  box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.16), 0 0 24px rgba(251, 191, 36, 0.45);
+}
+
+.map-glass-panel input,
+.map-glass-panel select {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.map-visual-panel option,
+.map-glass-panel option {
+  color: #0f172a;
+}
+
+.map-glass-panel .bg-white,
+.map-glass-panel .bg-gray-50 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.map-glass-panel .text-gray-500,
+.map-glass-panel .text-gray-600,
+.map-glass-panel .text-gray-700,
+.map-glass-panel .text-gray-800 {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.map-glass-panel .border,
+.map-glass-panel .border-gray-200,
+.map-glass-panel .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+</style>

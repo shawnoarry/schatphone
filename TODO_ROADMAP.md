@@ -289,8 +289,8 @@ Status / 状态: `IN_PROGRESS`
    中文：数据结构任务——`DONE`：已落地自定义文件夹与角色槽位绑定记录（V1=单文件夹绑定，并预留优先级字段 + 向后兼容迁移 + 测试）。
 2. EN: Gallery + Chat consumption task — `DONE`: Gallery folder CRUD is landed; Contacts exposes profile-image/dynamic-media/emoji/reference slot pickers with live binding-state/fallback hints and Gallery jump entry; Chat now consumes folder-bound assets in thread preferred list, gallery send ranking, and AI image-reference collection fallback; Chat Directory also surfaces profile-folder readiness summary.
    中文：相册 + Chat 消费任务——`DONE`：Gallery 文件夹增删改已落地；通讯录已提供形象照/动态图/表情包/参考图槽位选择，并补齐实时绑定状态/默认回退提示与跳转相册入口；Chat 已接入文件夹绑定素材用于会话优先素材列表、发送素材排序与 AI 参考图回退采样；会话通讯录也已显示档案文件夹就绪摘要。
-3. EN: Safety task — `DONE (phase-1)`: bound folder delete + bound asset delete/replace now enforce second confirmation in Gallery UI; force-delete path remains available.
-   中文：安全任务——`DONE（第一阶段）`：Gallery UI 中已对绑定文件夹删除与绑定素材删除/替换统一执行二次确认，并保留强制删除路径。
+3. EN: Safety task — `DONE (phase-1)`: bound folder delete + bound asset delete/replace now enforce second confirmation in Gallery UI; active Appearance wallpaper and Map gallery-background usage are visible on Gallery asset cards, included in deletion guards, filterable by in-use/unused state, and safely cleared on force-delete.
+   中文：安全任务——`DONE（第一阶段）`：Gallery UI 中已对绑定文件夹删除与绑定素材删除/替换统一执行二次确认；正在使用的外观壁纸与地图素材库背景会在素材卡片上前置显示，也已纳入删除守卫，并支持按“使用中/未使用”筛选，强制删除时会安全清理对应绑定。
 4. EN: Fallback task — `IN_PROGRESS` module-level default policies:
    中文：回退任务——`IN_PROGRESS` 模块级默认策略：
    - EN: role lanes fallback to text-first/no-pack/no-pad-image baseline (optional AI image-generation switch).
@@ -513,3 +513,15 @@ Acceptance / 验收标准:
     2026-04-22 中文：已落地 Appearance 壁纸快速切换打磨：相册壁纸素材现会在外观页提供缩略图预览条，可直接点选应用，同时保留原有下拉选择路径，并补齐预览资源的安全释放。
 36. 2026-04-23 EN: Landed Appearance wallpaper-state polish: Appearance now shows a direct current-wallpaper preview card and clearer reset-to-theme wording, so users can understand the active wallpaper mode and the reset result at a glance.
     2026-04-23 中文：已落地 Appearance 壁纸状态打磨：外观页现已提供当前壁纸预览卡，并使用更清晰的恢复主题文案，让用户能一眼理解当前壁纸模式以及恢复后的结果。
+37. 2026-04-28 EN: Extended Gallery deletion guards to active Map gallery-background usage, so force-delete now clears Map visual binding the same way active wallpaper binding is safely cleared.
+    2026-04-28 中文：扩展 Gallery 删除守卫，纳入地图正在使用的素材库背景；强制删除时会像外观壁纸一样安全清理地图视觉绑定。
+38. 2026-04-28 EN: Added Gallery asset usage chips for active wallpaper, map background, chat usage, and role bindings so in-use status is visible before destructive actions.
+    2026-04-28 中文：为 Gallery 素材卡片新增使用中标签，覆盖外观壁纸、地图背景、聊天使用与角色绑定，让占用状态在执行删除/替换前即可见。
+39. 2026-04-28 EN: Added Gallery usage-state filtering (`all / in use / unused`) on top of category filters, making occupied assets directly auditable from the asset hub.
+    2026-04-28 中文：为 Gallery 增加“全部 / 使用中 / 未使用”状态筛选，并叠加在分类筛选之上，让素材中台可以直接审计哪些素材已被占用。
+40. 2026-04-28 EN: Started immersion polish for Map and Gallery: Map now presents a map-canvas-first visual layer with glass controls, while Gallery began moving away from admin-panel styling.
+    2026-04-28 中文：启动 Map 与 Gallery 的沉浸感打磨：地图页改为地图画布优先 + 玻璃浮层控制，相册页开始脱离后台管理面板风格。
+41. 2026-04-29 EN: Reduced duplicate Chat settings entry points: service templates now have one formal editing path in Chat Directory, while in-chat service threads only show the active template summary and management jump; single-thread tuning and batch templates were renamed to clarify their scopes.
+    2026-04-29 中文：收敛 Chat 重复设置入口：服务模板正式编辑统一到会话通讯录，聊天内服务号会话仅展示当前模板摘要与管理跳转；单会话调校与批量模板也已通过文案区分适用范围。
+42. 2026-04-29 EN: Corrected Gallery visual direction toward iOS Photos: album/recents language, light system styling, current-view summary, three-column photo grid, and tucked-away per-photo options now keep asset-hub controls secondary.
+    2026-04-29 中文：校准 Gallery 视觉方向为更接近 iOS 系统相册：相册/最近项目语言、浅色系统风格、当前视图摘要、三列照片网格，以及收起的单张照片选项，让素材中台控制退到次级。

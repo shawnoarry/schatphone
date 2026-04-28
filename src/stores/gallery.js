@@ -12,6 +12,7 @@ import {
   summarizeMediaLimitPolicy,
   validateMediaFileBySize,
 } from '../lib/media-policy'
+import { useMapStore } from './map'
 import { useSystemStore } from './system'
 
 export const GALLERY_ASSET_CATEGORIES = Object.freeze(['wallpaper', 'emoji', 'reference', 'scenario'])
@@ -335,6 +336,7 @@ const normalizeUsageItem = (rawUsage, fallbackKey) => {
 
 export const useGalleryStore = defineStore('gallery', () => {
   const systemStore = useSystemStore()
+  const mapStore = useMapStore()
   const assets = ref([])
   const folders = ref([])
   const usageRegistry = reactive({})
@@ -1050,6 +1052,21 @@ export const useGalleryStore = defineStore('gallery', () => {
       })
     }
 
+    const mapVisualSettings = mapStore.mapVisualSettings || {}
+    const mapVisualMode =
+      typeof mapVisualSettings.mode === 'string' ? mapVisualSettings.mode.trim() : 'default'
+    const mapVisualAssetId =
+      typeof mapVisualSettings.assetId === 'string' ? mapVisualSettings.assetId.trim() : ''
+
+    if (mapVisualMode === 'gallery' && mapVisualAssetId && mapVisualAssetId === asset.id) {
+      runtimeUsages.push({
+        id: 'map:visual.background',
+        moduleKey: 'map',
+        targetKey: 'visual.background',
+        label: 'Map visual background',
+      })
+    }
+
     return runtimeUsages
   }
 
@@ -1112,6 +1129,10 @@ export const useGalleryStore = defineStore('gallery', () => {
       systemStore.clearAppearanceWallpaperAsset({
         fallbackToTheme: true,
       })
+    }
+    if (mapStore.mapVisualSettings?.assetId === normalizedId) {
+      mapStore.setMapVisualAssetId('')
+      mapStore.setMapVisualMode('default')
     }
     if (target.sourceType === 'file') {
       await deleteGalleryAssetBlob(target.blobId || target.id)

@@ -44,6 +44,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：会话级 AI 偏好和自动触发时间控制都已接通。
 6. EN: Chat confirmation, edit, import-choice, and management flows now use the same in-app dialog style as the rest of the shell, so the conversation experience no longer jumps out to browser UI.
    中文：Chat 中的确认、编辑、导入选择和管理流程现已统一使用壳层内的页内对话框样式，因此会话体验不再突然跳到浏览器原生 UI。
+7. EN: Chat setting entry points are clearer: service templates are formally edited in Chat Directory, while in-chat service threads only show the active template and a management jump; single-thread tuning is also named separately from batch templates.
+   中文：Chat 设置入口更清楚：服务模板正式编辑统一在会话通讯录，聊天内服务号会话仅显示当前模板与管理跳转；单会话调校也已与批量模板明确区分。
 
 ### 3.3 Global assets / 全局素材
 1. EN: Gallery works as the global asset hub instead of a chat-only helper.
@@ -52,24 +54,28 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：本地导入、URL 导入、文件夹增删改、角色槽位绑定，以及模块本地单次媒体路径，都已有基线实现。
 3. EN: Chat and Map both support “import before use” and “one-off without import” style local-media paths.
    中文：Chat 和地图都已支持“先入库再使用”与“不入库单次使用”两种本地媒体路径。
-4. EN: Safety guards are online for media size and for deleting/replacing in-use assets.
-   中文：媒体体积守卫以及“使用中素材删除/替换”的安全确认机制已上线。
-5. EN: Contacts and Chat Directory now expose asset-folder readiness/fallback summaries, so folder bindings are no longer hidden inside pickers only.
+4. EN: Safety guards are online for media size and for deleting/replacing in-use assets; Gallery now also shows active usage badges, supports all/in-use/unused filtering, and recognizes Appearance wallpaper plus Map gallery-background usage before deletion.
+   中文：媒体体积守卫以及“使用中素材删除/替换”的安全确认机制已上线；Gallery 现在会在素材卡片上显示使用中标签，支持“全部/使用中/未使用”筛选，并在删除前识别外观壁纸和地图素材库背景的占用关系。
+5. EN: Gallery has started moving away from admin-panel styling toward an iOS Photos-like album experience while keeping asset-hub behavior behind the scenes.
+   中文：Gallery 已开始从后台管理面板风格转向更接近 iOS 系统相册的体验，同时在背后保留素材中台能力。
+6. EN: Contacts and Chat Directory now expose asset-folder readiness/fallback summaries, so folder bindings are no longer hidden inside pickers only.
    中文：主通讯录与会话通讯录现在都会显示素材文件夹的就绪/回退摘要，因此文件夹绑定不再只是藏在选择框里的配置。
-6. EN: Contacts folder-slot binding now also shows thumbnail previews for the first few bound assets, making it easier to verify the correct folder visually.
+7. EN: Contacts folder-slot binding now also shows thumbnail previews for the first few bound assets, making it easier to verify the correct folder visually.
    中文：主通讯录的文件夹槽位绑定现在还会显示前几张已绑定素材的缩略图，便于用户直接肉眼确认是否绑定正确。
-7. EN: Chat Directory role cards now also show a lightweight thumbnail strip for profile-bound folders, so thread-side asset readiness is visible at a glance.
+8. EN: Chat Directory role cards now also show a lightweight thumbnail strip for profile-bound folders, so thread-side asset readiness is visible at a glance.
    中文：会话通讯录中的角色卡片现在也会显示一条轻量缩略图预览带，用来一眼确认档案绑定素材是否就绪。
-8. EN: Thread settings inside Chat Directory now show the active preferred-image preview plus a quick thumbnail strip for fast switching.
+9. EN: Thread settings inside Chat Directory now show the active preferred-image preview plus a quick thumbnail strip for fast switching.
    中文：会话通讯录中的“会话设定”弹层现在会显示当前优先图片预览，并提供一排缩略图用于快速切换。
-9. EN: All current page-level confirm/prompt flows inside `src/views` now share one in-app dialog layer for rename, delete, batch action, import choice, overwrite, unsubscribe, and diagnostics-clear flows.
+10. EN: All current page-level confirm/prompt flows inside `src/views` now share one in-app dialog layer for rename, delete, batch action, import choice, overwrite, unsubscribe, and diagnostics-clear flows.
    中文：`src/views` 内当前所有页面级 confirm/prompt 流程现已统一接入同一套页内对话框层，覆盖重命名、删除、批量操作、导入选择、覆盖导入、取消订阅与诊断清理等场景。
-10. EN: That means Gallery, Chat, Map, WorldBook, Chat Directory, Settings, Network, Contacts, Appearance, Home, and Chat feature tools now feel visually consistent with the shell instead of dropping into browser-native popups.
+11. EN: That means Gallery, Chat, Map, WorldBook, Chat Directory, Settings, Network, Contacts, Appearance, Home, and Chat feature tools now feel visually consistent with the shell instead of dropping into browser-native popups.
    中文：这意味着 Gallery、Chat、Map、WorldBook、ChatDirectory、Settings、Network、Contacts、Appearance、Home 与 Chat 功能工具页，现都能保持与壳层一致的视觉体验，而不会掉回浏览器原生弹窗。
-11. EN: Appearance wallpaper now truly consumes the global asset hub: users can switch between theme wallpaper, gallery-backed wallpaper assets, and custom URL wallpaper; shell background resolution and delete-safety fallback are both connected.
+12. EN: Appearance wallpaper now truly consumes the global asset hub: users can switch between theme wallpaper, gallery-backed wallpaper assets, and custom URL wallpaper; shell background resolution and delete-safety fallback are both connected.
    中文：外观壁纸现在已经真正接入全局素材中台：用户可在主题壁纸、相册素材壁纸和自定义 URL 壁纸之间切换；壳层背景解析与删除安全回退也已接通。
-12. EN: Appearance wallpaper selection now also supports thumbnail-based quick switching, so users can preview and apply gallery wallpapers without relying only on a dropdown picker.
+13. EN: Appearance wallpaper selection now also supports thumbnail-based quick switching, so users can preview and apply gallery wallpapers without relying only on a dropdown picker.
    中文：外观壁纸选择现也支持基于缩略图的快速切换，用户无需只依赖下拉框，就可以直接预览并应用相册壁纸。
+14. EN: Gallery now uses Photos-style language and layout: the top area reads as albums/recents, the visible state is shown as the current view, and per-photo management actions are tucked behind options instead of always looking like admin controls.
+   中文：Gallery 现在改用系统相册式语言和布局：顶部更像相册/最近项目，当前状态以“当前视图”呈现，单张照片的管理动作收进“选项”，不再常驻成后台控制项。
 
 ### 3.4 Worldview and map / 世界观与地图
 1. EN: Global worldview and bindable knowledge points are already split in data structure.
@@ -84,6 +90,8 @@ Source / 来源: `TODO_ROADMAP.md`
    中文：地图视觉设置现在还会显示当前绑定背景的状态，并提供缩略图快速切换，因此用户无需离开地图页即可更换地图视觉。
 6. EN: Map now also supports one-tap default restore and clearing the remembered gallery binding, so users can recover to baseline visuals without manual cleanup.
    中文：地图现在还支持一键恢复默认视觉，以及清除已记住的素材库背景绑定，因此用户无需手动清理也能快速回到基础视觉。
+7. EN: Map has started visual immersion polish: the page now leads with a map-canvas-style scene and glass controls instead of reading like a settings console.
+   中文：地图已开始做沉浸感视觉打磨：页面现在优先呈现地图画布式场景和玻璃浮层控制，不再像设置控制台。
 
 ### 3.5 Storage, backup, and language / 存储、备份与语言
 1. EN: Local persistence baseline is stable with backup export/import and diagnostics.
@@ -224,3 +232,15 @@ Source / 来源: `TODO_ROADMAP.md`
    2026-04-22 中文：同步 Appearance 缩略图快速切换打磨：相册壁纸素材现已在外观页内提供轻量预览条，用户可更快切换壁纸，同时保留原有下拉选择路径。
 18. 2026-04-23 EN: Synced Appearance wallpaper-state polish: Appearance now shows a direct current-wallpaper preview card and clearer reset-to-theme wording, so users can immediately understand the active wallpaper mode and what the reset action will do.
    2026-04-23 中文：同步 Appearance 壁纸状态打磨：外观页现已提供当前壁纸预览卡，并将恢复主题的操作文案说得更清楚，方便用户立刻理解当前壁纸模式以及恢复操作会产生的效果。
+19. 2026-04-28 EN: Synced asset-hub safety closure: Gallery now recognizes active Map gallery-background usage before deletion, and force-delete clears the Map visual binding safely.
+    2026-04-28 中文：同步素材中台安全收口：Gallery 现在会在删除前识别地图素材库背景占用，强制删除时会安全清理地图视觉绑定。
+20. 2026-04-28 EN: Synced Gallery usage visibility: asset cards now surface active usage badges for wallpaper, map background, chat usage, and role bindings.
+    2026-04-28 中文：同步 Gallery 使用关系可视化：素材卡片现在会显示外观壁纸、地图背景、聊天使用与角色绑定等使用中标签。
+21. 2026-04-28 EN: Synced Gallery usage-state filtering: asset hub users can now switch between all, in-use, and unused assets within the current category.
+    2026-04-28 中文：同步 Gallery 使用状态筛选：素材中台现在可在当前分类下切换全部、使用中与未使用素材。
+22. 2026-04-28 EN: Synced Map/Gallery immersion polish: Map now leads with a visual canvas and Gallery started moving away from admin-panel styling.
+    2026-04-28 中文：同步 Map/Gallery 沉浸感打磨：地图页改为视觉画布优先，Gallery 开始脱离后台面板风格。
+23. 2026-04-29 EN: Synced Chat settings-entry cleanup: service template editing now lives in Chat Directory, and in-chat controls now distinguish single-thread tuning from batch templates.
+    2026-04-29 中文：同步 Chat 设置入口清理：服务模板编辑统一留在会话通讯录，聊天内控制项现在区分单会话调校与批量模板。
+24. 2026-04-29 EN: Synced Gallery iOS Photos-style correction: album language, recents/current-view framing, light system styling, and tucked-away per-photo options replaced the previous asset-showcase direction.
+    2026-04-29 中文：同步 Gallery 的 iOS 相册式方向校准：用相册语言、最近项目/当前视图、浅色系统风格，以及收起的单张照片选项替代上一版素材展柜方向。

@@ -163,7 +163,6 @@ const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
 const retryRerollMessageId = ref('')
 const showThreadMenu = ref(false)
-const serviceTemplateDraft = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
@@ -174,13 +173,11 @@ const editingMessageDraftText = ref('')
 const lastManualActionAt = ref(0)
 const threadSettingsSaved = ref(false)
 const threadIdentitySaved = ref(false)
-const serviceTemplateSaved = ref(false)
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
 let autoInvokeTimerId = null
 let threadSettingsSavedTimerId = null
 let threadIdentitySavedTimerId = null
-let serviceTemplateSavedTimerId = null
 let uiNoticeTimerId = null
 let messageLongPressTimerId = null
 let messageLongPressTargetId = ''
@@ -472,7 +469,7 @@ const currentStatus = computed(() => {
 })
 
 const chatListDockItems = computed(() => [
-  { id: 'preferences', label: t('偏好', 'Prefs'), icon: 'fas fa-sliders-h' },
+  { id: 'preferences', label: t('批量模板', 'Templates'), icon: 'fas fa-sliders-h' },
   { id: 'identity', label: t('身份', 'Identity'), icon: 'fas fa-user-secret' },
   { id: 'labs', label: t('实验室', 'Labs'), icon: 'fas fa-flask' },
 ])
@@ -3442,14 +3439,13 @@ const contactKindTagClass = (contact) => {
 
 const headerSecondaryStatusText = computed(() => {
   if (loadingAI.value) return t('对方正在输入...', 'Typing...')
-  if (threadSettingsSaved.value) return t('会话设置已保存', 'Thread settings saved')
+  if (threadSettingsSaved.value) return t('会话调校已保存', 'Thread tuning saved')
   if (threadIdentitySaved.value) return t('会话身份已保存', 'Thread identity saved')
-  if (serviceTemplateSaved.value) return t('服务模板已保存', 'Service template saved')
   return ''
 })
 
 const headerSecondaryStatusClass = computed(() =>
-  !loadingAI.value && (threadSettingsSaved.value || threadIdentitySaved.value || serviceTemplateSaved.value)
+  !loadingAI.value && (threadSettingsSaved.value || threadIdentitySaved.value)
     ? 'text-emerald-600 font-medium'
     : '',
 )
@@ -3467,14 +3463,6 @@ const triggerThreadIdentitySaved = () => {
   if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
   threadIdentitySavedTimerId = setTimeout(() => {
     threadIdentitySaved.value = false
-  }, SAVE_FEEDBACK_DURATION_MS)
-}
-
-const triggerServiceTemplateSaved = () => {
-  serviceTemplateSaved.value = true
-  if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
-  serviceTemplateSavedTimerId = setTimeout(() => {
-    serviceTemplateSaved.value = false
   }, SAVE_FEEDBACK_DURATION_MS)
 }
 
@@ -3540,6 +3528,11 @@ const openModuleRoute = (routePath) => {
   router.push(routePath)
 }
 
+const openChatDirectory = () => {
+  showThreadMenu.value = false
+  router.push('/chat-contacts')
+}
+
 const transferActionLabel = (block) => {
   if (!block?.actionRoute) return t('详情', 'Details')
   if (block.actionRoute === '/wallet') return t('打开钱包', 'Open Wallet')
@@ -3550,20 +3543,9 @@ const toggleThreadMenu = () => {
   const next = !showThreadMenu.value
   showThreadMenu.value = next
   if (next) {
-    serviceTemplateDraft.value = activeChat.value?.serviceTemplate || ''
     applyThreadSettingsDraft()
     applyThreadIdentityDraft()
   }
-}
-
-const saveServiceTemplate = () => {
-  if (!activeChat.value || !isActiveServiceChat.value) return
-  const ok = chatStore.updateContact(activeChat.value.id, {
-    serviceTemplate: serviceTemplateDraft.value.trim(),
-  })
-  if (!ok) return
-  chatStore.saveNow()
-  triggerServiceTemplateSaved()
 }
 
 const saveThreadIdentityOverrides = () => {
@@ -3704,7 +3686,6 @@ watch(
     pendingQuote.value = null
     threadSettingsSaved.value = false
     threadIdentitySaved.value = false
-    serviceTemplateSaved.value = false
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
 
@@ -3786,7 +3767,6 @@ onBeforeUnmount(() => {
   cancelMessageLongPress()
   if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
   if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
-  if (serviceTemplateSavedTimerId) clearTimeout(serviceTemplateSavedTimerId)
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearGalleryPickerPreviewMap()
   clearMessageImagePreviewMap()
@@ -3866,15 +3846,26 @@ onBeforeUnmount(() => {
       <div v-if="showThreadMenu" class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
         <template v-if="isActiveServiceChat">
           <div class="space-y-2">
-            <p class="font-semibold text-sm text-gray-900">{{ t('服务模板', 'Service Template') }}</p>
-            <textarea v-model="serviceTemplateDraft" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs resize-none outline-none" />
-            <button
-              @click="saveServiceTemplate"
-              class="px-2.5 py-1 rounded-lg border"
-              :class="serviceTemplateSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'"
-            >
-              {{ serviceTemplateSaved ? t('已保存', 'Saved') : t('保存模板', 'Save Template') }}
-            </button>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-semibold text-sm text-gray-900">{{ t('服务模板摘要', 'Service template summary') }}</p>
+                <p class="mt-1 text-[11px] text-gray-500">
+                  {{
+                    activeChat.serviceTemplate ||
+                    t('当前服务号暂未设置模板。请到会话通讯录统一编辑。', 'No template is set yet. Edit it from Chat Directory.')
+                  }}
+                </p>
+              </div>
+              <button
+                @click="openChatDirectory"
+                class="shrink-0 px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+              >
+                {{ t('去管理', 'Manage') }}
+              </button>
+            </div>
+            <p class="text-[10px] text-gray-400">
+              {{ t('服务号模板只保留一个正式编辑入口：Chat Directory。此处仅展示当前会话正在使用的模板。', 'Service templates have one formal edit entry: Chat Directory. This menu only shows the active template.') }}
+            </p>
           </div>
         </template>
 
@@ -3918,7 +3909,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="border-t border-gray-200 pt-3 space-y-2">
-          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话 AI 设置', 'Thread AI Settings') }}</p>
+          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话调校', 'Current thread tuning') }}</p>
 
           <label class="flex items-center justify-between gap-3">
             <span>{{ t('回复模式', 'Reply Mode') }}</span>
@@ -4077,7 +4068,7 @@ onBeforeUnmount(() => {
               class="px-2.5 py-1 rounded-lg border"
               :class="threadSettingsSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
             >
-              {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存会话设置', 'Save thread settings') }}
+              {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存本会话调校', 'Save this thread tuning') }}
             </button>
           </div>
         </div>

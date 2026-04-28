@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useGalleryStore } from '../src/stores/gallery'
+import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
 import { clearGalleryAssetBlobFallback } from '../src/lib/asset-binary-storage'
 import { MEDIA_KIND, MEDIA_SIZE_SCENE, resolveMediaSizeLimitBytes } from '../src/lib/media-policy'
@@ -319,6 +320,36 @@ describe('gallery store', () => {
     const guard = store.getAssetDeletionGuard(asset.id)
     expect(guard.blocked).toBe(true)
     expect(guard.reason).toBe('in_use')
+  })
+
+  test('guards deletion for assets currently used as map visual background', async () => {
+    const mapStore = useMapStore()
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/map/background.webp',
+      category: 'scenario',
+      name: 'Map background',
+    })
+    expect(imported.ok).toBe(true)
+
+    const asset = store.findAssetById(imported.assetId)
+    mapStore.setMapVisualMode('gallery')
+    mapStore.setMapVisualAssetId(asset.id)
+
+    const guard = store.getAssetDeletionGuard(asset.id)
+    expect(guard.blocked).toBe(true)
+    expect(guard.reason).toBe('in_use')
+    expect(guard.usages.some((usage) => usage.id === 'map:visual.background')).toBe(true)
+
+    const blockedRemoval = await store.removeAsset(asset.id)
+    expect(blockedRemoval.ok).toBe(false)
+    expect(blockedRemoval.reason).toBe('in_use')
+
+    const forcedRemoval = await store.removeAsset(asset.id, { force: true })
+    expect(forcedRemoval.ok).toBe(true)
+    expect(store.findAssetById(asset.id)).toBe(null)
+    expect(mapStore.mapVisualSettings.mode).toBe('default')
+    expect(mapStore.mapVisualSettings.assetId).toBe('')
   })
 
   test('persists and restores folders with snapshot and storage hydration', () => {

@@ -26,10 +26,10 @@ const featureMeta = computed(() => {
   if (id === 'preferences') {
     return {
       id,
-      title: t('聊天偏好', 'Chat Preferences'),
+      title: t('批量会话模板', 'Batch Thread Templates'),
       description: t(
-        '批量设置会话偏好模板，可一键应用到指定范围会话。',
-        'Batch-edit a conversation preference template and apply it to selected chat scopes.',
+        '批量套用会话调校模板；单个会话的细调仍在对应聊天右上菜单完成。',
+        'Batch-apply thread tuning templates; single-thread fine tuning remains in the chat menu.',
       ),
       icon: 'fas fa-sliders',
     }
@@ -412,7 +412,7 @@ watch(
       <template v-if="isPreferencesFeature">
         <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
           <div class="flex items-center justify-between gap-2">
-            <p class="text-sm font-semibold text-gray-900">{{ t('批量会话偏好模板', 'Batch conversation template') }}</p>
+            <p class="text-sm font-semibold text-gray-900">{{ t('批量套用会话模板', 'Batch apply thread template') }}</p>
             <p class="text-[11px] text-gray-500">
               {{ t(`目标会话：${preferenceScopeContacts.length}`, `Targets: ${preferenceScopeContacts.length}`) }}
             </p>
@@ -514,8 +514,8 @@ watch(
           <p class="text-[10px] text-gray-500">
             {{
               t(
-                '这里只会覆盖当前页面展示的偏好字段，不会改写上下文轮数与翻译语言等其他项。',
-                'Only fields shown here will be overwritten. Context turns and translation language are kept.',
+                '这里是批量入口，只会覆盖当前页面展示的字段；单个会话的上下文轮数、翻译语言、参考图模式等细调请到聊天右上菜单处理。',
+                'This is the batch entry. Only fields shown here will be overwritten; tune context turns, translation language, image-reference mode, and other single-thread details from the chat menu.',
               )
             }}
           </p>

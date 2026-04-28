@@ -14,6 +14,7 @@ const { t } = useI18n()
 const { confirmDialog, promptDialog } = useDialog()
 
 const activeCategory = ref('all')
+const activeAssetUsageFilter = ref('all')
 const localImportCategory = ref('reference')
 const localFileInput = ref(null)
 const replaceFileInput = ref(null)
@@ -54,7 +55,7 @@ const categoryTabs = computed(() => [
   })),
 ])
 
-const visibleAssets = computed(() => galleryStore.getAssetsByCategory(activeCategory.value))
+const categoryScopedAssets = computed(() => galleryStore.getAssetsByCategory(activeCategory.value))
 const folderCategoryTabs = computed(() => [
   { key: 'all', label: t('全部文件夹', 'All folders') },
   ...GALLERY_ASSET_CATEGORIES.map((key) => ({
@@ -510,6 +511,74 @@ const buildAssetBindingSummary = (asset) => {
   }
 }
 
+const formatRuntimeUsageLabel = (usage) => {
+  if (!usage || typeof usage !== 'object') return ''
+  if (usage.id === 'system:appearance.wallpaper') return t('外观壁纸', 'Appearance wallpaper')
+  if (usage.id === 'map:visual.background') return t('地图背景', 'Map background')
+  if (usage.moduleKey === 'chat') return usage.label || t('聊天会话', 'Chat thread')
+  return usage.label || usage.targetKey || usage.moduleKey || ''
+}
+
+const getAssetUsageLabels = (asset) => {
+  if (!asset?.id) return []
+  const summary = buildAssetBindingSummary(asset)
+  const labels = [
+    ...(summary.guard.usages || []).map((usage) => formatRuntimeUsageLabel(usage)),
+    ...summary.roleBindingHits.map((hit) => `${hit.profileName} · ${hit.slotLabel}`),
+  ].filter(Boolean)
+  return [...new Set(labels)]
+}
+
+const getAssetUsageChips = (asset) => getAssetUsageLabels(asset).slice(0, 3)
+
+const getAssetUsageOverflowCount = (asset) =>
+  Math.max(0, getAssetUsageLabels(asset).length - getAssetUsageChips(asset).length)
+
+const assetUsageFilterTabs = computed(() => {
+  const sourceAssets = categoryScopedAssets.value
+  const usedCount = sourceAssets.filter((asset) => getAssetUsageLabels(asset).length > 0).length
+  const unusedCount = Math.max(0, sourceAssets.length - usedCount)
+  return [
+    { key: 'all', label: t('全部照片', 'All Photos'), count: sourceAssets.length },
+    { key: 'in_use', label: t('已使用', 'Used'), count: usedCount },
+    { key: 'unused', label: t('未使用', 'Unused'), count: unusedCount },
+  ]
+})
+
+const visibleAssets = computed(() => {
+  const sourceAssets = categoryScopedAssets.value
+  if (activeAssetUsageFilter.value === 'in_use') {
+    return sourceAssets.filter((asset) => getAssetUsageLabels(asset).length > 0)
+  }
+  if (activeAssetUsageFilter.value === 'unused') {
+    return sourceAssets.filter((asset) => getAssetUsageLabels(asset).length === 0)
+  }
+  return sourceAssets
+})
+
+const assetEmptyStateText = computed(() => {
+  if (activeAssetUsageFilter.value === 'in_use') {
+    return t('当前相簿暂无已使用照片', 'No used photos in this album')
+  }
+  if (activeAssetUsageFilter.value === 'unused') {
+    return t('当前相簿暂无未使用照片', 'No unused photos in this album')
+  }
+  return t('当前相簿暂无照片', 'No photos in this album')
+})
+
+const activeUsageFilterMeta = computed(
+  () => assetUsageFilterTabs.value.find((tab) => tab.key === activeAssetUsageFilter.value) || assetUsageFilterTabs.value[0],
+)
+
+const heroPreviewAssets = computed(() => visibleAssets.value.slice(0, 5))
+
+const assetCurationSummary = computed(() =>
+  t(
+    `${categoryLabel(activeCategory.value)} · ${activeUsageFilterMeta.value?.label || ''} · ${visibleAssets.value.length} 张`,
+    `${categoryLabel(activeCategory.value)} · ${activeUsageFilterMeta.value?.label || ''} · ${visibleAssets.value.length} photos`,
+  ),
+)
+
 const confirmAssetReplace = async (asset, modeLabel) => {
   const summary = buildAssetBindingSummary(asset)
   const firstConfirmed = await confirmDialog({
@@ -664,31 +733,72 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] text-gray-900 flex flex-col">
-    <div class="pt-12 px-4 pb-3 bg-white border-b border-gray-100">
+  <div class="gallery-immersive-root w-full h-full text-neutral-950 flex flex-col">
+    <div class="gallery-topbar pt-12 px-4 pb-2">
       <div class="flex items-center justify-between">
         <button @click="goHome" class="text-blue-500 text-lg">
           <i class="fas fa-chevron-left"></i>
         </button>
-        <span class="font-semibold text-[15px]">{{ t('全局素材中心', 'Global Asset Center') }}</span>
-        <span class="text-xs text-gray-400">{{ galleryStore.categoryCounts.all }}</span>
+        <button @click="openLocalImport" class="text-blue-500 text-lg">
+          <i class="fas fa-plus"></i>
+        </button>
       </div>
-      <p class="text-[11px] text-gray-500 mt-2">
-        {{ t('一次导入，全局复用：聊天、角色绑定、壁纸与场景都可共享。', 'Import once and reuse globally across chat, role binding, wallpaper and scenarios.') }}
-      </p>
+      <h1 class="mt-3 text-[34px] font-bold tracking-tight">{{ t('相册', 'Photos') }}</h1>
     </div>
 
-    <div class="px-4 py-3 space-y-3 bg-white border-b border-gray-100">
+    <div class="gallery-controls px-4 py-2 space-y-3">
+      <section class="gallery-hero rounded-[1.75rem] p-4">
+        <p class="text-[12px] font-semibold text-blue-500">{{ t('最近项目', 'Recents') }}</p>
+        <div class="mt-1 flex items-end justify-between gap-3">
+          <div>
+            <h2 class="text-3xl font-bold leading-tight">{{ galleryStore.categoryCounts.all }}</h2>
+            <p class="mt-1 text-xs text-neutral-500">
+              {{ t('照片会自动用于聊天、壁纸、地图和角色相簿。', 'Photos can be reused by chats, wallpapers, maps, and role albums.') }}
+            </p>
+          </div>
+          <button
+            @click="openLocalImport"
+            class="shrink-0 rounded-full bg-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-sm"
+          >
+            <i class="fas fa-plus mr-1"></i>
+            {{ t('添加', 'Add') }}
+          </button>
+        </div>
+        <div class="mt-4 rounded-[1.35rem] border border-neutral-200 bg-white/80 px-3 py-2.5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[10px] uppercase tracking-[0.18em] text-neutral-400">{{ t('当前视图', 'Current View') }}</p>
+              <p class="mt-1 text-xs text-neutral-700 truncate">{{ assetCurationSummary }}</p>
+            </div>
+            <div v-if="heroPreviewAssets.length > 0" class="flex -space-x-2 shrink-0">
+              <div
+                v-for="asset in heroPreviewAssets"
+                :key="`hero-preview-${asset.id}`"
+                class="h-9 w-9 overflow-hidden rounded-xl border-2 border-white bg-neutral-100 shadow-sm"
+              >
+                <img
+                  v-if="previewMap[asset.id]"
+                  :src="previewMap[asset.id]"
+                  :alt="asset.name"
+                  class="h-full w-full object-cover"
+                />
+                <div v-else class="h-full w-full bg-neutral-200"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="grid grid-cols-5 gap-2">
         <button
           v-for="tab in categoryTabs"
           :key="tab.key"
           @click="activeCategory = tab.key"
-          class="rounded-lg px-2 py-2 text-[11px] border transition"
+          class="gallery-filter-button rounded-xl px-2 py-2 text-[11px] border transition"
           :class="
             activeCategory === tab.key
-              ? 'bg-blue-50 border-blue-200 text-blue-700'
-              : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+              ? 'is-active'
+              : ''
           "
         >
           <p class="font-medium">{{ tab.label }}</p>
@@ -696,12 +806,29 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="tab in assetUsageFilterTabs"
+          :key="`usage-filter-${tab.key}`"
+          @click="activeAssetUsageFilter = tab.key"
+          class="gallery-filter-button rounded-xl px-2 py-2 text-[11px] border transition"
+          :class="
+            activeAssetUsageFilter === tab.key
+              ? 'is-active'
+              : ''
+          "
+        >
+          <p class="font-medium">{{ tab.label }}</p>
+          <p class="text-[10px] mt-0.5">{{ tab.count }}</p>
+        </button>
+      </div>
+
+      <div class="gallery-control-card rounded-2xl p-3 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-xs font-semibold">{{ t('本地导入', 'Local Import') }}</p>
+          <p class="text-xs font-semibold">{{ t('添加到相册', 'Add to Photos') }}</p>
           <select
             v-model="localImportCategory"
-            class="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
+            class="gallery-field text-xs rounded px-2 py-1"
           >
             <option
               v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
@@ -714,12 +841,12 @@ onBeforeUnmount(() => {
         </div>
         <button
           @click="openLocalImport"
-          class="w-full py-2.5 rounded-lg border border-dashed border-blue-300 text-blue-600 text-sm hover:bg-blue-50 transition"
+          class="w-full py-2.5 rounded-xl border border-dashed border-blue-200 text-blue-500 text-sm hover:bg-blue-50 transition"
         >
           <i class="fas fa-upload mr-1"></i>
-          {{ t('导入 png/jpg/webp/gif', 'Import png/jpg/webp/gif') }}
+          {{ t('选择照片或 GIF', 'Choose photos or GIFs') }}
         </button>
-        <p class="text-[11px] text-gray-500">
+        <p class="text-[11px] text-neutral-400">
           {{ importLimitHint }}
         </p>
         <input
@@ -739,24 +866,24 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <div class="rounded-xl border border-gray-200 p-3 space-y-2">
-        <p class="text-xs font-semibold">{{ t('URL 导入', 'URL Import') }}</p>
+      <div class="gallery-control-card rounded-2xl p-3 space-y-2">
+        <p class="text-xs font-semibold">{{ t('从链接添加', 'Add from Link') }}</p>
         <input
           v-model="urlForm.url"
           type="url"
-          class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none"
+          class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
           :placeholder="t('https://example.com/image.png', 'https://example.com/image.png')"
         />
         <div class="grid grid-cols-[1fr,110px] gap-2">
           <input
             v-model="urlForm.name"
             type="text"
-            class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none"
+            class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
             :placeholder="t('可选名称', 'Optional name')"
           />
           <select
             v-model="urlForm.category"
-            class="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs bg-white"
+            class="gallery-field w-full rounded-xl px-2 py-2 text-xs"
           >
             <option
               v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
@@ -769,16 +896,16 @@ onBeforeUnmount(() => {
         </div>
         <button
           @click="importFromUrl"
-          class="w-full py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 transition"
+          class="w-full py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition"
         >
-          {{ t('添加 URL 素材', 'Add URL Asset') }}
+          {{ t('添加到相册', 'Add to Photos') }}
         </button>
       </div>
 
-      <div class="rounded-xl border border-gray-200 p-3 space-y-2.5">
+      <div class="gallery-control-card rounded-2xl p-3 space-y-2.5">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold">{{ t('文件夹管理', 'Folder Management') }}</p>
-          <span class="text-[10px] text-gray-500">
+          <p class="text-xs font-semibold">{{ t('我的相簿', 'My Albums') }}</p>
+          <span class="text-[10px] text-neutral-400">
             {{ t('总数', 'Total') }} {{ allFolderOptions.length }}
           </span>
         </div>
@@ -787,12 +914,12 @@ onBeforeUnmount(() => {
           <input
             v-model="folderForm.name"
             type="text"
-            class="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none"
+            class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
             :placeholder="t('新文件夹名称', 'New folder name')"
           />
           <select
             v-model="folderForm.category"
-            class="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs bg-white"
+            class="gallery-field w-full rounded-xl px-2 py-2 text-xs"
           >
             <option value="all">{{ t('全部类型', 'All types') }}</option>
             <option
@@ -805,7 +932,7 @@ onBeforeUnmount(() => {
           </select>
           <button
             @click="createFolder"
-            class="rounded-lg bg-gray-900 text-white text-xs px-2 py-2 hover:bg-black"
+            class="rounded-xl bg-blue-500 text-white text-xs px-2 py-2 font-semibold"
           >
             {{ t('新建', 'Create') }}
           </button>
@@ -816,36 +943,36 @@ onBeforeUnmount(() => {
             v-for="tab in folderCategoryTabs"
             :key="`folder-tab-${tab.key}`"
             @click="activeFolderCategory = tab.key"
-            class="rounded-md px-1.5 py-1 text-[10px] border transition"
+            class="gallery-filter-button rounded-lg px-1.5 py-1 text-[10px] border transition"
             :class="
               activeFolderCategory === tab.key
-                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                : 'bg-white border-gray-200 text-gray-500'
+                ? 'is-active'
+                : ''
             "
           >
             {{ tab.label }}
           </button>
         </div>
 
-        <div v-if="visibleFolders.length === 0" class="text-[11px] text-gray-500 rounded-lg border border-dashed border-gray-200 px-2 py-3 text-center">
-          {{ t('当前筛选下暂无文件夹。', 'No folders under current filter.') }}
+        <div v-if="visibleFolders.length === 0" class="text-[11px] text-neutral-400 rounded-xl border border-dashed border-neutral-200 px-2 py-3 text-center">
+          {{ t('当前筛选下暂无相簿。', 'No albums under current filter.') }}
         </div>
 
         <div v-else class="space-y-2 max-h-56 overflow-y-auto pr-0.5">
           <div
             v-for="folder in visibleFolders"
             :key="folder.id"
-            class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2"
+            class="rounded-2xl border border-neutral-200 bg-white p-2.5 space-y-2"
           >
             <div class="flex items-center justify-between gap-2">
-              <p class="text-xs font-medium text-gray-800 truncate">{{ folder.name }}</p>
-              <span class="text-[10px] text-gray-500">{{ getFolderAssetCount(folder) }} {{ t('项', 'items') }}</span>
+              <p class="text-xs font-medium text-neutral-900 truncate">{{ folder.name }}</p>
+              <span class="text-[10px] text-neutral-400">{{ getFolderAssetCount(folder) }} {{ t('张', 'photos') }}</span>
             </div>
 
             <div class="grid grid-cols-[1fr,56px,56px] gap-1.5">
               <select
                 :value="folder.category"
-                class="text-[11px] border border-gray-200 rounded px-1.5 py-1 bg-white"
+                class="gallery-field text-[11px] rounded px-1.5 py-1"
                 @change="updateFolderCategory(folder.id, $event.target.value)"
               >
                 <option value="all">{{ t('全部类型', 'All types') }}</option>
@@ -859,40 +986,40 @@ onBeforeUnmount(() => {
               </select>
               <button
                 @click="renameFolder(folder)"
-                class="text-[11px] border border-gray-200 rounded px-1.5 py-1 text-gray-600 hover:bg-gray-50"
+                class="text-[11px] border border-neutral-200 rounded px-1.5 py-1 text-blue-500 hover:bg-blue-50"
               >
                 {{ t('改名', 'Rename') }}
               </button>
               <button
                 @click="removeFolder(folder)"
-                class="text-[11px] border border-red-200 rounded px-1.5 py-1 text-red-500 hover:bg-red-50"
+                class="text-[11px] border border-red-100 rounded px-1.5 py-1 text-red-500 hover:bg-red-50"
               >
                 {{ t('删除', 'Delete') }}
               </button>
             </div>
 
-            <div v-if="getFolderAssetCount(folder) === 0" class="text-[10px] text-gray-400">
-              {{ t('该文件夹还没有素材。', 'This folder has no assets yet.') }}
+            <div v-if="getFolderAssetCount(folder) === 0" class="text-[10px] text-neutral-400">
+              {{ t('该相簿还没有照片。', 'This album has no photos yet.') }}
             </div>
 
             <div v-else class="flex flex-wrap gap-1.5">
               <span
                 v-for="item in getFolderPreviewAssets(folder)"
                 :key="`folder-item-${folder.id}-${item.id}`"
-                class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600"
+                class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] text-neutral-600"
               >
                 <span class="max-w-[96px] truncate">{{ item.name }}</span>
                 <button
                   @click="removeAssetFromFolder(folder.id, item.id)"
-                  class="text-gray-400 hover:text-red-500"
-                  :title="t('从文件夹移除', 'Remove from folder')"
+                  class="text-neutral-400 hover:text-red-500"
+                  :title="t('从相簿移除', 'Remove from album')"
                 >
                   <i class="fas fa-times"></i>
                 </button>
               </span>
               <span
                 v-if="getFolderPreviewOverflowCount(folder) > 0"
-                class="inline-flex items-center rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-[10px] text-gray-500"
+                class="inline-flex items-center rounded-full border border-dashed border-neutral-200 px-2 py-0.5 text-[10px] text-neutral-400"
               >
                 +{{ getFolderPreviewOverflowCount(folder) }}
               </span>
@@ -917,25 +1044,25 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex-1 overflow-y-auto p-4">
-      <div v-if="visibleAssets.length === 0" class="text-center text-gray-400 text-sm pt-14">
+      <div v-if="visibleAssets.length === 0" class="text-center text-neutral-400 text-sm pt-14">
         <i class="fas fa-images text-2xl mb-3"></i>
-        <p>{{ t('当前分类暂无素材', 'No assets in this category') }}</p>
+        <p>{{ assetEmptyStateText }}</p>
       </div>
 
-      <div v-else class="grid grid-cols-2 gap-3 pb-8">
+      <div v-else class="grid grid-cols-3 gap-1 pb-8">
         <div
           v-for="asset in visibleAssets"
           :key="asset.id"
-          class="rounded-xl bg-white border border-gray-200 overflow-hidden"
+          class="gallery-asset-card overflow-hidden"
         >
-          <div class="aspect-square bg-gray-100 relative">
+          <div class="aspect-square bg-neutral-100 relative">
             <img
               v-if="previewMap[asset.id]"
               :src="previewMap[asset.id]"
               :alt="asset.name"
               class="w-full h-full object-cover"
             />
-            <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            <div v-else class="w-full h-full flex items-center justify-center text-neutral-400 text-xs">
               {{ t('预览加载中', 'Loading...') }}
             </div>
             <button
@@ -947,9 +1074,9 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div class="p-2.5 space-y-2">
-            <p class="text-xs font-medium leading-tight line-clamp-2 min-h-[30px]">{{ asset.name }}</p>
-            <p class="text-[10px] text-gray-400">
+          <div class="p-2 space-y-1.5 bg-white">
+            <p class="text-[11px] font-medium leading-tight line-clamp-1">{{ asset.name }}</p>
+            <p class="text-[10px] text-neutral-400">
               {{ categoryLabel(asset.category) }} ·
               {{
                 asset.sourceType === 'file'
@@ -957,70 +1084,177 @@ onBeforeUnmount(() => {
                   : t('URL', 'URL')
               }}
             </p>
-            <div class="grid grid-cols-[1fr,72px] gap-2">
-              <select
-                :value="asset.category"
-                class="text-[11px] border border-gray-200 rounded px-1.5 py-1 bg-white"
-                @change="moveAssetToCategory(asset.id, $event.target.value)"
+            <div v-if="getAssetUsageChips(asset).length > 0" class="flex flex-wrap gap-1">
+              <span
+                v-for="label in getAssetUsageChips(asset)"
+                :key="`${asset.id}-usage-${label}`"
+                class="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-500 max-w-full"
               >
-                <option
-                  v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-                  :key="categoryKey"
-                  :value="categoryKey"
-                >
-                  {{ categoryLabel(categoryKey) }}
-                </option>
-              </select>
-              <button
-                @click="renameAsset(asset)"
-                class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
-                >
-                  {{ t('改名', 'Rename') }}
-                </button>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-                <button
-                  @click="replaceAssetByUrl(asset)"
-                  class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
-                >
-                  {{ t('替换URL', 'Replace URL') }}
-                </button>
-                <button
-                  @click="openReplaceAssetFile(asset)"
-                  class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
-                >
-                  {{ t('替换文件', 'Replace file') }}
-                </button>
-              </div>
-
-              <div v-if="allFolderOptions.length > 0" class="grid grid-cols-[1fr,56px] gap-2">
-                <select
-                  v-model="assetFolderDraftMap[asset.id]"
-                  class="text-[11px] border border-gray-200 rounded px-1.5 py-1 bg-white"
-                >
-                  <option value="">{{ t('选择文件夹', 'Choose folder') }}</option>
-                  <option
-                    v-for="folder in allFolderOptions"
-                    :key="`asset-folder-${asset.id}-${folder.id}`"
-                    :value="folder.id"
-                  >
-                    {{ folder.name }}
-                  </option>
-                </select>
-                <button
-                  @click="addAssetToSelectedFolder(asset)"
-                  class="text-[11px] border border-gray-200 rounded px-2 py-1 text-gray-600 hover:bg-gray-50"
-                >
-                  {{ t('加入', 'Add') }}
-                </button>
-              </div>
-              <p v-else class="text-[10px] text-gray-400">
-                {{ t('先创建文件夹后可归档素材。', 'Create folders first to organize assets.') }}
-              </p>
+                <i class="fas fa-link mr-1 text-[9px]"></i>
+                <span class="truncate">{{ label }}</span>
+              </span>
+              <span
+                v-if="getAssetUsageOverflowCount(asset) > 0"
+                class="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[9px] text-neutral-400"
+              >
+                +{{ getAssetUsageOverflowCount(asset) }}
+              </span>
             </div>
+            <details class="photo-actions">
+              <summary class="cursor-pointer select-none text-[11px] text-blue-500">{{ t('选项', 'Options') }}</summary>
+              <div class="mt-2 space-y-2">
+                <div class="grid grid-cols-[1fr,72px] gap-2">
+                  <select
+                    :value="asset.category"
+                    class="gallery-field text-[11px] rounded px-1.5 py-1"
+                    @change="moveAssetToCategory(asset.id, $event.target.value)"
+                  >
+                    <option
+                      v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
+                      :key="categoryKey"
+                      :value="categoryKey"
+                    >
+                      {{ categoryLabel(categoryKey) }}
+                    </option>
+                  </select>
+                  <button
+                    @click="renameAsset(asset)"
+                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-blue-500 hover:bg-blue-50"
+                  >
+                    {{ t('改名', 'Rename') }}
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    @click="replaceAssetByUrl(asset)"
+                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-neutral-600 hover:bg-neutral-50"
+                  >
+                    {{ t('替换URL', 'Replace URL') }}
+                  </button>
+                  <button
+                    @click="openReplaceAssetFile(asset)"
+                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-neutral-600 hover:bg-neutral-50"
+                  >
+                    {{ t('替换文件', 'Replace file') }}
+                  </button>
+                </div>
+
+                <div v-if="allFolderOptions.length > 0" class="grid grid-cols-[1fr,56px] gap-2">
+                  <select
+                    v-model="assetFolderDraftMap[asset.id]"
+                    class="gallery-field text-[11px] rounded px-1.5 py-1"
+                  >
+                    <option value="">{{ t('选择相簿', 'Choose album') }}</option>
+                    <option
+                      v-for="folder in allFolderOptions"
+                      :key="`asset-folder-${asset.id}-${folder.id}`"
+                      :value="folder.id"
+                    >
+                      {{ folder.name }}
+                    </option>
+                  </select>
+                  <button
+                    @click="addAssetToSelectedFolder(asset)"
+                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-blue-500 hover:bg-blue-50"
+                  >
+                    {{ t('加入', 'Add') }}
+                  </button>
+                </div>
+                <p v-else class="text-[10px] text-neutral-400">
+                  {{ t('先创建相簿后可归档照片。', 'Create albums first to organize photos.') }}
+                </p>
+              </div>
+            </details>
           </div>
-        </div>
+      </div>
     </div>
   </div>
+</div>
 </template>
+
+<style scoped>
+.gallery-immersive-root {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(0, 122, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfbfd 0%, #f2f2f7 42%, #ffffff 100%);
+}
+
+.gallery-topbar {
+  background: linear-gradient(180deg, rgba(251, 251, 253, 0.96), rgba(251, 251, 253, 0.78));
+  backdrop-filter: blur(20px);
+}
+
+.gallery-controls {
+  background: linear-gradient(180deg, rgba(251, 251, 253, 0.78), rgba(242, 242, 247, 0.3));
+}
+
+.gallery-hero,
+.gallery-control-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(209, 213, 219, 0.72);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.gallery-hero::before {
+  content: '';
+  position: absolute;
+  inset: -36% -18% auto auto;
+  width: 200px;
+  height: 200px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(0, 122, 255, 0.16), transparent 62%);
+  pointer-events: none;
+}
+
+.gallery-filter-button {
+  border-color: rgba(209, 213, 219, 0.8);
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(82, 82, 91, 0.86);
+}
+
+.gallery-filter-button.is-active {
+  border-color: rgba(0, 122, 255, 0.26);
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.08);
+}
+
+.gallery-field {
+  border: 1px solid rgba(209, 213, 219, 0.85);
+  background: rgba(255, 255, 255, 0.9);
+  color: #18181b;
+}
+
+.gallery-field::placeholder {
+  color: rgba(113, 113, 122, 0.64);
+}
+
+.gallery-field option {
+  color: #18181b;
+}
+
+.gallery-asset-card {
+  position: relative;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(229, 231, 235, 0.82);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  transform: translateZ(0);
+}
+
+.gallery-asset-card::after {
+  content: none;
+}
+
+.photo-actions summary {
+  list-style: none;
+}
+
+.photo-actions summary::-webkit-details-marker {
+  display: none;
+}
+</style>
