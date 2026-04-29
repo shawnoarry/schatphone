@@ -24,6 +24,41 @@ const MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_RUNNER = 'skipped_no_runner'
 const MAP_PROVIDER_VISUAL_MODE_FAILED = 'provider_failed'
 const MAP_PROVIDER_VISUAL_MODE_TEXT = 'provider_text'
 const MAP_PROVIDER_VISUAL_MODE_IMAGE_URL = 'provider_image_url'
+const ROUTE_FAMILIARITY_LIMIT = 8
+const ROUTE_FAMILIARITY_TIERS = [
+  {
+    tier: 'new_route',
+    minPoints: 0,
+    minCompletedCount: 1,
+    tierLabelZh: '新路线',
+    tierLabelEn: 'New route',
+    tone: 'blue',
+  },
+  {
+    tier: 'known_route',
+    minPoints: 20,
+    minCompletedCount: 2,
+    tierLabelZh: '熟悉路线',
+    tierLabelEn: 'Known route',
+    tone: 'amber',
+  },
+  {
+    tier: 'trusted_route',
+    minPoints: 60,
+    minCompletedCount: 4,
+    tierLabelZh: '稳定路线',
+    tierLabelEn: 'Trusted route',
+    tone: 'emerald',
+  },
+  {
+    tier: 'signature_route',
+    minPoints: 120,
+    minCompletedCount: 8,
+    tierLabelZh: '招牌路线',
+    tierLabelEn: 'Signature route',
+    tone: 'sky-solid',
+  },
+]
 
 const SEED_ADDRESSES = [
   { id: 1, label: '家', detail: '首尔市江南区清潭洞 88-1' },
@@ -192,6 +227,119 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
     durationSeconds: Math.max(0, toInt(raw.durationSeconds, 0)),
     startedAt: Math.max(0, toInt(raw.startedAt, 0)),
     endedAt,
+    rewardPoints:
+      status === 'arrived'
+        ? Math.max(0, toInt(raw.rewardPoints, 0))
+        : 0,
+    eventKind:
+      typeof raw.eventKind === 'string' && raw.eventKind.trim()
+        ? raw.eventKind.trim().slice(0, 80)
+        : '',
+    eventTitleZh:
+      typeof raw.eventTitleZh === 'string' && raw.eventTitleZh.trim()
+        ? raw.eventTitleZh.trim().slice(0, 80)
+        : '',
+    eventTitleEn:
+      typeof raw.eventTitleEn === 'string' && raw.eventTitleEn.trim()
+        ? raw.eventTitleEn.trim().slice(0, 80)
+        : '',
+    eventSummaryZh:
+      typeof raw.eventSummaryZh === 'string' && raw.eventSummaryZh.trim()
+        ? raw.eventSummaryZh.trim().slice(0, 180)
+        : '',
+    eventSummaryEn:
+      typeof raw.eventSummaryEn === 'string' && raw.eventSummaryEn.trim()
+        ? raw.eventSummaryEn.trim().slice(0, 180)
+        : '',
+  }
+}
+
+const buildTripArrivalReward = (state = {}) => {
+  const distanceKm = Math.max(0, toInt(state.distanceKm, 0))
+  const durationSeconds = Math.max(0, toInt(state.durationSeconds, 0))
+  const destination = `${state.toLabel || ''} ${state.to || ''}`.toLowerCase()
+  const rewardPoints = Math.max(8, Math.round(distanceKm * 3) + (durationSeconds >= 1800 ? 8 : 3))
+
+  if (distanceKm >= 15) {
+    return {
+      rewardPoints,
+      eventKind: 'long_ride',
+      eventTitleZh: '远距离行程',
+      eventTitleEn: 'Long ride',
+      eventSummaryZh: '完成了一段较长距离移动，城市区域理解度提升。',
+      eventSummaryEn: 'Completed a longer route and improved city familiarity.',
+    }
+  }
+
+  if (/公司|office|work|workplace/.test(destination)) {
+    return {
+      rewardPoints,
+      eventKind: 'work_route',
+      eventTitleZh: '通勤路线',
+      eventTitleEn: 'Work route',
+      eventSummaryZh: '常用通勤路线已记录，可作为后续日程和事件触发参考。',
+      eventSummaryEn: 'A routine work route was logged for future schedule and event hooks.',
+    }
+  }
+
+  if (/练习室|studio|gym|practice/.test(destination)) {
+    return {
+      rewardPoints,
+      eventKind: 'routine_stop',
+      eventTitleZh: '固定据点',
+      eventTitleEn: 'Routine stop',
+      eventSummaryZh: '常去地点已形成记忆，后续可扩展为日常事件节点。',
+      eventSummaryEn: 'A familiar stop was logged and can later become a routine event node.',
+    }
+  }
+
+  return {
+    rewardPoints,
+    eventKind: 'city_pulse',
+    eventTitleZh: '城市脉冲',
+    eventTitleEn: 'City pulse',
+    eventSummaryZh: '完成一次城市移动，地图沉浸进度小幅提升。',
+    eventSummaryEn: 'Completed a city movement and gained a small immersion progress boost.',
+  }
+}
+
+const normalizeRouteEndpoint = (value) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+const createTripRouteKey = (from, to) => {
+  const normalizedFrom = normalizeRouteEndpoint(from)
+  const normalizedTo = normalizeRouteEndpoint(to)
+  if (!normalizedFrom || !normalizedTo) return ''
+  return `${normalizedFrom} -> ${normalizedTo}`
+}
+
+const buildRouteFamiliarityTier = (pointsInput = 0, completedCountInput = 0) => {
+  const points = Math.max(0, toInt(pointsInput, 0))
+  const completedCount = Math.max(0, toInt(completedCountInput, 0))
+  let selectedIndex = 0
+
+  ROUTE_FAMILIARITY_TIERS.forEach((tier, index) => {
+    if (points >= tier.minPoints || completedCount >= tier.minCompletedCount) {
+      selectedIndex = index
+    }
+  })
+
+  const tier = ROUTE_FAMILIARITY_TIERS[selectedIndex]
+  const nextTier = ROUTE_FAMILIARITY_TIERS[selectedIndex + 1] || null
+  return {
+    tier: tier.tier,
+    tierLabelZh: tier.tierLabelZh,
+    tierLabelEn: tier.tierLabelEn,
+    tone: tier.tone,
+    nextTier: nextTier?.tier || '',
+    nextTierLabelZh: nextTier?.tierLabelZh || '',
+    nextTierLabelEn: nextTier?.tierLabelEn || '',
+    nextPoints: nextTier ? Math.max(0, nextTier.minPoints - points) : 0,
+    nextCompletedCount: nextTier
+      ? Math.max(0, nextTier.minCompletedCount - completedCount)
+      : 0,
   }
 }
 
@@ -343,6 +491,58 @@ export const useMapStore = defineStore('map', () => {
       elapsedSeconds,
       remainingSeconds,
     }
+  })
+
+  const routeFamiliarity = computed(() => {
+    const routeMap = new Map()
+
+    tripHistory.value.forEach((item) => {
+      if (item?.status !== 'arrived') return
+      const routeKey = createTripRouteKey(item.from, item.to)
+      if (!routeKey) return
+
+      const existing = routeMap.get(routeKey) || {
+        key: routeKey,
+        from: normalizeRouteEndpoint(item.from),
+        to: normalizeRouteEndpoint(item.to),
+        fromLabel: normalizeRouteEndpoint(item.fromLabel || item.from),
+        toLabel: normalizeRouteEndpoint(item.toLabel || item.to),
+        points: 0,
+        completedCount: 0,
+        latestAt: 0,
+        totalDistanceKm: 0,
+        totalDurationSeconds: 0,
+      }
+
+      existing.points += Math.max(0, toInt(item.rewardPoints, 0))
+      existing.completedCount += 1
+      existing.latestAt = Math.max(existing.latestAt, toInt(item.endedAt, 0))
+      existing.totalDistanceKm += Math.max(0, toInt(item.distanceKm, 0))
+      existing.totalDurationSeconds += Math.max(0, toInt(item.durationSeconds, 0))
+      routeMap.set(routeKey, existing)
+    })
+
+    return Array.from(routeMap.values())
+      .map((route) => {
+        const averageDistanceKm = route.completedCount
+          ? Math.round((route.totalDistanceKm / route.completedCount) * 10) / 10
+          : 0
+        const averageDurationSeconds = route.completedCount
+          ? Math.round(route.totalDurationSeconds / route.completedCount)
+          : 0
+        return {
+          ...route,
+          averageDistanceKm,
+          averageDurationSeconds,
+          ...buildRouteFamiliarityTier(route.points, route.completedCount),
+        }
+      })
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points
+        if (b.completedCount !== a.completedCount) return b.completedCount - a.completedCount
+        return b.latestAt - a.latestAt
+      })
+      .slice(0, ROUTE_FAMILIARITY_LIMIT)
   })
 
   const mapAiVisualAutomationPolicy = computed(() => {
@@ -629,6 +829,7 @@ export const useMapStore = defineStore('map', () => {
       label: state.toLabel || resolveAddressLabel(state.to, '目的地'),
       detail: state.to,
     }
+    const reward = buildTripArrivalReward(state)
     appendTripHistory({
       id: `trip_hist_${arrivedAt}`,
       status: 'arrived',
@@ -641,6 +842,7 @@ export const useMapStore = defineStore('map', () => {
       durationSeconds: state.durationSeconds,
       startedAt: state.startedAt,
       endedAt: arrivedAt,
+      ...reward,
     })
     clearTripArrivalTimer()
     if (scheduleId) {
@@ -1378,6 +1580,7 @@ export const useMapStore = defineStore('map', () => {
     tripState,
     tripRuntime,
     tripHistory,
+    routeFamiliarity,
     mapVisualSettings,
     mapAutomationRuntime,
     mapAiVisualAutomationPolicy,

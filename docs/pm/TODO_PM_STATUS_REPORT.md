@@ -20,7 +20,10 @@ Source / 来源:
 - 中文乱码已经补了回归守卫，后续源码里出现常见乱码会被测试拦住。
 - “共享素材选择器 / 使用标识设计切片”已完成第二阶段：共享状态标识已覆盖 Gallery、Appearance、Chat、Map、Contacts。
 - 已转入 P1 产品深度第一刀：WorldBook 现在能显示每条知识点被哪些角色使用、是否会进入 Chat 提示词链路。
-- 下一步适合判断：继续补 WorldBook 使用状态筛选/排序，还是切到地图奖励/事件。
+- WorldBook 使用管理第二刀已完成：知识点现在支持按使用状态筛选，并可按最近更新、使用状态、绑定角色数、标题排序。
+- 地图奖励/事件第一刀已完成：完成行程会产生探索点数和轻量事件摘要，取消行程不奖励。
+- 地图路线熟悉度第二刀已完成：已完成行程会自动聚合为常走路线等级，显示完成次数、探索点和下一等级提示。
+- 下一步适合判断：继续做区域解锁，还是先把这批本地改动提交。
 
 ## 2. PM Dashboard / 项目经理仪表盘
 
@@ -30,7 +33,7 @@ Source / 来源:
 | Chat / 聊天 | Green, but large / 可用但文件偏大 | 核心聊天、富消息、手动 AI 触发、设置入口都可用。 | 做低风险组件拆分，避免后续越改越难维护。 |
 | Gallery / 相册素材中台 | Green / 可用 | 已承担全局素材中台职责，支持使用状态、删除保护、相册式体验。 | 决定是否继续抽共享缩略图选择器。 |
 | Settings / 设置 | Green, but dense / 可用但偏密 | 设置、备份、诊断、推送等都集中在同一页，功能强但阅读压力高。 | 适合作为第一批拆组件目标。 |
-| WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已开始补使用可见性；地图行程和视觉基线可用，但玩法深度还不够。 | 判断继续 WorldBook 筛选/排序，或切地图奖励/事件。 |
+| WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已具备使用可见性和基础管理筛选；地图已开始补探索奖励、事件反馈和路线熟悉度。 | 下一步做区域解锁或先提交当前批次。 |
 | Future modules / 未来模块 | Yellow / 待规划 | Phone、Calendar、Wallet、Stock、Files、More 仍偏占位或轻量 MVP。 | 等主沉浸循环更清楚后再扩展。 |
 | Documentation / 文档 | Green / 已收束 | 已按 PM、路线图、流程、架构、产品决策、归档分类。 | 新任务不要再新建零散路线图。 |
 | Quality guard / 质量守门 | Green / 已增强 | lint/build/test 最近已通过；新增中文乱码守门测试。 | 新功能继续保持同一检查标准。 |
@@ -61,6 +64,14 @@ Source / 来源:
 8. WorldBook 使用可见性第一阶段已完成。
    每条知识点现在会显示绑定角色数、Chat 关联数、注入状态和绑定角色名单；Contacts 也补充了“可在世界书查看使用情况”的说明。
 
+9. WorldBook 使用管理第二阶段已完成。
+   知识点现在可按“全部 / 已进入 Chat / 仅角色档案 / 未使用 / 已停用”筛选，并支持最近更新、使用状态、绑定角色数、标题排序。
+
+10. 地图奖励/事件第一阶段已完成。
+    完成行程会写入探索点数和事件摘要；行程记录会展示总探索进度和单次奖励，取消行程不会奖励。
+11. 地图路线熟悉度第二阶段已完成。
+    已完成行程会自动聚合成路线熟悉度等级；地图页会展示常走路线、完成次数、探索点、平均距离和下一等级提示。
+
 ## 4. Current Active Queue / 当前执行队列
 
 当前近期队列来自 `docs/roadmap/TODO_ROADMAP.md`，已从 P0.5 清理进入 P1 产品深度：
@@ -71,6 +82,9 @@ Source / 来源:
 | P0.5 | 大组件拆分第一刀 | Done / 已完成 | Settings 快捷入口和内容菜单已抽成展示组件，行为不变。 |
 | P0.5 | 共享素材选择器 / 使用标识设计切片 | Done phase-2 / 第二阶段已完成 | 共享状态标识已覆盖 Gallery、Appearance、Chat、Map、Contacts，降低后续多页面重复 UI。 |
 | P1 | WorldBook 使用可见性第一刀 | Done phase-1 / 第一阶段已完成 | 产品经理和用户可以看懂知识点有没有被角色使用，以及是否进入 Chat 提示词链路。 |
+| P1 | WorldBook 使用管理第二刀 | Done phase-2 / 第二阶段已完成 | 用户可以筛选和排序知识点，快速找到未使用、已停用或已进入 Chat 的条目。 |
+| P1 | Map 奖励/事件第一刀 | Done phase-1 / 第一阶段已完成 | 完成行程有可见探索奖励和事件反馈，地图开始从工具走向玩法。 |
+| P1 | Map 路线熟悉度第二刀 | Done phase-2 / 第二阶段已完成 | 已完成行程会形成常走路线等级，用户可以看到路线进度和下一等级目标。 |
 
 已完成的 P0.5 切片：
 
@@ -80,12 +94,15 @@ Source / 来源:
 - 将 `AssetStatusBadge.vue` 扩展到 Chat、Map、Contacts。
 - 为 WorldBook 增加知识点使用状态、角色绑定数、Chat 关联数和绑定角色名单。
 - Contacts 知识点绑定说明补充“可在世界书查看使用情况”。
+- 为 WorldBook 增加知识点使用状态筛选和排序。
+- 为 Map 完成行程增加探索点数、轻量事件摘要和行程记录展示。
+- 为 Map 增加路线熟悉度聚合、等级标识和下一等级提示。
 - 这些改动只拆展示结构，不移动备份、推送、诊断、素材绑定等业务逻辑。
 
 建议下一刀：
 
-- 首选：给 WorldBook 增加使用状态筛选/排序，例如“未使用 / 仅角色档案 / 已进入 Chat / 已停用”。
-- 备选：转入地图奖励/事件，开始补玩法深度。
+- 首选：基于探索点数与熟悉路线增加区域解锁。
+- 备选：先提交当前本地改动，避免未提交变更继续累积。
 - 暂不建议：直接重构 Chat 主消息流，因为风险更高。
 
 ## 5. Risks / 当前风险
@@ -100,8 +117,8 @@ Source / 来源:
 
 ## 6. Product Decisions Needed Later / 后续可能需要产品确认
 
-1. WorldBook 第二刀还是 Map 玩法？
-   建议如果目标是继续降低配置理解成本，就做 WorldBook 筛选/排序；如果目标是增强可玩性，就切地图奖励/事件。
+1. 下一刀做区域解锁还是先提交当前批次？
+   路线熟悉度已经完成，建议先提交当前批次；继续开发时优先做区域解锁，因为它能复用已存在的探索点和熟悉路线。
 
 2. 外部推送默认展示模式是否继续保持“极简”？
    当前支持 `极简 / 标准 / 预览`，默认策略后续可根据体验调整。
@@ -128,10 +145,10 @@ Source / 来源:
 
 - `npm run lint` passed.
 - `npm run build` passed.
-- `npm test` passed, 29 test files and 160 tests.
+- `npm test` passed, 29 test files and 161 tests.
 - `git diff --check` passed after Markdown whitespace cleanup.
 
-本次共享素材状态标识与 WorldBook 使用可见性切片额外验证：`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（29 files / 160 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
+本次 WorldBook 使用管理、Map 奖励/事件与路线熟悉度切片额外验证：`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（29 files / 161 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
 
 ## 9. Change Log / 变更记录
 
@@ -152,3 +169,12 @@ Source / 来源:
 
 6. 2026-04-29: Synced WorldBook usage visibility phase-1: knowledge points now show role usage, Chat readiness, and bound role names.
    2026-04-29：同步 WorldBook 使用可见性第一阶段：知识点现显示角色使用情况、Chat 就绪状态与绑定角色名单。
+
+7. 2026-04-29: Synced WorldBook usage management phase-2: knowledge points now support usage-state filtering and sorting.
+   2026-04-29：同步 WorldBook 使用管理第二阶段：知识点现支持使用状态筛选与排序。
+
+8. 2026-04-29: Synced Map rewards/events phase-1: completed trips now show exploration points and event summaries.
+   2026-04-29：同步 Map 奖励/事件第一阶段：完成行程现展示探索点数与事件摘要。
+
+9. 2026-04-29: Synced Map route familiarity phase-2: completed trips now aggregate into route tiers with next-tier hints.
+   2026-04-29：同步 Map 路线熟悉度第二阶段：完成行程现聚合为路线等级，并展示下一等级提示。

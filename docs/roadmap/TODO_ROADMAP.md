@@ -155,6 +155,38 @@ Status / 状态: `IN_PROGRESS`
      中文：验收：不改变数据结构，也不改变 Chat 提示词组装行为。
    - EN: Next phase candidate: add filters/sorting for unused, disabled, and Chat-ready knowledge points, or move to Map rewards/events.
      中文：下一阶段候选：增加未使用/停用/Chat 就绪知识点筛选排序，或转入地图奖励/事件。
+5. EN: P1 WorldBook usage management second slice — `DONE`.
+   中文：P1 世界书使用管理第二刀 — `DONE`。
+   - EN: Add knowledge-point usage filters: all, Chat-ready, profile-only, unused, and disabled.
+     中文：增加知识点使用状态筛选：全部、已进入 Chat、仅角色档案、未使用、已停用。
+   - EN: Add sorting by recent update, usage state, bound role count, and title.
+     中文：增加排序：最近更新、使用状态、绑定角色数、标题。
+   - EN: Acceptance: filtering/sorting is local UI state only and does not alter knowledge point records or Chat prompt assembly.
+     中文：验收：筛选/排序仅为本地 UI 状态，不改变知识点记录，也不改变 Chat 提示词组装。
+   - EN: Next phase candidate: switch to Map rewards/events, unless WorldBook needs search/tag filtering next.
+     中文：下一阶段候选：转入地图奖励/事件；除非 WorldBook 需要继续补搜索/标签筛选。
+6. EN: P1 Map rewards/events first slice — `DONE`.
+   中文：P1 地图奖励/事件第一刀 — `DONE`。
+   - EN: Completed trips now write deterministic exploration rewards and lightweight event summaries into trip history.
+     中文：已完成的行程现会在行程记录中写入确定性的探索奖励与轻量事件摘要。
+   - EN: Cancelled trips remain non-rewarding, preserving the existing cancel semantics.
+     中文：取消行程仍不会产生奖励，保持原有取消语义。
+   - EN: Map history now shows total exploration score and per-trip reward/event details.
+     中文：地图行程记录现展示总探索进度，以及每条到达行程的奖励/事件详情。
+   - EN: Acceptance: rewards are deterministic and persisted through normal trip history/backup paths; no economy system added.
+     中文：验收：奖励为确定性规则，并通过现有行程历史/备份路径持久化；不新增经济系统。
+   - EN: Next phase candidate: add area unlocks based on accumulated exploration points and route familiarity.
+     中文：下一阶段候选：基于累计探索点与路线熟悉度增加区域解锁。
+7. EN: P1 Map route familiarity second slice — `DONE`.
+   中文：P1 地图路线熟悉度第二刀 — `DONE`。
+   - EN: Completed trips now aggregate into route familiarity tiers, sorted by exploration points, completion count, and recency.
+     中文：已完成行程现在会聚合为路线熟悉度等级，并按探索点、完成次数与最近完成时间排序。
+   - EN: Map now shows the top familiar routes with tier badges, points, completion count, average distance, and next-tier hints.
+     中文：地图现在展示最常走路线的等级标识、探索点、完成次数、平均距离与下一等级提示。
+   - EN: Acceptance: familiarity is derived from persisted trip history only; cancelled trips do not affect route tiers.
+     中文：验收：熟悉度只从已持久化的行程历史派生；取消行程不影响路线等级。
+   - EN: Next phase candidate: add area unlocks from accumulated route familiarity and exploration points.
+     中文：下一阶段候选：基于累计路线熟悉度与探索点增加区域解锁。
 
 ---
 
@@ -593,3 +625,9 @@ Acceptance / 验收标准:
     2026-04-29 中文：将 `AssetStatusBadge.vue` 扩展到 Chat、Map、Contacts，使第一套跨模块素材状态语言已覆盖五个素材消费界面。
 50. 2026-04-29 EN: Landed WorldBook usage visibility phase-1: each knowledge point now shows role usage, Chat prompt-chain readiness, and bound role names.
     2026-04-29 中文：已落地世界书使用可见性第一阶段：每条知识点现可显示角色使用情况、Chat 提示词链路状态与绑定角色名单。
+51. 2026-04-29 EN: Landed WorldBook usage management phase-2 with usage-state filters and sorting controls for knowledge points.
+    2026-04-29 中文：已落地世界书使用管理第二阶段，为知识点增加使用状态筛选与排序控件。
+52. 2026-04-29 EN: Landed Map rewards/events phase-1: completed trips now record deterministic exploration points and lightweight event summaries.
+    2026-04-29 中文：已落地地图奖励/事件第一阶段：完成行程现会记录确定性探索点数与轻量事件摘要。
+53. 2026-04-29 EN: Landed Map route familiarity phase-2: completed trips now aggregate into route tiers with completion counts, points, averages, and next-tier hints.
+    2026-04-29 中文：已落地地图路线熟悉度第二阶段：完成行程现会聚合为路线等级，并展示完成次数、点数、平均距离和下一等级提示。

@@ -28,6 +28,8 @@ const globalWorldview = computed({
 
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
+const knowledgeUsageFilter = ref('all')
+const knowledgeUsageSort = ref('recent')
 const roleProfileChatBindingMap = computed(() => {
   const map = new Map()
   contacts.value.forEach((contact) => {
@@ -131,22 +133,22 @@ const getKnowledgePointUsage = (point) => {
 }
 
 const getKnowledgePointUsageBadge = (point) => {
-  const usage = getKnowledgePointUsage(point)
-  if (usage.profiles.length <= 0) {
+  const state = getKnowledgePointUsageState(point)
+  if (state === 'unused') {
     return {
       label: t('未使用', 'Unused'),
       tone: 'neutral',
       icon: 'fas fa-circle',
     }
   }
-  if (point?.enabled === false) {
+  if (state === 'disabled') {
     return {
-      label: t('已绑定但停用', 'Bound but disabled'),
+      label: t('已停用', 'Disabled'),
       tone: 'amber',
       icon: 'fas fa-pause',
     }
   }
-  if (usage.chatBindingCount <= 0) {
+  if (state === 'profile_only') {
     return {
       label: t('仅角色档案', 'Profile only'),
       tone: 'amber',
@@ -159,6 +161,91 @@ const getKnowledgePointUsageBadge = (point) => {
     icon: 'fas fa-comments',
   }
 }
+
+const getKnowledgePointUsageState = (point) => {
+  const usage = getKnowledgePointUsage(point)
+  if (point?.enabled === false) return 'disabled'
+  if (usage.profiles.length <= 0) return 'unused'
+  if (usage.chatBindingCount <= 0) return 'profile_only'
+  return 'chat_ready'
+}
+
+const knowledgeUsageFilterOptions = computed(() => {
+  const counts = knowledgePoints.value.reduce(
+    (acc, point) => {
+      const state = getKnowledgePointUsageState(point)
+      acc.all += 1
+      acc[state] = (acc[state] || 0) + 1
+      return acc
+    },
+    {
+      all: 0,
+      unused: 0,
+      profile_only: 0,
+      chat_ready: 0,
+      disabled: 0,
+    },
+  )
+
+  return [
+    { value: 'all', label: t('全部', 'All'), count: counts.all },
+    { value: 'chat_ready', label: t('已进入 Chat', 'In Chat'), count: counts.chat_ready },
+    { value: 'profile_only', label: t('仅角色档案', 'Profile only'), count: counts.profile_only },
+    { value: 'unused', label: t('未使用', 'Unused'), count: counts.unused },
+    { value: 'disabled', label: t('已停用', 'Disabled'), count: counts.disabled },
+  ]
+})
+
+const knowledgeUsageSortOptions = computed(() => [
+  { value: 'recent', label: t('最近更新', 'Recent') },
+  { value: 'state', label: t('使用状态', 'Usage state') },
+  { value: 'role_count', label: t('绑定角色数', 'Bound roles') },
+  { value: 'title', label: t('标题', 'Title') },
+])
+
+const knowledgePointUpdatedAt = (point) => {
+  const updatedAt = Number(point?.updatedAt)
+  if (Number.isFinite(updatedAt) && updatedAt > 0) return updatedAt
+  const createdAt = Number(point?.createdAt)
+  return Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0
+}
+
+const compareKnowledgePointTitle = (a, b) => {
+  const titleA = typeof a?.title === 'string' ? a.title.trim() : ''
+  const titleB = typeof b?.title === 'string' ? b.title.trim() : ''
+  return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' })
+}
+
+const visibleKnowledgePoints = computed(() => {
+  const filter = knowledgeUsageFilter.value
+  const sort = knowledgeUsageSort.value
+  const usageStateOrder = {
+    unused: 0,
+    profile_only: 1,
+    disabled: 2,
+    chat_ready: 3,
+  }
+
+  return knowledgePoints.value
+    .filter((point) => filter === 'all' || getKnowledgePointUsageState(point) === filter)
+    .slice()
+    .sort((a, b) => {
+      if (sort === 'title') return compareKnowledgePointTitle(a, b)
+      if (sort === 'role_count') {
+        const usageA = getKnowledgePointUsage(a)
+        const usageB = getKnowledgePointUsage(b)
+        return usageB.profiles.length - usageA.profiles.length || compareKnowledgePointTitle(a, b)
+      }
+      if (sort === 'state') {
+        return (
+          usageStateOrder[getKnowledgePointUsageState(a)] -
+            usageStateOrder[getKnowledgePointUsageState(b)] ||
+          compareKnowledgePointTitle(a, b)
+        )
+      }
+      return knowledgePointUpdatedAt(b) - knowledgePointUpdatedAt(a) || compareKnowledgePointTitle(a, b)
+    })
+})
 
 const describeKnowledgePointUsage = (point) => {
   const usage = getKnowledgePointUsage(point)
@@ -297,13 +384,56 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <div v-if="knowledgePoints.length > 0" class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="option in knowledgeUsageFilterOptions"
+              :key="`knowledge-filter-${option.value}`"
+              type="button"
+              class="rounded-full border px-2 py-1 text-[11px] transition"
+              :class="
+                knowledgeUsageFilter === option.value
+                  ? 'border-blue-300 bg-blue-50 text-blue-600'
+                  : 'border-gray-200 bg-white text-gray-500'
+              "
+              @click="knowledgeUsageFilter = option.value"
+            >
+              {{ option.label }} · {{ option.count }}
+            </button>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[11px] text-gray-500">
+              {{ t('当前显示', 'Showing') }} {{ visibleKnowledgePoints.length }} / {{ knowledgePoints.length }}
+            </p>
+            <select
+              v-model="knowledgeUsageSort"
+              class="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] outline-none"
+            >
+              <option
+                v-for="option in knowledgeUsageSortOptions"
+                :key="`knowledge-sort-${option.value}`"
+                :value="option.value"
+              >
+                {{ t('排序', 'Sort') }}: {{ option.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
         <div v-if="knowledgePoints.length === 0" class="text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center">
           {{ t('暂无知识点。', 'No knowledge points yet.') }}
         </div>
 
+        <div
+          v-else-if="visibleKnowledgePoints.length === 0"
+          class="text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center"
+        >
+          {{ t('当前筛选下没有知识点。', 'No knowledge points match the current filter.') }}
+        </div>
+
         <div v-else class="space-y-2">
           <div
-            v-for="point in knowledgePoints"
+            v-for="point in visibleKnowledgePoints"
             :key="point.id"
             class="rounded-xl border border-gray-200 p-3 space-y-1"
           >

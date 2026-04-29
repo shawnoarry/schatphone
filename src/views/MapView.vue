@@ -29,6 +29,7 @@ const {
   tripEstimate,
   tripRuntime,
   tripHistory,
+  routeFamiliarity,
   mapVisualSettings,
   mapAutomationRuntime,
   mapAiVisualAutomationPolicy,
@@ -641,6 +642,25 @@ const tripArrivalPushHint = computed(() => {
   return t('当前未布置后台到达提醒；请检查真推送订阅与服务状态。', 'Background arrival reminder is not armed yet; check real push subscription and server status.')
 })
 
+const mapRewardScore = computed(() =>
+  tripHistory.value.reduce(
+    (sum, item) => sum + (item?.status === 'arrived' ? Math.max(0, Number(item.rewardPoints) || 0) : 0),
+    0,
+  ),
+)
+
+const visibleRouteFamiliarity = computed(() => routeFamiliarity.value.slice(0, 5))
+
+const getRouteFamiliarityNextHint = (route) => {
+  if (!route?.nextTier) {
+    return t('这条路线已达到当前最高熟悉度。', 'This route is at the current top familiarity tier.')
+  }
+  return t(
+    `距下一等级还需 ${Number(route.nextPoints) || 0} 点或 ${Number(route.nextCompletedCount) || 0} 次完成`,
+    `Next tier: ${Number(route.nextPoints) || 0} pts or ${Number(route.nextCompletedCount) || 0} completions`,
+  )
+}
+
 const formatSeconds = (seconds) => {
   const total = Math.max(0, Math.floor(Number(seconds) || 0))
   const minutes = Math.floor(total / 60)
@@ -724,11 +744,17 @@ const cancelTrip = () => {
 }
 
 const acknowledgeArrival = () => {
+  const latestReward = tripHistory.value.find((item) => item?.status === 'arrived' && Number(item.rewardPoints) > 0)
   const ok = mapStore.acknowledgeTripArrival()
   if (!ok) return
   tripActionHint.value = {
     tone: 'success',
-    message: t('行程已完成。', 'Trip marked as completed.'),
+    message: latestReward
+      ? t(
+          `行程已完成，获得 ${Number(latestReward.rewardPoints) || 0} 点探索进度。`,
+          `Trip completed. Gained ${Number(latestReward.rewardPoints) || 0} exploration points.`,
+        )
+      : t('行程已完成。', 'Trip marked as completed.'),
   }
 }
 
@@ -1216,7 +1242,59 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="map-glass-panel rounded-[1.75rem] p-4">
-        <h2 class="font-semibold mb-2">{{ t('行程记录', 'Trip history') }}</h2>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="font-semibold">{{ t('路线熟悉度', 'Route familiarity') }}</h2>
+          <AssetStatusBadge
+            v-if="routeFamiliarity.length > 0"
+            :label="t(`${routeFamiliarity.length} 条路线`, `${routeFamiliarity.length} routes`)"
+            icon="fas fa-layer-group"
+            tone="blue"
+            :truncate="false"
+          />
+        </div>
+        <p v-if="routeFamiliarity.length === 0" class="text-xs text-gray-500">
+          {{ t('完成行程后会自动形成常走路线与熟悉度等级。', 'Completed trips will automatically form route familiarity tiers.') }}
+        </p>
+        <div v-else class="space-y-2">
+          <div
+            v-for="route in visibleRouteFamiliarity"
+            :key="route.key"
+            class="rounded-lg border border-white/30 bg-white/45 p-2"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="min-w-0 text-sm font-medium">
+                {{ (route.fromLabel || route.from) + ' -> ' + (route.toLabel || route.to) }}
+              </p>
+              <AssetStatusBadge
+                :label-zh="route.tierLabelZh"
+                :label-en="route.tierLabelEn"
+                icon="fas fa-location-arrow"
+                :tone="route.tone || 'blue'"
+                :truncate="false"
+              />
+            </div>
+            <div class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-600">
+              <span>{{ t(`${route.completedCount} 次完成`, `${route.completedCount} trips`) }}</span>
+              <span>{{ t(`${route.points} 点探索`, `${route.points} pts`) }}</span>
+              <span>{{ t(`平均 ${route.averageDistanceKm} km`, `Avg ${route.averageDistanceKm} km`) }}</span>
+            </div>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{ getRouteFamiliarityNextHint(route) }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="font-semibold">{{ t('行程记录', 'Trip history') }}</h2>
+          <AssetStatusBadge
+            :label="t(`探索 ${mapRewardScore} 点`, `${mapRewardScore} pts`)"
+            icon="fas fa-route"
+            tone="emerald"
+            :truncate="false"
+          />
+        </div>
         <p v-if="tripHistory.length === 0" class="text-xs text-gray-500">
           {{ t('暂无记录。', 'No records yet.') }}
         </p>
@@ -1236,6 +1314,29 @@ onBeforeUnmount(() => {
               {{ t('时长', 'Duration') }} {{ formatSeconds(item.durationSeconds) }} ·
               {{ t('费用', 'Fare') }} ₩ {{ Number(item.fare || 0).toLocaleString() }}
             </p>
+            <div
+              v-if="item.status === 'arrived' && Number(item.rewardPoints) > 0"
+              class="mt-2 rounded-lg border border-emerald-200/50 bg-emerald-50/80 px-2.5 py-2 text-[11px] text-emerald-700"
+            >
+              <div class="mb-1 flex flex-wrap items-center gap-1.5">
+                <AssetStatusBadge
+                  :label="t(`+${Number(item.rewardPoints) || 0} 探索`, `+${Number(item.rewardPoints) || 0} exploration`)"
+                  icon="fas fa-star"
+                  tone="emerald"
+                  :truncate="false"
+                />
+                <AssetStatusBadge
+                  v-if="item.eventTitleZh || item.eventTitleEn"
+                  :label="t(item.eventTitleZh || item.eventTitleEn, item.eventTitleEn || item.eventTitleZh)"
+                  icon="fas fa-location-dot"
+                  tone="amber"
+                  :truncate="false"
+                />
+              </div>
+              <p v-if="item.eventSummaryZh || item.eventSummaryEn">
+                {{ t(item.eventSummaryZh || item.eventSummaryEn, item.eventSummaryEn || item.eventSummaryZh) }}
+              </p>
+            </div>
           </div>
         </div>
       </section>

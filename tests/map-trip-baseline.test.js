@@ -32,11 +32,43 @@ describe('map trip baseline loop', () => {
     expect(store.tripState.status).toBe('arrived')
     expect(store.currentLocation.detail).toBe('清潭洞')
     expect(store.tripHistory[0]?.status).toBe('arrived')
+    expect(store.tripHistory[0]?.rewardPoints).toBeGreaterThan(0)
+    expect(store.tripHistory[0]?.eventKind).toBeTruthy()
+    expect(store.routeFamiliarity[0]?.completedCount).toBe(1)
+    expect(store.routeFamiliarity[0]?.points).toBe(store.tripHistory[0]?.rewardPoints)
     expect(store.tripRuntime.remainingSeconds).toBe(0)
 
     const acknowledged = store.acknowledgeTripArrival()
     expect(acknowledged).toBe(true)
     expect(store.tripState.status).toBe('idle')
+  })
+
+  test('builds route familiarity from repeated completed trips', () => {
+    const store = useMapStore()
+    const completeCurrentTrip = () => {
+      const durationMs = Math.max(1, Number(store.tripState.durationSeconds || 0)) * 1000
+      vi.advanceTimersByTime(durationMs + 1000)
+      expect(store.tripState.status).toBe('arrived')
+    }
+
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(store.startTrip().ok).toBe(true)
+    completeCurrentTrip()
+    expect(store.acknowledgeTripArrival()).toBe(true)
+
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(store.startTrip().ok).toBe(true)
+    completeCurrentTrip()
+
+    const route = store.routeFamiliarity.find((item) => item.from === 'Home' && item.to === 'Office')
+    expect(route?.completedCount).toBe(2)
+    expect(route?.points).toBe(
+      Number(store.tripHistory[0]?.rewardPoints || 0) + Number(store.tripHistory[1]?.rewardPoints || 0),
+    )
+    expect(route?.tier).toBe('known_route')
+    expect(route?.nextTier).toBe('trusted_route')
   })
 
   test('canceling a running trip returns to idle and writes cancelled history', () => {
@@ -49,6 +81,7 @@ describe('map trip baseline loop', () => {
     expect(cancelled).toBe(true)
     expect(store.tripState.status).toBe('idle')
     expect(store.tripHistory[0]?.status).toBe('cancelled')
+    expect(store.tripHistory[0]?.rewardPoints).toBe(0)
 
     vi.advanceTimersByTime(60 * 60 * 1000)
     expect(store.tripState.status).toBe('idle')
@@ -73,6 +106,7 @@ describe('map trip baseline loop', () => {
 
     expect(storeB.tripState.status).toBe('arrived')
     expect(storeB.currentLocation.detail).toBe('公司')
+    expect(storeB.tripHistory[0]?.rewardPoints).toBeGreaterThan(0)
   })
 
   test('map visual falls back to default when gallery asset is unavailable', () => {

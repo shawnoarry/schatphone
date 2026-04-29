@@ -56,8 +56,8 @@ The weakest current area is not architecture, but module maturity imbalance: som
 | Contacts / 主通讯录 | Global role archive with profile editing, asset-folder slots, knowledge-point binding. | Role profile creation can still feel like configuration rather than character creation. | Role asset and world-knowledge controls share a dense form. | Add profile creation presets and a simplified first-time role setup flow. | P1 |
 | Gallery / 相册素材中台 | Global asset hub with import, folders, usage badges, in-use filtering, delete/replace safety. | Still balances two identities: iOS-like album vs asset-management console. | Asset hub behavior is embedded in a large page; future modules may need shared picker components. | Extract shared asset picker/usage badge components; keep Gallery UI photo-first. | P0.5 |
 | Appearance / 外观 | Theme, widgets, wallpaper source modes, app icon presets, gallery wallpaper integration. | Uploaded custom app icons are not supported; icon customization is preset-only. | Widget import/editor and appearance settings live together. | Decide if uploaded app icons are in scope; otherwise mark presets as the official model. | P1 |
-| WorldBook / 世界书 | Global worldview + knowledge points are split and bindable into Chat; phase-1 usage visibility is now available. | Users can now see role/Chat usage, but there is no filtering or sorting by usage state yet. | Consumption is strongest in Chat; broader module usage is still thin. | Add filters/sorting for unused, disabled, and Chat-ready knowledge points, then decide broader module consumption. | P1 |
-| Map / 地图 | Simulation-first baseline with trip lifecycle, reminders, history, gallery/default visuals, optional AI visual refresh. | Gameplay depth is still shallow: travel is functional but not yet rewarding. | Map store/view include automation, visual, trip, and push concerns together. | Add area unlocks, movement rewards, ambient events; keep core progress system-computed. | P1 |
+| WorldBook / 世界书 | Global worldview + knowledge points are split and bindable into Chat; usage visibility plus filters/sorting are now available. | Users can see and manage usage states, but broader non-Chat module consumption is still thin. | Consumption is strongest in Chat; broader module usage is still thin. | Decide broader module consumption or move product depth to Map rewards/events. | P1 |
+| Map / 地图 | Simulation-first baseline with trip lifecycle, reminders, history, gallery/default visuals, optional AI visual refresh, trip rewards/events, and route familiarity tiers. | Reward depth is improving, but area unlocks and downstream event hooks are not yet modeled. | Map store/view include automation, visual, trip, reward, route familiarity, and push concerns together. | Add area unlocks from accumulated exploration points and familiar routes; keep core progress system-computed. | P1 |
 | Files / 文件 | MVP file list, search, favorite, quick note creation. | Mock/local-only feel; not yet connected to real project assets or role/world data. | Data is local component state, not persisted or integrated. | Decide product role: document notebook, asset metadata browser, or future file manager. | P2 |
 | More / 更多 | MVP quick entries and experimental toggles. | Toggles are local UI only and do not persist. | Feature toggles are illustrative, not wired into system settings. | Either wire toggles to real feature flags or rename this page as “Labs”/“Shortcuts”. | P2 |
 | Profile / 用户信息 | Basic profile editor with persistence via system store. | Profile does not yet show downstream effects in Chat/world prompts. | Simple page is fine, but copy can better explain role in AI context. | Add a short “used in AI context” hint and optional preview of prompt-facing profile summary. | P1 |
@@ -85,8 +85,8 @@ The weakest current area is not architecture, but module maturity imbalance: som
    P0.5 清理：增加乱码守卫，保持 lint/build/test 通过，防止浏览器原生弹窗回潮。
 2. P0.5 component split: reduce risk in Chat, Settings, and Gallery by extracting shared panels.
    P0.5 组件拆分：通过提取共享面板降低 Chat、Settings、Gallery 的修改风险。
-3. P1 product depth: Map rewards/events, WorldBook usage visibility, Calendar reminder integration.
-   P1 产品深度：地图奖励/事件、世界书使用可见性、日历提醒接入。
+3. P1 product depth: Map rewards/events/familiarity, WorldBook usage visibility, Calendar reminder integration.
+   P1 产品深度：地图奖励/事件/熟悉度、世界书使用可见性、日历提醒接入。
 4. P1 decision: choose whether closed-page autonomous event generation is in the next milestone.
    P1 决策：确认“页面关闭后自动生成事件”是否进入下一里程碑。
 5. P2 module growth: Phone, Wallet, Stock, Files, and More can grow after the main immersion loops are clearer.
@@ -114,5 +114,11 @@ Best next implementation slice:
    将共享素材状态语言扩展到 Chat、Map、Contacts — 已完成。
 6. WorldBook usage visibility phase-1 — `DONE`.
    世界书使用可见性第一阶段 — 已完成。
-7. Next best slice: add WorldBook usage filters/sorting, or switch to Map rewards/events if product depth should move from configuration clarity to gameplay.
-   下一步最推荐：增加 WorldBook 使用状态筛选/排序；若产品深度要从配置清晰度转向玩法，则切到地图奖励/事件。
+7. WorldBook usage filters/sorting — `DONE`.
+   WorldBook 使用状态筛选/排序 — 已完成。
+8. Map rewards/events phase-1 — `DONE`.
+   地图奖励/事件第一阶段 — 已完成。
+9. Map route familiarity phase-2 — `DONE`.
+   地图路线熟悉度第二阶段 — 已完成。
+10. Next best slice: add area unlocks from accumulated exploration points and familiar routes; keep WorldBook search/tag filters as a later support task.
+    下一步最推荐：基于累计探索点与熟悉路线增加区域解锁；WorldBook 搜索/标签筛选作为后续支持任务保留。
