@@ -22,7 +22,9 @@ const goHome = () => {
     <div class="flex-1 px-5 py-6">
       <div class="rounded-2xl bg-gray-50 border border-gray-200 p-4">
         <p class="font-semibold mb-2">{{ t('钱包模块占位页', 'Wallet module placeholder') }}</p>
-        <p class="text-sm text-gray-600">{{ t('下一步可接入余额、交易流水、聊天转账和消费扣款。', 'Next, we can add balances, transaction history, chat transfer, and spending deduction.') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('下一步可接入余额、交易流水、聊天转账和消费扣款。', 'Next, we can add balances, transaction history, chat transfer, and spending deduction.') }}
+        </p>
       </div>
     </div>
   </div>

@@ -8,6 +8,8 @@ import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import SettingsMenuItem from '../components/settings/SettingsMenuItem.vue'
+import SettingsQuickAccessButton from '../components/settings/SettingsQuickAccessButton.vue'
 import {
   getPersistenceCapabilities,
   inspectPersistedStateLayers,
@@ -1514,86 +1516,68 @@ if (initialMenu) {
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('快捷入口', 'Quick Access') }}</div>
       <div class="grid grid-cols-3 gap-2">
-        <button
-          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
-          @click="openNetworkReports"
-        >
-          <p class="text-[11px] font-semibold text-gray-800">{{ t('网络与 API', 'Network & API') }}</p>
-          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('配置接口', 'Configure provider') }}</p>
-        </button>
-        <button
-          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
-          @click="openChatAutomation"
-        >
-          <p class="text-[11px] font-semibold text-gray-800">{{ t('会话设置', 'Chat settings') }}</p>
-          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('角色与会话', 'Roles and threads') }}</p>
-        </button>
-        <button
-          class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
-          @click="openAppearanceStudio"
-        >
-          <p class="text-[11px] font-semibold text-gray-800">{{ t('外观工坊', 'Appearance') }}</p>
-          <p class="text-[10px] text-gray-500 mt-0.5">{{ t('主题与壁纸', 'Theme and wallpaper') }}</p>
-        </button>
+        <SettingsQuickAccessButton
+          title-zh="网络与 API"
+          title-en="Network & API"
+          subtitle-zh="配置接口"
+          subtitle-en="Configure provider"
+          @select="openNetworkReports"
+        />
+        <SettingsQuickAccessButton
+          title-zh="会话设置"
+          title-en="Chat settings"
+          subtitle-zh="角色与会话"
+          subtitle-en="Roles and threads"
+          @select="openChatAutomation"
+        />
+        <SettingsQuickAccessButton
+          title-zh="外观工坊"
+          title-en="Appearance"
+          subtitle-zh="主题与壁纸"
+          subtitle-en="Theme and wallpaper"
+          @select="openAppearanceStudio"
+        />
       </div>
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
       <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
-        <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-          @click="openWorldBook"
-        >
-          <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-book-open"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('世界书', 'World Book') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('所有对话共享的世界设定', 'Shared context for all chats') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-          @click="openSubPage('general')"
-        >
-          <div class="w-7 h-7 rounded-lg bg-gray-600 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-sliders"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('通用', 'General') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('系统语言、时区等基础项', 'Language, timezone and basic system options') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-          @click="openSubPage('automation')"
-        >
-          <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-robot"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('AI 自动响应', 'AI Automation') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('总开关、优先级、安静时段', 'Master switch, priorities and quiet hours') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
-          @click="openSubPage('notification')"
-        >
-          <div class="w-7 h-7 rounded-lg bg-red-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-bell"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('通知', 'Notifications') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('消息提醒与系统提示', 'Message alerts and system notifications') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
+        <SettingsMenuItem
+          title-zh="世界书"
+          title-en="World Book"
+          subtitle-zh="所有对话共享的世界设定"
+          subtitle-en="Shared context for all chats"
+          icon="fas fa-book-open"
+          icon-class="bg-purple-500"
+          @select="openWorldBook"
+        />
+        <SettingsMenuItem
+          title-zh="通用"
+          title-en="General"
+          subtitle-zh="系统语言、时区等基础项"
+          subtitle-en="Language, timezone and basic system options"
+          icon="fas fa-sliders"
+          icon-class="bg-gray-600"
+          @select="openSubPage('general')"
+        />
+        <SettingsMenuItem
+          title-zh="AI 自动响应"
+          title-en="AI Automation"
+          subtitle-zh="总开关、优先级、安静时段"
+          subtitle-en="Master switch, priorities and quiet hours"
+          icon="fas fa-robot"
+          icon-class="bg-indigo-500"
+          @select="openSubPage('automation')"
+        />
+        <SettingsMenuItem
+          title-zh="通知"
+          title-en="Notifications"
+          subtitle-zh="消息提醒与系统提示"
+          subtitle-en="Message alerts and system notifications"
+          icon="fas fa-bell"
+          icon-class="bg-red-500"
+          :with-border="false"
+          @select="openSubPage('notification')"
+        />
       </div>
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>

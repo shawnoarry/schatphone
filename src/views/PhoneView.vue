@@ -22,7 +22,9 @@ const goHome = () => {
     <div class="flex-1 px-5 py-6">
       <div class="rounded-2xl bg-gray-50 border border-gray-200 p-4">
         <p class="font-semibold mb-2">{{ t('电话模块占位页', 'Phone module placeholder') }}</p>
-        <p class="text-sm text-gray-600">{{ t('下一步可接入联系人拨号、通话记录、AI 通话脚本生成。', 'Next, we can add contact dialing, call logs, and AI call script generation.') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('下一步可接入联系人拨号、通话记录、AI 通话脚本生成。', 'Next, we can add contact dialing, call logs, and AI call script generation.') }}
+        </p>
       </div>
     </div>
   </div>

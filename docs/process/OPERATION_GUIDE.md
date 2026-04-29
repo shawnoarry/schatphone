@@ -1,4 +1,4 @@
-﻿# SchatPhone 操作指南（新版）
+# SchatPhone 操作指南（新版）
 
 Updated / 更新时间: 2026-04-19
 
@@ -166,7 +166,7 @@ URL, auth, 404, rate-limit, timeout, network/CORS, server.
 4. Put state in proper store (`system/chat/map`)
 5. Route AI requests through `src/lib/ai.js`
 6. Keep explicit Save action on key input pages
-7. Update docs: `PROJECT_MASTER_GUIDE.md`, `TODO_ROADMAP.md`, `docs/reference/TODO_PM_STATUS_REPORT.md`, `docs/reference/ARCHITECTURE.md`
+7. Update docs: `docs/overview/PROJECT_MASTER_GUIDE.md`, `docs/roadmap/TODO_ROADMAP.md`, `docs/pm/TODO_PM_STATUS_REPORT.md`, `docs/architecture/ARCHITECTURE.md`
 
 ## 13. Pre-commit Checks / 提交前检查
 

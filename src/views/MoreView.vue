@@ -110,9 +110,9 @@ const openEntry = (route) => {
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
         <p class="text-sm font-semibold mb-2">{{ t('后续扩展建议', 'Future Expansion Ideas') }}</p>
         <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4">
-          <li>{{ t('把常用入口做成可编辑快捷区（可从 Home 拖入）', 'Build an editable quick area for frequent entries (drag from Home).') }}</li>
-          <li>{{ t('支持按场景显示不同模块组合', 'Support scene-based module combinations.') }}</li>
-          <li>{{ t('增加“模块商店”用于引入第三方扩展', 'Add a module store for third-party extensions.') }}</li>
+          <li>{{ t('把常用入口做成可编辑快捷区（可从 Home 拖入）。', 'Build an editable quick area for frequent entries (drag from Home).') }}</li>
+          <li>{{ t('支持按场景显示不同模块组合。', 'Support scene-based module combinations.') }}</li>
+          <li>{{ t('增加“模块商店”用于引入第三方扩展。', 'Add a module store for third-party extensions.') }}</li>
         </ul>
       </section>
     </div>

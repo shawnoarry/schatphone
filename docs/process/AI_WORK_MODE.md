@@ -1,9 +1,42 @@
-﻿# SchatPhone AI Work Mode / AI 工作模式
+# SchatPhone AI Work Mode / AI 工作模式
 
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-04-29
 
 Purpose / 用途: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.  
 给后续接手的 Codex、Claude 或其他 AI 编程助手一套统一执行方式。
+
+## 0. Documentation Authority / 文档职责收束
+
+This file is the single workflow/process rulebook. It does not replace the task board; it defines how task documents should be used.
+
+本文档是唯一的流程/协作规范，不替代任务看板；它定义各类任务文档应如何使用。
+
+| Document / 文档 | Role / 职责 | Rule / 使用规则 |
+| --- | --- | --- |
+| `docs/README.md` | Documentation map / 文档地图 | Use first when choosing which document to read or update. / 不确定读或改哪份文档时先看这里。 |
+| `docs/overview/PROJECT_MASTER_GUIDE.md` | Project-wide product + architecture overview / 项目全局产品与架构总览 | Read first for context; do not use it as a detailed task queue. / 先读它了解全局，不把它当细任务队列。 |
+| `docs/roadmap/TODO_ROADMAP.md` | Only live execution board / 唯一动态执行看板 | Any executable task with status must live here. / 任何带状态的可执行任务必须进这里。 |
+| `docs/roadmap/PROJECT_MODULE_AUDIT.md` | Module maturity audit and candidate task pool / 模块成熟度梳理与候选任务池 | Use for sorting and discovery; when a task becomes active, copy it into `docs/roadmap/TODO_ROADMAP.md`. / 用于梳理和发现；任务进入执行时必须转入 `docs/roadmap/TODO_ROADMAP.md`。 |
+| `docs/pm/TODO_PM_STATUS_REPORT.md` | PM-readable status mirror / 产品经理可读状态镜像 | Sync after meaningful roadmap changes; it should summarize, not create competing priorities. / 路线图有实质变化后同步；只做摘要，不另建优先级。 |
+| `docs/process/OPERATION_GUIDE.md` | Daily operation and validation guide / 日常操作与验收指南 | Use for commands, QA flow, release/deploy steps. / 用于命令、验收、发布流程。 |
+| `docs/process/AI_WORK_MODE.md` | Workflow and documentation governance / 协作流程与文档治理 | This file. Keep process rules here instead of creating new process docs. / 即本文档。流程规则集中在这里，不另散开。 |
+| Domain reference docs / 专题参考文档 | Decisions, contracts, and domain details / 决策、契约、专题细节 | Must not become active task boards unless explicitly linked from `docs/roadmap/TODO_ROADMAP.md`. / 不应变成活动任务看板，除非由 `docs/roadmap/TODO_ROADMAP.md` 明确引用。 |
+| `docs/archive/**` | Historical lookup only / 仅历史查询 | Never use as current execution source. / 不作为当前执行依据。 |
+
+Anti-scatter rules / 防分散规则：
+
+1. Do not create a new roadmap, task pool, or workflow document when an existing category fits.
+   若已有类别能承载，不新建路线图、任务池或流程文档。
+2. Put active execution status in `docs/roadmap/TODO_ROADMAP.md` only.
+   活动执行状态只放在 `docs/roadmap/TODO_ROADMAP.md`。
+3. Keep module-level ideas in `docs/roadmap/PROJECT_MODULE_AUDIT.md` until selected for execution.
+   模块级想法先放在 `docs/roadmap/PROJECT_MODULE_AUDIT.md`，选中执行后再进入路线图。
+4. Keep implementation process rules in this file.
+   实施流程规则集中在本文档。
+5. Move superseded planning/status docs into `docs/archive/` with a reason note.
+   被替代的计划/状态文档移入 `docs/archive/` 并注明原因。
+6. Mark obsolete archives with `Obsolete archive / 过时归档`.
+   过时归档必须标注 `Obsolete archive / 过时归档`。
 
 ## 1. Role Definition / 角色定位
 
@@ -18,10 +51,14 @@ Purpose / 用途: define a stable operating model for Codex, Claude, or any AI c
 
 - Track A: Immediate request track (`user-now`)  
 轨道 A：即时需求轨（用户当前请求）
-- Track B: Main roadmap track (`TODO_ROADMAP.md`)  
-轨道 B：主线任务轨（`TODO_ROADMAP.md`）
+- Track B: Main roadmap track (`docs/roadmap/TODO_ROADMAP.md`)  
+轨道 B：主线任务轨（`docs/roadmap/TODO_ROADMAP.md`）
+- Track C: Candidate module pool (`docs/roadmap/PROJECT_MODULE_AUDIT.md`)
+轨道 C：候选模块池（`docs/roadmap/PROJECT_MODULE_AUDIT.md`）
 - Rule: user request takes priority, but roadmap status must be backfilled after each insertion.  
 规则：用户需求优先，但每次插单后必须回填主线进度，避免主线断档。
+- Rule: Track C is for sorting, not execution status; promote selected work into Track B before implementation.
+规则：轨道 C 只用于排序，不承载执行状态；选中要做的工作先转入轨道 B。
 
 ## 3. Requirement Translation Template / 需求转译模板
 
@@ -75,10 +112,11 @@ Each delivery should include / 每次交付统一包含：
 关键输入页必须保留显式保存动作与反馈。
 - If route/schema/core interaction changes, update:  
 若涉及路由/数据结构/核心交互改动，必须同步更新：
-  - `PROJECT_MASTER_GUIDE.md`
-  - `TODO_ROADMAP.md`
-  - `docs/reference/TODO_PM_STATUS_REPORT.md`
-  - `docs/reference/ARCHITECTURE.md`
+  - `docs/overview/PROJECT_MASTER_GUIDE.md`
+  - `docs/roadmap/TODO_ROADMAP.md`
+  - `docs/pm/TODO_PM_STATUS_REPORT.md`
+  - `docs/architecture/ARCHITECTURE.md`
+  - `docs/roadmap/PROJECT_MODULE_AUDIT.md` when module maturity or priority changes / 若模块成熟度或优先级变化，同步模块梳理表
   - domain-specific reference docs when the change is feature-specific / 若变更只影响某一专题，再补对应专题参考文档
 
 ## 8. Definition of Done / 完成标准
@@ -103,14 +141,14 @@ Execution rules:
 1) Prioritize user natural-language requests, but always translate them into: goal, scope, acceptance, risk.
 2) Use dual-track execution:
    - Immediate request track
-   - Main roadmap track (`TODO_ROADMAP.md`)
+   - Main roadmap track (`docs/roadmap/TODO_ROADMAP.md`)
 3) For every delivery, include:
    - modified files
    - key changes
    - user-visible results
    - validation results (lint/build/test)
    - impact on roadmap
-4) If route/schema/core interaction changes, update `PROJECT_MASTER_GUIDE.md`, `TODO_ROADMAP.md`, `docs/reference/TODO_PM_STATUS_REPORT.md`, and `docs/reference/ARCHITECTURE.md`; add topic docs only when needed.
+4) If route/schema/core interaction changes, update `docs/overview/PROJECT_MASTER_GUIDE.md`, `docs/roadmap/TODO_ROADMAP.md`, `docs/pm/TODO_PM_STATUS_REPORT.md`, and `docs/architecture/ARCHITECTURE.md`; add topic docs only when needed.
 5) Route AI calls only through src/lib/ai.js (no direct AI fetch in components).
 ```
 

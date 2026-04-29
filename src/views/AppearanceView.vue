@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import {
   APP_ICON_ACCENT_OPTIONS,
   APP_ICON_CUSTOMIZATION_TARGET_IDS,
@@ -1025,12 +1026,14 @@ onBeforeUnmount(() => {
                 >
                   {{ t('加载中', 'Loading') }}
                 </div>
-                <div
+                <AssetStatusBadge
                   v-if="currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id"
-                  class="absolute left-1.5 top-1.5 rounded-full bg-sky-500/90 px-1.5 py-0.5 text-[9px] font-semibold text-white"
-                >
-                  {{ t('使用中', 'Live') }}
-                </div>
+                  label-zh="使用中"
+                  label-en="Live"
+                  tone="sky-solid"
+                  :truncate="false"
+                  class="absolute left-1.5 top-1.5 font-semibold"
+                />
               </div>
               <p class="mt-1 text-[10px] text-gray-600 truncate">
                 {{ asset.name }}

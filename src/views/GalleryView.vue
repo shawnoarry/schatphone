@@ -6,6 +6,7 @@ import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
 import { useChatStore } from '../stores/chat'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 
 const router = useRouter()
 const galleryStore = useGalleryStore()
@@ -1085,20 +1086,18 @@ onBeforeUnmount(() => {
               }}
             </p>
             <div v-if="getAssetUsageChips(asset).length > 0" class="flex flex-wrap gap-1">
-              <span
+              <AssetStatusBadge
                 v-for="label in getAssetUsageChips(asset)"
                 :key="`${asset.id}-usage-${label}`"
-                class="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] text-blue-500 max-w-full"
-              >
-                <i class="fas fa-link mr-1 text-[9px]"></i>
-                <span class="truncate">{{ label }}</span>
-              </span>
-              <span
+                :label="label"
+                icon="fas fa-link"
+              />
+              <AssetStatusBadge
                 v-if="getAssetUsageOverflowCount(asset) > 0"
-                class="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[9px] text-neutral-400"
-              >
-                +{{ getAssetUsageOverflowCount(asset) }}
-              </span>
+                :label="`+${getAssetUsageOverflowCount(asset)}`"
+                tone="neutral"
+                :truncate="false"
+              />
             </div>
             <details class="photo-actions">
               <summary class="cursor-pointer select-none text-[11px] text-blue-500">{{ t('选项', 'Options') }}</summary>

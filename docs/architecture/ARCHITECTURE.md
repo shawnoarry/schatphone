@@ -1,4 +1,4 @@
-﻿# SchatPhone 架构说明
+# SchatPhone 架构说明
 
 Updated / 更新时间: 2026-04-19
 
@@ -161,7 +161,7 @@ Core routes / 核心路由：
 - Cross-module role binding contract entry / 跨模块角色绑定契约入口：  
   `chatStore.getRoleBindingContract(contactId, { moduleKey })` and `chatStore.listRoleBindingContracts(...)`  
   with compatibility path `chatStore.getRoleBindingAssetContext(contactId)`  
-  (see `docs/reference/ROLE_BINDING_CONTRACT.md`).
+  (see `docs/architecture/ROLE_BINDING_CONTRACT.md`).
 
 ### 5.2 Interaction Model / 交互模型
 
@@ -258,6 +258,6 @@ Rules / 规则：
 所有 AI 请求统一走 `src/lib/ai.js`。
 5. If route/schema/core interaction changes, update docs in same PR.  
 涉及路由/数据结构/主交互改动时，同步更新文档。
-6. If lock/i18n behavior changes, sync `README.md`, `PROJECT_MASTER_GUIDE.md`, and `docs/reference/TODO_PM_STATUS_REPORT.md`.  
-涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`PROJECT_MASTER_GUIDE.md` 与 `docs/reference/TODO_PM_STATUS_REPORT.md`。
+6. If lock/i18n behavior changes, sync `README.md`, `docs/overview/PROJECT_MASTER_GUIDE.md`, and `docs/pm/TODO_PM_STATUS_REPORT.md`.  
+涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`docs/overview/PROJECT_MASTER_GUIDE.md` 与 `docs/pm/TODO_PM_STATUS_REPORT.md`。
 

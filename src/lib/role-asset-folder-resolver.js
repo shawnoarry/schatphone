@@ -8,13 +8,6 @@ import {
 const MAX_RESOLVED_ASSET_IDS = 180
 const MAX_SLOT_KEYS = 8
 
-export const ROLE_ASSET_FOLDER_SLOT_CATEGORY_HINTS = Object.freeze({
-  profileImage: ['all', 'wallpaper', 'scenario', 'reference'],
-  dynamicMedia: ['scenario', 'reference'],
-  emojiPack: ['emoji'],
-  imageReference: ['reference', 'scenario'],
-})
-
 const CATEGORY_TO_SLOT_KEYS = Object.freeze({
   all: [...ROLE_ASSET_FOLDER_SLOT_KEYS],
   wallpaper: ['profileImage'],

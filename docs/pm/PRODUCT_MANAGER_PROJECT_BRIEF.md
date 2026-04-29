@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-22
+Updated / 更新时间: 2026-04-29
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -265,8 +265,8 @@ Status / 状态: `DONE`
 Status / 状态: `DONE`
 1. EN: Cross-module role/avatar/asset contract APIs are now landed in chat store.
    中文：跨模块角色/头像/素材契约 API 已在 chat store 落地。
-2. EN: Contract acceptance checklist is documented in `docs/reference/ROLE_BINDING_CONTRACT.md`.
-   中文：契约验收清单已沉淀到 `docs/reference/ROLE_BINDING_CONTRACT.md`。
+2. EN: Contract acceptance checklist is documented in `docs/architecture/ROLE_BINDING_CONTRACT.md`.
+   中文：契约验收清单已沉淀到 `docs/architecture/ROLE_BINDING_CONTRACT.md`。
 3. EN: P0 closure is complete; next focus moves to P1 immersive module kickoff.
    中文：P0 收口已完成；下一阶段聚焦 P1 沉浸模块启动。
 
@@ -281,12 +281,14 @@ Status / 状态: `DONE`
    中文：后续命名决策（非阻塞）：是否将 UI 中的“世界书”改为更沉浸且易懂的名称。
 
 ## 7) Quick Read Path / 快速阅读路径
-1. EN: Product overview and architecture: `PROJECT_MASTER_GUIDE.md`.
-   中文：项目总览与架构：`PROJECT_MASTER_GUIDE.md`。
-2. EN: Live execution board: `TODO_ROADMAP.md`.
-   中文：动态执行看板：`TODO_ROADMAP.md`。
-3. EN: PM status report: `docs/reference/TODO_PM_STATUS_REPORT.md`.
-   中文：产品经理状态报告：`docs/reference/TODO_PM_STATUS_REPORT.md`。
+1. EN: Documentation map: `docs/README.md`.
+   中文：文档地图：`docs/README.md`。
+2. EN: Product overview and architecture: `docs/overview/PROJECT_MASTER_GUIDE.md`.
+   中文：项目总览与架构：`docs/overview/PROJECT_MASTER_GUIDE.md`。
+3. EN: Live execution board: `docs/roadmap/TODO_ROADMAP.md`.
+   中文：动态执行看板：`docs/roadmap/TODO_ROADMAP.md`。
+4. EN: PM status report: `docs/pm/TODO_PM_STATUS_REPORT.md`.
+   中文：产品经理状态报告：`docs/pm/TODO_PM_STATUS_REPORT.md`。
 
 ## 8) Change Log / 变更记录
 1. 2026-04-07 EN: Created PM-focused consolidated brief.
@@ -357,3 +359,5 @@ Status / 状态: `DONE`
     2026-04-17 中文：已落地地图视觉恢复打磨：地图现支持页内一键恢复默认视觉，并可直接清除已记住的素材库背景绑定。
 32. 2026-04-22 EN: Landed asset-hub appearance closure: Appearance wallpaper now supports `theme / gallery / custom URL`, App shell resolves gallery wallpaper assets directly, and Gallery now protects or safely clears active wallpaper bindings during deletion.
     2026-04-22 中文：已落地素材中台在外观链路的收口：Appearance 壁纸现支持 `主题 / 相册 / 自定义 URL`，App 壳层可直接解析相册壁纸素材，且 Gallery 在删除时会保护或安全清除正在使用中的壁纸绑定。
+33. 2026-04-29 EN: Updated quick-read path after documentation restructuring by function.
+    2026-04-29 中文：按职能完成文档重构后，更新快速阅读路径。

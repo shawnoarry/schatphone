@@ -109,8 +109,6 @@ const deleteBlobFromIndexedDb = async (assetId) => {
   })
 }
 
-export const supportsPersistentGalleryBlobStorage = () => canUseIndexedDb()
-
 export const putGalleryAssetBlob = async (assetId, blob) => {
   if (typeof assetId !== 'string' || !assetId.trim() || !(blob instanceof Blob)) return false
   const normalizedId = assetId.trim()
@@ -139,9 +137,3 @@ export const deleteGalleryAssetBlob = async (assetId) => {
 export const clearGalleryAssetBlobFallback = () => {
   memoryBlobFallback.clear()
 }
-
-export const getGalleryAssetStorageCapabilities = () => ({
-  indexedDbAvailable: canUseIndexedDb(),
-  persistentMode: canUseIndexedDb() && !galleryDbUnavailable,
-  memoryFallbackCount: memoryBlobFallback.size,
-})

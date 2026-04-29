@@ -1,5 +1,8 @@
 # Product Manager Priority Plan / 产品经理优先级任务单
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
 Updated / 更新时间: 2026-04-12
 
 ## 1. Purpose / 用途

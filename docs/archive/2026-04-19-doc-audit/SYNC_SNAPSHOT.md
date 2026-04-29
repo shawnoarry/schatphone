@@ -1,9 +1,12 @@
-﻿# SchatPhone 同步快照
+# SchatPhone 同步快照
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
 Updated / 更新时间: 2026-04-12
 
 Document position / 文档定位（2026-04-06）: snapshot reference.  
-本文件用于快照复核；主说明与动态待办请以 PROJECT_MASTER_GUIDE.md 与 TODO_ROADMAP.md 为准。
+本文件用于快照复核；主说明与动态待办请以 docs/overview/PROJECT_MASTER_GUIDE.md 与 docs/roadmap/TODO_ROADMAP.md 为准。
 
 ## Purpose / 用途
 

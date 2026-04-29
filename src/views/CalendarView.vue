@@ -22,7 +22,9 @@ const goHome = () => {
     <div class="flex-1 px-5 py-6">
       <div class="rounded-2xl bg-gray-50 border border-gray-200 p-4">
         <p class="font-semibold mb-2">{{ t('日程模块占位页', 'Schedule module placeholder') }}</p>
-        <p class="text-sm text-gray-600">{{ t('下一步可接入日程管理、提醒文案、与钱包/股票联动。', 'Next, we can add schedule management, reminder copywriting, and linkage with wallet/stock.') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('下一步可接入日程管理、提醒文案、与钱包/股票联动。', 'Next, we can add schedule management, reminder copywriting, and linkage with wallet/stock.') }}
+        </p>
       </div>
     </div>
   </div>

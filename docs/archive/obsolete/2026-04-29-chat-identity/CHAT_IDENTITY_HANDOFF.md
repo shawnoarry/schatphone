@@ -1,5 +1,16 @@
 # Chat Identity Handoff
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
+Status: Closed / Reference only
+
+This refactor track has no mandatory remaining task. Do not use this file as an active execution board. If Chat identity work is reopened, promote the selected task into `docs/roadmap/TODO_ROADMAP.md` first and use `docs/roadmap/PROJECT_MODULE_AUDIT.md` only for sorting.
+
+状态：已关闭 / 仅作参考
+
+本重构线当前没有强制剩余任务。不要把本文当作活动执行看板。若后续重新开启 Chat 身份相关工作，需先把选中的任务转入 `docs/roadmap/TODO_ROADMAP.md`，`docs/roadmap/PROJECT_MODULE_AUDIT.md` 仅用于排序。
+
 ## Goal
 
 Refactor `/chat-feature/identity` so it manages only the user identity inside Chat.
@@ -61,7 +72,7 @@ Only do:
 2. `src/views/ChatView.vue`
 3. `src/stores/chat.js`
 4. `tests/chat-store-model.test.js`
-5. `docs/reference/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md`
+5. `docs/archive/obsolete/2026-04-29-chat-identity/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md`
 
 ---
 

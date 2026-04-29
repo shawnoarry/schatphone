@@ -1,5 +1,16 @@
 # Chat 模块「身份」重构任务拆解
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
+Status: Closed / Reference only
+
+This breakdown documents a completed refactor track. It should not compete with `docs/roadmap/TODO_ROADMAP.md`. Future Chat identity tasks must be re-entered through the live roadmap before implementation.
+
+状态：已关闭 / 仅作参考
+
+本文记录的是已完成的重构拆解，不应与 `docs/roadmap/TODO_ROADMAP.md` 竞争优先级。后续 Chat 身份任务必须先进入动态路线图再执行。
+
 ## 目标
 
 把 `/chat-feature/identity` 调整为**仅管理用户在 Chat 模块中的身份**，不再承载任何 AI 角色身份配置。
@@ -273,9 +284,9 @@
 
 后续不要再手动长篇复述上下文，固定使用这 3 个文件协作：
 
-1. `docs/reference/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md`
-2. `docs/reference/CHAT_IDENTITY_HANDOFF.md`
-3. `docs/reference/CHAT_IDENTITY_SESSION_TEMPLATE.md`
+1. `docs/archive/obsolete/2026-04-29-chat-identity/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md`
+2. `docs/archive/obsolete/2026-04-29-chat-identity/CHAT_IDENTITY_HANDOFF.md`
+3. `docs/archive/obsolete/2026-04-29-chat-identity/CHAT_IDENTITY_SESSION_TEMPLATE.md`
 
 使用方法：
 
@@ -291,7 +302,7 @@
 可以直接把下面这段贴给下一次会话：
 
 ```md
-当前要处理 Chat 模块 identity 重构，只做 docs/reference/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md 中的“单个任务”。
+当前要处理 Chat 模块 identity 重构，只做 docs/archive/obsolete/2026-04-29-chat-identity/CHAT_IDENTITY_REFACTOR_BREAKDOWN.md 中的“单个任务”。
 
 总目标：
 - `/chat-feature/identity` 只管理用户在 Chat 模块中的身份

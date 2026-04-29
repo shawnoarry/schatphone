@@ -1,4 +1,4 @@
-﻿# SchatPhone Project Master Guide / SchatPhone 项目总说明
+# SchatPhone Project Master Guide / SchatPhone 项目总说明
 
 Updated / 更新时间: 2026-04-19
 
@@ -7,8 +7,8 @@ Updated / 更新时间: 2026-04-19
 This is the primary "understand the whole project" document for both product-facing readers and incoming AI engineers.  
 这是面向产品经理视角和后续 AI 程序员的主说明文档，用来快速理解项目全貌。
 
-If there is any conflict with older docs, this file + `TODO_ROADMAP.md` should be treated as current priority references.  
-如果与旧文档存在冲突，以本文件 + `TODO_ROADMAP.md` 作为当前优先参考。
+If there is any conflict with older docs, this file + `docs/roadmap/TODO_ROADMAP.md` should be treated as current priority references.  
+如果与旧文档存在冲突，以本文件 + `docs/roadmap/TODO_ROADMAP.md` 作为当前优先参考。
 
 ---
 
@@ -67,8 +67,8 @@ Chat 提示词组装已按 `全局世界观 -> 角色档案 -> 绑定知识点 -
 10. Real web-push delivery baseline is online for instant and scheduled reminders.  
 真 Web Push 送达基线已上线，可支持即时与定时提醒。
 
-Current active priorities are tracked in `TODO_ROADMAP.md`.  
-当前进行中优先级见 `TODO_ROADMAP.md`。
+Current active priorities are tracked in `docs/roadmap/TODO_ROADMAP.md`.  
+当前进行中优先级见 `docs/roadmap/TODO_ROADMAP.md`。
 
 ---
 
@@ -255,41 +255,45 @@ World kernel note / 世界内核说明：
 
 ## 10. Current Documentation Structure / 当前文档结构说明
 
-Primary docs (use these first):  
-主文档（优先阅读）：
+Start from `docs/README.md` when you are unsure which document to read.
+如果不确定应该读哪份文档，先从 `docs/README.md` 开始。
 
-1. `PROJECT_MASTER_GUIDE.md` (this file)  
-`PROJECT_MASTER_GUIDE.md`（本文件）
-2. `PRODUCT_MANAGER_PROJECT_BRIEF.md` (PM-facing overview)  
-`PRODUCT_MANAGER_PROJECT_BRIEF.md`（产品经理一页式总览）
-3. `TODO_ROADMAP.md` (live task board)  
-`TODO_ROADMAP.md`（动态待办清单）
-4. `docs/reference/TODO_PM_STATUS_REPORT.md` (PM-readable status mirror of the roadmap)  
-`docs/reference/TODO_PM_STATUS_REPORT.md`（面向产品经理的待办状态镜像）
+Rule of thumb / 使用原则：
 
-Secondary/reference docs (history/detail):  
-次级/参考文档（历史与细节）：
+1. `docs/roadmap/TODO_ROADMAP.md` is the only live execution board.
+`docs/roadmap/TODO_ROADMAP.md` 是唯一动态执行看板。
+2. `docs/roadmap/PROJECT_MODULE_AUDIT.md` is the module candidate pool and maturity audit, not a second roadmap.
+`docs/roadmap/PROJECT_MODULE_AUDIT.md` 是模块候选池和成熟度梳理表，不是第二路线图。
+3. `docs/process/AI_WORK_MODE.md` owns workflow and documentation governance.
+`docs/process/AI_WORK_MODE.md` 负责流程规范与文档治理。
 
-1. `docs/reference/ARCHITECTURE.md`
-2. `docs/reference/CHAT_FEATURE_DECISIONS.md`
-3. `docs/reference/NOTIFICATION_AND_APP_ICON_REQUIREMENTS.md`
-4. `docs/reference/ROLE_BINDING_CONTRACT.md`
-5. `docs/reference/AI_WORK_MODE.md`
-6. `docs/strategy/*`
+Functional folders / 职能目录：
+
+- `docs/pm/`: PM status and product overview / PM 状态与产品总览
+- `docs/roadmap/`: roadmap and module candidate pool / 路线图与模块候选池
+- `docs/overview/`: project master guide / 项目总说明
+- `docs/process/`: workflow and operation guide / 流程规范与操作指南
+- `docs/architecture/`: architecture and cross-module contracts / 架构与跨模块契约
+- `docs/product-decisions/`: current topic-level product decisions / 当前专题产品决策
+- `docs/strategy/`: long-range strategy / 长线策略
+- `docs/templates/`: reusable requirement and AI collaboration templates / 可复用需求与 AI 协作模板
+- `docs/archive/`: obsolete or historical docs only / 仅存放过时或历史归档
 
 Archived docs / 已归档文档：
 
 1. Superseded planning/status docs were moved to `docs/archive/2026-04-19-doc-audit/`.  
 已被替代的计划/状态文档已移动至 `docs/archive/2026-04-19-doc-audit/`。
+2. Closed Chat identity refactor docs were moved to `docs/archive/obsolete/2026-04-29-chat-identity/`.
+已关闭的 Chat 身份重构文档已移动至 `docs/archive/obsolete/2026-04-29-chat-identity/`。
 
 ---
 
 ## 11. Collaboration Rules for Incoming AI Engineers / 给后续 AI 程序员的协作规则
 
-1. Read this file + `TODO_ROADMAP.md` before coding.  
-编码前先读本文件 + `TODO_ROADMAP.md`。
-2. Treat `TODO_ROADMAP.md` as current execution order.  
-将 `TODO_ROADMAP.md` 视为当前执行顺序来源。
+1. Read this file + `docs/roadmap/TODO_ROADMAP.md` before coding.  
+编码前先读本文件 + `docs/roadmap/TODO_ROADMAP.md`。
+2. Treat `docs/roadmap/TODO_ROADMAP.md` as current execution order.  
+将 `docs/roadmap/TODO_ROADMAP.md` 视为当前执行顺序来源。
 3. When route/schema/core behavior changes, update docs in same PR/commit batch.  
 涉及路由/数据结构/核心行为变更时，同批次同步文档。
 4. Keep product-facing language readable; avoid deep technical shorthand in status summaries.  

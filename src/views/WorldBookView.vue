@@ -3,14 +3,18 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useChatStore } from '../stores/chat'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 
 const router = useRouter()
 const systemStore = useSystemStore()
+const chatStore = useChatStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { user } = storeToRefs(systemStore)
+const { roleProfiles, contacts } = storeToRefs(chatStore)
 
 const globalWorldview = computed({
   get: () =>
@@ -24,6 +28,16 @@ const globalWorldview = computed({
 
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
+const roleProfileChatBindingMap = computed(() => {
+  const map = new Map()
+  contacts.value.forEach((contact) => {
+    if (!contact || (contact.kind || 'role') !== 'role') return
+    const profileId = Number(contact.profileId)
+    if (!Number.isFinite(profileId) || profileId <= 0) return
+    map.set(profileId, (map.get(profileId) || 0) + 1)
+  })
+  return map
+})
 const saved = ref(false)
 const uiNotice = ref('')
 const knowledgeDraft = reactive({
@@ -86,6 +100,99 @@ const toggleKnowledgePoint = (point) => {
   if (!point?.id) return
   systemStore.setKnowledgePointEnabled(point.id, !point.enabled)
   systemStore.saveNow()
+}
+
+const getKnowledgePointUsage = (point) => {
+  const pointId = typeof point?.id === 'string' ? point.id.trim() : ''
+  if (!pointId) {
+    return {
+      profiles: [],
+      chatBindingCount: 0,
+      chatProfileCount: 0,
+    }
+  }
+
+  const profiles = roleProfiles.value.filter((profile) =>
+    Array.isArray(profile?.knowledgePointIds) && profile.knowledgePointIds.includes(pointId),
+  )
+  const chatProfiles = profiles.filter((profile) =>
+    (roleProfileChatBindingMap.value.get(Number(profile.id)) || 0) > 0,
+  )
+  const chatBindingCount = chatProfiles.reduce(
+    (sum, profile) => sum + (roleProfileChatBindingMap.value.get(Number(profile.id)) || 0),
+    0,
+  )
+
+  return {
+    profiles,
+    chatBindingCount,
+    chatProfileCount: chatProfiles.length,
+  }
+}
+
+const getKnowledgePointUsageBadge = (point) => {
+  const usage = getKnowledgePointUsage(point)
+  if (usage.profiles.length <= 0) {
+    return {
+      label: t('未使用', 'Unused'),
+      tone: 'neutral',
+      icon: 'fas fa-circle',
+    }
+  }
+  if (point?.enabled === false) {
+    return {
+      label: t('已绑定但停用', 'Bound but disabled'),
+      tone: 'amber',
+      icon: 'fas fa-pause',
+    }
+  }
+  if (usage.chatBindingCount <= 0) {
+    return {
+      label: t('仅角色档案', 'Profile only'),
+      tone: 'amber',
+      icon: 'fas fa-user-tag',
+    }
+  }
+  return {
+    label: t('进入 Chat', 'In Chat'),
+    tone: 'emerald',
+    icon: 'fas fa-comments',
+  }
+}
+
+const describeKnowledgePointUsage = (point) => {
+  const usage = getKnowledgePointUsage(point)
+  if (usage.profiles.length <= 0) {
+    return t('还没有角色绑定这个知识点。', 'No role profile is bound to this point yet.')
+  }
+
+  const profileCount = usage.profiles.length
+  if (point?.enabled === false) {
+    return t(
+      `已被 ${profileCount} 个角色绑定，但当前停用，不会注入 Chat。`,
+      `${profileCount} role profiles are bound, but this point is disabled and will not be injected into Chat.`,
+    )
+  }
+  if (usage.chatBindingCount <= 0) {
+    return t(
+      `已被 ${profileCount} 个角色绑定；这些角色尚未绑定到 Chat 会话，因此暂未进入 Chat 提示词链路。`,
+      `${profileCount} role profiles are bound; none are bound to Chat contacts yet, so this point is not in the Chat prompt chain.`,
+    )
+  }
+  return t(
+    `已被 ${profileCount} 个角色绑定，其中 ${usage.chatProfileCount} 个角色已连接 ${usage.chatBindingCount} 个 Chat 会话；启用时会进入这些会话的提示词链路。`,
+    `${profileCount} role profiles are bound; ${usage.chatProfileCount} profiles connect to ${usage.chatBindingCount} Chat contacts, so this enabled point enters those Chat prompt chains.`,
+  )
+}
+
+const formatKnowledgePointProfileNames = (point) => {
+  const usage = getKnowledgePointUsage(point)
+  if (usage.profiles.length <= 0) return ''
+  const names = usage.profiles
+    .map((profile) => (typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : t('未命名角色', 'Unnamed role')))
+    .slice(0, 4)
+  const overflow = Math.max(0, usage.profiles.length - names.length)
+  return overflow > 0 ? `${names.join(' / ')} +${overflow}` : names.join(' / ')
 }
 
 const removeKnowledgePoint = async (point) => {
@@ -203,6 +310,12 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold truncate">{{ point.title }}</p>
               <div class="flex items-center gap-2 shrink-0">
+                <AssetStatusBadge
+                  :label="getKnowledgePointUsageBadge(point).label"
+                  :tone="getKnowledgePointUsageBadge(point).tone"
+                  :icon="getKnowledgePointUsageBadge(point).icon"
+                  :truncate="false"
+                />
                 <button
                   @click="toggleKnowledgePoint(point)"
                   class="px-2 py-0.5 rounded text-[11px] border"
@@ -219,6 +332,26 @@ onBeforeUnmount(() => {
             <p v-if="Array.isArray(point.tags) && point.tags.length > 0" class="text-[11px] text-gray-400">
               #{{ point.tags.join(' #') }}
             </p>
+            <div class="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 space-y-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <AssetStatusBadge
+                  :label="t(`角色 ${getKnowledgePointUsage(point).profiles.length} 个`, `${getKnowledgePointUsage(point).profiles.length} roles`)"
+                  icon="fas fa-user"
+                  tone="neutral"
+                  :truncate="false"
+                />
+                <AssetStatusBadge
+                  :label="t(`Chat ${getKnowledgePointUsage(point).chatBindingCount} 个`, `${getKnowledgePointUsage(point).chatBindingCount} chats`)"
+                  icon="fas fa-comment"
+                  :tone="point.enabled === false || getKnowledgePointUsage(point).chatBindingCount <= 0 ? 'neutral' : 'emerald'"
+                  :truncate="false"
+                />
+              </div>
+              <p>{{ describeKnowledgePointUsage(point) }}</p>
+              <p v-if="formatKnowledgePointProfileNames(point)" class="text-gray-500">
+                {{ t('绑定角色', 'Bound roles') }}: {{ formatKnowledgePointProfileNames(point) }}
+              </p>
+            </div>
           </div>
         </div>
       </div>

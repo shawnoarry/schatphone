@@ -1,12 +1,14 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-22
+Updated / 更新时间: 2026-04-29
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
    中文：本文件是实现顺序的动态执行看板。
-2. EN: For product context, read `PROJECT_MASTER_GUIDE.md` first, then return here.
-   中文：先读 `PROJECT_MASTER_GUIDE.md` 了解全局，再回到本文件执行。
-3. EN: If any old document conflicts with this file, this file wins.
+2. EN: If you are choosing which document to read, start from `docs/README.md`.
+   中文：如果是在判断该读哪份文档，先从 `docs/README.md` 开始。
+3. EN: For product context, read `docs/overview/PROJECT_MASTER_GUIDE.md` first, then return here.
+   中文：需要产品全局背景时，先读 `docs/overview/PROJECT_MASTER_GUIDE.md`，再回到本文件执行。
+4. EN: If any old document conflicts with this file, this file wins.
    中文：若旧文档与本文件冲突，以本文件为准。
 
 ## 0.5 AI Quick Start (10 min) / AI 接手速览（10分钟）
@@ -103,6 +105,56 @@ Priority / 优先级: `Highest next / 下一阶段最高`
     中文：并非所有上传都强制入相册：模块本地内容可走单次上传/单次 AI 生成，并提供“是否导入素材库”弹窗。
 13. EN: Runtime smoothness policy is mandatory: broad format support with media-type size limits.
     中文：运行流畅性策略为强制项：格式支持尽量广，但需按媒体类型限制体积上限。
+
+#### 4.3 Near-Term Task Queue / 近期执行队列
+Source / 来源: `docs/roadmap/PROJECT_MODULE_AUDIT.md`
+
+Status / 状态: `IN_PROGRESS`
+
+1. EN: P0.5 mojibake regression guard — `DONE`.
+   中文：P0.5 中文乱码回归守卫 — `DONE`。
+   - EN: Add a lightweight test or script that scans user-visible `src` text for known mojibake fragments.
+     中文：新增轻量测试或脚本，扫描 `src` 中用户可见文本的常见乱码片段。
+   - EN: Acceptance: normal Chinese text is allowed; known mojibake markers fail the check.
+     中文：验收：正常中文允许通过；已知乱码标记会触发失败。
+   - EN: Regression checks: `npm run lint`, targeted test/script, and `npm test` if implemented as Vitest.
+     中文：回归检查：`npm run lint`、专项测试/脚本；若用 Vitest 实现则跑 `npm test`。
+   - EN: Landed as `tests/mojibake-guard.test.js`.
+     中文：已通过 `tests/mojibake-guard.test.js` 落地。
+2. EN: P0.5 large-component extraction first slice — `DONE`.
+   中文：P0.5 大组件拆分第一刀 — `DONE`。
+   - EN: Start with one low-risk panel from `ChatView.vue` or `SettingsView.vue`; avoid behavior changes.
+     中文：优先从 `ChatView.vue` 或 `SettingsView.vue` 中抽一个低风险面板；避免改变行为。
+   - EN: Acceptance: extracted component preserves current props/events/state behavior and existing tests still pass.
+     中文：验收：抽出的组件保持现有 props/events/state 行为，现有测试继续通过。
+   - EN: Regression checks: `npm run lint`, `npm run build`, and relevant tests.
+     中文：回归检查：`npm run lint`、`npm run build` 与相关测试。
+   - EN: Landed as display-only extraction from `SettingsView.vue`: `SettingsMenuItem.vue` and `SettingsQuickAccessButton.vue`.
+     中文：已从 `SettingsView.vue` 落地展示型拆分：`SettingsMenuItem.vue` 与 `SettingsQuickAccessButton.vue`。
+3. EN: P0.5 shared asset picker / usage badge design slice — `DONE`.
+   中文：P0.5 共享素材选择器 / 使用状态标识设计切片 — `DONE`。
+   - EN: Inventory Gallery, Appearance, Contacts, Chat, and Map asset-selection surfaces before extracting shared UI.
+     中文：先盘点 Gallery、Appearance、Contacts、Chat、Map 的素材选择界面，再抽共享 UI。
+   - EN: Acceptance: produce a small extraction target list and, if safe, extract the first reusable display-only piece.
+     中文：验收：产出小型抽取目标列表；若安全，先抽第一个只展示的可复用片段。
+   - EN: Regression checks: `npm run lint`, `npm run build`, and affected store/view tests.
+     中文：回归检查：`npm run lint`、`npm run build` 与受影响 store/view 测试。
+   - EN: Landed phase-1: extracted `AssetStatusBadge.vue` and reused it in Gallery usage chips and Appearance active-wallpaper badge.
+     中文：第一阶段已落地：抽出 `AssetStatusBadge.vue`，并复用于 Gallery 使用状态标签与 Appearance 当前壁纸标签。
+   - EN: Landed phase-2: extended the same badge language to Chat gallery picker, Map visual quick switch, and Contacts folder-slot binding status.
+     中文：第二阶段已落地：同一套状态标签语言已扩展到 Chat 素材发送面板、Map 视觉快速切换、Contacts 槽位绑定状态。
+   - EN: Next phase candidate: decide whether to extract a shared thumbnail picker, or pause here and move to a different P1 depth task.
+     中文：下一阶段候选：判断是否继续抽共享缩略图选择器，或先暂停在此并转入其他 P1 深度任务。
+4. EN: P1 WorldBook usage visibility first slice — `DONE`.
+   中文：P1 世界书使用可见性第一刀 — `DONE`。
+   - EN: Show per-knowledge-point role binding count, Chat prompt-chain readiness, and bound role names in WorldBook.
+     中文：在 WorldBook 中展示每条知识点的角色绑定数量、Chat 提示词链路状态与绑定角色名单。
+   - EN: Clarify in Contacts that enabled bound knowledge points are injected in Chat and usage can be reviewed in WorldBook.
+     中文：在 Contacts 中说明启用的绑定知识点会注入 Chat，且可回到 WorldBook 查看使用情况。
+   - EN: Acceptance: no data model or Chat prompt assembly behavior changes.
+     中文：验收：不改变数据结构，也不改变 Chat 提示词组装行为。
+   - EN: Next phase candidate: add filters/sorting for unused, disabled, and Chat-ready knowledge points, or move to Map rewards/events.
+     中文：下一阶段候选：增加未使用/停用/Chat 就绪知识点筛选排序，或转入地图奖励/事件。
 
 ---
 
@@ -243,7 +295,7 @@ Done / 已完成:
    - `listRoleBindingContracts(contactIds?, { moduleKey })`
 5. EN: Added contract reference document with integration checklist:
    中文：已补齐契约参考文档与接入清单：
-   - `docs/reference/ROLE_BINDING_CONTRACT.md`
+   - `docs/architecture/ROLE_BINDING_CONTRACT.md`
 6. EN: Existing chat flow remains backward compatible via `getRoleBindingAssetContext`.
    中文：现有 Chat 流程保持向后兼容，继续可用 `getRoleBindingAssetContext`。
 
@@ -525,3 +577,19 @@ Acceptance / 验收标准:
     2026-04-29 中文：收敛 Chat 重复设置入口：服务模板正式编辑统一到会话通讯录，聊天内服务号会话仅展示当前模板摘要与管理跳转；单会话调校与批量模板也已通过文案区分适用范围。
 42. 2026-04-29 EN: Corrected Gallery visual direction toward iOS Photos: album/recents language, light system styling, current-view summary, three-column photo grid, and tucked-away per-photo options now keep asset-hub controls secondary.
     2026-04-29 中文：校准 Gallery 视觉方向为更接近 iOS 系统相册：相册/最近项目语言、浅色系统风格、当前视图摘要、三列照片网格，以及收起的单张照片选项，让素材中台控制退到次级。
+43. 2026-04-29 EN: Promoted the first three module-audit candidates into the live roadmap as a near-term P0.5 queue: mojibake guard, large-component extraction, and shared asset-picker/usage-badge design.
+    2026-04-29 中文：将模块梳理表中的前三个候选切片转入动态路线图，形成近期 P0.5 队列：乱码守卫、大组件拆分、共享素材选择器/使用状态标识设计。
+44. 2026-04-29 EN: Landed the P0.5 mojibake regression guard as a Vitest scan over `src` source files.
+    2026-04-29 中文：已落地 P0.5 中文乱码回归守卫，通过 Vitest 扫描 `src` 源码文件。
+45. 2026-04-29 EN: Restructured project documentation by function under `docs/`, added `docs/README.md` as the documentation map, and marked obsolete archives.
+    2026-04-29 中文：按职能重构项目文档至 `docs/`，新增 `docs/README.md` 作为文档地图，并标注过时归档。
+46. 2026-04-29 EN: Rebuilt the PM status report into a weekly dashboard format with one-page verdict, active queue, risks, and product decisions.
+    2026-04-29 中文：将 PM 状态报告重构为周报仪表盘格式，包含一页结论、当前队列、风险与产品待决策点。
+47. 2026-04-29 EN: Landed the P0.5 large-component extraction first slice by extracting Settings quick-access/menu display components without behavior changes.
+    2026-04-29 中文：已落地 P0.5 大组件拆分第一刀，从 Settings 抽出快捷入口/菜单展示组件，未改变业务行为。
+48. 2026-04-29 EN: Landed the P0.5 shared asset badge phase-1 by extracting `AssetStatusBadge.vue` and reusing it in Gallery and Appearance.
+    2026-04-29 中文：已落地 P0.5 共享素材状态标识第一阶段，抽出 `AssetStatusBadge.vue` 并复用于 Gallery 与 Appearance。
+49. 2026-04-29 EN: Extended `AssetStatusBadge.vue` to Chat, Map, and Contacts so the first cross-module asset status language is now shared across five asset-consuming surfaces.
+    2026-04-29 中文：将 `AssetStatusBadge.vue` 扩展到 Chat、Map、Contacts，使第一套跨模块素材状态语言已覆盖五个素材消费界面。
+50. 2026-04-29 EN: Landed WorldBook usage visibility phase-1: each knowledge point now shows role usage, Chat prompt-chain readiness, and bound role names.
+    2026-04-29 中文：已落地世界书使用可见性第一阶段：每条知识点现可显示角色使用情况、Chat 提示词链路状态与绑定角色名单。

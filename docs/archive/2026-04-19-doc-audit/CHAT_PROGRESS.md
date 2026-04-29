@@ -1,9 +1,12 @@
 # SchatPhone Chat 进度说明
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
 Updated / 更新时间: 2026-04-10
 
 Document position / 文档定位（2026-04-06）: secondary reference.  
-本文件现为 Chat 专项参考；全局主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
+本文件现为 Chat 专项参考；全局主入口请优先查看 `docs/overview/PROJECT_MASTER_GUIDE.md` 与 `docs/roadmap/TODO_ROADMAP.md`。
 
 ## 1. Current Conclusion / 当前结论
 

@@ -1,9 +1,12 @@
-﻿# SchatPhone Task Execution Plan / 任务执行清单
+# SchatPhone Task Execution Plan / 任务执行清单
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
 Updated / 更新时间: 2026-04-12
 
 Document position / 文档定位（2026-04-06）: secondary execution reference.  
-本文件现为执行细节参考；动态主待办请优先维护 `TODO_ROADMAP.md`。
+本文件现为执行细节参考；动态主待办请优先维护 `docs/roadmap/TODO_ROADMAP.md`。
 
 Direction sync note (2026-04-12) / 方向同步说明（2026-04-12）:
 1. EN: PM confirmed world-map direction: split world kernel into `global worldview + bindable knowledge points`; map baseline remains `simulation-first, low-API`.
@@ -38,7 +41,7 @@ When task IDs differ between historical execution logs and current PM priorities
 每完成一项，需同步以下文档：
 - `docs/reference/PROJECT_STATUS.md`
 - `docs/reference/CHAT_PROGRESS.md` (if Chat is affected) /（若涉及 Chat）
-- `docs/reference/ARCHITECTURE.md` (if schema or core interaction changes) /（若涉及数据结构或核心交互）
+- `docs/architecture/ARCHITECTURE.md` (if schema or core interaction changes) /（若涉及数据结构或核心交互）
 - `docs/reference/SYNC_SNAPSHOT.md` (always refresh summary after source docs) /（源文档更新后同步快照）
 3. Before merge, run:  
 合并前至少执行：
@@ -66,11 +69,11 @@ When task IDs differ between historical execution logs and current PM priorities
 - Target files / 涉及文件:
 - `README.md`
 - `docs/reference/PROJECT_STATUS.md`
-- `docs/reference/ARCHITECTURE.md`
+- `docs/architecture/ARCHITECTURE.md`
 - `docs/reference/CHAT_PROGRESS.md`
 - `docs/reference/SYNC_SNAPSHOT.md`
 - `docs/reference/TASK_EXECUTION_PLAN.md`
-- `docs/reference/操作指南-新版.md`
+- `docs/process/OPERATION_GUIDE.md`
 - Acceptance criteria / 验收标准:
 - Main docs reflect current route/store/interaction reality. / 主文档与当前路由/Store/交互一致。
 - No stale "2026-02-23 only" status remains in core progress docs. / 核心进度文档不再停留在 2026-02-23。

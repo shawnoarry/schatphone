@@ -1,9 +1,12 @@
-﻿# SchatPhone 项目进度与待办
+# SchatPhone 项目进度与待办
 
+> Obsolete archive / 过时归档：This file is retained only for historical lookup. It is superseded by `docs/README.md` and must not be used as a current roadmap, status report, or implementation source.
+>
+> 当前仅保留历史查询；请以 `docs/README.md` 中列出的当前文档为准。
 Updated / 更新时间: 2026-04-12
 
 Document position / 文档定位（2026-04-06）: secondary reference.  
-本文件现为参考文档；主入口请优先查看 `PROJECT_MASTER_GUIDE.md` 与 `TODO_ROADMAP.md`。
+本文件现为参考文档；主入口请优先查看 `docs/overview/PROJECT_MASTER_GUIDE.md` 与 `docs/roadmap/TODO_ROADMAP.md`。
 
 ## 1. Current Project Status / 当前项目状态
 
@@ -275,8 +278,8 @@ Quiet-hours + notify-only + manual-priority policy now runs through settings and
 
 1. Any route/store/home-rule change must update this file.  
 改动路由/Store/Home 规则必须同步更新本文档。
-2. If lock-screen/i18n behavior changes, sync `README.md`, `docs/reference/ARCHITECTURE.md`, and `docs/reference/SYNC_SNAPSHOT.md` together.  
-若改动锁屏或系统语言行为，必须同步更新 `README.md`、`docs/reference/ARCHITECTURE.md`、`docs/reference/SYNC_SNAPSHOT.md`。
+2. If lock-screen/i18n behavior changes, sync `README.md`, `docs/architecture/ARCHITECTURE.md`, and `docs/reference/SYNC_SNAPSHOT.md` together.
+若改动锁屏或系统语言行为，必须同步更新 `README.md`、`docs/architecture/ARCHITECTURE.md`、`docs/reference/SYNC_SNAPSHOT.md`。
 3. Run `npm run lint` and `npm run build` before merge.  
 合并前至少执行 lint 与 build。
 4. Run `npm run test` when behavior logic changes.  

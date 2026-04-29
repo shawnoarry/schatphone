@@ -6,6 +6,7 @@ import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import {
   MEDIA_KIND,
   MEDIA_SIZE_SCENE,
@@ -920,7 +921,7 @@ onBeforeUnmount(() => {
                 @click="applyQuickMapVisualAsset(asset.id)"
               >
                 <div
-                  class="w-16 h-16 rounded-2xl overflow-hidden border bg-white/10"
+                  class="relative w-16 h-16 rounded-2xl overflow-hidden border bg-white/10"
                   :class="
                     mapVisualSelectedAsset?.id === asset.id
                       ? 'border-cyan-200 ring-2 ring-cyan-200/25'
@@ -938,6 +939,14 @@ onBeforeUnmount(() => {
                   >
                     {{ t('加载中', 'Loading') }}
                   </div>
+                  <AssetStatusBadge
+                    v-if="mapVisualSelectedAsset?.id === asset.id"
+                    label-zh="使用中"
+                    label-en="Live"
+                    tone="sky-solid"
+                    :truncate="false"
+                    class="absolute left-1 top-1 font-semibold"
+                  />
                 </div>
                 <p class="mt-1 text-[10px] text-cyan-50/65 line-clamp-2 text-left">{{ asset.name }}</p>
               </button>

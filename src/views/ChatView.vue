@@ -29,6 +29,7 @@ import {
 } from '../lib/media-policy'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -4506,24 +4507,32 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
                 <p class="mt-1 text-[10px] font-medium text-gray-700 line-clamp-1">{{ asset.name }}</p>
-                <p
+                <AssetStatusBadge
                   v-if="activeRoleAssetContext.preferredImageAssetId && asset.id === activeRoleAssetContext.preferredImageAssetId"
-                  class="mt-0.5 text-[10px] text-blue-600"
-                >
-                  {{ t('会话优先', 'Thread preferred') }}
-                </p>
-                <p
+                  label-zh="会话优先"
+                  label-en="Thread preferred"
+                  icon="fas fa-star"
+                  :truncate="false"
+                  class="mt-1"
+                />
+                <AssetStatusBadge
                   v-else-if="activeRoleAssetContext.profileFolderAssetIds.includes(asset.id)"
-                  class="mt-0.5 text-[10px] text-amber-600"
-                >
-                  {{ t('文件夹绑定', 'Folder bound') }}
-                </p>
-                <p
+                  label-zh="文件夹绑定"
+                  label-en="Folder bound"
+                  icon="fas fa-folder"
+                  tone="amber"
+                  :truncate="false"
+                  class="mt-1"
+                />
+                <AssetStatusBadge
                   v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"
-                  class="mt-0.5 text-[10px] text-emerald-600"
-                >
-                  {{ t('角色素材包', 'Profile pack') }}
-                </p>
+                  label-zh="角色素材包"
+                  label-en="Profile pack"
+                  icon="fas fa-images"
+                  tone="emerald"
+                  :truncate="false"
+                  class="mt-1"
+                />
               </button>
             </div>
 

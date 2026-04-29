@@ -9,6 +9,7 @@ import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -238,6 +239,22 @@ const folderBindingStatusClass = (summary) => {
   if (summary?.status === 'ready') return 'text-emerald-600'
   if (summary?.status === 'missing_folder') return 'text-red-500'
   return 'text-amber-600'
+}
+
+const folderBindingStatusBadgeLabel = (summary) => {
+  if (summary?.status === 'ready') return t('已连接', 'Ready')
+  if (summary?.status === 'empty') return t('回退中', 'Fallback')
+  if (summary?.status === 'missing_folder') return t('缺失', 'Missing')
+  if (summary?.isBound) return t('已绑定', 'Bound')
+  return t('未绑定', 'Unbound')
+}
+
+const folderBindingStatusBadgeTone = (summary) => {
+  if (summary?.status === 'ready') return 'emerald'
+  if (summary?.status === 'empty') return 'amber'
+  if (summary?.status === 'missing_folder') return 'red'
+  if (summary?.isBound) return 'amber'
+  return 'neutral'
 }
 
 const describeFolderBindingSummary = (summary) => {
@@ -649,8 +666,8 @@ onBeforeUnmount(() => {
           <p class="text-[11px] text-gray-500">
             {{
               t(
-                '绑定后，该角色在 Chat 中会注入对应知识点（仅注入启用项）。',
-                'Bound points are injected for this role in Chat (enabled points only).',
+                '绑定后，该角色在 Chat 中会注入对应知识点（仅注入启用项）；可在世界书查看使用情况。',
+                'Bound points are injected for this role in Chat (enabled points only); usage is visible in World Book.',
               )
             }}
           </p>
@@ -756,13 +773,11 @@ onBeforeUnmount(() => {
             <p class="text-xs font-semibold text-gray-700">
               {{ t('形象照文件夹绑定（全局档案）', 'Profile Image Folder Binding (Global Profile)') }}
             </p>
-            <span class="text-[10px] text-gray-500">
-              {{
-                profileDraft.assetFolderBindings.profileImage.folderId
-                  ? t('已绑定', 'Bound')
-                  : t('未绑定', 'Unbound')
-              }}
-            </span>
+            <AssetStatusBadge
+              :label="folderBindingStatusBadgeLabel(getDraftFolderBindingSummary('profileImage'))"
+              :tone="folderBindingStatusBadgeTone(getDraftFolderBindingSummary('profileImage'))"
+              :truncate="false"
+            />
           </div>
 
           <select
@@ -827,13 +842,11 @@ onBeforeUnmount(() => {
             <p class="text-xs font-semibold text-gray-700">
               {{ t('动态图文件夹绑定（全局档案）', 'Dynamic Media Folder Binding (Global Profile)') }}
             </p>
-            <span class="text-[10px] text-gray-500">
-              {{
-                profileDraft.assetFolderBindings.dynamicMedia.folderId
-                  ? t('已绑定', 'Bound')
-                  : t('未绑定', 'Unbound')
-              }}
-            </span>
+            <AssetStatusBadge
+              :label="folderBindingStatusBadgeLabel(getDraftFolderBindingSummary('dynamicMedia'))"
+              :tone="folderBindingStatusBadgeTone(getDraftFolderBindingSummary('dynamicMedia'))"
+              :truncate="false"
+            />
           </div>
 
           <select
@@ -898,13 +911,11 @@ onBeforeUnmount(() => {
             <p class="text-xs font-semibold text-gray-700">
               {{ t('表情包文件夹绑定（全局档案）', 'Emoji Folder Binding (Global Profile)') }}
             </p>
-            <span class="text-[10px] text-gray-500">
-              {{
-                profileDraft.assetFolderBindings.emojiPack.folderId
-                  ? t('已绑定', 'Bound')
-                  : t('未绑定', 'Unbound')
-              }}
-            </span>
+            <AssetStatusBadge
+              :label="folderBindingStatusBadgeLabel(getDraftFolderBindingSummary('emojiPack'))"
+              :tone="folderBindingStatusBadgeTone(getDraftFolderBindingSummary('emojiPack'))"
+              :truncate="false"
+            />
           </div>
 
           <select
@@ -969,13 +980,11 @@ onBeforeUnmount(() => {
             <p class="text-xs font-semibold text-gray-700">
               {{ t('参考图文件夹绑定（全局档案）', 'Reference Folder Binding (Global Profile)') }}
             </p>
-            <span class="text-[10px] text-gray-500">
-              {{
-                profileDraft.assetFolderBindings.imageReference.folderId
-                  ? t('已绑定', 'Bound')
-                  : t('未绑定', 'Unbound')
-              }}
-            </span>
+            <AssetStatusBadge
+              :label="folderBindingStatusBadgeLabel(getDraftFolderBindingSummary('imageReference'))"
+              :tone="folderBindingStatusBadgeTone(getDraftFolderBindingSummary('imageReference'))"
+              :truncate="false"
+            />
           </div>
 
           <select

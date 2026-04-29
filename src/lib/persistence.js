@@ -136,15 +136,6 @@ const writePersistedStateToLocal = (key, rawPayload) => {
   }
 }
 
-const clearPersistedStateFromLocal = (key) => {
-  if (!canUseStorage()) return
-  try {
-    window.localStorage.removeItem(buildStorageKey(key))
-  } catch (error) {
-    console.warn(`[persistence] clear failed for "${key}"`, error)
-  }
-}
-
 const openIndexedDb = async () => {
   if (!canUseLayeredPersistence() || indexedDbUnavailable) return null
   if (indexedDbOpenPromise) return indexedDbOpenPromise
@@ -352,15 +343,6 @@ const queueIndexedDbWrite = (fullKey, rawPayload) => {
   }, 16)
 }
 
-const queueIndexedDbDelete = (fullKey) => {
-  if (!canUseLayeredPersistence()) return
-  pendingIndexedDbOps.set(fullKey, { type: 'delete' })
-  if (indexedDbFlushTimerId) return
-  indexedDbFlushTimerId = setTimeout(() => {
-    void flushIndexedDbOps()
-  }, 16)
-}
-
 export const readPersistedState = (key, options = {}) =>
   readPersistedStateFromLocal(key, options)
 
@@ -370,12 +352,6 @@ export const writePersistedState = (key, data, { version = 1 } = {}) => {
   const rawPayload = JSON.stringify(envelope)
   writePersistedStateToLocal(key, rawPayload)
   queueIndexedDbWrite(fullKey, rawPayload)
-}
-
-export const clearPersistedState = (key) => {
-  const fullKey = buildStorageKey(key)
-  clearPersistedStateFromLocal(key)
-  queueIndexedDbDelete(fullKey)
 }
 
 export const readPersistedStateAsync = async (key, options = {}) => {
@@ -402,13 +378,6 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
   writePersistedStateToLocal(key, rawPayload)
   if (!canUseLayeredPersistence()) return
   await writeToIndexedDb(fullKey, rawPayload)
-}
-
-export const clearPersistedStateAsync = async (key) => {
-  const fullKey = buildStorageKey(key)
-  clearPersistedStateFromLocal(key)
-  if (!canUseLayeredPersistence()) return
-  await deleteFromIndexedDb(fullKey)
 }
 
 export const inspectPersistedStateLayers = async (key, options = {}) => {

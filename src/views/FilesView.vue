@@ -12,9 +12,9 @@ const createName = ref('')
 
 const files = ref([
   { id: 1, name: '角色设定.md', type: 'markdown', size: '12 KB', updatedAt: '今天 10:18', favorite: true },
-  { id: 2, name: '世界观草案.txt', type: 'text', size: '8 KB', updatedAt: '今天 09:43', favorite: false },
+  { id: 2, name: '世界观草稿.txt', type: 'text', size: '8 KB', updatedAt: '今天 09:43', favorite: false },
   { id: 3, name: '界面参考.png', type: 'image', size: '256 KB', updatedAt: '昨天 22:12', favorite: true },
-  { id: 4, name: '需求清单-v2.doc', type: 'doc', size: '76 KB', updatedAt: '昨天 18:07', favorite: false },
+  { id: 4, name: '需求清单 v2.doc', type: 'doc', size: '76 KB', updatedAt: '昨天 18:07', favorite: false },
 ])
 
 const typeLabelMap = {

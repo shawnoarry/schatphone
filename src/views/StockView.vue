@@ -22,7 +22,9 @@ const goHome = () => {
     <div class="flex-1 px-5 py-6">
       <div class="rounded-2xl bg-gray-50 border border-gray-200 p-4">
         <p class="font-semibold mb-2">{{ t('股票模块占位页', 'Stock module placeholder') }}</p>
-        <p class="text-sm text-gray-600">{{ t('下一步可接入股票列表、持仓与日程事件触发涨跌。', 'Next, we can add stock lists, positions, and schedule-triggered fluctuations.') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('下一步可接入股票列表、持仓与日程事件触发涨跌。', 'Next, we can add stock lists, positions, and schedule-triggered fluctuations.') }}
+        </p>
       </div>
     </div>
   </div>
