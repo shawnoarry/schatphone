@@ -59,6 +59,98 @@ const ROUTE_FAMILIARITY_TIERS = [
     tone: 'sky-solid',
   },
 ]
+const MAP_AREA_UNLOCKS = [
+  {
+    id: 'city_core',
+    areaLabelZh: '城市核心',
+    areaLabelEn: 'City core',
+    descriptionZh: '完成第一段移动后，地图开始记录你的城市活动范围。',
+    descriptionEn: 'The map starts tracking your city activity range after the first completed trip.',
+    requiredPoints: 8,
+    requiredCompletedTrips: 1,
+    requiredKnownRoutes: 0,
+    requiredTrustedRoutes: 0,
+    tone: 'emerald',
+    icon: 'fas fa-map-location-dot',
+  },
+  {
+    id: 'commute_belt',
+    areaLabelZh: '通勤走廊',
+    areaLabelEn: 'Commute belt',
+    descriptionZh: '重复完成路线后，常用移动带会被识别为稳定活动区域。',
+    descriptionEn: 'Repeated completed routes reveal a stable movement corridor.',
+    requiredPoints: 30,
+    requiredCompletedTrips: 2,
+    requiredKnownRoutes: 1,
+    requiredTrustedRoutes: 0,
+    tone: 'blue',
+    icon: 'fas fa-route',
+  },
+  {
+    id: 'routine_nodes',
+    areaLabelZh: '日常据点',
+    areaLabelEn: 'Routine nodes',
+    descriptionZh: '稳定路线会沉淀出常去地点，可作为后续日常事件节点。',
+    descriptionEn: 'Trusted routes turn recurring destinations into future routine event nodes.',
+    requiredPoints: 70,
+    requiredCompletedTrips: 4,
+    requiredKnownRoutes: 1,
+    requiredTrustedRoutes: 1,
+    tone: 'amber',
+    icon: 'fas fa-location-dot',
+  },
+  {
+    id: 'outer_ring',
+    areaLabelZh: '远行外环',
+    areaLabelEn: 'Outer ring',
+    descriptionZh: '足够多的探索和稳定路线会打开更远区域的叙事空间。',
+    descriptionEn: 'Enough exploration and trusted routes open narrative space beyond the usual area.',
+    requiredPoints: 120,
+    requiredCompletedTrips: 6,
+    requiredKnownRoutes: 2,
+    requiredTrustedRoutes: 1,
+    tone: 'sky-solid',
+    icon: 'fas fa-compass',
+  },
+]
+const MAP_AREA_FEEDBACK_LIMIT = 4
+const MAP_CALENDAR_REMINDER_LIMIT = 4
+const MAP_CALENDAR_REMINDER_STATUS_CONFIRMED = 'confirmed'
+const MAP_CALENDAR_REMINDER_STATUS_DISMISSED = 'dismissed'
+const MAP_CALENDAR_REMINDER_STATUS_DRAFT = 'draft'
+const MAP_CALENDAR_REMINDER_STATUS_SUGGESTED = 'suggested'
+const MAP_CALENDAR_REMINDER_STATUSES = new Set([
+  MAP_CALENDAR_REMINDER_STATUS_CONFIRMED,
+  MAP_CALENDAR_REMINDER_STATUS_DISMISSED,
+  MAP_CALENDAR_REMINDER_STATUS_DRAFT,
+  MAP_CALENDAR_REMINDER_STATUS_SUGGESTED,
+])
+const MAP_AREA_FEEDBACK_RULES = {
+  city_core: {
+    titleZh: '城市核心已点亮',
+    titleEn: 'City core activated',
+    summaryZh: '首次完成行程后，地图开始把移动记录转化为可追踪的城市活动范围。',
+    summaryEn: 'After the first completed trip, the map starts turning movement history into a trackable city range.',
+  },
+  commute_belt: {
+    titleZh: '通勤走廊成形',
+    titleEn: 'Commute corridor formed',
+    summaryZh: '重复路线已经形成稳定移动带，后续可用于通勤提醒、到达反馈和日常事件。',
+    summaryEn: 'Repeated routes have formed a stable corridor for future commute reminders, arrival feedback, and routine events.',
+  },
+  routine_nodes: {
+    titleZh: '日常据点浮现',
+    titleEn: 'Routine nodes surfaced',
+    summaryZh: '稳定路线沉淀出常去地点，地图可以开始围绕这些地点生成轻量生活反馈。',
+    summaryEn: 'Trusted routes reveal recurring destinations that can support lightweight daily location feedback.',
+  },
+  outer_ring: {
+    titleZh: '远行外环开启',
+    titleEn: 'Outer ring opened',
+    summaryZh: '更远范围已经具备叙事入口，后续可承接远行、偶遇和跨区事件。',
+    summaryEn: 'The wider range now has narrative entry points for future long rides, encounters, and cross-area events.',
+  },
+}
 
 const SEED_ADDRESSES = [
   { id: 1, label: '家', detail: '首尔市江南区清潭洞 88-1' },
@@ -343,6 +435,222 @@ const buildRouteFamiliarityTier = (pointsInput = 0, completedCountInput = 0) => 
   }
 }
 
+const isKnownRouteTier = (tier) =>
+  tier === 'known_route' || tier === 'trusted_route' || tier === 'signature_route'
+
+const isTrustedRouteTier = (tier) =>
+  tier === 'trusted_route' || tier === 'signature_route'
+
+const calculateAreaRequirementProgress = (current, required) => {
+  const normalizedRequired = Math.max(0, toInt(required, 0))
+  if (normalizedRequired <= 0) return 1
+  return Math.max(0, Math.min(1, Math.max(0, toInt(current, 0)) / normalizedRequired))
+}
+
+const buildMapAreaUnlocks = ({ tripHistory = [], routeFamiliarity = [] } = {}) => {
+  const arrivedTrips = Array.isArray(tripHistory)
+    ? tripHistory.filter((item) => item?.status === 'arrived')
+    : []
+  const totalPoints = arrivedTrips.reduce(
+    (sum, item) => sum + Math.max(0, toInt(item.rewardPoints, 0)),
+    0,
+  )
+  const completedTrips = arrivedTrips.length
+  const knownRoutes = Array.isArray(routeFamiliarity)
+    ? routeFamiliarity.filter((route) => isKnownRouteTier(route?.tier)).length
+    : 0
+  const trustedRoutes = Array.isArray(routeFamiliarity)
+    ? routeFamiliarity.filter((route) => isTrustedRouteTier(route?.tier)).length
+    : 0
+
+  return MAP_AREA_UNLOCKS.map((area) => {
+    const requirementProgress = [
+      calculateAreaRequirementProgress(totalPoints, area.requiredPoints),
+      calculateAreaRequirementProgress(completedTrips, area.requiredCompletedTrips),
+      calculateAreaRequirementProgress(knownRoutes, area.requiredKnownRoutes),
+      calculateAreaRequirementProgress(trustedRoutes, area.requiredTrustedRoutes),
+    ]
+    const progress = Math.min(...requirementProgress)
+    const unlocked = progress >= 1
+    return {
+      ...area,
+      unlocked,
+      status: unlocked ? 'unlocked' : 'locked',
+      progress,
+      progressPercent: Math.round(progress * 100),
+      currentPoints: totalPoints,
+      currentCompletedTrips: completedTrips,
+      currentKnownRoutes: knownRoutes,
+      currentTrustedRoutes: trustedRoutes,
+      remainingPoints: Math.max(0, area.requiredPoints - totalPoints),
+      remainingCompletedTrips: Math.max(0, area.requiredCompletedTrips - completedTrips),
+      remainingKnownRoutes: Math.max(0, area.requiredKnownRoutes - knownRoutes),
+      remainingTrustedRoutes: Math.max(0, area.requiredTrustedRoutes - trustedRoutes),
+    }
+  })
+}
+
+const resolveFeedbackRouteEndpoint = (label, raw) => {
+  const normalizedLabel = normalizeRouteEndpoint(label)
+  const normalizedRaw = normalizeRouteEndpoint(raw)
+  if (!normalizedRaw) return normalizedLabel
+  if (!normalizedLabel || normalizedLabel === '起点' || normalizedLabel === '目的地') {
+    return normalizedRaw
+  }
+  return normalizedLabel
+}
+
+const buildMapAreaFeedback = ({ areaUnlocks = [], tripHistory = [], routeFamiliarity = [] } = {}) => {
+  const unlockedAreas = Array.isArray(areaUnlocks)
+    ? areaUnlocks.filter((area) => area?.unlocked)
+    : []
+  if (unlockedAreas.length <= 0) return []
+
+  const arrivedTrips = Array.isArray(tripHistory)
+    ? tripHistory.filter((item) => item?.status === 'arrived')
+    : []
+  const latestArrivedAt = arrivedTrips.reduce(
+    (latest, item) => Math.max(latest, toInt(item.endedAt, 0)),
+    0,
+  )
+  const topRoute = Array.isArray(routeFamiliarity) ? routeFamiliarity[0] : null
+  const routeLabel = topRoute
+    ? `${resolveFeedbackRouteEndpoint(topRoute.fromLabel, topRoute.from)} -> ${resolveFeedbackRouteEndpoint(topRoute.toLabel, topRoute.to)}`.trim()
+    : ''
+
+  return unlockedAreas
+    .map((area) => {
+      const rule = MAP_AREA_FEEDBACK_RULES[area.id] || {
+        titleZh: area.areaLabelZh || '区域反馈',
+        titleEn: area.areaLabelEn || 'Area feedback',
+        summaryZh: area.descriptionZh || '',
+        summaryEn: area.descriptionEn || '',
+      }
+      return {
+        id: `area_feedback_${area.id}`,
+        areaId: area.id,
+        areaLabelZh: area.areaLabelZh,
+        areaLabelEn: area.areaLabelEn,
+        titleZh: rule.titleZh,
+        titleEn: rule.titleEn,
+        summaryZh: rule.summaryZh,
+        summaryEn: rule.summaryEn,
+        tone: area.tone,
+        icon: area.icon || 'fas fa-location-dot',
+        triggeredAt: latestArrivedAt,
+        routeLabel,
+        completedTrips: area.currentCompletedTrips,
+        explorationPoints: area.currentPoints,
+      }
+    })
+    .slice(0, MAP_AREA_FEEDBACK_LIMIT)
+}
+
+const normalizeMapCalendarReminderId = (value) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().slice(0, 120)
+}
+
+const normalizeMapCalendarReminderStatus = (value, fallback = '') => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (MAP_CALENDAR_REMINDER_STATUSES.has(normalized)) return normalized
+  return fallback
+}
+
+const normalizeMapCalendarReminderPreference = (raw) => {
+  if (!raw || typeof raw !== 'object') return null
+  const status = normalizeMapCalendarReminderStatus(raw.status, '')
+  const pinned = raw.pinned === true && status !== MAP_CALENDAR_REMINDER_STATUS_DISMISSED
+  return {
+    status,
+    pinned,
+    confirmedAt: Math.max(0, toInt(raw.confirmedAt, 0)),
+    pinnedAt: pinned ? Math.max(0, toInt(raw.pinnedAt, 0)) : 0,
+    dismissedAt:
+      status === MAP_CALENDAR_REMINDER_STATUS_DISMISSED
+        ? Math.max(0, toInt(raw.dismissedAt, 0))
+        : 0,
+    updatedAt: Math.max(0, toInt(raw.updatedAt, 0)),
+  }
+}
+
+const normalizeMapCalendarReminderPreferences = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  return Object.entries(raw).reduce((output, [rawId, rawPreference]) => {
+    const id = normalizeMapCalendarReminderId(rawId)
+    const preference = normalizeMapCalendarReminderPreference(rawPreference)
+    if (!id || !preference) return output
+    output[id] = preference
+    return output
+  }, {})
+}
+
+const getMapCalendarReminderSortPriority = (reminder) => {
+  if (reminder?.pinned) return 0
+  if (reminder?.status === MAP_CALENDAR_REMINDER_STATUS_CONFIRMED) return 1
+  if (reminder?.status === MAP_CALENDAR_REMINDER_STATUS_DISMISSED) return 3
+  return 2
+}
+
+const buildMapCalendarReminders = ({ areaFeedback = [], preferences = {} } = {}) => {
+  if (!Array.isArray(areaFeedback) || areaFeedback.length <= 0) return []
+
+  return areaFeedback
+    .map((feedback) => {
+      const triggeredAt = Math.max(0, toInt(feedback.triggeredAt, 0))
+      const dueAt = triggeredAt > 0 ? triggeredAt + 24 * 60 * 60 * 1000 : 0
+      const routeCue = typeof feedback.routeLabel === 'string' ? feedback.routeLabel.trim() : ''
+      const id = `map_calendar_${feedback.areaId}`
+      const baseStatus = dueAt > 0
+        ? MAP_CALENDAR_REMINDER_STATUS_SUGGESTED
+        : MAP_CALENDAR_REMINDER_STATUS_DRAFT
+      const preference = normalizeMapCalendarReminderPreference(preferences[id]) || {}
+      const status =
+        preference.status === MAP_CALENDAR_REMINDER_STATUS_CONFIRMED ||
+        preference.status === MAP_CALENDAR_REMINDER_STATUS_DISMISSED
+          ? preference.status
+          : baseStatus
+      const pinned =
+        status !== MAP_CALENDAR_REMINDER_STATUS_DISMISSED && preference.pinned === true
+      return {
+        id,
+        source: 'map_area_feedback',
+        areaId: feedback.areaId,
+        titleZh: `${feedback.areaLabelZh || '地图区域'}回访`,
+        titleEn: `${feedback.areaLabelEn || 'Map area'} follow-up`,
+        summaryZh: routeCue
+          ? `基于 ${routeCue} 的地点反馈，适合加入后续提醒或日程线索。`
+          : '基于已解锁区域的地点反馈，适合加入后续提醒或日程线索。',
+        summaryEn: routeCue
+          ? `Location feedback from ${routeCue}, ready to become a later reminder or schedule cue.`
+          : 'Location feedback from an unlocked area, ready to become a later reminder or schedule cue.',
+        dueAt,
+        status,
+        pinned,
+        confirmedAt: Math.max(0, toInt(preference.confirmedAt, 0)),
+        pinnedAt: pinned ? Math.max(0, toInt(preference.pinnedAt, 0)) : 0,
+        dismissedAt:
+          status === MAP_CALENDAR_REMINDER_STATUS_DISMISSED
+            ? Math.max(0, toInt(preference.dismissedAt, 0))
+            : 0,
+        updatedAt: Math.max(0, toInt(preference.updatedAt, 0)),
+        userManaged: Boolean(preference.updatedAt),
+        route: '/map',
+        icon: feedback.icon || 'fas fa-location-dot',
+        tone: feedback.tone || 'blue',
+        explorationPoints: Math.max(0, toInt(feedback.explorationPoints, 0)),
+      }
+    })
+    .sort((a, b) => {
+      const priorityDelta =
+        getMapCalendarReminderSortPriority(a) - getMapCalendarReminderSortPriority(b)
+      if (priorityDelta !== 0) return priorityDelta
+      if (a.dueAt !== b.dueAt) return a.dueAt - b.dueAt
+      return 0
+    })
+    .slice(0, MAP_CALENDAR_REMINDER_LIMIT)
+}
+
 const normalizeMapVisualSettings = (raw) => {
   const fallback = createDefaultMapVisualSettings()
   if (!raw || typeof raw !== 'object') return fallback
@@ -438,6 +746,7 @@ export const useMapStore = defineStore('map', () => {
   const tripForm = reactive(createDefaultTripForm())
   const tripState = ref(createIdleTripState())
   const tripHistory = ref([])
+  const mapCalendarReminderPreferences = ref({})
   const mapVisualSettings = ref(createDefaultMapVisualSettings())
   const mapAutomationRuntime = ref(createDefaultMapAutomationRuntime())
   const runtimeNow = ref(Date.now())
@@ -544,6 +853,28 @@ export const useMapStore = defineStore('map', () => {
       })
       .slice(0, ROUTE_FAMILIARITY_LIMIT)
   })
+
+  const mapAreaUnlocks = computed(() =>
+    buildMapAreaUnlocks({
+      tripHistory: tripHistory.value,
+      routeFamiliarity: routeFamiliarity.value,
+    }),
+  )
+
+  const mapAreaFeedback = computed(() =>
+    buildMapAreaFeedback({
+      areaUnlocks: mapAreaUnlocks.value,
+      tripHistory: tripHistory.value,
+      routeFamiliarity: routeFamiliarity.value,
+    }),
+  )
+
+  const mapCalendarReminders = computed(() =>
+    buildMapCalendarReminders({
+      areaFeedback: mapAreaFeedback.value,
+      preferences: mapCalendarReminderPreferences.value,
+    }),
+  )
 
   const mapAiVisualAutomationPolicy = computed(() => {
     const systemStore = getSystemStore()
@@ -1416,6 +1747,84 @@ export const useMapStore = defineStore('map', () => {
     return true
   }
 
+  const setMapCalendarReminderPreference = (reminderId, updates = {}) => {
+    const id = normalizeMapCalendarReminderId(reminderId)
+    if (!id || !updates || typeof updates !== 'object') return false
+
+    const now = Date.now()
+    const current =
+      normalizeMapCalendarReminderPreference(mapCalendarReminderPreferences.value[id]) || {
+        status: '',
+        pinned: false,
+        confirmedAt: 0,
+        pinnedAt: 0,
+        dismissedAt: 0,
+        updatedAt: 0,
+      }
+    const nextStatus = normalizeMapCalendarReminderStatus(updates.status, current.status)
+    const nextPinned =
+      Object.prototype.hasOwnProperty.call(updates, 'pinned')
+        ? updates.pinned === true
+        : current.pinned === true
+    const next = {
+      ...current,
+      status: nextStatus,
+      pinned: nextPinned,
+      updatedAt: now,
+    }
+
+    if (next.status === MAP_CALENDAR_REMINDER_STATUS_CONFIRMED && !next.confirmedAt) {
+      next.confirmedAt = now
+    }
+
+    if (next.pinned) {
+      next.status = MAP_CALENDAR_REMINDER_STATUS_CONFIRMED
+      next.pinnedAt = next.pinnedAt || now
+      next.confirmedAt = next.confirmedAt || now
+    } else {
+      next.pinnedAt = 0
+    }
+
+    if (next.status === MAP_CALENDAR_REMINDER_STATUS_DISMISSED) {
+      next.pinned = false
+      next.pinnedAt = 0
+      next.dismissedAt = next.dismissedAt || now
+    } else {
+      next.dismissedAt = 0
+    }
+
+    mapCalendarReminderPreferences.value = {
+      ...mapCalendarReminderPreferences.value,
+      [id]: normalizeMapCalendarReminderPreference(next),
+    }
+    return true
+  }
+
+  const confirmMapCalendarReminder = (reminderId) =>
+    setMapCalendarReminderPreference(reminderId, {
+      status: MAP_CALENDAR_REMINDER_STATUS_CONFIRMED,
+    })
+
+  const setMapCalendarReminderPinned = (reminderId, pinned = true) =>
+    setMapCalendarReminderPreference(reminderId, {
+      pinned: pinned === true,
+    })
+
+  const dismissMapCalendarReminder = (reminderId) =>
+    setMapCalendarReminderPreference(reminderId, {
+      status: MAP_CALENDAR_REMINDER_STATUS_DISMISSED,
+      pinned: false,
+    })
+
+  const resetMapCalendarReminderPreference = (reminderId) => {
+    const id = normalizeMapCalendarReminderId(reminderId)
+    if (!id || !mapCalendarReminderPreferences.value[id]) return false
+    const next = { ...mapCalendarReminderPreferences.value }
+    delete next[id]
+    mapCalendarReminderPreferences.value = next
+    return true
+  }
+
   const applyPersistedSource = (source) => {
     if (!source || typeof source !== 'object') return false
 
@@ -1443,6 +1852,8 @@ export const useMapStore = defineStore('map', () => {
         .slice(0, TRIP_HISTORY_LIMIT)
     }
 
+    mapCalendarReminderPreferences.value =
+      normalizeMapCalendarReminderPreferences(source.mapCalendarReminderPreferences)
     mapVisualSettings.value = normalizeMapVisualSettings(source.mapVisualSettings)
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
 
@@ -1485,6 +1896,9 @@ export const useMapStore = defineStore('map', () => {
     tripForm: { ...tripForm },
     tripState: { ...tripState.value },
     tripHistory: tripHistory.value.map((item) => ({ ...item })),
+    mapCalendarReminderPreferences: normalizeMapCalendarReminderPreferences(
+      mapCalendarReminderPreferences.value,
+    ),
     mapVisualSettings: { ...mapVisualSettings.value },
   })
 
@@ -1494,6 +1908,7 @@ export const useMapStore = defineStore('map', () => {
     clearTripArrivalTimer()
     tripState.value = createIdleTripState()
     tripHistory.value = []
+    mapCalendarReminderPreferences.value = {}
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     runtimeNow.value = Date.now()
@@ -1527,7 +1942,15 @@ export const useMapStore = defineStore('map', () => {
   })()
 
   watch(
-    [addresses, currentLocation, tripForm, tripState, tripHistory, mapVisualSettings],
+    [
+      addresses,
+      currentLocation,
+      tripForm,
+      tripState,
+      tripHistory,
+      mapCalendarReminderPreferences,
+      mapVisualSettings,
+    ],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1581,6 +2004,10 @@ export const useMapStore = defineStore('map', () => {
     tripRuntime,
     tripHistory,
     routeFamiliarity,
+    mapAreaUnlocks,
+    mapAreaFeedback,
+    mapCalendarReminders,
+    mapCalendarReminderPreferences,
     mapVisualSettings,
     mapAutomationRuntime,
     mapAiVisualAutomationPolicy,
@@ -1593,6 +2020,10 @@ export const useMapStore = defineStore('map', () => {
     startTrip,
     cancelTrip,
     acknowledgeTripArrival,
+    confirmMapCalendarReminder,
+    setMapCalendarReminderPinned,
+    dismissMapCalendarReminder,
+    resetMapCalendarReminderPreference,
     refreshTripState,
     tickTripRuntime,
     setMapVisualMode,

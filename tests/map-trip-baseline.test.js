@@ -36,6 +36,11 @@ describe('map trip baseline loop', () => {
     expect(store.tripHistory[0]?.eventKind).toBeTruthy()
     expect(store.routeFamiliarity[0]?.completedCount).toBe(1)
     expect(store.routeFamiliarity[0]?.points).toBe(store.tripHistory[0]?.rewardPoints)
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'city_core')?.unlocked).toBe(true)
+    expect(store.mapAreaFeedback[0]?.areaId).toBe('city_core')
+    expect(store.mapAreaFeedback[0]?.triggeredAt).toBe(store.tripHistory[0]?.endedAt)
+    expect(store.mapCalendarReminders[0]?.source).toBe('map_area_feedback')
+    expect(store.mapCalendarReminders[0]?.dueAt).toBe(store.tripHistory[0]?.endedAt + 24 * 60 * 60 * 1000)
     expect(store.tripRuntime.remainingSeconds).toBe(0)
 
     const acknowledged = store.acknowledgeTripArrival()
@@ -69,6 +74,101 @@ describe('map trip baseline loop', () => {
     )
     expect(route?.tier).toBe('known_route')
     expect(route?.nextTier).toBe('trusted_route')
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'commute_belt')?.unlocked).toBe(true)
+    expect(store.mapAreaFeedback.some((item) => item.areaId === 'commute_belt')).toBe(true)
+    expect(store.mapAreaFeedback.find((item) => item.areaId === 'commute_belt')?.routeLabel).toContain('Home')
+    expect(store.mapCalendarReminders.some((item) => item.areaId === 'commute_belt')).toBe(true)
+    expect(store.mapCalendarReminders.find((item) => item.areaId === 'commute_belt')?.summaryEn).toContain('Home')
+  })
+
+  test('derives area unlocks from restored completed trip history', () => {
+    const store = useMapStore()
+    const baseAt = Date.now()
+    const restored = store.restoreFromBackup({
+      map: {
+        tripHistory: Array.from({ length: 4 }, (_, index) => ({
+          id: `restored_trip_${index}`,
+          status: 'arrived',
+          from: 'Home',
+          to: 'Office',
+          fromLabel: 'Home',
+          toLabel: 'Office',
+          distanceKm: 5,
+          fare: 9000,
+          durationSeconds: 900,
+          startedAt: baseAt + index * 1000,
+          endedAt: baseAt + index * 1000 + 900,
+          rewardPoints: 20,
+        })),
+      },
+    })
+
+    expect(restored).toBe(true)
+    expect(store.routeFamiliarity[0]?.tier).toBe('trusted_route')
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'city_core')?.unlocked).toBe(true)
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'commute_belt')?.unlocked).toBe(true)
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'routine_nodes')?.unlocked).toBe(true)
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'outer_ring')?.unlocked).toBe(false)
+    expect(store.mapAreaFeedback.map((item) => item.areaId)).toEqual([
+      'city_core',
+      'commute_belt',
+      'routine_nodes',
+    ])
+    expect(store.mapCalendarReminders.map((item) => item.areaId)).toEqual([
+      'city_core',
+      'commute_belt',
+      'routine_nodes',
+    ])
+  })
+
+  test('persists calendar reminder confirmation and pinning preferences', () => {
+    const store = useMapStore()
+    const baseAt = Date.now()
+    const restored = store.restoreFromBackup({
+      map: {
+        tripHistory: Array.from({ length: 2 }, (_, index) => ({
+          id: `reminder_trip_${index}`,
+          status: 'arrived',
+          from: 'Home',
+          to: 'Office',
+          fromLabel: 'Home',
+          toLabel: 'Office',
+          distanceKm: 5,
+          fare: 9000,
+          durationSeconds: 900,
+          startedAt: baseAt + index * 1000,
+          endedAt: baseAt + index * 1000 + 900,
+          rewardPoints: 20,
+        })),
+      },
+    })
+
+    expect(restored).toBe(true)
+    const reminderId = store.mapCalendarReminders.find((item) => item.areaId === 'city_core')?.id
+    expect(reminderId).toBeTruthy()
+    expect(store.confirmMapCalendarReminder(reminderId)).toBe(true)
+    expect(store.setMapCalendarReminderPinned(reminderId, true)).toBe(true)
+
+    const reminder = store.mapCalendarReminders.find((item) => item.id === reminderId)
+    expect(reminder?.status).toBe('confirmed')
+    expect(reminder?.pinned).toBe(true)
+    expect(reminder?.confirmedAt).toBeGreaterThan(0)
+    expect(reminder?.pinnedAt).toBeGreaterThan(0)
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useMapStore()
+    expect(restoredStore.restoreFromBackup({ map: snapshot })).toBe(true)
+
+    const restoredReminder = restoredStore.mapCalendarReminders.find((item) => item.id === reminderId)
+    expect(restoredReminder?.status).toBe('confirmed')
+    expect(restoredReminder?.pinned).toBe(true)
+
+    expect(restoredStore.dismissMapCalendarReminder(reminderId)).toBe(true)
+    const dismissedReminder = restoredStore.mapCalendarReminders.find((item) => item.id === reminderId)
+    expect(dismissedReminder?.status).toBe('dismissed')
+    expect(dismissedReminder?.pinned).toBe(false)
+    expect(dismissedReminder?.dismissedAt).toBeGreaterThan(0)
   })
 
   test('canceling a running trip returns to idle and writes cancelled history', () => {
@@ -82,6 +182,9 @@ describe('map trip baseline loop', () => {
     expect(store.tripState.status).toBe('idle')
     expect(store.tripHistory[0]?.status).toBe('cancelled')
     expect(store.tripHistory[0]?.rewardPoints).toBe(0)
+    expect(store.mapAreaUnlocks.find((area) => area.id === 'city_core')?.unlocked).toBe(false)
+    expect(store.mapAreaFeedback.length).toBe(0)
+    expect(store.mapCalendarReminders.length).toBe(0)
 
     vi.advanceTimersByTime(60 * 60 * 1000)
     expect(store.tripState.status).toBe('idle')

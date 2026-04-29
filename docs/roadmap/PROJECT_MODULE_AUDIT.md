@@ -57,12 +57,12 @@ The weakest current area is not architecture, but module maturity imbalance: som
 | Gallery / 相册素材中台 | Global asset hub with import, folders, usage badges, in-use filtering, delete/replace safety. | Still balances two identities: iOS-like album vs asset-management console. | Asset hub behavior is embedded in a large page; future modules may need shared picker components. | Extract shared asset picker/usage badge components; keep Gallery UI photo-first. | P0.5 |
 | Appearance / 外观 | Theme, widgets, wallpaper source modes, app icon presets, gallery wallpaper integration. | Uploaded custom app icons are not supported; icon customization is preset-only. | Widget import/editor and appearance settings live together. | Decide if uploaded app icons are in scope; otherwise mark presets as the official model. | P1 |
 | WorldBook / 世界书 | Global worldview + knowledge points are split and bindable into Chat; usage visibility plus filters/sorting are now available. | Users can see and manage usage states, but broader non-Chat module consumption is still thin. | Consumption is strongest in Chat; broader module usage is still thin. | Decide broader module consumption or move product depth to Map rewards/events. | P1 |
-| Map / 地图 | Simulation-first baseline with trip lifecycle, reminders, history, gallery/default visuals, optional AI visual refresh, trip rewards/events, and route familiarity tiers. | Reward depth is improving, but area unlocks and downstream event hooks are not yet modeled. | Map store/view include automation, visual, trip, reward, route familiarity, and push concerns together. | Add area unlocks from accumulated exploration points and familiar routes; keep core progress system-computed. | P1 |
+| Map / 地图 | Simulation-first baseline with trip lifecycle, reminders, history, gallery/default visuals, optional AI visual refresh, trip rewards/events, route familiarity tiers, derived area unlocks, lightweight area feedback, and Calendar reminder cues with confirm/pin/dismiss state. | Reward depth is improving, but Calendar events are not yet scheduled through real push. | Map store/view include automation, visual, trip, reward, route familiarity, area unlock, feedback, reminder choices, and push concerns together. | Keep Map as suggestion source; schedule from Calendar events rather than Map suggestions. | P1 |
 | Files / 文件 | MVP file list, search, favorite, quick note creation. | Mock/local-only feel; not yet connected to real project assets or role/world data. | Data is local component state, not persisted or integrated. | Decide product role: document notebook, asset metadata browser, or future file manager. | P2 |
 | More / 更多 | MVP quick entries and experimental toggles. | Toggles are local UI only and do not persist. | Feature toggles are illustrative, not wired into system settings. | Either wire toggles to real feature flags or rename this page as “Labs”/“Shortcuts”. | P2 |
 | Profile / 用户信息 | Basic profile editor with persistence via system store. | Profile does not yet show downstream effects in Chat/world prompts. | Simple page is fine, but copy can better explain role in AI context. | Add a short “used in AI context” hint and optional preview of prompt-facing profile summary. | P1 |
 | Phone / 电话 | Placeholder module with corrected Chinese copy. | No real calling/log/social loop yet. | None beyond placeholder status. | Define whether Phone should support role calls, missed-call events, or AI-generated call summaries. | P2 |
-| Calendar / 日历 | Placeholder module with corrected Chinese copy. | No schedule/reminder/event integration yet. | None beyond placeholder status. | Connect to push scheduler and map/chat reminders before adding complex calendar UI. | P1 |
+| Calendar / 日历 | Lightweight reminder surface consumes Map-derived area feedback cues, lets users confirm/pin/dismiss, and stores confirmed reminders as Calendar events. | Calendar events are not yet connected to real scheduled push. | Calendar reads Map cues, writes user choice back to Map reminder preferences, and owns a small persisted event store. | Add scheduled push handoff from Calendar events. | P1 |
 | Wallet / 钱包 | Placeholder module with corrected Chinese copy. | No balance, transaction, transfer, or economy loop. | None beyond placeholder status. | Reuse Chat transfer blocks as the first ledger source; add fake balance history. | P2 |
 | Stock / 股票 | Placeholder module with corrected Chinese copy. | No watchlist, holdings, event-driven price changes. | None beyond placeholder status. | Treat as simulation module tied to Calendar/World events, not real finance first. | P2 |
 | Push Server / 推送服务 | Lightweight relay supports real and scheduled push delivery. | Does not generate closed-page autonomous events. | Server is intentionally small; future orchestration needs a separate design. | Decide if next milestone should include server-side event generation or keep push as delivery-only. | P1 decision |
@@ -85,8 +85,8 @@ The weakest current area is not architecture, but module maturity imbalance: som
    P0.5 清理：增加乱码守卫，保持 lint/build/test 通过，防止浏览器原生弹窗回潮。
 2. P0.5 component split: reduce risk in Chat, Settings, and Gallery by extracting shared panels.
    P0.5 组件拆分：通过提取共享面板降低 Chat、Settings、Gallery 的修改风险。
-3. P1 product depth: Map rewards/events/familiarity, WorldBook usage visibility, Calendar reminder integration.
-   P1 产品深度：地图奖励/事件/熟悉度、世界书使用可见性、日历提醒接入。
+3. P1 product depth: Map rewards/events/familiarity/area unlocks/feedback, WorldBook usage visibility, Calendar reminder integration.
+   P1 产品深度：地图奖励/事件/熟悉度/区域解锁/反馈、世界书使用可见性、日历提醒接入。
 4. P1 decision: choose whether closed-page autonomous event generation is in the next milestone.
    P1 决策：确认“页面关闭后自动生成事件”是否进入下一里程碑。
 5. P2 module growth: Phone, Wallet, Stock, Files, and More can grow after the main immersion loops are clearer.
@@ -120,5 +120,15 @@ Best next implementation slice:
    地图奖励/事件第一阶段 — 已完成。
 9. Map route familiarity phase-2 — `DONE`.
    地图路线熟悉度第二阶段 — 已完成。
-10. Next best slice: add area unlocks from accumulated exploration points and familiar routes; keep WorldBook search/tag filters as a later support task.
-    下一步最推荐：基于累计探索点与熟悉路线增加区域解锁；WorldBook 搜索/标签筛选作为后续支持任务保留。
+10. Map area unlocks phase-1 — `DONE`.
+    地图区域解锁第一阶段 — 已完成。
+11. Map area feedback phase-1 — `DONE`.
+    地图区域反馈第一阶段 — 已完成。
+12. Calendar map-reminder phase-1 — `DONE`.
+    日历地图提醒第一阶段 — 已完成。
+13. Calendar reminder confirmation/pinning — `DONE`.
+    日历提醒确认/固定 — 已完成。
+14. Calendar event store phase-1 — `DONE`.
+    日历事件存储第一阶段 — 已完成。
+15. Next best slice: add scheduled push handoff from Calendar events; keep WorldBook search/tag filters as a later support task.
+    下一步最推荐：从日历事件接入定时推送；WorldBook 搜索/标签筛选作为后续支持任务保留。

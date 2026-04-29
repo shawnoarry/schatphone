@@ -23,7 +23,12 @@ Source / 来源:
 - WorldBook 使用管理第二刀已完成：知识点现在支持按使用状态筛选，并可按最近更新、使用状态、绑定角色数、标题排序。
 - 地图奖励/事件第一刀已完成：完成行程会产生探索点数和轻量事件摘要，取消行程不奖励。
 - 地图路线熟悉度第二刀已完成：已完成行程会自动聚合为常走路线等级，显示完成次数、探索点和下一等级提示。
-- 下一步适合判断：继续做区域解锁，还是先把这批本地改动提交。
+- 地图区域解锁第一刀已完成：探索点、常走路线和稳定路线会自动派生区域解锁进度。
+- 地图区域反馈第一刀已完成：已解锁区域会自动生成地点反馈，展示参考路线、探索点和最近触发时间。
+- 日历地图提醒第一刀已完成：Calendar 现在能展示由地图区域反馈派生出来的建议提醒。
+- 日历提醒确认/固定切片已完成：建议提醒现在可以确认、固定或忽略，用户选择会随本地存储/备份保留。
+- 日历事件存储第一刀已完成：已确认地图提醒现在会进入独立 Calendar 事件存储，并纳入备份/导入。
+- 下一步适合推进：从 Calendar 事件接入真实定时推送，而不是直接从建议提醒推送。
 
 ## 2. PM Dashboard / 项目经理仪表盘
 
@@ -33,8 +38,8 @@ Source / 来源:
 | Chat / 聊天 | Green, but large / 可用但文件偏大 | 核心聊天、富消息、手动 AI 触发、设置入口都可用。 | 做低风险组件拆分，避免后续越改越难维护。 |
 | Gallery / 相册素材中台 | Green / 可用 | 已承担全局素材中台职责，支持使用状态、删除保护、相册式体验。 | 决定是否继续抽共享缩略图选择器。 |
 | Settings / 设置 | Green, but dense / 可用但偏密 | 设置、备份、诊断、推送等都集中在同一页，功能强但阅读压力高。 | 适合作为第一批拆组件目标。 |
-| WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已具备使用可见性和基础管理筛选；地图已开始补探索奖励、事件反馈和路线熟悉度。 | 下一步做区域解锁或先提交当前批次。 |
-| Future modules / 未来模块 | Yellow / 待规划 | Phone、Calendar、Wallet、Stock、Files、More 仍偏占位或轻量 MVP。 | 等主沉浸循环更清楚后再扩展。 |
+| WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已具备使用可见性和基础管理筛选；地图已开始补探索奖励、事件反馈、路线熟悉度、区域解锁、区域反馈和可确认日历提醒线索。 | 地图继续做线索源，真实推送从 Calendar 事件侧接。 |
+| Future modules / 未来模块 | Yellow / 待规划 | Phone、Wallet、Stock、Files、More 仍偏占位或轻量 MVP；Calendar 已有第一条 Map 提醒消费链路、用户确认状态和事件存储。 | 等主沉浸循环更清楚后再扩展其他模块。 |
 | Documentation / 文档 | Green / 已收束 | 已按 PM、路线图、流程、架构、产品决策、归档分类。 | 新任务不要再新建零散路线图。 |
 | Quality guard / 质量守门 | Green / 已增强 | lint/build/test 最近已通过；新增中文乱码守门测试。 | 新功能继续保持同一检查标准。 |
 
@@ -71,6 +76,16 @@ Source / 来源:
     完成行程会写入探索点数和事件摘要；行程记录会展示总探索进度和单次奖励，取消行程不会奖励。
 11. 地图路线熟悉度第二阶段已完成。
     已完成行程会自动聚合成路线熟悉度等级；地图页会展示常走路线、完成次数、探索点、平均距离和下一等级提示。
+12. 地图区域解锁第一阶段已完成。
+    已完成行程、探索点、熟悉路线和稳定路线会自动派生区域解锁进度；地图页会展示区域卡片、解锁数量、剩余条件和进度条。
+13. 地图区域反馈第一阶段已完成。
+    已解锁区域会自动生成轻量地点反馈；地图页会展示反馈标题、区域、最近触发时间、探索点和参考路线。
+14. 日历地图提醒第一阶段已完成。
+    Calendar 现在会读取地图区域反馈，展示建议型提醒卡片、建议时间、来源和返回地图入口。
+15. 日历提醒确认/固定切片已完成。
+    建议型提醒现在可以确认、固定或忽略；确认/固定/忽略状态会随地图 store 的本地存储和备份路径保留，但仍不创建真实推送。
+16. 日历事件存储第一阶段已完成。
+    已确认的地图提醒现在会写入独立 Calendar 事件存储；日历事件已纳入本地持久化、备份导出/导入和存储诊断。
 
 ## 4. Current Active Queue / 当前执行队列
 
@@ -85,6 +100,11 @@ Source / 来源:
 | P1 | WorldBook 使用管理第二刀 | Done phase-2 / 第二阶段已完成 | 用户可以筛选和排序知识点，快速找到未使用、已停用或已进入 Chat 的条目。 |
 | P1 | Map 奖励/事件第一刀 | Done phase-1 / 第一阶段已完成 | 完成行程有可见探索奖励和事件反馈，地图开始从工具走向玩法。 |
 | P1 | Map 路线熟悉度第二刀 | Done phase-2 / 第二阶段已完成 | 已完成行程会形成常走路线等级，用户可以看到路线进度和下一等级目标。 |
+| P1 | Map 区域解锁第一刀 | Done phase-1 / 第一阶段已完成 | 用户可以看到探索行为正在打开哪些区域，地图玩法有了更清晰的成长层。 |
+| P1 | Map 区域反馈第一刀 | Done phase-1 / 第一阶段已完成 | 解锁区域开始给出地点反馈，地图成长层开始转化为可读反馈。 |
+| P1 | Calendar 地图提醒第一刀 | Done phase-1 / 第一阶段已完成 | 日历开始消费地图区域反馈，形成第一条跨模块提醒线索。 |
+| P1 | Calendar 提醒确认/固定 | Done / 已完成 | 建议提醒已能被用户确认、固定或忽略，具备接入日历事件/推送前的用户意图状态。 |
+| P1 | Calendar 事件存储第一刀 | Done phase-1 / 第一阶段已完成 | 已确认提醒现在会成为真正的 Calendar 事件，具备接入定时推送前的业务承载层。 |
 
 已完成的 P0.5 切片：
 
@@ -97,12 +117,17 @@ Source / 来源:
 - 为 WorldBook 增加知识点使用状态筛选和排序。
 - 为 Map 完成行程增加探索点数、轻量事件摘要和行程记录展示。
 - 为 Map 增加路线熟悉度聚合、等级标识和下一等级提示。
+- 为 Map 增加区域解锁进度，基于探索点、熟悉路线和稳定路线自动派生。
+- 为 Map 增加区域反馈条目，基于已解锁区域、路线熟悉度和行程历史自动派生。
+- 为 Calendar 增加地图派生提醒展示，先作为建议型提醒，不写入真实日程存储。
+- 为 Calendar 建议提醒增加确认、固定和忽略操作，并把用户选择写入地图 store 的持久化/备份路径。
+- 为 Calendar 新增独立事件存储，已确认地图提醒会转成 Calendar event，并进入备份/导入。
 - 这些改动只拆展示结构，不移动备份、推送、诊断、素材绑定等业务逻辑。
 
 建议下一刀：
 
-- 首选：基于探索点数与熟悉路线增加区域解锁。
-- 备选：先提交当前本地改动，避免未提交变更继续累积。
+- 首选：从 Calendar event 接入真实定时推送，保持“建议提醒 -> 日历事件 -> 推送”的顺序。
+- 备选：先暂停做一次本地整理，避免未提交变更继续累积。
 - 暂不建议：直接重构 Chat 主消息流，因为风险更高。
 
 ## 5. Risks / 当前风险
@@ -117,8 +142,8 @@ Source / 来源:
 
 ## 6. Product Decisions Needed Later / 后续可能需要产品确认
 
-1. 下一刀做区域解锁还是先提交当前批次？
-   路线熟悉度已经完成，建议先提交当前批次；继续开发时优先做区域解锁，因为它能复用已存在的探索点和熟悉路线。
+1. Calendar event 接真实推送时，是否需要先做“通知时间可编辑”？
+   Calendar 已能把确认提醒转成事件；继续开发时建议先决定提醒时间是否可调整，再接真实定时推送，避免用户无法修改提醒时间。
 
 2. 外部推送默认展示模式是否继续保持“极简”？
    当前支持 `极简 / 标准 / 预览`，默认策略后续可根据体验调整。
@@ -145,10 +170,10 @@ Source / 来源:
 
 - `npm run lint` passed.
 - `npm run build` passed.
-- `npm test` passed, 29 test files and 161 tests.
+- `npm test` passed, 30 test files and 164 tests.
 - `git diff --check` passed after Markdown whitespace cleanup.
 
-本次 WorldBook 使用管理、Map 奖励/事件与路线熟悉度切片额外验证：`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（29 files / 161 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
+本次 WorldBook 使用管理、Map 奖励/事件、路线熟悉度、区域解锁、区域反馈、Calendar 地图提醒、提醒确认/固定与事件存储切片额外验证：`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（30 files / 164 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
 
 ## 9. Change Log / 变更记录
 
@@ -178,3 +203,16 @@ Source / 来源:
 
 9. 2026-04-29: Synced Map route familiarity phase-2: completed trips now aggregate into route tiers with next-tier hints.
    2026-04-29：同步 Map 路线熟悉度第二阶段：完成行程现聚合为路线等级，并展示下一等级提示。
+
+10. 2026-04-29: Synced Map area unlocks phase-1: exploration points and familiar routes now derive visible area unlock progress.
+    2026-04-29：同步 Map 区域解锁第一阶段：探索点与熟悉路线现派生为可见区域解锁进度。
+
+11. 2026-04-29: Synced Map area feedback phase-1: unlocked areas now derive lightweight location feedback with route cues.
+    2026-04-29：同步 Map 区域反馈第一阶段：已解锁区域现派生带参考路线的轻量地点反馈。
+
+12. 2026-04-29: Synced Calendar map-reminder phase-1: Calendar now displays suggested reminders derived from Map area feedback.
+    2026-04-29：同步 Calendar 地图提醒第一阶段：日历现展示由地图区域反馈派生的建议型提醒。
+13. 2026-04-29: Synced Calendar reminder confirmation/pinning: suggested reminders can now be confirmed, pinned, or dismissed with persisted user choice.
+    2026-04-29：同步 Calendar 提醒确认/固定：建议提醒现在可确认、固定或忽略，并保留用户选择。
+14. 2026-04-29: Synced Calendar event store phase-1: confirmed Map reminders now become Calendar events with backup/import coverage.
+    2026-04-29：同步 Calendar 事件存储第一阶段：已确认地图提醒现在会转成日历事件，并纳入备份/导入。

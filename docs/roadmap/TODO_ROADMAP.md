@@ -187,6 +187,48 @@ Status / 状态: `IN_PROGRESS`
      中文：验收：熟悉度只从已持久化的行程历史派生；取消行程不影响路线等级。
    - EN: Next phase candidate: add area unlocks from accumulated route familiarity and exploration points.
      中文：下一阶段候选：基于累计路线熟悉度与探索点增加区域解锁。
+8. EN: P1 Map area unlocks first slice — `DONE`.
+   中文：P1 地图区域解锁第一刀 — `DONE`。
+   - EN: Map now derives area unlock states from completed trips, exploration points, known routes, and trusted routes.
+     中文：地图现在会从已完成行程、探索点、熟悉路线与稳定路线中派生区域解锁状态。
+   - EN: Area cards show unlocked count, progress percentage, requirements, and future event-hook meaning.
+     中文：区域卡片会展示已解锁数量、进度百分比、剩余条件，以及后续事件挂钩意义。
+   - EN: Acceptance: unlocks are derived from trip history and route familiarity only; no new persistence field or manual task pool is added.
+     中文：验收：解锁状态只从行程历史与路线熟悉度派生；不新增持久化字段，也不新增手动任务池。
+   - EN: Next phase candidate: add lightweight area event hooks or location feedback based on unlocked areas.
+     中文：下一阶段候选：基于已解锁区域增加轻量区域事件钩子或地点反馈。
+9. EN: P1 Map area feedback first slice — `DONE`.
+   中文：P1 地图区域反馈第一刀 — `DONE`。
+   - EN: Unlocked areas now derive lightweight feedback notes with area title, route cue, exploration points, and latest trigger time.
+     中文：已解锁区域现在会派生轻量反馈条目，包含区域标题、参考路线、探索点和最近触发时间。
+   - EN: Map now shows an Area feedback panel after area unlocks.
+     中文：地图现在会在区域解锁后展示区域反馈面板。
+   - EN: Acceptance: feedback is deterministic and derived from unlocked areas, route familiarity, and trip history only.
+     中文：验收：反馈为确定性派生，只读取已解锁区域、路线熟悉度和行程历史。
+   - EN: Next phase candidate: connect area feedback to Calendar/reminders or a future ambient-event queue.
+     中文：下一阶段候选：把区域反馈接入日历/提醒，或后续轻量环境事件队列。
+10. EN: P1 Calendar map-reminder first slice — `DONE`.
+    中文：P1 日历地图提醒第一刀 — `DONE`。
+    - EN: Map area feedback now derives suggested Calendar reminders with due time, route cue, source, and exploration points.
+      中文：地图区域反馈现在会派生建议型日历提醒，包含建议时间、参考路线、来源和探索点。
+    - EN: Calendar now shows Map-derived reminder cards and a direct Map jump.
+      中文：日历现在展示地图派生提醒卡片，并提供返回地图入口。
+    - EN: Acceptance: no new calendar persistence or real push scheduling was added; this is the first visible cross-module cue.
+      中文：验收：不新增日历持久化，也不新增真实推送调度；这是第一条可见跨模块线索。
+11. EN: P1 Calendar reminder confirmation/pinning slice — `DONE`.
+    中文：P1 日历提醒确认/固定切片 — `DONE`。
+    - EN: Suggested Map-derived reminders now support confirm, pin, and dismiss states.
+      中文：地图派生的建议提醒现在支持确认、固定和忽略状态。
+    - EN: Reminder choices persist through the Map store backup/local storage path, but still do not create real push schedules.
+      中文：提醒选择会随地图 store 的备份/本地存储保留，但仍不创建真实推送调度。
+12. EN: P1 Calendar event store first slice — `DONE`.
+    中文：P1 日历事件存储第一刀 — `DONE`。
+    - EN: Confirmed Map-derived reminders now upsert into a dedicated Calendar event store.
+      中文：已确认的地图派生提醒现在会写入独立的日历事件存储。
+    - EN: Calendar events are included in local persistence, backup export/import, and storage diagnostics.
+      中文：日历事件已纳入本地持久化、备份导入导出和存储诊断。
+    - EN: Next phase candidate: schedule real push only from Calendar events, not directly from suggestions.
+      中文：下一阶段候选：只从日历事件接真实推送，不直接从建议提醒接推送。
 
 ---
 
@@ -631,3 +673,13 @@ Acceptance / 验收标准:
     2026-04-29 中文：已落地地图奖励/事件第一阶段：完成行程现会记录确定性探索点数与轻量事件摘要。
 53. 2026-04-29 EN: Landed Map route familiarity phase-2: completed trips now aggregate into route tiers with completion counts, points, averages, and next-tier hints.
     2026-04-29 中文：已落地地图路线熟悉度第二阶段：完成行程现会聚合为路线等级，并展示完成次数、点数、平均距离和下一等级提示。
+54. 2026-04-29 EN: Landed Map area unlocks phase-1: completed trips, exploration points, and familiar routes now derive visible area unlock progress.
+    2026-04-29 中文：已落地地图区域解锁第一阶段：完成行程、探索点与熟悉路线现会派生可见的区域解锁进度。
+55. 2026-04-29 EN: Landed Map area feedback phase-1: unlocked areas now derive lightweight feedback notes with route cues and latest trigger time.
+    2026-04-29 中文：已落地地图区域反馈第一阶段：已解锁区域现会派生带参考路线和最近触发时间的轻量反馈。
+56. 2026-04-29 EN: Landed Calendar map-reminder phase-1: Map area feedback now derives suggested Calendar reminders without adding calendar persistence.
+    2026-04-29 中文：已落地日历地图提醒第一阶段：地图区域反馈现会派生建议型日历提醒，且不新增日历持久化。
+57. 2026-04-29 EN: Landed Calendar reminder confirmation/pinning: suggested Map reminders can now be confirmed, pinned, or dismissed with persisted user choice.
+    2026-04-29 中文：已落地日历提醒确认/固定：地图派生建议提醒现在可确认、固定或忽略，并保留用户选择。
+58. 2026-04-29 EN: Landed Calendar event store phase-1: confirmed Map reminders now become dedicated Calendar events with backup/import coverage.
+    2026-04-29 中文：已落地日历事件存储第一阶段：已确认地图提醒现在会转成独立日历事件，并纳入备份/导入覆盖。

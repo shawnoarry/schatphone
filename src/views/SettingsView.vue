@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
@@ -31,6 +32,7 @@ const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
@@ -69,7 +71,8 @@ const persistenceCapabilityLabel = (available) =>
 const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:system', version: 1, labelZh: '系统存档', labelEn: 'System state' },
   { key: 'store:chat', version: 2, labelZh: '聊天存档', labelEn: 'Chat state' },
-  { key: 'store:map', version: 1, labelZh: '地图存档', labelEn: 'Map state' },
+  { key: 'store:map', version: 2, labelZh: '地图存档', labelEn: 'Map state' },
+  { key: 'store:calendar', version: 1, labelZh: '日历存档', labelEn: 'Calendar state' },
   { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
 ])
 const storageAuditRunning = ref(false)
@@ -1142,6 +1145,9 @@ const buildBackupPayload = async () => {
     map: {
       ...mapStore.createBackupSnapshot(),
     },
+    calendar: {
+      ...calendarStore.createBackupSnapshot(),
+    },
     gallery: gallerySnapshot,
   }
 }
@@ -1167,6 +1173,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (Array.isArray(payload.conversations)) return true
   if (Array.isArray(payload.messagesByConversation)) return true
   if (payload.map && typeof payload.map === 'object') return true
+  if (payload.calendar && typeof payload.calendar === 'object') return true
   if (payload.gallery && typeof payload.gallery === 'object') return true
   if (Array.isArray(payload.assets)) return true
   return false
@@ -1330,6 +1337,9 @@ const createRollbackSnapshot = () => {
     map: {
       ...deepClone(mapStore.createBackupSnapshot()),
     },
+    calendar: {
+      ...deepClone(calendarStore.createBackupSnapshot()),
+    },
     gallery: galleryStore.createBackupSnapshot(),
   }
 }
@@ -1384,10 +1394,11 @@ const importData = async (event) => {
     const systemOk = systemStore.restoreFromBackup(parsed)
     const chatOk = chatStore.restoreFromBackup(parsed)
     const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
+    const calendarOk = calendarStore.restoreFromBackup(parsed.calendar || parsed)
     const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
       restoreAssetPackage: true,
     })
-    if (!systemOk || !chatOk || !mapOk || !galleryRestoreResult?.ok) {
+    if (!systemOk || !chatOk || !mapOk || !calendarOk || !galleryRestoreResult?.ok) {
       throw createBackupImportError(
         'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',
         t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'),
@@ -1397,6 +1408,7 @@ const importData = async (event) => {
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
+    calendarStore.saveNow()
     galleryStore.saveNow()
 
     const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
@@ -1427,10 +1439,12 @@ const importData = async (event) => {
     systemStore.restoreFromBackup(rollback.system)
     chatStore.restoreFromBackup(rollback.chat)
     mapStore.restoreFromBackup(rollback.map)
+    calendarStore.restoreFromBackup(rollback.calendar)
     galleryStore.restoreFromBackup(rollback.gallery)
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
+    calendarStore.saveNow()
     galleryStore.saveNow()
     const resolved = resolveBackupImportFailure(error)
     const detail = resolved.detail ? ` ${resolved.detail}` : ''

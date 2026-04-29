@@ -30,6 +30,8 @@ const {
   tripRuntime,
   tripHistory,
   routeFamiliarity,
+  mapAreaUnlocks,
+  mapAreaFeedback,
   mapVisualSettings,
   mapAutomationRuntime,
   mapAiVisualAutomationPolicy,
@@ -650,6 +652,11 @@ const mapRewardScore = computed(() =>
 )
 
 const visibleRouteFamiliarity = computed(() => routeFamiliarity.value.slice(0, 5))
+const unlockedMapAreaCount = computed(() =>
+  mapAreaUnlocks.value.filter((area) => area?.unlocked).length,
+)
+const visibleMapAreaUnlocks = computed(() => mapAreaUnlocks.value.slice(0, 4))
+const visibleMapAreaFeedback = computed(() => mapAreaFeedback.value.slice(0, 4))
 
 const getRouteFamiliarityNextHint = (route) => {
   if (!route?.nextTier) {
@@ -659,6 +666,31 @@ const getRouteFamiliarityNextHint = (route) => {
     `距下一等级还需 ${Number(route.nextPoints) || 0} 点或 ${Number(route.nextCompletedCount) || 0} 次完成`,
     `Next tier: ${Number(route.nextPoints) || 0} pts or ${Number(route.nextCompletedCount) || 0} completions`,
   )
+}
+
+const getMapAreaUnlockHint = (area) => {
+  if (area?.unlocked) {
+    return t('已解锁，可作为后续地图事件和地点反馈的基础。', 'Unlocked for future map events and location feedback.')
+  }
+
+  const requirements = []
+  if (Number(area?.remainingPoints) > 0) {
+    requirements.push(t(`${area.remainingPoints} 点探索`, `${area.remainingPoints} pts`))
+  }
+  if (Number(area?.remainingCompletedTrips) > 0) {
+    requirements.push(t(`${area.remainingCompletedTrips} 次行程`, `${area.remainingCompletedTrips} trips`))
+  }
+  if (Number(area?.remainingKnownRoutes) > 0) {
+    requirements.push(t(`${area.remainingKnownRoutes} 条熟悉路线`, `${area.remainingKnownRoutes} known routes`))
+  }
+  if (Number(area?.remainingTrustedRoutes) > 0) {
+    requirements.push(t(`${area.remainingTrustedRoutes} 条稳定路线`, `${area.remainingTrustedRoutes} trusted routes`))
+  }
+
+  if (requirements.length <= 0) {
+    return t('继续完成行程即可推进解锁。', 'Complete more trips to progress this unlock.')
+  }
+  return t(`还需 ${requirements.join(' / ')}`, `Needs ${requirements.join(' / ')}`)
 }
 
 const formatSeconds = (seconds) => {
@@ -1140,6 +1172,53 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="map-glass-panel rounded-[1.75rem] p-4">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="font-semibold">{{ t('区域反馈', 'Area feedback') }}</h2>
+          <AssetStatusBadge
+            :label="t(`${mapAreaFeedback.length} 条反馈`, `${mapAreaFeedback.length} notes`)"
+            icon="fas fa-location-crosshairs"
+            tone="blue"
+            :truncate="false"
+          />
+        </div>
+        <p v-if="mapAreaFeedback.length === 0" class="text-xs text-gray-500">
+          {{ t('解锁区域后会自动生成地点反馈。', 'Area feedback appears after areas are unlocked.') }}
+        </p>
+        <div v-else class="space-y-2">
+          <div
+            v-for="feedback in visibleMapAreaFeedback"
+            :key="feedback.id"
+            class="rounded-lg border border-white/30 bg-white/45 p-2"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-sm font-medium">
+                  <i :class="[feedback.icon, 'mr-1 text-[11px] text-gray-500']"></i>
+                  {{ t(feedback.titleZh, feedback.titleEn) }}
+                </p>
+                <p class="text-[11px] text-gray-500">
+                  {{ t(feedback.areaLabelZh, feedback.areaLabelEn) }}
+                  <span v-if="feedback.triggeredAt"> · {{ formatTime(feedback.triggeredAt) }}</span>
+                </p>
+              </div>
+              <AssetStatusBadge
+                :label="t(`${feedback.explorationPoints} 点`, `${feedback.explorationPoints} pts`)"
+                icon="fas fa-star"
+                :tone="feedback.tone || 'blue'"
+                :truncate="false"
+              />
+            </div>
+            <p class="mt-1 text-[11px] text-gray-600">
+              {{ t(feedback.summaryZh, feedback.summaryEn) }}
+            </p>
+            <p v-if="feedback.routeLabel" class="mt-1 text-[11px] text-gray-500">
+              {{ t(`参考路线：${feedback.routeLabel}`, `Route cue: ${feedback.routeLabel}`) }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-3">{{ t('新增地址 / 手动定位', 'Add address / set manually') }}</h2>
         <div class="space-y-2">
           <input
@@ -1280,6 +1359,52 @@ onBeforeUnmount(() => {
             </div>
             <p class="mt-1 text-[11px] text-gray-500">
               {{ getRouteFamiliarityNextHint(route) }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-glass-panel rounded-[1.75rem] p-4">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="font-semibold">{{ t('区域解锁', 'Area unlocks') }}</h2>
+          <AssetStatusBadge
+            :label="t(`${unlockedMapAreaCount}/${mapAreaUnlocks.length} 已解锁`, `${unlockedMapAreaCount}/${mapAreaUnlocks.length} unlocked`)"
+            icon="fas fa-unlock"
+            tone="emerald"
+            :truncate="false"
+          />
+        </div>
+        <div class="space-y-2">
+          <div
+            v-for="area in visibleMapAreaUnlocks"
+            :key="area.id"
+            class="rounded-lg border border-white/30 bg-white/45 p-2"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-sm font-medium">
+                  <i :class="[area.icon, 'mr-1 text-[11px] text-gray-500']"></i>
+                  {{ t(area.areaLabelZh, area.areaLabelEn) }}
+                </p>
+                <p class="text-[11px] text-gray-500">
+                  {{ t(area.descriptionZh, area.descriptionEn) }}
+                </p>
+              </div>
+              <AssetStatusBadge
+                :label="area.unlocked ? t('已解锁', 'Unlocked') : t(`${area.progressPercent}%`, `${area.progressPercent}%`)"
+                :icon="area.unlocked ? 'fas fa-check' : 'fas fa-lock'"
+                :tone="area.unlocked ? area.tone : 'neutral'"
+                :truncate="false"
+              />
+            </div>
+            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+              <div
+                class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                :style="{ width: `${area.progressPercent}%` }"
+              ></div>
+            </div>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{ getMapAreaUnlockHint(area) }}
             </p>
           </div>
         </div>
