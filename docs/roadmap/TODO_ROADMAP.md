@@ -245,8 +245,14 @@ Status / 状态: `IN_PROGRESS`
       中文：编辑、快速后移或恢复事件时间时，现在会重排已有真实推送。
     - EN: Dismissing or removing a Map-derived reminder cancels the old Calendar event push schedule before the event is removed.
       中文：忽略或移除地图派生日历提醒时，会先取消旧的日历事件推送排程，再移除事件。
-    - EN: Next phase candidate: add push delivery history/quiet-hours visibility, or return to WorldBook search/tag support.
-      中文：下一阶段候选：补充推送送达历史/勿扰策略可见性，或回到 WorldBook 搜索/标签支持。
+16. EN: P1 Calendar push status visibility — `DONE`.
+    中文：P1 日历推送状态可见性 — `DONE`。
+    - EN: Calendar events now preserve a short local push schedule log for schedule/cancel success or failure.
+      中文：日历事件现在会保留简短的本地推送排程记录，覆盖排程/取消的成功或失败。
+    - EN: Calendar shows real-push readiness, event push status, recent schedule records, and AI quiet-hours policy visibility.
+      中文：Calendar 现在会展示真实推送就绪状态、事件推送状态、最近排程记录，以及 AI 安静时段策略说明。
+    - EN: Next phase candidate: add server-side delivery receipts if the push relay exposes them, or return to WorldBook search/tag support.
+      中文：下一阶段候选：如果推送中继提供服务端送达回执，再补真实送达记录；否则回到 WorldBook 搜索/标签支持。
 
 ---
 
@@ -707,3 +713,5 @@ Acceptance / 验收标准:
     2026-04-29 中文：已落地日历事件定时推送接入：已确认日历事件现在会通过现有推送中继安排真实定时推送。
 61. 2026-04-29 EN: Landed Calendar event push reschedule/cancel guard: time edits reschedule old push jobs and dismissed Map reminders cancel their Calendar event push.
     2026-04-29 中文：已落地日历事件推送重排/取消守卫：改时间会重排旧推送任务，忽略地图提醒会取消对应日历事件推送。
+62. 2026-04-29 EN: Landed Calendar push status visibility: events now keep local schedule logs and Calendar shows push readiness, event push status, and AI quiet-hours policy notes.
+    2026-04-29 中文：已落地日历推送状态可见性：事件现在保留本地排程记录，Calendar 展示推送就绪状态、事件推送状态和 AI 安静时段策略说明。

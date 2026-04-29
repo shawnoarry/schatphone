@@ -143,9 +143,20 @@ describe('calendar event store', () => {
     )
     expect(store.findEventById(event.id)?.scheduledPushId).toBe(scheduleId)
     expect(store.findEventById(event.id)?.scheduledPushAt).toBe(dueAt)
+    expect(store.findEventById(event.id)?.pushStatus).toBe('scheduled')
+    expect(store.findEventById(event.id)?.lastPushScheduledAt).toBeGreaterThan(0)
+    expect(store.findEventById(event.id)?.pushHistory[0]).toEqual(
+      expect.objectContaining({
+        action: 'schedule',
+        status: 'ok',
+        scheduleId,
+        deliverAt: dueAt,
+      }),
+    )
 
     const editedStartsAt = dueAt + 60 * 60 * 1000
     expect(store.setEventStartsAt(event.id, editedStartsAt)).toBe(true)
+    expect(store.findEventById(event.id)?.pushStatus).toBe('needs_reschedule')
     const rescheduled = await store.rescheduleEventPush(event.id, {
       source: 'test_calendar_event_reschedule',
     })
@@ -166,6 +177,20 @@ describe('calendar event store', () => {
       }),
     )
     expect(store.findEventById(event.id)?.scheduledPushAt).toBe(editedStartsAt)
+    expect(store.findEventById(event.id)?.pushStatus).toBe('scheduled')
+    expect(store.findEventById(event.id)?.lastPushCancelledAt).toBeGreaterThan(0)
+    expect(store.findEventById(event.id)?.pushHistory.map((item) => item.action)).toEqual([
+      'schedule',
+      'cancel',
+      'schedule',
+    ])
+    expect(store.findEventById(event.id)?.pushHistory[0]).toEqual(
+      expect.objectContaining({
+        action: 'schedule',
+        status: 'ok',
+        deliverAt: editedStartsAt,
+      }),
+    )
 
     const cancelled = await store.cancelEventPushScheduled({
       eventId: event.id,
@@ -176,5 +201,21 @@ describe('calendar event store', () => {
     expect(cancelSpy).toHaveBeenCalledTimes(2)
     expect(store.findEventById(event.id)?.scheduledPushId).toBe('')
     expect(store.findEventById(event.id)?.scheduledPushAt).toBe(0)
+    expect(store.findEventById(event.id)?.pushStatus).toBe('cancelled')
+    expect(store.findEventById(event.id)?.pushHistory[0]).toEqual(
+      expect.objectContaining({
+        action: 'cancel',
+        status: 'ok',
+        scheduleId,
+      }),
+    )
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(restoredStore.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    const restoredEvent = restoredStore.findEventById(event.id)
+    expect(restoredEvent?.pushStatus).toBe('cancelled')
+    expect(restoredEvent?.pushHistory[0]?.action).toBe('cancel')
   })
 })

@@ -62,7 +62,7 @@ The weakest current area is not architecture, but module maturity imbalance: som
 | More / 更多 | MVP quick entries and experimental toggles. | Toggles are local UI only and do not persist. | Feature toggles are illustrative, not wired into system settings. | Either wire toggles to real feature flags or rename this page as “Labs”/“Shortcuts”. | P2 |
 | Profile / 用户信息 | Basic profile editor with persistence via system store. | Profile does not yet show downstream effects in Chat/world prompts. | Simple page is fine, but copy can better explain role in AI context. | Add a short “used in AI context” hint and optional preview of prompt-facing profile summary. | P1 |
 | Phone / 电话 | Placeholder module with corrected Chinese copy. | No real calling/log/social loop yet. | None beyond placeholder status. | Define whether Phone should support role calls, missed-call events, or AI-generated call summaries. | P2 |
-| Calendar / 日历 | Lightweight reminder surface consumes Map-derived area feedback cues, lets users confirm/pin/dismiss, stores confirmed reminders as Calendar events, supports event time editing, and schedules real push from confirmed event times. | Calendar still lacks a fuller event list, push delivery history, and quiet-hours visibility. | Calendar reads Map cues, writes user choice back to Map reminder preferences, owns a small persisted event store, preserves user-edited event times, and tracks scheduled push state. | Add Calendar push history/status polish or a fuller event management surface. | P1 |
+| Calendar / 日历 | Lightweight reminder surface consumes Map-derived area feedback cues, lets users confirm/pin/dismiss, stores confirmed reminders as Calendar events, supports event time editing, schedules real push from confirmed event times, and shows push readiness/status/history notes. | Calendar has local schedule logs, but still lacks server-side delivery receipts and a fuller event list. | Calendar reads Map cues, writes user choice back to Map reminder preferences, owns a small persisted event store, preserves user-edited event times, and tracks scheduled push state/history. | Add server-side delivery receipts if the push relay exposes them, or build a fuller event management surface. | P1 |
 | Wallet / 钱包 | Placeholder module with corrected Chinese copy. | No balance, transaction, transfer, or economy loop. | None beyond placeholder status. | Reuse Chat transfer blocks as the first ledger source; add fake balance history. | P2 |
 | Stock / 股票 | Placeholder module with corrected Chinese copy. | No watchlist, holdings, event-driven price changes. | None beyond placeholder status. | Treat as simulation module tied to Calendar/World events, not real finance first. | P2 |
 | Push Server / 推送服务 | Lightweight relay supports real and scheduled push delivery. | Does not generate closed-page autonomous events. | Server is intentionally small; future orchestration needs a separate design. | Decide if next milestone should include server-side event generation or keep push as delivery-only. | P1 decision |
@@ -136,5 +136,7 @@ Best next implementation slice:
     日历事件定时推送接入 — 已完成。
 17. Calendar event push reschedule/cancel guard — `DONE`.
     日历事件推送重排/取消守卫 — 已完成。
-18. Next best slice: add Calendar push delivery history/quiet-hours visibility; keep WorldBook search/tag filters as a later support task.
-    下一步最推荐：补充 Calendar 推送送达历史/勿扰策略可见性；WorldBook 搜索/标签筛选作为后续支持任务保留。
+18. Calendar push status visibility — `DONE`.
+    日历推送状态可见性 — 已完成。
+19. Next best slice: add server-side delivery receipts only if the push relay exposes them; otherwise keep WorldBook search/tag filters as the next support task.
+    下一步最推荐：只有在推送中继提供送达回执时才补服务端送达记录；否则回到 WorldBook 搜索/标签筛选。

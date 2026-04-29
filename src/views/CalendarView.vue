@@ -5,13 +5,16 @@ import { useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
+import { useSystemStore } from '../stores/system'
 
 const router = useRouter()
 const { t } = useI18n()
 const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
+const systemStore = useSystemStore()
 const { upcomingEvents } = storeToRefs(calendarStore)
 const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
+const { settings } = storeToRefs(systemStore)
 
 const activeMapReminders = computed(() =>
   mapCalendarReminders.value.filter((reminder) => reminder.status !== 'dismissed'),
@@ -26,6 +29,64 @@ const eventTimeQuickShiftOptions = [
   { key: 'plus_hour', labelZh: '+1 小时', labelEn: '+1h', offsetMs: 60 * 60 * 1000 },
   { key: 'plus_day', labelZh: '+1 天', labelEn: '+1d', offsetMs: 24 * 60 * 60 * 1000 },
 ]
+const calendarPushRuntime = computed(() => {
+  const systemSettings = settings.value.system || {}
+  const automationSettings = settings.value.aiAutomation || {}
+  const quietHoursActive = systemStore.isAiAutomationQuietHoursActive(Date.now())
+  const quietHoursEnabled = automationSettings.quietHoursEnabled === true
+  const base = {
+    ready: false,
+    labelZh: '推送未就绪',
+    labelEn: 'Push not ready',
+    detailZh: '需要先在设置里启用真实推送并完成设备订阅。',
+    detailEn: 'Enable real push and subscribe this device in Settings first.',
+    toneClass: 'bg-gray-100 text-gray-600',
+    quietHoursEnabled,
+    quietHoursActive,
+    quietHoursStart: automationSettings.quietHoursStart || '23:00',
+    quietHoursEnd: automationSettings.quietHoursEnd || '07:00',
+    displayMode: systemSettings.pushDisplayMode || 'minimal',
+  }
+
+  if (systemSettings.notifications === false) {
+    return {
+      ...base,
+      detailZh: '系统通知总开关已关闭，Calendar 不会安排真实推送。',
+      detailEn: 'System notifications are off, so Calendar cannot schedule real push.',
+    }
+  }
+  if (systemSettings.realPushEnabled !== true) {
+    return {
+      ...base,
+      detailZh: '真实推送未启用；事件仍会保留在 Calendar 内。',
+      detailEn: 'Real push is disabled; events remain visible inside Calendar.',
+    }
+  }
+  if (systemSettings.pushSubscriptionActive !== true) {
+    return {
+      ...base,
+      detailZh: '当前设备尚未订阅推送，需在设置里重新订阅。',
+      detailEn: 'This device is not subscribed yet; resubscribe in Settings.',
+    }
+  }
+  if (!systemSettings.pushServerUrl || !systemSettings.pushDeviceId) {
+    return {
+      ...base,
+      detailZh: '推送服务地址或设备标识缺失，无法安排定时推送。',
+      detailEn: 'Push server URL or device ID is missing, so schedules cannot be armed.',
+    }
+  }
+
+  return {
+    ...base,
+    ready: true,
+    labelZh: '推送就绪',
+    labelEn: 'Push ready',
+    detailZh: '已确认的 Calendar 事件会按事件时间安排真实推送。',
+    detailEn: 'Confirmed Calendar events schedule real push at their event time.',
+    toneClass: 'bg-emerald-50 text-emerald-600',
+  }
+})
 
 const goHome = () => {
   router.push('/home')
@@ -146,6 +207,107 @@ const resetEventStartsAt = (event) => {
 }
 
 const isEventTimeEdited = (event) => Number(event.timeEditedAt || 0) > 0
+
+const getEventPushHistory = (event) =>
+  Array.isArray(event?.pushHistory) ? event.pushHistory.slice(0, 3) : []
+
+const getCalendarQuietHoursLabel = () => {
+  const runtime = calendarPushRuntime.value
+  if (!runtime.quietHoursEnabled) {
+    return t('AI 安静时段未启用。', 'AI quiet hours are off.')
+  }
+  const windowText = `${runtime.quietHoursStart}-${runtime.quietHoursEnd}`
+  if (runtime.quietHoursActive) {
+    return t(
+      `AI 安静时段生效中（${windowText}）；Calendar 定时推送仍按已排程时间执行。`,
+      `AI quiet hours are active (${windowText}); Calendar scheduled push still follows its armed time.`,
+    )
+  }
+  return t(
+    `AI 安静时段为 ${windowText}；该策略不会暂停已安排的 Calendar 推送。`,
+    `AI quiet hours are ${windowText}; this policy does not pause armed Calendar push schedules.`,
+  )
+}
+
+const formatPushReason = (reason) => {
+  if (reason === 'real_push_disabled') return t('真实推送未就绪', 'Real push not ready')
+  if (reason === 'server_url_missing') return t('推送服务地址缺失', 'Push server URL missing')
+  if (reason === 'schedule_failed') return t('排程失败', 'Schedule failed')
+  if (reason === 'cancel_schedule_failed') return t('取消排程失败', 'Cancel schedule failed')
+  if (reason === 'network_error') return t('推送服务连接失败', 'Push service network error')
+  return reason || t('暂无异常', 'No error')
+}
+
+const getCalendarPushStatusMeta = (event) => {
+  if (event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+    return {
+      labelZh: '已排程',
+      labelEn: 'Scheduled',
+      className: 'bg-emerald-50 text-emerald-600',
+    }
+  }
+  if (event.pushStatus === 'needs_reschedule') {
+    return {
+      labelZh: '待重排',
+      labelEn: 'Reschedule pending',
+      className: 'bg-amber-50 text-amber-600',
+    }
+  }
+  if (event.lastPushError || event.pushStatus === 'failed' || event.pushStatus === 'cancel_failed') {
+    return {
+      labelZh: '排程异常',
+      labelEn: 'Schedule issue',
+      className: 'bg-rose-50 text-rose-600',
+    }
+  }
+  if (!calendarPushRuntime.value.ready) {
+    return {
+      labelZh: '未就绪',
+      labelEn: 'Not ready',
+      className: 'bg-gray-100 text-gray-600',
+    }
+  }
+  if (event.pushStatus === 'cancelled') {
+    return {
+      labelZh: '已取消',
+      labelEn: 'Cancelled',
+      className: 'bg-gray-100 text-gray-600',
+    }
+  }
+  return {
+    labelZh: '待排程',
+    labelEn: 'Pending',
+    className: 'bg-blue-50 text-blue-600',
+  }
+}
+
+const getCalendarPushDetail = (event) => {
+  if (event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+    return t(
+      `排程时间：${formatDateTime(event.scheduledPushAt)}`,
+      `Scheduled time: ${formatDateTime(event.scheduledPushAt)}`,
+    )
+  }
+  if (event.lastPushError) {
+    return t(
+      `原因：${formatPushReason(event.lastPushError)}`,
+      `Reason: ${formatPushReason(event.lastPushError)}`,
+    )
+  }
+  if (!calendarPushRuntime.value.ready) {
+    return t(calendarPushRuntime.value.detailZh, calendarPushRuntime.value.detailEn)
+  }
+  if (event.pushStatus === 'cancelled') {
+    return t('最近一次排程已取消。', 'The most recent schedule was cancelled.')
+  }
+  return t('等待下一次同步或手动调整后排程。', 'Waiting for the next sync or time edit to schedule.')
+}
+
+const formatPushHistoryEntry = (entry) => {
+  const action = entry.action === 'cancel' ? t('取消', 'Cancel') : t('排程', 'Schedule')
+  const status = entry.status === 'ok' ? t('成功', 'ok') : t('失败', 'failed')
+  return `${action} ${status} · ${formatDateTime(entry.createdAt)}`
+}
 
 const formatDateTime = (timestamp) => {
   const ts = Number(timestamp)
@@ -270,6 +432,17 @@ watch(
           </span>
         </div>
 
+        <div class="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-[11px] text-gray-600">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-medium text-gray-700">{{ t('真实推送状态', 'Real push status') }}</span>
+            <span class="shrink-0 rounded-full px-2 py-1" :class="calendarPushRuntime.toneClass">
+              {{ t(calendarPushRuntime.labelZh, calendarPushRuntime.labelEn) }}
+            </span>
+          </div>
+          <p class="mt-2">{{ t(calendarPushRuntime.detailZh, calendarPushRuntime.detailEn) }}</p>
+          <p class="mt-1">{{ getCalendarQuietHoursLabel() }}</p>
+        </div>
+
         <div class="mt-3 space-y-2">
           <article
             v-for="event in visibleCalendarEvents"
@@ -326,12 +499,36 @@ watch(
               <p v-if="isEventTimeEdited(event)" class="text-[11px] text-blue-500">
                 {{ t('已调整', 'Adjusted') }}
               </p>
-              <p v-if="event.scheduledPushId" class="text-[11px] text-emerald-600">
-                {{ t('已安排真实推送', 'Push scheduled') }}
-              </p>
-              <p v-else-if="event.lastPushError" class="text-[11px] text-rose-500">
-                {{ t('推送排程失败', 'Push schedule failed') }}
-              </p>
+              <div class="rounded-lg border border-white bg-white/80 p-2 text-[11px] text-gray-600">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-medium text-gray-700">{{ t('推送状态', 'Push status') }}</span>
+                  <span
+                    class="shrink-0 rounded-full px-2 py-1"
+                    :class="getCalendarPushStatusMeta(event).className"
+                  >
+                    {{
+                      t(
+                        getCalendarPushStatusMeta(event).labelZh,
+                        getCalendarPushStatusMeta(event).labelEn,
+                      )
+                    }}
+                  </span>
+                </div>
+                <p class="mt-1">{{ getCalendarPushDetail(event) }}</p>
+                <div v-if="getEventPushHistory(event).length > 0" class="mt-2 space-y-1">
+                  <p class="font-medium text-gray-500">{{ t('最近排程记录', 'Recent schedule log') }}</p>
+                  <p
+                    v-for="entry in getEventPushHistory(event)"
+                    :key="`${entry.action}-${entry.createdAt}-${entry.scheduleId}`"
+                    class="flex items-center justify-between gap-2"
+                  >
+                    <span>{{ formatPushHistoryEntry(entry) }}</span>
+                    <span v-if="entry.deliverAt" class="text-gray-400">
+                      {{ formatDateTime(entry.deliverAt) }}
+                    </span>
+                  </p>
+                </div>
+              </div>
             </div>
           </article>
         </div>

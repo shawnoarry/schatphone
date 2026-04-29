@@ -31,7 +31,8 @@ Source / 来源:
 - 日历事件时间编辑已完成：Calendar event 的提醒时间可手动调整、快速后移或恢复建议时间。
 - 日历事件定时推送接入已完成：已确认 Calendar event 会通过现有推送中继安排真实定时推送。
 - 日历事件推送重排/取消守卫已完成：改时间会重排旧推送，忽略地图提醒会取消对应推送，避免旧提醒误送达。
-- 下一步适合推进：补 Calendar 推送送达历史/勿扰策略可见性，或回到 WorldBook 搜索/标签筛选。
+- 日历推送状态可见性第一阶段已完成：Calendar 会显示真实推送是否就绪、单个事件是否已排程、最近排程/取消记录，以及 AI 安静时段说明。
+- 下一步适合推进：如果 push relay 后续提供服务端送达回执，再补真实送达记录；否则回到 WorldBook 搜索/标签筛选。
 
 ## 2. PM Dashboard / 项目经理仪表盘
 
@@ -42,7 +43,7 @@ Source / 来源:
 | Gallery / 相册素材中台 | Green / 可用 | 已承担全局素材中台职责，支持使用状态、删除保护、相册式体验。 | 决定是否继续抽共享缩略图选择器。 |
 | Settings / 设置 | Green, but dense / 可用但偏密 | 设置、备份、诊断、推送等都集中在同一页，功能强但阅读压力高。 | 适合作为第一批拆组件目标。 |
 | WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已具备使用可见性和基础管理筛选；地图已开始补探索奖励、事件反馈、路线熟悉度、区域解锁、区域反馈和可确认日历提醒线索。 | 地图继续做线索源，不重复承担 Calendar 推送排程。 |
-| Future modules / 未来模块 | Yellow / 待规划 | Phone、Wallet、Stock、Files、More 仍偏占位或轻量 MVP；Calendar 已有 Map 提醒消费链路、用户确认状态、事件存储、时间编辑和真实定时推送。 | 等主沉浸循环更清楚后再扩展其他模块。 |
+| Future modules / 未来模块 | Yellow / 待规划 | Phone、Wallet、Stock、Files、More 仍偏占位或轻量 MVP；Calendar 已有 Map 提醒消费链路、用户确认状态、事件存储、时间编辑、真实定时推送和推送状态可见性。 | 等主沉浸循环更清楚后再扩展其他模块。 |
 | Documentation / 文档 | Green / 已收束 | 已按 PM、路线图、流程、架构、产品决策、归档分类。 | 新任务不要再新建零散路线图。 |
 | Quality guard / 质量守门 | Green / 已增强 | lint/build/test 最近已通过；新增中文乱码守门测试。 | 新功能继续保持同一检查标准。 |
 
@@ -96,6 +97,8 @@ Source / 来源:
     已确认 Calendar 事件现在会在同步后通过现有推送中继安排真实定时推送，卡片上会显示已安排或排程失败。
 19. 日历事件推送重排/取消守卫已完成。
     用户调整事件时间时会重排推送；忽略或移除地图派生提醒时会取消旧推送，减少旧时间误触发风险。
+20. 日历推送状态可见性第一阶段已完成。
+    Calendar 现在会显示真实推送准备状态、事件排程状态、最近排程/取消记录，并说明 AI 安静时段不会暂停已安排的 Calendar 推送。
 
 ## 4. Current Active Queue / 当前执行队列
 
@@ -118,6 +121,7 @@ Source / 来源:
 | P1 | Calendar 事件时间编辑 | Done / 已完成 | 日历事件提醒时间可由用户调整，后续真实推送可直接读取用户确认后的时间。 |
 | P1 | Calendar 事件定时推送接入 | Done / 已完成 | 已确认日历事件会通过现有推送中继安排真实推送，形成“建议提醒 -> 日历事件 -> 推送”的闭环。 |
 | P1 | Calendar 事件推送重排/取消守卫 | Done / 已完成 | 改时间会重排旧推送；忽略地图提醒会取消对应日历事件推送，避免旧提醒残留。 |
+| P1 | Calendar 推送状态可见性 | Done phase-1 / 第一阶段已完成 | 用户和 PM 可以看到真实推送是否就绪、事件是否已排程、最近排程/取消记录，以及 AI 安静时段说明。 |
 
 已完成的 P0.5 切片：
 
@@ -138,11 +142,12 @@ Source / 来源:
 - 为 Calendar event 增加提醒时间编辑、快速后移和恢复建议时间。
 - 为 Calendar event 接入真实定时推送，复用现有 push relay，不从 Map 建议态直接推送。
 - 为 Calendar event 增加推送重排/取消守卫，覆盖改时间、恢复时间、忽略/移除提醒。
+- 为 Calendar event 增加本地排程记录和状态展示，便于判断“已排程 / 未就绪 / 待重排 / 排程异常”。
 - 这些改动只拆展示结构，不移动备份、推送、诊断、素材绑定等业务逻辑。
 
 建议下一刀：
 
-- 首选：补 Calendar 推送送达历史/勿扰策略可见性，让 PM 和用户能看懂为什么某个事件已排程或未排程。
+- 首选：如果 push relay 后续提供服务端送达回执，再补真实送达历史；否则回到 WorldBook 搜索/标签筛选。
 - 备选：先暂停做一次本地整理，避免未提交变更继续累积。
 - 暂不建议：直接重构 Chat 主消息流，因为风险更高。
 
@@ -158,8 +163,8 @@ Source / 来源:
 
 ## 6. Product Decisions Needed Later / 后续可能需要产品确认
 
-1. Calendar 推送送达历史和勿扰策略是否需要做成用户可见？
-   Calendar 已支持定时推送、改时间重排和忽略取消；下一步若要继续增强可信度，建议让用户能看到排程状态、失败原因、是否受勿扰策略影响。
+1. Calendar 是否需要服务端送达回执？
+   Calendar 已有本地排程记录和状态可见性，但这不是服务端“已送达”证明；如果产品需要真实送达历史，需要 push relay 先提供回执或查询接口。
 
 2. 外部推送默认展示模式是否继续保持“极简”？
    当前支持 `极简 / 标准 / 预览`，默认策略后续可根据体验调整。
@@ -189,7 +194,7 @@ Source / 来源:
 - `npm test` passed, 30 test files and 165 tests.
 - `git diff --check` passed after Markdown whitespace cleanup.
 
-本次 WorldBook 使用管理、Map 奖励/事件、路线熟悉度、区域解锁、区域反馈、Calendar 地图提醒、提醒确认/固定、事件存储、事件时间编辑、事件定时推送接入与推送重排/取消守卫切片额外验证：`npm test -- tests/calendar-event-store.test.js` passed（2 tests），`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（30 files / 165 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
+本次 WorldBook 使用管理、Map 奖励/事件、路线熟悉度、区域解锁、区域反馈、Calendar 地图提醒、提醒确认/固定、事件存储、事件时间编辑、事件定时推送接入、推送重排/取消守卫与推送状态可见性切片额外验证：`npm test -- tests/calendar-event-store.test.js` passed（2 tests），`git diff --check` passed，`npm run lint` passed，`npm run build` passed，`npm test` passed（30 files / 165 tests）。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
 
 ## 9. Change Log / 变更记录
 
@@ -238,3 +243,5 @@ Source / 来源:
     2026-04-29：同步 Calendar 事件定时推送接入：已确认日历事件现在会通过现有推送中继安排真实定时推送。
 17. 2026-04-29: Synced Calendar event push reschedule/cancel guard: time edits reschedule old push jobs and dismissed Map reminders cancel their Calendar event push.
     2026-04-29：同步 Calendar 事件推送重排/取消守卫：改时间会重排旧推送任务，忽略地图提醒会取消对应日历事件推送。
+18. 2026-04-29: Synced Calendar push status visibility: Calendar now shows push readiness, event schedule status, recent local schedule logs, and AI quiet-hours notes.
+    2026-04-29：同步 Calendar 推送状态可见性：Calendar 现在展示推送就绪状态、事件排程状态、最近本地排程记录和 AI 安静时段说明。
