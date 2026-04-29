@@ -227,8 +227,26 @@ Status / 状态: `IN_PROGRESS`
       中文：已确认的地图派生提醒现在会写入独立的日历事件存储。
     - EN: Calendar events are included in local persistence, backup export/import, and storage diagnostics.
       中文：日历事件已纳入本地持久化、备份导入导出和存储诊断。
-    - EN: Next phase candidate: schedule real push only from Calendar events, not directly from suggestions.
-      中文：下一阶段候选：只从日历事件接真实推送，不直接从建议提醒接推送。
+13. EN: P1 Calendar event time editing — `DONE`.
+    中文：P1 日历事件时间编辑 — `DONE`。
+    - EN: Calendar events now support manual reminder-time editing, quick +1h/+1d shifts, and reset to suggested time.
+      中文：日历事件现在支持手动编辑提醒时间、快速后移 1 小时/1 天，并可恢复建议时间。
+    - EN: Edited event times persist through backup and are not overwritten by later Map reminder refreshes.
+      中文：已编辑事件时间会随备份保留，且不会被后续地图提醒刷新覆盖。
+14. EN: P1 Calendar event scheduled push handoff — `DONE`.
+    中文：P1 日历事件定时推送接入 — `DONE`。
+    - EN: Confirmed Calendar events now schedule real push through the existing push relay after Map reminder sync.
+      中文：已确认的日历事件现在会在地图提醒同步后，通过现有推送中继安排真实定时推送。
+    - EN: Calendar event cards show whether a real push schedule exists, or whether scheduling failed.
+      中文：日历事件卡片会显示真实推送是否已安排，或排程是否失败。
+15. EN: P1 Calendar event push reschedule/cancel guard — `DONE`.
+    中文：P1 日历事件推送重排/取消守卫 — `DONE`。
+    - EN: Editing, quick-shifting, or resetting an event time now reschedules the existing real push.
+      中文：编辑、快速后移或恢复事件时间时，现在会重排已有真实推送。
+    - EN: Dismissing or removing a Map-derived reminder cancels the old Calendar event push schedule before the event is removed.
+      中文：忽略或移除地图派生日历提醒时，会先取消旧的日历事件推送排程，再移除事件。
+    - EN: Next phase candidate: add push delivery history/quiet-hours visibility, or return to WorldBook search/tag support.
+      中文：下一阶段候选：补充推送送达历史/勿扰策略可见性，或回到 WorldBook 搜索/标签支持。
 
 ---
 
@@ -683,3 +701,9 @@ Acceptance / 验收标准:
     2026-04-29 中文：已落地日历提醒确认/固定：地图派生建议提醒现在可确认、固定或忽略，并保留用户选择。
 58. 2026-04-29 EN: Landed Calendar event store phase-1: confirmed Map reminders now become dedicated Calendar events with backup/import coverage.
     2026-04-29 中文：已落地日历事件存储第一阶段：已确认地图提醒现在会转成独立日历事件，并纳入备份/导入覆盖。
+59. 2026-04-29 EN: Landed Calendar event time editing: event reminder times can be manually adjusted, quick-shifted, reset, and preserved across Map refreshes.
+    2026-04-29 中文：已落地日历事件时间编辑：事件提醒时间可手动调整、快速后移、恢复，并能跨地图刷新保留。
+60. 2026-04-29 EN: Landed Calendar event scheduled push handoff: confirmed Calendar events now schedule real push through the existing push relay.
+    2026-04-29 中文：已落地日历事件定时推送接入：已确认日历事件现在会通过现有推送中继安排真实定时推送。
+61. 2026-04-29 EN: Landed Calendar event push reschedule/cancel guard: time edits reschedule old push jobs and dismissed Map reminders cancel their Calendar event push.
+    2026-04-29 中文：已落地日历事件推送重排/取消守卫：改时间会重排旧推送任务，忽略地图提醒会取消对应日历事件推送。

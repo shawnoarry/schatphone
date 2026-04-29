@@ -22,6 +22,10 @@ const dismissedMapReminderCount = computed(
   () => mapCalendarReminders.value.filter((reminder) => reminder.status === 'dismissed').length,
 )
 const visibleCalendarEvents = computed(() => upcomingEvents.value.slice(0, 4))
+const eventTimeQuickShiftOptions = [
+  { key: 'plus_hour', labelZh: '+1 小时', labelEn: '+1h', offsetMs: 60 * 60 * 1000 },
+  { key: 'plus_day', labelZh: '+1 天', labelEn: '+1d', offsetMs: 24 * 60 * 60 * 1000 },
+]
 
 const goHome = () => {
   router.push('/home')
@@ -37,13 +41,24 @@ const getLatestReminder = (reminder) =>
 const syncReminderEvent = (reminder) => {
   if (!reminder?.id) return
   if (reminder.status === 'dismissed') {
+    void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
+      source: 'calendar_reminder_dismiss',
+    })
     calendarStore.removeEventBySourceReminderId(reminder.id)
     return
   }
   if (reminder.status === 'confirmed' || reminder.pinned) {
-    calendarStore.upsertEventFromMapReminder(reminder)
+    const event = calendarStore.upsertEventFromMapReminder(reminder)
+    if (event?.id) {
+      void calendarStore.ensureEventPushScheduled(event.id, {
+        source: 'calendar_reminder_sync',
+      })
+    }
     return
   }
+  void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
+    source: 'calendar_reminder_remove',
+  })
   calendarStore.removeEventBySourceReminderId(reminder.id)
 }
 
@@ -58,6 +73,9 @@ const toggleReminderPin = (reminder) => {
 }
 
 const dismissReminder = (reminder) => {
+  void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
+    source: 'calendar_reminder_dismiss',
+  })
   mapStore.dismissMapCalendarReminder(reminder.id)
   calendarStore.removeEventBySourceReminderId(reminder.id)
 }
@@ -73,6 +91,61 @@ const getReminderStatusClass = (reminder) => {
   if (reminder.status === 'confirmed') return 'bg-emerald-50 text-emerald-600'
   return 'bg-amber-50 text-amber-600'
 }
+
+const padDatePart = (value) => String(value).padStart(2, '0')
+
+const formatDateTimeInput = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return ''
+  const date = new Date(ts)
+  return [
+    date.getFullYear(),
+    '-',
+    padDatePart(date.getMonth() + 1),
+    '-',
+    padDatePart(date.getDate()),
+    'T',
+    padDatePart(date.getHours()),
+    ':',
+    padDatePart(date.getMinutes()),
+  ].join('')
+}
+
+const parseDateTimeInput = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return 0
+  const timestamp = new Date(value).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+const updateEventStartsAt = (event, value) => {
+  const startsAt = parseDateTimeInput(value)
+  if (startsAt <= 0) return
+  if (calendarStore.setEventStartsAt(event.id, startsAt)) {
+    void calendarStore.rescheduleEventPush(event.id, {
+      source: 'calendar_event_time_edit',
+    })
+  }
+}
+
+const shiftEventStartsAt = (event, offsetMs) => {
+  const startsAt = Math.max(0, Number(event.startsAt || 0))
+  if (startsAt <= 0) return
+  if (calendarStore.setEventStartsAt(event.id, startsAt + offsetMs)) {
+    void calendarStore.rescheduleEventPush(event.id, {
+      source: 'calendar_event_time_shift',
+    })
+  }
+}
+
+const resetEventStartsAt = (event) => {
+  if (calendarStore.resetEventStartsAt(event.id)) {
+    void calendarStore.rescheduleEventPush(event.id, {
+      source: 'calendar_event_time_reset',
+    })
+  }
+}
+
+const isEventTimeEdited = (event) => Number(event.timeEditedAt || 0) > 0
 
 const formatDateTime = (timestamp) => {
   const ts = Number(timestamp)
@@ -221,6 +294,45 @@ watch(
             <p v-if="event.summaryZh || event.summaryEn" class="mt-2 text-xs text-gray-600">
               {{ t(event.summaryZh, event.summaryEn) }}
             </p>
+            <div class="mt-3 space-y-2">
+              <label class="block text-[11px] font-medium text-gray-500">
+                {{ t('提醒时间', 'Reminder time') }}
+              </label>
+              <input
+                type="datetime-local"
+                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800"
+                :value="formatDateTimeInput(event.startsAt)"
+                @change="updateEventStartsAt(event, $event.target.value)"
+              />
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  v-for="option in eventTimeQuickShiftOptions"
+                  :key="option.key"
+                  @click="shiftEventStartsAt(event, option.offsetMs)"
+                  class="rounded-full bg-white px-3 py-2 text-[11px] text-gray-700 border border-gray-200"
+                  :title="t('调整提醒时间', 'Adjust reminder time')"
+                >
+                  <i class="fas fa-clock mr-1"></i>{{ t(option.labelZh, option.labelEn) }}
+                </button>
+                <button
+                  v-if="isEventTimeEdited(event)"
+                  @click="resetEventStartsAt(event)"
+                  class="rounded-full bg-gray-100 px-3 py-2 text-[11px] text-gray-600"
+                  :title="t('恢复建议时间', 'Reset suggested time')"
+                >
+                  <i class="fas fa-rotate-left mr-1"></i>{{ t('恢复', 'Reset') }}
+                </button>
+              </div>
+              <p v-if="isEventTimeEdited(event)" class="text-[11px] text-blue-500">
+                {{ t('已调整', 'Adjusted') }}
+              </p>
+              <p v-if="event.scheduledPushId" class="text-[11px] text-emerald-600">
+                {{ t('已安排真实推送', 'Push scheduled') }}
+              </p>
+              <p v-else-if="event.lastPushError" class="text-[11px] text-rose-500">
+                {{ t('推送排程失败', 'Push schedule failed') }}
+              </p>
+            </div>
           </article>
         </div>
       </section>

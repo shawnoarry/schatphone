@@ -1,6 +1,11 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  cancelScheduledPushNotification,
+  schedulePushNotification,
+} from '../lib/push'
+import { useSystemStore } from './system'
 
 const CALENDAR_STORAGE_KEY = 'store:calendar'
 const CALENDAR_STORAGE_VERSION = 1
@@ -37,9 +42,15 @@ const createCalendarEventIdFromReminder = (reminderId) => {
   return normalizedReminderId ? `calendar_event_${normalizedReminderId}` : ''
 }
 
+const createCalendarEventScheduleId = (eventId) => {
+  const normalizedEventId = normalizeEventId(eventId)
+  return normalizedEventId ? `calendar_event_push_${normalizedEventId}` : ''
+}
+
 const normalizeCalendarEventRecord = (raw, index = 0) => {
   if (!raw || typeof raw !== 'object') return null
   const startsAt = Math.max(0, toInt(raw.startsAt ?? raw.dueAt, 0))
+  const originalStartsAt = Math.max(0, toInt(raw.originalStartsAt ?? startsAt, startsAt))
   const id =
     normalizeEventId(raw.id) ||
     createCalendarEventIdFromReminder(raw.sourceReminderId) ||
@@ -58,11 +69,16 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     summaryZh: trimLine(raw.summaryZh, '', 240),
     summaryEn: trimLine(raw.summaryEn, '', 240),
     startsAt,
+    originalStartsAt,
+    timeEditedAt: Math.max(0, toInt(raw.timeEditedAt, 0)),
     status: normalizeCalendarEventStatus(raw.status),
     pinned: raw.pinned === true,
     route: trimLine(raw.route, '', 120),
     icon: trimLine(raw.icon, 'fas fa-calendar-day', 80),
     tone: trimLine(raw.tone, 'blue', 40),
+    scheduledPushId: trimLine(raw.scheduledPushId, '', 140),
+    scheduledPushAt: Math.max(0, toInt(raw.scheduledPushAt, 0)),
+    lastPushError: trimLine(raw.lastPushError, '', 120),
     createdAt: Math.max(0, toInt(raw.createdAt, 0)),
     updatedAt: Math.max(0, toInt(raw.updatedAt, 0)),
   }
@@ -88,8 +104,11 @@ const sortCalendarEvents = (items = []) =>
   })
 
 export const useCalendarStore = defineStore('calendar', () => {
+  const getSystemStore = () => useSystemStore()
   const events = ref([])
   const hasFinishedStorageHydration = ref(false)
+  let eventPushSchedulePromise = null
+  let eventPushCancelPromise = null
 
   const upcomingEvents = computed(() =>
     sortCalendarEvents(
@@ -143,8 +162,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   const upsertEventFromMapReminder = (reminder = {}) => {
     const reminderId = normalizeEventId(reminder.id)
     if (!reminderId) return null
+    const eventId = createCalendarEventIdFromReminder(reminderId)
+    const existing = findEventById(eventId)
+    const reminderStartsAt = Math.max(0, toInt(reminder.dueAt, 0))
+    const hasEditedTime = Math.max(0, toInt(existing?.timeEditedAt, 0)) > 0
     return upsertEvent({
-      id: createCalendarEventIdFromReminder(reminderId),
+      id: eventId,
       source: 'map_calendar_reminder',
       sourceReminderId: reminderId,
       sourceAreaId: reminder.areaId || '',
@@ -152,12 +175,17 @@ export const useCalendarStore = defineStore('calendar', () => {
       titleEn: reminder.titleEn || 'Map reminder',
       summaryZh: reminder.summaryZh || '',
       summaryEn: reminder.summaryEn || '',
-      startsAt: reminder.dueAt,
+      startsAt: hasEditedTime ? existing.startsAt : reminderStartsAt,
+      originalStartsAt: existing?.originalStartsAt || reminderStartsAt,
+      timeEditedAt: existing?.timeEditedAt || 0,
       status: CALENDAR_EVENT_STATUS_CONFIRMED,
       pinned: reminder.pinned === true,
       route: reminder.route || '/map',
       icon: reminder.icon || 'fas fa-location-dot',
       tone: reminder.tone || 'blue',
+      scheduledPushId: existing?.scheduledPushId || '',
+      scheduledPushAt: existing?.scheduledPushAt || 0,
+      lastPushError: existing?.lastPushError || '',
     })
   }
 
@@ -179,6 +207,260 @@ export const useCalendarStore = defineStore('calendar', () => {
         pinned: pinned === true,
       }),
     )
+  }
+
+  const canUseCalendarEventRealPush = () => {
+    const systemStore = getSystemStore()
+    const systemSettings = systemStore.settings?.system || {}
+    return (
+      systemSettings.notifications !== false &&
+      systemSettings.realPushEnabled === true &&
+      systemSettings.pushSubscriptionActive === true &&
+      typeof systemSettings.pushServerUrl === 'string' &&
+      systemSettings.pushServerUrl.trim() &&
+      typeof systemSettings.pushDeviceId === 'string' &&
+      systemSettings.pushDeviceId.trim()
+    )
+  }
+
+  const buildCalendarEventNotification = (event) => {
+    const systemStore = getSystemStore()
+    const useChinese = String(systemStore.settings?.system?.language || '')
+      .toLowerCase()
+      .startsWith('zh')
+    return {
+      id: `calendar_event_${event.id}`,
+      title: useChinese ? '日历' : 'Calendar',
+      content: useChinese
+        ? `${event.titleZh || event.titleEn || '日历事件'} 即将开始。`
+        : `${event.titleEn || event.titleZh || 'Calendar event'} is coming up.`,
+      route: '/calendar',
+      source: 'calendar_event',
+      createdAt: event.startsAt || Date.now(),
+    }
+  }
+
+  const markEventPushState = (eventId, patch = {}) => {
+    const event = findEventById(eventId)
+    if (!event) return false
+    return Boolean(
+      upsertEvent({
+        ...event,
+        ...patch,
+      }),
+    )
+  }
+
+  const cancelEventPushScheduled = async ({ eventId = '', scheduleId = '', source = '' } = {}) => {
+    const systemStore = getSystemStore()
+    const event = findEventById(eventId)
+    const nextScheduleId =
+      trimLine(scheduleId, '', 140) ||
+      trimLine(event?.scheduledPushId, '', 140) ||
+      createCalendarEventScheduleId(eventId)
+
+    if (!nextScheduleId) return { ok: false, reason: 'schedule_missing' }
+    if (eventPushCancelPromise) return eventPushCancelPromise
+
+    eventPushCancelPromise = (async () => {
+      try {
+        const serverUrl = systemStore.settings?.system?.pushServerUrl || ''
+        if (!serverUrl) {
+          if (event?.id) {
+            markEventPushState(event.id, {
+              scheduledPushId: '',
+              scheduledPushAt: 0,
+            })
+          }
+          return { ok: false, reason: 'server_url_missing' }
+        }
+
+        const result = await cancelScheduledPushNotification({
+          serverUrl,
+          scheduleId: nextScheduleId,
+        })
+
+        if (event?.id) {
+          markEventPushState(event.id, {
+            scheduledPushId: '',
+            scheduledPushAt: 0,
+            lastPushError: result.ok ? '' : result.reason || 'cancel_schedule_failed',
+          })
+        }
+
+        if (!result.ok) {
+          systemStore.addApiReport({
+            level: 'error',
+            module: 'push',
+            action: 'cancel_schedule',
+            provider: 'push_relay',
+            model: source || 'calendar_event',
+            code: result.reason || 'cancel_schedule_failed',
+            message: result.message || 'Failed to cancel scheduled Calendar event push.',
+            createdAt: Date.now(),
+          })
+          return result
+        }
+
+        return {
+          ok: true,
+          removed: result.removed === true,
+          scheduleId: nextScheduleId,
+        }
+      } finally {
+        eventPushCancelPromise = null
+      }
+    })()
+
+    return eventPushCancelPromise
+  }
+
+  const cancelEventPushScheduledBySourceReminderId = async (reminderId, options = {}) => {
+    const event = findEventBySourceReminderId(reminderId)
+    if (!event) return { ok: false, reason: 'event_missing' }
+    return cancelEventPushScheduled({
+      eventId: event.id,
+      source: options.source || 'calendar_event_source_reminder',
+    })
+  }
+
+  const ensureEventPushScheduled = async (eventId, { force = false, source = '' } = {}) => {
+    const systemStore = getSystemStore()
+    const event = findEventById(eventId)
+    if (!event || event.status !== CALENDAR_EVENT_STATUS_CONFIRMED) {
+      return { ok: false, reason: 'event_missing' }
+    }
+    if (!event.startsAt) return { ok: false, reason: 'deliver_at_invalid' }
+    if (!canUseCalendarEventRealPush()) return { ok: false, reason: 'real_push_disabled' }
+    if (eventPushSchedulePromise) return eventPushSchedulePromise
+    if (!force && event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+      return {
+        ok: true,
+        reason: 'already_scheduled',
+        scheduleId: event.scheduledPushId,
+        deliverAt: event.scheduledPushAt,
+      }
+    }
+
+    const scheduleId = event.scheduledPushId || createCalendarEventScheduleId(event.id)
+    const notification = {
+      ...buildCalendarEventNotification(event),
+      pushDisplayMode: systemStore.settings.system.pushDisplayMode || 'minimal',
+    }
+
+    eventPushSchedulePromise = (async () => {
+      try {
+        const result = await schedulePushNotification({
+          serverUrl: systemStore.settings.system.pushServerUrl,
+          deviceId: systemStore.settings.system.pushDeviceId,
+          deliverAt: event.startsAt,
+          scheduleId,
+          source: source || 'calendar_event',
+          category: 'calendar_event',
+          notification,
+        })
+
+        if (!result.ok) {
+          markEventPushState(event.id, {
+            lastPushError: result.reason || 'schedule_failed',
+          })
+          systemStore.addApiReport({
+            level: 'error',
+            module: 'push',
+            action: 'schedule',
+            provider: 'push_relay',
+            model: source || 'calendar_event',
+            code: result.reason || 'schedule_failed',
+            message: result.message || 'Failed to schedule Calendar event push.',
+            createdAt: Date.now(),
+          })
+          return result
+        }
+
+        markEventPushState(event.id, {
+          scheduledPushId: result.scheduleId || scheduleId,
+          scheduledPushAt: result.deliverAt || event.startsAt,
+          lastPushError: '',
+        })
+
+        systemStore.addApiReport({
+          level: 'info',
+          module: 'push',
+          action: 'schedule',
+          provider: 'push_relay',
+          model: source || 'calendar_event',
+          message: 'Calendar event push scheduled.',
+          createdAt: Date.now(),
+        })
+
+        return {
+          ok: true,
+          scheduleId: result.scheduleId || scheduleId,
+          deliverAt: result.deliverAt || event.startsAt,
+        }
+      } finally {
+        eventPushSchedulePromise = null
+      }
+    })()
+
+    return eventPushSchedulePromise
+  }
+
+  const rescheduleEventPush = async (eventId, { source = '' } = {}) => {
+    const event = findEventById(eventId)
+    if (!event) return { ok: false, reason: 'event_missing' }
+    if (event.scheduledPushId && event.scheduledPushAt !== event.startsAt) {
+      await cancelEventPushScheduled({
+        eventId: event.id,
+        scheduleId: event.scheduledPushId,
+        source: source || 'calendar_event_reschedule',
+      })
+    }
+    return ensureEventPushScheduled(event.id, {
+      force: true,
+      source: source || 'calendar_event_reschedule',
+    })
+  }
+
+  const setEventStartsAt = (eventId, startsAt) => {
+    const event = findEventById(eventId)
+    const normalizedStartsAt = Math.max(0, toInt(startsAt, 0))
+    if (!event || normalizedStartsAt <= 0) return false
+    return Boolean(
+      upsertEvent({
+        ...event,
+        startsAt: normalizedStartsAt,
+        originalStartsAt: event.originalStartsAt || event.startsAt,
+        timeEditedAt: Date.now(),
+      }),
+    )
+  }
+
+  const setEventStartsAtBySourceReminderId = (reminderId, startsAt) => {
+    const event = findEventBySourceReminderId(reminderId)
+    if (!event) return false
+    return setEventStartsAt(event.id, startsAt)
+  }
+
+  const resetEventStartsAt = (eventId) => {
+    const event = findEventById(eventId)
+    if (!event) return false
+    const originalStartsAt = Math.max(0, toInt(event.originalStartsAt || event.startsAt, 0))
+    if (originalStartsAt <= 0) return false
+    return Boolean(
+      upsertEvent({
+        ...event,
+        startsAt: originalStartsAt,
+        originalStartsAt,
+        timeEditedAt: 0,
+      }),
+    )
+  }
+
+  const resetEventStartsAtBySourceReminderId = (reminderId) => {
+    const event = findEventBySourceReminderId(reminderId)
+    if (!event) return false
+    return resetEventStartsAt(event.id)
   }
 
   const applyPersistedSource = (source) => {
@@ -258,6 +540,14 @@ export const useCalendarStore = defineStore('calendar', () => {
     upsertEventFromMapReminder,
     removeEventBySourceReminderId,
     setEventPinnedBySourceReminderId,
+    ensureEventPushScheduled,
+    rescheduleEventPush,
+    cancelEventPushScheduled,
+    cancelEventPushScheduledBySourceReminderId,
+    setEventStartsAt,
+    setEventStartsAtBySourceReminderId,
+    resetEventStartsAt,
+    resetEventStartsAtBySourceReminderId,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,
