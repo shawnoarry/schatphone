@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
@@ -19,6 +19,7 @@ const createTestRouter = () =>
 
 describe('worldbook view filters', () => {
   let wrapper = null
+  let router = null
   let systemStore = null
 
   beforeEach(async () => {
@@ -44,7 +45,7 @@ describe('worldbook view filters', () => {
       enabled: true,
     })
 
-    const router = createTestRouter()
+    router = createTestRouter()
     await router.push('/worldbook')
     await router.isReady()
 
@@ -59,6 +60,7 @@ describe('worldbook view filters', () => {
   afterEach(() => {
     if (wrapper) wrapper.unmount()
     wrapper = null
+    router = null
     systemStore = null
   })
 
@@ -119,5 +121,34 @@ describe('worldbook view filters', () => {
       tags: ['travel', 'map', 'safety'],
     })
     expect(wrapper.find('[data-testid="knowledge-editing-state"]').exists()).toBe(false)
+  })
+
+  test('supports deep-link scoping from module context and clearing back to full list', async () => {
+    const routePoint = systemStore.listKnowledgePoints().find((point) => point.title === 'Route memory')
+    expect(routePoint?.id).toBeTruthy()
+
+    await router.push({
+      path: '/worldbook',
+      query: {
+        source: 'map',
+        point: routePoint.id,
+      },
+    })
+    await flushPromises()
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="knowledge-deeplink-banner"]').text()).toContain('Route memory')
+    expect(wrapper.findAll('[data-testid="knowledge-point-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Route memory')
+    expect(wrapper.text()).not.toContain('Tea rituals')
+
+    await wrapper.get('[data-testid="knowledge-deeplink-clear"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/worldbook')
+    expect(Object.keys(router.currentRoute.value.query)).toHaveLength(0)
+    expect(wrapper.find('[data-testid="knowledge-deeplink-banner"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="knowledge-point-card"]')).toHaveLength(3)
   })
 })

@@ -6,6 +6,7 @@ import { useI18n } from '../composables/useI18n'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
 import { useSystemStore } from '../stores/system'
+import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -96,8 +97,17 @@ const openMap = () => {
   router.push('/map')
 }
 
-const openWorldBook = () => {
-  router.push('/worldbook')
+const openWorldBook = (options = {}) => {
+  router.push({
+    path: '/worldbook',
+    query: buildWorldBookRouteQuery({
+      source: 'calendar',
+      pointIds: options.pointIds,
+      keyword: options.keyword,
+      tag: options.tag,
+      usage: options.usage,
+    }),
+  })
 }
 
 const buildKnowledgePointContextTags = (item = {}) => {
@@ -446,7 +456,11 @@ watch(
               <p class="text-[11px] font-medium text-blue-700">
                 {{ t('Related knowledge points', 'Related knowledge points') }}
               </p>
-              <button type="button" class="text-[11px] text-blue-600" @click="openWorldBook">
+              <button
+                type="button"
+                class="text-[11px] text-blue-600"
+                @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id).map((point) => point.id) })"
+              >
                 WorldBook
               </button>
             </div>
@@ -457,7 +471,7 @@ watch(
                 type="button"
                 class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] text-blue-700"
                 :data-testid="`calendar-reminder-worldbook-chip-${reminder.id}-${point.id}`"
-                @click="openWorldBook"
+                @click="openWorldBook({ pointIds: [point.id] })"
               >
                 {{ point.title }}
               </button>
@@ -555,7 +569,11 @@ watch(
                 <p class="text-[11px] font-medium text-blue-700">
                   {{ t('Related knowledge points', 'Related knowledge points') }}
                 </p>
-                <button type="button" class="text-[11px] text-blue-600" @click="openWorldBook">
+                <button
+                  type="button"
+                  class="text-[11px] text-blue-600"
+                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(eventKnowledgePoints, event.id).map((point) => point.id) })"
+                >
                   WorldBook
                 </button>
               </div>
@@ -566,7 +584,7 @@ watch(
                   type="button"
                   class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
                   :data-testid="`calendar-event-worldbook-chip-${event.id}-${point.id}`"
-                  @click="openWorldBook"
+                  @click="openWorldBook({ pointIds: [point.id] })"
                 >
                   {{ point.title }}
                 </button>

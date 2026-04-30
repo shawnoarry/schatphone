@@ -4,8 +4,10 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
+import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import {
   MEDIA_KIND,
@@ -18,6 +20,7 @@ import {
 const router = useRouter()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
+const systemStore = useSystemStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -62,6 +65,19 @@ let runtimeTimer = null
 
 const goHome = () => {
   router.push('/home')
+}
+
+const openWorldBook = (options = {}) => {
+  router.push({
+    path: '/worldbook',
+    query: buildWorldBookRouteQuery({
+      source: 'map',
+      pointIds: options.pointIds,
+      keyword: options.keyword,
+      tag: options.tag,
+      usage: options.usage,
+    }),
+  })
 }
 
 const useAddressAsCurrent = (addressId) => {
@@ -657,6 +673,88 @@ const unlockedMapAreaCount = computed(() =>
 )
 const visibleMapAreaUnlocks = computed(() => mapAreaUnlocks.value.slice(0, 4))
 const visibleMapAreaFeedback = computed(() => mapAreaFeedback.value.slice(0, 4))
+const visibleTripHistory = computed(() => tripHistory.value.slice(0, 8))
+
+const buildMapKnowledgeContextTexts = (item = {}) =>
+  [
+    item.titleZh,
+    item.titleEn,
+    item.summaryZh,
+    item.summaryEn,
+    item.areaLabelZh,
+    item.areaLabelEn,
+    item.descriptionZh,
+    item.descriptionEn,
+    item.routeLabel,
+    item.from,
+    item.to,
+    item.fromLabel,
+    item.toLabel,
+    item.tierLabelZh,
+    item.tierLabelEn,
+    item.eventTitleZh,
+    item.eventTitleEn,
+    item.eventSummaryZh,
+    item.eventSummaryEn,
+  ]
+    .filter((value) => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+const buildMapKnowledgeContextTags = (item = {}, options = {}) => {
+  const tags = ['map', 'travel']
+  const kind = typeof options.kind === 'string' ? options.kind.trim() : ''
+  if (kind) tags.push(kind)
+
+  const areaId = typeof item.areaId === 'string' && item.areaId.trim() ? item.areaId.trim() : ''
+  const tier = typeof item.tier === 'string' && item.tier.trim() ? item.tier.trim() : ''
+  const eventKind =
+    typeof item.eventKind === 'string' && item.eventKind.trim() ? item.eventKind.trim() : ''
+
+  if (areaId) tags.push(areaId)
+  if (tier) tags.push(tier)
+  if (eventKind) tags.push(eventKind)
+
+  return tags
+}
+
+const buildRelatedKnowledgePointIndex = (items = [], options = {}) =>
+  Object.fromEntries(
+    items
+      .map((item) => {
+        const itemKey =
+          typeof item?.id === 'string' && item.id.trim()
+            ? item.id.trim()
+            : typeof item?.key === 'string' && item.key.trim()
+              ? item.key.trim()
+              : ''
+        if (!itemKey) return null
+        return [
+          itemKey,
+          systemStore.findRelevantKnowledgePoints({
+            texts: buildMapKnowledgeContextTexts(item),
+            tags: buildMapKnowledgeContextTags(item, options),
+            limit: 3,
+          }),
+        ]
+      })
+      .filter(Boolean),
+  )
+
+const mapAreaFeedbackKnowledgePoints = computed(() =>
+  buildRelatedKnowledgePointIndex(visibleMapAreaFeedback.value, { kind: 'area_feedback' }),
+)
+const routeFamiliarityKnowledgePoints = computed(() =>
+  buildRelatedKnowledgePointIndex(visibleRouteFamiliarity.value, { kind: 'route' }),
+)
+const tripHistoryKnowledgePoints = computed(() =>
+  buildRelatedKnowledgePointIndex(visibleTripHistory.value, { kind: 'trip_history' }),
+)
+
+const getRelatedKnowledgePoints = (collection, itemId) => {
+  const source = collection?.value ?? collection ?? {}
+  return source[itemId] || []
+}
 
 const getRouteFamiliarityNextHint = (route) => {
   if (!route?.nextTier) {
@@ -1188,6 +1286,7 @@ onBeforeUnmount(() => {
           <div
             v-for="feedback in visibleMapAreaFeedback"
             :key="feedback.id"
+            :data-testid="`map-area-feedback-card-${feedback.id}`"
             class="rounded-lg border border-white/30 bg-white/45 p-2"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1214,6 +1313,36 @@ onBeforeUnmount(() => {
             <p v-if="feedback.routeLabel" class="mt-1 text-[11px] text-gray-500">
               {{ t(`参考路线：${feedback.routeLabel}`, `Route cue: ${feedback.routeLabel}`) }}
             </p>
+            <div
+              v-if="getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id).length > 0"
+              :data-testid="`map-area-feedback-worldbook-${feedback.id}`"
+              class="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[11px] font-medium text-blue-700">
+                  {{ t('Related knowledge points', 'Related knowledge points') }}
+                </p>
+                <button
+                  type="button"
+                  class="text-[11px] text-blue-600"
+                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id).map((point) => point.id) })"
+                >
+                  WorldBook
+                </button>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button
+                  v-for="point in getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id)"
+                  :key="point.id"
+                  type="button"
+                  class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] text-blue-700"
+                  :data-testid="`map-area-feedback-worldbook-chip-${feedback.id}-${point.id}`"
+                  @click="openWorldBook({ pointIds: [point.id] })"
+                >
+                  {{ point.title }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1338,6 +1467,7 @@ onBeforeUnmount(() => {
           <div
             v-for="route in visibleRouteFamiliarity"
             :key="route.key"
+            :data-testid="`map-route-card-${route.key}`"
             class="rounded-lg border border-white/30 bg-white/45 p-2"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1360,6 +1490,36 @@ onBeforeUnmount(() => {
             <p class="mt-1 text-[11px] text-gray-500">
               {{ getRouteFamiliarityNextHint(route) }}
             </p>
+            <div
+              v-if="getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key).length > 0"
+              :data-testid="`map-route-worldbook-${route.key}`"
+              class="mt-3 rounded-lg border border-blue-100 bg-white p-3"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[11px] font-medium text-blue-700">
+                  {{ t('Related knowledge points', 'Related knowledge points') }}
+                </p>
+                <button
+                  type="button"
+                  class="text-[11px] text-blue-600"
+                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key).map((point) => point.id) })"
+                >
+                  WorldBook
+                </button>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button
+                  v-for="point in getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key)"
+                  :key="point.id"
+                  type="button"
+                  class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
+                  :data-testid="`map-route-worldbook-chip-${route.key}-${point.id}`"
+                  @click="openWorldBook({ pointIds: [point.id] })"
+                >
+                  {{ point.title }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1425,8 +1585,9 @@ onBeforeUnmount(() => {
         </p>
         <div v-else class="space-y-2">
           <div
-            v-for="item in tripHistory"
+            v-for="item in visibleTripHistory"
             :key="item.id"
+            :data-testid="`map-trip-history-card-${item.id}`"
             class="border rounded-lg p-2"
           >
             <p class="text-xs text-gray-600">
@@ -1461,6 +1622,36 @@ onBeforeUnmount(() => {
               <p v-if="item.eventSummaryZh || item.eventSummaryEn">
                 {{ t(item.eventSummaryZh || item.eventSummaryEn, item.eventSummaryEn || item.eventSummaryZh) }}
               </p>
+            </div>
+            <div
+              v-if="getRelatedKnowledgePoints(tripHistoryKnowledgePoints, item.id).length > 0"
+              :data-testid="`map-trip-history-worldbook-${item.id}`"
+              class="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[11px] font-medium text-blue-700">
+                  {{ t('Related knowledge points', 'Related knowledge points') }}
+                </p>
+                <button
+                  type="button"
+                  class="text-[11px] text-blue-600"
+                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(tripHistoryKnowledgePoints, item.id).map((point) => point.id) })"
+                >
+                  WorldBook
+                </button>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button
+                  v-for="point in getRelatedKnowledgePoints(tripHistoryKnowledgePoints, item.id)"
+                  :key="point.id"
+                  type="button"
+                  class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] text-blue-700"
+                  :data-testid="`map-trip-history-worldbook-chip-${item.id}-${point.id}`"
+                  @click="openWorldBook({ pointIds: [point.id] })"
+                >
+                  {{ point.title }}
+                </button>
+              </div>
             </div>
           </div>
         </div>

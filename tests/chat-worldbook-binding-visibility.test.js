@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import { useChatStore } from '../src/stores/chat'
@@ -50,6 +50,7 @@ const createTestRouter = () =>
       { path: '/chat', component: DummyView },
       { path: '/chat/:id', component: ChatView },
       { path: '/home', component: DummyView },
+      { path: '/worldbook', component: DummyView },
       { path: '/gallery', component: DummyView },
       { path: '/map', component: DummyView },
       { path: '/wallet', component: DummyView },
@@ -158,5 +159,20 @@ describe('chat worldbook binding visibility', () => {
     expect(systemPrompt).not.toContain('Hidden note')
     expect(systemPrompt).not.toContain('Tea rituals')
     expect(wrapper.text()).toContain('Mocked worldbook reply.')
+  })
+
+  test('deep-links active injected points into WorldBook filters', async () => {
+    await wrapper.get('[data-testid="chat-thread-menu-toggle"]').trigger('click')
+    await flushUi()
+
+    await wrapper.get(`[data-testid="thread-worldbook-point-${injectedPoint.id}"]`).trigger('click')
+    await flushPromises()
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/worldbook')
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'chat',
+      point: injectedPoint.id,
+    })
   })
 })

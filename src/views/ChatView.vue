@@ -27,6 +27,7 @@ import {
   resolveMediaSizeLimitBytes,
   validateMediaFileBySize,
 } from '../lib/media-policy'
+import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
@@ -1259,6 +1260,19 @@ const activeThreadWorldKernelState = computed(() => {
     injectedPoints,
   }
 })
+
+const openWorldBookFromThreadContext = (pointId = '') => {
+  const directPointId = typeof pointId === 'string' ? pointId.trim() : ''
+  const injectedPointIds = activeThreadWorldKernelState.value.injectedPoints.map((point) => point.id)
+  router.push({
+    path: '/worldbook',
+    query: buildWorldBookRouteQuery({
+      source: 'chat',
+      pointIds: directPointId ? [directPointId] : injectedPointIds,
+      usage: directPointId || injectedPointIds.length > 0 ? 'all' : 'chat_ready',
+    }),
+  })
+}
 
 const getContextSourceMessages = (contactId, options = {}) => {
   const allMessages = chatStore.getMessagesByContactId(contactId)
@@ -3974,9 +3988,19 @@ onBeforeUnmount(() => {
                 }}
               </p>
             </div>
-            <span class="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] text-blue-700">
-              {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
-            </span>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                data-testid="thread-worldbook-open"
+                class="rounded-full border border-blue-200 bg-white px-2 py-1 text-[11px] text-blue-700"
+                @click="openWorldBookFromThreadContext()"
+              >
+                WorldBook
+              </button>
+              <span class="rounded-full bg-white px-2 py-1 text-[11px] text-blue-700">
+                {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
+              </span>
+            </div>
           </div>
 
           <div class="rounded-lg border border-white bg-white/80 p-2">
@@ -4031,14 +4055,16 @@ onBeforeUnmount(() => {
               v-if="activeThreadWorldKernelState.injectedPoints.length > 0"
               class="mt-2 flex flex-wrap gap-2"
             >
-              <span
+              <button
                 v-for="point in activeThreadWorldKernelState.injectedPoints"
                 :key="point.id"
+                type="button"
                 :data-testid="`thread-worldbook-point-${point.id}`"
                 class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
+                @click="openWorldBookFromThreadContext(point.id)"
               >
                 {{ point.title }}
-              </span>
+              </button>
             </div>
             <p
               v-else

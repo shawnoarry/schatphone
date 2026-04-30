@@ -3,8 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
-import CalendarView from '../src/views/CalendarView.vue'
-import { useCalendarStore } from '../src/stores/calendar'
+import MapView from '../src/views/MapView.vue'
 import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
 
@@ -14,24 +13,23 @@ const createTestRouter = () =>
   createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/calendar', component: CalendarView },
+      { path: '/map', component: MapView },
       { path: '/home', component: DummyView },
-      { path: '/map', component: DummyView },
+      { path: '/gallery', component: DummyView },
+      { path: '/settings', component: DummyView },
       { path: '/worldbook', component: DummyView },
     ],
   })
 
-describe('calendar worldbook context', () => {
+describe('map worldbook context', () => {
   let wrapper = null
   let router = null
-  let calendarStore = null
   let mapStore = null
   let systemStore = null
 
   beforeEach(async () => {
     localStorage.clear()
     setActivePinia(createPinia())
-    calendarStore = useCalendarStore()
     mapStore = useMapStore()
     systemStore = useSystemStore()
 
@@ -54,7 +52,7 @@ describe('calendar worldbook context', () => {
         map: {
           tripHistory: [
             {
-              id: 'calendar_worldbook_trip',
+              id: 'map_worldbook_trip',
               status: 'arrived',
               from: 'Home',
               to: 'Office',
@@ -72,15 +70,11 @@ describe('calendar worldbook context', () => {
       }),
     ).toBe(true)
 
-    const reminderId = mapStore.mapCalendarReminders[0]?.id
-    expect(reminderId).toBeTruthy()
-    expect(mapStore.confirmMapCalendarReminder(reminderId)).toBe(true)
-
     router = createTestRouter()
-    await router.push('/calendar')
+    await router.push('/map')
     await router.isReady()
 
-    wrapper = mount(CalendarView, {
+    wrapper = mount(MapView, {
       global: {
         plugins: [router],
       },
@@ -94,47 +88,56 @@ describe('calendar worldbook context', () => {
     if (wrapper) wrapper.unmount()
     wrapper = null
     router = null
-    calendarStore = null
     mapStore = null
     systemStore = null
   })
 
-  test('shows related WorldBook knowledge points for reminders and confirmed events', async () => {
-    const reminderId = mapStore.mapCalendarReminders[0]?.id
+  const findByTestId = (testId) =>
+    wrapper
+      .findAll('[data-testid]')
+      .find((node) => node.attributes('data-testid') === testId)
+
+  test('shows related WorldBook knowledge points across map feedback, route familiarity, and trip history', async () => {
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
-    const eventId = calendarStore.upcomingEvents[0]?.id
+    const feedbackId = mapStore.mapAreaFeedback[0]?.id
+    const routeKey = mapStore.routeFamiliarity[0]?.key
+    const tripId = mapStore.tripHistory[0]?.id
 
-    expect(reminderId).toBeTruthy()
     expect(routePoint?.id).toBeTruthy()
-    expect(eventId).toBeTruthy()
+    expect(feedbackId).toBeTruthy()
+    expect(routeKey).toBeTruthy()
+    expect(tripId).toBeTruthy()
 
-    const reminderContext = wrapper.get(`[data-testid="calendar-reminder-worldbook-${reminderId}"]`)
-    expect(reminderContext.text()).toContain('Route memory')
-    expect(reminderContext.text()).not.toContain('Tea rituals')
+    const feedbackContext = findByTestId(`map-area-feedback-worldbook-${feedbackId}`)
+    expect(feedbackContext?.exists()).toBe(true)
+    expect(feedbackContext.text()).toContain('Route memory')
+    expect(feedbackContext.text()).not.toContain('Tea rituals')
 
-    const eventContext = wrapper.get(`[data-testid="calendar-event-worldbook-${eventId}"]`)
-    expect(eventContext.text()).toContain('Route memory')
-    expect(
-      wrapper.find(`[data-testid="calendar-event-worldbook-chip-${eventId}-${routePoint.id}"]`).exists(),
-    ).toBe(true)
+    const routeContext = findByTestId(`map-route-worldbook-${routeKey}`)
+    expect(routeContext?.exists()).toBe(true)
+    expect(routeContext.text()).toContain('Route memory')
+    expect(findByTestId(`map-route-worldbook-chip-${routeKey}-${routePoint.id}`)?.exists()).toBe(true)
+
+    const tripContext = findByTestId(`map-trip-history-worldbook-${tripId}`)
+    expect(tripContext?.exists()).toBe(true)
+    expect(tripContext.text()).toContain('Route memory')
+    expect(tripContext.text()).not.toContain('Tea rituals')
   })
 
-  test('deep-links reminder context into WorldBook filters', async () => {
-    const reminderId = mapStore.mapCalendarReminders[0]?.id
+  test('deep-links map context into WorldBook filters', async () => {
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
+    const feedbackId = mapStore.mapAreaFeedback[0]?.id
 
-    expect(reminderId).toBeTruthy()
     expect(routePoint?.id).toBeTruthy()
+    expect(feedbackId).toBeTruthy()
 
-    await wrapper
-      .get(`[data-testid="calendar-reminder-worldbook-chip-${reminderId}-${routePoint.id}"]`)
-      .trigger('click')
+    await findByTestId(`map-area-feedback-worldbook-chip-${feedbackId}-${routePoint.id}`).trigger('click')
     await flushPromises()
     await nextTick()
 
     expect(router.currentRoute.value.path).toBe('/worldbook')
     expect(router.currentRoute.value.query).toMatchObject({
-      source: 'calendar',
+      source: 'map',
       point: routePoint.id,
     })
   })

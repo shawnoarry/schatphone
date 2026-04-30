@@ -1,13 +1,20 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import {
+  normalizeWorldBookPointIds,
+  normalizeWorldBookSource,
+  normalizeWorldBookTagFilter,
+  normalizeWorldBookUsageFilter,
+} from '../lib/worldbook-navigation'
 
+const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
@@ -32,6 +39,11 @@ const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
 const knowledgeUsageSort = ref('recent')
+const knowledgeDeepLinkPointIds = ref([])
+const knowledgeDeepLinkSource = ref('')
+const knowledgeDeepLinkKeyword = ref('')
+const knowledgeDeepLinkTag = ref('all')
+const knowledgeDeepLinkUsage = ref('all')
 const roleProfileChatBindingMap = computed(() => {
   const map = new Map()
   contacts.value.forEach((contact) => {
@@ -257,7 +269,7 @@ const getKnowledgePointUsageState = (point) => {
 }
 
 const knowledgeUsageFilterOptions = computed(() => {
-  const counts = searchedKnowledgePoints.value.reduce(
+  const counts = scopedKnowledgePoints.value.reduce(
     (acc, point) => {
       const state = getKnowledgePointUsageState(point)
       acc.all += 1
@@ -290,13 +302,19 @@ const searchedKnowledgePoints = computed(() =>
   }),
 )
 
+const scopedKnowledgePoints = computed(() => {
+  if (knowledgeDeepLinkPointIds.value.length <= 0) return searchedKnowledgePoints.value
+  const pointIdSet = new Set(knowledgeDeepLinkPointIds.value)
+  return searchedKnowledgePoints.value.filter((point) => pointIdSet.has(point.id))
+})
+
 const knowledgeSearchPlaceholder = computed(() =>
   t('搜索标题、内容或标签', 'Search title, content, or tags'),
 )
 
 const knowledgeTagFilterOptions = computed(() => {
   const counts = new Map()
-  const usageFilteredPoints = searchedKnowledgePoints.value.filter(
+  const usageFilteredPoints = scopedKnowledgePoints.value.filter(
     (point) =>
       knowledgeUsageFilter.value === 'all' || getKnowledgePointUsageState(point) === knowledgeUsageFilter.value,
   )
@@ -369,7 +387,7 @@ const visibleKnowledgePoints = computed(() => {
     chat_ready: 3,
   }
 
-  return searchedKnowledgePoints.value
+  return scopedKnowledgePoints.value
     .filter((point) => filter === 'all' || getKnowledgePointUsageState(point) === filter)
     .filter(
       (point) =>
@@ -394,6 +412,81 @@ const visibleKnowledgePoints = computed(() => {
       return knowledgePointUpdatedAt(b) - knowledgePointUpdatedAt(a) || compareKnowledgePointTitle(a, b)
     })
 })
+
+const knowledgeDeepLinkPoints = computed(() =>
+  knowledgeDeepLinkPointIds.value
+    .map((pointId) => systemStore.getKnowledgePointById(pointId))
+    .filter(Boolean),
+)
+
+const knowledgeDeepLinkActive = computed(
+  () =>
+    knowledgeDeepLinkPointIds.value.length > 0 ||
+    Boolean(knowledgeDeepLinkSource.value) ||
+    Boolean(knowledgeDeepLinkKeyword.value) ||
+    knowledgeDeepLinkTag.value !== 'all' ||
+    knowledgeDeepLinkUsage.value !== 'all',
+)
+
+const knowledgeDeepLinkSourceLabel = computed(() => {
+  if (knowledgeDeepLinkSource.value === 'calendar') return t('Calendar', 'Calendar')
+  if (knowledgeDeepLinkSource.value === 'map') return t('Map', 'Map')
+  if (knowledgeDeepLinkSource.value === 'chat') return t('Chat', 'Chat')
+  return t('模块上下文', 'Module context')
+})
+
+const knowledgeDeepLinkSummary = computed(() => {
+  if (knowledgeDeepLinkPointIds.value.length > 0) {
+    return t(
+      `${knowledgeDeepLinkSourceLabel.value} 带来了 ${knowledgeDeepLinkPointIds.value.length} 条相关知识点筛选。`,
+      `${knowledgeDeepLinkSourceLabel.value} scoped ${knowledgeDeepLinkPointIds.value.length} related knowledge points.`,
+    )
+  }
+  if (knowledgeDeepLinkKeyword.value) {
+    return t(
+      `${knowledgeDeepLinkSourceLabel.value} 预填了关键字：${knowledgeDeepLinkKeyword.value}`,
+      `${knowledgeDeepLinkSourceLabel.value} prefilled keyword: ${knowledgeDeepLinkKeyword.value}`,
+    )
+  }
+  if (knowledgeDeepLinkTag.value !== 'all' || knowledgeDeepLinkUsage.value !== 'all') {
+    return t(
+      `${knowledgeDeepLinkSourceLabel.value} 带来了筛选条件，可直接继续查看相关知识点。`,
+      `${knowledgeDeepLinkSourceLabel.value} applied direct filters for related knowledge points.`,
+    )
+  }
+  return t(
+    `${knowledgeDeepLinkSourceLabel.value} 已把你带到当前相关的 WorldBook 范围。`,
+    `${knowledgeDeepLinkSourceLabel.value} brought you into the relevant WorldBook scope.`,
+  )
+})
+
+const isDeepLinkedKnowledgePoint = (point) =>
+  Boolean(point?.id) && knowledgeDeepLinkPointIds.value.includes(point.id)
+
+const syncWorldBookDeepLink = () => {
+  knowledgeDeepLinkSource.value = normalizeWorldBookSource(route.query.source)
+  knowledgeDeepLinkKeyword.value =
+    typeof route.query.keyword === 'string' ? route.query.keyword.trim() : ''
+  knowledgeDeepLinkTag.value = normalizeWorldBookTagFilter(route.query.tag)
+  knowledgeDeepLinkUsage.value = normalizeWorldBookUsageFilter(route.query.usage)
+
+  const pointIds = normalizeWorldBookPointIds(route.query.points || route.query.point)
+  const existingPointIds = new Set(knowledgePoints.value.map((point) => point.id))
+  knowledgeDeepLinkPointIds.value = pointIds.filter((pointId) => existingPointIds.has(pointId))
+
+  const singlePoint =
+    knowledgeDeepLinkPointIds.value.length === 1
+      ? systemStore.getKnowledgePointById(knowledgeDeepLinkPointIds.value[0])
+      : null
+
+  knowledgeSearchKeyword.value = knowledgeDeepLinkKeyword.value || singlePoint?.title || ''
+  knowledgeTagFilter.value = knowledgeDeepLinkTag.value
+  knowledgeUsageFilter.value = knowledgeDeepLinkUsage.value
+}
+
+const clearKnowledgeDeepLink = () => {
+  router.replace('/worldbook')
+}
 
 const describeKnowledgePointUsage = (point) => {
   const usage = getKnowledgePointUsage(point)
@@ -447,6 +540,14 @@ const removeKnowledgePoint = async (point) => {
   systemStore.saveNow()
   pulseSaved(t('知识点已删除。', 'Knowledge point deleted.'))
 }
+
+watch(
+  () => route.fullPath,
+  () => {
+    syncWorldBookDeepLink()
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   if (savedTimerId) clearTimeout(savedTimerId)
@@ -562,6 +663,40 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="knowledgePoints.length > 0" class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+          <div
+            v-if="knowledgeDeepLinkActive"
+            data-testid="knowledge-deeplink-banner"
+            class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-800 space-y-2"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-medium">
+                  {{ t('来自模块上下文的筛选', 'Scoped from module context') }}
+                </p>
+                <p class="mt-1 text-blue-700">
+                  {{ knowledgeDeepLinkSummary }}
+                </p>
+              </div>
+              <button
+                type="button"
+                data-testid="knowledge-deeplink-clear"
+                class="shrink-0 text-[11px] text-blue-600"
+                @click="clearKnowledgeDeepLink"
+              >
+                {{ t('清除', 'Clear') }}
+              </button>
+            </div>
+            <div v-if="knowledgeDeepLinkPoints.length > 0" class="flex flex-wrap gap-1.5">
+              <span
+                v-for="point in knowledgeDeepLinkPoints"
+                :key="point.id"
+                :data-testid="`knowledge-deeplink-point-${point.id}`"
+                class="rounded-full border border-blue-200 bg-white px-2 py-1 text-[11px] text-blue-700"
+              >
+                {{ point.title }}
+              </span>
+            </div>
+          </div>
           <div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
             <i class="fas fa-search text-[11px] text-gray-400"></i>
             <input
@@ -648,7 +783,8 @@ onBeforeUnmount(() => {
             v-for="point in visibleKnowledgePoints"
             :key="point.id"
             data-testid="knowledge-point-card"
-            class="rounded-xl border border-gray-200 p-3 space-y-1"
+            class="rounded-xl border p-3 space-y-1"
+            :class="isDeepLinkedKnowledgePoint(point) ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-white'"
           >
             <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold truncate">{{ point.title }}</p>

@@ -171,8 +171,8 @@ Status / 状态: `IN_PROGRESS`
      中文：增加标签筛选 chips，并与既有使用状态筛选和排序共同工作。
    - EN: Acceptance: search/tag filters remain local UI state only and do not alter knowledge point records or Chat prompt assembly.
      中文：验收：搜索/标签筛选仍仅为本地 UI 状态，不改变知识点记录，也不改变 Chat 提示词组装。
-   - EN: Next phase candidate: extend WorldBook read-only relevance into Map or add direct WorldBook deep-link filtering from Calendar.
-     中文：下一阶段候选：把 WorldBook 的只读关联扩到 Map，或补 Calendar 直达 WorldBook 的深链筛选。
+   - EN: Next phase candidate: pause WorldBook feature growth and return to low-risk component extraction, starting with Chat thread menu / WorldBook summary.
+     中文：下一阶段候选：暂缓继续堆 WorldBook 功能，回到低风险组件拆分，优先拆 Chat 线程菜单 / WorldBook 摘要区。
 6. EN: P1 Map rewards/events first slice — `DONE`.
    中文：P1 地图奖励/事件第一刀 — `DONE`。
    - EN: Completed trips now write deterministic exploration rewards and lightweight event summaries into trip history.
@@ -731,3 +731,7 @@ Acceptance / 验收标准:
     2026-04-30 中文：已落地 WorldBook 在 Calendar 内的第一阶段消费：日历提醒卡片和已确认事件卡片现在会展示相关知识点。
 66. 2026-04-30 EN: Landed Chat WorldBook binding verification: the thread menu now shows active worldview and injected knowledge points, and an end-to-end test verifies prompt injection.
     2026-04-30 中文：已落地 Chat 的 WorldBook 绑定验收：线程菜单现在会展示当前生效的世界观与注入知识点，且已有端到端测试验证 prompt 注入。
+67. 2026-04-30 EN: Landed WorldBook Map consumption phase-1: Map area feedback, route familiarity, and trip history cards now surface related knowledge points from WorldBook.
+    2026-04-30 中文：已落地 WorldBook 在 Map 内的第一阶段消费：Map 的区域反馈、路线熟悉度、行程记录卡片现在会展示相关知识点。
+68. 2026-05-01 EN: Landed WorldBook deep-link filtering: Calendar, Chat, and Map can now jump into WorldBook with scoped related-point filters and a clearable context banner.
+    2026-05-01 中文：已落地 WorldBook 深链筛选：Calendar、Chat、Map 现在都能带着相关知识点范围跳到 WorldBook，并提供可清除的上下文提示条。

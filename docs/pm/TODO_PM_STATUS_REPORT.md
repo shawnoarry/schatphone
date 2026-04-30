@@ -25,6 +25,8 @@ Source / 来源:
 - WorldBook 已有知识点编辑流已完成：用户现在可以直接打开旧知识点、修改标题/内容/标签并原位保存。
 - WorldBook 已开始在 Calendar 内被消费：日历提醒卡片和已确认事件卡片现在会展示相关知识点，世界书不再只服务于 Chat。
 - Chat 的 WorldBook 绑定验收层已补齐：线程菜单现在能直接看见当前生效的世界观和知识点，且已有端到端测试验证 prompt 注入结果。
+- WorldBook 已开始在 Map 内被消费：区域反馈、路线熟悉度、行程记录卡片现在都会显示相关知识点，地图不再只消费自身事件数据。
+- WorldBook 跨模块直达筛选已补齐：Calendar、Chat、Map 现在都可以带着当前上下文直接跳到 WorldBook。
 - 地图奖励/事件第一刀已完成：完成行程会产生探索点数和轻量事件摘要，取消行程不奖励。
 - 地图路线熟悉度第二刀已完成：已完成行程会自动聚合为常走路线等级，显示完成次数、探索点和下一等级提示。
 - 地图区域解锁第一刀已完成：探索点、常走路线和稳定路线会自动派生区域解锁进度。
@@ -36,7 +38,7 @@ Source / 来源:
 - 日历事件定时推送接入已完成：已确认 Calendar event 会通过现有推送中继安排真实定时推送。
 - 日历事件推送重排/取消守卫已完成：改时间会重排旧推送，忽略地图提醒会取消对应推送，避免旧提醒误送达。
 - 日历推送状态可见性第一阶段已完成：Calendar 会显示真实推送是否就绪、单个事件是否已排程、最近排程/取消记录，以及 AI 安静时段说明。
-- 下一步适合推进：把 WorldBook 的关联消费继续扩展到 Map，或补从 Calendar 直达 WorldBook 的深链筛选。
+- 下一步适合推进：WorldBook 这一阶段已基本收口，回到低风险组件拆分，优先拆 Chat 线程菜单 / WorldBook 摘要区。
 
 ## 2. PM Dashboard / 项目经理仪表盘
 
@@ -46,7 +48,7 @@ Source / 来源:
 | Chat / 聊天 | Green, but large / 可用但文件偏大 | 核心聊天、富消息、手动 AI 触发、设置入口都可用。 | 做低风险组件拆分，避免后续越改越难维护。 |
 | Gallery / 相册素材中台 | Green / 可用 | 已承担全局素材中台职责，支持使用状态、删除保护、相册式体验。 | 决定是否继续抽共享缩略图选择器。 |
 | Settings / 设置 | Green, but dense / 可用但偏密 | 设置、备份、诊断、推送等都集中在同一页，功能强但阅读压力高。 | 适合作为第一批拆组件目标。 |
-| WorldBook + Map / 世界观与地图 | Yellow-green / 基线可用 | 世界书已具备使用可见性、基础管理筛选、搜索/标签筛选、已有知识点编辑流，并已开始在 Calendar 中展示相关知识点；地图已开始补探索奖励、事件反馈、路线熟悉度、区域解锁、区域反馈和可确认日历提醒线索。 | 优先把 WorldBook 的消费链路继续扩到 Map，或补 Calendar -> WorldBook 的直达筛选。 |
+| WorldBook + Map / 世界观与地图 | Green / 一阶段闭环已形成 | 世界书已具备使用可见性、基础管理筛选、搜索/标签筛选、已有知识点编辑流，并已在 Chat、Calendar、Map 三处展示相关知识点；Calendar、Chat、Map 也都能带着上下文直达 WorldBook。 | 暂不继续堆 WorldBook 功能，先回到低风险组件拆分或其他高价值 P1 切片。 |
 | Future modules / 未来模块 | Yellow / 待规划 | Phone、Wallet、Stock、Files、More 仍偏占位或轻量 MVP；Calendar 已有 Map 提醒消费链路、用户确认状态、事件存储、时间编辑、真实定时推送和推送状态可见性。 | 等主沉浸循环更清楚后再扩展其他模块。 |
 | Documentation / 文档 | Green / 已收束 | 已按 PM、路线图、流程、架构、产品决策、归档分类。 | 新任务不要再新建零散路线图。 |
 | Quality guard / 质量守门 | Green / 已增强 | lint/build/test 最近已通过；新增中文乱码守门测试。 | 新功能继续保持同一检查标准。 |
@@ -87,6 +89,10 @@ Source / 来源:
    日历提醒卡片和已确认事件卡片现在会展示相关知识点，世界书第一次开始跨模块被读取。
 13. Chat 的 WorldBook 绑定验收层已补齐。
    线程菜单现在可直接查看当前生效的全局世界观与知识点，且已有端到端测试验证 prompt 注入结果。
+14. WorldBook 已开始在 Map 中被消费。
+   区域反馈、路线熟悉度、行程记录卡片现在都会展示相关知识点，地图状态开始直接读取世界书上下文。
+15. WorldBook 跨模块直达筛选已补齐。
+   Calendar、Chat、Map 现在都能带着当前上下文直接跳到 WorldBook，跨模块查看路径已收口。
 14. 地图奖励/事件第一阶段已完成。
     完成行程会写入探索点数和事件摘要；行程记录会展示总探索进度和单次奖励，取消行程不会奖励。
 14. 地图路线熟悉度第二阶段已完成。
@@ -126,6 +132,8 @@ Source / 来源:
 | P1 | WorldBook 已有知识点编辑流 | Done / 已完成 | 用户可以直接维护已有知识点，不必删除后重建，世界书开始具备持续管理闭环。 |
 | P1 | WorldBook -> Calendar 关联知识点可见性 | Done / 已完成 | Calendar 提醒和事件卡片现在会展示相关知识点，世界书开始真正进入跨模块消费。 |
 | P1 | Chat WorldBook 绑定验收层 | Done / 已完成 | Chat 线程菜单现在可见当前生效的世界观与知识点，并已有端到端测试验证 prompt 注入。 |
+| P1 | WorldBook -> Map 关联知识点可见性 | Done / 已完成 | Map 的区域反馈、路线熟悉度、行程记录卡片现在会展示相关知识点，世界书已进入第三个消费模块。 |
+| P1 | WorldBook 跨模块直达筛选 | Done / 已完成 | Calendar、Chat、Map 现在都能带着当前上下文直接跳到 WorldBook，跨模块查看相关知识点更直接。 |
 | P1 | Map 奖励/事件第一刀 | Done phase-1 / 第一阶段已完成 | 完成行程有可见探索奖励和事件反馈，地图开始从工具走向玩法。 |
 | P1 | Map 路线熟悉度第二刀 | Done phase-2 / 第二阶段已完成 | 已完成行程会形成常走路线等级，用户可以看到路线进度和下一等级目标。 |
 | P1 | Map 区域解锁第一刀 | Done phase-1 / 第一阶段已完成 | 用户可以看到探索行为正在打开哪些区域，地图玩法有了更清晰的成长层。 |
@@ -151,6 +159,8 @@ Source / 来源:
 - 为 WorldBook 增加已有知识点编辑流，支持原位打开、修改并保存标题/内容/标签。
 - 让 Calendar 只读消费 WorldBook：地图提醒卡片和已确认事件卡片现在会展示相关知识点。
 - 为 Chat 增加 WorldBook 绑定可见性与端到端验收：线程菜单可见当前注入上下文，测试会直接校验 system prompt。
+- 让 Map 只读消费 WorldBook：区域反馈、路线熟悉度、行程记录卡片现在会展示相关知识点。
+- 为 Calendar / Chat / Map 增加直达 WorldBook 的深链筛选，保持上下文筛选并支持一键清除。
 - 为 Map 完成行程增加探索点数、轻量事件摘要和行程记录展示。
 - 为 Map 增加路线熟悉度聚合、等级标识和下一等级提示。
 - 为 Map 增加区域解锁进度，基于探索点、熟悉路线和稳定路线自动派生。
@@ -166,7 +176,7 @@ Source / 来源:
 
 建议下一刀：
 
-- 首选：继续把 WorldBook 的关联消费扩到 Map，或补 Calendar -> WorldBook 的直达筛选。
+- 首选：回到低风险组件拆分，优先拆 Chat 线程菜单 / WorldBook 摘要区。
 - 备选：先暂停做一次本地整理，避免未提交变更继续累积。
 - 暂不建议：直接重构 Chat 主消息流，因为风险更高。
 
@@ -210,10 +220,10 @@ Source / 来源:
 
 - `npm run lint` passed.
 - `npm run build` passed.
-- `npm test` passed, 33 test files and 171 tests.
+- `npm test` passed, 34 test files and 176 tests.
 - `git diff --check` passed after Markdown whitespace cleanup.
 
-本次 Chat / WorldBook 绑定验收切片额外验证：`npm test -- tests/chat-worldbook-binding-visibility.test.js tests/chat-role-knowledge-binding.test.js tests/system-world-kernel.test.js` passed（3 files / 8 tests），`npm run lint` passed，`npm test` passed（33 files / 171 tests），`npm run build` passed。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
+本次 WorldBook 深链筛选切片额外验证：`npm test -- tests/worldbook-view-filters.test.js tests/calendar-worldbook-context.test.js tests/map-worldbook-context.test.js tests/chat-worldbook-binding-visibility.test.js` passed（4 files / 9 tests），`npm run lint` passed，`npm test` passed（34 files / 176 tests），`npm run build` passed。由于沙盒限制，test/build 曾遇到 esbuild spawn EPERM，已用授权方式重跑通过。
 
 ## 9. Change Log / 变更记录
 
@@ -272,3 +282,7 @@ Source / 来源:
    2026-04-30：同步 WorldBook 在 Calendar 内的第一阶段消费：日历提醒卡片和已确认事件卡片现在会展示相关知识点。
 22. 2026-04-30: Synced Chat WorldBook binding verification: thread menu now shows the active worldview/knowledge-point context, and an end-to-end test now verifies prompt injection.
    2026-04-30：同步 Chat 的 WorldBook 绑定验收：线程菜单现在会展示当前生效的世界观/知识点上下文，且已有端到端测试验证 prompt 注入。
+23. 2026-04-30: Synced WorldBook Map consumption phase-1: Map area feedback, route familiarity, and trip history cards now surface related knowledge points from WorldBook.
+   2026-04-30：同步 WorldBook 在 Map 内的第一阶段消费：Map 的区域反馈、路线熟悉度、行程记录卡片现在会展示相关知识点。
+24. 2026-05-01: Synced WorldBook deep-link filters: Calendar, Chat, and Map can now jump into WorldBook with scoped related-point filters and a clearable context banner.
+   2026-05-01：同步 WorldBook 深链筛选：Calendar、Chat、Map 现在都能带着相关知识点范围跳到 WorldBook，并提供可清除的上下文提示条。
