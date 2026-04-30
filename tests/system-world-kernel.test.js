@@ -46,6 +46,78 @@ describe('system world kernel', () => {
     expect(store.getKnowledgePointById(created.id)).toBe(null)
   })
 
+  test('updates an existing knowledge point without changing its identity', () => {
+    const store = useSystemStore()
+    const created = store.upsertKnowledgePoint({
+      title: 'City etiquette',
+      content: 'Formal greeting only.',
+      tags: ['style'],
+      enabled: true,
+    })
+
+    expect(created).toBeTruthy()
+    const createdAt = created.createdAt
+
+    const updated = store.upsertKnowledgePoint({
+      id: created.id,
+      title: 'City etiquette v2',
+      content: 'Formal greeting and exit line.',
+      tags: ['style', 'city'],
+      enabled: false,
+    })
+
+    expect(updated).toBeTruthy()
+    expect(updated.id).toBe(created.id)
+    expect(updated.createdAt).toBe(createdAt)
+    expect(updated.updatedAt).toBeGreaterThanOrEqual(createdAt)
+    expect(store.getKnowledgePointById(created.id)).toMatchObject({
+      id: created.id,
+      title: 'City etiquette v2',
+      content: 'Formal greeting and exit line.',
+      enabled: false,
+      tags: ['style', 'city'],
+    })
+  })
+
+  test('finds relevant knowledge points from reminder context', () => {
+    const store = useSystemStore()
+    const routePoint = store.upsertKnowledgePoint({
+      title: 'Route memory',
+      content: 'Safe crossings and station exits for Home to Office.',
+      tags: ['map', 'travel'],
+      enabled: true,
+    })
+    const disabledPoint = store.upsertKnowledgePoint({
+      title: 'Night exit note',
+      content: 'Late-night office exit fallback.',
+      tags: ['map'],
+      enabled: false,
+    })
+    store.upsertKnowledgePoint({
+      title: 'Tea rituals',
+      content: 'Ceremony phrases for late evenings.',
+      tags: ['culture'],
+      enabled: true,
+    })
+
+    const matches = store.findRelevantKnowledgePoints({
+      texts: ['Location feedback from Home to Office, ready to become a later reminder cue.'],
+      tags: ['map', 'travel'],
+      limit: 3,
+    })
+
+    expect(matches.map((item) => item.id)).toEqual([routePoint.id])
+
+    const matchesWithDisabled = store.findRelevantKnowledgePoints({
+      texts: ['Late-night office exit fallback.'],
+      tags: ['map'],
+      enabledOnly: false,
+      limit: 3,
+    })
+
+    expect(matchesWithDisabled.map((item) => item.id)).toContain(disabledPoint.id)
+  })
+
   test('setGlobalWorldview keeps worldBook alias in sync', () => {
     const store = useSystemStore()
     const next = store.setGlobalWorldview('Global baseline v2')
@@ -55,4 +127,3 @@ describe('system world kernel', () => {
     expect(store.user.worldBook).toBe('Global baseline v2')
   })
 })
-

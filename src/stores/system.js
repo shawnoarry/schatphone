@@ -118,6 +118,27 @@ const MAX_KNOWLEDGE_POINT_TITLE_CHARS = 80
 const MAX_KNOWLEDGE_POINT_CONTENT_CHARS = 1600
 const MAX_KNOWLEDGE_POINT_TAGS = 12
 const MAX_KNOWLEDGE_POINT_TAG_CHARS = 24
+const KNOWLEDGE_POINT_MATCH_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'for',
+  'from',
+  'has',
+  'have',
+  'into',
+  'not',
+  'that',
+  'the',
+  'their',
+  'this',
+  'was',
+  'were',
+  'will',
+  'with',
+  'your',
+])
 const DEFAULT_GLOBAL_WORLDVIEW =
   '这是一个赛博朋克风格的近未来世界。科技高度发达，但生活水平差距巨大。大型公司控制着资源与秩序。'
 const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
@@ -274,6 +295,49 @@ const normalizeKnowledgePointList = (rawPoints) => {
     output.push(normalized)
   })
   return output.slice(0, MAX_KNOWLEDGE_POINTS)
+}
+
+const normalizeKnowledgePointMatchValue = (value, maxLength = 240) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, maxLength)
+}
+
+const tokenizeKnowledgePointMatchText = (value) => {
+  const normalized = normalizeKnowledgePointMatchValue(value)
+  if (!normalized) return []
+  return [
+    ...new Set(
+      normalized
+        .split(/[^a-z0-9\u00c0-\u024f\u4e00-\u9fff_-]+/i)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2 && !KNOWLEDGE_POINT_MATCH_STOP_WORDS.has(token)),
+    ),
+  ]
+}
+
+const buildKnowledgePointMatchContext = (options = {}) => {
+  const normalizedTexts = Array.isArray(options.texts)
+    ? options.texts
+        .map((value) => normalizeKnowledgePointMatchValue(value))
+        .filter(Boolean)
+        .slice(0, 12)
+    : []
+  const normalizedTags = Array.isArray(options.tags)
+    ? options.tags
+        .map((value) => normalizeKnowledgePointMatchValue(value, MAX_KNOWLEDGE_POINT_TAG_CHARS))
+        .filter(Boolean)
+        .slice(0, MAX_KNOWLEDGE_POINT_TAGS)
+    : []
+
+  return {
+    phrases: normalizedTexts.filter((value) => value.length >= 4).slice(0, 8),
+    tokens: [...new Set(normalizedTexts.flatMap((value) => tokenizeKnowledgePointMatchText(value)))].slice(0, 24),
+    tags: [
+      ...new Set(
+        normalizedTags.flatMap((value) => [value, ...tokenizeKnowledgePointMatchText(value)]),
+      ),
+    ].slice(0, 24),
+  }
 }
 
 const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAULT_GLOBAL_WORLDVIEW) => {
@@ -1345,6 +1409,73 @@ export const useSystemStore = defineStore('system', () => {
       const haystack = `${item.title || ''}\n${item.content || ''}\n${Array.isArray(item.tags) ? item.tags.join(' ') : ''}`.toLowerCase()
       return haystack.includes(keywordRaw)
     })
+  }
+
+  const findRelevantKnowledgePoints = (options = {}) => {
+    const enabledOnly = options.enabledOnly !== false
+    const limit = clamp(toInt(options.limit, 3), 1, 8)
+    const matchContext = buildKnowledgePointMatchContext(options)
+    if (
+      matchContext.tokens.length === 0 &&
+      matchContext.phrases.length === 0 &&
+      matchContext.tags.length === 0
+    ) {
+      return []
+    }
+
+    return listKnowledgePoints({ enabledOnly })
+      .map((item) => {
+        const title = normalizeKnowledgePointMatchValue(item.title, MAX_KNOWLEDGE_POINT_TITLE_CHARS)
+        const content = normalizeKnowledgePointMatchValue(
+          item.content,
+          MAX_KNOWLEDGE_POINT_CONTENT_CHARS,
+        )
+        const tags = normalizeKnowledgePointTags(item.tags).map((tag) => tag.toLowerCase())
+        let score = 0
+        let tagHits = 0
+        let titleHits = 0
+        let contentHits = 0
+        let phraseHits = 0
+
+        matchContext.tags.forEach((term) => {
+          if (tags.includes(term)) {
+            score += 8
+            tagHits += 1
+          }
+        })
+        matchContext.tokens.forEach((term) => {
+          if (tags.includes(term)) score += 5
+          if (title.includes(term)) {
+            score += term.length >= 4 ? 5 : 4
+            titleHits += 1
+            return
+          }
+          if (content.includes(term)) {
+            score += term.length >= 4 ? 3 : 2
+            contentHits += 1
+          }
+        })
+        matchContext.phrases.forEach((phrase) => {
+          if (title.includes(phrase)) {
+            score += 6
+            phraseHits += 1
+            return
+          }
+          if (content.includes(phrase)) {
+            score += 4
+            phraseHits += 1
+          }
+        })
+
+        const hasConfidentMatch =
+          tagHits > 0 || phraseHits > 0 || titleHits + contentHits >= 2
+        if (!hasConfidentMatch || score <= 0) return null
+        return { item, score }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score || b.item.updatedAt - a.item.updatedAt)
+      .slice(0, limit)
+      .map(({ item }) => item)
   }
 
   const upsertKnowledgePoint = (payload = {}) => {
@@ -2556,6 +2687,7 @@ export const useSystemStore = defineStore('system', () => {
     setGlobalWorldview,
     getKnowledgePointById,
     listKnowledgePoints,
+    findRelevantKnowledgePoints,
     upsertKnowledgePoint,
     setKnowledgePointEnabled,
     removeKnowledgePoint,

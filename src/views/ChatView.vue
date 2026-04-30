@@ -965,27 +965,87 @@ const getGlobalWorldviewText = () => {
   return typeof user.value.worldBook === 'string' ? user.value.worldBook.trim() : ''
 }
 
-const resolveBoundKnowledgePointsForContact = (contact) => {
-  if (!contact || (contact.kind || 'role') !== 'role') return []
+const resolveKnowledgePointBindingStateForContact = (contact) => {
+  if (!contact || (contact.kind || 'role') !== 'role') {
+    return {
+      roleBound: false,
+      profileName: '',
+      configuredCount: 0,
+      enabledPoints: [],
+      disabledCount: 0,
+      missingCount: 0,
+    }
+  }
   const profileId = Number(contact.profileId)
-  if (!Number.isFinite(profileId) || profileId <= 0) return []
+  if (!Number.isFinite(profileId) || profileId <= 0) {
+    return {
+      roleBound: false,
+      profileName: '',
+      configuredCount: 0,
+      enabledPoints: [],
+      disabledCount: 0,
+      missingCount: 0,
+    }
+  }
   const profile = chatStore.getRoleProfileById(profileId)
   if (!profile || !Array.isArray(profile.knowledgePointIds) || profile.knowledgePointIds.length === 0) {
-    return []
+    return {
+      roleBound: Boolean(profile),
+      profileName: profile?.name || contact.name || '',
+      configuredCount: 0,
+      enabledPoints: [],
+      disabledCount: 0,
+      missingCount: 0,
+    }
   }
 
   const sourcePoints = Array.isArray(user.value.knowledgePoints) ? user.value.knowledgePoints : []
-  if (sourcePoints.length === 0) return []
+  if (sourcePoints.length === 0) {
+    return {
+      roleBound: true,
+      profileName: profile.name || contact.name || '',
+      configuredCount: profile.knowledgePointIds.length,
+      enabledPoints: [],
+      disabledCount: 0,
+      missingCount: profile.knowledgePointIds.length,
+    }
+  }
   const pointMap = new Map(
     sourcePoints
       .filter((item) => item && typeof item === 'object' && typeof item.id === 'string')
       .map((item) => [item.id, item]),
   )
 
-  return profile.knowledgePointIds
-    .map((id) => pointMap.get(id))
-    .filter((item) => item && item.enabled !== false)
-    .slice(0, 8)
+  const enabledPoints = []
+  let disabledCount = 0
+  let missingCount = 0
+
+  profile.knowledgePointIds.forEach((id) => {
+    const point = pointMap.get(id)
+    if (!point) {
+      missingCount += 1
+      return
+    }
+    if (point.enabled === false) {
+      disabledCount += 1
+      return
+    }
+    enabledPoints.push(point)
+  })
+
+  return {
+    roleBound: true,
+    profileName: profile.name || contact.name || '',
+    configuredCount: profile.knowledgePointIds.length,
+    enabledPoints,
+    disabledCount,
+    missingCount,
+  }
+}
+
+const resolveBoundKnowledgePointsForContact = (contact) => {
+  const bindingState = resolveKnowledgePointBindingStateForContact(contact)
+  return Array.isArray(bindingState.enabledPoints) ? bindingState.enabledPoints.slice(0, 8) : []
 }
 
 const buildWorldKernelPromptBlock = (contact) => {
@@ -1177,6 +1237,28 @@ const truncateMessagePreview = (text, maxLength = 72) => {
   if (normalized.length <= maxLength) return normalized
   return `${normalized.slice(0, maxLength)}...`
 }
+
+const activeThreadWorldKernelState = computed(() => {
+  const worldview = getGlobalWorldviewText()
+  const bindingState = resolveKnowledgePointBindingStateForContact(activeChat.value)
+  const enabledPoints = Array.isArray(bindingState.enabledPoints) ? bindingState.enabledPoints : []
+  const injectedPoints = enabledPoints.slice(0, 8)
+
+  return {
+    worldview,
+    worldviewPreview: truncateMessagePreview(worldview, 120),
+    worldviewCharCount: worldview.length,
+    hasWorldview: Boolean(worldview),
+    roleBound: bindingState.roleBound === true,
+    profileName: bindingState.profileName || '',
+    configuredCount: Math.max(0, Number(bindingState.configuredCount || 0)),
+    injectedCount: injectedPoints.length,
+    disabledCount: Math.max(0, Number(bindingState.disabledCount || 0)),
+    missingCount: Math.max(0, Number(bindingState.missingCount || 0)),
+    overflowCount: Math.max(0, enabledPoints.length - injectedPoints.length),
+    injectedPoints,
+  }
+})
 
 const getContextSourceMessages = (contactId, options = {}) => {
   const allMessages = chatStore.getMessagesByContactId(contactId)
@@ -3841,7 +3923,11 @@ onBeforeUnmount(() => {
             <span v-if="headerSecondaryStatusText" :class="headerSecondaryStatusClass">{{ headerSecondaryStatusText }}</span>
           </p>
         </div>
-        <button @click="toggleThreadMenu" class="chat-ink px-2 w-16 text-right"><i class="fas fa-bars"></i></button>
+        <button
+          @click="toggleThreadMenu"
+          class="chat-ink px-2 w-16 text-right"
+          data-testid="chat-thread-menu-toggle"
+        ><i class="fas fa-bars"></i></button>
       </div>
 
       <div v-if="showThreadMenu" class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
@@ -3869,6 +3955,122 @@ onBeforeUnmount(() => {
             </p>
           </div>
         </template>
+
+        <div
+          class="space-y-2 rounded-xl border border-blue-100 bg-blue-50/70 p-3"
+          data-testid="thread-worldbook-summary"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-semibold text-sm text-gray-900">
+                {{ t('当前 WorldBook 上下文', 'Current WorldBook context') }}
+              </p>
+              <p class="mt-1 text-[10px] text-gray-500">
+                {{
+                  t(
+                    'Chat 会始终读取全局世界观，并只注入当前角色已绑定且启用的知识点。',
+                    'Chat always reads the global worldview and only injects enabled knowledge points bound to this role.',
+                  )
+                }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] text-blue-700">
+              {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
+            </span>
+          </div>
+
+          <div class="rounded-lg border border-white bg-white/80 p-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-medium text-gray-700">
+                {{ t('全局世界观', 'Global worldview') }}
+              </span>
+              <span
+                class="text-[10px]"
+                data-testid="thread-worldbook-worldview-count"
+              >
+                {{ activeThreadWorldKernelState.worldviewCharCount }}
+              </span>
+            </div>
+            <p
+              class="mt-1 text-[11px]"
+              data-testid="thread-worldbook-worldview-preview"
+              :class="activeThreadWorldKernelState.hasWorldview ? 'text-gray-600' : 'text-gray-400'"
+            >
+              {{
+                activeThreadWorldKernelState.hasWorldview
+                  ? activeThreadWorldKernelState.worldviewPreview
+                  : t('当前没有额外世界观文本。', 'No extra worldview text is active right now.')
+              }}
+            </p>
+          </div>
+
+          <div class="rounded-lg border border-white bg-white/80 p-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-medium text-gray-700">
+                {{ t('当前注入的知识点', 'Knowledge points in effect') }}
+              </span>
+              <span
+                class="text-[10px] text-gray-500"
+                data-testid="thread-worldbook-active-count"
+              >
+                {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
+              </span>
+            </div>
+            <p class="mt-1 text-[10px] text-gray-500">
+              {{
+                activeThreadWorldKernelState.roleBound
+                  ? t(
+                      `来源角色：${activeThreadWorldKernelState.profileName || activeChat?.name || ''}`,
+                      `Source role: ${activeThreadWorldKernelState.profileName || activeChat?.name || ''}`,
+                    )
+                  : t('当前会话未绑定角色档案。', 'This thread is not bound to a role profile.')
+              }}
+            </p>
+
+            <div
+              v-if="activeThreadWorldKernelState.injectedPoints.length > 0"
+              class="mt-2 flex flex-wrap gap-2"
+            >
+              <span
+                v-for="point in activeThreadWorldKernelState.injectedPoints"
+                :key="point.id"
+                :data-testid="`thread-worldbook-point-${point.id}`"
+                class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
+              >
+                {{ point.title }}
+              </span>
+            </div>
+            <p
+              v-else
+              class="mt-2 text-[11px] text-gray-400"
+              data-testid="thread-worldbook-empty"
+            >
+              {{
+                t(
+                  '当前没有可注入的启用知识点。',
+                  'There are no enabled bound knowledge points active for this thread.',
+                )
+              }}
+            </p>
+
+            <p
+              v-if="
+                activeThreadWorldKernelState.disabledCount > 0 ||
+                activeThreadWorldKernelState.missingCount > 0 ||
+                activeThreadWorldKernelState.overflowCount > 0
+              "
+              class="mt-2 text-[10px] text-amber-600"
+              data-testid="thread-worldbook-binding-note"
+            >
+              {{
+                t(
+                  `未注入：停用 ${activeThreadWorldKernelState.disabledCount} 条，缺失 ${activeThreadWorldKernelState.missingCount} 条，超出上限 ${activeThreadWorldKernelState.overflowCount} 条。`,
+                  `Not injected: ${activeThreadWorldKernelState.disabledCount} disabled, ${activeThreadWorldKernelState.missingCount} missing, ${activeThreadWorldKernelState.overflowCount} over the limit.`,
+                )
+              }}
+            </p>
+          </div>
+        </div>
 
         <div class="border-t border-gray-200 pt-3 space-y-2">
           <p class="font-semibold text-sm text-gray-900">{{ t('会话身份覆写', 'Thread identity overrides') }}</p>
@@ -4597,6 +4799,7 @@ onBeforeUnmount(() => {
 
         <button
           @click="requestPendingAiReply"
+          data-testid="chat-trigger-reply"
           class="h-8 px-3 rounded-full text-xs border transition"
           :class="canRequestAiReply ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-100 text-gray-400'"
           :disabled="!canRequestAiReply"

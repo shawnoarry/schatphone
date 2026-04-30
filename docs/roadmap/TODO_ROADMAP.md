@@ -163,8 +163,16 @@ Status / 状态: `IN_PROGRESS`
      中文：增加排序：最近更新、使用状态、绑定角色数、标题。
    - EN: Acceptance: filtering/sorting is local UI state only and does not alter knowledge point records or Chat prompt assembly.
      中文：验收：筛选/排序仅为本地 UI 状态，不改变知识点记录，也不改变 Chat 提示词组装。
-   - EN: Next phase candidate: switch to Map rewards/events, unless WorldBook needs search/tag filtering next.
-     中文：下一阶段候选：转入地图奖励/事件；除非 WorldBook 需要继续补搜索/标签筛选。
+6. EN: P1 WorldBook search/tag filtering — `DONE`.
+   中文：P1 世界书搜索/标签筛选 — `DONE`。
+   - EN: Add keyword search for knowledge-point title, content, and tags.
+     中文：增加知识点标题、内容和标签的关键字搜索。
+   - EN: Add tag chips that work together with existing usage-state filters and sorting.
+     中文：增加标签筛选 chips，并与既有使用状态筛选和排序共同工作。
+   - EN: Acceptance: search/tag filters remain local UI state only and do not alter knowledge point records or Chat prompt assembly.
+     中文：验收：搜索/标签筛选仍仅为本地 UI 状态，不改变知识点记录，也不改变 Chat 提示词组装。
+   - EN: Next phase candidate: extend WorldBook read-only relevance into Map or add direct WorldBook deep-link filtering from Calendar.
+     中文：下一阶段候选：把 WorldBook 的只读关联扩到 Map，或补 Calendar 直达 WorldBook 的深链筛选。
 6. EN: P1 Map rewards/events first slice — `DONE`.
    中文：P1 地图奖励/事件第一刀 — `DONE`。
    - EN: Completed trips now write deterministic exploration rewards and lightweight event summaries into trip history.
@@ -715,3 +723,11 @@ Acceptance / 验收标准:
     2026-04-29 中文：已落地日历事件推送重排/取消守卫：改时间会重排旧推送任务，忽略地图提醒会取消对应日历事件推送。
 62. 2026-04-29 EN: Landed Calendar push status visibility: events now keep local schedule logs and Calendar shows push readiness, event push status, and AI quiet-hours policy notes.
     2026-04-29 中文：已落地日历推送状态可见性：事件现在保留本地排程记录，Calendar 展示推送就绪状态、事件推送状态和 AI 安静时段策略说明。
+63. 2026-04-30 EN: Landed WorldBook search/tag filtering: knowledge points now support keyword search and tag chips on top of existing usage-state filters and sorting.
+    2026-04-30 中文：已落地世界书搜索/标签筛选：知识点现在支持关键字搜索和标签 chips，并可与既有使用状态筛选和排序共同工作。
+64. 2026-04-30 EN: Landed WorldBook edit flow: existing knowledge points can now be opened, edited in place, and saved without changing their identity.
+    2026-04-30 中文：已落地世界书编辑流：已有知识点现在可直接打开、原位编辑并保存，且不会改变原有身份。
+65. 2026-04-30 EN: Landed WorldBook Calendar consumption phase-1: Calendar reminder cards and confirmed event cards now surface related knowledge points from WorldBook.
+    2026-04-30 中文：已落地 WorldBook 在 Calendar 内的第一阶段消费：日历提醒卡片和已确认事件卡片现在会展示相关知识点。
+66. 2026-04-30 EN: Landed Chat WorldBook binding verification: the thread menu now shows active worldview and injected knowledge points, and an end-to-end test verifies prompt injection.
+    2026-04-30 中文：已落地 Chat 的 WorldBook 绑定验收：线程菜单现在会展示当前生效的世界观与注入知识点，且已有端到端测试验证 prompt 注入。

@@ -28,6 +28,8 @@ const globalWorldview = computed({
 
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
+const knowledgeSearchKeyword = ref('')
+const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
 const knowledgeUsageSort = ref('recent')
 const roleProfileChatBindingMap = computed(() => {
@@ -47,6 +49,7 @@ const knowledgeDraft = reactive({
   content: '',
   tags: '',
 })
+const editingKnowledgePointId = ref('')
 let savedTimerId = null
 
 const goSettings = () => {
@@ -74,7 +77,24 @@ const parseTagDraft = (raw) =>
     .map((item) => item.trim())
     .filter(Boolean)
 
-const addKnowledgePoint = () => {
+const parseKnowledgePointTags = (raw) => {
+  const normalized = typeof raw === 'string' ? raw.replace(/[，；]/g, ',').replace(/;/g, ',') : ''
+  const parsed = parseTagDraft(normalized)
+  if (
+    parsed.length === 1 &&
+    parsed[0] &&
+    typeof parsed[0] === 'string' &&
+    /,/.test(parsed[0])
+  ) {
+    return parsed[0]
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  return parsed
+}
+
+const createKnowledgePoint = () => {
   const title = knowledgeDraft.title.trim()
   const content = knowledgeDraft.content.trim()
   if (!title && !content) {
@@ -84,18 +104,84 @@ const addKnowledgePoint = () => {
   const created = systemStore.upsertKnowledgePoint({
     title,
     content,
-    tags: parseTagDraft(knowledgeDraft.tags),
+    tags: parseKnowledgePointTags(knowledgeDraft.tags),
     enabled: true,
   })
   if (!created) {
     uiNotice.value = t('知识点保存失败（可能已达上限）。', 'Knowledge point save failed (limit reached).')
     return
   }
+  resetKnowledgeDraft()
+  systemStore.saveNow()
+  pulseSaved(t('知识点已添加。', 'Knowledge point added.'))
+}
+
+const resetKnowledgeDraft = () => {
   knowledgeDraft.title = ''
   knowledgeDraft.content = ''
   knowledgeDraft.tags = ''
+  editingKnowledgePointId.value = ''
+}
+
+const formatKnowledgePointTags = (point) =>
+  Array.isArray(point?.tags) ? point.tags.join(', ') : ''
+
+const editingKnowledgePoint = computed(() =>
+  editingKnowledgePointId.value ? systemStore.getKnowledgePointById(editingKnowledgePointId.value) : null,
+)
+
+const isEditingKnowledgePoint = computed(() => Boolean(editingKnowledgePoint.value?.id))
+
+const openEditKnowledgePoint = (point) => {
+  if (!point?.id) return
+  editingKnowledgePointId.value = point.id
+  knowledgeDraft.title = point.title || ''
+  knowledgeDraft.content = point.content || ''
+  knowledgeDraft.tags = formatKnowledgePointTags(point)
+  saved.value = false
+  uiNotice.value = ''
+}
+
+const cancelKnowledgePointEdit = () => {
+  resetKnowledgeDraft()
+  uiNotice.value = ''
+  saved.value = false
+}
+
+const submitKnowledgePoint = () => {
+  if (!editingKnowledgePointId.value) {
+    createKnowledgePoint()
+    return
+  }
+
+  const title = knowledgeDraft.title.trim()
+  const content = knowledgeDraft.content.trim()
+  if (!title && !content) {
+    uiNotice.value = t('璇峰厛杈撳叆鏍囬鎴栧唴瀹广€?', 'Please enter title or content first.')
+    return
+  }
+
+  if (!editingKnowledgePoint.value?.id) {
+    resetKnowledgeDraft()
+    uiNotice.value = t('要编辑的知识点已不存在。', 'The knowledge point you were editing no longer exists.')
+    return
+  }
+
+  const savedPoint = systemStore.upsertKnowledgePoint({
+    id: editingKnowledgePoint.value.id,
+    title,
+    content,
+    tags: parseKnowledgePointTags(knowledgeDraft.tags),
+    enabled: editingKnowledgePoint.value.enabled !== false,
+  })
+  if (!savedPoint) {
+    uiNotice.value = t('鐭ヨ瘑鐐逛繚瀛樺け璐ワ紙鍙兘宸茶揪涓婇檺锛夈€?', 'Knowledge point save failed (limit reached).')
+    return
+  }
+
+  resetKnowledgeDraft()
   systemStore.saveNow()
-  pulseSaved(t('知识点已添加。', 'Knowledge point added.'))
+  pulseSaved(t('知识点已更新。', 'Knowledge point updated.'))
 }
 
 const toggleKnowledgePoint = (point) => {
@@ -171,7 +257,7 @@ const getKnowledgePointUsageState = (point) => {
 }
 
 const knowledgeUsageFilterOptions = computed(() => {
-  const counts = knowledgePoints.value.reduce(
+  const counts = searchedKnowledgePoints.value.reduce(
     (acc, point) => {
       const state = getKnowledgePointUsageState(point)
       acc.all += 1
@@ -194,6 +280,62 @@ const knowledgeUsageFilterOptions = computed(() => {
     { value: 'unused', label: t('未使用', 'Unused'), count: counts.unused },
     { value: 'disabled', label: t('已停用', 'Disabled'), count: counts.disabled },
   ]
+})
+
+const normalizedKnowledgeSearchKeyword = computed(() => knowledgeSearchKeyword.value.trim())
+
+const searchedKnowledgePoints = computed(() =>
+  systemStore.listKnowledgePoints({
+    keyword: normalizedKnowledgeSearchKeyword.value,
+  }),
+)
+
+const knowledgeSearchPlaceholder = computed(() =>
+  t('搜索标题、内容或标签', 'Search title, content, or tags'),
+)
+
+const knowledgeTagFilterOptions = computed(() => {
+  const counts = new Map()
+  const usageFilteredPoints = searchedKnowledgePoints.value.filter(
+    (point) =>
+      knowledgeUsageFilter.value === 'all' || getKnowledgePointUsageState(point) === knowledgeUsageFilter.value,
+  )
+
+  usageFilteredPoints.forEach((point) => {
+    if (!Array.isArray(point?.tags)) return
+    point.tags.forEach((tag) => {
+      if (typeof tag !== 'string' || !tag.trim()) return
+      counts.set(tag, (counts.get(tag) || 0) + 1)
+    })
+  })
+
+  const options = [
+    {
+      value: 'all',
+      label: t('全部标签', 'All tags'),
+      count: usageFilteredPoints.length,
+    },
+    ...[...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }))
+      .map(([tag, count]) => ({
+        value: tag,
+        label: `#${tag}`,
+        count,
+      })),
+  ]
+
+  if (
+    knowledgeTagFilter.value !== 'all' &&
+    !options.some((option) => option.value === knowledgeTagFilter.value)
+  ) {
+    options.push({
+      value: knowledgeTagFilter.value,
+      label: `#${knowledgeTagFilter.value}`,
+      count: 0,
+    })
+  }
+
+  return options
 })
 
 const knowledgeUsageSortOptions = computed(() => [
@@ -219,6 +361,7 @@ const compareKnowledgePointTitle = (a, b) => {
 const visibleKnowledgePoints = computed(() => {
   const filter = knowledgeUsageFilter.value
   const sort = knowledgeUsageSort.value
+  const tagFilter = knowledgeTagFilter.value
   const usageStateOrder = {
     unused: 0,
     profile_only: 1,
@@ -226,8 +369,13 @@ const visibleKnowledgePoints = computed(() => {
     chat_ready: 3,
   }
 
-  return knowledgePoints.value
+  return searchedKnowledgePoints.value
     .filter((point) => filter === 'all' || getKnowledgePointUsageState(point) === filter)
+    .filter(
+      (point) =>
+        tagFilter === 'all' ||
+        (Array.isArray(point?.tags) && point.tags.some((tag) => tag === tagFilter)),
+    )
     .slice()
     .sort((a, b) => {
       if (sort === 'title') return compareKnowledgePointTitle(a, b)
@@ -293,6 +441,9 @@ const removeKnowledgePoint = async (point) => {
   })
   if (!ok) return
   systemStore.removeKnowledgePoint(point.id)
+  if (editingKnowledgePointId.value === point.id) {
+    resetKnowledgeDraft()
+  }
   systemStore.saveNow()
   pulseSaved(t('知识点已删除。', 'Knowledge point deleted.'))
 }
@@ -361,23 +512,49 @@ onBeforeUnmount(() => {
         </p>
 
         <div class="space-y-2 rounded-xl border border-gray-200 p-3">
+          <div v-if="isEditingKnowledgePoint" class="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+            <span data-testid="knowledge-editing-state">
+              {{ t('正在编辑已有知识点', 'Editing existing knowledge point') }}
+            </span>
+            <button
+              type="button"
+              data-testid="knowledge-edit-cancel"
+              class="font-semibold text-amber-700"
+              @click="cancelKnowledgePointEdit"
+            >
+              {{ t('取消编辑', 'Cancel edit') }}
+            </button>
+          </div>
           <input
             v-model="knowledgeDraft.title"
+            data-testid="knowledge-draft-title"
             class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
             :placeholder="t('知识点标题（如：角色A语言规范）', 'Point title (e.g. Role A language rule)')"
           />
           <textarea
             v-model="knowledgeDraft.content"
+            data-testid="knowledge-draft-content"
             class="w-full h-20 border rounded-lg px-3 py-2 text-sm outline-none resize-none"
             :placeholder="t('知识点内容', 'Knowledge point content')"
           ></textarea>
           <input
             v-model="knowledgeDraft.tags"
+            data-testid="knowledge-draft-tags"
             class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
             :placeholder="t('标签（逗号分隔）', 'Tags (comma separated)')"
           />
           <button
-            @click="addKnowledgePoint"
+            v-if="isEditingKnowledgePoint"
+            @click="submitKnowledgePoint"
+            data-testid="knowledge-draft-submit"
+            class="w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
+          >
+            {{ t('保存修改', 'Save changes') }}
+          </button>
+          <button
+            v-else
+            @click="submitKnowledgePoint"
+            data-testid="knowledge-draft-submit"
             class="w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
           >
             {{ t('新增知识点', 'Add knowledge point') }}
@@ -385,6 +562,24 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="knowledgePoints.length > 0" class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+          <div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <i class="fas fa-search text-[11px] text-gray-400"></i>
+            <input
+              v-model="knowledgeSearchKeyword"
+              data-testid="knowledge-search-input"
+              class="min-w-0 flex-1 bg-transparent text-xs outline-none"
+              :placeholder="knowledgeSearchPlaceholder"
+            />
+            <button
+              v-if="knowledgeSearchKeyword"
+              type="button"
+              data-testid="knowledge-search-clear"
+              class="text-[11px] text-gray-400"
+              @click="knowledgeSearchKeyword = ''"
+            >
+              {{ t('清空', 'Clear') }}
+            </button>
+          </div>
           <div class="flex flex-wrap gap-1.5">
             <button
               v-for="option in knowledgeUsageFilterOptions"
@@ -397,6 +592,23 @@ onBeforeUnmount(() => {
                   : 'border-gray-200 bg-white text-gray-500'
               "
               @click="knowledgeUsageFilter = option.value"
+            >
+              {{ option.label }} · {{ option.count }}
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="option in knowledgeTagFilterOptions"
+              :key="`knowledge-tag-${option.value}`"
+              :data-testid="`knowledge-tag-filter-${option.value}`"
+              type="button"
+              class="rounded-full border px-2 py-1 text-[11px] transition"
+              :class="
+                knowledgeTagFilter === option.value
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-white text-gray-500'
+              "
+              @click="knowledgeTagFilter = option.value"
             >
               {{ option.label }} · {{ option.count }}
             </button>
@@ -435,6 +647,7 @@ onBeforeUnmount(() => {
           <div
             v-for="point in visibleKnowledgePoints"
             :key="point.id"
+            data-testid="knowledge-point-card"
             class="rounded-xl border border-gray-200 p-3 space-y-1"
           >
             <div class="flex items-center justify-between gap-2">
@@ -452,6 +665,13 @@ onBeforeUnmount(() => {
                   :class="point.enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-600'"
                 >
                   {{ point.enabled ? t('启用', 'Enabled') : t('停用', 'Disabled') }}
+                </button>
+                <button
+                  :data-testid="`knowledge-edit-${point.id}`"
+                  class="text-[11px] text-blue-500"
+                  @click="openEditKnowledgePoint(point)"
+                >
+                  {{ t('编辑', 'Edit') }}
                 </button>
                 <button @click="removeKnowledgePoint(point)" class="text-[11px] text-red-500">
                   {{ t('删除', 'Delete') }}
