@@ -400,4 +400,22 @@ describe('system automation controls', () => {
     expect(store.apiReports.some((item) => item.module === 'storage')).toBe(false)
     expect(store.apiReports.some((item) => item.module === 'network')).toBe(true)
   })
+
+  test('hydrates api defaults from env when no persisted snapshot exists', async () => {
+    vi.resetModules()
+    vi.stubEnv('VITE_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models')
+    vi.stubEnv('VITE_API_KEY', 'env-key-123')
+    vi.stubEnv('VITE_API_MODEL', 'gemini-2.5-flash')
+
+    setActivePinia(createPinia())
+    const { useSystemStore: useFreshSystemStore } = await import('../src/stores/system')
+    const store = useFreshSystemStore()
+
+    expect(store.settings.api.url).toBe('https://generativelanguage.googleapis.com/v1beta/models')
+    expect(store.settings.api.key).toBe('env-key-123')
+    expect(store.settings.api.model).toBe('gemini-2.5-flash')
+    expect(store.settings.api.resolvedKind).toBe('gemini')
+
+    vi.unstubAllEnvs()
+  })
 })

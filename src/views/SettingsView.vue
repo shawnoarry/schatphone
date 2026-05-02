@@ -9,8 +9,12 @@ import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import SettingsAutomationSection from '../components/settings/SettingsAutomationSection.vue'
+import SettingsBackupSection from '../components/settings/SettingsBackupSection.vue'
 import SettingsMenuItem from '../components/settings/SettingsMenuItem.vue'
+import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
 import SettingsQuickAccessButton from '../components/settings/SettingsQuickAccessButton.vue'
+import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import {
   getPersistenceCapabilities,
   inspectPersistedStateLayers,
@@ -676,6 +680,22 @@ const saveNotificationSettings = () => {
   }, 1200)
 }
 
+const updateNotificationEnabled = (enabled) => {
+  settings.value.system.notifications = Boolean(enabled)
+}
+
+const updateRealPushEnabled = (enabled) => {
+  settings.value.system.realPushEnabled = Boolean(enabled)
+}
+
+const updatePushDisplayMode = (mode) => {
+  settings.value.system.pushDisplayMode = mode
+}
+
+const updatePushServerUrl = (url) => {
+  settings.value.system.pushServerUrl = url
+}
+
 const checkPushServerHealthNow = async ({ silent = false } = {}) => {
   const serverUrl = normalizePushServerUrl(settings.value.system.pushServerUrl, '')
   if (!serverUrl) {
@@ -1023,6 +1043,23 @@ const normalizeAutomationClock = (value, fallback = '00:00') => {
 const automationRuntimePolicy = computed(() =>
   systemStore.getAiAutomationRuntimePolicy('chat', Date.now()),
 )
+
+const updateAutomationField = (field, value) => {
+  if (!settings.value.aiAutomation) return
+  settings.value.aiAutomation[field] = value
+}
+
+const updateAutomationModuleEnabled = (moduleKey, enabled) => {
+  const moduleSettings = settings.value.aiAutomation?.modules?.[moduleKey]
+  if (!moduleSettings) return
+  moduleSettings.enabled = Boolean(enabled)
+}
+
+const updateAutomationModulePriority = (moduleKey, priority) => {
+  const moduleSettings = settings.value.aiAutomation?.modules?.[moduleKey]
+  if (!moduleSettings) return
+  moduleSettings.priority = priority
+}
 
 const saveAutomationSettings = async () => {
   if (!settings.value.aiAutomation) return
@@ -1595,141 +1632,23 @@ if (initialMenu) {
       </div>
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
-      <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
-        <div class="px-3.5 py-3 border-b border-gray-100 space-y-2.5">
-          <p class="text-sm font-medium">{{ t('备份提示风格', 'Backup copy style') }}</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              class="py-2 rounded-lg text-xs font-medium border transition"
-              :class="
-                backupCopyTone === 'direct'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              "
-              @click="settings.system.backupCopyTone = 'direct'"
-            >
-              {{ t('直白说明', 'Direct') }}
-            </button>
-            <button
-              class="py-2 rounded-lg text-xs font-medium border transition"
-              :class="
-                backupCopyTone === 'immersive'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              "
-              @click="settings.system.backupCopyTone = 'immersive'"
-            >
-              {{ t('沉浸叙事', 'Immersive') }}
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-500">
-            {{
-              t(
-                '仅影响系统提示文案，不影响 AI 回复内容。',
-                'Only affects system copy, not AI-generated replies.',
-              )
-            }}
-          </p>
-        </div>
-
-        <div class="px-3.5 py-3 border-b border-gray-100">
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-medium">{{ resolveBackupCopy('导出包含素材包（可选）', 'Include asset package in export (optional)', '导出时附带素材行李（可选）', 'Include asset luggage in export (optional)') }}</p>
-              <p class="text-[11px] text-gray-500">
-                {{
-                  resolveBackupCopy(
-                    '默认仅导出元数据。开启后会尝试打包本地素材二进制，文件体积会明显增大。',
-                    'Metadata-only is default. When enabled, local binary assets are packaged and backup size grows significantly.',
-                    '默认轻装模式仅导出元数据。开启后会尽量装入本地素材，备份体积会明显变大。',
-                    'Travel-light (metadata-only) is default. Enabling this packs local assets when possible and increases backup size.',
-                  )
-                }}
-              </p>
-            </div>
-            <input
-              v-model="backupIncludeAssetPackage"
-              type="checkbox"
-              class="w-5 h-5 shrink-0"
-              :disabled="backupExporting || backupImporting"
-            />
-          </div>
-        </div>
-
-        <div class="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 space-y-1">
-          <p class="text-[11px] font-medium text-gray-700">{{ backupExportModeLabel }}</p>
-          <p class="text-[10px] text-gray-500">{{ backupExportModeHint }}</p>
-          <p class="text-[10px] text-gray-400">{{ backupPackageLimitHint }}</p>
-        </div>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-          @click="exportData"
-          :disabled="backupExporting || backupImporting"
-        >
-          <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-file-export"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">
-              {{
-                backupExporting
-                  ? t('正在导出...', 'Exporting...')
-                  : resolveBackupCopy('备份与导出（JSON）', 'Backup & Export (JSON)', '打包并导出（JSON）', 'Pack & Export (JSON)')
-              }}
-            </p>
-            <p class="text-[11px] text-gray-500">
-              {{
-                backupIncludeAssetPackage
-                  ? resolveBackupCopy(
-                      '将尝试附带素材包导出（体积更大）',
-                      'Will try to include asset package (larger file size)',
-                      '将尝试附带素材行李导出（文件更大）',
-                      'Will try to include asset luggage (larger file size)',
-                    )
-                  : resolveBackupCopy(
-                      '导出当前本地数据快照（元数据模式）',
-                      'Export current local snapshot (metadata mode)',
-                      '导出当前本地快照（轻装模式）',
-                      'Export current local snapshot (travel-light mode)',
-                    )
-              }}
-            </p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-          @click="triggerImportData"
-          :disabled="backupImporting || backupExporting"
-        >
-          <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-file-import"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">
-              {{ backupImporting ? t('正在导入...', 'Importing...') : t('恢复导入（JSON）', 'Restore Import (JSON)') }}
-            </p>
-            <p class="text-[11px] text-gray-500">{{ t('导入失败会自动回滚', 'Auto rollback will run if import fails') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-
-        <button
-          class="w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
-          @click="openSubPage('about')"
-        >
-          <div class="w-7 h-7 rounded bg-blue-500 flex items-center justify-center text-white text-xs">
-            <i class="fas fa-circle-info"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm">{{ t('关于 SchatPhone', 'About SchatPhone') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('版本与框架信息', 'Version and stack information') }}</p>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </button>
-      </div>
+      <SettingsBackupSection
+        :backup-copy-tone="backupCopyTone"
+        :backup-include-asset-package="backupIncludeAssetPackage"
+        :backup-exporting="backupExporting"
+        :backup-importing="backupImporting"
+        :backup-export-mode-label="backupExportModeLabel"
+        :backup-export-mode-hint="backupExportModeHint"
+        :backup-package-limit-hint="backupPackageLimitHint"
+        :backup-feedback-type="backupFeedbackType"
+        :backup-feedback-message="backupFeedbackMessage"
+        :resolve-backup-copy="resolveBackupCopy"
+        @update-backup-copy-tone="settings.system.backupCopyTone = $event"
+        @update-include-asset-package="backupIncludeAssetPackage = $event"
+        @export-data="exportData"
+        @trigger-import-data="triggerImportData"
+        @open-about="openSubPage('about')"
+      />
       <input
         ref="backupFileInput"
         type="file"
@@ -1737,14 +1656,6 @@ if (initialMenu) {
         class="hidden"
         @change="importData"
       />
-
-      <p
-        v-if="backupFeedbackMessage"
-        class="px-1 text-[11px]"
-        :class="backupFeedbackType === 'error' ? 'text-red-600' : backupFeedbackType === 'warn' ? 'text-amber-600' : 'text-emerald-600'"
-      >
-        {{ backupFeedbackMessage }}
-      </p>
 
       <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
@@ -1824,152 +1735,17 @@ if (initialMenu) {
         </div>
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-semibold">{{ t('全局自主调用总开关', 'Global autonomous switch') }}</p>
-                <p class="text-[10px] text-gray-400">
-                  {{ t('关闭后所有模块与会话的自主调用都失效。', 'When off, all autonomous calls in modules and chats are disabled.') }}
-                </p>
-              </div>
-              <input v-model="settings.aiAutomation.masterEnabled" type="checkbox" class="w-5 h-5" />
-            </div>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <p class="text-sm font-semibold">{{ t('模块级开关与优先级', 'Module switches and priorities') }}</p>
-            <div class="grid grid-cols-[1fr,70px,70px] gap-2 items-center">
-              <p class="text-xs text-gray-500">{{ t('模块', 'Module') }}</p>
-              <p class="text-xs text-gray-500 text-center">{{ t('开启', 'Enable') }}</p>
-              <p class="text-xs text-gray-500 text-center">{{ t('优先级', 'Priority') }}</p>
-
-              <p class="text-sm">{{ t('聊天（Chat）', 'Chat') }}</p>
-              <div class="text-center">
-                <input v-model="settings.aiAutomation.modules.chat.enabled" type="checkbox" class="w-4 h-4" />
-              </div>
-              <input v-model.number="settings.aiAutomation.modules.chat.priority" type="number" min="1" max="1000" class="border rounded px-2 py-1 text-xs text-right" />
-
-              <p class="text-sm">{{ t('地图（Map，预留）', 'Map (Reserved)') }}</p>
-              <div class="text-center">
-                <input v-model="settings.aiAutomation.modules.map.enabled" type="checkbox" class="w-4 h-4" />
-              </div>
-              <input v-model.number="settings.aiAutomation.modules.map.priority" type="number" min="1" max="1000" class="border rounded px-2 py-1 text-xs text-right" />
-
-              <p class="text-sm">{{ t('购物（预留）', 'Shopping (Reserved)') }}</p>
-              <div class="text-center">
-                <input v-model="settings.aiAutomation.modules.shopping.enabled" type="checkbox" class="w-4 h-4" />
-              </div>
-              <input v-model.number="settings.aiAutomation.modules.shopping.priority" type="number" min="1" max="1000" class="border rounded px-2 py-1 text-xs text-right" />
-            </div>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <p class="text-sm font-semibold">{{ t('执行模式与安静时段', 'Execution mode and quiet hours') }}</p>
-            <label class="flex items-center justify-between gap-2">
-              <span class="text-xs text-gray-500">{{ t('仅通知模式（不自动生成回复）', 'Notify-only mode (no auto reply generation)') }}</span>
-              <input v-model="settings.aiAutomation.notifyOnlyMode" type="checkbox" class="w-4 h-4" />
-            </label>
-            <label class="flex items-center justify-between gap-2">
-              <span class="text-xs text-gray-500">{{ t('启用安静时段（自动转为仅通知）', 'Enable quiet hours (force notify-only)') }}</span>
-              <input v-model="settings.aiAutomation.quietHoursEnabled" type="checkbox" class="w-4 h-4" />
-            </label>
-            <div v-if="settings.aiAutomation.quietHoursEnabled" class="grid grid-cols-2 gap-2">
-              <label class="flex flex-col gap-1">
-                <span class="text-[11px] text-gray-500">{{ t('开始', 'Start') }}</span>
-                <input
-                  v-model="settings.aiAutomation.quietHoursStart"
-                  type="time"
-                  class="border rounded px-2 py-1.5 text-xs"
-                />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-[11px] text-gray-500">{{ t('结束', 'End') }}</span>
-                <input
-                  v-model="settings.aiAutomation.quietHoursEnd"
-                  type="time"
-                  class="border rounded px-2 py-1.5 text-xs"
-                />
-              </label>
-            </div>
-            <p class="text-[11px] text-gray-500">
-              {{
-                t(
-                  '当前运行态：',
-                  'Current runtime mode:',
-                )
-              }}
-              {{
-                automationRuntimePolicy.notifyOnly
-                  ? automationRuntimePolicy.quietHoursActive
-                    ? t('安静时段仅通知', 'Quiet-hours notify-only')
-                    : t('全局仅通知', 'Global notify-only')
-                  : t('允许自动调用', 'Autonomous invoke enabled')
-              }}
-            </p>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <p class="text-sm font-semibold">{{ t('冲突与防重复策略', 'Conflict and dedupe policy') }}</p>
-            <label class="flex items-center justify-between gap-2">
-              <span class="text-xs text-gray-500">{{ t('手动触发后冷却秒数', 'Cooldown after manual trigger (sec)') }}</span>
-              <input
-                v-model.number="settings.aiAutomation.conflictCooldownSec"
-                type="number"
-                min="10"
-                max="600"
-                class="w-24 border rounded px-2 py-1 text-xs text-right"
-              />
-            </label>
-            <label class="flex items-center justify-between gap-2">
-              <span class="text-xs text-gray-500">{{ t('重复上下文抑制秒数', 'Dedupe window (sec)') }}</span>
-              <input
-                v-model.number="settings.aiAutomation.dedupeWindowSec"
-                type="number"
-                min="10"
-                max="1800"
-                class="w-24 border rounded px-2 py-1 text-xs text-right"
-              />
-            </label>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4">
-            <p class="text-xs text-gray-500">
-              {{ t('每个角色的自主调用间隔（如 360 秒/720 秒）在对应 Chat 会话菜单中设置。', 'Per-role autonomous interval (e.g. 360s/720s) is configured in each Chat thread menu.') }}
-            </p>
-            <button @click="openChatAutomation" class="mt-2 px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">
-              {{ t('前往会话设置', 'Go to chat settings') }}
-            </button>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-2">
-            <p class="text-xs text-gray-500">
-              {{
-                t(
-                  '手动触发始终优先；若与定时自主调用接近重叠，系统会自动顺延本轮自主调用，避免重复回复。',
-                  'Manual triggers always take priority. If near overlap happens with timed auto invoke, this cycle is deferred to avoid duplicate replies.',
-                )
-              }}
-            </p>
-            <p class="text-xs text-gray-500">
-              {{
-                t(
-                  '调用失败与中断记录可在 Network 的诊断报告中心查看。',
-                  'Failure and cancellation logs are available in Network diagnostics center.',
-                )
-              }}
-            </p>
-            <button @click="openNetworkReports" class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">
-              {{ t('前往诊断记录', 'Go to diagnostics') }}
-            </button>
-          </div>
-
-          <button
-            @click="saveAutomationSettings"
-            class="w-full py-3 rounded-xl text-sm font-semibold transition"
-            :class="automationSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-          >
-            {{ automationSaved ? t('已保存', 'Saved') : t('保存自动响应设置', 'Save automation settings') }}
-          </button>
+          <SettingsAutomationSection
+            :ai-automation="settings.aiAutomation"
+            :automation-runtime-policy="automationRuntimePolicy"
+            :automation-saved="automationSaved"
+            @update-automation-field="updateAutomationField"
+            @update-module-enabled="updateAutomationModuleEnabled"
+            @update-module-priority="updateAutomationModulePriority"
+            @open-chat-automation="openChatAutomation"
+            @open-network-reports="openNetworkReports"
+            @save-automation-settings="saveAutomationSettings"
+          />
         </div>
       </div>
 
@@ -1982,175 +1758,35 @@ if (initialMenu) {
         </div>
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
-          <div class="bg-white rounded-2xl p-4 flex items-center justify-between">
-            <div>
-              <p class="text-sm">{{ t('消息通知', 'Message notifications') }}</p>
-              <p class="text-[10px] text-gray-400">{{ t('用于聊天消息与系统提醒', 'Used for chat messages and system alerts') }}</p>
-            </div>
-            <input v-model="settings.system.notifications" type="checkbox" class="w-5 h-5" />
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-sm font-semibold">{{ t('真推送', 'Real Push') }}</p>
-                <p class="text-[10px] text-gray-500">
-                  {{
-                    t(
-                      '让项目通知进入手机系统通知层。需要 HTTPS 或 localhost、已授权通知、且建议安装到主屏幕。',
-                      'Delivers project notifications into the phone system layer. Requires HTTPS or localhost, granted permission, and is best after install-to-home-screen.',
-                    )
-                  }}
-                </p>
-              </div>
-              <input v-model="settings.system.realPushEnabled" type="checkbox" class="w-5 h-5" />
-            </div>
-
-            <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
-              <p class="text-[11px] text-gray-700">
-                {{ t('环境能力', 'Environment capability') }}:
-                <span class="font-medium">{{ webPushSupported ? t('支持', 'Supported') : t('不支持', 'Not supported') }}</span>
-              </p>
-              <p class="text-[11px] text-gray-700">
-                {{ t('通知权限', 'Notification permission') }}:
-                <span class="font-medium">{{ pushPermissionLabel }}</span>
-              </p>
-              <p class="text-[11px] text-gray-700">
-                {{ t('订阅状态', 'Subscription status') }}:
-                <span class="font-medium">{{ pushSubscriptionLabel }}</span>
-              </p>
-              <p class="text-[11px] text-gray-700">
-                {{ t('服务状态', 'Server status') }}:
-                <span class="font-medium">{{ pushServerHealthLabel }}</span>
-              </p>
-              <p class="text-[10px] text-gray-500">{{ pushCapabilityHint }}</p>
-            </div>
-
-            <div class="space-y-2">
-              <label class="text-xs text-gray-500 block">
-                {{ t('外部系统通知样式', 'External push style') }}
-              </label>
-              <select
-                v-model="settings.system.pushDisplayMode"
-                class="w-full border rounded-xl px-3 py-2 text-sm outline-none bg-white"
-              >
-                <option value="minimal">{{ t('极简', 'Minimal') }}</option>
-                <option value="standard">{{ t('标准', 'Standard') }}</option>
-                <option value="preview">{{ t('预览', 'Preview') }}</option>
-              </select>
-              <p class="text-[10px] text-gray-400">
-                {{ pushDisplayModeHint }}
-              </p>
-            </div>
-
-            <div class="space-y-2">
-              <label class="text-xs text-gray-500 block">{{ t('Push Server 地址', 'Push Server URL') }}</label>
-              <input
-                v-model="settings.system.pushServerUrl"
-                type="text"
-                class="w-full border rounded-xl px-3 py-2 text-sm outline-none bg-white"
-                placeholder="http://localhost:8787"
-              />
-              <p class="text-[10px] text-gray-400">
-                {{
-                  t(
-                    '开发期可使用本机或局域网地址；真正手机测试时，手机必须能访问这个地址。',
-                    'Use localhost or LAN address in development; on a real phone, the phone must be able to reach this URL.',
-                  )
-                }}
-              </p>
-            </div>
-
-            <div class="space-y-1 text-[11px] text-gray-500">
-              <p>
-                {{ t('当前有效地址', 'Effective URL') }}:
-                <span class="font-medium text-gray-700">{{ normalizedPushServerUrl || t('未设置', 'Not set') }}</span>
-              </p>
-              <p>
-                {{ t('设备标识', 'Device ID') }}:
-                <span class="font-medium text-gray-700">{{ settings.system.pushDeviceId || t('未分配', 'Not assigned') }}</span>
-              </p>
-              <p v-if="settings.system.pushLastSyncedAt > 0">
-                {{ t('最后同步', 'Last sync') }}:
-                <span class="font-medium text-gray-700">{{ formatStorageReportTime(settings.system.pushLastSyncedAt) }}</span>
-              </p>
-              <p v-if="pushLastHealthCheckAt > 0">
-                {{ t('最后检查', 'Last check') }}:
-                <span class="font-medium text-gray-700">{{ formatStorageReportTime(pushLastHealthCheckAt) }}</span>
-              </p>
-              <p v-if="pushServerHealthMessage">
-                {{ t('服务详情', 'Server detail') }}:
-                <span
-                  class="font-medium"
-                  :class="pushServerHealthState === 'ok' ? 'text-green-700' : pushServerHealthState === 'error' ? 'text-amber-700' : 'text-gray-700'"
-                >
-                  {{ pushServerHealthMessage }}
-                </span>
-              </p>
-              <p v-if="settings.system.pushLastError" class="text-amber-700">
-                {{ t('最近错误', 'Last error') }}:
-                <span class="font-medium">{{ settings.system.pushLastError }}</span>
-              </p>
-            </div>
-
-            <p
-              v-if="pushFeedbackMessage"
-              class="text-[11px]"
-              :class="pushFeedbackType === 'success' ? 'text-green-600' : pushFeedbackType === 'warn' ? 'text-amber-600' : 'text-gray-500'"
-            >
-              {{ pushFeedbackMessage }}
-            </p>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                @click="checkPushServerHealthNow()"
-                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="pushActionRunning || pushHealthRunning"
-              >
-                {{
-                  pushHealthRunning
-                    ? t('检查中...', 'Checking...')
-                    : t('检查服务连接', 'Check server')
-                }}
-              </button>
-              <button
-                @click="resyncRealPushNow()"
-                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="pushActionRunning || !settings.system.realPushEnabled"
-              >
-                {{ t('重同步订阅', 'Resync subscription') }}
-              </button>
-              <button
-                @click="subscribeRealPushNow"
-                class="px-3 py-2 rounded-lg border border-blue-200 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="pushActionRunning"
-              >
-                {{ pushActionRunning ? t('处理中...', 'Working...') : t('授权并订阅', 'Authorize & subscribe') }}
-              </button>
-              <button
-                @click="sendRealPushTestNow"
-                class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="pushActionRunning || !settings.system.pushSubscriptionActive"
-              >
-                {{ t('发送测试推送', 'Send test push') }}
-              </button>
-              <button
-                @click="unsubscribeRealPushNow"
-                class="px-3 py-2 rounded-lg border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="pushActionRunning"
-              >
-                {{ t('取消订阅', 'Unsubscribe') }}
-              </button>
-            </div>
-          </div>
-
-          <button
-            @click="saveNotificationSettings"
-            class="w-full py-3 rounded-xl text-sm font-semibold transition"
-            :class="notificationSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-          >
-            {{ notificationSaved ? t('已保存', 'Saved') : t('保存通知设置', 'Save notification settings') }}
-          </button>
+          <SettingsPushSection
+            :settings="settings"
+            :web-push-supported="webPushSupported"
+            :push-permission-label="pushPermissionLabel"
+            :push-subscription-label="pushSubscriptionLabel"
+            :push-server-health-label="pushServerHealthLabel"
+            :push-capability-hint="pushCapabilityHint"
+            :push-display-mode-hint="pushDisplayModeHint"
+            :normalized-push-server-url="normalizedPushServerUrl"
+            :push-last-health-check-at="pushLastHealthCheckAt"
+            :push-server-health-state="pushServerHealthState"
+            :push-server-health-message="pushServerHealthMessage"
+            :push-feedback-type="pushFeedbackType"
+            :push-feedback-message="pushFeedbackMessage"
+            :push-action-running="pushActionRunning"
+            :push-health-running="pushHealthRunning"
+            :notification-saved="notificationSaved"
+            :format-storage-report-time="formatStorageReportTime"
+            @update-notifications="updateNotificationEnabled"
+            @update-real-push-enabled="updateRealPushEnabled"
+            @update-push-display-mode="updatePushDisplayMode"
+            @update-push-server-url="updatePushServerUrl"
+            @check-push-server-health="checkPushServerHealthNow()"
+            @resync-real-push="resyncRealPushNow()"
+            @subscribe-real-push="subscribeRealPushNow"
+            @send-real-push-test="sendRealPushTestNow"
+            @unsubscribe-real-push="unsubscribeRealPushNow"
+            @save-notification-settings="saveNotificationSettings"
+          />
         </div>
       </div>
 
@@ -2169,132 +1805,30 @@ if (initialMenu) {
             <p class="text-xs text-gray-500 mt-1">{{ t('框架：Vue 3 + Vite + Pinia + Tailwind v4', 'Stack: Vue 3 + Vite + Pinia + Tailwind v4') }}</p>
           </div>
 
-          <div class="bg-white rounded-2xl p-4">
-            <p class="text-sm font-semibold">{{ t('本地存储能力', 'Local Storage Capability') }}</p>
-            <p class="text-xs text-gray-500 mt-1">
-              localStorage: {{ persistenceCapabilityLabel(persistenceCapabilities.localStorageAvailable) }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">
-              IndexedDB: {{ persistenceCapabilityLabel(persistenceCapabilities.indexedDbAvailable) }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">
-              {{ t('镜像模式', 'Mirror mode') }}: {{ persistenceCapabilityLabel(persistenceCapabilities.indexedDbMirrorEnabled) }}
-            </p>
-            <p class="text-[10px] text-gray-400 mt-2">
-              {{ t('命名空间', 'Namespace') }}: {{ persistenceCapabilities.namespace }} ·
-              DB: {{ persistenceCapabilities.indexedDbDatabaseName }} ·
-              Store: {{ persistenceCapabilities.indexedDbStoreName }}
-            </p>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-sm font-semibold">{{ t('存储一致性检查', 'Storage Consistency Check') }}</p>
-                <p class="text-[10px] text-gray-500 mt-1">
-                  {{
-                    t(
-                      '检查 localStorage 与 IndexedDB 镜像是否一致，并可一键修复不同步。',
-                      'Checks whether localStorage and IndexedDB mirror stay aligned, with one-click repair for drift.',
-                    )
-                  }}
-                </p>
-                <p class="text-[10px] text-gray-400 mt-1">
-                  {{ t('最后检查', 'Last check') }}: {{ formatStorageAuditTime(storageAuditAt) }}
-                </p>
-              </div>
-              <button
-                @click="runStorageAudit()"
-                class="px-3 py-2 rounded-lg border border-gray-200 text-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="storageAuditRunning || storageRepairRunning"
-              >
-                {{ storageAuditRunning ? t('检查中...', 'Checking...') : t('运行检查', 'Run check') }}
-              </button>
-            </div>
-
-            <p
-              v-if="storageAuditFeedbackMessage"
-              class="text-[11px]"
-              :class="storageAuditFeedbackType === 'success' ? 'text-green-600' : storageAuditFeedbackType === 'warn' ? 'text-amber-600' : 'text-gray-500'"
-            >
-              {{ storageAuditFeedbackMessage }}
-            </p>
-
-            <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-              <p class="text-[11px] text-gray-700">
-                {{ t('最近存储报告', 'Latest storage report') }}:
-                {{ storageReportReasonLabel(latestStorageReport) }}
-              </p>
-              <p class="text-[10px] text-gray-500 mt-1">
-                {{ t('记录时间', 'Recorded at') }}:
-                {{ formatStorageReportTime(latestStorageReport?.createdAt) }}
-                ·
-                {{ t('错误数', 'Errors') }}: {{ storageReportErrorCount }}
-              </p>
-            </div>
-
-            <button
-              @click="clearStorageReports"
-              class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              {{ t('清理存储报告', 'Clear storage reports') }}
-            </button>
-
-            <div v-if="storageAuditResults.length" class="space-y-2">
-              <div
-                v-for="item in storageAuditResults"
-                :key="item.key"
-                class="rounded-xl border border-gray-200 p-3"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <p class="text-sm font-medium">{{ t(item.labelZh, item.labelEn) }}</p>
-                  <span
-                    class="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                    :class="storageAuditStatusClass(item)"
-                  >
-                    {{ storageAuditStatusLabel(item) }}
-                  </span>
-                </div>
-                <p class="text-[10px] text-gray-500 mt-1">
-                  localStorage: {{ storageLayerLabel(item.local, t('缺失', 'Missing')) }} ·
-                  IndexedDB:
-                  {{
-                    item.mirrorApplicable
-                      ? storageLayerLabel(item.indexeddb, t('缺失', 'Missing'))
-                      : t('未启用', 'Disabled')
-                  }}
-                </p>
-                <p class="text-[10px] text-gray-400 mt-1">
-                  {{ t('建议修复来源', 'Recommended repair source') }}:
-                  {{ storageAuditSourceLabel(item.recommendedSource) }}
-                </p>
-              </div>
-            </div>
-
-            <button
-              @click="repairStorageDrift"
-              class="w-full py-2 rounded-lg text-xs font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="storageRepairRunning ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'"
-              :disabled="storageRepairRunning || storageAuditRunning"
-            >
-              {{ storageRepairRunning ? t('修复中...', 'Repairing...') : t('修复存储不同步', 'Repair storage drift') }}
-            </button>
-
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                @click="openNetworkReports('storage')"
-                class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
-              >
-                {{ t('查看全部报告', 'View all reports') }}
-              </button>
-              <button
-                @click="openNetworkReports('storage', 'error')"
-                class="w-full py-2 rounded-lg text-xs font-medium border border-amber-200 text-amber-700 hover:bg-amber-50"
-              >
-                {{ t('仅看错误', 'Errors only') }}
-              </button>
-            </div>
-          </div>
+          <SettingsStorageDiagnosticsSection
+            :persistence-capabilities="persistenceCapabilities"
+            :storage-audit-running="storageAuditRunning"
+            :storage-repair-running="storageRepairRunning"
+            :storage-audit-at="storageAuditAt"
+            :storage-audit-feedback-type="storageAuditFeedbackType"
+            :storage-audit-feedback-message="storageAuditFeedbackMessage"
+            :latest-storage-report="latestStorageReport"
+            :storage-report-error-count="storageReportErrorCount"
+            :storage-audit-results="storageAuditResults"
+            :persistence-capability-label="persistenceCapabilityLabel"
+            :format-storage-audit-time="formatStorageAuditTime"
+            :format-storage-report-time="formatStorageReportTime"
+            :storage-report-reason-label="storageReportReasonLabel"
+            :storage-audit-status-class="storageAuditStatusClass"
+            :storage-audit-status-label="storageAuditStatusLabel"
+            :storage-layer-label="storageLayerLabel"
+            :storage-audit-source-label="storageAuditSourceLabel"
+            @run-storage-audit="runStorageAudit()"
+            @clear-storage-reports="clearStorageReports"
+            @repair-storage-drift="repairStorageDrift"
+            @open-network-reports="openNetworkReports('storage')"
+            @open-network-storage-errors="openNetworkReports('storage', 'error')"
+          />
         </div>
       </div>
     </div>

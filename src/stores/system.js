@@ -12,6 +12,7 @@ import {
 } from '../lib/push'
 import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
+import { detectApiKindFromUrl } from '../lib/ai'
 
 const AVAILABLE_THEMES = [
   {
@@ -111,6 +112,19 @@ const DEFAULT_PUSH_SERVER_URL = normalizePushServerUrl(
   typeof import.meta !== 'undefined' ? import.meta?.env?.VITE_PUSH_SERVER_URL : '',
   'http://localhost:8787',
 )
+const DEFAULT_API_URL =
+  typeof import.meta !== 'undefined' && typeof import.meta?.env?.VITE_API_URL === 'string'
+    ? import.meta.env.VITE_API_URL.trim() || 'https://api.openai.com/v1/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions'
+const DEFAULT_API_KEY =
+  typeof import.meta !== 'undefined' && typeof import.meta?.env?.VITE_API_KEY === 'string'
+    ? import.meta.env.VITE_API_KEY.trim()
+    : ''
+const DEFAULT_API_MODEL =
+  typeof import.meta !== 'undefined' && typeof import.meta?.env?.VITE_API_MODEL === 'string'
+    ? import.meta.env.VITE_API_MODEL.trim() || 'gpt-4o-mini'
+    : 'gpt-4o-mini'
+const DEFAULT_API_RESOLVED_KIND = detectApiKindFromUrl(DEFAULT_API_URL)
 const MAX_GLOBAL_WORLDVIEW_CHARS = 6000
 const MAX_KNOWLEDGE_POINTS = 200
 const MAX_KNOWLEDGE_POINT_ID_CHARS = 64
@@ -830,10 +844,10 @@ export const useSystemStore = defineStore('system', () => {
 
   const settings = reactive({
     api: {
-      url: 'https://api.openai.com/v1/chat/completions',
-      key: '',
-      model: 'gpt-4o-mini',
-      resolvedKind: 'openai_compatible',
+      url: DEFAULT_API_URL,
+      key: DEFAULT_API_KEY,
+      model: DEFAULT_API_MODEL,
+      resolvedKind: DEFAULT_API_RESOLVED_KIND,
       presets: [],
       activePresetId: '',
     },

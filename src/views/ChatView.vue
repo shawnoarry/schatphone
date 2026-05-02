@@ -30,7 +30,9 @@ import {
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
-import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
+import ChatThreadMenuPanel from '../components/chat/ChatThreadMenuPanel.vue'
+import ChatUserActionPanel from '../components/chat/ChatUserActionPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -2948,6 +2950,11 @@ const openUserActionForm = (formType) => {
   }
 }
 
+const updateUserActionDraft = ({ key, value } = {}) => {
+  if (typeof key !== 'string' || !(key in userActionDraft)) return
+  userActionDraft[key] = value
+}
+
 const buildMessageImagePreviewKey = (messageId, blockIndex) => `${messageId}:${blockIndex}`
 
 const clearGalleryPickerPreviewMap = () => {
@@ -3630,6 +3637,25 @@ const openChatDirectory = () => {
   router.push('/chat-contacts')
 }
 
+const closeThreadMenu = () => {
+  showThreadMenu.value = false
+}
+
+const clearThreadIdentityDraft = () => {
+  threadIdentityDraft.selfAvatar = ''
+  threadIdentityDraft.contactAvatar = ''
+}
+
+const updateThreadIdentityDraft = ({ key, value }) => {
+  if (key !== 'selfAvatar' && key !== 'contactAvatar') return
+  threadIdentityDraft[key] = typeof value === 'string' ? value : ''
+}
+
+const updateThreadSettingsDraft = ({ key, value }) => {
+  if (!Object.prototype.hasOwnProperty.call(threadSettingsDraft, key)) return
+  threadSettingsDraft[key] = value
+}
+
 const transferActionLabel = (block) => {
   if (!block?.actionRoute) return t('详情', 'Details')
   if (block.actionRoute === '/wallet') return t('打开钱包', 'Open Wallet')
@@ -3944,364 +3970,34 @@ onBeforeUnmount(() => {
         ><i class="fas fa-bars"></i></button>
       </div>
 
-      <div v-if="showThreadMenu" class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
-        <template v-if="isActiveServiceChat">
-          <div class="space-y-2">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="font-semibold text-sm text-gray-900">{{ t('服务模板摘要', 'Service template summary') }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{
-                    activeChat.serviceTemplate ||
-                    t('当前服务号暂未设置模板。请到会话通讯录统一编辑。', 'No template is set yet. Edit it from Chat Directory.')
-                  }}
-                </p>
-              </div>
-              <button
-                @click="openChatDirectory"
-                class="shrink-0 px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
-              >
-                {{ t('去管理', 'Manage') }}
-              </button>
-            </div>
-            <p class="text-[10px] text-gray-400">
-              {{ t('服务号模板只保留一个正式编辑入口：Chat Directory。此处仅展示当前会话正在使用的模板。', 'Service templates have one formal edit entry: Chat Directory. This menu only shows the active template.') }}
-            </p>
-          </div>
-        </template>
-
-        <div
-          class="space-y-2 rounded-xl border border-blue-100 bg-blue-50/70 p-3"
-          data-testid="thread-worldbook-summary"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <p class="font-semibold text-sm text-gray-900">
-                {{ t('当前 WorldBook 上下文', 'Current WorldBook context') }}
-              </p>
-              <p class="mt-1 text-[10px] text-gray-500">
-                {{
-                  t(
-                    'Chat 会始终读取全局世界观，并只注入当前角色已绑定且启用的知识点。',
-                    'Chat always reads the global worldview and only injects enabled knowledge points bound to this role.',
-                  )
-                }}
-              </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                data-testid="thread-worldbook-open"
-                class="rounded-full border border-blue-200 bg-white px-2 py-1 text-[11px] text-blue-700"
-                @click="openWorldBookFromThreadContext()"
-              >
-                WorldBook
-              </button>
-              <span class="rounded-full bg-white px-2 py-1 text-[11px] text-blue-700">
-                {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
-              </span>
-            </div>
-          </div>
-
-          <div class="rounded-lg border border-white bg-white/80 p-2">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] font-medium text-gray-700">
-                {{ t('全局世界观', 'Global worldview') }}
-              </span>
-              <span
-                class="text-[10px]"
-                data-testid="thread-worldbook-worldview-count"
-              >
-                {{ activeThreadWorldKernelState.worldviewCharCount }}
-              </span>
-            </div>
-            <p
-              class="mt-1 text-[11px]"
-              data-testid="thread-worldbook-worldview-preview"
-              :class="activeThreadWorldKernelState.hasWorldview ? 'text-gray-600' : 'text-gray-400'"
-            >
-              {{
-                activeThreadWorldKernelState.hasWorldview
-                  ? activeThreadWorldKernelState.worldviewPreview
-                  : t('当前没有额外世界观文本。', 'No extra worldview text is active right now.')
-              }}
-            </p>
-          </div>
-
-          <div class="rounded-lg border border-white bg-white/80 p-2">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] font-medium text-gray-700">
-                {{ t('当前注入的知识点', 'Knowledge points in effect') }}
-              </span>
-              <span
-                class="text-[10px] text-gray-500"
-                data-testid="thread-worldbook-active-count"
-              >
-                {{ activeThreadWorldKernelState.injectedCount }} / {{ activeThreadWorldKernelState.configuredCount }}
-              </span>
-            </div>
-            <p class="mt-1 text-[10px] text-gray-500">
-              {{
-                activeThreadWorldKernelState.roleBound
-                  ? t(
-                      `来源角色：${activeThreadWorldKernelState.profileName || activeChat?.name || ''}`,
-                      `Source role: ${activeThreadWorldKernelState.profileName || activeChat?.name || ''}`,
-                    )
-                  : t('当前会话未绑定角色档案。', 'This thread is not bound to a role profile.')
-              }}
-            </p>
-
-            <div
-              v-if="activeThreadWorldKernelState.injectedPoints.length > 0"
-              class="mt-2 flex flex-wrap gap-2"
-            >
-              <button
-                v-for="point in activeThreadWorldKernelState.injectedPoints"
-                :key="point.id"
-                type="button"
-                :data-testid="`thread-worldbook-point-${point.id}`"
-                class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
-                @click="openWorldBookFromThreadContext(point.id)"
-              >
-                {{ point.title }}
-              </button>
-            </div>
-            <p
-              v-else
-              class="mt-2 text-[11px] text-gray-400"
-              data-testid="thread-worldbook-empty"
-            >
-              {{
-                t(
-                  '当前没有可注入的启用知识点。',
-                  'There are no enabled bound knowledge points active for this thread.',
-                )
-              }}
-            </p>
-
-            <p
-              v-if="
-                activeThreadWorldKernelState.disabledCount > 0 ||
-                activeThreadWorldKernelState.missingCount > 0 ||
-                activeThreadWorldKernelState.overflowCount > 0
-              "
-              class="mt-2 text-[10px] text-amber-600"
-              data-testid="thread-worldbook-binding-note"
-            >
-              {{
-                t(
-                  `未注入：停用 ${activeThreadWorldKernelState.disabledCount} 条，缺失 ${activeThreadWorldKernelState.missingCount} 条，超出上限 ${activeThreadWorldKernelState.overflowCount} 条。`,
-                  `Not injected: ${activeThreadWorldKernelState.disabledCount} disabled, ${activeThreadWorldKernelState.missingCount} missing, ${activeThreadWorldKernelState.overflowCount} over the limit.`,
-                )
-              }}
-            </p>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 pt-3 space-y-2">
-          <p class="font-semibold text-sm text-gray-900">{{ t('会话身份覆写', 'Thread identity overrides') }}</p>
-          <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('我的头像（会话级）', 'My avatar (thread-level)') }}</span>
-            <input
-              v-model="threadIdentityDraft.selfAvatar"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
-              placeholder="https://..."
-            />
-          </label>
-          <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('对方头像（会话级）', 'Contact avatar (thread-level)') }}</span>
-            <input
-              v-model="threadIdentityDraft.contactAvatar"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none"
-              placeholder="https://..."
-            />
-          </label>
-          <p class="text-[10px] text-gray-400">
-            {{ t('优先级：会话 > 模块 > 全局 > 默认。留空将回退到下一级。', 'Priority: thread > module > global > fallback. Leave blank to fall back.') }}
-          </p>
-          <div class="flex justify-end gap-2 pt-1">
-            <button
-              @click="threadIdentityDraft.selfAvatar = ''; threadIdentityDraft.contactAvatar = ''"
-              class="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600"
-            >
-              {{ t('清空', 'Clear') }}
-            </button>
-            <button
-              @click="saveThreadIdentityOverrides"
-              class="px-2.5 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
-            >
-              {{ t('保存身份覆写', 'Save identity overrides') }}
-            </button>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 pt-3 space-y-2">
-          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话调校', 'Current thread tuning') }}</p>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('回复模式', 'Reply Mode') }}</span>
-            <select v-model="threadSettingsDraft.replyMode" class="rounded-lg border border-gray-200 px-2 py-1">
-              <option v-for="item in REPLY_MODE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
-            </select>
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('每次触发回复条数', 'Replies per trigger') }}</span>
-            <input v-model.number="threadSettingsDraft.replyCount" type="number" min="1" max="3" class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-right" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('回复风格', 'Response style') }}</span>
-            <select v-model="threadSettingsDraft.responseStyle" class="rounded-lg border border-gray-200 px-2 py-1">
-              <option v-for="item in RESPONSE_STYLE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
-            </select>
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('可选回复建议', 'Suggested replies') }}</span>
-            <input v-model="threadSettingsDraft.suggestedRepliesEnabled" type="checkbox" class="h-4 w-4" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('双语输出', 'Bilingual output') }}</span>
-            <input v-model="threadSettingsDraft.bilingualEnabled" type="checkbox" class="h-4 w-4" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.bilingualEnabled">
-            <span>{{ t('第二语言', 'Secondary language') }}</span>
-            <input v-model="threadSettingsDraft.secondaryLanguage" type="text" class="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('允许引用回复', 'Allow quote reply') }}</span>
-            <input v-model="threadSettingsDraft.allowQuoteReply" type="checkbox" class="h-4 w-4" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('允许引用自己', 'Allow self quote') }}</span>
-            <input v-model="threadSettingsDraft.allowSelfQuote" type="checkbox" class="h-4 w-4" :disabled="!threadSettingsDraft.allowQuoteReply" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('虚拟语音', 'Virtual voice') }}</span>
-            <input v-model="threadSettingsDraft.virtualVoiceEnabled" type="checkbox" class="h-4 w-4" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('读取上文轮数', 'Context turns') }}</span>
-            <input v-model.number="threadSettingsDraft.contextTurns" type="number" min="2" max="20" class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-right" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('参考图模式', 'Image reference mode') }}</span>
-            <select v-model="threadSettingsDraft.imageReferenceMode" class="rounded-lg border border-gray-200 px-2 py-1">
-              <option v-for="item in IMAGE_REFERENCE_MODE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
-            </select>
-          </label>
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('无参考图时允许图片消息', 'Allow image blocks without references') }}</span>
-            <input v-model="threadSettingsDraft.allowImageVirtualWithoutReference" type="checkbox" class="h-4 w-4" />
-          </label>
-          <p class="text-[10px] text-gray-500">
-            {{
-              t(
-                '自动模式会按供应商能力优先使用原生图输入，失败时自动回退为上下文线索。',
-                'Auto mode prefers native image input when supported and falls back to context cues on unsupported responses.',
-              )
-            }}
-          </p>
-          <p
-            class="text-[10px]"
-            :class="roleImageReferenceAvailability.hasAny ? 'text-gray-500' : threadSettingsDraft.allowImageVirtualWithoutReference ? 'text-orange-500' : 'text-emerald-600'"
-          >
-            {{ threadImageBlockPolicyHint }}
-          </p>
-          <p class="text-[10px] text-gray-400">
-            {{
-              t(
-                '本地素材会在大小允许时转为参考图输入；超出上限时会仅作为文字线索。',
-                'Local assets are converted to reference images when size allows; oversized files degrade to text-only cues.',
-              )
-            }}
-          </p>
-
-          <label class="flex items-center justify-between gap-3">
-            <span>{{ t('主动开场', 'Proactive opener') }}</span>
-            <input v-model="threadSettingsDraft.proactiveOpenerEnabled" type="checkbox" class="h-4 w-4" />
-          </label>
-
-          <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.proactiveOpenerEnabled">
-            <span>{{ t('主动策略', 'Proactive strategy') }}</span>
-            <select v-model="threadSettingsDraft.proactiveOpenerStrategy" class="rounded-lg border border-gray-200 px-2 py-1">
-              <option v-for="item in PROACTIVE_STRATEGY_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</option>
-            </select>
-          </label>
-
-          <div class="border-t border-gray-200 pt-2 space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <span>{{ t('定时自主调用', 'Timed autonomous invoke') }}</span>
-              <input
-                v-model="threadSettingsDraft.autoInvokeEnabled"
-                type="checkbox"
-                class="h-4 w-4"
-                :disabled="!chatAutomationEnabled"
-              />
-            </div>
-            <label class="flex items-center justify-between gap-3">
-              <span>{{ t('自主调用间隔（秒）', 'Invoke interval (sec)') }}</span>
-              <input
-                v-model.number="threadSettingsDraft.autoInvokeIntervalSec"
-                type="number"
-                min="60"
-                max="86400"
-                class="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right"
-                :disabled="!threadSettingsDraft.autoInvokeEnabled"
-              />
-            </label>
-            <p v-if="!chatAutomationEnabled" class="text-[10px] text-orange-500">
-              {{ t('全局或 Chat 模块自动响应未开启，请先到设置中开启。', 'Global or Chat automation is disabled. Enable it in Settings first.') }}
-            </p>
-            <p v-else class="text-[10px] text-gray-500">
-              {{ autoScheduleHintText }}
-            </p>
-            <p
-              v-if="chatAutomationEnabled && autoBackgroundReminderHint.text"
-              class="text-[10px]"
-              :class="
-                autoBackgroundReminderHint.tone === 'success'
-                  ? 'text-emerald-600'
-                  : autoBackgroundReminderHint.tone === 'warning'
-                    ? 'text-orange-500'
-                    : 'text-gray-500'
-              "
-            >
-              {{ autoBackgroundReminderHint.text }}
-            </p>
-            <p v-if="chatAutomationEnabled && autoLastTriggeredHintText" class="text-[10px] text-gray-500">
-              {{ autoLastTriggeredHintText }}
-            </p>
-            <p v-if="chatAutomationEnabled && autoRestoreSettlementHintText" class="text-[10px] text-gray-500">
-              {{ autoRestoreSettlementHintText }}
-            </p>
-            <p class="text-[10px] text-gray-400">
-              {{ t('手动触发优先；若与自动触发接近重叠，自动调用会顺延到下一周期。', 'Manual trigger has priority. If it overlaps with auto invoke, autonomous call is deferred to next cycle.') }}
-            </p>
-          </div>
-
-          <div class="flex justify-end gap-2 pt-1">
-            <button @click="showThreadMenu = false" class="px-2.5 py-1 rounded-lg border border-gray-200">{{ t('取消', 'Cancel') }}</button>
-            <button
-              @click="saveThreadSettings"
-              class="px-2.5 py-1 rounded-lg border"
-              :class="threadSettingsSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
-            >
-              {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存本会话调校', 'Save this thread tuning') }}
-            </button>
-          </div>
-        </div>
-      </div>
+      <ChatThreadMenuPanel
+        v-if="showThreadMenu"
+        :active-chat="activeChat"
+        :is-active-service-chat="isActiveServiceChat"
+        :world-kernel-state="activeThreadWorldKernelState"
+        :thread-identity-draft="threadIdentityDraft"
+        :thread-settings-draft="threadSettingsDraft"
+        :reply-mode-options="REPLY_MODE_OPTIONS"
+        :response-style-options="RESPONSE_STYLE_OPTIONS"
+        :image-reference-mode-options="IMAGE_REFERENCE_MODE_OPTIONS"
+        :proactive-strategy-options="PROACTIVE_STRATEGY_OPTIONS"
+        :role-image-reference-availability="roleImageReferenceAvailability"
+        :thread-image-block-policy-hint="threadImageBlockPolicyHint"
+        :chat-automation-enabled="chatAutomationEnabled"
+        :auto-schedule-hint-text="autoScheduleHintText"
+        :auto-background-reminder-hint="autoBackgroundReminderHint"
+        :auto-last-triggered-hint-text="autoLastTriggeredHintText"
+        :auto-restore-settlement-hint-text="autoRestoreSettlementHintText"
+        :thread-settings-saved="threadSettingsSaved"
+        @open-chat-directory="openChatDirectory"
+        @open-worldbook="openWorldBookFromThreadContext"
+        @clear-thread-identity="clearThreadIdentityDraft"
+        @save-thread-identity="saveThreadIdentityOverrides"
+        @save-thread-settings="saveThreadSettings"
+        @update-thread-identity="updateThreadIdentityDraft"
+        @update-thread-setting="updateThreadSettingsDraft"
+        @close="closeThreadMenu"
+      />
 
       <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" ref="chatContainer">
         <div v-for="msg in activeMessages" :key="msg.id" class="flex w-full" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
@@ -4474,330 +4170,38 @@ onBeforeUnmount(() => {
           {{ uiNoticeMessage }}
         </div>
 
-        <div
+        <ChatUserActionPanel
           v-if="showUserActionPanel"
-          class="absolute bottom-[56px] left-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-sm"
-        >
-          <div v-if="userActionFormType === USER_ACTION_FORM_NONE" class="grid grid-cols-3 gap-2">
-            <button
-              @click="triggerUserMediaPicker(USER_MEDIA_KIND_IMAGE)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
-            >
-              {{ t('图片', 'Image') }}
-            </button>
-            <button
-              @click="triggerUserMediaPicker(USER_MEDIA_KIND_GIF)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
-            >
-              GIF
-            </button>
-            <button
-              @click="openUserActionForm(USER_ACTION_FORM_GALLERY)"
-              :disabled="!gallerySendState.enabled"
-              class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
-              :class="gallerySendState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
-            >
-              {{ t('素材库', 'Asset library') }}
-            </button>
-            <button
-              @click="openUserActionForm(USER_ACTION_FORM_LINK)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
-            >
-              {{ t('链接', 'Link') }}
-            </button>
-            <button
-              @click="sendCurrentLocation"
-              :disabled="!locationShareState.enabled"
-              class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
-              :class="locationShareState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
-            >
-              {{ t('位置', 'Location') }}
-            </button>
-            <button
-              @click="openUserActionForm(USER_ACTION_FORM_TRANSFER)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
-            >
-              {{ t('转账', 'Transfer') }}
-            </button>
-            <button
-              @click="openUserActionForm(USER_ACTION_FORM_VOICE)"
-              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
-            >
-              {{ t('语音卡片', 'Voice card') }}
-            </button>
-          </div>
-          <p
-            v-if="userActionFormType === USER_ACTION_FORM_NONE"
-            class="mt-2 text-[10px]"
-            :class="gallerySendState.enabled && locationShareState.enabled ? 'text-gray-500' : 'text-amber-600'"
-          >
-            {{ userActionGridHint }}
-          </p>
-
-          <div v-else-if="userActionFormType === USER_ACTION_FORM_LINK" class="space-y-2">
-            <p class="text-[11px] font-medium text-gray-700">{{ t('发送链接', 'Send link') }}</p>
-            <input
-              v-model="userActionDraft.linkUrl"
-              @keydown.enter.prevent="submitLinkCardForm"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-              :placeholder="t('链接地址（http/https）', 'URL (http/https)')"
-            />
-            <input
-              v-model="userActionDraft.linkTitle"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-              :placeholder="t('链接标题（可选）', 'Link title (optional)')"
-            />
-            <input
-              v-model="userActionDraft.linkNote"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-              :placeholder="t('附加说明（可选）', 'Note (optional)')"
-            />
-            <p
-              class="text-[10px]"
-              :class="linkFormState.valid ? 'text-gray-500' : 'text-amber-600'"
-            >
-              {{ linkFormState.message }}
-            </p>
-            <div class="flex items-center justify-end gap-2">
-              <button
-                @click="backToUserActionGrid"
-                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-              >
-                {{ t('返回', 'Back') }}
-              </button>
-              <button
-                @click="submitLinkCardForm"
-                :disabled="!linkFormState.valid"
-                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
-                :class="linkFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
-              >
-                {{ t('发送链接', 'Send link') }}
-              </button>
-            </div>
-          </div>
-
-          <div v-else-if="userActionFormType === USER_ACTION_FORM_TRANSFER" class="space-y-2">
-            <p class="text-[11px] font-medium text-gray-700">{{ t('发送转账卡片', 'Send transfer card') }}</p>
-            <div class="grid grid-cols-3 gap-2">
-              <input
-                v-model="userActionDraft.transferAmount"
-                @keydown.enter.prevent="submitTransferCardForm"
-                type="text"
-                inputmode="decimal"
-                class="col-span-2 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-                :placeholder="t('金额，如 88.00', 'Amount, e.g. 88.00')"
-              />
-              <input
-                v-model="userActionDraft.transferCurrency"
-                type="text"
-                class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] uppercase outline-none"
-                :placeholder="t('币种', 'Currency')"
-              />
-            </div>
-            <input
-              v-model="userActionDraft.transferNote"
-              type="text"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-              :placeholder="t('转账备注（可选）', 'Transfer note (optional)')"
-            />
-            <p
-              class="text-[10px]"
-              :class="transferFormState.valid ? 'text-gray-500' : 'text-amber-600'"
-            >
-              {{ transferFormState.message }}
-            </p>
-            <div class="flex items-center justify-end gap-2">
-              <button
-                @click="backToUserActionGrid"
-                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-              >
-                {{ t('返回', 'Back') }}
-              </button>
-              <button
-                @click="submitTransferCardForm"
-                :disabled="!transferFormState.valid"
-                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
-                :class="transferFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
-              >
-                {{ t('发送转账', 'Send transfer') }}
-              </button>
-            </div>
-          </div>
-
-          <div v-else-if="userActionFormType === USER_ACTION_FORM_VOICE" class="space-y-2">
-            <p class="text-[11px] font-medium text-gray-700">{{ t('发送语音卡片', 'Send voice card') }}</p>
-            <textarea
-              v-model="userActionDraft.voiceTranscript"
-              rows="2"
-              class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none resize-none"
-              :placeholder="t('输入语音内容', 'Enter voice transcript')"
-            ></textarea>
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] text-gray-600">{{ t('时长（秒）', 'Duration (sec)') }}</span>
-              <input
-                v-model.number="userActionDraft.voiceDurationSec"
-                type="number"
-                min="1"
-                max="600"
-                class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-[11px] outline-none"
-              />
-            </div>
-            <p
-              class="text-[10px]"
-              :class="voiceFormState.valid ? 'text-gray-500' : 'text-amber-600'"
-            >
-              {{ voiceFormState.message }}
-            </p>
-            <div class="flex items-center justify-end gap-2">
-              <button
-                @click="backToUserActionGrid"
-                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-              >
-                {{ t('返回', 'Back') }}
-              </button>
-              <button
-                @click="submitVoiceCardForm"
-                :disabled="!voiceFormState.valid"
-                class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
-                :class="voiceFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
-              >
-                {{ t('发送语音卡片', 'Send voice card') }}
-              </button>
-            </div>
-          </div>
-
-          <div v-else-if="userActionFormType === USER_ACTION_FORM_GALLERY" class="space-y-2">
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-[11px] font-medium text-gray-700">{{ t('从素材库发送', 'Send from asset library') }}</p>
-              <select
-                v-model="galleryPickerCategory"
-                class="rounded-lg border border-gray-200 px-1.5 py-1 text-[11px] bg-white"
-              >
-                <option
-                  v-for="option in galleryPickerCategoryOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </div>
-            <p
-              v-if="activeRoleAssetContext.profileId"
-              class="text-[10px] text-gray-500"
-            >
-              {{
-                activeRoleAssetContext.preferredImageAssetId
-                  ? t(
-                      `会话优先素材已启用（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                      `Thread preferred asset is enabled (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-                    )
-                  : activeRoleAssetContext.profileFolderAssetIds.length > 0
-                    ? t(
-                        `当前会话正在读取角色档案素材包与文件夹绑定（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                        `This chat is using profile pack + folder bindings (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-                      )
-                  : t(
-                      `当前会话正在读取角色档案素材包（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                      `This chat is using profile-bound asset pack (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-                    )
-              }}
-            </p>
-
-            <div
-              v-if="galleryPickerAssets.length === 0"
-              class="rounded-lg border border-dashed border-gray-200 px-2 py-3 text-[11px] text-gray-500 text-center"
-            >
-              {{ t('该分类暂无素材，请先在相册导入。', 'No assets in this category. Import in Gallery first.') }}
-            </div>
-
-            <div v-else class="max-h-48 overflow-y-auto pr-0.5 grid grid-cols-2 gap-2">
-              <button
-                v-for="asset in galleryPickerAssets"
-                :key="asset.id"
-                @click="submitGalleryAsset(asset)"
-                class="rounded-lg border border-gray-200 p-1.5 text-left hover:bg-gray-50 transition"
-              >
-                <div class="w-full h-14 rounded-md bg-gray-100 overflow-hidden">
-                  <img
-                    v-if="galleryPickerPreviewMap[asset.id]"
-                    :src="galleryPickerPreviewMap[asset.id]"
-                    class="w-full h-full object-cover"
-                  />
-                  <div
-                    v-else
-                    class="w-full h-full flex items-center justify-center text-[10px] text-gray-400"
-                  >
-                    {{ t('加载中', 'Loading') }}
-                  </div>
-                </div>
-                <p class="mt-1 text-[10px] font-medium text-gray-700 line-clamp-1">{{ asset.name }}</p>
-                <AssetStatusBadge
-                  v-if="activeRoleAssetContext.preferredImageAssetId && asset.id === activeRoleAssetContext.preferredImageAssetId"
-                  label-zh="会话优先"
-                  label-en="Thread preferred"
-                  icon="fas fa-star"
-                  :truncate="false"
-                  class="mt-1"
-                />
-                <AssetStatusBadge
-                  v-else-if="activeRoleAssetContext.profileFolderAssetIds.includes(asset.id)"
-                  label-zh="文件夹绑定"
-                  label-en="Folder bound"
-                  icon="fas fa-folder"
-                  tone="amber"
-                  :truncate="false"
-                  class="mt-1"
-                />
-                <AssetStatusBadge
-                  v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"
-                  label-zh="角色素材包"
-                  label-en="Profile pack"
-                  icon="fas fa-images"
-                  tone="emerald"
-                  :truncate="false"
-                  class="mt-1"
-                />
-              </button>
-            </div>
-
-            <div class="flex items-center justify-end gap-2">
-              <button
-                @click="backToUserActionGrid"
-                class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-              >
-                {{ t('返回', 'Back') }}
-              </button>
-              <button
-                @click="openModuleRoute('/gallery')"
-                class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
-              >
-                {{ t('打开相册', 'Open Gallery') }}
-              </button>
-            </div>
-          </div>
-
-          <div class="mt-2 flex items-center justify-between gap-2">
-            <button
-              v-if="suggestionFeatureEnabled && userActionFormType === USER_ACTION_FORM_NONE"
-              @click="generateSmartReplies"
-              class="rounded-lg border border-emerald-200 px-2 py-1 text-[11px] text-emerald-700 hover:bg-emerald-50"
-              :disabled="loadingSuggestions || loadingAI"
-            >
-              <span v-if="loadingSuggestions">{{ t('生成中...', 'Generating...') }}</span>
-              <span v-else>{{ t('生成建议回复', 'Generate suggested replies') }}</span>
-            </button>
-            <button
-              @click="closeUserActionPanel"
-              class="ml-auto rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-            >
-              {{ t('收起', 'Collapse') }}
-            </button>
-          </div>
-        </div>
+          :user-action-form-type="userActionFormType"
+          :user-action-draft="userActionDraft"
+          :gallery-send-state="gallerySendState"
+          :location-share-state="locationShareState"
+          :user-action-grid-hint="userActionGridHint"
+          :link-form-state="linkFormState"
+          :transfer-form-state="transferFormState"
+          :voice-form-state="voiceFormState"
+          :gallery-picker-category="galleryPickerCategory"
+          :gallery-picker-category-options="galleryPickerCategoryOptions"
+          :active-role-asset-context="activeRoleAssetContext"
+          :gallery-picker-assets="galleryPickerAssets"
+          :gallery-picker-preview-map="galleryPickerPreviewMap"
+          :suggestion-feature-enabled="suggestionFeatureEnabled"
+          :loading-suggestions="loadingSuggestions"
+          :loading-a-i="loadingAI"
+          @trigger-media-picker="triggerUserMediaPicker"
+          @open-form="openUserActionForm"
+          @send-current-location="sendCurrentLocation"
+          @back-to-grid="backToUserActionGrid"
+          @submit-link-card-form="submitLinkCardForm"
+          @submit-transfer-card-form="submitTransferCardForm"
+          @submit-voice-card-form="submitVoiceCardForm"
+          @update-user-action-draft="updateUserActionDraft"
+          @update-gallery-picker-category="galleryPickerCategory = $event"
+          @submit-gallery-asset="submitGalleryAsset"
+          @open-gallery="openModuleRoute('/gallery')"
+          @generate-smart-replies="generateSmartReplies"
+          @close="closeUserActionPanel"
+        />
 
         <input
           ref="userMediaInputRef"
@@ -4905,64 +4309,15 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div
+      <ChatMessageEditModal
         v-if="showEditMessageModal"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-3 pb-4 sm:pb-0"
-      >
-        <button
-          type="button"
-          class="absolute inset-0 bg-black/35"
-          @click="closeMessageEditModal"
-        ></button>
-
-        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-2xl">
-          <p class="text-sm font-semibold text-gray-900">
-            {{
-              editingMessageRole === 'assistant'
-                ? t('修订 AI 消息', 'Revise AI message')
-                : t('编辑用户消息', 'Edit user message')
-            }}
-          </p>
-          <p class="mt-1 text-[11px] text-gray-500">
-            {{
-              editingMessageRole === 'assistant'
-                ? t('修订内容会进入后续上下文，避免对话断层。', 'Revised text will be used for following context.')
-                : t('将直接更新当前消息文本。', 'This will update the current message text directly.')
-            }}
-          </p>
-
-          <textarea
-            v-model="editingMessageDraftText"
-            rows="5"
-            class="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none resize-none"
-            :placeholder="t('输入修订后的消息文本', 'Enter revised message text')"
-          ></textarea>
-
-          <p
-            class="mt-2 text-[11px]"
-            :class="messageEditState.valid ? 'text-gray-500' : 'text-amber-600'"
-          >
-            {{ messageEditState.message }}
-          </p>
-
-          <div class="mt-3 flex items-center justify-end gap-2">
-            <button
-              class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-              @click="closeMessageEditModal"
-            >
-              {{ t('取消', 'Cancel') }}
-            </button>
-            <button
-              class="rounded-lg border px-3 py-1.5 text-xs transition disabled:cursor-not-allowed disabled:opacity-50"
-              :class="messageEditState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
-              :disabled="!messageEditState.valid"
-              @click="submitMessageEdit"
-            >
-              {{ t('保存', 'Save') }}
-            </button>
-          </div>
-        </div>
-      </div>
+        :editing-message-role="editingMessageRole"
+        :editing-message-draft-text="editingMessageDraftText"
+        :message-edit-state="messageEditState"
+        @update:editing-message-draft-text="editingMessageDraftText = $event"
+        @close="closeMessageEditModal"
+        @submit="submitMessageEdit"
+      />
     </template>
   </div>
 </template>

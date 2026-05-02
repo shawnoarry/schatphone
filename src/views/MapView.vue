@@ -9,6 +9,10 @@ import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
+import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
+import MapTripControlPanel from '../components/map/MapTripControlPanel.vue'
+import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
 import {
   MEDIA_KIND,
   MEDIA_SIZE_SCENE,
@@ -109,6 +113,14 @@ const setTripFromAddress = (addressId) => {
 const setTripToAddress = (addressId) => {
   mapStore.applyAddressToTripEndpoint(addressId, 'to')
   tripActionHint.value = { tone: '', message: '' }
+}
+
+const updateTripFrom = (value) => {
+  tripForm.value.from = value
+}
+
+const updateTripTo = (value) => {
+  tripForm.value.to = value
 }
 
 const mapVisualAssetOptions = computed(() =>
@@ -925,318 +937,54 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
-      <section class="map-visual-panel rounded-[2rem] p-4">
-        <div class="flex items-center justify-between mb-3">
-          <div>
-            <p class="text-[10px] uppercase tracking-[0.24em] text-cyan-100/70">{{ t('实时视野', 'Live view') }}</p>
-            <h2 class="text-xl font-semibold">{{ t('地图视觉', 'Map visual') }}</h2>
-          </div>
-          <span class="text-[11px] px-2 py-1 rounded-full bg-white/12 border border-white/15 text-cyan-50">
-            {{ resolvedMapVisualMode === 'gallery' ? t('素材库', 'Gallery') : t('默认', 'Default') }}
-          </span>
-        </div>
-
-        <div class="map-preview-stage mb-4">
-          <img
-            v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl"
-            :src="mapVisualPreviewUrl"
-            class="w-full h-full object-cover"
-            :alt="t('地图视觉预览', 'Map visual preview')"
-          />
-          <img
-            v-else-if="mapOneOffVisualUrl"
-            :src="mapOneOffVisualUrl"
-            class="w-full h-full object-cover"
-            :alt="mapOneOffVisualName || t('单次地图背景预览', 'One-off map visual preview')"
-          />
-          <img
-            v-else-if="mapProviderGeneratedImageUrl"
-            :src="mapProviderGeneratedImageUrl"
-            class="w-full h-full object-cover"
-            :alt="t('供应商视觉预览', 'Provider visual preview')"
-          />
-          <div v-else class="map-default-canvas w-full h-full">
-            <div class="map-grid-lines"></div>
-            <div class="map-route-line"></div>
-            <div class="map-pin map-pin-a"></div>
-            <div class="map-pin map-pin-b"></div>
-          </div>
-          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/15 to-transparent"></div>
-          <div class="absolute left-4 right-4 bottom-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">{{ t('当前位置', 'Current location') }}</p>
-            <p class="mt-1 text-lg font-semibold line-clamp-2">{{ currentLocationText }}</p>
-            <p class="mt-1 text-xs text-cyan-50/75">{{ mapVisualBindingStatusText }}</p>
-          </div>
-        </div>
-
-        <div v-if="showMapVisualOnboarding" class="mb-3 rounded-2xl border border-amber-200/40 bg-amber-300/15 p-3 text-xs text-amber-50 space-y-2">
-          <p>
-            {{ t('首次可选择地图视觉模式：默认样式或素材库背景。未配置素材时会自动回退为默认。', 'Choose map visual mode on first use: default style or gallery background. Missing assets auto-fallback to default.') }}
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button @click="useDefaultMapVisual" class="px-2 py-1 rounded bg-white text-slate-950">
-              {{ t('保持默认', 'Keep default') }}
-            </button>
-            <button @click="useGalleryMapVisual" class="px-2 py-1 rounded border border-white/25">
-              {{ t('使用素材库', 'Use gallery') }}
-            </button>
-          </div>
-        </div>
-
-        <div class="space-y-2 text-xs text-cyan-50/80">
-          <label class="inline-flex items-center gap-2 mr-4">
-            <input
-              type="radio"
-              name="mapVisualMode"
-              value="default"
-              :checked="mapVisualSettings.mode === 'default'"
-              @change="onMapVisualModeChange"
-            />
-            {{ t('默认视觉', 'Default visual') }}
-          </label>
-          <label class="inline-flex items-center gap-2">
-            <input
-              type="radio"
-              name="mapVisualMode"
-              value="gallery"
-              :checked="mapVisualSettings.mode === 'gallery'"
-              @change="onMapVisualModeChange"
-            />
-            {{ t('素材库视觉', 'Gallery visual') }}
-          </label>
-        </div>
-
-        <div v-if="mapVisualSettings.mode === 'gallery'" class="mt-3 space-y-2">
-          <select
-            class="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-white outline-none"
-            :value="mapVisualSettings.assetId"
-            @change="onMapVisualAssetChange"
-          >
-            <option value="">{{ t('选择地图背景素材', 'Choose map background asset') }}</option>
-            <option v-for="asset in mapVisualAssetOptions" :key="asset.id" :value="asset.id">
-              {{ asset.name }}
-            </option>
-          </select>
-          <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-cyan-50/60">
-            {{ t('素材库暂无可用背景图，已自动回退默认模式。', 'No gallery asset available for map background; fallback stays on default mode.') }}
-          </p>
-
-          <div
-            v-else
-            class="rounded-3xl border border-white/12 bg-white/10 p-3 space-y-3 backdrop-blur"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-xs font-semibold text-cyan-50">{{ mapVisualSelectionTitle }}</p>
-                <p
-                  v-if="mapVisualSelectedAsset"
-                  class="mt-1 text-[11px] text-cyan-100 truncate"
-                >
-                  {{ mapVisualSelectedAsset.name }}
-                </p>
-                <p class="mt-1 text-[11px] text-cyan-50/60">
-                  {{ mapVisualSelectionDescription }}
-                </p>
-                <p class="mt-1 text-[11px] text-cyan-100">
-                  {{ mapVisualBindingStatusText }}
-                </p>
-              </div>
-              <button
-                type="button"
-                @click="openGallery"
-                class="shrink-0 rounded-xl border border-white/15 bg-white/12 px-2.5 py-1.5 text-[11px] text-cyan-50"
-              >
-                {{ t('打开相册', 'Open Gallery') }}
-              </button>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                @click="restoreDefaultMapVisual"
-                class="rounded-xl border border-white/15 bg-white/10 px-2.5 py-1.5 text-[11px] text-cyan-50"
-              >
-                {{ t('恢复默认视觉', 'Use default visual') }}
-              </button>
-              <button
-                v-if="mapVisualSelectedAsset"
-                type="button"
-                @click="clearMapVisualBinding"
-                class="rounded-xl border border-amber-200/40 bg-amber-300/15 px-2.5 py-1.5 text-[11px] text-amber-50"
-              >
-                {{ t('清除背景绑定', 'Clear bound asset') }}
-              </button>
-            </div>
-
-            <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              <button
-                v-for="asset in mapVisualQuickAssetOptions"
-                :key="`map-visual-chip-${asset.id}`"
-                type="button"
-                class="shrink-0 w-16"
-                @click="applyQuickMapVisualAsset(asset.id)"
-              >
-                <div
-                  class="relative w-16 h-16 rounded-2xl overflow-hidden border bg-white/10"
-                  :class="
-                    mapVisualSelectedAsset?.id === asset.id
-                      ? 'border-cyan-200 ring-2 ring-cyan-200/25'
-                      : 'border-white/15'
-                  "
-                >
-                  <img
-                    v-if="mapVisualQuickPreviewMap[asset.id]"
-                    :src="mapVisualQuickPreviewMap[asset.id]"
-                    class="w-full h-full object-cover"
-                  />
-                  <div
-                    v-else
-                    class="w-full h-full flex items-center justify-center text-[9px] text-cyan-50/50 bg-white/10"
-                  >
-                    {{ t('加载中', 'Loading') }}
-                  </div>
-                  <AssetStatusBadge
-                    v-if="mapVisualSelectedAsset?.id === asset.id"
-                    label-zh="使用中"
-                    label-en="Live"
-                    tone="sky-solid"
-                    :truncate="false"
-                    class="absolute left-1 top-1 font-semibold"
-                  />
-                </div>
-                <p class="mt-1 text-[10px] text-cyan-50/65 line-clamp-2 text-left">{{ asset.name }}</p>
-              </button>
-              <div
-                v-if="mapVisualQuickOverflowCount > 0"
-                class="shrink-0 rounded-xl border border-dashed border-white/20 px-3 py-2 text-[11px] text-cyan-50"
-              >
-                +{{ mapVisualQuickOverflowCount }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            ref="mapVisualFileInputRef"
-            type="file"
-            class="hidden"
-            accept="image/*"
-            @change="onMapVisualFilePicked"
-          />
-          <button @click="openMapVisualUploadPicker" class="px-3 py-1.5 rounded-full border border-white/15 bg-white/10 text-xs text-cyan-50">
-            {{ t('上传地图背景', 'Upload map visual') }}
-          </button>
-          <button
-            v-if="mapOneOffVisualUrl"
-            @click="clearMapOneOffVisual"
-            class="px-3 py-1.5 rounded-full border border-amber-200/40 text-amber-50 bg-amber-300/15 text-xs"
-          >
-            {{ t('清除本次背景', 'Clear one-off visual') }}
-          </button>
-        </div>
-        <p class="mt-1 text-[11px] text-cyan-50/55">
-          {{
-            t(
-              '支持“先入库再应用”与“单次应用不入库”双路径；单次背景只在当前会话可见。',
-              'Supports both import-then-apply and one-off apply without import; one-off visual is session-only.',
-            )
-          }}
-        </p>
-
-        <label class="mt-3 inline-flex items-center gap-2 text-xs text-cyan-50/75">
-          <input
-            type="checkbox"
-            class="w-4 h-4"
-            :checked="mapVisualSettings.aiVisualEnabled === true"
-            @change="onMapAiVisualToggle"
-          />
-          {{ t('启用 AI 地图视觉', 'Enable AI map visual') }}
-        </label>
-
-        <label class="mt-2 inline-flex items-center gap-2 text-xs text-cyan-50/75">
-          <input
-            type="checkbox"
-            class="w-4 h-4"
-            :checked="mapVisualSettings.providerVisualEnabled === true"
-            @change="onMapProviderVisualToggle"
-          />
-          {{ t('启用供应商视觉生成（可选）', 'Enable provider visual generation (optional)') }}
-        </label>
-
-        <div class="mt-3 rounded-2xl border border-white/12 bg-slate-950/25 p-3 text-xs text-cyan-50/70">
-          <p class="font-medium text-cyan-50">
-            {{ t('自动化策略状态', 'Automation policy') }}: {{ mapAiPolicySummary }}
-          </p>
-          <p class="mt-1">{{ mapAiPolicyHint }}</p>
-          <p class="mt-1">
-            {{ t('供应商状态', 'Provider status') }}: {{ mapProviderStatusLabel }}
-          </p>
-          <p
-            v-if="mapAutomationRuntime.lastProviderSummary"
-            class="mt-1 text-[11px] text-cyan-50/55"
-          >
-            {{ mapAutomationRuntime.lastProviderSummary }}
-          </p>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <button
-              @click="triggerMapAiVisualRefresh"
-              class="px-2 py-1 rounded border"
-              :class="mapAiVisualAutomationPolicy.invokeEnabled ? 'border-cyan-200/60 text-cyan-50 bg-cyan-300/15' : 'border-white/15 text-cyan-50/50 bg-white/5'"
-              :disabled="mapAiVisualRefreshing"
-            >
-              {{ mapAiVisualRefreshing ? t('刷新中…', 'Refreshing...') : t('触发 AI 刷新', 'Trigger AI refresh') }}
-            </button>
-            <button @click="openAutomationSettings" class="px-2 py-1 rounded border border-white/15">
-              {{ t('前往自动化设置', 'Open automation settings') }}
-            </button>
-          </div>
-          <p v-if="mapAutomationRuntime.lastExecuteAt > 0" class="mt-1 text-[11px] text-cyan-50/55">
-            {{ t('上次执行', 'Last executed') }}: {{ formatTime(mapAutomationRuntime.lastExecuteAt) }}
-          </p>
-        </div>
-
-        <div class="hidden">
-          <div v-if="resolvedMapVisualMode === 'gallery' && mapVisualPreviewUrl" class="aspect-[16/8] bg-black">
-            <img
-              :src="mapVisualPreviewUrl"
-              class="w-full h-full object-cover"
-              :alt="t('地图视觉预览', 'Map visual preview')"
-            />
-          </div>
-          <div v-else-if="mapOneOffVisualUrl" class="aspect-[16/8] bg-black">
-            <img
-              :src="mapOneOffVisualUrl"
-              class="w-full h-full object-cover"
-              :alt="mapOneOffVisualName || t('单次地图背景预览', 'One-off map visual preview')"
-            />
-          </div>
-          <div v-else-if="mapProviderGeneratedImageUrl" class="aspect-[16/8] bg-black">
-            <img
-              :src="mapProviderGeneratedImageUrl"
-              class="w-full h-full object-cover"
-              :alt="t('供应商视觉预览', 'Provider visual preview')"
-            />
-          </div>
-          <div v-else class="aspect-[16/8] bg-gradient-to-br from-slate-200 via-slate-100 to-blue-100 flex items-center justify-center">
-            <div class="text-center text-gray-600">
-              <i class="fas fa-map-location-dot text-3xl mb-2"></i>
-              <p class="text-xs">{{ t('默认地图视觉（可继续使用，不影响功能）', 'Default map visual (fully usable)') }}</p>
-            </div>
-          </div>
-        </div>
-
-        <p v-if="mapVisualLoading" class="mt-2 text-xs text-cyan-50/60">
-          {{ t('正在加载素材预览…', 'Loading asset preview...') }}
-        </p>
-        <p
-          v-if="mapVisualHint.message"
-          class="mt-2 text-xs"
-          :class="mapVisualHint.tone === 'success' ? 'text-emerald-200' : mapVisualHint.tone === 'warn' ? 'text-amber-200' : 'text-cyan-50/70'"
-        >
-          {{ mapVisualHint.message }}
-        </p>
-      </section>
+      <MapVisualSettingsPanel
+        :current-location-text="currentLocationText"
+        :resolved-map-visual-mode="resolvedMapVisualMode"
+        :map-visual-preview-url="mapVisualPreviewUrl"
+        :map-one-off-visual-url="mapOneOffVisualUrl"
+        :map-one-off-visual-name="mapOneOffVisualName"
+        :map-provider-generated-image-url="mapProviderGeneratedImageUrl"
+        :map-visual-binding-status-text="mapVisualBindingStatusText"
+        :show-map-visual-onboarding="showMapVisualOnboarding"
+        :map-visual-settings="mapVisualSettings"
+        :map-visual-asset-options="mapVisualAssetOptions"
+        :map-visual-selected-asset="mapVisualSelectedAsset"
+        :map-visual-selection-title="mapVisualSelectionTitle"
+        :map-visual-selection-description="mapVisualSelectionDescription"
+        :map-visual-quick-asset-options="mapVisualQuickAssetOptions"
+        :map-visual-quick-overflow-count="mapVisualQuickOverflowCount"
+        :map-visual-quick-preview-map="mapVisualQuickPreviewMap"
+        :map-automation-runtime="mapAutomationRuntime"
+        :map-ai-visual-automation-policy="mapAiVisualAutomationPolicy"
+        :map-ai-policy-summary="mapAiPolicySummary"
+        :map-ai-policy-hint="mapAiPolicyHint"
+        :map-provider-status-label="mapProviderStatusLabel"
+        :map-ai-visual-refreshing="mapAiVisualRefreshing"
+        :map-visual-loading="mapVisualLoading"
+        :map-visual-hint="mapVisualHint"
+        :format-time="formatTime"
+        @use-default-map-visual="useDefaultMapVisual"
+        @use-gallery-map-visual="useGalleryMapVisual"
+        @change-map-visual-mode="onMapVisualModeChange"
+        @change-map-visual-asset="onMapVisualAssetChange"
+        @open-gallery="openGallery"
+        @restore-default-map-visual="restoreDefaultMapVisual"
+        @clear-map-visual-binding="clearMapVisualBinding"
+        @apply-quick-map-visual-asset="applyQuickMapVisualAsset"
+        @open-upload-picker="openMapVisualUploadPicker"
+        @clear-map-one-off-visual="clearMapOneOffVisual"
+        @toggle-map-ai-visual="onMapAiVisualToggle"
+        @toggle-map-provider-visual="onMapProviderVisualToggle"
+        @trigger-map-ai-visual-refresh="triggerMapAiVisualRefresh"
+        @open-automation-settings="openAutomationSettings"
+      />
+      <input
+        ref="mapVisualFileInputRef"
+        type="file"
+        class="hidden"
+        accept="image/*"
+        @change="onMapVisualFilePicked"
+      />
 
       <section class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="flex items-center justify-between mb-2">
@@ -1269,83 +1017,14 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <h2 class="font-semibold">{{ t('区域反馈', 'Area feedback') }}</h2>
-          <AssetStatusBadge
-            :label="t(`${mapAreaFeedback.length} 条反馈`, `${mapAreaFeedback.length} notes`)"
-            icon="fas fa-location-crosshairs"
-            tone="blue"
-            :truncate="false"
-          />
-        </div>
-        <p v-if="mapAreaFeedback.length === 0" class="text-xs text-gray-500">
-          {{ t('解锁区域后会自动生成地点反馈。', 'Area feedback appears after areas are unlocked.') }}
-        </p>
-        <div v-else class="space-y-2">
-          <div
-            v-for="feedback in visibleMapAreaFeedback"
-            :key="feedback.id"
-            :data-testid="`map-area-feedback-card-${feedback.id}`"
-            class="rounded-lg border border-white/30 bg-white/45 p-2"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="min-w-0">
-                <p class="text-sm font-medium">
-                  <i :class="[feedback.icon, 'mr-1 text-[11px] text-gray-500']"></i>
-                  {{ t(feedback.titleZh, feedback.titleEn) }}
-                </p>
-                <p class="text-[11px] text-gray-500">
-                  {{ t(feedback.areaLabelZh, feedback.areaLabelEn) }}
-                  <span v-if="feedback.triggeredAt"> · {{ formatTime(feedback.triggeredAt) }}</span>
-                </p>
-              </div>
-              <AssetStatusBadge
-                :label="t(`${feedback.explorationPoints} 点`, `${feedback.explorationPoints} pts`)"
-                icon="fas fa-star"
-                :tone="feedback.tone || 'blue'"
-                :truncate="false"
-              />
-            </div>
-            <p class="mt-1 text-[11px] text-gray-600">
-              {{ t(feedback.summaryZh, feedback.summaryEn) }}
-            </p>
-            <p v-if="feedback.routeLabel" class="mt-1 text-[11px] text-gray-500">
-              {{ t(`参考路线：${feedback.routeLabel}`, `Route cue: ${feedback.routeLabel}`) }}
-            </p>
-            <div
-              v-if="getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id).length > 0"
-              :data-testid="`map-area-feedback-worldbook-${feedback.id}`"
-              class="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <p class="text-[11px] font-medium text-blue-700">
-                  {{ t('Related knowledge points', 'Related knowledge points') }}
-                </p>
-                <button
-                  type="button"
-                  class="text-[11px] text-blue-600"
-                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id).map((point) => point.id) })"
-                >
-                  WorldBook
-                </button>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  v-for="point in getRelatedKnowledgePoints(mapAreaFeedbackKnowledgePoints, feedback.id)"
-                  :key="point.id"
-                  type="button"
-                  class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] text-blue-700"
-                  :data-testid="`map-area-feedback-worldbook-chip-${feedback.id}-${point.id}`"
-                  @click="openWorldBook({ pointIds: [point.id] })"
-                >
-                  {{ point.title }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <MapAreaFeedbackPanel
+        :map-area-feedback="mapAreaFeedback"
+        :visible-map-area-feedback="visibleMapAreaFeedback"
+        :map-area-feedback-knowledge-points="mapAreaFeedbackKnowledgePoints"
+        :format-time="formatTime"
+        :get-related-knowledge-points="getRelatedKnowledgePoints"
+        @open-worldbook="openWorldBook"
+      />
 
       <section class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-3">{{ t('新增地址 / 手动定位', 'Add address / set manually') }}</h2>
@@ -1367,162 +1046,35 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="font-semibold">{{ t('出行模拟', 'Trip simulation') }}</h2>
-          <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ tripStatusLabel }}</span>
-        </div>
-        <div class="space-y-2">
-          <input
-            v-model="tripForm.from"
-            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            :placeholder="t('起点', 'From')"
-          />
-          <input
-            v-model="tripForm.to"
-            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            :placeholder="t('终点', 'To')"
-          />
-        </div>
-        <div class="mt-3 text-sm text-gray-700 space-y-1">
-          <p>{{ t('距离：约', 'Distance:') }} {{ tripEstimate.distanceKm }} km</p>
-          <p>{{ t('时长：约', 'Duration:') }} {{ tripEstimate.minutes }} {{ t('分钟', 'min') }}</p>
-          <p>{{ t('费用：约', 'Fare:') }} ₩ {{ tripEstimate.fare.toLocaleString() }}</p>
-        </div>
+      <MapTripControlPanel
+        :trip-form="tripForm"
+        :trip-estimate="tripEstimate"
+        :trip-runtime="tripRuntime"
+        :trip-status-label="tripStatusLabel"
+        :trip-progress-percent="tripProgressPercent"
+        :trip-arrival-push-status-label="tripArrivalPushStatusLabel"
+        :trip-arrival-push-hint="tripArrivalPushHint"
+        :trip-action-hint="tripActionHint"
+        :is-trip-traveling="isTripTraveling"
+        :is-trip-arrived="isTripArrived"
+        :can-start-trip="canStartTrip"
+        :format-seconds="formatSeconds"
+        :format-time="formatTime"
+        @update-trip-from="updateTripFrom"
+        @update-trip-to="updateTripTo"
+        @start-trip="startTrip"
+        @cancel-trip="cancelTrip"
+        @acknowledge-arrival="acknowledgeArrival"
+      />
 
-        <div v-if="isTripTraveling || isTripArrived" class="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-          <p class="text-sm text-gray-700">
-            {{ (tripRuntime.fromLabel || t('起点', 'From')) + ' → ' + (tripRuntime.toLabel || t('终点', 'To')) }}
-          </p>
-          <div class="h-2 rounded bg-gray-200 overflow-hidden">
-            <div class="h-full bg-emerald-500 transition-all duration-500" :style="{ width: `${tripProgressPercent}%` }"></div>
-          </div>
-          <p class="text-xs text-gray-600">
-            {{ t('进度', 'Progress') }} {{ tripProgressPercent }}% ·
-            {{ t('剩余', 'Remaining') }} {{ formatSeconds(tripRuntime.remainingSeconds) }}
-          </p>
-          <p class="text-xs text-gray-600">
-            {{ t('预计到达', 'ETA') }} {{ formatTime(tripRuntime.etaAt) }}
-          </p>
-          <p class="text-xs text-gray-600">
-            {{ t('后台到达提醒', 'Background arrival push') }} {{ tripArrivalPushStatusLabel }}
-          </p>
-          <p class="text-[11px] text-gray-500">
-            {{ tripArrivalPushHint }}
-          </p>
-          <p v-if="isTripArrived" class="text-xs text-emerald-700">
-            {{ t('已在系统时间到达目的地。', 'Destination reached according to system time.') }}
-          </p>
-        </div>
-
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button
-            @click="startTrip"
-            :disabled="!canStartTrip"
-            class="px-3 py-2 rounded-lg text-sm"
-            :class="canStartTrip ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'"
-          >
-            {{ t('开始行程', 'Start trip') }}
-          </button>
-          <button
-            v-if="isTripTraveling"
-            @click="cancelTrip"
-            class="px-3 py-2 rounded-lg bg-red-500 text-white text-sm"
-          >
-            {{ t('取消行程', 'Cancel trip') }}
-          </button>
-          <button
-            v-if="isTripArrived"
-            @click="acknowledgeArrival"
-            class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm"
-          >
-            {{ t('确认完成', 'Acknowledge') }}
-          </button>
-        </div>
-
-        <p
-          v-if="tripActionHint.message"
-          class="mt-2 text-xs"
-          :class="tripActionHint.tone === 'success' ? 'text-emerald-700' : tripActionHint.tone === 'warn' ? 'text-amber-700' : 'text-gray-600'"
-        >
-          {{ tripActionHint.message }}
-        </p>
-      </section>
-
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <h2 class="font-semibold">{{ t('路线熟悉度', 'Route familiarity') }}</h2>
-          <AssetStatusBadge
-            v-if="routeFamiliarity.length > 0"
-            :label="t(`${routeFamiliarity.length} 条路线`, `${routeFamiliarity.length} routes`)"
-            icon="fas fa-layer-group"
-            tone="blue"
-            :truncate="false"
-          />
-        </div>
-        <p v-if="routeFamiliarity.length === 0" class="text-xs text-gray-500">
-          {{ t('完成行程后会自动形成常走路线与熟悉度等级。', 'Completed trips will automatically form route familiarity tiers.') }}
-        </p>
-        <div v-else class="space-y-2">
-          <div
-            v-for="route in visibleRouteFamiliarity"
-            :key="route.key"
-            :data-testid="`map-route-card-${route.key}`"
-            class="rounded-lg border border-white/30 bg-white/45 p-2"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="min-w-0 text-sm font-medium">
-                {{ (route.fromLabel || route.from) + ' -> ' + (route.toLabel || route.to) }}
-              </p>
-              <AssetStatusBadge
-                :label-zh="route.tierLabelZh"
-                :label-en="route.tierLabelEn"
-                icon="fas fa-location-arrow"
-                :tone="route.tone || 'blue'"
-                :truncate="false"
-              />
-            </div>
-            <div class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-600">
-              <span>{{ t(`${route.completedCount} 次完成`, `${route.completedCount} trips`) }}</span>
-              <span>{{ t(`${route.points} 点探索`, `${route.points} pts`) }}</span>
-              <span>{{ t(`平均 ${route.averageDistanceKm} km`, `Avg ${route.averageDistanceKm} km`) }}</span>
-            </div>
-            <p class="mt-1 text-[11px] text-gray-500">
-              {{ getRouteFamiliarityNextHint(route) }}
-            </p>
-            <div
-              v-if="getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key).length > 0"
-              :data-testid="`map-route-worldbook-${route.key}`"
-              class="mt-3 rounded-lg border border-blue-100 bg-white p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <p class="text-[11px] font-medium text-blue-700">
-                  {{ t('Related knowledge points', 'Related knowledge points') }}
-                </p>
-                <button
-                  type="button"
-                  class="text-[11px] text-blue-600"
-                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key).map((point) => point.id) })"
-                >
-                  WorldBook
-                </button>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  v-for="point in getRelatedKnowledgePoints(routeFamiliarityKnowledgePoints, route.key)"
-                  :key="point.id"
-                  type="button"
-                  class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
-                  :data-testid="`map-route-worldbook-chip-${route.key}-${point.id}`"
-                  @click="openWorldBook({ pointIds: [point.id] })"
-                >
-                  {{ point.title }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <MapRouteFamiliarityPanel
+        :route-familiarity="routeFamiliarity"
+        :visible-route-familiarity="visibleRouteFamiliarity"
+        :route-familiarity-knowledge-points="routeFamiliarityKnowledgePoints"
+        :get-route-familiarity-next-hint="getRouteFamiliarityNextHint"
+        :get-related-knowledge-points="getRelatedKnowledgePoints"
+        @open-worldbook="openWorldBook"
+      />
 
       <section class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="mb-2 flex items-center justify-between gap-2">
@@ -1686,7 +1238,6 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(18px);
 }
 
-.map-visual-panel,
 .map-glass-panel {
   position: relative;
   overflow: hidden;
@@ -1696,77 +1247,12 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(24px);
 }
 
-.map-visual-panel::before,
 .map-glass-panel::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 42%);
-}
-
-.map-preview-stage {
-  position: relative;
-  height: 310px;
-  overflow: hidden;
-  border-radius: 1.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #07111f;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.map-default-canvas {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 18%, rgba(125, 211, 252, 0.35), transparent 22%),
-    radial-gradient(circle at 78% 66%, rgba(20, 184, 166, 0.32), transparent 26%),
-    linear-gradient(145deg, #10243a, #102033 46%, #0b1525);
-}
-
-.map-grid-lines {
-  position: absolute;
-  inset: -20%;
-  opacity: 0.38;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
-  background-size: 34px 34px;
-  transform: rotate(-13deg) scale(1.15);
-}
-
-.map-route-line {
-  position: absolute;
-  left: 18%;
-  top: 58%;
-  width: 66%;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #67e8f9, #fef3c7, #2dd4bf);
-  box-shadow: 0 0 24px rgba(103, 232, 249, 0.55);
-  transform: rotate(-24deg);
-}
-
-.map-pin {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 3px solid rgba(255, 255, 255, 0.82);
-  background: #22d3ee;
-  box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.16), 0 0 24px rgba(34, 211, 238, 0.55);
-}
-
-.map-pin-a {
-  left: 20%;
-  top: 56%;
-}
-
-.map-pin-b {
-  right: 18%;
-  top: 33%;
-  background: #fbbf24;
-  box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.16), 0 0 24px rgba(251, 191, 36, 0.45);
 }
 
 .map-glass-panel input,
@@ -1776,7 +1262,6 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.9) !important;
 }
 
-.map-visual-panel option,
 .map-glass-panel option {
   color: #0f172a;
 }

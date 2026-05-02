@@ -16,6 +16,8 @@ Authority note / 职责说明：
   当某条建议进入实际开发，必须复制或摘要到 `docs/roadmap/TODO_ROADMAP.md`。
 - Workflow rules live in `docs/process/AI_WORK_MODE.md`.
   流程规范统一放在 `docs/process/AI_WORK_MODE.md`。
+- For a handoff-oriented engineering view that adds file-size hotspots and test-coverage signals, read `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`.
+  若需要面向工程接手的视角（含文件体量热点与测试覆盖信号），请同时阅读 `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`。
 
 Priority legend / 优先级说明：
 

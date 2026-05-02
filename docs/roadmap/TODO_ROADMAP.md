@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-04-29
+Updated / 更新时间: 2026-05-02
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -171,8 +171,140 @@ Status / 状态: `IN_PROGRESS`
      中文：增加标签筛选 chips，并与既有使用状态筛选和排序共同工作。
    - EN: Acceptance: search/tag filters remain local UI state only and do not alter knowledge point records or Chat prompt assembly.
      中文：验收：搜索/标签筛选仍仅为本地 UI 状态，不改变知识点记录，也不改变 Chat 提示词组装。
-   - EN: Next phase candidate: pause WorldBook feature growth and return to low-risk component extraction, starting with Chat thread menu / WorldBook summary.
-     中文：下一阶段候选：暂缓继续堆 WorldBook 功能，回到低风险组件拆分，优先拆 Chat 线程菜单 / WorldBook 摘要区。
+   - EN: Follow-up landed: paused WorldBook feature growth and extracted the Chat thread menu / WorldBook summary surface into `ChatThreadMenuPanel`.
+     中文：后续已落地：暂缓继续堆 WorldBook 功能，并将 Chat 线程菜单 / WorldBook 摘要区抽为 `ChatThreadMenuPanel`。
+7. EN: P1 maintainability slice: Chat thread menu extraction — `DONE`.
+   中文：P1 可维护性切片：Chat 线程菜单拆分 — `DONE`。
+   - EN: Extracted `src/components/chat/ChatThreadMenuPanel.vue` from `src/views/ChatView.vue`.
+     中文：已从 `src/views/ChatView.vue` 抽出 `src/components/chat/ChatThreadMenuPanel.vue`。
+   - EN: Scope: display and form-control extraction only; store writes, navigation, prompt assembly, and conversation persistence remain in the parent view.
+     中文：范围：仅做展示与表单控制拆分；store 写入、导航、提示词组装与会话持久化仍留在父视图。
+   - EN: Acceptance: thread menu open/close, service-template jump, WorldBook summary/deep-linking, identity overrides, and thread tuning behavior remain unchanged.
+     中文：验收：线程菜单开关、服务模板跳转、WorldBook 摘要/深链、身份覆写与会话调校行为保持不变。
+   - EN: Regression checks: `npm run lint`, `npm test -- tests/chat-worldbook-binding-visibility.test.js tests/chat-view-semantic-revision.test.js`.
+     中文：回归检查：`npm run lint`、`npm test -- tests/chat-worldbook-binding-visibility.test.js tests/chat-view-semantic-revision.test.js`。
+   - EN: Next phase candidate: continue low-risk extraction with `SettingsStorageDiagnosticsSection`, `SettingsBackupSection`, or `ChatMessageEditModal`.
+     中文：下一阶段候选：继续低风险拆分 `SettingsStorageDiagnosticsSection`、`SettingsBackupSection` 或 `ChatMessageEditModal`。
+8. EN: P1 maintainability slice: Settings storage diagnostics extraction — `DONE`.
+   中文：P1 可维护性切片：Settings 存储诊断区块拆分 — `DONE`。
+   - EN: Extracted `src/components/settings/SettingsStorageDiagnosticsSection.vue` from the Settings `about` subpage.
+     中文：已从 Settings 的 `about` 子页抽出 `src/components/settings/SettingsStorageDiagnosticsSection.vue`。
+   - EN: Scope: display and callback wiring only; persistence inspection, repair, report cleanup, and Network report routing remain in `SettingsView.vue`.
+     中文：范围：仅做展示与回调接线；持久化检查、修复、报告清理与 Network 报告跳转仍留在 `SettingsView.vue`。
+   - EN: Acceptance: storage capability display, audit run, drift repair, report cleanup, and storage/error report jumps remain unchanged.
+     中文：验收：存储能力展示、运行检查、漂移修复、报告清理与存储/错误报告跳转行为保持不变。
+   - EN: Regression checks: `npm run lint`, `npm test -- tests/persistence-layer-reconcile.test.js tests/system-automation.test.js`.
+     中文：回归检查：`npm run lint`、`npm test -- tests/persistence-layer-reconcile.test.js tests/system-automation.test.js`。
+   - EN: Next phase candidate: continue Settings decomposition with `SettingsBackupSection`, or return to Chat with `ChatMessageEditModal`.
+     中文：下一阶段候选：继续拆 `SettingsBackupSection`，或回到 Chat 拆 `ChatMessageEditModal`。
+9. EN: P1 maintainability slice: Settings backup section extraction — `DONE`.
+   中文：P1 可维护性切片：Settings 备份区块拆分 — `DONE`。
+   - EN: Extracted `src/components/settings/SettingsBackupSection.vue` from the Settings Data & Security section.
+     中文：已从 Settings 的数据与安全区抽出 `src/components/settings/SettingsBackupSection.vue`。
+   - EN: Scope: backup UI, copy-tone controls, asset-package option, export/import buttons, about jump, and feedback display only; backup payload building, import rollback, file input, and store restore/export calls remain in `SettingsView.vue`.
+     中文：范围：仅拆备份 UI、提示风格控制、素材包选项、导出/导入按钮、关于入口与反馈展示；备份组包、导入回滚、文件 input 与 store 恢复/导出调用仍留在 `SettingsView.vue`。
+   - EN: Acceptance: export/import actions, asset-package toggle, backup copy tone, feedback messages, and rollback semantics remain unchanged.
+     中文：验收：导出/导入动作、素材包开关、备份提示语气、反馈消息与回滚语义保持不变。
+   - EN: Regression checks: `npm run lint`, `npm test -- tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js tests/gallery-store.test.js`.
+     中文：回归检查：`npm run lint`、`npm test -- tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js tests/gallery-store.test.js`。
+   - EN: Follow-up landed: returned to Chat and extracted `ChatMessageEditModal`.
+     中文：后续已落地：回到 Chat 并抽出 `ChatMessageEditModal`。
+10. EN: P1 maintainability slice: Chat message edit modal extraction — `DONE`.
+    中文：P1 可维护性切片：Chat 消息编辑弹窗拆分 — `DONE`。
+    - EN: Extracted `src/components/chat/ChatMessageEditModal.vue` from `src/views/ChatView.vue`.
+      中文：已从 `src/views/ChatView.vue` 抽出 `src/components/chat/ChatMessageEditModal.vue`。
+    - EN: Scope: modal display, draft textarea, helper copy, and cancel/save buttons only; edit validation, message update, semantic revision persistence, and notices remain in `ChatView.vue`.
+      中文：范围：仅拆弹窗展示、草稿输入、辅助说明与取消/保存按钮；编辑校验、消息更新、语义修订持久化与提示仍留在 `ChatView.vue`。
+    - EN: Acceptance: user-message edit, assistant semantic revision, invalid-draft disabled state, cancel, save, and restore-related flows remain unchanged.
+      中文：验收：用户消息编辑、AI 消息语义修订、无效草稿禁用态、取消、保存与恢复相关流程保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/chat-message-edit.test.js tests/chat-view-semantic-revision.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/chat-message-edit.test.js tests/chat-view-semantic-revision.test.js`、`npm run build`。
+    - EN: Follow-up landed: moved to Map and extracted `MapVisualSettingsPanel`.
+      中文：后续已落地：转到 Map 并抽出 `MapVisualSettingsPanel`。
+11. EN: P1 maintainability slice: Map visual settings panel extraction — `DONE`.
+    中文：P1 可维护性切片：Map 视觉设置面板拆分 — `DONE`。
+    - EN: Extracted `src/components/map/MapVisualSettingsPanel.vue` from `src/views/MapView.vue`.
+      中文：已从 `src/views/MapView.vue` 抽出 `src/components/map/MapVisualSettingsPanel.vue`。
+    - EN: Scope: visual panel display, mode controls, asset selector, quick thumbnails, upload button, AI/provider toggles, automation status, and local panel styles only; map visual mode resolution, gallery preview loading, one-off upload policy, asset import, provider refresh, and store writes remain in `MapView.vue`.
+      中文：范围：仅拆视觉面板展示、模式控件、素材选择器、快捷缩略图、上传按钮、AI/供应商开关、自动化状态与面板局部样式；地图视觉模式解析、素材预览加载、单次上传策略、素材导入、供应商刷新与 store 写入仍留在 `MapView.vue`。
+    - EN: Acceptance: default/gallery/one-off/provider visual modes, gallery fallback, upload/import choice, AI refresh, and automation settings jump remain unchanged.
+      中文：验收：默认/素材库/单次/供应商视觉模式、素材库回退、上传/导入选择、AI 刷新与自动化设置跳转保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/map-trip-baseline.test.js tests/map-worldbook-context.test.js tests/gallery-store.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/map-trip-baseline.test.js tests/map-worldbook-context.test.js tests/gallery-store.test.js`、`npm run build`。
+    - EN: Follow-up landed: returned to Chat and extracted `ChatUserActionPanel`.
+      中文：后续已落地：回到 Chat 并抽出 `ChatUserActionPanel`。
+12. EN: P1 maintainability slice: Chat user action panel extraction — `DONE`.
+    中文：P1 可维护性切片：Chat 用户动作面板拆分 — `DONE`。
+    - EN: Extracted `src/components/chat/ChatUserActionPanel.vue` from `src/views/ChatView.vue`.
+      中文：已从 `src/views/ChatView.vue` 抽出 `src/components/chat/ChatUserActionPanel.vue`。
+    - EN: Scope: + panel display, action grid, link/transfer/voice forms, gallery picker display, suggested-reply trigger button, and collapse/back controls only; media file input, form validation, location checks, gallery preview loading, asset import, message append, and store writes remain in `ChatView.vue`.
+      中文：范围：仅拆 + 面板展示、动作网格、链接/转账/语音表单、素材库选择展示、建议回复触发按钮与收起/返回控件；媒体文件 input、表单校验、位置检查、素材预览加载、素材导入、消息追加与 store 写入仍留在 `ChatView.vue`。
+    - EN: Acceptance: image/GIF picker, gallery asset send, link card, transfer card, voice card, current-location share, suggested replies, and panel collapse behavior remain unchanged.
+      中文：验收：图片/GIF 选择器、素材库发送、链接卡片、转账卡片、语音卡片、当前位置分享、建议回复与面板收起行为保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/chat-store-model.test.js tests/chat-view-semantic-revision.test.js tests/chat-worldbook-binding-visibility.test.js tests/gallery-store.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/chat-store-model.test.js tests/chat-view-semantic-revision.test.js tests/chat-worldbook-binding-visibility.test.js tests/gallery-store.test.js`、`npm run build`。
+    - EN: Follow-up landed: moved to Map and extracted `MapAreaFeedbackPanel`.
+      中文：后续已落地：转到 Map 并抽出 `MapAreaFeedbackPanel`。
+13. EN: P1 maintainability slice: Map area feedback panel extraction — `DONE`.
+    中文：P1 可维护性切片：Map 区域反馈面板拆分 — `DONE`。
+    - EN: Extracted `src/components/map/MapAreaFeedbackPanel.vue` from `src/views/MapView.vue`.
+      中文：已从 `src/views/MapView.vue` 抽出 `src/components/map/MapAreaFeedbackPanel.vue`。
+    - EN: Scope: area feedback empty state, feedback cards, exploration badges, route cue display, related WorldBook summary, and WorldBook chip/buttons only; feedback derivation, related knowledge index building, time formatting, and route query building remain in `MapView.vue`.
+      中文：范围：仅拆区域反馈空状态、反馈卡片、探索点标识、参考路线展示、关联 WorldBook 摘要与 WorldBook chip/按钮；反馈派生、关联知识点索引、时间格式化与路由 query 构建仍留在 `MapView.vue`。
+    - EN: Acceptance: area feedback count/cards, route cue text, related knowledge display, and WorldBook deep links remain unchanged.
+      中文：验收：区域反馈数量/卡片、参考路线文案、关联知识点展示与 WorldBook 深链保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`、`npm run build`。
+    - EN: Follow-up landed: returned to Settings and extracted `SettingsPushSection`.
+      中文：后续已落地：回到 Settings 并抽出 `SettingsPushSection`。
+14. EN: P1 maintainability slice: Settings push section extraction — `DONE`.
+    中文：P1 可维护性切片：Settings 推送区块拆分 — `DONE`。
+    - EN: Extracted `src/components/settings/SettingsPushSection.vue` from the Settings notification subpage.
+      中文：已从 Settings 的通知子页抽出 `src/components/settings/SettingsPushSection.vue`。
+    - EN: Scope: message notification toggle, real-push toggle, capability/status display, push display-mode select, Push Server URL input, feedback copy, and push action buttons only; push orchestration, subscription/resync/unsubscribe/test-send flows, health checks, diagnostics writing, and permission sync remain in `SettingsView.vue`.
+      中文：范围：仅拆消息通知开关、真推送开关、能力/状态展示、外部通知样式选择、Push Server 地址输入、反馈文案与推送操作按钮；推送编排、订阅/重同步/取消订阅/测试发送流程、健康检查、诊断写入与权限同步仍留在 `SettingsView.vue`。
+    - EN: Acceptance: notification save behavior, real-push subscribe/resync/test/unsubscribe actions, health status display, permission labels, and Push Server URL normalization remain unchanged.
+      中文：验收：通知保存行为、真推送订阅/重同步/测试/取消订阅动作、健康状态展示、权限标签与 Push Server URL 规范化保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/push-web-baseline.test.js tests/system-automation.test.js tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/push-web-baseline.test.js tests/system-automation.test.js tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js`、`npm run build`。
+    - EN: Follow-up landed: stayed in Map and extracted `MapTripControlPanel`.
+      中文：后续已落地：留在 Map 并抽出 `MapTripControlPanel`。
+15. EN: P1 maintainability slice: Map trip control panel extraction — `DONE`.
+    中文：P1 可维护性切片：Map 行程控制面板拆分 — `DONE`。
+    - EN: Extracted `src/components/map/MapTripControlPanel.vue` from `src/views/MapView.vue`.
+      中文：已从 `src/views/MapView.vue` 抽出 `src/components/map/MapTripControlPanel.vue`。
+    - EN: Scope: trip endpoint inputs, estimate display, runtime progress/ETA/background-push status, action hint, and start/cancel/acknowledge buttons only; trip lifecycle, arrival scheduling, push arming, reward/history writes, and store calls remain in `MapView.vue`.
+      中文：范围：仅拆行程起终点输入、估算展示、运行进度/预计到达/后台推送状态、操作提示与开始/取消/确认按钮；行程生命周期、到达调度、推送布置、奖励/历史写入与 store 调用仍留在 `MapView.vue`。
+    - EN: Acceptance: trip form edits, start eligibility, traveling/arrived progress display, cancel behavior, acknowledge behavior, and background-arrival push labels remain unchanged.
+      中文：验收：行程表单编辑、开始条件、进行中/已到达进度展示、取消行为、确认完成行为与后台到达推送标签保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/map-trip-baseline.test.js tests/map-worldbook-context.test.js tests/push-web-baseline.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/map-trip-baseline.test.js tests/map-worldbook-context.test.js tests/push-web-baseline.test.js`、`npm run build`。
+    - EN: Follow-up landed: returned to Settings and extracted `SettingsAutomationSection`.
+      中文：后续已落地：回到 Settings 并抽出 `SettingsAutomationSection`。
+16. EN: P1 maintainability slice: Settings automation section extraction — `DONE`.
+    中文：P1 可维护性切片：Settings 自动化区块拆分 — `DONE`。
+    - EN: Extracted `src/components/settings/SettingsAutomationSection.vue` from the Settings automation subpage.
+      中文：已从 Settings 的自动化子页抽出 `src/components/settings/SettingsAutomationSection.vue`。
+    - EN: Scope: global automation switch, module enable/priority controls, notify-only/quiet-hours controls, runtime-policy display, conflict/dedupe inputs, Chat settings jump, Network diagnostics jump, and save button only; enable confirmation, input normalization, runtime policy calculation, routing, diagnostics ownership, and store semantics remain in `SettingsView.vue`.
+      中文：范围：仅拆全局自动化开关、模块启用/优先级控件、仅通知/安静时段控件、运行策略展示、冲突/防重复输入、Chat 设置跳转、Network 诊断跳转与保存按钮；开启确认、输入归一化、运行策略计算、路由、诊断职责与 store 语义仍留在 `SettingsView.vue`。
+    - EN: Acceptance: automation toggles, priorities, quiet-hours visibility, runtime policy copy, Chat/Network jumps, save confirmation, and normalization behavior remain unchanged.
+      中文：验收：自动化开关、优先级、安静时段显示、运行态文案、Chat/Network 跳转、保存确认与归一化行为保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/system-automation.test.js tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js tests/push-web-baseline.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/system-automation.test.js tests/system-backup-reminder.test.js tests/system-backup-copy-tone.test.js tests/push-web-baseline.test.js`、`npm run build`。
+    - EN: Follow-up landed: stayed in Map and extracted `MapRouteFamiliarityPanel`.
+      中文：后续已落地：留在 Map 并抽出 `MapRouteFamiliarityPanel`。
+17. EN: P1 maintainability slice: Map route familiarity panel extraction — `DONE`.
+    中文：P1 可维护性切片：Map 路线熟悉度面板拆分 — `DONE`。
+    - EN: Extracted `src/components/map/MapRouteFamiliarityPanel.vue` from `src/views/MapView.vue`.
+      中文：已从 `src/views/MapView.vue` 抽出 `src/components/map/MapRouteFamiliarityPanel.vue`。
+    - EN: Scope: route familiarity count, route cards, tier badges, completion/points/distance stats, next-tier hints, related WorldBook summary, and WorldBook chip/buttons only; route derivation, related knowledge indexing, next-hint logic, and WorldBook route query building remain in `MapView.vue`.
+      中文：范围：仅拆路线熟悉度数量、路线卡片、等级标识、完成/探索点/距离统计、下一阶段提示、关联 WorldBook 摘要与 WorldBook chip/按钮；路线派生、关联知识点索引、下一阶段提示逻辑与 WorldBook 路由 query 构建仍留在 `MapView.vue`。
+    - EN: Acceptance: route familiarity empty state/cards, tier display, next-tier hint, related knowledge display, and WorldBook deep links remain unchanged.
+      中文：验收：路线熟悉度空状态/卡片、等级展示、下一阶段提示、关联知识点展示与 WorldBook 深链保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`、`npm run build`。
+    - EN: Next phase candidate: stay in Map with `MapTripHistoryPanel`, or switch to feature work such as Network guided setup.
+      中文：下一阶段候选：留在 Map 拆 `MapTripHistoryPanel`，或切换到 Network 引导配置等功能项。
 6. EN: P1 Map rewards/events first slice — `DONE`.
    中文：P1 地图奖励/事件第一刀 — `DONE`。
    - EN: Completed trips now write deterministic exploration rewards and lightweight event summaries into trip history.
@@ -735,3 +867,25 @@ Acceptance / 验收标准:
     2026-04-30 中文：已落地 WorldBook 在 Map 内的第一阶段消费：Map 的区域反馈、路线熟悉度、行程记录卡片现在会展示相关知识点。
 68. 2026-05-01 EN: Landed WorldBook deep-link filtering: Calendar, Chat, and Map can now jump into WorldBook with scoped related-point filters and a clearable context banner.
     2026-05-01 中文：已落地 WorldBook 深链筛选：Calendar、Chat、Map 现在都能带着相关知识点范围跳到 WorldBook，并提供可清除的上下文提示条。
+69. 2026-05-02 EN: Landed P1 maintainability slice by extracting `ChatThreadMenuPanel.vue` from `ChatView.vue` without changing thread tuning, identity override, service-template, or WorldBook deep-link behavior.
+    2026-05-02 中文：已落地 P1 可维护性切片，从 `ChatView.vue` 抽出 `ChatThreadMenuPanel.vue`，未改变会话调校、身份覆写、服务模板或 WorldBook 深链行为。
+70. 2026-05-02 EN: Landed P1 Settings maintainability slice by extracting `SettingsStorageDiagnosticsSection.vue` without changing storage audit, repair, report cleanup, or Network report routing behavior.
+    2026-05-02 中文：已落地 P1 Settings 可维护性切片，抽出 `SettingsStorageDiagnosticsSection.vue`，未改变存储检查、修复、报告清理或 Network 报告跳转行为。
+71. 2026-05-02 EN: Landed P1 Settings backup maintainability slice by extracting `SettingsBackupSection.vue` while keeping backup payload building, import rollback, file input, and store restore/export logic in `SettingsView.vue`.
+    2026-05-02 中文：已落地 P1 Settings 备份可维护性切片，抽出 `SettingsBackupSection.vue`，同时将备份组包、导入回滚、文件 input 与 store 恢复/导出逻辑保留在 `SettingsView.vue`。
+72. 2026-05-02 EN: Landed P1 Chat message edit maintainability slice by extracting `ChatMessageEditModal.vue` while keeping validation, user-message update, assistant semantic revision, and notice logic in `ChatView.vue`.
+    2026-05-02 中文：已落地 P1 Chat 消息编辑可维护性切片，抽出 `ChatMessageEditModal.vue`，同时将校验、用户消息更新、AI 语义修订与提示逻辑保留在 `ChatView.vue`。
+73. 2026-05-02 EN: Landed P1 Map visual panel maintainability slice by extracting `MapVisualSettingsPanel.vue` while keeping visual mode resolution, gallery preview loading, upload/import policy, AI refresh, and store writes in `MapView.vue`.
+    2026-05-02 中文：已落地 P1 Map 视觉面板可维护性切片，抽出 `MapVisualSettingsPanel.vue`，同时将视觉模式解析、素材预览加载、上传/导入策略、AI 刷新与 store 写入保留在 `MapView.vue`。
+74. 2026-05-02 EN: Landed P1 Chat user action maintainability slice by extracting `ChatUserActionPanel.vue` while keeping media input ownership, validation, gallery preview loading, asset import, message append, and store writes in `ChatView.vue`.
+    2026-05-02 中文：已落地 P1 Chat 用户动作可维护性切片，抽出 `ChatUserActionPanel.vue`，同时将媒体 input 所有权、校验、素材预览加载、素材导入、消息追加与 store 写入保留在 `ChatView.vue`。
+75. 2026-05-02 EN: Landed P1 Map area feedback maintainability slice by extracting `MapAreaFeedbackPanel.vue` while keeping feedback derivation, related knowledge indexing, time formatting, and WorldBook routing in `MapView.vue`.
+    2026-05-02 中文：已落地 P1 Map 区域反馈可维护性切片，抽出 `MapAreaFeedbackPanel.vue`，同时将反馈派生、关联知识点索引、时间格式化与 WorldBook 路由保留在 `MapView.vue`。
+76. 2026-05-02 EN: Landed P1 Settings push maintainability slice by extracting `SettingsPushSection.vue` while keeping push orchestration, permission sync, health checks, diagnostics writing, and subscribe/resync/test/unsubscribe flows in `SettingsView.vue`.
+    2026-05-02 中文：已落地 P1 Settings 推送可维护性切片，抽出 `SettingsPushSection.vue`，同时将推送编排、权限同步、健康检查、诊断写入与订阅/重同步/测试/取消订阅流程保留在 `SettingsView.vue`。
+77. 2026-05-02 EN: Landed P1 Map trip-control maintainability slice by extracting `MapTripControlPanel.vue` while keeping trip lifecycle, arrival scheduling, background-push arming, reward/history writes, and store calls in `MapView.vue`.
+    2026-05-02 中文：已落地 P1 Map 行程控制可维护性切片，抽出 `MapTripControlPanel.vue`，同时将行程生命周期、到达调度、后台推送布置、奖励/历史写入与 store 调用保留在 `MapView.vue`。
+78. 2026-05-02 EN: Landed P1 Settings automation maintainability slice by extracting `SettingsAutomationSection.vue` while keeping enable confirmation, input normalization, runtime policy calculation, routing, diagnostics ownership, and store semantics in `SettingsView.vue`.
+    2026-05-02 中文：已落地 P1 Settings 自动化可维护性切片，抽出 `SettingsAutomationSection.vue`，同时将开启确认、输入归一化、运行策略计算、路由、诊断职责与 store 语义保留在 `SettingsView.vue`。
+79. 2026-05-03 EN: Landed P1 Map route-familiarity maintainability slice by extracting `MapRouteFamiliarityPanel.vue` while keeping route derivation, related knowledge indexing, next-hint logic, and WorldBook routing in `MapView.vue`.
+    2026-05-03 中文：已落地 P1 Map 路线熟悉度可维护性切片，抽出 `MapRouteFamiliarityPanel.vue`，同时将路线派生、关联知识点索引、下一阶段提示逻辑与 WorldBook 路由保留在 `MapView.vue`。
