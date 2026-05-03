@@ -109,7 +109,7 @@ These modules exist and can be used, but their long-term product identity is sti
 | Network / 网络 | Strong MVP | Should provider setup become more guided for non-technical users? / 是否要把供应商配置进一步产品化引导？ |
 | Appearance / 外观 | Strong MVP | Are uploaded custom app icons in scope, or are presets the official path? / 自定义上传图标要不要做，还是预设图标就是官方模型？ |
 | Profile / 用户信息 | Basic MVP | How visible should profile-to-AI-context impact be? / 用户资料对 AI 上下文的影响要不要更显式？ |
-| Files / 文件 | MVP shell | Is it a notebook, metadata browser, or future file manager? / 它到底是笔记本、元数据浏览器，还是未来文件管理器？ |
+| Files / 文件 | Persisted file-index MVP / 持久化文件索引 MVP | Is it a notebook, metadata browser, or future file manager? / 它到底是笔记本、元数据浏览器，还是未来文件管理器？ |
 | More / 更多 | MVP shell | Should it stay a shortcut bucket or become a Labs surface? / 它该继续做快捷入口，还是明确为 Labs？ |
 
 ### 3.4 Tier D: Placeholder / D 档：明确占位
@@ -296,9 +296,9 @@ These signals suggest:
 
 ### 6.13 Files / 文件
 
-- Product state: shell MVP.
-- Engineering note: role ambiguity is bigger than implementation complexity.
-- Recommendation: define product purpose before large engineering investment.
+- Product state: persisted metadata-only file-index MVP.
+- Engineering note: quick notes, favorites, deletes, and local file metadata import now live in `src/stores/files.js`; original file content is not copied or stored.
+- Recommendation: define product purpose before large engineering investment or connecting Files to Gallery assets, role/world documents, or binary storage.
 
 ### 6.14 More / 更多
 

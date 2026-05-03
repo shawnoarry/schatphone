@@ -1,27 +1,31 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { formatBytesCompact } from '../lib/media-policy'
+import { useFilesStore } from '../stores/files'
 
 const router = useRouter()
 const { t } = useI18n()
+const filesStore = useFilesStore()
+const { records: files, fileCount, favoriteCount } = storeToRefs(filesStore)
 
 const query = ref('')
 const activeTab = ref('recent')
 const createName = ref('')
-
-const files = ref([
-  { id: 1, name: '角色设定.md', type: 'markdown', size: '12 KB', updatedAt: '今天 10:18', favorite: true },
-  { id: 2, name: '世界观草稿.txt', type: 'text', size: '8 KB', updatedAt: '今天 09:43', favorite: false },
-  { id: 3, name: '界面参考.png', type: 'image', size: '256 KB', updatedAt: '昨天 22:12', favorite: true },
-  { id: 4, name: '需求清单 v2.doc', type: 'doc', size: '76 KB', updatedAt: '昨天 18:07', favorite: false },
-])
+const fileInputRef = ref(null)
+const importFeedback = ref('')
+const importFeedbackType = ref('success')
 
 const typeLabelMap = {
   markdown: 'MD',
   text: 'TXT',
   image: 'IMG',
+  gif: 'GIF',
+  video: 'VID',
   doc: 'DOC',
+  file: 'FILE',
 }
 
 const visibleFiles = computed(() => {
@@ -33,35 +37,86 @@ const visibleFiles = computed(() => {
   })
 })
 
-const favoriteCount = computed(() => files.value.filter((item) => item.favorite).length)
-
 const goHome = () => {
   router.push('/home')
 }
 
 const toggleFavorite = (id) => {
-  const target = files.value.find((item) => item.id === id)
-  if (!target) return
-  target.favorite = !target.favorite
+  filesStore.toggleFavorite(id)
 }
 
 const removeFile = (id) => {
-  files.value = files.value.filter((item) => item.id !== id)
+  filesStore.removeFile(id)
 }
 
 const createQuickNote = () => {
-  const name = createName.value.trim() || '新建便签.txt'
-  const nextId = files.value.reduce((max, item) => Math.max(max, item.id), 0) + 1
-  files.value.unshift({
-    id: nextId,
-    name,
-    type: 'text',
-    size: '1 KB',
-    updatedAt: '刚刚',
-    favorite: false,
-  })
+  filesStore.createQuickNote(createName.value)
   createName.value = ''
   activeTab.value = 'recent'
+}
+
+const openFileImporter = () => {
+  fileInputRef.value?.click()
+}
+
+const showImportFeedback = (type, message) => {
+  importFeedbackType.value = type
+  importFeedback.value = message
+}
+
+const handleFileImport = async (event) => {
+  const target = event?.target
+  const result = await filesStore.importLocalFiles(target?.files)
+  if (target) target.value = ''
+
+  if (result.importedCount > 0) {
+    const skipped = result.skippedDuplicateCount + result.skippedTooLargeCount + result.skippedInvalidCount
+    showImportFeedback(
+      skipped > 0 ? 'warning' : 'success',
+      skipped > 0
+        ? t(
+            `已索引 ${result.importedCount} 个文件，另有 ${skipped} 个被跳过。`,
+            `Indexed ${result.importedCount} files and skipped ${skipped}.`,
+          )
+        : t(`已索引 ${result.importedCount} 个本地文件。`, `Indexed ${result.importedCount} local files.`),
+    )
+    activeTab.value = 'recent'
+    return
+  }
+
+  if (result.reason === 'all_duplicate') {
+    showImportFeedback('warning', t('这些文件已在索引中。', 'These files are already indexed.'))
+    return
+  }
+
+  if (result.reason === 'all_too_large') {
+    const limit = result.firstTooLarge?.maxBytes
+      ? formatBytesCompact(result.firstTooLarge.maxBytes)
+      : t('当前限制', 'the current limit')
+    showImportFeedback(
+      'warning',
+      t(`媒体文件过大，单次索引上限为 ${limit}。`, `Media file is too large. Inline index limit is ${limit}.`),
+    )
+    return
+  }
+
+  showImportFeedback('warning', t('没有可索引的文件。', 'No files could be indexed.'))
+}
+
+const formatUpdatedAt = (timestamp) => {
+  const value = Number(timestamp)
+  if (!Number.isFinite(value) || value <= 0) return t('未知时间', 'Unknown time')
+  const diffMs = Date.now() - value
+  if (diffMs >= 0 && diffMs < 60 * 1000) return t('刚刚', 'Just now')
+  if (diffMs >= 0 && diffMs < 60 * 60 * 1000) {
+    const minutes = Math.max(1, Math.floor(diffMs / (60 * 1000)))
+    return t(`${minutes} 分钟前`, `${minutes}m ago`)
+  }
+  if (diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000) {
+    const hours = Math.max(1, Math.floor(diffMs / (60 * 60 * 1000)))
+    return t(`${hours} 小时前`, `${hours}h ago`)
+  }
+  return new Date(value).toLocaleDateString()
 }
 </script>
 
@@ -85,10 +140,50 @@ const createQuickNote = () => {
         />
       </section>
 
+      <section class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold">{{ t('本地文件索引', 'Local File Index') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{
+                t(
+                  '记录文件名、类型、大小与收藏状态；不会读取、上传或复制原文件内容。',
+                  'Records name, type, size, and favorite state; original file content is not read, uploaded, or copied.',
+                )
+              }}
+            </p>
+          </div>
+          <button
+            @click="openFileImporter"
+            class="shrink-0 px-3 py-2 rounded-lg bg-blue-500 text-white text-xs hover:bg-blue-600"
+          >
+            {{ t('导入索引', 'Import index') }}
+          </button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            multiple
+            class="hidden"
+            @change="handleFileImport"
+          />
+        </div>
+        <p
+          v-if="importFeedback"
+          class="rounded-lg border px-3 py-2 text-[11px]"
+          :class="
+            importFeedbackType === 'warning'
+              ? 'border-amber-200 bg-amber-50 text-amber-700'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          "
+        >
+          {{ importFeedback }}
+        </p>
+      </section>
+
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
         <div class="flex items-center justify-between mb-3">
           <p class="text-sm font-semibold">{{ t('文件列表', 'File List') }}</p>
-          <span class="text-[11px] text-gray-500">{{ t('共', 'Total') }} {{ files.length }} {{ t('个', '') }}</span>
+          <span class="text-[11px] text-gray-500">{{ t('共', 'Total') }} {{ fileCount }} {{ t('个', '') }}</span>
         </div>
 
         <div class="flex gap-2 mb-3">
@@ -115,11 +210,13 @@ const createQuickNote = () => {
             class="border border-gray-200 rounded-xl p-3 flex items-center gap-3"
           >
             <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600">
-              {{ typeLabelMap[item.type] || 'FILE' }}
+              {{ typeLabelMap[item.kind] || 'FILE' }}
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium truncate">{{ item.name }}</p>
-              <p class="text-[11px] text-gray-500">{{ item.size }} · {{ item.updatedAt }}</p>
+              <p class="text-[11px] text-gray-500">
+                {{ formatBytesCompact(item.sizeBytes) }} · {{ formatUpdatedAt(item.updatedAt) }}
+              </p>
             </div>
             <button
               @click="toggleFavorite(item.id)"

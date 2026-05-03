@@ -615,6 +615,8 @@ Status / 状态: `IN_PROGRESS`
       中文：地图链路（后续）回退到 icon/默认图，首次可选 AI 生图提示。
 5. EN: Module-local upload task — `IN_PROGRESS`: Chat and Map now support one-off local media apply/send without gallery import (with size guard) plus import-before-use path; other modules (shopping/takeout/etc.) remain pending.
    中文：模块本地上传任务——`IN_PROGRESS`：Chat 与 Map 已支持“单次本地应用/发送不入库”（带体积守卫）与“先入库再使用”双路径；购物/外卖等模块待接入。
+   - EN: Files hardening note — `DONE (phase-1)`: Files now indexes local file metadata only, persists quick notes/favorites/deletes, and applies the shared media-size guard for local media metadata import without copying original file content.
+      中文：Files 加固备注——`DONE（第一阶段）`：Files 现在只索引本地文件元数据，持久化便签/收藏/删除，并在本地媒体元数据导入时复用共享体积守卫，不复制原文件内容。
 6. EN: Performance policy task — `DONE (phase-1)`: centralized media-size policy is now wired in Chat/Gallery (import + replace + one-off send) with explicit oversize rejection copy for image/animation and reserved video limits.
    中文：性能策略任务——`DONE（第一阶段）`：Chat/Gallery 已接入统一媒体体积策略（导入 + 替换 + 单次发送），并提供图片/动图超限拒绝提示，同时预留视频上限规则。
 
@@ -931,3 +933,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Network 预设安全，新增保存时质量提示、Key 本地保存文案、自定义网关警告，以及预设复用前的手动模型兜底确认。
 89. 2026-05-03 EN: Landed Network-to-Chat smoke path with a real `callAI` request that avoids chat-history writes, protects stale async results, and records diagnostics for success/failure.
     2026-05-03 中文：已落地 Network 到 Chat 烟测链路，使用真实 `callAI` 请求但不写入聊天记录，保护陈旧异步结果，并为成功/失败写入诊断记录。
+90. 2026-05-03 EN: Landed Files persistent metadata-index baseline with `useFilesStore`, local file metadata import, shared media-size guard reuse, quick-note/favorite/delete persistence, and store regression tests.
+    2026-05-03 中文：已落地 Files 持久化元数据索引基线，新增 `useFilesStore`、本地文件元数据导入、共享媒体体积守卫复用、便签/收藏/删除持久化与 store 回归测试。
