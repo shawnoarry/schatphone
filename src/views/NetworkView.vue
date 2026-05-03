@@ -7,6 +7,7 @@ import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from 
 import {
   NETWORK_PROVIDER_TEMPLATES,
   applyNetworkProviderTemplate,
+  buildNetworkFailureGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
 } from '../lib/network-guidance'
@@ -31,6 +32,7 @@ const reportLevelFilter = ref('all')
 const copiedReportId = ref('')
 const uiFeedbackType = ref('')
 const uiFeedbackMessage = ref('')
+const connectionGuidance = ref(null)
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
@@ -151,6 +153,7 @@ const reportReasonLabel = (item) => {
   const code = (item?.code || '').toUpperCase()
   const statusCode = Number(item?.statusCode || 0)
 
+  if (code === 'MISSING_URL') return t('缺少接口地址', 'Missing endpoint URL')
   if (code === 'NO_API_KEY') return t('缺少 API Key', 'Missing API key')
   if (code === 'STORAGE_HEALTHY') return t('存储状态健康', 'Storage is healthy')
   if (code === 'STORAGE_MIRROR_DRIFT') return t('存储层不同步', 'Storage mirror drift detected')
@@ -216,6 +219,7 @@ const reportSuggestionLabel = (item) => {
   const code = (item?.code || '').toUpperCase()
   const statusCode = Number(item?.statusCode || 0)
 
+  if (code === 'MISSING_URL') return t('请先填写 API 接口 URL。', 'Please fill in API endpoint URL first.')
   if (code === 'NO_API_KEY') return t('请在本页补全 API Key。', 'Please fill in API key on this page.')
   if (code === 'STORAGE_HEALTHY')
     return t('当前存储层状态正常，无需操作。', 'Storage layers are healthy; no action required.')
@@ -522,20 +526,49 @@ const clearModelState = () => {
   modelsError.value = ''
 }
 
-const loadModels = async () => {
+const buildPreflightError = (apiUrl, apiKey) => {
+  if (!apiUrl) return { code: 'MISSING_URL' }
+  if (!apiKey) return { code: 'NO_API_KEY' }
+  return null
+}
+
+const recordNetworkFailure = (guidance, message) => {
+  systemStore.addApiReport({
+    level: 'error',
+    module: 'network',
+    action: 'fetch_models',
+    provider: guidance.provider || settings.value.api.resolvedKind || '',
+    model: guidance.model || settings.value.api.model || '',
+    statusCode: guidance.statusCode || 0,
+    code: guidance.code || '',
+    message: message || guidance.detailZh || guidance.detailEn || '',
+  })
+}
+
+const loadModels = async (options = {}) => {
+  const manual = options?.manual === true
   const apiUrl = settings.value.api.url?.trim()
   const apiKey = settings.value.api.key?.trim()
 
   settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
 
-  if (!apiUrl || !apiKey) {
+  const preflightError = buildPreflightError(apiUrl, apiKey)
+  if (preflightError) {
     clearModelState()
+    if (manual) {
+      const guidance = buildNetworkFailureGuidance(preflightError, settings.value.api)
+      connectionGuidance.value = guidance
+      modelsError.value = t(guidance.detailZh, guidance.detailEn)
+      recordNetworkFailure(guidance, modelsError.value)
+      setUiFeedback('warn', t(guidance.fixZh, guidance.fixEn), 3200)
+    }
     return
   }
 
   const currentToken = ++modelFetchToken
   modelsLoading.value = true
   modelsError.value = ''
+  connectionGuidance.value = null
 
   try {
     const { kind, models } = await fetchAvailableModels({ settings: settings.value })
@@ -547,20 +580,20 @@ const loadModels = async () => {
     if (!settings.value.api.model && modelOptions.value.length > 0) {
       settings.value.api.model = modelOptions.value[0]
     }
+    connectionGuidance.value = null
+    if (manual) {
+      setUiFeedback('success', t('连接测试通过，模型列表已更新。', 'Connection test passed. Model list updated.'))
+    }
   } catch (error) {
     if (currentToken !== modelFetchToken) return
     modelOptions.value = []
     modelsError.value = formatApiErrorForUi(error, t('模型拉取失败，请检查设置。', 'Failed to load models. Check your settings.'))
-    systemStore.addApiReport({
-      level: 'error',
-      module: 'network',
-      action: 'fetch_models',
-      provider: settings.value.api.resolvedKind || '',
-      model: settings.value.api.model || '',
-      statusCode: Number.isFinite(Number(error?.status)) ? Number(error.status) : 0,
-      code: typeof error?.code === 'string' ? error.code : '',
-      message: modelsError.value || formatApiErrorForUi(error),
-    })
+    const guidance = buildNetworkFailureGuidance(error, settings.value.api)
+    connectionGuidance.value = guidance
+    recordNetworkFailure(guidance, modelsError.value || guidance.detailZh)
+    if (manual) {
+      setUiFeedback('error', t(guidance.fixZh, guidance.fixEn), 4200)
+    }
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
@@ -594,6 +627,7 @@ const scheduleAutoLoadModels = () => {
 
   if (!apiUrl || !apiKey) {
     clearModelState()
+    connectionGuidance.value = null
     return
   }
 
@@ -829,15 +863,38 @@ ensurePresetState()
         </div>
 
         <button
-          @click="loadModels"
+          @click="loadModels({ manual: true })"
           :disabled="modelsLoading"
           class="w-full rounded-lg py-2 text-sm transition"
           :class="modelsLoading ? 'bg-gray-100 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'"
         >
-          {{ modelsLoading ? t('拉取中...', 'Loading...') : t('刷新模型列表', 'Refresh model list') }}
+          {{ modelsLoading ? t('测试中...', 'Testing...') : t('测试连接并刷新模型', 'Test connection and refresh models') }}
         </button>
 
         <p v-if="modelsError" class="text-xs text-red-500 mt-2">{{ modelsError }}</p>
+
+        <div v-if="connectionGuidance" class="mt-3 rounded-xl border border-red-100 bg-red-50 p-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-red-700">
+                {{ t(connectionGuidance.titleZh, connectionGuidance.titleEn) }}
+              </p>
+              <p class="mt-1 text-[11px] text-red-600">
+                {{ t(connectionGuidance.detailZh, connectionGuidance.detailEn) }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-red-600">
+              {{ connectionGuidance.code }}
+            </span>
+          </div>
+          <p class="mt-2 text-[11px] text-gray-700">
+            {{ t('建议处理', 'Suggested fix') }}: {{ t(connectionGuidance.fixZh, connectionGuidance.fixEn) }}
+          </p>
+          <p class="mt-2 text-[10px] text-gray-500">
+            {{ t('供应商', 'Provider') }}: {{ t(connectionGuidance.providerLabelZh, connectionGuidance.providerLabelEn) }} ·
+            {{ t('状态码', 'Status') }}: {{ connectionGuidance.statusCode || '-' }}
+          </p>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl p-4" v-if="modelOptions.length > 0">

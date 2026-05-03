@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   applyNetworkProviderTemplate,
+  buildNetworkFailureGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
   getNetworkProviderTemplate,
@@ -57,5 +58,43 @@ describe('network guidance helpers', () => {
 
     expect(copy.tone).toBe('success')
     expect(copy.actionEn).toBe('Test connection')
+  })
+
+  test('classifies missing key before a connection attempt', () => {
+    const guidance = buildNetworkFailureGuidance(
+      { code: 'NO_API_KEY' },
+      {
+        url: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4o-mini',
+      },
+    )
+
+    expect(guidance.code).toBe('NO_API_KEY')
+    expect(guidance.provider).toBe('openai_compatible')
+    expect(guidance.titleEn).toContain('API key')
+    expect(guidance.fixEn).toContain('key')
+  })
+
+  test('classifies provider and gateway failures with actionable copy', () => {
+    const auth = buildNetworkFailureGuidance(
+      { code: 'AUTH', status: 403 },
+      {
+        url: 'https://generativelanguage.googleapis.com/v1beta/models',
+        model: 'gemini-2.5-flash',
+      },
+    )
+    expect(auth.provider).toBe('gemini')
+    expect(auth.statusCode).toBe(403)
+    expect(auth.fixEn).toContain('Gemini')
+
+    const cors = buildNetworkFailureGuidance(
+      { code: 'NETWORK' },
+      {
+        url: 'https://your-gateway.example.com/v1/chat/completions',
+        model: 'gpt-4o-mini',
+      },
+    )
+    expect(cors.titleEn).toContain('CORS')
+    expect(cors.fixEn).toContain('gateway')
   })
 })
