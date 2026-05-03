@@ -7,6 +7,7 @@ import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import {
   APP_ICON_ACCENT_OPTIONS,
   APP_ICON_CUSTOMIZATION_TARGET_IDS,
@@ -997,35 +998,25 @@ onBeforeUnmount(() => {
             </span>
           </div>
           <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            <button
+            <AssetThumbnailOption
               v-for="asset in wallpaperQuickAssetOptions"
               :key="`wallpaper-chip-${asset.id}`"
-              type="button"
-              class="shrink-0 w-16"
-              @click="applyQuickWallpaperAsset(asset.id)"
+              :asset="asset"
+              :preview-url="wallpaperQuickPreviewMap[asset.id]"
+              :selected="
+                currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id
+                  ? true
+                  : selectedWallpaperAssetId === asset.id
+              "
+              :selection-tone="
+                currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id
+                  ? 'sky'
+                  : 'slate'
+              "
+              variant="portrait"
+              @select="applyQuickWallpaperAsset(asset.id)"
             >
-              <div
-                class="relative w-16 h-24 rounded-2xl overflow-hidden border bg-white"
-                :class="
-                  currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id
-                    ? 'border-sky-400 ring-2 ring-sky-100'
-                    : selectedWallpaperAssetId === asset.id
-                      ? 'border-slate-400'
-                      : 'border-gray-200'
-                "
-              >
-                <img
-                  v-if="wallpaperQuickPreviewMap[asset.id]"
-                  :src="wallpaperQuickPreviewMap[asset.id]"
-                  :alt="asset.name"
-                  class="w-full h-full object-cover"
-                />
-                <div
-                  v-else
-                  class="w-full h-full flex items-center justify-center bg-gray-50 text-[9px] text-gray-400"
-                >
-                  {{ t('加载中', 'Loading') }}
-                </div>
+              <template #overlay>
                 <AssetStatusBadge
                   v-if="currentWallpaperMode === 'gallery' && currentWallpaperAsset?.id === asset.id"
                   label-zh="使用中"
@@ -1034,11 +1025,8 @@ onBeforeUnmount(() => {
                   :truncate="false"
                   class="absolute left-1.5 top-1.5 font-semibold"
                 />
-              </div>
-              <p class="mt-1 text-[10px] text-gray-600 truncate">
-                {{ asset.name }}
-              </p>
-            </button>
+              </template>
+            </AssetThumbnailOption>
           </div>
         </div>
         <select

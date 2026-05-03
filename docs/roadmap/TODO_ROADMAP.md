@@ -143,8 +143,16 @@ Status / 状态: `IN_PROGRESS`
      中文：第一阶段已落地：抽出 `AssetStatusBadge.vue`，并复用于 Gallery 使用状态标签与 Appearance 当前壁纸标签。
    - EN: Landed phase-2: extended the same badge language to Chat gallery picker, Map visual quick switch, and Contacts folder-slot binding status.
      中文：第二阶段已落地：同一套状态标签语言已扩展到 Chat 素材发送面板、Map 视觉快速切换、Contacts 槽位绑定状态。
-   - EN: Next phase candidate: decide whether to extract a shared thumbnail picker, or pause here and move to a different P1 depth task.
-     中文：下一阶段候选：判断是否继续抽共享缩略图选择器，或先暂停在此并转入其他 P1 深度任务。
+   - EN: Landed phase-3: extracted `AssetThumbnailOption.vue` and reused it in Chat gallery send and Map visual quick switch while keeping preview loading, selection handling, and store writes in parent views/components.
+     中文：第三阶段已落地：抽出 `AssetThumbnailOption.vue`，并复用于 Chat 素材发送与 Map 视觉快切，同时将预览加载、选择处理与 store 写入保留在父级视图/组件。
+   - EN: Landed phase-4: added a non-interactive `mini` variant and reused it in Contacts folder-slot previews without changing folder binding or preview-loading ownership.
+     中文：第四阶段已落地：新增只读 `mini` 变体，并复用于 Contacts 文件夹槽位预览，未改变文件夹绑定或预览加载职责。
+   - EN: Landed phase-5: widened `AssetThumbnailOption.vue` variants and reused it in Contacts asset-pack grid, ChatDirectory role preview strips / preferred-image switcher, and Appearance wallpaper quick switch.
+     中文：第五阶段已落地：扩展 `AssetThumbnailOption.vue` 变体，并复用于 Contacts 素材包网格、ChatDirectory 角色预览条/会话优先图切换与 Appearance 壁纸快切。
+   - EN: Landed phase-6: added the square variant and reused it in Gallery hero previews and asset cards while preserving Gallery delete/replace/folder operations in `GalleryView.vue`.
+     中文：第六阶段已落地：新增方形变体，并复用于 Gallery 顶部预览与素材卡片，同时将 Gallery 删除、替换与文件夹操作保留在 `GalleryView.vue`。
+   - EN: Next phase candidate: commit this maintainability batch, then switch to Network guided setup.
+     中文：下一阶段候选：提交当前可维护性批次，然后切换到 Network 引导配置。
 4. EN: P1 WorldBook usage visibility first slice — `DONE`.
    中文：P1 世界书使用可见性第一刀 — `DONE`。
    - EN: Show per-knowledge-point role binding count, Chat prompt-chain readiness, and bound role names in WorldBook.
@@ -303,8 +311,22 @@ Status / 状态: `IN_PROGRESS`
       中文：验收：路线熟悉度空状态/卡片、等级展示、下一阶段提示、关联知识点展示与 WorldBook 深链保持不变。
     - EN: Regression checks: `npm run lint`, `npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`, `npm run build`.
       中文：回归检查：`npm run lint`、`npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`、`npm run build`。
-    - EN: Next phase candidate: stay in Map with `MapTripHistoryPanel`, or switch to feature work such as Network guided setup.
-      中文：下一阶段候选：留在 Map 拆 `MapTripHistoryPanel`，或切换到 Network 引导配置等功能项。
+    - EN: Follow-up landed: stayed in Map and extracted `MapTripHistoryPanel`.
+      中文：后续已落地：留在 Map 并抽出 `MapTripHistoryPanel`。
+18. EN: P1 maintainability slice: Map trip history panel extraction — `DONE`.
+    中文：P1 可维护性切片：Map 行程记录面板拆分 — `DONE`。
+    - EN: Extracted `src/components/map/MapTripHistoryPanel.vue` from `src/views/MapView.vue`.
+      中文：已从 `src/views/MapView.vue` 抽出 `src/components/map/MapTripHistoryPanel.vue`。
+    - EN: Scope: trip-history empty state/cards, status labels, duration/fare display, reward/event summaries, total exploration score, related WorldBook summary, and WorldBook chip/buttons only; trip-history slicing, reward scoring, related knowledge indexing, formatting, and WorldBook route query handling remain in `MapView.vue`.
+      中文：范围：仅拆行程记录空状态/卡片、状态标签、时长/费用展示、奖励/事件摘要、总探索分、关联 WorldBook 摘要与 WorldBook chip/按钮；行程记录截取、奖励总分、关联知识点索引、格式化与 WorldBook 路由 query 处理仍留在 `MapView.vue`。
+    - EN: Acceptance: trip history display, reward/event display, related knowledge display, and WorldBook deep links remain unchanged.
+      中文：验收：行程记录展示、奖励/事件展示、关联知识点展示与 WorldBook 深链保持不变。
+    - EN: Regression checks: `npm run lint`, `npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`, `npm run build`.
+      中文：回归检查：`npm run lint`、`npm test -- tests/map-worldbook-context.test.js tests/map-trip-baseline.test.js`、`npm run build`。
+    - EN: Next phase candidate: switch to feature work such as Network guided setup, or continue maintainability work with shared thumbnail picker extraction.
+      中文：下一阶段候选：切换到 Network 引导配置等功能项，或继续可维护性工作抽共享缩略图选择器。
+    - EN: Follow-up landed: continued maintainability work with shared thumbnail option phase 1.
+      中文：后续已落地：继续可维护性工作并落地共享缩略图选项第一阶段。
 6. EN: P1 Map rewards/events first slice — `DONE`.
    中文：P1 地图奖励/事件第一刀 — `DONE`。
    - EN: Completed trips now write deterministic exploration rewards and lightweight event summaries into trip history.
@@ -889,3 +911,13 @@ Acceptance / 验收标准:
     2026-05-02 中文：已落地 P1 Settings 自动化可维护性切片，抽出 `SettingsAutomationSection.vue`，同时将开启确认、输入归一化、运行策略计算、路由、诊断职责与 store 语义保留在 `SettingsView.vue`。
 79. 2026-05-03 EN: Landed P1 Map route-familiarity maintainability slice by extracting `MapRouteFamiliarityPanel.vue` while keeping route derivation, related knowledge indexing, next-hint logic, and WorldBook routing in `MapView.vue`.
     2026-05-03 中文：已落地 P1 Map 路线熟悉度可维护性切片，抽出 `MapRouteFamiliarityPanel.vue`，同时将路线派生、关联知识点索引、下一阶段提示逻辑与 WorldBook 路由保留在 `MapView.vue`。
+80. 2026-05-03 EN: Landed P1 Map trip-history maintainability slice by extracting `MapTripHistoryPanel.vue` while keeping trip-history slicing, reward scoring, related knowledge indexing, formatting, and WorldBook routing in `MapView.vue`.
+    2026-05-03 中文：已落地 P1 Map 行程记录可维护性切片，抽出 `MapTripHistoryPanel.vue`，同时将行程记录截取、奖励总分、关联知识点索引、格式化与 WorldBook 路由保留在 `MapView.vue`。
+81. 2026-05-03 EN: Landed shared asset thumbnail option phase 1 by extracting `AssetThumbnailOption.vue` and reusing it in Chat gallery send and Map visual quick switch without changing preview loading or store writes.
+    2026-05-03 中文：已落地共享素材缩略图选项第一阶段，抽出 `AssetThumbnailOption.vue` 并复用于 Chat 素材发送与 Map 视觉快切，未改变预览加载或 store 写入。
+82. 2026-05-03 EN: Landed shared asset thumbnail option phase 2 by adding the read-only `mini` variant and reusing it in Contacts folder-slot previews without changing folder binding or preview-loading ownership.
+    2026-05-03 中文：已落地共享素材缩略图选项第二阶段，新增只读 `mini` 变体并复用于 Contacts 文件夹槽位预览，未改变文件夹绑定或预览加载职责。
+83. 2026-05-03 EN: Landed shared asset thumbnail option phase 3 across Contacts asset-pack grid, ChatDirectory role preview strips / preferred-image switcher, and Appearance wallpaper quick switch while preserving preview-loading and store ownership in parent views.
+    2026-05-03 中文：已落地共享素材缩略图选项第三阶段，覆盖 Contacts 素材包网格、ChatDirectory 角色预览条/会话优先图切换与 Appearance 壁纸快切，同时保持预览加载与 store 职责仍在父视图。
+84. 2026-05-03 EN: Landed shared asset thumbnail option phase 4 in Gallery hero previews and asset cards, completing the main cross-module thumbnail cleanup pass across asset-consuming surfaces.
+    2026-05-03 中文：已落地共享素材缩略图选项第四阶段，覆盖 Gallery 顶部预览与素材卡片，完成主要素材消费界面的跨模块缩略图清理。

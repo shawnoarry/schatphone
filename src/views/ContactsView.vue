@@ -10,6 +10,7 @@ import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resol
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -213,6 +214,12 @@ const getDraftFolderPreviewOverflowCount = (slotKey, limit = 3) => {
   const count = Number(summary?.assetCount) || 0
   return Math.max(0, count - limit)
 }
+
+const getDraftFolderPreviewAssets = (slotKey, limit = 3) =>
+  getDraftFolderPreviewAssetIds(slotKey, limit).map((assetId) => ({
+    id: assetId,
+    name: galleryStore.findAssetById(assetId)?.name || roleFolderSlotLabel(slotKey),
+  }))
 
 const draftPreviewKeepAliveAssetIds = computed(() => {
   const previewIds = [
@@ -747,23 +754,15 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <div class="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-0.5">
-              <button
+              <AssetThumbnailOption
                 v-for="asset in availableAssets"
                 :key="asset.id"
-                @click="toggleDraftAsset(asset.id)"
-                class="rounded-lg border p-1.5 text-left"
-                :class="isDraftAssetSelected(asset.id, activeAssetCategoryConfig.key) ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'"
+                :asset="asset"
+                :preview-url="draftPreviewMap[asset.id]"
+                :selected="isDraftAssetSelected(asset.id, activeAssetCategoryConfig.key)"
+                @select="toggleDraftAsset(asset.id)"
               >
-                <div class="w-full h-14 rounded-md bg-gray-100 overflow-hidden">
-                  <img
-                    v-if="draftPreviewMap[asset.id]"
-                    :src="draftPreviewMap[asset.id]"
-                    class="w-full h-full object-cover"
-                  />
-                  <div v-else class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">{{ t('加载中', 'Loading') }}</div>
-                </div>
-                <p class="mt-1 text-[10px] text-gray-700 line-clamp-1">{{ asset.name }}</p>
-              </button>
+              </AssetThumbnailOption>
             </div>
           </div>
         </div>
@@ -814,20 +813,15 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <div v-if="getDraftFolderPreviewAssetIds('profileImage').length > 0" class="flex items-center gap-1.5">
-            <div
-              v-for="assetId in getDraftFolderPreviewAssetIds('profileImage')"
-              :key="`profileImage-preview-${assetId}`"
-              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
-            >
-              <img
-                v-if="draftPreviewMap[assetId]"
-                :src="draftPreviewMap[assetId]"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                {{ t('加载中', 'Loading') }}
-              </div>
-            </div>
+            <AssetThumbnailOption
+              v-for="asset in getDraftFolderPreviewAssets('profileImage')"
+              :key="`profileImage-preview-${asset.id}`"
+              :asset="asset"
+              :preview-url="draftPreviewMap[asset.id]"
+              variant="mini"
+              :interactive="false"
+              :show-name="false"
+            />
             <span
               v-if="getDraftFolderPreviewOverflowCount('profileImage') > 0"
               class="text-[10px] text-gray-500"
@@ -883,20 +877,15 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <div v-if="getDraftFolderPreviewAssetIds('dynamicMedia').length > 0" class="flex items-center gap-1.5">
-            <div
-              v-for="assetId in getDraftFolderPreviewAssetIds('dynamicMedia')"
-              :key="`dynamicMedia-preview-${assetId}`"
-              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
-            >
-              <img
-                v-if="draftPreviewMap[assetId]"
-                :src="draftPreviewMap[assetId]"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                {{ t('加载中', 'Loading') }}
-              </div>
-            </div>
+            <AssetThumbnailOption
+              v-for="asset in getDraftFolderPreviewAssets('dynamicMedia')"
+              :key="`dynamicMedia-preview-${asset.id}`"
+              :asset="asset"
+              :preview-url="draftPreviewMap[asset.id]"
+              variant="mini"
+              :interactive="false"
+              :show-name="false"
+            />
             <span
               v-if="getDraftFolderPreviewOverflowCount('dynamicMedia') > 0"
               class="text-[10px] text-gray-500"
@@ -952,20 +941,15 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <div v-if="getDraftFolderPreviewAssetIds('emojiPack').length > 0" class="flex items-center gap-1.5">
-            <div
-              v-for="assetId in getDraftFolderPreviewAssetIds('emojiPack')"
-              :key="`emojiPack-preview-${assetId}`"
-              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
-            >
-              <img
-                v-if="draftPreviewMap[assetId]"
-                :src="draftPreviewMap[assetId]"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                {{ t('加载中', 'Loading') }}
-              </div>
-            </div>
+            <AssetThumbnailOption
+              v-for="asset in getDraftFolderPreviewAssets('emojiPack')"
+              :key="`emojiPack-preview-${asset.id}`"
+              :asset="asset"
+              :preview-url="draftPreviewMap[asset.id]"
+              variant="mini"
+              :interactive="false"
+              :show-name="false"
+            />
             <span
               v-if="getDraftFolderPreviewOverflowCount('emojiPack') > 0"
               class="text-[10px] text-gray-500"
@@ -1021,20 +1005,15 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <div v-if="getDraftFolderPreviewAssetIds('imageReference').length > 0" class="flex items-center gap-1.5">
-            <div
-              v-for="assetId in getDraftFolderPreviewAssetIds('imageReference')"
-              :key="`imageReference-preview-${assetId}`"
-              class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
-            >
-              <img
-                v-if="draftPreviewMap[assetId]"
-                :src="draftPreviewMap[assetId]"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                {{ t('加载中', 'Loading') }}
-              </div>
-            </div>
+            <AssetThumbnailOption
+              v-for="asset in getDraftFolderPreviewAssets('imageReference')"
+              :key="`imageReference-preview-${asset.id}`"
+              :asset="asset"
+              :preview-url="draftPreviewMap[asset.id]"
+              variant="mini"
+              :interactive="false"
+              :show-name="false"
+            />
             <span
               v-if="getDraftFolderPreviewOverflowCount('imageReference') > 0"
               class="text-[10px] text-gray-500"

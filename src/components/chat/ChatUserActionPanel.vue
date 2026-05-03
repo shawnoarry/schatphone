@@ -1,6 +1,7 @@
 <script setup>
 import { useI18n } from '../../composables/useI18n'
 import AssetStatusBadge from '../assets/AssetStatusBadge.vue'
+import AssetThumbnailOption from '../assets/AssetThumbnailOption.vue'
 
 defineProps({
   userActionFormType: {
@@ -344,53 +345,42 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       </div>
 
       <div v-else class="max-h-48 overflow-y-auto pr-0.5 grid grid-cols-2 gap-2">
-        <button
+        <AssetThumbnailOption
           v-for="asset in galleryPickerAssets"
           :key="asset.id"
-          @click="$emit('submit-gallery-asset', asset)"
-          class="rounded-lg border border-gray-200 p-1.5 text-left hover:bg-gray-50 transition"
+          :asset="asset"
+          :preview-url="galleryPickerPreviewMap[asset.id]"
+          @select="$emit('submit-gallery-asset', asset)"
         >
-          <div class="w-full h-14 rounded-md bg-gray-100 overflow-hidden">
-            <img
-              v-if="galleryPickerPreviewMap[asset.id]"
-              :src="galleryPickerPreviewMap[asset.id]"
-              class="w-full h-full object-cover"
+          <template #badges>
+            <AssetStatusBadge
+              v-if="activeRoleAssetContext.preferredImageAssetId && asset.id === activeRoleAssetContext.preferredImageAssetId"
+              label-zh="会话优先"
+              label-en="Thread preferred"
+              icon="fas fa-star"
+              :truncate="false"
+              class="mt-1"
             />
-            <div
-              v-else
-              class="w-full h-full flex items-center justify-center text-[10px] text-gray-400"
-            >
-              {{ t('加载中', 'Loading') }}
-            </div>
-          </div>
-          <p class="mt-1 text-[10px] font-medium text-gray-700 line-clamp-1">{{ asset.name }}</p>
-          <AssetStatusBadge
-            v-if="activeRoleAssetContext.preferredImageAssetId && asset.id === activeRoleAssetContext.preferredImageAssetId"
-            label-zh="会话优先"
-            label-en="Thread preferred"
-            icon="fas fa-star"
-            :truncate="false"
-            class="mt-1"
-          />
-          <AssetStatusBadge
-            v-else-if="activeRoleAssetContext.profileFolderAssetIds.includes(asset.id)"
-            label-zh="文件夹绑定"
-            label-en="Folder bound"
-            icon="fas fa-folder"
-            tone="amber"
-            :truncate="false"
-            class="mt-1"
-          />
-          <AssetStatusBadge
-            v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"
-            label-zh="角色素材包"
-            label-en="Profile pack"
-            icon="fas fa-images"
-            tone="emerald"
-            :truncate="false"
-            class="mt-1"
-          />
-        </button>
+            <AssetStatusBadge
+              v-else-if="activeRoleAssetContext.profileFolderAssetIds.includes(asset.id)"
+              label-zh="文件夹绑定"
+              label-en="Folder bound"
+              icon="fas fa-folder"
+              tone="amber"
+              :truncate="false"
+              class="mt-1"
+            />
+            <AssetStatusBadge
+              v-else-if="activeRoleAssetContext.profileAssetIds.includes(asset.id)"
+              label-zh="角色素材包"
+              label-en="Profile pack"
+              icon="fas fa-images"
+              tone="emerald"
+              :truncate="false"
+              class="mt-1"
+            />
+          </template>
+        </AssetThumbnailOption>
       </div>
 
       <div class="flex items-center justify-end gap-2">

@@ -614,6 +614,9 @@ Engineering meaning / 工程含义: rich product layer with concentrated display
   - related WorldBook chips
 - Suggested component name:
   - `src/components/map/MapTripHistoryPanel.vue`
+- Current status:
+  - `DONE` on 2026-05-03; component extracted and trip-history derivation / WorldBook route query ownership kept in `MapView.vue`.
+  - 2026-05-03 已落地；组件已抽出，行程记录派生与 WorldBook 路由 query 职责仍留在 `MapView.vue`。
 - Why fifth:
   - also display-heavy and derived
   - good candidate after visual and control panel split
@@ -685,3 +688,5 @@ If you are deciding what to build next:
    2026-05-02 中文：新增为面向后续开发同事与 AI 助手的接手参考文档，打通 PM 状态、路线图、模块审计、文件体量热点与测试覆盖信号。
 2. 2026-05-02 EN: Added a concrete component extraction candidate list for `ChatView.vue`, `SettingsView.vue`, and `MapView.vue`, including suggested boundaries, sequencing, and guardrails.
    2026-05-02 中文：补充 `ChatView.vue`、`SettingsView.vue`、`MapView.vue` 的具体组件拆分候选清单，包含推荐边界、拆分顺序与守则。
+3. 2026-05-03 EN: Marked `MapTripHistoryPanel.vue` as landed after extracting the trip-history display panel from `MapView.vue`.
+   2026-05-03 中文：在从 `MapView.vue` 抽出行程记录展示面板后，将 `MapTripHistoryPanel.vue` 标记为已落地。

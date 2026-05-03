@@ -7,6 +7,7 @@ import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from 
 import { useChatStore } from '../stores/chat'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
+import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 
 const router = useRouter()
 const galleryStore = useGalleryStore()
@@ -772,19 +773,16 @@ onBeforeUnmount(() => {
               <p class="mt-1 text-xs text-neutral-700 truncate">{{ assetCurationSummary }}</p>
             </div>
             <div v-if="heroPreviewAssets.length > 0" class="flex -space-x-2 shrink-0">
-              <div
+              <AssetThumbnailOption
                 v-for="asset in heroPreviewAssets"
                 :key="`hero-preview-${asset.id}`"
-                class="h-9 w-9 overflow-hidden rounded-xl border-2 border-white bg-neutral-100 shadow-sm"
-              >
-                <img
-                  v-if="previewMap[asset.id]"
-                  :src="previewMap[asset.id]"
-                  :alt="asset.name"
-                  class="h-full w-full object-cover"
-                />
-                <div v-else class="h-full w-full bg-neutral-200"></div>
-              </div>
+                :asset="asset"
+                :preview-url="previewMap[asset.id]"
+                variant="mini"
+                :interactive="false"
+                :show-name="false"
+                class="rounded-xl border-2 border-white shadow-sm"
+              />
             </div>
           </div>
         </div>
@@ -1056,16 +1054,14 @@ onBeforeUnmount(() => {
           :key="asset.id"
           class="gallery-asset-card overflow-hidden"
         >
-          <div class="aspect-square bg-neutral-100 relative">
-            <img
-              v-if="previewMap[asset.id]"
-              :src="previewMap[asset.id]"
-              :alt="asset.name"
-              class="w-full h-full object-cover"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center text-neutral-400 text-xs">
-              {{ t('预览加载中', 'Loading...') }}
-            </div>
+          <AssetThumbnailOption
+            :asset="asset"
+            :preview-url="previewMap[asset.id]"
+            variant="square"
+            :interactive="false"
+            :show-name="false"
+          >
+            <template #overlay>
             <button
               @click="removeAsset(asset)"
               class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/45 text-white text-xs hover:bg-black/60 transition"
@@ -1073,7 +1069,8 @@ onBeforeUnmount(() => {
             >
               <i class="fas fa-trash"></i>
             </button>
-          </div>
+            </template>
+          </AssetThumbnailOption>
 
           <div class="p-2 space-y-1.5 bg-white">
             <p class="text-[11px] font-medium leading-tight line-clamp-1">{{ asset.name }}</p>

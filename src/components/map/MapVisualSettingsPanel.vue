@@ -1,6 +1,7 @@
 <script setup>
 import { useI18n } from '../../composables/useI18n'
 import AssetStatusBadge from '../assets/AssetStatusBadge.vue'
+import AssetThumbnailOption from '../assets/AssetThumbnailOption.vue'
 
 defineProps({
   currentLocationText: {
@@ -270,32 +271,16 @@ const { t } = useI18n()
         </div>
 
         <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <button
+          <AssetThumbnailOption
             v-for="asset in mapVisualQuickAssetOptions"
             :key="`map-visual-chip-${asset.id}`"
-            type="button"
-            class="shrink-0 w-16"
-            @click="$emit('apply-quick-map-visual-asset', asset.id)"
+            :asset="asset"
+            :preview-url="mapVisualQuickPreviewMap[asset.id]"
+            :selected="mapVisualSelectedAsset?.id === asset.id"
+            variant="rail"
+            @select="$emit('apply-quick-map-visual-asset', asset.id)"
           >
-            <div
-              class="relative w-16 h-16 rounded-2xl overflow-hidden border bg-white/10"
-              :class="
-                mapVisualSelectedAsset?.id === asset.id
-                  ? 'border-cyan-200 ring-2 ring-cyan-200/25'
-                  : 'border-white/15'
-              "
-            >
-              <img
-                v-if="mapVisualQuickPreviewMap[asset.id]"
-                :src="mapVisualQuickPreviewMap[asset.id]"
-                class="w-full h-full object-cover"
-              />
-              <div
-                v-else
-                class="w-full h-full flex items-center justify-center text-[9px] text-cyan-50/50 bg-white/10"
-              >
-                {{ t('加载中', 'Loading') }}
-              </div>
+            <template #overlay>
               <AssetStatusBadge
                 v-if="mapVisualSelectedAsset?.id === asset.id"
                 label-zh="使用中"
@@ -304,9 +289,8 @@ const { t } = useI18n()
                 :truncate="false"
                 class="absolute left-1 top-1 font-semibold"
               />
-            </div>
-            <p class="mt-1 text-[10px] text-cyan-50/65 line-clamp-2 text-left">{{ asset.name }}</p>
-          </button>
+            </template>
+          </AssetThumbnailOption>
           <div
             v-if="mapVisualQuickOverflowCount > 0"
             class="shrink-0 rounded-xl border border-dashed border-white/20 px-3 py-2 text-[11px] text-cyan-50"

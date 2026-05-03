@@ -11,6 +11,7 @@ import {
 } from '../lib/role-asset-folder-resolver'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -1215,20 +1216,15 @@ onBeforeUnmount(() => {
               {{ roleFolderBindingSummary(contact) }}
             </p>
             <div v-if="getRolePreviewAssetIds(contact.id).length > 0" class="mt-1 flex items-center gap-1.5">
-              <div
+              <AssetThumbnailOption
                 v-for="assetId in getRolePreviewAssetIds(contact.id)"
                 :key="`chat-role-preview-${contact.id}-${assetId}`"
-                class="w-7 h-7 rounded-md overflow-hidden bg-gray-100 border border-gray-200"
-              >
-                <img
-                  v-if="rolePreviewMap[assetId]"
-                  :src="rolePreviewMap[assetId]"
-                  class="w-full h-full object-cover"
-                />
-                <div v-else class="w-full h-full flex items-center justify-center text-[8px] text-gray-400">
-                  {{ t('加载中', 'Loading') }}
-                </div>
-              </div>
+                :asset="{ id: assetId, name: preferredImageAssetLabel(contact) || roleFolderBindingSummary(contact) }"
+                :preview-url="rolePreviewMap[assetId]"
+                variant="tiny"
+                :interactive="false"
+                :show-name="false"
+              />
               <span
                 v-if="getRolePreviewOverflowCount(contact.id) > 0"
                 class="text-[10px] text-gray-500"
@@ -1519,16 +1515,14 @@ onBeforeUnmount(() => {
         </p>
         <div v-if="roleMetaPreviewLeadOption" class="space-y-2">
           <div class="rounded-2xl border border-violet-100 bg-violet-50/40 p-3 flex items-center gap-3">
-            <div class="w-16 h-16 rounded-xl overflow-hidden bg-white border border-violet-100 shrink-0">
-              <img
-                v-if="rolePreviewMap[roleMetaPreviewLeadOption.id]"
-                :src="rolePreviewMap[roleMetaPreviewLeadOption.id]"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
-                {{ t('加载中', 'Loading') }}
-              </div>
-            </div>
+            <AssetThumbnailOption
+              :asset="roleMetaPreviewLeadOption"
+              :preview-url="rolePreviewMap[roleMetaPreviewLeadOption.id]"
+              variant="rail"
+              selection-tone="violet"
+              :interactive="false"
+              :show-name="false"
+            />
             <div class="min-w-0">
               <p class="text-xs font-semibold text-violet-800 truncate">{{ roleMetaPreviewTitle }}</p>
               <p class="text-[11px] text-violet-700 truncate">{{ roleMetaPreviewLeadOption.label }}</p>
@@ -1550,32 +1544,17 @@ onBeforeUnmount(() => {
               {{ t('跟随档案默认', 'Use profile default') }}
             </button>
 
-            <button
+            <AssetThumbnailOption
               v-for="asset in roleMetaQuickPreviewOptions"
               :key="`role-meta-preview-chip-${asset.id}`"
-              type="button"
-              @click="roleMetaDraft.preferredImageAssetId = asset.id"
-              class="shrink-0 w-14"
+              :asset="asset"
+              :preview-url="rolePreviewMap[asset.id]"
+              :selected="roleMetaDraft.preferredImageAssetId === asset.id"
+              variant="compact"
+              selection-tone="violet"
+              @select="roleMetaDraft.preferredImageAssetId = asset.id"
             >
-              <div
-                class="w-14 h-14 rounded-xl overflow-hidden border"
-                :class="
-                  roleMetaDraft.preferredImageAssetId === asset.id
-                    ? 'border-violet-400 ring-2 ring-violet-100'
-                    : 'border-gray-200'
-                "
-              >
-                <img
-                  v-if="rolePreviewMap[asset.id]"
-                  :src="rolePreviewMap[asset.id]"
-                  class="w-full h-full object-cover"
-                />
-                <div v-else class="w-full h-full flex items-center justify-center text-[9px] text-gray-400 bg-gray-50">
-                  {{ t('加载中', 'Loading') }}
-                </div>
-              </div>
-              <p class="mt-1 text-[10px] text-gray-500 line-clamp-2 text-left">{{ asset.label }}</p>
-            </button>
+            </AssetThumbnailOption>
           </div>
         </div>
         <div class="space-y-1">
