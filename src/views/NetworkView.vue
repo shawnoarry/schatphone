@@ -7,6 +7,7 @@ import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from 
 import {
   NETWORK_PROVIDER_TEMPLATES,
   applyNetworkProviderTemplate,
+  buildNetworkEndpointGuidance,
   buildNetworkFailureGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
@@ -80,6 +81,7 @@ const apiKindLabel = computed(() => {
 const presets = computed(() => settings.value.api.presets || [])
 const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
 const networkSetupCopy = computed(() => buildNetworkSetupCopy(networkSetupState.value))
+const endpointGuidance = computed(() => buildNetworkEndpointGuidance(settings.value.api))
 const reportModuleOptions = computed(() => [
   { value: 'all', label: t('全部模块', 'All modules') },
   { value: 'chat', label: t('聊天', 'Chat') },
@@ -765,6 +767,63 @@ ensurePresetState()
           placeholder="https://api.openai.com/v1/chat/completions"
         />
         <p class="text-[10px] text-gray-400 mt-2">{{ t('输入 URL 后会自动识别类型，并尝试拉取模型列表。', 'The type will be auto-detected after URL input, then model list will be fetched.') }}</p>
+
+        <div
+          v-if="endpointGuidance.visible"
+          class="mt-3 rounded-xl border p-3"
+          :class="
+            endpointGuidance.tone === 'success'
+              ? 'border-emerald-100 bg-emerald-50'
+              : endpointGuidance.tone === 'error'
+                ? 'border-red-100 bg-red-50'
+                : 'border-amber-100 bg-amber-50'
+          "
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p
+                class="text-xs font-semibold"
+                :class="
+                  endpointGuidance.tone === 'success'
+                    ? 'text-emerald-700'
+                    : endpointGuidance.tone === 'error'
+                      ? 'text-red-700'
+                      : 'text-amber-700'
+                "
+              >
+                {{ t(endpointGuidance.titleZh, endpointGuidance.titleEn) }}
+              </p>
+              <p class="mt-1 text-[11px] text-gray-600">
+                {{ t(endpointGuidance.detailZh, endpointGuidance.detailEn) }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-600">
+              {{ t(endpointGuidance.providerLabelZh, endpointGuidance.providerLabelEn) }}
+            </span>
+          </div>
+
+          <div class="mt-2 space-y-1.5">
+            <p
+              v-for="item in endpointGuidance.checklist"
+              :key="item.id"
+              class="text-[11px]"
+              :class="
+                item.tone === 'success'
+                  ? 'text-emerald-700'
+                  : item.tone === 'error'
+                    ? 'text-red-700'
+                    : 'text-amber-700'
+              "
+            >
+              {{ item.tone === 'success' ? 'OK' : '!' }}
+              {{ t(item.textZh, item.textEn) }}
+            </p>
+          </div>
+
+          <p class="mt-2 text-[11px] text-gray-700">
+            {{ t(endpointGuidance.modelFallbackZh, endpointGuidance.modelFallbackEn) }}
+          </p>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl p-4">

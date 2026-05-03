@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   applyNetworkProviderTemplate,
+  buildNetworkEndpointGuidance,
   buildNetworkFailureGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
@@ -58,6 +59,39 @@ describe('network guidance helpers', () => {
 
     expect(copy.tone).toBe('success')
     expect(copy.actionEn).toBe('Test connection')
+  })
+
+  test('summarizes official and custom endpoint quality', () => {
+    const official = buildNetworkEndpointGuidance({
+      url: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-4o-mini',
+    })
+    expect(official.visible).toBe(true)
+    expect(official.customGateway).toBe(false)
+    expect(official.pathLooksOk).toBe(true)
+    expect(official.tone).toBe('success')
+    expect(official.modelFallbackEn).toContain('gpt-4o-mini')
+
+    const gateway = buildNetworkEndpointGuidance({
+      url: 'https://gateway.example.com/proxy',
+      model: '',
+    })
+    expect(gateway.customGateway).toBe(true)
+    expect(gateway.pathLooksOk).toBe(false)
+    expect(gateway.tone).toBe('warn')
+    expect(gateway.checklist.some((item) => item.id === 'cors' && item.tone === 'warn')).toBe(true)
+    expect(gateway.modelFallbackEn).toContain('enter a model')
+  })
+
+  test('flags malformed endpoint before fetch', () => {
+    const guidance = buildNetworkEndpointGuidance({
+      url: 'ftp://api.example.com/v1/chat/completions',
+    })
+
+    expect(guidance.visible).toBe(true)
+    expect(guidance.validHttpUrl).toBe(false)
+    expect(guidance.tone).toBe('error')
+    expect(guidance.checklist[0].id).toBe('protocol')
   })
 
   test('classifies missing key before a connection attempt', () => {

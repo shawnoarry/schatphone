@@ -42,6 +42,18 @@ const normalizeStatusCode = (value) => {
   const status = Number(value)
   return Number.isFinite(status) && status > 0 ? Math.floor(status) : 0
 }
+const parseHttpUrl = (value) => {
+  const url = normalizeText(value)
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    const protocol = parsed.protocol.toLowerCase()
+    if (protocol !== 'http:' && protocol !== 'https:') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
 
 export const getNetworkProviderTemplate = (templateId) =>
   NETWORK_PROVIDER_TEMPLATES.find((item) => item.id === templateId) || null
@@ -141,6 +153,147 @@ export const buildNetworkSetupCopy = (state = {}) => {
     tone: 'success',
     providerLabelZh,
     providerLabelEn,
+  }
+}
+
+export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
+  const url = normalizeText(apiSettings.url)
+  const model = normalizeText(apiSettings.model)
+  const kind = detectApiKindFromUrl(url)
+  const providerLabelZh = kind === 'gemini' ? 'Gemini' : 'OpenAI 兼容'
+  const providerLabelEn = kind === 'gemini' ? 'Gemini' : 'OpenAI-compatible'
+  const parsed = parseHttpUrl(url)
+  const host = parsed?.hostname?.toLowerCase() || ''
+  const path = parsed?.pathname?.replace(/\/+$/, '').toLowerCase() || ''
+  const validHttpUrl = Boolean(parsed)
+  const officialOpenAi = host === 'api.openai.com'
+  const officialGemini = host === 'generativelanguage.googleapis.com'
+  const officialProvider = kind === 'gemini' ? officialGemini : officialOpenAi
+  const customGateway = validHttpUrl && !officialProvider
+  const pathLooksOk =
+    !validHttpUrl
+      ? false
+      : kind === 'gemini'
+        ? path.includes('/v1beta') || path.includes('/v1')
+        : path === '/v1' || path.endsWith('/v1') || path.endsWith('/models') || path.endsWith('/chat/completions')
+
+  const checklist = []
+
+  if (!url) {
+    return {
+      visible: false,
+      kind,
+      providerLabelZh,
+      providerLabelEn,
+      validHttpUrl: false,
+      customGateway: false,
+      pathLooksOk: false,
+      tone: 'neutral',
+      titleZh: '等待接口地址',
+      titleEn: 'Waiting for endpoint',
+      detailZh: '选择模板或填写 URL 后会显示路径与网关检查。',
+      detailEn: 'Choose a template or enter a URL to see path and gateway checks.',
+      checklist,
+      modelFallbackActive: false,
+    }
+  }
+
+  if (!validHttpUrl) {
+    checklist.push({
+      id: 'protocol',
+      tone: 'error',
+      textZh: 'URL 必须以 http:// 或 https:// 开头。',
+      textEn: 'URL must start with http:// or https://.',
+    })
+    return {
+      visible: true,
+      kind,
+      providerLabelZh,
+      providerLabelEn,
+      validHttpUrl,
+      customGateway: false,
+      pathLooksOk: false,
+      tone: 'error',
+      titleZh: '接口地址格式需要修正',
+      titleEn: 'Endpoint format needs attention',
+      detailZh: '当前地址无法作为浏览器请求发送，请先修正协议、域名和路径。',
+      detailEn: 'The current endpoint cannot be sent by the browser. Fix protocol, domain, and path first.',
+      checklist,
+      modelFallbackActive: Boolean(model),
+    }
+  }
+
+  checklist.push({
+    id: 'protocol',
+    tone: 'success',
+    textZh: parsed.protocol === 'https:' ? '已使用 HTTPS。' : '当前是 HTTP，仅建议用于 localhost 或内网调试。',
+    textEn: parsed.protocol === 'https:' ? 'HTTPS is enabled.' : 'HTTP should only be used for localhost or internal testing.',
+  })
+  checklist.push({
+    id: 'path',
+    tone: pathLooksOk ? 'success' : 'warn',
+    textZh:
+      kind === 'gemini'
+        ? 'Gemini 通常使用 /v1beta/models，生成请求会自动拼接模型路径。'
+        : 'OpenAI 兼容接口建议使用 /v1/chat/completions，模型列表会自动换算到 /v1/models。',
+    textEn:
+      kind === 'gemini'
+        ? 'Gemini usually uses /v1beta/models; generation requests derive the model path automatically.'
+        : 'OpenAI-compatible endpoints should use /v1/chat/completions; model listing derives /v1/models automatically.',
+  })
+  checklist.push({
+    id: 'cors',
+    tone: customGateway ? 'warn' : 'success',
+    textZh: customGateway
+      ? '自定义网关需允许当前站点跨域访问，否则浏览器会报网络/CORS 错误。'
+      : '官方接口路径已识别；若浏览器环境受限，可改用允许跨域的网关。',
+    textEn: customGateway
+      ? 'Custom gateways must allow CORS from this app, otherwise the browser reports network/CORS errors.'
+      : 'Official endpoint detected. If the browser environment blocks it, use a CORS-enabled gateway.',
+  })
+  checklist.push({
+    id: 'auth',
+    tone: customGateway ? 'warn' : 'success',
+    textZh:
+      kind === 'gemini'
+        ? 'Gemini 模型列表会把 Key 作为查询参数发送；请确认 Key 属于目标 Google 项目。'
+        : customGateway
+          ? 'OpenAI 兼容网关需接受 Bearer token，或在网关侧完成鉴权转换。'
+          : 'OpenAI 官方接口会使用 Bearer token 鉴权。',
+    textEn:
+      kind === 'gemini'
+        ? 'Gemini model listing sends the key as a query parameter; confirm it belongs to the target Google project.'
+        : customGateway
+          ? 'OpenAI-compatible gateways must accept Bearer tokens or translate auth server-side.'
+          : 'OpenAI official endpoints use Bearer token authentication.',
+  })
+
+  const modelFallbackActive = Boolean(model)
+  return {
+    visible: true,
+    kind,
+    providerLabelZh,
+    providerLabelEn,
+    validHttpUrl,
+    customGateway,
+    pathLooksOk,
+    tone: customGateway || !pathLooksOk ? 'warn' : 'success',
+    titleZh: customGateway ? '自定义网关检查' : '供应商接口检查',
+    titleEn: customGateway ? 'Custom gateway check' : 'Provider endpoint check',
+    detailZh: customGateway
+      ? `当前按 ${providerLabelZh} 网关处理。请重点确认路径、CORS 与鉴权转发。`
+      : `当前识别为 ${providerLabelZh} 官方/标准路径。`,
+    detailEn: customGateway
+      ? `This is treated as a ${providerLabelEn} gateway. Verify path, CORS, and auth forwarding.`
+      : `Detected as a standard ${providerLabelEn} endpoint.`,
+    checklist,
+    modelFallbackActive,
+    modelFallbackZh: modelFallbackActive
+      ? `如果模型列表不可用，当前手动模型名「${model}」仍会用于实际 AI 请求。`
+      : '如果模型列表不可用，可在下方手动填写模型名作为兜底。',
+    modelFallbackEn: modelFallbackActive
+      ? `If model listing is unavailable, the manual model "${model}" will still be used for AI requests.`
+      : 'If model listing is unavailable, enter a model manually below as fallback.',
   }
 }
 

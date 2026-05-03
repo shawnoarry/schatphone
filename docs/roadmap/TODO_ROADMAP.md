@@ -925,3 +925,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Network 引导配置第一阶段，新增供应商模板、配置进度、下一步提示文案与 helper 回归测试，同时保持既有模型加载与诊断流程不变。
 86. 2026-05-03 EN: Landed Network connection-test failure guidance with reusable cause classification, inline action card, and clearer diagnostics records for URL/key/auth/CORS/timeout/provider failures.
     2026-05-03 中文：已落地 Network 连接测试失败指引，新增可复用原因分类、页内操作卡片，以及针对 URL/Key/鉴权/CORS/超时/供应商故障的更清晰诊断记录。
+87. 2026-05-03 EN: Landed Network endpoint/gateway guidance with reusable checks for protocol, path shape, custom-gateway CORS/auth risks, and manual-model fallback confirmation.
+    2026-05-03 中文：已落地 Network 接口/网关指引，新增可复用检查，覆盖协议、路径形态、自定义网关 CORS/鉴权风险，以及手动模型兜底确认。
