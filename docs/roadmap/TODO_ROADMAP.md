@@ -927,3 +927,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Network 连接测试失败指引，新增可复用原因分类、页内操作卡片，以及针对 URL/Key/鉴权/CORS/超时/供应商故障的更清晰诊断记录。
 87. 2026-05-03 EN: Landed Network endpoint/gateway guidance with reusable checks for protocol, path shape, custom-gateway CORS/auth risks, and manual-model fallback confirmation.
     2026-05-03 中文：已落地 Network 接口/网关指引，新增可复用检查，覆盖协议、路径形态、自定义网关 CORS/鉴权风险，以及手动模型兜底确认。
+88. 2026-05-03 EN: Landed Network preset safety with save-time quality guidance, local key-storage copy, custom-gateway warnings, and manual-model fallback confirmation before preset reuse.
+    2026-05-03 中文：已落地 Network 预设安全，新增保存时质量提示、Key 本地保存文案、自定义网关警告，以及预设复用前的手动模型兜底确认。

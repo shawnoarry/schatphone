@@ -3,6 +3,7 @@ import {
   applyNetworkProviderTemplate,
   buildNetworkEndpointGuidance,
   buildNetworkFailureGuidance,
+  buildNetworkPresetSaveGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
   getNetworkProviderTemplate,
@@ -92,6 +93,36 @@ describe('network guidance helpers', () => {
     expect(guidance.validHttpUrl).toBe(false)
     expect(guidance.tone).toBe('error')
     expect(guidance.checklist[0].id).toBe('protocol')
+  })
+
+  test('summarizes preset save safety', () => {
+    const clean = buildNetworkPresetSaveGuidance({
+      url: 'https://api.openai.com/v1/chat/completions',
+      key: 'sk-test',
+      model: 'gpt-4o-mini',
+    })
+    expect(clean.tone).toBe('success')
+    expect(clean.canSaveCleanly).toBe(true)
+    expect(clean.confirmations.some((item) => item.id === 'key_storage')).toBe(true)
+
+    const gateway = buildNetworkPresetSaveGuidance({
+      url: 'https://gateway.example.com/proxy',
+      key: 'gateway-key',
+      model: '',
+    })
+    expect(gateway.tone).toBe('warn')
+    expect(gateway.blocking).toHaveLength(0)
+    expect(gateway.warnings.some((item) => item.id === 'custom_gateway')).toBe(true)
+    expect(gateway.warnings.some((item) => item.id === 'model')).toBe(true)
+
+    const invalid = buildNetworkPresetSaveGuidance({
+      url: 'ftp://api.example.com/v1/chat/completions',
+      key: '',
+      model: '',
+    })
+    expect(invalid.tone).toBe('error')
+    expect(invalid.canSaveCleanly).toBe(false)
+    expect(invalid.blocking.map((item) => item.id)).toEqual(['url', 'key'])
   })
 
   test('classifies missing key before a connection attempt', () => {

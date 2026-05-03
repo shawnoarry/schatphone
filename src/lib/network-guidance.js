@@ -297,6 +297,104 @@ export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
   }
 }
 
+export const buildNetworkPresetSaveGuidance = (apiSettings = {}) => {
+  const endpoint = buildNetworkEndpointGuidance(apiSettings)
+  const hasKey = Boolean(normalizeText(apiSettings.key))
+  const hasModel = Boolean(normalizeText(apiSettings.model))
+  const blocking = []
+  const warnings = []
+  const confirmations = []
+
+  if (!endpoint.validHttpUrl) {
+    blocking.push({
+      id: 'url',
+      textZh: '接口地址格式仍需修正，建议先不要保存为预设。',
+      textEn: 'Endpoint format still needs fixing; avoid saving it as a preset yet.',
+    })
+  }
+
+  if (!hasKey) {
+    blocking.push({
+      id: 'key',
+      textZh: '缺少 API Key，保存后无法直接用于连接测试。',
+      textEn: 'API key is missing, so the preset cannot be tested directly after saving.',
+    })
+  }
+
+  if (endpoint.customGateway) {
+    warnings.push({
+      id: 'custom_gateway',
+      textZh: '这是自定义网关预设，请确认 CORS 与鉴权转发稳定。',
+      textEn: 'This is a custom gateway preset. Confirm CORS and auth forwarding are stable.',
+    })
+  }
+
+  if (endpoint.validHttpUrl && !endpoint.pathLooksOk) {
+    warnings.push({
+      id: 'path',
+      textZh: '接口路径看起来不是标准路径，保存前建议先测试连接。',
+      textEn: 'Endpoint path does not look standard; test the connection before saving.',
+    })
+  }
+
+  if (hasKey) {
+    confirmations.push({
+      id: 'key_storage',
+      textZh: 'Key 会随预设保存在本地浏览器配置中；不要在共享设备上保存真实生产 Key。',
+      textEn: 'The key is stored with the preset in local browser settings. Do not save production keys on shared devices.',
+    })
+  }
+
+  if (hasModel) {
+    confirmations.push({
+      id: 'manual_model',
+      textZh: '当前模型名会随预设保存；模型列表不可用时会作为手动兜底使用。',
+      textEn: 'The current model name is saved with the preset and used as manual fallback when model listing is unavailable.',
+    })
+  } else {
+    warnings.push({
+      id: 'model',
+      textZh: '当前没有模型名；如果供应商模型列表不可用，保存后仍需手动补模型。',
+      textEn: 'No model is set. If provider model listing is unavailable, you still need to add a model manually after saving.',
+    })
+  }
+
+  const tone = blocking.length > 0 ? 'error' : warnings.length > 0 ? 'warn' : 'success'
+
+  return {
+    visible: endpoint.visible || hasKey || hasModel,
+    tone,
+    canSaveCleanly: blocking.length === 0,
+    blocking,
+    warnings,
+    confirmations,
+    titleZh:
+      tone === 'error'
+        ? '预设保存前还需修正'
+        : tone === 'warn'
+          ? '预设可保存，但建议先确认'
+          : '预设保存信息完整',
+    titleEn:
+      tone === 'error'
+        ? 'Preset needs fixes before saving'
+        : tone === 'warn'
+          ? 'Preset can be saved, but review first'
+          : 'Preset is ready to save',
+    detailZh:
+      tone === 'error'
+        ? '建议先补齐必需项，避免保存一个无法复用的配置。'
+        : tone === 'warn'
+          ? '保存不会被阻止，但这些信息会影响后续复用稳定性。'
+          : 'URL、Key 与模型兜底信息已具备，可作为可复用配置保存。',
+    detailEn:
+      tone === 'error'
+        ? 'Fix required items first to avoid saving an unusable configuration.'
+        : tone === 'warn'
+          ? 'Saving is allowed, but these details affect reuse stability.'
+          : 'Endpoint, key, and model fallback are ready for a reusable preset.',
+  }
+}
+
 export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
   const url = normalizeText(apiSettings.url)
   const model = normalizeText(apiSettings.model)

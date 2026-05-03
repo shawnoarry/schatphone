@@ -9,6 +9,7 @@ import {
   applyNetworkProviderTemplate,
   buildNetworkEndpointGuidance,
   buildNetworkFailureGuidance,
+  buildNetworkPresetSaveGuidance,
   buildNetworkSetupCopy,
   buildNetworkSetupState,
 } from '../lib/network-guidance'
@@ -82,6 +83,7 @@ const presets = computed(() => settings.value.api.presets || [])
 const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
 const networkSetupCopy = computed(() => buildNetworkSetupCopy(networkSetupState.value))
 const endpointGuidance = computed(() => buildNetworkEndpointGuidance(settings.value.api))
+const presetSaveGuidance = computed(() => buildNetworkPresetSaveGuidance(settings.value.api))
 const reportModuleOptions = computed(() => [
   { value: 'all', label: t('全部模块', 'All modules') },
   { value: 'chat', label: t('聊天', 'Chat') },
@@ -374,7 +376,12 @@ const savePreset = () => {
   }
 
   presetName.value = ''
-  setUiFeedback('success', t('预设已保存。', 'Preset saved.'))
+  const guidance = presetSaveGuidance.value
+  if (guidance?.tone === 'warn') {
+    setUiFeedback('warn', t('预设已保存，但建议稍后完成连接测试确认。', 'Preset saved, but run a connection test when possible.'), 3200)
+    return
+  }
+  setUiFeedback('success', t('预设已保存，Key 仅保存在本地配置中。', 'Preset saved. The key stays in local settings.'))
 }
 
 const applyProviderTemplate = (templateId) => {
@@ -859,6 +866,58 @@ ensurePresetState()
           >
             {{ t('保存', 'Save') }}
           </button>
+        </div>
+
+        <div
+          v-if="presetSaveGuidance.visible"
+          class="mt-3 rounded-xl border p-3"
+          :class="
+            presetSaveGuidance.tone === 'success'
+              ? 'border-emerald-100 bg-emerald-50'
+              : presetSaveGuidance.tone === 'error'
+                ? 'border-red-100 bg-red-50'
+                : 'border-amber-100 bg-amber-50'
+          "
+        >
+          <p
+            class="text-xs font-semibold"
+            :class="
+              presetSaveGuidance.tone === 'success'
+                ? 'text-emerald-700'
+                : presetSaveGuidance.tone === 'error'
+                  ? 'text-red-700'
+                  : 'text-amber-700'
+            "
+          >
+            {{ t(presetSaveGuidance.titleZh, presetSaveGuidance.titleEn) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-600">
+            {{ t(presetSaveGuidance.detailZh, presetSaveGuidance.detailEn) }}
+          </p>
+
+          <div class="mt-2 space-y-1.5">
+            <p
+              v-for="item in presetSaveGuidance.blocking"
+              :key="item.id"
+              class="text-[11px] text-red-700"
+            >
+              ! {{ t(item.textZh, item.textEn) }}
+            </p>
+            <p
+              v-for="item in presetSaveGuidance.warnings"
+              :key="item.id"
+              class="text-[11px] text-amber-700"
+            >
+              ! {{ t(item.textZh, item.textEn) }}
+            </p>
+            <p
+              v-for="item in presetSaveGuidance.confirmations"
+              :key="item.id"
+              class="text-[11px] text-emerald-700"
+            >
+              OK {{ t(item.textZh, item.textEn) }}
+            </p>
+          </div>
         </div>
       </div>
 
