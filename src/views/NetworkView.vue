@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import { callAI, detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
 import {
   NETWORK_PROVIDER_TEMPLATES,
   applyNetworkProviderTemplate,
@@ -35,9 +35,13 @@ const copiedReportId = ref('')
 const uiFeedbackType = ref('')
 const uiFeedbackMessage = ref('')
 const connectionGuidance = ref(null)
+const smokeTestLoading = ref(false)
+const smokeTestResult = ref(null)
+const smokeTestError = ref('')
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
+let smokeTestToken = 0
 let savedTimerId = null
 let copiedReportTimerId = null
 let uiFeedbackTimerId = null
@@ -135,6 +139,7 @@ const moduleLabel = (moduleKey) => {
 
 const actionLabel = (actionKey) => {
   if (actionKey === 'fetch_models') return t('拉取模型列表', 'Fetch model list')
+  if (actionKey === 'chat_smoke_test') return t('Chat 烟测调用', 'Chat smoke test')
   if (actionKey === 'call_ai') return t('调用 AI', 'Call AI')
   if (actionKey === 'reroll_reply') return t('重生成回复', 'Reroll reply')
   if (actionKey === 'auto_invoke') return t('自动调用', 'Autonomous invoke')
@@ -554,6 +559,19 @@ const recordNetworkFailure = (guidance, message) => {
   })
 }
 
+const recordChatSmokeResult = (level, payload = {}) => {
+  systemStore.addApiReport({
+    level,
+    module: 'network',
+    action: 'chat_smoke_test',
+    provider: payload.provider || settings.value.api.resolvedKind || detectApiKindFromUrl(settings.value.api.url),
+    model: payload.model || settings.value.api.model || '',
+    statusCode: payload.statusCode || 0,
+    code: payload.code || '',
+    message: payload.message || '',
+  })
+}
+
 const loadModels = async (options = {}) => {
   const manual = options?.manual === true
   const apiUrl = settings.value.api.url?.trim()
@@ -606,6 +624,84 @@ const loadModels = async (options = {}) => {
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
+    }
+  }
+}
+
+const runChatSmokeTest = async () => {
+  const apiUrl = settings.value.api.url?.trim()
+  const apiKey = settings.value.api.key?.trim()
+  const preflightError = buildPreflightError(apiUrl, apiKey)
+  settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
+
+  if (preflightError) {
+    const guidance = buildNetworkFailureGuidance(preflightError, settings.value.api)
+    connectionGuidance.value = guidance
+    smokeTestResult.value = null
+    smokeTestError.value = t(guidance.detailZh, guidance.detailEn)
+    recordChatSmokeResult('error', {
+      provider: guidance.provider,
+      model: guidance.model,
+      statusCode: guidance.statusCode,
+      code: guidance.code,
+      message: smokeTestError.value,
+    })
+    setUiFeedback('warn', t(guidance.fixZh, guidance.fixEn), 3600)
+    return
+  }
+
+  const currentToken = ++smokeTestToken
+  smokeTestLoading.value = true
+  smokeTestResult.value = null
+  smokeTestError.value = ''
+  connectionGuidance.value = null
+
+  try {
+    const reply = await callAI({
+      settings: settings.value,
+      systemPrompt:
+        'You are a connection smoke-test endpoint. Reply with exactly: OK',
+      messages: [
+        {
+          role: 'user',
+          content: 'Return exactly OK if this Chat completion path works.',
+        },
+      ],
+    })
+    if (currentToken !== smokeTestToken) return
+
+    const preview = typeof reply === 'string' ? reply.trim().slice(0, 80) : ''
+    smokeTestResult.value = {
+      provider: settings.value.api.resolvedKind || detectApiKindFromUrl(settings.value.api.url),
+      model: settings.value.api.model || '',
+      preview: preview || 'OK',
+    }
+    recordChatSmokeResult('info', {
+      provider: smokeTestResult.value.provider,
+      model: smokeTestResult.value.model,
+      code: 'CHAT_SMOKE_OK',
+      message: `Chat smoke test succeeded: ${smokeTestResult.value.preview}`,
+    })
+    setUiFeedback('success', t('Chat 烟测通过，当前配置可用于真实聊天调用。', 'Chat smoke test passed. Current settings can call Chat.'))
+  } catch (error) {
+    if (currentToken !== smokeTestToken) return
+
+    const guidance = buildNetworkFailureGuidance(error, settings.value.api)
+    const message = formatApiErrorForUi(error, t('Chat 烟测失败，请检查设置。', 'Chat smoke test failed. Check your settings.'))
+    connectionGuidance.value = guidance
+    smokeTestResult.value = null
+    smokeTestError.value = message
+    recordChatSmokeResult('error', {
+      provider: guidance.provider,
+      model: guidance.model,
+      statusCode: guidance.statusCode,
+      code: guidance.code,
+      message,
+    })
+    setUiFeedback('error', t(guidance.fixZh, guidance.fixEn), 4200)
+  } finally {
+    if (currentToken === smokeTestToken) {
+      smokeTestLoading.value = false
     }
   }
 }
@@ -669,6 +765,10 @@ watch(
   () => [settings.value.api.url, settings.value.api.key],
   () => {
     clearModelState()
+    smokeTestToken += 1
+    smokeTestLoading.value = false
+    smokeTestResult.value = null
+    smokeTestError.value = ''
     scheduleAutoLoadModels()
   },
 )
@@ -1011,6 +1111,52 @@ ensurePresetState()
           <p class="mt-2 text-[10px] text-gray-500">
             {{ t('供应商', 'Provider') }}: {{ t(connectionGuidance.providerLabelZh, connectionGuidance.providerLabelEn) }} ·
             {{ t('状态码', 'Status') }}: {{ connectionGuidance.statusCode || '-' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <p class="text-xs font-semibold text-gray-700">{{ t('Chat 调用烟测', 'Chat call smoke test') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{ t('使用当前 URL/Key/模型发起一次极轻量 Chat 请求，不写入聊天记录。', 'Runs one tiny Chat request with current URL/key/model without writing chat history.') }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-[10px] text-gray-500">
+            {{ t('真实调用', 'Real call') }}
+          </span>
+        </div>
+
+        <button
+          @click="runChatSmokeTest"
+          :disabled="smokeTestLoading"
+          class="w-full rounded-lg py-2 text-sm transition"
+          :class="smokeTestLoading ? 'bg-gray-100 text-gray-400' : 'bg-gray-900 text-white hover:bg-black'"
+        >
+          {{ smokeTestLoading ? t('烟测中...', 'Testing...') : t('运行 Chat 烟测', 'Run Chat smoke test') }}
+        </button>
+
+        <div v-if="smokeTestResult" class="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+          <p class="text-xs font-semibold text-emerald-700">
+            {{ t('Chat 路径已打通', 'Chat path is working') }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-700">
+            {{ t('返回预览', 'Reply preview') }}: {{ smokeTestResult.preview }}
+          </p>
+          <p class="mt-1 text-[10px] text-gray-500">
+            {{ t('供应商', 'Provider') }}: {{ smokeTestResult.provider || '-' }} ·
+            {{ t('模型', 'Model') }}: {{ smokeTestResult.model || '-' }}
+          </p>
+        </div>
+
+        <div v-if="smokeTestError" class="mt-3 rounded-xl border border-red-100 bg-red-50 p-3">
+          <p class="text-xs font-semibold text-red-700">
+            {{ t('Chat 烟测未通过', 'Chat smoke test failed') }}
+          </p>
+          <p class="mt-1 text-[11px] text-red-600">{{ smokeTestError }}</p>
+          <p class="mt-1 text-[10px] text-gray-500">
+            {{ t('已写入诊断报告中心。', 'Saved to Diagnostics Center.') }}
           </p>
         </div>
       </div>

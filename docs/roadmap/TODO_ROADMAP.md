@@ -929,3 +929,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Network 接口/网关指引，新增可复用检查，覆盖协议、路径形态、自定义网关 CORS/鉴权风险，以及手动模型兜底确认。
 88. 2026-05-03 EN: Landed Network preset safety with save-time quality guidance, local key-storage copy, custom-gateway warnings, and manual-model fallback confirmation before preset reuse.
     2026-05-03 中文：已落地 Network 预设安全，新增保存时质量提示、Key 本地保存文案、自定义网关警告，以及预设复用前的手动模型兜底确认。
+89. 2026-05-03 EN: Landed Network-to-Chat smoke path with a real `callAI` request that avoids chat-history writes, protects stale async results, and records diagnostics for success/failure.
+    2026-05-03 中文：已落地 Network 到 Chat 烟测链路，使用真实 `callAI` 请求但不写入聊天记录，保护陈旧异步结果，并为成功/失败写入诊断记录。
