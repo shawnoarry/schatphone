@@ -4,6 +4,12 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import {
+  NETWORK_PROVIDER_TEMPLATES,
+  applyNetworkProviderTemplate,
+  buildNetworkSetupCopy,
+  buildNetworkSetupState,
+} from '../lib/network-guidance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 
@@ -70,6 +76,8 @@ const apiKindLabel = computed(() => {
 })
 
 const presets = computed(() => settings.value.api.presets || [])
+const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
+const networkSetupCopy = computed(() => buildNetworkSetupCopy(networkSetupState.value))
 const reportModuleOptions = computed(() => [
   { value: 'all', label: t('全部模块', 'All modules') },
   { value: 'chat', label: t('聊天', 'Chat') },
@@ -363,6 +371,14 @@ const savePreset = () => {
   setUiFeedback('success', t('预设已保存。', 'Preset saved.'))
 }
 
+const applyProviderTemplate = (templateId) => {
+  const ok = applyNetworkProviderTemplate(settings.value.api, templateId)
+  if (!ok) return
+  clearModelState()
+  scheduleAutoLoadModels()
+  setUiFeedback('success', t('已套用供应商模板，请继续填写 Key。', 'Provider template applied. Continue with your key.'))
+}
+
 const applyPreset = (presetId) => {
   ensurePresetState()
   if (!presetId) return
@@ -647,6 +663,65 @@ ensurePresetState()
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="bg-white rounded-xl p-4 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold text-blue-600">{{ t('配置向导', 'Setup guide') }}</p>
+            <h2 class="mt-1 text-lg font-bold text-gray-900">
+              {{ t(networkSetupCopy.titleZh, networkSetupCopy.titleEn) }}
+            </h2>
+            <p class="mt-1 text-xs text-gray-500">
+              {{ t(networkSetupCopy.detailZh, networkSetupCopy.detailEn) }}
+            </p>
+          </div>
+          <span
+            class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            :class="
+              networkSetupCopy.tone === 'success'
+                ? 'bg-emerald-100 text-emerald-700'
+                : networkSetupCopy.tone === 'info'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-amber-100 text-amber-700'
+            "
+          >
+            {{ networkSetupState.completedSteps }}/{{ networkSetupState.totalSteps }}
+          </span>
+        </div>
+        <div class="h-2 overflow-hidden rounded-full bg-gray-100">
+          <div
+            class="h-full rounded-full bg-blue-500 transition-all duration-300"
+            :style="{ width: `${networkSetupState.progressPercent}%` }"
+          ></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[11px]">
+          <div class="rounded-lg border px-2 py-1.5" :class="networkSetupState.hasUrl ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-500'">
+            {{ t('接口地址', 'Endpoint') }}
+          </div>
+          <div class="rounded-lg border px-2 py-1.5" :class="networkSetupState.hasKey ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-500'">
+            API Key
+          </div>
+          <div class="rounded-lg border px-2 py-1.5" :class="networkSetupState.hasModel ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-500'">
+            {{ t('模型', 'Model') }}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 gap-2">
+          <button
+            v-for="template in NETWORK_PROVIDER_TEMPLATES"
+            :key="template.id"
+            type="button"
+            class="rounded-xl border border-gray-200 px-3 py-2 text-left hover:bg-gray-50 transition"
+            @click="applyProviderTemplate(template.id)"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm font-semibold text-gray-800">{{ t(template.nameZh, template.nameEn) }}</span>
+              <span class="text-[10px] text-gray-400">{{ template.model }}</span>
+            </div>
+            <p class="mt-1 truncate font-mono text-[10px] text-gray-500">{{ template.url }}</p>
+            <p class="mt-1 text-[10px] text-gray-400">{{ t('Key 格式', 'Key format') }}: {{ template.keyHint }}</p>
+          </button>
+        </div>
+      </div>
+
       <div class="bg-white rounded-xl p-4">
         <label class="text-xs text-gray-500 block mb-1">{{ t('API 接口 URL', 'API Endpoint URL') }}</label>
         <input

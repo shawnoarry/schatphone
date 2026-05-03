@@ -151,8 +151,8 @@ Status / 状态: `IN_PROGRESS`
      中文：第五阶段已落地：扩展 `AssetThumbnailOption.vue` 变体，并复用于 Contacts 素材包网格、ChatDirectory 角色预览条/会话优先图切换与 Appearance 壁纸快切。
    - EN: Landed phase-6: added the square variant and reused it in Gallery hero previews and asset cards while preserving Gallery delete/replace/folder operations in `GalleryView.vue`.
      中文：第六阶段已落地：新增方形变体，并复用于 Gallery 顶部预览与素材卡片，同时将 Gallery 删除、替换与文件夹操作保留在 `GalleryView.vue`。
-   - EN: Next phase candidate: commit this maintainability batch, then switch to Network guided setup.
-     中文：下一阶段候选：提交当前可维护性批次，然后切换到 Network 引导配置。
+   - EN: Follow-up landed: maintainability batch was committed, then work switched to Network guided setup phase 1.
+     中文：后续已落地：可维护性批次已提交，随后切换到 Network 引导配置第一阶段。
 4. EN: P1 WorldBook usage visibility first slice — `DONE`.
    中文：P1 世界书使用可见性第一刀 — `DONE`。
    - EN: Show per-knowledge-point role binding count, Chat prompt-chain readiness, and bound role names in WorldBook.
@@ -921,3 +921,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地共享素材缩略图选项第三阶段，覆盖 Contacts 素材包网格、ChatDirectory 角色预览条/会话优先图切换与 Appearance 壁纸快切，同时保持预览加载与 store 职责仍在父视图。
 84. 2026-05-03 EN: Landed shared asset thumbnail option phase 4 in Gallery hero previews and asset cards, completing the main cross-module thumbnail cleanup pass across asset-consuming surfaces.
     2026-05-03 中文：已落地共享素材缩略图选项第四阶段，覆盖 Gallery 顶部预览与素材卡片，完成主要素材消费界面的跨模块缩略图清理。
+85. 2026-05-03 EN: Landed Network guided setup phase 1 with provider templates, setup progress, next-step copy, and helper regression tests while preserving the existing model loading and diagnostics flow.
+    2026-05-03 中文：已落地 Network 引导配置第一阶段，新增供应商模板、配置进度、下一步提示文案与 helper 回归测试，同时保持既有模型加载与诊断流程不变。
