@@ -939,3 +939,5 @@ Acceptance / 验收标准:
     2026-05-04 中文：已落地 More 持久化实验开关，新增 `settings.more.featureToggles`、归一化 store 方法、页面接线与 system-store 回归测试。
 92. 2026-05-04 EN: Landed Profile AI-context visibility by adding a shared prompt-facing user summary, showing it in Profile, and reusing it in non-anonymous Chat prompts.
     2026-05-04 中文：已落地 Profile 的 AI 上下文可见性，新增共享的提示词用户摘要，在 Profile 展示，并复用于非匿名 Chat 提示词。
+93. 2026-05-04 EN: Landed Wallet local virtual ledger baseline with `useWalletStore`, balance summary, manual transfer records, persistence/restore, and store regression tests.
+    2026-05-04 中文：已落地 Wallet 本地虚拟账本基线，新增 `useWalletStore`、余额汇总、手动转账流水、持久化/恢复与 store 回归测试。

@@ -121,7 +121,7 @@ These modules should not compete with the main immersion loop yet.
 | Module / 模块 | Maturity / 成熟度 | Best Future Starting Point / 最合理起点 |
 | --- | --- | --- |
 | Phone / 电话 | Placeholder | Role calls, missed-call events, or AI call summaries. / 角色通话、未接来电事件或 AI 通话摘要。 |
-| Wallet / 钱包 | Placeholder | Reuse Chat transfer blocks as the first ledger source. / 先复用 Chat 转账 block 做账本起点。 |
+| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Attach Chat transfer blocks as ledger sources. / 将 Chat 转账 block 接到账本来源。 |
 | Stock / 股票 | Placeholder | Simulated market tied to world/calendar events. / 与世界观或日历事件绑定的模拟行情。 |
 
 ---
@@ -314,9 +314,9 @@ These signals suggest:
 
 ### 6.16 Wallet / 钱包
 
-- Product state: placeholder.
-- Engineering note: cheapest entry is to consume existing transfer blocks.
-- Recommendation: fake ledger before economy simulation.
+- Product state: local virtual ledger MVP.
+- Engineering note: `src/stores/wallet.js` owns manual transfer records, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
+- Recommendation: next attach Chat `transfer_virtual` blocks as ledger sources before considering any economy simulation.
 
 ### 6.17 Stock / 股票
 
