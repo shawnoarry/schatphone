@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { useSystemStore } from './system'
 
 const PHONE_STORAGE_KEY = 'store:phone'
 const PHONE_STORAGE_VERSION = 1
@@ -51,6 +52,21 @@ const normalizeDurationSec = (value) => {
 }
 
 const createPhoneCallId = () => `phone_call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const createMissedCallNotificationPayload = (call) => {
+  if (!call || typeof call !== 'object') return null
+  const contactName = normalizeText(call.contactName, '', 80)
+  if (!contactName) return null
+  return {
+    title: `Missed call: ${contactName}`,
+    content: call.summary || `${contactName} tried to reach you.`,
+    icon: 'fas fa-phone-slash',
+    route: '/phone',
+    source: 'phone_missed_call',
+    pushTitle: `Missed call: ${contactName}`,
+    pushBody: call.summary || `${contactName} tried to reach you.`,
+  }
+}
 
 const normalizeCallLog = (rawCall, index = 0) => {
   if (!rawCall || typeof rawCall !== 'object') return null
@@ -197,6 +213,22 @@ export const usePhoneStore = defineStore('phone', () => {
       sourceModule: 'phone_manual',
     })
 
+  const notifyMissedCall = (call) => {
+    const payload = createMissedCallNotificationPayload(call)
+    if (!payload) return ''
+    const systemStore = useSystemStore()
+    return systemStore.addNotification(payload)
+  }
+
+  const addMissedCallWithNotification = (input = {}) => {
+    const call = addMissedCall(input)
+    if (!call) return null
+    return {
+      call,
+      notificationId: notifyMissedCall(call),
+    }
+  }
+
   const removeCallLog = (callId) => {
     const record = findCallById(callId)
     if (!record) return false
@@ -290,6 +322,8 @@ export const usePhoneStore = defineStore('phone', () => {
     addCallLog,
     addRoleCallLog,
     addMissedCall,
+    notifyMissedCall,
+    addMissedCallWithNotification,
     removeCallLog,
     createBackupSnapshot,
     createBackupSnapshotAsync,

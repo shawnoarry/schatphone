@@ -142,6 +142,13 @@ export const useWalletStore = defineStore('wallet', () => {
     return transactions.value.find((item) => item.id === id) || null
   }
 
+  const findTransactionBySource = (sourceModule = '', sourceId = '') => {
+    const module = normalizeText(sourceModule, '', 40)
+    const id = normalizeText(sourceId, '', 140)
+    if (!module || !id) return null
+    return transactions.value.find((item) => item.sourceModule === module && item.sourceId === id) || null
+  }
+
   const addTransaction = (input = {}) => {
     const now = Date.now()
     const transaction = normalizeWalletTransaction({
@@ -168,6 +175,33 @@ export const useWalletStore = defineStore('wallet', () => {
       note,
       sourceModule: 'wallet_manual',
     })
+
+  const addChatTransferTransaction = ({
+    messageId = '',
+    amount,
+    currency = DEFAULT_CURRENCY,
+    counterparty = '',
+    note = '',
+    createdAt,
+  } = {}) => {
+    const sourceId = normalizeText(messageId, '', 140)
+    if (!sourceId) return null
+
+    const existing = findTransactionBySource('chat_transfer', sourceId)
+    if (existing) return existing
+
+    return addTransaction({
+      type: 'expense',
+      title: 'Chat transfer',
+      amount,
+      currency,
+      counterparty,
+      note,
+      sourceModule: 'chat_transfer',
+      sourceId,
+      createdAt,
+    })
+  }
 
   const removeTransaction = (transactionId) => {
     const transaction = findTransactionById(transactionId)
@@ -258,8 +292,10 @@ export const useWalletStore = defineStore('wallet', () => {
     primaryBalance,
     hasFinishedStorageHydration,
     findTransactionById,
+    findTransactionBySource,
     addTransaction,
     addTransferTransaction,
+    addChatTransferTransaction,
     removeTransaction,
     createBackupSnapshot,
     createBackupSnapshotAsync,

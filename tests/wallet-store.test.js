@@ -66,6 +66,51 @@ describe('wallet store', () => {
     })
   })
 
+  test('records Chat transfer cards as deduped ledger expenses', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const first = store.addChatTransferTransaction({
+      messageId: 'msg_transfer_1',
+      amount: '18.80',
+      currency: 'cny',
+      counterparty: 'Nova',
+      note: 'Coffee',
+      createdAt: Date.now(),
+    })
+    const second = store.addChatTransferTransaction({
+      messageId: 'msg_transfer_1',
+      amount: '18.80',
+      currency: 'cny',
+      counterparty: 'Nova',
+      note: 'Coffee duplicate',
+      createdAt: Date.now(),
+    })
+
+    expect(first).toMatchObject({
+      type: 'expense',
+      title: 'Chat transfer',
+      amountCents: 1880,
+      currency: 'CNY',
+      counterparty: 'Nova',
+      note: 'Coffee',
+      sourceModule: 'chat_transfer',
+      sourceId: 'msg_transfer_1',
+    })
+    expect(second.id).toBe(first.id)
+    expect(store.transactionCount).toBe(1)
+    expect(store.findTransactionBySource('chat_transfer', 'msg_transfer_1')?.id).toBe(first.id)
+    expect(store.primaryBalance.amountCents).toBe(-1880)
+  })
+
+  test('rejects Chat ledger records without message source', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    expect(store.addChatTransferTransaction({ amount: '10.00' })).toBeNull()
+    expect(store.transactionCount).toBe(0)
+  })
+
   test('persists, restores, and removes transactions', () => {
     const store = useWalletStore()
     store.resetForTesting()

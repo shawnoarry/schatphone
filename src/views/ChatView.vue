@@ -7,6 +7,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
+import { useWalletStore } from '../stores/wallet'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
@@ -40,6 +41,7 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
+const walletStore = useWalletStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -3258,7 +3260,7 @@ const submitTransferCardForm = () => {
   }
   const { amount, currency, note } = transferFormState.value
 
-  appendUserMessage({
+  const appended = appendUserMessage({
     content: `${t('转账', 'Transfer')} ${amount} ${currency}`,
     blocks: [
       {
@@ -3273,6 +3275,19 @@ const submitTransferCardForm = () => {
     ],
     source: 'transfer',
   })
+  if (appended) {
+    const transaction = walletStore.addChatTransferTransaction({
+      messageId: appended.id,
+      amount,
+      currency,
+      counterparty: activeChat.value.name || '',
+      note,
+      createdAt: appended.createdAt,
+    })
+    if (transaction) {
+      showUiNotice('success', t('转账卡已同步到钱包流水。', 'Transfer card synced to Wallet ledger.'))
+    }
+  }
   closeUserActionPanel()
 }
 

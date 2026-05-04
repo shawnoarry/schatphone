@@ -66,7 +66,7 @@ const submitCallLog = () => {
   const direction = callDraft.value.direction
   const created =
     direction === PHONE_CALL_DIRECTION.MISSED
-      ? phoneStore.addMissedCall({
+      ? phoneStore.addMissedCallWithNotification({
           contactName: callDraft.value.contactName,
           summary: callDraft.value.summary,
         })
@@ -85,7 +85,12 @@ const submitCallLog = () => {
   callDraft.value.contactName = ''
   callDraft.value.summary = ''
   callDraft.value.durationMinutes = '3'
-  showFeedback('success', t('通话记录已保存。', 'Call log saved.'))
+  showFeedback(
+    'success',
+    direction === PHONE_CALL_DIRECTION.MISSED
+      ? t('未接来电已保存，并已生成系统通知。', 'Missed call saved and system notification created.')
+      : t('通话记录已保存。', 'Call log saved.'),
+  )
 }
 
 const removeCall = (callId) => {

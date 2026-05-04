@@ -120,8 +120,8 @@ These modules should not compete with the main immersion loop yet.
 
 | Module / 模块 | Maturity / 成熟度 | Best Future Starting Point / 最合理起点 |
 | --- | --- | --- |
-| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Connect missed-call records to notifications or Calendar cues. / 将未接来电记录接入通知或日历线索。 |
-| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Attach Chat transfer blocks as ledger sources. / 将 Chat 转账 block 接到账本来源。 |
+| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Connect missed-call notification records to Calendar cues. / 将未接来电通知记录继续接入日历线索。 |
+| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Surface Chat-origin ledger source badges/filters. / 为来自 Chat 的流水增加来源徽标或筛选。 |
 | Stock / 股票 | Local simulated-market MVP / 本地模拟行情 MVP | Tie simulated movement to world/calendar events if it becomes a narrative economy surface. / 若进入叙事经济线，再接入世界观或日历事件驱动波动。 |
 
 ---
@@ -309,14 +309,14 @@ These signals suggest:
 ### 6.15 Phone / 电话
 
 - Product state: local role-call log MVP.
-- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, persistence, backup/restore, and regression tests; it does not dial real phone calls.
-- Recommendation: next connect missed-call records to notification or Calendar cues before adding AI call summaries.
+- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, shared missed-call notification handoff, persistence, backup/restore, and regression tests; it does not dial real phone calls.
+- Recommendation: next connect missed-call notification records to Calendar cues before adding AI call summaries.
 
 ### 6.16 Wallet / 钱包
 
 - Product state: local virtual ledger MVP.
-- Engineering note: `src/stores/wallet.js` owns manual transfer records, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
-- Recommendation: next attach Chat `transfer_virtual` blocks as ledger sources before considering any economy simulation.
+- Engineering note: `src/stores/wallet.js` owns manual transfer records, Chat `transfer_virtual` source entries, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
+- Recommendation: next surface Chat-origin source badges/filters before considering any economy simulation.
 
 ### 6.17 Stock / 股票
 
@@ -690,3 +690,5 @@ If you are deciding what to build next:
    2026-05-02 中文：补充 `ChatView.vue`、`SettingsView.vue`、`MapView.vue` 的具体组件拆分候选清单，包含推荐边界、拆分顺序与守则。
 3. 2026-05-03 EN: Marked `MapTripHistoryPanel.vue` as landed after extracting the trip-history display panel from `MapView.vue`.
    2026-05-03 中文：在从 `MapView.vue` 抽出行程记录展示面板后，将 `MapTripHistoryPanel.vue` 标记为已落地。
+4. 2026-05-04 EN: Updated Phone and Wallet maturity notes after landing missed-call shell notifications and Chat transfer-card Wallet ledger sync.
+   2026-05-04 中文：在未接来电 shell 通知与 Chat 转账卡同步 Wallet 流水落地后，更新 Phone 与 Wallet 成熟度说明。

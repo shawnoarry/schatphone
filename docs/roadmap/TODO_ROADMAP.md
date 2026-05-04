@@ -947,3 +947,7 @@ Acceptance / 验收标准:
     2026-05-04 中文：已落地 Stock 本地模拟行情基线，新增 `useStockStore`、关注/持仓 UI、波动提示、持久化/恢复、备份覆盖与 store 回归测试。
 96. 2026-05-04 EN: Extended Settings backup and storage diagnostics coverage to Files, Wallet, Phone, and Stock while preserving backward-compatible backup imports.
     2026-05-04 中文：已将 Settings 备份与存储诊断覆盖扩展到 Files、Wallet、Phone、Stock，并保持旧备份导入向后兼容。
+97. 2026-05-04 EN: Landed Chat-to-Wallet transfer handoff: Chat `transfer_virtual` cards now create deduped Wallet ledger expenses with `chat_transfer` source metadata.
+    2026-05-04 中文：已落地 Chat 到 Wallet 的转账交接：Chat `transfer_virtual` 卡片现在会创建带 `chat_transfer` 来源元数据且按消息去重的 Wallet 支出流水。
+98. 2026-05-04 EN: Landed Phone missed-call notification handoff: newly recorded missed calls now create shared shell notifications while respecting the system notification toggle.
+    2026-05-04 中文：已落地 Phone 未接来电通知交接：新记录的未接来电现在会创建共享 shell 通知，并遵守系统通知开关。

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../src/stores/phone'
+import { useSystemStore } from '../src/stores/system'
 
 describe('phone store', () => {
   beforeEach(() => {
@@ -53,6 +54,47 @@ describe('phone store', () => {
       durationSec: 0,
     })
     expect(store.missedCallCount).toBe(1)
+  })
+
+  test('creates system notifications for newly recorded missed calls', () => {
+    const store = usePhoneStore()
+    const systemStore = useSystemStore()
+    store.resetForTesting()
+
+    const result = store.addMissedCallWithNotification({
+      contactName: 'Nova',
+      summary: 'Call me when you arrive.',
+    })
+
+    expect(result?.call).toMatchObject({
+      contactName: 'Nova',
+      direction: PHONE_CALL_DIRECTION.MISSED,
+      status: 'missed',
+    })
+    expect(result?.notificationId).toBeTruthy()
+    expect(systemStore.notifications).toHaveLength(1)
+    expect(systemStore.notifications[0]).toMatchObject({
+      source: 'phone_missed_call',
+      title: 'Missed call: Nova',
+      content: 'Call me when you arrive.',
+      route: '/phone',
+      icon: 'fas fa-phone-slash',
+    })
+  })
+
+  test('respects disabled system notifications for missed calls', () => {
+    const store = usePhoneStore()
+    const systemStore = useSystemStore()
+    store.resetForTesting()
+    systemStore.settings.system.notifications = false
+
+    const result = store.addMissedCallWithNotification({
+      contactName: 'Nova',
+    })
+
+    expect(result?.call?.contactName).toBe('Nova')
+    expect(result?.notificationId).toBe('')
+    expect(systemStore.notifications).toHaveLength(0)
   })
 
   test('persists, restores, and removes calls', () => {
