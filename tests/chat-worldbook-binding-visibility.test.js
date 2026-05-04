@@ -82,6 +82,10 @@ describe('chat worldbook binding visibility', () => {
     chatStore = useChatStore()
     systemStore = useSystemStore()
 
+    systemStore.user.name = 'V'
+    systemStore.user.occupation = 'Courier'
+    systemStore.user.relationship = 'Trusted partner'
+    systemStore.user.bio = 'Keeps promises and prefers direct answers.'
     systemStore.setGlobalWorldview('Night city baseline. Formal etiquette in public.')
     injectedPoint = systemStore.upsertKnowledgePoint({
       id: 'kp_city_etiquette',
@@ -155,6 +159,10 @@ describe('chat worldbook binding visibility', () => {
     const systemPrompt = aiMockState.calls[0]?.systemPrompt || ''
 
     expect(systemPrompt).toContain('Global worldview: Night city baseline. Formal etiquette in public.')
+    expect(systemPrompt).toContain('User profile context:')
+    expect(systemPrompt).toContain('Occupation: Courier')
+    expect(systemPrompt).toContain('Relationship setting: Trusted partner')
+    expect(systemPrompt).toContain('Profile bio: Keeps promises and prefers direct answers.')
     expect(systemPrompt).toContain('City etiquette: Formal greeting only. [tags: style]')
     expect(systemPrompt).not.toContain('Hidden note')
     expect(systemPrompt).not.toContain('Tea rituals')

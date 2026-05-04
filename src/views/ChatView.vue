@@ -1089,7 +1089,9 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const moduleIdentity = chatStore.getModuleIdentity()
   const anonymousIdentity = chatStore.isModuleIdentityAnonymousForContact(contact.id)
   const userDisplayName = moduleIdentity.nickname || user.value.name || 'User'
-  const userBio = typeof user.value.bio === 'string' ? user.value.bio.trim() : ''
+  const userAiContext = systemStore.getUserAiContextSummary({
+    displayName: userDisplayName,
+  })
 
   const serviceInstruction =
     contactKind === 'service' || contactKind === 'official'
@@ -1141,7 +1143,7 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
         'Treat the user as a stranger by default.',
         'Do not assume you know their name, background, occupation, or prior relationship unless this conversation explicitly reveals it.',
       ].join('\n')
-    : `User: ${userDisplayName}, ${userBio || 'none'}`
+    : userAiContext.promptText
 
   return `
 ${worldKernelInstruction}

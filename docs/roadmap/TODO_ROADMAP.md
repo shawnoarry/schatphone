@@ -937,3 +937,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Files 持久化元数据索引基线，新增 `useFilesStore`、本地文件元数据导入、共享媒体体积守卫复用、便签/收藏/删除持久化与 store 回归测试。
 91. 2026-05-04 EN: Landed More persistent experimental toggles by adding `settings.more.featureToggles`, normalized store helpers, UI wiring, and system-store regression tests.
     2026-05-04 中文：已落地 More 持久化实验开关，新增 `settings.more.featureToggles`、归一化 store 方法、页面接线与 system-store 回归测试。
+92. 2026-05-04 EN: Landed Profile AI-context visibility by adding a shared prompt-facing user summary, showing it in Profile, and reusing it in non-anonymous Chat prompts.
+    2026-05-04 中文：已落地 Profile 的 AI 上下文可见性，新增共享的提示词用户摘要，在 Profile 展示，并复用于非匿名 Chat 提示词。

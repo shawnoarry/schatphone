@@ -108,7 +108,7 @@ These modules exist and can be used, but their long-term product identity is sti
 | --- | --- | --- |
 | Network / 网络 | Strong MVP | Should provider setup become more guided for non-technical users? / 是否要把供应商配置进一步产品化引导？ |
 | Appearance / 外观 | Strong MVP | Are uploaded custom app icons in scope, or are presets the official path? / 自定义上传图标要不要做，还是预设图标就是官方模型？ |
-| Profile / 用户信息 | Basic MVP | How visible should profile-to-AI-context impact be? / 用户资料对 AI 上下文的影响要不要更显式？ |
+| Profile / 用户信息 | Prompt-visible MVP / 提示词可见 MVP | What downstream effects beyond Chat prompt context should be shown? / 除 Chat 提示词上下文外，还要展示哪些下游影响？ |
 | Files / 文件 | Persisted file-index MVP / 持久化文件索引 MVP | Is it a notebook, metadata browser, or future file manager? / 它到底是笔记本、元数据浏览器，还是未来文件管理器？ |
 | More / 更多 | Persisted shortcut/Labs MVP / 持久化快捷与实验入口 MVP | Should it stay a shortcut bucket or become a Labs surface? / 它该继续做快捷入口，还是明确为 Labs？ |
 

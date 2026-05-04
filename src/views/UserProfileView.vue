@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -11,6 +11,29 @@ const { t } = useI18n()
 const { user } = storeToRefs(systemStore)
 const saved = ref(false)
 let savedTimerId = null
+
+const userAiContextSummary = computed(() => systemStore.getUserAiContextSummary())
+
+const contextFieldLabel = (key) => {
+  if (key === 'name') return t('姓名', 'Name')
+  if (key === 'gender') return t('性别', 'Gender')
+  if (key === 'birthday') return t('出生日期', 'Birthday')
+  if (key === 'occupation') return t('职业', 'Occupation')
+  if (key === 'relationship') return t('关系设定', 'Relationship')
+  if (key === 'bio') return t('详细人设', 'Bio')
+  return key
+}
+
+const missingContextLabels = computed(() =>
+  userAiContextSummary.value.missingRecommendedKeys.map((key) => contextFieldLabel(key)),
+)
+
+const promptPreviewLines = computed(() =>
+  userAiContextSummary.value.promptText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean),
+)
 
 const goSettings = () => {
   router.push('/settings')
@@ -91,6 +114,49 @@ onBeforeUnmount(() => {
           class="w-full h-28 border border-gray-200 rounded-lg p-2 outline-none text-sm resize-none"
           :placeholder="t('描述你的性格、偏好与背景...', 'Describe your personality, preferences, and background...')"
         ></textarea>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ t('AI 上下文预览', 'AI Context Preview') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{
+                t(
+                  '非匿名聊天会读取这份摘要；匿名模式会隐藏这些身份信息。',
+                  'Non-anonymous chats read this summary; anonymous mode hides these identity details.',
+                )
+              }}
+            </p>
+          </div>
+          <span
+            class="shrink-0 rounded-full px-2 py-1 text-[10px] font-medium"
+            :class="
+              userAiContextSummary.hasRecommendedBaseline
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                : 'bg-amber-50 text-amber-700 border border-amber-100'
+            "
+          >
+            {{
+              userAiContextSummary.hasRecommendedBaseline
+                ? t('基础完整', 'Baseline ready')
+                : t('建议补全', 'Needs detail')
+            }}
+          </span>
+        </div>
+
+        <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 text-[11px] text-gray-700 space-y-1">
+          <p v-for="line in promptPreviewLines" :key="line" class="break-words">{{ line }}</p>
+        </div>
+
+        <p v-if="missingContextLabels.length > 0" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+          {{
+            t(
+              `建议补充：${missingContextLabels.join('、')}，这样 Chat 更容易理解用户身份。`,
+              `Recommended: add ${missingContextLabels.join(', ')} so Chat can understand the user identity better.`,
+            )
+          }}
+        </p>
       </div>
 
       <button

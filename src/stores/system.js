@@ -114,6 +114,15 @@ const DEFAULT_MORE_FEATURE_TOGGLES = Object.freeze({
   focus_mode: false,
   scene_switch: false,
 })
+const USER_AI_CONTEXT_RECOMMENDED_KEYS = ['name', 'occupation', 'relationship', 'bio']
+const USER_AI_CONTEXT_FIELD_LIMITS = Object.freeze({
+  name: 80,
+  gender: 40,
+  birthday: 40,
+  occupation: 120,
+  relationship: 160,
+  bio: 600,
+})
 const DEFAULT_PUSH_SERVER_URL = normalizePushServerUrl(
   typeof import.meta !== 'undefined' ? import.meta?.env?.VITE_PUSH_SERVER_URL : '',
   'http://localhost:8787',
@@ -262,6 +271,74 @@ const normalizeMoreSettings = (input = {}) => {
   const source = input && typeof input === 'object' ? input : {}
   return {
     featureToggles: normalizeMoreFeatureToggles(source.featureToggles),
+  }
+}
+
+const normalizeUserAiContextText = (value, maxLength = 160) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().replace(/\s+/g, ' ').slice(0, maxLength)
+}
+
+const normalizeUserAiContextGender = (value) => {
+  const normalized = normalizeUserAiContextText(value, USER_AI_CONTEXT_FIELD_LIMITS.gender).toLowerCase()
+  if (normalized === 'female') return 'female'
+  if (normalized === 'male') return 'male'
+  if (normalized === 'other') return 'other'
+  return normalized
+}
+
+const normalizeUserAiContextBirthday = (value) => {
+  const normalized = normalizeUserAiContextText(value, USER_AI_CONTEXT_FIELD_LIMITS.birthday)
+  if (!normalized) return ''
+  const dateMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return dateMatch ? normalized : normalized.slice(0, USER_AI_CONTEXT_FIELD_LIMITS.birthday)
+}
+
+const createUserAiContextField = (key, promptLabel, value) => {
+  const normalizedValue = normalizeUserAiContextText(
+    value,
+    USER_AI_CONTEXT_FIELD_LIMITS[key] || 160,
+  )
+  if (!normalizedValue) return null
+  return {
+    key,
+    promptLabel,
+    value: normalizedValue,
+    promptLine: `${promptLabel}: ${normalizedValue}`,
+  }
+}
+
+const buildUserAiContextSummary = (rawUser = {}, options = {}) => {
+  const source = rawUser && typeof rawUser === 'object' ? rawUser : {}
+  const overrideName = normalizeUserAiContextText(options.displayName, USER_AI_CONTEXT_FIELD_LIMITS.name)
+  const displayName = overrideName || normalizeUserAiContextText(source.name, USER_AI_CONTEXT_FIELD_LIMITS.name)
+
+  const fields = [
+    createUserAiContextField('name', 'Display name', displayName || 'User'),
+    createUserAiContextField('gender', 'Gender', normalizeUserAiContextGender(source.gender)),
+    createUserAiContextField('birthday', 'Birthday', normalizeUserAiContextBirthday(source.birthday)),
+    createUserAiContextField('occupation', 'Occupation', source.occupation),
+    createUserAiContextField('relationship', 'Relationship setting', source.relationship),
+    createUserAiContextField('bio', 'Profile bio', source.bio),
+  ].filter(Boolean)
+
+  const sourceForMissing = {
+    ...source,
+    name: displayName || source.name,
+  }
+  const missingRecommendedKeys = USER_AI_CONTEXT_RECOMMENDED_KEYS.filter(
+    (key) => !normalizeUserAiContextText(sourceForMissing[key], USER_AI_CONTEXT_FIELD_LIMITS[key] || 160),
+  )
+  const promptText = [
+    'User profile context:',
+    ...fields.map((field) => `- ${field.promptLine}`),
+  ].join('\n')
+
+  return {
+    fields,
+    missingRecommendedKeys,
+    promptText,
+    hasRecommendedBaseline: missingRecommendedKeys.length === 0,
   }
 }
 
@@ -1027,6 +1104,8 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalizedId) return false
     return setMoreFeatureToggle(normalizedId, !isMoreFeatureToggleEnabled(normalizedId))
   }
+
+  const getUserAiContextSummary = (options = {}) => buildUserAiContextSummary(user, options)
 
   const syncPushPermissionFromBrowser = () => {
     settings.system.pushPermission = normalizePushPermission(
@@ -2762,6 +2841,7 @@ export const useSystemStore = defineStore('system', () => {
     isMoreFeatureToggleEnabled,
     setMoreFeatureToggle,
     toggleMoreFeatureToggle,
+    getUserAiContextSummary,
     addNotification,
     markNotificationRead,
     markAllNotificationsRead,
