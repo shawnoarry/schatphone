@@ -17,6 +17,12 @@ Updated / 更新时间: 2026-04-29
 4. EN: Product principle: continuity and immersion quality are more important than feature quantity.
    中文：产品原则：连续性和沉浸感优先于功能数量。
 
+## 2.0 Current Module Feature Catalog / 当前模块功能目录
+1. EN: For a non-technical walkthrough of every current module, use `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`.
+   中文：若需要面向产品、设计、运营、测试或用户说明“每个模块入口叫什么、有哪些一级/二级菜单、分别能做什么”，请使用 `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`。
+2. EN: This PM brief remains the direction and priority summary; the module catalog is the detailed function dictionary.
+   中文：本文仍是项目方向与优先级总览；模块功能目录是更细的功能字典。
+
 ## 2.1 Requirement Freeze: Global Asset Hub / 需求冻结：全局素材中台
 1. EN: Gallery is the global asset hub, not a chat-only helper.
    中文：相册是全局素材中台，不是仅服务聊天的附属功能。

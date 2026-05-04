@@ -14,31 +14,34 @@ This is the single index for project documents. If two documents seem to overlap
 2. `docs/pm/PRODUCT_MANAGER_PROJECT_BRIEF.md`
    Product overview: project direction, delivered scope, and PM-level priorities.
    产品总览：项目方向、已交付范围、产品侧优先级。
-3. `docs/roadmap/TODO_ROADMAP.md`
+3. `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`
+   Product module catalog: entry names, routes, visible menus, submenus, and PM-readable function details for all current modules.
+   产品模块功能目录：当前所有模块的入口名称、路由、一级菜单、次级菜单与产品视角功能说明。
+4. `docs/roadmap/TODO_ROADMAP.md`
    The only live execution board. Any active task with status must be here.
    唯一动态执行看板。任何带状态的执行任务都必须在这里。
-4. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
+5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
    Module maturity audit and candidate task pool. It is not a second roadmap.
    模块成熟度梳理与候选任务池。它不是第二路线图。
-5. `docs/overview/PROJECT_MASTER_GUIDE.md`
+6. `docs/overview/PROJECT_MASTER_GUIDE.md`
    Full project guide for product context, architecture context, and AI engineer handoff.
    项目总说明，用于理解产品全貌、架构背景与 AI 工程师接手。
-6. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
+7. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
    Engineering-oriented maturity map: module tiers, file-size hotspots, test-coverage signals, and recommended decomposition order.
    面向工程接手的成熟度地图：模块分层、文件体量热点、测试覆盖信号与推荐拆分顺序。
-7. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
+8. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
    Functional-code next steps: concrete maintainability and feature candidates after visual work was parked, without becoming a second live roadmap.
    功能代码推进项：视觉工作搁置后的可维护性与功能候选，不作为第二动态路线图。
-8. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
+9. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
    Visual rebuild reference: which appearance surfaces are technically present, which are still visually immature, and which should be treated as full rebuild targets.
    外观重建参考：哪些外观能力技术上已存在、哪些视觉仍未成熟、以及哪些界面应被视为完整重建对象。
-9. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
+10. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
    Visual style direction brief: global and module-level references for the appearance rebuild, including iOS-like shell, KakaoTalk-style Chat, Google Maps-style Map, and iOS Photos-style Gallery.
    视觉风格方向简报：外观重建的全局与模块级参考，包括 iOS-like 壳层、KakaoTalk 风格 Chat、Google Maps 风格 Map、iOS Photos 风格 Gallery。
-10. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
+11. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
    Deferred visual TODO archive: parked visual-rebuild suggestions for future use while current work returns to functional code.
    暂存视觉 TODO：当前阶段转回功能代码时，为后续视觉重建保留的建议清单。
-11. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+12. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
    Product decision for Files: hidden as a standalone frontend entry, retained as an internal storage and coordination component.
    Files 产品决策：不作为独立前台入口展示，保留为内部储存与跨模块协调组件。
 
@@ -46,7 +49,7 @@ This is the single index for project documents. If two documents seem to overlap
 
 | Category / 分类 | Folder / 目录 | Purpose / 用途 |
 | --- | --- | --- |
-| PM status and product overview / PM 状态与产品总览 | `docs/pm/` | PM weekly status, project brief, product decisions that need attention. / 给产品经理看的周报、总览与待确认事项。 |
+| PM status, product overview, and feature catalog / PM 状态、产品总览与功能目录 | `docs/pm/` | PM weekly status, project brief, product module catalog, and product decisions that need attention. / 给产品经理看的周报、总览、模块功能目录与待确认事项。 |
 | Roadmap and task pool / 路线图与任务池 | `docs/roadmap/` | Live execution board plus candidate module pool. / 动态执行看板与候选模块池。 |
 | Project overview / 项目总说明 | `docs/overview/` | Cross-role master guide plus engineering, functional-code, and visual handoff references, including rebuild scope and style direction. / 面向产品与工程的总说明，以及工程、功能代码与视觉接手参考，包括重建范围与风格方向。 |
 | Process and workflow / 流程规范 | `docs/process/` | AI collaboration rules, operation guide, validation flow. / AI 协作规则、操作指引与验收流程。 |
