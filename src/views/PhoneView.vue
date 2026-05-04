@@ -88,7 +88,10 @@ const submitCallLog = () => {
   showFeedback(
     'success',
     direction === PHONE_CALL_DIRECTION.MISSED
-      ? t('未接来电已保存，并已生成系统通知。', 'Missed call saved and system notification created.')
+      ? t(
+          '未接来电已保存，并已生成系统通知与 Calendar 线索。',
+          'Missed call saved with a system notification and Calendar cue.',
+        )
       : t('通话记录已保存。', 'Call log saved.'),
   )
 }
@@ -127,7 +130,7 @@ const removeCall = (callId) => {
           {{
             t(
               '这是本地模拟通话记录，不会拨打真实电话；后续可接入 Chat 角色、未接事件和 AI 通话摘要。',
-              'This is a local simulated call log, not real dialing; Chat roles, missed events, and AI call summaries can attach later.',
+              'This is a local simulated call log, not real dialing; Chat roles and AI call summaries can attach later.',
             )
           }}
         </p>

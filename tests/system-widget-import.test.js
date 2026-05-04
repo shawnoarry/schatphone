@@ -45,6 +45,20 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[3]).toContain(importedId)
   })
 
+  test('hides Files from default and restored Home layouts', () => {
+    const store = useSystemStore()
+
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
+
+    store.setHomeWidgetPages([
+      ['app_chat', 'app_files', 'weather'],
+      ['app_more'],
+    ])
+
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
+  })
+
   test('blocks invalid JSON and keeps previous state unchanged', () => {
     const store = useSystemStore()
     const beforeSnapshot = snapshotWidgetState(store)

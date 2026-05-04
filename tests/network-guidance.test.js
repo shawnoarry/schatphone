@@ -8,6 +8,18 @@ import {
   buildNetworkSetupState,
   getNetworkProviderTemplate,
 } from '../src/lib/network-guidance'
+import {
+  getNetworkReportActionLabel,
+  getNetworkReportModuleLabel,
+  getNetworkReportReasonLabel,
+  getNetworkReportSuggestionLabel,
+} from '../src/lib/network-report-labels'
+import {
+  filterNetworkReports,
+  normalizeNetworkReportLevelFilter,
+  normalizeNetworkReportModuleFilter,
+  summarizeNetworkReports,
+} from '../src/lib/network-report-state'
 
 describe('network guidance helpers', () => {
   test('tracks setup progress and next required step', () => {
@@ -161,5 +173,63 @@ describe('network guidance helpers', () => {
     )
     expect(cors.titleEn).toContain('CORS')
     expect(cors.fixEn).toContain('gateway')
+  })
+
+  test('labels Network diagnostics reports from reusable helpers', () => {
+    const passthroughT = (_zh, en) => en
+
+    expect(getNetworkReportModuleLabel('push', passthroughT)).toBe('Push')
+    expect(getNetworkReportModuleLabel('unknown', passthroughT)).toBe('Unknown module')
+    expect(getNetworkReportActionLabel('chat_smoke_test', passthroughT)).toBe('Chat smoke test')
+    expect(getNetworkReportActionLabel('custom_action', passthroughT)).toBe('custom_action')
+
+    expect(
+      getNetworkReportReasonLabel(
+        {
+          code: 'AUTH',
+          statusCode: 401,
+        },
+        passthroughT,
+      ),
+    ).toContain('Authentication')
+    expect(
+      getNetworkReportSuggestionLabel(
+        {
+          code: 'STORAGE_LAYER_INVALID',
+        },
+        passthroughT,
+      ),
+    ).toContain('Export backup')
+    expect(
+      getNetworkReportReasonLabel(
+        {
+          statusCode: 503,
+        },
+        passthroughT,
+      ),
+    ).toContain('Server error')
+  })
+
+  test('filters and summarizes Network diagnostics reports from reusable state helpers', () => {
+    const reports = [
+      { id: 'a', module: 'network', level: 'error' },
+      { id: 'b', module: 'network', level: 'info' },
+      { id: 'c', module: 'chat', level: 'error' },
+      null,
+    ]
+
+    expect(normalizeNetworkReportModuleFilter(' push ')).toBe('push')
+    expect(normalizeNetworkReportModuleFilter('files')).toBe('all')
+    expect(normalizeNetworkReportLevelFilter('error')).toBe('error')
+    expect(normalizeNetworkReportLevelFilter('warn')).toBe('all')
+    expect(filterNetworkReports(reports, { moduleFilter: 'network', levelFilter: 'error' })).toEqual([
+      { id: 'a', module: 'network', level: 'error' },
+    ])
+    expect(filterNetworkReports(reports, { moduleFilter: 'network', limit: 1 })).toHaveLength(1)
+    expect(summarizeNetworkReports(reports)).toEqual({
+      total: 4,
+      errorCount: 2,
+      infoCount: 2,
+    })
   })
 })

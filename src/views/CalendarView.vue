@@ -7,13 +7,23 @@ import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
 import { useSystemStore } from '../stores/system'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
+import CalendarMapReminderCard from '../components/calendar/CalendarMapReminderCard.vue'
+import CalendarPhoneCueCard from '../components/calendar/CalendarPhoneCueCard.vue'
+import CalendarStockCueCard from '../components/calendar/CalendarStockCueCard.vue'
 
 const router = useRouter()
 const { t } = useI18n()
 const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
 const systemStore = useSystemStore()
-const { upcomingEvents } = storeToRefs(calendarStore)
+const {
+  activePhoneMissedCallCues,
+  activeStockMarketCues,
+  phoneMissedCallCueCount,
+  stockMarketCueCount,
+  upcomingEvents,
+} = storeToRefs(calendarStore)
 const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
 const { settings } = storeToRefs(systemStore)
 
@@ -22,6 +32,8 @@ const activeMapReminders = computed(() =>
 )
 const visibleMapReminders = computed(() => activeMapReminders.value.slice(0, 4))
 const mapReminderCount = computed(() => activeMapReminders.value.length)
+const visiblePhoneCues = computed(() => activePhoneMissedCallCues.value.slice(0, 4))
+const visibleStockCues = computed(() => activeStockMarketCues.value.slice(0, 4))
 const dismissedMapReminderCount = computed(
   () => mapCalendarReminders.value.filter((reminder) => reminder.status === 'dismissed').length,
 )
@@ -199,6 +211,32 @@ const dismissReminder = (reminder) => {
   })
   mapStore.dismissMapCalendarReminder(reminder.id)
   calendarStore.removeEventBySourceReminderId(reminder.id)
+}
+
+const confirmPhoneCue = (cue) => {
+  const event = calendarStore.confirmPhoneMissedCallCue(cue.id)
+  if (event?.id) {
+    void calendarStore.ensureEventPushScheduled(event.id, {
+      source: 'calendar_phone_missed_call_confirm',
+    })
+  }
+}
+
+const dismissPhoneCue = (cue) => {
+  calendarStore.dismissPhoneMissedCallCue(cue.id)
+}
+
+const confirmStockCue = (cue) => {
+  const event = calendarStore.confirmStockMarketCue(cue.id)
+  if (event?.id) {
+    void calendarStore.ensureEventPushScheduled(event.id, {
+      source: 'calendar_stock_market_confirm',
+    })
+  }
+}
+
+const dismissStockCue = (cue) => {
+  calendarStore.dismissStockMarketCue(cue.id)
 }
 
 const getReminderStatusLabel = (reminder) => {
@@ -419,97 +457,101 @@ watch(
       </section>
 
       <section v-if="visibleMapReminders.length > 0" class="space-y-2">
-        <article
+        <CalendarMapReminderCard
           v-for="reminder in visibleMapReminders"
           :key="reminder.id"
-          :data-testid="`calendar-reminder-card-${reminder.id}`"
-          class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold">
-                <i :class="[reminder.icon, 'mr-1 text-blue-500']"></i>
-                {{ t(reminder.titleZh, reminder.titleEn) }}
-              </p>
-              <p class="mt-1 text-xs text-gray-500">{{ formatDateTime(reminder.dueAt) }}</p>
-            </div>
-            <span
-              class="shrink-0 rounded-full px-2 py-1 text-[11px]"
-              :class="getReminderStatusClass(reminder)"
-            >
-              {{ getReminderStatusLabel(reminder) }}
-            </span>
-          </div>
-
-          <p class="mt-2 text-sm text-gray-700">{{ t(reminder.summaryZh, reminder.summaryEn) }}</p>
-          <div class="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
-            <span>{{ t(`${reminder.explorationPoints} 点探索`, `${reminder.explorationPoints} pts`) }}</span>
-            <span>{{ t('来源：地图区域反馈', 'Source: Map area feedback') }}</span>
-          </div>
-
-          <div
-            v-if="getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id).length > 0"
-            :data-testid="`calendar-reminder-worldbook-${reminder.id}`"
-            class="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-[11px] font-medium text-blue-700">
-                {{ t('Related knowledge points', 'Related knowledge points') }}
-              </p>
-              <button
-                type="button"
-                class="text-[11px] text-blue-600"
-                @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id).map((point) => point.id) })"
-              >
-                WorldBook
-              </button>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-2">
-              <button
-                v-for="point in getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id)"
-                :key="point.id"
-                type="button"
-                class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] text-blue-700"
-                :data-testid="`calendar-reminder-worldbook-chip-${reminder.id}-${point.id}`"
-                @click="openWorldBook({ pointIds: [point.id] })"
-              >
-                {{ point.title }}
-              </button>
-            </div>
-          </div>
-
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              v-if="reminder.status !== 'confirmed'"
-              @click="confirmReminder(reminder)"
-              class="rounded-full bg-emerald-500 px-3 py-2 text-xs text-white"
-              :title="t('确认提醒', 'Confirm reminder')"
-            >
-              <i class="fas fa-check mr-1"></i>{{ t('确认', 'Confirm') }}
-            </button>
-            <button
-              @click="toggleReminderPin(reminder)"
-              class="rounded-full px-3 py-2 text-xs"
-              :class="reminder.pinned ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'"
-              :title="reminder.pinned ? t('取消固定', 'Unpin reminder') : t('固定提醒', 'Pin reminder')"
-            >
-              <i class="fas fa-thumbtack mr-1"></i>{{ reminder.pinned ? t('取消固定', 'Unpin') : t('固定', 'Pin') }}
-            </button>
-            <button
-              @click="dismissReminder(reminder)"
-              class="rounded-full bg-gray-100 px-3 py-2 text-xs text-gray-600"
-              :title="t('忽略提醒', 'Dismiss reminder')"
-            >
-              <i class="fas fa-xmark mr-1"></i>{{ t('忽略', 'Dismiss') }}
-            </button>
-          </div>
-        </article>
+          :reminder="reminder"
+          :related-knowledge-points="getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id)"
+          :status-label="getReminderStatusLabel(reminder)"
+          :status-class="getReminderStatusClass(reminder)"
+          :formatted-due-at="formatDateTime(reminder.dueAt)"
+          @confirm="confirmReminder"
+          @toggle-pin="toggleReminderPin"
+          @dismiss="dismissReminder"
+          @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
+        />
       </section>
 
       <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
         <p class="font-semibold mb-2">{{ t('暂无地点反馈提醒', 'No location feedback reminders yet') }}</p>
         <p class="text-sm text-gray-600">
           {{ t('完成地图行程并解锁区域后，这里会显示可跟进的地点提醒。', 'Complete map trips and unlock areas to see follow-up location reminders here.') }}
+        </p>
+      </section>
+
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs text-gray-500">{{ t('来自电话', 'From Phone') }}</p>
+            <h2 class="font-semibold">{{ t('未接来电线索', 'Missed-call cues') }}</h2>
+          </div>
+          <span class="rounded-full bg-rose-50 px-2 py-1 text-[11px] text-rose-600">
+            {{ t(`${phoneMissedCallCueCount} 条`, `${phoneMissedCallCueCount} items`) }}
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">
+          {{
+            t(
+              'Phone 新增未接来电后，会在这里形成可确认的回拨提醒；确认后才进入日历事件和真实推送链路。',
+              'New missed calls from Phone become callback cues here; only confirmed cues become Calendar events and real push schedules.',
+            )
+          }}
+        </p>
+      </section>
+
+      <section v-if="visiblePhoneCues.length > 0" class="space-y-2">
+        <CalendarPhoneCueCard
+          v-for="cue in visiblePhoneCues"
+          :key="cue.id"
+          :cue="cue"
+          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
+          @confirm="confirmPhoneCue"
+          @dismiss="dismissPhoneCue"
+        />
+      </section>
+
+      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <p class="font-semibold mb-2">{{ t('暂无未接来电线索', 'No missed-call cues yet') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('在 Phone 里记录新的未接来电后，这里会出现可确认的回拨提醒。', 'Record a new missed call in Phone to see callback cues here.') }}
+        </p>
+      </section>
+
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs text-gray-500">{{ t('来自股票', 'From Stock') }}</p>
+            <h2 class="font-semibold">{{ t('行情复盘线索', 'Market review cues') }}</h2>
+          </div>
+          <span class="rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-600">
+            {{ t(`${stockMarketCueCount} 条`, `${stockMarketCueCount} items`) }}
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">
+          {{
+            t(
+              'Stock 模拟标的出现明显波动后，会在这里形成可确认的复盘提醒；确认后进入日历事件和真实推送链路。',
+              'Large simulated Stock moves become market review cues here; confirmed cues become Calendar events and real push schedules.',
+            )
+          }}
+        </p>
+      </section>
+
+      <section v-if="visibleStockCues.length > 0" class="space-y-2">
+        <CalendarStockCueCard
+          v-for="cue in visibleStockCues"
+          :key="cue.id"
+          :cue="cue"
+          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
+          @confirm="confirmStockCue"
+          @dismiss="dismissStockCue"
+        />
+      </section>
+
+      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <p class="font-semibold mb-2">{{ t('暂无行情复盘线索', 'No market review cues yet') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('在 Stock 中添加或更新明显波动的模拟标的后，这里会出现可确认的复盘提醒。', 'Add or update a simulated Stock asset with a large move to see review cues here.') }}
         </p>
       </section>
 
@@ -536,124 +578,25 @@ watch(
         </div>
 
         <div class="mt-3 space-y-2">
-          <article
+          <CalendarEventCard
             v-for="event in visibleCalendarEvents"
             :key="event.id"
-            :data-testid="`calendar-event-card-${event.id}`"
-            class="rounded-lg border border-gray-100 bg-gray-50 p-3"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold">
-                  <i :class="[event.icon, 'mr-1 text-emerald-500']"></i>
-                  {{ t(event.titleZh, event.titleEn) }}
-                </p>
-                <p class="mt-1 text-xs text-gray-500">{{ formatDateTime(event.startsAt) }}</p>
-              </div>
-              <span
-                v-if="event.pinned"
-                class="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-600"
-              >
-                {{ t('已固定', 'Pinned') }}
-              </span>
-            </div>
-            <p v-if="event.summaryZh || event.summaryEn" class="mt-2 text-xs text-gray-600">
-              {{ t(event.summaryZh, event.summaryEn) }}
-            </p>
-            <div
-              v-if="getRelatedKnowledgePoints(eventKnowledgePoints, event.id).length > 0"
-              :data-testid="`calendar-event-worldbook-${event.id}`"
-              class="mt-3 rounded-lg border border-blue-100 bg-white p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <p class="text-[11px] font-medium text-blue-700">
-                  {{ t('Related knowledge points', 'Related knowledge points') }}
-                </p>
-                <button
-                  type="button"
-                  class="text-[11px] text-blue-600"
-                  @click="openWorldBook({ pointIds: getRelatedKnowledgePoints(eventKnowledgePoints, event.id).map((point) => point.id) })"
-                >
-                  WorldBook
-                </button>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  v-for="point in getRelatedKnowledgePoints(eventKnowledgePoints, event.id)"
-                  :key="point.id"
-                  type="button"
-                  class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700"
-                  :data-testid="`calendar-event-worldbook-chip-${event.id}-${point.id}`"
-                  @click="openWorldBook({ pointIds: [point.id] })"
-                >
-                  {{ point.title }}
-                </button>
-              </div>
-            </div>
-            <div class="mt-3 space-y-2">
-              <label class="block text-[11px] font-medium text-gray-500">
-                {{ t('提醒时间', 'Reminder time') }}
-              </label>
-              <input
-                type="datetime-local"
-                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800"
-                :value="formatDateTimeInput(event.startsAt)"
-                @change="updateEventStartsAt(event, $event.target.value)"
-              />
-              <div class="flex flex-wrap items-center gap-2">
-                <button
-                  v-for="option in eventTimeQuickShiftOptions"
-                  :key="option.key"
-                  @click="shiftEventStartsAt(event, option.offsetMs)"
-                  class="rounded-full bg-white px-3 py-2 text-[11px] text-gray-700 border border-gray-200"
-                  :title="t('调整提醒时间', 'Adjust reminder time')"
-                >
-                  <i class="fas fa-clock mr-1"></i>{{ t(option.labelZh, option.labelEn) }}
-                </button>
-                <button
-                  v-if="isEventTimeEdited(event)"
-                  @click="resetEventStartsAt(event)"
-                  class="rounded-full bg-gray-100 px-3 py-2 text-[11px] text-gray-600"
-                  :title="t('恢复建议时间', 'Reset suggested time')"
-                >
-                  <i class="fas fa-rotate-left mr-1"></i>{{ t('恢复', 'Reset') }}
-                </button>
-              </div>
-              <p v-if="isEventTimeEdited(event)" class="text-[11px] text-blue-500">
-                {{ t('已调整', 'Adjusted') }}
-              </p>
-              <div class="rounded-lg border border-white bg-white/80 p-2 text-[11px] text-gray-600">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="font-medium text-gray-700">{{ t('推送状态', 'Push status') }}</span>
-                  <span
-                    class="shrink-0 rounded-full px-2 py-1"
-                    :class="getCalendarPushStatusMeta(event).className"
-                  >
-                    {{
-                      t(
-                        getCalendarPushStatusMeta(event).labelZh,
-                        getCalendarPushStatusMeta(event).labelEn,
-                      )
-                    }}
-                  </span>
-                </div>
-                <p class="mt-1">{{ getCalendarPushDetail(event) }}</p>
-                <div v-if="getEventPushHistory(event).length > 0" class="mt-2 space-y-1">
-                  <p class="font-medium text-gray-500">{{ t('最近排程记录', 'Recent schedule log') }}</p>
-                  <p
-                    v-for="entry in getEventPushHistory(event)"
-                    :key="`${entry.action}-${entry.createdAt}-${entry.scheduleId}`"
-                    class="flex items-center justify-between gap-2"
-                  >
-                    <span>{{ formatPushHistoryEntry(entry) }}</span>
-                    <span v-if="entry.deliverAt" class="text-gray-400">
-                      {{ formatDateTime(entry.deliverAt) }}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </article>
+            :event="event"
+            :related-knowledge-points="getRelatedKnowledgePoints(eventKnowledgePoints, event.id)"
+            :formatted-starts-at="formatDateTime(event.startsAt)"
+            :formatted-input-starts-at="formatDateTimeInput(event.startsAt)"
+            :is-time-edited="isEventTimeEdited(event)"
+            :quick-shift-options="eventTimeQuickShiftOptions"
+            :push-status-meta="getCalendarPushStatusMeta(event)"
+            :push-detail="getCalendarPushDetail(event)"
+            :push-history="getEventPushHistory(event)"
+            :format-push-history-entry="formatPushHistoryEntry"
+            :format-date-time="formatDateTime"
+            @update-starts-at="updateEventStartsAt"
+            @shift-starts-at="shiftEventStartsAt"
+            @reset-starts-at="resetEventStartsAt"
+            @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
+          />
         </div>
       </section>
 

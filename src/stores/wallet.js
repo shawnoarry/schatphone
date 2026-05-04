@@ -6,7 +6,15 @@ const WALLET_STORAGE_KEY = 'store:wallet'
 const WALLET_STORAGE_VERSION = 1
 const WALLET_TRANSACTION_LIMIT = 200
 const DEFAULT_CURRENCY = 'CNY'
+export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
+  ALL: 'all',
+  MANUAL: 'manual',
+  CHAT: 'chat',
+})
 const WALLET_TRANSACTION_TYPES = new Set(['income', 'expense', 'transfer'])
+const WALLET_TRANSACTION_SOURCE_FILTER_VALUES = new Set(
+  Object.values(WALLET_TRANSACTION_SOURCE_FILTERS),
+)
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -45,6 +53,17 @@ const createWalletTransactionId = () => `wallet_tx_${Date.now()}_${Math.random()
 const normalizeTransactionType = (value, fallback = 'transfer') => {
   const normalized = typeof value === 'string' ? value.trim() : ''
   return WALLET_TRANSACTION_TYPES.has(normalized) ? normalized : fallback
+}
+
+const isChatTransferTransaction = (transaction) => transaction?.sourceModule === 'chat_transfer'
+
+const normalizeCounterpartyKey = (value) => normalizeText(value, '', 120).toLowerCase()
+
+const normalizeTransactionSourceFilter = (value) => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return WALLET_TRANSACTION_SOURCE_FILTER_VALUES.has(normalized)
+    ? normalized
+    : WALLET_TRANSACTION_SOURCE_FILTERS.ALL
 }
 
 const normalizeWalletTransaction = (rawTransaction, index = 0) => {
@@ -114,6 +133,15 @@ export const useWalletStore = defineStore('wallet', () => {
   const hasFinishedStorageHydration = ref(false)
 
   const transactionCount = computed(() => transactions.value.length)
+  const transactionSourceSummary = computed(() => {
+    const chat = transactions.value.filter(isChatTransferTransaction).length
+    const manual = transactions.value.length - chat
+    return {
+      all: transactions.value.length,
+      manual,
+      chat,
+    }
+  })
   const balances = computed(() => {
     const totals = new Map()
     transactions.value.forEach((transaction) => {
@@ -147,6 +175,61 @@ export const useWalletStore = defineStore('wallet', () => {
     const id = normalizeText(sourceId, '', 140)
     if (!module || !id) return null
     return transactions.value.find((item) => item.sourceModule === module && item.sourceId === id) || null
+  }
+
+  const listTransactionsBySourceFilter = (filter = WALLET_TRANSACTION_SOURCE_FILTERS.ALL) => {
+    const normalizedFilter = normalizeTransactionSourceFilter(filter)
+    if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.CHAT) {
+      return transactions.value.filter(isChatTransferTransaction)
+    }
+    if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL) {
+      return transactions.value.filter((transaction) => !isChatTransferTransaction(transaction))
+    }
+    return transactions.value.slice()
+  }
+
+  const listTransactionsByCounterparty = (counterparty = '') => {
+    const key = normalizeCounterpartyKey(counterparty)
+    if (!key) return []
+    return transactions.value.filter(
+      (transaction) => normalizeCounterpartyKey(transaction.counterparty) === key,
+    )
+  }
+
+  const summarizeCounterpartyLedger = (counterparty = '') => {
+    const records = listTransactionsByCounterparty(counterparty)
+    if (records.length === 0) {
+      return {
+        counterparty: normalizeText(counterparty, '', 120),
+        count: 0,
+        chatCount: 0,
+        manualCount: 0,
+        currencies: [],
+        latestTransaction: null,
+      }
+    }
+
+    const totals = new Map()
+    records.forEach((transaction) => {
+      const sign = transaction.type === 'expense' ? -1 : 1
+      const current = totals.get(transaction.currency) || 0
+      totals.set(transaction.currency, current + sign * transaction.amountCents)
+    })
+
+    return {
+      counterparty: records[0].counterparty,
+      count: records.length,
+      chatCount: records.filter(isChatTransferTransaction).length,
+      manualCount: records.filter((transaction) => !isChatTransferTransaction(transaction)).length,
+      currencies: [...totals.entries()]
+        .map(([currency, amountCents]) => ({
+          currency,
+          amountCents,
+          amount: formatAmount(amountCents),
+        }))
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+      latestTransaction: records[0] || null,
+    }
   }
 
   const addTransaction = (input = {}) => {
@@ -288,11 +371,15 @@ export const useWalletStore = defineStore('wallet', () => {
   return {
     transactions,
     transactionCount,
+    transactionSourceSummary,
     balances,
     primaryBalance,
     hasFinishedStorageHydration,
     findTransactionById,
     findTransactionBySource,
+    listTransactionsBySourceFilter,
+    listTransactionsByCounterparty,
+    summarizeCounterpartyLedger,
     addTransaction,
     addTransferTransaction,
     addChatTransferTransaction,

@@ -34,7 +34,7 @@ npm run dev
 - `/appearance` (Appearance)
 - `/chat` (Chat list)
 - `/chat-contacts` (Chat directory / 会话通讯录)
-- `/files` (Files)
+- `/files` (Files internal/compatibility route; not a promoted frontend entry)
 - `/more` (More)
 
 ## 4. Lock and Home Rules / 锁屏与 Home 规则

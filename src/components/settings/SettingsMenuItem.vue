@@ -41,6 +41,7 @@ const { t } = useI18n()
   <button
     class="w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
     :class="withBorder ? 'border-b border-gray-100' : ''"
+    :data-settings-menu-title="titleEn"
     @click="$emit('select')"
   >
     <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs" :class="iconClass">

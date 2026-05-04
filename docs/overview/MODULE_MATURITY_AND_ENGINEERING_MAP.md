@@ -109,8 +109,8 @@ These modules exist and can be used, but their long-term product identity is sti
 | Network / 网络 | Strong MVP | Should provider setup become more guided for non-technical users? / 是否要把供应商配置进一步产品化引导？ |
 | Appearance / 外观 | Strong MVP | Are uploaded custom app icons in scope, or are presets the official path? / 自定义上传图标要不要做，还是预设图标就是官方模型？ |
 | Profile / 用户信息 | Prompt-visible MVP / 提示词可见 MVP | What downstream effects beyond Chat prompt context should be shown? / 除 Chat 提示词上下文外，还要展示哪些下游影响？ |
-| Files / 文件 | Persisted file-index MVP / 持久化文件索引 MVP | Is it a notebook, metadata browser, or future file manager? / 它到底是笔记本、元数据浏览器，还是未来文件管理器？ |
-| More / 更多 | Persisted shortcut/Labs MVP / 持久化快捷与实验入口 MVP | Should it stay a shortcut bucket or become a Labs surface? / 它该继续做快捷入口，还是明确为 Labs？ |
+| Files / 文件 | Internal storage/index component / 内部储存与索引组件 | Keep hidden from standalone frontend entry; owning modules should surface user-facing assets. / 不作为独立前台入口展示；用户可见素材应由所属模块承载。 |
+| More / 更多 | Persisted shortcut/Labs MVP / 持久化快捷与实验入口 MVP | Let existing toggles mature before adding more. / 先让已有开关成熟，再添加更多开关。 |
 
 ### 3.4 Tier D: Placeholder / D 档：明确占位
 
@@ -120,8 +120,8 @@ These modules should not compete with the main immersion loop yet.
 
 | Module / 模块 | Maturity / 成熟度 | Best Future Starting Point / 最合理起点 |
 | --- | --- | --- |
-| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Connect missed-call notification records to Calendar cues. / 将未接来电通知记录继续接入日历线索。 |
-| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Surface Chat-origin ledger source badges/filters. / 为来自 Chat 的流水增加来源徽标或筛选。 |
+| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Defer AI summaries until callback cues are clearer. / 回拨线索更清楚后再推进 AI 摘要。 |
+| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Defer economy simulation until narrative consumers exist. / 等叙事消费者明确后再做经济模拟。 |
 | Stock / 股票 | Local simulated-market MVP / 本地模拟行情 MVP | Tie simulated movement to world/calendar events if it becomes a narrative economy surface. / 若进入叙事经济线，再接入世界观或日历事件驱动波动。 |
 
 ---
@@ -296,27 +296,28 @@ These signals suggest:
 
 ### 6.13 Files / 文件
 
-- Product state: persisted metadata-only file-index MVP.
+- Product state: internal metadata-only storage/index component; standalone frontend entry is hidden.
 - Engineering note: quick notes, favorites, deletes, and local file metadata import now live in `src/stores/files.js`; original file content is not copied or stored.
-- Recommendation: define product purpose before large engineering investment or connecting Files to Gallery assets, role/world documents, or binary storage.
+- Recommendation: keep user-facing file/asset management in owning modules; only expand Files when another module needs an internal metadata bridge.
+- Decision record: `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`.
 
 ### 6.14 More / 更多
 
 - Product state: persisted shortcut/Labs MVP.
-- Engineering note: experimental toggles now live under `settings.more.featureToggles`; downstream modules do not yet consume them.
-- Recommendation: decide whether More is primarily Shortcuts or Labs before wiring toggles to visible module behavior.
+- Engineering note: experimental toggles live under `settings.more.featureToggles` and now have first low-risk UI consumers in Home, Lock, and More.
+- Recommendation: let the existing toggles mature before adding more toggles or deeper automation ownership.
 
 ### 6.15 Phone / 电话
 
 - Product state: local role-call log MVP.
-- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, shared missed-call notification handoff, persistence, backup/restore, and regression tests; it does not dial real phone calls.
-- Recommendation: next connect missed-call notification records to Calendar cues before adding AI call summaries.
+- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, shared missed-call notification handoff, Calendar callback cue handoff, persistence, backup/restore, and regression tests; it does not dial real phone calls.
+- Recommendation: defer AI call summaries until the Calendar callback cue loop is clearer.
 
 ### 6.16 Wallet / 钱包
 
 - Product state: local virtual ledger MVP.
-- Engineering note: `src/stores/wallet.js` owns manual transfer records, Chat `transfer_virtual` source entries, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
-- Recommendation: next surface Chat-origin source badges/filters before considering any economy simulation.
+- Engineering note: `src/stores/wallet.js` owns manual transfer records, Chat `transfer_virtual` source entries, source summary/filter helpers, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
+- Recommendation: defer economy simulation until more narrative consumers exist.
 
 ### 6.17 Stock / 股票
 
@@ -692,3 +693,106 @@ If you are deciding what to build next:
    2026-05-03 中文：在从 `MapView.vue` 抽出行程记录展示面板后，将 `MapTripHistoryPanel.vue` 标记为已落地。
 4. 2026-05-04 EN: Updated Phone and Wallet maturity notes after landing missed-call shell notifications and Chat transfer-card Wallet ledger sync.
    2026-05-04 中文：在未接来电 shell 通知与 Chat 转账卡同步 Wallet 流水落地后，更新 Phone 与 Wallet 成熟度说明。
+5. 2026-05-04 EN: Marked Phone missed-call Calendar callback cues as landed and moved the next practical work toward Wallet source visibility.
+   2026-05-04 中文：标记 Phone 未接来电 Calendar 回拨线索已落地，并将下一实际推进项顺延到 Wallet 来源可见性。
+6. 2026-05-04 EN: Marked Wallet Chat-origin source visibility as landed and moved the next practical work toward More/Labs toggle consumption.
+   2026-05-04 中文：标记 Wallet 的 Chat 来源可见性已落地，并将下一实际推进项顺延到 More/Labs 开关消费。
+7. 2026-05-04 EN: Marked More/Labs toggle consumption as landed across Home, Lock, and More, then moved the next practical work toward Network component coverage or a Files role decision.
+   2026-05-04 中文：标记 More/Labs 开关消费已在 Home、Lock、More 落地，并将下一实际推进项顺延到 Network 组件覆盖或 Files 角色决策。
+8. 2026-05-04 EN: Marked Files product role as decided: hidden standalone frontend entry, retained internal storage/coordination component, with next practical work moved to Network component coverage.
+   2026-05-04 中文：标记 Files 产品角色已决策：隐藏独立前台入口，保留内部储存/协调组件，并将下一实际推进项顺延到 Network 组件覆盖。
+9. 2026-05-04 EN: Marked Network smoke-control component coverage as landed; next practical Network work is display-only extraction of smoke/diagnostics sections.
+   2026-05-04 中文：标记 Network 烟测控件组件覆盖已落地；下一实际 Network 工作为烟测/诊断区的展示层拆分。
+10. 2026-05-04 EN: Marked Network smoke/diagnostics display extraction as landed; next practical Network work is provider-template/setup/preset display extraction.
+    2026-05-04 中文：标记 Network 烟测/诊断展示层拆分已落地；下一实际 Network 工作为供应商模板/配置向导/预设展示区拆分。
+---
+
+## 2026-05-04 Network Engineering Note
+
+EN: Network maintainability has improved after the follow-up decomposition batch. `NetworkView.vue` now delegates setup/preset display, smoke controls, manual model/save display, and diagnostics display to dedicated components, while reusable report labels and report filtering/summary logic live in `src/lib/network-report-labels.js` and `src/lib/network-report-state.js`.
+
+中文：Network 可维护性已在本轮连续拆分后提升。`NetworkView.vue` 现在将配置/预设展示、烟测控制、手动模型/保存展示、诊断展示交给独立组件；可复用的报告标签、报告筛选与汇总逻辑位于 `src/lib/network-report-labels.js` 和 `src/lib/network-report-state.js`。
+
+EN: Current recommendation is not to keep splitting Network by default. Prefer moving to the next small connector or hotspot unless a Network bug appears.
+
+中文：当前建议不是默认继续拆 Network；除非出现 Network 缺陷，否则优先转向下一个小功能连接点或其它热点。
+
+---
+
+## 2026-05-04 Settings Engineering Note
+
+EN: Settings maintainability improved with the General/About follow-up batch. `SettingsView.vue` now delegates General display/input events, repeated subpage headers, and About version-card display to small components, while backup-reminder interval rules live in `src/lib/backup-reminder-settings.js`.
+
+中文：Settings 可维护性已通过本轮 General/About 批次提升。`SettingsView.vue` 现在将通用设置展示/输入事件、重复子页头部、About 版本卡展示交给小组件；备份提醒间隔规则位于 `src/lib/backup-reminder-settings.js`。
+
+EN: Next practical Settings work is one more display-only extraction from the landing page. Avoid changing backup/import, push, or storage semantics in the same slice.
+
+中文：下一步实用 Settings 工作是继续从首页做一个展示层拆分。不要在同一切片里改变备份/导入、推送或存储语义。
+
+---
+
+## 2026-05-04 Settings Landing Engineering Note
+
+EN: Settings landing maintainability improved after extracting `SettingsLandingSection.vue`. The landing page now delegates profile entry, beginner tip, quick access, and content-menu display to a small component; `SettingsView.vue` remains responsible for route jumps and subpage state.
+
+中文：Settings 首页可维护性已通过 `SettingsLandingSection.vue` 拆分提升。首页现在把资料入口、新手提示、快捷入口与内容设置菜单展示交给小组件；`SettingsView.vue` 仍负责路由跳转与子页状态。
+
+EN: Current recommendation is to pause further Settings display splitting unless a Settings bug appears, and move to Calendar cue lifecycle polish as the next low-risk functional connector.
+
+中文：当前建议暂缓继续拆 Settings 展示层，除非出现 Settings 缺陷；下一步转向 Calendar 线索生命周期打磨，作为低风险功能连接点继续推进。
+
+---
+
+## 2026-05-04 Calendar Engineering Note
+
+EN: Calendar real-push lifecycle reliability improved. Push schedule/cancel operations no longer share one global in-flight promise; they are keyed by event id and schedule id, preserving duplicate-click dedupe while allowing independent events to schedule concurrently.
+
+中文：Calendar 真实推送生命周期可靠性已提升。推送调度/取消不再共享单个全局 in-flight promise，而是按事件 id 与排程 id 隔离；这样既保留重复点击去重，又允许独立事件并发调度。
+
+EN: Next practical Calendar work can be a display-only extraction of cue/event cards, but avoid changing the visual language or interaction concept while the visual rebuild is parked.
+
+中文：下一步 Calendar 实用工作可以是线索/事件卡片的纯展示层拆分；但在视觉重建已搁置的前提下，不要改变视觉语言或交互概念。
+
+---
+
+## 2026-05-04 Calendar Cue Card Engineering Note
+
+EN: Calendar view maintainability improved after extracting Map reminder and Phone callback cue cards into dedicated components. The parent view still owns synchronization, confirmation/dismissal, formatting, WorldBook lookups, and navigation.
+
+中文：Calendar 视图可维护性已通过拆出 Map 提醒卡与 Phone 回拨线索卡提升。父视图仍负责同步、确认/忽略、格式化、WorldBook 查询与导航。
+
+EN: Further Calendar extraction should stay display-only. Do not change cue lifecycle, push scheduling, or visual direction in the same slice.
+
+中文：后续 Calendar 拆分应保持纯展示层边界。不要在同一切片里改变线索生命周期、推送调度或视觉方向。
+
+---
+
+## 2026-05-04 Calendar Event Card Engineering Note
+
+EN: Calendar event-card maintainability improved after extracting `CalendarEventCard.vue`. The parent view is now mostly orchestration for events, reminders, Phone cues, WorldBook routing, and push-state derivation.
+
+中文：Calendar 事件卡片可维护性已通过 `CalendarEventCard.vue` 拆分提升。父视图现在更接近事件、提醒、Phone 线索、WorldBook 路由与推送状态派生的编排层。
+
+EN: Current recommendation is to stop Calendar display-only extraction for now and choose the next module direction before adding a new cross-module behavior.
+
+中文：当前建议暂时停止 Calendar 纯展示拆分，并在新增跨模块行为前先选择下一模块方向。
+
+---
+
+## 2026-05-04 Stock/Wallet Connector Engineering Note
+
+EN: Stock maturity improved from standalone simulated-market MVP to an integrated Calendar cue producer. Large simulated moves create persistent Calendar stock cues; confirmed cues become events through the same Calendar event/push path as Map and Phone cues.
+
+中文：Stock 成熟度已从独立模拟行情 MVP 提升为 Calendar 线索生产者。明显波动的模拟标的会生成持久化 Calendar 行情线索；确认后会通过与 Map、Phone 相同的 Calendar 事件/推送链路进入日程。
+
+EN: Wallet maturity improved as relationship context for Contacts. Wallet owns transaction aggregation by counterparty, while Contacts only reads and displays matching summaries, preserving module boundaries.
+
+中文：Wallet 成熟度已提升为 Contacts 的关系上下文来源。Wallet 负责按交易对象聚合流水，Contacts 只读取并展示匹配摘要，保持模块边界清晰。
+
+EN: Next practical work should add Calendar view-level interaction coverage for Stock cues before adding more connector types.
+
+中文：下一步实用工作建议先补 Calendar 行情线索的视图级交互覆盖，再新增更多连接类型。
+
+EN: Calendar Stock cue view coverage is now present, so further connector expansion should wait for the next module-pair decision.
+
+中文：Calendar 行情线索视图覆盖已补齐，因此后续连接点扩展应等待下一组模块组合决策。

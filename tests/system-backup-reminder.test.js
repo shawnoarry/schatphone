@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSystemStore } from '../src/stores/system'
+import {
+  BACKUP_REMINDER_INTERVAL_OPTIONS,
+  createBackupReminderIntervalLabel,
+  normalizeBackupReminderIntervalHours,
+} from '../src/lib/backup-reminder-settings'
 
 describe('system backup reminder', () => {
   beforeEach(() => {
@@ -62,5 +67,17 @@ describe('system backup reminder', () => {
     expect(result.triggered).toBe(false)
     expect(result.reason).toBe('disabled')
     expect(store.notifications.length).toBe(0)
+  })
+
+  test('normalizes and labels backup reminder settings for Settings UI', () => {
+    const passthroughT = (_zh, en) => en
+    const label = createBackupReminderIntervalLabel(passthroughT)
+
+    expect(BACKUP_REMINDER_INTERVAL_OPTIONS).toContain(24)
+    expect(normalizeBackupReminderIntervalHours(9999)).toBe(720)
+    expect(normalizeBackupReminderIntervalHours(0)).toBe(1)
+    expect(normalizeBackupReminderIntervalHours('bad')).toBe(24)
+    expect(label(48)).toBe('2 day(s)')
+    expect(label(3)).toBe('3 hour(s)')
   })
 })

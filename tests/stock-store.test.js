@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { useCalendarStore } from '../src/stores/calendar'
 import { useStockStore } from '../src/stores/stock'
 
 describe('stock store', () => {
@@ -104,5 +105,67 @@ describe('stock store', () => {
     expect(restoredStore.restoreFromBackup(snapshot)).toBe(true)
     expect(restoredStore.watchlistCount).toBe(1)
     expect(restoredStore.findStockBySymbol('BACK')?.priceCents).toBe(800)
+  })
+
+  test('creates Calendar market cues for large simulated moves and cleans them up', () => {
+    const store = useStockStore()
+    const calendarStore = useCalendarStore()
+    store.resetForTesting()
+    calendarStore.resetForTesting()
+
+    const calm = store.upsertStock({
+      symbol: 'CALM',
+      name: 'Calm Asset',
+      price: 10,
+      changePercent: 1.2,
+    })
+
+    expect(calm).toBeTruthy()
+    expect(store.calendarCueEligibleCount).toBe(0)
+    expect(calendarStore.stockMarketCueCount).toBe(0)
+
+    const mover = store.upsertStock({
+      symbol: 'NOVA',
+      name: 'Nova Labs',
+      price: 12.34,
+      changePercent: 4.5,
+      note: 'Earnings rumor',
+    })
+    const cue = calendarStore.findStockMarketCueByStockId(mover.id)
+
+    expect(store.calendarCueEligibleCount).toBe(1)
+    expect(cue).toMatchObject({
+      stockId: mover.id,
+      symbol: 'NOVA',
+      name: 'Nova Labs',
+      status: 'suggested',
+      source: 'stock_market_move',
+      route: '/stock',
+    })
+    expect(cue?.suggestedAt).toBe(mover.updatedAt + 2 * 60 * 60 * 1000)
+
+    const event = calendarStore.confirmStockMarketCue(cue.id)
+
+    expect(event).toMatchObject({
+      source: 'stock_market_move',
+      sourceReminderId: cue.id,
+      titleEn: 'Review NOVA',
+      route: '/stock',
+      status: 'confirmed',
+    })
+    expect(calendarStore.findStockMarketCueById(cue.id)?.status).toBe('confirmed')
+
+    const snapshot = calendarStore.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredCalendar = useCalendarStore()
+    expect(restoredCalendar.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    expect(restoredCalendar.findStockMarketCueByStockId(mover.id)?.status).toBe('confirmed')
+    expect(restoredCalendar.findEventBySourceReminderId(cue.id)?.titleEn).toBe('Review NOVA')
+
+    const nextStockStore = useStockStore()
+    expect(nextStockStore.restoreFromBackup({ stock: { items: [mover] } })).toBe(true)
+    expect(nextStockStore.updatePrice('NOVA', { price: 12.4, changePercent: 0.4 })?.changePercent).toBe(0.4)
+    expect(restoredCalendar.findStockMarketCueByStockId(mover.id)?.status).toBe('dismissed')
+    expect(restoredCalendar.findEventBySourceReminderId(cue.id)).toBeNull()
   })
 })

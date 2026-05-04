@@ -951,3 +951,89 @@ Acceptance / 验收标准:
     2026-05-04 中文：已落地 Chat 到 Wallet 的转账交接：Chat `transfer_virtual` 卡片现在会创建带 `chat_transfer` 来源元数据且按消息去重的 Wallet 支出流水。
 98. 2026-05-04 EN: Landed Phone missed-call notification handoff: newly recorded missed calls now create shared shell notifications while respecting the system notification toggle.
     2026-05-04 中文：已落地 Phone 未接来电通知交接：新记录的未接来电现在会创建共享 shell 通知，并遵守系统通知开关。
+99. 2026-05-04 EN: Standing execution rule: every completed coding task must append both a landed record and a next recommended slice to this roadmap, then sync `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md` when the recommendation changes.
+    2026-05-04 中文：固定执行规则：每次代码任务结束时，都必须向本路线图追加已落地记录和下一推荐切片；若建议发生变化，同步更新 `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`。
+100. 2026-05-04 EN: Next recommended slice is Phone -> Calendar cues: convert missed-call notification records into Calendar candidate cues while keeping real scheduling ownership in Calendar.
+    2026-05-04 中文：下一推荐切片为 Phone -> Calendar 线索：将未接来电通知记录转为 Calendar 候选线索，同时保持真实调度职责仍归 Calendar。
+101. 2026-05-04 EN: Landed Phone -> Calendar callback cues: new missed calls create persistent Calendar cues that can be confirmed into events or dismissed, while real push scheduling remains Calendar-owned.
+    2026-05-04 中文：已落地 Phone -> Calendar 回拨线索：新未接来电会创建可持久化的 Calendar 线索，可确认成事件或忽略，真实推送调度仍由 Calendar 拥有。
+102. 2026-05-04 EN: Next recommended slice is Wallet source visibility: add source badges/filters for Chat-origin ledger entries.
+    2026-05-04 中文：下一推荐切片为 Wallet 来源可见性：为来自 Chat 的流水增加来源徽标/筛选。
+103. 2026-05-04 EN: Landed Wallet source visibility: Chat-origin ledger entries now have source counts, filters, and badges distinct from manual records.
+    2026-05-04 中文：已落地 Wallet 来源可见性：来自 Chat 的流水现在拥有独立的来源计数、筛选和徽标，可与手动流水区分。
+104. 2026-05-04 EN: Next recommended slice is More/Labs toggle consumption: connect one persisted experimental toggle to visible low-risk UI behavior.
+    2026-05-04 中文：下一推荐切片为 More/Labs 开关消费：将一个已持久化的实验开关接入低风险的可见 UI 行为。
+105. 2026-05-04 EN: Landed More/Labs toggle consumption batch: `smart_panel` shows a Home smart panel, `focus_mode` condenses Lock notifications, and `scene_switch` shows a More scene preview.
+    2026-05-04 中文：已落地 More/Labs 开关消费批次：`smart_panel` 显示 Home 智能面板，`focus_mode` 收敛 Lock 通知，`scene_switch` 显示 More 场景预览。
+106. 2026-05-04 EN: Next recommended slice is Network component coverage for existing smoke controls, unless the human first chooses the Files product role.
+    2026-05-04 中文：下一推荐切片为给既有 Network 烟测控件补组件覆盖；除非用户先选择 Files 的产品角色。
+107. 2026-05-04 EN: Landed Files product-role decision and frontend hiding: Files is hidden from standalone Home/More/Appearance entry points and retained as an internal storage/coordination component with `/files` kept for compatibility/internal use.
+    2026-05-04 中文：已落地 Files 产品角色决策与前台隐藏：Files 不再作为 Home/More/Appearance 独立入口展示，保留为内部储存与跨模块协调组件，`/files` 仅保留作兼容/内部使用。
+108. 2026-05-04 EN: Next recommended slice is Network component coverage for existing smoke controls.
+    2026-05-04 中文：下一推荐切片为给既有 Network 烟测控件补组件覆盖。
+109. 2026-05-04 EN: Landed Network component coverage for existing smoke controls: Chat smoke preflight/success/failure, model-refresh preflight/success, and diagnostics filtering/clearing now have `NetworkView` component tests.
+    2026-05-04 中文：已落地既有 Network 烟测控件组件覆盖：Chat 烟测预检/成功/失败、模型刷新预检/成功、诊断筛选/清空现在都有 `NetworkView` 组件测试。
+110. 2026-05-04 EN: Next recommended slice is Network smoke/diagnostics display extraction: split display sections into small components while keeping API calls, report writes, and dialog ownership in `NetworkView.vue`.
+    2026-05-04 中文：下一推荐切片为 Network 烟测/诊断展示层拆分：把展示区拆成小组件，同时将 API 调用、报告写入与弹窗所有权保留在 `NetworkView.vue`。
+111. 2026-05-04 EN: Landed Network smoke/diagnostics display extraction: added `NetworkSmokeControlsPanel.vue` and `NetworkDiagnosticsPanel.vue`, while keeping API calls, report writes, routing, and dialog ownership in `NetworkView.vue`.
+    2026-05-04 中文：已落地 Network 烟测/诊断展示层拆分：新增 `NetworkSmokeControlsPanel.vue` 与 `NetworkDiagnosticsPanel.vue`，同时将 API 调用、报告写入、路由与弹窗所有权保留在 `NetworkView.vue`。
+112. 2026-05-04 EN: Next recommended slice is Network provider-template/setup/preset display extraction while keeping preset save/remove and API settings writes in `NetworkView.vue`.
+    2026-05-04 中文：下一推荐切片为 Network 供应商模板/配置向导/预设展示区拆分，同时将预设保存/删除与 API 设置写入保留在 `NetworkView.vue`。
+---
+
+## 2026-05-04 Network Maintainability Follow-Up
+
+113. EN: Landed Network setup/preset display extraction and helper cleanup: added `NetworkSetupPresetPanel.vue`, `NetworkManualModelSavePanel.vue`, `network-report-labels.js`, and `network-report-state.js`; `NetworkView.vue` now keeps orchestration, API calls, report writes, routing, and dialog ownership while the display/state helpers are test-covered.
+    中文：已落地 Network 配置向导/预设展示层拆分与 helper 清理：新增 `NetworkSetupPresetPanel.vue`、`NetworkManualModelSavePanel.vue`、`network-report-labels.js`、`network-report-state.js`；`NetworkView.vue` 继续保留编排、API 调用、报告写入、路由与弹窗所有权，展示层与状态 helper 已有测试保护。
+
+114. EN: Next recommended slice is to pause broad Network restructuring and move to the next small functional connector or maintainability hotspot; good candidates are Chat/WorldBook service-template clarity, Settings remaining section extraction, or Calendar cue lifecycle polish.
+    中文：下一步建议暂停大范围 Network 重构，转向下一个小型功能连接点或可维护性热点；候选包括 Chat/WorldBook 服务模板清晰度、Settings 剩余区块拆分，或 Calendar 线索生命周期打磨。
+
+---
+
+## 2026-05-04 Settings Maintainability Follow-Up
+
+115. EN: Landed Settings general/about display extraction: added `SettingsGeneralSection.vue`, `SettingsSubPageHeader.vue`, `SettingsAboutInfoCard.vue`, and `backup-reminder-settings.js`; parent `SettingsView.vue` keeps save normalization and store writes, with component and helper tests covering the moved paths.
+    中文：已落地 Settings 通用/About 展示层拆分：新增 `SettingsGeneralSection.vue`、`SettingsSubPageHeader.vue`、`SettingsAboutInfoCard.vue` 和 `backup-reminder-settings.js`；父级 `SettingsView.vue` 继续保留保存归一化与 store 写入，并用组件/helper 测试覆盖迁移路径。
+
+116. EN: Next recommended slice is another low-risk Settings landing-page display extraction, then switch to Calendar cue lifecycle polish if Settings reaches diminishing returns.
+    中文：下一步建议继续做一个低风险 Settings 首页展示层拆分；如果 Settings 拆分收益开始变低，再转向 Calendar 线索生命周期打磨。
+
+---
+
+## 2026-05-04 Settings Landing Follow-Up
+
+117. EN: Landed Settings landing-page display extraction: added `SettingsLandingSection.vue`, moved profile/beginner-tip/quick-access/content-menu display out of `SettingsView.vue`, and added stable menu/quick-access selectors while keeping route and subpage ownership in the parent view.
+    中文：已落地 Settings 首页展示层拆分：新增 `SettingsLandingSection.vue`，将资料入口、新手提示、快捷入口、内容设置菜单展示移出 `SettingsView.vue`，并为菜单/快捷入口补充稳定选择器；路由跳转与子页所有权仍保留在父视图。
+118. EN: Next recommended slice is Calendar cue lifecycle polish: inspect callback/reminder cue creation, confirmation, dismissal, and event handoff for small reliability or maintainability gains without changing product direction.
+    中文：下一步建议推进 Calendar 线索生命周期打磨：检查回拨/提醒线索的创建、确认、忽略与事件交接，优先做小型可靠性或可维护性增强，不改变产品方向。
+
+119. EN: Landed Calendar push lifecycle reliability: concurrent real-push schedule/cancel operations are now isolated per event/schedule id, while duplicate same-event scheduling still dedupes through the in-flight map.
+    中文：已落地 Calendar 推送生命周期可靠性修正：并发真实推送调度/取消现在按事件/排程 id 隔离，同一事件重复调度仍通过 in-flight map 去重。
+120. EN: Next recommended slice is Calendar view display extraction for cue/event cards, or another small connector if Calendar UI splitting starts to overlap with the future visual rebuild.
+    中文：下一步建议推进 Calendar 视图展示层拆分（线索/事件卡片），如果该拆分开始与未来视觉重建重叠，则改做另一个小型功能连接点。
+
+121. EN: Landed Calendar cue-card display extraction: added `CalendarMapReminderCard.vue` and `CalendarPhoneCueCard.vue`, while `CalendarView.vue` still owns reminder sync, Phone cue confirmation/dismissal, formatting, and WorldBook routing.
+    中文：已落地 Calendar 线索卡片展示层拆分：新增 `CalendarMapReminderCard.vue` 与 `CalendarPhoneCueCard.vue`；`CalendarView.vue` 仍保留提醒同步、Phone 线索确认/忽略、格式化与 WorldBook 路由职责。
+122. EN: Next recommended slice is Calendar confirmed-event card extraction only if kept display-only; otherwise move to a non-visual functional connector such as Stock/Calendar or Wallet/Contacts handoff.
+    中文：下一步建议只在保持纯展示拆分的前提下推进 Calendar 已确认事件卡片拆分；否则转向非视觉的小型功能连接点，例如 Stock/Calendar 或 Wallet/Contacts 交接。
+
+123. EN: Landed Calendar confirmed-event card display extraction: added `CalendarEventCard.vue` while `CalendarView.vue` keeps event time edits, quick shifts, reset handling, push status/detail derivation, push history formatting, and WorldBook routing.
+    中文：已落地 Calendar 已确认事件卡片展示层拆分：新增 `CalendarEventCard.vue`；`CalendarView.vue` 仍保留事件时间编辑、快捷偏移、恢复处理、推送状态/详情派生、推送历史格式化与 WorldBook 路由职责。
+124. EN: Next recommended slice needs a module-direction choice: either continue non-visual functional connectors (Stock -> Calendar market reminders, Wallet -> Contacts relationship ledger notes) or return to maintainability on another large view.
+    中文：下一步建议需要选择模块方向：继续做非视觉功能连接点（Stock -> Calendar 行情提醒、Wallet -> Contacts 关系账本备注），或回到其它大型视图的可维护性拆分。
+
+---
+
+## 2026-05-04 Stock/Wallet Connector Batch
+
+125. EN: Landed Stock -> Calendar market review cues: large simulated Stock moves now create Calendar stock cues, can be confirmed into Calendar events, and clean up when the move falls below threshold or the asset is removed.
+    中文：已落地 Stock -> Calendar 行情复盘线索：模拟标的出现明显波动后会生成 Calendar 行情线索，可确认成日历事件；当波动回落或标的删除时会清理对应线索。
+126. EN: Landed Wallet -> Contacts read-only ledger context: Wallet now summarizes transactions by counterparty, and Contacts displays matching role-profile ledger count, net amount, source hint, and latest record without writing back to Wallet or role profiles.
+    中文：已落地 Wallet -> Contacts 只读账本上下文：Wallet 可按交易对象汇总流水，Contacts 会在匹配角色档案下展示账本笔数、净额、来源提示与最近记录，不反向写入 Wallet 或角色资料。
+127. EN: Next recommended slice is to add view-level coverage for Calendar stock cue interactions or continue with another small connector only after choosing a module pair.
+    中文：下一步建议补 Calendar 行情线索交互的视图级覆盖；或在选择新的模块组合后继续推进另一个小型连接点。
+128. EN: Landed Calendar Stock cue view coverage: confirming and dismissing Stock market cues from `CalendarView` now has component-level regression protection.
+    中文：已落地 Calendar 行情线索视图覆盖：从 `CalendarView` 确认与忽略 Stock 行情线索现在有组件级回归保护。
+129. EN: Next recommended slice is to pause connector expansion and choose a new module pair or return to maintainability cleanup before adding more cross-module behavior.
+    中文：下一步建议暂停连接点扩展，先选择新的模块组合，或回到可维护性清理，再继续新增跨模块行为。

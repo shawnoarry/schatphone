@@ -10,12 +10,22 @@ import { useSystemStore } from './system'
 const CALENDAR_STORAGE_KEY = 'store:calendar'
 const CALENDAR_STORAGE_VERSION = 1
 const CALENDAR_EVENT_LIMIT = 120
+const CALENDAR_PHONE_CUE_LIMIT = 80
+const CALENDAR_STOCK_CUE_LIMIT = 80
 const CALENDAR_EVENT_PUSH_HISTORY_LIMIT = 6
 const CALENDAR_EVENT_STATUS_CONFIRMED = 'confirmed'
 const CALENDAR_EVENT_STATUS_CANCELLED = 'cancelled'
+const CALENDAR_CUE_STATUS_SUGGESTED = 'suggested'
+const CALENDAR_CUE_STATUS_CONFIRMED = 'confirmed'
+const CALENDAR_CUE_STATUS_DISMISSED = 'dismissed'
 const CALENDAR_EVENT_STATUSES = new Set([
   CALENDAR_EVENT_STATUS_CONFIRMED,
   CALENDAR_EVENT_STATUS_CANCELLED,
+])
+const CALENDAR_CUE_STATUSES = new Set([
+  CALENDAR_CUE_STATUS_SUGGESTED,
+  CALENDAR_CUE_STATUS_CONFIRMED,
+  CALENDAR_CUE_STATUS_DISMISSED,
 ])
 const CALENDAR_EVENT_PUSH_STATUSES = new Set([
   'idle',
@@ -57,9 +67,143 @@ const createCalendarEventIdFromReminder = (reminderId) => {
   return normalizedReminderId ? `calendar_event_${normalizedReminderId}` : ''
 }
 
+const createPhoneMissedCallCueId = (callId) => {
+  const normalizedCallId = normalizeEventId(callId)
+  return normalizedCallId ? `phone_missed_call_cue_${normalizedCallId}` : ''
+}
+
+const createStockMarketCueId = (stockId) => {
+  const normalizedStockId = normalizeEventId(stockId)
+  return normalizedStockId ? `stock_market_cue_${normalizedStockId}` : ''
+}
+
+const createCalendarEventIdFromPhoneCue = (cueId) => {
+  const normalizedCueId = normalizeEventId(cueId)
+  return normalizedCueId ? `calendar_event_${normalizedCueId}` : ''
+}
+
+const createCalendarEventIdFromStockCue = (cueId) => {
+  const normalizedCueId = normalizeEventId(cueId)
+  return normalizedCueId ? `calendar_event_${normalizedCueId}` : ''
+}
+
 const createCalendarEventScheduleId = (eventId) => {
   const normalizedEventId = normalizeEventId(eventId)
   return normalizedEventId ? `calendar_event_push_${normalizedEventId}` : ''
+}
+
+const normalizeCalendarCueStatus = (value, fallback = CALENDAR_CUE_STATUS_SUGGESTED) => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (CALENDAR_CUE_STATUSES.has(normalized)) return normalized
+  return fallback
+}
+
+const normalizePhoneMissedCallCue = (raw, index = 0) => {
+  if (!raw || typeof raw !== 'object') return null
+  const callId = normalizeEventId(raw.callId || raw.sourceCallId || raw.sourceReminderId)
+  if (!callId) return null
+  const cueId = normalizeEventId(raw.id) || createPhoneMissedCallCueId(callId)
+  const contactName = trimLine(raw.contactName, '', 80)
+  if (!cueId || !contactName) return null
+  const createdAt = Math.max(0, toInt(raw.createdAt, Date.now() + index))
+  const suggestedAt = Math.max(
+    0,
+    toInt(raw.suggestedAt || raw.dueAt || raw.startsAt, createdAt + 30 * 60 * 1000),
+  )
+
+  return {
+    id: cueId,
+    callId,
+    contactName,
+    phoneNumber: trimLine(raw.phoneNumber, '', 40),
+    summary: trimLine(raw.summary || raw.summaryEn || raw.summaryZh, '', 240),
+    suggestedAt,
+    status: normalizeCalendarCueStatus(raw.status),
+    route: trimLine(raw.route, '/phone', 120),
+    icon: trimLine(raw.icon, 'fas fa-phone-slash', 80),
+    tone: trimLine(raw.tone, 'rose', 40),
+    source: trimLine(raw.source, 'phone_missed_call', 80),
+    createdAt,
+    updatedAt: Math.max(0, toInt(raw.updatedAt, createdAt)),
+  }
+}
+
+const normalizePhoneMissedCallCues = (raw) => {
+  if (!Array.isArray(raw)) return []
+  const seenIds = new Set()
+  const normalized = []
+  raw.forEach((item, index) => {
+    const cue = normalizePhoneMissedCallCue(item, index)
+    if (!cue || seenIds.has(cue.id)) return
+    seenIds.add(cue.id)
+    normalized.push(cue)
+  })
+  return normalized
+    .sort((a, b) => {
+      if (a.status !== b.status) {
+        if (a.status === CALENDAR_CUE_STATUS_SUGGESTED) return -1
+        if (b.status === CALENDAR_CUE_STATUS_SUGGESTED) return 1
+      }
+      return b.updatedAt - a.updatedAt
+    })
+    .slice(0, CALENDAR_PHONE_CUE_LIMIT)
+}
+
+const normalizeStockMarketCue = (raw, index = 0) => {
+  if (!raw || typeof raw !== 'object') return null
+  const stockId = normalizeEventId(raw.stockId || raw.sourceStockId || raw.sourceReminderId)
+  if (!stockId) return null
+  const cueId = normalizeEventId(raw.id) || createStockMarketCueId(stockId)
+  const symbol = trimLine(raw.symbol, '', 24).toUpperCase()
+  const name = trimLine(raw.name || raw.stockName, symbol, 100)
+  if (!cueId || !symbol || !name) return null
+  const createdAt = Math.max(0, toInt(raw.createdAt, Date.now() + index))
+  const suggestedAt = Math.max(
+    0,
+    toInt(raw.suggestedAt || raw.dueAt || raw.startsAt, createdAt + 2 * 60 * 60 * 1000),
+  )
+
+  return {
+    id: cueId,
+    stockId,
+    symbol,
+    name,
+    priceCents: Math.max(0, toInt(raw.priceCents, 0)),
+    currency: trimLine(raw.currency, 'CNY', 12).toUpperCase(),
+    changePercent: Number.isFinite(Number(raw.changePercent))
+      ? Math.round(Number(raw.changePercent) * 100) / 100
+      : 0,
+    summary: trimLine(raw.summary || raw.summaryEn || raw.summaryZh, '', 240),
+    suggestedAt,
+    status: normalizeCalendarCueStatus(raw.status),
+    route: trimLine(raw.route, '/stock', 120),
+    icon: trimLine(raw.icon, 'fas fa-chart-line', 80),
+    tone: trimLine(raw.tone, Number(raw.changePercent) >= 0 ? 'red' : 'emerald', 40),
+    source: trimLine(raw.source, 'stock_market_move', 80),
+    createdAt,
+    updatedAt: Math.max(0, toInt(raw.updatedAt, createdAt)),
+  }
+}
+
+const normalizeStockMarketCues = (raw) => {
+  if (!Array.isArray(raw)) return []
+  const seenIds = new Set()
+  const normalized = []
+  raw.forEach((item, index) => {
+    const cue = normalizeStockMarketCue(item, index)
+    if (!cue || seenIds.has(cue.id)) return
+    seenIds.add(cue.id)
+    normalized.push(cue)
+  })
+  return normalized
+    .sort((a, b) => {
+      if (a.status !== b.status) {
+        if (a.status === CALENDAR_CUE_STATUS_SUGGESTED) return -1
+        if (b.status === CALENDAR_CUE_STATUS_SUGGESTED) return 1
+      }
+      return b.updatedAt - a.updatedAt
+    })
+    .slice(0, CALENDAR_STOCK_CUE_LIMIT)
 }
 
 const normalizeCalendarEventPushHistory = (raw) => {
@@ -150,9 +294,11 @@ const sortCalendarEvents = (items = []) =>
 export const useCalendarStore = defineStore('calendar', () => {
   const getSystemStore = () => useSystemStore()
   const events = ref([])
+  const phoneMissedCallCues = ref([])
+  const stockMarketCues = ref([])
   const hasFinishedStorageHydration = ref(false)
-  let eventPushSchedulePromise = null
-  let eventPushCancelPromise = null
+  const eventPushSchedulePromises = new Map()
+  const eventPushCancelPromises = new Map()
 
   const upcomingEvents = computed(() =>
     sortCalendarEvents(
@@ -161,6 +307,18 @@ export const useCalendarStore = defineStore('calendar', () => {
   )
 
   const eventCount = computed(() => events.value.length)
+
+  const activePhoneMissedCallCues = computed(() =>
+    phoneMissedCallCues.value.filter((cue) => cue.status !== CALENDAR_CUE_STATUS_DISMISSED),
+  )
+
+  const phoneMissedCallCueCount = computed(() => activePhoneMissedCallCues.value.length)
+
+  const activeStockMarketCues = computed(() =>
+    stockMarketCues.value.filter((cue) => cue.status !== CALENDAR_CUE_STATUS_DISMISSED),
+  )
+
+  const stockMarketCueCount = computed(() => activeStockMarketCues.value.length)
 
   const findEventById = (eventId) => {
     const id = normalizeEventId(eventId)
@@ -172,6 +330,30 @@ export const useCalendarStore = defineStore('calendar', () => {
     const sourceReminderId = normalizeEventId(reminderId)
     if (!sourceReminderId) return null
     return events.value.find((event) => event.sourceReminderId === sourceReminderId) || null
+  }
+
+  const findPhoneMissedCallCueById = (cueId) => {
+    const id = normalizeEventId(cueId)
+    if (!id) return null
+    return phoneMissedCallCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findPhoneMissedCallCueByCallId = (callId) => {
+    const normalizedCallId = normalizeEventId(callId)
+    if (!normalizedCallId) return null
+    return phoneMissedCallCues.value.find((cue) => cue.callId === normalizedCallId) || null
+  }
+
+  const findStockMarketCueById = (cueId) => {
+    const id = normalizeEventId(cueId)
+    if (!id) return null
+    return stockMarketCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findStockMarketCueByStockId = (stockId) => {
+    const normalizedStockId = normalizeEventId(stockId)
+    if (!normalizedStockId) return null
+    return stockMarketCues.value.find((cue) => cue.stockId === normalizedStockId) || null
   }
 
   const upsertEvent = (rawEvent = {}) => {
@@ -236,6 +418,241 @@ export const useCalendarStore = defineStore('calendar', () => {
       lastPushError: existing?.lastPushError || '',
       pushHistory: existing?.pushHistory || [],
     })
+  }
+
+  const upsertPhoneMissedCallCue = (input = {}) => {
+    const now = Date.now()
+    const normalized = normalizePhoneMissedCallCue({
+      ...input,
+      updatedAt: now,
+      createdAt: input.createdAt || now,
+    })
+    if (!normalized) return null
+    const index = phoneMissedCallCues.value.findIndex((cue) => cue.id === normalized.id)
+    if (index >= 0) {
+      const existing = phoneMissedCallCues.value[index]
+      phoneMissedCallCues.value.splice(index, 1, {
+        ...existing,
+        ...normalized,
+        createdAt: existing.createdAt || normalized.createdAt,
+      })
+    } else {
+      phoneMissedCallCues.value.unshift(normalized)
+      if (phoneMissedCallCues.value.length > CALENDAR_PHONE_CUE_LIMIT) {
+        phoneMissedCallCues.value.splice(CALENDAR_PHONE_CUE_LIMIT)
+      }
+    }
+    return findPhoneMissedCallCueById(normalized.id)
+  }
+
+  const upsertPhoneMissedCallCueFromCall = (call = {}) => {
+    const callId = normalizeEventId(call.id)
+    if (!callId) return null
+    const existing = findPhoneMissedCallCueByCallId(callId)
+    return upsertPhoneMissedCallCue({
+      id: existing?.id || createPhoneMissedCallCueId(callId),
+      callId,
+      contactName: call.contactName || '',
+      phoneNumber: call.phoneNumber || '',
+      summary: call.summary || '',
+      suggestedAt: existing?.suggestedAt || Math.max(0, toInt(call.startedAt, Date.now())) + 30 * 60 * 1000,
+      status: existing?.status || CALENDAR_CUE_STATUS_SUGGESTED,
+      route: '/phone',
+      icon: 'fas fa-phone-slash',
+      tone: 'rose',
+      source: 'phone_missed_call',
+      createdAt: existing?.createdAt || call.createdAt || Date.now(),
+    })
+  }
+
+  const upsertEventFromPhoneMissedCallCue = (cue = {}) => {
+    const cueId = normalizeEventId(cue.id)
+    if (!cueId) return null
+    const eventId = createCalendarEventIdFromPhoneCue(cueId)
+    const existing = findEventById(eventId)
+    const suggestedAt = Math.max(0, toInt(cue.suggestedAt, Date.now() + 30 * 60 * 1000))
+    const hasEditedTime = Math.max(0, toInt(existing?.timeEditedAt, 0)) > 0
+    return upsertEvent({
+      id: eventId,
+      source: 'phone_missed_call',
+      sourceReminderId: cueId,
+      sourceAreaId: '',
+      titleZh: `回拨 ${cue.contactName}`,
+      titleEn: `Call back ${cue.contactName}`,
+      summaryZh: cue.summary || `${cue.contactName} 有一通未接来电。`,
+      summaryEn: cue.summary || `${cue.contactName} left a missed call.`,
+      startsAt: hasEditedTime ? existing.startsAt : suggestedAt,
+      originalStartsAt: existing?.originalStartsAt || suggestedAt,
+      timeEditedAt: existing?.timeEditedAt || 0,
+      status: CALENDAR_EVENT_STATUS_CONFIRMED,
+      pinned: false,
+      route: '/phone',
+      icon: 'fas fa-phone-slash',
+      tone: cue.tone || 'rose',
+      scheduledPushId: existing?.scheduledPushId || '',
+      scheduledPushAt: existing?.scheduledPushAt || 0,
+      pushStatus: existing?.pushStatus || 'idle',
+      pushUpdatedAt: existing?.pushUpdatedAt || 0,
+      lastPushScheduledAt: existing?.lastPushScheduledAt || 0,
+      lastPushCancelledAt: existing?.lastPushCancelledAt || 0,
+      lastPushError: existing?.lastPushError || '',
+      pushHistory: existing?.pushHistory || [],
+    })
+  }
+
+  const upsertStockMarketCue = (input = {}) => {
+    const now = Date.now()
+    const normalized = normalizeStockMarketCue({
+      ...input,
+      updatedAt: now,
+      createdAt: input.createdAt || now,
+    })
+    if (!normalized) return null
+    const index = stockMarketCues.value.findIndex((cue) => cue.id === normalized.id)
+    if (index >= 0) {
+      const existing = stockMarketCues.value[index]
+      stockMarketCues.value.splice(index, 1, {
+        ...existing,
+        ...normalized,
+        createdAt: existing.createdAt || normalized.createdAt,
+      })
+    } else {
+      stockMarketCues.value.unshift(normalized)
+      if (stockMarketCues.value.length > CALENDAR_STOCK_CUE_LIMIT) {
+        stockMarketCues.value.splice(CALENDAR_STOCK_CUE_LIMIT)
+      }
+    }
+    return findStockMarketCueById(normalized.id)
+  }
+
+  const upsertStockMarketCueFromStock = (stock = {}) => {
+    const stockId = normalizeEventId(stock.id || stock.symbol)
+    if (!stockId) return null
+    const existing = findStockMarketCueByStockId(stockId)
+    const symbol = trimLine(stock.symbol, '', 24).toUpperCase()
+    const changePercent = Number.isFinite(Number(stock.changePercent))
+      ? Math.round(Number(stock.changePercent) * 100) / 100
+      : 0
+    const directionZh = changePercent >= 0 ? '上涨' : '下跌'
+    const directionEn = changePercent >= 0 ? 'up' : 'down'
+    return upsertStockMarketCue({
+      id: existing?.id || createStockMarketCueId(stockId),
+      stockId,
+      symbol,
+      name: stock.name || symbol,
+      priceCents: stock.priceCents || 0,
+      currency: stock.currency || 'CNY',
+      changePercent,
+      summary:
+        stock.note ||
+        `${symbol || stock.name || 'Asset'} ${directionEn} ${Math.abs(changePercent).toFixed(2)}%.`,
+      suggestedAt: existing?.suggestedAt || Math.max(0, toInt(stock.updatedAt, Date.now())) + 2 * 60 * 60 * 1000,
+      status: existing?.status || CALENDAR_CUE_STATUS_SUGGESTED,
+      route: '/stock',
+      icon: 'fas fa-chart-line',
+      tone: changePercent >= 0 ? 'red' : 'emerald',
+      source: 'stock_market_move',
+      createdAt: existing?.createdAt || stock.createdAt || Date.now(),
+      summaryZh: `${symbol || stock.name || '标的'} ${directionZh} ${Math.abs(changePercent).toFixed(2)}%。`,
+    })
+  }
+
+  const upsertEventFromStockMarketCue = (cue = {}) => {
+    const cueId = normalizeEventId(cue.id)
+    if (!cueId) return null
+    const eventId = createCalendarEventIdFromStockCue(cueId)
+    const existing = findEventById(eventId)
+    const suggestedAt = Math.max(0, toInt(cue.suggestedAt, Date.now() + 2 * 60 * 60 * 1000))
+    const hasEditedTime = Math.max(0, toInt(existing?.timeEditedAt, 0)) > 0
+    const absChange = Math.abs(Number(cue.changePercent) || 0).toFixed(2)
+    const directionZh = Number(cue.changePercent) >= 0 ? '上涨' : '下跌'
+    const directionEn = Number(cue.changePercent) >= 0 ? 'up' : 'down'
+    return upsertEvent({
+      id: eventId,
+      source: 'stock_market_move',
+      sourceReminderId: cueId,
+      sourceAreaId: '',
+      titleZh: `复盘 ${cue.symbol || cue.name}`,
+      titleEn: `Review ${cue.symbol || cue.name}`,
+      summaryZh: cue.summary || `${cue.name || cue.symbol} ${directionZh} ${absChange}%，建议稍后复盘。`,
+      summaryEn: cue.summary || `${cue.name || cue.symbol} is ${directionEn} ${absChange}%; review it later.`,
+      startsAt: hasEditedTime ? existing.startsAt : suggestedAt,
+      originalStartsAt: existing?.originalStartsAt || suggestedAt,
+      timeEditedAt: existing?.timeEditedAt || 0,
+      status: CALENDAR_EVENT_STATUS_CONFIRMED,
+      pinned: false,
+      route: '/stock',
+      icon: 'fas fa-chart-line',
+      tone: cue.tone || (Number(cue.changePercent) >= 0 ? 'red' : 'emerald'),
+      scheduledPushId: existing?.scheduledPushId || '',
+      scheduledPushAt: existing?.scheduledPushAt || 0,
+      pushStatus: existing?.pushStatus || 'idle',
+      pushUpdatedAt: existing?.pushUpdatedAt || 0,
+      lastPushScheduledAt: existing?.lastPushScheduledAt || 0,
+      lastPushCancelledAt: existing?.lastPushCancelledAt || 0,
+      lastPushError: existing?.lastPushError || '',
+      pushHistory: existing?.pushHistory || [],
+    })
+  }
+
+  const confirmPhoneMissedCallCue = (cueId) => {
+    const cue = findPhoneMissedCallCueById(cueId)
+    if (!cue || cue.status === CALENDAR_CUE_STATUS_DISMISSED) return null
+    const event = upsertEventFromPhoneMissedCallCue(cue)
+    if (!event?.id) return null
+    upsertPhoneMissedCallCue({
+      ...cue,
+      status: CALENDAR_CUE_STATUS_CONFIRMED,
+    })
+    return event
+  }
+
+  const dismissPhoneMissedCallCue = (cueId) => {
+    const cue = findPhoneMissedCallCueById(cueId)
+    if (!cue) return false
+    void cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'calendar_phone_cue_dismiss',
+    })
+    removeEventBySourceReminderId(cue.id)
+    return Boolean(
+      upsertPhoneMissedCallCue({
+        ...cue,
+        status: CALENDAR_CUE_STATUS_DISMISSED,
+      }),
+    )
+  }
+
+  const confirmStockMarketCue = (cueId) => {
+    const cue = findStockMarketCueById(cueId)
+    if (!cue || cue.status === CALENDAR_CUE_STATUS_DISMISSED) return null
+    const event = upsertEventFromStockMarketCue(cue)
+    if (!event?.id) return null
+    upsertStockMarketCue({
+      ...cue,
+      status: CALENDAR_CUE_STATUS_CONFIRMED,
+    })
+    return event
+  }
+
+  const dismissStockMarketCue = (cueId) => {
+    const cue = findStockMarketCueById(cueId)
+    if (!cue) return false
+    void cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'calendar_stock_cue_dismiss',
+    })
+    removeEventBySourceReminderId(cue.id)
+    return Boolean(
+      upsertStockMarketCue({
+        ...cue,
+        status: CALENDAR_CUE_STATUS_DISMISSED,
+      }),
+    )
+  }
+
+  const dismissStockMarketCueByStockId = (stockId) => {
+    const cue = findStockMarketCueByStockId(stockId)
+    if (!cue) return false
+    return dismissStockMarketCue(cue.id)
   }
 
   const removeEventBySourceReminderId = (reminderId) => {
@@ -328,9 +745,11 @@ export const useCalendarStore = defineStore('calendar', () => {
       createCalendarEventScheduleId(eventId)
 
     if (!nextScheduleId) return { ok: false, reason: 'schedule_missing' }
-    if (eventPushCancelPromise) return eventPushCancelPromise
+    if (eventPushCancelPromises.has(nextScheduleId)) {
+      return eventPushCancelPromises.get(nextScheduleId)
+    }
 
-    eventPushCancelPromise = (async () => {
+    const cancelPromise = (async () => {
       try {
         const serverUrl = systemStore.settings?.system?.pushServerUrl || ''
         if (!serverUrl) {
@@ -396,11 +815,12 @@ export const useCalendarStore = defineStore('calendar', () => {
           scheduleId: nextScheduleId,
         }
       } finally {
-        eventPushCancelPromise = null
+        eventPushCancelPromises.delete(nextScheduleId)
       }
     })()
 
-    return eventPushCancelPromise
+    eventPushCancelPromises.set(nextScheduleId, cancelPromise)
+    return cancelPromise
   }
 
   const cancelEventPushScheduledBySourceReminderId = async (reminderId, options = {}) => {
@@ -420,7 +840,9 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
     if (!event.startsAt) return { ok: false, reason: 'deliver_at_invalid' }
     if (!canUseCalendarEventRealPush()) return { ok: false, reason: 'real_push_disabled' }
-    if (eventPushSchedulePromise) return eventPushSchedulePromise
+    if (eventPushSchedulePromises.has(event.id)) {
+      return eventPushSchedulePromises.get(event.id)
+    }
     if (!force && event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
       return {
         ok: true,
@@ -436,7 +858,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       pushDisplayMode: systemStore.settings.system.pushDisplayMode || 'minimal',
     }
 
-    eventPushSchedulePromise = (async () => {
+    const schedulePromise = (async () => {
       try {
         const result = await schedulePushNotification({
           serverUrl: systemStore.settings.system.pushServerUrl,
@@ -508,11 +930,12 @@ export const useCalendarStore = defineStore('calendar', () => {
           deliverAt: result.deliverAt || event.startsAt,
         }
       } finally {
-        eventPushSchedulePromise = null
+        eventPushSchedulePromises.delete(event.id)
       }
     })()
 
-    return eventPushSchedulePromise
+    eventPushSchedulePromises.set(event.id, schedulePromise)
+    return schedulePromise
   }
 
   const rescheduleEventPush = async (eventId, { source = '' } = {}) => {
@@ -581,6 +1004,10 @@ export const useCalendarStore = defineStore('calendar', () => {
   const applyPersistedSource = (source) => {
     if (!source || typeof source !== 'object') return false
     events.value = normalizeCalendarEvents(source.events)
+    phoneMissedCallCues.value = normalizePhoneMissedCallCues(
+      source.phoneMissedCallCues || source.phoneCues,
+    )
+    stockMarketCues.value = normalizeStockMarketCues(source.stockMarketCues || source.stockCues)
     return true
   }
 
@@ -600,6 +1027,8 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const createBackupSnapshot = () => ({
     events: events.value.map((event) => ({ ...event })),
+    phoneMissedCallCues: phoneMissedCallCues.value.map((cue) => ({ ...cue })),
+    stockMarketCues: stockMarketCues.value.map((cue) => ({ ...cue })),
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()
@@ -624,6 +1053,8 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const resetForTesting = () => {
     events.value = []
+    phoneMissedCallCues.value = []
+    stockMarketCues.value = []
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -636,7 +1067,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   })()
 
   watch(
-    events,
+    [events, phoneMissedCallCues, stockMarketCues],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -646,13 +1077,34 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   return {
     events,
+    phoneMissedCallCues,
+    stockMarketCues,
+    activePhoneMissedCallCues,
+    activeStockMarketCues,
     upcomingEvents,
     eventCount,
+    phoneMissedCallCueCount,
+    stockMarketCueCount,
     hasFinishedStorageHydration,
     findEventById,
     findEventBySourceReminderId,
+    findPhoneMissedCallCueById,
+    findPhoneMissedCallCueByCallId,
+    findStockMarketCueById,
+    findStockMarketCueByStockId,
     upsertEvent,
     upsertEventFromMapReminder,
+    upsertPhoneMissedCallCue,
+    upsertPhoneMissedCallCueFromCall,
+    upsertEventFromPhoneMissedCallCue,
+    upsertStockMarketCue,
+    upsertStockMarketCueFromStock,
+    upsertEventFromStockMarketCue,
+    confirmPhoneMissedCallCue,
+    dismissPhoneMissedCallCue,
+    confirmStockMarketCue,
+    dismissStockMarketCue,
+    dismissStockMarketCueByStockId,
     removeEventBySourceReminderId,
     setEventPinnedBySourceReminderId,
     ensureEventPushScheduled,

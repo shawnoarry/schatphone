@@ -86,6 +86,55 @@ describe('calendar event store', () => {
     expect(restoredStore.upcomingEvents.length).toBe(0)
   })
 
+  test('turns missed-call cues into confirmable calendar events', () => {
+    const store = useCalendarStore()
+    const callStartedAt = Date.now() - 5 * 60 * 1000
+
+    const cue = store.upsertPhoneMissedCallCueFromCall({
+      id: 'phone_call_nova',
+      contactName: 'Nova',
+      phoneNumber: '+10086',
+      summary: 'Call back after arrival.',
+      startedAt: callStartedAt,
+      createdAt: callStartedAt,
+    })
+
+    expect(cue).toMatchObject({
+      id: 'phone_missed_call_cue_phone_call_nova',
+      callId: 'phone_call_nova',
+      contactName: 'Nova',
+      status: 'suggested',
+      source: 'phone_missed_call',
+    })
+    expect(cue?.suggestedAt).toBe(callStartedAt + 30 * 60 * 1000)
+    expect(store.phoneMissedCallCueCount).toBe(1)
+
+    const event = store.confirmPhoneMissedCallCue(cue.id)
+
+    expect(event).toMatchObject({
+      source: 'phone_missed_call',
+      sourceReminderId: cue.id,
+      titleEn: 'Call back Nova',
+      route: '/phone',
+      icon: 'fas fa-phone-slash',
+      status: 'confirmed',
+    })
+    expect(store.findPhoneMissedCallCueById(cue.id)?.status).toBe('confirmed')
+    expect(store.upcomingEvents.map((item) => item.id)).toEqual([event.id])
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(restoredStore.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    expect(restoredStore.findPhoneMissedCallCueById(cue.id)?.status).toBe('confirmed')
+    expect(restoredStore.findEventBySourceReminderId(cue.id)?.titleEn).toBe('Call back Nova')
+
+    expect(restoredStore.dismissPhoneMissedCallCue(cue.id)).toBe(true)
+    expect(restoredStore.findPhoneMissedCallCueById(cue.id)?.status).toBe('dismissed')
+    expect(restoredStore.findEventBySourceReminderId(cue.id)).toBeNull()
+    expect(restoredStore.phoneMissedCallCueCount).toBe(0)
+  })
+
   test('schedules, reschedules, and cancels real push for calendar events', async () => {
     const store = useCalendarStore()
     const systemStore = useSystemStore()
@@ -217,5 +266,71 @@ describe('calendar event store', () => {
     const restoredEvent = restoredStore.findEventById(event.id)
     expect(restoredEvent?.pushStatus).toBe('cancelled')
     expect(restoredEvent?.pushHistory[0]?.action).toBe('cancel')
+  })
+
+  test('keeps concurrent push scheduling isolated per event while deduping same-event requests', async () => {
+    const store = useCalendarStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_1',
+      pushSubscriptionActive: true,
+    })
+
+    const scheduleSpy = vi
+      .spyOn(pushLib, 'schedulePushNotification')
+      .mockImplementation(async ({ scheduleId, deliverAt }) => ({
+        ok: true,
+        scheduleId,
+        deliverAt,
+      }))
+
+    const firstStartsAt = Date.now() + 2 * 60 * 60 * 1000
+    const secondStartsAt = Date.now() + 3 * 60 * 60 * 1000
+    const firstEvent = store.upsertEvent({
+      id: 'calendar_event_parallel_first',
+      titleZh: 'First event',
+      titleEn: 'First event',
+      startsAt: firstStartsAt,
+    })
+    const secondEvent = store.upsertEvent({
+      id: 'calendar_event_parallel_second',
+      titleZh: 'Second event',
+      titleEn: 'Second event',
+      startsAt: secondStartsAt,
+    })
+
+    const [firstResult, secondResult] = await Promise.all([
+      store.ensureEventPushScheduled(firstEvent.id, { source: 'parallel_first' }),
+      store.ensureEventPushScheduled(secondEvent.id, { source: 'parallel_second' }),
+    ])
+
+    expect(firstResult).toMatchObject({
+      ok: true,
+      scheduleId: `calendar_event_push_${firstEvent.id}`,
+      deliverAt: firstStartsAt,
+    })
+    expect(secondResult).toMatchObject({
+      ok: true,
+      scheduleId: `calendar_event_push_${secondEvent.id}`,
+      deliverAt: secondStartsAt,
+    })
+    expect(scheduleSpy).toHaveBeenCalledTimes(2)
+    expect(store.findEventById(firstEvent.id)?.scheduledPushId).toBe(
+      `calendar_event_push_${firstEvent.id}`,
+    )
+    expect(store.findEventById(secondEvent.id)?.scheduledPushId).toBe(
+      `calendar_event_push_${secondEvent.id}`,
+    )
+
+    scheduleSpy.mockClear()
+    const [duplicateFirst, duplicateSecond] = await Promise.all([
+      store.ensureEventPushScheduled(firstEvent.id, { force: true, source: 'duplicate_first' }),
+      store.ensureEventPushScheduled(firstEvent.id, { force: true, source: 'duplicate_second' }),
+    ])
+
+    expect(duplicateFirst).toEqual(duplicateSecond)
+    expect(scheduleSpy).toHaveBeenCalledTimes(1)
   })
 })

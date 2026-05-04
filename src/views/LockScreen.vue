@@ -28,6 +28,7 @@ const notificationLocale = computed(() =>
 )
 
 const lockClockStyle = computed(() => settings.value.appearance.lockClockStyle || 'classic')
+const focusModeEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('focus_mode'))
 const lockNotifications = computed(() => {
   return [...notifications.value]
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
@@ -60,6 +61,18 @@ const lockNotificationGroups = computed(() => {
 
   return [...groups.values()].sort((a, b) => b.latestAt - a.latestAt)
 })
+const visibleLockNotificationGroups = computed(() =>
+  focusModeEnabled.value
+    ? lockNotificationGroups.value.map((group) => ({
+        ...group,
+        notes: group.notes.slice(0, 1),
+        hiddenCount: Math.max(0, group.notes.length - 1),
+      }))
+    : lockNotificationGroups.value.map((group) => ({
+        ...group,
+        hiddenCount: 0,
+      })),
+)
 const lockBannerVisible = ref(false)
 const lockBannerNote = ref(null)
 
@@ -203,9 +216,14 @@ onBeforeUnmount(() => {
         <span class="text-xs opacity-80">{{ unreadCount }} {{ t('条未读', 'unread') }}</span>
       </div>
 
-      <div v-if="lockNotificationGroups.length > 0" class="space-y-3">
+      <div v-if="focusModeEnabled" class="lock-focus-chip" data-testid="lock-focus-mode-chip">
+        <i class="fas fa-moon"></i>
+        <span>{{ t('专注模式：每组仅显示最新一条', 'Focus mode: newest item per group') }}</span>
+      </div>
+
+      <div v-if="visibleLockNotificationGroups.length > 0" class="space-y-3">
         <section
-          v-for="group in lockNotificationGroups"
+          v-for="group in visibleLockNotificationGroups"
           :key="group.key"
           class="lock-notification-group"
         >
@@ -248,6 +266,9 @@ onBeforeUnmount(() => {
               </div>
             </button>
           </TransitionGroup>
+          <p v-if="group.hiddenCount > 0" class="lock-focus-hidden">
+            {{ t(`已收起 ${group.hiddenCount} 条`, `${group.hiddenCount} hidden`) }}
+          </p>
         </section>
       </div>
 
@@ -479,6 +500,26 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   margin-bottom: 8px;
   padding: 0 4px;
+}
+
+.lock-focus-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px 4px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lock-focus-hidden {
+  margin-top: 8px;
+  padding-left: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .lock-notification-group {

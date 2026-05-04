@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { useCalendarStore } from './calendar'
 import { useSystemStore } from './system'
 
 const PHONE_STORAGE_KEY = 'store:phone'
@@ -223,9 +224,12 @@ export const usePhoneStore = defineStore('phone', () => {
   const addMissedCallWithNotification = (input = {}) => {
     const call = addMissedCall(input)
     if (!call) return null
+    const calendarStore = useCalendarStore()
+    const calendarCue = calendarStore.upsertPhoneMissedCallCueFromCall(call)
     return {
       call,
       notificationId: notifyMissedCall(call),
+      calendarCueId: calendarCue?.id || '',
     }
   }
 

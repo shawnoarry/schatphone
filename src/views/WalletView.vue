@@ -3,12 +3,12 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
-import { useWalletStore } from '../stores/wallet'
+import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
 const { t } = useI18n()
 const walletStore = useWalletStore()
-const { transactions, transactionCount, primaryBalance, balances } = storeToRefs(walletStore)
+const { transactionCount, transactionSourceSummary, primaryBalance, balances } = storeToRefs(walletStore)
 
 const transferDraft = ref({
   amount: '',
@@ -18,8 +18,29 @@ const transferDraft = ref({
 })
 const feedback = ref('')
 const feedbackType = ref('success')
+const sourceFilter = ref(WALLET_TRANSACTION_SOURCE_FILTERS.ALL)
 
-const recentTransactions = computed(() => transactions.value.slice(0, 20))
+const sourceFilterOptions = computed(() => [
+  {
+    key: WALLET_TRANSACTION_SOURCE_FILTERS.ALL,
+    label: t('全部', 'All'),
+    count: transactionSourceSummary.value.all,
+  },
+  {
+    key: WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL,
+    label: t('手动', 'Manual'),
+    count: transactionSourceSummary.value.manual,
+  },
+  {
+    key: WALLET_TRANSACTION_SOURCE_FILTERS.CHAT,
+    label: t('Chat', 'Chat'),
+    count: transactionSourceSummary.value.chat,
+  },
+])
+
+const recentTransactions = computed(() =>
+  walletStore.listTransactionsBySourceFilter(sourceFilter.value).slice(0, 20),
+)
 
 const goHome = () => {
   router.push('/home')
@@ -35,6 +56,14 @@ const showFeedback = (type, message) => {
   feedbackType.value = type
   feedback.value = message
 }
+
+const isChatSource = (transaction) => transaction?.sourceModule === 'chat_transfer'
+
+const getTransactionSourceLabel = (transaction) =>
+  isChatSource(transaction) ? t('来自 Chat', 'From Chat') : t('手动记录', 'Manual')
+
+const getTransactionSourceClass = (transaction) =>
+  isChatSource(transaction) ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
 
 const submitTransfer = () => {
   const created = walletStore.addTransferTransaction({
@@ -78,8 +107,8 @@ const removeTransaction = (transactionId) => {
         <p class="mt-2 text-[11px] text-gray-500">
           {{
             t(
-              '这是本地虚拟账本基线，后续可接入 Chat 转账卡片与消费事件。',
-              'This is a local virtual ledger baseline; Chat transfer cards and spending events can attach later.',
+              '这是本地虚拟账本；Chat 转账卡片会以来源流水进入这里。',
+              'This is a local virtual ledger; Chat transfer cards now appear here as sourced records.',
             )
           }}
         </p>
@@ -143,9 +172,26 @@ const removeTransaction = (transactionId) => {
       </section>
 
       <section class="rounded-2xl bg-white border border-gray-200 p-4">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="text-sm font-semibold">{{ t('交易流水', 'Transactions') }}</p>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold">{{ t('交易流水', 'Transactions') }}</p>
+            <p class="text-[11px] text-gray-500">
+              {{ t(`${transactionSourceSummary.chat} 条来自 Chat`, `${transactionSourceSummary.chat} from Chat`) }}
+            </p>
+          </div>
           <span class="text-[11px] text-gray-500">{{ transactionCount }}</span>
+        </div>
+        <div class="mb-3 flex flex-wrap gap-2">
+          <button
+            v-for="option in sourceFilterOptions"
+            :key="option.key"
+            type="button"
+            class="rounded-full px-3 py-1.5 text-[11px]"
+            :class="sourceFilter === option.key ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'"
+            @click="sourceFilter = option.key"
+          >
+            {{ option.label }} · {{ option.count }}
+          </button>
         </div>
         <div v-if="recentTransactions.length > 0" class="space-y-2">
           <div
@@ -164,6 +210,12 @@ const removeTransaction = (transactionId) => {
               <p class="text-[11px] text-gray-500 truncate">
                 {{ item.counterparty || t('未设置对象', 'No counterparty') }} · {{ formatTime(item.createdAt) }}
               </p>
+              <span
+                class="mt-2 inline-flex rounded-full px-2 py-1 text-[11px]"
+                :class="getTransactionSourceClass(item)"
+              >
+                {{ getTransactionSourceLabel(item) }}
+              </span>
               <p v-if="item.note" class="mt-1 text-[11px] text-gray-400 truncate">{{ item.note }}</p>
             </div>
             <div class="text-right">

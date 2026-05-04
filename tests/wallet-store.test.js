@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useWalletStore } from '../src/stores/wallet'
+import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../src/stores/wallet'
 
 describe('wallet store', () => {
   beforeEach(() => {
@@ -101,6 +101,80 @@ describe('wallet store', () => {
     expect(store.transactionCount).toBe(1)
     expect(store.findTransactionBySource('chat_transfer', 'msg_transfer_1')?.id).toBe(first.id)
     expect(store.primaryBalance.amountCents).toBe(-1880)
+  })
+
+  test('summarizes and filters manual versus Chat-origin ledger records', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const manual = store.addTransferTransaction({
+      amount: '50.00',
+      currency: 'CNY',
+      counterparty: 'Mika',
+    })
+    const chat = store.addChatTransferTransaction({
+      messageId: 'msg_wallet_source_1',
+      amount: '12.00',
+      currency: 'CNY',
+      counterparty: 'Nova',
+    })
+
+    expect(store.transactionSourceSummary).toEqual({
+      all: 2,
+      manual: 1,
+      chat: 1,
+    })
+    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.CHAT)).toEqual([chat])
+    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL)).toEqual([
+      manual,
+    ])
+    expect(store.listTransactionsBySourceFilter('unknown').map((item) => item.id)).toEqual([
+      chat.id,
+      manual.id,
+    ])
+  })
+
+  test('summarizes counterparty ledger context for Contacts', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    store.addTransferTransaction({
+      amount: '50.00',
+      currency: 'CNY',
+      counterparty: 'Nova',
+      note: 'Manual top-up',
+    })
+    store.addChatTransferTransaction({
+      messageId: 'msg_wallet_contacts_1',
+      amount: '12.00',
+      currency: 'CNY',
+      counterparty: 'nova',
+      note: 'Chat coffee',
+    })
+    store.addTransferTransaction({
+      amount: '7.00',
+      currency: 'USD',
+      counterparty: 'Mika',
+    })
+
+    const summary = store.summarizeCounterpartyLedger('NOVA')
+
+    expect(summary).toMatchObject({
+      counterparty: 'nova',
+      count: 2,
+      chatCount: 1,
+      manualCount: 1,
+    })
+    expect(summary.currencies).toEqual([
+      {
+        currency: 'CNY',
+        amountCents: 3800,
+        amount: '38.00',
+      },
+    ])
+    expect(summary.latestTransaction?.sourceModule).toBe('chat_transfer')
+    expect(store.listTransactionsByCounterparty('nova').length).toBe(2)
+    expect(store.summarizeCounterpartyLedger('Unknown').count).toBe(0)
   })
 
   test('rejects Chat ledger records without message source', () => {

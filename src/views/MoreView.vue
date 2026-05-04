@@ -34,6 +34,27 @@ const featureToggles = computed(() =>
     enabled: settings.value.more?.featureToggles?.[item.id] === true,
   })),
 )
+const sceneSwitchEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('scene_switch'))
+const scenePresets = computed(() => [
+  {
+    id: 'work',
+    title: t('工作', 'Work'),
+    desc: t('Network、Calendar、Settings 优先', 'Network, Calendar, and Settings first'),
+    icon: 'fas fa-briefcase',
+  },
+  {
+    id: 'life',
+    title: t('生活', 'Life'),
+    desc: t('Chat、Gallery、Wallet 更靠前', 'Chat, Gallery, and Wallet move forward'),
+    icon: 'fas fa-mug-hot',
+  },
+  {
+    id: 'story',
+    title: t('沉浸', 'Immersive'),
+    desc: t('Map、WorldBook 与角色线索组合', 'Map, WorldBook, and role cues together'),
+    icon: 'fas fa-compass',
+  },
+])
 
 const quickEntries = computed(() => [
   {
@@ -51,14 +72,6 @@ const quickEntries = computed(() => [
     route: '/appearance',
     icon: 'fas fa-palette',
     accent: 'bg-violet-500',
-  },
-  {
-    id: 'files',
-    title: t('文件', 'Files'),
-    desc: t('文档与草稿管理', 'Document and draft management'),
-    route: '/files',
-    icon: 'fas fa-folder',
-    accent: 'bg-amber-500',
   },
   {
     id: 'settings',
@@ -100,6 +113,7 @@ const toggleFeature = (toggleId) => {
             v-for="entry in quickEntries"
             :key="entry.id"
             @click="openEntry(entry.route)"
+            :data-testid="`more-quick-entry-${entry.id}`"
             class="rounded-xl border border-gray-200 p-3 text-left hover:bg-gray-50 transition"
           >
             <div class="w-8 h-8 rounded-lg text-white flex items-center justify-center text-xs" :class="entry.accent">
@@ -139,6 +153,39 @@ const toggleFeature = (toggleId) => {
               {{ item.enabled ? t('已开启', 'On') : t('未开启', 'Off') }}
             </button>
           </div>
+        </div>
+      </section>
+
+      <section
+        v-if="sceneSwitchEnabled"
+        class="bg-white rounded-2xl border border-gray-200 p-4"
+        data-testid="more-scene-switch-preview"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold">{{ t('场景切换预览', 'Scene Switch Preview') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{ t('当前是只读预览，用于验证实验开关已能驱动模块 UI。', 'Read-only preview proving this Labs toggle can drive module UI.') }}
+            </p>
+          </div>
+          <span class="rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-600">
+            Labs
+          </span>
+        </div>
+        <div class="mt-3 grid gap-2">
+          <article
+            v-for="scene in scenePresets"
+            :key="scene.id"
+            class="rounded-xl border border-gray-100 bg-gray-50 p-3 flex items-center gap-3"
+          >
+            <span class="w-9 h-9 rounded-xl bg-blue-500 text-white flex items-center justify-center text-xs">
+              <i :class="scene.icon"></i>
+            </span>
+            <div>
+              <p class="text-sm font-medium">{{ scene.title }}</p>
+              <p class="text-[11px] text-gray-500">{{ scene.desc }}</p>
+            </div>
+          </article>
         </div>
       </section>
 

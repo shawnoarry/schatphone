@@ -49,7 +49,6 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_stock',
   'app_settings',
   'app_contacts',
-  'app_files',
   'app_more',
 ]
 

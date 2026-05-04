@@ -28,6 +28,7 @@ const { t } = useI18n()
 <template>
   <button
     class="bg-white rounded-xl p-2.5 border border-gray-100 text-left active:bg-gray-50"
+    :data-settings-quick-title="titleEn"
     @click="$emit('select')"
   >
     <p class="text-[11px] font-semibold text-gray-800">{{ t(titleZh, titleEn) }}</p>

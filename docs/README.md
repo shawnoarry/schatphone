@@ -38,6 +38,9 @@ This is the single index for project documents. If two documents seem to overlap
 10. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
    Deferred visual TODO archive: parked visual-rebuild suggestions for future use while current work returns to functional code.
    暂存视觉 TODO：当前阶段转回功能代码时，为后续视觉重建保留的建议清单。
+11. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+   Product decision for Files: hidden as a standalone frontend entry, retained as an internal storage and coordination component.
+   Files 产品决策：不作为独立前台入口展示，保留为内部储存与跨模块协调组件。
 
 ## 2. Functional Categories / 按职能分类
 

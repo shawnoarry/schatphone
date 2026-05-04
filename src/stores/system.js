@@ -42,7 +42,6 @@ const DEFAULT_WIDGET_PAGES = [
     'app_phone',
     'app_map',
     'app_calendar',
-    'app_files',
     'app_stock',
     'app_more',
   ],
@@ -76,9 +75,9 @@ const CORE_HOME_TILE_IDS = [
   'app_contacts',
   'app_settings',
   'app_gallery',
-  'app_files',
   'app_more',
 ]
+const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
 const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
   (tileId) => typeof tileId === 'string' && !tileId.startsWith('app_'),
 )
@@ -658,6 +657,7 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = []) => {
       page
         .map((tileId) => HOME_TILE_ALIASES[tileId] || tileId)
         .filter((tileId) => {
+          if (HIDDEN_FRONTEND_HOME_TILE_IDS.has(tileId)) return false
           if (!allowedIds.has(tileId)) return false
           if (seen.has(tileId)) return false
           seen.add(tileId)

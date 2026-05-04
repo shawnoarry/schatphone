@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
+import { useWalletStore } from '../stores/wallet'
 import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import { useDialog } from '../composables/useDialog'
@@ -16,6 +17,7 @@ const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
+const walletStore = useWalletStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -520,6 +522,35 @@ const profileFolderBindingSummary = (profile) => {
   return t(
     `文件夹就绪 ${readyCount}/${boundCount} · 素材 ${totalAssets} 项`,
     `Folders ready ${readyCount}/${boundCount} · ${totalAssets} assets`,
+  )
+}
+
+const formatLedgerAmount = (item) => {
+  if (!item) return ''
+  const sign = Number(item.amountCents) < 0 ? '-' : ''
+  return `${sign}${item.amount} ${item.currency}`
+}
+
+const profileWalletLedgerSummary = (profile) => {
+  const summary = walletStore.summarizeCounterpartyLedger(profile?.name || '')
+  if (!summary.count) return t('暂无账本记录', 'No wallet ledger records')
+  const primary = summary.currencies[0]
+  const sourceHint =
+    summary.chatCount > 0
+      ? t(`${summary.chatCount} 条来自 Chat`, `${summary.chatCount} from Chat`)
+      : t('手动账本记录', 'Manual ledger records')
+  return t(
+    `账本 ${summary.count} 条 · 净额 ${formatLedgerAmount(primary)} · ${sourceHint}`,
+    `${summary.count} ledger item(s) · net ${formatLedgerAmount(primary)} · ${sourceHint}`,
+  )
+}
+
+const profileWalletLatestSummary = (profile) => {
+  const latest = walletStore.summarizeCounterpartyLedger(profile?.name || '').latestTransaction
+  if (!latest) return ''
+  return t(
+    `最近：${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
+    `Latest: ${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
   )
 }
 
@@ -1064,6 +1095,10 @@ onBeforeUnmount(() => {
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileWalletLedgerSummary(contact) }}</p>
+            <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
+              {{ profileWalletLatestSummary(contact) }}
+            </p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
@@ -1087,6 +1122,10 @@ onBeforeUnmount(() => {
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
+            <p class="text-[10px] text-gray-400 truncate">{{ profileWalletLedgerSummary(contact) }}</p>
+            <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
+              {{ profileWalletLatestSummary(contact) }}
+            </p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>

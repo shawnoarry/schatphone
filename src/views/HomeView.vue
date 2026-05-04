@@ -7,7 +7,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 
-defineProps({
+const props = defineProps({
   currentTime: {
     type: String,
     default: '',
@@ -26,6 +26,27 @@ const { confirmDialog } = useDialog()
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
+const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
+const smartPanelItems = computed(() => [
+  {
+    id: 'today',
+    icon: 'fas fa-calendar-check',
+    label: t('今日节奏', 'Today'),
+    value: props.currentDate || today.value.toLocaleDateString(homeLocale.value),
+  },
+  {
+    id: 'theme',
+    icon: 'fas fa-palette',
+    label: t('当前主题', 'Theme'),
+    value: activeThemeName.value || t('默认', 'Default'),
+  },
+  {
+    id: 'apps',
+    icon: 'fas fa-layer-group',
+    label: t('主屏页数', 'Pages'),
+    value: t(`${totalPages.value} 页`, `${totalPages.value} pages`),
+  },
+])
 
 const currentPage = ref(0)
 const touchStartX = ref(0)
@@ -122,7 +143,6 @@ const widgetRegistry = {
     route: '/contacts',
   },
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
-  app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
   app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
 }
 
@@ -138,7 +158,6 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_chat') return t('聊天', 'Chat')
   if (tileId === 'app_contacts') return t('联系人', 'Contacts')
   if (tileId === 'app_settings') return t('设置', 'Settings')
-  if (tileId === 'app_files') return t('文件', 'Files')
   if (tileId === 'app_more') return t('更多', 'More')
   return fallback
 }
@@ -883,6 +902,29 @@ onBeforeUnmount(() => {
           <p class="home-subtitle">{{ t('一切准备就绪。', 'Everything is ready.') }}</p>
         </div>
 
+        <section
+          v-if="pageIndex === 0 && smartPanelEnabled"
+          class="home-smart-panel"
+          data-testid="home-smart-panel"
+        >
+          <div class="home-smart-panel-head">
+            <div>
+              <p class="home-smart-kicker">{{ t('More Labs', 'More Labs') }}</p>
+              <h2>{{ t('智能面板', 'Smart Panel') }}</h2>
+            </div>
+            <span>{{ t('只读', 'Read-only') }}</span>
+          </div>
+          <div class="home-smart-grid">
+            <article v-for="item in smartPanelItems" :key="item.id" class="home-smart-card">
+              <i :class="item.icon"></i>
+              <div>
+                <p>{{ item.label }}</p>
+                <strong>{{ item.value }}</strong>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <div class="home-search-pill" v-if="pageIndex === 1">
           <i class="fas fa-search"></i>
           <span>{{ t('搜索系统...', 'Search System...') }}</span>
@@ -1227,6 +1269,81 @@ onBeforeUnmount(() => {
 
 .home-grid.is-editing {
   min-height: calc(6 * 78px + 5 * 12px);
+}
+
+.home-smart-panel {
+  margin: -8px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  padding: 13px;
+  background: rgba(15, 23, 42, 0.28);
+  color: #fff;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+}
+
+.home-smart-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-smart-panel-head h2 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.home-smart-panel-head span {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.home-smart-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.home-smart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.home-smart-card {
+  min-width: 0;
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.home-smart-card i {
+  font-size: 13px;
+  opacity: 0.82;
+}
+
+.home-smart-card p {
+  margin-top: 7px;
+  font-size: 10px;
+  opacity: 0.72;
+}
+
+.home-smart-card strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-grid-slot-overlay {

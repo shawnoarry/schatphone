@@ -13,12 +13,19 @@ import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import {
+  BACKUP_REMINDER_INTERVAL_OPTIONS,
+  createBackupReminderIntervalLabel,
+  normalizeBackupReminderIntervalHours,
+} from '../lib/backup-reminder-settings'
+import SettingsAboutInfoCard from '../components/settings/SettingsAboutInfoCard.vue'
 import SettingsAutomationSection from '../components/settings/SettingsAutomationSection.vue'
 import SettingsBackupSection from '../components/settings/SettingsBackupSection.vue'
-import SettingsMenuItem from '../components/settings/SettingsMenuItem.vue'
+import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
-import SettingsQuickAccessButton from '../components/settings/SettingsQuickAccessButton.vue'
+import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
+import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
 import {
   getPersistenceCapabilities,
   inspectPersistedStateLayers,
@@ -97,21 +104,13 @@ const storageAuditResults = ref([])
 const storageAuditAt = ref(0)
 const storageAuditFeedbackType = ref('')
 const storageAuditFeedbackMessage = ref('')
-const backupReminderIntervalOptions = [1, 3, 6, 12, 24, 48, 72, 168, 336, 720]
+const backupReminderIntervalOptions = BACKUP_REMINDER_INTERVAL_OPTIONS
 const BACKUP_SCHEMA_VERSION = 2
 const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
 const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 const BACKUP_COPY_TONE_DIRECT = 'direct'
 const BACKUP_COPY_TONE_IMMERSIVE = 'immersive'
-const backupReminderIntervalLabel = (hours) => {
-  const normalizedHours = Number(hours)
-  if (!Number.isFinite(normalizedHours) || normalizedHours <= 0) return t('自定义', 'Custom')
-  if (normalizedHours % 24 === 0) {
-    const days = normalizedHours / 24
-    return t(`${days} 天`, `${days} day(s)`)
-  }
-  return t(`${normalizedHours} 小时`, `${normalizedHours} hour(s)`)
-}
+const backupReminderIntervalLabel = createBackupReminderIntervalLabel(t)
 
 const setPushFeedback = (type, message, durationMs = 2200) => {
   pushFeedbackType.value = type
@@ -661,10 +660,9 @@ const openWorldBook = () => {
 }
 
 const saveGeneralSettings = () => {
-  const rawInterval = Number(settings.value.system.backupReminderIntervalHours)
-  settings.value.system.backupReminderIntervalHours = Number.isFinite(rawInterval)
-    ? Math.min(24 * 30, Math.max(1, Math.floor(rawInterval)))
-    : 24
+  settings.value.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
+    settings.value.system.backupReminderIntervalHours,
+  )
   settings.value.system.backupReminderEnabled = settings.value.system.backupReminderEnabled !== false
   systemStore.saveNow()
   generalSaved.value = true
@@ -1594,97 +1592,17 @@ if (initialMenu) {
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar">
-      <button class="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left" @click="openProfile">
-        <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
-          <img
-            :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"
-            class="w-full h-full object-cover"
-          />
-        </div>
-        <div class="flex-1">
-          <h2 class="text-lg font-semibold">{{ user.name || t('未命名用户', 'Unnamed User') }}</h2>
-          <p class="text-xs text-gray-500">{{ t('Apple ID、头像与基础人设', 'Apple ID, avatar and profile basics') }}</p>
-        </div>
-        <i class="fas fa-chevron-right text-gray-300"></i>
-      </button>
-
-      <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3.5">
-        <p class="text-[11px] font-semibold text-blue-700">{{ t('新手建议', 'Beginner tip') }}</p>
-        <p class="text-[11px] text-blue-700/90 mt-1">
-          {{
-            t(
-              '推荐顺序：先配置“网络与 API”，再进入会话手动触发回复，最后按需要开启自动响应。',
-              'Recommended flow: set up Network & API first, then use manual trigger in chat, and enable automation only when needed.',
-            )
-          }}
-        </p>
-      </div>
-
-      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('快捷入口', 'Quick Access') }}</div>
-      <div class="grid grid-cols-3 gap-2">
-        <SettingsQuickAccessButton
-          title-zh="网络与 API"
-          title-en="Network & API"
-          subtitle-zh="配置接口"
-          subtitle-en="Configure provider"
-          @select="openNetworkReports"
-        />
-        <SettingsQuickAccessButton
-          title-zh="会话设置"
-          title-en="Chat settings"
-          subtitle-zh="角色与会话"
-          subtitle-en="Roles and threads"
-          @select="openChatAutomation"
-        />
-        <SettingsQuickAccessButton
-          title-zh="外观工坊"
-          title-en="Appearance"
-          subtitle-zh="主题与壁纸"
-          subtitle-en="Theme and wallpaper"
-          @select="openAppearanceStudio"
-        />
-      </div>
-
-      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
-      <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
-        <SettingsMenuItem
-          title-zh="世界书"
-          title-en="World Book"
-          subtitle-zh="所有对话共享的世界设定"
-          subtitle-en="Shared context for all chats"
-          icon="fas fa-book-open"
-          icon-class="bg-purple-500"
-          @select="openWorldBook"
-        />
-        <SettingsMenuItem
-          title-zh="通用"
-          title-en="General"
-          subtitle-zh="系统语言、时区等基础项"
-          subtitle-en="Language, timezone and basic system options"
-          icon="fas fa-sliders"
-          icon-class="bg-gray-600"
-          @select="openSubPage('general')"
-        />
-        <SettingsMenuItem
-          title-zh="AI 自动响应"
-          title-en="AI Automation"
-          subtitle-zh="总开关、优先级、安静时段"
-          subtitle-en="Master switch, priorities and quiet hours"
-          icon="fas fa-robot"
-          icon-class="bg-indigo-500"
-          @select="openSubPage('automation')"
-        />
-        <SettingsMenuItem
-          title-zh="通知"
-          title-en="Notifications"
-          subtitle-zh="消息提醒与系统提示"
-          subtitle-en="Message alerts and system notifications"
-          icon="fas fa-bell"
-          icon-class="bg-red-500"
-          :with-border="false"
-          @select="openSubPage('notification')"
-        />
-      </div>
+      <SettingsLandingSection
+        :user="user"
+        @open-profile="openProfile"
+        @open-worldbook="openWorldBook"
+        @open-general="openSubPage('general')"
+        @open-automation="openSubPage('automation')"
+        @open-notification="openSubPage('notification')"
+        @open-network="openNetworkReports"
+        @open-chat-settings="openChatAutomation"
+        @open-appearance="openAppearanceStudio"
+      />
 
       <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
       <SettingsBackupSection
@@ -1713,81 +1631,29 @@ if (initialMenu) {
       />
 
       <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
-          </button>
-          <span class="font-bold mx-auto pr-8">{{ t('通用', 'General') }}</span>
-        </div>
-
-        <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
-          <div class="bg-white rounded-2xl p-4">
-            <label class="text-xs text-gray-500 block mb-2">{{ t('语言', 'Language') }}</label>
-            <select v-model="settings.system.language" class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white">
-              <option value="zh-CN">简体中文</option>
-              <option value="en-US">{{ t('英语', 'English') }}</option>
-              <option value="ko-KR">한국어</option>
-            </select>
-          </div>
-
-          <div class="bg-white rounded-2xl p-4">
-            <label class="text-xs text-gray-500 block mb-1">{{ t('时区', 'Timezone') }}</label>
-            <input
-              v-model="settings.system.timezone"
-              type="text"
-              class="w-full border-b border-gray-200 py-1 outline-none text-sm"
-              placeholder="Asia/Shanghai"
-            />
-          </div>
-
-          <div class="bg-white rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-semibold">{{ t('备份提醒', 'Backup Reminder') }}</p>
-                <p class="text-[10px] text-gray-500">
-                  {{ t('通过系统通知提醒你定期导出备份，不使用弹窗。', 'Uses system-style notifications to remind regular backup export, no pop-up dialogs.') }}
-                </p>
-              </div>
-              <input v-model="settings.system.backupReminderEnabled" type="checkbox" class="w-5 h-5" />
-            </div>
-
-            <div v-if="settings.system.backupReminderEnabled" class="space-y-2">
-              <label class="text-xs text-gray-500 block mb-1">{{ t('提醒间隔', 'Reminder interval') }}</label>
-              <select
-                v-model.number="settings.system.backupReminderIntervalHours"
-                class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
-              >
-                <option
-                  v-for="hours in backupReminderIntervalOptions"
-                  :key="hours"
-                  :value="hours"
-                >
-                  {{ backupReminderIntervalLabel(hours) }}
-                </option>
-              </select>
-              <p class="text-[10px] text-gray-400">
-                {{ t('建议至少 24 小时一次。', 'Recommended: at least once every 24 hours.') }}
-              </p>
-            </div>
-          </div>
-
-          <button
-            @click="saveGeneralSettings"
-            class="w-full py-3 rounded-xl text-sm font-semibold transition"
-            :class="generalSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-          >
-            {{ generalSaved ? t('已保存', 'Saved') : t('保存通用设置', 'Save general settings') }}
-          </button>
-        </div>
+        <SettingsGeneralSection
+          :language="settings.system.language"
+          :timezone="settings.system.timezone"
+          :backup-reminder-enabled="settings.system.backupReminderEnabled"
+          :backup-reminder-interval-hours="settings.system.backupReminderIntervalHours"
+          :backup-reminder-interval-options="backupReminderIntervalOptions"
+          :backup-reminder-interval-label="backupReminderIntervalLabel"
+          :general-saved="generalSaved"
+          @close="closeSubPage"
+          @update-language="settings.system.language = $event"
+          @update-timezone="settings.system.timezone = $event"
+          @update-backup-reminder-enabled="settings.system.backupReminderEnabled = $event"
+          @update-backup-reminder-interval-hours="settings.system.backupReminderIntervalHours = $event"
+          @save="saveGeneralSettings"
+        />
       </div>
 
       <div v-if="activeMenu === 'automation'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
-          </button>
-          <span class="font-bold mx-auto pr-8">{{ t('AI 自动响应', 'AI Automation') }}</span>
-        </div>
+        <SettingsSubPageHeader
+          title-zh="AI 自动响应"
+          title-en="AI Automation"
+          @close="closeSubPage"
+        />
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
           <SettingsAutomationSection
@@ -1805,12 +1671,11 @@ if (initialMenu) {
       </div>
 
       <div v-if="activeMenu === 'notification'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
-          </button>
-          <span class="font-bold mx-auto pr-8">{{ t('通知', 'Notifications') }}</span>
-        </div>
+        <SettingsSubPageHeader
+          title-zh="通知"
+          title-en="Notifications"
+          @close="closeSubPage"
+        />
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
           <SettingsPushSection
@@ -1846,19 +1711,14 @@ if (initialMenu) {
       </div>
 
       <div v-if="activeMenu === 'about'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
-            <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
-          </button>
-          <span class="font-bold mx-auto pr-8">{{ t('关于', 'About') }}</span>
-        </div>
+        <SettingsSubPageHeader
+          title-zh="关于"
+          title-en="About"
+          @close="closeSubPage"
+        />
 
         <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
-          <div class="bg-white rounded-2xl p-4">
-            <p class="text-sm font-semibold">SchatPhone</p>
-            <p class="text-xs text-gray-500 mt-1">{{ t('当前版本：1.2.0', 'Current version: 1.2.0') }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ t('框架：Vue 3 + Vite + Pinia + Tailwind v4', 'Stack: Vue 3 + Vite + Pinia + Tailwind v4') }}</p>
-          </div>
+          <SettingsAboutInfoCard />
 
           <SettingsStorageDiagnosticsSection
             :persistence-capabilities="persistenceCapabilities"

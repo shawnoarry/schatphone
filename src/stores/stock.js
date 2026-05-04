@@ -1,11 +1,13 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { useCalendarStore } from './calendar'
 
 const STOCK_STORAGE_KEY = 'store:stock'
 const STOCK_STORAGE_VERSION = 1
 const STOCK_ITEM_LIMIT = 100
 const DEFAULT_CURRENCY = 'CNY'
+const STOCK_CALENDAR_CUE_CHANGE_THRESHOLD = 3
 
 const toFiniteNumber = (value, fallback = 0) => {
   const num = Number(value)
@@ -140,6 +142,7 @@ const createSeedItems = () => {
 }
 
 export const useStockStore = defineStore('stock', () => {
+  const getCalendarStore = () => useCalendarStore()
   const items = ref([])
   const hasFinishedStorageHydration = ref(false)
 
@@ -172,6 +175,24 @@ export const useStockStore = defineStore('stock', () => {
       .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
       .slice(0, 3),
   )
+  const calendarCueEligibleMovers = computed(() =>
+    topMovers.value.filter(
+      (item) => Math.abs(Number(item.changePercent) || 0) >= STOCK_CALENDAR_CUE_CHANGE_THRESHOLD,
+    ),
+  )
+
+  const calendarCueEligibleCount = computed(() => calendarCueEligibleMovers.value.length)
+
+  const syncCalendarCueForStock = (item) => {
+    if (!item) return null
+    const calendarStore = getCalendarStore()
+    const changePercent = Math.abs(Number(item.changePercent) || 0)
+    if (changePercent < STOCK_CALENDAR_CUE_CHANGE_THRESHOLD) {
+      calendarStore.dismissStockMarketCueByStockId(item.id)
+      return null
+    }
+    return calendarStore.upsertStockMarketCueFromStock(item)
+  }
 
   const findStockById = (stockId) => {
     const id = typeof stockId === 'string' ? stockId.trim() : ''
@@ -203,11 +224,13 @@ export const useStockStore = defineStore('stock', () => {
         createdAt: existing.createdAt,
         updatedAt: now,
       })
+      syncCalendarCueForStock(existing)
       return existing
     }
 
     items.value.unshift(normalized)
     if (items.value.length > STOCK_ITEM_LIMIT) items.value.splice(STOCK_ITEM_LIMIT)
+    syncCalendarCueForStock(normalized)
     return normalized
   }
 
@@ -219,12 +242,14 @@ export const useStockStore = defineStore('stock', () => {
     item.priceCents = priceCents
     item.changePercent = normalizeChangePercent(changePercent)
     item.updatedAt = Date.now()
+    syncCalendarCueForStock(item)
     return item
   }
 
   const removeStock = (stockId) => {
     const item = findStockById(stockId) || findStockBySymbol(stockId)
     if (!item) return false
+    getCalendarStore().dismissStockMarketCueByStockId(item.id)
     items.value = items.value.filter((record) => record.id !== item.id)
     return true
   }
@@ -311,11 +336,14 @@ export const useStockStore = defineStore('stock', () => {
     holdingsValueByCurrency,
     primaryHoldingValue,
     topMovers,
+    calendarCueEligibleMovers,
+    calendarCueEligibleCount,
     hasFinishedStorageHydration,
     findStockById,
     findStockBySymbol,
     upsertStock,
     updatePrice,
+    syncCalendarCueForStock,
     removeStock,
     createBackupSnapshot,
     createBackupSnapshotAsync,
