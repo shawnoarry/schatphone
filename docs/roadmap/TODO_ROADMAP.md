@@ -941,3 +941,9 @@ Acceptance / 验收标准:
     2026-05-04 中文：已落地 Profile 的 AI 上下文可见性，新增共享的提示词用户摘要，在 Profile 展示，并复用于非匿名 Chat 提示词。
 93. 2026-05-04 EN: Landed Wallet local virtual ledger baseline with `useWalletStore`, balance summary, manual transfer records, persistence/restore, and store regression tests.
     2026-05-04 中文：已落地 Wallet 本地虚拟账本基线，新增 `useWalletStore`、余额汇总、手动转账流水、持久化/恢复与 store 回归测试。
+94. 2026-05-04 EN: Landed Phone local role-call log baseline with `usePhoneStore`, recent-call UI, missed/completed counters, persistence/restore, backup coverage, and store regression tests.
+    2026-05-04 中文：已落地 Phone 本地角色通话记录基线，新增 `usePhoneStore`、最近通话 UI、未接/已接统计、持久化/恢复、备份覆盖与 store 回归测试。
+95. 2026-05-04 EN: Landed Stock local simulated-market baseline with `useStockStore`, watchlist/holdings UI, top movers, persistence/restore, backup coverage, and store regression tests.
+    2026-05-04 中文：已落地 Stock 本地模拟行情基线，新增 `useStockStore`、关注/持仓 UI、波动提示、持久化/恢复、备份覆盖与 store 回归测试。
+96. 2026-05-04 EN: Extended Settings backup and storage diagnostics coverage to Files, Wallet, Phone, and Stock while preserving backward-compatible backup imports.
+    2026-05-04 中文：已将 Settings 备份与存储诊断覆盖扩展到 Files、Wallet、Phone、Stock，并保持旧备份导入向后兼容。

@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity and Engineering Map / SchatPhone 模块成熟度与工程接手地图
 
-Updated / 更新时间: 2026-05-02
+Updated / 更新时间: 2026-05-04
 
 ## 1. Purpose / 用途
 
@@ -81,7 +81,7 @@ These modules already form real product loops and should be treated as active fo
 | WorldBook / 世界书 | Stable for current scope | Split worldview/knowledge-point model is online and already consumed by multiple modules. / 世界观与知识点拆分已上线，并被多个模块消费。 |
 | Map / 地图 | Stable baseline + active expansion | Simulation-first progression is online and already connected to Calendar. / 模拟优先进度已上线，并已和 Calendar 接通。 |
 | Calendar / 日历 | Stable MVP | Reminder -> event -> scheduled push loop is already meaningful. / 提醒 -> 事件 -> 定时推送链路已形成。 |
-| Persistence / 存储 | Stable infrastructure | Backup, restore, diagnostics, and layered persistence are all active. / 备份、恢复、诊断与分层持久化都已可用。 |
+| Persistence / 存储 | Stable infrastructure | Backup, restore, diagnostics, layered persistence, and local MVP module coverage are all active. / 备份、恢复、诊断、分层持久化与本地 MVP 模块覆盖都已可用。 |
 | Push Server / 推送服务 | Stable delivery infrastructure | Real delivery and scheduled delivery are both online. / 即时与定时送达能力都已上线。 |
 
 ### 3.2 Tier B: Usable but Structurally Heavy / B 档：可用，但结构偏重
@@ -120,9 +120,9 @@ These modules should not compete with the main immersion loop yet.
 
 | Module / 模块 | Maturity / 成熟度 | Best Future Starting Point / 最合理起点 |
 | --- | --- | --- |
-| Phone / 电话 | Placeholder | Role calls, missed-call events, or AI call summaries. / 角色通话、未接来电事件或 AI 通话摘要。 |
+| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Connect missed-call records to notifications or Calendar cues. / 将未接来电记录接入通知或日历线索。 |
 | Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Attach Chat transfer blocks as ledger sources. / 将 Chat 转账 block 接到账本来源。 |
-| Stock / 股票 | Placeholder | Simulated market tied to world/calendar events. / 与世界观或日历事件绑定的模拟行情。 |
+| Stock / 股票 | Local simulated-market MVP / 本地模拟行情 MVP | Tie simulated movement to world/calendar events if it becomes a narrative economy surface. / 若进入叙事经济线，再接入世界观或日历事件驱动波动。 |
 
 ---
 
@@ -308,9 +308,9 @@ These signals suggest:
 
 ### 6.15 Phone / 电话
 
-- Product state: placeholder.
-- Engineering note: do not build generic call UI without deciding its narrative role.
-- Recommendation: only start once role-call or event-call direction is chosen.
+- Product state: local role-call log MVP.
+- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, persistence, backup/restore, and regression tests; it does not dial real phone calls.
+- Recommendation: next connect missed-call records to notification or Calendar cues before adding AI call summaries.
 
 ### 6.16 Wallet / 钱包
 
@@ -320,9 +320,9 @@ These signals suggest:
 
 ### 6.17 Stock / 股票
 
-- Product state: placeholder.
-- Engineering note: real-market integration would fight the project’s simulation-first nature.
-- Recommendation: treat as narrative simulation if activated.
+- Product state: local simulated-market MVP.
+- Engineering note: `src/stores/stock.js` owns watchlist, holdings value, top movers, manual simulated assets, persistence, backup/restore, and regression tests; no real-market API is included.
+- Recommendation: keep simulation-first; attach world/calendar events only if Stock becomes part of the narrative economy loop.
 
 ---
 

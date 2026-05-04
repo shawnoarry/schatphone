@@ -7,6 +7,10 @@ import { useChatStore } from '../stores/chat'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
+import { useFilesStore } from '../stores/files'
+import { usePhoneStore } from '../stores/phone'
+import { useStockStore } from '../stores/stock'
+import { useWalletStore } from '../stores/wallet'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import SettingsAutomationSection from '../components/settings/SettingsAutomationSection.vue'
@@ -39,6 +43,10 @@ const chatStore = useChatStore()
 const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
+const filesStore = useFilesStore()
+const phoneStore = usePhoneStore()
+const stockStore = useStockStore()
+const walletStore = useWalletStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -78,6 +86,10 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:map', version: 2, labelZh: '地图存档', labelEn: 'Map state' },
   { key: 'store:calendar', version: 1, labelZh: '日历存档', labelEn: 'Calendar state' },
   { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
+  { key: 'store:files', version: 1, labelZh: '文件索引', labelEn: 'Files index' },
+  { key: 'store:wallet', version: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger' },
+  { key: 'store:phone', version: 1, labelZh: '电话记录', labelEn: 'Phone logs' },
+  { key: 'store:stock', version: 1, labelZh: '模拟行情', labelEn: 'Simulated market' },
 ])
 const storageAuditRunning = ref(false)
 const storageRepairRunning = ref(false)
@@ -1186,6 +1198,10 @@ const buildBackupPayload = async () => {
       ...calendarStore.createBackupSnapshot(),
     },
     gallery: gallerySnapshot,
+    files: filesStore.createBackupSnapshot(),
+    wallet: walletStore.createBackupSnapshot(),
+    phone: phoneStore.createBackupSnapshot(),
+    stock: stockStore.createBackupSnapshot(),
   }
 }
 
@@ -1212,6 +1228,10 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.map && typeof payload.map === 'object') return true
   if (payload.calendar && typeof payload.calendar === 'object') return true
   if (payload.gallery && typeof payload.gallery === 'object') return true
+  if (payload.files && typeof payload.files === 'object') return true
+  if (payload.wallet && typeof payload.wallet === 'object') return true
+  if (payload.phone && typeof payload.phone === 'object') return true
+  if (payload.stock && typeof payload.stock === 'object') return true
   if (Array.isArray(payload.assets)) return true
   return false
 }
@@ -1355,6 +1375,11 @@ const deepClone = (value) => {
   return JSON.parse(JSON.stringify(value))
 }
 
+const restoreOptionalBackupSection = (store, section) => {
+  if (!section || typeof section !== 'object') return true
+  return store.restoreFromBackup(section)
+}
+
 const createRollbackSnapshot = () => {
   return {
     system: {
@@ -1378,6 +1403,10 @@ const createRollbackSnapshot = () => {
       ...deepClone(calendarStore.createBackupSnapshot()),
     },
     gallery: galleryStore.createBackupSnapshot(),
+    files: filesStore.createBackupSnapshot(),
+    wallet: walletStore.createBackupSnapshot(),
+    phone: phoneStore.createBackupSnapshot(),
+    stock: stockStore.createBackupSnapshot(),
   }
 }
 
@@ -1435,7 +1464,21 @@ const importData = async (event) => {
     const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
       restoreAssetPackage: true,
     })
-    if (!systemOk || !chatOk || !mapOk || !calendarOk || !galleryRestoreResult?.ok) {
+    const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
+    const walletOk = restoreOptionalBackupSection(walletStore, parsed.wallet)
+    const phoneOk = restoreOptionalBackupSection(phoneStore, parsed.phone)
+    const stockOk = restoreOptionalBackupSection(stockStore, parsed.stock)
+    if (
+      !systemOk ||
+      !chatOk ||
+      !mapOk ||
+      !calendarOk ||
+      !galleryRestoreResult?.ok ||
+      !filesOk ||
+      !walletOk ||
+      !phoneOk ||
+      !stockOk
+    ) {
       throw createBackupImportError(
         'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',
         t('备份结构不完整或不受支持。', 'Backup structure is incomplete or unsupported.'),
@@ -1447,6 +1490,10 @@ const importData = async (event) => {
     mapStore.saveNow()
     calendarStore.saveNow()
     galleryStore.saveNow()
+    filesStore.saveNow()
+    walletStore.saveNow()
+    phoneStore.saveNow()
+    stockStore.saveNow()
 
     const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
     const failedCount = Number(galleryRestoreResult.failedPackageCount || 0)
@@ -1478,11 +1525,19 @@ const importData = async (event) => {
     mapStore.restoreFromBackup(rollback.map)
     calendarStore.restoreFromBackup(rollback.calendar)
     galleryStore.restoreFromBackup(rollback.gallery)
+    filesStore.restoreFromBackup(rollback.files)
+    walletStore.restoreFromBackup(rollback.wallet)
+    phoneStore.restoreFromBackup(rollback.phone)
+    stockStore.restoreFromBackup(rollback.stock)
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
     calendarStore.saveNow()
     galleryStore.saveNow()
+    filesStore.saveNow()
+    walletStore.saveNow()
+    phoneStore.saveNow()
+    stockStore.saveNow()
     const resolved = resolveBackupImportFailure(error)
     const detail = resolved.detail ? ` ${resolved.detail}` : ''
     const message = `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`
