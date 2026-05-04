@@ -935,3 +935,5 @@ Acceptance / 验收标准:
     2026-05-03 中文：已落地 Network 到 Chat 烟测链路，使用真实 `callAI` 请求但不写入聊天记录，保护陈旧异步结果，并为成功/失败写入诊断记录。
 90. 2026-05-03 EN: Landed Files persistent metadata-index baseline with `useFilesStore`, local file metadata import, shared media-size guard reuse, quick-note/favorite/delete persistence, and store regression tests.
     2026-05-03 中文：已落地 Files 持久化元数据索引基线，新增 `useFilesStore`、本地文件元数据导入、共享媒体体积守卫复用、便签/收藏/删除持久化与 store 回归测试。
+91. 2026-05-04 EN: Landed More persistent experimental toggles by adding `settings.more.featureToggles`, normalized store helpers, UI wiring, and system-store regression tests.
+    2026-05-04 中文：已落地 More 持久化实验开关，新增 `settings.more.featureToggles`、归一化 store 方法、页面接线与 system-store 回归测试。

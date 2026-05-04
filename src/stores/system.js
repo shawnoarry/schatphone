@@ -108,6 +108,12 @@ const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
 const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
 const BACKUP_COPY_TONE_VALUES = ['direct', 'immersive']
 const DEFAULT_BACKUP_COPY_TONE = 'direct'
+const MORE_FEATURE_TOGGLE_IDS = ['smart_panel', 'focus_mode', 'scene_switch']
+const DEFAULT_MORE_FEATURE_TOGGLES = Object.freeze({
+  smart_panel: true,
+  focus_mode: false,
+  scene_switch: false,
+})
 const DEFAULT_PUSH_SERVER_URL = normalizePushServerUrl(
   typeof import.meta !== 'undefined' ? import.meta?.env?.VITE_PUSH_SERVER_URL : '',
   'http://localhost:8787',
@@ -229,6 +235,34 @@ const normalizeBackupReminderIntervalHours = (value, fallback = BACKUP_REMINDER_
 
 const normalizeBackupCopyTone = (value, fallback = DEFAULT_BACKUP_COPY_TONE) => {
   return BACKUP_COPY_TONE_VALUES.includes(value) ? value : fallback
+}
+
+const normalizeMoreFeatureToggleId = (value) => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return MORE_FEATURE_TOGGLE_IDS.includes(normalized) ? normalized : ''
+}
+
+const createDefaultMoreSettings = () => ({
+  featureToggles: { ...DEFAULT_MORE_FEATURE_TOGGLES },
+})
+
+const normalizeMoreFeatureToggles = (input = {}) => {
+  const source = input && typeof input === 'object' ? input : {}
+  return Object.fromEntries(
+    MORE_FEATURE_TOGGLE_IDS.map((toggleId) => [
+      toggleId,
+      typeof source[toggleId] === 'boolean'
+        ? source[toggleId]
+        : DEFAULT_MORE_FEATURE_TOGGLES[toggleId],
+    ]),
+  )
+}
+
+const normalizeMoreSettings = (input = {}) => {
+  const source = input && typeof input === 'object' ? input : {}
+  return {
+    featureToggles: normalizeMoreFeatureToggles(source.featureToggles),
+  }
 }
 
 const normalizePushError = (value, fallback = '') => {
@@ -883,6 +917,7 @@ export const useSystemStore = defineStore('system', () => {
       backupReminderLastNotifiedAt: 0,
       backupCopyTone: DEFAULT_BACKUP_COPY_TONE,
     },
+    more: createDefaultMoreSettings(),
     aiAutomation: createDefaultAiAutomationSettings(),
   })
 
@@ -970,6 +1005,27 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.wallpaperMode = 'url'
     }
     return true
+  }
+
+  const isMoreFeatureToggleEnabled = (toggleId) => {
+    const normalizedId = normalizeMoreFeatureToggleId(toggleId)
+    if (!normalizedId) return false
+    settings.more = normalizeMoreSettings(settings.more)
+    return settings.more.featureToggles[normalizedId] === true
+  }
+
+  const setMoreFeatureToggle = (toggleId, enabled) => {
+    const normalizedId = normalizeMoreFeatureToggleId(toggleId)
+    if (!normalizedId) return false
+    settings.more = normalizeMoreSettings(settings.more)
+    settings.more.featureToggles[normalizedId] = enabled === true
+    return true
+  }
+
+  const toggleMoreFeatureToggle = (toggleId) => {
+    const normalizedId = normalizeMoreFeatureToggleId(toggleId)
+    if (!normalizedId) return false
+    return setMoreFeatureToggle(normalizedId, !isMoreFeatureToggleEnabled(normalizedId))
   }
 
   const syncPushPermissionFromBrowser = () => {
@@ -2417,6 +2473,12 @@ export const useSystemStore = defineStore('system', () => {
       )
     }
 
+    if (persisted.settings?.more && typeof persisted.settings.more === 'object') {
+      settings.more = normalizeMoreSettings(persisted.settings.more)
+    } else {
+      settings.more = normalizeMoreSettings(settings.more)
+    }
+
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
       settings.aiAutomation = normalizeAiAutomationSettings(persisted.settings.aiAutomation)
     } else {
@@ -2546,6 +2608,7 @@ export const useSystemStore = defineStore('system', () => {
       settings.system.backupCopyTone,
       DEFAULT_BACKUP_COPY_TONE,
     )
+    settings.more = normalizeMoreSettings(settings.more)
     return true
   }
 
@@ -2592,6 +2655,11 @@ export const useSystemStore = defineStore('system', () => {
             customWidgets: settings.appearance.customWidgets.map((widget) => ({ ...widget })),
           },
           system: { ...settings.system },
+          more: {
+            featureToggles: {
+              ...normalizeMoreSettings(settings.more).featureToggles,
+            },
+          },
           aiAutomation: {
             ...settings.aiAutomation,
             modules: Object.fromEntries(
@@ -2691,6 +2759,9 @@ export const useSystemStore = defineStore('system', () => {
     placeCustomWidget,
     importCustomWidgets,
     placeBuiltInWidgetTile,
+    isMoreFeatureToggleEnabled,
+    setMoreFeatureToggle,
+    toggleMoreFeatureToggle,
     addNotification,
     markNotificationRead,
     markAllNotificationsRead,

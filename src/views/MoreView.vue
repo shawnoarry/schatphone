@@ -1,16 +1,39 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { useSystemStore } from '../stores/system'
 
 const router = useRouter()
 const { t } = useI18n()
+const systemStore = useSystemStore()
+const { settings } = storeToRefs(systemStore)
 
-const featureToggles = ref([
-  { id: 'smart_panel', label: '智能面板', desc: '聚合推荐与快捷动作', enabled: true },
-  { id: 'focus_mode', label: '专注模式', desc: '减少提醒干扰，仅保留关键通知', enabled: false },
-  { id: 'scene_switch', label: '场景切换', desc: '一键切换工作/生活布局预设', enabled: false },
+const featureToggleMeta = computed(() => [
+  {
+    id: 'smart_panel',
+    label: t('智能面板', 'Smart Panel'),
+    desc: t('聚合推荐与快捷动作', 'Aggregated suggestions and quick actions'),
+  },
+  {
+    id: 'focus_mode',
+    label: t('专注模式', 'Focus Mode'),
+    desc: t('减少提醒干扰，仅保留关键通知', 'Reduce distractions and keep only key alerts'),
+  },
+  {
+    id: 'scene_switch',
+    label: t('场景切换', 'Scene Switch'),
+    desc: t('一键切换工作/生活布局预设', 'Switch work/life layout presets with one tap'),
+  },
 ])
+
+const featureToggles = computed(() =>
+  featureToggleMeta.value.map((item) => ({
+    ...item,
+    enabled: settings.value.more?.featureToggles?.[item.id] === true,
+  })),
+)
 
 const quickEntries = computed(() => [
   {
@@ -54,6 +77,10 @@ const goHome = () => {
 const openEntry = (route) => {
   router.push(route)
 }
+
+const toggleFeature = (toggleId) => {
+  systemStore.toggleMoreFeatureToggle(toggleId)
+}
 </script>
 
 <template>
@@ -85,7 +112,15 @@ const openEntry = (route) => {
       </section>
 
       <section class="bg-white rounded-2xl border border-gray-200 p-4">
-        <p class="text-sm font-semibold mb-3">{{ t('实验功能开关', 'Experimental Toggles') }}</p>
+        <p class="text-sm font-semibold mb-1">{{ t('实验功能开关', 'Experimental Toggles') }}</p>
+        <p class="text-[11px] text-gray-500 mb-3">
+          {{
+            t(
+              '这些开关现在会随系统设置持久化；后续模块可直接读取同一份状态。',
+              'These toggles now persist with system settings; future modules can read the same state.',
+            )
+          }}
+        </p>
         <div class="space-y-2">
           <div
             v-for="item in featureToggles"
@@ -97,7 +132,7 @@ const openEntry = (route) => {
               <p class="text-[11px] text-gray-500">{{ item.desc }}</p>
             </div>
             <button
-              @click="item.enabled = !item.enabled"
+              @click="toggleFeature(item.id)"
               class="px-3 py-1.5 text-xs rounded-full border transition"
               :class="item.enabled ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200'"
             >

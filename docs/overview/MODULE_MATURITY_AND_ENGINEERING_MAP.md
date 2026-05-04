@@ -110,7 +110,7 @@ These modules exist and can be used, but their long-term product identity is sti
 | Appearance / 外观 | Strong MVP | Are uploaded custom app icons in scope, or are presets the official path? / 自定义上传图标要不要做，还是预设图标就是官方模型？ |
 | Profile / 用户信息 | Basic MVP | How visible should profile-to-AI-context impact be? / 用户资料对 AI 上下文的影响要不要更显式？ |
 | Files / 文件 | Persisted file-index MVP / 持久化文件索引 MVP | Is it a notebook, metadata browser, or future file manager? / 它到底是笔记本、元数据浏览器，还是未来文件管理器？ |
-| More / 更多 | MVP shell | Should it stay a shortcut bucket or become a Labs surface? / 它该继续做快捷入口，还是明确为 Labs？ |
+| More / 更多 | Persisted shortcut/Labs MVP / 持久化快捷与实验入口 MVP | Should it stay a shortcut bucket or become a Labs surface? / 它该继续做快捷入口，还是明确为 Labs？ |
 
 ### 3.4 Tier D: Placeholder / D 档：明确占位
 
@@ -302,9 +302,9 @@ These signals suggest:
 
 ### 6.14 More / 更多
 
-- Product state: shell MVP / shortcut bucket.
-- Engineering note: local-only toggles can confuse future maintainers if treated like real settings.
-- Recommendation: either wire to real flags or explicitly position as Labs/Shortcuts.
+- Product state: persisted shortcut/Labs MVP.
+- Engineering note: experimental toggles now live under `settings.more.featureToggles`; downstream modules do not yet consume them.
+- Recommendation: decide whether More is primarily Shortcuts or Labs before wiring toggles to visible module behavior.
 
 ### 6.15 Phone / 电话
 
