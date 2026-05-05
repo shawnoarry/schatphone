@@ -257,6 +257,7 @@ describe('chat store model', () => {
         { type: 'module_link', label: 'Open', route: 'javascript:alert(1)', note: 'n'.repeat(1200) },
         { type: 'link_external', label: 'Docs', url: 'www.example.com/help', note: 'x'.repeat(1200) },
         { type: 'transfer_virtual', label: 'Pay', amount: '  888.66 ', currency: ' usd ', actionRoute: 'https://evil.com' },
+        { type: 'product_card', productId: 'product_demo', title: 'Demo Product', price: '88.00 CNY', currency: 'cny', route: 'https://evil.com', desc: 'd'.repeat(1200), serviceKey: 'style_cloud', serviceLabel: 'Style Cloud', assetEligible: true },
         { type: 'image_virtual', alt: 'Pic', url: 'javascript:alert(1)', caption: 'c'.repeat(1200) },
         { type: 'mini_scene', title: 'Scene', htmlSnippet: '<script>alert(1)</script><div>ok</div>' },
       ],
@@ -271,6 +272,7 @@ describe('chat store model', () => {
     const moduleBlock = assistantMessage.blocks.find((item) => item.type === 'module_link')
     const externalLinkBlock = assistantMessage.blocks.find((item) => item.type === 'link_external')
     const transferBlock = assistantMessage.blocks.find((item) => item.type === 'transfer_virtual')
+    const productBlock = assistantMessage.blocks.find((item) => item.type === 'product_card')
     const imageBlock = assistantMessage.blocks.find((item) => item.type === 'image_virtual')
     const sceneBlock = assistantMessage.blocks.find((item) => item.type === 'mini_scene')
 
@@ -280,6 +282,16 @@ describe('chat store model', () => {
     expect((externalLinkBlock?.note || '').length).toBeLessThanOrEqual(800)
     expect(transferBlock?.actionRoute).toBe('/wallet')
     expect(transferBlock?.currency).toBe('USD')
+    expect(productBlock).toMatchObject({
+      productId: 'product_demo',
+      title: 'Demo Product',
+      currency: 'CNY',
+      route: '/shopping',
+      serviceKey: 'style_cloud',
+      serviceLabel: 'Style Cloud',
+      assetEligible: true,
+    })
+    expect((productBlock?.desc || '').length).toBeLessThanOrEqual(800)
     expect(imageBlock?.url).toBe('')
     expect(sceneBlock?.htmlSnippet).not.toContain('<script')
 
@@ -644,15 +656,30 @@ describe('chat store model', () => {
       kind: 'service',
       role: 'Service account',
       serviceTemplate: 'Order notification template',
+      shoppingServiceKey: 'style_cloud',
+      logisticsServiceKey: 'standard_courier',
+      foodDeliveryServiceKey: 'food_delivery_dispatch',
     })
 
     expect(created.kind).toBe('service')
     expect(created.serviceTemplate).toBe('Order notification template')
+    expect(created.shoppingServiceKey).toBe('style_cloud')
+    expect(created.logisticsServiceKey).toBe('standard_courier')
+    expect(created.foodDeliveryServiceKey).toBe('food_delivery_dispatch')
 
-    store.updateContact(created.id, { kind: 'official', serviceTemplate: 'Announcement template' })
+    store.updateContact(created.id, {
+      kind: 'official',
+      serviceTemplate: 'Announcement template',
+      shoppingServiceKey: 'invalid_service',
+      logisticsServiceKey: 'invalid_logistics',
+      foodDeliveryServiceKey: 'invalid_food',
+    })
     const updated = store.contacts.find((item) => item.id === created.id)
     expect(updated?.kind).toBe('official')
     expect(updated?.serviceTemplate).toBe('Announcement template')
+    expect(updated?.shoppingServiceKey).toBe('')
+    expect(updated?.logisticsServiceKey).toBe('')
+    expect(updated?.foodDeliveryServiceKey).toBe('')
 
     const removed = store.removeContact(created.id)
     expect(removed).toBe(true)

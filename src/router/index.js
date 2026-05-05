@@ -17,6 +17,9 @@ const CalendarView = () => import('../views/CalendarView.vue')
 const WalletView = () => import('../views/WalletView.vue')
 const WorldBookView = () => import('../views/WorldBookView.vue')
 const StockView = () => import('../views/StockView.vue')
+const ShoppingView = () => import('../views/ShoppingView.vue')
+const FoodDeliveryView = () => import('../views/FoodDeliveryView.vue')
+const AssetsView = () => import('../views/AssetsView.vue')
 const UserProfileView = () => import('../views/UserProfileView.vue')
 const FilesView = () => import('../views/FilesView.vue')
 const MoreView = () => import('../views/MoreView.vue')
@@ -43,6 +46,9 @@ const router = createRouter({
     { path: '/worldbook', component: WorldBookView },
     { path: '/profile', component: UserProfileView },
     { path: '/stock', component: StockView },
+    { path: '/shopping', component: ShoppingView },
+    { path: '/food-delivery', component: FoodDeliveryView },
+    { path: '/assets', component: AssetsView },
     { path: '/files', component: FilesView },
     { path: '/more', component: MoreView },
   ],

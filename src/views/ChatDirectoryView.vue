@@ -9,9 +9,22 @@ import {
   resolveFolderBoundAssetIds,
   summarizeRoleAssetFolderBindings,
 } from '../lib/role-asset-folder-resolver'
+import {
+  getAvatarImageGalleryAssetId,
+  resolveAvatarImageSourceUrl,
+} from '../lib/avatar-image-source-resolver'
+import {
+  FOOD_DELIVERY_SERVICE_PRESETS,
+  LOGISTICS_SERVICE_PRESETS,
+  SHOPPING_SERVICE_PRESETS,
+  findFoodDeliveryServicePreset,
+  findLogisticsServicePreset,
+  findShoppingServicePreset,
+} from '../lib/planned-module-registry'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
+import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -45,6 +58,12 @@ const serviceDraft = reactive({
   kind: 'service',
   template: '',
   bio: '',
+  avatarImageSourceType: 'none',
+  avatarImageUrl: '',
+  avatarImageGalleryAssetId: '',
+  shoppingServiceKey: '',
+  logisticsServiceKey: '',
+  foodDeliveryServiceKey: '',
 })
 
 const roleMetaTemplatePresets = [
@@ -115,6 +134,26 @@ const rolePreviewMap = reactive({})
 const CHAT_DIRECTORY_ASSET_PREVIEW_SCOPE_ID = 'chat-directory-view'
 let uiNoticeTimerId = null
 
+const normalizeDraftAvatarImage = (contact = {}) => {
+  const source = contact.avatarImage && typeof contact.avatarImage === 'object'
+    ? contact.avatarImage
+    : null
+  const legacyAvatar = typeof contact.avatar === 'string' ? contact.avatar.trim() : ''
+  return {
+    sourceType: source?.sourceType || source?.imageSourceType || (legacyAvatar ? 'url' : 'none'),
+    url: source?.url || source?.imageUrl || legacyAvatar,
+    galleryAssetId: source?.galleryAssetId || source?.imageGalleryAssetId || '',
+  }
+}
+
+const buildServiceDraftAvatarImage = () => ({
+  imageSourceType: serviceDraft.avatarImageSourceType,
+  imageUrl: serviceDraft.avatarImageSourceType === 'url' ? serviceDraft.avatarImageUrl : '',
+  imageGalleryAssetId:
+    serviceDraft.avatarImageSourceType === 'gallery' ? serviceDraft.avatarImageGalleryAssetId : '',
+  imageAlt: serviceDraft.name,
+})
+
 const showUiNotice = (type, message, durationMs = 2200) => {
   const text = typeof message === 'string' ? message.trim() : ''
   if (!text) return
@@ -165,6 +204,30 @@ const serviceFilterOptions = computed(() => [
   { key: 'official', label: t('公众号', 'Official') },
 ])
 
+const shoppingServicePresetOptions = computed(() =>
+  SHOPPING_SERVICE_PRESETS.map((preset) => ({
+    ...preset,
+    label: t(preset.zh, preset.en),
+    desc: t(preset.descZh, preset.descEn),
+  })),
+)
+
+const logisticsServicePresetOptions = computed(() =>
+  LOGISTICS_SERVICE_PRESETS.map((preset) => ({
+    ...preset,
+    label: t(preset.zh, preset.en),
+    desc: t(preset.descZh, preset.descEn),
+  })),
+)
+
+const foodDeliveryServicePresetOptions = computed(() =>
+  FOOD_DELIVERY_SERVICE_PRESETS.map((preset) => ({
+    ...preset,
+    label: t(preset.zh, preset.en),
+    desc: t(preset.descZh, preset.descEn),
+  })),
+)
+
 const normalizedSearchKeyword = computed(() => searchKeyword.value.trim().toLowerCase())
 
 const includesSearch = (...fields) => {
@@ -210,6 +273,9 @@ const filteredServiceContacts = computed(() =>
       contact?.name,
       contact?.role,
       contact?.serviceTemplate,
+      contact?.shoppingServiceKey,
+      contact?.logisticsServiceKey,
+      contact?.foodDeliveryServiceKey,
       contact?.bio,
       contact?.lastMessage,
     )
@@ -384,6 +450,26 @@ const roleMetaPreviewKeepAliveAssetIds = computed(() => {
   return ids
 })
 
+const visibleAvatarPreviewAssetIds = computed(() => {
+  const ids = []
+  const pushAssetId = (assetId) => {
+    const normalized = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalized || ids.includes(normalized)) return
+    ids.push(normalized)
+  }
+
+  filteredRoleBindings.value.forEach((contact) => {
+    pushAssetId(getAvatarImageGalleryAssetId(contact?.avatarImage, contact?.avatar, contact?.name))
+  })
+  filteredServiceContacts.value.forEach((contact) => {
+    pushAssetId(getAvatarImageGalleryAssetId(contact?.avatarImage, contact?.avatar, contact?.name))
+  })
+  if (showServiceModal.value && serviceDraft.avatarImageSourceType === 'gallery') {
+    pushAssetId(serviceDraft.avatarImageGalleryAssetId)
+  }
+  return ids
+})
+
 const roleMetaAssetOptions = computed(() => {
   if (!editingRoleContactId.value) return []
   const contract = getRoleBindingContract(editingRoleContactId.value)
@@ -449,6 +535,12 @@ const roleMetaAssetOptions = computed(() => {
   })
 })
 
+const serviceAvatarGalleryOptions = computed(() =>
+  galleryStore.assets
+    .filter((asset) => ['reference', 'scenario', 'wallpaper'].includes(asset.category))
+    .slice(0, 80),
+)
+
 const roleMetaAssetContextLabel = computed(() => {
   if (!editingRoleContactId.value) return ''
   const contract = getRoleBindingContract(editingRoleContactId.value)
@@ -477,6 +569,7 @@ watch(
     [...new Set(
       [
         ...filteredRoleBindings.value.flatMap((contact) => getRolePreviewAssetIds(contact.id)),
+        ...visibleAvatarPreviewAssetIds.value,
         ...roleMetaPreviewKeepAliveAssetIds.value,
       ],
     )],
@@ -724,6 +817,12 @@ const resetServiceDraft = () => {
   serviceDraft.kind = 'service'
   serviceDraft.template = ''
   serviceDraft.bio = ''
+  serviceDraft.avatarImageSourceType = 'none'
+  serviceDraft.avatarImageUrl = ''
+  serviceDraft.avatarImageGalleryAssetId = ''
+  serviceDraft.shoppingServiceKey = ''
+  serviceDraft.logisticsServiceKey = ''
+  serviceDraft.foodDeliveryServiceKey = ''
 }
 
 const openCreateService = (kind = 'service') => {
@@ -741,6 +840,13 @@ const openEditService = (contact) => {
   serviceDraft.kind = contact.kind === 'official' ? 'official' : 'service'
   serviceDraft.template = contact.serviceTemplate || ''
   serviceDraft.bio = contact.bio || ''
+  const avatarImage = normalizeDraftAvatarImage(contact)
+  serviceDraft.avatarImageSourceType = avatarImage.sourceType
+  serviceDraft.avatarImageUrl = avatarImage.url
+  serviceDraft.avatarImageGalleryAssetId = avatarImage.galleryAssetId
+  serviceDraft.shoppingServiceKey = contact.shoppingServiceKey || ''
+  serviceDraft.logisticsServiceKey = contact.logisticsServiceKey || ''
+  serviceDraft.foodDeliveryServiceKey = contact.foodDeliveryServiceKey || ''
   showServiceModal.value = true
 }
 
@@ -762,6 +868,11 @@ const saveService = () => {
     role: serviceDraft.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service'),
     serviceTemplate: serviceDraft.template.trim(),
     bio: serviceDraft.bio.trim(),
+    avatarImage: buildServiceDraftAvatarImage(),
+    avatar: serviceDraft.avatarImageSourceType === 'url' ? serviceDraft.avatarImageUrl : '',
+    shoppingServiceKey: serviceDraft.shoppingServiceKey,
+    logisticsServiceKey: serviceDraft.logisticsServiceKey,
+    foodDeliveryServiceKey: serviceDraft.foodDeliveryServiceKey,
   }
 
   if (serviceModalMode.value === 'create') {
@@ -834,9 +945,51 @@ const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('
 const serviceKindTag = (contact) =>
   contact.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')
 
+const shoppingServiceLabel = (serviceKey) => {
+  const preset = findShoppingServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
+const logisticsServiceLabel = (serviceKey) => {
+  const preset = findLogisticsServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
+const foodDeliveryServiceLabel = (serviceKey) => {
+  const preset = findFoodDeliveryServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
+const contactHasThreadOrModuleAvatarOverride = (contactId) => {
+  const contract = getRoleBindingContract(contactId)
+  return contract.avatar?.activeLayer === 'thread' || contract.avatar?.activeLayer === 'module'
+}
+
 const contactAvatarForDisplay = (contact) => {
   if (!contact?.id) return ''
-  return chatStore.resolveContactAvatar(contact.id)
+  if (contactHasThreadOrModuleAvatarOverride(contact.id)) return chatStore.resolveContactAvatar(contact.id)
+  return resolveAvatarImageSourceUrl({
+    galleryStore,
+    previewMap: rolePreviewMap,
+    avatarImage: contact.avatarImage,
+    legacyAvatar: contact.avatar,
+    fallbackAlt: contact.name || 'Contact',
+  }) || chatStore.resolveContactAvatar(contact.id)
+}
+
+const explicitContactAvatarForDisplay = (contact) => {
+  if (!contact?.id) return ''
+  if (contactHasThreadOrModuleAvatarOverride(contact.id)) return chatStore.resolveContactAvatar(contact.id)
+  return resolveAvatarImageSourceUrl({
+    galleryStore,
+    previewMap: rolePreviewMap,
+    avatarImage: contact.avatarImage,
+    legacyAvatar: contact.avatar,
+    fallbackAlt: contact.name || 'Contact',
+  })
 }
 
 const preferredImageAssetLabel = (contact) => {
@@ -925,6 +1078,42 @@ const openCreateServiceFromPreset = (templateId) => {
   serviceDraft.name = servicePresetName(template)
   serviceDraft.template = servicePresetTemplate(template)
   serviceDraft.bio = servicePresetBio(template)
+}
+
+const openCreateShoppingService = (serviceKey) => {
+  const preset = findShoppingServicePreset(serviceKey)
+  if (!preset?.key || preset.key !== serviceKey) return
+
+  openCreateService('service')
+  serviceDraft.name = t(preset.zh, preset.en)
+  serviceDraft.template = t('Shopping 店铺账号', 'Shopping shop account')
+  serviceDraft.bio = t(
+    `${preset.zh} 店铺服务号。仅承载商品推荐、订单提醒和跳转上下文；商品、购物车和订单仍由 Shopping 管理。`,
+    `${preset.en} shop service account. It only carries product recommendation, order reminder, and route context; products, cart, and orders remain owned by Shopping.`,
+  )
+  serviceDraft.shoppingServiceKey = preset.key
+}
+
+const openCreateLogisticsService = (serviceKey) => {
+  const preset = findLogisticsServicePreset(serviceKey)
+  if (!preset?.key || preset.key !== serviceKey) return
+
+  openCreateService('service')
+  serviceDraft.name = t(preset.zh, preset.en)
+  serviceDraft.template = t('物流服务号', 'Logistics service account')
+  serviceDraft.bio = t(preset.descZh, preset.descEn)
+  serviceDraft.logisticsServiceKey = preset.key
+}
+
+const openCreateFoodDeliveryService = (serviceKey) => {
+  const preset = findFoodDeliveryServicePreset(serviceKey)
+  if (!preset?.key || preset.key !== serviceKey) return
+
+  openCreateService('service')
+  serviceDraft.name = t(preset.zh, preset.en)
+  serviceDraft.template = t('外卖通知服务号', 'Food delivery notification account')
+  serviceDraft.bio = t(preset.descZh, preset.descEn)
+  serviceDraft.foodDeliveryServiceKey = preset.key
 }
 
 const applyServicePresetToSelected = async () => {
@@ -1044,6 +1233,7 @@ onBeforeUnmount(() => {
       <button
         @click="switchSection('service')"
         class="px-3 py-1.5 rounded-full text-xs border"
+        data-testid="chat-directory-section-service"
         :class="
           activeSection === 'service'
             ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
@@ -1201,7 +1391,11 @@ onBeforeUnmount(() => {
             <i class="fas fa-check"></i>
           </button>
           <div class="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden">
-            <img :src="contactAvatarForDisplay(contact)" class="w-full h-full object-cover" />
+            <img
+              :src="contactAvatarForDisplay(contact)"
+              class="w-full h-full object-cover"
+              :data-testid="`chat-directory-contact-avatar-${contact.id}`"
+            />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
@@ -1285,7 +1479,11 @@ onBeforeUnmount(() => {
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('服务号 / 公众号', 'Service / Official') }}</h3>
           <div class="flex gap-2">
-            <button @click="openCreateService('service')" class="px-2.5 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs">
+            <button
+              @click="openCreateService('service')"
+              class="px-2.5 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs"
+              data-testid="chat-directory-add-service"
+            >
               {{ t('新增服务号', 'Add Service') }}
             </button>
             <button @click="openCreateService('official')" class="px-2.5 py-1 rounded-md border border-sky-200 bg-sky-50 text-sky-700 text-xs">
@@ -1339,6 +1537,111 @@ onBeforeUnmount(() => {
             >
               {{ t('批量删除', 'Batch Delete') }}
             </button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-amber-100 bg-white p-3 space-y-2" data-testid="chat-directory-shopping-service-presets">
+          <p class="text-xs font-semibold text-amber-700">
+            {{ t('Shopping 店铺账号预设', 'Shopping shop account presets') }}
+          </p>
+          <p class="text-[11px] leading-4 text-gray-500">
+            {{
+              t(
+                '这些账号负责新品、折扣和商品推荐；商品、购物车和订单仍由 Shopping 管理，物流提醒交给物流服务号。',
+                'These accounts handle new arrivals, discounts, and product recommendations; products, cart, and orders remain owned by Shopping, while logistics reminders belong to Logistics service accounts.',
+              )
+            }}
+          </p>
+          <div class="grid gap-2">
+            <div
+              v-for="preset in shoppingServicePresetOptions"
+              :key="`shopping-service-preset-${preset.key}`"
+              class="rounded-lg border border-amber-100 bg-amber-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
+            >
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-amber-800 truncate">
+                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
+                </p>
+                <p class="text-[11px] text-amber-700 truncate">{{ preset.desc }}</p>
+              </div>
+              <button
+                @click="openCreateShoppingService(preset.key)"
+                class="px-2 py-1 rounded border border-amber-200 bg-white text-amber-700 text-[11px]"
+                :data-testid="`chat-directory-create-shopping-service-${preset.key}`"
+              >
+                {{ t('创建店铺号', 'Create Shop') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-sky-100 bg-white p-3 space-y-2" data-testid="chat-directory-logistics-service-presets">
+          <p class="text-xs font-semibold text-sky-700">
+            {{ t('物流服务号预设', 'Logistics service account presets') }}
+          </p>
+          <p class="text-[11px] leading-4 text-gray-500">
+            {{
+              t(
+                '物流信息统一由物流服务号承载，可区分同城急送、普通快递和国际物流。',
+                'Logistics information is carried by Logistics service accounts, split by local express, standard courier, and international logistics.',
+              )
+            }}
+          </p>
+          <div class="grid gap-2">
+            <div
+              v-for="preset in logisticsServicePresetOptions"
+              :key="`logistics-service-preset-${preset.key}`"
+              class="rounded-lg border border-sky-100 bg-sky-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
+            >
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-sky-800 truncate">
+                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
+                </p>
+                <p class="text-[11px] text-sky-700 truncate">{{ preset.desc }}</p>
+              </div>
+              <button
+                @click="openCreateLogisticsService(preset.key)"
+                class="px-2 py-1 rounded border border-sky-200 bg-white text-sky-700 text-[11px]"
+                :data-testid="`chat-directory-create-logistics-service-${preset.key}`"
+              >
+                {{ t('创建物流号', 'Create Logistics') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-orange-100 bg-white p-3 space-y-2" data-testid="chat-directory-food-delivery-service-presets">
+          <p class="text-xs font-semibold text-orange-700">
+            {{ t('外卖服务号预设', 'Food delivery service account presets') }}
+          </p>
+          <p class="text-[11px] leading-4 text-gray-500">
+            {{
+              t(
+                '外卖推送使用独立服务号，后续承载接单、备餐、骑手取餐、送达和异常提醒。',
+                'Food delivery pushes use a dedicated service account for accepted, cooking, rider pickup, delivered, and exception alerts.',
+              )
+            }}
+          </p>
+          <div class="grid gap-2">
+            <div
+              v-for="preset in foodDeliveryServicePresetOptions"
+              :key="`food-delivery-service-preset-${preset.key}`"
+              class="rounded-lg border border-orange-100 bg-orange-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
+            >
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-orange-800 truncate">
+                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
+                </p>
+                <p class="text-[11px] text-orange-700 truncate">{{ preset.desc }}</p>
+              </div>
+              <button
+                @click="openCreateFoodDeliveryService(preset.key)"
+                class="px-2 py-1 rounded border border-orange-200 bg-white text-orange-700 text-[11px]"
+                :data-testid="`chat-directory-create-food-delivery-service-${preset.key}`"
+              >
+                {{ t('创建外卖号', 'Create Food') }}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1420,15 +1723,42 @@ onBeforeUnmount(() => {
             <i class="fas fa-check"></i>
           </button>
           <div
-            class="w-10 h-10 rounded-xl flex items-center justify-center"
+            class="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden"
             :class="contact.kind === 'official' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
           >
-            <i :class="contact.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-concierge-bell'"></i>
+            <img
+              v-if="explicitContactAvatarForDisplay(contact)"
+              :src="explicitContactAvatarForDisplay(contact)"
+              class="h-full w-full object-cover"
+              :data-testid="`chat-directory-service-avatar-${contact.id}`"
+            />
+            <i v-else :class="contact.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-concierge-bell'"></i>
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
             <p class="text-xs text-gray-500 truncate">
               {{ serviceKindTag(contact) }} · {{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}
+            </p>
+            <p
+              v-if="shoppingServiceLabel(contact.shoppingServiceKey)"
+              class="text-[11px] text-amber-700 truncate"
+              :data-testid="`chat-directory-shopping-service-${contact.id}`"
+            >
+              {{ t('Shopping 店铺', 'Shopping shop') }} · {{ shoppingServiceLabel(contact.shoppingServiceKey) }}
+            </p>
+            <p
+              v-if="logisticsServiceLabel(contact.logisticsServiceKey)"
+              class="text-[11px] text-sky-700 truncate"
+              :data-testid="`chat-directory-logistics-service-${contact.id}`"
+            >
+              {{ t('物流服务号', 'Logistics service') }} · {{ logisticsServiceLabel(contact.logisticsServiceKey) }}
+            </p>
+            <p
+              v-if="foodDeliveryServiceLabel(contact.foodDeliveryServiceKey)"
+              class="text-[11px] text-orange-700 truncate"
+              :data-testid="`chat-directory-food-delivery-service-${contact.id}`"
+            >
+              {{ t('外卖服务号', 'Food delivery service') }} · {{ foodDeliveryServiceLabel(contact.foodDeliveryServiceKey) }}
             </p>
           </div>
           <template v-if="!batchMode">
@@ -1601,6 +1931,7 @@ onBeforeUnmount(() => {
           v-model="serviceDraft.name"
           type="text"
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          data-testid="chat-directory-service-name"
           :placeholder="t('名称', 'Name')"
         />
         <select
@@ -1617,6 +1948,64 @@ onBeforeUnmount(() => {
           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
           :placeholder="t('服务模板标题', 'Service template title')"
         />
+        <select
+          v-model="serviceDraft.shoppingServiceKey"
+          class="w-full rounded-xl border border-amber-100 bg-amber-50/40 px-3 py-2 text-sm text-amber-800 outline-none"
+          data-testid="chat-directory-service-shopping-service"
+        >
+          <option value="">{{ t('不绑定 Shopping 店铺', 'No Shopping shop binding') }}</option>
+          <option
+            v-for="preset in shoppingServicePresetOptions"
+            :key="`service-shopping-option-${preset.key}`"
+            :value="preset.key"
+          >
+            {{ preset.label }}
+          </option>
+        </select>
+        <select
+          v-model="serviceDraft.logisticsServiceKey"
+          class="w-full rounded-xl border border-sky-100 bg-sky-50/40 px-3 py-2 text-sm text-sky-800 outline-none"
+          data-testid="chat-directory-service-logistics-service"
+        >
+          <option value="">{{ t('不绑定物流服务号', 'No Logistics binding') }}</option>
+          <option
+            v-for="preset in logisticsServicePresetOptions"
+            :key="`service-logistics-option-${preset.key}`"
+            :value="preset.key"
+          >
+            {{ preset.label }}
+          </option>
+        </select>
+        <select
+          v-model="serviceDraft.foodDeliveryServiceKey"
+          class="w-full rounded-xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-sm text-orange-800 outline-none"
+          data-testid="chat-directory-service-food-delivery-service"
+        >
+          <option value="">{{ t('不绑定外卖服务号', 'No Food Delivery binding') }}</option>
+          <option
+            v-for="preset in foodDeliveryServicePresetOptions"
+            :key="`service-food-delivery-option-${preset.key}`"
+            :value="preset.key"
+          >
+            {{ preset.label }}
+          </option>
+        </select>
+        <div class="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3 space-y-2">
+          <p class="text-xs font-semibold text-emerald-700">{{ t('头像来源', 'Avatar source') }}</p>
+          <ImageSourcePicker
+            v-model:source-type="serviceDraft.avatarImageSourceType"
+            v-model:image-url="serviceDraft.avatarImageUrl"
+            v-model:gallery-asset-id="serviceDraft.avatarImageGalleryAssetId"
+            :gallery-assets="serviceAvatarGalleryOptions"
+            :source-options="[
+              { value: 'none', labelZh: '默认头像', labelEn: 'Default avatar' },
+              { value: 'url', labelZh: 'URL 头像', labelEn: 'URL avatar' },
+              { value: 'gallery', labelZh: 'Gallery 素材', labelEn: 'Gallery asset' },
+            ]"
+            size="xs"
+            test-id-prefix="chat-directory-service-avatar"
+          />
+        </div>
         <textarea
           v-model="serviceDraft.bio"
           rows="3"
@@ -1628,6 +2017,7 @@ onBeforeUnmount(() => {
           <button
             @click="saveService"
             class="px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-sm"
+            data-testid="chat-directory-save-service"
           >
             {{ t('保存', 'Save') }}
           </button>

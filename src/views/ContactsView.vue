@@ -12,6 +12,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
+import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 
 const router = useRouter()
 const systemStore = useSystemStore()
@@ -87,9 +88,32 @@ const cloneAssetFolderBindings = (bindings = {}) => ({
   },
 })
 
+const normalizeDraftAvatarImage = (profile = {}) => {
+  const source = profile.avatarImage && typeof profile.avatarImage === 'object'
+    ? profile.avatarImage
+    : null
+  const legacyAvatar = typeof profile.avatar === 'string' ? profile.avatar.trim() : ''
+  return {
+    sourceType: source?.sourceType || source?.imageSourceType || (legacyAvatar ? 'url' : 'none'),
+    url: source?.url || source?.imageUrl || legacyAvatar,
+    galleryAssetId: source?.galleryAssetId || source?.imageGalleryAssetId || '',
+  }
+}
+
+const buildDraftAvatarImage = () => ({
+  imageSourceType: profileDraft.avatarImageSourceType,
+  imageUrl: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
+  imageGalleryAssetId:
+    profileDraft.avatarImageSourceType === 'gallery' ? profileDraft.avatarImageGalleryAssetId : '',
+  imageAlt: profileDraft.name,
+})
+
 const profileDraft = reactive({
   name: '',
   role: '',
+  avatarImageSourceType: 'none',
+  avatarImageUrl: '',
+  avatarImageGalleryAssetId: '',
   isMain: false,
   bio: '',
   knowledgePointIds: [],
@@ -135,6 +159,8 @@ const activeAssetCategoryConfig = computed(() =>
 const availableAssets = computed(() =>
   galleryStore.getAssetsByCategory(assetPackCategory.value).slice(0, 48),
 )
+
+const galleryImageAssets = computed(() => galleryStore.assets.slice(0, 80))
 
 const hasAnyGalleryAsset = computed(() => galleryStore.assets.length > 0)
 const profileImageFolderOptions = computed(() =>
@@ -226,6 +252,7 @@ const getDraftFolderPreviewAssets = (slotKey, limit = 3) =>
 const draftPreviewKeepAliveAssetIds = computed(() => {
   const previewIds = [
     ...availableAssets.value.map((asset) => asset.id),
+    profileDraft.avatarImageSourceType === 'gallery' ? profileDraft.avatarImageGalleryAssetId : '',
     ...Object.keys(draftFolderBindingSummaryMap.value).flatMap((slotKey) =>
       getDraftFolderPreviewAssetIds(slotKey, 3),
     ),
@@ -317,6 +344,30 @@ const ensureDraftAssetPreview = async (assetId) => {
   draftPreviewMap[assetId] = previewUrl
 }
 
+const resolveAvatarImageUrl = (profile = {}) => {
+  const avatarImage = normalizeDraftAvatarImage(profile)
+  if (avatarImage.sourceType === 'url' && avatarImage.url) return avatarImage.url
+  if (avatarImage.sourceType === 'gallery' && avatarImage.galleryAssetId) {
+    const asset = galleryStore.findAssetById(avatarImage.galleryAssetId)
+    if (asset?.sourceType === 'url' && asset.sourceUrl) return asset.sourceUrl
+    return draftPreviewMap[avatarImage.galleryAssetId] || ''
+  }
+  return profile.avatar || ''
+}
+
+const fallbackAvatarUrl = (name = '') =>
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || 'Contact')}`
+
+const draftAvatarPreviewUrl = computed(() =>
+  resolveAvatarImageUrl({
+    name: profileDraft.name,
+    avatar: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
+    avatarImage: buildDraftAvatarImage(),
+  }) || fallbackAvatarUrl(profileDraft.name),
+)
+
+const contactAvatarUrl = (contact = {}) => resolveAvatarImageUrl(contact) || fallbackAvatarUrl(contact.name)
+
 watch(
   draftPreviewKeepAliveAssetIds,
   (assetIds) => {
@@ -338,6 +389,9 @@ watch(
 const resetProfileDraft = () => {
   profileDraft.name = ''
   profileDraft.role = ''
+  profileDraft.avatarImageSourceType = 'none'
+  profileDraft.avatarImageUrl = ''
+  profileDraft.avatarImageGalleryAssetId = ''
   profileDraft.bio = ''
   profileDraft.isMain = false
   profileDraft.knowledgePointIds = []
@@ -360,6 +414,10 @@ const openEditProfile = (profile) => {
   editingProfileId.value = Number(profile.id) || 0
   profileDraft.name = profile.name || ''
   profileDraft.role = profile.role || ''
+  const avatarImage = normalizeDraftAvatarImage(profile)
+  profileDraft.avatarImageSourceType = avatarImage.sourceType
+  profileDraft.avatarImageUrl = avatarImage.url
+  profileDraft.avatarImageGalleryAssetId = avatarImage.galleryAssetId
   profileDraft.bio = profile.bio || ''
   profileDraft.isMain = Boolean(profile.isMain)
   profileDraft.knowledgePointIds = Array.isArray(profile.knowledgePointIds)
@@ -444,6 +502,8 @@ const saveProfile = () => {
   const payload = {
     name,
     role: profileDraft.role,
+    avatarImage: buildDraftAvatarImage(),
+    avatar: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
     isMain: profileDraft.isMain,
     bio: profileDraft.bio,
     knowledgePointIds: [...new Set(profileDraft.knowledgePointIds)],
@@ -454,7 +514,6 @@ const saveProfile = () => {
   if (profileModalMode.value === 'create') {
     chatStore.addRoleProfile({
       ...payload,
-      avatar: '',
     })
     setUiNotice('success', t('角色档案已创建。', 'Role profile created.'))
     closeProfileModal()
@@ -627,13 +686,13 @@ onBeforeUnmount(() => {
       <div class="flex flex-col items-center mb-4 relative">
         <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-3xl mb-2 overflow-hidden shadow-inner">
           <img
-            v-if="profileDraft.name"
-            :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${profileDraft.name}`"
+            v-if="draftAvatarPreviewUrl"
+            :src="draftAvatarPreviewUrl"
             class="w-full h-full object-cover"
           />
           <i v-else class="fas fa-camera"></i>
         </div>
-        <span class="text-blue-500 text-xs">{{ t('输入名字自动生成头像', 'Avatar auto-generates from name') }}</span>
+        <span class="text-blue-500 text-xs">{{ t('可用默认头像、URL 或 Gallery 素材', 'Use default, URL, or Gallery avatar') }}</span>
       </div>
 
       <div class="space-y-3 overflow-y-auto pb-6 no-scrollbar">
@@ -642,6 +701,29 @@ onBeforeUnmount(() => {
           :placeholder="t('名字 / 昵称', 'Name / Display Name')"
           class="w-full border-b py-2 outline-none"
         />
+
+        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
+          <p class="text-xs font-semibold text-gray-700">{{ t('头像来源', 'Avatar source') }}</p>
+          <ImageSourcePicker
+            v-model:source-type="profileDraft.avatarImageSourceType"
+            v-model:image-url="profileDraft.avatarImageUrl"
+            v-model:gallery-asset-id="profileDraft.avatarImageGalleryAssetId"
+            :gallery-assets="galleryImageAssets"
+            :source-options="[
+              { value: 'none', labelZh: '默认头像', labelEn: 'Default avatar' },
+              { value: 'url', labelZh: 'URL 头像', labelEn: 'URL avatar' },
+              { value: 'gallery', labelZh: 'Gallery 素材', labelEn: 'Gallery asset' },
+            ]"
+            url-placeholder-zh="https:// 头像图片地址"
+            url-placeholder-en="https:// avatar image URL"
+            gallery-placeholder-zh="选择 Gallery 头像素材"
+            gallery-placeholder-en="Choose Gallery avatar asset"
+            test-id-prefix="contacts-profile-avatar"
+          />
+          <p class="text-[11px] text-gray-500">
+            {{ t('本地图片仍先进入相册，再在角色档案中引用。', 'Local images still enter through Gallery first, then are referenced by the role profile.') }}
+          </p>
+        </div>
 
         <div class="flex gap-2">
           <input v-model="profileDraft.role" :placeholder="t('职业 / 身份', 'Role / Identity')" class="flex-1 border-b py-2 outline-none" />
@@ -1066,7 +1148,7 @@ onBeforeUnmount(() => {
       <div class="px-4 py-3 flex items-center gap-3 border-b border-gray-100">
         <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
           <img
-            :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"
+            :src="user.avatar || fallbackAvatarUrl(user.name)"
             class="w-full h-full object-cover"
           />
         </div>
@@ -1085,7 +1167,7 @@ onBeforeUnmount(() => {
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
-              :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.name"
+              :src="contactAvatarUrl(contact)"
               class="w-full h-full object-cover"
             />
           </div>
@@ -1112,7 +1194,7 @@ onBeforeUnmount(() => {
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
-              :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.name"
+              :src="contactAvatarUrl(contact)"
               class="w-full h-full object-cover"
             />
           </div>

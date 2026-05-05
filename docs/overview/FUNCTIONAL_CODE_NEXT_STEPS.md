@@ -1,6 +1,6 @@
 # Functional Code Next Steps / 功能代码推进项接手单
 
-Updated / 更新时间: 2026-05-04
+Updated / 更新时间: 2026-05-05
 
 ## 1. Purpose / 用途
 
@@ -1083,3 +1083,680 @@ Follow-up:
   中文：Calendar 行情线索视图交互覆盖已落地于 `tests/calendar-stock-cue-view.test.js`。
 - EN: Next work should pause connector expansion until a new module pair is selected, or switch back to maintainability cleanup.
   中文：下一步建议在选择新的模块组合前暂停连接点扩展，或切回可维护性清理。
+
+---
+
+## 2026-05-04 Update: Home Folder / Shopping / Assets Direction
+
+Status:
+
+- EN: Product direction selected: introduce a reusable Home folder entry pattern, use Shopping as the first folder-style module, and add Assets as an independent module.
+  中文：产品方向已选择：新增可复用的主屏文件夹入口形态，购物作为第一个文件夹式模块落地，资产作为独立模块新增。
+- EN: Shopping should not be implemented as a one-off Home exception. The folder shell belongs to the Home/system entry layer; Shopping only owns its child categories and commerce data.
+  中文：购物不应做成主屏一次性特例。文件夹外壳属于 Home/系统入口层；购物只拥有子入口分类与电商业务数据。
+- EN: Assets should stay separate from Stock. Stock owns market/watchlist behavior; Assets can consume Stock holdings as one investment category summary later.
+  中文：资产应与 Stock 保持分离。Stock 负责行情/自选/市场行为；资产后续可把 Stock 持仓作为投资分类摘要消费。
+- EN: Files remains hidden from the frontend as an internal storage/coordination component, so new Shopping and Assets user-facing records should live under their own module entries.
+  中文：Files 继续作为内部储存/协调组件隐藏在前台之外，因此购物与资产面向用户的记录应分别归属自己的模块入口。
+
+Immediate implementation TODO:
+
+1. EN: Add generic Home entry metadata support for `type: "folder"` while preserving existing app/widget/custom-widget entries.
+   中文：新增通用 Home 入口元数据对 `type: "folder"` 的支持，同时保留现有 app/widget/custom-widget 入口。
+2. EN: Render a 1x1 Home folder tile that visually occupies the same grid footprint as a normal app icon and opens an immersive child-entry panel.
+   中文：渲染一个占位等同普通 App 图标的 1x1 主屏文件夹入口，并可打开沉浸式子入口面板。
+3. EN: Add Shopping as the first folder-backed module entry with child categories such as mall, fashion, beauty, digital, grocery, home, luxury, and gifts.
+   中文：将购物作为第一个文件夹承载模块入口，子分类可包括商城、服饰、美妆、数码、生鲜、家居、奢侈品与礼物。
+4. EN: Add Assets as a standalone module shell with categories for real estate, investment, vehicles, and special assets.
+   中文：新增资产独立模块壳层，分类包括不动产、投资、交通工具与特殊资产。
+5. EN: Defer rich visual theming to the appearance rebuild, but keep the technical boundary ready for Appearance to style folder blur, icon masks, preview density, and open animation.
+   中文：丰富视觉样式暂缓到外观重建，但技术边界需预留给 Appearance 后续控制文件夹毛玻璃、图标蒙版、预览密度与打开动效。
+
+Recommended next:
+
+- EN: Start with the generic Home folder baseline before adding Shopping-specific screens. This reduces future rework if other modules also reuse the folder pattern.
+  中文：先做通用 Home 文件夹基座，再做购物专属页面。这样如果后续其他模块也复用文件夹形态，可以显著减少返工。
+
+Follow-up:
+
+- EN: Home folder baseline, Shopping shell, Assets shell, planned-module registry, future source keys, and regression tests are now landed.
+  中文：Home 文件夹基座、Shopping 壳层、Assets 壳层、规划模块注册表、未来 source key 与回归测试均已落地。
+- EN: Next work should shift from infrastructure to module data behavior. Recommended order: Shopping local store/product-cart-order baseline first, then Assets local store/asset CRUD baseline.
+  中文：下一步应从基础设施转向模块数据行为。推荐顺序：先做 Shopping 本地 store/商品-购物车-订单基线，再做 Assets 本地 store/资产 CRUD 基线。
+- EN: Keep Chat/Wallet/Map/Stock handoffs source-key-only until Shopping and Assets stores are stable.
+  中文：在 Shopping 和 Assets store 稳定前，Chat/Wallet/Map/Stock 联动先保持 source key 预留或只读边界，不急于写入真实联动。
+
+---
+
+## 2026-05-04 Update: Shopping Data Baseline
+
+Status:
+
+- EN: Shopping now has a local store for product catalog, favorites, cart lines, local orders, persistence, and backup/restore.
+  中文：Shopping 现在已有本地 store，承载商品目录、收藏、购物车行、本地订单、持久化与备份/恢复。
+- EN: `ShoppingView.vue` is wired to real local state for category browsing, favorite toggles, cart quantity edits, local checkout, and recent-order removal.
+  中文：`ShoppingView.vue` 已接入真实本地状态，支持分类浏览、收藏切换、购物车数量调整、本地结算与最近订单删除。
+- EN: Settings storage diagnostics and backup payload now include `store:shopping`.
+  中文：Settings 存储诊断与备份载荷现在包含 `store:shopping`。
+- EN: Folder visual status has been archived as a partial scaffold, not final Appearance-controlled theming.
+  中文：文件夹视觉状态已存档为“局部脚手架”，不是最终由 Appearance 控制的主题化完成态。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/shopping-store.test.js tests/shopping-view.test.js tests/home-folder-entry.test.js tests/system-widget-import.test.js`
+- `npm test -- tests/system-automation.test.js tests/shopping-store.test.js tests/shopping-view.test.js`
+- `npm run build`
+
+Recommended next:
+
+- EN: Move to Assets data baseline: local asset store, category summaries, valuation totals, CRUD basics, backup/restore, and then only later Map/Stock/Wallet handoffs.
+  中文：下一步推进 Assets 数据基线：本地资产 store、分类摘要、估值合计、CRUD 基础、备份/恢复；Map/Stock/Wallet 联动再后置。
+
+---
+
+## 2026-05-04 Update: Assets Data Baseline
+
+Status:
+
+- EN: Assets now has a local store for long-term owned-object records, category summaries, status, valuation totals, persistence, and backup/restore.
+  中文：Assets 现在已有本地 store，承载长期拥有物记录、分类摘要、状态、估值合计、持久化与备份/恢复。
+- EN: `AssetsView.vue` is wired to real local state for category browsing, total/active counters, manual create/edit/status/delete, and recent asset display.
+  中文：`AssetsView.vue` 已接入真实本地状态，支持分类浏览、总数/持有中统计、手动新增/编辑/状态更新/删除与最近资产展示。
+- EN: Settings storage diagnostics and backup payload now include `store:assets`.
+  中文：Settings 存储诊断与备份载荷现在包含 `store:assets`。
+- EN: Backup import has a compatibility guard so old Gallery `assets` arrays are not treated as Assets ledger records.
+  中文：备份导入已加入兼容保护，避免旧 Gallery 的 `assets` 数组被当成资产总账记录。
+- EN: Assets visual identity is still deferred to the Appearance rebuild; the current page is only a functional baseline.
+  中文：Assets 视觉身份仍后置到 Appearance 重建；当前页面只是功能基线。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/assets-store.test.js tests/assets-view.test.js`
+- `npm test -- tests/assets-store.test.js tests/assets-view.test.js tests/shopping-store.test.js tests/shopping-view.test.js`
+- `npm run build`
+
+Recommended next:
+
+- EN: Move to Shopping -> Assets handoff baseline: surface manual/importable asset suggestions from asset-eligible Shopping orders, then defer Wallet/Map/Stock writebacks until the handoff UX is explicit.
+  中文：下一步推进 Shopping -> Assets 交接基线：从可转资产的购物订单中展示手动/可导入资产建议；Wallet/Map/Stock 写回等到交接体验明确后再做。
+
+---
+
+## 2026-05-04 Update: Shopping -> Assets Handoff Baseline
+
+Status:
+
+- EN: Shopping now detects asset-eligible local order items and displays manual transfer suggestions inside `ShoppingView.vue`.
+  中文：Shopping 现在会识别本地订单中可转资产的商品，并在 `ShoppingView.vue` 中展示手动转入建议。
+- EN: Checkout does not write Assets automatically; the Assets store is written only after the user clicks the transfer action.
+  中文：结算不会自动写入 Assets；只有用户点击转入动作后，Assets store 才会被写入。
+- EN: Imported assets use deterministic ids and `assets_shopping_purchase` source metadata, preventing duplicate imports for the same order item.
+  中文：转入资产使用确定性 ID 与 `assets_shopping_purchase` 来源元数据，避免同一订单商品重复导入。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/shopping-view.test.js tests/assets-store.test.js tests/assets-view.test.js`
+- `npm run build`
+
+Recommended next:
+
+- EN: Continue with manual-confirmation handoffs rather than automatic writebacks. Good candidates are Shopping -> Wallet expense suggestions or Shopping -> Calendar delivery/reminder suggestions.
+  中文：继续做“手动确认式交接”，不要直接自动写回。候选项是 Shopping -> Wallet 消费建议，或 Shopping -> Calendar 配送/提醒建议。
+
+---
+
+## 2026-05-04 Update: Shopping -> Wallet Handoff Baseline
+
+Status:
+
+- EN: Shopping now displays manual Wallet expense suggestions for local orders.
+  中文：Shopping 现在会为本地订单展示手动 Wallet 消费记账建议。
+- EN: Checkout does not write Wallet automatically; Wallet receives an expense only after the user clicks the record action.
+  中文：结算不会自动写入 Wallet；只有用户点击记账动作后，Wallet 才会生成消费流水。
+- EN: Wallet expense records use `shopping_wallet_expense` and the order id as source metadata, preventing duplicate entries for the same order.
+  中文：Wallet 消费记录使用 `shopping_wallet_expense` 与订单 ID 作为来源元数据，避免同一订单重复记账。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/shopping-view.test.js tests/wallet-store.test.js tests/planned-module-registry.test.js`
+- `npm run build`
+
+Recommended next:
+
+- EN: Continue the same pattern with Shopping -> Calendar delivery/reminder suggestions, or pause connector growth and clean up the mojibake-heavy Shopping page copy before adding more UI.
+  中文：历史中文行在当前终端中显示异常；最新状态见下方 Shopping -> Calendar 更新块。
+
+---
+
+## 2026-05-04 Update: Shopping -> Calendar Handoff Baseline
+
+Status:
+
+- EN: Shopping checkout now writes a delivery/follow-up cue into Calendar while keeping the order itself owned by Shopping.
+  中文：Shopping 结算现在会向 Calendar 写入配送/跟进线索，同时订单本身仍归 Shopping 拥有。
+- EN: `CalendarView.vue` now displays Shopping delivery cues through `CalendarShoppingCueCard.vue`.
+  中文：`CalendarView.vue` 现在通过 `CalendarShoppingCueCard.vue` 展示 Shopping 配送线索。
+- EN: The handoff remains manual-confirmation based: only Calendar confirmation turns the cue into an event and attempts real push scheduling.
+  中文：该交接继续采用手动确认规则：只有在 Calendar 内确认后，线索才会变成事件并尝试真实推送排程。
+- EN: Removing a Shopping order dismisses the related Calendar cue and removes any confirmed event tied to that cue.
+  中文：删除 Shopping 订单会忽略相关 Calendar 线索，并移除与该线索绑定的已确认事件。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/shopping-store.test.js tests/shopping-view.test.js tests/calendar-event-store.test.js tests/calendar-shopping-cue-view.test.js tests/calendar-stock-cue-view.test.js tests/planned-module-registry.test.js`
+
+Recommended next:
+
+- EN: Pause broad connector expansion and do a focused copy/encoding cleanup for Shopping and Calendar visible strings, or add a very small Chat -> Shopping product-card suggestion while preserving Shopping checkout ownership.
+  中文：建议暂停大范围联动扩张，先聚焦清理 Shopping 与 Calendar 可见文案/编码；或做一个很小的 Chat -> Shopping 商品卡建议，但必须保持 Shopping 拥有结算流程。
+  中文：下一步可沿用同样模式做 Shopping -> Calendar 配送/提醒建议；也可以暂停连接点扩展，先清理 Shopping 页面里历史遗留的乱码文案再继续加 UI。
+
+---
+
+## 2026-05-04 Update: Shopping / Calendar Handoff Copy Clarification
+
+Status:
+
+- EN: `ShoppingView.vue` now labels the handoff section as current boundary status instead of future-only boundaries.
+  中文：`ShoppingView.vue` 已将交接区说明改为当前边界状态，而不是全部描述成未来边界。
+- EN: Shopping copy now states that Wallet, Assets, and Calendar handoffs exist but still require user confirmation.
+  中文：Shopping 文案现在说明 Wallet、Assets 与 Calendar 交接已存在，但仍需要用户确认。
+- EN: `CalendarView.vue` now explains Calendar as the cue-confirmation layer for Map, Phone, Shopping, and Stock.
+  中文：`CalendarView.vue` 现在说明 Calendar 是 Map、Phone、Shopping、Stock 的线索确认层。
+- EN: This slice did not add new behavior; it reduced product-state ambiguity before more connector work.
+  中文：本切片没有新增行为，只是在继续新增连接点前降低产品状态误解。
+
+Validation:
+
+- `npm run lint`
+- `npm test -- tests/shopping-view.test.js tests/calendar-shopping-cue-view.test.js tests/calendar-event-store.test.js`
+- `npm run build`
+
+Recommended next:
+
+- EN: Add targeted component assertions for the clarified Shopping/Calendar status copy, or proceed to a small Chat -> Shopping product-card suggestion without moving checkout ownership out of Shopping.
+  中文：下一步可补 Shopping/Calendar 状态文案的组件断言；或推进一个小型 Chat -> Shopping 商品卡建议，但不能把结算归属从 Shopping 移走。
+
+---
+
+## 2026-05-04 Update: Chat -> Shopping Product Suggestion Entry
+
+Status:
+
+- EN: Shopping/Calendar boundary copy now has targeted component assertions.
+  中文：Shopping/Calendar 边界文案现在已有针对性组件断言保护。
+- EN: Chat `+` panel now contains a small Shopping suggestion entry.
+  中文：Chat 的 `+` 面板现在包含一个小型购物建议入口。
+- EN: The entry routes to `/shopping?source=chat&intent=product_card`; all cart, order, checkout, Wallet, Assets, and Calendar ownership remains outside Chat.
+  中文：该入口跳转到 `/shopping?source=chat&intent=product_card`；购物车、订单、结算、Wallet、Assets 与 Calendar 归属仍不进入 Chat。
+
+Validation:
+
+- `npm test -- tests\shopping-view.test.js tests\calendar-shopping-cue-view.test.js tests\chat-user-action-shopping-entry.test.js`
+
+Recommended next:
+
+- EN: If continuing Shopping/Chat work, add a read-only Chat product-card preview sourced from the Shopping catalog. If not, return to maintainability cleanup on a large view. Keep checkout Shopping-owned.
+  中文：若继续推进 Shopping/Chat，可做读取 Shopping 商品目录的只读 Chat 商品卡预览；否则回到大视图可维护性清理。结算继续归 Shopping。
+
+---
+
+## 2026-05-04 Update: Chat Read-Only Shopping Product Preview
+
+Status:
+
+- EN: Chat now reads Shopping catalog products and shows up to three available items in the `+` panel as read-only previews.
+  中文：Chat 现在读取 Shopping 商品目录，并在 `+` 面板中以只读预览展示最多三个有货商品。
+- EN: Preview cards route back to Shopping with `source=chat`, `intent=product_card`, `category`, and `productId`.
+  中文：预览卡会携带 `source=chat`、`intent=product_card`、`category` 与 `productId` 回到 Shopping。
+- EN: `ShoppingView.vue` highlights the target product when opened with a `productId` query.
+  中文：`ShoppingView.vue` 在携带 `productId` query 打开时会高亮目标商品。
+- EN: No cart/order/checkout ownership moved into Chat.
+  中文：购物车、订单与结算归属没有进入 Chat。
+
+Validation:
+
+- `npm test -- tests\chat-user-action-shopping-entry.test.js tests\chat-shopping-preview-routing.test.js tests\shopping-view.test.js`
+
+Recommended next:
+
+- EN: If continuing the same connector, add explicit "send product card as local chat message" composition while keeping checkout in Shopping. Otherwise return to maintainability cleanup on a large view.
+  中文：若继续同一连接线，可新增“作为本地聊天消息发送商品卡”的组装能力，但结算继续留在 Shopping；否则回到大视图可维护性清理。
+
+---
+
+## 2026-05-04 Update: Chat Shopping Product Card Message Batch
+
+Status:
+
+- EN: Chat now supports a structured `product_card` block from store normalization through visual rendering.
+  中文：Chat 现在支持结构化 `product_card` 消息块，从 store 归一化到视觉渲染均已接通。
+- EN: The Chat `+` panel can either route a product preview to Shopping or send it as a local Chat product-card message.
+  中文：Chat `+` 面板既可以把商品预览跳转到 Shopping，也可以将其作为本地 Chat 商品卡消息发送。
+- EN: Shopping shows a Chat-source banner when opened from a product card and offers a return-to-chat action when `chatId` is present.
+  中文：Shopping 从商品卡打开时会显示 Chat 来源承接提示，并在存在 `chatId` 时提供返回聊天动作。
+- EN: No cart/order/checkout ownership moved into Chat.
+  中文：购物车、订单与结算归属仍未进入 Chat。
+
+Validation:
+
+- `npm test -- tests\chat-store-model.test.js tests\chat-user-action-shopping-entry.test.js tests\chat-shopping-preview-routing.test.js tests\shopping-view.test.js`
+
+Recommended next:
+
+- EN: Continue Shopping with gift-intent handoff: let checkout attach an optional Chat recipient/thread context and then surface the confirmed gift context back in Chat. Keep checkout owned by Shopping.
+  中文：继续 Shopping 线可推进赠礼意图交接：结算时可选附带 Chat 收礼对象/会话上下文，再把确认后的赠礼上下文回显到 Chat；结算仍归 Shopping。
+
+---
+
+## 2026-05-04 Update: Shopping Product Source / Image Source Contract
+
+Status:
+
+- EN: New product decision: Shopping products should support system seed/catalog, user-custom, and future AI-assisted/generated origins.
+  中文：新增产品决策：Shopping 商品应支持系统预设/目录、用户自定义、未来 AI 辅助/生成三类来源。
+- EN: New technical direction: user image input across the project should converge on one source contract: URL, Gallery asset, local file through Gallery, and future AI-generated asset.
+  中文：新增技术方向：全项目用户图片输入应收敛到同一个来源契约：URL、Gallery 素材、通过 Gallery 的本地文件，以及未来 AI 生成素材。
+- EN: Immediate Shopping slice: add product image metadata, custom product creation, URL image support, and Gallery image support.
+  中文：Shopping 当前立即推进项：商品图片元数据、自定义商品创建、URL 图片支持与 Gallery 图片支持。
+
+Recommended next:
+
+- EN: Build reusable image-source utilities/components only after the first Shopping implementation proves the contract shape. Do not duplicate file-upload storage outside Gallery.
+  中文：先通过 Shopping 第一刀验证契约形态，再抽可复用图片来源工具/组件；不要在 Gallery 之外重复建设文件上传存储。
+
+---
+
+## 2026-05-04 Update: Shopping Custom Product Images Landed
+
+Status:
+
+- EN: `src/stores/shopping.js` now normalizes product origin as `seed`, `user`, or `ai`.
+  中文：`src/stores/shopping.js` 现在会将商品来源归一化为 `seed`、`user` 或 `ai`。
+- EN: Shopping product images now use a shared source shape: `none`, `url`, `gallery`, or `ai`.
+  中文：Shopping 商品图片现在使用统一来源结构：`none`、`url`、`gallery` 或 `ai`。
+- EN: `ShoppingView.vue` now lets users create custom products with URL images or Gallery asset images.
+  中文：`ShoppingView.vue` 现在支持用户创建自定义商品，并选择 URL 图片或 Gallery 素材图片。
+- EN: Local file upload remains centralized in Gallery: Shopping references Gallery assets instead of owning a separate upload/storage flow.
+  中文：本地文件上传继续集中在 Gallery：Shopping 引用 Gallery 素材，不单独拥有一套上传/存储流程。
+- EN: Validation passed: `npm test -- tests\shopping-store.test.js tests\shopping-view.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-store.test.js tests\shopping-view.test.js`。
+
+Recommended next:
+
+- EN: Extract a reusable image-source picker only after one more module adopts the same input contract, so the abstraction has at least two real consumers.
+  中文：等第二个模块也采用同一图片来源契约后，再抽取可复用图片来源选择器，让抽象至少被两个真实消费者验证。
+- EN: If Shopping remains the priority, continue with gift-recipient handoff: allow a confirmed Shopping order to attach optional Chat/contact recipient context while keeping checkout owned by Shopping.
+  中文：如果继续优先推进 Shopping，则下一步做赠礼收件人交接：让已确认 Shopping 订单可选附带 Chat/联系人收礼上下文，但结算归属仍留在 Shopping。
+
+---
+
+## 2026-05-05 Update: Joint Shopping Gift + Assets Image Batch
+
+Status:
+
+- EN: Starting a joint functional batch rather than two isolated micro-steps.
+  中文：开始一个联合功能批次，而不是两个孤立小步。
+- EN: Shopping gift-recipient handoff will store optional Chat/contact context on the order, without moving cart or checkout behavior into Chat.
+  中文：Shopping 赠礼收件人交接会把可选 Chat/联系人上下文存到订单上，但不会把购物车或结算行为移入 Chat。
+- EN: Assets image-source support will reuse the same source shape proven in Shopping: URL, Gallery asset, local file through Gallery, and future AI-generated asset.
+  中文：Assets 图片来源支持将复用 Shopping 已验证的来源结构：URL、Gallery 素材、通过 Gallery 的本地文件，以及未来 AI 生成素材。
+- EN: Local file upload remains centralized in Gallery.
+  中文：本地文件上传继续集中在 Gallery。
+- EN: Landed: Shopping orders persist structured `giftRecipient` context and `ShoppingView.vue` can prefill it from Chat product-card routes.
+  中文：已落地：Shopping 订单会持久化结构化 `giftRecipient` 上下文，`ShoppingView.vue` 可从 Chat 商品卡路由预填该上下文。
+- EN: Landed: Assets now uses the shared image-source contract for URL/Gallery/AI-reserved asset images.
+  中文：已落地：Assets 现在使用共享图片来源契约承载 URL/Gallery/AI 预留资产图片。
+- EN: Validation passed: `npm test -- tests\shopping-store.test.js tests\shopping-view.test.js tests\assets-store.test.js tests\assets-view.test.js`, `npm run lint`, and `npm run build`.
+  中文：验证通过：`npm test -- tests\shopping-store.test.js tests\shopping-view.test.js tests\assets-store.test.js tests\assets-view.test.js`、`npm run lint` 与 `npm run build`。
+
+Recommended next after this batch:
+
+- EN: Extract a reusable image-source picker component from Shopping + Assets usage before adding the same picker to more modules.
+  中文：先从 Shopping + Assets 两处用法抽取通用图片来源选择器组件，再把同样选择器扩展到更多模块。
+- EN: After that, continue Shopping-to-Chat gift context visibility so Chat can show confirmed gift-order context without owning checkout.
+  中文：之后再继续 Shopping 到 Chat 的赠礼上下文回显，让 Chat 能展示已确认赠礼订单上下文，但不拥有结算。
+
+---
+
+## 2026-05-05 Update: Shared Image Source Picker Landed
+
+Status:
+
+- EN: `src/components/shared/ImageSourcePicker.vue` now owns the common URL/Gallery/AI-reserved picker UI.
+  中文：`src/components/shared/ImageSourcePicker.vue` 现在承载通用 URL/Gallery/AI 预留图片来源选择 UI。
+- EN: Shopping custom product creation and Assets manual asset creation/editing now consume the shared picker.
+  中文：Shopping 自定义商品创建与 Assets 手动资产新增/编辑现在都消费共享选择器。
+- EN: The existing test-id contract was preserved so current view tests still protect the same user paths.
+  中文：既有 test-id 契约已保留，因此当前视图测试仍保护同样的用户路径。
+- EN: Validation passed: `npm test -- tests\shopping-view.test.js tests\assets-view.test.js tests\shopping-store.test.js tests\assets-store.test.js`, `npm run lint`, and `npm run build`.
+  中文：验证通过：`npm test -- tests\shopping-view.test.js tests\assets-view.test.js tests\shopping-store.test.js tests\assets-store.test.js`、`npm run lint` 与 `npm run build`。
+
+Recommended next:
+
+- EN: Legacy picker template blocks are now removed from Shopping and Assets. Next, adopt `ImageSourcePicker` in the next image-heavy module, or return to Shopping-to-Chat gift context visibility if connector work is the priority.
+  中文：Shopping 与 Assets 中旧选择器模板块已清理。下一步可将 `ImageSourcePicker` 接入下一个重图片模块；若继续优先联动，则回到 Shopping-to-Chat 赠礼上下文回显。
+
+---
+
+## 2026-05-05 Update: Appearance Wallpaper Picker Uses Shared Image Source UI
+
+Status:
+
+- EN: `ImageSourcePicker.vue` now accepts custom source options, allowing non-product workflows such as wallpaper sources to use the same component without showing irrelevant AI/default-icon choices.
+  中文：`ImageSourcePicker.vue` 现在支持自定义来源选项，因此壁纸来源这类非商品流程也能复用同一组件，而不会显示无关的 AI/默认图标选项。
+- EN: Appearance wallpaper selection now uses the shared picker for Theme, URL, and Gallery modes while preserving existing system-store wallpaper behavior.
+  中文：Appearance 壁纸选择现在使用共享选择器承载主题、URL 与 Gallery 三种模式，同时保留原有 system store 壁纸行为。
+- EN: `tests/appearance-wallpaper-picker.test.js` covers URL, Gallery, and theme wallpaper application through the shared picker.
+  中文：`tests/appearance-wallpaper-picker.test.js` 已覆盖通过共享选择器应用 URL、Gallery 与主题壁纸。
+
+Recommended next:
+
+- EN: Continue image-source consolidation in one more visual/media-heavy module, preferably Map background imagery or profile/contact avatar selection. Keep direct local file upload centralized in Gallery.
+  中文：下一步建议继续在一个重视觉/媒体模块中收敛图片来源，优先候选是 Map 背景图或 Profile/Contacts 头像选择。直接本地文件上传仍统一集中在 Gallery。
+
+---
+
+## 2026-05-05 Update: Map Picker + Chat Gift Context Sync Batch
+
+Status:
+
+- EN: Map visual selection now consumes `ImageSourcePicker` for default/Gallery mode selection, making Map the fourth real shared-picker consumer after Shopping, Assets, and Appearance.
+  中文：Map 视觉选择现在使用 `ImageSourcePicker` 承载默认/Gallery 模式选择，成为 Shopping、Assets、Appearance 之后第四个真实共享选择器消费者。
+- EN: Chat now reads confirmed Shopping gift orders for the active conversation and displays them as read-only context cards.
+  中文：Chat 现在会读取当前会话相关的已确认 Shopping 赠礼订单，并以只读上下文卡片展示。
+- EN: The ownership boundary is preserved: Chat can view and route to Shopping gift orders, but cannot create or mutate Shopping checkout state.
+  中文：归属边界保持不变：Chat 可以查看并跳转到 Shopping 赠礼订单，但不能创建或修改 Shopping 结算状态。
+
+Recommended next:
+
+- EN: Add Shopping-side support for `intent=gift_order&orderId=...` so the route from Chat lands on a highlighted order, or continue media-source consolidation into Profile/Contacts avatars.
+  中文：下一步建议在 Shopping 侧支持 `intent=gift_order&orderId=...`，让 Chat 跳转能定位高亮订单；或继续把媒体来源收敛推进到 Profile/Contacts 头像。
+
+---
+
+## 2026-05-05 Update: Shopping Gift Order Route Highlight
+
+Status:
+
+- EN: `ShoppingView.vue` now reads `source=chat&intent=gift_order&orderId=...` and turns the matching order into the visible, highlighted target.
+  中文：`ShoppingView.vue` 现在读取 `source=chat&intent=gift_order&orderId=...`，并将对应订单变成可见且高亮的目标。
+- EN: The recent-order list now pulls in the target order when it would otherwise be outside the normal short list, so Chat-to-Shopping navigation does not land on an invisible state.
+  中文：最近订单列表会在目标订单原本不在短列表内时主动纳入该订单，避免 Chat 跳转到 Shopping 后看不到目标。
+- EN: Ownership remains unchanged: Chat surfaces and routes to gift context, while Shopping owns product, cart, order, and checkout state.
+  中文：归属不变：Chat 只展示并跳转赠礼上下文；商品、购物车、订单和结算状态仍归 Shopping。
+- EN: Validation passed: `npm test -- tests\shopping-view.test.js tests\chat-shopping-preview-routing.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-view.test.js tests\chat-shopping-preview-routing.test.js`。
+
+Recommended next:
+
+- EN: Continue media-source consolidation into Profile/Contacts avatar selection, or add a focused Shopping order-detail panel if order review needs a clearer drill-in surface.
+  中文：下一步建议继续把媒体来源收敛推进到 Profile/Contacts 头像选择；如果订单查看需要更清晰的下钻面板，则补一个聚焦的 Shopping 订单详情面板。
+
+---
+
+## 2026-05-05 Update: Profile + Contacts Avatar Source Consolidation
+
+Status:
+
+- EN: User profile avatar selection now consumes the shared `ImageSourcePicker` with default, URL, and Gallery modes.
+  中文：用户资料头像选择现在接入共享 `ImageSourcePicker`，支持默认、URL 与 Gallery 三种模式。
+- EN: Role profiles in Contacts now persist structured `avatarImage` metadata while keeping legacy URL avatar compatibility for current Chat/contact rendering.
+  中文：Contacts 中的角色档案现在持久化结构化 `avatarImage` 元数据，同时保留旧 URL 头像兼容，避免破坏当前 Chat/contact 渲染。
+- EN: `ImageSourcePicker` now supports both camelCase and kebab-case update events, reducing integration risk for future explicit event listeners.
+  中文：`ImageSourcePicker` 现在支持 camelCase 与 kebab-case 两类更新事件，降低后续显式事件监听接入风险。
+- EN: Validation passed: `npm test -- tests\user-profile-avatar-picker.test.js tests\contacts-wallet-ledger-context.test.js tests\shopping-view.test.js tests\assets-view.test.js tests\appearance-wallpaper-picker.test.js tests\map-visual-picker.test.js`.
+  中文：验证通过：`npm test -- tests\user-profile-avatar-picker.test.js tests\contacts-wallet-ledger-context.test.js tests\shopping-view.test.js tests\assets-view.test.js tests\appearance-wallpaper-picker.test.js tests\map-visual-picker.test.js`。
+
+Recommended next:
+
+- EN: Continue with Gallery avatar resolution in Chat avatar rendering, or shift to a Shopping order-detail panel if order review needs a deeper surface.
+  中文：下一步建议继续把 Gallery 头像解析接入 Chat 头像渲染链；如果订单查看需要更深层界面，则转做 Shopping 订单详情面板。
+---
+
+## 2026-05-05 Update: Chat Gallery Avatar Rendering
+
+Status:
+
+- EN: Chat now resolves structured URL/Gallery avatar sources from Profile and Contacts in the conversation list, assistant-side message avatars, and self-side message avatars.
+  中文：Chat 现在会在会话列表、对方消息头像、自己消息头像中解析 Profile 与 Contacts 保存的结构化 URL/Gallery 头像来源。
+- EN: Thread-level and module-level avatar overrides still win over global role/profile avatars, so existing identity override behavior is preserved.
+  中文：单会话头像覆写和模块级头像覆写仍优先于全局角色/用户头像，因此既有身份覆写行为不变。
+- EN: ChatDirectory role binding rows now use the same Gallery avatar resolution, keeping management and chat-entry display aligned.
+  中文：Chat Directory 的角色绑定行也使用同一套 Gallery 头像解析，保证管理页与聊天入口显示一致。
+- EN: Validation passed: `npm test -- tests\chat-avatar-image-source.test.js`.
+  中文：验证通过：`npm test -- tests\chat-avatar-image-source.test.js`。
+
+Recommended next:
+
+- EN: Add a focused Shopping order-detail panel next, because Chat can already route to orders and Shopping now needs a clearer drill-in surface for review.
+  中文：下一步建议补一个聚焦的 Shopping 订单详情面板，因为 Chat 已经能跳回订单，Shopping 侧需要更清晰的下钻查看面。
+- EN: If order review is paused, continue small ChatDirectory/service-account polish without changing Chat/store ownership boundaries.
+  中文：如果暂缓订单详情，则继续做 ChatDirectory/服务号管理的小型打磨，但不改变 Chat/store 的归属边界。
+
+---
+
+## 2026-05-05 Update: Shopping Order Detail Panel
+
+Status:
+
+- EN: Shopping now has a focused read-only order-detail panel for recent orders and Chat gift-order returns.
+  中文：Shopping 现在为最近订单与 Chat 赠礼订单返回路径提供聚焦的只读订单详情面板。
+- EN: The panel shows order total, status, item lines, gift context, and clear copy that Shopping owns checkout while other modules only receive explicit handoffs.
+  中文：面板展示订单总额、状态、商品明细、赠礼上下文，并明确说明 Shopping 拥有结算，其他模块只接收显式交接。
+- EN: Validation passed: `npm test -- tests\shopping-view.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-view.test.js`。
+
+Recommended next:
+
+- EN: Let ChatDirectory service/official accounts adopt the shared avatar image-source contract so non-role chat entries can also use URL/Gallery avatars.
+  中文：下一步建议让 ChatDirectory 的服务号/公众号接入共享头像来源契约，使非角色类聊天对象也能使用 URL/Gallery 头像。
+- EN: Alternative if Shopping remains the focus: add explicit order-lifecycle status controls, such as mark completed/cancelled, without moving Wallet/Assets ownership.
+  中文：如果继续聚焦 Shopping，则可补订单生命周期状态控制，例如标记完成/取消，但不移动 Wallet/Assets 归属。
+---
+
+## 2026-05-05 Update: ChatDirectory Service Avatar Source Contract
+
+Status:
+
+- EN: ChatDirectory service and official account editing now consumes the shared `ImageSourcePicker` with default, URL, and Gallery avatar modes.
+  中文：ChatDirectory 服务号/官方账号编辑已复用共享 `ImageSourcePicker`，支持默认、URL、Gallery 三类头像来源。
+- EN: Contact-level `avatarImage` metadata now persists for service/official chat entries, while existing service/official fallback icons remain when no explicit avatar is configured.
+  中文：服务号/官方账号聊天对象已持久化 contact 级 `avatarImage`；未配置头像时仍保留服务号/官方账号默认图标。
+- EN: Validation passed across avatar rendering, Chat store model, contacts context, and Chat-to-Shopping routing tests.
+  中文：头像渲染、Chat store 模型、联系人上下文、Chat-to-Shopping 路由相关测试均已通过。
+
+Recommended next:
+
+- EN: Continue Shopping order lifecycle controls because the order-detail panel is already landed and needs explicit completion/cancellation states.
+  中文：下一步建议继续补 Shopping 订单生命周期控制，因为订单详情面板已落地，需要明确完成/取消状态。
+
+---
+
+## 2026-05-05 Update: Shopping Order Lifecycle Controls
+
+Status:
+
+- EN: Shopping now has explicit local order lifecycle APIs: `updateOrderStatus`, `markOrderCompleted`, and `cancelOrder`.
+  中文：Shopping 已具备明确的本地订单生命周期 API：`updateOrderStatus`、`markOrderCompleted`、`cancelOrder`。
+- EN: The order-detail panel now exposes complete/cancel actions; completing or cancelling an order closes its Calendar delivery cue.
+  中文：订单详情面板已提供完成/取消操作；完成或取消订单会关闭对应 Calendar 配送线索。
+- EN: This preserves ownership boundaries: Shopping owns order state; Calendar only carries confirmed handoff cues.
+  中文：该设计保持归属边界：Shopping 拥有订单状态，Calendar 只承载已交接的跟进线索。
+- EN: Validation passed: `npm test -- tests\shopping-store.test.js tests\shopping-view.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-store.test.js tests\shopping-view.test.js`。
+
+Recommended next:
+
+- EN: Run the broader connector regression next, then choose between Shopping service/shop presets and Assets-to-Map location handoff.
+  中文：下一步建议先跑更宽的联动回归，然后在 Shopping 服务/店铺预设与 Assets-to-Map 位置交接之间选择同体量任务。
+---
+
+## 2026-05-05 Update: Shopping Service Presets
+
+Status:
+
+- EN: Shopping now defines stable service/shop presets for platform-like grouping inside the Shopping module.
+  中文：Shopping 已定义稳定的服务/店铺预设，用于在购物模块内部形成类似多个购物平台的分组。
+- EN: Products persist `serviceKey`, and both seed products and user-created products can be filtered by service.
+  中文：商品会持久化 `serviceKey`，内置商品与用户自定义商品均可按服务/店铺筛选。
+- EN: This deliberately avoids creating multiple standalone foreground apps; Home folder immersion remains a visual/navigation layer, while Shopping owns catalog, cart, and orders.
+  中文：这一步刻意不新增多个独立前台 App；主屏文件夹沉浸感仍属于视觉/导航层，Shopping 继续拥有商品、购物车和订单。
+- EN: Validation passed: `npm test -- tests\planned-module-registry.test.js tests\shopping-store.test.js tests\shopping-view.test.js`.
+  中文：验证通过：`npm test -- tests\planned-module-registry.test.js tests\shopping-store.test.js tests\shopping-view.test.js`。
+
+Recommended next:
+
+- EN: Connect Shopping service presets to ChatDirectory service accounts so platform/shop identities can appear in Chat without moving Shopping ownership.
+  中文：下一步建议把 Shopping 店铺预设与 ChatDirectory 服务号账号衔接，让平台/店铺身份能出现在 Chat 中，但不转移 Shopping 归属。
+- EN: Alternative: run broader connector regression and then start Assets-to-Map location handoff.
+  中文：备选是先跑更宽联动回归，再开始 Assets-to-Map 位置交接。
+
+---
+
+## 2026-05-05 Update: ChatDirectory Shopping Service Account Binding
+
+Status:
+
+- EN: ChatDirectory can now create Shopping shop service accounts from shared shop presets.
+  中文：ChatDirectory 现在可以从共享店铺预设创建 Shopping 店铺服务号。
+- EN: Service and official contacts persist a normalized `shoppingServiceKey`, and the service editor can manually bind or clear a Shopping shop reference.
+  中文：服务号/公众号联系人会持久化标准化的 `shoppingServiceKey`，服务编辑弹窗可手动绑定或清空 Shopping 店铺引用。
+- EN: The service list displays the bound Shopping shop label so future Chat interactions can identify which shop/account is speaking.
+  中文：服务号列表会显示已绑定的 Shopping 店铺名称，后续 Chat 互动可明确是哪一个店铺/账号在发言。
+- EN: Validation passed: `npm test -- tests\chat-store-model.test.js tests\chat-avatar-image-source.test.js`.
+  中文：验证通过：`npm test -- tests\chat-store-model.test.js tests\chat-avatar-image-source.test.js`。
+
+Recommended next:
+
+- EN: Add Chat-facing product-card/service-account sender context so a shop-bound service account can recommend or discuss Shopping products without owning checkout.
+  中文：下一步建议补 Chat 侧商品卡/服务号发送者上下文，让绑定店铺的服务号能推荐或讨论 Shopping 商品，但不接管结算。
+- EN: Alternative same-size slice: begin Assets-to-Map location handoff for real estate and vehicle assets.
+  中文：同体量备选任务是启动 Assets-to-Map 位置交接，让不动产和交通工具类资产开始服务地图系统。
+
+---
+
+## 2026-05-05 Update: Chat Product Card Shop Context
+
+Status:
+
+- EN: Chat product cards now carry Shopping shop context through `serviceKey` and `serviceLabel`.
+  中文：Chat 商品卡现在会通过 `serviceKey` 与 `serviceLabel` 携带 Shopping 店铺上下文。
+- EN: Product previews and sent product-card messages display the shop label and route back to Shopping with the `service` query.
+  中文：商品预览和已发送商品卡会显示店铺名称，并在跳转 Shopping 时携带 `service` query。
+- EN: Shopping-bound service account chats now prioritize products from the bound shop in the `+` panel.
+  中文：已绑定 Shopping 店铺的服务号聊天中，`+` 面板会优先展示该店铺商品。
+- EN: Validation passed: `npm test -- tests\chat-store-model.test.js tests\chat-user-action-shopping-entry.test.js tests\chat-shopping-preview-routing.test.js`.
+  中文：验证通过：`npm test -- tests\chat-store-model.test.js tests\chat-user-action-shopping-entry.test.js tests\chat-shopping-preview-routing.test.js`。
+
+Recommended next:
+
+- EN: Run the broader Shopping/Chat regression before adding another connector.
+  中文：下一步先跑更宽的 Shopping/Chat 回归，再继续新增连接点。
+- EN: Good next slice: service-account order reminder copy in Chat, or Assets-to-Map location handoff if shifting away from Shopping.
+  中文：可选下一切片：补 Chat 服务号订单提醒文案；若切出 Shopping，则推进 Assets-to-Map 位置交接。
+
+---
+
+## 2026-05-05 Update: Shopping Logistics Peer Entry
+
+Status:
+
+- EN: Shopping now includes a peer `logistics` entry alongside product categories.
+  中文：Shopping 现在新增与商品品类平级的 `logistics` / 物流入口。
+- EN: The logistics view aggregates Shopping orders and Calendar delivery cues instead of creating a separate logistics store.
+  中文：物流视图聚合 Shopping 订单与 Calendar 配送线索，不新增独立物流 store。
+- EN: Logistics is intentionally excluded from the custom-product category selector.
+  中文：物流被刻意排除在自定义商品品类选择器之外。
+- EN: Validation passed: `npm test -- tests\planned-module-registry.test.js tests\shopping-store.test.js tests\shopping-view.test.js`.
+  中文：验证通过：`npm test -- tests\planned-module-registry.test.js tests\shopping-store.test.js tests\shopping-view.test.js`。
+
+Linkage judgment:
+
+- EN: Calendar: current strongest linkage. Shopping checkout already creates delivery cues; logistics displays them.
+  中文：Calendar：当前最强联动。Shopping 结算已生成配送线索，物流入口负责展示。
+- EN: Chat: next strong candidate. Shop service accounts can send shipment, arrival, delay, and pickup messages.
+  中文：Chat：下一强候选。店铺服务号可发送发货、到达、延迟、取件消息。
+- EN: Map: future candidate. Delivery address, pickup point, courier route, or ETA can become Map context later.
+  中文：Map：未来候选。配送地址、取件点、配送路线或 ETA 后续可进入 Map 上下文。
+- EN: Wallet/Assets: downstream consumers only. Logistics should not own expenses or owned objects.
+  中文：Wallet/Assets：仅作为下游消费方。物流不应拥有消费流水或拥有物记录。
+
+Recommended next:
+
+- EN: Add Chat service-account shipment/arrival reminder cards before starting Map address handoff.
+  中文：建议先补 Chat 店铺服务号发货/到达提醒卡，再启动 Map 地址交接。
+---
+
+## 2026-05-05 Update: Chat Service Logistics Context
+
+Status:
+
+- EN: Shopping order items now persist shop identity through `serviceKey` and `serviceLabel`.
+  中文：Shopping 订单项现在通过 `serviceKey` 与 `serviceLabel` 固化店铺身份。
+- EN: Chat service accounts bound to Shopping shops show read-only logistics reminders for matching active Calendar delivery cues.
+  中文：绑定 Shopping 店铺的 Chat 服务号会展示匹配该店铺、仍活跃的 Calendar 配送线索，且保持只读。
+- EN: Chat routes these reminders back to Shopping Logistics with `category=logistics`, `intent=logistics`, `service`, `chatId`, and `orderId`.
+  中文：Chat 会携带 `category=logistics`、`intent=logistics`、`service`、`chatId`、`orderId` 跳回 Shopping 物流入口。
+- EN: Shopping recognizes the Chat logistics source banner and highlights the linked logistics order row.
+  中文：Shopping 会识别来自 Chat 的物流来源横幅，并高亮对应物流订单行。
+- EN: Validation passed: `npm test -- tests\shopping-store.test.js tests\chat-shopping-preview-routing.test.js tests\shopping-view.test.js tests\calendar-shopping-cue-view.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-store.test.js tests\chat-shopping-preview-routing.test.js tests\shopping-view.test.js tests\calendar-shopping-cue-view.test.js`。
+
+Recommended next:
+
+- EN: Add explicit Chat message-card composition for shipment/arrival updates if continuing Shopping/Chat immersion.
+  中文：若继续深化 Shopping/Chat 沉浸联动，下一步建议做可发送的 Chat 发货/到达消息卡。
+- EN: Alternative same-size slice: start Map delivery-address handoff, keeping Map as a location consumer rather than a logistics owner.
+  中文：同体量备选任务是启动 Map 配送地址交接，但 Map 只作为位置消费方，不成为物流归属方。
+
+---
+
+## 2026-05-05 Update: Shopping Promotion / Logistics Service / Food Delivery Baseline
+
+Status:
+
+- EN: The Shopping service-account boundary has changed: shop accounts should push new arrivals, discounts, and product recommendations, while logistics belongs to separate Logistics service accounts.
+  中文：Shopping 服务号边界已调整：店铺号负责新品、折扣和商品推荐；物流信息统一归独立物流服务号。
+- EN: ChatDirectory now supports dedicated Logistics and Food Delivery service-account presets, and Chat contacts persist `logisticsServiceKey` / `foodDeliveryServiceKey`.
+  中文：ChatDirectory 已支持独立物流服务号与外卖通知服务号预设，Chat 联系人会持久化 `logisticsServiceKey` / `foodDeliveryServiceKey`。
+- EN: Chat logistics reminders now appear only for Logistics service accounts and aggregate active delivery cues from Shopping/Calendar.
+  中文：Chat 物流提醒现在只在物流服务号会话中出现，并聚合来自 Shopping/Calendar 的活跃配送线索。
+- EN: Food Delivery now has a Home folder-style entry and a light `/food-delivery` route with category navigation and Map handoff boundary copy.
+  中文：外卖已具备主屏文件夹式入口和轻量 `/food-delivery` 页面，支持分类导航，并明确与 Map 的交接边界。
+- EN: Validation passed across planned registry, Home folder, Food Delivery view, Chat store, ChatDirectory, logistics routing, system widget import, and icon-presentation tests.
+  中文：已通过规划注册、主屏文件夹、外卖页面、Chat store、ChatDirectory、物流路由、系统桌面导入和图标展示相关回归。
+
+Recommended next:
+
+- EN: Add a local Food Delivery data baseline: restaurant records, menu items, delivery cart, order skeleton, and a read-only Chat food-delivery push context.
+  中文：下一步建议补外卖本地数据基线：餐厅记录、菜单项、外卖购物车、订单骨架，以及 Chat 中只读外卖推送上下文。
+- EN: After that, connect Map as a location/ETA provider for Food Delivery, not as the owner of restaurant orders or payment.
+  中文：随后再让 Map 作为外卖的位置/ETA 提供方接入，而不是接管餐厅订单或支付。
+
+---
+
+## 2026-05-05 Update: Food Delivery Local Data Baseline
+
+Status:
+
+- EN: Food Delivery now has a persisted local store for restaurants, menu items, cart lines, orders, and order status.
+  中文：Food Delivery 现在具备持久化本地 store，管理餐厅、菜单项、购物车行、订单和订单状态。
+- EN: The Food Delivery page can create a baseline order from seed menu data while keeping Map as a future location/ETA provider.
+  中文：外卖页面现在可从种子菜单数据生成基础订单，同时继续把 Map 定位为后续位置/ETA 提供方。
+- EN: Settings backup/import/rollback and storage diagnostics now include Food Delivery data.
+  中文：Settings 的备份、导入、回滚和存储诊断已包含外卖数据。
+- EN: Validation passed: Food Delivery store/view, Home folder, and system widget import tests.
+  中文：已通过外卖 store/view、主屏文件夹和系统桌面导入相关测试。
+
+Recommended next:
+
+- EN: Add Chat food-delivery service-account push context next, using the existing `foodDeliveryServiceKey` contact binding and Food Delivery order status.
+  中文：下一步建议补 Chat 外卖服务号推送上下文，复用现有 `foodDeliveryServiceKey` 联系人绑定和外卖订单状态。
+- EN: Keep Map handoff read-only until Food Delivery order state is stable in Chat.
+  中文：在外卖订单状态进入 Chat 并稳定前，Map 交接继续保持只读。

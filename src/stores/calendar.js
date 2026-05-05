@@ -5,6 +5,7 @@ import {
   cancelScheduledPushNotification,
   schedulePushNotification,
 } from '../lib/push'
+import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useSystemStore } from './system'
 
 const CALENDAR_STORAGE_KEY = 'store:calendar'
@@ -12,6 +13,7 @@ const CALENDAR_STORAGE_VERSION = 1
 const CALENDAR_EVENT_LIMIT = 120
 const CALENDAR_PHONE_CUE_LIMIT = 80
 const CALENDAR_STOCK_CUE_LIMIT = 80
+const CALENDAR_SHOPPING_CUE_LIMIT = 80
 const CALENDAR_EVENT_PUSH_HISTORY_LIMIT = 6
 const CALENDAR_EVENT_STATUS_CONFIRMED = 'confirmed'
 const CALENDAR_EVENT_STATUS_CANCELLED = 'cancelled'
@@ -77,12 +79,22 @@ const createStockMarketCueId = (stockId) => {
   return normalizedStockId ? `stock_market_cue_${normalizedStockId}` : ''
 }
 
+const createShoppingDeliveryCueId = (orderId) => {
+  const normalizedOrderId = normalizeEventId(orderId)
+  return normalizedOrderId ? `shopping_delivery_cue_${normalizedOrderId}` : ''
+}
+
 const createCalendarEventIdFromPhoneCue = (cueId) => {
   const normalizedCueId = normalizeEventId(cueId)
   return normalizedCueId ? `calendar_event_${normalizedCueId}` : ''
 }
 
 const createCalendarEventIdFromStockCue = (cueId) => {
+  const normalizedCueId = normalizeEventId(cueId)
+  return normalizedCueId ? `calendar_event_${normalizedCueId}` : ''
+}
+
+const createCalendarEventIdFromShoppingCue = (cueId) => {
   const normalizedCueId = normalizeEventId(cueId)
   return normalizedCueId ? `calendar_event_${normalizedCueId}` : ''
 }
@@ -206,6 +218,59 @@ const normalizeStockMarketCues = (raw) => {
     .slice(0, CALENDAR_STOCK_CUE_LIMIT)
 }
 
+const normalizeShoppingDeliveryCue = (raw, index = 0) => {
+  if (!raw || typeof raw !== 'object') return null
+  const orderId = normalizeEventId(raw.orderId || raw.sourceOrderId || raw.sourceReminderId)
+  if (!orderId) return null
+  const cueId = normalizeEventId(raw.id) || createShoppingDeliveryCueId(orderId)
+  const title = trimLine(raw.title || raw.titleEn || raw.titleZh, 'Shopping order', 100)
+  if (!cueId || !title) return null
+  const createdAt = Math.max(0, toInt(raw.createdAt, Date.now() + index))
+  const suggestedAt = Math.max(
+    0,
+    toInt(raw.suggestedAt || raw.dueAt || raw.startsAt, createdAt + 24 * 60 * 60 * 1000),
+  )
+
+  return {
+    id: cueId,
+    orderId,
+    title,
+    itemCount: Math.max(0, toInt(raw.itemCount, 0)),
+    totalCents: Math.max(0, toInt(raw.totalCents, 0)),
+    currency: trimLine(raw.currency, 'CNY', 12).toUpperCase(),
+    summary: trimLine(raw.summary || raw.summaryEn || raw.summaryZh, '', 240),
+    suggestedAt,
+    status: normalizeCalendarCueStatus(raw.status),
+    route: trimLine(raw.route, '/shopping', 120),
+    icon: trimLine(raw.icon, 'fas fa-truck-fast', 80),
+    tone: trimLine(raw.tone, 'orange', 40),
+    source: trimLine(raw.source, SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY, 80),
+    createdAt,
+    updatedAt: Math.max(0, toInt(raw.updatedAt, createdAt)),
+  }
+}
+
+const normalizeShoppingDeliveryCues = (raw) => {
+  if (!Array.isArray(raw)) return []
+  const seenIds = new Set()
+  const normalized = []
+  raw.forEach((item, index) => {
+    const cue = normalizeShoppingDeliveryCue(item, index)
+    if (!cue || seenIds.has(cue.id)) return
+    seenIds.add(cue.id)
+    normalized.push(cue)
+  })
+  return normalized
+    .sort((a, b) => {
+      if (a.status !== b.status) {
+        if (a.status === CALENDAR_CUE_STATUS_SUGGESTED) return -1
+        if (b.status === CALENDAR_CUE_STATUS_SUGGESTED) return 1
+      }
+      return b.updatedAt - a.updatedAt
+    })
+    .slice(0, CALENDAR_SHOPPING_CUE_LIMIT)
+}
+
 const normalizeCalendarEventPushHistory = (raw) => {
   if (!Array.isArray(raw)) return []
   return raw
@@ -296,6 +361,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const events = ref([])
   const phoneMissedCallCues = ref([])
   const stockMarketCues = ref([])
+  const shoppingDeliveryCues = ref([])
   const hasFinishedStorageHydration = ref(false)
   const eventPushSchedulePromises = new Map()
   const eventPushCancelPromises = new Map()
@@ -319,6 +385,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   )
 
   const stockMarketCueCount = computed(() => activeStockMarketCues.value.length)
+
+  const activeShoppingDeliveryCues = computed(() =>
+    shoppingDeliveryCues.value.filter((cue) => cue.status !== CALENDAR_CUE_STATUS_DISMISSED),
+  )
+
+  const shoppingDeliveryCueCount = computed(() => activeShoppingDeliveryCues.value.length)
 
   const findEventById = (eventId) => {
     const id = normalizeEventId(eventId)
@@ -354,6 +426,18 @@ export const useCalendarStore = defineStore('calendar', () => {
     const normalizedStockId = normalizeEventId(stockId)
     if (!normalizedStockId) return null
     return stockMarketCues.value.find((cue) => cue.stockId === normalizedStockId) || null
+  }
+
+  const findShoppingDeliveryCueById = (cueId) => {
+    const id = normalizeEventId(cueId)
+    if (!id) return null
+    return shoppingDeliveryCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findShoppingDeliveryCueByOrderId = (orderId) => {
+    const normalizedOrderId = normalizeEventId(orderId)
+    if (!normalizedOrderId) return null
+    return shoppingDeliveryCues.value.find((cue) => cue.orderId === normalizedOrderId) || null
   }
 
   const upsertEvent = (rawEvent = {}) => {
@@ -595,6 +679,95 @@ export const useCalendarStore = defineStore('calendar', () => {
     })
   }
 
+  const upsertShoppingDeliveryCue = (input = {}) => {
+    const now = Date.now()
+    const normalized = normalizeShoppingDeliveryCue({
+      ...input,
+      updatedAt: now,
+      createdAt: input.createdAt || now,
+    })
+    if (!normalized) return null
+    const index = shoppingDeliveryCues.value.findIndex((cue) => cue.id === normalized.id)
+    if (index >= 0) {
+      const existing = shoppingDeliveryCues.value[index]
+      shoppingDeliveryCues.value.splice(index, 1, {
+        ...existing,
+        ...normalized,
+        createdAt: existing.createdAt || normalized.createdAt,
+      })
+    } else {
+      shoppingDeliveryCues.value.unshift(normalized)
+      if (shoppingDeliveryCues.value.length > CALENDAR_SHOPPING_CUE_LIMIT) {
+        shoppingDeliveryCues.value.splice(CALENDAR_SHOPPING_CUE_LIMIT)
+      }
+    }
+    return findShoppingDeliveryCueById(normalized.id)
+  }
+
+  const upsertShoppingDeliveryCueFromOrder = (order = {}) => {
+    const orderId = normalizeEventId(order.id)
+    if (!orderId) return null
+    const existing = findShoppingDeliveryCueByOrderId(orderId)
+    const createdAt = Math.max(0, toInt(order.createdAt, Date.now()))
+    const itemCount = Math.max(0, toInt(order.itemCount, Array.isArray(order.items) ? order.items.length : 0))
+    const totalCents = Math.max(0, toInt(order.totalCents, 0))
+    const currency = trimLine(order.currency, 'CNY', 12).toUpperCase()
+    const orderTitle = itemCount > 1 ? `${itemCount} Shopping items` : trimLine(order.items?.[0]?.title, 'Shopping order', 100)
+    return upsertShoppingDeliveryCue({
+      id: existing?.id || createShoppingDeliveryCueId(orderId),
+      orderId,
+      title: orderTitle,
+      itemCount,
+      totalCents,
+      currency,
+      summary: order.note || `Track delivery or follow up for ${itemCount || 1} Shopping item(s).`,
+      suggestedAt: existing?.suggestedAt || createdAt + 24 * 60 * 60 * 1000,
+      status: existing?.status || CALENDAR_CUE_STATUS_SUGGESTED,
+      route: '/shopping',
+      icon: 'fas fa-truck-fast',
+      tone: 'orange',
+      source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+      createdAt: existing?.createdAt || createdAt,
+    })
+  }
+
+  const upsertEventFromShoppingDeliveryCue = (cue = {}) => {
+    const cueId = normalizeEventId(cue.id)
+    if (!cueId) return null
+    const eventId = createCalendarEventIdFromShoppingCue(cueId)
+    const existing = findEventById(eventId)
+    const suggestedAt = Math.max(0, toInt(cue.suggestedAt, Date.now() + 24 * 60 * 60 * 1000))
+    const hasEditedTime = Math.max(0, toInt(existing?.timeEditedAt, 0)) > 0
+    const itemCount = Math.max(0, toInt(cue.itemCount, 0))
+    const amount = (Math.max(0, toInt(cue.totalCents, 0)) / 100).toFixed(2)
+    return upsertEvent({
+      id: eventId,
+      source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+      sourceReminderId: cueId,
+      sourceAreaId: '',
+      titleZh: `购物跟进：${cue.title}`,
+      titleEn: `Shopping follow-up: ${cue.title}`,
+      summaryZh: cue.summary || `跟进 ${itemCount || 1} 件购物订单，金额 ${amount} ${cue.currency || 'CNY'}。`,
+      summaryEn: cue.summary || `Follow up ${itemCount || 1} Shopping item(s), ${amount} ${cue.currency || 'CNY'}.`,
+      startsAt: hasEditedTime ? existing.startsAt : suggestedAt,
+      originalStartsAt: existing?.originalStartsAt || suggestedAt,
+      timeEditedAt: existing?.timeEditedAt || 0,
+      status: CALENDAR_EVENT_STATUS_CONFIRMED,
+      pinned: false,
+      route: '/shopping',
+      icon: 'fas fa-truck-fast',
+      tone: cue.tone || 'orange',
+      scheduledPushId: existing?.scheduledPushId || '',
+      scheduledPushAt: existing?.scheduledPushAt || 0,
+      pushStatus: existing?.pushStatus || 'idle',
+      pushUpdatedAt: existing?.pushUpdatedAt || 0,
+      lastPushScheduledAt: existing?.lastPushScheduledAt || 0,
+      lastPushCancelledAt: existing?.lastPushCancelledAt || 0,
+      lastPushError: existing?.lastPushError || '',
+      pushHistory: existing?.pushHistory || [],
+    })
+  }
+
   const confirmPhoneMissedCallCue = (cueId) => {
     const cue = findPhoneMissedCallCueById(cueId)
     if (!cue || cue.status === CALENDAR_CUE_STATUS_DISMISSED) return null
@@ -653,6 +826,39 @@ export const useCalendarStore = defineStore('calendar', () => {
     const cue = findStockMarketCueByStockId(stockId)
     if (!cue) return false
     return dismissStockMarketCue(cue.id)
+  }
+
+  const confirmShoppingDeliveryCue = (cueId) => {
+    const cue = findShoppingDeliveryCueById(cueId)
+    if (!cue || cue.status === CALENDAR_CUE_STATUS_DISMISSED) return null
+    const event = upsertEventFromShoppingDeliveryCue(cue)
+    if (!event?.id) return null
+    upsertShoppingDeliveryCue({
+      ...cue,
+      status: CALENDAR_CUE_STATUS_CONFIRMED,
+    })
+    return event
+  }
+
+  const dismissShoppingDeliveryCue = (cueId) => {
+    const cue = findShoppingDeliveryCueById(cueId)
+    if (!cue) return false
+    void cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'calendar_shopping_delivery_dismiss',
+    })
+    removeEventBySourceReminderId(cue.id)
+    return Boolean(
+      upsertShoppingDeliveryCue({
+        ...cue,
+        status: CALENDAR_CUE_STATUS_DISMISSED,
+      }),
+    )
+  }
+
+  const dismissShoppingDeliveryCueByOrderId = (orderId) => {
+    const cue = findShoppingDeliveryCueByOrderId(orderId)
+    if (!cue) return false
+    return dismissShoppingDeliveryCue(cue.id)
   }
 
   const removeEventBySourceReminderId = (reminderId) => {
@@ -1008,6 +1214,9 @@ export const useCalendarStore = defineStore('calendar', () => {
       source.phoneMissedCallCues || source.phoneCues,
     )
     stockMarketCues.value = normalizeStockMarketCues(source.stockMarketCues || source.stockCues)
+    shoppingDeliveryCues.value = normalizeShoppingDeliveryCues(
+      source.shoppingDeliveryCues || source.shoppingCues,
+    )
     return true
   }
 
@@ -1029,6 +1238,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     events: events.value.map((event) => ({ ...event })),
     phoneMissedCallCues: phoneMissedCallCues.value.map((cue) => ({ ...cue })),
     stockMarketCues: stockMarketCues.value.map((cue) => ({ ...cue })),
+    shoppingDeliveryCues: shoppingDeliveryCues.value.map((cue) => ({ ...cue })),
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()
@@ -1055,6 +1265,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     events.value = []
     phoneMissedCallCues.value = []
     stockMarketCues.value = []
+    shoppingDeliveryCues.value = []
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -1067,7 +1278,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   })()
 
   watch(
-    [events, phoneMissedCallCues, stockMarketCues],
+    [events, phoneMissedCallCues, stockMarketCues, shoppingDeliveryCues],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1079,12 +1290,15 @@ export const useCalendarStore = defineStore('calendar', () => {
     events,
     phoneMissedCallCues,
     stockMarketCues,
+    shoppingDeliveryCues,
     activePhoneMissedCallCues,
     activeStockMarketCues,
+    activeShoppingDeliveryCues,
     upcomingEvents,
     eventCount,
     phoneMissedCallCueCount,
     stockMarketCueCount,
+    shoppingDeliveryCueCount,
     hasFinishedStorageHydration,
     findEventById,
     findEventBySourceReminderId,
@@ -1092,6 +1306,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     findPhoneMissedCallCueByCallId,
     findStockMarketCueById,
     findStockMarketCueByStockId,
+    findShoppingDeliveryCueById,
+    findShoppingDeliveryCueByOrderId,
     upsertEvent,
     upsertEventFromMapReminder,
     upsertPhoneMissedCallCue,
@@ -1100,11 +1316,17 @@ export const useCalendarStore = defineStore('calendar', () => {
     upsertStockMarketCue,
     upsertStockMarketCueFromStock,
     upsertEventFromStockMarketCue,
+    upsertShoppingDeliveryCue,
+    upsertShoppingDeliveryCueFromOrder,
+    upsertEventFromShoppingDeliveryCue,
     confirmPhoneMissedCallCue,
     dismissPhoneMissedCallCue,
     confirmStockMarketCue,
     dismissStockMarketCue,
     dismissStockMarketCueByStockId,
+    confirmShoppingDeliveryCue,
+    dismissShoppingDeliveryCue,
+    dismissShoppingDeliveryCueByOrderId,
     removeEventBySourceReminderId,
     setEventPinnedBySourceReminderId,
     ensureEventPushScheduled,

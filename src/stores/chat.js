@@ -2,6 +2,12 @@ import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
+import { normalizeImageSource } from '../lib/image-source-contract'
+import {
+  FOOD_DELIVERY_SERVICE_PRESETS,
+  LOGISTICS_SERVICE_PRESETS,
+  SHOPPING_SERVICE_PRESETS,
+} from '../lib/planned-module-registry'
 import {
   ROLE_ASSET_FOLDER_SLOT_KEYS,
   cloneRoleAssetFolderBindings as cloneRoleProfileAssetFolderBindingsShared,
@@ -20,6 +26,9 @@ const CHAT_STORAGE_VERSION = 2
 const VALID_MESSAGE_ROLES = new Set(['user', 'assistant', 'system'])
 const VALID_MESSAGE_STATUS = new Set(['sending', 'sent', 'failed', 'delivered', 'read'])
 const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
+const VALID_SHOPPING_SERVICE_KEYS = new Set(SHOPPING_SERVICE_PRESETS.map((item) => item.key))
+const VALID_LOGISTICS_SERVICE_KEYS = new Set(LOGISTICS_SERVICE_PRESETS.map((item) => item.key))
+const VALID_FOOD_DELIVERY_SERVICE_KEYS = new Set(FOOD_DELIVERY_SERVICE_PRESETS.map((item) => item.key))
 const VALID_REPLY_MODES = new Set(['manual', 'auto'])
 const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
@@ -33,6 +42,7 @@ const VALID_BLOCK_TYPES = new Set([
   'module_link',
   'link_external',
   'transfer_virtual',
+  'product_card',
   'image_virtual',
   'mini_scene',
 ])
@@ -151,6 +161,23 @@ const trimTo = (value, maxLength, fallback = '') => {
 
 const normalizeSingleLineText = (value, maxLength, fallback = '') =>
   trimTo(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
+
+const normalizeShoppingServiceKey = (value) => {
+  const key = trimTo(value, 40)
+  return VALID_SHOPPING_SERVICE_KEYS.has(key) ? key : ''
+}
+
+const normalizeLogisticsServiceKey = (value) => {
+  const key = trimTo(value, 40)
+  return VALID_LOGISTICS_SERVICE_KEYS.has(key) ? key : ''
+}
+
+const normalizeFoodDeliveryServiceKey = (value) => {
+  const key = trimTo(value, 40)
+  return VALID_FOOD_DELIVERY_SERVICE_KEYS.has(key) ? key : ''
+}
+
+const normalizeShoppingServiceLabel = (value) => normalizeSingleLineText(value, 80)
 
 const sanitizeAssetId = (value) => sanitizeRoleBindingAssetId(value)
 
@@ -515,6 +542,27 @@ const normalizeMessageBlock = (rawBlock) => {
     }
   }
 
+  if (blockType === 'product_card') {
+    const productId = normalizeSingleLineText(rawBlock.productId, 140)
+    const title = normalizeSingleLineText(rawBlock.title || rawBlock.label, MAX_SHORT_LABEL_LENGTH, '商品卡片')
+    if (!productId || !title) return null
+    const serviceKey = normalizeShoppingServiceKey(rawBlock.serviceKey)
+    return {
+      type: 'product_card',
+      productId,
+      title,
+      category: normalizeSingleLineText(rawBlock.category, 40),
+      price: normalizeSingleLineText(rawBlock.price, 40),
+      currency: normalizeSingleLineText(rawBlock.currency, 8, 'CNY').toUpperCase(),
+      desc: trimTo(rawBlock.desc || rawBlock.description, MAX_DETAIL_TEXT_LENGTH),
+      route: sanitizeRoutePath(rawBlock.route, '/shopping'),
+      serviceKey,
+      serviceLabel: serviceKey ? normalizeShoppingServiceLabel(rawBlock.serviceLabel) : '',
+      assetEligible: rawBlock.assetEligible === true,
+      giftable: rawBlock.giftable === true,
+    }
+  }
+
   if (blockType === 'image_virtual') {
     return {
       type: 'image_virtual',
@@ -571,6 +619,11 @@ const normalizeMessageBlocks = (rawBlocks, fallbackContent = '', role = 'assista
 }
 
 const summarizeBlocks = (blocks) => {
+  const firstProductCard = Array.isArray(blocks)
+    ? blocks.find((block) => block?.type === 'product_card' && block.title)
+    : null
+  if (firstProductCard) return `[商品] ${firstProductCard.title}`
+
   if (!Array.isArray(blocks) || blocks.length === 0) return ''
 
   const firstText = blocks.find((block) => block.type === 'text' && block.text?.trim())
@@ -587,18 +640,41 @@ const summarizeBlocks = (blocks) => {
   return ''
 }
 
+const normalizeAvatarImageSource = (rawSource = {}, legacyAvatar = '', fallbackAlt = 'Avatar') => {
+  const normalized = normalizeImageSource(rawSource, { alt: fallbackAlt })
+  if (normalized.sourceType !== 'none') return normalized
+
+  const legacyUrl = sanitizeAvatarUrl(legacyAvatar)
+  if (!legacyUrl) return normalized
+
+  return normalizeImageSource(
+    {
+      imageSourceType: 'url',
+      imageUrl: legacyUrl,
+    },
+    { alt: fallbackAlt },
+  )
+}
+
+const avatarImageToLegacyAvatar = (avatarImage = {}) =>
+  avatarImage?.sourceType === 'url' && typeof avatarImage.url === 'string' ? avatarImage.url : ''
+
 const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
   const parsedId = Number(rawProfile?.id)
   const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
+  const name =
+    typeof rawProfile?.name === 'string' && rawProfile.name.trim()
+      ? rawProfile.name.trim()
+      : `角色 ${id}`
+  const legacyAvatar = typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : ''
+  const avatarImage = normalizeAvatarImageSource(rawProfile?.avatarImage, legacyAvatar, name)
   return {
     id,
-    name:
-      typeof rawProfile?.name === 'string' && rawProfile.name.trim()
-        ? rawProfile.name.trim()
-        : `角色 ${id}`,
+    name,
     role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
     isMain: Boolean(rawProfile?.isMain),
-    avatar: typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : '',
+    avatar: avatarImageToLegacyAvatar(avatarImage) || legacyAvatar,
+    avatarImage,
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
     knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
@@ -625,16 +701,23 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
   const kind = VALID_CONTACT_KINDS.has(rawContact?.kind) ? rawContact.kind : 'role'
   const relationshipLevel = clamp(toInt(rawContact?.relationshipLevel, 50), 0, 100)
   const parsedProfileId = Number(rawContact?.profileId)
+  const legacyAvatar = typeof rawContact?.avatar === 'string' ? rawContact.avatar : ''
+  const name = typeof rawContact?.name === 'string' && rawContact.name.trim() ? rawContact.name.trim() : `联系人 ${id}`
+  const avatarImage = normalizeAvatarImageSource(rawContact?.avatarImage, legacyAvatar, name)
   return {
     id,
-    name: typeof rawContact?.name === 'string' && rawContact.name.trim() ? rawContact.name.trim() : `联系人 ${id}`,
+    name,
     kind,
     profileId: Number.isFinite(parsedProfileId) && parsedProfileId > 0 ? Math.floor(parsedProfileId) : 0,
     role: typeof rawContact?.role === 'string' ? rawContact.role : '',
     isMain: Boolean(rawContact?.isMain),
-    avatar: typeof rawContact?.avatar === 'string' ? rawContact.avatar : '',
+    avatar: avatarImageToLegacyAvatar(avatarImage) || legacyAvatar,
+    avatarImage,
     bio: typeof rawContact?.bio === 'string' ? rawContact.bio : '',
     serviceTemplate: typeof rawContact?.serviceTemplate === 'string' ? rawContact.serviceTemplate : '',
+    shoppingServiceKey: normalizeShoppingServiceKey(rawContact?.shoppingServiceKey),
+    logisticsServiceKey: normalizeLogisticsServiceKey(rawContact?.logisticsServiceKey),
+    foodDeliveryServiceKey: normalizeFoodDeliveryServiceKey(rawContact?.foodDeliveryServiceKey),
     preferredImageAssetId: sanitizeAssetId(rawContact?.preferredImageAssetId),
     relationshipLevel,
     relationshipNote: typeof rawContact?.relationshipNote === 'string' ? rawContact.relationshipNote : '',
@@ -945,6 +1028,7 @@ export const useChatStore = defineStore('chat', () => {
       role: profile.role || contact.role,
       bio: profile.bio || contact.bio,
       avatar: profile.avatar || contact.avatar,
+      avatarImage: normalizeAvatarImageSource(profile.avatarImage, profile.avatar || contact.avatar, profile.name),
       isMain: Boolean(profile.isMain),
       profileAssetPack: cloneRoleProfileAssetPack(profile.assetPack),
       profileAssetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
@@ -1679,6 +1763,11 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (typeof updates.avatar === 'string') {
       target.avatar = updates.avatar
+      target.avatarImage = normalizeAvatarImageSource(target.avatarImage, updates.avatar, target.name)
+    }
+    if (updates.avatarImage && typeof updates.avatarImage === 'object') {
+      target.avatarImage = normalizeAvatarImageSource(updates.avatarImage, target.avatar, target.name)
+      target.avatar = avatarImageToLegacyAvatar(target.avatarImage)
     }
     if (typeof updates.bio === 'string') {
       target.bio = updates.bio
@@ -1820,12 +1909,26 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (typeof updates.avatar === 'string') {
       target.avatar = updates.avatar
+      target.avatarImage = normalizeAvatarImageSource(target.avatarImage, updates.avatar, target.name)
+    }
+    if (updates.avatarImage && typeof updates.avatarImage === 'object') {
+      target.avatarImage = normalizeAvatarImageSource(updates.avatarImage, target.avatar, target.name)
+      target.avatar = avatarImageToLegacyAvatar(target.avatarImage)
     }
     if (typeof updates.bio === 'string') {
       target.bio = updates.bio
     }
     if (typeof updates.serviceTemplate === 'string') {
       target.serviceTemplate = updates.serviceTemplate
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'shoppingServiceKey')) {
+      target.shoppingServiceKey = normalizeShoppingServiceKey(updates.shoppingServiceKey)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'logisticsServiceKey')) {
+      target.logisticsServiceKey = normalizeLogisticsServiceKey(updates.logisticsServiceKey)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'foodDeliveryServiceKey')) {
+      target.foodDeliveryServiceKey = normalizeFoodDeliveryServiceKey(updates.foodDeliveryServiceKey)
     }
     if (typeof updates.isMain === 'boolean') {
       target.isMain = updates.isMain

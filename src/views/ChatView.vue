@@ -8,6 +8,8 @@ import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
+import { useShoppingStore } from '../stores/shopping'
+import { useCalendarStore } from '../stores/calendar'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
@@ -29,6 +31,13 @@ import {
   validateMediaFileBySize,
 } from '../lib/media-policy'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import {
+  getAvatarImageGalleryAssetId,
+  resolveAvatarImageSourceUrl,
+} from '../lib/avatar-image-source-resolver'
+import {
+  findShoppingServicePreset,
+} from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
@@ -42,6 +51,8 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
+const shoppingStore = useShoppingStore()
+const calendarStore = useCalendarStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -133,6 +144,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/calendar',
   '/wallet',
   '/stock',
+  '/shopping',
   '/files',
   '/more',
 ])
@@ -202,6 +214,7 @@ const userActionDraft = reactive({
 const galleryPickerPreviewMap = reactive({})
 const messageImagePreviewMap = reactive({})
 const messageImagePreviewAssetIdMap = reactive({})
+const avatarPreviewMap = reactive({})
 const CHAT_ASSET_PREVIEW_SCOPE_ID = 'chat-view'
 
 const threadSettingsDraft = reactive({
@@ -387,7 +400,134 @@ const userActionGridHint = computed(() => {
   if (!gallerySendState.value.enabled) hints.push(gallerySendState.value.message)
   if (!locationShareState.value.enabled) hints.push(locationShareState.value.message)
   if (hints.length > 0) return hints.join(' · ')
-  return t('可通过 + 面板发送图片、链接、位置、转账与语音卡片。', 'Use + panel to send images, links, location, transfer cards and voice cards.')
+  return t('可通过 + 面板发送图片、链接、位置、转账、语音卡片与购物建议。', 'Use + panel to send images, links, location, transfer cards, voice cards and shopping picks.')
+})
+
+const formatShoppingPreviewPrice = (product) =>
+  `${(Number(product?.priceCents || 0) / 100).toFixed(2)} ${product?.currency || 'CNY'}`
+
+const formatShoppingOrderAmount = (order = {}) =>
+  `${(Number(order?.totalCents || 0) / 100).toFixed(2)} ${order?.currency || 'CNY'}`
+
+const shoppingServiceLabel = (serviceKey) => {
+  const preset = findShoppingServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
+const normalizeShoppingCardPayload = (rawProduct = {}) => {
+  const productId = typeof rawProduct.productId === 'string' ? rawProduct.productId.trim() : typeof rawProduct.id === 'string' ? rawProduct.id.trim() : ''
+  const title = typeof rawProduct.title === 'string' ? rawProduct.title.trim() : ''
+  if (!productId || !title) return null
+  const category = typeof rawProduct.category === 'string' ? rawProduct.category.trim() : ''
+  const serviceKey = typeof rawProduct.serviceKey === 'string' ? rawProduct.serviceKey.trim() : ''
+  const serviceLabel = typeof rawProduct.serviceLabel === 'string' && rawProduct.serviceLabel.trim()
+    ? rawProduct.serviceLabel.trim()
+    : shoppingServiceLabel(serviceKey)
+  const currency = typeof rawProduct.currency === 'string' && rawProduct.currency.trim()
+    ? rawProduct.currency.trim().toUpperCase()
+    : 'CNY'
+  const price = typeof rawProduct.price === 'string' && rawProduct.price.trim()
+    ? rawProduct.price.trim()
+    : formatShoppingPreviewPrice(rawProduct)
+  return {
+    id: productId,
+    productId,
+    title,
+    category,
+    desc: typeof rawProduct.desc === 'string' ? rawProduct.desc.trim() : '',
+    serviceKey,
+    serviceLabel,
+    price,
+    currency,
+    assetEligible: rawProduct.assetEligible === true,
+    giftable: rawProduct.giftable === true,
+  }
+}
+
+const activeShoppingServiceKey = computed(() => activeChat.value?.shoppingServiceKey || '')
+const activeLogisticsServiceKey = computed(() => activeChat.value?.logisticsServiceKey || '')
+
+const shoppingPreviewProducts = computed(() =>
+  (activeShoppingServiceKey.value
+    ? shoppingStore.listProductsByService(activeShoppingServiceKey.value)
+    : shoppingStore.products)
+    .filter((product) => product?.stockStatus !== 'sold_out')
+    .slice(0, 3)
+    .map((product) => ({
+      id: product.id,
+      title: product.title,
+      category: product.category,
+      desc: product.desc,
+      serviceKey: product.serviceKey,
+      serviceLabel: shoppingServiceLabel(product.serviceKey),
+      price: formatShoppingPreviewPrice(product),
+      assetEligible: product.assetEligible === true,
+      giftable: product.giftable === true,
+    })),
+)
+
+const activeGiftOrderSummaries = computed(() => {
+  const chatId = Number(activeChat.value?.id)
+  if (!Number.isFinite(chatId) || chatId <= 0) return []
+
+  return shoppingStore.orders
+    .filter((order) => {
+      const giftRecipient = order?.giftRecipient || {}
+      return Number(giftRecipient.chatId || giftRecipient.contactId || 0) === chatId
+    })
+    .slice(0, 3)
+    .map((order) => ({
+      id: order.id,
+      title: order.items?.[0]?.title || t('礼物订单', 'Gift order'),
+      itemCount: Number(order.itemCount || order.items?.length || 0),
+      amount: `${(Number(order.totalCents || 0) / 100).toFixed(2)} ${order.currency || 'CNY'}`,
+      recipientName: order.giftRecipient?.name || activeChat.value?.name || '',
+      status: order.status || '',
+    }))
+})
+
+const logisticsStatusLabel = (status) => {
+  if (status === 'confirmed') return t('已确认提醒', 'Reminder confirmed')
+  if (status === 'completed') return t('已完成', 'Completed')
+  if (status === 'cancelled') return t('已取消', 'Cancelled')
+  return t('待跟进', 'Pending follow-up')
+}
+
+const formatLogisticsCueDate = (timestamp) => {
+  const date = new Date(Number(timestamp || 0))
+  if (Number.isNaN(date.getTime())) return t('时间待定', 'Time TBD')
+  const locale = languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value
+  return date.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const activeShoppingServiceLogisticsRows = computed(() => {
+  if (!activeLogisticsServiceKey.value) return []
+
+  return calendarStore.activeShoppingDeliveryCues
+    .map((cue) => {
+      const order = shoppingStore.orders.find((item) => item.id === cue.orderId)
+      if (!order) return null
+      return {
+        cue,
+        order,
+        id: order.id,
+        title: cue.title || order.items?.[0]?.title || t('物流订单', 'Logistics order'),
+        amount: formatShoppingOrderAmount(order),
+        itemCount: Number(order.itemCount || order.items?.length || 0),
+        status: cue.status || order.status || '',
+        statusLabel: logisticsStatusLabel(cue.status || order.status || ''),
+        suggestedAt: formatLogisticsCueDate(cue.suggestedAt || order.createdAt),
+        summary: cue.summary || t('该订单已有配送跟进线索。', 'This order has a delivery follow-up cue.'),
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 3)
 })
 
 const activeRoleAssetContext = computed(() => {
@@ -480,11 +620,44 @@ const chatListDockItems = computed(() => [
   { id: 'labs', label: t('实验室', 'Labs'), icon: 'fas fa-flask' },
 ])
 
+const contactHasThreadOrModuleAvatarOverride = (contactId) => {
+  const id = Number(contactId)
+  if (!Number.isFinite(id) || id <= 0) return false
+  const threadOverrides = chatStore.getConversationIdentityOverrides(id)
+  if (threadOverrides.contactAvatar) return true
+  if (chatStore.getModuleContactAvatarOverride(id)) return true
+  const moduleAvatarOverrides = chatStore.getModuleAvatarOverrides()
+  return Boolean(moduleAvatarOverrides.defaultContactAvatar)
+}
+
+const resolveContactAvatarImageUrl = (contact) =>
+  resolveAvatarImageSourceUrl({
+    galleryStore,
+    previewMap: avatarPreviewMap,
+    avatarImage: contact?.avatarImage,
+    legacyAvatar: contact?.avatar,
+    fallbackAlt: contact?.name || t('联系人', 'Contact'),
+  })
+
+const resolveContactDisplayAvatar = (contact) => {
+  if (!contact?.id) {
+    return resolveAvatarWithHierarchy({
+      fallbackSeed: contact?.name || t('联系人', 'Contact'),
+    })
+  }
+
+  if (contactHasThreadOrModuleAvatarOverride(contact.id)) {
+    return chatStore.resolveContactAvatar(contact.id)
+  }
+
+  return resolveContactAvatarImageUrl(contact) || chatStore.resolveContactAvatar(contact.id)
+}
+
 const activeContactAvatar = computed(() => {
   if (!activeChat.value) {
     return resolveAvatarWithHierarchy({ fallbackSeed: t('联系人', 'Contact') })
   }
-  return chatStore.resolveContactAvatar(activeChat.value.id)
+  return resolveContactDisplayAvatar(activeChat.value)
 })
 
 const activeModuleIdentity = computed(() => chatStore.getModuleIdentity())
@@ -497,11 +670,18 @@ const activeSelfAvatar = computed(() => {
   const threadOverrides = activeChat.value
     ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
     : { selfAvatar: '' }
+  const userAvatarUrl = resolveAvatarImageSourceUrl({
+    galleryStore,
+    previewMap: avatarPreviewMap,
+    avatarImage: user.value.avatarImage,
+    legacyAvatar: user.value.avatar,
+    fallbackAlt: activeModuleNickname.value,
+  })
 
   return resolveAvatarWithHierarchy({
     threadAvatar: threadOverrides.selfAvatar,
     moduleAvatar: moduleIdentity.avatar,
-    globalAvatar: user.value.avatar,
+    globalAvatar: userAvatarUrl,
     fallbackSeed: activeModuleNickname.value,
   })
 })
@@ -910,14 +1090,7 @@ const applyThreadIdentityDraft = () => {
   threadIdentityDraft.contactAvatar = overrides.contactAvatar || ''
 }
 
-const contactAvatarForList = (contact) => {
-  if (!contact?.id) {
-    return resolveAvatarWithHierarchy({
-      fallbackSeed: contact?.name || t('联系人', 'Contact'),
-    })
-  }
-  return chatStore.resolveContactAvatar(contact.id)
-}
+const contactAvatarForList = (contact) => resolveContactDisplayAvatar(contact)
 
 const formatTruthTimestampForPrompt = (timestamp) => {
   const ts = Number(timestamp)
@@ -1931,6 +2104,24 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs, options = {}) => {
     }
   }
 
+  if (blockType === 'product_card') {
+    const productId = trimAssistantSingleLine(rawBlock.productId, 140)
+    const title = trimAssistantSingleLine(rawBlock.title || rawBlock.label, MAX_ASSISTANT_LABEL_CHARS, '')
+    if (!productId || !title) return null
+    return {
+      type: 'product_card',
+      productId,
+      title,
+      category: trimAssistantSingleLine(rawBlock.category, 40),
+      price: trimAssistantSingleLine(rawBlock.price, 40),
+      currency: trimAssistantSingleLine(rawBlock.currency, 8, 'CNY').toUpperCase(),
+      desc: trimAssistantText(rawBlock.desc || rawBlock.description, MAX_ASSISTANT_DETAIL_CHARS),
+      route: sanitizeAssistantRoute(rawBlock.route, '/shopping'),
+      assetEligible: rawBlock.assetEligible === true,
+      giftable: rawBlock.giftable === true,
+    }
+  }
+
   if (blockType === 'image_virtual') {
     if (options.allowImageVirtual === false) return null
     return {
@@ -2018,6 +2209,13 @@ const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
   if (first.type === 'transfer_virtual') {
     return trimAssistantText(
       `${first.label} ${first.amount || '0.00'} ${first.currency || 'CNY'}`,
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'product_card') {
+    return trimAssistantText(
+      `${first.title} ${first.price || ''} ${first.currency || ''}`.trim(),
       MAX_ASSISTANT_TEXT_CHARS,
       '',
     )
@@ -3000,6 +3198,22 @@ const ensureMessageImagePreview = async (messageId, blockIndex, assetId) => {
   messageImagePreviewAssetIdMap[key] = assetId
 }
 
+const ensureAvatarPreview = async (assetId) => {
+  if (!assetId || avatarPreviewMap[assetId]) return
+  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
+    scopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
+  })
+  if (!previewUrl) return
+  avatarPreviewMap[assetId] = previewUrl
+}
+
+const clearAvatarPreviewMap = () => {
+  Object.keys(avatarPreviewMap).forEach((assetId) => {
+    galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
+    delete avatarPreviewMap[assetId]
+  })
+}
+
 const resolveImageBlockUrl = (messageId, blockIndex, block) => {
   const key = buildMessageImagePreviewKey(messageId, blockIndex)
   return messageImagePreviewMap[key] || block?.url || ''
@@ -3310,6 +3524,36 @@ const submitVoiceCardForm = () => {
       },
     ],
     source: 'voice_card',
+  })
+  closeUserActionPanel()
+}
+
+const submitShoppingProductCard = (rawProduct = {}) => {
+  if (!activeChat.value) return
+  const product = normalizeShoppingCardPayload(rawProduct)
+  if (!product) {
+    showUiNotice('warning', t('商品卡片不可用。', 'Product card is unavailable.'))
+    return
+  }
+  appendUserMessage({
+    content: `${t('商品推荐', 'Product pick')}: ${product.title}`,
+    blocks: [
+      {
+        type: 'product_card',
+        productId: product.productId,
+        title: product.title,
+        category: product.category,
+        price: product.price,
+        currency: product.currency,
+        desc: product.desc,
+        route: '/shopping',
+        serviceKey: product.serviceKey,
+        serviceLabel: product.serviceLabel,
+        assetEligible: product.assetEligible,
+        giftable: product.giftable,
+      },
+    ],
+    source: 'shopping_product_card',
   })
   closeUserActionPanel()
 }
@@ -3649,6 +3893,53 @@ const openModuleRoute = (routePath) => {
   router.push(routePath)
 }
 
+const openShoppingFromChat = (payload = {}) => {
+  const productId = typeof payload?.productId === 'string' ? payload.productId.trim() : ''
+  const category = typeof payload?.category === 'string' ? payload.category.trim() : ''
+  const serviceKey = typeof payload?.serviceKey === 'string' ? payload.serviceKey.trim() : ''
+  const intent = typeof payload?.intent === 'string' && payload.intent.trim()
+    ? payload.intent.trim()
+    : 'product_card'
+  const orderId = typeof payload?.orderId === 'string' ? payload.orderId.trim() : ''
+  const chatId = Number(activeChat.value?.id)
+  closeUserActionPanel()
+  router.push({
+    path: '/shopping',
+    query: {
+      source: 'chat',
+      intent,
+      ...(Number.isFinite(chatId) && chatId > 0 ? { chatId: String(chatId) } : {}),
+      ...(category ? { category } : {}),
+      ...(serviceKey ? { service: serviceKey } : {}),
+      ...(productId ? { productId } : {}),
+      ...(orderId ? { orderId } : {}),
+    },
+  })
+}
+
+const openShoppingProductCard = (block = {}) => {
+  openShoppingFromChat({
+    productId: block.productId,
+    category: block.category,
+    serviceKey: block.serviceKey,
+  })
+}
+
+const openShoppingGiftOrder = (order = {}) => {
+  openShoppingFromChat({
+    intent: 'gift_order',
+    orderId: order.id,
+  })
+}
+
+const openShoppingLogisticsOrder = (row = {}) => {
+  openShoppingFromChat({
+    intent: 'logistics',
+    category: 'logistics',
+    orderId: row.order?.id || row.id,
+  })
+}
+
 const openChatDirectory = () => {
   showThreadMenu.value = false
   router.push('/chat-contacts')
@@ -3815,6 +4106,42 @@ watch(
 )
 
 watch(
+  () => {
+    const ids = []
+    const pushAssetId = (assetId) => {
+      const normalized = typeof assetId === 'string' ? assetId.trim() : ''
+      if (!normalized || ids.includes(normalized)) return
+      ids.push(normalized)
+    }
+
+    contactsForList.value.forEach((contact) => {
+      pushAssetId(getAvatarImageGalleryAssetId(contact?.avatarImage, contact?.avatar, contact?.name))
+    })
+    pushAssetId(
+      getAvatarImageGalleryAssetId(
+        user.value.avatarImage,
+        user.value.avatar,
+        activeModuleNickname.value,
+      ),
+    )
+    return ids
+  },
+  (assetIds) => {
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      void ensureAvatarPreview(assetId)
+    })
+    Object.keys(avatarPreviewMap).forEach((assetId) => {
+      if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
+        delete avatarPreviewMap[assetId]
+      }
+    })
+  },
+  { immediate: true },
+)
+
+watch(
   activeChatId,
   (id) => {
     showThreadMenu.value = false
@@ -3910,6 +4237,7 @@ onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearGalleryPickerPreviewMap()
   clearMessageImagePreviewMap()
+  clearAvatarPreviewMap()
   galleryStore.releaseAssetPreviewScope(CHAT_ASSET_PREVIEW_SCOPE_ID)
 })
 </script>
@@ -3933,7 +4261,11 @@ onBeforeUnmount(() => {
           class="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer"
         >
           <div class="w-12 h-12 rounded-[18px] overflow-hidden bg-gray-200">
-            <img :src="contactAvatarForList(contact)" class="w-full h-full object-cover" />
+            <img
+              :src="contactAvatarForList(contact)"
+              class="w-full h-full object-cover"
+              :data-testid="`chat-contact-avatar-${contact.id}`"
+            />
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-center gap-2">
@@ -4017,9 +4349,118 @@ onBeforeUnmount(() => {
       />
 
       <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" ref="chatContainer">
+        <section
+          v-if="activeGiftOrderSummaries.length > 0"
+          class="rounded-2xl border border-rose-100 bg-rose-50/80 px-3 py-2 text-xs text-rose-900"
+          data-testid="chat-gift-order-context"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold">{{ t('已确认礼物订单', 'Confirmed gift orders') }}</p>
+              <p class="mt-1 text-[11px] text-rose-700">
+                {{
+                  t(
+                    'Shopping 已保存这些赠礼订单；Chat 只显示上下文，不接管结算。',
+                    'Shopping owns these gift orders; Chat only shows context and does not own checkout.',
+                  )
+                }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+              {{ activeGiftOrderSummaries.length }}
+            </span>
+          </div>
+          <div class="mt-2 space-y-1.5">
+            <article
+              v-for="order in activeGiftOrderSummaries"
+              :key="order.id"
+              class="rounded-xl border border-rose-100 bg-white/80 px-2.5 py-2"
+              :data-testid="`chat-gift-order-${order.id}`"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold truncate">{{ order.title }}</p>
+                  <p class="mt-0.5 text-[11px] text-rose-600">
+                    {{ order.amount }} · {{ order.recipientName || activeChat.name }}
+                    <span v-if="order.itemCount > 1"> · {{ order.itemCount }} {{ t('件', 'items') }}</span>
+                  </p>
+                </div>
+                <button
+                  class="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700"
+                  :data-testid="`chat-gift-order-open-${order.id}`"
+                  @click="openShoppingGiftOrder(order)"
+                >
+                  {{ t('去 Shopping 查看', 'View in Shopping') }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section
+          v-if="activeShoppingServiceLogisticsRows.length > 0"
+          class="rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-xs text-sky-950"
+          data-testid="chat-service-logistics-context"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold">{{ t('物流服务提醒', 'Logistics service reminders') }}</p>
+              <p class="mt-1 text-[11px] leading-4 text-sky-700">
+                {{
+                  t(
+                    'Chat 仅在物流服务号里显示配送线索；订单归 Shopping，提醒归 Calendar。',
+                    'Chat only shows delivery cues inside Logistics service accounts; Shopping owns orders and Calendar owns reminders.',
+                  )
+                }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-sky-600">
+              {{ activeShoppingServiceLogisticsRows.length }}
+            </span>
+          </div>
+          <div class="mt-2 space-y-1.5">
+            <article
+              v-for="row in activeShoppingServiceLogisticsRows"
+              :key="row.id"
+              class="rounded-xl border border-sky-100 bg-white/85 px-2.5 py-2"
+              :data-testid="`chat-service-logistics-${row.id}`"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold truncate">{{ row.title }}</p>
+                  <p class="mt-0.5 text-[11px] text-sky-700">
+                    {{ row.amount }} · {{ row.suggestedAt }}
+                    <span v-if="row.itemCount > 1"> · {{ row.itemCount }} {{ t('件', 'items') }}</span>
+                  </p>
+                  <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-sky-600">{{ row.summary }}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <span
+                    class="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700"
+                    :data-testid="`chat-service-logistics-status-${row.id}`"
+                  >
+                    {{ row.statusLabel }}
+                  </span>
+                  <button
+                    class="mt-1 block rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700"
+                    :data-testid="`chat-service-logistics-open-${row.id}`"
+                    @click="openShoppingLogisticsOrder(row)"
+                  >
+                    {{ t('去物流查看', 'Open logistics') }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <div v-for="msg in activeMessages" :key="msg.id" class="flex w-full" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div v-if="msg.role !== 'user'" class="w-8 h-8 rounded-xl bg-gray-200 mr-2 overflow-hidden flex-shrink-0">
-            <img :src="activeContactAvatar" class="w-full h-full object-cover" />
+            <img
+              :src="activeContactAvatar"
+              class="w-full h-full object-cover"
+              data-testid="chat-active-contact-avatar"
+            />
           </div>
 
           <div class="max-w-[70%]">
@@ -4100,6 +4541,29 @@ onBeforeUnmount(() => {
                   <button @click="openModuleRoute(block.actionRoute)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">{{ transferActionLabel(block) }}</button>
                 </div>
 
+                <div v-else-if="block.type === 'product_card'" class="rounded-lg border border-orange-200 bg-orange-50/80 px-2.5 py-2">
+                  <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-500">{{ t('Shopping 商品卡', 'Shopping product card') }}</p>
+                  <p v-if="block.serviceLabel || block.serviceKey" class="mt-1 text-[10px] font-semibold text-amber-700">
+                    {{ t('来自店铺', 'From shop') }} · {{ block.serviceLabel || block.serviceKey }}
+                  </p>
+                  <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
+                  <p v-if="block.desc" class="mt-1 text-[11px] opacity-75 line-clamp-2">{{ block.desc }}</p>
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-orange-600">{{ block.price }}</span>
+                    <span v-if="block.category" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">{{ block.category }}</span>
+                    <span v-if="block.serviceLabel || block.serviceKey" class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{{ block.serviceLabel || block.serviceKey }}</span>
+                    <span v-if="block.assetEligible" class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600">{{ t('可转资产', 'Asset-ready') }}</span>
+                    <span v-if="block.giftable" class="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] text-rose-600">{{ t('可赠礼', 'Giftable') }}</span>
+                  </div>
+                  <button
+                    :data-testid="`chat-product-card-open-${block.productId}`"
+                    @click="openShoppingProductCard(block)"
+                    class="mt-2 rounded-md border border-orange-200 bg-white px-2 py-1 text-[11px] text-orange-700"
+                  >
+                    {{ t('去 Shopping 确认', 'Confirm in Shopping') }}
+                  </button>
+                </div>
+
                 <div v-else-if="block.type === 'image_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
                   <div class="w-full h-24 rounded-md bg-black/5 overflow-hidden mb-1.5">
                     <img
@@ -4130,7 +4594,11 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="msg.role === 'user'" class="w-8 h-8 rounded-xl bg-gray-200 ml-2 overflow-hidden flex-shrink-0">
-            <img :src="activeSelfAvatar" class="w-full h-full object-cover" />
+            <img
+              :src="activeSelfAvatar"
+              class="w-full h-full object-cover"
+              data-testid="chat-active-self-avatar"
+            />
           </div>
         </div>
 
@@ -4202,6 +4670,7 @@ onBeforeUnmount(() => {
           :active-role-asset-context="activeRoleAssetContext"
           :gallery-picker-assets="galleryPickerAssets"
           :gallery-picker-preview-map="galleryPickerPreviewMap"
+          :shopping-preview-products="shoppingPreviewProducts"
           :suggestion-feature-enabled="suggestionFeatureEnabled"
           :loading-suggestions="loadingSuggestions"
           :loading-a-i="loadingAI"
@@ -4212,10 +4681,12 @@ onBeforeUnmount(() => {
           @submit-link-card-form="submitLinkCardForm"
           @submit-transfer-card-form="submitTransferCardForm"
           @submit-voice-card-form="submitVoiceCardForm"
+          @send-product-card="submitShoppingProductCard"
           @update-user-action-draft="updateUserActionDraft"
           @update-gallery-picker-category="galleryPickerCategory = $event"
           @submit-gallery-asset="submitGalleryAsset"
           @open-gallery="openModuleRoute('/gallery')"
+          @open-shopping="openShoppingFromChat"
           @generate-smart-replies="generateSmartReplies"
           @close="closeUserActionPanel"
         />
@@ -4229,6 +4700,7 @@ onBeforeUnmount(() => {
         />
 
         <button
+          data-testid="chat-user-action-toggle"
           @click="toggleUserActionPanel"
           class="w-8 h-8 rounded-full flex items-center justify-center transition border"
           :class="showUserActionPanel ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600'"

@@ -11,7 +11,13 @@ import {
   syncExistingWebPushSubscription,
 } from '../lib/push'
 import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
+import {
+  ASSETS_HOME_APP_ID,
+  FOOD_DELIVERY_HOME_APP_ID,
+  SHOPPING_HOME_APP_ID,
+} from '../lib/planned-module-registry'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
+import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl } from '../lib/ai'
 
 const AVAILABLE_THEMES = [
@@ -43,6 +49,9 @@ const DEFAULT_WIDGET_PAGES = [
     'app_map',
     'app_calendar',
     'app_stock',
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    ASSETS_HOME_APP_ID,
     'app_more',
   ],
   [],
@@ -75,6 +84,9 @@ const CORE_HOME_TILE_IDS = [
   'app_contacts',
   'app_settings',
   'app_gallery',
+  SHOPPING_HOME_APP_ID,
+  FOOD_DELIVERY_HOME_APP_ID,
+  ASSETS_HOME_APP_ID,
   'app_more',
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
@@ -477,6 +489,21 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
     globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
     knowledgePoints: normalizeKnowledgePointList(source.knowledgePoints),
   }
+}
+
+const normalizeUserAvatarImageSource = (rawUser = {}) => {
+  const legacyAvatar = typeof rawUser?.avatar === 'string' ? rawUser.avatar : ''
+  const normalized = normalizeImageSource(rawUser?.avatarImage, {
+    alt: typeof rawUser?.name === 'string' ? rawUser.name : 'User',
+  })
+  if (normalized.sourceType !== 'none') return normalized
+  return normalizeImageSource(
+    {
+      imageSourceType: legacyAvatar ? 'url' : 'none',
+      imageUrl: legacyAvatar,
+    },
+    { alt: typeof rawUser?.name === 'string' ? rawUser.name : 'User' },
+  )
 }
 
 const normalizeNonNegativeTimestamp = (value, fallback = 0) => {
@@ -1007,6 +1034,7 @@ export const useSystemStore = defineStore('system', () => {
     relationship: '',
     bio: '夜之城的自由佣兵。',
     avatar: '',
+    avatarImage: normalizeImageSource({ imageSourceType: 'none' }, { alt: 'V' }),
     worldBook: DEFAULT_GLOBAL_WORLDVIEW,
     globalWorldview: DEFAULT_GLOBAL_WORLDVIEW,
     knowledgePoints: [],
@@ -2568,6 +2596,8 @@ export const useSystemStore = defineStore('system', () => {
     if (persistedUser) {
       Object.assign(user, persistedUser)
     }
+    user.avatarImage = normalizeUserAvatarImageSource(user)
+    user.avatar = user.avatarImage.sourceType === 'url' ? user.avatarImage.url : ''
     const normalizedWorldKernel = normalizeUserWorldKernel(
       persistedUser || user,
       user.globalWorldview || DEFAULT_GLOBAL_WORLDVIEW,
@@ -2813,6 +2843,7 @@ export const useSystemStore = defineStore('system', () => {
   return {
     settings,
     user,
+    hasFinishedStorageHydration,
     notifications,
     apiReports,
     aiAutomationQueue,

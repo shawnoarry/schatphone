@@ -1,0 +1,832 @@
+import { computed, ref, watch } from 'vue'
+import { defineStore } from 'pinia'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { normalizeImageSource } from '../lib/image-source-contract'
+import {
+  FOOD_DELIVERY_CATEGORY_ENTRIES,
+  FOOD_DELIVERY_SOURCE_KEYS,
+} from '../lib/planned-module-registry'
+
+const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
+const FOOD_DELIVERY_STORAGE_VERSION = 1
+const FOOD_RESTAURANT_LIMIT = 120
+const FOOD_MENU_ITEM_LIMIT = 360
+const FOOD_CART_LINE_LIMIT = 40
+const FOOD_ORDER_LIMIT = 120
+const DEFAULT_CURRENCY = 'CNY'
+
+export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
+  PLACED: 'placed',
+  ACCEPTED: 'accepted',
+  COOKING: 'cooking',
+  RIDER_PICKUP: 'rider_pickup',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled',
+})
+
+const FOOD_DELIVERY_ORDER_STATUS_VALUES = new Set(Object.values(FOOD_DELIVERY_ORDER_STATUS))
+const FOOD_CATEGORY_KEYS = FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => entry.key)
+const FOOD_CATEGORY_KEY_SET = new Set(FOOD_CATEGORY_KEYS)
+
+const toInt = (value, fallback = 0) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? Math.floor(num) : fallback
+}
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const normalizeText = (value, fallback = '', max = 120) => {
+  if (typeof value !== 'string') return fallback
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  if (!normalized) return fallback
+  return normalized.slice(0, max)
+}
+
+const normalizeCurrency = (value, fallback = DEFAULT_CURRENCY) => {
+  const normalized = normalizeText(value, fallback, 8).toUpperCase()
+  return /^[A-Z]{2,8}$/.test(normalized) ? normalized : fallback
+}
+
+const normalizeAmountCents = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value * 100))
+  }
+  if (typeof value !== 'string') return 0
+  const normalized = value.trim()
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return 0
+  return Math.round(Number(normalized) * 100)
+}
+
+const formatAmount = (amountCents = 0) => {
+  const cents = Number.isFinite(Number(amountCents)) ? Math.max(0, Math.floor(Number(amountCents))) : 0
+  return (cents / 100).toFixed(2)
+}
+
+const normalizeCategory = (value, fallback = 'restaurants') => {
+  const normalized = normalizeText(value, fallback, 40)
+  return FOOD_CATEGORY_KEY_SET.has(normalized) ? normalized : fallback
+}
+
+const normalizeFoodId = (value) => normalizeText(value, '', 140)
+
+const normalizeStatus = (value, fallback = FOOD_DELIVERY_ORDER_STATUS.PLACED) => {
+  const normalized = normalizeText(value, fallback, 40)
+  return FOOD_DELIVERY_ORDER_STATUS_VALUES.has(normalized) ? normalized : fallback
+}
+
+const normalizeRating = (value, fallback = 4.6) => {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.round(clamp(num, 0, 5) * 10) / 10
+}
+
+const normalizeDistanceKm = (value, fallback = 1.2) => {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.round(Math.max(0, num) * 10) / 10
+}
+
+const normalizeQuantity = (value, fallback = 1) => clamp(toInt(value, fallback), 1, 99)
+
+const createRestaurantId = () => `food_restaurant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createMenuItemId = () => `food_menu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createFoodOrderId = () => `food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const normalizeRestaurant = (rawRestaurant, index = 0) => {
+  if (!rawRestaurant || typeof rawRestaurant !== 'object') return null
+
+  const name = normalizeText(rawRestaurant.name || rawRestaurant.title, '', 90)
+  if (!name) return null
+
+  const now = Date.now()
+  const updatedAt = Math.max(0, toInt(rawRestaurant.updatedAt, now))
+  const deliveryFeeCents =
+    Number.isFinite(Number(rawRestaurant.deliveryFeeCents)) && Number(rawRestaurant.deliveryFeeCents) >= 0
+      ? Math.floor(Number(rawRestaurant.deliveryFeeCents))
+      : normalizeAmountCents(rawRestaurant.deliveryFee)
+
+  return {
+    id: normalizeFoodId(rawRestaurant.id) || `food_restaurant_legacy_${now}_${index}`,
+    name,
+    category: normalizeCategory(rawRestaurant.category),
+    cuisine: normalizeText(rawRestaurant.cuisine, '', 80),
+    rating: normalizeRating(rawRestaurant.rating),
+    deliveryEtaMinutes: clamp(toInt(rawRestaurant.deliveryEtaMinutes || rawRestaurant.etaMinutes, 28), 5, 180),
+    deliveryFeeCents,
+    deliveryFee: formatAmount(deliveryFeeCents),
+    currency: normalizeCurrency(rawRestaurant.currency),
+    distanceKm: normalizeDistanceKm(rawRestaurant.distanceKm),
+    address: normalizeText(rawRestaurant.address, '', 160),
+    image: normalizeImageSource(rawRestaurant, { alt: name }),
+    sourceModule: normalizeText(rawRestaurant.sourceModule, 'food_delivery_seed', 60),
+    sourceId: normalizeText(rawRestaurant.sourceId, '', 140),
+    createdAt: Math.max(0, toInt(rawRestaurant.createdAt, updatedAt)),
+    updatedAt,
+  }
+}
+
+const normalizeRestaurants = (rawRestaurants) => {
+  if (!Array.isArray(rawRestaurants)) return []
+  const seen = new Set()
+  const normalized = []
+  rawRestaurants.forEach((item, index) => {
+    const restaurant = normalizeRestaurant(item, index)
+    if (!restaurant || seen.has(restaurant.id)) return
+    seen.add(restaurant.id)
+    normalized.push(restaurant)
+  })
+  return normalized
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, FOOD_RESTAURANT_LIMIT)
+}
+
+const normalizeMenuItem = (rawItem, restaurantIds, index = 0) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+
+  const restaurantId = normalizeFoodId(rawItem.restaurantId || rawItem.storeId)
+  if (!restaurantId || (restaurantIds.size > 0 && !restaurantIds.has(restaurantId))) return null
+
+  const title = normalizeText(rawItem.title || rawItem.name, '', 90)
+  const priceCents =
+    Number.isFinite(Number(rawItem.priceCents)) && Number(rawItem.priceCents) > 0
+      ? Math.floor(Number(rawItem.priceCents))
+      : normalizeAmountCents(rawItem.price)
+  if (!title || priceCents <= 0) return null
+
+  const now = Date.now()
+  const updatedAt = Math.max(0, toInt(rawItem.updatedAt, now))
+
+  return {
+    id: normalizeFoodId(rawItem.id) || `food_menu_legacy_${now}_${index}`,
+    restaurantId,
+    title,
+    category: normalizeCategory(rawItem.category, 'restaurants'),
+    priceCents,
+    price: formatAmount(priceCents),
+    currency: normalizeCurrency(rawItem.currency),
+    desc: normalizeText(rawItem.desc || rawItem.description, '', 240),
+    available: rawItem.available !== false,
+    image: normalizeImageSource(rawItem, { alt: title }),
+    sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_menu', 60),
+    sourceId: normalizeText(rawItem.sourceId, '', 140),
+    createdAt: Math.max(0, toInt(rawItem.createdAt, updatedAt)),
+    updatedAt,
+  }
+}
+
+const normalizeMenuItems = (rawItems, restaurantIds) => {
+  if (!Array.isArray(rawItems)) return []
+  const seen = new Set()
+  const normalized = []
+  rawItems.forEach((item, index) => {
+    const menuItem = normalizeMenuItem(item, restaurantIds, index)
+    if (!menuItem || seen.has(menuItem.id)) return
+    seen.add(menuItem.id)
+    normalized.push(menuItem)
+  })
+  return normalized
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, FOOD_MENU_ITEM_LIMIT)
+}
+
+const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const menuItemId = normalizeFoodId(rawItem.menuItemId || rawItem.id)
+  if (!menuItemId || (menuItemIds.size > 0 && !menuItemIds.has(menuItemId))) return null
+  const now = Date.now()
+  const addedAt = Math.max(0, toInt(rawItem.addedAt || rawItem.createdAt, now + index))
+
+  return {
+    menuItemId,
+    quantity: normalizeQuantity(rawItem.quantity),
+    sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_cart', 60),
+    sourceId: normalizeText(rawItem.sourceId, '', 140),
+    addedAt,
+    updatedAt: Math.max(0, toInt(rawItem.updatedAt, addedAt)),
+  }
+}
+
+const normalizeCartItems = (rawItems, menuItemIds) => {
+  if (!Array.isArray(rawItems)) return []
+  const byMenuItemId = new Map()
+  rawItems.forEach((item, index) => {
+    const cartItem = normalizeCartItem(item, menuItemIds, index)
+    if (!cartItem) return
+    const existing = byMenuItemId.get(cartItem.menuItemId)
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + cartItem.quantity)
+      existing.updatedAt = Math.max(existing.updatedAt, cartItem.updatedAt)
+      return
+    }
+    byMenuItemId.set(cartItem.menuItemId, cartItem)
+  })
+  return [...byMenuItemId.values()]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, FOOD_CART_LINE_LIMIT)
+}
+
+const normalizeOrderItem = (rawItem, index = 0) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const menuItemId = normalizeFoodId(rawItem.menuItemId || rawItem.productId || rawItem.id)
+  const title = normalizeText(rawItem.title || rawItem.name, '', 90)
+  const unitPriceCents =
+    Number.isFinite(Number(rawItem.unitPriceCents)) && Number(rawItem.unitPriceCents) > 0
+      ? Math.floor(Number(rawItem.unitPriceCents))
+      : normalizeAmountCents(rawItem.price)
+  if (!menuItemId || !title || unitPriceCents <= 0) return null
+
+  return {
+    id: normalizeText(rawItem.id, `${menuItemId}_${index}`, 140),
+    menuItemId,
+    title,
+    category: normalizeCategory(rawItem.category, 'restaurants'),
+    quantity: normalizeQuantity(rawItem.quantity),
+    unitPriceCents,
+    currency: normalizeCurrency(rawItem.currency),
+  }
+}
+
+const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
+  const totals = new Map()
+  items.forEach((item) => {
+    const current = totals.get(item.currency) || 0
+    totals.set(item.currency, current + item.unitPriceCents * item.quantity)
+  })
+  if (deliveryFeeCents > 0) {
+    totals.set(currency, (totals.get(currency) || 0) + deliveryFeeCents)
+  }
+  return [...totals.entries()]
+    .map(([totalCurrency, amountCents]) => ({
+      currency: totalCurrency,
+      amountCents,
+      amount: formatAmount(amountCents),
+    }))
+    .sort((a, b) => a.currency.localeCompare(b.currency))
+}
+
+const normalizeFoodOrder = (rawOrder, index = 0) => {
+  if (!rawOrder || typeof rawOrder !== 'object') return null
+  const items = Array.isArray(rawOrder.items)
+    ? rawOrder.items.map((item, itemIndex) => normalizeOrderItem(item, itemIndex)).filter(Boolean)
+    : []
+  if (items.length === 0) return null
+
+  const now = Date.now()
+  const createdAt = Math.max(0, toInt(rawOrder.createdAt, now + index))
+  const deliveryFeeCents =
+    Number.isFinite(Number(rawOrder.deliveryFeeCents)) && Number(rawOrder.deliveryFeeCents) >= 0
+      ? Math.floor(Number(rawOrder.deliveryFeeCents))
+      : normalizeAmountCents(rawOrder.deliveryFee)
+  const currency = normalizeCurrency(rawOrder.currency || items[0]?.currency)
+  const totals = summarizeOrderTotals(items, deliveryFeeCents, currency)
+  const primaryTotal = totals.find((item) => item.currency === DEFAULT_CURRENCY) || totals[0] || {
+    currency: DEFAULT_CURRENCY,
+    amountCents: 0,
+    amount: '0.00',
+  }
+
+  return {
+    id: normalizeText(rawOrder.id, `food_order_legacy_${now}_${index}`, 140),
+    status: normalizeStatus(rawOrder.status),
+    restaurantId: normalizeFoodId(rawOrder.restaurantId),
+    restaurantName: normalizeText(rawOrder.restaurantName, '', 90),
+    items,
+    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    deliveryFeeCents,
+    deliveryFee: formatAmount(deliveryFeeCents),
+    totals,
+    totalCents: primaryTotal.amountCents,
+    currency: primaryTotal.currency,
+    deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
+    note: normalizeText(rawOrder.note, '', 240),
+    sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_checkout', 60),
+    sourceId: normalizeText(rawOrder.sourceId, '', 140),
+    createdAt,
+    updatedAt: Math.max(0, toInt(rawOrder.updatedAt, createdAt)),
+  }
+}
+
+const normalizeFoodOrders = (rawOrders) => {
+  if (!Array.isArray(rawOrders)) return []
+  const seen = new Set()
+  const normalized = []
+  rawOrders.forEach((item, index) => {
+    const order = normalizeFoodOrder(item, index)
+    if (!order || seen.has(order.id)) return
+    seen.add(order.id)
+    normalized.push(order)
+  })
+  return normalized
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, FOOD_ORDER_LIMIT)
+}
+
+const createSeedRestaurants = () =>
+  normalizeRestaurants([
+    {
+      id: 'food_seed_moon_bistro',
+      name: 'Moon Bistro',
+      category: 'restaurants',
+      cuisine: 'Fusion dinner',
+      rating: 4.8,
+      deliveryEtaMinutes: 32,
+      deliveryFee: '6.00',
+      distanceKm: 2.1,
+      address: 'Luna Street 18',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 8 * 60 * 1000,
+      updatedAt: Date.now() - 8 * 60 * 1000,
+    },
+    {
+      id: 'food_seed_river_noodles',
+      name: 'River Noodles',
+      category: 'fast_food',
+      cuisine: 'Noodles',
+      rating: 4.6,
+      deliveryEtaMinutes: 24,
+      deliveryFee: '4.00',
+      distanceKm: 1.4,
+      address: 'River Market',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 7 * 60 * 1000,
+      updatedAt: Date.now() - 7 * 60 * 1000,
+    },
+    {
+      id: 'food_seed_daylight_cafe',
+      name: 'Daylight Cafe',
+      category: 'cafe',
+      cuisine: 'Coffee and brunch',
+      rating: 4.7,
+      deliveryEtaMinutes: 18,
+      deliveryFee: '3.00',
+      distanceKm: 0.8,
+      address: 'Station Corner',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 6 * 60 * 1000,
+      updatedAt: Date.now() - 6 * 60 * 1000,
+    },
+    {
+      id: 'food_seed_sugar_lane',
+      name: 'Sugar Lane',
+      category: 'dessert',
+      cuisine: 'Dessert',
+      rating: 4.5,
+      deliveryEtaMinutes: 26,
+      deliveryFee: '5.00',
+      distanceKm: 1.9,
+      address: 'Sweet Park',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 5 * 60 * 1000,
+      updatedAt: Date.now() - 5 * 60 * 1000,
+    },
+  ])
+
+const createSeedMenuItems = () =>
+  normalizeMenuItems(
+    [
+      {
+        id: 'food_menu_moon_rice',
+        restaurantId: 'food_seed_moon_bistro',
+        title: 'Lunar Rice Set',
+        category: 'restaurants',
+        price: '58.00',
+        desc: 'Warm dinner set for late-night story scenes.',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 8 * 60 * 1000,
+        updatedAt: Date.now() - 8 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_soup',
+        restaurantId: 'food_seed_moon_bistro',
+        title: 'Signal Soup',
+        category: 'restaurants',
+        price: '26.00',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 7 * 60 * 1000,
+        updatedAt: Date.now() - 7 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_noodles',
+        restaurantId: 'food_seed_river_noodles',
+        title: 'River Beef Noodles',
+        category: 'fast_food',
+        price: '36.00',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 6 * 60 * 1000,
+        updatedAt: Date.now() - 6 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_cafe_latte',
+        restaurantId: 'food_seed_daylight_cafe',
+        title: 'Daylight Latte',
+        category: 'cafe',
+        price: '22.00',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 5 * 60 * 1000,
+        updatedAt: Date.now() - 5 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_cake',
+        restaurantId: 'food_seed_sugar_lane',
+        title: 'Tiny Moon Cake',
+        category: 'dessert',
+        price: '32.00',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+    ],
+    new Set(['food_seed_moon_bistro', 'food_seed_river_noodles', 'food_seed_daylight_cafe', 'food_seed_sugar_lane']),
+  )
+
+export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
+  const restaurants = ref([])
+  const menuItems = ref([])
+  const cartItems = ref([])
+  const orders = ref([])
+  const hasFinishedStorageHydration = ref(false)
+
+  const restaurantMap = computed(() => new Map(restaurants.value.map((restaurant) => [restaurant.id, restaurant])))
+  const menuItemMap = computed(() => new Map(menuItems.value.map((item) => [item.id, item])))
+  const restaurantCount = computed(() => restaurants.value.length)
+  const menuItemCount = computed(() => menuItems.value.length)
+  const cartQuantity = computed(() =>
+    cartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
+  )
+  const orderCount = computed(() => orders.value.length)
+  const recentOrders = computed(() => orders.value.slice(0, 5))
+  const categorySummaries = computed(() =>
+    FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
+      key: entry.key,
+      zh: entry.zh,
+      en: entry.en,
+      icon: entry.icon,
+      restaurantCount: restaurants.value.filter((restaurant) => restaurant.category === entry.key).length,
+      menuItemCount: menuItems.value.filter((item) => item.category === entry.key).length,
+    })),
+  )
+  const cartLineItems = computed(() =>
+    cartItems.value
+      .map((item) => {
+        const menuItem = menuItemMap.value.get(item.menuItemId)
+        if (!menuItem) return null
+        const restaurant = restaurantMap.value.get(menuItem.restaurantId) || null
+        const subtotalCents = menuItem.priceCents * item.quantity
+        return {
+          ...item,
+          menuItem,
+          restaurant,
+          subtotalCents,
+          subtotal: formatAmount(subtotalCents),
+          currency: menuItem.currency,
+        }
+      })
+      .filter(Boolean),
+  )
+  const cartRestaurant = computed(() => cartLineItems.value[0]?.restaurant || null)
+  const cartTotals = computed(() =>
+    summarizeOrderTotals(
+      cartLineItems.value.map((line) => ({
+        menuItemId: line.menuItemId,
+        title: line.menuItem.title,
+        category: line.menuItem.category,
+        quantity: line.quantity,
+        unitPriceCents: line.menuItem.priceCents,
+        currency: line.menuItem.currency,
+      })),
+      cartRestaurant.value?.deliveryFeeCents || 0,
+      cartRestaurant.value?.currency || DEFAULT_CURRENCY,
+    ),
+  )
+  const cartPrimaryTotal = computed(() =>
+    cartTotals.value.find((item) => item.currency === DEFAULT_CURRENCY) || cartTotals.value[0] || {
+      currency: DEFAULT_CURRENCY,
+      amountCents: 0,
+      amount: '0.00',
+    },
+  )
+
+  const findRestaurantById = (restaurantId) => {
+    const id = normalizeFoodId(restaurantId)
+    if (!id) return null
+    return restaurantMap.value.get(id) || null
+  }
+
+  const findMenuItemById = (menuItemId) => {
+    const id = normalizeFoodId(menuItemId)
+    if (!id) return null
+    return menuItemMap.value.get(id) || null
+  }
+
+  const listRestaurantsByCategory = (category = '') => {
+    const normalized = normalizeCategory(category, '')
+    if (!normalized) return restaurants.value.slice()
+    if (normalized === 'nearby') {
+      return restaurants.value.slice().sort((a, b) => a.distanceKm - b.distanceKm)
+    }
+    if (normalized === 'grocery_delivery') {
+      return restaurants.value.filter((restaurant) => restaurant.category === 'grocery_delivery')
+    }
+    return restaurants.value.filter((restaurant) => restaurant.category === normalized)
+  }
+
+  const listMenuByRestaurant = (restaurantId = '') => {
+    const id = normalizeFoodId(restaurantId)
+    if (!id) return []
+    return menuItems.value.filter((item) => item.restaurantId === id)
+  }
+
+  const upsertRestaurant = (input = {}) => {
+    const now = Date.now()
+    const inputId = normalizeFoodId(input.id)
+    const existingIndex = inputId
+      ? restaurants.value.findIndex((restaurant) => restaurant.id === inputId)
+      : -1
+    const existing = existingIndex >= 0 ? restaurants.value[existingIndex] : null
+    const restaurant = normalizeRestaurant({
+      ...input,
+      id: inputId || createRestaurantId(),
+      createdAt: existing?.createdAt || input.createdAt || now,
+      updatedAt: now,
+    })
+    if (!restaurant) return null
+
+    if (existingIndex >= 0) {
+      restaurants.value.splice(existingIndex, 1, {
+        ...existing,
+        ...restaurant,
+        createdAt: existing.createdAt,
+      })
+      return restaurants.value[existingIndex]
+    }
+
+    restaurants.value.unshift(restaurant)
+    if (restaurants.value.length > FOOD_RESTAURANT_LIMIT) restaurants.value.splice(FOOD_RESTAURANT_LIMIT)
+    return restaurant
+  }
+
+  const upsertMenuItem = (input = {}) => {
+    const now = Date.now()
+    const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
+    const inputId = normalizeFoodId(input.id)
+    const existingIndex = inputId
+      ? menuItems.value.findIndex((item) => item.id === inputId)
+      : -1
+    const existing = existingIndex >= 0 ? menuItems.value[existingIndex] : null
+    const menuItem = normalizeMenuItem(
+      {
+        ...input,
+        id: inputId || createMenuItemId(),
+        createdAt: existing?.createdAt || input.createdAt || now,
+        updatedAt: now,
+      },
+      restaurantIds,
+    )
+    if (!menuItem) return null
+
+    if (existingIndex >= 0) {
+      menuItems.value.splice(existingIndex, 1, {
+        ...existing,
+        ...menuItem,
+        createdAt: existing.createdAt,
+      })
+      return menuItems.value[existingIndex]
+    }
+
+    menuItems.value.unshift(menuItem)
+    if (menuItems.value.length > FOOD_MENU_ITEM_LIMIT) menuItems.value.splice(FOOD_MENU_ITEM_LIMIT)
+    return menuItem
+  }
+
+  const addToCart = (menuItemId, quantity = 1, options = {}) => {
+    const menuItem = findMenuItemById(menuItemId)
+    if (!menuItem || menuItem.available === false) return null
+    const currentRestaurantId = cartLineItems.value[0]?.menuItem?.restaurantId || ''
+    if (currentRestaurantId && currentRestaurantId !== menuItem.restaurantId) {
+      cartItems.value = []
+    }
+    const normalizedQuantity = normalizeQuantity(quantity)
+    const now = Date.now()
+    const existing = cartItems.value.find((item) => item.menuItemId === menuItem.id)
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + normalizedQuantity)
+      existing.updatedAt = now
+      return existing
+    }
+    const item = {
+      menuItemId: menuItem.id,
+      quantity: normalizedQuantity,
+      sourceModule: normalizeText(options.sourceModule, 'food_delivery_cart', 60),
+      sourceId: normalizeText(options.sourceId, '', 140),
+      addedAt: now,
+      updatedAt: now,
+    }
+    cartItems.value.unshift(item)
+    if (cartItems.value.length > FOOD_CART_LINE_LIMIT) cartItems.value.splice(FOOD_CART_LINE_LIMIT)
+    return item
+  }
+
+  const updateCartQuantity = (menuItemId, quantity = 1) => {
+    const id = normalizeFoodId(menuItemId)
+    const item = cartItems.value.find((line) => line.menuItemId === id)
+    if (!item) return false
+    const nextQuantity = toInt(quantity, item.quantity)
+    if (nextQuantity <= 0) {
+      cartItems.value = cartItems.value.filter((line) => line.menuItemId !== id)
+      return true
+    }
+    item.quantity = normalizeQuantity(nextQuantity)
+    item.updatedAt = Date.now()
+    return true
+  }
+
+  const clearCart = () => {
+    const removed = cartItems.value.length
+    cartItems.value = []
+    return removed
+  }
+
+  const checkoutCart = ({
+    deliveryAddress = '',
+    note = '',
+    sourceModule = FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
+    sourceId = '',
+  } = {}) => {
+    const lines = cartLineItems.value
+    if (lines.length === 0) return null
+    const restaurant = lines[0]?.restaurant
+    if (!restaurant) return null
+    const now = Date.now()
+    const order = normalizeFoodOrder({
+      id: createFoodOrderId(),
+      status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      deliveryFeeCents: restaurant.deliveryFeeCents,
+      currency: restaurant.currency,
+      items: lines.map((line) => ({
+        id: `${line.menuItemId}_${line.addedAt}`,
+        menuItemId: line.menuItemId,
+        title: line.menuItem.title,
+        category: line.menuItem.category,
+        quantity: line.quantity,
+        unitPriceCents: line.menuItem.priceCents,
+        currency: line.menuItem.currency,
+      })),
+      deliveryAddress,
+      note,
+      sourceModule,
+      sourceId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    if (!order) return null
+    orders.value.unshift(order)
+    if (orders.value.length > FOOD_ORDER_LIMIT) orders.value.splice(FOOD_ORDER_LIMIT)
+    clearCart()
+    return order
+  }
+
+  const updateOrderStatus = (orderId, status) => {
+    const id = normalizeText(orderId, '', 140)
+    const nextStatus = normalizeStatus(status, '')
+    if (!id || !nextStatus) return false
+    const order = orders.value.find((item) => item.id === id)
+    if (!order || order.status === nextStatus) return false
+    order.status = nextStatus
+    order.updatedAt = Date.now()
+    return true
+  }
+
+  const removeOrder = (orderId) => {
+    const id = normalizeText(orderId, '', 140)
+    const before = orders.value.length
+    orders.value = orders.value.filter((order) => order.id !== id)
+    return orders.value.length !== before
+  }
+
+  const applyPersistedSource = (source) => {
+    const rawSource = source && typeof source === 'object' ? source : null
+    if (!rawSource) return false
+
+    const nextRestaurants = normalizeRestaurants(rawSource.restaurants)
+    const restaurantIds = new Set(nextRestaurants.map((restaurant) => restaurant.id))
+    const nextMenuItems = normalizeMenuItems(rawSource.menuItems || rawSource.menu, restaurantIds)
+    const menuItemIds = new Set(nextMenuItems.map((item) => item.id))
+    restaurants.value = nextRestaurants
+    menuItems.value = nextMenuItems
+    cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemIds)
+    orders.value = normalizeFoodOrders(rawSource.orders)
+    return true
+  }
+
+  const hydrateFromStorage = () => {
+    const persisted = readPersistedState(FOOD_DELIVERY_STORAGE_KEY, {
+      version: FOOD_DELIVERY_STORAGE_VERSION,
+    })
+    return applyPersistedSource(persisted)
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(FOOD_DELIVERY_STORAGE_KEY, {
+      version: FOOD_DELIVERY_STORAGE_VERSION,
+    })
+    return applyPersistedSource(persisted)
+  }
+
+  const createBackupSnapshot = () => ({
+    restaurants: restaurants.value.map((restaurant) => ({ ...restaurant })),
+    menuItems: menuItems.value.map((item) => ({ ...item })),
+    cartItems: cartItems.value.map((item) => ({ ...item })),
+    orders: orders.value.map((order) => ({
+      ...order,
+      items: order.items.map((item) => ({ ...item })),
+      totals: order.totals.map((item) => ({ ...item })),
+    })),
+  })
+
+  const createBackupSnapshotAsync = async () => createBackupSnapshot()
+
+  const restoreFromBackup = (snapshot = {}) => {
+    const source =
+      snapshot && typeof snapshot.foodDelivery === 'object' && snapshot.foodDelivery
+        ? snapshot.foodDelivery
+        : snapshot
+    return applyPersistedSource(source)
+  }
+
+  const persistToStorage = () => {
+    writePersistedState(FOOD_DELIVERY_STORAGE_KEY, createBackupSnapshot(), {
+      version: FOOD_DELIVERY_STORAGE_VERSION,
+    })
+  }
+
+  const saveNow = () => {
+    persistToStorage()
+  }
+
+  const resetForTesting = () => {
+    restaurants.value = []
+    menuItems.value = []
+    cartItems.value = []
+    orders.value = []
+  }
+
+  const hydratedFromLocal = hydrateFromStorage()
+  if (!hydratedFromLocal) {
+    restaurants.value = createSeedRestaurants()
+    menuItems.value = createSeedMenuItems()
+  }
+
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [restaurants, menuItems, cartItems, orders],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
+
+  return {
+    restaurants,
+    menuItems,
+    cartItems,
+    orders,
+    restaurantCount,
+    menuItemCount,
+    cartQuantity,
+    orderCount,
+    recentOrders,
+    categorySummaries,
+    cartLineItems,
+    cartRestaurant,
+    cartTotals,
+    cartPrimaryTotal,
+    hasFinishedStorageHydration,
+    findRestaurantById,
+    findMenuItemById,
+    listRestaurantsByCategory,
+    listMenuByRestaurant,
+    upsertRestaurant,
+    upsertMenuItem,
+    addToCart,
+    updateCartQuantity,
+    clearCart,
+    checkoutCart,
+    updateOrderStatus,
+    removeOrder,
+    createBackupSnapshot,
+    createBackupSnapshotAsync,
+    restoreFromBackup,
+    resetForTesting,
+    saveNow,
+  }
+})

@@ -6,6 +6,13 @@ import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import {
+  HOME_APP_REGISTRY_ADDITIONS,
+  HOME_FOLDER_REGISTRY,
+  HOME_FOLDER_TILE_KIND,
+  resolveHomeFolderChildRoute,
+  resolveHomeFolderPresentation,
+} from '../lib/home-entry-registry'
 
 const props = defineProps({
   currentTime: {
@@ -70,6 +77,7 @@ const dragGhostX = ref(0)
 const dragGhostY = ref(0)
 const dragGhostWidth = ref(72)
 const dragGhostHeight = ref(72)
+const openFolderTileId = ref('')
 
 let longPressTimerId = null
 let lastDragPageSwitchAt = 0
@@ -144,6 +152,8 @@ const widgetRegistry = {
   },
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
   app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
+  ...HOME_APP_REGISTRY_ADDITIONS,
+  ...HOME_FOLDER_REGISTRY,
 }
 
 const resolveAppTileLabel = (tileId, fallback = '') => {
@@ -158,8 +168,18 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_chat') return t('聊天', 'Chat')
   if (tileId === 'app_contacts') return t('联系人', 'Contacts')
   if (tileId === 'app_settings') return t('设置', 'Settings')
+  if (tileId === 'app_shopping') return t('购物', 'Shopping')
+  if (tileId === 'app_food_delivery') return t('外卖', 'Food')
+  if (tileId === 'app_assets') return t('资产', 'Assets')
   if (tileId === 'app_more') return t('更多', 'More')
   return fallback
+}
+
+const localizeEntryText = (entry, zhKey = 'zh', enKey = 'en') => {
+  if (!entry || typeof entry !== 'object') return ''
+  return languageBase.value === 'zh'
+    ? entry[zhKey] || entry[enKey] || ''
+    : entry[enKey] || entry[zhKey] || ''
 }
 
 const resolveWidgetVariantLabel = (variant) => {
@@ -254,6 +274,22 @@ const tileMeta = (tileId) => {
         label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
       }
     }
+    if (builtIn.kind === HOME_FOLDER_TILE_KIND) {
+      const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
+      const childEntries = Array.isArray(builtIn.childEntries) ? builtIn.childEntries : []
+      return {
+        ...builtIn,
+        icon: resolvedIconMeta.icon,
+        accent: resolvedIconMeta.accent,
+        label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
+        childEntries: childEntries.map((entry) => ({
+          ...entry,
+          label: localizeEntryText(entry),
+          desc: localizeEntryText(entry, 'descZh', 'descEn'),
+        })),
+        presentation: resolveHomeFolderPresentation(builtIn),
+      }
+    }
     return builtIn
   }
 
@@ -293,9 +329,9 @@ const dragGhostMeta = computed(() => {
   const meta = tileMeta(tileId)
   if (!meta) return null
 
-  if (meta.kind === 'app') {
+  if (meta.kind === 'app' || meta.kind === HOME_FOLDER_TILE_KIND) {
     return {
-      kind: 'app',
+      kind: meta.kind,
       label: meta.label,
       icon: meta.icon,
       accent: meta.accent || 'default',
@@ -334,6 +370,13 @@ const dragGhostStyle = computed(() => {
 const isLockedEntryTile = (tileId) => typeof tileId === 'string' && tileId.startsWith('app_')
 
 const canHideTile = (tileId) => !isLockedEntryTile(tileId)
+const openedFolderMeta = computed(() => tileMeta(openFolderTileId.value))
+const openedFolderPreviewEntries = computed(() => {
+  const entries = Array.isArray(openedFolderMeta.value?.childEntries)
+    ? openedFolderMeta.value.childEntries
+    : []
+  return entries.slice(0, 8)
+})
 
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
 
@@ -379,7 +422,15 @@ const openAppById = (tileId) => {
   if (Date.now() < ignoreAppOpenUntil.value) return
 
   const tile = widgetRegistry[tileId]
-  if (!tile || tile.kind !== 'app') return
+  if (!tile) return
+
+  if (tile.kind === HOME_FOLDER_TILE_KIND) {
+    maybeVibrate(8)
+    openFolderTileId.value = tileId
+    return
+  }
+
+  if (tile.kind !== 'app') return
 
   if (tile.route) {
     maybeVibrate(8)
@@ -388,6 +439,18 @@ const openAppById = (tileId) => {
   }
 
   triggerLayoutToast(t(`应用「${tile.label}」正在开发中`, `App "${tile.label}" is in development`))
+}
+
+const closeHomeFolder = () => {
+  openFolderTileId.value = ''
+}
+
+const openFolderChildEntry = (entry) => {
+  const target = resolveHomeFolderChildRoute(entry)
+  if (!target) return
+  maybeVibrate(8)
+  closeHomeFolder()
+  router.push(target)
 }
 
 const clearLongPressTimer = () => {
@@ -793,6 +856,9 @@ const hideTileFromHome = (tileId) => {
   if (selectedTileId.value === tileId) {
     selectedTileId.value = ''
   }
+  if (openFolderTileId.value === tileId) {
+    closeHomeFolder()
+  }
   triggerLayoutToast(t('组件已隐藏', 'Widget hidden'))
   maybeVibrate(10)
   systemStore.saveNow()
@@ -826,6 +892,7 @@ const exitLayoutMode = () => {
 onBeforeUnmount(() => {
   clearLongPressTimer()
   resetDragState()
+  closeHomeFolder()
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   if (droppedTileTimerId) clearTimeout(droppedTileTimerId)
 })
@@ -880,7 +947,7 @@ onBeforeUnmount(() => {
     <div v-if="hasActiveDrag" class="home-drag-ghost" :style="dragGhostStyle" aria-hidden="true">
       <div class="home-drag-ghost-body">
         <span
-          v-if="dragGhostMeta?.kind === 'app'"
+          v-if="dragGhostMeta?.kind === 'app' || dragGhostMeta?.kind === HOME_FOLDER_TILE_KIND"
           class="home-drag-ghost-icon"
           :style="iconStyle(dragGhostMeta.accent)"
         >
@@ -1031,6 +1098,26 @@ onBeforeUnmount(() => {
                   <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
                 </button>
 
+                <button
+                  class="home-app-tile home-folder-tile"
+                  v-else-if="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
+                  @click="openAppById(tileId)"
+                  :data-testid="`home-folder-${tileId}`"
+                >
+                  <span class="home-app-icon home-folder-icon" :style="iconStyle(tileMeta(tileId).accent)">
+                    <span class="home-folder-preview-grid" aria-hidden="true">
+                      <span
+                        v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
+                        :key="entry.key"
+                        class="home-folder-preview-cell"
+                      >
+                        <i :class="entry.icon"></i>
+                      </span>
+                    </span>
+                  </span>
+                  <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
+                </button>
+
                 <div class="home-custom-widget-card" v-else-if="tileMeta(tileId)?.kind === 'custom_widget'">
                   <iframe
                     class="home-custom-widget-frame"
@@ -1094,6 +1181,41 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>
+    </div>
+
+    <div
+      v-if="openedFolderMeta?.kind === HOME_FOLDER_TILE_KIND"
+      class="home-folder-overlay"
+      data-testid="home-folder-overlay"
+      data-no-layout-longpress
+      @click.self="closeHomeFolder"
+    >
+      <section class="home-folder-panel" :data-folder-presentation="openedFolderMeta.presentation.openAnimation">
+        <div class="home-folder-panel-head">
+          <div>
+            <p>{{ t('文件夹', 'Folder') }}</p>
+            <h2>{{ openedFolderMeta.label }}</h2>
+          </div>
+          <button @click="closeHomeFolder" :aria-label="t('关闭文件夹', 'Close folder')">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+        <div class="home-folder-entry-grid">
+          <button
+            v-for="entry in openedFolderPreviewEntries"
+            :key="entry.key"
+            class="home-folder-entry"
+            :data-testid="`home-folder-entry-${entry.key}`"
+            @click="openFolderChildEntry(entry)"
+          >
+            <span class="home-folder-entry-icon" :style="iconStyle(entry.accent)">
+              <i :class="entry.icon"></i>
+            </span>
+            <span class="home-folder-entry-label">{{ entry.label }}</span>
+            <span class="home-folder-entry-desc">{{ entry.desc }}</span>
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -1472,6 +1594,169 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.home-folder-tile {
+  position: relative;
+}
+
+.home-folder-icon {
+  padding: 7px;
+  overflow: hidden;
+}
+
+.home-folder-preview-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.home-folder-preview-cell {
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 11px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.home-folder-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(8, 13, 28, 0.36);
+  backdrop-filter: blur(18px);
+  animation: home-folder-overlay-in 180ms ease-out;
+}
+
+.home-folder-panel {
+  width: min(100%, 330px);
+  max-height: min(78%, 560px);
+  overflow: hidden;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(20, 25, 43, 0.58);
+  color: #fff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(24px);
+  padding: 18px;
+  animation: home-folder-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.home-folder-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.home-folder-panel-head p {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.home-folder-panel-head h2 {
+  margin: 3px 0 0;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.home-folder-panel-head button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.home-folder-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 430px;
+  padding-right: 2px;
+}
+
+.home-folder-entry {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.home-folder-entry:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.home-folder-entry-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.home-folder-entry-label {
+  display: block;
+  margin-top: 9px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.home-folder-entry-desc {
+  display: block;
+  margin-top: 3px;
+  min-height: 32px;
+  font-size: 10px;
+  line-height: 1.45;
+  opacity: 0.72;
+}
+
+@keyframes home-folder-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes home-folder-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes home-drag-lift {

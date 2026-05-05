@@ -2,6 +2,12 @@
 import { useI18n } from '../../composables/useI18n'
 import AssetStatusBadge from '../assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../assets/AssetThumbnailOption.vue'
+import ImageSourcePicker from '../shared/ImageSourcePicker.vue'
+
+const MAP_VISUAL_SOURCE_OPTIONS = [
+  { value: 'default', labelZh: '默认地图视觉', labelEn: 'Default map visual' },
+  { value: 'gallery', labelZh: 'Gallery 地图背景', labelEn: 'Gallery map background' },
+]
 
 defineProps({
   currentLocationText: {
@@ -186,39 +192,29 @@ const { t } = useI18n()
     </div>
 
     <div class="space-y-2 text-xs text-cyan-50/80">
-      <label class="inline-flex items-center gap-2 mr-4">
-        <input
-          type="radio"
-          name="mapVisualMode"
-          value="default"
-          :checked="mapVisualSettings.mode === 'default'"
-          @change="$emit('change-map-visual-mode', $event)"
-        />
-        {{ t('默认视觉', 'Default visual') }}
-      </label>
-      <label class="inline-flex items-center gap-2">
-        <input
-          type="radio"
-          name="mapVisualMode"
-          value="gallery"
-          :checked="mapVisualSettings.mode === 'gallery'"
-          @change="$emit('change-map-visual-mode', $event)"
-        />
-        {{ t('素材库视觉', 'Gallery visual') }}
-      </label>
+      <ImageSourcePicker
+        :source-type="mapVisualSettings.mode"
+        :gallery-asset-id="mapVisualSettings.assetId"
+        :source-options="MAP_VISUAL_SOURCE_OPTIONS"
+        :gallery-assets="mapVisualAssetOptions"
+        size="xs"
+        test-id-prefix="map-visual"
+        gallery-placeholder-zh="选择地图背景素材"
+        gallery-placeholder-en="Choose map background asset"
+        @update:source-type="$emit('change-map-visual-mode', { target: { value: $event } })"
+        @update:gallery-asset-id="$emit('change-map-visual-asset', { target: { value: $event } })"
+      />
+      <p class="text-[11px] leading-4 text-cyan-50/55">
+        {{
+          t(
+            '本地图片仍先进入 Gallery；Map 只引用已入库素材或使用默认视觉。',
+            'Local images still enter Gallery first; Map only references stored assets or uses the default visual.',
+          )
+        }}
+      </p>
     </div>
 
     <div v-if="mapVisualSettings.mode === 'gallery'" class="mt-3 space-y-2">
-      <select
-        class="w-full rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-white outline-none"
-        :value="mapVisualSettings.assetId"
-        @change="$emit('change-map-visual-asset', $event)"
-      >
-        <option value="">{{ t('选择地图背景素材', 'Choose map background asset') }}</option>
-        <option v-for="asset in mapVisualAssetOptions" :key="asset.id" :value="asset.id">
-          {{ asset.name }}
-        </option>
-      </select>
       <p v-if="mapVisualAssetOptions.length === 0" class="text-xs text-cyan-50/60">
         {{ t('素材库暂无可用背景图，已自动回退默认模式。', 'No gallery asset available for map background; fallback stays on default mode.') }}
       </p>

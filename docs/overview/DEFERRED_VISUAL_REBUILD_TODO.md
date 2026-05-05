@@ -175,6 +175,49 @@ Recommendation / 建议:
 
 ## 4. Suggested Resume Order / 未来恢复视觉工作时的建议顺序
 
+### 4.1 Home Folder Visual Status / 主屏文件夹视觉进度
+
+Status / 状态: partial baseline landed, full visual rebuild deferred / 已落地基础视觉骨架，完整视觉重建仍搁置
+
+Landed / 已完成:
+
+1. Home folder tile occupies the same 1x1 footprint as a normal app entry.
+   主屏文件夹入口已使用与普通 App 相同的 1x1 占位。
+2. Shopping now uses the folder-style Home entry instead of a normal single app icon.
+   Shopping 已使用文件夹式 Home 入口，而不是普通单 App 图标。
+3. The folder icon shows a 2x2 child-entry preview grid.
+   文件夹图标已显示 2x2 子入口缩略预览。
+4. Opening the folder uses a blur/glass overlay, rounded panel, and baseline open animation.
+   文件夹打开已具备模糊/毛玻璃遮罩、圆角面板与基础打开动效。
+5. The implementation has a presentation boundary in `src/lib/home-entry-registry.js`.
+   实现已在 `src/lib/home-entry-registry.js` 中预留展示配置边界。
+
+Not finished / 未完成:
+
+1. Folder visuals are not yet controlled by Appearance settings.
+   文件夹视觉尚未接入 Appearance 设置。
+2. Blur strength, icon mask, preview density, tint, radius, and animation are not user-configurable.
+   模糊强度、图标蒙版、预览密度、染色、圆角与动效尚不可由用户配置。
+3. The current style is a functional visual scaffold, not the final iOS-grade shell rebuild.
+   当前样式是功能性视觉脚手架，不是最终 iOS 级壳层重建。
+4. Shopping's inner page still uses a functional baseline layout for products, cart, orders, Assets/Wallet suggestions, and Calendar delivery cues; it needs later module-level visual direction.
+   Shopping 内页仍是商品、购物车、订单、Assets/Wallet 建议和 Calendar 配送线索的功能基线布局，后续需要单独做模块级视觉方向。
+5. Assets' inner page now has functional CRUD and valuation layout, but its final module identity is not designed.
+   Assets 内页现在已有功能性 CRUD 与估值布局，但最终模块视觉身份尚未设计。
+
+Future visual TODO / 后续视觉 TODO:
+
+1. Add Appearance controls for folder preview density, blur/tint, radius, and open animation.
+   在 Appearance 中加入文件夹预览密度、模糊/染色、圆角与打开动效控制。
+2. Move folder skin values from `HomeView.vue` scoped CSS into shared shell/appearance tokens.
+   将文件夹皮肤值从 `HomeView.vue` 局部样式迁移到共享壳层/外观 token。
+3. Rework Home folder opening motion together with the broader Lock/Home/Dock rebuild.
+   在整体 Lock/Home/Dock 重建时一起重做文件夹打开动效。
+4. Revisit Shopping's folder and inner-page identity after the product/cart/order plus Assets/Wallet/Calendar handoff baseline is stable.
+   等 Shopping 商品/购物车/订单以及 Assets/Wallet/Calendar 交接基线稳定后，再回看购物文件夹与内页视觉身份。
+5. Revisit Assets visual identity after Shopping -> Assets handoff behavior is clear.
+   等 Shopping -> Assets 交接行为明确后，再回看资产模块视觉身份。
+
 When the project returns to visual work, resume in this order:
 
 未来恢复视觉工作时，建议按以下顺序：

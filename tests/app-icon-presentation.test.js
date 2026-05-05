@@ -48,6 +48,22 @@ describe('app icon presentation helpers', () => {
     expect(meta.toneClass).toBe('accent-warm')
   })
 
+  test('resolves planned Shopping and Assets app metadata', () => {
+    const shopping = resolveAppIconMeta('app_shopping', {}, 'zh-CN')
+    const food = resolveAppIconMeta('app_food_delivery', {}, 'en-US')
+    const assets = resolveAppIconMeta('app_assets', {}, 'en-US')
+
+    expect(shopping.label).toBe('购物')
+    expect(shopping.icon).toBe('fas fa-bag-shopping')
+    expect(shopping.accent).toBe('warm')
+    expect(food.label).toBe('Food')
+    expect(food.icon).toBe('fas fa-bowl-food')
+    expect(food.accent).toBe('warm')
+    expect(assets.label).toBe('Assets')
+    expect(assets.icon).toBe('fas fa-vault')
+    expect(assets.accent).toBe('cool')
+  })
+
   test('reuses app icon overrides in in-shell notification presentation', () => {
     const meta = resolveNotificationModuleMeta(
       {

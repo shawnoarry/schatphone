@@ -56,6 +56,10 @@ defineProps({
     type: Object,
     default: () => ({}),
   },
+  shoppingPreviewProducts: {
+    type: Array,
+    default: () => [],
+  },
   suggestionFeatureEnabled: {
     type: Boolean,
     default: false,
@@ -76,7 +80,9 @@ defineEmits([
   'generate-smart-replies',
   'open-form',
   'open-gallery',
+  'open-shopping',
   'send-current-location',
+  'send-product-card',
   'submit-gallery-asset',
   'submit-link-card-form',
   'submit-transfer-card-form',
@@ -146,6 +152,75 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       >
         {{ t('语音卡片', 'Voice card') }}
       </button>
+      <button
+        data-testid="chat-user-action-open-shopping"
+        @click="$emit('open-shopping')"
+        class="rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-left text-[11px] text-orange-700 transition hover:bg-orange-100"
+      >
+        <span class="block font-semibold">{{ t('购物建议', 'Shopping pick') }}</span>
+        <span class="block text-[10px] text-orange-500">{{ t('去 Shopping 确认', 'Confirm in Shopping') }}</span>
+      </button>
+    </div>
+    <div
+      v-if="userActionFormType === USER_ACTION_FORM_NONE && shoppingPreviewProducts.length > 0"
+      class="mt-2 rounded-xl border border-orange-100 bg-orange-50/70 p-2"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-[11px] font-semibold text-orange-800">{{ t('只读商品预览', 'Read-only product preview') }}</p>
+        <span class="text-[10px] text-orange-500">{{ t('结算仍在 Shopping', 'Checkout stays in Shopping') }}</span>
+      </div>
+      <div class="mt-2 grid grid-cols-1 gap-2">
+        <button
+          v-for="product in shoppingPreviewProducts"
+          :key="product.id"
+          :data-testid="`chat-shopping-preview-${product.id}`"
+          @click="$emit('open-shopping', { productId: product.id, category: product.category, serviceKey: product.serviceKey })"
+          class="rounded-lg border border-orange-100 bg-white/80 px-2 py-2 text-left transition hover:border-orange-200 hover:bg-white"
+        >
+          <span class="flex items-start justify-between gap-2">
+            <span class="min-w-0">
+              <span class="block truncate text-[11px] font-semibold text-gray-900">{{ product.title }}</span>
+              <span
+                v-if="product.serviceLabel || product.serviceKey"
+                class="mt-0.5 block truncate text-[10px] font-semibold text-amber-700"
+              >
+                {{ product.serviceLabel || product.serviceKey }}
+              </span>
+              <span class="mt-0.5 block truncate text-[10px] text-gray-500">{{ product.desc || t('来自 Shopping 商品目录', 'From Shopping catalog') }}</span>
+            </span>
+            <span class="shrink-0 text-[10px] font-semibold text-orange-600">{{ product.price }}</span>
+          </span>
+          <span class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
+            <span class="rounded-full bg-orange-50 px-1.5 py-0.5 text-orange-600">{{ product.category }}</span>
+            <span
+              v-if="product.serviceLabel || product.serviceKey"
+              class="rounded-full bg-amber-50 px-1.5 py-0.5 text-amber-700"
+            >
+              {{ product.serviceLabel || product.serviceKey }}
+            </span>
+            <span v-if="product.assetEligible" class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-emerald-600">
+              {{ t('可转资产', 'Asset-ready') }}
+            </span>
+            <span v-if="product.giftable" class="rounded-full bg-rose-50 px-1.5 py-0.5 text-rose-600">
+              {{ t('可赠礼', 'Giftable') }}
+            </span>
+          </span>
+          <span class="mt-2 flex items-center gap-2">
+            <span
+              role="button"
+              tabindex="0"
+              :data-testid="`chat-send-product-card-${product.id}`"
+              @click.stop="$emit('send-product-card', product)"
+              @keydown.enter.prevent.stop="$emit('send-product-card', product)"
+              @keydown.space.prevent.stop="$emit('send-product-card', product)"
+              class="rounded-full bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
+            >
+              {{ t('发送商品卡', 'Send card') }}
+            </span>
+            <span class="text-[10px] text-orange-600">{{ t('点卡片去确认', 'Tap card to confirm') }}</span>
+          </span>
+        </button>
+      </div>
     </div>
     <p
       v-if="userActionFormType === USER_ACTION_FORM_NONE"

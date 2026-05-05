@@ -18,6 +18,8 @@ const APP_ICON_LABELS = {
   app_contacts: { zh: '通讯录', en: 'Contacts', ko: '연락처' },
   app_settings: { zh: '设置', en: 'Settings', ko: '설정' },
   app_files: { zh: '文件', en: 'Files', ko: '파일' },
+  app_shopping: { zh: '购物', en: 'Shopping', ko: '쇼핑' },
+  app_assets: { zh: '资产', en: 'Assets', ko: '자산' },
   app_more: { zh: '更多', en: 'More', ko: '더보기' },
 }
 
@@ -34,8 +36,13 @@ const BUILT_IN_APP_ICON_META = {
   app_contacts: { icon: 'fas fa-address-book', accent: 'light' },
   app_settings: { icon: 'fas fa-cog', accent: 'dark' },
   app_files: { icon: 'fas fa-folder', accent: 'cool' },
+  app_shopping: { icon: 'fas fa-bag-shopping', accent: 'warm' },
+  app_assets: { icon: 'fas fa-vault', accent: 'cool' },
   app_more: { icon: 'fas fa-ellipsis-h', accent: 'default' },
 }
+
+APP_ICON_LABELS.app_food_delivery = { zh: '外卖', en: 'Food', ko: 'Delivery' }
+BUILT_IN_APP_ICON_META.app_food_delivery = { icon: 'fas fa-bowl-food', accent: 'warm' }
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -47,6 +54,9 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_map',
   'app_calendar',
   'app_stock',
+  'app_shopping',
+  'app_food_delivery',
+  'app_assets',
   'app_settings',
   'app_contacts',
   'app_more',
@@ -157,6 +167,9 @@ export const resolveNotificationModuleAppId = (moduleKey) => {
   if (moduleKey === 'chat') return 'app_chat'
   if (moduleKey === 'map') return 'app_map'
   if (moduleKey === 'gallery') return 'app_gallery'
+  if (moduleKey === 'shopping') return 'app_shopping'
+  if (moduleKey === 'food_delivery') return 'app_food_delivery'
+  if (moduleKey === 'assets') return 'app_assets'
   if (moduleKey === 'system') return 'app_settings'
   return ''
 }

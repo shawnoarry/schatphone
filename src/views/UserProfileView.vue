@@ -1,16 +1,79 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
+import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 
 const router = useRouter()
 const systemStore = useSystemStore()
+const galleryStore = useGalleryStore()
 const { t } = useI18n()
 const { user } = storeToRefs(systemStore)
 const saved = ref(false)
 let savedTimerId = null
+
+const readUserAvatarImage = () => {
+  const source = user.value.avatarImage && typeof user.value.avatarImage === 'object'
+    ? user.value.avatarImage
+    : null
+  return {
+    sourceType: source?.sourceType || source?.imageSourceType || (user.value.avatar ? 'url' : 'none'),
+    url: source?.url || source?.imageUrl || user.value.avatar || '',
+    galleryAssetId: source?.galleryAssetId || source?.imageGalleryAssetId || '',
+  }
+}
+
+const userAvatarSourceType = ref('none')
+const userAvatarUrl = ref('')
+const userAvatarGalleryAssetId = ref('')
+let syncingAvatarDraft = false
+
+const syncAvatarDraftFromUser = () => {
+  const avatarImage = readUserAvatarImage()
+  syncingAvatarDraft = true
+  userAvatarSourceType.value = avatarImage.sourceType
+  userAvatarUrl.value = avatarImage.url
+  userAvatarGalleryAssetId.value = avatarImage.galleryAssetId
+  syncingAvatarDraft = false
+}
+
+const syncUserFromAvatarDraft = () => {
+  if (syncingAvatarDraft) return
+  const sourceType = userAvatarSourceType.value
+  const url = sourceType === 'url' ? userAvatarUrl.value : ''
+  const galleryAssetId = sourceType === 'gallery' ? userAvatarGalleryAssetId.value : ''
+  user.value.avatar = url
+  user.value.avatarImage = {
+    ...(user.value.avatarImage || {}),
+    sourceType,
+    url,
+    galleryAssetId,
+  }
+}
+
+const galleryImageAssets = computed(() => galleryStore.assets.slice(0, 80))
+
+watch(
+  () => [
+    user.value.avatar,
+    user.value.avatarImage?.sourceType,
+    user.value.avatarImage?.imageSourceType,
+    user.value.avatarImage?.url,
+    user.value.avatarImage?.imageUrl,
+    user.value.avatarImage?.galleryAssetId,
+    user.value.avatarImage?.imageGalleryAssetId,
+  ],
+  syncAvatarDraftFromUser,
+  { immediate: true },
+)
+
+watch(
+  [userAvatarSourceType, userAvatarUrl, userAvatarGalleryAssetId],
+  syncUserFromAvatarDraft,
+)
 
 const userAiContextSummary = computed(() => systemStore.getUserAiContextSummary())
 
@@ -64,13 +127,26 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-2xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('头像 URL', 'Avatar URL') }}</label>
-        <input
-          v-model="user.avatar"
-          type="text"
-          class="w-full border-b border-gray-200 py-1 outline-none text-sm"
-          placeholder="https://..."
+        <label class="text-xs text-gray-500 block mb-2">{{ t('头像来源', 'Avatar source') }}</label>
+        <ImageSourcePicker
+          v-model:source-type="userAvatarSourceType"
+          v-model:image-url="userAvatarUrl"
+          v-model:gallery-asset-id="userAvatarGalleryAssetId"
+          :gallery-assets="galleryImageAssets"
+          :source-options="[
+            { value: 'none', labelZh: '默认头像', labelEn: 'Default avatar' },
+            { value: 'url', labelZh: 'URL 头像', labelEn: 'URL avatar' },
+            { value: 'gallery', labelZh: 'Gallery 素材', labelEn: 'Gallery asset' },
+          ]"
+          url-placeholder-zh="https:// 头像图片地址"
+          url-placeholder-en="https:// avatar image URL"
+          gallery-placeholder-zh="选择 Gallery 头像素材"
+          gallery-placeholder-en="Choose Gallery avatar asset"
+          test-id-prefix="user-profile-avatar"
         />
+        <p class="mt-2 text-[11px] text-gray-500">
+          {{ t('本地图片仍先进入相册，再在这里引用。', 'Local images still enter through Gallery first, then are referenced here.') }}
+        </p>
       </div>
 
       <div class="bg-white rounded-2xl p-4">

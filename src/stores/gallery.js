@@ -1199,6 +1199,15 @@ export const useGalleryStore = defineStore('gallery', () => {
     persistToStorage()
   }
 
+  const resetForTesting = () => {
+    clearAssetPreviewCache()
+    assets.value = []
+    folders.value = []
+    Object.keys(usageRegistry).forEach((assetId) => {
+      delete usageRegistry[assetId]
+    })
+  }
+
   const createBackupSnapshot = () => ({
     assets: assets.value.map((asset) => cloneAsset(asset)),
     folders: folders.value.map((folder) => cloneFolder(folder)),
@@ -1456,6 +1465,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     createBackupSnapshotAsync,
     restoreFromBackup,
     restoreFromBackupAsync,
+    resetForTesting,
     saveNow,
   }
 })

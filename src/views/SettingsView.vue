@@ -9,6 +9,9 @@ import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useFilesStore } from '../stores/files'
 import { usePhoneStore } from '../stores/phone'
+import { useAssetsStore } from '../stores/assets'
+import { useShoppingStore } from '../stores/shopping'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useDialog } from '../composables/useDialog'
@@ -52,6 +55,9 @@ const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const filesStore = useFilesStore()
 const phoneStore = usePhoneStore()
+const assetsStore = useAssetsStore()
+const shoppingStore = useShoppingStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const stockStore = useStockStore()
 const walletStore = useWalletStore()
 const { t } = useI18n()
@@ -94,6 +100,9 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:calendar', version: 1, labelZh: '日历存档', labelEn: 'Calendar state' },
   { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
   { key: 'store:files', version: 1, labelZh: '文件索引', labelEn: 'Files index' },
+  { key: 'store:shopping', version: 1, labelZh: '购物记录', labelEn: 'Shopping records' },
+  { key: 'store:food-delivery', version: 1, labelZh: '外卖记录', labelEn: 'Food delivery records' },
+  { key: 'store:assets', version: 1, labelZh: '资产记录', labelEn: 'Assets records' },
   { key: 'store:wallet', version: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger' },
   { key: 'store:phone', version: 1, labelZh: '电话记录', labelEn: 'Phone logs' },
   { key: 'store:stock', version: 1, labelZh: '模拟行情', labelEn: 'Simulated market' },
@@ -1197,6 +1206,9 @@ const buildBackupPayload = async () => {
     },
     gallery: gallerySnapshot,
     files: filesStore.createBackupSnapshot(),
+    shopping: shoppingStore.createBackupSnapshot(),
+    foodDelivery: foodDeliveryStore.createBackupSnapshot(),
+    assets: assetsStore.createBackupSnapshot(),
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
     stock: stockStore.createBackupSnapshot(),
@@ -1227,10 +1239,13 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.calendar && typeof payload.calendar === 'object') return true
   if (payload.gallery && typeof payload.gallery === 'object') return true
   if (payload.files && typeof payload.files === 'object') return true
+  if (payload.shopping && typeof payload.shopping === 'object') return true
+  if (payload.foodDelivery && typeof payload.foodDelivery === 'object') return true
+  if (isAssetsBackupSection(payload.assets)) return true
+  if (Array.isArray(payload.assets)) return true
   if (payload.wallet && typeof payload.wallet === 'object') return true
   if (payload.phone && typeof payload.phone === 'object') return true
   if (payload.stock && typeof payload.stock === 'object') return true
-  if (Array.isArray(payload.assets)) return true
   return false
 }
 
@@ -1378,6 +1393,36 @@ const restoreOptionalBackupSection = (store, section) => {
   return store.restoreFromBackup(section)
 }
 
+const isAssetRecordLike = (item) =>
+  item &&
+  typeof item === 'object' &&
+  typeof (item.name || item.title) === 'string' &&
+  (
+    Object.prototype.hasOwnProperty.call(item, 'estimatedValue') ||
+    Object.prototype.hasOwnProperty.call(item, 'estimatedValueCents') ||
+    Object.prototype.hasOwnProperty.call(item, 'purchaseValue') ||
+    Object.prototype.hasOwnProperty.call(item, 'purchaseValueCents')
+  )
+
+const isAssetsBackupSection = (section) => {
+  if (!section || typeof section !== 'object') return false
+  const records = Array.isArray(section.records)
+    ? section.records
+    : Array.isArray(section.assetRecords)
+      ? section.assetRecords
+      : Array.isArray(section.items)
+        ? section.items
+        : null
+  if (!records) return false
+  if (records.length === 0) return true
+  return records.some((item) => isAssetRecordLike(item))
+}
+
+const restoreAssetsBackupSection = (section) => {
+  if (!isAssetsBackupSection(section)) return true
+  return assetsStore.restoreFromBackup(section)
+}
+
 const createRollbackSnapshot = () => {
   return {
     system: {
@@ -1402,6 +1447,9 @@ const createRollbackSnapshot = () => {
     },
     gallery: galleryStore.createBackupSnapshot(),
     files: filesStore.createBackupSnapshot(),
+    shopping: shoppingStore.createBackupSnapshot(),
+    foodDelivery: foodDeliveryStore.createBackupSnapshot(),
+    assets: assetsStore.createBackupSnapshot(),
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
     stock: stockStore.createBackupSnapshot(),
@@ -1463,6 +1511,9 @@ const importData = async (event) => {
       restoreAssetPackage: true,
     })
     const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
+    const shoppingOk = restoreOptionalBackupSection(shoppingStore, parsed.shopping)
+    const foodDeliveryOk = restoreOptionalBackupSection(foodDeliveryStore, parsed.foodDelivery)
+    const assetsOk = restoreAssetsBackupSection(parsed.assets)
     const walletOk = restoreOptionalBackupSection(walletStore, parsed.wallet)
     const phoneOk = restoreOptionalBackupSection(phoneStore, parsed.phone)
     const stockOk = restoreOptionalBackupSection(stockStore, parsed.stock)
@@ -1473,6 +1524,9 @@ const importData = async (event) => {
       !calendarOk ||
       !galleryRestoreResult?.ok ||
       !filesOk ||
+      !shoppingOk ||
+      !foodDeliveryOk ||
+      !assetsOk ||
       !walletOk ||
       !phoneOk ||
       !stockOk
@@ -1489,6 +1543,9 @@ const importData = async (event) => {
     calendarStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
+    shoppingStore.saveNow()
+    foodDeliveryStore.saveNow()
+    assetsStore.saveNow()
     walletStore.saveNow()
     phoneStore.saveNow()
     stockStore.saveNow()
@@ -1524,6 +1581,9 @@ const importData = async (event) => {
     calendarStore.restoreFromBackup(rollback.calendar)
     galleryStore.restoreFromBackup(rollback.gallery)
     filesStore.restoreFromBackup(rollback.files)
+    shoppingStore.restoreFromBackup(rollback.shopping)
+    foodDeliveryStore.restoreFromBackup(rollback.foodDelivery)
+    assetsStore.restoreFromBackup(rollback.assets)
     walletStore.restoreFromBackup(rollback.wallet)
     phoneStore.restoreFromBackup(rollback.phone)
     stockStore.restoreFromBackup(rollback.stock)
@@ -1533,6 +1593,9 @@ const importData = async (event) => {
     calendarStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
+    shoppingStore.saveNow()
+    foodDeliveryStore.saveNow()
+    assetsStore.saveNow()
     walletStore.saveNow()
     phoneStore.saveNow()
     stockStore.saveNow()

@@ -10,6 +10,7 @@ import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
 import CalendarMapReminderCard from '../components/calendar/CalendarMapReminderCard.vue'
 import CalendarPhoneCueCard from '../components/calendar/CalendarPhoneCueCard.vue'
+import CalendarShoppingCueCard from '../components/calendar/CalendarShoppingCueCard.vue'
 import CalendarStockCueCard from '../components/calendar/CalendarStockCueCard.vue'
 
 const router = useRouter()
@@ -19,8 +20,10 @@ const mapStore = useMapStore()
 const systemStore = useSystemStore()
 const {
   activePhoneMissedCallCues,
+  activeShoppingDeliveryCues,
   activeStockMarketCues,
   phoneMissedCallCueCount,
+  shoppingDeliveryCueCount,
   stockMarketCueCount,
   upcomingEvents,
 } = storeToRefs(calendarStore)
@@ -33,6 +36,7 @@ const activeMapReminders = computed(() =>
 const visibleMapReminders = computed(() => activeMapReminders.value.slice(0, 4))
 const mapReminderCount = computed(() => activeMapReminders.value.length)
 const visiblePhoneCues = computed(() => activePhoneMissedCallCues.value.slice(0, 4))
+const visibleShoppingCues = computed(() => activeShoppingDeliveryCues.value.slice(0, 4))
 const visibleStockCues = computed(() => activeStockMarketCues.value.slice(0, 4))
 const dismissedMapReminderCount = computed(
   () => mapCalendarReminders.value.filter((reminder) => reminder.status === 'dismissed').length,
@@ -239,6 +243,19 @@ const dismissStockCue = (cue) => {
   calendarStore.dismissStockMarketCue(cue.id)
 }
 
+const confirmShoppingCue = (cue) => {
+  const event = calendarStore.confirmShoppingDeliveryCue(cue.id)
+  if (event?.id) {
+    void calendarStore.ensureEventPushScheduled(event.id, {
+      source: 'calendar_shopping_delivery_confirm',
+    })
+  }
+}
+
+const dismissShoppingCue = (cue) => {
+  calendarStore.dismissShoppingDeliveryCue(cue.id)
+}
+
 const getReminderStatusLabel = (reminder) => {
   if (reminder.pinned) return t('已固定', 'Pinned')
   if (reminder.status === 'confirmed') return t('已确认', 'Confirmed')
@@ -438,6 +455,23 @@ watch(
 
     <div class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
       <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-blue-500">
+          {{ t('线索确认层', 'Cue confirmation layer') }}
+        </p>
+        <h2 class="mt-2 text-lg font-bold text-gray-950">
+          {{ t('外部模块先给出线索，确认后才进入日历。', 'Source modules suggest cues first; only confirmed cues become events.') }}
+        </h2>
+        <p class="mt-2 text-xs leading-5 text-gray-500">
+          {{
+            t(
+              'Map、Phone、Shopping 与 Stock 的提醒都先停留在这里，避免其它模块自动占用日程；用户确认后才会安排事件和真实推送。',
+              'Map, Phone, Shopping, and Stock reminders land here as cues first, preventing source modules from taking over the schedule. Confirmation creates events and real push schedules.',
+            )
+          }}
+        </p>
+      </section>
+
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-xs text-gray-500">{{ t('来自地图', 'From Map') }}</p>
@@ -514,6 +548,44 @@ watch(
         <p class="font-semibold mb-2">{{ t('暂无未接来电线索', 'No missed-call cues yet') }}</p>
         <p class="text-sm text-gray-600">
           {{ t('在 Phone 里记录新的未接来电后，这里会出现可确认的回拨提醒。', 'Record a new missed call in Phone to see callback cues here.') }}
+        </p>
+      </section>
+
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs text-gray-500">{{ t('来自购物', 'From Shopping') }}</p>
+            <h2 class="font-semibold">{{ t('配送跟进线索', 'Delivery follow-up cues') }}</h2>
+          </div>
+          <span class="rounded-full bg-orange-50 px-2 py-1 text-[11px] text-orange-600">
+            {{ t(`${shoppingDeliveryCueCount} 条`, `${shoppingDeliveryCueCount} items`) }}
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">
+          {{
+            t(
+              'Shopping 订单会先在这里形成配送或预约跟进线索；Calendar 内确认后才进入日历事件和真实推送链路。',
+              'Shopping orders first become delivery or appointment follow-up cues here; only Calendar confirmation turns them into events and real push schedules.',
+            )
+          }}
+        </p>
+      </section>
+
+      <section v-if="visibleShoppingCues.length > 0" class="space-y-2">
+        <CalendarShoppingCueCard
+          v-for="cue in visibleShoppingCues"
+          :key="cue.id"
+          :cue="cue"
+          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
+          @confirm="confirmShoppingCue"
+          @dismiss="dismissShoppingCue"
+        />
+      </section>
+
+      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+        <p class="font-semibold mb-2">{{ t('暂无购物跟进线索', 'No Shopping cues yet') }}</p>
+        <p class="text-sm text-gray-600">
+          {{ t('在 Shopping 中生成本地订单后，这里会出现可确认的配送或预约提醒。', 'Create a local Shopping order to see confirmable delivery or appointment reminders here.') }}
         </p>
       </section>
 

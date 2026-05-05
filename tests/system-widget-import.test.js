@@ -49,6 +49,9 @@ describe('system widget import safety', () => {
     const store = useSystemStore()
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
 
     store.setHomeWidgetPages([
       ['app_chat', 'app_files', 'weather'],
@@ -57,6 +60,9 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
   })
 
   test('blocks invalid JSON and keeps previous state unchanged', () => {

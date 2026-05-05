@@ -1,5 +1,5 @@
 # SchatPhone Product Manager Brief / SchatPhone 产品经理总览
-Updated / 更新时间: 2026-04-29
+Updated / 更新时间: 2026-05-04
 
 ## 1) Document Purpose / 文档用途
 1. EN: This file is the PM-focused single-page summary for project direction, stack, delivered scope, and current priorities.
@@ -22,6 +22,8 @@ Updated / 更新时间: 2026-04-29
    中文：若需要面向产品、设计、运营、测试或用户说明“每个模块入口叫什么、有哪些一级/二级菜单、分别能做什么”，请使用 `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`。
 2. EN: This PM brief remains the direction and priority summary; the module catalog is the detailed function dictionary.
    中文：本文仍是项目方向与优先级总览；模块功能目录是更细的功能字典。
+3. EN: New module direction for Home folders, Shopping, and Assets is recorded in `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`, with the PM-facing catalog synchronized as a planned-addition section.
+   中文：主屏文件夹、购物与资产的新模块方向已记录在 `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`，并已同步到面向产品的功能目录“规划新增”部分。
 
 ## 2.1 Requirement Freeze: Global Asset Hub / 需求冻结：全局素材中台
 1. EN: Gallery is the global asset hub, not a chat-only helper.

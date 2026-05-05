@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import * as pushLib from '../src/lib/push'
+import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useSystemStore } from '../src/stores/system'
 
@@ -133,6 +134,62 @@ describe('calendar event store', () => {
     expect(restoredStore.findPhoneMissedCallCueById(cue.id)?.status).toBe('dismissed')
     expect(restoredStore.findEventBySourceReminderId(cue.id)).toBeNull()
     expect(restoredStore.phoneMissedCallCueCount).toBe(0)
+  })
+
+  test('turns Shopping delivery cues into confirmable calendar events', () => {
+    const store = useCalendarStore()
+    const orderCreatedAt = Date.now()
+
+    const cue = store.upsertShoppingDeliveryCueFromOrder({
+      id: 'shopping_order_nova',
+      itemCount: 2,
+      totalCents: 45600,
+      currency: 'CNY',
+      note: 'Delivery check for Nova.',
+      createdAt: orderCreatedAt,
+      items: [
+        {
+          title: 'Nova Gift',
+        },
+      ],
+    })
+
+    expect(cue).toMatchObject({
+      id: 'shopping_delivery_cue_shopping_order_nova',
+      orderId: 'shopping_order_nova',
+      status: 'suggested',
+      source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+      totalCents: 45600,
+    })
+    expect(cue?.suggestedAt).toBe(orderCreatedAt + 24 * 60 * 60 * 1000)
+    expect(store.shoppingDeliveryCueCount).toBe(1)
+
+    const event = store.confirmShoppingDeliveryCue(cue.id)
+
+    expect(event).toMatchObject({
+      source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+      sourceReminderId: cue.id,
+      titleEn: 'Shopping follow-up: 2 Shopping items',
+      route: '/shopping',
+      icon: 'fas fa-truck-fast',
+      status: 'confirmed',
+    })
+    expect(store.findShoppingDeliveryCueById(cue.id)?.status).toBe('confirmed')
+    expect(store.upcomingEvents.map((item) => item.id)).toEqual([event.id])
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(restoredStore.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    expect(restoredStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('confirmed')
+    expect(restoredStore.findEventBySourceReminderId(cue.id)?.titleEn).toBe(
+      'Shopping follow-up: 2 Shopping items',
+    )
+
+    expect(restoredStore.dismissShoppingDeliveryCue(cue.id)).toBe(true)
+    expect(restoredStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('dismissed')
+    expect(restoredStore.findEventBySourceReminderId(cue.id)).toBeNull()
+    expect(restoredStore.shoppingDeliveryCueCount).toBe(0)
   })
 
   test('schedules, reschedules, and cancels real push for calendar events', async () => {

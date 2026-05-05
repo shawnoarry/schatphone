@@ -8,6 +8,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
+import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import {
   APP_ICON_ACCENT_OPTIONS,
   APP_ICON_CUSTOMIZATION_TARGET_IDS,
@@ -43,6 +44,11 @@ const LOCK_CLOCK_STYLE_OPTIONS = [
   { id: 'classic', label: '经典细体' },
   { id: 'outline', label: '描边样式' },
   { id: 'mono', label: '数字等宽' },
+]
+const WALLPAPER_SOURCE_OPTIONS = [
+  { value: 'theme', labelZh: '跟随主题', labelEn: 'Theme wallpaper' },
+  { value: 'url', labelZh: 'URL 壁纸', labelEn: 'URL wallpaper' },
+  { value: 'gallery', labelZh: 'Gallery 壁纸', labelEn: 'Gallery wallpaper' },
 ]
 
 const router = useRouter()
@@ -129,6 +135,7 @@ const builtInWidgetPage = ref(0)
 const customFontStackInput = ref('')
 const customWallpaperUrlInput = ref('')
 const selectedWallpaperAssetId = ref('')
+const wallpaperSourceTypeDraft = ref('')
 const wallpaperQuickPreviewMap = reactive({})
 
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
@@ -222,6 +229,14 @@ const currentFontStack = computed(() => {
   return typeof value === 'string' && value.trim() ? value.trim() : DEFAULT_FONT_STACK
 })
 const currentWallpaperMode = computed(() => settings.value.appearance.wallpaperMode || 'theme')
+const wallpaperSourceDraft = computed({
+  get: () => wallpaperSourceTypeDraft.value || currentWallpaperMode.value,
+  set: (sourceType) => {
+    wallpaperSourceTypeDraft.value = ['theme', 'url', 'gallery'].includes(sourceType)
+      ? sourceType
+      : 'theme'
+  },
+})
 const currentWallpaperAsset = computed(() => {
   const assetId =
     typeof settings.value.appearance.wallpaperAssetId === 'string'
@@ -339,6 +354,7 @@ const currentWallpaperSourceSummary = computed(() => {
 watch(
   () => [settings.value.appearance.wallpaperMode, settings.value.appearance.wallpaper],
   ([mode, value]) => {
+    wallpaperSourceTypeDraft.value = mode || 'theme'
     if (mode === 'url') {
       customWallpaperUrlInput.value = typeof value === 'string' ? value : ''
       return
@@ -454,6 +470,7 @@ const openGallery = () => {
 }
 
 const useThemeWallpaperSource = () => {
+  wallpaperSourceTypeDraft.value = 'theme'
   systemStore.useThemeWallpaper()
   triggerSaved()
 }
@@ -462,6 +479,7 @@ const applyGalleryWallpaper = () => {
   const assetId =
     typeof selectedWallpaperAssetId.value === 'string' ? selectedWallpaperAssetId.value.trim() : ''
   if (!assetId) return
+  wallpaperSourceTypeDraft.value = 'gallery'
   systemStore.setAppearanceWallpaperAsset(assetId)
   triggerSaved()
 }
@@ -469,6 +487,7 @@ const applyGalleryWallpaper = () => {
 const applyQuickWallpaperAsset = (assetId) => {
   if (typeof assetId !== 'string' || !assetId.trim()) return
   selectedWallpaperAssetId.value = assetId
+  wallpaperSourceTypeDraft.value = 'gallery'
   systemStore.setAppearanceWallpaperAsset(assetId)
   triggerSaved()
 }
@@ -478,10 +497,12 @@ const applyWallpaperUrl = () => {
   if (!normalizedUrl) {
     systemStore.useThemeWallpaper()
     customWallpaperUrlInput.value = ''
+    wallpaperSourceTypeDraft.value = 'theme'
     triggerSaved()
     return
   }
 
+  wallpaperSourceTypeDraft.value = 'url'
   systemStore.setAppearanceWallpaperUrl(normalizedUrl)
   triggerSaved()
 }
@@ -1029,48 +1050,52 @@ onBeforeUnmount(() => {
             </AssetThumbnailOption>
           </div>
         </div>
-        <select
-          v-model="selectedWallpaperAssetId"
-          class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
-          :disabled="wallpaperAssets.length === 0"
-        >
-          <option value="">{{ t('请选择壁纸素材', 'Select a wallpaper asset') }}</option>
-          <option v-for="asset in wallpaperAssets" :key="asset.id" :value="asset.id">
-            {{ asset.name }}
-          </option>
-        </select>
-        <button
-          @click="applyGalleryWallpaper"
-          class="w-full py-2.5 rounded-lg text-sm font-semibold transition"
-          :class="selectedWallpaperAssetId ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
-          :disabled="!selectedWallpaperAssetId"
-        >
-          {{ t('应用为壁纸', 'Apply as Wallpaper') }}
-        </button>
-      </div>
-
-      <div class="bg-white rounded-xl p-4 shadow-sm">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('自定义壁纸 URL', 'Custom Wallpaper URL') }}</label>
-        <input
-          v-model="customWallpaperUrlInput"
-          type="text"
-          class="w-full border-b border-gray-200 py-1 outline-none text-sm"
-          placeholder="https://..."
-          @keyup.enter="applyWallpaperUrl"
-        />
-        <div class="mt-3 flex gap-2">
-          <button
-            @click="applyWallpaperUrl"
-            class="flex-1 px-3 py-2 rounded-md text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
-          >
-            {{ t('应用 URL', 'Apply URL') }}
-          </button>
-          <button
-            @click="useThemeWallpaperSource"
-            class="px-3 py-2 rounded-md text-sm border border-gray-200 hover:bg-gray-50"
-          >
-            {{ t('恢复默认', 'Reset') }}
-          </button>
+        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+          <div>
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('壁纸来源', 'Wallpaper Source') }}
+            </p>
+            <p class="mt-1 text-[11px] leading-4 text-gray-500">
+              {{
+                t(
+                  '统一使用项目图片来源选择器；本地文件仍先进入 Gallery，再作为壁纸素材引用。',
+                  'Uses the shared project image source picker; local files still enter Gallery first, then become wallpaper assets.',
+                )
+              }}
+            </p>
+          </div>
+          <ImageSourcePicker
+            v-model:source-type="wallpaperSourceDraft"
+            v-model:image-url="customWallpaperUrlInput"
+            v-model:gallery-asset-id="selectedWallpaperAssetId"
+            :source-options="WALLPAPER_SOURCE_OPTIONS"
+            :gallery-assets="wallpaperAssets"
+            test-id-prefix="appearance-wallpaper"
+            url-placeholder-zh="https:// 壁纸图片地址"
+            url-placeholder-en="https:// wallpaper image URL"
+            gallery-placeholder-zh="请选择壁纸素材"
+            gallery-placeholder-en="Select a wallpaper asset"
+          />
+          <div class="flex gap-2">
+            <button
+              @click="
+                wallpaperSourceDraft === 'gallery'
+                  ? applyGalleryWallpaper()
+                  : wallpaperSourceDraft === 'url'
+                    ? applyWallpaperUrl()
+                    : useThemeWallpaperSource()
+              "
+              class="flex-1 px-3 py-2 rounded-md text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
+            >
+              {{ t('应用壁纸来源', 'Apply Wallpaper Source') }}
+            </button>
+            <button
+              @click="useThemeWallpaperSource"
+              class="px-3 py-2 rounded-md text-sm border border-gray-200 bg-white hover:bg-gray-50"
+            >
+              {{ t('恢复默认', 'Reset') }}
+            </button>
+          </div>
         </div>
       </div>
 

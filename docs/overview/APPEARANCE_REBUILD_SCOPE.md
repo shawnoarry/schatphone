@@ -300,3 +300,9 @@ It is only the safest grouping logic for future execution.
 
 1. 2026-05-02 EN: Created as the current reference for visual rebuild scope. Under the current plan, the appearance layer should be treated as a full rebuild rather than incremental polish.
    2026-05-02 中文：新增为当前外观重建范围参考文档；在当前规划下，外观层应被视为整体重建对象，而不是局部打磨对象。
+2. 2026-05-04 EN: Home folder visual scaffold landed for Shopping: 1x1 folder tile, preview grid, blur overlay, rounded panel, and baseline animation exist, but full Appearance-controlled folder theming remains deferred.
+   2026-05-04 中文：Shopping 的主屏文件夹视觉脚手架已落地：1x1 文件夹入口、预览格、模糊遮罩、圆角面板与基础动效已存在，但完整由 Appearance 控制的文件夹主题化仍处于搁置状态。
+3. 2026-05-04 EN: Assets functional page baseline landed with CRUD and valuation summaries, but it should still be treated as a future visual rebuild target rather than final module styling.
+   2026-05-04 中文：Assets 功能页基线已落地，包含 CRUD 与估值摘要；但它仍应被视为后续视觉重建对象，而不是最终模块样式。
+4. 2026-05-04 EN: Shopping functional handoff baseline now includes Assets import suggestions, Wallet expense suggestions, and Calendar delivery cues; this is product behavior progress only, not final Shopping visual identity.
+   2026-05-04 中文：Shopping 功能交接基线现已包含 Assets 转入建议、Wallet 消费建议与 Calendar 配送线索；这是产品行为进展，不代表 Shopping 最终视觉身份完成。
