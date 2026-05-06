@@ -245,6 +245,49 @@ describe('map trip baseline loop', () => {
     expect(storeB.mapVisualSettings.onboardingPromptPending).toBe(false)
   })
 
+  test('builds read-only Food Delivery location handoff without starting a trip', () => {
+    const store = useMapStore()
+    store.setCurrentLocation({
+      label: 'Studio',
+      detail: 'Studio Street 9',
+      source: 'test',
+    })
+
+    const handoff = store.buildFoodDeliveryMapHandoff({
+      categoryKey: 'nearby',
+      restaurant: {
+        id: 'food_restaurant_test',
+        name: 'Moon Bistro',
+        address: 'Kitchen Lane 3',
+        distanceKm: 2.4,
+        deliveryEtaMinutes: 18,
+      },
+    })
+
+    expect(handoff).toMatchObject({
+      sourceModule: 'food_delivery_map_courier_route',
+      sourceId: 'map_food_delivery_food_restaurant_test',
+      categoryKey: 'nearby',
+      readOnly: true,
+      orderOwner: 'food_delivery',
+      mapOwner: 'location_eta_context',
+      deliveryAddress: 'Studio Street 9',
+      pickupPoint: 'Kitchen Lane 3',
+      restaurantId: 'food_restaurant_test',
+      restaurantName: 'Moon Bistro',
+      distanceKm: 2.4,
+      etaMinutes: 18,
+    })
+    expect(handoff.sourceKeys).toEqual([
+      'food_delivery_map_restaurant_location',
+      'food_delivery_map_courier_route',
+    ])
+    expect(handoff.routeSummaryEn).toContain('Moon Bistro')
+    expect(handoff.routeSummaryEn).toContain('18 min')
+    expect(store.tripState.status).toBe('idle')
+    expect(store.tripHistory).toHaveLength(0)
+  })
+
   test('map AI visual refresh executes when system automation policy allows it', async () => {
     const mapStore = useMapStore()
     const systemStore = useSystemStore()

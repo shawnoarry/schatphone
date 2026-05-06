@@ -10,6 +10,7 @@ import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
 import { useCalendarStore } from '../stores/calendar'
+import { FOOD_DELIVERY_ORDER_STATUS, useFoodDeliveryStore } from '../stores/foodDelivery'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
@@ -53,6 +54,7 @@ const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
 const shoppingStore = useShoppingStore()
 const calendarStore = useCalendarStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -145,6 +147,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/wallet',
   '/stock',
   '/shopping',
+  '/food-delivery',
   '/files',
   '/more',
 ])
@@ -447,6 +450,7 @@ const normalizeShoppingCardPayload = (rawProduct = {}) => {
 
 const activeShoppingServiceKey = computed(() => activeChat.value?.shoppingServiceKey || '')
 const activeLogisticsServiceKey = computed(() => activeChat.value?.logisticsServiceKey || '')
+const activeFoodDeliveryServiceKey = computed(() => activeChat.value?.foodDeliveryServiceKey || '')
 
 const shoppingPreviewProducts = computed(() =>
   (activeShoppingServiceKey.value
@@ -494,6 +498,15 @@ const logisticsStatusLabel = (status) => {
   return t('待跟进', 'Pending follow-up')
 }
 
+const foodDeliveryStatusLabel = (status) => {
+  if (status === FOOD_DELIVERY_ORDER_STATUS.ACCEPTED) return t('已接单', 'Accepted')
+  if (status === FOOD_DELIVERY_ORDER_STATUS.COOKING) return t('备餐中', 'Cooking')
+  if (status === FOOD_DELIVERY_ORDER_STATUS.RIDER_PICKUP) return t('骑手取餐', 'Rider pickup')
+  if (status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED) return t('已送达', 'Delivered')
+  if (status === FOOD_DELIVERY_ORDER_STATUS.CANCELLED) return t('已取消', 'Cancelled')
+  return t('待接单', 'Pending acceptance')
+}
+
 const formatLogisticsCueDate = (timestamp) => {
   const date = new Date(Number(timestamp || 0))
   if (Number.isNaN(date.getTime())) return t('时间待定', 'Time TBD')
@@ -528,6 +541,31 @@ const activeShoppingServiceLogisticsRows = computed(() => {
     })
     .filter(Boolean)
     .slice(0, 3)
+})
+
+const activeFoodDeliveryOrderRows = computed(() => {
+  if (!activeFoodDeliveryServiceKey.value) return []
+
+  return foodDeliveryStore.orders
+    .slice(0, 3)
+    .map((order) => {
+      const deliveryAddress = typeof order.deliveryAddress === 'string' ? order.deliveryAddress.trim() : ''
+      const primaryItem = order.items?.[0]
+      return {
+        order,
+        id: order.id,
+        restaurantName: order.restaurantName || t('外卖订单', 'Food delivery order'),
+        title: primaryItem?.title || t('外卖订单', 'Food delivery order'),
+        itemCount: Number(order.itemCount || order.items?.length || 0),
+        amount: `${(Number(order.totalCents || 0) / 100).toFixed(2)} ${order.currency || 'CNY'}`,
+        status: order.status || '',
+        statusLabel: foodDeliveryStatusLabel(order.status || ''),
+        updatedAt: formatLogisticsCueDate(order.updatedAt || order.createdAt),
+        summary: deliveryAddress
+          ? t(`送往 ${deliveryAddress}`, `Delivering to ${deliveryAddress}`)
+          : t('外卖订单状态由 Food Delivery 持有，Chat 只显示服务号推送。', 'Food Delivery owns this order status; Chat only shows service-account pushes.'),
+      }
+    })
 })
 
 const activeRoleAssetContext = computed(() => {
@@ -3940,6 +3978,22 @@ const openShoppingLogisticsOrder = (row = {}) => {
   })
 }
 
+const openFoodDeliveryOrder = (row = {}) => {
+  const orderId = typeof row?.id === 'string' ? row.id.trim() : ''
+  const chatId = Number(activeChat.value?.id)
+  const query = {
+    source: 'chat',
+    intent: 'food_delivery_order',
+    orderId,
+  }
+  if (Number.isFinite(chatId) && chatId > 0) query.chatId = String(chatId)
+  if (activeFoodDeliveryServiceKey.value) query.service = activeFoodDeliveryServiceKey.value
+  router.push({
+    path: '/food-delivery',
+    query,
+  })
+}
+
 const openChatDirectory = () => {
   showThreadMenu.value = false
   router.push('/chat-contacts')
@@ -4447,6 +4501,63 @@ onBeforeUnmount(() => {
                     @click="openShoppingLogisticsOrder(row)"
                   >
                     {{ t('去物流查看', 'Open logistics') }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section
+          v-if="activeFoodDeliveryOrderRows.length > 0"
+          class="rounded-2xl border border-orange-100 bg-orange-50/85 px-3 py-2 text-xs text-orange-950"
+          data-testid="chat-food-delivery-context"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold">{{ t('外卖服务号提醒', 'Food delivery service reminders') }}</p>
+              <p class="mt-1 text-[11px] leading-4 text-orange-700">
+                {{
+                  t(
+                    'Chat 仅显示外卖服务号推送；餐厅、菜单、订单与履约状态归 Food Delivery。',
+                    'Chat only shows Food Delivery service pushes; restaurants, menus, orders and fulfillment state stay in Food Delivery.',
+                  )
+                }}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-orange-600">
+              {{ activeFoodDeliveryOrderRows.length }}
+            </span>
+          </div>
+          <div class="mt-2 space-y-1.5">
+            <article
+              v-for="row in activeFoodDeliveryOrderRows"
+              :key="row.id"
+              class="rounded-xl border border-orange-100 bg-white/85 px-2.5 py-2"
+              :data-testid="`chat-food-delivery-${row.id}`"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold truncate">{{ row.restaurantName }}</p>
+                  <p class="mt-0.5 text-[11px] text-orange-700">
+                    {{ row.title }} · {{ row.amount }} · {{ row.updatedAt }}
+                    <span v-if="row.itemCount > 1"> · {{ row.itemCount }} {{ t('件', 'items') }}</span>
+                  </p>
+                  <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-orange-600">{{ row.summary }}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <span
+                    class="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700"
+                    :data-testid="`chat-food-delivery-status-${row.id}`"
+                  >
+                    {{ row.statusLabel }}
+                  </span>
+                  <button
+                    class="mt-1 block rounded-lg border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-700"
+                    :data-testid="`chat-food-delivery-open-${row.id}`"
+                    @click="openFoodDeliveryOrder(row)"
+                  >
+                    {{ t('去外卖查看', 'Open Food Delivery') }}
                   </button>
                 </div>
               </div>

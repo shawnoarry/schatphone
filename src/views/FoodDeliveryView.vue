@@ -1,8 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { useGalleryStore } from '../stores/gallery'
+import { useMapStore } from '../stores/map'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
@@ -13,6 +16,34 @@ const route = useRoute()
 const router = useRouter()
 const { t, languageBase } = useI18n()
 const foodDeliveryStore = useFoodDeliveryStore()
+const galleryStore = useGalleryStore()
+const mapStore = useMapStore()
+const FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID = 'food-delivery-view'
+const foodImagePreviewMap = reactive({})
+
+const customFeedback = ref('')
+const restaurantDraft = reactive({
+  name: '',
+  category: 'restaurants',
+  cuisine: '',
+  address: '',
+  deliveryFee: '',
+  distanceKm: '',
+  deliveryEtaMinutes: '',
+  imageSourceType: 'none',
+  imageUrl: '',
+  imageGalleryAssetId: '',
+})
+const menuDraft = reactive({
+  restaurantId: '',
+  title: '',
+  category: 'restaurants',
+  price: '',
+  desc: '',
+  imageSourceType: 'none',
+  imageUrl: '',
+  imageGalleryAssetId: '',
+})
 
 const activeCategoryKey = computed(() =>
   typeof route.query.category === 'string' ? route.query.category : 'restaurants',
@@ -78,7 +109,112 @@ const activeRestaurant = computed(() => activeRestaurants.value[0] || foodDelive
 const activeMenuItems = computed(() =>
   activeRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(activeRestaurant.value.id) : [],
 )
+const galleryImageOptions = computed(() =>
+  galleryStore.assets
+    .filter((asset) => ['reference', 'scenario', 'wallpaper'].includes(asset.category))
+    .slice(0, 80),
+)
+const activeMapHandoff = computed(() =>
+  mapStore.buildFoodDeliveryMapHandoff({
+    restaurant: activeRestaurant.value || {},
+    categoryKey: activeCategory.value?.key || '',
+  }),
+)
+const activeMapHandoffRouteSummary = computed(() =>
+  languageBase.value === 'zh'
+    ? activeMapHandoff.value.routeSummaryZh
+    : activeMapHandoff.value.routeSummaryEn,
+)
 const recentOrders = computed(() => foodDeliveryStore.recentOrders)
+const chatSourceOrderId = computed(() =>
+  typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
+)
+const isChatFoodDeliverySource = computed(() =>
+  route.query.source === 'chat' && route.query.intent === 'food_delivery_order' && Boolean(chatSourceOrderId.value),
+)
+const chatSourceOrder = computed(() => {
+  if (!chatSourceOrderId.value) return null
+  return foodDeliveryStore.orders.find((order) => order.id === chatSourceOrderId.value) || null
+})
+
+const isHighlightedOrder = (orderId) => isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
+
+const resetRestaurantDraft = () => {
+  restaurantDraft.name = ''
+  restaurantDraft.category = activeCategory.value?.key || 'restaurants'
+  restaurantDraft.cuisine = ''
+  restaurantDraft.address = ''
+  restaurantDraft.deliveryFee = ''
+  restaurantDraft.distanceKm = ''
+  restaurantDraft.deliveryEtaMinutes = ''
+  restaurantDraft.imageSourceType = 'none'
+  restaurantDraft.imageUrl = ''
+  restaurantDraft.imageGalleryAssetId = ''
+}
+
+const resetMenuDraft = (restaurantId = activeRestaurant.value?.id || '') => {
+  menuDraft.restaurantId = restaurantId
+  menuDraft.title = ''
+  menuDraft.category = activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants'
+  menuDraft.price = ''
+  menuDraft.desc = ''
+  menuDraft.imageSourceType = 'none'
+  menuDraft.imageUrl = ''
+  menuDraft.imageGalleryAssetId = ''
+}
+
+const createCustomRestaurant = () => {
+  customFeedback.value = ''
+  const imageSourceType = restaurantDraft.imageSourceType
+  const restaurant = foodDeliveryStore.upsertRestaurant({
+    name: restaurantDraft.name,
+    category: restaurantDraft.category,
+    cuisine: restaurantDraft.cuisine,
+    address: restaurantDraft.address,
+    deliveryFee: restaurantDraft.deliveryFee,
+    distanceKm: restaurantDraft.distanceKm,
+    deliveryEtaMinutes: restaurantDraft.deliveryEtaMinutes,
+    sourceModule: 'food_delivery_user_custom_restaurant',
+    imageSourceType,
+    imageUrl: imageSourceType === 'url' ? restaurantDraft.imageUrl : '',
+    imageGalleryAssetId: imageSourceType === 'gallery' ? restaurantDraft.imageGalleryAssetId : '',
+  })
+  if (!restaurant) {
+    customFeedback.value = t('请输入有效餐厅名称。', 'Please enter a valid restaurant name.')
+    return
+  }
+  customFeedback.value = t('自定义餐厅已加入外卖列表。', 'Custom restaurant added to Food Delivery.')
+  resetRestaurantDraft()
+  resetMenuDraft(restaurant.id)
+  router.push({
+    path: '/food-delivery',
+    query: { category: restaurant.category },
+  })
+}
+
+const createCustomMenuItem = () => {
+  customFeedback.value = ''
+  const restaurantId = menuDraft.restaurantId || activeRestaurant.value?.id || ''
+  const restaurant = foodDeliveryStore.findRestaurantById(restaurantId)
+  const imageSourceType = menuDraft.imageSourceType
+  const item = foodDeliveryStore.upsertMenuItem({
+    restaurantId,
+    title: menuDraft.title,
+    category: menuDraft.category || restaurant?.category || 'restaurants',
+    price: menuDraft.price,
+    desc: menuDraft.desc,
+    sourceModule: 'food_delivery_user_custom_menu',
+    imageSourceType,
+    imageUrl: imageSourceType === 'url' ? menuDraft.imageUrl : '',
+    imageGalleryAssetId: imageSourceType === 'gallery' ? menuDraft.imageGalleryAssetId : '',
+  })
+  if (!item) {
+    customFeedback.value = t('请输入有效菜单名称、餐厅和价格。', 'Please enter a valid menu name, restaurant, and price.')
+    return
+  }
+  customFeedback.value = t('自定义菜单项已加入当前餐厅。', 'Custom menu item added to the restaurant.')
+  resetMenuDraft(item.restaurantId)
+}
 
 const openCategory = (key) => {
   router.push({
@@ -94,15 +230,86 @@ const addMenuItemToCart = (menuItemId) => {
 }
 
 const checkoutFoodDelivery = () => {
+  const mapHandoff = activeMapHandoff.value
   foodDeliveryStore.checkoutCart({
-    deliveryAddress: t('Map 当前配送地址', 'Current Map delivery address'),
-    note: t('外卖模块基础订单', 'Food Delivery baseline order'),
+    deliveryAddress: mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
+    note: activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
+    sourceModule: mapHandoff.sourceModule,
+    sourceId: mapHandoff.sourceId,
   })
 }
 
 const goHome = () => {
   router.push('/home')
 }
+
+const foodImageUrl = (item) => {
+  const image = item?.image || {}
+  if (image.sourceType === 'url') return image.url || ''
+  if (image.sourceType === 'gallery' && image.galleryAssetId) {
+    return foodImagePreviewMap[image.galleryAssetId] || ''
+  }
+  return ''
+}
+
+const foodImageSourceLabel = (item) => {
+  const sourceType = item?.image?.sourceType || 'none'
+  if (sourceType === 'url') return t('URL image', 'URL image')
+  if (sourceType === 'gallery') return t('Gallery asset', 'Gallery asset')
+  if (sourceType === 'ai') return t('AI image reserved', 'AI image reserved')
+  return t('Default icon', 'Default icon')
+}
+
+watch(
+  activeCategoryKey,
+  () => {
+    if (!restaurantDraft.name) restaurantDraft.category = activeCategory.value?.key || 'restaurants'
+    if (!menuDraft.title) menuDraft.category = activeCategory.value?.key || 'restaurants'
+  },
+  { immediate: true },
+)
+
+watch(
+  () => activeRestaurant.value?.id || '',
+  (restaurantId) => {
+    if (!menuDraft.restaurantId || !foodDeliveryStore.findRestaurantById(menuDraft.restaurantId)) {
+      menuDraft.restaurantId = restaurantId
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [
+    ...activeRestaurants.value.map((restaurant) => restaurant.image?.galleryAssetId || ''),
+    ...activeMenuItems.value.map((item) => item.image?.galleryAssetId || ''),
+  ].filter(Boolean),
+  (assetIds) => {
+    const activeSet = new Set(assetIds)
+    assetIds.forEach((assetId) => {
+      if (foodImagePreviewMap[assetId]) return
+      void galleryStore.getAssetPreviewUrl(assetId, {
+        scopeId: FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID,
+      }).then((previewUrl) => {
+        if (previewUrl) foodImagePreviewMap[assetId] = previewUrl
+      })
+    })
+    Object.keys(foodImagePreviewMap).forEach((assetId) => {
+      if (!activeSet.has(assetId)) {
+        galleryStore.releaseAssetPreview(assetId, FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID)
+        delete foodImagePreviewMap[assetId]
+      }
+    })
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  galleryStore.releaseAssetPreviewScope(FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID)
+  Object.keys(foodImagePreviewMap).forEach((assetId) => {
+    delete foodImagePreviewMap[assetId]
+  })
+})
 </script>
 
 <template>
@@ -126,6 +333,34 @@ const goHome = () => {
               'Food Delivery uses the Home folder pattern. It can later host restaurant categories while orders stay here and Map provides location/route context.',
             )
           }}
+        </p>
+      </section>
+
+      <section
+        v-if="isChatFoodDeliverySource"
+        class="rounded-3xl border border-orange-200 bg-orange-50 p-4"
+        data-testid="food-delivery-chat-source-banner"
+      >
+        <p class="text-sm font-bold text-orange-900">
+          {{ t('来自 Chat 外卖服务号', 'From Chat food delivery service') }}
+        </p>
+        <p class="mt-2 text-xs leading-5 text-orange-700">
+          <span v-if="chatSourceOrder">
+            {{
+              t(
+                `已定位到 ${chatSourceOrder.restaurantName} 的外卖订单，订单状态仍由 Food Delivery 管理。`,
+                `Located the food order from ${chatSourceOrder.restaurantName}. Food Delivery still owns order status.`,
+              )
+            }}
+          </span>
+          <span v-else>
+            {{
+              t(
+                '未找到对应外卖订单；可能已被删除或来自其他本地数据快照。',
+                'The linked food order was not found. It may have been removed or belongs to another local data snapshot.',
+              )
+            }}
+          </span>
         </p>
       </section>
 
@@ -185,15 +420,29 @@ const goHome = () => {
             class="rounded-2xl border border-orange-100 bg-orange-50/60 p-3"
             :data-testid="`food-delivery-restaurant-${restaurant.id}`"
           >
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-white">
+                <img
+                  v-if="foodImageUrl(restaurant)"
+                  :src="foodImageUrl(restaurant)"
+                  :alt="restaurant.image?.alt || restaurant.name"
+                  class="h-full w-full object-cover"
+                />
+                <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
+                  <i class="fas fa-utensils"></i>
+                </div>
+              </div>
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold">{{ restaurant.name }}</p>
                 <p class="mt-1 text-[11px] text-orange-700">
                   {{ restaurant.cuisine || restaurant.category }} · {{ restaurant.rating.toFixed(1) }} ★ ·
                   {{ restaurant.deliveryEtaMinutes }} min · {{ restaurant.distanceKm }} km
                 </p>
+                <p class="mt-1 text-[10px] font-semibold text-orange-500">
+                  {{ foodImageSourceLabel(restaurant) }}
+                </p>
               </div>
-              <span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600">
+              <span class="ml-auto rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600">
                 {{ restaurant.deliveryFee }} {{ restaurant.currency }}
               </span>
             </div>
@@ -211,9 +460,22 @@ const goHome = () => {
               class="flex items-center justify-between gap-3 rounded-xl bg-white p-2"
               :data-testid="`food-delivery-menu-${item.id}`"
             >
-              <div class="min-w-0">
-                <p class="truncate text-xs font-semibold">{{ item.title }}</p>
-                <p class="text-[11px] text-gray-500">{{ item.price }} {{ item.currency }}</p>
+              <div class="flex min-w-0 items-center gap-2">
+                <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-orange-50">
+                  <img
+                    v-if="foodImageUrl(item)"
+                    :src="foodImageUrl(item)"
+                    :alt="item.image?.alt || item.title"
+                    class="h-full w-full object-cover"
+                  />
+                  <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
+                    <i class="fas fa-bowl-food"></i>
+                  </div>
+                </div>
+                <div class="min-w-0">
+                  <p class="truncate text-xs font-semibold">{{ item.title }}</p>
+                  <p class="text-[11px] text-gray-500">{{ item.price }} {{ item.currency }} · {{ foodImageSourceLabel(item) }}</p>
+                </div>
               </div>
               <button
                 class="rounded-full bg-orange-500 px-3 py-1 text-[11px] font-bold text-white"
@@ -225,6 +487,157 @@ const goHome = () => {
             </article>
           </div>
         </div>
+      </section>
+
+      <section class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-custom-form">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">{{ t('自定义餐厅与菜单', 'Custom restaurants and menu') }}</p>
+            <p class="mt-1 text-[11px] leading-4 text-gray-500">
+              {{
+                t(
+                  '可自定义餐厅、餐品名称、价格和 URL/Gallery 图片。本地文件仍先进入 Gallery，再被外卖引用。',
+                  'Create restaurants and menu items with custom names, prices, and URL/Gallery images. Local files still enter Gallery first.',
+                )
+              }}
+            </p>
+          </div>
+          <span class="rounded-full bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-600">
+            {{ t('User origin', 'User origin') }}
+          </span>
+        </div>
+
+        <div class="mt-3 rounded-2xl bg-orange-50/60 p-3">
+          <p class="text-xs font-bold text-orange-900">{{ t('新增餐厅', 'New restaurant') }}</p>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <input
+              v-model="restaurantDraft.name"
+              data-testid="food-delivery-custom-restaurant-name"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              :placeholder="t('餐厅名称', 'Restaurant name')"
+            />
+            <select
+              v-model="restaurantDraft.category"
+              data-testid="food-delivery-custom-restaurant-category"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+            >
+              <option v-for="category in categoryCards" :key="category.key" :value="category.key">
+                {{ category.label }}
+              </option>
+            </select>
+            <input
+              v-model="restaurantDraft.cuisine"
+              data-testid="food-delivery-custom-restaurant-cuisine"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              :placeholder="t('菜系/类型', 'Cuisine')"
+            />
+            <input
+              v-model="restaurantDraft.deliveryFee"
+              data-testid="food-delivery-custom-restaurant-fee"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              inputmode="decimal"
+              :placeholder="t('配送费，例如 6.00', 'Delivery fee, e.g. 6.00')"
+            />
+            <input
+              v-model="restaurantDraft.distanceKm"
+              data-testid="food-delivery-custom-restaurant-distance"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              inputmode="decimal"
+              :placeholder="t('距离 km', 'Distance km')"
+            />
+            <input
+              v-model="restaurantDraft.deliveryEtaMinutes"
+              data-testid="food-delivery-custom-restaurant-eta"
+              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              inputmode="numeric"
+              :placeholder="t('ETA 分钟', 'ETA minutes')"
+            />
+            <input
+              v-model="restaurantDraft.address"
+              data-testid="food-delivery-custom-restaurant-address"
+              class="col-span-2 rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+              :placeholder="t('餐厅地址/取餐点', 'Restaurant address / pickup point')"
+            />
+            <ImageSourcePicker
+              v-model:source-type="restaurantDraft.imageSourceType"
+              v-model:image-url="restaurantDraft.imageUrl"
+              v-model:gallery-asset-id="restaurantDraft.imageGalleryAssetId"
+              :gallery-assets="galleryImageOptions"
+              size="xs"
+              test-id-prefix="food-delivery-custom-restaurant"
+            />
+          </div>
+          <button
+            data-testid="food-delivery-create-restaurant"
+            class="mt-3 rounded-full bg-orange-500 px-4 py-2 text-xs font-bold text-white"
+            @click="createCustomRestaurant"
+          >
+            {{ t('加入餐厅', 'Add restaurant') }}
+          </button>
+        </div>
+
+        <div class="mt-3 rounded-2xl bg-amber-50/70 p-3">
+          <p class="text-xs font-bold text-amber-900">{{ t('新增菜单项', 'New menu item') }}</p>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <select
+              v-model="menuDraft.restaurantId"
+              data-testid="food-delivery-custom-menu-restaurant"
+              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+            >
+              <option value="">{{ t('选择餐厅', 'Choose restaurant') }}</option>
+              <option v-for="restaurant in foodDeliveryStore.restaurants" :key="restaurant.id" :value="restaurant.id">
+                {{ restaurant.name }}
+              </option>
+            </select>
+            <input
+              v-model="menuDraft.title"
+              data-testid="food-delivery-custom-menu-title"
+              class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+              :placeholder="t('餐品名称', 'Menu item name')"
+            />
+            <input
+              v-model="menuDraft.price"
+              data-testid="food-delivery-custom-menu-price"
+              class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+              inputmode="decimal"
+              :placeholder="t('价格，例如 28.00', 'Price, e.g. 28.00')"
+            />
+            <select
+              v-model="menuDraft.category"
+              data-testid="food-delivery-custom-menu-category"
+              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+            >
+              <option v-for="category in categoryCards" :key="category.key" :value="category.key">
+                {{ category.label }}
+              </option>
+            </select>
+            <ImageSourcePicker
+              v-model:source-type="menuDraft.imageSourceType"
+              v-model:image-url="menuDraft.imageUrl"
+              v-model:gallery-asset-id="menuDraft.imageGalleryAssetId"
+              :gallery-assets="galleryImageOptions"
+              size="xs"
+              test-id-prefix="food-delivery-custom-menu"
+            />
+            <textarea
+              v-model="menuDraft.desc"
+              data-testid="food-delivery-custom-menu-desc"
+              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+              rows="2"
+              :placeholder="t('餐品描述', 'Menu item description')"
+            ></textarea>
+          </div>
+          <button
+            data-testid="food-delivery-create-menu"
+            class="mt-3 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white"
+            @click="createCustomMenuItem"
+          >
+            {{ t('加入菜单', 'Add menu item') }}
+          </button>
+        </div>
+        <p v-if="customFeedback" class="mt-2 text-[11px] font-semibold text-orange-600">
+          {{ customFeedback }}
+        </p>
       </section>
 
       <section class="rounded-3xl border border-amber-100 bg-white p-4" data-testid="food-delivery-cart-panel">
@@ -262,13 +675,50 @@ const goHome = () => {
         </p>
       </section>
 
+      <section class="rounded-3xl border border-lime-100 bg-white p-4" data-testid="food-delivery-map-handoff">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">{{ t('Map 配送上下文', 'Map delivery context') }}</p>
+            <p class="mt-1 text-xs text-gray-500">
+              {{ t('只读提供位置、距离和 ETA，不创建外卖订单。', 'Read-only location, distance, and ETA. It does not create food orders.') }}
+            </p>
+          </div>
+          <span class="rounded-full bg-lime-50 px-3 py-1 text-[11px] font-semibold text-lime-700">
+            {{ activeMapHandoff.etaMinutes }} min
+          </span>
+        </div>
+        <div class="mt-3 grid gap-2 text-xs">
+          <p
+            class="rounded-2xl bg-lime-50/80 p-3 leading-5 text-lime-800"
+            data-testid="food-delivery-map-handoff-route"
+          >
+            {{ activeMapHandoffRouteSummary }}
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-map-handoff-address">
+              <p class="font-semibold text-gray-900">{{ t('配送地址', 'Delivery address') }}</p>
+              <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">
+                {{ activeMapHandoff.deliveryAddress || t('未设置', 'Not set') }}
+              </p>
+            </div>
+            <div class="rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-map-handoff-distance">
+              <p class="font-semibold text-gray-900">{{ t('预计距离', 'Distance') }}</p>
+              <p class="mt-1 text-[11px] text-gray-500">
+                {{ activeMapHandoff.distanceKm }} km · {{ activeMapHandoff.etaMinutes }} min
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="rounded-3xl border border-gray-100 bg-white p-4" data-testid="food-delivery-orders-panel">
         <p class="text-sm font-bold">{{ t('最近外卖订单', 'Recent food orders') }}</p>
         <div v-if="recentOrders.length > 0" class="mt-3 space-y-2">
           <article
             v-for="order in recentOrders"
             :key="order.id"
-            class="rounded-2xl bg-gray-50 p-3"
+            class="rounded-2xl p-3"
+            :class="isHighlightedOrder(order.id) ? 'border-2 border-orange-300 bg-orange-50 shadow-sm' : 'bg-gray-50'"
             :data-testid="`food-delivery-order-${order.id}`"
           >
             <div class="flex items-start justify-between gap-3">

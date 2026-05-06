@@ -1582,3 +1582,56 @@ Status: DONE
    中文：验证通过：`npm test -- tests\food-delivery-store.test.js tests\food-delivery-view.test.js tests\home-folder-entry.test.js tests\system-widget-import.test.js`。
 5. EN: Next recommended slice: add Chat food-delivery service-account push context for accepted/cooking/rider pickup/delivered/exception states before Map ETA handoff.
    中文：下一步建议：先补 Chat 外卖服务号推送上下文，覆盖接单、备餐、骑手取餐、送达、异常等状态，再推进 Map ETA 交接。
+
+---
+
+## 2026-05-05 Chat Food Delivery Service Context
+
+Status: DONE
+
+1. EN: Chat now shows read-only Food Delivery service-account push context only when the active contact has `foodDeliveryServiceKey`.
+   中文：Chat 现在只会在当前联系人绑定 `foodDeliveryServiceKey` 时显示只读外卖服务号推送上下文。
+2. EN: The push card displays restaurant name, primary menu item, amount, delivery address summary, and Food Delivery order status labels such as accepted/cooking/rider pickup/delivered/cancelled.
+   中文：推送卡会展示餐厅名、主要菜品、金额、配送地址摘要，以及接单、备餐、骑手取餐、送达、取消等外卖订单状态标签。
+3. EN: Opening a push routes to `/food-delivery?source=chat&intent=food_delivery_order&orderId=...`; Food Delivery shows a Chat source banner and highlights the linked order.
+   中文：点击推送会跳转到 `/food-delivery?source=chat&intent=food_delivery_order&orderId=...`；外卖页会显示 Chat 来源提示并高亮对应订单。
+4. EN: Ownership remains unchanged: Chat displays and routes; Food Delivery owns restaurants, menus, cart, orders, and order status.
+   中文：归属边界不变：Chat 只负责展示和跳转；Food Delivery 拥有餐厅、菜单、购物车、订单和订单状态。
+5. EN: Validation passed: `npm test -- tests\chat-shopping-preview-routing.test.js tests\food-delivery-view.test.js`.
+   中文：验证通过：`npm test -- tests\chat-shopping-preview-routing.test.js tests\food-delivery-view.test.js`。
+6. EN: Next recommended slice: connect Map as a read-only Food Delivery location/ETA provider, then add user-created restaurant/menu image sources using the shared Gallery/URL contract.
+   中文：下一步建议：接入 Map 作为只读外卖位置/ETA 提供方，然后补用户自定义餐厅/菜单图片来源并复用 Gallery/URL 契约。
+
+---
+
+## 2026-05-05 Map Food Delivery Read-Only Handoff
+
+Status: DONE
+
+1. EN: `mapStore.buildFoodDeliveryMapHandoff()` now returns read-only Food Delivery context with restaurant pickup point, current delivery address, distance, ETA, route summary, and source metadata.
+   中文：`mapStore.buildFoodDeliveryMapHandoff()` 现在会返回只读外卖上下文，包括餐厅取餐点、当前配送地址、距离、ETA、路线摘要和来源元数据。
+2. EN: The handoff explicitly marks `readOnly`, `orderOwner: "food_delivery"`, and `mapOwner: "location_eta_context"` so Map does not create or own food orders.
+   中文：该交接显式标记 `readOnly`、`orderOwner: "food_delivery"` 和 `mapOwner: "location_eta_context"`，避免 Map 创建或拥有外卖订单。
+3. EN: `FoodDeliveryView.vue` now shows a Map delivery context panel and uses the Map current location as the checkout delivery address.
+   中文：`FoodDeliveryView.vue` 现在展示 Map 配送上下文面板，并在生成外卖订单时使用 Map 当前定位作为配送地址。
+4. EN: Validation passed: `npm test -- tests\map-trip-baseline.test.js tests\food-delivery-view.test.js`.
+   中文：验证通过：`npm test -- tests\map-trip-baseline.test.js tests\food-delivery-view.test.js`。
+5. EN: Next recommended slice: add user-created restaurant/menu image sources via the shared Gallery/URL contract, then deepen Food Delivery exception/status message cards.
+   中文：下一步建议：通过共享 Gallery/URL 契约补用户自定义餐厅/菜单图片来源，然后深化外卖异常/状态消息卡。
+
+---
+
+## 2026-05-05 Food Delivery Custom Image Sources
+
+Status: DONE
+
+1. EN: `FoodDeliveryView.vue` now supports user-created restaurants with category, cuisine, address, delivery fee, distance, ETA, and URL/Gallery image source.
+   中文：`FoodDeliveryView.vue` 现在支持用户自定义餐厅，可填写分类、菜系、地址、配送费、距离、ETA，并配置 URL/Gallery 图片来源。
+2. EN: The same view also supports user-created menu items with restaurant binding, category, price, description, and URL/Gallery image source.
+   中文：同一页面也支持用户自定义菜单项，可绑定餐厅、分类、价格、描述，并配置 URL/Gallery 图片来源。
+3. EN: Restaurant and menu cards render URL images directly and Gallery images through scoped Gallery preview URLs; local files still enter Gallery first.
+   中文：餐厅卡和菜单卡会直接渲染 URL 图片，并通过有作用域的 Gallery 预览 URL 渲染 Gallery 图片；本地文件仍先进入 Gallery。
+4. EN: Validation passed: `npm test -- tests\food-delivery-view.test.js tests\food-delivery-store.test.js`.
+   中文：验证通过：`npm test -- tests\food-delivery-view.test.js tests\food-delivery-store.test.js`。
+5. EN: Next recommended slice: deepen Food Delivery exception/status message cards for rider delay, restaurant cancellation, address change, and ETA update.
+   中文：下一步建议：深化外卖异常/状态消息卡，覆盖骑手延迟、商家取消、改地址和预计送达变化。

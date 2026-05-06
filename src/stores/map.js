@@ -7,6 +7,7 @@ import {
   cancelScheduledPushNotification,
   schedulePushNotification,
 } from '../lib/push'
+import { FOOD_DELIVERY_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -700,6 +701,20 @@ const trimLine = (value, max = 200) => {
   const normalized = value.trim().replace(/\s+/g, ' ')
   if (!normalized) return ''
   return normalized.slice(0, max)
+}
+
+const normalizeFoodDeliveryRestaurantContext = (restaurant = {}) => {
+  const rawRestaurant = restaurant && typeof restaurant === 'object' ? restaurant : {}
+  const id = trimLine(rawRestaurant.id || rawRestaurant.restaurantId || '', 120)
+  const name = trimLine(rawRestaurant.name || rawRestaurant.title || '', 90)
+  const address = trimLine(rawRestaurant.address || rawRestaurant.detail || '', 160)
+  return {
+    id,
+    name,
+    address,
+    distanceKm: Number(rawRestaurant.distanceKm),
+    deliveryEtaMinutes: Number(rawRestaurant.deliveryEtaMinutes || rawRestaurant.etaMinutes),
+  }
 }
 
 const buildMapProviderVisualPrompt = ({ settings, locationText, tripSnapshot }) => {
@@ -1663,6 +1678,52 @@ export const useMapStore = defineStore('map', () => {
     addresses.splice(index, 1)
   }
 
+  const buildFoodDeliveryMapHandoff = ({ restaurant = {}, categoryKey = '' } = {}) => {
+    const current = normalizeCurrentLocation(currentLocation.value)
+    const restaurantContext = normalizeFoodDeliveryRestaurantContext(restaurant)
+    const normalizedCategory = trimLine(categoryKey, 40)
+    const pickupPoint = restaurantContext.address || restaurantContext.name
+    const dropoffPoint = current.detail || ''
+    const estimate = pickupPoint && dropoffPoint
+      ? computeTripEstimate(pickupPoint, dropoffPoint)
+      : { distanceKm: 0, minutes: 0, fare: 0 }
+    const distanceKm = Number.isFinite(restaurantContext.distanceKm) && restaurantContext.distanceKm > 0
+      ? Math.round(restaurantContext.distanceKm * 10) / 10
+      : estimate.distanceKm
+    const etaMinutes =
+      Number.isFinite(restaurantContext.deliveryEtaMinutes) && restaurantContext.deliveryEtaMinutes > 0
+        ? Math.max(5, Math.round(restaurantContext.deliveryEtaMinutes))
+        : Math.max(5, Math.round(estimate.minutes || 0))
+    const restaurantLabel = restaurantContext.name || pickupPoint || 'Restaurant'
+    const deliveryLabel = current.label || '当前位置'
+    const sourceId = `map_food_delivery_${restaurantContext.id || normalizedCategory || 'context'}`.slice(0, 140)
+
+    return {
+      sourceModule: FOOD_DELIVERY_SOURCE_KEYS.MAP_COURIER_ROUTE,
+      sourceKeys: [
+        FOOD_DELIVERY_SOURCE_KEYS.MAP_RESTAURANT_LOCATION,
+        FOOD_DELIVERY_SOURCE_KEYS.MAP_COURIER_ROUTE,
+      ],
+      sourceId,
+      categoryKey: normalizedCategory,
+      readOnly: true,
+      orderOwner: 'food_delivery',
+      mapOwner: 'location_eta_context',
+      currentLocationLabel: current.label,
+      currentLocationDetail: current.detail,
+      deliveryAddress: current.detail,
+      pickupPoint,
+      dropoffPoint,
+      restaurantId: restaurantContext.id,
+      restaurantName: restaurantContext.name,
+      restaurantAddress: restaurantContext.address,
+      distanceKm,
+      etaMinutes,
+      routeSummaryZh: `${restaurantLabel} → ${deliveryLabel} · 约 ${distanceKm} km · ${etaMinutes} min`,
+      routeSummaryEn: `${restaurantLabel} -> ${deliveryLabel || 'Current location'} · about ${distanceKm} km · ${etaMinutes} min`,
+    }
+  }
+
   const startTrip = () => {
     refreshTripState(Date.now())
     if (tripState.value.status === TRIP_STATUS_TRAVELING) {
@@ -2017,6 +2078,7 @@ export const useMapStore = defineStore('map', () => {
     applyAddressToTripEndpoint,
     addAddress,
     removeAddress,
+    buildFoodDeliveryMapHandoff,
     startTrip,
     cancelTrip,
     acknowledgeTripArrival,

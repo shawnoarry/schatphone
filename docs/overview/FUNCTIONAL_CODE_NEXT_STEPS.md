@@ -1760,3 +1760,69 @@ Recommended next:
   中文：下一步建议补 Chat 外卖服务号推送上下文，复用现有 `foodDeliveryServiceKey` 联系人绑定和外卖订单状态。
 - EN: Keep Map handoff read-only until Food Delivery order state is stable in Chat.
   中文：在外卖订单状态进入 Chat 并稳定前，Map 交接继续保持只读。
+
+---
+
+## 2026-05-05 Update: Chat Food Delivery Service Context
+
+Status:
+
+- EN: Chat now has a read-only Food Delivery service-account context block keyed by `foodDeliveryServiceKey`.
+  中文：Chat 已新增基于 `foodDeliveryServiceKey` 的只读外卖服务号上下文块。
+- EN: The context block shows recent Food Delivery orders with restaurant, menu item, amount, delivery address summary, and localized status label.
+  中文：该上下文块会展示最近外卖订单的餐厅、菜品、金额、配送地址摘要和本地化状态标签。
+- EN: Clicking the block routes to Food Delivery, where a Chat source banner appears and the linked food order is highlighted.
+  中文：点击该卡片会跳到外卖模块，外卖页会出现 Chat 来源提示并高亮对应订单。
+- EN: Validation passed: `npm test -- tests\chat-shopping-preview-routing.test.js tests\food-delivery-view.test.js`.
+  中文：验证通过：`npm test -- tests\chat-shopping-preview-routing.test.js tests\food-delivery-view.test.js`。
+
+Recommended next:
+
+- EN: Start the Map read-only Food Delivery handoff: delivery address, restaurant location, nearby filter, rider route, and ETA should be consumed by Food Delivery without moving order ownership.
+  中文：下一步建议启动 Map -> Food Delivery 的只读交接：配送地址、餐厅位置、附近筛选、骑手路线和 ETA 可被外卖消费，但不移动订单归属。
+- EN: Parallel same-size follow-up: add user-created restaurant/menu image source fields using the shared Gallery/URL image-source contract.
+  中文：同体量备选是补用户自定义餐厅/菜单图片来源字段，复用全项目 Gallery/URL 图片来源契约。
+
+---
+
+## 2026-05-05 Update: Map Food Delivery Read-Only Handoff
+
+Status:
+
+- EN: Map now exposes `buildFoodDeliveryMapHandoff()` for Food Delivery to consume location/ETA context without creating trips or orders.
+  中文：Map 已新增 `buildFoodDeliveryMapHandoff()`，供 Food Delivery 消费位置/ETA 上下文，但不会创建行程或订单。
+- EN: The handoff includes delivery address, restaurant pickup point, estimated distance, ETA, route summary, and stable source metadata.
+  中文：该交接包含配送地址、餐厅取餐点、预计距离、ETA、路线摘要和稳定来源元数据。
+- EN: Food Delivery displays the Map delivery context panel and uses the current Map location as the checkout delivery address.
+  中文：Food Delivery 会展示 Map 配送上下文面板，并在下单时使用当前 Map 定位作为配送地址。
+- EN: Validation passed: `npm test -- tests\map-trip-baseline.test.js tests\food-delivery-view.test.js`.
+  中文：验证通过：`npm test -- tests\map-trip-baseline.test.js tests\food-delivery-view.test.js`。
+
+Recommended next:
+
+- EN: Add user-created restaurant/menu image source fields using the shared Gallery/URL image-source contract.
+  中文：下一步建议补用户自定义餐厅/菜单图片来源字段，复用共享 Gallery/URL 图片来源契约。
+- EN: Then deepen Food Delivery status/exception message cards, such as rider delay, restaurant cancellation, address change, and ETA update.
+  中文：随后深化外卖状态/异常消息卡，例如骑手延迟、商家取消、改地址和预计送达变化。
+
+---
+
+## 2026-05-05 Update: Food Delivery Custom Image Sources
+
+Status:
+
+- EN: Food Delivery now has user-created restaurant and menu item forms with shared URL/Gallery image-source controls.
+  中文：Food Delivery 已新增用户自定义餐厅和菜单项表单，并复用共享 URL/Gallery 图片来源控件。
+- EN: Restaurant cards and menu cards render configured image sources, including scoped Gallery preview URLs.
+  中文：餐厅卡和菜单卡会渲染已配置的图片来源，包括有作用域的 Gallery 预览 URL。
+- EN: Local file ownership remains in Gallery; Food Delivery stores only structured image-source metadata.
+  中文：本地文件归属仍在 Gallery；Food Delivery 只保存结构化图片来源元数据。
+- EN: Validation passed: `npm test -- tests\food-delivery-view.test.js tests\food-delivery-store.test.js`.
+  中文：验证通过：`npm test -- tests\food-delivery-view.test.js tests\food-delivery-store.test.js`。
+
+Recommended next:
+
+- EN: Deepen Food Delivery status/exception message cards for rider delay, restaurant cancellation, address change, and ETA update.
+  中文：下一步建议深化外卖状态/异常消息卡，覆盖骑手延迟、商家取消、改地址和预计送达变化。
+- EN: Alternative same-size slice: add Wallet food-expense suggestions from completed Food Delivery orders while keeping Wallet as downstream ledger only.
+  中文：同体量备选是从已完成外卖订单生成 Wallet 外卖消费建议，但 Wallet 仍只作为下游账本。

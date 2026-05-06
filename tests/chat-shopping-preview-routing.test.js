@@ -7,6 +7,7 @@ import ChatView from '../src/views/ChatView.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useShoppingStore } from '../src/stores/shopping'
+import { FOOD_DELIVERY_ORDER_STATUS, useFoodDeliveryStore } from '../src/stores/foodDelivery'
 
 const DummyView = { template: '<div />' }
 
@@ -16,6 +17,7 @@ const createTestRouter = () =>
     routes: [
       { path: '/chat/:id', component: ChatView },
       { path: '/shopping', component: DummyView },
+      { path: '/food-delivery', component: DummyView },
       { path: '/home', component: DummyView },
       { path: '/gallery', component: DummyView },
       { path: '/map', component: DummyView },
@@ -326,6 +328,89 @@ describe('ChatView Shopping product preview routing', () => {
     expect(router.currentRoute.value.query.service).toBeUndefined()
     expect(shoppingStore.orderCount).toBe(2)
     expect(shoppingStore.cartQuantity).toBe(0)
+    wrapper.unmount()
+  })
+
+  test('shows Food Delivery pushes only in Food Delivery service accounts and routes without side effects', async () => {
+    const router = createTestRouter()
+    const foodDeliveryStore = useFoodDeliveryStore()
+    foodDeliveryStore.resetForTesting()
+    const restaurant = foodDeliveryStore.upsertRestaurant({
+      id: 'food_chat_moon_bistro',
+      name: 'Moon Bistro',
+      category: 'restaurants',
+      deliveryFee: '6.00',
+      address: 'Map Pin A',
+    })
+    const menuItem = foodDeliveryStore.upsertMenuItem({
+      id: 'food_chat_lunar_rice',
+      restaurantId: restaurant.id,
+      title: 'Lunar Rice Set',
+      category: 'restaurants',
+      price: '58.00',
+    })
+    foodDeliveryStore.addToCart(menuItem.id)
+    const order = foodDeliveryStore.checkoutCart({
+      deliveryAddress: 'Map Pin A',
+      note: 'Dinner delivery.',
+    })
+    foodDeliveryStore.updateOrderStatus(order.id, FOOD_DELIVERY_ORDER_STATUS.COOKING)
+
+    const chatStore = useChatStore()
+    const shopContact = chatStore.addContact({
+      name: 'Style Cloud',
+      kind: 'service',
+      role: 'Service account',
+      serviceTemplate: 'Shopping shop account',
+      shoppingServiceKey: 'style_cloud',
+    })
+    const foodContact = chatStore.addContact({
+      name: 'Food Delivery Dispatch',
+      kind: 'service',
+      role: 'Service account',
+      serviceTemplate: 'Food delivery service account',
+      foodDeliveryServiceKey: 'food_delivery_dispatch',
+    })
+
+    await router.push(`/chat/${shopContact.id}`)
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="chat-food-delivery-context"]').exists()).toBe(false)
+
+    await router.push(`/chat/${foodContact.id}`)
+    await flushPromises()
+    await nextTick()
+
+    const foodContext = wrapper.get('[data-testid="chat-food-delivery-context"]')
+    expect(foodContext.text()).toContain('Moon Bistro')
+    expect(foodContext.text()).toContain('Lunar Rice Set')
+    expect(foodContext.text()).toContain('64.00 CNY')
+    expect(foodContext.text()).toContain('Map Pin A')
+    expect(wrapper.get(`[data-testid="chat-food-delivery-status-${order.id}"]`).text()).toMatch(
+      /备餐中|Cooking/,
+    )
+
+    await wrapper.get(`[data-testid="chat-food-delivery-open-${order.id}"]`).trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'chat',
+      intent: 'food_delivery_order',
+      chatId: String(foodContact.id),
+      service: 'food_delivery_dispatch',
+      orderId: order.id,
+    })
+    expect(foodDeliveryStore.orderCount).toBe(1)
+    expect(foodDeliveryStore.cartQuantity).toBe(0)
     wrapper.unmount()
   })
 })
