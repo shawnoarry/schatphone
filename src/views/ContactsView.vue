@@ -552,18 +552,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-white flex flex-col">
-    <div class="pt-12 pb-2 px-4 flex justify-between items-center border-b">
-      <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
+  <div class="contacts-shell w-full h-full bg-white flex flex-col">
+    <div class="contacts-header pt-12 pb-2 px-4 flex justify-between items-center border-b">
+      <button @click="goHome" class="contacts-nav-button text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
       <span class="font-bold">{{ t('联系人', 'Contacts') }}</span>
-      <button @click="openCreateProfile" class="text-blue-500 text-xl"><i class="fas fa-plus"></i></button>
+      <button @click="openCreateProfile" class="contacts-add-button text-blue-500 text-xl"><i class="fas fa-plus"></i></button>
     </div>
 
     <p
       v-if="showUiNoticeMessage"
-      class="px-4 py-2 text-[11px]"
+      class="contacts-notice px-4 py-2 text-[11px]"
       :class="
         showUiNoticeType === 'error'
           ? 'text-red-600'
@@ -575,8 +575,8 @@ onBeforeUnmount(() => {
       {{ showUiNoticeMessage }}
     </p>
 
-    <div v-if="showProfileModal" class="absolute inset-0 bg-white z-20 pt-12 px-4 flex flex-col animate-slide-in">
-      <div class="flex justify-between mb-4">
+    <div v-if="showProfileModal" class="contacts-modal absolute inset-0 bg-white z-20 pt-12 px-4 flex flex-col animate-slide-in">
+      <div class="contacts-modal-header flex justify-between mb-4">
         <button @click="closeProfileModal" class="text-blue-500">{{ t('取消', 'Cancel') }}</button>
         <span class="font-bold">
           {{ profileModalMode === 'create' ? t('新建角色档案', 'Create Role Profile') : t('编辑角色档案', 'Edit Role Profile') }}
@@ -586,7 +586,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="flex flex-col items-center mb-4 relative">
+      <div class="contacts-avatar-preview flex flex-col items-center mb-4 relative">
         <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-3xl mb-2 overflow-hidden shadow-inner">
           <img
             v-if="profileDraft.name"
@@ -598,7 +598,7 @@ onBeforeUnmount(() => {
         <span class="text-blue-500 text-xs">{{ t('输入名字自动生成头像', 'Avatar auto-generates from name') }}</span>
       </div>
 
-      <div class="space-y-3 overflow-y-auto pb-6 no-scrollbar">
+      <div class="contacts-modal-scroll space-y-3 overflow-y-auto pb-6 no-scrollbar">
         <input
           v-model="profileDraft.name"
           :placeholder="t('名字 / 昵称', 'Name / Display Name')"
@@ -1046,14 +1046,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto no-scrollbar">
+    <div class="contacts-scroll flex-1 overflow-y-auto no-scrollbar">
       <div class="px-4 py-2">
-        <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center text-gray-500 text-sm">
+        <div class="contacts-search bg-gray-100 rounded-lg px-3 py-1.5 flex items-center text-gray-500 text-sm">
           <i class="fas fa-search mr-2"></i> {{ t('搜索', 'Search') }}
         </div>
       </div>
 
-      <div class="px-4 py-3 flex items-center gap-3 border-b border-gray-100">
+      <div class="contacts-my-card px-4 py-3 flex items-center gap-3 border-b border-gray-100">
         <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
           <img
             :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"
@@ -1066,12 +1066,12 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="px-4 py-2">
-        <div class="text-xs font-bold text-gray-500 mb-2">{{ t('我的 AI（主角色）', 'My AI (Main)') }}</div>
+      <div class="contacts-list px-4 py-2">
+        <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('我的 AI（主角色）', 'My AI (Main)') }}</div>
         <div
           v-for="contact in mainProfiles"
           :key="contact.id"
-          class="flex items-center gap-3 py-2 border-b border-gray-50"
+          class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
@@ -1090,11 +1090,11 @@ onBeforeUnmount(() => {
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
         </div>
 
-        <div class="text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('其他联系人（NPC）', 'Other Contacts (NPC)') }}</div>
+        <div class="contacts-section-title text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('其他联系人（NPC）', 'Other Contacts (NPC)') }}</div>
         <div
           v-for="contact in npcProfiles"
           :key="contact.id"
-          class="flex items-center gap-3 py-2 border-b border-gray-50"
+          class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
@@ -1116,3 +1116,363 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.contacts-shell {
+  --contacts-text: #172033;
+  --contacts-muted: rgba(23, 32, 51, 0.62);
+  --contacts-soft: rgba(23, 32, 51, 0.42);
+  --contacts-accent: #426f8f;
+  --contacts-accent-strong: #315f7c;
+  --contacts-accent-soft: rgba(66, 111, 143, 0.13);
+  --contacts-warm: #bf7354;
+  --contacts-warm-soft: rgba(191, 115, 84, 0.12);
+  --contacts-border: rgba(49, 64, 86, 0.12);
+  --contacts-surface: rgba(255, 255, 255, 0.84);
+  --contacts-surface-strong: rgba(255, 255, 255, 0.94);
+  --contacts-shadow: 0 14px 34px rgba(45, 63, 89, 0.1);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(75, 124, 154, 0.16), transparent 35%),
+    radial-gradient(circle at 92% 14%, rgba(191, 115, 84, 0.13), transparent 34%),
+    linear-gradient(180deg, #f8faf9 0%, #eef4f6 54%, #e8edf2 100%);
+  color: var(--contacts-text);
+}
+
+.contacts-header {
+  position: relative;
+  border-bottom: 1px solid var(--contacts-border);
+  background: rgba(251, 253, 252, 0.82);
+  box-shadow: 0 12px 28px rgba(45, 63, 89, 0.08);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
+}
+
+.contacts-header::after {
+  content: '';
+  position: absolute;
+  right: 52px;
+  bottom: -1px;
+  left: 52px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(66, 111, 143, 0.35), transparent);
+  pointer-events: none;
+}
+
+.contacts-header span {
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--contacts-text);
+}
+
+.contacts-nav-button,
+.contacts-modal-header button,
+.contacts-row button {
+  color: var(--contacts-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.contacts-nav-button,
+.contacts-add-button {
+  min-height: 36px;
+}
+
+.contacts-nav-button {
+  border-radius: 12px;
+  padding-right: 6px;
+  padding-left: 2px;
+}
+
+.contacts-add-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--contacts-accent), #6f97ad);
+  color: #fff;
+  font-size: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 10px 22px rgba(66, 111, 143, 0.26);
+}
+
+.contacts-nav-button:active,
+.contacts-add-button:active,
+.contacts-modal-header button:active {
+  transform: scale(0.98);
+}
+
+.contacts-notice {
+  background: rgba(255, 255, 255, 0.66);
+  border-bottom: 1px solid var(--contacts-border);
+}
+
+.contacts-scroll {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.contacts-search {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--contacts-muted);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.contacts-search input {
+  color: var(--contacts-text);
+}
+
+.contacts-search i {
+  color: var(--contacts-soft);
+}
+
+.contacts-my-card {
+  position: relative;
+  overflow: hidden;
+  margin: 6px 16px 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 242, 245, 0.86) 56%, rgba(250, 239, 233, 0.78)),
+    var(--contacts-surface-strong);
+  box-shadow: var(--contacts-shadow);
+}
+
+.contacts-my-card::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 84px;
+  height: 56px;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(66, 111, 143, 0.16) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(66, 111, 143, 0.1) 1px, transparent 1px);
+  background-size: 12px 12px;
+  opacity: 0.52;
+  pointer-events: none;
+}
+
+.contacts-my-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.contacts-my-card > .rounded-full,
+.contacts-row > .rounded-full,
+.contacts-avatar-preview .rounded-full {
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, #e4edf1, #fbfcfd);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 22px rgba(45, 63, 89, 0.13);
+}
+
+.contacts-list {
+  padding-bottom: 24px;
+}
+
+.contacts-section-title {
+  color: var(--contacts-muted);
+  letter-spacing: 0;
+}
+
+.contacts-row {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 8px;
+  padding: 11px 12px 11px 14px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 18px;
+  background: var(--contacts-surface-strong);
+  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  transition:
+    transform var(--system-motion-fast),
+    box-shadow var(--system-motion-fast),
+    border-color var(--system-motion-fast);
+}
+
+.contacts-row::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--contacts-accent), var(--contacts-warm));
+  opacity: 0.72;
+}
+
+.contacts-row:active {
+  transform: scale(0.992);
+  border-color: rgba(66, 111, 143, 0.24);
+  box-shadow: 0 8px 18px rgba(45, 63, 89, 0.08);
+}
+
+.contacts-row p,
+.contacts-my-card span {
+  letter-spacing: 0;
+}
+
+.contacts-row .text-gray-400,
+.contacts-row .text-gray-500,
+.contacts-my-card .text-gray-400 {
+  color: var(--contacts-muted);
+}
+
+.contacts-row button:last-child {
+  color: var(--system-danger);
+}
+
+.contacts-modal {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(75, 124, 154, 0.14), transparent 36%),
+    radial-gradient(circle at 100% 18%, rgba(191, 115, 84, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(251, 253, 252, 0.92), rgba(237, 243, 246, 0.98));
+  color: var(--contacts-text);
+}
+
+.contacts-modal-header {
+  min-height: 40px;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--contacts-border);
+}
+
+.contacts-modal-header span {
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.contacts-avatar-preview span {
+  color: var(--contacts-accent);
+}
+
+.contacts-modal-scroll {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+}
+
+.contacts-modal-scroll > .rounded-xl,
+.contacts-modal-scroll > .bg-gray-50 {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 18px;
+  background: var(--contacts-surface-strong);
+  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+}
+
+.contacts-modal-scroll > .bg-gray-50 {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(233, 242, 245, 0.72)),
+    var(--contacts-surface);
+}
+
+.contacts-modal-scroll > .flex.items-center.justify-between {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 16px;
+  background: var(--contacts-surface);
+}
+
+.contacts-modal-scroll > .flex.gap-2 {
+  align-items: stretch;
+}
+
+.contacts-modal-scroll input,
+.contacts-modal-scroll textarea,
+.contacts-modal-scroll select {
+  border-color: var(--contacts-border);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--contacts-text);
+  transition:
+    border-color var(--system-motion-fast),
+    box-shadow var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.contacts-modal-scroll input:focus,
+.contacts-modal-scroll textarea:focus,
+.contacts-modal-scroll select:focus {
+  border-color: rgba(66, 111, 143, 0.44);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 4px var(--contacts-accent-soft);
+}
+
+.contacts-modal-scroll input.border-b {
+  min-height: 42px;
+  border-width: 1px;
+  border-radius: 14px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.contacts-modal-scroll textarea {
+  line-height: 1.55;
+}
+
+.contacts-modal-scroll .bg-purple-100 {
+  min-height: 42px;
+  border: 1px solid rgba(191, 115, 84, 0.2);
+  background: var(--contacts-warm-soft);
+  color: #9d583e;
+}
+
+.contacts-modal-scroll .bg-blue-500,
+.contacts-modal-scroll button.bg-blue-500 {
+  background: linear-gradient(135deg, var(--contacts-accent), #6f97ad);
+  box-shadow: 0 8px 18px rgba(66, 111, 143, 0.2);
+}
+
+.contacts-modal-scroll .bg-blue-50 {
+  background: var(--contacts-accent-soft);
+}
+
+.contacts-modal-scroll .border-blue-300,
+.contacts-modal-scroll .border-blue-200 {
+  border-color: rgba(66, 111, 143, 0.3);
+}
+
+.contacts-modal-scroll .text-blue-700,
+.contacts-modal-scroll .text-blue-600,
+.contacts-modal-scroll .text-blue-500 {
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-modal-scroll .bg-gray-200,
+.contacts-modal-scroll .bg-gray-100,
+.contacts-modal-scroll .bg-gray-50 {
+  background: rgba(242, 246, 247, 0.84);
+}
+
+.contacts-modal-scroll button {
+  border-radius: 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.contacts-nav-button:focus-visible,
+.contacts-add-button:focus-visible,
+.contacts-modal-header button:focus-visible,
+.contacts-modal-scroll button:focus-visible,
+.contacts-modal-scroll input:focus-visible,
+.contacts-modal-scroll textarea:focus-visible,
+.contacts-modal-scroll select:focus-visible {
+  outline: 2px solid rgba(66, 111, 143, 0.35);
+  outline-offset: 2px;
+}
+
+.contacts-modal-scroll .grid button {
+  transition:
+    transform var(--system-motion-fast),
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.contacts-modal-scroll .grid button:active {
+  transform: scale(0.985);
+}
+</style>

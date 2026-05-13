@@ -165,6 +165,7 @@ const lockClockStyleLabel = (styleId) => {
 }
 
 const themeDisplayName = (theme) => {
+  if (theme?.id === 'default') return t('默认系统', 'Default System')
   if (theme?.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
   if (theme?.id === 'zen') return t('纯白', 'Pure White')
   return theme?.name || ''
@@ -796,21 +797,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-gray-100 flex flex-col text-black">
-    <div class="pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
-      <button @click="handleBack" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
+  <div class="appearance-shell w-full h-full bg-gray-100 flex flex-col text-black">
+    <div class="appearance-header pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
+      <button @click="handleBack" class="appearance-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
         <i class="fas fa-chevron-left"></i> {{ backLabel }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ pageTitle }}</h1>
-      <button @click="goHome" class="text-blue-500 text-sm">{{ t('主页', 'Home') }}</button>
+      <button @click="goHome" class="appearance-nav-button text-blue-500 text-sm">{{ t('主页', 'Home') }}</button>
     </div>
 
-    <div v-if="activeMenu === ROOT_MENU" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+    <div v-if="activeMenu === ROOT_MENU" class="appearance-root-list flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
       <button
-        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
         @click="openMenu('theme')"
       >
-        <div class="w-8 h-8 rounded-lg bg-violet-500 text-white flex items-center justify-center text-xs">
+        <div class="appearance-menu-icon is-theme w-8 h-8 rounded-lg bg-violet-500 text-white flex items-center justify-center text-xs">
           <i class="fas fa-palette"></i>
         </div>
         <div class="flex-1">
@@ -821,10 +822,10 @@ onBeforeUnmount(() => {
       </button>
 
       <button
-        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
         @click="openMenu('font')"
       >
-        <div class="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center text-xs">
+        <div class="appearance-menu-icon is-font w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center text-xs">
           <i class="fas fa-font"></i>
         </div>
         <div class="flex-1">
@@ -835,10 +836,10 @@ onBeforeUnmount(() => {
       </button>
 
       <button
-        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
         @click="openMenu('icons')"
       >
-        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs">
+        <div class="appearance-menu-icon is-icons w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs">
           <i class="fas fa-icons"></i>
         </div>
         <div class="flex-1">
@@ -849,10 +850,10 @@ onBeforeUnmount(() => {
       </button>
 
       <button
-        class="w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
+        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
         @click="openMenu('widget')"
       >
-        <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs">
+        <div class="appearance-menu-icon is-widget w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs">
           <i class="fas fa-puzzle-piece"></i>
         </div>
         <div class="flex-1">
@@ -865,7 +866,7 @@ onBeforeUnmount(() => {
 
     <div v-else-if="activeMenu === 'theme'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <div class="text-sm font-bold mb-3">{{ t('主题（保留 Y2K / 纯白）', 'Theme (Y2K / Pure White)') }}</div>
+        <div class="text-sm font-bold mb-3">{{ t('系统主题', 'System Theme') }}</div>
         <div class="grid grid-cols-2 gap-3">
           <button
             v-for="theme in availableThemes"
@@ -1505,3 +1506,85 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.appearance-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  color: var(--system-text);
+}
+
+.appearance-header {
+  border-bottom: 1px solid var(--system-border);
+  background: rgba(248, 250, 252, 0.86);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+}
+
+.appearance-header h1 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.appearance-nav-button {
+  min-height: 36px;
+  color: var(--system-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-root-list {
+  padding-top: 16px;
+}
+
+.appearance-menu-card {
+  min-height: 72px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--system-radius-md);
+  background: var(--system-surface-strong);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  transition:
+    transform var(--system-motion-fast),
+    background var(--system-motion-fast),
+    box-shadow var(--system-motion-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-menu-card:active {
+  transform: scale(0.992);
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.appearance-menu-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.appearance-menu-icon.is-theme {
+  background: linear-gradient(135deg, #7c5cff 0%, #4f8cff 100%);
+}
+
+.appearance-menu-icon.is-font {
+  background: linear-gradient(135deg, #334155 0%, #111827 100%);
+}
+
+.appearance-menu-icon.is-icons {
+  background: linear-gradient(135deg, #1fc59a 0%, #0f9f76 100%);
+}
+
+.appearance-menu-icon.is-widget {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appearance-menu-card {
+    transition: none;
+  }
+}
+</style>

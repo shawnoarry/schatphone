@@ -637,16 +637,16 @@ ensurePresetState()
 </script>
 
 <template>
-  <div class="w-full h-full bg-gray-100 flex flex-col text-black">
-    <div class="pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
-      <button @click="goHome" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
+  <div class="network-shell w-full h-full bg-gray-100 flex flex-col text-black">
+    <div class="network-header pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
+      <button @click="goHome" class="network-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
         <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('网络与 API', 'Network & API') }}</h1>
-      <button @click="goSettings" class="text-blue-500 text-sm">{{ t('设置', 'Settings') }}</button>
+      <button @click="goSettings" class="network-nav-button text-blue-500 text-sm">{{ t('设置', 'Settings') }}</button>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+    <div class="network-scroll flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <div class="bg-white rounded-xl p-4">
         <label class="text-xs text-gray-500 block mb-1">{{ t('API 接口 URL', 'API Endpoint URL') }}</label>
         <input
@@ -894,7 +894,7 @@ ensurePresetState()
 
       <button
         @click="saveNetworkSettings"
-        class="w-full py-3 rounded-xl text-sm font-semibold transition"
+        class="network-save-button w-full py-3 rounded-xl text-sm font-semibold transition"
         :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
       >
         {{ saved ? t('已保存', 'Saved') : t('保存网络设置', 'Save network settings') }}
@@ -902,3 +902,90 @@ ensurePresetState()
     </div>
   </div>
 </template>
+
+<style scoped>
+.network-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  color: var(--system-text);
+}
+
+.network-header {
+  border-bottom: 1px solid var(--system-border);
+  background: rgba(248, 250, 252, 0.86);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+}
+
+.network-header h1 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.network-nav-button {
+  min-height: 36px;
+  color: var(--system-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.network-scroll {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.network-scroll > .bg-white {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--system-radius-md);
+  background: var(--system-surface-strong);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.network-scroll label,
+.network-scroll .text-xs.text-gray-500 {
+  color: var(--system-text-muted);
+  letter-spacing: 0;
+}
+
+.network-scroll input[type='text'],
+.network-scroll input[type='password'],
+.network-scroll select {
+  min-height: 42px;
+  border-color: rgba(20, 24, 31, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.network-scroll input.border-b {
+  border-bottom-width: 1px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.network-scroll button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.network-scroll button:not(.network-save-button) {
+  min-height: 36px;
+}
+
+.network-scroll .rounded-lg.border {
+  border-color: rgba(20, 24, 31, 0.09);
+}
+
+.network-save-button {
+  min-height: 46px;
+  border-radius: 14px;
+  box-shadow: 0 10px 22px rgba(47, 111, 237, 0.2);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .network-save-button {
+    transition: none;
+  }
+}
+</style>

@@ -80,23 +80,23 @@ const toneClass = () => {
     <transition name="dialog-fade">
       <div
         v-if="dialogState.visible"
-        class="fixed inset-0 z-[999] flex items-center justify-center bg-black/45 px-4"
+        class="app-dialog-scrim fixed inset-0 z-[999] flex items-center justify-center bg-black/45 px-4"
         @click.self="dialogState.dismissible !== false ? cancelDialog() : null"
       >
-        <div class="w-full max-w-sm rounded-[28px] bg-white p-4 shadow-2xl border border-black/5">
+        <div class="app-dialog-panel w-full max-w-sm rounded-[28px] bg-white p-4 shadow-2xl border border-black/5">
           <div class="space-y-2">
-            <p v-if="dialogState.title" class="text-base font-bold text-gray-900">
+            <p v-if="dialogState.title" class="app-dialog-title text-base font-bold text-gray-900">
               {{ dialogState.title }}
             </p>
             <p
               v-if="dialogState.message"
-              class="text-sm text-gray-600 whitespace-pre-wrap leading-6"
+              class="app-dialog-message text-sm text-gray-600 whitespace-pre-wrap leading-6"
             >
               {{ dialogState.message }}
             </p>
             <div
               v-if="dialogState.details.length > 0"
-              class="space-y-1.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2"
+              class="app-dialog-details space-y-1.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2"
             >
               <p
                 v-for="(line, index) in dialogState.details"
@@ -118,7 +118,7 @@ const toneClass = () => {
               :rows="dialogState.inputRows"
               :value="dialogState.inputValue"
               :placeholder="dialogState.inputPlaceholder"
-              class="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm outline-none resize-none"
+              class="app-dialog-input w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm outline-none resize-none"
               @input="setDialogInputValue($event?.target?.value || '')"
             ></textarea>
             <input
@@ -127,7 +127,7 @@ const toneClass = () => {
               :type="dialogState.inputType"
               :value="dialogState.inputValue"
               :placeholder="dialogState.inputPlaceholder"
-              class="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm outline-none"
+              class="app-dialog-input w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm outline-none"
               @input="setDialogInputValue($event?.target?.value || '')"
             />
             <p v-if="dialogState.inputError" class="text-xs text-red-500">
@@ -138,14 +138,14 @@ const toneClass = () => {
           <div class="mt-5 flex items-center justify-end gap-2">
             <button
               type="button"
-              class="rounded-2xl border border-gray-200 px-3.5 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              class="app-dialog-button app-dialog-button-secondary rounded-2xl border border-gray-200 px-3.5 py-2 text-sm text-gray-600 hover:bg-gray-50"
               @click="cancelDialog"
             >
               {{ dialogState.cancelText }}
             </button>
             <button
               type="button"
-              class="rounded-2xl border px-3.5 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+              class="app-dialog-button rounded-2xl border px-3.5 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
               :class="toneClass()"
               :disabled="!canSubmitDialog"
               @click="submitDialog"
@@ -163,6 +163,50 @@ const toneClass = () => {
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
   transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.app-dialog-scrim {
+  background: rgba(8, 12, 20, 0.48);
+  backdrop-filter: blur(var(--system-blur-sm));
+  -webkit-backdrop-filter: blur(var(--system-blur-sm));
+}
+
+.app-dialog-panel {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: var(--system-radius-xl);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--system-shadow-strong);
+}
+
+.app-dialog-title {
+  color: var(--system-text);
+  letter-spacing: 0;
+}
+
+.app-dialog-message {
+  color: var(--system-text-muted);
+}
+
+.app-dialog-details {
+  border-color: rgba(20, 24, 31, 0.08);
+  background: var(--system-surface-muted);
+}
+
+.app-dialog-input {
+  min-height: 42px;
+  border-color: rgba(20, 24, 31, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.app-dialog-button {
+  min-height: 38px;
+  border-radius: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-dialog-button-secondary {
+  color: var(--system-text-muted);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .dialog-fade-enter-from,

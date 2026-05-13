@@ -271,14 +271,17 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 72px 16px 22px;
+  padding: calc(70px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom));
 }
 
 .lock-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 10, 24, 0.32) 0%, rgba(10, 12, 20, 0.56) 100%);
-  backdrop-filter: blur(6px);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(7, 10, 24, 0.22) 0%, rgba(9, 12, 20, 0.58) 100%);
+  backdrop-filter: blur(4px) saturate(1.05);
+  -webkit-backdrop-filter: blur(4px) saturate(1.05);
   pointer-events: none;
 }
 
@@ -294,12 +297,16 @@ onBeforeUnmount(() => {
   z-index: 2;
   width: 100%;
   margin-bottom: 10px;
-  border: 0;
-  border-radius: 16px;
-  padding: 10px 11px;
+  border: 1px solid var(--system-border-light);
+  border-radius: var(--system-radius-md);
+  padding: 11px 12px;
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: var(--system-shadow-soft);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
 }
 
 .lock-banner-icon {
@@ -424,7 +431,7 @@ onBeforeUnmount(() => {
 
 .lock-time-panel {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .lock-label {
@@ -432,18 +439,18 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  opacity: 0.88;
+  opacity: 0.82;
 }
 
 .lock-time {
-  margin-top: 8px;
-  font-size: clamp(58px, 14vw, 86px);
+  margin-top: 10px;
+  font-size: clamp(62px, 15vw, 92px);
   line-height: 1;
   font-weight: 300;
-  letter-spacing: -0.03em;
-  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  letter-spacing: -0.025em;
+  text-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .lock-time.is-outline {
@@ -513,12 +520,16 @@ onBeforeUnmount(() => {
 
 .lock-notification-card {
   width: 100%;
-  border: 0;
-  border-radius: 16px;
-  padding: 10px 11px;
+  border: 1px solid var(--system-border-light);
+  border-radius: var(--system-radius-md);
+  padding: 11px 12px;
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
 }
 
 .lock-notification-card.is-read {
@@ -582,7 +593,7 @@ onBeforeUnmount(() => {
 }
 
 .lock-notification-empty {
-  border-radius: 16px;
+  border-radius: var(--system-radius-md);
   padding: 14px 12px;
   font-size: 12px;
   text-align: center;
@@ -596,13 +607,22 @@ onBeforeUnmount(() => {
 
 .lock-unlock-button {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--system-border-light);
   border-radius: 999px;
-  padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.14);
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
+  transition: transform var(--system-motion-fast), background var(--system-motion-fast);
+}
+
+.lock-unlock-button:active {
+  transform: scale(0.985);
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .lock-unlock-hint {
@@ -614,7 +634,7 @@ onBeforeUnmount(() => {
 
 .lock-banner-enter-active,
 .lock-banner-leave-active {
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition: opacity var(--system-motion-base), transform var(--system-motion-base);
 }
 
 .lock-banner-enter-from,
@@ -626,7 +646,7 @@ onBeforeUnmount(() => {
 .lock-list-enter-active,
 .lock-list-leave-active,
 .lock-list-move {
-  transition: transform 220ms ease, opacity 220ms ease;
+  transition: transform var(--system-motion-base), opacity var(--system-motion-base);
 }
 
 .lock-list-enter-from,

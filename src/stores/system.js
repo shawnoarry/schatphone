@@ -15,6 +15,14 @@ import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-s
 
 const AVAILABLE_THEMES = [
   {
+    id: 'default',
+    name: 'Default System',
+    preview: 'linear-gradient(180deg, #f7f8fb 0%, #dfe6f1 52%, #b7c5d9 100%)',
+    darkText: true,
+    wallpaper:
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80',
+  },
+  {
     id: 'y2k',
     name: 'Y2K Vapor',
     preview: 'linear-gradient(180deg, #ff9a9e 0%, #fad0c4 55%, #ffd1ff 100%)',
@@ -838,7 +846,7 @@ export const useSystemStore = defineStore('system', () => {
       activePresetId: '',
     },
     appearance: {
-      currentTheme: 'y2k',
+      currentTheme: 'default',
       wallpaperMode: DEFAULT_WALLPAPER_MODE,
       wallpaperAssetId: '',
       wallpaper: AVAILABLE_THEMES[0].wallpaper,

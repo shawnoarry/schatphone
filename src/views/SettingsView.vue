@@ -1493,19 +1493,20 @@ if (initialMenu) {
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] flex flex-col text-black">
-    <div class="pt-12 pb-4 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
-      <button @click="goHome" class="mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
+  <div class="settings-shell w-full h-full bg-[#f2f2f7] flex flex-col text-black">
+    <div class="settings-header pt-12 pb-4 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
+      <button @click="goHome" class="settings-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
         <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('设置', 'Settings') }}</h1>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar">
-      <button class="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left" @click="openProfile">
-        <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
+    <div class="settings-scroll flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar">
+      <button class="settings-profile-card w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left" @click="openProfile">
+        <div class="settings-profile-avatar w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
           <img
             :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"
+            :alt="user.name || t('用户头像', 'User avatar')"
             class="w-full h-full object-cover"
           />
         </div>
@@ -1516,7 +1517,7 @@ if (initialMenu) {
         <i class="fas fa-chevron-right text-gray-300"></i>
       </button>
 
-      <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3.5">
+      <div class="settings-tip-card bg-blue-50 border border-blue-100 rounded-2xl p-3.5">
         <p class="text-[11px] font-semibold text-blue-700">{{ t('新手建议', 'Beginner tip') }}</p>
         <p class="text-[11px] text-blue-700/90 mt-1">
           {{
@@ -1528,7 +1529,7 @@ if (initialMenu) {
         </p>
       </div>
 
-      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('快捷入口', 'Quick Access') }}</div>
+      <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('快捷入口', 'Quick Access') }}</div>
       <div class="grid grid-cols-3 gap-2">
         <SettingsQuickAccessButton
           title-zh="网络与 API"
@@ -1553,8 +1554,8 @@ if (initialMenu) {
         />
       </div>
 
-      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
-      <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+      <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('内容设置', 'Content Settings') }}</div>
+      <div class="settings-group bg-white rounded-2xl overflow-hidden shadow-sm">
         <SettingsMenuItem
           title-zh="世界书"
           title-en="World Book"
@@ -1594,13 +1595,13 @@ if (initialMenu) {
         />
       </div>
 
-      <div class="px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
-      <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
-        <div class="px-3.5 py-3 border-b border-gray-100 space-y-2.5">
+      <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
+      <div class="settings-group bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div class="settings-inline-panel px-3.5 py-3 border-b border-gray-100 space-y-2.5">
           <p class="text-sm font-medium">{{ t('备份提示风格', 'Backup copy style') }}</p>
           <div class="grid grid-cols-2 gap-2">
             <button
-              class="py-2 rounded-lg text-xs font-medium border transition"
+              class="settings-segment-button py-2 rounded-lg text-xs font-medium border transition"
               :class="
                 backupCopyTone === 'direct'
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -1611,7 +1612,7 @@ if (initialMenu) {
               {{ t('直白说明', 'Direct') }}
             </button>
             <button
-              class="py-2 rounded-lg text-xs font-medium border transition"
+              class="settings-segment-button py-2 rounded-lg text-xs font-medium border transition"
               :class="
                 backupCopyTone === 'immersive'
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -1632,7 +1633,7 @@ if (initialMenu) {
           </p>
         </div>
 
-        <div class="px-3.5 py-3 border-b border-gray-100">
+        <div class="settings-inline-panel px-3.5 py-3 border-b border-gray-100">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
               <p class="text-sm font-medium">{{ resolveBackupCopy('导出包含素材包（可选）', 'Include asset package in export (optional)', '导出时附带素材行李（可选）', 'Include asset luggage in export (optional)') }}</p>
@@ -1656,18 +1657,18 @@ if (initialMenu) {
           </div>
         </div>
 
-        <div class="px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 space-y-1">
+        <div class="settings-status-strip px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 space-y-1">
           <p class="text-[11px] font-medium text-gray-700">{{ backupExportModeLabel }}</p>
           <p class="text-[10px] text-gray-500">{{ backupExportModeHint }}</p>
           <p class="text-[10px] text-gray-400">{{ backupPackageLimitHint }}</p>
         </div>
 
         <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
+          class="settings-action-row w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
           @click="exportData"
           :disabled="backupExporting || backupImporting"
         >
-          <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
+          <div class="settings-action-icon w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-export"></i>
           </div>
           <div class="flex-1 min-w-0">
@@ -1700,11 +1701,11 @@ if (initialMenu) {
         </button>
 
         <button
-          class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
+          class="settings-action-row w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
           @click="triggerImportData"
           :disabled="backupImporting || backupExporting"
         >
-          <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
+          <div class="settings-action-icon w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-file-import"></i>
           </div>
           <div class="flex-1 min-w-0">
@@ -1717,10 +1718,10 @@ if (initialMenu) {
         </button>
 
         <button
-          class="w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
+          class="settings-action-row w-full p-3.5 flex items-center gap-3 active:bg-gray-50 transition text-left"
           @click="openSubPage('about')"
         >
-          <div class="w-7 h-7 rounded bg-blue-500 flex items-center justify-center text-white text-xs">
+          <div class="settings-action-icon w-7 h-7 rounded bg-blue-500 flex items-center justify-center text-white text-xs">
             <i class="fas fa-circle-info"></i>
           </div>
           <div class="flex-1 min-w-0">
@@ -1746,15 +1747,15 @@ if (initialMenu) {
         {{ backupFeedbackMessage }}
       </p>
 
-      <div v-if="activeMenu === 'general'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
+      <div v-if="activeMenu === 'general'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <div class="settings-subpage-header pt-12 pb-2 px-2 bg-white flex items-center border-b">
+          <button @click="closeSubPage" class="settings-subpage-back text-blue-500 flex items-center px-2">
             <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
           <span class="font-bold mx-auto pr-8">{{ t('通用', 'General') }}</span>
         </div>
 
-        <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4">
             <label class="text-xs text-gray-500 block mb-2">{{ t('语言', 'Language') }}</label>
             <select v-model="settings.system.language" class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white">
@@ -1815,15 +1816,15 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'automation'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
+      <div v-if="activeMenu === 'automation'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <div class="settings-subpage-header pt-12 pb-2 px-2 bg-white flex items-center border-b">
+          <button @click="closeSubPage" class="settings-subpage-back text-blue-500 flex items-center px-2">
             <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
           <span class="font-bold mx-auto pr-8">{{ t('AI 自动响应', 'AI Automation') }}</span>
         </div>
 
-        <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between">
               <div>
@@ -1973,15 +1974,15 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'notification'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
+      <div v-if="activeMenu === 'notification'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <div class="settings-subpage-header pt-12 pb-2 px-2 bg-white flex items-center border-b">
+          <button @click="closeSubPage" class="settings-subpage-back text-blue-500 flex items-center px-2">
             <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
           <span class="font-bold mx-auto pr-8">{{ t('通知', 'Notifications') }}</span>
         </div>
 
-        <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4 flex items-center justify-between">
             <div>
               <p class="text-sm">{{ t('消息通知', 'Message notifications') }}</p>
@@ -2154,15 +2155,15 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'about'" class="fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
-          <button @click="closeSubPage" class="text-blue-500 flex items-center px-2">
+      <div v-if="activeMenu === 'about'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <div class="settings-subpage-header pt-12 pb-2 px-2 bg-white flex items-center border-b">
+          <button @click="closeSubPage" class="settings-subpage-back text-blue-500 flex items-center px-2">
             <i class="fas fa-chevron-left mr-1"></i> {{ t('设置', 'Settings') }}
           </button>
           <span class="font-bold mx-auto pr-8">{{ t('关于', 'About') }}</span>
         </div>
 
-        <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <div class="bg-white rounded-2xl p-4">
             <p class="text-sm font-semibold">SchatPhone</p>
             <p class="text-xs text-gray-500 mt-1">{{ t('当前版本：1.2.0', 'Current version: 1.2.0') }}</p>
@@ -2300,3 +2301,162 @@ if (initialMenu) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.settings-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  color: var(--system-text);
+}
+
+.settings-header {
+  border-bottom: 1px solid var(--system-border);
+  background: rgba(248, 250, 252, 0.86);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+}
+
+.settings-header h1 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.settings-nav-button,
+.settings-subpage-back {
+  min-height: 36px;
+  color: var(--system-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-scroll,
+.settings-subpage-scroll {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.settings-profile-card,
+.settings-group,
+.settings-tip-card,
+.settings-subpage-scroll :deep(.bg-white.rounded-2xl) {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: var(--system-surface-strong);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.settings-profile-card {
+  min-height: 88px;
+  border-radius: var(--system-radius-lg);
+  transition:
+    transform var(--system-motion-fast),
+    background var(--system-motion-fast),
+    box-shadow var(--system-motion-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-profile-card:active {
+  transform: scale(0.992);
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.settings-profile-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.settings-tip-card {
+  border-color: rgba(47, 111, 237, 0.14);
+  background: rgba(47, 111, 237, 0.08);
+  box-shadow: none;
+}
+
+.settings-section-label {
+  color: var(--system-text-soft);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.settings-group {
+  border-radius: var(--system-radius-lg);
+  overflow: hidden;
+}
+
+.settings-inline-panel,
+.settings-action-row {
+  border-color: rgba(20, 24, 31, 0.07);
+}
+
+.settings-status-strip {
+  border-color: rgba(20, 24, 31, 0.06);
+  background: var(--system-surface-muted);
+}
+
+.settings-segment-button {
+  min-height: 38px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-action-row {
+  min-height: 64px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-action-row:active {
+  background: rgba(47, 111, 237, 0.06);
+}
+
+.settings-action-row:disabled {
+  opacity: 0.58;
+}
+
+.settings-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.settings-subpage {
+  background:
+    linear-gradient(180deg, #fbfcff 0%, #f4f7fb 34%, #eef1f5 100%);
+  color: var(--system-text);
+}
+
+.settings-subpage-header {
+  min-height: 86px;
+  border-bottom: 1px solid var(--system-border);
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+}
+
+.settings-subpage-header span {
+  color: var(--system-text);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.settings-subpage-scroll :deep(input[type='text']),
+.settings-subpage-scroll :deep(input[type='number']),
+.settings-subpage-scroll :deep(input[type='time']),
+.settings-subpage-scroll :deep(select) {
+  min-height: 42px;
+  border-color: rgba(20, 24, 31, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.settings-subpage-scroll :deep(button) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-profile-card {
+    transition: none;
+  }
+}
+</style>

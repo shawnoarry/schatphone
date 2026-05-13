@@ -210,6 +210,7 @@ const activeTheme = computed(() => {
 })
 const activeThemeName = computed(() => {
   if (!activeTheme.value) return ''
+  if (activeTheme.value.id === 'default') return t('默认系统', 'Default System')
   if (activeTheme.value.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
   if (activeTheme.value.id === 'zen') return t('纯白', 'Pure White')
   return activeTheme.value.name || ''
@@ -1067,8 +1068,10 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
+  background: rgba(20, 24, 34, 0.46);
+  border-bottom: 1px solid var(--system-border-light);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
 }
 
 .home-edit-actions {
@@ -1102,11 +1105,13 @@ onBeforeUnmount(() => {
   gap: 6px;
   font-size: 11px;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(17, 24, 39, 0.64);
+  border: 1px solid var(--system-border-light);
+  background: rgba(17, 24, 39, 0.58);
   border-radius: 999px;
   padding: 5px 10px;
-  backdrop-filter: blur(10px);
+  box-shadow: var(--system-shadow-soft);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
 }
 
 .home-drag-edge-hints {
@@ -1143,7 +1148,7 @@ onBeforeUnmount(() => {
 
 .home-drag-edge.is-active {
   color: #fff;
-  background: rgba(37, 99, 235, 0.4);
+  background: var(--system-accent-soft);
   border-color: rgba(191, 219, 254, 0.8);
 }
 
@@ -1158,8 +1163,8 @@ onBeforeUnmount(() => {
 }
 
 .home-edit-btn.is-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--system-accent);
+  border-color: var(--system-accent);
 }
 
 .home-tile {
@@ -1175,7 +1180,7 @@ onBeforeUnmount(() => {
 }
 
 .home-tile.is-layout-selected {
-  outline: 2px solid rgba(59, 130, 246, 0.95);
+  outline: 2px solid var(--system-accent);
   outline-offset: 3px;
   border-radius: 20px;
 }
@@ -1198,7 +1203,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #ef4444;
+  background: var(--system-danger);
   color: #fff;
   font-size: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -1215,7 +1220,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #2563eb;
+  background: var(--system-accent);
   color: #fff;
   font-size: 10px;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
@@ -1241,14 +1246,14 @@ onBeforeUnmount(() => {
 
 .home-grid-slot {
   border-radius: 18px;
-  border: 1px dashed rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.11);
+  border: 1px dashed var(--system-border-light);
+  background: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
   transition: background 120ms ease, border-color 120ms ease;
 }
 
 .home-grid-slot:active {
-  background: rgba(59, 130, 246, 0.25);
+  background: var(--system-accent-soft);
   border-color: rgba(96, 165, 250, 0.9);
 }
 
@@ -1256,7 +1261,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   border-radius: 18px;
   border: 1px solid rgba(96, 165, 250, 0.95);
-  background: rgba(59, 130, 246, 0.24);
+  background: var(--system-accent-soft);
   box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.95);
   transition: all 150ms cubic-bezier(0.17, 0.84, 0.44, 1);
 }
@@ -1264,7 +1269,7 @@ onBeforeUnmount(() => {
 .home-custom-widget-card {
   width: 100%;
   height: 100%;
-  border-radius: 22px;
+  border-radius: var(--system-radius-lg);
   border: 1px solid var(--home-widget-border);
   background: var(--home-widget-bg);
   box-shadow: var(--home-widget-shadow);
@@ -1318,10 +1323,11 @@ onBeforeUnmount(() => {
 .home-drag-ghost-body {
   width: 100%;
   height: 100%;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  background: rgba(13, 25, 52, 0.58);
-  backdrop-filter: blur(16px);
+  border-radius: var(--system-radius-md);
+  border: 1px solid var(--system-border-light);
+  background: rgba(13, 25, 52, 0.54);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.15);
   display: flex;
   flex-direction: column;
   align-items: center;

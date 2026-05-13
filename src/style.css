@@ -3,40 +3,72 @@
 
 :root {
   --app-font-family: "Inter", "Noto Sans SC", sans-serif;
-  --app-bg: #0f1220;
-  --indicator-bg: rgba(255, 255, 255, 0.5);
-  --status-fg: #fff;
+  --system-bg: #f4f5f7;
+  --system-surface: rgba(255, 255, 255, 0.78);
+  --system-surface-strong: rgba(255, 255, 255, 0.92);
+  --system-surface-muted: rgba(245, 247, 250, 0.78);
+  --system-surface-dark: rgba(19, 23, 34, 0.48);
+  --system-border: rgba(20, 24, 31, 0.1);
+  --system-border-light: rgba(255, 255, 255, 0.34);
+  --system-text: #14171f;
+  --system-text-inverse: #fff;
+  --system-text-muted: rgba(20, 23, 31, 0.62);
+  --system-text-soft: rgba(20, 23, 31, 0.44);
+  --system-accent: #2f6fed;
+  --system-accent-soft: rgba(47, 111, 237, 0.16);
+  --system-success: #23a55a;
+  --system-warning: #c98112;
+  --system-danger: #d84a4a;
+  --system-radius-sm: 12px;
+  --system-radius-md: 18px;
+  --system-radius-lg: 24px;
+  --system-radius-xl: 32px;
+  --system-blur-sm: 10px;
+  --system-blur-md: 18px;
+  --system-blur-lg: 28px;
+  --system-shadow-soft: 0 16px 40px rgba(16, 24, 40, 0.14);
+  --system-shadow-strong: 0 24px 56px rgba(16, 24, 40, 0.22);
+  --system-motion-fast: 140ms ease;
+  --system-motion-base: 220ms ease;
+  --system-wallpaper-fallback:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(215deg, rgba(92, 132, 166, 0.42) 0%, rgba(92, 132, 166, 0) 46%),
+    linear-gradient(25deg, rgba(78, 112, 94, 0.32) 0%, rgba(78, 112, 94, 0) 50%),
+    linear-gradient(180deg, #edf2f5 0%, #b9c6d1 48%, #727f89 100%);
+  --app-bg: #f4f5f7;
+  --indicator-bg: rgba(20, 24, 31, 0.24);
+  --status-fg: #f9fafb;
   --status-blend: normal;
-  --glass-bg: rgba(255, 255, 255, 0.2);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-dark-bg: rgba(0, 0, 0, 0.5);
-  --glass-dark-border: rgba(255, 255, 255, 0.05);
-  --home-bg: linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
-  --home-overlay-a: radial-gradient(circle at 85% 15%, rgba(255, 161, 219, 0.35), transparent 45%);
-  --home-overlay-b: radial-gradient(circle at 10% 90%, rgba(149, 142, 255, 0.3), transparent 48%);
+  --glass-bg: var(--system-surface);
+  --glass-border: var(--system-border-light);
+  --glass-dark-bg: rgba(20, 24, 34, 0.56);
+  --glass-dark-border: rgba(255, 255, 255, 0.16);
+  --home-bg: linear-gradient(180deg, rgba(247, 249, 252, 0.18) 0%, rgba(54, 70, 94, 0.22) 100%);
+  --home-overlay-a: radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.4), transparent 42%);
+  --home-overlay-b: linear-gradient(180deg, rgba(7, 10, 18, 0.08) 0%, rgba(7, 10, 18, 0.32) 100%);
   --home-text-main: #fff;
-  --home-text-sub: rgba(255, 255, 255, 0.72);
-  --home-accent: #ff75d8;
-  --home-widget-bg: rgba(255, 255, 255, 0.14);
-  --home-widget-border: rgba(255, 255, 255, 0.22);
-  --home-widget-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
-  --home-search-bg: rgba(255, 255, 255, 0.16);
-  --home-search-text: rgba(255, 255, 255, 0.85);
-  --home-progress-track: rgba(255, 255, 255, 0.22);
-  --home-progress-fill: #fff;
-  --home-dock-bg: rgba(255, 255, 255, 0.14);
-  --home-dock-border: rgba(255, 255, 255, 0.2);
-  --home-dot-bg: rgba(255, 255, 255, 0.34);
-  --home-dot-active-bg: rgba(255, 255, 255, 0.95);
-  --home-icon-default-bg: linear-gradient(135deg, #7b6cff 0%, #c060ff 100%);
+  --home-text-sub: rgba(255, 255, 255, 0.74);
+  --home-accent: #dbeafe;
+  --home-widget-bg: rgba(255, 255, 255, 0.2);
+  --home-widget-border: rgba(255, 255, 255, 0.28);
+  --home-widget-shadow: 0 16px 42px rgba(15, 23, 42, 0.18);
+  --home-search-bg: rgba(255, 255, 255, 0.22);
+  --home-search-text: rgba(255, 255, 255, 0.86);
+  --home-progress-track: rgba(255, 255, 255, 0.24);
+  --home-progress-fill: rgba(255, 255, 255, 0.94);
+  --home-dock-bg: rgba(255, 255, 255, 0.2);
+  --home-dock-border: rgba(255, 255, 255, 0.32);
+  --home-dot-bg: rgba(255, 255, 255, 0.36);
+  --home-dot-active-bg: rgba(255, 255, 255, 0.96);
+  --home-icon-default-bg: linear-gradient(135deg, #4f8cff 0%, #7c5cff 100%);
   --home-icon-default-fg: #fff;
-  --home-icon-warm-bg: linear-gradient(135deg, #ff7db0 0%, #ff5f77 100%);
+  --home-icon-warm-bg: linear-gradient(135deg, #ff9f6e 0%, #f05f73 100%);
   --home-icon-warm-fg: #fff;
-  --home-icon-cool-bg: linear-gradient(135deg, #66c1ff 0%, #5f7dff 100%);
+  --home-icon-cool-bg: linear-gradient(135deg, #5ed7e8 0%, #4f8cff 100%);
   --home-icon-cool-fg: #fff;
-  --home-icon-light-bg: rgba(255, 255, 255, 0.9);
-  --home-icon-light-fg: #593ea8;
-  --home-icon-dark-bg: rgba(8, 10, 20, 0.75);
+  --home-icon-light-bg: rgba(255, 255, 255, 0.92);
+  --home-icon-light-fg: #1f2937;
+  --home-icon-dark-bg: rgba(20, 24, 34, 0.82);
   --home-icon-dark-fg: #f3f4f6;
   --chat-bg: #fee500;
   --chat-thread-bg: #b2c7da;
@@ -59,10 +91,48 @@
 
 .app-shell[data-theme="y2k"] {
   --app-bg: #0f1220;
+  --system-accent: #7b6cff;
+  --system-wallpaper-fallback:
+    linear-gradient(135deg, rgba(255, 117, 216, 0.38) 0%, rgba(255, 117, 216, 0) 38%),
+    linear-gradient(215deg, rgba(123, 108, 255, 0.5) 0%, rgba(123, 108, 255, 0) 48%),
+    linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
+  --indicator-bg: rgba(255, 255, 255, 0.5);
+  --status-fg: #fff;
+  --glass-bg: rgba(255, 255, 255, 0.2);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-dark-bg: rgba(0, 0, 0, 0.5);
+  --glass-dark-border: rgba(255, 255, 255, 0.05);
+  --home-bg: linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
+  --home-overlay-a: radial-gradient(circle at 85% 15%, rgba(255, 161, 219, 0.35), transparent 45%);
+  --home-overlay-b: radial-gradient(circle at 10% 90%, rgba(149, 142, 255, 0.3), transparent 48%);
+  --home-accent: #ff75d8;
+  --home-widget-bg: rgba(255, 255, 255, 0.14);
+  --home-widget-border: rgba(255, 255, 255, 0.22);
+  --home-widget-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  --home-search-bg: rgba(255, 255, 255, 0.16);
+  --home-search-text: rgba(255, 255, 255, 0.85);
+  --home-dock-bg: rgba(255, 255, 255, 0.14);
+  --home-dock-border: rgba(255, 255, 255, 0.2);
+  --home-icon-default-bg: linear-gradient(135deg, #7b6cff 0%, #c060ff 100%);
+  --home-icon-warm-bg: linear-gradient(135deg, #ff7db0 0%, #ff5f77 100%);
+  --home-icon-cool-bg: linear-gradient(135deg, #66c1ff 0%, #5f7dff 100%);
+  --home-icon-light-fg: #593ea8;
+  --home-icon-dark-bg: rgba(8, 10, 20, 0.75);
 }
 
 .app-shell[data-theme="zen"] {
   --app-bg: #eef1f3;
+  --system-bg: #eef1f3;
+  --system-wallpaper-fallback:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(215deg, rgba(209, 213, 219, 0.38) 0%, rgba(209, 213, 219, 0) 48%),
+    linear-gradient(180deg, #ffffff 0%, #eef1f3 100%);
+  --system-surface: rgba(255, 255, 255, 0.74);
+  --system-surface-strong: rgba(255, 255, 255, 0.94);
+  --system-border: rgba(17, 24, 39, 0.12);
+  --system-text: #111827;
+  --system-text-muted: rgba(17, 24, 39, 0.66);
+  --system-accent: #4b5563;
   --indicator-bg: rgba(17, 24, 39, 0.26);
   --status-fg: #111827;
   --status-blend: normal;
@@ -155,6 +225,7 @@ select {
   border-radius: 0;
   overflow: hidden;
   position: relative;
+  background-color: var(--app-bg);
   background-size: cover;
   background-position: center;
   transition: background-image 0.5s ease;
@@ -368,7 +439,7 @@ select {
 
 .home-search-pill {
   height: 42px;
-  border-radius: 16px;
+  border-radius: var(--system-radius-md);
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -376,7 +447,9 @@ select {
   gap: 8px;
   background: var(--home-search-bg);
   color: var(--home-search-text);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
   border: 1px solid var(--home-widget-border);
 }
 
@@ -394,13 +467,14 @@ select {
 .home-widget-card {
   width: 100%;
   height: 100%;
-  border-radius: 22px;
+  border-radius: var(--system-radius-lg);
   padding: 14px;
   border: 1px solid var(--home-widget-border);
   background: var(--home-widget-bg);
   box-shadow: var(--home-widget-shadow);
-  backdrop-filter: blur(10px);
-  transition: transform 120ms ease, filter 120ms ease;
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  transition: transform var(--system-motion-fast), filter var(--system-motion-fast);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -543,8 +617,8 @@ select {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
-  transition: transform 120ms ease;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);
+  transition: transform var(--system-motion-fast), filter var(--system-motion-fast);
 }
 
 .home-app-tile:active .home-app-icon {
@@ -578,7 +652,7 @@ select {
   align-items: center;
   justify-content: end;
   padding-bottom: calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent);
+  background: linear-gradient(to top, rgba(7, 10, 18, 0.24), rgba(7, 10, 18, 0));
 }
 
 .home-page-dots {
@@ -607,11 +681,13 @@ select {
 
 .home-dock {
   width: min(92%, 480px);
-  height: 72px;
-  border-radius: 30px;
+  height: 74px;
+  border-radius: var(--system-radius-xl);
   border: 1px solid var(--home-dock-border);
   background: var(--home-dock-bg);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
   display: flex;
   align-items: center;
   justify-content: space-around;
@@ -628,7 +704,7 @@ select {
   justify-content: center;
   font-size: 21px;
   cursor: pointer;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 9px 18px rgba(15, 23, 42, 0.18);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -641,7 +717,10 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .home-page-track,
   .home-app-icon,
-  .home-dot {
+  .home-dot,
+  .home-widget-card,
+  .home-custom-widget-card,
+  .home-dock-icon {
     transition: none;
   }
 }

@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map / SchatPhone 文档地图
 
-Updated / 更新时间: 2026-04-29
+Updated / 更新时间: 2026-05-13
 
 This is the single index for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -56,3 +56,19 @@ This is the single index for project documents. If two documents seem to overlap
 
 - `docs/archive/obsolete/2026-04-29-chat-identity/`  
   Closed Chat identity refactor notes and session templates. This track has no active mandatory task.
+
+## 5. Current Process Docs
+
+- `docs/process/AI_WORK_MODE.md`: AI collaboration and documentation governance.
+- `docs/process/OPERATION_GUIDE.md`: implementation and validation operation guide.
+- `docs/process/VISUAL_WORKFLOW.md`: visual-design-only workflow, skill setup, reference-library setup, and cross-PC reuse notes.
+
+## 6. Current Design Docs
+
+- `docs/design/DESIGN.md`: visual ownership model for native system surfaces, installed app surfaces, hybrid surfaces, entry-context ownership, and future world-theme extension.
+- `docs/design/DEFAULT_SYSTEM_STYLE.md`: current default native-system visual style, defined as a soft iOS-like personal OS baseline.
+- `docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md`: current route, entry, and cross-module visual ownership map.
+
+Important visual rule:
+
+- SchatPhone visual ownership is decided by the user's actual entry and parent context before code ownership or data ownership. If a surface appears inside an installed app, preserve that app's immersion unless the user explicitly navigated to a system-owned full page.

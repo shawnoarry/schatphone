@@ -555,15 +555,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
-      <button @click="goSettings" class="text-blue-500 text-sm flex items-center gap-1">
+  <div class="worldbook-shell w-full h-full bg-[#f2f2f7] text-black flex flex-col">
+    <div class="worldbook-header pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
+      <button @click="goSettings" class="worldbook-nav-button text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('设置', 'Settings') }}
       </button>
       <h1 class="font-bold text-xl">{{ t('世界书', 'World Book') }}</h1>
     </div>
 
-    <div class="flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
+    <div class="worldbook-scroll flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
       <div class="rounded-2xl bg-white border border-gray-200 p-4">
         <p class="text-sm font-semibold">{{ t('全局世界观（必选）', 'Global worldview (required)') }}</p>
         <p class="text-xs text-gray-500 mt-1">
@@ -848,3 +848,137 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.worldbook-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(244, 247, 250, 0.82) 42%, rgba(239, 243, 248, 0.96) 100%),
+    var(--system-bg);
+  color: var(--system-text);
+}
+
+.worldbook-header {
+  border-bottom: 1px solid var(--system-border);
+  background: rgba(248, 250, 252, 0.86);
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.07);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
+}
+
+.worldbook-header h1 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0;
+  color: var(--system-text);
+}
+
+.worldbook-nav-button {
+  min-height: 36px;
+  color: var(--system-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.worldbook-scroll {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.worldbook-scroll > .rounded-2xl {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: var(--system-radius-lg);
+  background: var(--system-surface-strong);
+  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.1);
+}
+
+.worldbook-scroll p {
+  letter-spacing: 0;
+}
+
+.worldbook-scroll .text-gray-500 {
+  color: var(--system-text-muted);
+}
+
+.worldbook-scroll .text-gray-400 {
+  color: var(--system-text-soft);
+}
+
+.worldbook-scroll textarea,
+.worldbook-scroll input,
+.worldbook-scroll select {
+  border-color: var(--system-border);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--system-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition:
+    border-color var(--system-motion-fast),
+    box-shadow var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.worldbook-scroll textarea:focus,
+.worldbook-scroll input:focus,
+.worldbook-scroll select:focus {
+  border-color: rgba(47, 111, 237, 0.48);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.12);
+}
+
+.worldbook-scroll textarea {
+  line-height: 1.65;
+}
+
+.worldbook-scroll button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.worldbook-scroll > .rounded-2xl > button,
+.worldbook-scroll [data-testid='knowledge-draft-submit'] {
+  min-height: 42px;
+  border-radius: 14px;
+  background: var(--system-text);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(20, 24, 31, 0.16);
+}
+
+.worldbook-scroll > .rounded-2xl > button.bg-green-500 {
+  background: var(--system-success);
+}
+
+.worldbook-scroll .rounded-xl {
+  border-color: var(--system-border);
+}
+
+.worldbook-scroll .bg-gray-50 {
+  background: rgba(245, 247, 250, 0.76);
+}
+
+.worldbook-scroll .bg-white {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.worldbook-scroll [data-testid='knowledge-deeplink-banner'],
+.worldbook-scroll .bg-blue-50 {
+  border-color: rgba(47, 111, 237, 0.2);
+  background: rgba(47, 111, 237, 0.1);
+}
+
+.worldbook-scroll .bg-emerald-50 {
+  background: rgba(35, 165, 90, 0.1);
+}
+
+.worldbook-scroll .bg-amber-50 {
+  background: rgba(201, 129, 18, 0.1);
+}
+
+.worldbook-scroll [data-testid='knowledge-point-card'] {
+  border-radius: var(--system-radius-md);
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+  transition:
+    transform var(--system-motion-fast),
+    box-shadow var(--system-motion-fast),
+    border-color var(--system-motion-fast);
+}
+
+.worldbook-scroll [data-testid='knowledge-point-card']:active {
+  transform: scale(0.992);
+}
+</style>

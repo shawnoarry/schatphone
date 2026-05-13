@@ -37,6 +37,11 @@ const currentTime = ref('')
 const currentDate = ref('')
 const currentWallpaper = ref('')
 const customVarStyle = computed(() => settings.value.appearance.customVars || {})
+const screenBackgroundImage = computed(() => {
+  const wallpaper = typeof currentWallpaper.value === 'string' ? currentWallpaper.value.trim() : ''
+  if (!wallpaper) return 'var(--system-wallpaper-fallback)'
+  return `url(${JSON.stringify(wallpaper)}), var(--system-wallpaper-fallback)`
+})
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
@@ -809,7 +814,7 @@ const lockPhone = () => {
     :data-statusbar="showStatusBar ? 'on' : 'off'"
     :style="customVarStyle"
   >
-    <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
+    <div class="screen" :style="{ backgroundImage: screenBackgroundImage }">
       <div
         v-if="showStatusBar"
         class="absolute top-0 w-full h-8 px-6 flex justify-between items-center text-xs font-medium z-40 select-none status-fg"
@@ -872,18 +877,21 @@ const lockPhone = () => {
 <style scoped>
 .app-shell-banner {
   position: absolute;
-  top: 38px;
-  left: 12px;
-  right: 12px;
+  top: calc(38px + env(safe-area-inset-top));
+  left: 14px;
+  right: 14px;
   z-index: 45;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  border: 0;
-  border-radius: 18px;
-  padding: 10px 11px;
-  color: var(--status-fg);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.2);
+  border: 1px solid var(--system-border-light);
+  border-radius: var(--system-radius-md);
+  padding: 11px 12px;
+  color: var(--system-text);
+  background: var(--system-surface-strong);
+  box-shadow: var(--system-shadow-soft);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.25);
 }
 
 .app-shell-banner-icon {
@@ -894,8 +902,8 @@ const lockPhone = () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--system-accent-soft);
+  color: var(--system-accent);
 }
 
 .app-shell-banner-icon.accent-default,
@@ -944,8 +952,8 @@ const lockPhone = () => {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--system-accent-soft);
+  color: var(--system-accent);
 }
 
 .app-shell-banner-time {
@@ -977,7 +985,7 @@ const lockPhone = () => {
 
 .shell-banner-enter-active,
 .shell-banner-leave-active {
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition: opacity var(--system-motion-base), transform var(--system-motion-base);
 }
 
 .shell-banner-enter-from,
@@ -986,5 +994,3 @@ const lockPhone = () => {
   transform: translateY(-10px) scale(0.98);
 }
 </style>
-
-
