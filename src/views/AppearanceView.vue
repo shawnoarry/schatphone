@@ -166,8 +166,7 @@ const lockClockStyleLabel = (styleId) => {
 
 const themeDisplayName = (theme) => {
   if (theme?.id === 'default') return t('默认系统', 'Default System')
-  if (theme?.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
-  if (theme?.id === 'zen') return t('纯白', 'Pure White')
+  if (theme?.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
   return theme?.name || ''
 }
 
@@ -1567,7 +1566,7 @@ onBeforeUnmount(() => {
 }
 
 .appearance-menu-icon.is-theme {
-  background: linear-gradient(135deg, #7c5cff 0%, #4f8cff 100%);
+  background: linear-gradient(135deg, #5d8295 0%, #385e75 100%);
 }
 
 .appearance-menu-icon.is-font {
@@ -1575,11 +1574,11 @@ onBeforeUnmount(() => {
 }
 
 .appearance-menu-icon.is-icons {
-  background: linear-gradient(135deg, #1fc59a 0%, #0f9f76 100%);
+  background: linear-gradient(135deg, #6f949a 0%, #3d6974 100%);
 }
 
 .appearance-menu-icon.is-widget {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #6b7f8a 0%, #465a66 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

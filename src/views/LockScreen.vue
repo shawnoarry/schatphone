@@ -323,21 +323,21 @@ onBeforeUnmount(() => {
 .lock-banner-icon.accent-default,
 .lock-notification-icon.accent-default,
 .lock-app-chip.accent-default {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.92) 0%, rgba(79, 70, 229, 0.88) 100%);
+  background: linear-gradient(135deg, rgba(93, 130, 149, 0.94) 0%, rgba(56, 94, 117, 0.9) 100%);
   color: #fff;
 }
 
 .lock-banner-icon.accent-cool,
 .lock-notification-icon.accent-cool,
 .lock-app-chip.accent-cool {
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.92) 0%, rgba(14, 165, 233, 0.88) 100%);
+  background: linear-gradient(135deg, rgba(111, 148, 154, 0.94) 0%, rgba(61, 105, 116, 0.9) 100%);
   color: #fff;
 }
 
 .lock-banner-icon.accent-warm,
 .lock-notification-icon.accent-warm,
 .lock-app-chip.accent-warm {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.92) 0%, rgba(249, 115, 22, 0.88) 100%);
+  background: linear-gradient(135deg, rgba(186, 133, 104, 0.94) 0%, rgba(143, 95, 79, 0.9) 100%);
   color: #fff;
 }
 
@@ -358,14 +358,14 @@ onBeforeUnmount(() => {
 .lock-banner-icon.is-shopping,
 .lock-notification-icon.is-shopping,
 .lock-app-chip.is-shopping {
-  background: linear-gradient(135deg, rgba(244, 114, 182, 0.92) 0%, rgba(239, 68, 68, 0.88) 100%);
+  background: linear-gradient(135deg, rgba(176, 103, 116, 0.94) 0%, rgba(135, 72, 82, 0.9) 100%);
   color: #fff;
 }
 
 .lock-banner-icon.is-forum,
 .lock-notification-icon.is-forum,
 .lock-app-chip.is-forum {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.92) 0%, rgba(129, 140, 248, 0.88) 100%);
+  background: linear-gradient(135deg, rgba(111, 117, 145, 0.94) 0%, rgba(75, 82, 111, 0.9) 100%);
   color: #fff;
 }
 

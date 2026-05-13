@@ -17,26 +17,16 @@ const AVAILABLE_THEMES = [
   {
     id: 'default',
     name: 'Default System',
-    preview: 'linear-gradient(180deg, #f7f8fb 0%, #dfe6f1 52%, #b7c5d9 100%)',
+    preview: 'linear-gradient(180deg, #f7f8fa 0%, #e2e8ed 52%, #aab8c3 100%)',
     darkText: true,
-    wallpaper:
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'y2k',
-    name: 'Y2K Vapor',
-    preview: 'linear-gradient(180deg, #ff9a9e 0%, #fad0c4 55%, #ffd1ff 100%)',
-    darkText: false,
-    wallpaper:
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80',
+    wallpaper: '',
   },
   {
     id: 'zen',
-    name: 'Pure White',
-    preview: 'linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%)',
-    darkText: true,
-    wallpaper:
-      'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1000&q=80',
+    name: 'Graphite Quiet',
+    preview: 'linear-gradient(180deg, #25303a 0%, #151c24 54%, #0d1218 100%)',
+    darkText: false,
+    wallpaper: '',
   },
 ]
 
@@ -105,6 +95,12 @@ const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const VALID_WALLPAPER_MODES = ['theme', 'url', 'gallery']
 const DEFAULT_WALLPAPER_MODE = 'theme'
+const LEGACY_THEME_MIGRATIONS = Object.freeze({
+  y2k: 'default',
+})
+const LEGACY_THEME_WALLPAPERS = new Set([
+  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80',
+])
 const MAX_NOTIFICATIONS = 80
 const MAX_API_REPORTS = 200
 const MAX_AI_AUTOMATION_QUEUE_SIZE = 240
@@ -585,8 +581,17 @@ const normalizeLockClockStyle = (value) =>
 const normalizeWallpaperMode = (value, fallback = DEFAULT_WALLPAPER_MODE) =>
   VALID_WALLPAPER_MODES.includes(value) ? value : fallback
 
+const normalizeThemeId = (themeId, fallback = AVAILABLE_THEMES[0]?.id || 'default') => {
+  const normalized = typeof themeId === 'string' ? themeId.trim() : ''
+  const migrated = LEGACY_THEME_MIGRATIONS[normalized] || normalized
+  return AVAILABLE_THEMES.some((theme) => theme.id === migrated) ? migrated : fallback
+}
+
 const normalizeWallpaperAssetId = (value) =>
   typeof value === 'string' ? value.trim().slice(0, 160) : ''
+
+const isLegacyThemeWallpaper = (value) =>
+  typeof value === 'string' && LEGACY_THEME_WALLPAPERS.has(value.trim())
 
 const normalizeNotification = (rawNote) => {
   if (!rawNote || typeof rawNote !== 'object') return null
@@ -916,7 +921,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.customWidgets.map((widget) => widget.id)
 
   const getThemeById = (themeId = '') => {
-    const normalizedThemeId = typeof themeId === 'string' ? themeId.trim() : ''
+    const normalizedThemeId = normalizeThemeId(themeId, '')
     if (!normalizedThemeId) return availableThemes.value[0] || null
     return availableThemes.value.find((item) => item.id === normalizedThemeId) || null
   }
@@ -1143,7 +1148,7 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const setTheme = (themeId) => {
-    const theme = getThemeById(themeId)
+    const theme = getThemeById(normalizeThemeId(themeId))
     if (!theme) return
     settings.appearance.currentTheme = theme.id
     if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
@@ -2324,20 +2329,28 @@ export const useSystemStore = defineStore('system', () => {
       const appearance = persisted.settings.appearance
 
       if (typeof appearance.currentTheme === 'string') {
-        settings.appearance.currentTheme = appearance.currentTheme
+        settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
       }
       const inferredThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
       settings.appearance.wallpaperMode =
         typeof appearance.wallpaperMode === 'string'
           ? normalizeWallpaperMode(appearance.wallpaperMode, settings.appearance.wallpaperMode)
           : typeof appearance.wallpaper === 'string' && appearance.wallpaper.trim()
-            ? appearance.wallpaper.trim() === inferredThemeWallpaper
+            ? appearance.wallpaper.trim() === inferredThemeWallpaper || isLegacyThemeWallpaper(appearance.wallpaper)
               ? DEFAULT_WALLPAPER_MODE
               : 'url'
             : DEFAULT_WALLPAPER_MODE
       settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(appearance.wallpaperAssetId)
       if (typeof appearance.wallpaper === 'string') {
         settings.appearance.wallpaper = appearance.wallpaper
+      }
+      if (
+        settings.appearance.currentTheme === 'default' &&
+        isLegacyThemeWallpaper(settings.appearance.wallpaper)
+      ) {
+        settings.appearance.wallpaperMode = DEFAULT_WALLPAPER_MODE
+        settings.appearance.wallpaperAssetId = ''
+        settings.appearance.wallpaper = getThemeWallpaper(settings.appearance.currentTheme)
       }
       if (typeof appearance.showStatusBar === 'boolean') {
         settings.appearance.showStatusBar = appearance.showStatusBar
@@ -2460,9 +2473,10 @@ export const useSystemStore = defineStore('system', () => {
       truthState.lastUpdatedAt = normalizedTruthState.lastUpdatedAt
     }
 
+    settings.appearance.currentTheme = normalizeThemeId(settings.appearance.currentTheme)
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
     if (!hasTheme) {
-      settings.appearance.currentTheme = availableThemes.value[0]?.id || 'y2k'
+      settings.appearance.currentTheme = availableThemes.value[0]?.id || 'default'
     }
 
     settings.appearance.wallpaperMode = normalizeWallpaperMode(

@@ -223,12 +223,13 @@ docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 Current theme state:
 
 - `default`
-- `y2k`
-- `zen`
+- `zen` / `Graphite Quiet` (legacy id, redesigned theme)
 
 Short-term direction:
 
 - Treat `Default System Style v1` as the current default native-system baseline.
+- `y2k` was a legacy vapor-style theme and is no longer part of the default selectable system themes. Persisted `y2k` state should migrate to `default`.
+- Keep the theme-switching mechanism, but avoid old novelty themes. Secondary themes should be mature system variants, such as low-saturation dark graphite, not vapor, neon, candy, or pure decorative skins.
 - Keep themes as OS-level visual modes.
 - Do not force every installed app to adopt the same full visual language.
 - OS themes may influence system surfaces, wallpaper, app icons, status bar, dock, and notification materials.

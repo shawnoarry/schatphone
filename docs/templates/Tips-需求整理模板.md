@@ -27,8 +27,8 @@ Purpose / 用途: clarify requirements before coding to reduce rework.
 
 - Core interactions (click/swipe/long-press/drag/page-swipe)  
 核心交互（点击/滑动/长按/拖拽/切屏）：
-- Visual direction (Y2K / Pure White / Other)  
-视觉方向（Y2K / 纯白 / 其他）：
+- Visual direction (Default System / Graphite Quiet / World-specific / Other)
+视觉方向（默认系统 / 石墨静夜 / 世界观专项 / 其他）：
 - Custom CSS capability involved? / 是否涉及自定义 CSS：Yes/No（是/否）
 
 ---

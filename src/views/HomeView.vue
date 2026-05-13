@@ -211,8 +211,7 @@ const activeTheme = computed(() => {
 const activeThemeName = computed(() => {
   if (!activeTheme.value) return ''
   if (activeTheme.value.id === 'default') return t('默认系统', 'Default System')
-  if (activeTheme.value.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
-  if (activeTheme.value.id === 'zen') return t('纯白', 'Pure White')
+  if (activeTheme.value.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
   return activeTheme.value.name || ''
 })
 const canDragToPrevPage = computed(() => currentPage.value > 0)
@@ -1254,15 +1253,15 @@ onBeforeUnmount(() => {
 
 .home-grid-slot:active {
   background: var(--system-accent-soft);
-  border-color: rgba(96, 165, 250, 0.9);
+  border-color: rgba(68, 111, 135, 0.78);
 }
 
 .home-grid-drop-preview {
   pointer-events: none;
   border-radius: 18px;
-  border: 1px solid rgba(96, 165, 250, 0.95);
+  border: 1px solid rgba(68, 111, 135, 0.82);
   background: var(--system-accent-soft);
-  box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(205, 220, 226, 0.95);
   transition: all 150ms cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 

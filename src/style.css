@@ -3,22 +3,22 @@
 
 :root {
   --app-font-family: "Inter", "Noto Sans SC", sans-serif;
-  --system-bg: #f4f5f7;
-  --system-surface: rgba(255, 255, 255, 0.78);
-  --system-surface-strong: rgba(255, 255, 255, 0.92);
-  --system-surface-muted: rgba(245, 247, 250, 0.78);
-  --system-surface-dark: rgba(19, 23, 34, 0.48);
-  --system-border: rgba(20, 24, 31, 0.1);
-  --system-border-light: rgba(255, 255, 255, 0.34);
-  --system-text: #14171f;
+  --system-bg: #f3f5f6;
+  --system-surface: rgba(252, 253, 253, 0.76);
+  --system-surface-strong: rgba(255, 255, 255, 0.9);
+  --system-surface-muted: rgba(239, 243, 245, 0.82);
+  --system-surface-dark: rgba(24, 30, 38, 0.5);
+  --system-border: rgba(31, 42, 52, 0.11);
+  --system-border-light: rgba(255, 255, 255, 0.42);
+  --system-text: #17202a;
   --system-text-inverse: #fff;
-  --system-text-muted: rgba(20, 23, 31, 0.62);
-  --system-text-soft: rgba(20, 23, 31, 0.44);
-  --system-accent: #2f6fed;
-  --system-accent-soft: rgba(47, 111, 237, 0.16);
-  --system-success: #23a55a;
-  --system-warning: #c98112;
-  --system-danger: #d84a4a;
+  --system-text-muted: rgba(23, 32, 42, 0.62);
+  --system-text-soft: rgba(23, 32, 42, 0.44);
+  --system-accent: #446f87;
+  --system-accent-soft: rgba(68, 111, 135, 0.14);
+  --system-success: #3f8f67;
+  --system-warning: #a77736;
+  --system-danger: #b85353;
   --system-radius-sm: 12px;
   --system-radius-md: 18px;
   --system-radius-lg: 24px;
@@ -31,28 +31,28 @@
   --system-motion-fast: 140ms ease;
   --system-motion-base: 220ms ease;
   --system-wallpaper-fallback:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0) 34%),
-    linear-gradient(215deg, rgba(92, 132, 166, 0.42) 0%, rgba(92, 132, 166, 0) 46%),
-    linear-gradient(25deg, rgba(78, 112, 94, 0.32) 0%, rgba(78, 112, 94, 0) 50%),
-    linear-gradient(180deg, #edf2f5 0%, #b9c6d1 48%, #727f89 100%);
-  --app-bg: #f4f5f7;
-  --indicator-bg: rgba(20, 24, 31, 0.24);
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0) 32%),
+    radial-gradient(circle at 84% 18%, rgba(117, 145, 159, 0.24) 0%, rgba(117, 145, 159, 0) 36%),
+    linear-gradient(145deg, rgba(132, 154, 162, 0.22) 0%, rgba(132, 154, 162, 0) 48%),
+    linear-gradient(180deg, #eef2f3 0%, #b8c3c9 54%, #6e7a82 100%);
+  --app-bg: #f3f5f6;
+  --indicator-bg: rgba(23, 32, 42, 0.24);
   --status-fg: #f9fafb;
   --status-blend: normal;
   --glass-bg: var(--system-surface);
   --glass-border: var(--system-border-light);
   --glass-dark-bg: rgba(20, 24, 34, 0.56);
   --glass-dark-border: rgba(255, 255, 255, 0.16);
-  --home-bg: linear-gradient(180deg, rgba(247, 249, 252, 0.18) 0%, rgba(54, 70, 94, 0.22) 100%);
-  --home-overlay-a: radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.4), transparent 42%);
-  --home-overlay-b: linear-gradient(180deg, rgba(7, 10, 18, 0.08) 0%, rgba(7, 10, 18, 0.32) 100%);
+  --home-bg: linear-gradient(180deg, rgba(245, 248, 249, 0.18) 0%, rgba(28, 42, 54, 0.24) 100%);
+  --home-overlay-a: radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.34), transparent 42%);
+  --home-overlay-b: linear-gradient(180deg, rgba(9, 14, 19, 0.06) 0%, rgba(9, 14, 19, 0.3) 100%);
   --home-text-main: #fff;
   --home-text-sub: rgba(255, 255, 255, 0.74);
-  --home-accent: #dbeafe;
-  --home-widget-bg: rgba(255, 255, 255, 0.2);
-  --home-widget-border: rgba(255, 255, 255, 0.28);
-  --home-widget-shadow: 0 16px 42px rgba(15, 23, 42, 0.18);
-  --home-search-bg: rgba(255, 255, 255, 0.22);
+  --home-accent: #e8f0f2;
+  --home-widget-bg: rgba(255, 255, 255, 0.24);
+  --home-widget-border: rgba(255, 255, 255, 0.34);
+  --home-widget-shadow: 0 16px 38px rgba(13, 21, 30, 0.16);
+  --home-search-bg: rgba(255, 255, 255, 0.24);
   --home-search-text: rgba(255, 255, 255, 0.86);
   --home-progress-track: rgba(255, 255, 255, 0.24);
   --home-progress-fill: rgba(255, 255, 255, 0.94);
@@ -60,11 +60,11 @@
   --home-dock-border: rgba(255, 255, 255, 0.32);
   --home-dot-bg: rgba(255, 255, 255, 0.36);
   --home-dot-active-bg: rgba(255, 255, 255, 0.96);
-  --home-icon-default-bg: linear-gradient(135deg, #4f8cff 0%, #7c5cff 100%);
+  --home-icon-default-bg: linear-gradient(135deg, #5d8295 0%, #385e75 100%);
   --home-icon-default-fg: #fff;
-  --home-icon-warm-bg: linear-gradient(135deg, #ff9f6e 0%, #f05f73 100%);
+  --home-icon-warm-bg: linear-gradient(135deg, #ba8568 0%, #8f5f4f 100%);
   --home-icon-warm-fg: #fff;
-  --home-icon-cool-bg: linear-gradient(135deg, #5ed7e8 0%, #4f8cff 100%);
+  --home-icon-cool-bg: linear-gradient(135deg, #6f949a 0%, #3d6974 100%);
   --home-icon-cool-fg: #fff;
   --home-icon-light-bg: rgba(255, 255, 255, 0.92);
   --home-icon-light-fg: #1f2937;
@@ -83,106 +83,83 @@
   --chat-send-bg: #fee500;
   --chat-send-text: #392020;
   --chat-suggest-bg: rgba(255, 255, 255, 0.8);
-  --chat-suggest-text: #2563eb;
-  --chat-suggest-border: #bfdbfe;
-  --chat-magic-bg: linear-gradient(45deg, #ff86cb, #8f8bff);
+  --chat-suggest-text: #385e75;
+  --chat-suggest-border: rgba(68, 111, 135, 0.28);
+  --chat-magic-bg: linear-gradient(135deg, #5d8295, #385e75);
   --chat-magic-text: #ffffff;
 }
 
-.app-shell[data-theme="y2k"] {
-  --app-bg: #0f1220;
-  --system-accent: #7b6cff;
-  --system-wallpaper-fallback:
-    linear-gradient(135deg, rgba(255, 117, 216, 0.38) 0%, rgba(255, 117, 216, 0) 38%),
-    linear-gradient(215deg, rgba(123, 108, 255, 0.5) 0%, rgba(123, 108, 255, 0) 48%),
-    linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
-  --indicator-bg: rgba(255, 255, 255, 0.5);
-  --status-fg: #fff;
-  --glass-bg: rgba(255, 255, 255, 0.2);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-dark-bg: rgba(0, 0, 0, 0.5);
-  --glass-dark-border: rgba(255, 255, 255, 0.05);
-  --home-bg: linear-gradient(180deg, #5b3da8 0%, #3d2a77 45%, #251d58 100%);
-  --home-overlay-a: radial-gradient(circle at 85% 15%, rgba(255, 161, 219, 0.35), transparent 45%);
-  --home-overlay-b: radial-gradient(circle at 10% 90%, rgba(149, 142, 255, 0.3), transparent 48%);
-  --home-accent: #ff75d8;
-  --home-widget-bg: rgba(255, 255, 255, 0.14);
-  --home-widget-border: rgba(255, 255, 255, 0.22);
-  --home-widget-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
-  --home-search-bg: rgba(255, 255, 255, 0.16);
-  --home-search-text: rgba(255, 255, 255, 0.85);
-  --home-dock-bg: rgba(255, 255, 255, 0.14);
-  --home-dock-border: rgba(255, 255, 255, 0.2);
-  --home-icon-default-bg: linear-gradient(135deg, #7b6cff 0%, #c060ff 100%);
-  --home-icon-warm-bg: linear-gradient(135deg, #ff7db0 0%, #ff5f77 100%);
-  --home-icon-cool-bg: linear-gradient(135deg, #66c1ff 0%, #5f7dff 100%);
-  --home-icon-light-fg: #593ea8;
-  --home-icon-dark-bg: rgba(8, 10, 20, 0.75);
-}
-
 .app-shell[data-theme="zen"] {
-  --app-bg: #eef1f3;
-  --system-bg: #eef1f3;
+  --app-bg: #10161d;
+  --system-bg: #10161d;
   --system-wallpaper-fallback:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 40%),
-    linear-gradient(215deg, rgba(209, 213, 219, 0.38) 0%, rgba(209, 213, 219, 0) 48%),
-    linear-gradient(180deg, #ffffff 0%, #eef1f3 100%);
-  --system-surface: rgba(255, 255, 255, 0.74);
-  --system-surface-strong: rgba(255, 255, 255, 0.94);
-  --system-border: rgba(17, 24, 39, 0.12);
-  --system-text: #111827;
-  --system-text-muted: rgba(17, 24, 39, 0.66);
-  --system-accent: #4b5563;
-  --indicator-bg: rgba(17, 24, 39, 0.26);
-  --status-fg: #111827;
+    radial-gradient(circle at 20% 8%, rgba(107, 128, 139, 0.3) 0%, rgba(107, 128, 139, 0) 34%),
+    radial-gradient(circle at 86% 20%, rgba(74, 94, 105, 0.26) 0%, rgba(74, 94, 105, 0) 36%),
+    linear-gradient(180deg, #25303a 0%, #151c24 54%, #0d1218 100%);
+  --system-surface: rgba(26, 35, 44, 0.72);
+  --system-surface-strong: rgba(34, 44, 54, 0.9);
+  --system-surface-muted: rgba(20, 28, 36, 0.78);
+  --system-surface-dark: rgba(7, 11, 15, 0.64);
+  --system-border: rgba(198, 211, 219, 0.13);
+  --system-border-light: rgba(255, 255, 255, 0.16);
+  --system-text: #edf3f5;
+  --system-text-muted: rgba(237, 243, 245, 0.66);
+  --system-text-soft: rgba(237, 243, 245, 0.44);
+  --system-accent: #8fb0bd;
+  --system-accent-soft: rgba(143, 176, 189, 0.16);
+  --system-success: #7db08d;
+  --system-warning: #c5a46f;
+  --system-danger: #cf7f7f;
+  --indicator-bg: rgba(237, 243, 245, 0.38);
+  --status-fg: #f5f8f9;
   --status-blend: normal;
-  --glass-bg: rgba(255, 255, 255, 0.74);
-  --glass-border: rgba(17, 24, 39, 0.12);
-  --glass-dark-bg: rgba(31, 41, 55, 0.78);
-  --glass-dark-border: rgba(255, 255, 255, 0.2);
-  --home-bg: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
-  --home-overlay-a: radial-gradient(circle at 85% 15%, rgba(214, 216, 220, 0.34), transparent 45%);
-  --home-overlay-b: radial-gradient(circle at 10% 90%, rgba(209, 213, 219, 0.36), transparent 48%);
-  --home-text-main: #111827;
-  --home-text-sub: rgba(17, 24, 39, 0.66);
-  --home-accent: #4b5563;
-  --home-widget-bg: rgba(255, 255, 255, 0.88);
-  --home-widget-border: rgba(17, 24, 39, 0.08);
-  --home-widget-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
-  --home-search-bg: rgba(255, 255, 255, 0.9);
-  --home-search-text: rgba(17, 24, 39, 0.7);
-  --home-progress-track: rgba(17, 24, 39, 0.15);
-  --home-progress-fill: #111827;
-  --home-dock-bg: rgba(255, 255, 255, 0.9);
-  --home-dock-border: rgba(17, 24, 39, 0.1);
-  --home-dot-bg: rgba(17, 24, 39, 0.25);
-  --home-dot-active-bg: rgba(17, 24, 39, 0.95);
-  --home-icon-default-bg: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  --home-icon-default-fg: #111827;
-  --home-icon-warm-bg: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  --home-icon-warm-fg: #7f1d1d;
-  --home-icon-cool-bg: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-  --home-icon-cool-fg: #1e3a8a;
-  --home-icon-light-bg: #ffffff;
-  --home-icon-light-fg: #111827;
-  --home-icon-dark-bg: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  --home-icon-dark-fg: #f9fafb;
-  --chat-bg: #f7f7f8;
-  --chat-thread-bg: #eceff3;
-  --chat-thread-header-bg: rgba(236, 239, 243, 0.92);
-  --chat-ink: #111827;
-  --chat-user-bubble-bg: #ffffff;
-  --chat-user-bubble-text: #111827;
-  --chat-assistant-bubble-bg: #f3f4f6;
-  --chat-assistant-bubble-text: #111827;
-  --chat-input-bg: #ffffff;
-  --chat-input-field-bg: #f3f4f6;
-  --chat-send-bg: #111827;
-  --chat-send-text: #ffffff;
-  --chat-suggest-bg: rgba(255, 255, 255, 0.95);
-  --chat-suggest-text: #1f2937;
-  --chat-suggest-border: #d1d5db;
-  --chat-magic-bg: linear-gradient(45deg, #9ca3af, #4b5563);
+  --glass-bg: rgba(26, 35, 44, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-dark-bg: rgba(7, 11, 15, 0.72);
+  --glass-dark-border: rgba(255, 255, 255, 0.1);
+  --home-bg: linear-gradient(180deg, rgba(30, 41, 51, 0.18) 0%, rgba(7, 11, 15, 0.42) 100%);
+  --home-overlay-a: radial-gradient(circle at 82% 12%, rgba(143, 176, 189, 0.18), transparent 42%);
+  --home-overlay-b: linear-gradient(180deg, rgba(2, 6, 10, 0.08) 0%, rgba(2, 6, 10, 0.42) 100%);
+  --home-text-main: #f5f8f9;
+  --home-text-sub: rgba(245, 248, 249, 0.7);
+  --home-accent: #d7e3e7;
+  --home-widget-bg: rgba(26, 35, 44, 0.5);
+  --home-widget-border: rgba(255, 255, 255, 0.16);
+  --home-widget-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+  --home-search-bg: rgba(26, 35, 44, 0.48);
+  --home-search-text: rgba(245, 248, 249, 0.78);
+  --home-progress-track: rgba(245, 248, 249, 0.2);
+  --home-progress-fill: rgba(245, 248, 249, 0.9);
+  --home-dock-bg: rgba(20, 28, 36, 0.58);
+  --home-dock-border: rgba(255, 255, 255, 0.18);
+  --home-dot-bg: rgba(245, 248, 249, 0.28);
+  --home-dot-active-bg: rgba(245, 248, 249, 0.92);
+  --home-icon-default-bg: linear-gradient(135deg, #8fb0bd 0%, #4f6f7c 100%);
+  --home-icon-default-fg: #071016;
+  --home-icon-warm-bg: linear-gradient(135deg, #b89478 0%, #7d6252 100%);
+  --home-icon-warm-fg: #fff;
+  --home-icon-cool-bg: linear-gradient(135deg, #7ea1a5 0%, #486d73 100%);
+  --home-icon-cool-fg: #fff;
+  --home-icon-light-bg: rgba(237, 243, 245, 0.9);
+  --home-icon-light-fg: #17202a;
+  --home-icon-dark-bg: rgba(7, 11, 15, 0.86);
+  --home-icon-dark-fg: #f5f8f9;
+  --chat-bg: #141c24;
+  --chat-thread-bg: #17222c;
+  --chat-thread-header-bg: rgba(23, 34, 44, 0.92);
+  --chat-ink: #f5f8f9;
+  --chat-user-bubble-bg: #d7e3e7;
+  --chat-user-bubble-text: #10161d;
+  --chat-assistant-bubble-bg: #25303a;
+  --chat-assistant-bubble-text: #edf3f5;
+  --chat-input-bg: #10161d;
+  --chat-input-field-bg: #202b35;
+  --chat-send-bg: #d7e3e7;
+  --chat-send-text: #10161d;
+  --chat-suggest-bg: rgba(32, 43, 53, 0.92);
+  --chat-suggest-text: #d7e3e7;
+  --chat-suggest-border: rgba(143, 176, 189, 0.28);
+  --chat-magic-bg: linear-gradient(135deg, #8fb0bd, #4f6f7c);
 }
 
 body {

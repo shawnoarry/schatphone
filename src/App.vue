@@ -908,19 +908,19 @@ const lockPhone = () => {
 
 .app-shell-banner-icon.accent-default,
 .app-shell-banner-chip.accent-default {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.94) 0%, rgba(79, 70, 229, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(93, 130, 149, 0.96) 0%, rgba(56, 94, 117, 0.94) 100%);
   color: #fff;
 }
 
 .app-shell-banner-icon.accent-cool,
 .app-shell-banner-chip.accent-cool {
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.94) 0%, rgba(14, 165, 233, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(111, 148, 154, 0.96) 0%, rgba(61, 105, 116, 0.94) 100%);
   color: #fff;
 }
 
 .app-shell-banner-icon.accent-warm,
 .app-shell-banner-chip.accent-warm {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.94) 0%, rgba(249, 115, 22, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(186, 133, 104, 0.96) 0%, rgba(143, 95, 79, 0.94) 100%);
   color: #fff;
 }
 

@@ -116,7 +116,7 @@ Avoid these keywords as main direction:
 
 ## 5. Color Direction
 
-Default system colors should be restrained and wallpaper-aware.
+Default system colors should be restrained and wallpaper-aware. The previous vapor/Y2K direction used high-saturation pink, purple, cyan, and blue-violet gradients across wallpaper, app icons, notification accents, and magic/AI controls. That made the default OS feel stylized and trend-led instead of like a credible phone shell.
 
 Recommended base behavior:
 
@@ -124,25 +124,32 @@ Recommended base behavior:
 - Let wallpapers provide atmosphere.
 - Use accent colors sparingly for active states, key actions, and app identity marks.
 - Avoid making the whole OS dominated by one loud hue.
+- Avoid neon pink, purple-blue, cyan glow, and candy gradients in the default system style.
+- Keep legacy/world-specific expressive styles out of the default system baseline.
 
 Suggested token direction:
 
 ```css
---system-bg: #f4f5f7;
---system-surface: rgba(255, 255, 255, 0.78);
---system-surface-strong: rgba(255, 255, 255, 0.92);
---system-surface-muted: rgba(245, 247, 250, 0.78);
---system-border: rgba(20, 24, 31, 0.10);
---system-text: #14171f;
---system-text-muted: rgba(20, 23, 31, 0.62);
---system-text-soft: rgba(20, 23, 31, 0.44);
---system-accent: #2f6fed;
---system-success: #23a55a;
---system-warning: #c98112;
---system-danger: #d84a4a;
+--system-bg: #f3f5f6;
+--system-surface: rgba(252, 253, 253, 0.76);
+--system-surface-strong: rgba(255, 255, 255, 0.90);
+--system-surface-muted: rgba(239, 243, 245, 0.82);
+--system-border: rgba(31, 42, 52, 0.11);
+--system-text: #17202a;
+--system-text-muted: rgba(23, 32, 42, 0.62);
+--system-text-soft: rgba(23, 32, 42, 0.44);
+--system-accent: #446f87;
+--system-success: #3f8f67;
+--system-warning: #a77736;
+--system-danger: #b85353;
 ```
 
 Dark or wallpaper-heavy surfaces may invert text and use stronger blur, but should keep contrast readable.
+
+Current built-in theme variants:
+
+- `default`: the primary low-saturation light system baseline.
+- `zen` / `Graphite Quiet`: a redesigned low-saturation graphite dark variant. The `zen` id is retained only for saved-state compatibility; it should no longer be treated as the old pure-white theme.
 
 ## 6. Typography
 
