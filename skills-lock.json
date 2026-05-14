@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "anthropics/claude-code",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
+      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
+    },
+    "frontend-logic-design": {
+      "source": "clouddreamai-tools-public/frontend-logic-design",
+      "sourceType": "git",
+      "skillPath": "skills/frontend-logic-design/SKILL.md",
+      "computedHash": "ddb946aca65808e6d2e7a61a432d55d723e3f809a7663aaa52921b43c73ff0dc"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "8833ba9691dd006cea03013cffa8d5aaf0835ec8179186e0188c6fc388737147"
+    }
+  }
+}

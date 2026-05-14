@@ -79,7 +79,8 @@ Native system surfaces:
   - App icons
   - Dock
   - Page indicator
-  - Layout edit mode
+  - Fixed Home layout slots
+  - Experimental layout edit mode, if explicitly enabled
 - `src/views/SettingsView.vue`
   - System settings hub
   - Backup, storage, notification, diagnostics, automation settings
@@ -103,6 +104,26 @@ Native system visual rules:
 - Primary navigation should feel predictable and OS-level.
 - Avoid app-specific color dominance unless the page is explicitly a theme preview.
 - Keep Chinese, English, and Korean text able to fit without cramped controls.
+- User-visible copy must be product copy. Do not expose developer comments, TODOs, debug labels, implementation notes, component names, store names, route names, class names, or token names in the rendered interface unless the page is explicitly a developer tool.
+
+### Home Layout Rule
+
+Home is a native-system surface. Its default layout model should preserve the feeling of a stable phone OS rather than a free-form desktop board.
+
+Default direction:
+
+- Use a fixed page skeleton with named widget slots.
+- Each slot has a stable size, such as `1x1`, `2x1`, `2x2`, `4x2`, or `4x3`.
+- Users customize Home by replacing the content inside a slot, not by freely dragging every item.
+- A widget picker opened from a slot should only show widgets that match that slot size.
+- App entries and the Dock stay in fixed system-owned zones.
+- Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
+- Extra apps should go to an App Library, More page, or another system-owned overflow surface.
+
+Current implementation note:
+
+- The current store uses `homeWidgetPages` as an ordered page array. Future visual work should evolve this toward a slot model, for example `homeLayoutSlots: [{ page, slotId, size, widgetId }]`.
+- Free drag can remain as an experimental or developer-only feature, but it is not the default visual direction.
 
 ## 3. Installed App Layer
 
@@ -147,6 +168,7 @@ Installed app visual rules:
 - Apps must preserve system safe areas and status bar readability.
 - Apps should still use common base controls where they behave like OS controls: back buttons, dialogs, permission notices, destructive confirmations, file pickers, and empty states.
 - If an app mimics a real-world style, it should be treated as "inspired by", not a direct brand copy.
+- App-local copy can match the app's tone, but it must still avoid development leakage such as internal object names, placeholder notes, debugging text, and implementation explanations.
 
 ## 4. Hybrid Surfaces
 

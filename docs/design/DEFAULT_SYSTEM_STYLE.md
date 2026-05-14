@@ -278,13 +278,17 @@ Direction:
 - App icons and widgets should feel arranged on a device, not a dashboard.
 - Dock should be a strong native-system anchor.
 - Widget surfaces should be softer and less card-heavy than web widgets.
-- Edit mode can be functional, but should still feel OS-native.
+- Home should use fixed widget slots as the default customization model.
+- A slot opens a same-size widget picker; users replace slot content instead of freely dragging every tile.
+- App entries should stay in fixed system-owned zones, with overflow handled by an App Library or More surface.
+- Free drag may exist as an experimental or developer-only mode, but should not define the default experience.
 
 Avoid:
 
 - Desktop-like grid density.
 - Too many unrelated icon styles.
 - Home widgets that look like embedded web cards.
+- User flows that require understanding grid collision, empty placeholders, or cross-page drag mechanics.
 
 ### Settings
 

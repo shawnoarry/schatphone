@@ -5,6 +5,12 @@ Updated / 更新时间: 2026-04-19
 This guide covers daily development, validation, and release workflow.  
 本指南用于日常开发、验收与提交流程。
 
+Shared development tools outside the visual专项 workflow are documented in:
+
+```text
+docs/process/DEVELOPMENT_TOOLING.md
+```
+
 ## 1. Setup / 开发前准备
 
 ```bash
@@ -45,17 +51,19 @@ npm run dev
 `isLocked` 为 true 时阻止访问非锁屏路由
 - Lock screen notifications can be tapped to unlock and open target route  
 锁屏通知可直接点击解锁并进入目标页面
-- Home still supports long-press edit mode, but layout-edit is controlled by feature flags  
-Home 仍支持长按编辑，但布局编辑由实验开关控制
+- Home customization should default to fixed slots and same-size widget replacement / Home 美化默认采用固定槽位与同尺寸 Widget 替换
+- Legacy long-press layout edit may exist only behind experimental feature flags / 旧版长按布局编辑仅作为实验开关能力保留
 
 ## 5. Home Rules / Home 交互规则
 
-- Long-press blank area to enter edit mode / 长按空白进入编辑模式
-- Supports in-page and cross-page drag / 支持同屏与跨屏拖拽
+- Fixed page skeleton is the default Home model / 固定页面骨架是默认 Home 模型
+- Widget slots have stable sizes such as `1x1`, `2x1`, `2x2`, `4x2`, `4x3` / Widget 槽位保持稳定尺寸
+- Tap a slot to choose a same-size widget after the slot picker is implemented / 槽位选择器完成后，点击槽位选择同尺寸 Widget
+- Free drag and cross-page drag are experimental, not the default user path / 自由拖拽与跨屏拖拽是实验能力，不是默认用户路径
 - Default 5 pages (pages 3-5 reserved) / 默认 5 屏，后 3 屏预留
-- `app_*` entries cannot be hidden/deleted / `app_*` 不可隐藏或删除
-- Widgets and custom widgets can be hidden / Widget 与自定义 Widget 可隐藏
-- Hidden widgets do not leave blank slots / 隐藏后网格自动重排
+- App entries and Dock items stay in fixed system-owned zones / App 入口与 Dock 项保持在系统固定区域
+- `app_*` entries cannot be deleted; visibility and overflow should be managed by system-owned Home/App Library rules / `app_*` 不可删除，显示与溢出由系统 Home/App Library 规则管理
+- Widgets and custom widgets can be hidden or assigned to compatible slots / Widget 与自定义 Widget 可隐藏或分配到兼容槽位
 
 ## 6. Settings Structure / Settings 分层
 
@@ -82,6 +90,12 @@ Appearance sections / Appearance 二级菜单：
 系统 UI 文案、设置文案、导航标签
 - Out of scope / 不在范围：AI-generated chat message content  
 AI 生成的聊天内容不受系统语言强制改写
+
+Visible copy rule / 可见文案规则：
+
+- UI text must be user-facing product copy / UI 文字必须是面向用户的产品文案
+- Do not render developer comments, TODOs, debug labels, implementation notes, component names, store names, route names, class names, or token names / 不得把开发注释、TODO、调试标签、实现说明、组件名、store 名、路由名、class 名或 token 名显示给用户
+- Placeholder or unfinished states must use real empty/loading/unavailable copy / 占位或未完成状态也必须使用正式的空态、加载态或不可用状态文案
 
 ## 8. Chat Rules / Chat 交互规则
 
@@ -128,12 +142,11 @@ AI 生成的聊天内容不受系统语言强制改写
 1. Open `/appearance`
 2. Enter Widget section / 进入 Widget 二级菜单
 3. Copy/export template as starting point / 复制或导出模板
-4. Fill name/size/target page/code and add / 填写名称、尺寸、目标屏与代码
-5. Return to `/home` and arrange placement / 回到 Home 查看并拖拽
+4. Fill name/size/code and add / 填写名称、尺寸与代码
+5. Assign the widget to a compatible Home slot when slot assignment is available / 槽位分配完成后，将 Widget 分配到兼容的 Home 槽位
 
 Built-in widget recovery / 内置 Widget 恢复：  
-Use built-in restore panel to re-add or move built-in widgets.  
-可在恢复面板将隐藏项加回指定屏或直接移动已显示项。
+Use the built-in restore panel to re-add widgets, then place them through compatible slot assignment. / 可在恢复面板恢复隐藏项，再通过兼容槽位分配放回 Home。
 
 Import / 导入：  
 Paste JSON array in Appearance import area.  
@@ -209,4 +222,3 @@ Check URL/Key, then CORS or gateway limits, then fallback model input.
 4. Why some pages are not fully localized yet? / 为什么部分页面仍未完全切语言？  
 P0-2 baseline has been completed for current target pages; if any page is still mixed-language, treat it as a regression and migrate with `useI18n` + `t(...)` immediately.  
 当前目标页面的 P0-2 基线已完成；若仍出现混合语言页面，应按回归问题处理并立即补齐 `useI18n` + `t(...)`。
-

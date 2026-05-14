@@ -79,7 +79,8 @@ let seenShellNotificationIds = new Set()
 const MAP_AUTOMATION_MODULE_KEY = 'map'
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MAP_AUTOMATION_INTERVAL_MS = 6 * 60 * 1000
-const ROOT_AUTOMATION_TICK_MS = 1500
+const ROOT_AUTOMATION_IDLE_TICK_MS = 30 * 1000
+const ROOT_AUTOMATION_ACTIVE_TICK_MS = 5 * 1000
 const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
 const PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC = 'resync'
 const SHELL_WALLPAPER_PREVIEW_SCOPE = 'app-shell-wallpaper'
@@ -312,9 +313,18 @@ watch(
     if (!systemStore.isAiAutomationEnabledForModule(MAP_AUTOMATION_MODULE_KEY)) {
       mapAutoNextAt = 0
     }
+    restartAutomationTickTimer()
     void runAutomationRootTick()
   },
   { deep: true },
+)
+
+watch(
+  () => systemStore.aiAutomationQueue.length,
+  () => {
+    restartAutomationTickTimer()
+    void runAutomationRootTick()
+  },
 )
 
 watch(
@@ -453,11 +463,29 @@ const enqueueMapAutomationTaskIfDue = (baseAt = Date.now()) => {
 }
 
 const runAutomationRootTick = async () => {
+  if (!settings.value.aiAutomation?.masterEnabled) return
   enqueueMapAutomationTaskIfDue(Date.now())
   for (let i = 0; i < 4; i += 1) {
     const result = await systemStore.runAiAutomationQueueTick(Date.now())
     if (!result?.handled && !result?.queueAdvanced) break
   }
+}
+
+const restartAutomationTickTimer = () => {
+  if (automationTickTimerId) {
+    clearInterval(automationTickTimerId)
+    automationTickTimerId = null
+  }
+  if (!settings.value.aiAutomation?.masterEnabled) return
+
+  const interval =
+    systemStore.aiAutomationQueue.length > 0
+      ? ROOT_AUTOMATION_ACTIVE_TICK_MS
+      : ROOT_AUTOMATION_IDLE_TICK_MS
+  automationTickTimerId = setInterval(() => {
+    if (document.hidden) return
+    void runAutomationRootTick()
+  }, interval)
 }
 
 const runPushStartupSelfHeal = async () => {
@@ -729,11 +757,10 @@ onMounted(() => {
   document.addEventListener('visibilitychange', backupReminderVisibilityHandler, { passive: true })
   mapStore.ensureMapAutomationHandlerRegistered()
   void runAutomationRootTick()
-  automationTickTimerId = setInterval(() => {
-    void runAutomationRootTick()
-  }, ROOT_AUTOMATION_TICK_MS)
+  restartAutomationTickTimer()
   automationVisibilityHandler = () => {
     if (document.hidden) return
+    restartAutomationTickTimer()
     void runAutomationRootTick()
   }
   document.addEventListener('visibilitychange', automationVisibilityHandler, { passive: true })

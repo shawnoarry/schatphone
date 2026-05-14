@@ -38,8 +38,8 @@ describe('push web baseline helpers', () => {
     expect(payload.route).toBe('/chat/1')
     expect(payload.source).toBe('chat_ai_reply')
     expect(payload.createdAt).toBe(123)
-    expect(payload.icon).toContain('icons/pwa-icon.svg')
-    expect(payload.badge).toContain('icons/pwa-icon.svg')
+    expect(payload.icon).toContain('icons/pwa-icon-192.png')
+    expect(payload.badge).toContain('icons/pwa-icon-192.png')
   })
 
   test('builds module-aware copy when standard mode is requested', () => {
