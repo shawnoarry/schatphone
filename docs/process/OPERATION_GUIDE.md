@@ -1,6 +1,6 @@
 # SchatPhone 操作指南（新版）
 
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-05-14
 
 This guide covers daily development, validation, and release workflow.  
 本指南用于日常开发、验收与提交流程。
@@ -38,6 +38,7 @@ npm run dev
 - `/worldbook` (WorldBook)
 - `/network` (Network)
 - `/appearance` (Appearance)
+- `/widgets` (Widget Center / Widget 中心)
 - `/chat` (Chat list)
 - `/chat-contacts` (Chat directory / 会话通讯录)
 - `/files` (Files)
@@ -52,13 +53,14 @@ npm run dev
 - Lock screen notifications can be tapped to unlock and open target route  
 锁屏通知可直接点击解锁并进入目标页面
 - Home customization should default to fixed slots and same-size widget replacement / Home 美化默认采用固定槽位与同尺寸 Widget 替换
+- Tap the Home Widgets icon to open `/widgets`; long-press it to enter Home widget edit mode / 点击 Home 的组件图标进入 `/widgets`；长按该图标进入 Home Widget 编辑模式
 - Legacy long-press layout edit may exist only behind experimental feature flags / 旧版长按布局编辑仅作为实验开关能力保留
 
 ## 5. Home Rules / Home 交互规则
 
 - Fixed page skeleton is the default Home model / 固定页面骨架是默认 Home 模型
 - Widget slots have stable sizes such as `1x1`, `2x1`, `2x2`, `4x2`, `4x3` / Widget 槽位保持稳定尺寸
-- Tap a slot to choose a same-size widget after the slot picker is implemented / 槽位选择器完成后，点击槽位选择同尺寸 Widget
+- In widget edit mode, tap a placed widget to choose a same-size replacement / Widget 编辑模式中，点击已放置的 Widget 可选择同尺寸替换项
 - Free drag and cross-page drag are experimental, not the default user path / 自由拖拽与跨屏拖拽是实验能力，不是默认用户路径
 - Default 5 pages (pages 3-5 reserved) / 默认 5 屏，后 3 屏预留
 - App entries and Dock items stay in fixed system-owned zones / App 入口与 Dock 项保持在系统固定区域
@@ -75,12 +77,13 @@ Settings home includes / Settings 首页包括：
 Independent entries / 独立入口：
 - `/network`
 - `/appearance`
+- `/widgets`
 
 Appearance sections / Appearance 二级菜单：
 - Theme and wallpaper / 主题与壁纸
 - Lock clock style / 锁屏时间样式
 - Font presets and custom stack / 字体预设与自定义字体栈
-- Widget template/create/import/manage / Widget 模板、创建、导入、管理
+- Widget Center shortcut / Widget 中心快捷入口
 
 ## 7. System Language Rule / 系统语言规则
 
@@ -139,18 +142,18 @@ Visible copy rule / 可见文案规则：
 
 ## 9. Custom Widget Quick Flow / 自定义 Widget 快速操作
 
-1. Open `/appearance`
-2. Enter Widget section / 进入 Widget 二级菜单
-3. Copy/export template as starting point / 复制或导出模板
-4. Fill name/size/code and add / 填写名称、尺寸与代码
-5. Assign the widget to a compatible Home slot when slot assignment is available / 槽位分配完成后，将 Widget 分配到兼容的 Home 槽位
+1. Tap the Home Widgets icon or open `/widgets` from Appearance / 点击 Home 的组件图标，或从 Appearance 进入 `/widgets`
+2. Choose Library, Custom, or Import / 选择组件库、自定义或导入
+3. Fill name/size/content and add / 填写名称、尺寸与内容
+4. Long-press the Home Widgets icon to enter widget edit mode / 长按 Home 的组件图标进入 Widget 编辑模式
+5. Tap a placed widget and choose a same-size replacement / 点击已放置 Widget，选择同尺寸替换项
 
 Built-in widget recovery / 内置 Widget 恢复：  
-Use the built-in restore panel to re-add widgets, then place them through compatible slot assignment. / 可在恢复面板恢复隐藏项，再通过兼容槽位分配放回 Home。
+Use `/widgets` to re-add or move built-in widgets, then use Home widget edit mode for same-size replacement. / 在 `/widgets` 中加入或移动内置 Widget，再通过 Home Widget 编辑模式进行同尺寸替换。
 
 Import / 导入：  
-Paste JSON array in Appearance import area.  
-在 Appearance 导入区粘贴 JSON 数组后导入。
+Paste widget array in `/widgets` Import.
+在 `/widgets` 的导入区粘贴 Widget 数组后导入。
 
 ## 10. Network API Quick Flow / 网络 API 快速操作
 

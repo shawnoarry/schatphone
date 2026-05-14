@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide / SchatPhone 项目总说明
 
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-05-14
 
 ## 1. Why This File Exists / 这份文档的用途
 
@@ -148,6 +148,8 @@ Rule: components should not directly implement provider fetch logic; use `src/li
 Widget 与应用入口组织，含编辑模式开关门控。
 3. App entry tiles are protected from hide/delete.  
 应用入口 tile 禁止隐藏/删除。
+4. Widget Center is a system-owned entry: tap the Home Widgets icon or open `/widgets` from Appearance; long-press the Home Widgets icon to enter Home widget edit mode.
+Widget 中心是系统层入口：点击 Home 的组件图标或从 Appearance 进入 `/widgets`；长按 Home 组件图标进入 Home Widget 编辑模式。
 
 ### 7.3 Settings / 设置
 
@@ -307,4 +309,3 @@ Archived docs / 已归档文档：
 2026-04-06：由原先分散的状态/架构/进度文档整合生成本主说明。
 2. 2026-04-12: synced confirmed world-map direction (world kernel split plan + map simulation-first baseline) and clarified current-vs-target data model.
 2026-04-12：同步世界观-地图已确认方向（世界内核拆分计划 + 地图模拟优先基线），并明确当前与目标数据模型差异。
-

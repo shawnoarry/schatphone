@@ -5,6 +5,7 @@ const LockScreen = () => import('../views/LockScreen.vue')
 const HomeView = () => import('../views/HomeView.vue')
 const SettingsView = () => import('../views/SettingsView.vue')
 const AppearanceView = () => import('../views/AppearanceView.vue')
+const WidgetsView = () => import('../views/WidgetsView.vue')
 const NetworkView = () => import('../views/NetworkView.vue')
 const ChatView = () => import('../views/ChatView.vue')
 const ChatDirectoryView = () => import('../views/ChatDirectoryView.vue')
@@ -29,6 +30,7 @@ const router = createRouter({
     { path: '/home', component: HomeView },
     { path: '/settings', component: SettingsView },
     { path: '/appearance', component: AppearanceView },
+    { path: '/widgets', component: WidgetsView },
     { path: '/network', component: NetworkView },
     { path: '/chat', component: ChatView },
     { path: '/chat-contacts', component: ChatDirectoryView },

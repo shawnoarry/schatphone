@@ -1,6 +1,6 @@
 # SchatPhone Design System
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 
 This document defines the visual ownership model for SchatPhone. SchatPhone is an immersive virtual-phone OS shell, not a single ordinary app. Its design must distinguish between the native phone system and the installed apps running inside it.
 
@@ -86,6 +86,8 @@ Native system surfaces:
   - Backup, storage, notification, diagnostics, automation settings
 - `src/views/AppearanceView.vue`
   - Theme, wallpaper, font, icon, widget, and visual customization controls
+- `src/views/WidgetsView.vue`
+  - Widget library, custom widget creation, import, and Home placement
 - `src/views/NetworkView.vue`
   - System-level AI/network provider configuration
 - `src/views/UserProfileView.vue`
@@ -116,6 +118,7 @@ Default direction:
 - Each slot has a stable size, such as `1x1`, `2x1`, `2x2`, `4x2`, or `4x3`.
 - Users customize Home by replacing the content inside a slot, not by freely dragging every item.
 - A widget picker opened from a slot should only show widgets that match that slot size.
+- The Home `Widgets` entry is the primary user-facing shortcut for widget customization: tap opens `/widgets`, long-press enters Home widget edit mode.
 - App entries and the Dock stay in fixed system-owned zones.
 - Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
 - Extra apps should go to an App Library, More page, or another system-owned overflow surface.
@@ -223,6 +226,7 @@ docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 | Foreground notification banner | Native System + App Accent | System card with app icon/accent. |
 | `/settings` | Native System | OS settings hub. |
 | `/appearance` | Native System | Visual customization center. |
+| `/widgets` | Native System | Widget library and Home widget management. Tap the Home Widgets icon to open it; long-press the same icon to edit Home widget placement. |
 | `/network` | Native System | Provider/network configuration when reached as system setup. |
 | `/profile` | Native System | System-owned user identity when reached as OS profile. |
 | `/worldbook` | Native System | Full management page is system-owned when reached from Settings/system utilities. In-app WorldBook previews inherit the host app. |

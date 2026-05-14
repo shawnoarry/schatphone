@@ -1,6 +1,6 @@
 # Visual Entry Ownership Map
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 
 This document maps SchatPhone surfaces by **where the user enters from**, not only by route, file name, or data source.
 
@@ -34,6 +34,7 @@ These are system-owned when reached directly from the phone shell or Settings.
 | Global shell | `src/App.vue` status bar, home indicator, foreground banner | Native System / System Shell With App Accent | App banner content may use app accent, but material remains system-owned. |
 | Home/Dock -> Settings | `/settings` | Native System | OS settings hub. |
 | Settings -> Appearance, Home -> Themes icon | `/appearance` | Native System | Even with a Home icon, this controls the phone visual system, so keep system customization language. |
+| Home -> Widgets icon, Appearance -> Widget Center | `/widgets` | Native System | Widget library and Home widget management are OS-level customization surfaces. Tap opens the library; long-press the Home Widgets icon enters Home widget edit mode. |
 | Settings -> Network, Home -> Network icon | `/network` | Native System | Provider/network configuration is system-level. If a future app-local network picker exists, reassess by context. |
 | Settings -> Profile | `/profile` | Native System | System-owned user identity. |
 | Settings -> WorldBook | `/worldbook` | Native System | Full world-kernel management page. In-app WorldBook summaries are not covered by this row. |

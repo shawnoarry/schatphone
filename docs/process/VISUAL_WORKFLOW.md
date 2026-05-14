@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 
 This document defines the "Visual专项" workflow. It is separate from the feature-progress track and should be used when the team is discussing or implementing UI polish, visual design, interaction feel, layout refinement, motion, typography, color, or product-grade surface quality.
 
@@ -29,7 +29,7 @@ Visual专项 may change files that directly affect visual quality and interactio
 
 - Global styles and tokens: `src/style.css`
 - Shell surfaces: `src/App.vue`, `src/views/LockScreen.vue`, `src/views/HomeView.vue`
-- Appearance and customization: `src/views/AppearanceView.vue`
+- Appearance and customization: `src/views/AppearanceView.vue`, `src/views/WidgetsView.vue`
 - Settings presentation: `src/views/SettingsView.vue`, `src/components/settings/*`
 - Shared visual components: `src/components/*`
 - Module surfaces only when the requested polish requires it
@@ -57,6 +57,7 @@ If a visual change requires touching functional code, keep the change minimal an
 9. Determine visual ownership from the user's entry and parent context before looking at code ownership or data ownership.
 10. Do not restyle an in-app surface as a system page merely because it reads system/shared data.
 11. Audit all visible frontend copy during visual work. Developer comments, implementation notes, TODO text, debug labels, route names, store names, and temporary explanations must not appear in the rendered UI.
+12. For Home widget customization, prefer the visible Widgets entry over hidden gestures: tap opens the Widget Center, long-press enters widget edit mode, then same-size replacement happens from the Home context.
 
 ## 4. Entry-Context Audit
 

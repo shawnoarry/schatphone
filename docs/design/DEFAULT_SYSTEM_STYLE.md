@@ -1,6 +1,6 @@
 # Default System Style v1
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 
 This document defines the default native-system visual style for SchatPhone. It is the baseline style for the current version before any future WorldBook/worldview-driven visual profiles are introduced.
 
@@ -279,7 +279,8 @@ Direction:
 - Dock should be a strong native-system anchor.
 - Widget surfaces should be softer and less card-heavy than web widgets.
 - Home should use fixed widget slots as the default customization model.
-- A slot opens a same-size widget picker; users replace slot content instead of freely dragging every tile.
+- The Home Widgets icon is the visible customization entry: tap opens Widget Center; long-press enters Home widget edit mode.
+- A placed widget opens a same-size widget picker in edit mode; users replace slot content instead of freely dragging every tile.
 - App entries should stay in fixed system-owned zones, with overflow handled by an App Library or More surface.
 - Free drag may exist as an experimental or developer-only mode, but should not define the default experience.
 

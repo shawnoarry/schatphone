@@ -395,10 +395,11 @@ select {
 
 .home-title {
   margin: 0;
-  font-size: 36px;
+  font-size: 34px;
   line-height: 1;
-  font-weight: 300;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.12);
 }
 
 .home-accent {
@@ -444,11 +445,15 @@ select {
 .home-widget-card {
   width: 100%;
   height: 100%;
-  border-radius: var(--system-radius-lg);
+  border-radius: 22px;
   padding: 14px;
   border: 1px solid var(--home-widget-border);
-  background: var(--home-widget-bg);
-  box-shadow: var(--home-widget-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+    var(--home-widget-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    var(--home-widget-shadow);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
   transition: transform var(--system-motion-fast), filter var(--system-motion-fast);
@@ -501,7 +506,7 @@ select {
   font-size: 48px;
   line-height: 1;
   font-weight: 300;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .home-widget-music {
@@ -515,10 +520,12 @@ select {
   height: 72px;
   border-radius: 18px;
   flex-shrink: 0;
-  background-image: url("https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=600&auto=format&fit=crop");
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(135deg, rgba(94, 119, 133, 0.96), rgba(37, 52, 65, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .home-music-meta {

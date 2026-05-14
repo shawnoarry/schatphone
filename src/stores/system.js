@@ -31,7 +31,7 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes'],
+  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_widgets'],
   [
     'system',
     'quick_heart',
@@ -65,6 +65,7 @@ const CORE_HOME_TILE_IDS = [
   'app_network',
   'app_wallet',
   'app_themes',
+  'app_widgets',
   'app_phone',
   'app_map',
   'app_calendar',
