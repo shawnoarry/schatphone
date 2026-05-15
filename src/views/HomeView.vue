@@ -6,15 +6,8 @@ import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
-import {
-  HOME_APP_REGISTRY_ADDITIONS,
-  HOME_FOLDER_REGISTRY,
-  HOME_FOLDER_TILE_KIND,
-  resolveHomeFolderChildRoute,
-  resolveHomeFolderPresentation,
-} from '../lib/home-entry-registry'
 
-const props = defineProps({
+defineProps({
   currentTime: {
     type: String,
     default: '',
@@ -33,27 +26,6 @@ const { confirmDialog } = useDialog()
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
-const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
-const smartPanelItems = computed(() => [
-  {
-    id: 'today',
-    icon: 'fas fa-calendar-check',
-    label: t('今日节奏', 'Today'),
-    value: props.currentDate || today.value.toLocaleDateString(homeLocale.value),
-  },
-  {
-    id: 'theme',
-    icon: 'fas fa-palette',
-    label: t('当前主题', 'Theme'),
-    value: activeThemeName.value || t('默认', 'Default'),
-  },
-  {
-    id: 'apps',
-    icon: 'fas fa-layer-group',
-    label: t('主屏页数', 'Pages'),
-    value: t(`${totalPages.value} 页`, `${totalPages.value} pages`),
-  },
-])
 
 const currentPage = ref(0)
 const touchStartX = ref(0)
@@ -68,6 +40,9 @@ const droppedTileId = ref('')
 const layoutToastText = ref('')
 const dragEdgeDirection = ref('')
 const ignoreAppOpenUntil = ref(0)
+const widgetEntryPressStartX = ref(0)
+const widgetEntryPressStartY = ref(0)
+const widgetReplaceTarget = ref(null)
 
 const dragTileId = ref('')
 const dragPointerId = ref(null)
@@ -77,12 +52,12 @@ const dragGhostX = ref(0)
 const dragGhostY = ref(0)
 const dragGhostWidth = ref(72)
 const dragGhostHeight = ref(72)
-const openFolderTileId = ref('')
 
 let longPressTimerId = null
 let lastDragPageSwitchAt = 0
 let layoutToastTimerId = null
 let droppedTileTimerId = null
+let widgetEntryLongPressTimerId = null
 
 const LONG_PRESS_MS = 600
 const LONG_PRESS_MOVE_THRESHOLD = 12
@@ -92,6 +67,7 @@ const LAYOUT_SLOT_COLUMNS = 4
 const LAYOUT_SLOT_ROWS = 6
 const LAYOUT_SLOT_GAP = 12
 const LAYOUT_SLOT_HEIGHT = 78
+const WIDGET_APP_TILE_ID = 'app_widgets'
 const LAYOUT_EDIT_LOCAL_STORAGE_KEY = 'schatphone:layout_edit_enabled'
 const LAYOUT_EDIT_ENV_ENABLED =
   typeof import.meta.env.VITE_ENABLE_LAYOUT_EDIT === 'string' &&
@@ -119,6 +95,8 @@ const WIDGET_VARIANT_META = {
   disc: { label: '快捷唱片', icon: 'fas fa-compact-disc' },
 }
 
+const BUILT_IN_WIDGET_ORDER = ['weather', 'calendar', 'music', 'system', 'quick_heart', 'quick_disc']
+
 const CUSTOM_WIDGET_SPAN_CLASS_MAP = {
   '1x1': 'col-span-1 row-span-1',
   '2x1': 'col-span-2 row-span-1',
@@ -138,6 +116,7 @@ const widgetRegistry = {
   app_wallet: { kind: 'app', icon: 'fas fa-wallet', label: 'Wallet', accent: 'warm', route: '/wallet' },
   app_gallery: { kind: 'app', icon: 'fas fa-images', label: 'Photos', accent: 'light', route: '/gallery' },
   app_themes: { kind: 'app', icon: 'fas fa-palette', label: 'Themes', accent: 'default', route: '/appearance' },
+  app_widgets: { kind: 'app', icon: 'fas fa-table-cells-large', label: 'Widgets', accent: 'light', route: '/widgets' },
   app_phone: { kind: 'app', icon: 'fas fa-phone', label: 'Phone', accent: 'default', route: '/phone' },
   app_map: { kind: 'app', icon: 'fas fa-map-location-dot', label: 'Map', accent: 'cool', route: '/map' },
   app_calendar: { kind: 'app', icon: 'fas fa-calendar-days', label: 'Calendar', accent: 'light', route: '/calendar' },
@@ -151,9 +130,8 @@ const widgetRegistry = {
     route: '/contacts',
   },
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
+  app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
   app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
-  ...HOME_APP_REGISTRY_ADDITIONS,
-  ...HOME_FOLDER_REGISTRY,
 }
 
 const resolveAppTileLabel = (tileId, fallback = '') => {
@@ -161,6 +139,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_wallet') return t('钱包', 'Wallet')
   if (tileId === 'app_gallery') return t('相册', 'Photos')
   if (tileId === 'app_themes') return t('外观', 'Themes')
+  if (tileId === 'app_widgets') return t('组件', 'Widgets')
   if (tileId === 'app_phone') return t('电话', 'Phone')
   if (tileId === 'app_map') return t('地图', 'Map')
   if (tileId === 'app_calendar') return t('日历', 'Calendar')
@@ -168,18 +147,9 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_chat') return t('聊天', 'Chat')
   if (tileId === 'app_contacts') return t('联系人', 'Contacts')
   if (tileId === 'app_settings') return t('设置', 'Settings')
-  if (tileId === 'app_shopping') return t('购物', 'Shopping')
-  if (tileId === 'app_food_delivery') return t('外卖', 'Food')
-  if (tileId === 'app_assets') return t('资产', 'Assets')
+  if (tileId === 'app_files') return t('文件', 'Files')
   if (tileId === 'app_more') return t('更多', 'More')
   return fallback
-}
-
-const localizeEntryText = (entry, zhKey = 'zh', enKey = 'en') => {
-  if (!entry || typeof entry !== 'object') return ''
-  return languageBase.value === 'zh'
-    ? entry[zhKey] || entry[enKey] || ''
-    : entry[enKey] || entry[zhKey] || ''
 }
 
 const resolveWidgetVariantLabel = (variant) => {
@@ -249,8 +219,8 @@ const activeTheme = computed(() => {
 })
 const activeThemeName = computed(() => {
   if (!activeTheme.value) return ''
-  if (activeTheme.value.id === 'y2k') return t('Y2K 蒸汽波', 'Y2K Vapor')
-  if (activeTheme.value.id === 'zen') return t('纯白', 'Pure White')
+  if (activeTheme.value.id === 'default') return t('默认系统', 'Default System')
+  if (activeTheme.value.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
   return activeTheme.value.name || ''
 })
 const canDragToPrevPage = computed(() => currentPage.value > 0)
@@ -272,22 +242,6 @@ const tileMeta = (tileId) => {
         icon: resolvedIconMeta.icon,
         accent: resolvedIconMeta.accent,
         label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
-      }
-    }
-    if (builtIn.kind === HOME_FOLDER_TILE_KIND) {
-      const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
-      const childEntries = Array.isArray(builtIn.childEntries) ? builtIn.childEntries : []
-      return {
-        ...builtIn,
-        icon: resolvedIconMeta.icon,
-        accent: resolvedIconMeta.accent,
-        label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
-        childEntries: childEntries.map((entry) => ({
-          ...entry,
-          label: localizeEntryText(entry),
-          desc: localizeEntryText(entry, 'descZh', 'descEn'),
-        })),
-        presentation: resolveHomeFolderPresentation(builtIn),
       }
     }
     return builtIn
@@ -318,6 +272,11 @@ const tileSpanForId = (tileId) => {
   return { cols, rows }
 }
 
+const tileSizeKeyForId = (tileId) => {
+  const { cols, rows } = tileSpanForId(tileId)
+  return `${cols}x${rows}`
+}
+
 const customWidgetSrcDoc = (tileId) => customWidgetSrcDocMap.value.get(tileId) || ''
 const hasActiveDrag = computed(() => layoutEditMode.value && !!dragTileId.value)
 const dragTileSpan = computed(() => tileSpanForId(dragTileId.value))
@@ -329,9 +288,9 @@ const dragGhostMeta = computed(() => {
   const meta = tileMeta(tileId)
   if (!meta) return null
 
-  if (meta.kind === 'app' || meta.kind === HOME_FOLDER_TILE_KIND) {
+  if (meta.kind === 'app') {
     return {
-      kind: meta.kind,
+      kind: 'app',
       label: meta.label,
       icon: meta.icon,
       accent: meta.accent || 'default',
@@ -370,15 +329,93 @@ const dragGhostStyle = computed(() => {
 const isLockedEntryTile = (tileId) => typeof tileId === 'string' && tileId.startsWith('app_')
 
 const canHideTile = (tileId) => !isLockedEntryTile(tileId)
-const openedFolderMeta = computed(() => tileMeta(openFolderTileId.value))
-const openedFolderPreviewEntries = computed(() => {
-  const entries = Array.isArray(openedFolderMeta.value?.childEntries)
-    ? openedFolderMeta.value.childEntries
-    : []
-  return entries.slice(0, 8)
-})
 
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
+
+const isReplaceableWidgetTile = (tileId) => {
+  const meta = tileMeta(tileId)
+  return meta?.kind === 'widget' || meta?.kind === 'custom_widget'
+}
+
+const homePageLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
+
+const widgetCandidateLabel = (tileId) => {
+  const meta = tileMeta(tileId)
+  if (!meta) return t('组件', 'Widget')
+  if (meta.kind === 'custom_widget') return meta.label || t('自定义组件', 'Custom Widget')
+  if (meta.kind === 'widget') return resolveWidgetVariantLabel(meta.variant)
+  return meta.label || t('组件', 'Widget')
+}
+
+const widgetCandidateIcon = (tileId) => {
+  const meta = tileMeta(tileId)
+  if (meta?.kind === 'custom_widget') return 'fas fa-code'
+  const variant = WIDGET_VARIANT_META[meta?.variant] || null
+  return variant?.icon || 'fas fa-puzzle-piece'
+}
+
+const widgetReplaceCandidates = computed(() => {
+  if (!widgetReplaceTarget.value?.size) return []
+  const targetSize = widgetReplaceTarget.value.size
+  const candidateIds = [...BUILT_IN_WIDGET_ORDER, ...customWidgets.value.map((widget) => widget.id)]
+  return candidateIds
+    .filter((tileId) => tileId !== widgetReplaceTarget.value.tileId)
+    .filter((tileId) => tileSizeKeyForId(tileId) === targetSize)
+    .map((tileId) => ({
+      tileId,
+      label: widgetCandidateLabel(tileId),
+      icon: widgetCandidateIcon(tileId),
+      pageIndex: tilePageIndexMap.value.get(tileId),
+    }))
+})
+
+const closeWidgetReplaceSheet = () => {
+  widgetReplaceTarget.value = null
+}
+
+const openWidgetReplaceSheet = (tileId) => {
+  if (!layoutEditMode.value || !isReplaceableWidgetTile(tileId)) return
+  const pageIndex = tilePageIndexMap.value.get(tileId)
+  if (typeof pageIndex !== 'number') return
+
+  widgetReplaceTarget.value = {
+    tileId,
+    label: widgetCandidateLabel(tileId),
+    size: tileSizeKeyForId(tileId),
+    pageIndex,
+  }
+  selectedTileId.value = tileId
+  maybeVibrate(8)
+}
+
+const replaceWidgetAtTarget = (replacementTileId) => {
+  const target = widgetReplaceTarget.value
+  if (!target?.tileId || !replacementTileId) return
+
+  const nextPages = widgetPages.value.map((page) => [...page])
+  nextPages.forEach((page) => {
+    for (let index = page.length - 1; index >= 0; index -= 1) {
+      if (page[index] === replacementTileId) {
+        page.splice(index, 1)
+      }
+    }
+  })
+
+  const targetPage = nextPages[target.pageIndex]
+  if (!targetPage) return
+
+  const targetIndex = targetPage.indexOf(target.tileId)
+  if (targetIndex < 0) return
+
+  targetPage[targetIndex] = replacementTileId
+  systemStore.setHomeWidgetPages(nextPages)
+  selectedTileId.value = replacementTileId
+  closeWidgetReplaceSheet()
+  triggerDroppedTileFeedback(replacementTileId)
+  triggerLayoutToast(t('组件已更换', 'Widget changed'))
+  maybeVibrate(12)
+  systemStore.saveNow()
+}
 
 const selectTileForLayout = (tileId) => {
   if (!layoutEditMode.value) return
@@ -422,15 +459,7 @@ const openAppById = (tileId) => {
   if (Date.now() < ignoreAppOpenUntil.value) return
 
   const tile = widgetRegistry[tileId]
-  if (!tile) return
-
-  if (tile.kind === HOME_FOLDER_TILE_KIND) {
-    maybeVibrate(8)
-    openFolderTileId.value = tileId
-    return
-  }
-
-  if (tile.kind !== 'app') return
+  if (!tile || tile.kind !== 'app') return
 
   if (tile.route) {
     maybeVibrate(8)
@@ -438,25 +467,51 @@ const openAppById = (tileId) => {
     return
   }
 
-  triggerLayoutToast(t(`应用「${tile.label}」正在开发中`, `App "${tile.label}" is in development`))
-}
-
-const closeHomeFolder = () => {
-  openFolderTileId.value = ''
-}
-
-const openFolderChildEntry = (entry) => {
-  const target = resolveHomeFolderChildRoute(entry)
-  if (!target) return
-  maybeVibrate(8)
-  closeHomeFolder()
-  router.push(target)
+  triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`))
 }
 
 const clearLongPressTimer = () => {
   if (!longPressTimerId) return
   clearTimeout(longPressTimerId)
   longPressTimerId = null
+}
+
+const clearWidgetEntryLongPressTimer = () => {
+  if (!widgetEntryLongPressTimerId) return
+  clearTimeout(widgetEntryLongPressTimerId)
+  widgetEntryLongPressTimerId = null
+}
+
+const enterWidgetLayoutMode = () => {
+  clearLongPressTimer()
+  clearWidgetEntryLongPressTimer()
+  resetDragState()
+  layoutEditMode.value = true
+  selectedTileId.value = ''
+  closeWidgetReplaceSheet()
+  clearTilePressed()
+  ignoreAppOpenUntil.value = Date.now() + 420
+  triggerLayoutToast(t('选择组件位置', 'Choose a widget position'))
+  maybeVibrate(16)
+}
+
+const scheduleWidgetEntryLongPress = (event) => {
+  if (layoutEditMode.value) return
+  clearWidgetEntryLongPressTimer()
+  widgetEntryPressStartX.value = event.clientX
+  widgetEntryPressStartY.value = event.clientY
+  widgetEntryLongPressTimerId = setTimeout(() => {
+    enterWidgetLayoutMode()
+  }, LONG_PRESS_MS)
+}
+
+const maybeCancelWidgetEntryLongPressByMove = (event) => {
+  if (!widgetEntryLongPressTimerId) return
+  const movedX = Math.abs(event.clientX - widgetEntryPressStartX.value)
+  const movedY = Math.abs(event.clientY - widgetEntryPressStartY.value)
+  if (movedX > LONG_PRESS_MOVE_THRESHOLD || movedY > LONG_PRESS_MOVE_THRESHOLD) {
+    clearWidgetEntryLongPressTimer()
+  }
 }
 
 const canStartLayoutLongPress = (event) => {
@@ -711,7 +766,14 @@ const resetDragState = () => {
 const startTileDrag = (tileId, event) => {
   markTilePressed(tileId)
 
-  if (!layoutEditMode.value) return
+  if (!layoutEditMode.value) {
+    if (tileId === WIDGET_APP_TILE_ID) {
+      scheduleWidgetEntryLongPress(event)
+    }
+    return
+  }
+
+  closeWidgetReplaceSheet()
 
   selectedTileId.value = tileId
   syncDragGhostSize(event)
@@ -737,7 +799,10 @@ const startTileDrag = (tileId, event) => {
 }
 
 const onTilePointerMove = (event) => {
-  if (!layoutEditMode.value) return
+  if (!layoutEditMode.value) {
+    maybeCancelWidgetEntryLongPressByMove(event)
+    return
+  }
   if (!dragTileId.value || dragPointerId.value !== event.pointerId) return
 
   event.preventDefault()
@@ -779,6 +844,7 @@ const onTilePointerMove = (event) => {
 }
 
 const stopTileDrag = (event) => {
+  clearWidgetEntryLongPressTimer()
   clearTilePressed()
 
   if (!layoutEditMode.value) return
@@ -791,6 +857,7 @@ const stopTileDrag = (event) => {
       triggerLayoutToast(t('布局已保存', 'Layout saved'))
       maybeVibrate(12)
       systemStore.saveNow()
+      ignoreAppOpenUntil.value = Date.now() + 220
     }
     selectedTileId.value = dragTileId.value
   }
@@ -801,17 +868,24 @@ const stopTileDrag = (event) => {
 
 const onTileClick = (tileId) => {
   if (!layoutEditMode.value) return
+  if (Date.now() < ignoreAppOpenUntil.value) return
+  if (isReplaceableWidgetTile(tileId)) {
+    openWidgetReplaceSheet(tileId)
+    return
+  }
   selectTileForLayout(tileId)
 }
 
 const clearSelectedTile = () => {
   selectedTileId.value = ''
+  closeWidgetReplaceSheet()
   maybeVibrate(8)
 }
 
 const onGridClick = (pageIndex, event) => {
   if (!layoutEditMode.value || !selectedTileId.value) return
   if (hasActiveDrag.value) return
+  if (widgetReplaceTarget.value) return
 
   const target = event.target
   if (!(target instanceof HTMLElement)) return
@@ -837,6 +911,7 @@ const onGridClick = (pageIndex, event) => {
 const onLayoutSlotClick = (pageIndex, slotIndex) => {
   if (!layoutEditMode.value || !selectedTileId.value) return
   if (hasActiveDrag.value) return
+  if (widgetReplaceTarget.value) return
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
@@ -856,8 +931,8 @@ const hideTileFromHome = (tileId) => {
   if (selectedTileId.value === tileId) {
     selectedTileId.value = ''
   }
-  if (openFolderTileId.value === tileId) {
-    closeHomeFolder()
+  if (widgetReplaceTarget.value?.tileId === tileId) {
+    closeWidgetReplaceSheet()
   }
   triggerLayoutToast(t('组件已隐藏', 'Widget hidden'))
   maybeVibrate(10)
@@ -882,6 +957,7 @@ const resetHomeLayout = async () => {
 const exitLayoutMode = () => {
   resetDragState()
   selectedTileId.value = ''
+  closeWidgetReplaceSheet()
   clearTilePressed()
   dragEdgeDirection.value = ''
   layoutEditMode.value = false
@@ -891,8 +967,8 @@ const exitLayoutMode = () => {
 
 onBeforeUnmount(() => {
   clearLongPressTimer()
+  clearWidgetEntryLongPressTimer()
   resetDragState()
-  closeHomeFolder()
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   if (droppedTileTimerId) clearTimeout(droppedTileTimerId)
 })
@@ -913,13 +989,13 @@ onBeforeUnmount(() => {
     <div v-if="layoutEditMode" class="home-edit-topbar" data-no-layout-longpress>
       <button @click="resetHomeLayout" class="home-edit-btn">{{ t('重置', 'Reset') }}</button>
       <span class="home-edit-title">
-        {{ t('编辑主屏', 'Edit Home') }}
+        {{ t('主屏位置', 'Home Layout') }}
         <span v-if="selectedTileId" class="home-edit-tip">
-          {{ t(' · 可拖拽吸附，也可点半透明格子投放', ' · Drag to snap or tap transparent slots to place') }}
+          {{ t(' · 已选择项目', ' · Item selected') }}
         </span>
       </span>
       <div class="home-edit-actions">
-        <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">{{ t('取消选中', 'Clear Selection') }}</button>
+        <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">{{ t('取消', 'Clear') }}</button>
         <button @click="exitLayoutMode" class="home-edit-btn is-primary">{{ t('完成', 'Done') }}</button>
       </div>
     </div>
@@ -927,6 +1003,50 @@ onBeforeUnmount(() => {
     <div v-if="layoutToastText" class="home-layout-toast" aria-live="polite">
       <i class="fas fa-check-circle"></i>
       <span>{{ layoutToastText }}</span>
+    </div>
+
+    <div v-if="widgetReplaceTarget" class="home-widget-replace-sheet" data-no-layout-longpress>
+      <div class="home-widget-replace-head">
+        <div>
+          <span>{{ widgetReplaceTarget.size }}</span>
+          <h2>{{ t('更换组件', 'Change Widget') }}</h2>
+          <p>{{ widgetReplaceTarget.label }} · {{ homePageLabel(widgetReplaceTarget.pageIndex) }}</p>
+        </div>
+        <button
+          class="home-widget-replace-close"
+          type="button"
+          @click="closeWidgetReplaceSheet"
+          :aria-label="t('关闭', 'Close')"
+        >
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+      <div v-if="widgetReplaceCandidates.length > 0" class="home-widget-replace-list">
+        <button
+          v-for="candidate in widgetReplaceCandidates"
+          :key="candidate.tileId"
+          class="home-widget-replace-option"
+          type="button"
+          @click="replaceWidgetAtTarget(candidate.tileId)"
+        >
+          <span class="home-widget-replace-icon">
+            <i :class="candidate.icon"></i>
+          </span>
+          <span class="home-widget-replace-copy">
+            <strong>{{ candidate.label }}</strong>
+            <small>
+              {{
+                typeof candidate.pageIndex === 'number'
+                  ? `${homePageLabel(candidate.pageIndex)} · ${t('将移动到这里', 'Move here')}`
+                  : t('加入当前位置', 'Add here')
+              }}
+            </small>
+          </span>
+        </button>
+      </div>
+      <p v-else class="home-widget-replace-empty">
+        {{ t('暂无同尺寸组件。', 'No same-size widgets yet.') }}
+      </p>
     </div>
 
     <div v-if="layoutEditMode && hasActiveDrag" class="home-drag-edge-hints" aria-hidden="true">
@@ -947,7 +1067,7 @@ onBeforeUnmount(() => {
     <div v-if="hasActiveDrag" class="home-drag-ghost" :style="dragGhostStyle" aria-hidden="true">
       <div class="home-drag-ghost-body">
         <span
-          v-if="dragGhostMeta?.kind === 'app' || dragGhostMeta?.kind === HOME_FOLDER_TILE_KIND"
+          v-if="dragGhostMeta?.kind === 'app'"
           class="home-drag-ghost-icon"
           :style="iconStyle(dragGhostMeta.accent)"
         >
@@ -969,32 +1089,9 @@ onBeforeUnmount(() => {
           <p class="home-subtitle">{{ t('一切准备就绪。', 'Everything is ready.') }}</p>
         </div>
 
-        <section
-          v-if="pageIndex === 0 && smartPanelEnabled"
-          class="home-smart-panel"
-          data-testid="home-smart-panel"
-        >
-          <div class="home-smart-panel-head">
-            <div>
-              <p class="home-smart-kicker">{{ t('More Labs', 'More Labs') }}</p>
-              <h2>{{ t('智能面板', 'Smart Panel') }}</h2>
-            </div>
-            <span>{{ t('只读', 'Read-only') }}</span>
-          </div>
-          <div class="home-smart-grid">
-            <article v-for="item in smartPanelItems" :key="item.id" class="home-smart-card">
-              <i :class="item.icon"></i>
-              <div>
-                <p>{{ item.label }}</p>
-                <strong>{{ item.value }}</strong>
-              </div>
-            </article>
-          </div>
-        </section>
-
         <div class="home-search-pill" v-if="pageIndex === 1">
           <i class="fas fa-search"></i>
-          <span>{{ t('搜索系统...', 'Search System...') }}</span>
+          <span>{{ t('搜索手机', 'Search phone') }}</span>
         </div>
 
         <div class="home-grid-wrap">
@@ -1061,8 +1158,8 @@ onBeforeUnmount(() => {
                     <div class="home-music-cover"></div>
                     <div class="home-music-meta">
                       <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
-                      <h3>Cyber Heart</h3>
-                      <p>Neo Tokyo 2077 Mix</p>
+                      <h3>{{ t('晚间电台', 'Evening Radio') }}</h3>
+                      <p>{{ t('日常播放列表', 'Daily Mix') }}</p>
                       <div class="home-progress">
                         <div class="home-progress-fill"></div>
                       </div>
@@ -1075,7 +1172,7 @@ onBeforeUnmount(() => {
                       <span>{{ t('系统', 'System') }}</span>
                     </div>
                     <div class="home-widget-bottomline">
-                      <span>CPU 42%</span>
+                      <span>{{ t('电量 86%', 'Battery 86%') }}</span>
                     </div>
                     <div class="home-progress">
                       <div class="home-progress-fill home-progress-fill-system"></div>
@@ -1094,26 +1191,6 @@ onBeforeUnmount(() => {
                 <button class="home-app-tile" v-else-if="tileMeta(tileId)?.kind === 'app'" @click="openAppById(tileId)">
                   <span class="home-app-icon" :style="iconStyle(tileMeta(tileId).accent)">
                     <i :class="tileMeta(tileId).icon"></i>
-                  </span>
-                  <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
-                </button>
-
-                <button
-                  class="home-app-tile home-folder-tile"
-                  v-else-if="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
-                  @click="openAppById(tileId)"
-                  :data-testid="`home-folder-${tileId}`"
-                >
-                  <span class="home-app-icon home-folder-icon" :style="iconStyle(tileMeta(tileId).accent)">
-                    <span class="home-folder-preview-grid" aria-hidden="true">
-                      <span
-                        v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
-                        :key="entry.key"
-                        class="home-folder-preview-cell"
-                      >
-                        <i :class="entry.icon"></i>
-                      </span>
-                    </span>
                   </span>
                   <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
                 </button>
@@ -1162,10 +1239,6 @@ onBeforeUnmount(() => {
           :aria-label="`${t('前往第', 'Go to page ')}${index}${t('页', '')}`"
         ></button>
       </div>
-      <p class="text-[10px] text-white/70 mt-1" v-if="layoutEditFeatureEnabled && !layoutEditMode">
-        {{ t('长按桌面空白处可进入布局编辑', 'Long press an empty area to enter layout edit') }}
-      </p>
-
       <div class="home-dock">
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_chat').accent)" @click="openAppById('app_chat')">
           <i :class="dockAppMeta('app_chat').icon"></i>
@@ -1182,41 +1255,6 @@ onBeforeUnmount(() => {
       </div>
       <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>
     </div>
-
-    <div
-      v-if="openedFolderMeta?.kind === HOME_FOLDER_TILE_KIND"
-      class="home-folder-overlay"
-      data-testid="home-folder-overlay"
-      data-no-layout-longpress
-      @click.self="closeHomeFolder"
-    >
-      <section class="home-folder-panel" :data-folder-presentation="openedFolderMeta.presentation.openAnimation">
-        <div class="home-folder-panel-head">
-          <div>
-            <p>{{ t('文件夹', 'Folder') }}</p>
-            <h2>{{ openedFolderMeta.label }}</h2>
-          </div>
-          <button @click="closeHomeFolder" :aria-label="t('关闭文件夹', 'Close folder')">
-            <i class="fas fa-xmark"></i>
-          </button>
-        </div>
-        <div class="home-folder-entry-grid">
-          <button
-            v-for="entry in openedFolderPreviewEntries"
-            :key="entry.key"
-            class="home-folder-entry"
-            :data-testid="`home-folder-entry-${entry.key}`"
-            @click="openFolderChildEntry(entry)"
-          >
-            <span class="home-folder-entry-icon" :style="iconStyle(entry.accent)">
-              <i :class="entry.icon"></i>
-            </span>
-            <span class="home-folder-entry-label">{{ entry.label }}</span>
-            <span class="home-folder-entry-desc">{{ entry.desc }}</span>
-          </button>
-        </div>
-      </section>
-    </div>
   </div>
 </template>
 
@@ -1224,15 +1262,20 @@ onBeforeUnmount(() => {
 .home-edit-topbar {
   position: absolute;
   top: 44px;
-  left: 0;
-  right: 0;
+  left: 10px;
+  right: 10px;
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: rgba(20, 24, 34, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.18);
 }
 
 .home-edit-actions {
@@ -1245,6 +1288,7 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 12px;
   font-weight: 600;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1266,11 +1310,154 @@ onBeforeUnmount(() => {
   gap: 6px;
   font-size: 11px;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(17, 24, 39, 0.64);
+  border: 1px solid var(--system-border-light);
+  background: rgba(17, 24, 39, 0.58);
   border-radius: 999px;
   padding: 5px 10px;
-  backdrop-filter: blur(10px);
+  box-shadow: var(--system-shadow-soft);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
+}
+
+.home-widget-replace-sheet {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 66;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(19, 25, 34, 0.72);
+  box-shadow: 0 24px 54px rgba(8, 13, 22, 0.28);
+  color: #fff;
+  padding: 12px;
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
+}
+
+.home-widget-replace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.home-widget-replace-head span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.home-widget-replace-head h2 {
+  margin: 6px 0 2px;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.home-widget-replace-head p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.home-widget-replace-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.home-widget-replace-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.home-widget-replace-option {
+  min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.home-widget-replace-option:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.home-widget-replace-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 14px;
+}
+
+.home-widget-replace-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-widget-replace-copy strong,
+.home-widget-replace-copy small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-widget-replace-copy strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.home-widget-replace-copy small {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.home-widget-replace-empty {
+  margin: 0;
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
+  font-size: 12px;
 }
 
 .home-drag-edge-hints {
@@ -1307,23 +1494,24 @@ onBeforeUnmount(() => {
 
 .home-drag-edge.is-active {
   color: #fff;
-  background: rgba(37, 99, 235, 0.4);
+  background: var(--system-accent-soft);
   border-color: rgba(191, 219, 254, 0.8);
 }
 
 .home-edit-btn {
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 11px;
   line-height: 1;
-  padding: 6px 10px;
+  min-height: 28px;
+  padding: 7px 10px;
   background: rgba(255, 255, 255, 0.12);
 }
 
 .home-edit-btn.is-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--system-accent);
+  border-color: var(--system-accent);
 }
 
 .home-tile {
@@ -1339,9 +1527,10 @@ onBeforeUnmount(() => {
 }
 
 .home-tile.is-layout-selected {
-  outline: 2px solid rgba(59, 130, 246, 0.95);
-  outline-offset: 3px;
-  border-radius: 20px;
+  outline: 2px solid rgba(255, 255, 255, 0.72);
+  outline-offset: 4px;
+  border-radius: 22px;
+  filter: saturate(1.05);
 }
 
 .home-tile.is-drop-confirm .home-widget-card,
@@ -1362,7 +1551,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #ef4444;
+  background: var(--system-danger);
   color: #fff;
   font-size: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -1379,10 +1568,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #2563eb;
+  background: rgba(18, 26, 36, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.58);
   color: #fff;
   font-size: 10px;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
 }
 
 .home-grid-wrap {
@@ -1391,81 +1581,6 @@ onBeforeUnmount(() => {
 
 .home-grid.is-editing {
   min-height: calc(6 * 78px + 5 * 12px);
-}
-
-.home-smart-panel {
-  margin: -8px 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 22px;
-  padding: 13px;
-  background: rgba(15, 23, 42, 0.28);
-  color: #fff;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
-}
-
-.home-smart-panel-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.home-smart-panel-head h2 {
-  margin: 2px 0 0;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.home-smart-panel-head span {
-  border-radius: 999px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.18);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.home-smart-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.72;
-}
-
-.home-smart-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.home-smart-card {
-  min-width: 0;
-  border-radius: 16px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.home-smart-card i {
-  font-size: 13px;
-  opacity: 0.82;
-}
-
-.home-smart-card p {
-  margin-top: 7px;
-  font-size: 10px;
-  opacity: 0.72;
-}
-
-.home-smart-card strong {
-  display: block;
-  margin-top: 2px;
-  font-size: 11px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .home-grid-slot-overlay {
@@ -1479,31 +1594,35 @@ onBeforeUnmount(() => {
 }
 
 .home-grid-slot {
-  border-radius: 18px;
-  border: 1px dashed rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.11);
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.045);
   transition: background 120ms ease, border-color 120ms ease;
 }
 
 .home-grid-slot:active {
-  background: rgba(59, 130, 246, 0.25);
-  border-color: rgba(96, 165, 250, 0.9);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .home-grid-drop-preview {
   pointer-events: none;
-  border-radius: 18px;
-  border: 1px solid rgba(96, 165, 250, 0.95);
-  background: rgba(59, 130, 246, 0.24);
-  box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.95);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 12px 26px rgba(15, 23, 42, 0.16);
   transition: all 150ms cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .home-custom-widget-card {
   width: 100%;
   height: 100%;
-  border-radius: 22px;
+  border-radius: var(--system-radius-lg);
   border: 1px solid var(--home-widget-border);
   background: var(--home-widget-bg);
   box-shadow: var(--home-widget-shadow);
@@ -1557,10 +1676,11 @@ onBeforeUnmount(() => {
 .home-drag-ghost-body {
   width: 100%;
   height: 100%;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  background: rgba(13, 25, 52, 0.58);
-  backdrop-filter: blur(16px);
+  border-radius: var(--system-radius-md);
+  border: 1px solid var(--system-border-light);
+  background: rgba(13, 25, 52, 0.54);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.15);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1594,169 +1714,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.home-folder-tile {
-  position: relative;
-}
-
-.home-folder-icon {
-  padding: 7px;
-  overflow: hidden;
-}
-
-.home-folder-preview-grid {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.home-folder-preview-cell {
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.24);
-  font-size: 11px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-}
-
-.home-folder-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 22px;
-  background: rgba(8, 13, 28, 0.36);
-  backdrop-filter: blur(18px);
-  animation: home-folder-overlay-in 180ms ease-out;
-}
-
-.home-folder-panel {
-  width: min(100%, 330px);
-  max-height: min(78%, 560px);
-  overflow: hidden;
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(20, 25, 43, 0.58);
-  color: #fff;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
-  backdrop-filter: blur(24px);
-  padding: 18px;
-  animation: home-folder-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.home-folder-panel-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 15px;
-}
-
-.home-folder-panel-head p {
-  margin: 0;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.65;
-}
-
-.home-folder-panel-head h2 {
-  margin: 3px 0 0;
-  font-size: 22px;
-  line-height: 1.1;
-  font-weight: 800;
-}
-
-.home-folder-panel-head button {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-
-.home-folder-entry-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  overflow-y: auto;
-  max-height: 430px;
-  padding-right: 2px;
-}
-
-.home-folder-entry {
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
-  padding: 12px;
-  text-align: left;
-  transition: transform 120ms ease, background 120ms ease;
-}
-
-.home-folder-entry:active {
-  transform: scale(0.97);
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.home-folder-entry-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
-}
-
-.home-folder-entry-label {
-  display: block;
-  margin-top: 9px;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.home-folder-entry-desc {
-  display: block;
-  margin-top: 3px;
-  min-height: 32px;
-  font-size: 10px;
-  line-height: 1.45;
-  opacity: 0.72;
-}
-
-@keyframes home-folder-overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes home-folder-panel-in {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
 }
 
 @keyframes home-drag-lift {

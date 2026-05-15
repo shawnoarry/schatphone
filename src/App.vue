@@ -31,12 +31,16 @@ const mapStore = useMapStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, notifications } = storeToRefs(systemStore)
-const { loadingAI } = storeToRefs(chatStore)
 
 const currentTime = ref('')
 const currentDate = ref('')
 const currentWallpaper = ref('')
 const customVarStyle = computed(() => settings.value.appearance.customVars || {})
+const screenBackgroundImage = computed(() => {
+  const wallpaper = typeof currentWallpaper.value === 'string' ? currentWallpaper.value.trim() : ''
+  if (!wallpaper) return 'var(--system-wallpaper-fallback)'
+  return `url(${JSON.stringify(wallpaper)}), var(--system-wallpaper-fallback)`
+})
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
@@ -74,7 +78,8 @@ let seenShellNotificationIds = new Set()
 const MAP_AUTOMATION_MODULE_KEY = 'map'
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MAP_AUTOMATION_INTERVAL_MS = 6 * 60 * 1000
-const ROOT_AUTOMATION_TICK_MS = 1500
+const ROOT_AUTOMATION_IDLE_TICK_MS = 30 * 1000
+const ROOT_AUTOMATION_ACTIVE_TICK_MS = 5 * 1000
 const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
 const PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC = 'resync'
 const SHELL_WALLPAPER_PREVIEW_SCOPE = 'app-shell-wallpaper'
@@ -264,6 +269,15 @@ watch(
 )
 
 watch(
+  () => settings.value.appearance?.currentTheme,
+  (themeId) => {
+    if (typeof document === 'undefined') return
+    document.documentElement.setAttribute('data-theme', themeId || 'default')
+  },
+  { immediate: true },
+)
+
+watch(
   () => {
     const wallpaperAssetId =
       typeof settings.value.appearance?.wallpaperAssetId === 'string'
@@ -307,9 +321,18 @@ watch(
     if (!systemStore.isAiAutomationEnabledForModule(MAP_AUTOMATION_MODULE_KEY)) {
       mapAutoNextAt = 0
     }
+    restartAutomationTickTimer()
     void runAutomationRootTick()
   },
   { deep: true },
+)
+
+watch(
+  () => systemStore.aiAutomationQueue.length,
+  () => {
+    restartAutomationTickTimer()
+    void runAutomationRootTick()
+  },
 )
 
 watch(
@@ -448,11 +471,29 @@ const enqueueMapAutomationTaskIfDue = (baseAt = Date.now()) => {
 }
 
 const runAutomationRootTick = async () => {
+  if (!settings.value.aiAutomation?.masterEnabled) return
   enqueueMapAutomationTaskIfDue(Date.now())
   for (let i = 0; i < 4; i += 1) {
     const result = await systemStore.runAiAutomationQueueTick(Date.now())
     if (!result?.handled && !result?.queueAdvanced) break
   }
+}
+
+const restartAutomationTickTimer = () => {
+  if (automationTickTimerId) {
+    clearInterval(automationTickTimerId)
+    automationTickTimerId = null
+  }
+  if (!settings.value.aiAutomation?.masterEnabled) return
+
+  const interval =
+    systemStore.aiAutomationQueue.length > 0
+      ? ROOT_AUTOMATION_ACTIVE_TICK_MS
+      : ROOT_AUTOMATION_IDLE_TICK_MS
+  automationTickTimerId = setInterval(() => {
+    if (document.hidden) return
+    void runAutomationRootTick()
+  }, interval)
 }
 
 const runPushStartupSelfHeal = async () => {
@@ -724,11 +765,10 @@ onMounted(() => {
   document.addEventListener('visibilitychange', backupReminderVisibilityHandler, { passive: true })
   mapStore.ensureMapAutomationHandlerRegistered()
   void runAutomationRootTick()
-  automationTickTimerId = setInterval(() => {
-    void runAutomationRootTick()
-  }, ROOT_AUTOMATION_TICK_MS)
+  restartAutomationTickTimer()
   automationVisibilityHandler = () => {
     if (document.hidden) return
+    restartAutomationTickTimer()
     void runAutomationRootTick()
   }
   document.addEventListener('visibilitychange', automationVisibilityHandler, { passive: true })
@@ -795,21 +835,13 @@ const lockPhone = () => {
 </script>
 
 <template>
-  <div class="fixed top-4 left-4 text-white text-xs opacity-50 hidden md:block z-[9999]">
-    <p>{{ t('SchatPhone 构建版本：1.2.0（开放）', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
-    <p>{{ t('主题', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
-    <p v-if="loadingAI" class="text-yellow-400 font-bold">
-      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 思考中...', 'AI Thinking...') }}
-    </p>
-  </div>
-
   <div
     class="app-shell"
     :data-theme="settings.appearance.currentTheme"
     :data-statusbar="showStatusBar ? 'on' : 'off'"
     :style="customVarStyle"
   >
-    <div class="screen" :style="{ backgroundImage: `url(${currentWallpaper})` }">
+    <div class="screen" :style="{ backgroundImage: screenBackgroundImage }">
       <div
         v-if="showStatusBar"
         class="absolute top-0 w-full h-8 px-6 flex justify-between items-center text-xs font-medium z-40 select-none status-fg"
@@ -872,18 +904,21 @@ const lockPhone = () => {
 <style scoped>
 .app-shell-banner {
   position: absolute;
-  top: 38px;
-  left: 12px;
-  right: 12px;
+  top: calc(38px + env(safe-area-inset-top));
+  left: 14px;
+  right: 14px;
   z-index: 45;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  border: 0;
-  border-radius: 18px;
-  padding: 10px 11px;
-  color: var(--status-fg);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.2);
+  border: 1px solid var(--system-border-light);
+  border-radius: var(--system-radius-md);
+  padding: 11px 12px;
+  color: var(--system-text);
+  background: var(--system-surface-strong);
+  box-shadow: var(--system-shadow-soft);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.25);
 }
 
 .app-shell-banner-icon {
@@ -894,25 +929,25 @@ const lockPhone = () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--system-accent-soft);
+  color: var(--system-accent);
 }
 
 .app-shell-banner-icon.accent-default,
 .app-shell-banner-chip.accent-default {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.94) 0%, rgba(79, 70, 229, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(93, 130, 149, 0.96) 0%, rgba(56, 94, 117, 0.94) 100%);
   color: #fff;
 }
 
 .app-shell-banner-icon.accent-cool,
 .app-shell-banner-chip.accent-cool {
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.94) 0%, rgba(14, 165, 233, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(111, 148, 154, 0.96) 0%, rgba(61, 105, 116, 0.94) 100%);
   color: #fff;
 }
 
 .app-shell-banner-icon.accent-warm,
 .app-shell-banner-chip.accent-warm {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.94) 0%, rgba(249, 115, 22, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(186, 133, 104, 0.96) 0%, rgba(143, 95, 79, 0.94) 100%);
   color: #fff;
 }
 
@@ -944,8 +979,8 @@ const lockPhone = () => {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--system-accent-soft);
+  color: var(--system-accent);
 }
 
 .app-shell-banner-time {
@@ -977,7 +1012,7 @@ const lockPhone = () => {
 
 .shell-banner-enter-active,
 .shell-banner-leave-active {
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition: opacity var(--system-motion-base), transform var(--system-motion-base);
 }
 
 .shell-banner-enter-from,
@@ -986,5 +1021,3 @@ const lockPhone = () => {
   transform: translateY(-10px) scale(0.98);
 }
 </style>
-
-

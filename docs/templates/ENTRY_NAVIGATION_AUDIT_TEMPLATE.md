@@ -10,6 +10,8 @@ Best practice / 最佳实践:
   强烈建议配截图。
 - Focus on “where I expected this to be” vs “where it actually is”.  
   重点写“我以为它会在哪”与“它实际上在哪”。
+- For visual work, this path also decides whether the surface should feel like Native System or an Installed App.
+  对视觉工作来说，这条路径也会决定界面应该像【本机系统】还是【装载 APP】。
 
 ---
 
@@ -61,15 +63,24 @@ Best practice / 最佳实践:
 - Which page should also contain this entry / 哪个相关页面也应该有这个入口:
 - Should it be top-level or sub-level? / 它应是一层入口还是二层入口:
 
-## 6) References / 参考
+## 6) Visual Ownership / 视觉归属
+- When I see this surface, I feel I am still inside / 当我看到这个界面时，我感觉自己还在:
+  本机系统 / Chat / Map / Gallery / Calendar / Contacts / Other
+- Data it uses / 它调用的数据:
+  例如：WorldBook / Gallery assets / Contacts / Map / Calendar
+- Visual style it should follow / 它应该跟随的视觉:
+- Visual style it should not jump to / 它不应该跳到的视觉:
+
+## 7) References / 参考
 - Current screenshots / 当前截图:
 - Marked screenshots / 标注截图:
 - Similar app examples / 类似 App 示例:
 
-## 7) Acceptance / 验收
+## 8) Acceptance / 验收
 - What would make this feel fixed / 怎样算修好了:
 - What path should become shorter / 哪条路径应该更短:
 - What wording should become clearer / 哪些文案应该更清楚:
+- What would preserve immersion / 怎样才算保持沉浸感:
 ```
 
 ---
@@ -91,4 +102,3 @@ Best practice / 最佳实践:
   当问题核心是路径混乱、层级错位、入口重复时，用这份模板。
 - If the problem is also visual, combine it with `VISUAL_REDESIGN_BRIEF_TEMPLATE.md`.  
   如果同时也涉及观感问题，建议与 `VISUAL_REDESIGN_BRIEF_TEMPLATE.md` 一起使用。
-

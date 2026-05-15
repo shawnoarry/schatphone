@@ -10,6 +10,7 @@ const APP_ICON_LABELS = {
   app_wallet: { zh: '钱包', en: 'Wallet', ko: '지갑' },
   app_gallery: { zh: '相册', en: 'Photos', ko: '사진' },
   app_themes: { zh: '外观', en: 'Themes', ko: '테마' },
+  app_widgets: { zh: '组件', en: 'Widgets', ko: '위젯' },
   app_phone: { zh: '电话', en: 'Phone', ko: '전화' },
   app_map: { zh: '地图', en: 'Map', ko: '지도' },
   app_calendar: { zh: '日历', en: 'Calendar', ko: '캘린더' },
@@ -28,6 +29,7 @@ const BUILT_IN_APP_ICON_META = {
   app_wallet: { icon: 'fas fa-wallet', accent: 'warm' },
   app_gallery: { icon: 'fas fa-images', accent: 'light' },
   app_themes: { icon: 'fas fa-palette', accent: 'default' },
+  app_widgets: { icon: 'fas fa-table-cells-large', accent: 'light' },
   app_phone: { icon: 'fas fa-phone', accent: 'default' },
   app_map: { icon: 'fas fa-map-location-dot', accent: 'cool' },
   app_calendar: { icon: 'fas fa-calendar-days', accent: 'light' },
@@ -49,6 +51,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_wallet',
   'app_gallery',
   'app_themes',
+  'app_widgets',
   'app_phone',
   'app_chat',
   'app_map',
@@ -75,6 +78,9 @@ export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-cog', zh: '齿轮', en: 'Gear', ko: '톱니바퀴' },
   { value: 'fas fa-sliders', zh: '滑杆', en: 'Sliders', ko: '슬라이더' },
   { value: 'fas fa-folder', zh: '文件夹', en: 'Folder', ko: '폴더' },
+  { value: 'fas fa-table-cells-large', zh: '组件网格', en: 'Widget Grid', ko: '위젯 그리드' },
+  { value: 'fas fa-puzzle-piece', zh: '组件拼块', en: 'Widget Piece', ko: '위젯 조각' },
+  { value: 'fas fa-shapes', zh: '组合图形', en: 'Shapes', ko: '도형' },
 ]
 
 export const APP_ICON_ACCENT_OPTIONS = [

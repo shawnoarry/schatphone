@@ -21,7 +21,7 @@ const normalizeBaseAssetPath = (path = '') => {
 }
 
 const SERVICE_WORKER_URL = normalizeBaseAssetPath('service-worker.js')
-const DEFAULT_PUSH_ICON = normalizeBaseAssetPath('icons/pwa-icon.svg')
+const DEFAULT_PUSH_ICON = normalizeBaseAssetPath('icons/pwa-icon-192.png')
 const MAX_PUSH_TEXT_LENGTH = 160
 const PUSH_DISPLAY_MODE_VALUES = ['minimal', 'standard', 'preview']
 const DEFAULT_PUSH_DISPLAY_MODE = 'minimal'

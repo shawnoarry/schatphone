@@ -1,6 +1,6 @@
 # SchatPhone 架构说明
 
-Updated / 更新时间: 2026-04-19
+Updated / 更新时间: 2026-05-14
 
 ## 1. Architecture Goals / 架构目标
 
@@ -112,6 +112,7 @@ Core routes / 核心路由：
 - Settings: `/settings`
 - Network: `/network`
 - Appearance: `/appearance`
+- Widgets: `/widgets`
 - Chat list: `/chat`
 - Chat directory: `/chat-contacts`
 - Chat thread: `/chat/:id`
@@ -227,8 +228,12 @@ Rules / 规则：
 - `app_*` entries cannot be hidden/deleted / `app_*` 不可隐藏或删除
 - Widgets and custom widgets can be hidden / Widget 与自定义 Widget 可隐藏
 - Default 5 pages, with pages 3-5 reserved / 默认 5 屏，后 3 屏预留
-- Layout edit is gated by env + localStorage feature flags  
-布局编辑能力受 env + localStorage 双开关控制
+- Tap Home Widgets to open `/widgets`; long-press Home Widgets to enter widget edit mode
+点击 Home 组件入口进入 `/widgets`；长按 Home 组件入口进入 Widget 编辑模式
+- In widget edit mode, placed widgets can be replaced only by same-size candidates
+Widget 编辑模式下，已放置 Widget 只能替换为同尺寸候选项
+- Legacy blank-area layout edit is gated by env + localStorage feature flags
+旧版空白区长按布局编辑受 env + localStorage 双开关控制
 
 ## 7. Data and Security Boundaries / 数据与安全边界
 
@@ -260,4 +265,3 @@ Rules / 规则：
 涉及路由/数据结构/主交互改动时，同步更新文档。
 6. If lock/i18n behavior changes, sync `README.md`, `docs/overview/PROJECT_MASTER_GUIDE.md`, and `docs/pm/TODO_PM_STATUS_REPORT.md`.  
 涉及锁屏或系统语言行为改动时，同步更新 `README.md`、`docs/overview/PROJECT_MASTER_GUIDE.md` 与 `docs/pm/TODO_PM_STATUS_REPORT.md`。
-

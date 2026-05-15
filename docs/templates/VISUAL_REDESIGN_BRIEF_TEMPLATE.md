@@ -10,6 +10,8 @@ Best practice / 最佳实践:
   如果你说不清风格，就写“像什么 / 不像什么 / 关键词”。
 - If layout may change, say so explicitly.  
   如果允许调整页面结构，请明确写出来。
+- For SchatPhone, write where the user enters from before deciding the visual style.
+  对 SchatPhone，请先写清楚用户从哪里进入，再判断视觉风格。
 
 ---
 
@@ -33,6 +35,12 @@ Any subset is useful / 任意一部分都有效:
 
 - Page / 页面:
   例如：Home / Chat / Settings / Gallery
+
+- User entry path / 用户入口路径:
+  例如：Home 图标 -> Chat -> 会话设置 -> WorldBook 摘要
+
+- Parent context / 上级上下文:
+  本机系统 / 装载 APP / APP 内弹层或抽屉
 
 - Current problem / 当前问题:
   例如：太丑、太乱、太像后台、层级不清楚、按钮都长一样
@@ -63,19 +71,33 @@ Any subset is useful / 任意一部分都有效:
 - Priority / 优先级: P0 / P1 / P2
 - Is this a global style change? / 是否为全局风格改动:
 
-## 2) Current Situation / 当前现状
+## 2) Entry Context / 入口上下文
+- Actual user path / 实际用户路径:
+  1.
+  2.
+  3.
+- Parent context when seen / 看到该界面时的上级上下文:
+  本机系统 / 装载 APP / APP 内弹层或抽屉
+- Visual owner you expect / 你认为应归属的视觉层:
+  例如：Chat / Map / Gallery / Contacts / Native System
+- Shared data involved / 涉及的共享数据:
+  例如：WorldBook / Gallery assets / Contacts / Calendar / Map
+- Must not visually jump to / 不应该跳到哪种视觉:
+  例如：不要从 Chat 内突然变成 Settings 风格
+
+## 3) Current Situation / 当前现状
 - What looks bad now / 现在最不好看的地方:
 - What feels confusing / 现在最让人困惑的地方:
 - What feels too weak / 现在最没质感的地方:
 
-## 3) Desired Direction / 目标方向
+## 4) Desired Direction / 目标方向
 - Like / 像什么:
 - Unlike / 不像什么:
 - Keywords / 关键词:
 - Emotion / 情绪气质:
   例如：真实、暧昧、精致、克制、轻盈、系统感、恋爱感
 
-## 4) Visual Details / 视觉细节
+## 5) Visual Details / 视觉细节
 - Background style / 背景风格:
 - Card style / 卡片风格:
 - Button style / 按钮风格:
@@ -84,13 +106,13 @@ Any subset is useful / 任意一部分都有效:
 - Motion style / 动效风格:
 - Density / 页面疏密感:
 
-## 5) Structure Flexibility / 结构调整空间
+## 6) Structure Flexibility / 结构调整空间
 - Can layout change? / 是否允许改布局:
 - Can button positions change? / 是否允许改按钮位置:
 - Can entry hierarchy change? / 是否允许改入口层级:
 - What must stay fixed? / 哪些必须不动:
 
-## 6) References / 参考资料
+## 7) References / 参考资料
 - Current screenshots / 当前截图:
 - Reference screenshots / 参考截图:
 - Figma / 设计稿:
@@ -98,13 +120,14 @@ Any subset is useful / 任意一部分都有效:
 - Recording / 录屏:
 - Notes / 说明:
 
-## 7) Acceptance / 验收标准
+## 8) Acceptance / 验收标准
 - What should feel improved first / 最先应改善什么:
 - What should become clearer / 哪些地方应更清楚:
 - What should feel more immersive / 哪些地方应更沉浸:
 - What should remain familiar / 哪些地方仍应保持熟悉:
+- Does it preserve parent-context immersion? / 是否保持上级入口沉浸感:
 
-## 8) Notes / 补充说明
+## 9) Notes / 补充说明
 - Open questions / 还没想清楚的问题:
 - Areas where AI should decide / 希望 AI 帮你判断的部分:
 ```
@@ -121,6 +144,10 @@ Example 2 / 示例 2:
 - “Settings 的结构还行，但视觉太普通。希望像 iPhone 设置一样清楚，但不要那么素。”  
   “The Settings structure is acceptable, but the visuals are too plain. I want it to be as clear as iPhone Settings, but less plain.”
 
+Example 3 / 示例 3:
+- “Chat 里的 WorldBook 摘要不要做成系统设置风格。用户还在 Chat 里，只是看到了世界观上下文，所以它应该像聊天 App 的会话信息面板。”
+  “The WorldBook summary inside Chat should not become a system-settings surface. The user is still in Chat, so it should feel like a chat thread info panel.”
+
 ---
 
 ## 5. Recommended Use / 建议用法
@@ -129,4 +156,3 @@ Example 2 / 示例 2:
   当你的问题主要是观感、风格、沉浸感、氛围或质感时，用这份模板。
 - If the main issue is “I cannot find the entry”, combine it with `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md`.  
   如果主要问题是“找不到入口”，建议和 `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md` 一起使用。
-

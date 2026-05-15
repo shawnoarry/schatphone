@@ -59,7 +59,7 @@ Please do not modify / 请不要修改：
 [点击/滑动/长按/拖拽/保存反馈]
 - If network calls are involved / 若涉及网络调用：  
 [error classification + retry behavior / 错误分级 + 重试按钮行为]
-- Visual style / 视觉风格：[Y2K / Pure White / iOS settings style]
+- Visual style / 视觉风格：[Default System / Graphite Quiet / iOS settings style / World-specific]
 
 ## 6. Acceptance Criteria / 验收标准
 
