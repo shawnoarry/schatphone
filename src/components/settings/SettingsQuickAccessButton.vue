@@ -38,9 +38,9 @@ const { t } = useI18n()
 <style scoped>
 .settings-quick-access {
   min-height: 62px;
-  border-color: rgba(20, 24, 31, 0.08);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  border-color: var(--system-subtle-border);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-control);
   transition:
     transform var(--system-motion-fast),
     background var(--system-motion-fast),
@@ -51,7 +51,7 @@ const { t } = useI18n()
 .settings-quick-access:active {
   transform: scale(0.985);
   border-color: var(--system-accent-soft);
-  background: #fff;
+  background: var(--system-elevated-bg);
 }
 
 .settings-quick-access p:first-child {

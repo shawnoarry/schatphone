@@ -943,15 +943,14 @@ onBeforeUnmount(() => {
 .appearance-shell {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .appearance-header {
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.86);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
@@ -974,10 +973,10 @@ onBeforeUnmount(() => {
 
 .appearance-menu-card {
   min-height: 72px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-md);
-  background: var(--system-surface-strong);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
   transition:
     transform var(--system-motion-fast),
     background var(--system-motion-fast),
@@ -987,8 +986,8 @@ onBeforeUnmount(() => {
 
 .appearance-menu-card:active {
   transform: scale(0.992);
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  background: var(--system-elevated-bg);
+  box-shadow: var(--system-shadow-control);
 }
 
 .appearance-menu-icon {
@@ -1012,6 +1011,96 @@ onBeforeUnmount(() => {
 
 .appearance-menu-icon.is-widget {
   background: linear-gradient(135deg, #6b7f8a 0%, #465a66 100%);
+}
+
+.appearance-shell :deep(.bg-white) {
+  background-color: var(--system-panel-bg);
+}
+
+.appearance-shell :deep(.bg-gray-50),
+.appearance-shell :deep(.bg-gray-100),
+.appearance-shell :deep(.bg-gray-200) {
+  background-color: var(--system-surface-muted);
+}
+
+.appearance-shell :deep(.text-black),
+.appearance-shell :deep(.text-gray-700),
+.appearance-shell :deep(.text-gray-800),
+.appearance-shell :deep(.text-gray-900) {
+  color: var(--system-text);
+}
+
+.appearance-shell :deep(.text-gray-300),
+.appearance-shell :deep(.text-gray-400) {
+  color: var(--system-text-soft);
+}
+
+.appearance-shell :deep(.text-gray-500),
+.appearance-shell :deep(.text-gray-600) {
+  color: var(--system-text-muted);
+}
+
+.appearance-shell :deep(.text-blue-500),
+.appearance-shell :deep(.text-blue-600),
+.appearance-shell :deep(.text-blue-700),
+.appearance-shell :deep(.text-sky-700),
+.appearance-shell :deep(.text-sky-800),
+.appearance-shell :deep(.text-violet-700),
+.appearance-shell :deep(.text-violet-800) {
+  color: var(--system-accent);
+}
+
+.appearance-shell :deep(.border-gray-100),
+.appearance-shell :deep(.border-gray-200),
+.appearance-shell :deep(.border-white\/80),
+.appearance-shell :deep(.border-sky-100),
+.appearance-shell :deep(.border-violet-100),
+.appearance-shell :deep(.border-blue-500) {
+  border-color: var(--system-control-border);
+}
+
+.appearance-shell :deep(input),
+.appearance-shell :deep(textarea),
+.appearance-shell :deep(select) {
+  color: var(--system-text);
+  background-color: var(--system-control-bg);
+  border-color: var(--system-control-border);
+}
+
+.appearance-shell :deep(input:focus),
+.appearance-shell :deep(textarea:focus),
+.appearance-shell :deep(select:focus) {
+  background-color: var(--system-control-bg-strong);
+  box-shadow: 0 0 0 4px var(--system-focus-ring);
+}
+
+.appearance-shell :deep(.bg-blue-50),
+.appearance-shell :deep(.bg-sky-50\/50),
+.appearance-shell :deep(.bg-violet-50\/50) {
+  background-color: var(--system-accent-soft);
+}
+
+.appearance-shell :deep(.bg-gray-300) {
+  background-color: var(--system-control-bg);
+}
+
+.appearance-shell :deep(.bg-green-500) {
+  color: var(--system-on-success);
+  background-color: var(--system-success);
+}
+
+.appearance-shell :deep(.bg-blue-500),
+.appearance-shell :deep(.bg-violet-500),
+.appearance-shell :deep(.bg-emerald-500),
+.appearance-shell :deep(.bg-gray-900) {
+  color: var(--system-on-accent);
+  background-color: var(--system-accent);
+}
+
+.appearance-shell :deep(.hover\:bg-gray-50:hover),
+.appearance-shell :deep(.hover\:bg-blue-600:hover),
+.appearance-shell :deep(.hover\:bg-black:hover) {
+  background-color: var(--system-pressed-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {

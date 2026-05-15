@@ -907,15 +907,14 @@ ensurePresetState()
 .network-shell {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .network-header {
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.86);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
@@ -937,10 +936,10 @@ ensurePresetState()
 }
 
 .network-scroll > .bg-white {
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-md);
-  background: var(--system-surface-strong);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
 }
 
 .network-scroll label,
@@ -953,9 +952,10 @@ ensurePresetState()
 .network-scroll input[type='password'],
 .network-scroll select {
   min-height: 42px;
-  border-color: rgba(20, 24, 31, 0.12);
+  border-color: var(--system-control-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--system-control-bg);
+  color: var(--system-text);
 }
 
 .network-scroll input.border-b {
@@ -973,14 +973,85 @@ ensurePresetState()
 }
 
 .network-scroll .rounded-lg.border {
-  border-color: rgba(20, 24, 31, 0.09);
+  border-color: var(--system-subtle-border);
 }
 
 .network-save-button {
   min-height: 46px;
   border-radius: 14px;
-  box-shadow: 0 10px 22px rgba(47, 111, 237, 0.2);
+  box-shadow: 0 10px 22px var(--system-focus-ring);
   -webkit-tap-highlight-color: transparent;
+}
+
+.network-shell :deep(.bg-white) {
+  background-color: var(--system-panel-bg);
+}
+
+.network-shell :deep(.bg-gray-50),
+.network-shell :deep(.bg-gray-100),
+.network-shell :deep(.bg-gray-200) {
+  background-color: var(--system-surface-muted);
+}
+
+.network-shell :deep(.bg-blue-50),
+.network-shell :deep(.bg-blue-100) {
+  background-color: var(--system-info-soft);
+}
+
+.network-shell :deep(.bg-red-50),
+.network-shell :deep(.bg-red-100) {
+  background-color: var(--system-danger-soft);
+}
+
+.network-shell :deep(.text-gray-700),
+.network-shell :deep(.text-gray-800),
+.network-shell :deep(.text-gray-900) {
+  color: var(--system-text);
+}
+
+.network-shell :deep(.text-gray-400) {
+  color: var(--system-text-soft);
+}
+
+.network-shell :deep(.text-gray-500),
+.network-shell :deep(.text-gray-600) {
+  color: var(--system-text-muted);
+}
+
+.network-shell :deep(.text-blue-500),
+.network-shell :deep(.text-blue-600),
+.network-shell :deep(.text-blue-700) {
+  color: var(--system-info);
+}
+
+.network-shell :deep(.text-red-500),
+.network-shell :deep(.text-red-600),
+.network-shell :deep(.text-red-700) {
+  color: var(--system-danger);
+}
+
+.network-shell :deep(.border-gray-200),
+.network-shell :deep(.border-blue-200),
+.network-shell :deep(.border-red-200) {
+  border-color: var(--system-control-border);
+}
+
+.network-shell :deep(.bg-blue-500),
+.network-shell :deep(.bg-gray-800) {
+  color: var(--system-on-accent);
+  background-color: var(--system-accent);
+}
+
+.network-shell :deep(.bg-red-500) {
+  color: var(--system-on-danger);
+  background-color: var(--system-danger);
+}
+
+.network-shell :deep(.hover\:bg-gray-50:hover),
+.network-shell :deep(.hover\:bg-blue-50:hover),
+.network-shell :deep(.hover\:bg-blue-600:hover),
+.network-shell :deep(.hover\:bg-black:hover) {
+  background-color: var(--system-pressed-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -601,9 +601,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 34%),
-    linear-gradient(180deg, rgba(247, 249, 250, 0.98), rgba(231, 236, 240, 0.98));
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
@@ -613,7 +611,8 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: calc(42px + env(safe-area-inset-top)) 16px 12px;
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.82);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
 }
@@ -662,7 +661,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   color: var(--system-text);
   background: var(--system-surface-strong);
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+  box-shadow: var(--system-shadow-control);
 }
 
 .widgets-home-btn {
@@ -674,7 +673,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   color: var(--system-text);
   background: var(--system-surface-strong);
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+  box-shadow: var(--system-shadow-control);
   font-size: 12px;
   font-weight: 700;
 }
@@ -684,7 +683,7 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   padding: 10px 16px;
-  background: rgba(246, 248, 250, 0.9);
+  background: var(--system-surface-muted);
 }
 
 .widgets-tab {
@@ -695,8 +694,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 7px;
   color: var(--system-text-muted);
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px solid rgba(31, 42, 52, 0.08);
+  background: var(--system-control-bg);
+  border: 1px solid var(--system-subtle-border);
   font-size: 12px;
   font-weight: 700;
   transition: transform var(--system-motion-fast), background var(--system-motion-fast), color var(--system-motion-fast);
@@ -705,7 +704,7 @@ onBeforeUnmount(() => {
 .widgets-tab.is-active {
   color: var(--system-text);
   background: var(--system-surface-strong);
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+  box-shadow: var(--system-shadow-control);
 }
 
 .widgets-tab:active,
@@ -726,8 +725,8 @@ onBeforeUnmount(() => {
 .widgets-section {
   border: 1px solid var(--system-border);
   border-radius: 26px;
-  background: rgba(252, 253, 253, 0.86);
-  box-shadow: 0 16px 36px rgba(16, 24, 40, 0.1);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
   padding: 15px;
 }
 
@@ -782,12 +781,12 @@ onBeforeUnmount(() => {
 .widgets-field select,
 .widgets-field textarea {
   width: 100%;
-  border: 1px solid rgba(31, 42, 52, 0.12);
+  border: 1px solid var(--system-control-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--system-control-bg);
   color: var(--system-text);
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
 }
 
 .widgets-select-field select {
@@ -827,9 +826,9 @@ onBeforeUnmount(() => {
 
 .widgets-library-item,
 .widgets-created-item {
-  border: 1px solid rgba(31, 42, 52, 0.1);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.68);
+  background: var(--system-control-bg);
   padding: 11px;
 }
 
@@ -894,8 +893,8 @@ onBeforeUnmount(() => {
 
 .widgets-secondary-btn {
   color: var(--system-text);
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(31, 42, 52, 0.1);
+  background: var(--system-control-bg);
+  border: 1px solid var(--system-control-border);
 }
 
 .widgets-form-grid {
@@ -935,7 +934,7 @@ onBeforeUnmount(() => {
 
 .widgets-empty {
   border-radius: 18px;
-  background: rgba(239, 243, 245, 0.72);
+  background: var(--system-surface-muted);
   color: var(--system-text-muted);
   padding: 18px;
   text-align: center;
@@ -965,8 +964,8 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   padding: 0 11px;
   color: var(--system-text);
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(31, 42, 52, 0.1);
+  background: var(--system-control-bg);
+  border: 1px solid var(--system-control-border);
   font-size: 11px;
   font-weight: 700;
 }
@@ -983,7 +982,7 @@ onBeforeUnmount(() => {
 .widgets-import-note {
   margin-top: 12px;
   border-radius: 18px;
-  background: rgba(239, 243, 245, 0.72);
+  background: var(--system-surface-muted);
   padding: 12px;
   color: var(--system-text-muted);
   font-size: 12px;
@@ -1001,9 +1000,9 @@ onBeforeUnmount(() => {
   right: 16px;
   z-index: 40;
   border-radius: 18px;
-  border: 1px solid rgba(31, 42, 52, 0.1);
-  background: rgba(252, 253, 253, 0.92);
-  box-shadow: 0 16px 36px rgba(16, 24, 40, 0.14);
+  border: 1px solid var(--system-card-border);
+  background: var(--system-elevated-bg);
+  box-shadow: var(--system-shadow-soft);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
 }

@@ -851,16 +851,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .worldbook-shell {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(244, 247, 250, 0.82) 42%, rgba(239, 243, 248, 0.96) 100%),
-    var(--system-bg);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .worldbook-header {
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.86);
-  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.07);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-md));
   -webkit-backdrop-filter: blur(var(--system-blur-md));
 }
@@ -883,10 +881,10 @@ onBeforeUnmount(() => {
 }
 
 .worldbook-scroll > .rounded-2xl {
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-lg);
-  background: var(--system-surface-strong);
-  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.1);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
 }
 
 .worldbook-scroll p {
@@ -905,9 +903,9 @@ onBeforeUnmount(() => {
 .worldbook-scroll input,
 .worldbook-scroll select {
   border-color: var(--system-border);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--system-control-bg);
   color: var(--system-text);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
   transition:
     border-color var(--system-motion-fast),
     box-shadow var(--system-motion-fast),
@@ -917,9 +915,9 @@ onBeforeUnmount(() => {
 .worldbook-scroll textarea:focus,
 .worldbook-scroll input:focus,
 .worldbook-scroll select:focus {
-  border-color: rgba(47, 111, 237, 0.48);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.12);
+  border-color: var(--system-accent);
+  background: var(--system-control-bg-strong);
+  box-shadow: 0 0 0 4px var(--system-focus-ring);
 }
 
 .worldbook-scroll textarea {
@@ -935,8 +933,8 @@ onBeforeUnmount(() => {
   min-height: 42px;
   border-radius: 14px;
   background: var(--system-text);
-  color: #fff;
-  box-shadow: 0 12px 24px rgba(20, 24, 31, 0.16);
+  color: var(--system-text-inverse);
+  box-shadow: var(--system-shadow-control);
 }
 
 .worldbook-scroll > .rounded-2xl > button.bg-green-500 {
@@ -948,34 +946,61 @@ onBeforeUnmount(() => {
 }
 
 .worldbook-scroll .bg-gray-50 {
-  background: rgba(245, 247, 250, 0.76);
+  background: var(--system-surface-muted);
 }
 
 .worldbook-scroll .bg-white {
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--system-control-bg);
 }
 
 .worldbook-scroll [data-testid='knowledge-deeplink-banner'],
-.worldbook-scroll .bg-blue-50 {
-  border-color: rgba(47, 111, 237, 0.2);
-  background: rgba(47, 111, 237, 0.1);
+.worldbook-scroll .bg-blue-50,
+.worldbook-scroll .bg-blue-50\/30 {
+  border-color: var(--system-control-border);
+  background: var(--system-info-soft);
 }
 
 .worldbook-scroll .bg-emerald-50 {
-  background: rgba(35, 165, 90, 0.1);
+  background: var(--system-success-soft);
 }
 
 .worldbook-scroll .bg-amber-50 {
-  background: rgba(201, 129, 18, 0.1);
+  background: var(--system-warning-soft);
 }
 
 .worldbook-scroll [data-testid='knowledge-point-card'] {
   border-radius: var(--system-radius-md);
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--system-shadow-control);
   transition:
     transform var(--system-motion-fast),
     box-shadow var(--system-motion-fast),
     border-color var(--system-motion-fast);
+}
+
+.worldbook-shell :deep(.text-blue-500),
+.worldbook-shell :deep(.text-blue-600),
+.worldbook-shell :deep(.text-blue-700),
+.worldbook-shell :deep(.text-blue-800) {
+  color: var(--system-info);
+}
+
+.worldbook-shell :deep(.text-red-500),
+.worldbook-shell :deep(.text-red-600),
+.worldbook-shell :deep(.text-red-700) {
+  color: var(--system-danger);
+}
+
+.worldbook-shell :deep(.text-emerald-700) {
+  color: var(--system-success);
+}
+
+.worldbook-shell :deep(.border-gray-100),
+.worldbook-shell :deep(.border-gray-200),
+.worldbook-shell :deep(.border-blue-200),
+.worldbook-shell :deep(.border-blue-300),
+.worldbook-shell :deep(.border-emerald-300),
+.worldbook-shell :deep(.border-emerald-200) {
+  border-color: var(--system-control-border);
 }
 
 .worldbook-scroll [data-testid='knowledge-point-card']:active {

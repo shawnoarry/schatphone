@@ -57,12 +57,12 @@ const { t } = useI18n()
 <style scoped>
 .settings-menu-item {
   min-height: 64px;
-  border-color: rgba(20, 24, 31, 0.07);
+  border-color: var(--system-subtle-border);
   -webkit-tap-highlight-color: transparent;
 }
 
 .settings-menu-item:active {
-  background: rgba(47, 111, 237, 0.06);
+  background: var(--system-pressed-bg);
 }
 
 .settings-menu-icon {
@@ -84,6 +84,6 @@ const { t } = useI18n()
 }
 
 .settings-menu-chevron {
-  color: rgba(20, 24, 31, 0.22);
+  color: var(--system-text-soft);
 }
 </style>

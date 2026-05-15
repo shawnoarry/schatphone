@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-14
+Updated: 2026-05-15
 
 This document defines the "Visual专项" workflow. It is separate from the feature-progress track and should be used when the team is discussing or implementing UI polish, visual design, interaction feel, layout refinement, motion, typography, color, or product-grade surface quality.
 
@@ -58,6 +58,9 @@ If a visual change requires touching functional code, keep the change minimal an
 10. Do not restyle an in-app surface as a system page merely because it reads system/shared data.
 11. Audit all visible frontend copy during visual work. Developer comments, implementation notes, TODO text, debug labels, route names, store names, and temporary explanations must not appear in the rendered UI.
 12. For Home widget customization, prefer the visible Widgets entry over hidden gestures: tap opens the Widget Center, long-press enters widget edit mode, then same-size replacement happens from the Home context.
+13. When working on themes, review `default` and `zen` together as a native-system day/night pair.
+14. On native-system surfaces, replace raw white/gray utility backgrounds and hardcoded semantic colors with system tokens unless the element is app-owned, media/content preview, or user-authored widget/template content.
+15. Dark-theme approval requires checking panels, forms, list rows, dialogs, hover/active states, disabled states, and teleported overlays for contrast and background completeness.
 
 ## 4. Entry-Context Audit
 
@@ -513,8 +516,9 @@ Use this sequence for visual work unless the user asks for a narrower path.
 6. Define the smallest useful change slice before editing.
 7. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
 8. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
-9. Verify with `git diff --check`, then lint/build/test when code changed.
-10. Summarize the changed surfaces, the visual owner decisions, remaining risks, and any follow-up visual slices.
+9. If themes are touched, verify both `default` and `zen` on the same surfaces before declaring the slice complete.
+10. Verify with `git diff --check`, then lint/build/test when code changed.
+11. Summarize the changed surfaces, the visual owner decisions, remaining risks, and any follow-up visual slices.
 
 ## 11. First Prompt Template
 
@@ -562,5 +566,7 @@ npm run build
 ```
 
 For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports.
+
+For theme changes, inspect both built-in themes. The dark theme must not show light text on leftover raw white system panels. Allowed exceptions are installed-app-owned surfaces, image/media previews, and user-authored widget/template content.
 
 For visible-copy checks, inspect the rendered page and review changed templates for development markers such as `TODO`, `FIXME`, `debug`, `mock`, `placeholder`, `dev`, `注释`, `开发`, or `临时`. The goal is not to remove legitimate code comments; it is to ensure those markers are not shown to the user.

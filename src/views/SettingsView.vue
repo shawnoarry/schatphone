@@ -2306,15 +2306,14 @@ if (initialMenu) {
 .settings-shell {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .settings-header {
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.86);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
@@ -2341,9 +2340,9 @@ if (initialMenu) {
 .settings-group,
 .settings-tip-card,
 .settings-subpage-scroll :deep(.bg-white.rounded-2xl) {
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  background: var(--system-surface-strong);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--system-card-border);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
 }
 
 .settings-profile-card {
@@ -2358,18 +2357,18 @@ if (initialMenu) {
 
 .settings-profile-card:active {
   transform: scale(0.992);
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  background: var(--system-elevated-bg);
+  box-shadow: var(--system-shadow-control);
 }
 
 .settings-profile-avatar {
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  border: 2px solid var(--system-card-border);
+  box-shadow: var(--system-shadow-control);
 }
 
 .settings-tip-card {
-  border-color: rgba(47, 111, 237, 0.14);
-  background: rgba(47, 111, 237, 0.08);
+  border-color: var(--system-control-border);
+  background: var(--system-accent-soft);
   box-shadow: none;
 }
 
@@ -2386,11 +2385,11 @@ if (initialMenu) {
 
 .settings-inline-panel,
 .settings-action-row {
-  border-color: rgba(20, 24, 31, 0.07);
+  border-color: var(--system-subtle-border);
 }
 
 .settings-status-strip {
-  border-color: rgba(20, 24, 31, 0.06);
+  border-color: var(--system-subtle-border);
   background: var(--system-surface-muted);
 }
 
@@ -2405,7 +2404,7 @@ if (initialMenu) {
 }
 
 .settings-action-row:active {
-  background: rgba(47, 111, 237, 0.06);
+  background: var(--system-pressed-bg);
 }
 
 .settings-action-row:disabled {
@@ -2420,16 +2419,15 @@ if (initialMenu) {
 }
 
 .settings-subpage {
-  background:
-    linear-gradient(180deg, #fbfcff 0%, #f4f7fb 34%, #eef1f5 100%);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .settings-subpage-header {
   min-height: 86px;
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.9);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
@@ -2445,13 +2443,148 @@ if (initialMenu) {
 .settings-subpage-scroll :deep(input[type='time']),
 .settings-subpage-scroll :deep(select) {
   min-height: 42px;
-  border-color: rgba(20, 24, 31, 0.12);
+  border-color: var(--system-control-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--system-control-bg);
+  color: var(--system-text);
 }
 
 .settings-subpage-scroll :deep(button) {
   -webkit-tap-highlight-color: transparent;
+}
+
+.settings-shell :deep(.bg-white) {
+  background-color: var(--system-panel-bg);
+}
+
+.settings-shell :deep(.bg-gray-50),
+.settings-shell :deep(.bg-gray-100),
+.settings-shell :deep(.bg-gray-200),
+.settings-shell :deep(.bg-gray-300) {
+  background-color: var(--system-surface-muted);
+}
+
+.settings-shell :deep(.bg-blue-50),
+.settings-shell :deep(.bg-blue-100) {
+  background-color: var(--system-accent-soft);
+}
+
+.settings-shell :deep(.bg-green-100),
+.settings-shell :deep(.bg-emerald-100) {
+  background-color: var(--system-success-soft);
+}
+
+.settings-shell :deep(.bg-red-50),
+.settings-shell :deep(.bg-red-100) {
+  background-color: var(--system-danger-soft);
+}
+
+.settings-shell :deep(.bg-amber-50),
+.settings-shell :deep(.bg-amber-100),
+.settings-shell :deep(.bg-yellow-50),
+.settings-shell :deep(.bg-yellow-100) {
+  background-color: var(--system-warning-soft);
+}
+
+.settings-shell :deep(.text-black),
+.settings-shell :deep(.text-gray-700),
+.settings-shell :deep(.text-gray-800),
+.settings-shell :deep(.text-gray-900) {
+  color: var(--system-text);
+}
+
+.settings-shell :deep(.text-gray-300),
+.settings-shell :deep(.text-gray-400) {
+  color: var(--system-text-soft);
+}
+
+.settings-shell :deep(.text-gray-500),
+.settings-shell :deep(.text-gray-600) {
+  color: var(--system-text-muted);
+}
+
+.settings-shell :deep(.text-blue-500),
+.settings-shell :deep(.text-blue-600),
+.settings-shell :deep(.text-blue-700),
+.settings-shell :deep(.text-blue-700\/90) {
+  color: var(--system-accent);
+}
+
+.settings-shell :deep(.text-green-600),
+.settings-shell :deep(.text-green-700),
+.settings-shell :deep(.text-emerald-600),
+.settings-shell :deep(.text-emerald-700) {
+  color: var(--system-success);
+}
+
+.settings-shell :deep(.text-red-500),
+.settings-shell :deep(.text-red-600),
+.settings-shell :deep(.text-red-700) {
+  color: var(--system-danger);
+}
+
+.settings-shell :deep(.text-amber-600),
+.settings-shell :deep(.text-amber-700),
+.settings-shell :deep(.text-yellow-700) {
+  color: var(--system-warning);
+}
+
+.settings-shell :deep(.border-gray-100),
+.settings-shell :deep(.border-gray-200),
+.settings-shell :deep(.border-blue-100),
+.settings-shell :deep(.border-blue-200),
+.settings-shell :deep(.border-blue-300),
+.settings-shell :deep(.border-blue-500),
+.settings-shell :deep(.border-emerald-300),
+.settings-shell :deep(.border-amber-200),
+.settings-shell :deep(.border-red-200) {
+  border-color: var(--system-control-border);
+}
+
+.settings-shell :deep(input),
+.settings-shell :deep(textarea),
+.settings-shell :deep(select) {
+  color: var(--system-text);
+  background-color: var(--system-control-bg);
+  border-color: var(--system-control-border);
+}
+
+.settings-shell :deep(input:focus),
+.settings-shell :deep(textarea:focus),
+.settings-shell :deep(select:focus) {
+  background-color: var(--system-control-bg-strong);
+  box-shadow: 0 0 0 4px var(--system-focus-ring);
+}
+
+.settings-shell :deep(.bg-blue-500),
+.settings-shell :deep(.bg-blue-600),
+.settings-shell :deep(.bg-gray-800),
+.settings-shell :deep(.bg-gray-900) {
+  color: var(--system-on-accent);
+  background-color: var(--system-accent);
+}
+
+.settings-shell :deep(.bg-green-500) {
+  color: var(--system-on-success);
+  background-color: var(--system-success);
+}
+
+.settings-shell :deep(.bg-red-500) {
+  color: var(--system-on-danger);
+  background-color: var(--system-danger);
+}
+
+.settings-shell :deep(.bg-yellow-500) {
+  color: var(--system-on-warning);
+  background-color: var(--system-warning);
+}
+
+.settings-shell :deep(.hover\:bg-gray-50:hover),
+.settings-shell :deep(.active\:bg-gray-50:active),
+.settings-shell :deep(.hover\:bg-blue-50:hover),
+.settings-shell :deep(.hover\:bg-blue-600:hover),
+.settings-shell :deep(.hover\:bg-black:hover) {
+  background-color: var(--system-pressed-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {

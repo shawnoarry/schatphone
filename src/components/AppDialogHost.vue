@@ -66,12 +66,12 @@ watch(
 
 const toneClass = () => {
   if (dialogState.tone === 'danger') {
-    return 'border-red-200 bg-red-500 hover:bg-red-600 text-white'
+    return 'app-dialog-button-danger'
   }
   if (dialogState.tone === 'accent') {
-    return 'border-blue-200 bg-blue-500 hover:bg-blue-600 text-white'
+    return 'app-dialog-button-accent'
   }
-  return 'border-gray-200 bg-gray-900 hover:bg-black text-white'
+  return 'app-dialog-button-default'
 }
 </script>
 
@@ -172,10 +172,11 @@ const toneClass = () => {
 }
 
 .app-dialog-panel {
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-xl);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--system-elevated-bg);
   box-shadow: var(--system-shadow-strong);
+  color: var(--system-text);
 }
 
 .app-dialog-title {
@@ -188,14 +189,15 @@ const toneClass = () => {
 }
 
 .app-dialog-details {
-  border-color: rgba(20, 24, 31, 0.08);
+  border-color: var(--system-control-border);
   background: var(--system-surface-muted);
 }
 
 .app-dialog-input {
   min-height: 42px;
-  border-color: rgba(20, 24, 31, 0.12);
-  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--system-control-border);
+  background: var(--system-control-bg);
+  color: var(--system-text);
 }
 
 .app-dialog-button {
@@ -205,8 +207,55 @@ const toneClass = () => {
 }
 
 .app-dialog-button-secondary {
+  border-color: var(--system-control-border);
   color: var(--system-text-muted);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--system-control-bg);
+}
+
+.app-dialog-button-accent {
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.app-dialog-button-default {
+  border-color: var(--system-text);
+  color: var(--system-text-inverse);
+  background: var(--system-text);
+}
+
+.app-dialog-button-danger {
+  border-color: var(--system-danger);
+  color: var(--system-on-danger);
+  background: var(--system-danger);
+}
+
+.app-dialog-button-accent:hover,
+.app-dialog-button-default:hover,
+.app-dialog-button-danger:hover {
+  filter: brightness(0.96);
+}
+
+.app-dialog-panel :deep(.text-gray-500),
+.app-dialog-panel :deep(.text-gray-600) {
+  color: var(--system-text-muted);
+}
+
+.app-dialog-panel :deep(.text-red-500) {
+  color: var(--system-danger);
+}
+
+.app-dialog-panel :deep(.text-gray-900) {
+  color: var(--system-text);
+}
+
+.app-dialog-panel :deep(.bg-gray-50) {
+  background-color: var(--system-surface-muted);
+}
+
+.app-dialog-panel :deep(.border-gray-100),
+.app-dialog-panel :deep(.border-gray-200) {
+  border-color: var(--system-control-border);
 }
 
 .dialog-fade-enter-from,

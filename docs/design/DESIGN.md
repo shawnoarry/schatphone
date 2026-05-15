@@ -1,6 +1,6 @@
 # SchatPhone Design System
 
-Updated: 2026-05-14
+Updated: 2026-05-15
 
 This document defines the visual ownership model for SchatPhone. SchatPhone is an immersive virtual-phone OS shell, not a single ordinary app. Its design must distinguish between the native phone system and the installed apps running inside it.
 
@@ -248,15 +248,17 @@ docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 
 Current theme state:
 
-- `default`
-- `zen` / `Graphite Quiet` (legacy id, redesigned theme)
+- `default`: native-system day mode.
+- `zen` / `Graphite Quiet`: native-system night mode. The id is legacy-compatible, but the visual role is a complete graphite dark mode.
 
 Short-term direction:
 
 - Treat `Default System Style v1` as the current default native-system baseline.
 - `y2k` was a legacy vapor-style theme and is no longer part of the default selectable system themes. Persisted `y2k` state should migrate to `default`.
-- Keep the theme-switching mechanism, but avoid old novelty themes. Secondary themes should be mature system variants, such as low-saturation dark graphite, not vapor, neon, candy, or pure decorative skins.
+- Keep the theme-switching mechanism, but avoid old novelty themes. Current themes should behave as a mature day/night system pair, not as vapor, neon, candy, or pure decorative skins.
 - Keep themes as OS-level visual modes.
+- Native-system implementation must use semantic tokens instead of hardcoded white, gray, black, blue, red, green, or amber utility colors for durable theme parity.
+- Dark-mode review must check panels, forms, list rows, dialogs, hover/active states, disabled states, and teleported overlays. Light text on raw white panels is a theme completeness bug.
 - Do not force every installed app to adopt the same full visual language.
 - OS themes may influence system surfaces, wallpaper, app icons, status bar, dock, and notification materials.
 - Installed apps may choose whether to inherit only base tokens or also adapt their own palette.

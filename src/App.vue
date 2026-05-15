@@ -31,7 +31,6 @@ const mapStore = useMapStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, notifications } = storeToRefs(systemStore)
-const { loadingAI } = storeToRefs(chatStore)
 
 const currentTime = ref('')
 const currentDate = ref('')
@@ -265,6 +264,15 @@ watch(
   ],
   () => {
     void resolveCurrentWallpaper()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => settings.value.appearance?.currentTheme,
+  (themeId) => {
+    if (typeof document === 'undefined') return
+    document.documentElement.setAttribute('data-theme', themeId || 'default')
   },
   { immediate: true },
 )
@@ -827,14 +835,6 @@ const lockPhone = () => {
 </script>
 
 <template>
-  <div class="fixed top-4 left-4 text-white text-xs opacity-50 hidden md:block z-[9999]">
-    <p>{{ t('SchatPhone 构建版本：1.2.0（开放）', 'SchatPhone Build: 1.2.0 (Open)') }}</p>
-    <p>{{ t('主题', 'Theme') }}: {{ settings.appearance.currentTheme }}</p>
-    <p v-if="loadingAI" class="text-yellow-400 font-bold">
-      <i class="fas fa-spinner fa-spin"></i> {{ t('AI 思考中...', 'AI Thinking...') }}
-    </p>
-  </div>
-
   <div
     class="app-shell"
     :data-theme="settings.appearance.currentTheme"

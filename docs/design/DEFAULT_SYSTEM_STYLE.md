@@ -1,6 +1,6 @@
 # Default System Style v1
 
-Updated: 2026-05-14
+Updated: 2026-05-15
 
 This document defines the default native-system visual style for SchatPhone. It is the baseline style for the current version before any future WorldBook/worldview-driven visual profiles are introduced.
 
@@ -148,8 +148,16 @@ Dark or wallpaper-heavy surfaces may invert text and use stronger blur, but shou
 
 Current built-in theme variants:
 
-- `default`: the primary low-saturation light system baseline.
-- `zen` / `Graphite Quiet`: a redesigned low-saturation graphite dark variant. The `zen` id is retained only for saved-state compatibility; it should no longer be treated as the old pure-white theme.
+- `default`: the primary low-saturation light system baseline. Treat it as the day mode of the native system.
+- `zen` / `Graphite Quiet`: the paired low-saturation graphite night mode. The `zen` id is retained only for saved-state compatibility; it should no longer be treated as the old pure-white theme.
+
+Theme completeness rules:
+
+- `default` and `zen` must be maintained as a coherent day/night pair, not as unrelated skins.
+- Native-system pages should consume semantic system tokens for page, chrome, panel, elevated, control, border, text, semantic color, focus, and shadow values.
+- Do not leave raw white or raw gray utility backgrounds on native-system panels when the dark theme is active. If a white-looking element remains, it must be an intentional app-owned surface, content preview, media thumbnail, or user-authored widget/template content.
+- Teleported overlays and global dialog surfaces must receive the active theme through a global theme attribute, not only through the local `.app-shell` subtree.
+- Installed apps are not automatically forced into this day/night pair. Only their OS-owned containers, shell notifications, and shared system mechanics should inherit system theme materials by default.
 
 ## 6. Typography
 

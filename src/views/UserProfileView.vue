@@ -123,15 +123,14 @@ onBeforeUnmount(() => {
 .profile-shell {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 247, 251, 0.96) 34%, #eef1f5 100%);
+  background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .profile-header {
   border-bottom: 1px solid var(--system-border);
-  background: rgba(248, 250, 252, 0.86);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
@@ -154,9 +153,9 @@ onBeforeUnmount(() => {
 
 .profile-identity-card,
 .profile-field-card {
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  background: var(--system-surface-strong);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--system-card-border);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
 }
 
 .profile-identity-card {
@@ -171,10 +170,10 @@ onBeforeUnmount(() => {
   width: 58px;
   height: 58px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--system-card-border);
   border-radius: 999px;
   background: linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--system-shadow-control);
   flex: 0 0 auto;
 }
 
@@ -210,9 +209,10 @@ onBeforeUnmount(() => {
 .profile-field-card input,
 .profile-field-card select,
 .profile-field-card textarea {
-  border-color: rgba(20, 24, 31, 0.12);
+  border-color: var(--system-control-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--system-control-bg);
+  color: var(--system-text);
 }
 
 .profile-field-card input {
@@ -228,8 +228,35 @@ onBeforeUnmount(() => {
 .profile-save-button {
   min-height: 46px;
   border-radius: 14px;
-  box-shadow: 0 10px 22px rgba(47, 111, 237, 0.2);
+  box-shadow: 0 10px 22px var(--system-focus-ring);
   -webkit-tap-highlight-color: transparent;
+}
+
+.profile-shell :deep(.bg-white) {
+  background-color: var(--system-panel-bg);
+}
+
+.profile-shell :deep(.text-gray-500),
+.profile-shell :deep(.text-gray-600) {
+  color: var(--system-text-muted);
+}
+
+.profile-shell :deep(.border-gray-200) {
+  border-color: var(--system-control-border);
+}
+
+.profile-shell :deep(.bg-blue-500) {
+  color: var(--system-on-accent);
+  background-color: var(--system-accent);
+}
+
+.profile-shell :deep(.bg-green-500) {
+  color: var(--system-on-success);
+  background-color: var(--system-success);
+}
+
+.profile-shell :deep(.hover\:bg-blue-600:hover) {
+  background-color: var(--system-pressed-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {
