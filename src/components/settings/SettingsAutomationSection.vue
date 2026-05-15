@@ -150,12 +150,7 @@ const { t } = useI18n()
       </label>
     </div>
     <p class="text-[11px] text-gray-500">
-      {{
-        t(
-          '当前运行态：',
-          'Current runtime mode:',
-        )
-      }}
+      {{ t('当前运行态：', 'Current runtime mode:') }}
       {{
         automationRuntimePolicy.notifyOnly
           ? automationRuntimePolicy.quietHoursActive
@@ -224,9 +219,9 @@ const { t } = useI18n()
   </div>
 
   <button
-    @click="$emit('save-automation-settings')"
     class="w-full py-3 rounded-xl text-sm font-semibold transition"
     :class="automationSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+    @click="$emit('save-automation-settings')"
   >
     {{ automationSaved ? t('已保存', 'Saved') : t('保存自动响应设置', 'Save automation settings') }}
   </button>

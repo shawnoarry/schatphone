@@ -119,9 +119,9 @@ const { t } = useI18n()
         </p>
       </div>
       <button
-        @click="$emit('run-storage-audit')"
         class="px-3 py-2 rounded-lg border border-gray-200 text-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="storageAuditRunning || storageRepairRunning"
+        @click="$emit('run-storage-audit')"
       >
         {{ storageAuditRunning ? t('检查中...', 'Checking...') : t('运行检查', 'Run check') }}
       </button>
@@ -149,8 +149,8 @@ const { t } = useI18n()
     </div>
 
     <button
-      @click="$emit('clear-storage-reports')"
       class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+      @click="$emit('clear-storage-reports')"
     >
       {{ t('清理存储报告', 'Clear storage reports') }}
     </button>
@@ -187,24 +187,24 @@ const { t } = useI18n()
     </div>
 
     <button
-      @click="$emit('repair-storage-drift')"
       class="w-full py-2 rounded-lg text-xs font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed"
       :class="storageRepairRunning ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'"
       :disabled="storageRepairRunning || storageAuditRunning"
+      @click="$emit('repair-storage-drift')"
     >
       {{ storageRepairRunning ? t('修复中...', 'Repairing...') : t('修复存储不同步', 'Repair storage drift') }}
     </button>
 
     <div class="grid grid-cols-2 gap-2">
       <button
-        @click="$emit('open-network-reports')"
         class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+        @click="$emit('open-network-reports')"
       >
         {{ t('查看全部报告', 'View all reports') }}
       </button>
       <button
-        @click="$emit('open-network-storage-errors')"
         class="w-full py-2 rounded-lg text-xs font-medium border border-amber-200 text-amber-700 hover:bg-amber-50"
+        @click="$emit('open-network-storage-errors')"
       >
         {{ t('仅看错误', 'Errors only') }}
       </button>

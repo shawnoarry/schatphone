@@ -187,7 +187,7 @@ const submitKnowledgePoint = () => {
     enabled: editingKnowledgePoint.value.enabled !== false,
   })
   if (!savedPoint) {
-    uiNotice.value = t('鐭ヨ瘑鐐逛繚瀛樺け璐ワ紙鍙兘宸茶揪涓婇檺锛夈€?', 'Knowledge point save failed (limit reached).')
+    uiNotice.value = t('知识点保存失败（可能已达上限）。', 'Knowledge point save failed (limit reached).')
     return
   }
 

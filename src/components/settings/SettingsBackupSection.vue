@@ -126,8 +126,8 @@ const { t } = useI18n()
 
     <button
       class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-      @click="$emit('export-data')"
       :disabled="backupExporting || backupImporting"
+      @click="$emit('export-data')"
     >
       <div class="w-7 h-7 rounded bg-yellow-500 flex items-center justify-center text-white text-xs">
         <i class="fas fa-file-export"></i>
@@ -163,8 +163,8 @@ const { t } = useI18n()
 
     <button
       class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
-      @click="$emit('trigger-import-data')"
       :disabled="backupImporting || backupExporting"
+      @click="$emit('trigger-import-data')"
     >
       <div class="w-7 h-7 rounded bg-green-500 flex items-center justify-center text-white text-xs">
         <i class="fas fa-file-import"></i>

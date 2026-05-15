@@ -222,9 +222,9 @@ const { t } = useI18n()
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <button
-        @click="$emit('check-push-server-health')"
         class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="pushActionRunning || pushHealthRunning"
+        @click="$emit('check-push-server-health')"
       >
         {{
           pushHealthRunning
@@ -233,30 +233,30 @@ const { t } = useI18n()
         }}
       </button>
       <button
-        @click="$emit('resync-real-push')"
         class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="pushActionRunning || !settings.system.realPushEnabled"
+        @click="$emit('resync-real-push')"
       >
         {{ t('重同步订阅', 'Resync subscription') }}
       </button>
       <button
-        @click="$emit('subscribe-real-push')"
         class="px-3 py-2 rounded-lg border border-blue-200 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="pushActionRunning"
+        @click="$emit('subscribe-real-push')"
       >
         {{ pushActionRunning ? t('处理中...', 'Working...') : t('授权并订阅', 'Authorize & subscribe') }}
       </button>
       <button
-        @click="$emit('send-real-push-test')"
         class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="pushActionRunning || !settings.system.pushSubscriptionActive"
+        @click="$emit('send-real-push-test')"
       >
         {{ t('发送测试推送', 'Send test push') }}
       </button>
       <button
-        @click="$emit('unsubscribe-real-push')"
         class="px-3 py-2 rounded-lg border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="pushActionRunning"
+        @click="$emit('unsubscribe-real-push')"
       >
         {{ t('取消订阅', 'Unsubscribe') }}
       </button>
@@ -264,9 +264,9 @@ const { t } = useI18n()
   </div>
 
   <button
-    @click="$emit('save-notification-settings')"
     class="w-full py-3 rounded-xl text-sm font-semibold transition"
     :class="notificationSaved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
+    @click="$emit('save-notification-settings')"
   >
     {{ notificationSaved ? t('已保存', 'Saved') : t('保存通知设置', 'Save notification settings') }}
   </button>

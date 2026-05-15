@@ -1,11 +1,30 @@
-﻿<script setup>
+<script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import { callAI, detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
+import {
+  NETWORK_PROVIDER_TEMPLATES,
+  applyNetworkProviderTemplate,
+  buildNetworkEndpointGuidance,
+  buildNetworkFailureGuidance,
+  buildNetworkPresetSaveGuidance,
+  buildNetworkSetupCopy,
+  buildNetworkSetupState,
+} from '../lib/network-guidance'
+import {
+  filterNetworkReports,
+  normalizeNetworkReportLevelFilter,
+  normalizeNetworkReportModuleFilter,
+  summarizeNetworkReports,
+} from '../lib/network-report-state'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import NetworkDiagnosticsPanel from '../components/network/NetworkDiagnosticsPanel.vue'
+import NetworkManualModelSavePanel from '../components/network/NetworkManualModelSavePanel.vue'
+import NetworkSetupPresetPanel from '../components/network/NetworkSetupPresetPanel.vue'
+import NetworkSmokeControlsPanel from '../components/network/NetworkSmokeControlsPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -25,9 +44,14 @@ const reportLevelFilter = ref('all')
 const copiedReportId = ref('')
 const uiFeedbackType = ref('')
 const uiFeedbackMessage = ref('')
+const connectionGuidance = ref(null)
+const smokeTestLoading = ref(false)
+const smokeTestResult = ref(null)
+const smokeTestError = ref('')
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
+let smokeTestToken = 0
 let savedTimerId = null
 let copiedReportTimerId = null
 let uiFeedbackTimerId = null
@@ -40,17 +64,6 @@ const setUiFeedback = (type, message, durationMs = 1800) => {
     uiFeedbackType.value = ''
     uiFeedbackMessage.value = ''
   }, durationMs)
-}
-
-const normalizeReportModuleFilter = (value) => {
-  const raw = typeof value === 'string' ? value.trim() : ''
-  const allowed = new Set(['all', 'chat', 'network', 'storage', 'push', 'map', 'shopping'])
-  return allowed.has(raw) ? raw : 'all'
-}
-
-const normalizeReportLevelFilter = (value) => {
-  const raw = typeof value === 'string' ? value.trim() : ''
-  return raw === 'error' || raw === 'info' ? raw : 'all'
 }
 
 const ensurePresetState = () => {
@@ -70,6 +83,10 @@ const apiKindLabel = computed(() => {
 })
 
 const presets = computed(() => settings.value.api.presets || [])
+const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
+const networkSetupCopy = computed(() => buildNetworkSetupCopy(networkSetupState.value))
+const endpointGuidance = computed(() => buildNetworkEndpointGuidance(settings.value.api))
+const presetSaveGuidance = computed(() => buildNetworkPresetSaveGuidance(settings.value.api))
 const reportModuleOptions = computed(() => [
   { value: 'all', label: t('全部模块', 'All modules') },
   { value: 'chat', label: t('聊天', 'Chat') },
@@ -84,207 +101,13 @@ const reportLevelOptions = computed(() => [
   { value: 'error', label: t('错误', 'Error') },
   { value: 'info', label: t('信息', 'Info') },
 ])
-const networkReports = computed(() => {
-  const moduleFilter = reportModuleFilter.value
-  const levelFilter = reportLevelFilter.value
-  return (apiReports.value || [])
-    .filter((item) => {
-      if (!item || typeof item !== 'object') return false
-      if (moduleFilter !== 'all' && item.module !== moduleFilter) return false
-      if (levelFilter !== 'all' && item.level !== levelFilter) return false
-      return true
-    })
-    .slice(0, 100)
-})
-
-const reportSummary = computed(() => {
-  const list = Array.isArray(apiReports.value) ? apiReports.value : []
-  const total = list.length
-  const errorCount = list.filter((item) => item?.level === 'error').length
-  const infoCount = total - errorCount
-  return {
-    total,
-    errorCount,
-    infoCount: Math.max(0, infoCount),
-  }
-})
-
-const moduleLabel = (moduleKey) => {
-  if (moduleKey === 'chat') return t('聊天', 'Chat')
-  if (moduleKey === 'network') return t('网络', 'Network')
-  if (moduleKey === 'storage') return t('存储', 'Storage')
-  if (moduleKey === 'push') return t('推送', 'Push')
-  if (moduleKey === 'map') return t('地图', 'Map')
-  if (moduleKey === 'shopping') return t('购物', 'Shopping')
-  return t('未知模块', 'Unknown module')
-}
-
-const actionLabel = (actionKey) => {
-  if (actionKey === 'fetch_models') return t('拉取模型列表', 'Fetch model list')
-  if (actionKey === 'call_ai') return t('调用 AI', 'Call AI')
-  if (actionKey === 'reroll_reply') return t('重生成回复', 'Reroll reply')
-  if (actionKey === 'auto_invoke') return t('自动调用', 'Autonomous invoke')
-  if (actionKey === 'audit_storage') return t('检查存储一致性', 'Audit storage consistency')
-  if (actionKey === 'repair_storage') return t('修复存储不同步', 'Repair storage drift')
-  if (actionKey === 'export_backup') return t('导出备份', 'Export backup')
-  if (actionKey === 'import_backup') return t('导入备份', 'Import backup')
-  if (actionKey === 'subscribe') return t('订阅真推送', 'Subscribe real push')
-  if (actionKey === 'unsubscribe') return t('取消真推送', 'Unsubscribe real push')
-  if (actionKey === 'test') return t('发送测试推送', 'Send test push')
-  if (actionKey === 'relay_notification') return t('转发系统通知', 'Relay system notification')
-  if (actionKey === 'health_check') return t('检查推送服务', 'Check push service')
-  if (actionKey === 'resync') return t('重同步订阅', 'Resync subscription')
-  if (actionKey === 'schedule') return t('安排定时推送', 'Schedule push delivery')
-  if (actionKey === 'cancel_schedule') return t('取消定时推送', 'Cancel scheduled push')
-  return actionKey || t('未知动作', 'Unknown action')
-}
-
-const reportReasonLabel = (item) => {
-  const code = (item?.code || '').toUpperCase()
-  const statusCode = Number(item?.statusCode || 0)
-
-  if (code === 'NO_API_KEY') return t('缺少 API Key', 'Missing API key')
-  if (code === 'STORAGE_HEALTHY') return t('存储状态健康', 'Storage is healthy')
-  if (code === 'STORAGE_MIRROR_DRIFT') return t('存储层不同步', 'Storage mirror drift detected')
-  if (code === 'STORAGE_LAYER_INVALID') return t('存储层数据异常', 'Invalid payload in storage layer')
-  if (code === 'STORAGE_REPAIR_DONE') return t('存储修复完成', 'Storage repair completed')
-  if (code === 'STORAGE_REPAIR_NOOP') return t('无需修复', 'No repair needed')
-  if (code === 'STORAGE_REPAIR_PARTIAL') return t('存储修复部分失败', 'Storage repair partially failed')
-  if (code === 'BACKUP_EXPORT_METADATA_ONLY')
-    return t('备份导出成功（元数据）', 'Backup export succeeded (metadata)')
-  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
-    return t('备份导出成功（含素材包）', 'Backup export succeeded (with asset package)')
-  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL')
-    return t('备份导出完成（素材包部分缺失）', 'Backup export completed (asset package partial)')
-  if (code === 'BACKUP_EXPORT_FAILED') return t('备份导出失败', 'Backup export failed')
-  if (code === 'BACKUP_IMPORT_METADATA_ONLY')
-    return t('备份导入成功（元数据）', 'Backup import succeeded (metadata)')
-  if (code === 'BACKUP_IMPORT_WITH_ASSET_PACKAGE')
-    return t('备份导入成功（含素材包）', 'Backup import succeeded (with asset package)')
-  if (code === 'BACKUP_IMPORT_ASSET_PACKAGE_PARTIAL')
-    return t('备份导入部分成功（素材包有失败）', 'Backup import partially succeeded (asset package failures)')
-  if (code === 'BACKUP_IMPORT_INVALID_JSON')
-    return t('备份导入失败（JSON 无效）', 'Backup import failed (invalid JSON)')
-  if (code === 'BACKUP_IMPORT_INVALID_FORMAT')
-    return t('备份导入失败（文件格式无效）', 'Backup import failed (invalid file format)')
-  if (code === 'BACKUP_IMPORT_UNSUPPORTED_SCHEMA')
-    return t('备份导入失败（版本过高）', 'Backup import failed (unsupported schema)')
-  if (code === 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED')
-    return t('备份导入失败（结构不支持）', 'Backup import failed (unsupported structure)')
-  if (code === 'BACKUP_IMPORT_FAILED') return t('备份导入失败', 'Backup import failed')
-  if (code === 'SERVER_URL_MISSING') return t('缺少 Push Server 地址', 'Push server URL missing')
-  if (code === 'CONFIG_MISSING') return t('推送配置不完整', 'Push configuration incomplete')
-  if (code === 'DELIVER_AT_INVALID') return t('计划时间无效', 'Scheduled time is invalid')
-  if (code === 'PUBLIC_KEY_MISSING' || code === 'PUBLIC_KEY_FAILED')
-    return t('推送公钥不可用', 'Push public key unavailable')
-  if (code === 'PERMISSION_DENIED' || code === 'PERMISSION_NOT_GRANTED')
-    return t('系统通知权限未授权', 'System notification permission not granted')
-  if (code === 'UNSUPPORTED') return t('当前环境不支持真推送', 'Real push unsupported here')
-  if (code === 'SUBSCRIPTION_MISSING')
-    return t('浏览器本地订阅不存在', 'Browser subscription missing')
-  if (code === 'SUBSCRIPTION_NOT_FOUND')
-    return t('服务端未找到该设备订阅', 'Server subscription record missing')
-  if (code === 'SUBSCRIPTION_EXPIRED')
-    return t('推送订阅已失效', 'Push subscription expired')
-  if (code === 'SUBSCRIPTION_READ_FAILED')
-    return t('读取浏览器订阅失败', 'Failed to read browser subscription')
-  if (code === 'FETCH_UNAVAILABLE' || code === 'NETWORK_ERROR')
-    return t('无法连接 Push Server', 'Unable to reach Push Server')
-  if (code === 'INVALID_URL') return t('接口地址格式错误', 'Invalid endpoint URL')
-  if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
-    return t('鉴权失败（401/403）', 'Authentication failed (401/403)')
-  if (code === 'NOT_FOUND' || statusCode === 404) return t('接口不存在（404）', 'Endpoint not found (404)')
-  if (code === 'RATE_LIMIT' || statusCode === 429) return t('请求过于频繁（429）', 'Rate limit exceeded (429)')
-  if (code === 'TIMEOUT') return t('请求超时', 'Request timeout')
-  if (code === 'NETWORK') return t('网络或跨域问题', 'Network or CORS issue')
-  if (code === 'PARSE_ERROR') return t('响应格式解析失败', 'Response parsing failed')
-  if (code === 'SERVER' || statusCode >= 500) return t('服务端异常（5xx）', 'Server error (5xx)')
-  if (code === 'CANCELED') return t('请求被取消', 'Request canceled')
-  if (code === 'HTTP_ERROR') return t('HTTP 请求失败', 'HTTP request failed')
-  return t('未分类问题', 'Unclassified issue')
-}
-
-const reportSuggestionLabel = (item) => {
-  const code = (item?.code || '').toUpperCase()
-  const statusCode = Number(item?.statusCode || 0)
-
-  if (code === 'NO_API_KEY') return t('请在本页补全 API Key。', 'Please fill in API key on this page.')
-  if (code === 'STORAGE_HEALTHY')
-    return t('当前存储层状态正常，无需操作。', 'Storage layers are healthy; no action required.')
-  if (code === 'STORAGE_MIRROR_DRIFT')
-    return t('可在设置-关于执行一键修复。', 'Run one-click repair in Settings > About.')
-  if (code === 'STORAGE_LAYER_INVALID')
-    return t('建议先导出备份，再执行修复与重检。', 'Export backup first, then run repair and re-audit.')
-  if (code === 'STORAGE_REPAIR_DONE')
-    return t('建议再次执行检查确认一致性。', 'Run audit again to verify consistency.')
-  if (code === 'STORAGE_REPAIR_NOOP')
-    return t('当前无不同步项，可继续正常使用。', 'No drift found; continue normal usage.')
-  if (code === 'STORAGE_REPAIR_PARTIAL')
-    return t('查看报告后重试，必要时导出并恢复备份。', 'Review report and retry; export/restore backup if needed.')
-  if (code === 'BACKUP_EXPORT_METADATA_ONLY')
-    return t('这是轻量备份，恢复时不含本地素材二进制。', 'This is a lightweight backup and does not include local binary assets.')
-  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE')
-    return t('已导出素材包，建议同时保留近期元数据备份。', 'Asset package exported. Keep a recent metadata backup as well.')
-  if (code === 'BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL')
-    return t('素材包未完整打包，请留意导出提示中的跳过/缺失数量。', 'Asset package is partial; check skipped/missing counts in export feedback.')
-  if (code === 'BACKUP_EXPORT_FAILED')
-    return t('请检查浏览器存储权限后重试导出。', 'Check browser storage permissions and retry export.')
-  if (code === 'BACKUP_IMPORT_METADATA_ONLY')
-    return t('已恢复元数据；若需本地素材，请导入含素材包的备份。', 'Metadata restored. Import a backup with asset package if local media is needed.')
-  if (code === 'BACKUP_IMPORT_WITH_ASSET_PACKAGE')
-    return t('建议检查相册预览是否正常并执行一次手动备份。', 'Check gallery preview and run one manual backup after import.')
-  if (code === 'BACKUP_IMPORT_ASSET_PACKAGE_PARTIAL')
-    return t('部分素材包恢复失败，可在相册中重新导入缺失素材。', 'Some asset package items failed; re-import missing assets in Gallery.')
-  if (code === 'BACKUP_IMPORT_INVALID_JSON')
-    return t('请确认选择的是 JSON 备份文件。', 'Please make sure the selected file is a JSON backup file.')
-  if (code === 'BACKUP_IMPORT_INVALID_FORMAT')
-    return t('请使用系统导出的备份文件重试。', 'Retry with a backup file exported by this system.')
-  if (code === 'BACKUP_IMPORT_UNSUPPORTED_SCHEMA')
-    return t('该备份来自更高版本，请升级应用后再导入。', 'This backup is from a newer version. Upgrade app before importing.')
-  if (code === 'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED')
-    return t('备份结构不完整，建议重新导出后再导入。', 'Backup structure is incomplete; re-export and import again.')
-  if (code === 'BACKUP_IMPORT_FAILED')
-    return t('导入失败已回滚，请检查备份文件结构后重试。', 'Import failed and rolled back. Validate backup file structure and retry.')
-  if (code === 'SERVER_URL_MISSING')
-    return t('前往设置-通知，先填写可访问的 Push Server 地址。', 'Open Settings > Notifications and enter a reachable Push Server URL.')
-  if (code === 'CONFIG_MISSING')
-    return t('先完成服务地址与设备订阅，再尝试发送推送。', 'Complete server URL and device subscription before sending push.')
-  if (code === 'DELIVER_AT_INVALID')
-    return t('请检查计划触发时间，确保它是有效的未来时间戳。', 'Check the scheduled trigger time and make sure it is a valid future timestamp.')
-  if (code === 'PUBLIC_KEY_MISSING' || code === 'PUBLIC_KEY_FAILED')
-    return t('检查 Push Server 是否已生成并暴露 VAPID 公钥。', 'Check whether the Push Server exposes a valid VAPID public key.')
-  if (code === 'PERMISSION_DENIED' || code === 'PERMISSION_NOT_GRANTED')
-    return t('到浏览器或系统设置里允许通知权限，然后重新订阅。', 'Allow browser/system notification permission, then subscribe again.')
-  if (code === 'UNSUPPORTED')
-    return t('请使用支持 Service Worker/Push 的 HTTPS 或 localhost 环境。', 'Use HTTPS or localhost in a browser that supports Service Worker and Push.')
-  if (code === 'SUBSCRIPTION_MISSING')
-    return t('在设置-通知执行“重同步订阅”或重新订阅真推送。', 'Use “Resync subscription” in Settings > Notifications or subscribe again.')
-  if (code === 'SUBSCRIPTION_NOT_FOUND')
-    return t('服务端记录已丢失，前往设置-通知执行“重同步订阅”。', 'Server record is missing. Go to Settings > Notifications and run “Resync subscription”.')
-  if (code === 'SUBSCRIPTION_EXPIRED')
-    return t('当前订阅已过期，建议取消后重新订阅真推送。', 'Current subscription expired. Unsubscribe then subscribe again.')
-  if (code === 'SUBSCRIPTION_READ_FAILED')
-    return t('刷新页面后重试；若仍失败，可重新订阅真推送。', 'Reload and retry. If it still fails, subscribe to real push again.')
-  if (code === 'FETCH_UNAVAILABLE' || code === 'NETWORK_ERROR')
-    return t('确认 Push Server 正在运行，且当前网络可访问该地址。', 'Make sure the Push Server is running and reachable from the current network.')
-  if (code === 'INVALID_URL') return t('检查 URL 是否完整且包含正确路径。', 'Check endpoint URL and verify full path.')
-  if (code === 'AUTH' || statusCode === 401 || statusCode === 403)
-    return t('更换可用 Key，或检查供应商权限设置。', 'Use a valid key or verify provider permissions.')
-  if (code === 'NOT_FOUND' || statusCode === 404)
-    return t('确认网关地址或接口路径是否正确。', 'Confirm gateway address and endpoint path.')
-  if (code === 'RATE_LIMIT' || statusCode === 429)
-    return t('稍后重试，或切换到其他供应商。', 'Retry later or switch to another provider.')
-  if (code === 'TIMEOUT') return t('检查网络后重试，必要时更换网关。', 'Check network and retry; switch gateway if needed.')
-  if (code === 'NETWORK')
-    return t('优先检查网络与跨域代理设置。', 'Check network first, then CORS/proxy settings.')
-  if (code === 'PARSE_ERROR')
-    return t('确认返回内容是有效 JSON。', 'Ensure upstream response is valid JSON.')
-  if (code === 'SERVER' || statusCode >= 500)
-    return t('属于服务端问题，建议稍后再试。', 'Server-side issue. Retry later.')
-  if (code === 'CANCELED')
-    return t('这是手动取消记录，无需处理。', 'This is a manual cancel record; no action needed.')
-  return t('可先复制报告并排查 URL/Key/模型三项。', 'Copy report and verify URL, key, and model first.')
-}
+const networkReports = computed(() =>
+  filterNetworkReports(apiReports.value, {
+    moduleFilter: reportModuleFilter.value,
+    levelFilter: reportLevelFilter.value,
+  }),
+)
+const reportSummary = computed(() => summarizeNetworkReports(apiReports.value))
 
 const copyReport = async (item) => {
   if (!item) return
@@ -360,7 +183,24 @@ const savePreset = () => {
   }
 
   presetName.value = ''
-  setUiFeedback('success', t('预设已保存。', 'Preset saved.'))
+  const guidance = presetSaveGuidance.value
+  if (guidance?.tone === 'warn') {
+    setUiFeedback(
+      'warn',
+      t('预设已保存，但建议稍后完成连接测试确认。', 'Preset saved, but run a connection test when possible.'),
+      3200,
+    )
+    return
+  }
+  setUiFeedback('success', t('预设已保存，Key 仅保存在本地配置中。', 'Preset saved. The key stays in local settings.'))
+}
+
+const applyProviderTemplate = (templateId) => {
+  const ok = applyNetworkProviderTemplate(settings.value.api, templateId)
+  if (!ok) return
+  clearModelState()
+  scheduleAutoLoadModels()
+  setUiFeedback('success', t('已套用供应商模板，请继续填写 Key。', 'Provider template applied. Continue with your key.'))
 }
 
 const applyPreset = (presetId) => {
@@ -485,20 +325,11 @@ const clearApiReportHistory = async () => {
     : systemStore.clearApiReports()
 
   if (removed > 0) {
-    setUiFeedback(
-      'success',
-      t(
-        `已清空 ${removed} 条记录。`,
-        `Cleared ${removed} record(s).`,
-      ),
-    )
+    setUiFeedback('success', t(`已清空 ${removed} 条记录。`, `Cleared ${removed} record(s).`))
     return
   }
 
-  setUiFeedback(
-    'warn',
-    t('当前筛选无可清空记录。', 'No records matched current filter.'),
-  )
+  setUiFeedback('warn', t('当前筛选无可清空记录。', 'No records matched current filter.'))
 }
 
 const clearModelState = () => {
@@ -506,20 +337,62 @@ const clearModelState = () => {
   modelsError.value = ''
 }
 
-const loadModels = async () => {
+const buildPreflightError = (apiUrl, apiKey) => {
+  if (!apiUrl) return { code: 'MISSING_URL' }
+  if (!apiKey) return { code: 'NO_API_KEY' }
+  return null
+}
+
+const recordNetworkFailure = (guidance, message) => {
+  systemStore.addApiReport({
+    level: 'error',
+    module: 'network',
+    action: 'fetch_models',
+    provider: guidance.provider || settings.value.api.resolvedKind || '',
+    model: guidance.model || settings.value.api.model || '',
+    statusCode: guidance.statusCode || 0,
+    code: guidance.code || '',
+    message: message || guidance.detailZh || guidance.detailEn || '',
+  })
+}
+
+const recordChatSmokeResult = (level, payload = {}) => {
+  systemStore.addApiReport({
+    level,
+    module: 'network',
+    action: 'chat_smoke_test',
+    provider: payload.provider || settings.value.api.resolvedKind || detectApiKindFromUrl(settings.value.api.url),
+    model: payload.model || settings.value.api.model || '',
+    statusCode: payload.statusCode || 0,
+    code: payload.code || '',
+    message: payload.message || '',
+  })
+}
+
+const loadModels = async (options = {}) => {
+  const manual = options?.manual === true
   const apiUrl = settings.value.api.url?.trim()
   const apiKey = settings.value.api.key?.trim()
 
   settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
 
-  if (!apiUrl || !apiKey) {
+  const preflightError = buildPreflightError(apiUrl, apiKey)
+  if (preflightError) {
     clearModelState()
+    if (manual) {
+      const guidance = buildNetworkFailureGuidance(preflightError, settings.value.api)
+      connectionGuidance.value = guidance
+      modelsError.value = t(guidance.detailZh, guidance.detailEn)
+      recordNetworkFailure(guidance, modelsError.value)
+      setUiFeedback('warn', t(guidance.fixZh, guidance.fixEn), 3200)
+    }
     return
   }
 
   const currentToken = ++modelFetchToken
   modelsLoading.value = true
   modelsError.value = ''
+  connectionGuidance.value = null
 
   try {
     const { kind, models } = await fetchAvailableModels({ settings: settings.value })
@@ -531,23 +404,103 @@ const loadModels = async () => {
     if (!settings.value.api.model && modelOptions.value.length > 0) {
       settings.value.api.model = modelOptions.value[0]
     }
+    connectionGuidance.value = null
+    if (manual) {
+      setUiFeedback('success', t('连接测试通过，模型列表已更新。', 'Connection test passed. Model list updated.'))
+    }
   } catch (error) {
     if (currentToken !== modelFetchToken) return
     modelOptions.value = []
     modelsError.value = formatApiErrorForUi(error, t('模型拉取失败，请检查设置。', 'Failed to load models. Check your settings.'))
-    systemStore.addApiReport({
-      level: 'error',
-      module: 'network',
-      action: 'fetch_models',
-      provider: settings.value.api.resolvedKind || '',
-      model: settings.value.api.model || '',
-      statusCode: Number.isFinite(Number(error?.status)) ? Number(error.status) : 0,
-      code: typeof error?.code === 'string' ? error.code : '',
-      message: modelsError.value || formatApiErrorForUi(error),
-    })
+    const guidance = buildNetworkFailureGuidance(error, settings.value.api)
+    connectionGuidance.value = guidance
+    recordNetworkFailure(guidance, modelsError.value || guidance.detailZh)
+    if (manual) {
+      setUiFeedback('error', t(guidance.fixZh, guidance.fixEn), 4200)
+    }
   } finally {
     if (currentToken === modelFetchToken) {
       modelsLoading.value = false
+    }
+  }
+}
+
+const runChatSmokeTest = async () => {
+  const apiUrl = settings.value.api.url?.trim()
+  const apiKey = settings.value.api.key?.trim()
+  const preflightError = buildPreflightError(apiUrl, apiKey)
+  settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
+
+  if (preflightError) {
+    const guidance = buildNetworkFailureGuidance(preflightError, settings.value.api)
+    connectionGuidance.value = guidance
+    smokeTestResult.value = null
+    smokeTestError.value = t(guidance.detailZh, guidance.detailEn)
+    recordChatSmokeResult('error', {
+      provider: guidance.provider,
+      model: guidance.model,
+      statusCode: guidance.statusCode,
+      code: guidance.code,
+      message: smokeTestError.value,
+    })
+    setUiFeedback('warn', t(guidance.fixZh, guidance.fixEn), 3600)
+    return
+  }
+
+  const currentToken = ++smokeTestToken
+  smokeTestLoading.value = true
+  smokeTestResult.value = null
+  smokeTestError.value = ''
+  connectionGuidance.value = null
+
+  try {
+    const reply = await callAI({
+      settings: settings.value,
+      systemPrompt: 'You are a connection smoke-test endpoint. Reply with exactly: OK',
+      messages: [
+        {
+          role: 'user',
+          content: 'Return exactly OK if this Chat completion path works.',
+        },
+      ],
+    })
+    if (currentToken !== smokeTestToken) return
+
+    const preview = typeof reply === 'string' ? reply.trim().slice(0, 80) : ''
+    smokeTestResult.value = {
+      provider: settings.value.api.resolvedKind || detectApiKindFromUrl(settings.value.api.url),
+      model: settings.value.api.model || '',
+      preview: preview || 'OK',
+    }
+    recordChatSmokeResult('info', {
+      provider: smokeTestResult.value.provider,
+      model: smokeTestResult.value.model,
+      code: 'CHAT_SMOKE_OK',
+      message: `Chat smoke test succeeded: ${smokeTestResult.value.preview}`,
+    })
+    setUiFeedback(
+      'success',
+      t('Chat 烟测通过，当前配置可用于真实聊天调用。', 'Chat smoke test passed. Current settings can call Chat.'),
+    )
+  } catch (error) {
+    if (currentToken !== smokeTestToken) return
+
+    const guidance = buildNetworkFailureGuidance(error, settings.value.api)
+    const message = formatApiErrorForUi(error, t('Chat 烟测失败，请检查设置。', 'Chat smoke test failed. Check your settings.'))
+    connectionGuidance.value = guidance
+    smokeTestResult.value = null
+    smokeTestError.value = message
+    recordChatSmokeResult('error', {
+      provider: guidance.provider,
+      model: guidance.model,
+      statusCode: guidance.statusCode,
+      code: guidance.code,
+      message,
+    })
+    setUiFeedback('error', t(guidance.fixZh, guidance.fixEn), 4200)
+  } finally {
+    if (currentToken === smokeTestToken) {
+      smokeTestLoading.value = false
     }
   }
 }
@@ -578,6 +531,7 @@ const scheduleAutoLoadModels = () => {
 
   if (!apiUrl || !apiKey) {
     clearModelState()
+    connectionGuidance.value = null
     return
   }
 
@@ -596,10 +550,10 @@ watch(
 watch(
   () => route.query,
   (query) => {
-    reportModuleFilter.value = normalizeReportModuleFilter(
+    reportModuleFilter.value = normalizeNetworkReportModuleFilter(
       typeof query?.reportModule === 'string' ? query.reportModule : '',
     )
-    reportLevelFilter.value = normalizeReportLevelFilter(
+    reportLevelFilter.value = normalizeNetworkReportLevelFilter(
       typeof query?.reportLevel === 'string' ? query.reportLevel : '',
     )
   },
@@ -610,6 +564,10 @@ watch(
   () => [settings.value.api.url, settings.value.api.key],
   () => {
     clearModelState()
+    smokeTestToken += 1
+    smokeTestLoading.value = false
+    smokeTestResult.value = null
+    smokeTestError.value = ''
     scheduleAutoLoadModels()
   },
 )
@@ -647,258 +605,60 @@ ensurePresetState()
     </div>
 
     <div class="network-scroll flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('API 接口 URL', 'API Endpoint URL') }}</label>
-        <input
-          v-model="settings.api.url"
-          type="text"
-          class="w-full border-b border-gray-200 py-1 outline-none text-sm font-mono text-gray-700"
-          placeholder="https://api.openai.com/v1/chat/completions"
-        />
-        <p class="text-[10px] text-gray-400 mt-2">{{ t('输入 URL 后会自动识别类型，并尝试拉取模型列表。', 'The type will be auto-detected after URL input, then model list will be fetched.') }}</p>
-      </div>
+      <NetworkSetupPresetPanel
+        v-model:api-url="settings.api.url"
+        v-model:api-key="settings.api.key"
+        v-model:show-api-key="showApiKey"
+        v-model:preset-name="presetName"
+        v-model:active-preset-id="settings.api.activePresetId"
+        :network-setup-copy="networkSetupCopy"
+        :network-setup-state="networkSetupState"
+        :provider-templates="NETWORK_PROVIDER_TEMPLATES"
+        :endpoint-guidance="endpointGuidance"
+        :preset-save-guidance="presetSaveGuidance"
+        :presets="presets"
+        :ui-feedback-type="uiFeedbackType"
+        :ui-feedback-message="uiFeedbackMessage"
+        @apply-template="applyProviderTemplate"
+        @save-preset="savePreset"
+        @remove-active-preset="removeActivePreset"
+        @clear-all-presets="clearAllPresets"
+      />
 
-      <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">API Key</label>
-        <div class="flex items-center gap-2">
-          <input
-            v-model="settings.api.key"
-            :type="showApiKey ? 'text' : 'password'"
-            class="flex-1 border-b border-gray-200 py-1 outline-none text-sm font-mono"
-            placeholder="sk-..."
-          />
-          <button
-            @click="showApiKey = !showApiKey"
-            class="px-2 py-1 text-xs rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
-            {{ showApiKey ? t('隐藏', 'Hide') : t('显示', 'Show') }}
-          </button>
-        </div>
-      </div>
+      <NetworkSmokeControlsPanel
+        v-model="settings.api.model"
+        :api-kind-label="apiKindLabel"
+        :models-loading="modelsLoading"
+        :models-error="modelsError"
+        :connection-guidance="connectionGuidance"
+        :smoke-test-loading="smokeTestLoading"
+        :smoke-test-result="smokeTestResult"
+        :smoke-test-error="smokeTestError"
+        :model-options="modelOptions"
+        @test-models="loadModels({ manual: true })"
+        @run-chat-smoke-test="runChatSmokeTest"
+      />
 
-      <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-2">{{ t('保存为预设', 'Save as preset') }}</label>
-        <div class="flex gap-2">
-          <input
-            v-model="presetName"
-            type="text"
-            class="flex-1 border-b border-gray-200 py-1 outline-none text-sm"
-            :placeholder="t('例如：主账号 / 测试网关', 'Example: Primary / Test Gateway')"
-          />
-          <button
-            @click="savePreset"
-            class="px-3 py-1.5 rounded-md bg-blue-500 text-white text-xs hover:bg-blue-600 transition"
-          >
-            {{ t('保存', 'Save') }}
-          </button>
-        </div>
-      </div>
+      <NetworkManualModelSavePanel
+        v-model="settings.api.model"
+        :saved="saved"
+        @save-settings="saveNetworkSettings"
+      />
 
-      <p
-        v-if="uiFeedbackMessage"
-        class="px-1 text-[11px]"
-        :class="
-          uiFeedbackType === 'error'
-            ? 'text-red-600'
-            : uiFeedbackType === 'warn'
-              ? 'text-amber-600'
-              : 'text-emerald-600'
-        "
-      >
-        {{ uiFeedbackMessage }}
-      </p>
-
-      <div class="bg-white rounded-xl p-4" v-if="presets.length > 0">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('已存预设', 'Saved presets') }}</label>
-        <select
-          v-model="settings.api.activePresetId"
-          class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
-        >
-          <option value="">{{ t('请选择预设', 'Select a preset') }}</option>
-          <option v-for="preset in presets" :key="preset.id" :value="preset.id">
-            {{ preset.name }}
-          </option>
-        </select>
-        <div class="flex gap-2 mt-2">
-          <button
-            @click="removeActivePreset"
-            :disabled="!settings.api.activePresetId"
-            class="flex-1 px-3 py-1.5 rounded-md text-xs transition"
-            :class="
-              settings.api.activePresetId
-                ? 'bg-red-500 text-white hover:bg-red-600'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            "
-          >
-            {{ t('删除当前预设', 'Delete current preset') }}
-          </button>
-          <button
-            @click="clearAllPresets"
-            :disabled="presets.length === 0"
-            class="flex-1 px-3 py-1.5 rounded-md text-xs transition"
-            :class="
-              presets.length > 0
-                ? 'bg-gray-800 text-white hover:bg-black'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            "
-          >
-            {{ t('清空全部预设', 'Clear all presets') }}
-          </button>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-gray-500">{{ t('已识别类型', 'Detected type') }}</span>
-          <span class="text-xs font-semibold text-gray-700">{{ apiKindLabel }}</span>
-        </div>
-
-        <button
-          @click="loadModels"
-          :disabled="modelsLoading"
-          class="w-full rounded-lg py-2 text-sm transition"
-          :class="modelsLoading ? 'bg-gray-100 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'"
-        >
-          {{ modelsLoading ? t('拉取中...', 'Loading...') : t('刷新模型列表', 'Refresh model list') }}
-        </button>
-
-        <p v-if="modelsError" class="text-xs text-red-500 mt-2">{{ modelsError }}</p>
-      </div>
-
-      <div class="bg-white rounded-xl p-4" v-if="modelOptions.length > 0">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('可用模型（自动拉取）', 'Available models (auto fetched)') }}</label>
-        <select
-          v-model="settings.api.model"
-          class="w-full border rounded-lg px-2 py-2 text-sm outline-none bg-white"
-        >
-          <option v-for="model in modelOptions" :key="model" :value="model">{{ model }}</option>
-        </select>
-      </div>
-
-      <div class="bg-white rounded-xl p-4">
-        <label class="text-xs text-gray-500 block mb-1">{{ t('模型名（手动兜底）', 'Model name (manual fallback)') }}</label>
-        <input
-          v-model="settings.api.model"
-          type="text"
-          class="w-full border-b border-gray-200 py-1 outline-none text-sm font-mono"
-          placeholder="gpt-4o-mini / gemini-2.5-flash"
-        />
-        <p class="text-[10px] text-gray-400 mt-2">{{ t('如果模型接口受限或跨域失败，可直接手动填写模型名。', 'If model API is limited or blocked by CORS, enter model name manually.') }}</p>
-      </div>
-
-      <div class="bg-white rounded-xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-xs text-gray-500">{{ t('诊断报告中心（API/推送/存储）', 'Diagnostics Center (API/Push/Storage)') }}</p>
-          <button
-            @click="clearApiReportHistory"
-            class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
-            {{ t('清空', 'Clear') }}
-          </button>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2 mb-3">
-          <div class="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
-            <p class="text-[10px] text-gray-500">{{ t('总记录', 'Total') }}</p>
-            <p class="text-sm font-semibold text-gray-800">{{ reportSummary.total }}</p>
-          </div>
-          <div class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-2">
-            <p class="text-[10px] text-red-500">{{ t('错误', 'Error') }}</p>
-            <p class="text-sm font-semibold text-red-700">{{ reportSummary.errorCount }}</p>
-          </div>
-          <div class="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
-            <p class="text-[10px] text-blue-500">{{ t('信息', 'Info') }}</p>
-            <p class="text-sm font-semibold text-blue-700">{{ reportSummary.infoCount }}</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mb-2">
-          <select v-model="reportModuleFilter" class="border rounded-md px-2 py-1 text-xs bg-white outline-none">
-            <option v-for="item in reportModuleOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </option>
-          </select>
-          <select v-model="reportLevelFilter" class="border rounded-md px-2 py-1 text-xs bg-white outline-none">
-            <option v-for="item in reportLevelOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </option>
-          </select>
-        </div>
-
-        <p v-if="networkReports.length === 0" class="text-xs text-gray-400">
-          {{ t('暂无匹配记录。', 'No matching records.') }}
-        </p>
-
-        <div v-else class="space-y-2 max-h-52 overflow-y-auto no-scrollbar">
-          <div v-for="item in networkReports" :key="item.id" class="rounded-lg border border-gray-200 p-2">
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-[11px] font-semibold text-gray-700">
-                {{ moduleLabel(item.module) }} · {{ actionLabel(item.action) }}
-              </p>
-              <p class="text-[10px] text-gray-400">{{ formatReportTime(item.createdAt) }}</p>
-            </div>
-
-            <div class="mt-1 flex items-center gap-1.5">
-              <span
-                class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                :class="item.level === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'"
-              >
-                {{ item.level === 'error' ? t('错误', 'Error') : t('信息', 'Info') }}
-              </span>
-              <span class="inline-flex rounded bg-gray-100 text-gray-600 px-1.5 py-0.5 text-[10px]">
-                {{ t('状态码', 'Status') }}: {{ item.statusCode || '-' }}
-              </span>
-              <span class="inline-flex rounded bg-gray-100 text-gray-600 px-1.5 py-0.5 text-[10px]">
-                Code: {{ item.code || '-' }}
-              </span>
-            </div>
-
-            <p class="text-[11px] text-gray-600 mt-1 line-clamp-2">
-              {{ item.message || t('未知错误', 'Unknown error') }}
-            </p>
-            <p class="text-[11px] text-gray-700 mt-1">
-              {{ t('问题类型', 'Issue type') }}: {{ reportReasonLabel(item) }}
-            </p>
-            <p class="text-[11px] text-blue-700 mt-1">
-              {{ t('建议处理', 'Suggested fix') }}: {{ reportSuggestionLabel(item) }}
-            </p>
-            <p class="text-[10px] text-gray-400 mt-1">
-              {{ t('模型', 'Model') }}: {{ item.model || '-' }} ·
-              {{ t('供应商', 'Provider') }}: {{ item.provider || '-' }}
-            </p>
-            <div class="mt-2 flex justify-end gap-2">
-              <button
-                v-if="item.module === 'storage'"
-                @click="openStorageDiagnostics"
-                class="text-[11px] px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-50"
-              >
-                {{ t('前往修复', 'Go to repair') }}
-              </button>
-              <button
-                v-if="item.module === 'push'"
-                @click="openPushSettings"
-                class="text-[11px] px-2 py-1 rounded border border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-              >
-                {{ t('前往推送设置', 'Go to push settings') }}
-              </button>
-              <button
-                @click="copyReport(item)"
-                class="text-[11px] px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
-              >
-                {{ copiedReportId === item.id ? t('已复制', 'Copied') : t('复制报告', 'Copy report') }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button
-        @click="saveNetworkSettings"
-        class="network-save-button w-full py-3 rounded-xl text-sm font-semibold transition"
-        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-      >
-        {{ saved ? t('已保存', 'Saved') : t('保存网络设置', 'Save network settings') }}
-      </button>
+      <NetworkDiagnosticsPanel
+        v-model:report-module-filter="reportModuleFilter"
+        v-model:report-level-filter="reportLevelFilter"
+        :report-summary="reportSummary"
+        :network-reports="networkReports"
+        :report-module-options="reportModuleOptions"
+        :report-level-options="reportLevelOptions"
+        :copied-report-id="copiedReportId"
+        :format-report-time="formatReportTime"
+        @clear-reports="clearApiReportHistory"
+        @copy-report="copyReport"
+        @open-storage-diagnostics="openStorageDiagnostics"
+        @open-push-settings="openPushSettings"
+      />
     </div>
   </div>
 </template>

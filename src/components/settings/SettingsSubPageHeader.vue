@@ -17,10 +17,10 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="pt-12 pb-2 px-2 bg-white flex items-center border-b">
+  <div class="settings-subpage-header pt-12 pb-2 px-2 bg-white flex items-center border-b">
     <button
       type="button"
-      class="text-blue-500 flex items-center px-2"
+      class="settings-subpage-back text-blue-500 flex items-center px-2"
       data-testid="settings-subpage-back"
       @click="emit('close')"
     >

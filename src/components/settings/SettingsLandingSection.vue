@@ -33,6 +33,7 @@ const { t } = useI18n()
     <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
       <img
         :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name"
+        :alt="user.name || t('用户头像', 'User avatar')"
         class="w-full h-full object-cover"
       />
     </div>

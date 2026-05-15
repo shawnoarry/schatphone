@@ -68,7 +68,7 @@ const updateBackupReminderIntervalHours = (event) => {
     @close="emit('close')"
   />
 
-  <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+  <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
     <div class="bg-white rounded-2xl p-4">
       <label class="text-xs text-gray-500 block mb-2">{{ t('语言', 'Language') }}</label>
       <select
