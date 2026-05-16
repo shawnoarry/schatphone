@@ -1,10 +1,16 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import {
+  buildRouteWithReturnSource,
+  normalizeHomePageQuery,
+  pushReturnTarget,
+  resolveReturnLabel,
+} from '../lib/navigation-return'
 import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
 
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
@@ -33,6 +39,7 @@ const WIDGET_TEMPLATE_CODE = `<style>
 <div class="widget-card">My Custom Widget</div>`
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const { settings } = storeToRefs(systemStore)
 const { t } = useI18n()
@@ -41,14 +48,11 @@ const { confirmDialog } = useDialog()
 const activePanel = ref('library')
 const saved = ref(false)
 const templateCopied = ref(false)
-const builtInWidgetPage = ref(0)
 const customWidgetName = ref('')
 const customWidgetSize = ref('2x2')
 const customWidgetCode = ref('')
-const customWidgetPage = ref(0)
 const editingWidgetId = ref('')
 const importJsonText = ref('')
-const importTargetPage = ref(0)
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
 const importFeedbackDetails = ref([])
@@ -64,10 +68,21 @@ const panels = computed(() => [
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
-const pageOptions = computed(() =>
-  Array.from({ length: Math.max(homeWidgetPages.value.length, 5) }, (_, index) => index),
-)
 const hasCustomWidgets = computed(() => customWidgets.value.length > 0)
+const editingCustomWidget = computed(() =>
+  customWidgets.value.find((widget) => widget.id === editingWidgetId.value) || null,
+)
+const editingWidgetIsPlaced = computed(() =>
+  Boolean(
+    editingWidgetId.value &&
+      homeWidgetPages.value.some((page) => Array.isArray(page) && page.includes(editingWidgetId.value)),
+  ),
+)
+const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
+const returnButtonLabel = computed(() =>
+  returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
+)
+const returnHomePage = computed(() => normalizeHomePageQuery(route.query.homePage))
 
 const WIDGET_TEMPLATE_JSON = computed(() =>
   JSON.stringify(
@@ -153,16 +168,25 @@ const triggerSaved = () => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
+}
+
+const openHomeWidgetEdit = () => {
+  router.push(
+    buildRouteWithReturnSource('/home', 'home', {
+      widgetEdit: '1',
+      ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
+    }),
+  )
 }
 
 const restoreBuiltInWidget = (tileId) => {
-  const ok = systemStore.placeBuiltInWidgetTile(tileId, builtInWidgetPage.value)
+  const ok = systemStore.restoreBuiltInWidgetTile(tileId)
   if (!ok) {
     setImportFeedback('error', t('无法加入这个组件。', 'This widget cannot be added.'))
     return
   }
-  setImportFeedback('success', t('组件已放入目标屏幕。', 'Widget moved to the target screen.'))
+  setImportFeedback('success', t('组件已恢复到默认位置。', 'Widget restored to its default Home slot.'))
   triggerSaved()
 }
 
@@ -171,7 +195,6 @@ const resetCustomWidgetForm = () => {
   customWidgetName.value = ''
   customWidgetSize.value = '2x2'
   customWidgetCode.value = ''
-  customWidgetPage.value = 0
 }
 
 const startEditCustomWidget = (widget) => {
@@ -180,9 +203,6 @@ const startEditCustomWidget = (widget) => {
   customWidgetName.value = widget.name || ''
   customWidgetSize.value = widget.size || '2x2'
   customWidgetCode.value = widget.code || ''
-
-  const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(widget.id))
-  customWidgetPage.value = pageIndex >= 0 ? pageIndex : 0
 }
 
 const submitCustomWidget = () => {
@@ -194,7 +214,9 @@ const submitCustomWidget = () => {
 
   const payload = {
     name: customWidgetName.value.trim() || t('自定义组件', 'Custom Widget'),
-    size: customWidgetSize.value,
+    size: editingWidgetIsPlaced.value
+      ? editingCustomWidget.value?.size || customWidgetSize.value
+      : customWidgetSize.value,
     code,
   }
 
@@ -204,7 +226,6 @@ const submitCustomWidget = () => {
       setImportFeedback('error', t('这个组件无法更新。', 'This widget cannot be updated.'))
       return
     }
-    systemStore.placeCustomWidget(editingWidgetId.value, customWidgetPage.value)
     setImportFeedback('success', t('组件已更新。', 'Widget updated.'))
     triggerSaved()
     resetCustomWidgetForm()
@@ -213,9 +234,10 @@ const submitCustomWidget = () => {
 
   systemStore.addCustomWidget({
     ...payload,
-    pageIndex: customWidgetPage.value,
+    pageIndex: null,
+    placeOnHome: false,
   })
-  setImportFeedback('success', t('组件已添加到主屏。', 'Widget added to Home.'))
+  setImportFeedback('success', t('组件已加入库。', 'Widget added to the library.'))
   triggerSaved()
   resetCustomWidgetForm()
 }
@@ -235,12 +257,6 @@ const removeCustomWidget = async (widgetId) => {
     resetCustomWidgetForm()
   }
   setImportFeedback('success', t('组件已删除。', 'Widget deleted.'))
-  triggerSaved()
-}
-
-const moveCustomWidgetToPage = (widgetId, pageIndex) => {
-  systemStore.placeCustomWidget(widgetId, pageIndex)
-  setImportFeedback('success', t('组件位置已更新。', 'Widget location updated.'))
   triggerSaved()
 }
 
@@ -340,7 +356,7 @@ const importCustomWidgets = () => {
     return
   }
 
-  const result = systemStore.importCustomWidgets(raw, importTargetPage.value)
+  const result = systemStore.importCustomWidgets(raw, null, { placeOnHome: false })
   if (!result?.ok) {
     const details = (result?.errors || []).map((item) => formatImportError(item))
     setImportFeedback('error', details[0] || t('导入失败。', 'Import failed.'), details)
@@ -373,7 +389,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="widgets-shell">
     <header class="widgets-header">
-      <button class="widgets-icon-btn" type="button" @click="goHome" :aria-label="t('返回主页', 'Back Home')">
+      <button class="widgets-icon-btn" type="button" @click="goHome" :aria-label="returnButtonLabel">
         <i class="fas fa-chevron-left"></i>
       </button>
       <div class="widgets-heading">
@@ -381,8 +397,8 @@ onBeforeUnmount(() => {
         <h1>{{ t('Widget 中心', 'Widget Center') }}</h1>
       </div>
       <button class="widgets-home-btn" type="button" @click="goHome">
-        <i class="fas fa-house"></i>
-        <span>{{ t('主页', 'Home') }}</span>
+        <i :class="returnLabelKey === 'Settings' ? 'fas fa-gear' : 'fas fa-house'"></i>
+        <span>{{ returnButtonLabel }}</span>
       </button>
     </header>
 
@@ -405,16 +421,12 @@ onBeforeUnmount(() => {
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('内置组件', 'Built-in widgets') }}</h2>
-            <p>{{ t('选择屏幕后，可把组件加入或移动到主屏。', 'Choose a screen, then add or move widgets to Home.') }}</p>
+            <p>{{ t('这里只恢复默认组件；更换主屏位置请进入组件编辑。', 'Restore default widgets here; change Home slots in widget edit mode.') }}</p>
           </div>
-          <label class="widgets-select-field">
-            <span>{{ t('目标屏幕', 'Target screen') }}</span>
-            <select v-model.number="builtInWidgetPage">
-              <option v-for="pageIndex in pageOptions" :key="`builtin-${pageIndex}`" :value="pageIndex">
-                {{ pageDisplayLabel(pageIndex) }}
-              </option>
-            </select>
-          </label>
+          <button class="widgets-secondary-btn" type="button" @click="openHomeWidgetEdit">
+            <i class="fas fa-table-cells"></i>
+            <span>{{ t('编辑主屏组件', 'Edit Home Widgets') }}</span>
+          </button>
         </div>
 
         <div class="widgets-library-list">
@@ -427,11 +439,7 @@ onBeforeUnmount(() => {
               <p>{{ widget.size }} · {{ widget.pageLabel }}</p>
             </div>
             <button class="widgets-action-btn" type="button" @click="restoreBuiltInWidget(widget.id)">
-              {{
-                widget.visible
-                  ? `${t('设为', 'Set to')} ${pageDisplayLabel(builtInWidgetPage)}`
-                  : `${t('加入', 'Add to')} ${pageDisplayLabel(builtInWidgetPage)}`
-              }}
+              {{ widget.visible ? t('恢复默认', 'Restore') : t('恢复到主屏', 'Restore') }}
             </button>
           </article>
         </div>
@@ -468,17 +476,12 @@ onBeforeUnmount(() => {
           <div class="widgets-form-grid">
             <label class="widgets-field">
               <span>{{ t('尺寸', 'Size') }}</span>
-              <select v-model="customWidgetSize">
+              <select v-model="customWidgetSize" :disabled="editingWidgetIsPlaced">
                 <option v-for="size in CUSTOM_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
               </select>
-            </label>
-            <label class="widgets-field">
-              <span>{{ t('目标屏幕', 'Target screen') }}</span>
-              <select v-model.number="customWidgetPage">
-                <option v-for="pageIndex in pageOptions" :key="`create-${pageIndex}`" :value="pageIndex">
-                  {{ pageDisplayLabel(pageIndex) }}
-                </option>
-              </select>
+              <small v-if="editingWidgetIsPlaced" class="widgets-field-hint">
+                {{ t('已放置的组件保留当前尺寸。', 'Placed widgets keep their current size.') }}
+              </small>
             </label>
           </div>
 
@@ -520,16 +523,6 @@ onBeforeUnmount(() => {
               <button type="button" @click="startEditCustomWidget(widget)">{{ t('编辑', 'Edit') }}</button>
               <button type="button" class="is-danger" @click="removeCustomWidget(widget.id)">{{ t('删除', 'Delete') }}</button>
             </div>
-            <div class="widgets-page-row">
-              <button
-                v-for="pageIndex in pageOptions"
-                :key="`${widget.id}-${pageIndex}`"
-                type="button"
-                @click="moveCustomWidgetToPage(widget.id, pageIndex)"
-              >
-                {{ pageDisplayLabel(pageIndex) }}
-              </button>
-            </div>
           </article>
         </div>
       </section>
@@ -538,7 +531,7 @@ onBeforeUnmount(() => {
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('导入组件', 'Import widgets') }}</h2>
-            <p>{{ t('粘贴组件数组，可一次加入多个主屏组件。', 'Paste a widget array to add multiple Home widgets.') }}</p>
+            <p>{{ t('导入后进入组件库；回到主屏编辑槽位时再选择使用。', 'Imported widgets go into the library; choose them from Home widget edit mode.') }}</p>
           </div>
           <button class="widgets-secondary-btn" type="button" @click="fillRecognizedImportTemplate">
             <i class="fas fa-wand-magic-sparkles"></i>
@@ -557,14 +550,6 @@ onBeforeUnmount(() => {
         </label>
 
         <div class="widgets-import-actions">
-          <label class="widgets-select-field">
-            <span>{{ t('放入屏幕', 'Place on screen') }}</span>
-            <select v-model.number="importTargetPage">
-              <option v-for="pageIndex in pageOptions" :key="`import-${pageIndex}`" :value="pageIndex">
-                {{ pageDisplayLabel(pageIndex) }}
-              </option>
-            </select>
-          </label>
           <button class="widgets-primary-btn" type="button" @click="importCustomWidgets">
             {{ t('导入', 'Import') }}
           </button>
@@ -644,8 +629,7 @@ onBeforeUnmount(() => {
 .widgets-action-btn,
 .widgets-primary-btn,
 .widgets-secondary-btn,
-.widgets-created-actions button,
-.widgets-page-row button {
+.widgets-created-actions button {
   border: 0;
   cursor: pointer;
   font: inherit;
@@ -812,6 +796,18 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
+.widgets-field select:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.widgets-field-hint {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .widgets-import-textarea {
   min-height: 220px;
 }
@@ -910,6 +906,10 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.widgets-import-actions .widgets-primary-btn {
+  flex: 1;
+}
+
 .widgets-form-actions .widgets-primary-btn {
   flex: 1;
 }
@@ -951,15 +951,13 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.widgets-created-actions,
-.widgets-page-row {
+.widgets-created-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
-.widgets-created-actions button,
-.widgets-page-row button {
+.widgets-created-actions button {
   min-height: 34px;
   border-radius: 999px;
   padding: 0 11px;
@@ -973,10 +971,6 @@ onBeforeUnmount(() => {
 .widgets-created-actions button.is-danger {
   color: var(--system-danger);
   border-color: rgba(184, 83, 83, 0.22);
-}
-
-.widgets-import-actions .widgets-select-field {
-  flex: 1;
 }
 
 .widgets-import-note {

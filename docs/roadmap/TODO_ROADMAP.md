@@ -68,6 +68,17 @@ Updated / 更新时间: 2026-05-05
 
 ## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
+### 4.0 Visual Track Immediate Correction / 视觉专项立即修正
+
+Status / 状态: `IN_PROGRESS`
+
+1. EN: Return navigation now needs explicit target labels and source preservation for multi-entry system pages.
+   中文：多入口系统页的返回导航需要明确目标标签，并保留来源上下文。
+2. EN: Widget Center must no longer expose screen-number placement. It is a library/import/create surface; Home widget edit owns same-size slot replacement.
+   中文：Widget 中心不再暴露“第几屏”放置控件；它是库、导入与创建界面，Home Widget 编辑模式负责同尺寸槽位替换。
+3. EN: Follow-up data-model task: migrate the current `homeWidgetPages` array toward explicit fixed slot records when the slot schema is designed.
+   中文：后续数据模型任务：在槽位 schema 设计完成后，将当前 `homeWidgetPages` 数组迁移为显式固定槽位记录。
+
 ### P1 Kickoff Preview / P1 启动预览
 Status / 状态: `IN_PROGRESS`
 Priority / 优先级: `Highest next / 下一阶段最高`
@@ -1065,6 +1076,7 @@ Status: Baseline landed; next work should move from infrastructure to module dat
 3. DONE - Shopping shell using the folder baseline.
    Scope: add Shopping as a Home folder entry with child categories such as mall, fashion, beauty, digital, grocery, home, luxury, and gifts.
    Acceptance: Shopping appears on Home as a folder-style entry, child category entries are visible after opening the folder, and the module has a route/view shell for later commerce behavior.
+   Current visual note: this is now historical baseline wording. The current Home Shopping folder exposes platform-like child app identities such as Schat Mall, Style Cloud, Nova Digital, and Daily Fresh; product categories live inside the selected Shopping platform route.
 4. DONE - Shopping cross-module planning hooks.
    Scope: reserve stable data/source labels for future Chat handoff such as product share cards, recommendation messages, cart reminders, and order updates.
    Acceptance: no full commerce logic required yet, but route names, source keys, and docs avoid future rename churn.
@@ -1514,6 +1526,7 @@ Status: DONE
    中文：Shopping 现在新增与其他购物品类平级的 `logistics` / 物流入口，用于配送和跟进聚合。
 2. EN: The Home Shopping folder automatically exposes Logistics because child entries are sourced from `SHOPPING_CATEGORY_ENTRIES`.
    中文：主屏 Shopping 文件夹会自动展示物流入口，因为子入口来源于 `SHOPPING_CATEGORY_ENTRIES`。
+   Current visual note: this is historical. The Home Shopping folder is now platform-style; Logistics should be reached from inside Shopping or a logistics service-account context, not as a first-level Home folder child.
 3. EN: `ShoppingView.vue` now shows a logistics panel when opened with `category=logistics`; it aggregates Shopping orders and Calendar delivery cues without showing product cards.
    中文：`ShoppingView.vue` 在 `category=logistics` 下展示物流面板，聚合 Shopping 订单与 Calendar 配送线索，不展示商品卡列表。
 4. EN: Logistics is not available as a custom-product category, preventing users from creating products under the logistics entry.

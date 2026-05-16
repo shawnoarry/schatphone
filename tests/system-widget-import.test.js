@@ -45,6 +45,80 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[3]).toContain(importedId)
   })
 
+  test('can import widgets into library without placing them on Home', () => {
+    const store = useSystemStore()
+    const beforePages = store.settings.appearance.homeWidgetPages.map((page) => [...page])
+
+    const result = store.importCustomWidgets(
+      JSON.stringify([
+        {
+          name: 'Library Widget',
+          size: '2x2',
+          code: '<div>Library</div>',
+        },
+      ]),
+      null,
+      { placeOnHome: false },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.importedCount).toBe(1)
+    expect(store.settings.appearance.customWidgets.some((item) => item.id === result.importedIds[0])).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+  })
+
+  test('can create custom widgets without placing them on Home', () => {
+    const store = useSystemStore()
+    const beforePages = store.settings.appearance.homeWidgetPages.map((page) => [...page])
+
+    const widgetId = store.addCustomWidget({
+      name: 'Draft Widget',
+      size: '2x2',
+      code: '<div>Draft</div>',
+      pageIndex: null,
+      placeOnHome: false,
+    })
+
+    expect(widgetId).toMatch(/^custom_widget_/)
+    expect(store.settings.appearance.customWidgets.some((item) => item.id === widgetId)).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+  })
+
+  test('restores built-in widgets to their default page order', () => {
+    const store = useSystemStore()
+    store.setHomeWidgetPages([['calendar'], ['weather', 'music']])
+
+    const ok = store.restoreBuiltInWidgetTile('weather')
+
+    expect(ok).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages[0].indexOf('weather')).toBeLessThan(
+      store.settings.appearance.homeWidgetPages[0].indexOf('calendar'),
+    )
+    expect(store.settings.appearance.homeWidgetPages[1]).not.toContain('weather')
+  })
+
+  test('updates placed custom widgets without moving them across pages', () => {
+    const store = useSystemStore()
+    const widgetId = store.addCustomWidget({
+      name: 'Placed Widget',
+      size: '2x2',
+      code: '<div>Before</div>',
+      pageIndex: 2,
+    })
+
+    const beforePages = store.settings.appearance.homeWidgetPages.map((page) => [...page])
+    const ok = store.updateCustomWidget(widgetId, {
+      name: 'Placed Widget Updated',
+      code: '<div>After</div>',
+    })
+
+    expect(ok).toBe(true)
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === widgetId)?.name).toBe(
+      'Placed Widget Updated',
+    )
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+  })
+
   test('hides Files from default and restored Home layouts', () => {
     const store = useSystemStore()
 

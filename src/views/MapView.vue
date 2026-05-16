@@ -1,13 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import { pushReturnTarget } from '../lib/navigation-return'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
@@ -23,6 +24,7 @@ import {
 } from '../lib/media-policy'
 
 const router = useRouter()
+const route = useRoute()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const systemStore = useSystemStore()
@@ -69,7 +71,7 @@ const mapAiVisualRefreshing = ref(false)
 let runtimeTimer = null
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const openWorldBook = (options = {}) => {
@@ -77,6 +79,7 @@ const openWorldBook = (options = {}) => {
     path: '/worldbook',
     query: buildWorldBookRouteQuery({
       source: 'map',
+      homePage: route.query.homePage,
       pointIds: options.pointIds,
       keyword: options.keyword,
       tag: options.tag,

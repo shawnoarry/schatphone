@@ -1,11 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { useStockStore } from '../stores/stock'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const stockStore = useStockStore()
 const {
@@ -31,7 +33,7 @@ const feedbackType = ref('success')
 const visibleItems = computed(() => items.value.slice(0, 30))
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const showFeedback = (type, message) => {

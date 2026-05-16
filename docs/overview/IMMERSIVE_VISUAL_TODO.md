@@ -15,6 +15,8 @@ Authority note / 职责说明:
 - Entries inside a Home folder may be installed app identities.
 - Shared stores may remain shared, but the user-facing surface must preserve immersion.
 - Audit visible copy. Do not expose development notes, source keys, handoff rules, or implementation labels unless the surface is explicitly a developer/admin tool.
+- Return buttons must name the real target context and preserve visible entry source.
+- Widget Center is a library/import/create surface; Home widget edit mode owns slot replacement.
 
 ---
 
@@ -22,6 +24,7 @@ Authority note / 职责说明:
 
 ### Recently changed but not yet committed / 最近已改但尚未提交
 
+- 2026-05-16 commit `e73cf06` froze the current immersive visual workflow and Shopping platform-folder transition.
 - Shopping Home folder child entries now point to platform-like app entries instead of product categories.
 - Current first-level Shopping entries: `Schat Mall`, `Style Cloud`, `Nova Digital`, `Daily Fresh`.
 - `ShoppingView` now reads `service` and presents the selected platform as the active app identity.
@@ -32,8 +35,8 @@ Authority note / 职责说明:
 
 Recommended first action / 建议第一步:
 
-1. Commit the current Shopping platform-folder slice before starting visual refactors.
-2. Then continue with the visual tasks below.
+1. Keep the Shopping platform-folder slice as the current baseline.
+2. Continue with the visual tasks below.
 
 ---
 
@@ -44,6 +47,10 @@ Recommended first action / 建议第一步:
 Goal / 目标:
 
 - Freeze the current logical transition before visual changes mix with it.
+
+Status / 状态:
+
+- Done in commit `e73cf06`.
 
 Files currently involved / 当前相关文件:
 
@@ -164,6 +171,29 @@ Tasks / 任务:
 - Native system surfaces must use system tokens for default / graphite-night.
 - Installed apps should not blindly inherit native-system colors. Give them app-local day/night tokens when needed.
 - Confirm dark mode does not produce white panels with light text.
+
+### P1.4 Return Navigation And Home Widget Placement
+
+Owner / 归属:
+
+- Native System / Home / Settings / cross-module entry rules.
+
+Goal / 目标:
+
+- Remove ambiguous return behavior and retire old screen-number widget placement from the normal user path.
+
+Current baseline / 当前基线:
+
+- System pages can preserve `from=home` or `from=settings`.
+- Cross-module management pages can preserve `source=chat|map|calendar`.
+- Widget Center should create/import/restore library items only.
+- Home widget edit mode should replace same-size slots without dragging or page-number controls.
+
+Follow-up tasks / 后续任务:
+
+- Audit every installed app header and replace vague Back labels with explicit parent labels.
+- Replace remaining hardcoded Home/Settings returns with the shared return helper where routes have multiple entry parents.
+- Continue evolving the `homeWidgetPages` array toward explicit fixed slot records when the data model is ready.
 
 ---
 
@@ -290,27 +320,7 @@ Do not start these until the visual architecture above is stable:
 
 #### Recommended First / 优先考虑
 
-1. `supercent-io/skills-template@frontend-design-system`
-
-Use for / 用途:
-
-- Design tokens, component consistency, layout rules, motion guidance, accessibility checklist.
-- Best match for turning the current visual decisions into a reusable phone-shell/app-shell design system.
-
-Install / 安装:
-
-```bash
-npx skills add supercent-io/skills-template@frontend-design-system
-```
-
-Notes / 备注:
-
-- `find-skills` result: 8.5K installs.
-- Review the linked source before installing. The install count is promising, but source quality should still be checked.
-- Do not install the sibling `design-system` at the same time unless this one proves too broad; they likely overlap.
-- 2026-05-16 status: recommended but not installed on this machine. Repeated install attempts failed because `https://github.com/supercent-io/skills-template.git` could not be reached or authenticated from this machine. Retry after GitHub access is confirmed.
-
-2. `vercel-labs/agent-skills@web-design-guidelines`
+1. `vercel-labs/agent-skills@web-design-guidelines`
 
 Use for:
 
@@ -340,81 +350,11 @@ Current testing-skill status:
 - `aj-geddes/useful-ai-prompts@visual-regression-testing`: defer until screenshot baselines, mobile/desktop viewport captures, or visual regression gates become explicit project goals.
 - `hoodini/ai-agents-skills@web-accessibility`: not recommended right now because `web-design-guidelines` now covers accessibility review with stronger source/install signals. Reconsider only if the project needs a dedicated WCAG-only pass.
 
-#### Useful Later / 后续可考虑
-
-2. `aj-geddes/useful-ai-prompts@frontend-testing`
-
-Use for / 用途:
-
-- Vue/Vitest-oriented frontend test planning, regression prevention, component and integration testing.
-
-Install / 安装:
-
-```bash
-npx skills add https://github.com/aj-geddes/useful-ai-prompts --skill frontend-testing
-```
-
-Notes / 备注:
-
-- Review the linked source before installing.
-
-3. `alinaqi/claude-bootstrap@ui-testing`
-
-Use for / 用途:
-
-- UI testing strategy, including accessibility, visual regression, Playwright-style workflow.
-
-Install / 安装:
-
-```bash
-npx skills add alinaqi/claude-bootstrap@ui-testing
-```
-
-Notes / 备注:
-
-- `find-skills` result: 218 installs.
-- Verify source before install.
-
-4. `aj-geddes/useful-ai-prompts@visual-regression-testing`
-
-Use for / 用途:
-
-- Screenshot comparison and visual-regression planning after Home folder / Shopping / Food Delivery visual rebuilds.
-
-Install / 安装:
-
-```bash
-npx skills add aj-geddes/useful-ai-prompts@visual-regression-testing
-```
-
-Notes / 备注:
-
-- `find-skills` result: 406 installs.
-- Install only after deciding to formalize screenshot baselines.
-- Verify source before install.
-
-5. `hoodini/ai-agents-skills@web-accessibility`
-
-Use for / 用途:
-
-- WCAG, ARIA, keyboard navigation, focus management, screen reader checks.
-
-Install / 安装:
-
-```bash
-npx skills add hoodini/ai-agents-skills@web-accessibility
-```
-
-Notes / 备注:
-
-- `find-skills` result: 301 installs.
-- Useful if Home folder overlay and app drawers need formal accessibility review.
-- Low install count compared with design-system skills, so review source first.
-
 ### Not Recommended Now / 暂不建议
 
 - `kuse-ai/kuse-skills@backstage-style-web`: conflicts with the current goal to avoid web-admin/backstage feel.
 - Very low-install visual skills under 100 installs unless there is a specific reason and source review is completed.
+- Skills whose source repository or install path cannot be verified from the current machine or project docs.
 
 ---
 
@@ -422,8 +362,7 @@ Notes / 备注:
 
 Recommended next sequence:
 
-1. Commit current Shopping folder platformization.
-2. `web-design-guidelines` is installed; retry `frontend-design-system` only after GitHub access for `supercent-io/skills-template` is confirmed.
-3. Update `VISUAL_ENTRY_OWNERSHIP_MAP.md`.
-4. Start `P1.1 System-Controlled Home Folder Visual`.
-5. Then start `P1.2 Shopping Platform App Shells`.
+1. Use `web-design-guidelines` as the default external UI/UX/accessibility audit skill when an external pass is needed.
+2. Keep `VISUAL_ENTRY_OWNERSHIP_MAP.md` synchronized with system-controlled folder decisions.
+3. Continue `P1.1 System-Controlled Home Folder Visual`.
+4. Then start `P1.2 Shopping Platform App Shells`.

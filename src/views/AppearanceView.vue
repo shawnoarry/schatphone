@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
@@ -17,6 +17,11 @@ import {
   resolveAppCustomizationTargetMeta,
   resolveAppIconPresetLabel,
 } from '../lib/app-icon-presentation'
+import {
+  buildReturnSourceQuery,
+  pushReturnTarget,
+  resolveReturnLabel,
+} from '../lib/navigation-return'
 
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
@@ -41,6 +46,7 @@ const WALLPAPER_SOURCE_OPTIONS = [
 ]
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const { t, systemLanguage, languageBase } = useI18n()
@@ -109,9 +115,11 @@ const pageTitle = computed(() => {
   return t('外观工坊', 'Appearance Studio')
 })
 
-const backLabel = computed(() =>
-  activeMenu.value === ROOT_MENU ? t('设置', 'Settings') : t('外观工坊', 'Appearance Studio'),
-)
+const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
+const backLabel = computed(() => {
+  if (activeMenu.value !== ROOT_MENU) return t('外观工坊', 'Appearance Studio')
+  return returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home')
+})
 
 const currentFontStack = computed(() => {
   const value = settings.value.appearance.customVars?.[FONT_VAR_NAME]
@@ -323,15 +331,19 @@ const triggerSaved = () => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const openWidgetCenter = () => {
-  router.push('/widgets')
+  const source = returnLabelKey.value === 'Settings' ? 'settings' : 'home'
+  router.push({
+    path: '/widgets',
+    query: buildReturnSourceQuery(source, route),
+  })
 }
 
 const goSettings = () => {
-  router.push('/settings')
+  pushReturnTarget(router, route, '/home')
 }
 
 const handleBack = () => {

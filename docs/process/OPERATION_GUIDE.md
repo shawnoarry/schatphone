@@ -56,6 +56,14 @@ npm run dev
 - Tap the Home Widgets icon to open `/widgets`; long-press it to enter Home widget edit mode / 点击 Home 的组件图标进入 `/widgets`；长按该图标进入 Home Widget 编辑模式
 - Legacy long-press layout edit may exist only behind experimental feature flags / 旧版长按布局编辑仅作为实验开关能力保留
 
+### 4A. Return Navigation Rule / 返回导航规则
+
+- Full installed apps return to Home by default / 完整装载 App 默认返回 Home
+- System customization pages preserve entry source with `from=home` or `from=settings` / 系统美化页通过 `from=home` 或 `from=settings` 保留入口来源
+- In-app child pages return to their parent app, not to a generic system layer / App 内子页返回上级 App，不跳到泛化系统层
+- Cross-module management deep links may use `source=chat|map|calendar` so the back button names the source context / 跨模块管理链接可使用 `source=chat|map|calendar`，让返回按钮明确来源
+- Do not label a button only as Back if the target layer is not obvious / 如果返回目标不清晰，不要只写 Back
+
 ## 5. Home Rules / Home 交互规则
 
 - Fixed page skeleton is the default Home model / 固定页面骨架是默认 Home 模型
@@ -66,6 +74,8 @@ npm run dev
 - App entries and Dock items stay in fixed system-owned zones / App 入口与 Dock 项保持在系统固定区域
 - `app_*` entries cannot be deleted; visibility and overflow should be managed by system-owned Home/App Library rules / `app_*` 不可删除，显示与溢出由系统 Home/App Library 规则管理
 - Widgets and custom widgets can be hidden or assigned to compatible slots / Widget 与自定义 Widget 可隐藏或分配到兼容槽位
+- Widget Center is a library/import/create surface; it must not expose screen-number placement controls / Widget 中心是库、导入与创建界面，不再暴露屏幕编号的放置控件
+- New or imported custom widgets stay in the library until the user chooses a compatible Home slot / 新建或导入的自定义 Widget 先进入库，由用户在 Home 槽位中选择
 
 ## 6. Settings Structure / Settings 分层
 
@@ -144,16 +154,16 @@ Visible copy rule / 可见文案规则：
 
 1. Tap the Home Widgets icon or open `/widgets` from Appearance / 点击 Home 的组件图标，或从 Appearance 进入 `/widgets`
 2. Choose Library, Custom, or Import / 选择组件库、自定义或导入
-3. Fill name/size/content and add / 填写名称、尺寸与内容
+3. Fill name/size/content and add to the library / 填写名称、尺寸与内容并加入组件库
 4. Long-press the Home Widgets icon to enter widget edit mode / 长按 Home 的组件图标进入 Widget 编辑模式
 5. Tap a placed widget and choose a same-size replacement / 点击已放置 Widget，选择同尺寸替换项
 
 Built-in widget recovery / 内置 Widget 恢复：  
-Use `/widgets` to re-add or move built-in widgets, then use Home widget edit mode for same-size replacement. / 在 `/widgets` 中加入或移动内置 Widget，再通过 Home Widget 编辑模式进行同尺寸替换。
+Use `/widgets` to restore built-in widgets to their default Home slots, then use Home widget edit mode for same-size replacement. / 在 `/widgets` 中将内置 Widget 恢复到默认 Home 槽位，再通过 Home Widget 编辑模式进行同尺寸替换。
 
 Import / 导入：  
-Paste widget array in `/widgets` Import.
-在 `/widgets` 的导入区粘贴 Widget 数组后导入。
+Paste widget array in `/widgets` Import. Imported widgets remain in the library until assigned from Home widget edit mode.
+在 `/widgets` 的导入区粘贴 Widget 数组后导入；导入项先留在组件库，直到用户在 Home Widget 编辑模式中选择槽位。
 
 ## 10. Network API Quick Flow / 网络 API 快速操作
 

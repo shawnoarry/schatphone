@@ -12,6 +12,7 @@ import {
 } from '../lib/planned-module-registry'
 import { ASSET_STATUS, useAssetsStore } from '../stores/assets'
 import { useGalleryStore } from '../stores/gallery'
+import { pushReturnTarget } from '../lib/navigation-return'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,7 +116,7 @@ const assetDraft = ref(createAssetDraft())
 const formatTotal = (total) => `${total?.amount || '0.00'} ${total?.currency || 'CNY'}`
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const openCategory = (key) => {
@@ -497,4 +498,3 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
-

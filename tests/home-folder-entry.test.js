@@ -73,6 +73,7 @@ describe('Home folder entries', () => {
       },
     })
 
+    await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-entry-nearby"]').exists()).toBe(true)
@@ -82,6 +83,8 @@ describe('Home folder entries', () => {
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query.category).toBe('nearby')
+    expect(router.currentRoute.value.query.from).toBe('home')
+    expect(router.currentRoute.value.query.homePage).toBe('1')
     wrapper.unmount()
   })
 
@@ -100,6 +103,7 @@ describe('Home folder entries', () => {
       },
     })
 
+    await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_shopping"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-entry-style_cloud"]').exists()).toBe(true)
@@ -110,6 +114,8 @@ describe('Home folder entries', () => {
     expect(router.currentRoute.value.path).toBe('/shopping')
     expect(router.currentRoute.value.query.service).toBe('style_cloud')
     expect(router.currentRoute.value.query.category).toBe('fashion')
+    expect(router.currentRoute.value.query.from).toBe('home')
+    expect(router.currentRoute.value.query.homePage).toBe('1')
     wrapper.unmount()
   })
 

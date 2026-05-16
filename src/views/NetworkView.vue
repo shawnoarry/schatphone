@@ -25,6 +25,7 @@ import NetworkDiagnosticsPanel from '../components/network/NetworkDiagnosticsPan
 import NetworkManualModelSavePanel from '../components/network/NetworkManualModelSavePanel.vue'
 import NetworkSetupPresetPanel from '../components/network/NetworkSetupPresetPanel.vue'
 import NetworkSmokeControlsPanel from '../components/network/NetworkSmokeControlsPanel.vue'
+import { buildReturnSourceQuery, pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 
 const router = useRouter()
 const route = useRoute()
@@ -108,6 +109,10 @@ const networkReports = computed(() =>
   }),
 )
 const reportSummary = computed(() => summarizeNetworkReports(apiReports.value))
+const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
+const returnButtonLabel = computed(() =>
+  returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
+)
 
 const copyReport = async (item) => {
   if (!item) return
@@ -261,28 +266,31 @@ const clearAllPresets = async () => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const goSettings = () => {
-  router.push('/settings')
+  router.push({
+    path: '/settings',
+    query: buildReturnSourceQuery('home', route),
+  })
 }
 
 const openStorageDiagnostics = () => {
   router.push({
     path: '/settings',
-    query: {
+    query: buildReturnSourceQuery('home', route, {
       menu: 'about',
-    },
+    }),
   })
 }
 
 const openPushSettings = () => {
   router.push({
     path: '/settings',
-    query: {
+    query: buildReturnSourceQuery('home', route, {
       menu: 'notification',
-    },
+    }),
   })
 }
 
@@ -598,10 +606,16 @@ ensurePresetState()
   <div class="network-shell w-full h-full bg-gray-100 flex flex-col text-black">
     <div class="network-header pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
       <button @click="goHome" class="network-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
-        <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
+        <i class="fas fa-chevron-left"></i> {{ returnButtonLabel }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('网络与 API', 'Network & API') }}</h1>
-      <button @click="goSettings" class="network-nav-button text-blue-500 text-sm">{{ t('设置', 'Settings') }}</button>
+      <button
+        v-if="returnLabelKey !== 'Settings'"
+        @click="goSettings"
+        class="network-nav-button text-blue-500 text-sm"
+      >
+        {{ t('设置', 'Settings') }}
+      </button>
     </div>
 
     <div class="network-scroll flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">

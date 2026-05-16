@@ -11,6 +11,7 @@ import {
   FOOD_DELIVERY_SOURCE_KEYS,
   findFoodDeliveryCategory,
 } from '../lib/planned-module-registry'
+import { pushReturnTarget } from '../lib/navigation-return'
 
 const route = useRoute()
 const router = useRouter()
@@ -240,7 +241,7 @@ const checkoutFoodDelivery = () => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const foodImageUrl = (item) => {

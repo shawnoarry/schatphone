@@ -13,6 +13,7 @@ import {
   normalizeWorldBookTagFilter,
   normalizeWorldBookUsageFilter,
 } from '../lib/worldbook-navigation'
+import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,9 +64,21 @@ const knowledgeDraft = reactive({
 })
 const editingKnowledgePointId = ref('')
 let savedTimerId = null
+const returnLabelKey = computed(() => resolveReturnLabel(route, 'Settings'))
+const returnButtonLabel = computed(() =>
+  returnLabelKey.value === 'Home'
+    ? t('主页', 'Home')
+    : returnLabelKey.value === 'Chat'
+      ? t('聊天', 'Chat')
+      : returnLabelKey.value === 'Map'
+        ? t('地图', 'Map')
+        : returnLabelKey.value === 'Calendar'
+          ? t('日历', 'Calendar')
+          : t('设置', 'Settings'),
+)
 
 const goSettings = () => {
-  router.push('/settings')
+  pushReturnTarget(router, route, '/settings')
 }
 
 const pulseSaved = (message = '') => {
@@ -558,7 +571,7 @@ onBeforeUnmount(() => {
   <div class="worldbook-shell w-full h-full bg-[#f2f2f7] text-black flex flex-col">
     <div class="worldbook-header pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
       <button @click="goSettings" class="worldbook-nav-button text-blue-500 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> {{ t('设置', 'Settings') }}
+        <i class="fas fa-chevron-left"></i> {{ returnButtonLabel }}
       </button>
       <h1 class="font-bold text-xl">{{ t('世界书', 'World Book') }}</h1>
     </div>

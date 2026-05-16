@@ -235,6 +235,30 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...page])
 
+const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
+  const order = DEFAULT_WIDGET_PAGES[pageIndex] || []
+  const targetOrder = order.indexOf(tileId)
+  const nextPage = Array.isArray(page) ? page.filter((itemId) => itemId !== tileId) : []
+
+  if (targetOrder < 0) {
+    nextPage.push(tileId)
+    return nextPage
+  }
+
+  const insertIndex = nextPage.findIndex((itemId) => {
+    const itemOrder = order.indexOf(itemId)
+    return itemOrder >= 0 && itemOrder > targetOrder
+  })
+
+  if (insertIndex < 0) {
+    nextPage.push(tileId)
+    return nextPage
+  }
+
+  nextPage.splice(insertIndex, 0, tileId)
+  return nextPage
+}
+
 const createDefaultAiAutomationSettings = () => ({
   masterEnabled: DEFAULT_AI_AUTOMATION_SETTINGS.masterEnabled,
   notifyOnlyMode: DEFAULT_AI_AUTOMATION_SETTINGS.notifyOnlyMode,
@@ -1370,7 +1394,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.homeWidgetPages = cloneDefaultWidgetPages()
   }
 
-  const addCustomWidget = ({ name, size, code, pageIndex = 0 } = {}) => {
+  const addCustomWidget = ({ name, size, code, pageIndex = 0, placeOnHome = true } = {}) => {
     const widget = {
       id: createCustomWidgetId(),
       name: typeof name === 'string' && name.trim() ? name.trim() : '自定义组件',
@@ -1380,6 +1404,14 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     settings.appearance.customWidgets = [...settings.appearance.customWidgets, widget]
+
+    if (placeOnHome === false || pageIndex === null) {
+      settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
+        settings.appearance.homeWidgetPages,
+        currentCustomWidgetIds(),
+      )
+      return widget.id
+    }
 
     const nextPages = settings.appearance.homeWidgetPages.map((page) => [...page])
     const targetPage = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
@@ -1446,9 +1478,10 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const importCustomWidgets = (importPayload, pageIndex = 0, options = {}) => {
+    const { placeOnHome = true, ...validationOptions } = options || {}
     const validation = validateWidgetImportPayload(importPayload, {
       fallbackName: '自定义组件',
-      ...options,
+      ...validationOptions,
     })
 
     if (!validation.ok) {
@@ -1476,14 +1509,17 @@ export const useSystemStore = defineStore('system', () => {
 
       const mergedWidgets = [...currentWidgetsSnapshot, ...importedWidgets]
       const nextPages = currentPagesSnapshot.map((page) => [...page])
-      const targetPage = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+      const shouldPlaceOnHome = placeOnHome !== false && pageIndex !== null
 
-      while (nextPages.length <= targetPage) {
-        nextPages.push([])
+      if (shouldPlaceOnHome) {
+        const targetPage = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+        while (nextPages.length <= targetPage) {
+          nextPages.push([])
+        }
+        importedWidgets.forEach((widget) => {
+          nextPages[targetPage].push(widget.id)
+        })
       }
-      importedWidgets.forEach((widget) => {
-        nextPages[targetPage].push(widget.id)
-      })
 
       const mergedWidgetIds = mergedWidgets.map((widget) => widget.id)
       const normalizedPages = normalizeHomeWidgetPages(nextPages, mergedWidgetIds)
@@ -1524,6 +1560,24 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     nextPages[targetPage].push(tileId)
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    return true
+  }
+
+  const restoreBuiltInWidgetTile = (tileId) => {
+    if (!BUILT_IN_WIDGET_TILE_IDS.includes(tileId)) return false
+    const targetPage = DEFAULT_TILE_PAGE_INDEX[tileId]
+    if (!Number.isInteger(targetPage)) return false
+
+    const nextPages = settings.appearance.homeWidgetPages.map((page) =>
+      page.filter((itemId) => itemId !== tileId),
+    )
+
+    while (nextPages.length <= targetPage) {
+      nextPages.push([])
+    }
+
+    nextPages[targetPage] = insertHomeTileByDefaultOrder(nextPages[targetPage], tileId, targetPage)
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
     return true
   }
@@ -2892,6 +2946,7 @@ export const useSystemStore = defineStore('system', () => {
     placeCustomWidget,
     importCustomWidgets,
     placeBuiltInWidgetTile,
+    restoreBuiltInWidgetTile,
     isMoreFeatureToggleEnabled,
     setMoreFeatureToggle,
     toggleMoreFeatureToggle,

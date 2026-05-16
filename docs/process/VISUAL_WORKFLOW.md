@@ -61,6 +61,9 @@ If a visual change requires touching functional code, keep the change minimal an
 13. When working on themes, review `default` and `zen` together as a native-system day/night pair.
 14. On native-system surfaces, replace raw white/gray utility backgrounds and hardcoded semantic colors with system tokens unless the element is app-owned, media/content preview, or user-authored widget/template content.
 15. Dark-theme approval requires checking panels, forms, list rows, dialogs, hover/active states, disabled states, and teleported overlays for contrast and background completeness.
+16. Return controls must name their actual target layer (`Home`, `Settings`, `Chat`, `Map`, etc.); avoid ambiguous Back labels when the route can be reached from multiple parents.
+17. Widget Center must stay a library/import/create surface. Placement belongs to Home widget edit mode and should use same-size slot replacement, not screen-number selectors.
+18. New or changed app/module navigation must preserve Home page return context. Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md` so a route opened from Home page N returns to Home page N.
 
 ## 4. Entry-Context Audit
 
@@ -90,6 +93,7 @@ Decision rules:
 3. **Data source does not own the look.** WorldBook, Gallery, Contacts, Calendar, Map, and Chat data may appear across modules, but the host surface decides the outer style.
 4. **Shell renders shell.** Lock-screen notifications, foreground banners, status bar surfaces, and global dialogs use system materials, with app icon/accent metadata as a secondary cue.
 5. **Full route is not always full ownership.** A full-screen route opened from Home can use its app identity; a compact embedded preview inside another app must stay host-local.
+6. **System-controlled folders keep system material.** A Home folder overlay is native-system even when its children launch app-owned destinations. The ownership changes only after the child route opens.
 
 Examples:
 
@@ -99,6 +103,9 @@ Examples:
 - Calendar event created from Map: Calendar visual owner after opening Calendar; Map visual owner while still inside Map.
 - Contacts role profile asset binding: Contacts visual owner, Gallery/WorldBook data sources.
 - Lock-screen Chat notification: Native System container, Chat accent/icon.
+- Shopping Home folder overlay: Native System container, Shopping platform child entries.
+- Shopping folder child route: Installed App identity for the selected Shopping platform.
+- Food Delivery folder overlay: Native System container, Food Delivery category child entries.
 
 ## 5. Visible Copy Audit
 
@@ -318,32 +325,6 @@ Install note:
 - Review the skill before use because installed skills run with full agent permissions.
 - Restart Codex or the agent host if the skill does not appear in the active skill list.
 
-### Deferred install: `frontend-design-system`
-
-Purpose:
-
-- Design tokens, component consistency, layout rules, motion guidance, and accessibility checklist.
-- Candidate support for turning SchatPhone's native-system and installed-app visual rules into a reusable design system.
-
-Recommended source:
-
-```text
-https://github.com/supercent-io/skills-template.git
-```
-
-Recommended install command on Windows:
-
-```powershell
-npx.cmd skills add https://github.com/supercent-io/skills-template --skill frontend-design-system
-```
-
-Current status:
-
-- Recommended, but not installed on this machine yet.
-- 2026-05-16 install attempts failed because this machine could not reach or authenticate against `https://github.com/supercent-io/skills-template.git`.
-- Retry only after GitHub network access or credentials are confirmed.
-- Do not install a sibling design-system skill at the same time unless this one proves unsuitable; they likely overlap.
-
 ## 7. Reference Library
 
 The current machine keeps the `awesome-design-md` reference library here:
@@ -560,22 +541,6 @@ The destination should contain:
 .agents\skills\web-design-guidelines\SKILL.md
 ```
 
-### Deferred: install `frontend-design-system`
-
-Only retry this when the machine can access `github.com/supercent-io/skills-template.git`.
-
-From the confirmed SchatPhone project root:
-
-```powershell
-npx.cmd skills add https://github.com/supercent-io/skills-template --skill frontend-design-system
-```
-
-The destination should contain:
-
-```text
-.agents\skills\frontend-design-system\SKILL.md
-```
-
 ### Clone `awesome-design-md`
 
 Do not assume every PC has a `D:` drive. Before cloning, ask the machine owner to confirm the local reference-library path.
@@ -614,8 +579,9 @@ Use this sequence for visual work unless the user asks for a narrower path.
 7. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
 8. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
 9. If themes are touched, verify both `default` and `zen` on the same surfaces before declaring the slice complete.
-10. Verify with `git diff --check`, then lint/build/test when code changed.
-11. Summarize the changed surfaces, the visual owner decisions, remaining risks, and any follow-up visual slices.
+10. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md` and search for hardcoded `router.push('/home')` regressions.
+11. Verify with `git diff --check`, then lint/build/test when code changed.
+12. Summarize the changed surfaces, the visual owner decisions, remaining risks, and any follow-up visual slices.
 
 ## 11. First Prompt Template
 

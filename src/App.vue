@@ -21,6 +21,7 @@ import {
   schedulePushNotification,
   syncExistingWebPushSubscription,
 } from './lib/push'
+import { pushReturnTarget } from './lib/navigation-return'
 
 const router = useRouter()
 const route = useRoute()
@@ -824,7 +825,7 @@ onBeforeUnmount(() => {
 const goHome = () => {
   if (systemStore.isLocked) return
   hideShellBanner()
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const lockPhone = () => {

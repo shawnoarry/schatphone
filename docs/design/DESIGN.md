@@ -37,6 +37,25 @@ Data source decides content structure, not the outer style.
 
 This is essential for immersion. A Chat-local WorldBook summary should feel like part of Chat. A Map-local Calendar cue should feel like part of Map. A Settings-owned WorldBook management page can remain system-like because the user reached it as a system utility.
 
+### Navigation Return Context Rule
+
+Immersive visual ownership also includes where the user returns after leaving a module.
+
+When a user opens an installed app or system page from Home page N, returning to Home should restore page N, not always page 1. This keeps the phone illusion intact when app entries are moved between Home pages.
+
+New modules should follow the navigation contract in:
+
+```text
+docs/process/NAVIGATION_RETURN_CONTRACT.md
+```
+
+Design-facing summary:
+
+- Home, Dock, and Home folder child entries capture `from=home` and `homePage=<index>` at launch time.
+- App and system return controls use the shared return helper instead of hardcoded `/home`.
+- Moving an app icon from one Home page to another should automatically change its return destination because the page is captured from the visible entry context.
+- Direct URL entry, lock-screen unlock fallback, and notifications without target routes may still fall back to Home page 1.
+
 The current baseline native-system style is defined in:
 
 ```text
@@ -77,6 +96,7 @@ Native system surfaces:
   - Home pages
   - Widgets
   - App icons
+  - System-controlled Home folders
   - Dock
   - Page indicator
   - Fixed Home layout slots
@@ -122,6 +142,11 @@ Default direction:
 - App entries and the Dock stay in fixed system-owned zones.
 - Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
 - Extra apps should go to an App Library, More page, or another system-owned overflow surface.
+- System-controlled Home folders are OS launch containers. Their tile preview, overlay material, close behavior, icon grid, and spacing belong to Home/Appearance.
+- Child entries inside a Home folder may represent installed app identities or app-internal category shortcuts. Once the user taps a child and navigation opens a route, visual ownership changes to the destination app.
+- Shopping is the first platform-style folder case: the folder shell stays native-system, while `Schat Mall`, `Style Cloud`, `Nova Digital`, and `Daily Fresh` should become selected Shopping platform identities after opening `/shopping?service=...`.
+- Food Delivery currently uses folder children as category shortcuts into the Food Delivery app. If it later becomes platform-style, update this document and `VISUAL_ENTRY_OWNERSHIP_MAP.md` before visual implementation.
+- Do not replace this controlled folder model with fully user-editable desktop folders until the product direction explicitly changes.
 
 Current implementation note:
 
@@ -158,6 +183,14 @@ Installed app surfaces:
   - Wallet app placeholder/MVP
 - `src/views/StockView.vue`
   - Stock app placeholder/MVP
+- `src/views/ShoppingView.vue`
+  - Shopping platform app shell
+  - The selected `service` query controls the apparent platform identity; product shelves, cart, and orders can still share one store.
+- `src/views/FoodDeliveryView.vue`
+  - Food Delivery app
+  - Current Home folder children are app-internal category entry points.
+- `src/views/AssetsView.vue`
+  - Assets vault/archive app
 - `src/views/FilesView.vue`
   - Files app MVP
 - `src/views/MoreView.vue`
@@ -240,6 +273,9 @@ docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 | `/phone` | Installed App | MVP placeholder for now. |
 | `/wallet` | Installed App | MVP placeholder for now. |
 | `/stock` | Installed App | MVP placeholder for now. |
+| `/shopping` | Installed App: selected Shopping platform | When opened from the Shopping Home folder, `service` decides the app identity. Shared Shopping data must not make the UI feel like a backend hub. |
+| `/food-delivery` | Installed App: Food Delivery | Current Home folder children are category entry points. Destination stays Food Delivery-owned. |
+| `/assets` | Installed App: Assets | Direct app entry from Home. |
 | `/files` | Installed App / Utility App | File utility. If opened as a system import/export picker later, reassess by entry context. |
 | `/more` | Installed App | MVP collection/overflow app. |
 | App dialogs | Native System Mechanics + Host Context | Dialog mechanics are system-owned, but app-local dialogs should keep the host app's accent and wording context where appropriate. |

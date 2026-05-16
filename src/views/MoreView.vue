@@ -1,11 +1,13 @@
 <script setup>
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { buildRouteWithReturnSource, pushReturnTarget } from '../lib/navigation-return'
 import { useSystemStore } from '../stores/system'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const systemStore = useSystemStore()
 const { settings } = storeToRefs(systemStore)
@@ -84,11 +86,11 @@ const quickEntries = computed(() => [
 ])
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
-const openEntry = (route) => {
-  router.push(route)
+const openEntry = (targetRoute) => {
+  router.push(buildRouteWithReturnSource(targetRoute, 'home', { homePage: route.query.homePage }))
 }
 
 const toggleFeature = (toggleId) => {

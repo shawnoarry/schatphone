@@ -32,6 +32,7 @@ import {
   validateMediaFileBySize,
 } from '../lib/media-policy'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import { pushReturnTarget } from '../lib/navigation-return'
 import {
   getAvatarImageGalleryAssetId,
   resolveAvatarImageSourceUrl,
@@ -1077,7 +1078,7 @@ const scrollToBottom = () => {
   })
 }
 
-const goHome = () => router.push('/home')
+const goHome = () => pushReturnTarget(router, route, '/home')
 const leaveChat = () => {
   closeMessageEditModal()
   router.push('/chat')
@@ -1485,6 +1486,7 @@ const openWorldBookFromThreadContext = (pointId = '') => {
     path: '/worldbook',
     query: buildWorldBookRouteQuery({
       source: 'chat',
+      homePage: route.query.homePage,
       pointIds: directPointId ? [directPointId] : injectedPointIds,
       usage: directPointId || injectedPointIds.length > 0 ? 'all' : 'chat_ready',
     }),

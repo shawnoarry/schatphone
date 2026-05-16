@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
@@ -13,7 +13,9 @@ import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
+import { pushReturnTarget } from '../lib/navigation-return'
 
+const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
@@ -325,7 +327,7 @@ const mainProfiles = computed(() => roleProfiles.value.filter((item) => Boolean(
 const npcProfiles = computed(() => roleProfiles.value.filter((item) => !item.isMain))
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const clearDraftPreviewMap = () => {

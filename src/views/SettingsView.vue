@@ -45,6 +45,7 @@ import {
   syncExistingWebPushSubscription,
   unsubscribeWebPush,
 } from '../lib/push'
+import { buildReturnSourceQuery, pushReturnTarget } from '../lib/navigation-return'
 
 const router = useRouter()
 const route = useRoute()
@@ -578,7 +579,7 @@ const repairStorageDrift = async () => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const webPushSupported = computed(() => isWebPushSupported())
@@ -661,11 +662,17 @@ const closeSubPage = () => {
 }
 
 const openProfile = () => {
-  router.push('/profile')
+  router.push({
+    path: '/profile',
+    query: buildReturnSourceQuery('settings', route),
+  })
 }
 
 const openWorldBook = () => {
-  router.push('/worldbook')
+  router.push({
+    path: '/worldbook',
+    query: buildReturnSourceQuery('settings', route),
+  })
 }
 
 const saveGeneralSettings = () => {
@@ -1104,7 +1111,10 @@ const openNetworkReports = (moduleKey = 'all', levelKey = 'all') => {
   const normalizedModule = typeof moduleKey === 'string' ? moduleKey.trim() : 'all'
   const normalizedLevel = typeof levelKey === 'string' ? levelKey.trim() : 'all'
   if ((!normalizedModule || normalizedModule === 'all') && (!normalizedLevel || normalizedLevel === 'all')) {
-    router.push('/network')
+    router.push({
+      path: '/network',
+      query: buildReturnSourceQuery('settings', route),
+    })
     return
   }
 
@@ -1118,12 +1128,15 @@ const openNetworkReports = (moduleKey = 'all', levelKey = 'all') => {
 
   router.push({
     path: '/network',
-    query,
+    query: buildReturnSourceQuery('settings', route, query),
   })
 }
 
 const openAppearanceStudio = () => {
-  router.push('/appearance')
+  router.push({
+    path: '/appearance',
+    query: buildReturnSourceQuery('settings', route),
+  })
 }
 
 const buildBackupPayload = async () => {

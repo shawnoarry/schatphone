@@ -15,6 +15,12 @@ const normalizeQueryText = (raw) => {
   return ''
 }
 
+const normalizeHomePageQuery = (raw) => {
+  const value = normalizeQueryText(raw)
+  if (!/^\d+$/.test(value)) return ''
+  return value
+}
+
 export const normalizeWorldBookPointIds = (raw) =>
   normalizeQueryText(raw)
     .split(',')
@@ -46,8 +52,10 @@ export const buildWorldBookRouteQuery = (options = {}) => {
   const keyword = normalizeQueryText(options.keyword)
   const tag = normalizeWorldBookTagFilter(options.tag)
   const usage = normalizeWorldBookUsageFilter(options.usage)
+  const homePage = normalizeHomePageQuery(options.homePage)
 
   if (source) query.source = source
+  if (homePage) query.homePage = homePage
   if (pointIds.length === 1) {
     query.point = pointIds[0]
   } else if (pointIds.length > 1) {

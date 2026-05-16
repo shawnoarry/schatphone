@@ -71,7 +71,10 @@ describe('map worldbook context', () => {
     ).toBe(true)
 
     router = createTestRouter()
-    await router.push('/map')
+    await router.push({
+      path: '/map',
+      query: { from: 'home', homePage: '1' },
+    })
     await router.isReady()
 
     wrapper = mount(MapView, {
@@ -138,6 +141,7 @@ describe('map worldbook context', () => {
     expect(router.currentRoute.value.path).toBe('/worldbook')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'map',
+      homePage: '1',
       point: routePoint.id,
     })
   })

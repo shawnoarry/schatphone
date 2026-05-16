@@ -289,6 +289,8 @@ Direction:
 - Home should use fixed widget slots as the default customization model.
 - The Home Widgets icon is the visible customization entry: tap opens Widget Center; long-press enters Home widget edit mode.
 - A placed widget opens a same-size widget picker in edit mode; users replace slot content instead of freely dragging every tile.
+- Widget Center is a component library and import/create surface, not a screen-placement menu.
+- Custom widgets created or imported in Widget Center should not auto-place on Home; the user assigns them from a compatible Home slot.
 - App entries should stay in fixed system-owned zones, with overflow handled by an App Library or More surface.
 - Free drag may exist as an experimental or developer-only mode, but should not define the default experience.
 

@@ -1,11 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const phoneStore = usePhoneStore()
 const { callCount, missedCallCount, completedCallCount, recentCalls } = storeToRefs(phoneStore)
@@ -22,7 +24,7 @@ const feedbackType = ref('success')
 const sortedRecentCalls = computed(() => recentCalls.value)
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const showFeedback = (type, message) => {

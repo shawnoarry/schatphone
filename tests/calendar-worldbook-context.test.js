@@ -77,7 +77,10 @@ describe('calendar worldbook context', () => {
     expect(mapStore.confirmMapCalendarReminder(reminderId)).toBe(true)
 
     router = createTestRouter()
-    await router.push('/calendar')
+    await router.push({
+      path: '/calendar',
+      query: { from: 'home', homePage: '1' },
+    })
     await router.isReady()
 
     wrapper = mount(CalendarView, {
@@ -135,6 +138,7 @@ describe('calendar worldbook context', () => {
     expect(router.currentRoute.value.path).toBe('/worldbook')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'calendar',
+      homePage: '1',
       point: routePoint.id,
     })
   })

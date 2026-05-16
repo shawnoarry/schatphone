@@ -1,11 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const walletStore = useWalletStore()
 const { transactionCount, transactionSourceSummary, primaryBalance, balances } = storeToRefs(walletStore)
@@ -43,7 +45,7 @@ const recentTransactions = computed(() =>
 )
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const formatTime = (timestamp) => {

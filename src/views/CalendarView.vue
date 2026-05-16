@@ -1,12 +1,13 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
 import { useSystemStore } from '../stores/system'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import { pushReturnTarget } from '../lib/navigation-return'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
 import CalendarMapReminderCard from '../components/calendar/CalendarMapReminderCard.vue'
 import CalendarPhoneCueCard from '../components/calendar/CalendarPhoneCueCard.vue'
@@ -14,6 +15,7 @@ import CalendarShoppingCueCard from '../components/calendar/CalendarShoppingCueC
 import CalendarStockCueCard from '../components/calendar/CalendarStockCueCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
@@ -106,7 +108,7 @@ const calendarPushRuntime = computed(() => {
 })
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const openMap = () => {
@@ -118,6 +120,7 @@ const openWorldBook = (options = {}) => {
     path: '/worldbook',
     query: buildWorldBookRouteQuery({
       source: 'calendar',
+      homePage: route.query.homePage,
       pointIds: options.pointIds,
       keyword: options.keyword,
       tag: options.tag,

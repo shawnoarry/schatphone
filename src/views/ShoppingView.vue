@@ -8,12 +8,12 @@ import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
   SHOPPING_PLATFORM_APP_ENTRIES,
-  SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
   findShoppingCategory,
   findShoppingPlatformApp,
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { useAssetsStore } from '../stores/assets'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
@@ -286,7 +286,7 @@ const sourcePlan = computed(() => [
 ])
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const goBackToChat = () => {

@@ -8,7 +8,6 @@ import {
   LOGISTICS_SERVICE_PRESETS,
   LOGISTICS_SOURCE_KEYS,
   MODULE_RELATIONSHIP_BOUNDARIES,
-  SHOPPING_CATEGORY_ENTRIES,
   SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
@@ -16,7 +15,6 @@ import {
   findFoodDeliveryCategory,
   findFoodDeliveryServicePreset,
   findLogisticsServicePreset,
-  findShoppingCategory,
   findShoppingPlatformApp,
   findShoppingServicePreset,
 } from '../src/lib/planned-module-registry'

@@ -34,11 +34,16 @@ These are system-owned when reached directly from the phone shell or Settings.
 | Global shell | `src/App.vue` status bar, home indicator, foreground banner | Native System / System Shell With App Accent | App banner content may use app accent, but material remains system-owned. |
 | Home/Dock -> Settings | `/settings` | Native System | OS settings hub. |
 | Settings -> Appearance, Home -> Themes icon | `/appearance` | Native System | Even with a Home icon, this controls the phone visual system, so keep system customization language. |
-| Home -> Widgets icon, Appearance -> Widget Center | `/widgets` | Native System | Widget library and Home widget management are OS-level customization surfaces. Tap opens the library; long-press the Home Widgets icon enters Home widget edit mode. |
+| Home -> Widgets icon, Appearance -> Widget Center | `/widgets` | Native System | Widget Center is the library/import/create surface. It must not expose screen-number placement; placement belongs to Home widget edit mode through same-size slot replacement. Tap opens the library; long-press the Home Widgets icon enters Home widget edit mode. |
+| Home -> system-controlled folder tile | Home folder overlay | Native System | The folder shell, blur, close behavior, icon grid, and spacing belong to Home/OS. Child entries may carry app icons and labels, but the folder container must not become Shopping, Food Delivery, or another app skin. |
 | Settings -> Network, Home -> Network icon | `/network` | Native System | Provider/network configuration is system-level. If a future app-local network picker exists, reassess by context. |
 | Settings -> Profile | `/profile` | Native System | System-owned user identity. |
 | Settings -> WorldBook | `/worldbook` | Native System | Full world-kernel management page. In-app WorldBook summaries are not covered by this row. |
 | System modal/dialog host | `AppDialogHost.vue` | Native System Mechanics + Host Context | Mechanics are system-owned; wording/accent may reflect the host app. |
+
+Return controls in native-system pages must preserve the visible entry context. Use `from=home` or `from=settings` for system pages that can be launched from both places. Cross-module management links may use `source=chat|map|calendar` when the page should return to that app context.
+
+If the entry started from Home, the route chain must also preserve `homePage=<index>`. A module moved from one Home page to another should not need new return configuration; the visible Home page is captured when the user launches the module. See `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 
 ## 3. Installed App Entries From Home / Dock
 
@@ -55,7 +60,22 @@ These routes should feel like apps when opened as full-screen destinations.
 | Wallet icon | `/wallet` | Installed App: Wallet | Wallet app placeholder/MVP. |
 | Stock icon | `/stock` | Installed App: Stock | Stock app placeholder/MVP. |
 | Files icon | `/files` | Installed App / Utility App | File utility; system import/export pickers should be reassessed separately. |
+| Shopping folder child app | `/shopping?service=...` | Installed App: selected Shopping platform | The Home folder is system-owned, but tapping a child opens a platform-like Shopping app identity such as Schat Mall, Style Cloud, Nova Digital, or Daily Fresh. |
+| Food Delivery folder child | `/food-delivery?category=...` | Installed App: Food Delivery | Current children are category entry points inside the Food Delivery app. They are not editable OS folders and should not use Settings styling. |
+| Assets icon | `/assets` | Installed App: Assets | Assets is a direct app entry, not a Home folder child. |
 | More icon | `/more` | Installed App: More | Overflow/collection app placeholder. |
+
+## 3A. System-Controlled Home Folders
+
+Home folders are system-controlled launch containers. They simulate phone folders for grouped entry points, but users do not currently create arbitrary folders or freely move icons into them.
+
+| User Path | Surface / Data | Visual Owner | Data Sources | Styling Guidance |
+| --- | --- | --- | --- | --- |
+| Home -> Shopping folder tile | Folder overlay | Native System | Shopping platform entries | Use neutral Home folder material. Show platform entries as app-like icons and labels, but do not make the folder panel look like a Shopping page. |
+| Shopping folder -> Schat Mall / Style Cloud / Nova Digital / Daily Fresh | `/shopping?service=...&category=...` | Installed App: selected Shopping platform | Shared Shopping store, platform metadata | Ownership changes after navigation. The Shopping route should present the selected platform app shell, while cart, order, and product data remain shared. |
+| Home -> Food Delivery folder tile | Folder overlay | Native System | Food Delivery category entries | Use the same neutral Home folder material. Current children are entry shortcuts into Food Delivery categories. |
+| Food Delivery folder -> category child | `/food-delivery?category=...` | Installed App: Food Delivery | Food Delivery store, category metadata | Ownership changes after navigation. The destination should feel like Food Delivery, not a system category page. |
+| Home -> Assets icon | `/assets` | Installed App: Assets | Assets store | Direct app launch. Do not treat it as part of the folder pattern. |
 
 ## 4. Chat-Owned Surfaces
 

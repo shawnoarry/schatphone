@@ -1,14 +1,16 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import { resolveAvatarImageSourceUrl } from '../lib/avatar-image-source-resolver'
+import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
@@ -90,6 +92,10 @@ const profileAvatarUrl = computed(() => {
 })
 
 const userAiContextSummary = computed(() => systemStore.getUserAiContextSummary())
+const returnLabelKey = computed(() => resolveReturnLabel(route, 'Settings'))
+const returnButtonLabel = computed(() =>
+  returnLabelKey.value === 'Home' ? t('主页', 'Home') : t('设置', 'Settings'),
+)
 
 const contextFieldLabel = (key) => {
   if (key === 'name') return t('姓名', 'Name')
@@ -113,7 +119,7 @@ const promptPreviewLines = computed(() =>
 )
 
 const goSettings = () => {
-  router.push('/settings')
+  pushReturnTarget(router, route, '/settings')
 }
 
 const saveProfile = () => {
@@ -139,7 +145,7 @@ onBeforeUnmount(() => {
         @click="goSettings"
         class="profile-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium"
       >
-        <i class="fas fa-chevron-left"></i> {{ t('设置', 'Settings') }}
+        <i class="fas fa-chevron-left"></i> {{ returnButtonLabel }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('用户信息', 'Profile') }}</h1>
     </div>

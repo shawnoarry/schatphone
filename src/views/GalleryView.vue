@@ -1,15 +1,17 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { useChatStore } from '../stores/chat'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 
 const router = useRouter()
+const route = useRoute()
 const galleryStore = useGalleryStore()
 const chatStore = useChatStore()
 const { t } = useI18n()
@@ -88,7 +90,7 @@ const setFeedback = (type, text) => {
 }
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const openLocalImport = () => {

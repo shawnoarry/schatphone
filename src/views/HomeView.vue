@@ -1,7 +1,7 @@
 ﻿<script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
@@ -13,6 +13,11 @@ import {
   resolveHomeFolderChildRoute,
   resolveHomeFolderPresentation,
 } from '../lib/home-entry-registry'
+import {
+  buildHomeSourceQuery,
+  buildRouteWithReturnSource,
+  normalizeHomePageQuery,
+} from '../lib/navigation-return'
 
 const props = defineProps({
   currentTime: {
@@ -26,6 +31,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
@@ -264,6 +270,8 @@ const activeThemeName = computed(() => {
   if (activeTheme.value.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
   return activeTheme.value.name || ''
 })
+const canFreelyMoveHomeTiles = computed(() => layoutEditFeatureEnabled.value === true)
+const widgetEditRouteRequested = computed(() => route.query.widgetEdit === '1')
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
 
@@ -272,6 +280,14 @@ const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(0, page))
 const setPage = (page) => {
   currentPage.value = clampPage(page)
 }
+
+const syncHomePageFromRoute = () => {
+  const homePage = normalizeHomePageQuery(route.query.homePage)
+  if (!homePage) return
+  setPage(Number(homePage))
+}
+
+watch(() => route.query.homePage, syncHomePageFromRoute, { immediate: true })
 
 const tileMeta = (tileId) => {
   const builtIn = widgetRegistry[tileId]
@@ -535,7 +551,7 @@ const openAppById = (tileId) => {
 
   if (tile.route) {
     maybeVibrate(8)
-    router.push(tile.route)
+    router.push(buildRouteWithReturnSource(tile.route, 'home', { homePage: currentPage.value }))
     return
   }
 
@@ -551,7 +567,11 @@ const openFolderChildEntry = (entry) => {
   if (!target) return
   maybeVibrate(8)
   closeHomeFolder()
-  router.push(target)
+  const normalizedTarget = typeof target === 'string' ? { path: target } : target
+  router.push({
+    ...normalizedTarget,
+    query: buildHomeSourceQuery(currentPage.value, normalizedTarget.query || {}),
+  })
 }
 
 const clearLongPressTimer = () => {
@@ -575,7 +595,7 @@ const enterWidgetLayoutMode = () => {
   closeWidgetReplaceSheet()
   clearTilePressed()
   ignoreAppOpenUntil.value = Date.now() + 420
-  triggerLayoutToast(t('选择组件位置', 'Choose a widget position'))
+  triggerLayoutToast(t('点击组件进行同尺寸更换', 'Tap a widget to change it'))
   maybeVibrate(16)
 }
 
@@ -857,6 +877,8 @@ const startTileDrag = (tileId, event) => {
     return
   }
 
+  if (!canFreelyMoveHomeTiles.value) return
+
   closeWidgetReplaceSheet()
 
   selectedTileId.value = tileId
@@ -884,6 +906,10 @@ const startTileDrag = (tileId, event) => {
 
 const onTilePointerMove = (event) => {
   if (!layoutEditMode.value) {
+    maybeCancelWidgetEntryLongPressByMove(event)
+    return
+  }
+  if (!canFreelyMoveHomeTiles.value) {
     maybeCancelWidgetEntryLongPressByMove(event)
     return
   }
@@ -932,6 +958,7 @@ const stopTileDrag = (event) => {
   clearTilePressed()
 
   if (!layoutEditMode.value) return
+  if (!canFreelyMoveHomeTiles.value) return
   if (dragPointerId.value !== event.pointerId) return
 
   if (dragTileId.value && dragPreviewPageIndex.value >= 0 && dragPreviewSlotIndex.value >= 0) {
@@ -957,6 +984,7 @@ const onTileClick = (tileId) => {
     openWidgetReplaceSheet(tileId)
     return
   }
+  if (!canFreelyMoveHomeTiles.value) return
   selectTileForLayout(tileId)
 }
 
@@ -968,6 +996,7 @@ const clearSelectedTile = () => {
 
 const onGridClick = (pageIndex, event) => {
   if (!layoutEditMode.value || !selectedTileId.value) return
+  if (!canFreelyMoveHomeTiles.value) return
   if (hasActiveDrag.value) return
   if (widgetReplaceTarget.value) return
 
@@ -994,6 +1023,7 @@ const onGridClick = (pageIndex, event) => {
 
 const onLayoutSlotClick = (pageIndex, slotIndex) => {
   if (!layoutEditMode.value || !selectedTileId.value) return
+  if (!canFreelyMoveHomeTiles.value) return
   if (hasActiveDrag.value) return
   if (widgetReplaceTarget.value) return
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
@@ -1006,6 +1036,7 @@ const onLayoutSlotClick = (pageIndex, slotIndex) => {
 }
 
 const hideTileFromHome = (tileId) => {
+  if (!canFreelyMoveHomeTiles.value) return
   if (!canHideTile(tileId)) return
   const nextPages = widgetPages.value.map((page) => page.filter((id) => id !== tileId))
   systemStore.setHomeWidgetPages(nextPages)
@@ -1052,6 +1083,12 @@ const exitLayoutMode = () => {
   systemStore.saveNow()
 }
 
+if (widgetEditRouteRequested.value) {
+  enterWidgetLayoutMode()
+  const homePage = normalizeHomePageQuery(route.query.homePage)
+  router.replace(homePage ? { path: '/home', query: { homePage } } : '/home')
+}
+
 onBeforeUnmount(() => {
   clearLongPressTimer()
   clearWidgetEntryLongPressTimer()
@@ -1075,11 +1112,14 @@ onBeforeUnmount(() => {
     @mouseleave="onMouseUp"
   >
     <div v-if="layoutEditMode" class="home-edit-topbar" data-no-layout-longpress>
-      <button @click="resetHomeLayout" class="home-edit-btn">{{ t('重置', 'Reset') }}</button>
+      <button v-if="canFreelyMoveHomeTiles" @click="resetHomeLayout" class="home-edit-btn">
+        {{ t('重置', 'Reset') }}
+      </button>
+      <span v-else class="home-edit-spacer" aria-hidden="true"></span>
       <span class="home-edit-title">
-        {{ t('主屏位置', 'Home Layout') }}
+        {{ canFreelyMoveHomeTiles ? t('主屏位置', 'Home Layout') : t('更换组件', 'Change Widgets') }}
         <span v-if="selectedTileId" class="home-edit-tip">
-          {{ t(' · 已选择项目', ' · Item selected') }}
+          {{ canFreelyMoveHomeTiles ? t(' · 已选择项目', ' · Item selected') : t(' · 已选择组件', ' · Widget selected') }}
         </span>
       </span>
       <div class="home-edit-actions">
@@ -1125,8 +1165,8 @@ onBeforeUnmount(() => {
             <small>
               {{
                 typeof candidate.pageIndex === 'number'
-                  ? `${homePageLabel(candidate.pageIndex)} · ${t('将移动到这里', 'Move here')}`
-                  : t('加入当前位置', 'Add here')
+                  ? `${homePageLabel(candidate.pageIndex)} · ${t('将替换当前位置', 'Swap into this slot')}`
+                  : t('可加入当前位置', 'Available here')
               }}
             </small>
           </span>
@@ -1218,7 +1258,7 @@ onBeforeUnmount(() => {
                   'home-tile',
                   tileMeta(tileId)?.span || 'col-span-1 row-span-1',
                   {
-                    'is-layout-dragging': layoutEditMode && dragTileId === tileId,
+                    'is-layout-dragging': canFreelyMoveHomeTiles && dragTileId === tileId,
                     'is-layout-selected': isTileSelected(tileId),
                     'is-pressed': pressedTileId === tileId,
                     'is-drop-confirm': droppedTileId === tileId,
@@ -1232,7 +1272,7 @@ onBeforeUnmount(() => {
                 @pointercancel="stopTileDrag"
               >
                 <button
-                  v-if="layoutEditMode && canHideTile(tileId)"
+                  v-if="layoutEditMode && canFreelyMoveHomeTiles && canHideTile(tileId)"
                   class="home-edit-hide"
                   @pointerdown.stop
                   @click.stop="hideTileFromHome(tileId)"
@@ -1340,7 +1380,7 @@ onBeforeUnmount(() => {
             </template>
           </div>
 
-          <div v-if="layoutEditMode" class="home-grid-slot-overlay" aria-hidden="true">
+          <div v-if="layoutEditMode && canFreelyMoveHomeTiles" class="home-grid-slot-overlay" aria-hidden="true">
             <button
               v-for="slotIndex in layoutSlotIndices"
               :key="`slot-${pageIndex}-${slotIndex}`"
@@ -1397,7 +1437,7 @@ onBeforeUnmount(() => {
       <section class="home-folder-panel" :data-folder-presentation="openedFolderMeta.presentation.openAnimation">
         <div class="home-folder-panel-head">
           <div>
-            <p>{{ t('文件夹', 'Folder') }}</p>
+            <p>{{ t('主屏文件夹', 'Home Folder') }}</p>
             <h2>{{ openedFolderMeta.label }}</h2>
           </div>
           <button @click="closeHomeFolder" :aria-label="t('关闭文件夹', 'Close folder')">
@@ -1448,6 +1488,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.home-edit-spacer {
+  width: 54px;
+  flex: 0 0 auto;
 }
 
 .home-edit-title {
@@ -1890,8 +1935,13 @@ onBeforeUnmount(() => {
 }
 
 .home-folder-icon {
-  padding: 7px;
+  padding: 6px;
   overflow: hidden;
+  border: 1px solid var(--home-folder-tile-border);
+  background: var(--home-folder-tile-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 10px 22px rgba(11, 18, 28, 0.18);
 }
 
 .home-folder-preview-grid {
@@ -1900,17 +1950,22 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 
 .home-folder-preview-cell {
-  border-radius: 8px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 9px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.24);
-  font-size: 11px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--home-folder-text);
+  font-size: 10px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.17),
+    0 2px 5px rgba(10, 16, 24, 0.08);
 }
 
 .home-app-icon {
@@ -1995,26 +2050,26 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 22px;
-  background: rgba(8, 13, 28, 0.36);
-  backdrop-filter: blur(var(--system-blur-lg));
-  -webkit-backdrop-filter: blur(var(--system-blur-lg));
+  padding: 22px 18px calc(108px + env(safe-area-inset-bottom));
+  background: var(--home-folder-overlay-bg);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
   animation: home-folder-overlay-in 180ms ease-out;
 }
 
 .home-folder-panel {
-  width: min(100%, 330px);
-  max-height: min(78%, 560px);
+  width: min(100%, 320px);
+  max-height: min(76%, 520px);
   overflow: hidden;
-  border-radius: 30px;
-  border: 1px solid var(--system-border-light);
-  background: rgba(20, 25, 43, 0.66);
-  color: #fff;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.12);
-  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.12);
-  padding: 18px;
-  animation: home-folder-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  border-radius: 34px;
+  border: 1px solid var(--home-folder-panel-border);
+  background: var(--home-folder-panel-bg);
+  color: var(--home-folder-text);
+  box-shadow: var(--home-folder-shadow);
+  backdrop-filter: blur(34px) saturate(1.16);
+  -webkit-backdrop-filter: blur(34px) saturate(1.16);
+  padding: 17px 16px 18px;
+  animation: home-folder-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .home-folder-panel-head {
@@ -2022,88 +2077,113 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .home-folder-panel-head p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--home-folder-text-muted);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .home-folder-panel-head h2 {
   margin: 3px 0 0;
-  font-size: 22px;
+  max-width: 230px;
+  font-size: 23px;
   line-height: 1.1;
-  font-weight: 800;
+  font-weight: 750;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .home-folder-panel-head button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: 0;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--home-folder-close-bg);
+  color: var(--home-folder-text);
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.home-folder-panel-head button:active {
+  transform: scale(0.92);
+  background: var(--home-folder-entry-pressed-bg);
 }
 
 .home-folder-entry-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px;
   overflow-y: auto;
-  max-height: 430px;
+  max-height: 414px;
   padding-right: 2px;
 }
 
 .home-folder-entry {
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
-  padding: 12px;
-  text-align: left;
+  min-height: 88px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--home-folder-text);
+  padding: 2px 4px 4px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  cursor: pointer;
   transition: transform 120ms ease, background 120ms ease;
 }
 
 .home-folder-entry:active {
   transform: scale(0.97);
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--home-folder-entry-bg);
 }
 
 .home-folder-entry-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  flex: 0 0 auto;
+  font-size: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 18px rgba(9, 15, 24, 0.2);
 }
 
 .home-folder-entry-label {
   display: block;
-  margin-top: 9px;
-  font-size: 12px;
-  font-weight: 800;
+  width: 100%;
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-folder-entry-desc {
   display: block;
-  margin-top: 3px;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 10px;
-  line-height: 1.3;
+  width: 100%;
+  margin-top: 2px;
+  color: var(--home-folder-text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @keyframes home-folder-overlay-in {
@@ -2118,7 +2198,7 @@ onBeforeUnmount(() => {
 @keyframes home-folder-panel-in {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(18px);
+    transform: scale(0.86) translateY(16px);
   }
   to {
     opacity: 1;

@@ -1,12 +1,14 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact } from '../lib/media-policy'
+import { pushReturnTarget } from '../lib/navigation-return'
 import { useFilesStore } from '../stores/files'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const filesStore = useFilesStore()
 const { records: files, fileCount, favoriteCount } = storeToRefs(filesStore)
@@ -38,7 +40,7 @@ const visibleFiles = computed(() => {
 })
 
 const goHome = () => {
-  router.push('/home')
+  pushReturnTarget(router, route, '/home')
 }
 
 const toggleFavorite = (id) => {
