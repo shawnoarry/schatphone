@@ -9,6 +9,7 @@ import {
   LOGISTICS_SOURCE_KEYS,
   MODULE_RELATIONSHIP_BOUNDARIES,
   SHOPPING_CATEGORY_ENTRIES,
+  SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
   findAssetCategory,
@@ -16,6 +17,7 @@ import {
   findFoodDeliveryServicePreset,
   findLogisticsServicePreset,
   findShoppingCategory,
+  findShoppingPlatformApp,
   findShoppingServicePreset,
 } from '../src/lib/planned-module-registry'
 import {
@@ -29,17 +31,19 @@ describe('planned module registry', () => {
     const shoppingFolder = HOME_FOLDER_REGISTRY.app_shopping
 
     expect(shoppingFolder.kind).toBe(HOME_FOLDER_TILE_KIND)
-    expect(shoppingFolder.childEntries).toHaveLength(SHOPPING_CATEGORY_ENTRIES.length)
-    expect(resolveHomeFolderChildRoute(findShoppingCategory('digital'))).toEqual({
+    expect(shoppingFolder.childEntries).toHaveLength(SHOPPING_PLATFORM_APP_ENTRIES.length)
+    expect(resolveHomeFolderChildRoute(findShoppingPlatformApp('nova_digital'))).toEqual({
       path: '/shopping',
       query: {
+        service: 'nova_digital',
         category: 'digital',
       },
     })
-    expect(resolveHomeFolderChildRoute(findShoppingCategory('logistics'))).toEqual({
+    expect(resolveHomeFolderChildRoute(findShoppingPlatformApp('style_cloud'))).toEqual({
       path: '/shopping',
       query: {
-        category: 'logistics',
+        service: 'style_cloud',
+        category: 'fashion',
       },
     })
   })
@@ -93,6 +97,16 @@ describe('planned module registry', () => {
       'nova_digital',
       'daily_fresh',
     ])
+    expect(SHOPPING_PLATFORM_APP_ENTRIES.map((entry) => entry.key)).toEqual([
+      'schat_mall',
+      'style_cloud',
+      'nova_digital',
+      'daily_fresh',
+    ])
+    expect(findShoppingPlatformApp('daily_fresh')?.folderQuery).toEqual({
+      service: 'daily_fresh',
+      category: 'grocery',
+    })
     expect(findShoppingServicePreset('nova_digital')?.key).toBe('nova_digital')
     expect('route' in findShoppingServicePreset('nova_digital')).toBe(false)
     expect(findShoppingServicePreset('unknown')?.key).toBe('schat_mall')

@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-15
+Updated: 2026-05-16
 
 This document defines the "Visual专项" workflow. It is separate from the feature-progress track and should be used when the team is discussing or implementing UI polish, visual design, interaction feel, layout refinement, motion, typography, color, or product-grade surface quality.
 
@@ -278,6 +278,72 @@ Note:
 - Restart Codex or the agent host if the skill does not appear in the active skill list.
 - When using it for SchatPhone, still obey this workflow's entry-context ownership and visible-copy audit rules.
 
+### `web-design-guidelines`
+
+Purpose:
+
+- Web Interface Guidelines review for UI, UX, accessibility, and implementation quality.
+- A framework-neutral review pass that can be applied to Vue files, templates, and shared UI components.
+- Useful before or after visual polish when a changed surface needs an external best-practice audit.
+
+Installed in the current project:
+
+```text
+.\.agents\skills\web-design-guidelines
+```
+
+Source:
+
+```text
+https://github.com/vercel-labs/agent-skills.git
+```
+
+Installed subpath:
+
+```text
+skills/web-design-guidelines/SKILL.md
+```
+
+Install command used on Windows:
+
+```powershell
+npx.cmd skills add vercel-labs/agent-skills --skill web-design-guidelines
+```
+
+Install note:
+
+- Installed on 2026-05-16.
+- Installer security summary: Gen Safe, Socket 0 alerts, Snyk Med Risk.
+- The skill fetches the latest Vercel Web Interface Guidelines before each review, so network access may be needed at review time.
+- Review the skill before use because installed skills run with full agent permissions.
+- Restart Codex or the agent host if the skill does not appear in the active skill list.
+
+### Deferred install: `frontend-design-system`
+
+Purpose:
+
+- Design tokens, component consistency, layout rules, motion guidance, and accessibility checklist.
+- Candidate support for turning SchatPhone's native-system and installed-app visual rules into a reusable design system.
+
+Recommended source:
+
+```text
+https://github.com/supercent-io/skills-template.git
+```
+
+Recommended install command on Windows:
+
+```powershell
+npx.cmd skills add https://github.com/supercent-io/skills-template --skill frontend-design-system
+```
+
+Current status:
+
+- Recommended, but not installed on this machine yet.
+- 2026-05-16 install attempts failed because this machine could not reach or authenticate against `https://github.com/supercent-io/skills-template.git`.
+- Retry only after GitHub network access or credentials are confirmed.
+- Do not install a sibling design-system skill at the same time unless this one proves unsuitable; they likely overlap.
+
 ## 7. Reference Library
 
 The current machine keeps the `awesome-design-md` reference library here:
@@ -352,7 +418,7 @@ To reuse this workflow on another machine:
 
 1. Clone the SchatPhone repo.
 2. Ask the machine owner to confirm all local installation paths before installing anything.
-3. Install or copy the five visual skills: `ui-aesthetics`, `ui-ux-pro-max`, `frontend-design`, `frontend-logic-design`, and `impeccable`.
+3. Install or copy the current visual skills: `ui-aesthetics`, `ui-ux-pro-max`, `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines`.
 4. Clone the design reference library to the confirmed path.
 5. Restart Codex.
 6. Use the trigger phrase `视觉专项`.
@@ -384,7 +450,7 @@ PowerShell command runner: npx.cmd
 Rules:
 
 - `ui-aesthetics` and `ui-ux-pro-max` are global Codex skills in the confirmed global Codex skills directory.
-- `frontend-design`, `frontend-logic-design`, and `impeccable` are project-local skills in the confirmed SchatPhone project root under `.agents\skills`.
+- `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines` are project-local skills in the confirmed SchatPhone project root under `.agents\skills`.
 - Run every `npx.cmd skills add ...` command from the confirmed SchatPhone project root so the skill is installed into the correct `.agents\skills`.
 - If the owner chooses a different project path, replace every project-root-relative path in this section accordingly.
 - If the owner chooses a different reference-library path, tell Codex that path before starting `视觉专项`.
@@ -480,6 +546,36 @@ The destination should contain:
 .agents\skills\impeccable\SKILL.md
 ```
 
+### Install `web-design-guidelines`
+
+From the confirmed SchatPhone project root:
+
+```powershell
+npx.cmd skills add vercel-labs/agent-skills --skill web-design-guidelines
+```
+
+The destination should contain:
+
+```text
+.agents\skills\web-design-guidelines\SKILL.md
+```
+
+### Deferred: install `frontend-design-system`
+
+Only retry this when the machine can access `github.com/supercent-io/skills-template.git`.
+
+From the confirmed SchatPhone project root:
+
+```powershell
+npx.cmd skills add https://github.com/supercent-io/skills-template --skill frontend-design-system
+```
+
+The destination should contain:
+
+```text
+.agents\skills\frontend-design-system\SKILL.md
+```
+
 ### Clone `awesome-design-md`
 
 Do not assume every PC has a `D:` drive. Before cloning, ask the machine owner to confirm the local reference-library path.
@@ -513,6 +609,7 @@ Use this sequence for visual work unless the user asks for a narrower path.
    - `frontend-design` for stronger creative direction on a page, component, or app surface.
    - `frontend-logic-design` for information architecture, MECE grouping, navigation depth, and interaction consistency.
    - `impeccable` for a strict second pass across visual hierarchy, UX copy, edge states, and implementation-shaped UI.
+   - `web-design-guidelines` for external Web Interface Guidelines review of UI, UX, accessibility, and implementation details.
 6. Define the smallest useful change slice before editing.
 7. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
 8. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.

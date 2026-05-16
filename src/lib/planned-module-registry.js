@@ -141,6 +141,23 @@ export const SHOPPING_SERVICE_PRESETS = Object.freeze([
   },
 ])
 
+export const SHOPPING_PLATFORM_APP_ENTRIES = Object.freeze(
+  SHOPPING_SERVICE_PRESETS.map((entry) => {
+    const defaultCategory =
+      Array.isArray(entry.categoryKeys) && entry.categoryKeys.length > 0 ? entry.categoryKeys[0] : 'mall'
+
+    return Object.freeze({
+      ...entry,
+      route: SHOPPING_ROUTE,
+      defaultCategory,
+      folderQuery: Object.freeze({
+        service: entry.key,
+        category: defaultCategory,
+      }),
+    })
+  }),
+)
+
 export const LOGISTICS_SERVICE_PRESETS = Object.freeze([
   {
     key: 'local_express',
@@ -362,6 +379,8 @@ export const findFoodDeliveryCategory = (key) => findPlannedModuleEntry(FOOD_DEL
 export const findAssetCategory = (key) => findPlannedModuleEntry(ASSET_CATEGORY_ENTRIES, key)
 
 export const findShoppingServicePreset = (key) => findPlannedModuleEntry(SHOPPING_SERVICE_PRESETS, key)
+
+export const findShoppingPlatformApp = (key) => findPlannedModuleEntry(SHOPPING_PLATFORM_APP_ENTRIES, key)
 
 export const findLogisticsServicePreset = (key) => findPlannedModuleEntry(LOGISTICS_SERVICE_PRESETS, key)
 

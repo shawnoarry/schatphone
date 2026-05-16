@@ -7,9 +7,11 @@ import { useI18n } from '../composables/useI18n'
 import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
+  SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
   findShoppingCategory,
+  findShoppingPlatformApp,
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
 import { useAssetsStore } from '../stores/assets'
@@ -96,6 +98,24 @@ const activeCategoryIsLogistics = computed(() => activeCategory.value?.key === '
 const activeService = computed(() =>
   activeServiceKey.value ? findShoppingServicePreset(activeServiceKey.value) : null,
 )
+const activePlatformApp = computed(() =>
+  activeServiceKey.value ? findShoppingPlatformApp(activeServiceKey.value) : null,
+)
+const activeShoppingAppLabel = computed(() => {
+  const platform = activePlatformApp.value
+  if (!platform?.key) return t('Shopping', 'Shopping')
+  return languageBase.value === 'zh' ? platform.zh : platform.en
+})
+const activeShoppingAppDesc = computed(() => {
+  const platform = activePlatformApp.value
+  if (!platform?.key) {
+    return t(
+      'Select a shopping app from the Home folder, or browse the shared shopping catalog here.',
+      'Select a shopping app from the Home folder, or browse the shared shopping catalog here.',
+    )
+  }
+  return languageBase.value === 'zh' ? platform.descZh : platform.descEn
+})
 const visibleProducts = computed(() => {
   if (activeCategoryIsLogistics.value) return []
   const categoryProducts = shoppingStore.listProductsByCategory(activeCategory.value?.key || 'mall')
@@ -218,8 +238,17 @@ const productCategoryCards = computed(() =>
   categoryCards.value.filter((entry) => entry.key !== 'logistics'),
 )
 
+const platformCategoryCards = computed(() => {
+  if (!activePlatformApp.value?.key || activeCategoryIsLogistics.value) return categoryCards.value
+  const allowedKeys = Array.isArray(activePlatformApp.value.categoryKeys)
+    ? activePlatformApp.value.categoryKeys
+    : []
+  if (allowedKeys.length === 0) return categoryCards.value
+  return categoryCards.value.filter((entry) => allowedKeys.includes(entry.key))
+})
+
 const serviceCards = computed(() =>
-  SHOPPING_SERVICE_PRESETS.map((entry) => ({
+  SHOPPING_PLATFORM_APP_ENTRIES.map((entry) => ({
     ...entry,
     label: languageBase.value === 'zh' ? entry.zh : entry.en,
     desc: languageBase.value === 'zh' ? entry.descZh : entry.descEn,
@@ -277,10 +306,11 @@ const openCategory = (key) => {
 
 const openService = (key = '') => {
   const normalizedKey = typeof key === 'string' ? key.trim() : ''
+  const platform = normalizedKey ? findShoppingPlatformApp(normalizedKey) : null
   router.push({
     path: '/shopping',
     query: {
-      category: activeCategory.value?.key || 'mall',
+      category: platform?.defaultCategory || activeCategory.value?.key || 'mall',
       ...(normalizedKey ? { service: normalizedKey } : {}),
     },
   })
@@ -576,27 +606,17 @@ onBeforeUnmount(() => {
       <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('Home', 'Home') }}
       </button>
-      <h1 class="font-bold">{{ t('Shopping', 'Shopping') }}</h1>
+      <h1 class="font-bold">{{ activeShoppingAppLabel }}</h1>
     </div>
 
     <div class="flex-1 overflow-y-auto no-scrollbar bg-gray-50 px-5 py-6 space-y-4">
       <section class="rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-orange-100 p-5">
-        <p class="text-xs font-semibold text-orange-600">{{ t('Local shopping baseline', 'Local shopping baseline') }}</p>
+        <p class="text-xs font-semibold text-orange-600">{{ t('Shopping folder app', 'Shopping folder app') }}</p>
         <h2 class="mt-2 text-2xl font-black text-gray-950">
-          {{
-            t(
-              'Shopping now owns local products, favorites, cart, and orders.',
-              'Shopping now owns local products, favorites, cart, and orders.',
-            )
-          }}
+          {{ activeShoppingAppLabel }}
         </h2>
         <p class="mt-3 text-xs leading-5 text-gray-600">
-          {{
-            t(
-              'Baseline is ready: Home folder, category entries, stable source keys, and manual Wallet/Assets/Calendar handoffs. Chat handoff stays future-only.',
-              'Baseline is ready: Home folder, category entries, stable source keys, and manual Wallet/Assets/Calendar handoffs. Chat handoff stays future-only.',
-            )
-          }}
+          {{ activeShoppingAppDesc }}
         </p>
         <div class="mt-4 grid grid-cols-4 gap-2">
           <div class="rounded-2xl bg-white/70 p-3">
@@ -663,7 +683,7 @@ onBeforeUnmount(() => {
       <section class="rounded-2xl bg-white border border-gray-200 p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-sm font-semibold">{{ t('Active Category', 'Active Category') }}</p>
+            <p class="text-sm font-semibold">{{ t('Current shelf', 'Current shelf') }}</p>
             <p class="mt-1 text-xs text-gray-500">
               {{ languageBase === 'zh' ? activeCategory.zh : activeCategory.en }}
             </p>
@@ -762,12 +782,12 @@ onBeforeUnmount(() => {
       <section class="rounded-2xl bg-white border border-amber-100 p-4" data-testid="shopping-service-filter-panel">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-sm font-semibold">{{ t('Shopping services', 'Shopping services') }}</p>
+            <p class="text-sm font-semibold">{{ t('Shopping apps', 'Shopping apps') }}</p>
             <p class="mt-1 text-[11px] leading-4 text-gray-500">
               {{
                 t(
-                  'Service presets simulate different shopping apps inside the Home folder while products still stay owned by Shopping.',
-                  'Service presets simulate different shopping apps inside the Home folder while products still stay owned by Shopping.',
+                  'The Home folder opens separate shopping apps. Orders still use the shared local checkout layer.',
+                  'The Home folder opens separate shopping apps. Orders still use the shared local checkout layer.',
                 )
               }}
             </p>
@@ -896,7 +916,7 @@ onBeforeUnmount(() => {
 
       <section class="grid grid-cols-2 gap-3">
         <button
-          v-for="category in categoryCards"
+          v-for="category in platformCategoryCards"
           :key="category.key"
           class="rounded-2xl border p-4 text-left transition"
           :class="category.active ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white'"
@@ -1363,4 +1383,3 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
-

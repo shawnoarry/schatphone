@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-05-14
+Updated: 2026-05-16
 
 This document records shared development tools outside the visual-workflow skill group. Its purpose is to keep different PCs and future handoffs on the same operating assumptions.
 
@@ -128,18 +128,63 @@ Run project-local skill installs from the confirmed SchatPhone project root so t
 <SchatPhone project root>\.agents\skills
 ```
 
-Current project-local visual skills are tracked in:
+Current project-local skills are tracked in:
 
 ```text
 skills-lock.json
 .agents\skills
 ```
 
-The visual skill list and installation commands live in:
+The visual skill list and installation commands live separately in:
 
 ```text
 docs/process/VISUAL_WORKFLOW.md
 ```
+
+### 5.1 Non-Visual Project Skills
+
+Use this section for project-local skills that support engineering, architecture, review, refactoring, testing, or handoff work outside the visual workflow.
+
+#### `improve-codebase-architecture`
+
+Purpose:
+
+- Architecture review and refactoring discovery.
+- Finding shallow modules, high-friction interfaces, and deepening opportunities.
+- Making large Vue/Pinia modules easier to test, maintain, and navigate with AI assistance.
+- Useful for SchatPhone hotspots such as large views, stores, cross-module handoffs, and domain contracts.
+
+Installed in the current project:
+
+```text
+.\.agents\skills\improve-codebase-architecture
+```
+
+Source:
+
+```text
+https://github.com/mattpocock/skills.git
+```
+
+Install command used on Windows:
+
+```powershell
+npx.cmd skills add mattpocock/skills --skill improve-codebase-architecture
+```
+
+Use when:
+
+- Reviewing `ChatView.vue`, `SettingsView.vue`, large Pinia stores, or other high-change modules.
+- Planning component/store extraction before implementation.
+- Looking for better seams, adapters, and test surfaces.
+- Preparing an architecture-focused handoff for another project group.
+
+Cross-PC notes:
+
+- Run the install command from the confirmed SchatPhone project root so it lands under `.agents\skills`.
+- If PowerShell blocks plain `npx`, use `npx.cmd`.
+- After installing or updating skills, restart Codex or the agent host so the new skills are loaded.
+- Review installed skills before use because project-local skills run with full agent permissions.
 
 ## 6. VSCode Notes
 
@@ -169,6 +214,8 @@ If a tool works in an external terminal but not in VSCode:
 ## 7. Cross-PC Setup Checklist
 
 Use this checklist before another device takes over development:
+
+Non-visual project skills are covered by Section 5. Install or confirm them before visual-only skills when another project group takes over the repo.
 
 1. Confirm local paths with the machine owner.
 2. Install Node.js/npm or confirm the existing Node version is suitable.

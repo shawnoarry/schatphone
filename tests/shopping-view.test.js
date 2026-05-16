@@ -209,6 +209,28 @@ describe('ShoppingView', () => {
     wrapper.unmount()
   })
 
+  test('presents a selected folder platform as the active shopping app', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    store.resetForTesting()
+    await router.push('/shopping?service=nova_digital&category=digital')
+    await router.isReady()
+
+    const wrapper = mount(ShoppingView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('h1').text()).toBe('Nova Digital')
+    expect(wrapper.text()).toContain('Nova Digital')
+    expect(wrapper.get('[data-testid="shopping-service-nova_digital"]').classes()).toContain('border-amber-300')
+    expect(wrapper.find('[data-testid="shopping-category-digital"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-category-luxury"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-category-fashion"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   test('highlights a gift order when opened from Chat gift context', async () => {
     const router = createTestRouter()
     const store = useShoppingStore()

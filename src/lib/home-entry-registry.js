@@ -4,8 +4,8 @@ import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_HOME_APP_ID,
   FOOD_DELIVERY_ROUTE,
-  SHOPPING_CATEGORY_ENTRIES,
   SHOPPING_HOME_APP_ID,
+  SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_ROUTE,
 } from './planned-module-registry'
 
@@ -27,7 +27,7 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
     icon: 'fas fa-bag-shopping',
     accent: 'warm',
     route: SHOPPING_ROUTE,
-    childEntries: SHOPPING_CATEGORY_ENTRIES,
+    childEntries: SHOPPING_PLATFORM_APP_ENTRIES,
     presentation: HOME_FOLDER_PRESENTATION_DEFAULTS,
   }),
   [FOOD_DELIVERY_HOME_APP_ID]: Object.freeze({
@@ -77,6 +77,15 @@ export const resolveHomeFolderChildRoute = (entry = {}) => {
   const route = typeof entry.route === 'string' && entry.route.trim() ? entry.route.trim() : ''
   if (!route) return ''
   const key = typeof entry.key === 'string' ? entry.key.trim() : ''
+  const folderQuery = entry.folderQuery && typeof entry.folderQuery === 'object' ? entry.folderQuery : null
+  if (folderQuery) {
+    return {
+      path: route,
+      query: {
+        ...folderQuery,
+      },
+    }
+  }
   if (!key) return route
   return {
     path: route,

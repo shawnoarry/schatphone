@@ -1,6 +1,6 @@
 # Home Folder, Shopping, and Assets Direction / 主屏文件夹、购物与资产方向
 
-Updated / 更新时间: 2026-05-04
+Updated / 更新时间: 2026-05-16
 
 ## 1. Decision Summary / 决策摘要
 
@@ -21,7 +21,7 @@ Updated / 更新时间: 2026-05-04
 
 - 主屏入口过多导致桌面拥挤。
 - 同类功能需要多个视觉入口，但业务上仍可归属同一个模块。
-- Shopping 这类功能天然有多个平台/品类入口的现实类比。
+- Shopping 这类功能天然有多个平台入口的现实类比；品类应作为平台 App 内部货架，而不是主屏文件夹第一层。
 - 后续 Social、Games、Tools、Assets 子类入口也可复用同一桌面能力。
 
 ## 3. Ownership Boundary / 归属边界
@@ -30,7 +30,7 @@ Updated / 更新时间: 2026-05-04
 | --- | --- | --- |
 | 文件夹占位、展开、关闭、文件夹内入口排列 | Home | 文件夹是桌面系统能力，类似手机 Launcher。 |
 | 文件夹圆角、背景、模糊、子图标预览密度、打开动画 | Appearance | 外观只配置视觉，不管理业务分类。 |
-| 子入口名称、图标、路由、分类参数 | 对应业务模块提供，Home 统一渲染 | 例如 Shopping 提供 Fashion/Beauty/Grocery 等入口元数据。 |
+| 子入口名称、图标、路由、入口参数 | 对应业务模块提供，Home 统一渲染 | 例如 Shopping 提供 Schat Mall / Style Cloud / Nova Digital 等平台 App 元数据。 |
 | 商品、订单、购物车、心愿单 | Shopping | 业务数据归 Shopping，不归 Home 文件夹。 |
 | 资产、估值、持有状态、资产分类 | Assets | 资产数据归 Assets，不归 Wallet 或 Stock。 |
 | 流水、余额、支出收入 | Wallet | 购物或资产变动可生成 Wallet 流水，但 Wallet 不拥有商品或资产。 |
@@ -48,9 +48,10 @@ Updated / 更新时间: 2026-05-04
 - `app_map`
 - `folder_shopping`
 - `app_assets`
-- `shopping_fashion`
-- `shopping_beauty`
-- `shopping_grocery`
+- `shopping_schat_mall`
+- `shopping_style_cloud`
+- `shopping_nova_digital`
+- `shopping_daily_fresh`
 - `assets_real_estate`
 - `assets_vehicle`
 
@@ -63,7 +64,7 @@ Home 根据 tile 类型渲染：
 - `widget`：系统 Widget。
 - `custom_widget`：用户自定义 Widget。
 
-文件夹点击后由 Home 打开统一弹层，展示文件夹内子入口。子入口可以跳转到同一个模块路由并携带分类参数。
+文件夹点击后由 Home 打开统一弹层，展示文件夹内子入口。Shopping 文件夹第一层子入口应表现为多个独立购物平台 App；子入口可以跳转到同一个底层模块路由，并携带平台与默认货架参数，例如 `service=style_cloud&category=fashion`。
 
 ### 4.3 Appearance 外观配置层
 
@@ -84,18 +85,16 @@ Appearance 后续只配置视觉：
 - English：Shopping
 - 主屏表现：文件夹型入口
 - Route 建议：`/shopping`
-- 首批子入口：综合购物、服饰、美妆、数码、生鲜、家居、奢侈品、礼物
+- 首批子入口：Schat Mall、Style Cloud、Nova Digital、Daily Fresh
 
-第一阶段不需要为每个子入口都做独立路由。可以统一跳转：
+第一阶段不需要为每个平台都做独立路由。可以统一跳转到底层 Shopping route，但必须携带平台身份，让用户感觉是进入文件夹里的某个购物 App：
 
-- `/shopping?category=mall`
-- `/shopping?category=fashion`
-- `/shopping?category=beauty`
-- `/shopping?category=digital`
-- `/shopping?category=grocery`
-- `/shopping?category=home`
-- `/shopping?category=luxury`
-- `/shopping?category=gifts`
+- `/shopping?service=schat_mall&category=mall`
+- `/shopping?service=style_cloud&category=fashion`
+- `/shopping?service=nova_digital&category=digital`
+- `/shopping?service=daily_fresh&category=grocery`
+
+购物品类仍然保留，但应位于具体平台 App 内部，作为“货架 / 分类”出现。不要把 Fashion / Beauty / Digital 直接作为主屏购物文件夹的第一层入口；这会让它看起来像一个集成目录，而不是多个独立购物平台 App。
 
 Shopping 业务归属：
 

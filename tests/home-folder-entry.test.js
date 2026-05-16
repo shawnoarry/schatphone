@@ -85,7 +85,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('opens Shopping folder and routes child entries with category query', async () => {
+  test('opens Shopping folder and routes platform app entries with service and category query', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -102,12 +102,13 @@ describe('Home folder entries', () => {
 
     await wrapper.find('[data-testid="home-folder-app_shopping"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-fashion"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-style_cloud"]').exists()).toBe(true)
 
-    await wrapper.find('[data-testid="home-folder-entry-fashion"]').trigger('click')
+    await wrapper.find('[data-testid="home-folder-entry-style_cloud"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query.service).toBe('style_cloud')
     expect(router.currentRoute.value.query.category).toBe('fashion')
     wrapper.unmount()
   })
