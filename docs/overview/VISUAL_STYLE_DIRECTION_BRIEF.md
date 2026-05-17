@@ -76,6 +76,13 @@ Must avoid / 必须避免:
 | Network / 网络 | iOS Settings subpage | Developer connection panels only when necessary | Technical but restrained | It can stay more utilitarian, but should inherit the global system skin. |
 | Phone / Wallet / Stock / Files / More | To be defined | Inherit global shell first | Pending | Product role is not mature enough for bespoke style direction. |
 
+Shell implementation note / 壳层实施备注:
+
+- 2026-05-17: Home now includes a `-1` Today View baseline to the left of page 1.
+- The surface should be treated as native system chrome, not as a normal editable Home page.
+- Greeting, Smart Panel, and hidden-system placeholders such as World Hub and Cheats belong there rather than occupying ordinary app-icon pages.
+- Locked hidden-system entries should feel like believable inactive phone affordances: visible enough to create anticipation, but dim, non-customizable, and not mistaken for installed apps.
+
 ---
 
 ## 4. Chat Direction / Chat 模块方向
@@ -150,6 +157,13 @@ Must preserve / 必须保留:
 - Calendar/reminder ownership split
 - Trip lifecycle and history
 - WorldBook relevance hooks
+
+Implementation note / 实施备注:
+
+- 2026-05-17: Map has landed a structural map-first baseline before the full visual rebuild.
+- The first screen now prioritizes a map canvas, destination search, route summary, and bottom navigation.
+- Secondary surfaces such as visual settings, address book, route familiarity, area unlocks, and trip history are moved behind an in-app drawer.
+- This is not the final Google Maps visual pass; it is an information-architecture correction so future delivery/logistics/asset-location integrations do not keep turning Map into a backend dashboard.
 
 ---
 

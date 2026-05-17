@@ -28,6 +28,8 @@ Core gameplay direction / 核心玩法方向：
    以 AI 作为社交与关系互动内容的主要引擎。
 3. Keep continuity and immersion more important than isolated feature stacking.
    将连续性与沉浸感放在零散功能堆叠之前。
+4. Treat events, growth, tasks, and numeric data as tools for user freedom and virtual-life realism, not as restrictions.
+   将事件、养成、任务和数值视为服务用户自由度与虚拟生活真实感的工具，而不是限制用户的规则。
 
 ---
 
@@ -284,11 +286,13 @@ Rule of thumb / 使用原则：
    `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md` 记录视觉工作搁置后的具体功能代码候选；用于选择安全的下一刀代码工作，但不作为第二动态路线图。
 6. `docs/process/EVENT_WORKFLOW.md`, `docs/architecture/SIMULATION_EVENT_ENGINE.md`, and `docs/overview/IMMERSIVE_EVENT_TODO.md` define the event-specialist track for random, condition-driven, scheduled, and module-owned immersive events.
    `docs/process/EVENT_WORKFLOW.md`、`docs/architecture/SIMULATION_EVENT_ENGINE.md` 与 `docs/overview/IMMERSIVE_EVENT_TODO.md` 定义事件专项，用于随机触发、条件触发、定时触发与模块自有沉浸式事件。
-7. `docs/overview/APPEARANCE_REBUILD_SCOPE.md` is the visual rebuild reference; use it to judge which shell and module surfaces should be fully redesigned instead of incrementally polished.
+7. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` defines the relationship-growth event standard for affinity, interpersonal progress, character growth, world-aware relationship packs, and future World Hub controls.
+   `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` 定义关系成长事件标准，用于好感度、人际关系进展、角色成长、世界观适配关系事件包，以及后续 World Hub 控制/改写。
+8. `docs/overview/APPEARANCE_REBUILD_SCOPE.md` is the visual rebuild reference; use it to judge which shell and module surfaces should be fully redesigned instead of incrementally polished.
    `docs/overview/APPEARANCE_REBUILD_SCOPE.md` 是外观重建参考文档；用于判断哪些壳层与模块界面应做完整视觉重建，而不是继续局部打磨。
-8. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` is the visual style direction brief; use it to judge the desired references and mood for the rebuild.
+9. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` is the visual style direction brief; use it to judge the desired references and mood for the rebuild.
    `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` 是视觉风格方向简报；用于判断外观重建应参考哪些 App/系统，以及整体气质应如何收敛。
-9. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` parks visual-rebuild next steps while current focus returns to functional code.
+10. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` parks visual-rebuild next steps while current focus returns to functional code.
    `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` 用于暂存视觉重建后续建议，当前阶段则先回到功能代码推进。
 
 Functional folders / 职能目录：
@@ -338,6 +342,9 @@ Archived docs / 已归档文档：
 ---
 
 ## 12. Change Log / 变更记录
+
+10. 2026-05-17: added `docs/pm/MODULE_NAME_GLOSSARY.md` as the module Chinese/English naming source, and `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md` as the Calendar vs Reminders product boundary. Calendar should become the real schedule/date app; Reminders should own cross-module cues, follow-ups, and world/task objectives before more Calendar relationship facts are added.
+    2026-05-17：新增 `docs/pm/MODULE_NAME_GLOSSARY.md` 作为模块中英命名来源，并新增 `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md` 作为 Calendar 与 Reminders 的产品边界。Calendar 回归真实日程/日期应用；Reminders 承接跨模块线索、跟进事项与世界观任务目标，再继续扩展 Calendar 关系事实。
 
 1. 2026-04-06: created as the consolidated master guide from previously split status, architecture, and progress docs.
    2026-04-06：由原先分散的状态、架构与进度文档整合生成本文。

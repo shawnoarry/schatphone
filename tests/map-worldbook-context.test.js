@@ -100,7 +100,19 @@ describe('map worldbook context', () => {
       .findAll('[data-testid]')
       .find((node) => node.attributes('data-testid') === testId)
 
+  const openProgressDrawer = async () => {
+    const progressButton = wrapper
+      .get('[data-testid="map-secondary-menu"]')
+      .findAll('button')
+      .find((button) => button.text().includes('探索') || button.text().includes('Progress'))
+    expect(progressButton?.exists()).toBe(true)
+    await progressButton.trigger('click')
+    await nextTick()
+  }
+
   test('shows related WorldBook knowledge points across map feedback, route familiarity, and trip history', async () => {
+    await openProgressDrawer()
+
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
     const feedbackId = mapStore.mapAreaFeedback[0]?.id
     const routeKey = mapStore.routeFamiliarity[0]?.key
@@ -128,6 +140,8 @@ describe('map worldbook context', () => {
   })
 
   test('deep-links map context into WorldBook filters', async () => {
+    await openProgressDrawer()
+
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
     const feedbackId = mapStore.mapAreaFeedback[0]?.id
 

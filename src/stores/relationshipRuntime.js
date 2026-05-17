@@ -1,0 +1,633 @@
+import { computed, ref, watch } from 'vue'
+import { defineStore } from 'pinia'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+
+export const RELATIONSHIP_RUNTIME_STORAGE_KEY = 'store:relationship-runtime'
+export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 1
+
+const RELATIONSHIP_ENTITY_LIMIT = 300
+const RELATIONSHIP_EVENT_LIMIT = 500
+const METRIC_KEYS = ['affinity', 'trust', 'intimacy', 'tension', 'dependency']
+export const RELATIONSHIP_EVENT_STATUS = Object.freeze({
+  APPLIED: 'applied',
+  PENDING_CONFIRMATION: 'pending_confirmation',
+  DISMISSED: 'dismissed',
+  SKIPPED_DISABLED: 'skipped_disabled',
+})
+const DEFAULT_RELATIONSHIP_METRICS = Object.freeze({
+  affinity: 50,
+  trust: 50,
+  intimacy: 20,
+  tension: 10,
+  dependency: 10,
+})
+
+const toInt = (value, fallback = 0) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? Math.floor(num) : fallback
+}
+
+const clamp = (value, min = 0, max = 100) => {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return min
+  return Math.min(max, Math.max(min, num))
+}
+
+const normalizeText = (value, fallback = '', max = 160) => {
+  if (typeof value !== 'string') return fallback
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  if (!normalized) return fallback
+  return normalized.slice(0, max)
+}
+
+const normalizeTag = (value) => normalizeText(value, '', 40).toLowerCase()
+
+const normalizeMetric = (value, fallback = 0) => clamp(toInt(value, fallback), 0, 100)
+
+const normalizeMetricDeltas = (rawDeltas = {}) => {
+  const source = rawDeltas && typeof rawDeltas === 'object' ? rawDeltas : {}
+  return METRIC_KEYS.reduce((acc, key) => {
+    const delta = Number(source[key])
+    if (Number.isFinite(delta) && delta !== 0) {
+      acc[key] = clamp(Math.round(delta), -30, 30)
+    }
+    return acc
+  }, {})
+}
+
+const createRelationshipEventId = () =>
+  `relationship_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const normalizeWorldContext = (rawContext = {}) => {
+  const source = rawContext && typeof rawContext === 'object' ? rawContext : {}
+  const tags = Array.isArray(source.tags)
+    ? [...new Set(source.tags.map(normalizeTag).filter(Boolean))].slice(0, 12)
+    : []
+  return {
+    worldContextId: normalizeText(source.worldContextId, '', 80),
+    eventPackId: normalizeText(source.eventPackId, '', 80),
+    variantId: normalizeText(source.variantId, '', 80),
+    tags,
+  }
+}
+
+export const buildRelationshipEntityKey = (rawTarget = {}) => {
+  const target = rawTarget && typeof rawTarget === 'object' ? rawTarget : {}
+  const explicitKey = normalizeText(target.entityKey, '', 120)
+  if (explicitKey) return explicitKey
+
+  const profileId = toInt(target.profileId ?? target.roleProfileId, 0)
+  if (profileId > 0) return `role:${profileId}`
+
+  const roleProfileId = target.sourceType === 'roleProfile' ? toInt(target.id, 0) : 0
+  if (roleProfileId > 0) return `role:${roleProfileId}`
+
+  const contactId = toInt(target.contactId ?? (target.sourceType === 'contact' ? target.id : 0), 0)
+  if (contactId > 0) return `contact:${contactId}`
+
+  const name = normalizeText(target.name || target.displayName, '', 100).toLowerCase()
+  return name ? `name:${name}` : ''
+}
+
+const normalizeTargetMeta = (rawTarget = {}) => {
+  const target = rawTarget && typeof rawTarget === 'object' ? rawTarget : {}
+  const entityKey = buildRelationshipEntityKey(target)
+  if (!entityKey) return null
+
+  const explicitRoleProfileId = entityKey.startsWith('role:') ? toInt(entityKey.slice(5), 0) : 0
+  const explicitContactId = entityKey.startsWith('contact:') ? toInt(entityKey.slice(8), 0) : 0
+  const profileId = toInt(target.profileId ?? target.roleProfileId, 0) || explicitRoleProfileId
+  const sourceProfileId = target.sourceType === 'roleProfile' ? toInt(target.id, 0) : 0
+  const contactId = toInt(target.contactId ?? (target.sourceType === 'contact' ? target.id : 0), 0) || explicitContactId
+  const kind = normalizeText(target.kind, entityKey.startsWith('role:') ? 'role' : 'contact', 40)
+
+  return {
+    entityKey,
+    profileId: profileId > 0 ? profileId : sourceProfileId,
+    contactId,
+    kind,
+    displayName: normalizeText(target.name || target.displayName, '', 100),
+  }
+}
+
+const deriveRelationshipStage = (metrics = {}) => {
+  const affinity = normalizeMetric(metrics.affinity, DEFAULT_RELATIONSHIP_METRICS.affinity)
+  const trust = normalizeMetric(metrics.trust, DEFAULT_RELATIONSHIP_METRICS.trust)
+  const intimacy = normalizeMetric(metrics.intimacy, DEFAULT_RELATIONSHIP_METRICS.intimacy)
+  const tension = normalizeMetric(metrics.tension, DEFAULT_RELATIONSHIP_METRICS.tension)
+
+  if (tension >= 72) return 'conflict'
+  if (affinity <= 22 || trust <= 22) return 'distant'
+  if (affinity >= 86 && trust >= 72 && intimacy >= 78) return 'intimate'
+  if (affinity >= 72 && trust >= 62 && intimacy >= 52) return 'close'
+  if (affinity >= 56 && trust >= 46) return 'friend'
+  if (affinity >= 38) return 'acquaintance'
+  return 'stranger'
+}
+
+const normalizeMilestones = (rawMilestones = []) => {
+  if (!Array.isArray(rawMilestones)) return []
+  const seen = new Set()
+  return rawMilestones
+    .map((item, index) => {
+      const source = item && typeof item === 'object' ? item : { label: item }
+      const label = normalizeText(source.label || source.title || source.name, '', 100)
+      if (!label) return null
+      const key = label.toLowerCase()
+      if (seen.has(key)) return null
+      seen.add(key)
+      const createdAt = Math.max(0, toInt(source.createdAt, Date.now() - index))
+      return {
+        id: normalizeText(source.id, `milestone_${createdAt}_${index}`, 100),
+        label,
+        sourceEventId: normalizeText(source.sourceEventId, '', 120),
+        createdAt,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 40)
+}
+
+const normalizeGrowthTraits = (rawTraits = []) => {
+  if (!Array.isArray(rawTraits)) return []
+  return [...new Set(rawTraits.map(normalizeTag).filter(Boolean))].slice(0, 40)
+}
+
+const createDefaultEntity = (meta = {}) => {
+  const now = Date.now()
+  const metrics = { ...DEFAULT_RELATIONSHIP_METRICS }
+  return {
+    entityKey: meta.entityKey || '',
+    profileId: toInt(meta.profileId, 0),
+    contactId: toInt(meta.contactId, 0),
+    kind: normalizeText(meta.kind, 'role', 40),
+    displayName: normalizeText(meta.displayName, '', 100),
+    metrics,
+    relationshipStage: deriveRelationshipStage(metrics),
+    milestones: [],
+    growthTraits: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+const normalizeEntity = (rawEntity = {}, index = 0) => {
+  const source = rawEntity && typeof rawEntity === 'object' ? rawEntity : {}
+  const meta = normalizeTargetMeta(source)
+  if (!meta) return null
+
+  const metrics = METRIC_KEYS.reduce((acc, key) => {
+    acc[key] = normalizeMetric(source.metrics?.[key] ?? source[key], DEFAULT_RELATIONSHIP_METRICS[key])
+    return acc
+  }, {})
+  const createdAt = Math.max(0, toInt(source.createdAt, Date.now() - index))
+  const relationshipStage =
+    normalizeText(source.relationshipStage, '', 40) || deriveRelationshipStage(metrics)
+
+  return {
+    entityKey: meta.entityKey,
+    profileId: meta.profileId,
+    contactId: meta.contactId,
+    kind: meta.kind,
+    displayName: meta.displayName,
+    metrics,
+    relationshipStage,
+    milestones: normalizeMilestones(source.milestones),
+    growthTraits: normalizeGrowthTraits(source.growthTraits),
+    createdAt,
+    updatedAt: Math.max(createdAt, toInt(source.updatedAt, createdAt)),
+  }
+}
+
+const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
+  const source = rawEvent && typeof rawEvent === 'object' ? rawEvent : {}
+  const target = source.target && typeof source.target === 'object' ? source.target : source
+  const meta = normalizeTargetMeta({
+    ...target,
+    entityKey: source.entityKey || target.entityKey,
+  })
+  if (!meta) return null
+
+  const createdAt = Math.max(0, toInt(source.createdAt, Date.now() - index))
+  const status = normalizeText(source.status, '', 40)
+  const normalizedStatus = Object.values(RELATIONSHIP_EVENT_STATUS).includes(status)
+    ? status
+    : source.requiresConfirmation === true
+      ? RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+      : RELATIONSHIP_EVENT_STATUS.APPLIED
+
+  return {
+    id: normalizeText(source.id, `relationship_event_legacy_${createdAt}_${index}`, 120),
+    entityKey: meta.entityKey,
+    targetLabel: normalizeText(source.targetLabel || meta.displayName, '', 100),
+    sourceModule: normalizeText(source.sourceModule, 'relationship_runtime', 60),
+    sourceId: normalizeText(source.sourceId, '', 140),
+    factType: normalizeText(source.factType || source.type, 'relationship_fact', 80),
+    summary: normalizeText(source.summary || source.note || source.title, '', 220),
+    intensity: clamp(toInt(source.intensity, 1), 1, 5),
+    metricDeltas: normalizeMetricDeltas(source.metricDeltas),
+    milestone: normalizeText(source.milestone, '', 100),
+    growthTraits: normalizeGrowthTraits(source.growthTraits),
+    requiresConfirmation: source.requiresConfirmation === true,
+    status: normalizedStatus,
+    worldContext: normalizeWorldContext(source.worldContext),
+    createdAt,
+    appliedAt: Math.max(0, toInt(source.appliedAt, 0)),
+    dismissedAt: Math.max(0, toInt(source.dismissedAt, 0)),
+  }
+}
+
+const createDefaultSettings = () => ({
+  enabled: true,
+  autoApplyLowImpact: true,
+  requireConfirmationForMajorEffects: true,
+})
+
+const normalizeSettings = (rawSettings = {}) => {
+  const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
+  return {
+    enabled: source.enabled !== false,
+    autoApplyLowImpact: source.autoApplyLowImpact !== false,
+    requireConfirmationForMajorEffects: source.requireConfirmationForMajorEffects !== false,
+  }
+}
+
+const isMajorRelationshipEvent = (event) => {
+  if (!event) return false
+  if (event.requiresConfirmation) return true
+  if (event.milestone && event.intensity >= 4) return true
+  return Object.values(event.metricDeltas || {}).some((delta) => Math.abs(Number(delta) || 0) >= 16)
+}
+
+const summarizeEventsForPrompt = (items = []) => {
+  if (!items.length) return 'none'
+  return items
+    .slice(0, 3)
+    .map((event) => {
+      const summary = event.summary || event.factType || 'relationship fact'
+      return `${event.sourceModule}:${event.factType} - ${summary}`
+    })
+    .join('; ')
+}
+
+export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', () => {
+  const settings = ref(createDefaultSettings())
+  const entities = ref([])
+  const events = ref([])
+  const hasFinishedStorageHydration = ref(false)
+
+  const entityMap = computed(() => {
+    const map = new Map()
+    entities.value.forEach((entity) => {
+      map.set(entity.entityKey, entity)
+    })
+    return map
+  })
+  const entityCount = computed(() => entities.value.length)
+  const pendingEventCount = computed(
+    () => events.value.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION).length,
+  )
+
+  const findEntity = (target = {}) => {
+    const key = buildRelationshipEntityKey(target)
+    return key ? entityMap.value.get(key) || null : null
+  }
+
+  const findEventBySource = (sourceModule, sourceId) => {
+    const moduleKey = normalizeText(sourceModule, '', 60)
+    const id = normalizeText(sourceId, '', 140)
+    if (!moduleKey || !id) return null
+    const event = events.value.find((item) => item.sourceModule === moduleKey && item.sourceId === id)
+    return event ? { ...event, metricDeltas: { ...event.metricDeltas } } : null
+  }
+
+  const ensureEntity = (target = {}) => {
+    const meta = normalizeTargetMeta(target)
+    if (!meta) return null
+    const existing = entityMap.value.get(meta.entityKey)
+    if (existing) {
+      existing.profileId = meta.profileId || existing.profileId
+      existing.contactId = meta.contactId || existing.contactId
+      existing.kind = meta.kind || existing.kind
+      existing.displayName = meta.displayName || existing.displayName
+      return existing
+    }
+    const created = createDefaultEntity(meta)
+    entities.value.unshift(created)
+    if (entities.value.length > RELATIONSHIP_ENTITY_LIMIT) {
+      entities.value.splice(RELATIONSHIP_ENTITY_LIMIT)
+    }
+    return created
+  }
+
+  const upsertEntity = (target = {}, updates = {}) => {
+    const entity = ensureEntity(target)
+    if (!entity) return null
+    const source = updates && typeof updates === 'object' ? updates : {}
+    if (source.metrics && typeof source.metrics === 'object') {
+      METRIC_KEYS.forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(source.metrics, key)) {
+          entity.metrics[key] = normalizeMetric(source.metrics[key], entity.metrics[key])
+        }
+      })
+    }
+    if (Array.isArray(source.growthTraits)) {
+      entity.growthTraits = normalizeGrowthTraits([...entity.growthTraits, ...source.growthTraits])
+    }
+    if (Array.isArray(source.milestones)) {
+      entity.milestones = normalizeMilestones([...entity.milestones, ...source.milestones])
+    }
+    entity.relationshipStage = normalizeText(source.relationshipStage, '', 40) || deriveRelationshipStage(entity.metrics)
+    entity.updatedAt = Date.now()
+    return { ...entity, metrics: { ...entity.metrics } }
+  }
+
+  const addMilestone = (entity, milestoneLabel, sourceEventId = '', createdAt = Date.now()) => {
+    const label = normalizeText(milestoneLabel, '', 100)
+    if (!entity || !label) return
+    const exists = entity.milestones.some((item) => item.label.toLowerCase() === label.toLowerCase())
+    if (exists) return
+    entity.milestones.unshift({
+      id: `milestone_${createdAt}_${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      sourceEventId: normalizeText(sourceEventId, '', 120),
+      createdAt,
+    })
+    entity.milestones = normalizeMilestones(entity.milestones)
+  }
+
+  const applyEventToEntity = (event) => {
+    const entity = ensureEntity({
+      entityKey: event.entityKey,
+      name: event.targetLabel,
+    })
+    if (!entity) return null
+
+    METRIC_KEYS.forEach((key) => {
+      const delta = Number(event.metricDeltas?.[key] || 0)
+      if (delta !== 0) {
+        entity.metrics[key] = normalizeMetric(entity.metrics[key] + delta, DEFAULT_RELATIONSHIP_METRICS[key])
+      }
+    })
+    if (event.milestone) addMilestone(entity, event.milestone, event.id, event.createdAt)
+    if (event.growthTraits.length > 0) {
+      entity.growthTraits = normalizeGrowthTraits([...entity.growthTraits, ...event.growthTraits])
+    }
+    entity.relationshipStage = deriveRelationshipStage(entity.metrics)
+    entity.updatedAt = Date.now()
+    return entity
+  }
+
+  const recordRelationshipFact = (input = {}) => {
+    const target = input.target && typeof input.target === 'object' ? input.target : input
+    const event = normalizeRelationshipEvent({
+      ...input,
+      id: input.id || createRelationshipEventId(),
+      target,
+      createdAt: input.createdAt || Date.now(),
+    })
+    if (!event) return null
+
+    const major = settings.value.requireConfirmationForMajorEffects && isMajorRelationshipEvent(event)
+    if (!settings.value.enabled && input.force !== true) {
+      event.status = RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED
+    } else if (major) {
+      event.status = RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+    } else if (settings.value.autoApplyLowImpact) {
+      event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
+      event.appliedAt = Date.now()
+      applyEventToEntity(event)
+    } else {
+      event.status = RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+    }
+
+    events.value.unshift(event)
+    if (events.value.length > RELATIONSHIP_EVENT_LIMIT) {
+      events.value.splice(RELATIONSHIP_EVENT_LIMIT)
+    }
+    return { ...event, metricDeltas: { ...event.metricDeltas } }
+  }
+
+  const applyPendingRelationshipEvent = (eventId) => {
+    const id = normalizeText(eventId, '', 120)
+    if (!id) return false
+    const event = events.value.find((item) => item.id === id)
+    if (!event || event.status !== RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return false
+    event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
+    event.appliedAt = Date.now()
+    applyEventToEntity(event)
+    return true
+  }
+
+  const dismissRelationshipEvent = (eventId) => {
+    const id = normalizeText(eventId, '', 120)
+    if (!id) return false
+    const event = events.value.find((item) => item.id === id)
+    if (!event || event.status !== RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return false
+    event.status = RELATIONSHIP_EVENT_STATUS.DISMISSED
+    event.dismissedAt = Date.now()
+    return true
+  }
+
+  const listEventsForTarget = (target = {}, limit = 5) => {
+    const key = buildRelationshipEntityKey(target)
+    if (!key) return []
+    return events.value
+      .filter((event) => event.entityKey === key)
+      .slice(0, clamp(toInt(limit, 5), 0, 50))
+      .map((event) => ({ ...event, metricDeltas: { ...event.metricDeltas } }))
+  }
+
+  const summarizeEntityForTarget = (target = {}, options = {}) => {
+    const meta = normalizeTargetMeta(target)
+    if (!meta) return null
+    const entity = entityMap.value.get(meta.entityKey)
+    const fallback = entity || createDefaultEntity(meta)
+    const eventLimit = clamp(toInt(options.eventLimit, 3), 0, 20)
+    const recentEvents = eventLimit > 0 ? listEventsForTarget(meta, eventLimit) : []
+    const appliedEvents = recentEvents.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.APPLIED)
+    const latestEvent = appliedEvents[0] || null
+
+    return {
+      exists: Boolean(entity),
+      entityKey: meta.entityKey,
+      displayName: fallback.displayName || meta.displayName,
+      profileId: fallback.profileId,
+      contactId: fallback.contactId,
+      kind: fallback.kind,
+      metrics: { ...fallback.metrics },
+      relationshipStage: fallback.relationshipStage,
+      milestones: fallback.milestones.map((item) => ({ ...item })),
+      growthTraits: [...fallback.growthTraits],
+      recentEvents,
+      latestEventSummary: latestEvent?.summary || latestEvent?.factType || '',
+      pendingEventCount: events.value.filter(
+        (event) =>
+          event.entityKey === meta.entityKey &&
+          event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION,
+      ).length,
+      updatedAt: fallback.updatedAt,
+    }
+  }
+
+  const buildPromptContextForTarget = (target = {}, options = {}) => {
+    if (!settings.value.enabled && options.includeDisabled !== true) return ''
+    const snapshot = summarizeEntityForTarget(target, {
+      eventLimit: options.eventLimit ?? 3,
+    })
+    if (!snapshot) return ''
+    if (!snapshot.exists && options.includeNeutral !== true) return ''
+
+    const metrics = snapshot.metrics
+    const milestones = snapshot.milestones.map((item) => item.label).slice(0, 3).join('; ') || 'none'
+    const traits = snapshot.growthTraits.slice(0, 6).join(', ') || 'none'
+    const recentEvents = summarizeEventsForPrompt(
+      snapshot.recentEvents.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.APPLIED),
+    )
+
+    return [
+      `Relationship runtime snapshot: ${snapshot.displayName || 'unknown target'}.`,
+      `Stage: ${snapshot.relationshipStage}; metrics affinity/trust/intimacy/tension/dependency: ${metrics.affinity}/${metrics.trust}/${metrics.intimacy}/${metrics.tension}/${metrics.dependency}.`,
+      `Milestones: ${milestones}.`,
+      `Growth traits: ${traits}.`,
+      `Recent relationship events: ${recentEvents}.`,
+    ].join('\n')
+  }
+
+  const setRuntimeEnabled = (enabled) => {
+    settings.value.enabled = enabled !== false
+  }
+
+  const setAutoApplyLowImpact = (enabled) => {
+    settings.value.autoApplyLowImpact = enabled !== false
+  }
+
+  const applyPersistedSource = (source = {}) => {
+    const rawSource =
+      source && typeof source.relationshipRuntime === 'object' && source.relationshipRuntime
+        ? source.relationshipRuntime
+        : source
+    if (!rawSource || typeof rawSource !== 'object') return false
+
+    const rawEntities = Array.isArray(rawSource.entities)
+      ? rawSource.entities
+      : Array.isArray(rawSource.relationshipEntities)
+        ? rawSource.relationshipEntities
+        : null
+    const rawEvents = Array.isArray(rawSource.events)
+      ? rawSource.events
+      : Array.isArray(rawSource.relationshipEvents)
+        ? rawSource.relationshipEvents
+        : null
+
+    settings.value = normalizeSettings(rawSource.settings)
+    entities.value = (rawEntities || [])
+      .map(normalizeEntity)
+      .filter(Boolean)
+      .slice(0, RELATIONSHIP_ENTITY_LIMIT)
+    events.value = (rawEvents || [])
+      .map(normalizeRelationshipEvent)
+      .filter(Boolean)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, RELATIONSHIP_EVENT_LIMIT)
+    return true
+  }
+
+  const hydrateFromStorage = () => {
+    const persisted = readPersistedState(RELATIONSHIP_RUNTIME_STORAGE_KEY, {
+      version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+    })
+    return applyPersistedSource(persisted)
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(RELATIONSHIP_RUNTIME_STORAGE_KEY, {
+      version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+    })
+    return applyPersistedSource(persisted)
+  }
+
+  const createBackupSnapshot = () => ({
+    settings: { ...settings.value },
+    entities: entities.value.map((entity) => ({
+      ...entity,
+      metrics: { ...entity.metrics },
+      milestones: entity.milestones.map((item) => ({ ...item })),
+      growthTraits: [...entity.growthTraits],
+    })),
+    events: events.value.map((event) => ({
+      ...event,
+      metricDeltas: { ...event.metricDeltas },
+      growthTraits: [...event.growthTraits],
+      worldContext: {
+        ...event.worldContext,
+        tags: [...event.worldContext.tags],
+      },
+    })),
+  })
+
+  const createBackupSnapshotAsync = async () => createBackupSnapshot()
+
+  const restoreFromBackup = (snapshot = {}) => applyPersistedSource(snapshot)
+
+  const persistToStorage = () => {
+    writePersistedState(RELATIONSHIP_RUNTIME_STORAGE_KEY, createBackupSnapshot(), {
+      version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+    })
+  }
+
+  const saveNow = () => {
+    persistToStorage()
+  }
+
+  const resetForTesting = () => {
+    settings.value = createDefaultSettings()
+    entities.value = []
+    events.value = []
+  }
+
+  const hydratedFromLocal = hydrateFromStorage()
+
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [settings, entities, events],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
+
+  return {
+    settings,
+    entities,
+    events,
+    entityCount,
+    pendingEventCount,
+    hasFinishedStorageHydration,
+    findEntity,
+    findEventBySource,
+    upsertEntity,
+    recordRelationshipFact,
+    applyPendingRelationshipEvent,
+    dismissRelationshipEvent,
+    listEventsForTarget,
+    summarizeEntityForTarget,
+    buildPromptContextForTarget,
+    setRuntimeEnabled,
+    setAutoApplyLowImpact,
+    createBackupSnapshot,
+    createBackupSnapshotAsync,
+    restoreFromBackup,
+    resetForTesting,
+    saveNow,
+  }
+})

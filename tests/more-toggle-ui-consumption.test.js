@@ -124,7 +124,7 @@ describe('More toggle UI consumption', () => {
     enabledWrapper.unmount()
   })
 
-  test('control_center toggle controls the optional Director Home entry', async () => {
+  test('control_center toggle controls the optional World Hub Home entry', async () => {
     const router = createTestRouter()
     await router.push('/more')
     await router.isReady()
@@ -136,7 +136,7 @@ describe('More toggle UI consumption', () => {
       },
     })
 
-    expect(moreWrapper.text()).toContain('运行控制台')
+    expect(moreWrapper.text()).toContain('世界中枢')
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
 
     await moreWrapper.find('[data-testid="more-feature-toggle-control_center"]').trigger('click')

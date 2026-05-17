@@ -218,6 +218,41 @@ Future visual TODO / 后续视觉 TODO:
 5. Revisit Assets visual identity after Shopping -> Assets handoff behavior is clear.
    等 Shopping -> Assets 交接行为明确后，再回看资产模块视觉身份。
 
+### 4.2 Home -1 Today View Visual Status / 主屏 -1 今日视图视觉进度
+
+Status / 状态: functional shell baseline landed, full visual rebuild deferred / 功能性壳层基线已落地，完整视觉重建仍搁置
+
+Landed / 已完成:
+
+1. Home now has a native-system `-1` Today View to the left of page 1.
+   Home 现在在第 1 屏左侧拥有一个原生系统感的 `-1` 今日视图。
+2. The greeting and Smart Panel have moved from page 1 into this `-1` surface.
+   “你好，用户名”和智能面板已从第 1 屏移动到 `-1` 页面。
+3. World Hub and Cheats are represented as fixed hidden-system placeholders.
+   World Hub 与金手指已作为固定隐藏系统占位呈现。
+4. Locked placeholders are dim/low-saturation and show `App not installed` feedback when tapped.
+   未安装占位以暗色/低饱和显示，点击后提示“应用未安装”。
+5. World Hub lights up and opens only when the `control_center` runtime toggle is enabled.
+   只有 `control_center` 运行控制开关开启后，World Hub 才会变亮并可打开。
+
+Not finished / 未完成:
+
+1. Cheats still has no unlock condition, route, or value-editing surface.
+   金手指尚未接入解锁条件、路由或数值编辑界面。
+2. The `-1` widget/card visuals are local scaffolding, not final iOS Today View quality.
+   `-1` 小组件/卡片视觉仍是局部脚手架，不是最终 iOS 今日视图质量。
+3. The `-1` surface is intentionally not editable through Appearance or Home layout.
+   `-1` 页面当前刻意不接入 Appearance 或 Home 布局编辑。
+
+Future visual TODO / 后续视觉 TODO:
+
+1. Rebuild `-1` with a more believable iOS Today View/widget composition.
+   后续按更可信的 iOS 今日视图/小组件组合重建 `-1` 页面。
+2. Define a locked/installed visual language for hidden system apps that cannot be customized by Appearance.
+   定义隐藏系统 App 的未安装/已安装视觉语言，并保持不可被 Appearance 自定义。
+3. Decide whether unlocked `-1` shortcuts should return to `-1` through an expanded navigation contract or continue normalizing to Home page 1.
+   决定解锁后的 `-1` 快捷入口是否扩展返回协议回到 `-1`，或继续归一化返回第 1 屏。
+
 When the project returns to visual work, resume in this order:
 
 未来恢复视觉工作时，建议按以下顺序：

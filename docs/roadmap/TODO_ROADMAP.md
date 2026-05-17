@@ -1820,24 +1820,326 @@ Status: PARTIAL_DONE
 
 ---
 
-## 2026-05-17 Optional Runtime Control / Director App
+## 2026-05-17 Optional Runtime Control / World Hub App
 
 Status: DONE
 
 1. EN: Optional Runtime Control is now gated behind the More toggle `control_center`.
    中文：可选运行控制现在由 More 开关 `control_center` 控制。
-2. EN: Home hides `app_control_center` by default and restores the Director entry only after the toggle is enabled.
-   中文：Home 默认隐藏 `app_control_center`，只有开启开关后才恢复导演台入口。
-3. EN: Disabling the toggle removes the Director entry without affecting Chat, Map, Shopping, Food Delivery, Assets, Wallet, Phone, Calendar, Gallery, or Settings.
-   中文：关闭开关会移除导演台入口，不影响 Chat、Map、Shopping、Food Delivery、Assets、Wallet、Phone、Calendar、Gallery 或 Settings。
+2. EN: Home hides `app_control_center` by default and restores the World Hub entry only after the toggle is enabled.
+   中文：Home 默认隐藏 `app_control_center`，只有开启开关后才恢复世界中枢入口。
+3. EN: Disabling the toggle removes the World Hub entry without affecting Chat, Map, Shopping, Food Delivery, Assets, Wallet, Phone, Calendar, Gallery, or Settings.
+   中文：关闭开关会移除世界中枢入口，不影响 Chat、Map、Shopping、Food Delivery、Assets、Wallet、Phone、Calendar、Gallery 或 Settings。
 4. EN: `/control-center` now provides a safe placeholder explaining optional runtime control, event controls, value controls, and the boundary that module data intake remains distributed.
    中文：`/control-center` 现在提供安全占位页，说明可选运行控制、事件控制、数值控制，以及模块资料导入仍分散在各模块内的边界。
-5. EN: Product decision reference: `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_DIRECTOR_APP.md`.
-   中文：产品决策参考 `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_DIRECTOR_APP.md`。
+5. EN: Product decision reference: `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`.
+   中文：产品决策参考 `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`。
 6. EN: Validation target: `npm test -- tests\system-widget-import.test.js tests\home-folder-entry.test.js tests\more-toggle-ui-consumption.test.js tests\app-icon-presentation.test.js tests\planned-module-registry.test.js`.
    中文：验证目标：`npm test -- tests\system-widget-import.test.js tests\home-folder-entry.test.js tests\more-toggle-ui-consumption.test.js tests\app-icon-presentation.test.js tests\planned-module-registry.test.js`。
 7. EN: Next recommended slice: connect `ControlCenterView.vue` to read-only `simulationStore` state before adding any mutation controls.
    中文：下一步建议：先把 `ControlCenterView.vue` 接入只读 `simulationStore` 状态，再考虑任何改写控件。
+
+---
+
+## 2026-05-17 World Hub Readonly Simulation Runtime Panel
+
+Status: DONE
+
+1. EN: `/control-center` now reads `simulationStore` and displays runtime status without triggering events or mutating module data.
+   中文：`/control-center` 现在读取 `simulationStore` 并展示运行状态，但不会触发事件，也不会改写任何模块数据。
+2. EN: The panel shows Surprise Mode, event-log count, active cooldowns, recent triggered/skipped/failed counts, module event enablement, recent logs, and world-variant metadata.
+   中文：面板展示 Surprise Mode、事件日志数量、活跃冷却、近期触发/跳过/失败数量、模块事件启用状态、最近日志与世界观变体元数据。
+3. EN: It keeps World Hub as a safe observation/control surface instead of a hidden runtime trigger.
+   中文：该实现让世界中枢先保持为安全观测/控制界面，而不是隐藏的运行时触发器。
+4. EN: Validation target: `npm test -- tests\control-center-view.test.js`.
+   中文：验证目标：`npm test -- tests\control-center-view.test.js`。
+5. EN: Next recommended slice: wire an explicit foreground-session tick control in Settings > Automation before automatic runtime execution becomes active.
+   中文：下一步建议：在自动运行时执行真正启用前，先把前台会话 tick 的显式控制接入 Settings > Automation。
+6. EN: Alternative same-size slice: expose Map read-only delivery route context from Food Delivery/Shopping cards without starting Map trips automatically.
+   中文：同体量备选：在 Food Delivery/Shopping 卡片中展示 Map 只读配送路线/位置上下文，但不自动启动地图行程。
+
+---
+
+## 2026-05-17 Settings Foreground Tick Control Baseline
+
+Status: DONE
+
+1. EN: Settings > Automation now exposes explicit foreground event tick controls backed by `simulationStore`.
+   中文：Settings > Automation 现在展示由 `simulationStore` 支撑的前台事件 tick 显式控制。
+2. EN: The persisted fields are `foregroundSessionTickEnabled` and `foregroundSessionTickIntervalMs`.
+   中文：持久化字段为 `foregroundSessionTickEnabled` 与 `foregroundSessionTickIntervalMs`。
+3. EN: The control is a safe baseline only: toggling it does not immediately run events and app lifecycle automatic execution is still not wired.
+   中文：该控制只是安全基线：切换不会立刻运行事件，应用生命周期自动执行仍未接入。
+4. EN: Validation target: `npm test -- tests\simulation-store.test.js tests\settings-general-section.test.js tests\simulation-foreground-session-tick.test.js`.
+   中文：验证目标：`npm test -- tests\simulation-store.test.js tests\settings-general-section.test.js tests\simulation-foreground-session-tick.test.js`。
+5. EN: Next recommended slice: wire the foreground-session tick controller into `App.vue` only when the persisted setting is enabled, with visibility guard and audit reports.
+   中文：下一步建议：仅在持久化开关开启时，把前台会话 tick 控制器接入 `App.vue`，并加入可见性保护与审计报告。
+6. EN: Keep automatic execution off by default and limited to Food Delivery ETA/rider-delay safe-list events.
+   中文：自动执行默认仍关闭，并继续限制在外卖 ETA/骑手延迟安全事件白名单内。
+
+---
+
+## 2026-05-17 App Lifecycle Foreground Tick Wiring
+
+Status: DONE
+
+1. EN: `App.vue` now wires the foreground-session tick lifecycle behind the persisted Settings > Automation switch.
+   中文：`App.vue` 已把前台会话 tick 生命周期接到 Settings > Automation 的持久化开关之后。
+2. EN: The runtime starts only when enabled, visible, unlocked, and outside `/lock`.
+   中文：运行只会在用户开启、页面可见、手机未锁屏且不在 `/lock` 路由时启动。
+3. EN: Hidden documents, lock screen, and disabled settings stop or block the controller.
+   中文：页面隐藏、锁屏或关闭设置都会停止或阻止控制器。
+4. EN: Triggered/skipped ticks now write `simulation/foreground_event_tick` Network diagnostics reports.
+   中文：触发或跳过的 tick 会写入 `simulation/foreground_event_tick` Network 诊断报告。
+5. EN: Automatic execution remains off by default and remains limited to Food Delivery safe-list events.
+   中文：自动执行默认关闭，并继续限制在外卖安全白名单事件内。
+6. EN: Validation target: `npm test -- tests\simulation-foreground-session-tick-lifecycle.test.js tests\network-guidance.test.js`.
+   中文：验证目标：`npm test -- tests\simulation-foreground-session-tick-lifecycle.test.js tests\network-guidance.test.js`。
+
+Recommended next:
+
+- EN: Expose Map read-only delivery route context from Food Delivery/Shopping cards as a product-visible but non-mutating action.
+  中文：下一步建议在 Food Delivery/Shopping 卡片里展示 Map 只读配送路线/位置上下文，作为可见但不改数据的动作。
+- EN: Alternative same-size slice: add Wallet expense suggestions from completed Shopping/Food Delivery orders while keeping Wallet as downstream ledger only.
+  中文：同体量备选是从已完成购物/外卖订单生成 Wallet 消费建议，但 Wallet 仍只作为下游账本。
+
+---
+
+## 2026-05-17 Map Information Architecture Baseline
+
+Status: DONE
+
+1. EN: `MapView.vue` now leads with a map canvas, current-location/search card, route summary, and bottom navigation.
+   中文：`MapView.vue` 现在以地图画布、当前位置/搜索卡、路线摘要和底部导航作为首屏。
+2. EN: Existing management-heavy surfaces move behind an in-app drawer: trip controls, places/address book, exploration progress, and visual/layer settings.
+   中文：原本偏管理后台的表面移入 app 内二级抽屉：行程控制、地点/地址簿、探索进度、视觉/图层设置。
+3. EN: Store behavior and Map ownership rules remain unchanged.
+   中文：store 行为与 Map 所有权边界不变。
+4. EN: This is a functional information-architecture baseline, not the full Google Maps visual rebuild.
+   中文：这是功能侧信息架构基线，不是完整 Google Maps 视觉重建。
+5. EN: Validation target: `npm test -- tests\map-view-information-architecture.test.js tests\map-worldbook-context.test.js tests\map-visual-picker.test.js tests\map-trip-baseline.test.js`.
+   中文：验证目标：`npm test -- tests\map-view-information-architecture.test.js tests\map-worldbook-context.test.js tests\map-visual-picker.test.js tests\map-trip-baseline.test.js`。
+
+Recommended next:
+
+- EN: Expose Map read-only delivery route context from Food Delivery/Shopping cards now that Map has a clearer route-context landing surface.
+  中文：Map 已有更清晰的路线语境落点，下一步可在 Food Delivery/Shopping 卡片里展示 Map 只读配送路线/位置上下文。
+- EN: Keep deeper route drawing, real markers, and Google Maps-like visual polish in the visual rebuild track.
+  中文：更深入的路线绘制、真实 marker 和 Google Maps 式视觉精修仍放入视觉重建专项。
+
+---
+
+## 2026-05-17 Delivery Route Context UI Handoff
+
+Status: DONE
+
+1. EN: Added `src/components/map/DeliveryRouteContextCard.vue` as a shared read-only route/location context card.
+   中文：新增 `src/components/map/DeliveryRouteContextCard.vue`，作为共享只读路线/位置上下文卡片。
+2. EN: Food Delivery order-event cards now show Map route context generated by `mapStore.buildDeliveryEventMapHandoff(...)`.
+   中文：Food Delivery 订单事件卡现在显示由 `mapStore.buildDeliveryEventMapHandoff(...)` 生成的 Map 路线上下文。
+3. EN: Shopping logistics cards now show the same context when a real logistics event exists.
+   中文：Shopping 物流卡现在会在存在真实物流事件时显示同一套上下文。
+4. EN: The UI confirms ownership boundaries: orders stay in Food Delivery/Shopping, and Map only explains location/ETA.
+   中文：UI 已明确所有权边界：订单仍属于 Food Delivery/Shopping，Map 只解释位置与 ETA。
+5. EN: Validation target: `npm test -- tests\food-delivery-view.test.js tests\shopping-view.test.js tests\map-trip-baseline.test.js`.
+   中文：验证目标：`npm test -- tests\food-delivery-view.test.js tests\shopping-view.test.js tests\map-trip-baseline.test.js`。
+
+Recommended next:
+
+- EN: Add Wallet expense suggestions from completed Shopping/Food Delivery orders, with explicit user confirmation before writing Wallet.
+  中文：下一步建议从已完成的 Shopping/Food Delivery 订单生成 Wallet 消费建议，并在写入 Wallet 前要求用户显式确认。
+- EN: Alternative same-size slice: add Chat service-account delivery/logistics push cards using existing order/event ids.
+  中文：同体量备选：在 Chat 服务号中加入外卖/物流推送卡，并复用现有订单/事件 id。
+
+---
+
+## 2026-05-17 Wallet Completed-Order Expense Suggestions
+
+Status: DONE
+
+1. EN: Shopping Wallet suggestions now appear only after a Shopping order is completed.
+   中文：Shopping 的 Wallet 消费建议现在只会在购物订单完成后出现。
+2. EN: Food Delivery Wallet suggestions now appear only after an order is marked delivered.
+   中文：Food Delivery 的 Wallet 消费建议现在只会在外卖订单标记送达后出现。
+3. EN: Writing an order expense to Wallet still requires explicit user confirmation.
+   中文：订单消费写入 Wallet 仍需要用户显式点击确认。
+4. EN: Wallet now separates order-origin expenses through the `Orders` source filter and order-origin badges.
+   中文：Wallet 现在通过 `Orders` 来源筛选和订单来源标识区分订单消费流水。
+5. EN: Contacts Wallet summaries can distinguish order-origin records, preparing safe facts for future relationship/growth events.
+   中文：Contacts 的 Wallet 摘要可区分订单来源记录，为后续关系/成长事件提供安全事实来源。
+6. EN: Validation target: `npm test -- tests\wallet-store.test.js tests\contacts-wallet-ledger-context.test.js tests\shopping-view.test.js tests\food-delivery-view.test.js`.
+   中文：验证目标：`npm test -- tests\wallet-store.test.js tests\contacts-wallet-ledger-context.test.js tests\shopping-view.test.js tests\food-delivery-view.test.js`。
+
+Recommended next:
+
+- EN: Historical note: Relationship Growth Event System baseline has since landed; see the next section.
+  中文：历史说明：关系成长事件系统基线现已落地；见下一节。
+- EN: Next current slice: add the first safe relationship fact adapter, preferably Wallet/Shopping gift or shared-expense facts.
+  中文：当前下一步：接入第一个安全关系事实适配器，优先 Wallet/Shopping 礼物或共同消费事实。
+
+---
+
+## 2026-05-17 Relationship Runtime Baseline
+
+Status: DONE
+
+1. EN: Added `src/stores/relationshipRuntime.js` as the shared relationship/growth truth layer.
+   中文：新增 `src/stores/relationshipRuntime.js` 作为共享关系/成长真值层。
+2. EN: The runtime persists relationship entities, affinity/trust/intimacy/tension/dependency metrics, relationship stages, milestones, growth traits, event history, and pending confirmations.
+   中文：运行时可持久化关系实体、好感/信任/亲密/紧张/依赖指标、关系阶段、里程碑、成长标签、事件历史与待确认事件。
+3. EN: Low-impact facts can apply locally; major or explicitly risky effects remain pending until approved by a future World Hub/review surface.
+   中文：低影响事实可本地落账；重大或显式高风险效果会保持待确认，等待后续 World Hub/审阅界面处理。
+4. EN: Contacts now shows read-only relationship snapshots for role profiles.
+   中文：Contacts 现在为角色档案展示只读关系快照。
+5. EN: Chat prompt assembly now injects compact relationship runtime context for role conversations without an extra API call.
+   中文：Chat 提示词组装现在会为角色会话注入紧凑关系运行时上下文，且不额外调用 API。
+6. EN: Settings backup/import rollback and storage diagnostics include `store:relationship-runtime`.
+   中文：Settings 备份、导入回滚与存储诊断已纳入 `store:relationship-runtime`。
+7. EN: Validation target: `npm test -- tests\relationship-runtime-store.test.js tests\contacts-wallet-ledger-context.test.js tests\chat-worldbook-binding-visibility.test.js`.
+   中文：验证目标：`npm test -- tests\relationship-runtime-store.test.js tests\contacts-wallet-ledger-context.test.js tests\chat-worldbook-binding-visibility.test.js`。
+
+Recommended next:
+
+- EN: Add the first safe relationship fact adapter from Wallet/Shopping gift or shared-expense records.
+  中文：下一步建议从 Wallet/Shopping 礼物或共同消费记录接入第一个安全关系事实适配器。
+- EN: Adapter rule: module stores submit facts through `relationshipRuntimeStore.recordRelationshipFact(...)`; they must not edit metrics/stages directly.
+  中文：适配器规则：模块 store 只通过 `relationshipRuntimeStore.recordRelationshipFact(...)` 提交事实，不直接编辑指标/阶段。
+- EN: Alternative same-size slice: add a World Hub read-only relationship runtime review panel before enabling value editing.
+  中文：同体量备选：先做 World Hub 只读关系运行时审阅面板，再考虑开放数值编辑。
+
+---
+
+## 2026-05-17 First Safe Relationship Fact Adapters
+
+Status: DONE
+
+1. EN: Added `src/lib/relationship-fact-adapters.js` as the first shared adapter seam for relationship-relevant module facts.
+   中文：新增 `src/lib/relationship-fact-adapters.js`，作为第一批关系相关模块事实的共享适配器入口。
+2. EN: Added source-level dedupe through `relationshipRuntimeStore.findEventBySource(sourceModule, sourceId)`.
+   中文：通过 `relationshipRuntimeStore.findEventBySource(sourceModule, sourceId)` 增加来源级去重。
+3. EN: Shopping completed gift orders can write a low-impact `gift_purchased` relationship fact when the user records the order into Wallet.
+   中文：Shopping 已完成赠礼订单在用户写入 Wallet 时，可生成低影响 `gift_purchased` 关系事实。
+4. EN: Food Delivery delivered orders can optionally write a low-impact `shared_meal` relationship fact when the user selects a contact and records the order into Wallet.
+   中文：Food Delivery 已送达订单在用户选择联系人并写入 Wallet 时，可选择生成低影响 `shared_meal` 关系事实。
+5. EN: Module ownership remains intact: Shopping/Food Delivery own orders, Wallet owns ledger records, relationship runtime owns only relationship facts.
+   中文：模块所有权保持不变：Shopping/Food Delivery 拥有订单，Wallet 拥有账本，relationship runtime 只拥有关系事实。
+6. EN: Validation target: `npm test -- tests\relationship-runtime-store.test.js tests\relationship-fact-adapters.test.js tests\shopping-view.test.js tests\food-delivery-view.test.js`.
+   中文：验证目标：`npm test -- tests\relationship-runtime-store.test.js tests\relationship-fact-adapters.test.js tests\shopping-view.test.js tests\food-delivery-view.test.js`。
+
+Recommended next:
+
+- EN: Add Phone completed/missed-call relationship facts and Map shared-route/check-in relationship facts.
+  中文：下一步建议增加 Phone 已接/未接来电关系事实，以及 Map 共享路线/地点打卡关系事实。
+- EN: Alternative same-size slice: add a World Hub read-only relationship review panel before enabling value editing or high-impact automatic relationship events.
+  中文：同体量备选任务：在开放数值编辑或高影响自动关系事件前，增加 World Hub 只读关系审阅面板。
+---
+
+## 2026-05-17 World Hub Relationship Runtime Review
+
+Status: DONE
+
+1. EN: `ControlCenterView.vue` now includes a read-only Relationship Runtime review panel.
+   中文：`ControlCenterView.vue` 现在包含只读 Relationship Runtime 审阅面板。
+2. EN: The panel displays relationship entity count, event count, pending effect count, runtime enabled state, top snapshots, and recent facts.
+   中文：该面板展示关系实体数、事件数、待确认效果数、运行时开关、主要快照与最近事实。
+3. EN: World Hub remains non-mutating: it does not apply, dismiss, edit, or generate relationship events.
+   中文：World Hub 仍然不改写数据：不会应用、忽略、编辑或生成关系事件。
+4. EN: Validation target: `npm test -- tests\control-center-view.test.js tests\relationship-runtime-store.test.js tests\relationship-fact-adapters.test.js`.
+   中文：验证目标：`npm test -- tests\control-center-view.test.js tests\relationship-runtime-store.test.js tests\relationship-fact-adapters.test.js`。
+
+Recommended next:
+
+- EN: Add Phone completed/missed-call relationship facts and Map shared-route/check-in relationship facts.
+  中文：下一步建议增加 Phone 已接/未接来电关系事实，以及 Map 共享路线/地点打卡关系事实。
+- EN: Alternative same-size slice: add Wallet shared-expense/transfer relationship facts.
+  中文：同体量备选任务：增加 Wallet 共同消费/转账关系事实。
+---
+
+## 2026-05-17 Expanded Relationship Fact Adapter Batch
+
+Status: DONE
+
+1. EN: Phone completed/missed calls can now create low-impact relationship facts when the call is bound to an existing Chat contact.
+   Chinese: Phone completed/missed calls can now create low-impact relationship facts when the call is bound to an existing Chat contact.
+2. EN: Map arrived trips can now create shared-route relationship facts when the user selects a companion before acknowledging arrival.
+   Chinese: Map arrived trips can now create shared-route relationship facts when the user selects a companion before acknowledging arrival.
+3. EN: Wallet manual virtual transfers can now create wallet interaction relationship facts when bound to an existing Chat contact.
+   Chinese: Wallet manual virtual transfers can now create wallet interaction relationship facts when bound to an existing Chat contact.
+4. EN: World Hub can now apply or dismiss `pending_confirmation` relationship events, while freeform value/funds/unlock editing remains deferred.
+   Chinese: World Hub can now apply or dismiss `pending_confirmation` relationship events, while freeform value/funds/unlock editing remains deferred.
+5. EN: All new facts reuse `src/lib/relationship-fact-adapters.js` and source-level dedupe, preserving module ownership.
+   Chinese: All new facts reuse `src/lib/relationship-fact-adapters.js` and source-level dedupe, preserving module ownership.
+6. EN: Validation passed: `npm test -- tests\relationship-fact-adapters.test.js tests\relationship-runtime-store.test.js tests\phone-store.test.js tests\phone-view.test.js tests\wallet-store.test.js tests\wallet-view.test.js tests\map-view-information-architecture.test.js tests\control-center-view.test.js`.
+   Chinese: Targeted relationship, Phone, Wallet, Map, and World Hub tests passed.
+
+Recommended next:
+
+- EN: Start the Calendar / Reminders split before adding Calendar relationship facts.
+  Chinese: 在添加 Calendar 关系事实前，先启动 Calendar / Reminders 拆分。
+- EN: Add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
+  Chinese: 同体量下一步：添加 Gallery 关系事实，用于共享照片、人物相册、旅程回忆和回忆合集。
+- EN: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
+  Chinese: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
+
+---
+
+## 2026-05-17 Calendar / Reminders Product Split
+
+Status: PARTIAL_DONE
+
+1. EN: Product decision documented: `Calendar / 日历` should become the real schedule/date app, while `Reminders / 提醒事项` should own cross-module cues, callbacks, follow-ups, logistics reminders, stock review cues, and world/task objectives.
+   Chinese: 产品决策已记录：`Calendar / 日历` 回归真实日程/日期应用，`Reminders / 提醒事项` 承接跨模块线索、回拨、跟进、物流提醒、股票复盘线索与世界观任务目标。
+2. EN: Module Chinese/English glossary documented in `docs/pm/MODULE_NAME_GLOSSARY.md`.
+   Chinese: 模块中英对照表已记录在 `docs/pm/MODULE_NAME_GLOSSARY.md`。
+3. EN: Current code still combines these responsibilities in `src/stores/calendar.js` and `src/views/CalendarView.vue`.
+   Chinese: 当前代码仍暂时合并在 `src/stores/calendar.js` 与 `src/views/CalendarView.vue`。
+4. EN: First non-breaking Reminders seam landed as `src/stores/reminders.js`, `/reminders`, and `src/views/RemindersView.vue`.
+   Chinese: 第一阶段非破坏性 Reminders 接缝已落地：`src/stores/reminders.js`、`/reminders` 与 `src/views/RemindersView.vue`。
+5. EN: Reminders currently aggregates Map, Phone, Shopping, and Stock cues while delegating confirmation/dismissal to existing Calendar/Map owners.
+   Chinese: 当前 Reminders 聚合 Map、Phone、Shopping、Stock 线索，并把确认/忽略委托回现有 Calendar/Map 所有者。
+6. EN: Calendar remains compatible and still shows its old cue confirmation layer until persisted cue ownership is migrated.
+   Chinese: Calendar 仍保持兼容并继续显示旧线索确认层，直到后续迁移持久化线索所有权。
+7. EN: Validation target: `npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\calendar-worldbook-context.test.js`.
+   Chinese: 验证目标：`npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\calendar-worldbook-context.test.js`。
+
+Recommended next:
+
+- EN: Move cue arrays and confirmation/dismissal methods from `calendarStore` into `remindersStore` with compatibility wrappers.
+  Chinese: 下一步把线索数组与确认/忽略方法从 `calendarStore` 迁移到 `remindersStore`，同时保留兼容 wrapper。
+- EN: After ownership migration, make `/calendar` lead with schedule/date content and keep cue confirmation primarily in `/reminders`.
+  Chinese: 所有权迁移后，让 `/calendar` 首屏回到日程/日期内容，线索确认主要留在 `/reminders`。
+- EN: Keep Gallery relationship facts as the next independent same-size task if Calendar/Reminders migration is paused.
+  Chinese: 若 Calendar/Reminders 迁移暂缓，Gallery 关系事实可作为独立同体量任务推进。
+
+---
+
+## 2026-05-17 Home -1 Today View Baseline
+
+Status: DONE
+
+1. EN: Home now has a fixed `-1` Today View to the left of page 1, while the ordinary Home pages remain five non-negative pages.
+   Chinese: Home 现在在第 1 屏左侧拥有固定 `-1` 今日视图，普通主屏仍保持五个非负页。
+2. EN: The greeting and Smart Panel moved from page 1 to the `-1` Today View.
+   Chinese: “你好，用户名”和智能面板已从第 1 屏移动到 `-1` 今日视图。
+3. EN: World Hub and Cheats are fixed hidden-system placeholders on `-1`; locked entries are dim and show `App not installed`.
+   Chinese: World Hub 与金手指作为固定隐藏系统占位放在 `-1`；未安装时置暗，点击提示“应用未安装”。
+4. EN: World Hub lights up and opens `/control-center` only after the `control_center` toggle is enabled.
+   Chinese: 只有开启 `control_center` 开关后，World Hub 才会变亮并打开 `/control-center`。
+5. EN: The `-1` surface is not stored in `homeWidgetPages`, not editable through Home layout, and not counted by ordinary `.home-dot` page tests.
+   Chinese: `-1` 页面不写入 `homeWidgetPages`，不参与 Home 布局编辑，也不计入普通 `.home-dot` 分页测试。
+6. EN: Navigation contract note: routes launched from `-1` normalize return context to `homePage=0` until a dedicated negative-page return protocol is designed.
+   Chinese: 导航协议说明：从 `-1` 打开的路由暂时归一化返回 `homePage=0`，直到后续设计负数页返回协议。
+7. EN: Validation target: `npm test -- tests\home-folder-entry.test.js tests\system-widget-import.test.js tests\more-toggle-ui-consumption.test.js`.
+   Chinese: 验证目标：`npm test -- tests\home-folder-entry.test.js tests\system-widget-import.test.js tests\more-toggle-ui-consumption.test.js`。
+
+Recommended next:
+
+- EN: Continue with Calendar / Reminders split as the next functional product-architecture task.
+  Chinese: 下一步建议继续推进 Calendar / Reminders 拆分，作为功能侧产品架构任务。
+- EN: Alternative same-size slice: define the Cheats unlock source and route only after World Hub/relationship/event review surfaces are stronger.
+  Chinese: 同体量备选：等 World Hub/关系/事件审阅界面更稳后，再定义金手指解锁来源与路由。
+- EN: Visual follow-up is archived in `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`; do not expand the `-1` visual system unless visual work is explicitly resumed.
+  Chinese: 视觉后续已归档在 `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`；除非明确恢复视觉专项，不要继续扩大 `-1` 视觉系统。
 
 ---
 

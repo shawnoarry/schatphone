@@ -10,6 +10,18 @@ defineProps({
     type: Object,
     required: true,
   },
+  simulationSettings: {
+    type: Object,
+    required: true,
+  },
+  simulationForegroundTickIntervalMinutes: {
+    type: Number,
+    required: true,
+  },
+  simulationForegroundTickRuntimeLabel: {
+    type: String,
+    required: true,
+  },
   automationSaved: {
     type: Boolean,
     default: false,
@@ -20,6 +32,8 @@ defineEmits([
   'open-chat-automation',
   'open-network-reports',
   'save-automation-settings',
+  'update-simulation-foreground-tick-enabled',
+  'update-simulation-foreground-tick-interval-minutes',
   'update-automation-field',
   'update-module-enabled',
   'update-module-priority',
@@ -44,6 +58,39 @@ const { t } = useI18n()
         @change="$emit('update-automation-field', 'masterEnabled', $event.target.checked)"
       />
     </div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 space-y-3">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-sm font-semibold">{{ t('事件前台 Tick', 'Foreground event tick') }}</p>
+        <p class="text-[10px] leading-4 text-gray-400">
+          {{ t('用于后续在用户使用 App 时低频检查安全事件。当前只保存显式控制状态，不会在此页直接触发事件。', 'For future low-frequency safe event checks while the app is in use. This page only saves the explicit control state and does not trigger events directly.') }}
+        </p>
+      </div>
+      <input
+        :checked="simulationSettings.foregroundSessionTickEnabled"
+        type="checkbox"
+        class="w-5 h-5"
+        data-testid="settings-simulation-foreground-tick-enabled"
+        @change="$emit('update-simulation-foreground-tick-enabled', $event.target.checked)"
+      />
+    </div>
+    <label class="flex items-center justify-between gap-2">
+      <span class="text-xs text-gray-500">{{ t('检查间隔（分钟）', 'Interval (minutes)') }}</span>
+      <input
+        :value="simulationForegroundTickIntervalMinutes"
+        type="number"
+        min="1"
+        max="120"
+        class="w-24 border rounded px-2 py-1 text-xs text-right"
+        data-testid="settings-simulation-foreground-tick-interval"
+        @input="$emit('update-simulation-foreground-tick-interval-minutes', Number($event.target.value))"
+      />
+    </label>
+    <p class="text-[11px] text-gray-500" data-testid="settings-simulation-foreground-tick-runtime">
+      {{ simulationForegroundTickRuntimeLabel }}
+    </p>
   </div>
 
   <div class="bg-white rounded-2xl p-4 space-y-3">

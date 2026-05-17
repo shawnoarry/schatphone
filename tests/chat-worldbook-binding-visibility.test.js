@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import { useChatStore } from '../src/stores/chat'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 
 const aiMockState = vi.hoisted(() => ({
@@ -70,6 +71,7 @@ describe('chat worldbook binding visibility', () => {
   let wrapper = null
   let router = null
   let chatStore = null
+  let relationshipRuntimeStore = null
   let systemStore = null
   let binding = null
   let injectedPoint = null
@@ -80,6 +82,7 @@ describe('chat worldbook binding visibility', () => {
     setActivePinia(createPinia())
 
     chatStore = useChatStore()
+    relationshipRuntimeStore = useRelationshipRuntimeStore()
     systemStore = useSystemStore()
 
     systemStore.user.name = 'V'
@@ -114,6 +117,21 @@ describe('chat worldbook binding visibility', () => {
       role: 'Companion',
       knowledgePointIds: ['kp_city_etiquette', 'kp_hidden_note'],
     })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: 'Nova',
+      },
+      sourceModule: 'food_delivery',
+      factType: 'shared_meal',
+      summary: 'Shared a late dinner after patrol.',
+      metricDeltas: {
+        affinity: 9,
+        trust: 4,
+        intimacy: 5,
+      },
+      milestone: 'First shared meal',
+    })
     binding = chatStore.bindRoleProfile(profile.id)
 
     router = createTestRouter()
@@ -133,6 +151,7 @@ describe('chat worldbook binding visibility', () => {
     wrapper = null
     router = null
     chatStore = null
+    relationshipRuntimeStore = null
     systemStore = null
     binding = null
     injectedPoint = null
@@ -164,6 +183,9 @@ describe('chat worldbook binding visibility', () => {
     expect(systemPrompt).toContain('Relationship setting: Trusted partner')
     expect(systemPrompt).toContain('Profile bio: Keeps promises and prefers direct answers.')
     expect(systemPrompt).toContain('City etiquette: Formal greeting only. [tags: style]')
+    expect(systemPrompt).toContain('Relationship runtime snapshot: Nova.')
+    expect(systemPrompt).toContain('First shared meal')
+    expect(systemPrompt).toContain('food_delivery:shared_meal')
     expect(systemPrompt).not.toContain('Hidden note')
     expect(systemPrompt).not.toContain('Tea rituals')
     expect(wrapper.text()).toContain('Mocked worldbook reply.')

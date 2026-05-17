@@ -181,6 +181,9 @@ describe('network guidance helpers', () => {
     expect(getNetworkReportModuleLabel('push', passthroughT)).toBe('Push')
     expect(getNetworkReportModuleLabel('unknown', passthroughT)).toBe('Unknown module')
     expect(getNetworkReportActionLabel('chat_smoke_test', passthroughT)).toBe('Chat smoke test')
+    expect(getNetworkReportActionLabel('foreground_event_tick', passthroughT)).toBe(
+      'Foreground event tick',
+    )
     expect(getNetworkReportActionLabel('custom_action', passthroughT)).toBe('custom_action')
 
     expect(
@@ -200,6 +203,22 @@ describe('network guidance helpers', () => {
         passthroughT,
       ),
     ).toContain('Export backup')
+    expect(
+      getNetworkReportReasonLabel(
+        {
+          code: 'SIMULATION_FOREGROUND_TICK_TRIGGERED',
+        },
+        passthroughT,
+      ),
+    ).toContain('Foreground event tick triggered')
+    expect(
+      getNetworkReportSuggestionLabel(
+        {
+          code: 'SIMULATION_FOREGROUND_TICK_SKIPPED',
+        },
+        passthroughT,
+      ),
+    ).toContain('No event triggered')
     expect(
       getNetworkReportReasonLabel(
         {

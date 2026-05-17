@@ -32,6 +32,14 @@ Examples:
 /widgets?from=home&homePage=0
 ```
 
+## Home -1 Today View Exception
+
+Home may expose a native-system `-1` Today View to the left of page 1. This surface is not a user-editable Home page and is not stored in `homeWidgetPages`.
+
+For now, routes launched from the `-1` Today View must normalize return context to `homePage=0`.
+
+This keeps the current non-negative `homePage=<zero-based page index>` contract stable while still allowing locked or installed system shortcuts, such as World Hub, to live on the Today View.
+
 System-launched routes that can return to Settings should carry:
 
 ```text

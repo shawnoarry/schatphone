@@ -30,10 +30,10 @@ const featureToggleMeta = computed(() => [
   },
   {
     id: 'control_center',
-    label: t('运行控制台', 'Runtime Control'),
+    label: t('世界中枢', 'World Hub'),
     desc: t(
-      '开启后主屏显示导演台入口；关闭时隐藏入口，聊天、地图等常规功能照常使用。',
-      'Show the Director entry on Home when enabled; when off, regular Chat, Map, and other flows stay unchanged.',
+      '开启后主屏显示世界中枢入口；关闭时隐藏入口，聊天、地图等常规功能照常使用。',
+      'Show the World Hub entry on Home when enabled; when off, regular Chat, Map, and other flows stay unchanged.',
     ),
   },
 ])

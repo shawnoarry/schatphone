@@ -9,12 +9,15 @@ import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { recordMapSharedRouteRelationshipFact } from '../lib/relationship-fact-adapters'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
 import MapTripControlPanel from '../components/map/MapTripControlPanel.vue'
 import MapTripHistoryPanel from '../components/map/MapTripHistoryPanel.vue'
 import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
+import { useChatStore } from '../stores/chat'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import {
   MEDIA_KIND,
   MEDIA_SIZE_SCENE,
@@ -25,9 +28,11 @@ import {
 
 const router = useRouter()
 const route = useRoute()
+const chatStore = useChatStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const systemStore = useSystemStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -68,7 +73,24 @@ const mapOneOffVisualName = ref('')
 const mapVisualFileInputRef = ref(null)
 const mapVisualLoading = ref(false)
 const mapAiVisualRefreshing = ref(false)
+const mapDrawerOpen = ref(false)
+const mapDrawerFocus = ref('trip')
+const sharedRouteContactId = ref('')
 let runtimeTimer = null
+
+const MAP_DRAWER_SECTIONS = Object.freeze([
+  { key: 'trip', icon: 'fas fa-route', labelZh: '行程', labelEn: 'Trip' },
+  { key: 'places', icon: 'fas fa-map-location-dot', labelZh: '地点', labelEn: 'Places' },
+  { key: 'progress', icon: 'fas fa-layer-group', labelZh: '探索', labelEn: 'Progress' },
+  { key: 'visual', icon: 'fas fa-map', labelZh: '图层', labelEn: 'Layers' },
+])
+
+const MAP_CANVAS_PIN_POSITIONS = Object.freeze([
+  { top: '34%', left: '24%' },
+  { top: '46%', left: '70%' },
+  { top: '60%', left: '42%' },
+  { top: '25%', left: '58%' },
+])
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -86,6 +108,16 @@ const openWorldBook = (options = {}) => {
       usage: options.usage,
     }),
   })
+}
+
+const openMapDrawer = (section = 'trip') => {
+  const nextSection = MAP_DRAWER_SECTIONS.some((item) => item.key === section) ? section : 'trip'
+  mapDrawerFocus.value = nextSection
+  mapDrawerOpen.value = true
+}
+
+const closeMapDrawer = () => {
+  mapDrawerOpen.value = false
 }
 
 const useAddressAsCurrent = (addressId) => {
@@ -642,6 +674,22 @@ watch(
 const isTripTraveling = computed(() => tripRuntime.value.status === 'traveling')
 const isTripArrived = computed(() => tripRuntime.value.status === 'arrived')
 
+const relationshipContactOptions = computed(() =>
+  chatStore.contacts
+    .filter((contact) => contact.kind !== 'service' && contact.kind !== 'official')
+    .map((contact) => ({
+      ...contact,
+      optionValue: String(contact.id),
+      optionLabel: contact.name || `Contact ${contact.id}`,
+    })),
+)
+
+const selectedSharedRouteContact = computed(() =>
+  relationshipContactOptions.value.find(
+    (contact) => contact.optionValue === String(sharedRouteContactId.value || ''),
+  ) || null,
+)
+
 const canStartTrip = computed(() => {
   const from = typeof tripForm.value?.from === 'string' ? tripForm.value.from.trim() : ''
   const to = typeof tripForm.value?.to === 'string' ? tripForm.value.to.trim() : ''
@@ -690,6 +738,51 @@ const unlockedMapAreaCount = computed(() =>
 const visibleMapAreaUnlocks = computed(() => mapAreaUnlocks.value.slice(0, 4))
 const visibleMapAreaFeedback = computed(() => mapAreaFeedback.value.slice(0, 4))
 const visibleTripHistory = computed(() => tripHistory.value.slice(0, 8))
+const primaryMapAreaFeedback = computed(() => visibleMapAreaFeedback.value[0] || null)
+const primaryRouteFamiliarity = computed(() => visibleRouteFamiliarity.value[0] || null)
+const mapCanvasPins = computed(() =>
+  visibleMapAreaFeedback.value.slice(0, MAP_CANVAS_PIN_POSITIONS.length).map((item, index) => ({
+    ...item,
+    position: MAP_CANVAS_PIN_POSITIONS[index],
+  })),
+)
+
+const activeTripRouteLabel = computed(() => {
+  const from =
+    tripRuntime.value?.fromLabel ||
+    tripForm.value?.from ||
+    currentLocation.value?.label ||
+    t('当前位置', 'Current location')
+  const to = tripRuntime.value?.toLabel || tripForm.value?.to || t('目的地', 'Destination')
+  return `${from} -> ${to}`
+})
+
+const mapDestinationHint = computed(() => {
+  const to = typeof tripForm.value?.to === 'string' ? tripForm.value.to.trim() : ''
+  if (to) return to
+  if (primaryMapAreaFeedback.value) {
+    return t(primaryMapAreaFeedback.value.titleZh, primaryMapAreaFeedback.value.titleEn)
+  }
+  if (primaryRouteFamiliarity.value) {
+    return primaryRouteFamiliarity.value.toLabel || primaryRouteFamiliarity.value.to || ''
+  }
+  return ''
+})
+
+const mapPrimarySheetTitle = computed(() => {
+  if (isTripTraveling.value) return t('正在前往目的地', 'Heading to destination')
+  if (isTripArrived.value) return t('已到达目的地', 'Arrived at destination')
+  if (mapDestinationHint.value) return t('准备规划路线', 'Ready to plan route')
+  return t('选择目的地', 'Choose a destination')
+})
+
+const mapPrimarySheetDescription = computed(() => {
+  if (isTripTraveling.value || isTripArrived.value) return activeTripRouteLabel.value
+  if (mapDestinationHint.value) {
+    return t(`当前位置到 ${mapDestinationHint.value}`, `Current location to ${mapDestinationHint.value}`)
+  }
+  return t('输入目的地，或从地点、探索反馈和历史路线中选择。', 'Enter a destination, or choose from places, feedback, and route history.')
+})
 
 const buildMapKnowledgeContextTexts = (item = {}) =>
   [
@@ -891,8 +984,16 @@ const cancelTrip = () => {
 
 const acknowledgeArrival = () => {
   const latestReward = tripHistory.value.find((item) => item?.status === 'arrived' && Number(item.rewardPoints) > 0)
+  const sharedRouteTarget = selectedSharedRouteContact.value
   const ok = mapStore.acknowledgeTripArrival()
   if (!ok) return
+  if (latestReward && sharedRouteTarget) {
+    recordMapSharedRouteRelationshipFact({
+      relationshipRuntimeStore,
+      trip: latestReward,
+      target: sharedRouteTarget,
+    })
+  }
   tripActionHint.value = {
     tone: 'success',
     message: latestReward
@@ -940,8 +1041,185 @@ onBeforeUnmount(() => {
       </span>
     </div>
 
-    <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+    <main class="map-canvas-shell flex-1" data-testid="map-primary-shell">
+      <section class="map-canvas" data-testid="map-primary-canvas">
+        <div class="map-grid-layer"></div>
+        <div class="map-road map-road-main"></div>
+        <div class="map-road map-road-cross"></div>
+        <div class="map-road map-road-ring"></div>
+        <div class="map-waterway"></div>
+
+        <div class="map-search-card">
+          <div class="map-search-row">
+            <i class="fas fa-location-crosshairs text-blue-500"></i>
+            <div class="min-w-0">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {{ t('当前位置', 'Current location') }}
+              </p>
+              <p class="truncate text-sm font-semibold text-slate-900">{{ currentLocationText }}</p>
+            </div>
+          </div>
+          <div class="map-search-divider"></div>
+          <label class="map-search-row">
+            <i class="fas fa-magnifying-glass text-slate-400"></i>
+            <input
+              :value="tripForm.to"
+              class="map-destination-input"
+              :placeholder="t('搜索地点或输入目的地', 'Search places or enter destination')"
+              data-testid="map-destination-search"
+              @input="updateTripTo($event.target.value)"
+            />
+          </label>
+        </div>
+
+        <button
+          type="button"
+          class="map-layer-button"
+          data-testid="map-open-layers"
+          @click="openMapDrawer('visual')"
+        >
+          <i class="fas fa-layer-group"></i>
+        </button>
+        <button
+          type="button"
+          class="map-current-location-button"
+          data-testid="map-open-places"
+          @click="openMapDrawer('places')"
+        >
+          <i class="fas fa-location-arrow"></i>
+        </button>
+
+        <div
+          v-for="pin in mapCanvasPins"
+          :key="pin.id"
+          class="map-canvas-pin"
+          :style="{ top: pin.position.top, left: pin.position.left }"
+          :title="t(pin.titleZh, pin.titleEn)"
+        >
+          <i :class="pin.icon || 'fas fa-location-dot'"></i>
+        </div>
+
+        <div class="map-route-card" data-testid="map-primary-route-card">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            {{ t('路线', 'Route') }}
+          </p>
+          <p class="mt-1 text-lg font-bold text-slate-950">{{ mapPrimarySheetTitle }}</p>
+          <p class="mt-1 text-sm text-slate-600">{{ mapPrimarySheetDescription }}</p>
+          <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
+            <span class="map-route-pill">{{ tripEstimate.distanceKm }} km</span>
+            <span class="map-route-pill">{{ tripEstimate.minutes }} {{ t('分钟', 'min') }}</span>
+            <span class="map-route-pill">¥{{ Number(tripEstimate.fare || 0).toLocaleString() }}</span>
+          </div>
+          <label class="mt-3 block">
+            <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {{ t('Shared route', 'Shared route') }}
+            </span>
+            <select
+              v-model="sharedRouteContactId"
+              class="map-destination-input w-full"
+              data-testid="map-relationship-contact"
+            >
+              <option value="">{{ t('Optional companion', 'Optional companion') }}</option>
+              <option
+                v-for="contact in relationshipContactOptions"
+                :key="contact.id"
+                :value="contact.optionValue"
+              >
+                {{ contact.optionLabel }}
+              </option>
+            </select>
+          </label>
+          <div v-if="isTripTraveling || isTripArrived" class="mt-3">
+            <div class="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                :style="{ width: `${tripProgressPercent}%` }"
+              ></div>
+            </div>
+            <p class="mt-1 text-[11px] text-slate-500">
+              {{ tripProgressPercent }}% 路 {{ formatSeconds(tripRuntime.remainingSeconds) }}
+            </p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button
+              type="button"
+              class="map-primary-action"
+              :disabled="!canStartTrip"
+              :class="{ 'map-primary-action-disabled': !canStartTrip }"
+              data-testid="map-primary-start-trip"
+              @click="startTrip"
+            >
+              {{ isTripArrived ? t('已到达', 'Arrived') : t('开始行程', 'Start trip') }}
+            </button>
+            <button
+              type="button"
+              class="map-secondary-action"
+              data-testid="map-open-trip-drawer"
+              @click="openMapDrawer('trip')"
+            >
+              {{ t('详情', 'Details') }}
+            </button>
+          </div>
+        </div>
+
+        <nav class="map-bottom-nav" data-testid="map-secondary-menu">
+          <button
+            v-for="section in MAP_DRAWER_SECTIONS"
+            :key="section.key"
+            type="button"
+            class="map-bottom-nav-item"
+            @click="openMapDrawer(section.key)"
+          >
+            <i :class="section.icon"></i>
+            <span>{{ t(section.labelZh, section.labelEn) }}</span>
+          </button>
+        </nav>
+      </section>
+    </main>
+
+    <div
+      v-if="mapDrawerOpen"
+      class="map-drawer-backdrop"
+      data-testid="map-secondary-drawer"
+      @click.self="closeMapDrawer"
+    >
+      <aside class="map-bottom-drawer">
+        <div class="map-drawer-handle"></div>
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+              {{ t('地图工具', 'Map tools') }}
+            </p>
+            <h2 class="text-lg font-bold text-slate-950">
+              {{ t('二级功能', 'Secondary tools') }}
+            </h2>
+          </div>
+          <button
+            type="button"
+            class="h-9 w-9 rounded-full bg-slate-100 text-slate-600"
+            @click="closeMapDrawer"
+          >
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="map-drawer-tabs">
+          <button
+            v-for="section in MAP_DRAWER_SECTIONS"
+            :key="section.key"
+            type="button"
+            class="map-drawer-tab"
+            :class="{ 'map-drawer-tab-active': mapDrawerFocus === section.key }"
+            @click="mapDrawerFocus = section.key"
+          >
+            <i :class="section.icon"></i>
+            {{ t(section.labelZh, section.labelEn) }}
+          </button>
+        </div>
+
+        <div class="map-drawer-content no-scrollbar p-4 space-y-4">
       <MapVisualSettingsPanel
+        v-show="mapDrawerFocus === 'visual'"
         :current-location-text="currentLocationText"
         :resolved-map-visual-mode="resolvedMapVisualMode"
         :map-visual-preview-url="mapVisualPreviewUrl"
@@ -990,7 +1268,7 @@ onBeforeUnmount(() => {
         @change="onMapVisualFilePicked"
       />
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
+      <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="flex items-center justify-between mb-2">
           <h2 class="font-semibold">{{ t('当前位置', 'Current location') }}</h2>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
@@ -1022,6 +1300,7 @@ onBeforeUnmount(() => {
       </section>
 
       <MapAreaFeedbackPanel
+        v-show="mapDrawerFocus === 'progress'"
         :map-area-feedback="mapAreaFeedback"
         :visible-map-area-feedback="visibleMapAreaFeedback"
         :map-area-feedback-knowledge-points="mapAreaFeedbackKnowledgePoints"
@@ -1030,7 +1309,7 @@ onBeforeUnmount(() => {
         @open-worldbook="openWorldBook"
       />
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
+      <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-3">{{ t('新增地址 / 手动定位', 'Add address / set manually') }}</h2>
         <div class="space-y-2">
           <input
@@ -1051,6 +1330,7 @@ onBeforeUnmount(() => {
       </section>
 
       <MapTripControlPanel
+        v-show="mapDrawerFocus === 'trip'"
         :trip-form="tripForm"
         :trip-estimate="tripEstimate"
         :trip-runtime="tripRuntime"
@@ -1072,6 +1352,7 @@ onBeforeUnmount(() => {
       />
 
       <MapRouteFamiliarityPanel
+        v-show="mapDrawerFocus === 'progress'"
         :route-familiarity="routeFamiliarity"
         :visible-route-familiarity="visibleRouteFamiliarity"
         :route-familiarity-knowledge-points="routeFamiliarityKnowledgePoints"
@@ -1080,7 +1361,7 @@ onBeforeUnmount(() => {
         @open-worldbook="openWorldBook"
       />
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
+      <section v-show="mapDrawerFocus === 'progress'" class="map-glass-panel rounded-[1.75rem] p-4">
         <div class="mb-2 flex items-center justify-between gap-2">
           <h2 class="font-semibold">{{ t('区域解锁', 'Area unlocks') }}</h2>
           <AssetStatusBadge
@@ -1127,6 +1408,7 @@ onBeforeUnmount(() => {
       </section>
 
       <MapTripHistoryPanel
+        v-show="mapDrawerFocus === 'progress'"
         :trip-history="tripHistory"
         :visible-trip-history="visibleTripHistory"
         :trip-history-knowledge-points="tripHistoryKnowledgePoints"
@@ -1137,7 +1419,7 @@ onBeforeUnmount(() => {
         @open-worldbook="openWorldBook"
       />
 
-      <section class="map-glass-panel rounded-[1.75rem] p-4">
+      <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
         <h2 class="font-semibold mb-2">{{ t('地址簿管理', 'Address book') }}</h2>
         <div class="space-y-2">
           <div v-for="item in addresses" :key="`row-${item.id}`" class="flex items-center justify-between border rounded-lg p-2">
@@ -1149,6 +1431,8 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </section>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -1164,6 +1448,312 @@ onBeforeUnmount(() => {
 .map-topbar {
   background: linear-gradient(180deg, rgba(7, 17, 31, 0.92), rgba(7, 17, 31, 0.42));
   backdrop-filter: blur(18px);
+}
+
+.map-canvas-shell {
+  min-height: 0;
+  padding: 0 14px 14px;
+}
+
+.map-canvas {
+  position: relative;
+  height: 100%;
+  min-height: 620px;
+  overflow: hidden;
+  border-radius: 2rem 2rem 1.6rem 1.6rem;
+  background:
+    radial-gradient(circle at 20% 24%, rgba(59, 130, 246, 0.18), transparent 18%),
+    radial-gradient(circle at 76% 18%, rgba(16, 185, 129, 0.14), transparent 18%),
+    linear-gradient(135deg, #d8eadc 0%, #e8f3e8 38%, #dbeaf6 39%, #eef5f8 100%);
+  box-shadow: 0 28px 70px rgba(2, 6, 23, 0.34);
+  color: #0f172a;
+}
+
+.map-grid-layer {
+  position: absolute;
+  inset: -18%;
+  opacity: 0.46;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+  background-size: 58px 58px;
+  transform: rotate(-10deg);
+}
+
+.map-road {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.34),
+    0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.map-road-main {
+  top: 33%;
+  left: -14%;
+  width: 132%;
+  height: 30px;
+  transform: rotate(-18deg);
+}
+
+.map-road-cross {
+  top: 10%;
+  left: 51%;
+  width: 28px;
+  height: 86%;
+  transform: rotate(19deg);
+}
+
+.map-road-ring {
+  right: -20%;
+  bottom: 12%;
+  width: 82%;
+  height: 28px;
+  transform: rotate(31deg);
+}
+
+.map-waterway {
+  position: absolute;
+  right: -14%;
+  top: 8%;
+  width: 34%;
+  height: 94%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.42), rgba(56, 189, 248, 0.2));
+  transform: rotate(13deg);
+  filter: blur(1px);
+}
+
+.map-search-card {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  right: 16px;
+  z-index: 4;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.map-search-row {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.map-search-divider {
+  height: 1px;
+  margin-left: 44px;
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.map-destination-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 650;
+  outline: none;
+}
+
+.map-destination-input::placeholder {
+  color: rgba(71, 85, 105, 0.62);
+}
+
+.map-layer-button,
+.map-current-location-button {
+  position: absolute;
+  right: 18px;
+  z-index: 4;
+  display: grid;
+  height: 44px;
+  width: 44px;
+  place-items: center;
+  border: 1px solid rgba(226, 232, 240, 0.86);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.map-layer-button {
+  top: 148px;
+}
+
+.map-current-location-button {
+  top: 202px;
+}
+
+.map-canvas-pin {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  height: 34px;
+  width: 34px;
+  place-items: center;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 999px 999px 999px 6px;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+  transform: rotate(-45deg);
+}
+
+.map-canvas-pin i {
+  transform: rotate(45deg);
+  font-size: 0.75rem;
+}
+
+.map-route-card {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 92px;
+  z-index: 5;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 1.7rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 18px;
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.map-route-pill {
+  border-radius: 999px;
+  background: #eff6ff;
+  padding: 6px 10px;
+  color: #1e3a8a;
+}
+
+.map-primary-action,
+.map-secondary-action {
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.map-primary-action {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+}
+
+.map-primary-action-disabled {
+  background: #cbd5e1;
+  box-shadow: none;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.map-secondary-action {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.map-bottom-nav {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 18px;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 8px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.map-bottom-nav-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: 1rem;
+  padding: 8px 4px;
+  color: #475569;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.map-bottom-nav-item i {
+  color: #2563eb;
+  font-size: 0.95rem;
+}
+
+.map-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.34);
+  padding: 12px;
+}
+
+.map-bottom-drawer {
+  display: flex;
+  max-height: min(82vh, 760px);
+  width: min(100%, 720px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 2rem 2rem 1.4rem 1.4rem;
+  background: rgba(248, 250, 252, 0.96);
+  padding: 10px 12px 12px;
+  box-shadow: 0 -28px 80px rgba(2, 6, 23, 0.28);
+  color: #0f172a;
+  backdrop-filter: blur(22px);
+}
+
+.map-drawer-handle {
+  margin: 2px auto 12px;
+  height: 5px;
+  width: 44px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.map-drawer-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.map-drawer-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  padding: 8px 12px;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.map-drawer-tab-active {
+  background: #0f172a;
+  color: #fff;
+}
+
+.map-drawer-content {
+  overflow-y: auto;
 }
 
 .map-glass-panel {

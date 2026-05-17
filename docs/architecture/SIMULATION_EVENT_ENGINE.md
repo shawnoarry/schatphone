@@ -534,19 +534,39 @@ The event engine is an internal reusable foundation. Its user-facing runtime-con
 
 Current decision:
 
-- `app_control_center` / `/control-center` is the Director app entry.
+- `app_control_center` / `/control-center` is the World Hub app entry.
 - The entry appears on Home only when `settings.more.featureToggles.control_center === true`.
 - When the toggle is off, Home must normalize away `app_control_center` even if old/imported layouts contain it.
 - Direct route access is allowed, but the page should explain that the runtime-control layer is optional and can be enabled from More.
 
 Boundary:
 
-- Director may coordinate event controls, logs, surprise mode, affinity, funds, unlocks, and other future game-like values.
-- Director must not become the required intake surface for roles, assets, map places, shopping products, food delivery restaurants, or other module-native records.
-- Module stores keep owning mutation. The event engine and Director call adapters or store actions; they do not take over domain data.
+- World Hub may coordinate event controls, logs, surprise mode, affinity, funds, unlocks, and other future game-like values.
+- World Hub must not become the required intake surface for roles, assets, map places, shopping products, food delivery restaurants, or other module-native records.
+- Module stores keep owning mutation. The event engine and World Hub call adapters or store actions; they do not take over domain data.
 
 Next architecture step:
 
-- Connect Director to read-only `simulationStore` state before adding mutation controls.
+- Connect World Hub to read-only `simulationStore` state before adding mutation controls.
 - First read-only panel should show event mode, event-log count, recent event summaries, module adapter enablement, and world-variant pack status.
 - Mutation controls should wait until audit logs, explanation copy, and undo/dismissal semantics are clear.
+
+## 23. 2026-05-17 Relationship Growth Event Standard
+
+Relationship growth, affinity, interpersonal progress, and character-growth events are now defined as a specialized event track on top of the shared simulation foundation.
+
+Standard source:
+
+- `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
+
+Decision:
+
+- Relationship and growth events should reuse the shared event engine and world-context variant standard.
+- Feature modules should submit facts through adapters; they should not own affinity math or relationship-stage mutation.
+- Major relationship effects such as stage changes, trust collapse, confession outcomes, rivalry locks, or irreversible growth traits need user confirmation or a product-approved high-intensity mode.
+- Routine runtime should use local relationship event packs and local facts; API calls should generate or refresh packs, not fire on every relationship event.
+
+Next architecture step:
+
+- Build a relationship runtime store or truth-layer slice before adding Chat/World Hub mutation controls.
+- First implementation should store entities, metrics, milestones, growth traits, and relationship event history with deterministic tests.

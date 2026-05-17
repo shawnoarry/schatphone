@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import { useDialog } from '../composables/useDialog'
@@ -21,6 +22,7 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -599,6 +601,8 @@ const profileWalletLedgerSummary = (profile) => {
   const sourceHint =
     summary.chatCount > 0
       ? t(`${summary.chatCount} 条来自 Chat`, `${summary.chatCount} from Chat`)
+      : summary.orderCount > 0
+        ? t(`${summary.orderCount} 条来自订单`, `${summary.orderCount} from Orders`)
       : t('手动账本记录', 'Manual ledger records')
   return t(
     `账本 ${summary.count} 条 · 净额 ${formatLedgerAmount(primary)} · ${sourceHint}`,
@@ -613,6 +617,49 @@ const profileWalletLatestSummary = (profile) => {
     `最近：${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
     `Latest: ${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
   )
+}
+
+const relationshipStageLabel = (stage) => {
+  if (stage === 'intimate') return t('亲密', 'Intimate')
+  if (stage === 'close') return t('亲近', 'Close')
+  if (stage === 'friend') return t('朋友', 'Friend')
+  if (stage === 'acquaintance') return t('熟人', 'Acquaintance')
+  if (stage === 'distant') return t('疏远', 'Distant')
+  if (stage === 'conflict') return t('冲突', 'Conflict')
+  return t('陌生/未展开', 'Stranger / unset')
+}
+
+const profileRelationshipTarget = (profile) => ({
+  entityKey: profile?.id ? `role:${profile.id}` : '',
+  profileId: profile?.id,
+  kind: 'role',
+  name: profile?.name,
+})
+
+const profileRelationshipSnapshot = (profile) =>
+  relationshipRuntimeStore.summarizeEntityForTarget(profileRelationshipTarget(profile), {
+    eventLimit: 2,
+  })
+
+const profileRelationshipSummary = (profile) => {
+  const snapshot = profileRelationshipSnapshot(profile)
+  if (!snapshot) return t('关系快照：暂不可用', 'Relationship snapshot unavailable')
+  const metrics = snapshot.metrics || {}
+  return t(
+    `关系快照：${relationshipStageLabel(snapshot.relationshipStage)} · 好感 ${metrics.affinity ?? 50} · 信任 ${metrics.trust ?? 50}`,
+    `Relationship snapshot: ${relationshipStageLabel(snapshot.relationshipStage)} · affinity ${metrics.affinity ?? 50} · trust ${metrics.trust ?? 50}`,
+  )
+}
+
+const profileRelationshipLatestSummary = (profile) => {
+  const snapshot = profileRelationshipSnapshot(profile)
+  if (!snapshot?.exists) return t('暂无跨模块关系事件', 'No cross-module relationship facts yet')
+  const milestone = snapshot.milestones?.[0]?.label || ''
+  if (milestone) return t(`最近里程碑：${milestone}`, `Latest milestone: ${milestone}`)
+  if (snapshot.latestEventSummary) {
+    return t(`最近关系事件：${snapshot.latestEventSummary}`, `Latest relationship event: ${snapshot.latestEventSummary}`)
+  }
+  return t('已有关系记录，等待更多事件沉淀。', 'Relationship record exists; waiting for more events.')
 }
 
 const autoGenerateProfile = async () => {
@@ -1183,6 +1230,15 @@ onBeforeUnmount(() => {
             <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
               {{ profileWalletLatestSummary(contact) }}
             </p>
+            <p
+              class="text-[10px] text-blue-500 truncate"
+              :data-testid="`contacts-relationship-summary-${contact.id}`"
+            >
+              {{ profileRelationshipSummary(contact) }}
+            </p>
+            <p class="text-[10px] text-gray-400 truncate">
+              {{ profileRelationshipLatestSummary(contact) }}
+            </p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
           <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
@@ -1209,6 +1265,15 @@ onBeforeUnmount(() => {
             <p class="text-[10px] text-gray-400 truncate">{{ profileWalletLedgerSummary(contact) }}</p>
             <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
               {{ profileWalletLatestSummary(contact) }}
+            </p>
+            <p
+              class="text-[10px] text-blue-500 truncate"
+              :data-testid="`contacts-relationship-summary-${contact.id}`"
+            >
+              {{ profileRelationshipSummary(contact) }}
+            </p>
+            <p class="text-[10px] text-gray-400 truncate">
+              {{ profileRelationshipLatestSummary(contact) }}
             </p>
           </div>
           <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>

@@ -123,6 +123,7 @@ describe('wallet store', () => {
       all: 2,
       manual: 1,
       chat: 1,
+      orders: 0,
     })
     expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.CHAT)).toEqual([chat])
     expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL)).toEqual([
@@ -132,6 +133,57 @@ describe('wallet store', () => {
       chat.id,
       manual.id,
     ])
+  })
+
+  test('summarizes and filters order-origin expenses separately from manual records', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const manual = store.addTransferTransaction({
+      amount: '20.00',
+      currency: 'CNY',
+      counterparty: 'Manual',
+    })
+    const shopping = store.addTransaction({
+      type: 'expense',
+      title: 'Shopping order',
+      amount: '88.00',
+      currency: 'CNY',
+      counterparty: 'Shopping',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'shopping_order_wallet_1',
+    })
+    const food = store.addTransaction({
+      type: 'expense',
+      title: 'Food Delivery order',
+      amount: '32.00',
+      currency: 'CNY',
+      counterparty: 'Food Delivery',
+      sourceModule: 'food_delivery_wallet_expense',
+      sourceId: 'food_order_wallet_1',
+    })
+
+    expect(store.transactionSourceSummary).toEqual({
+      all: 3,
+      manual: 1,
+      chat: 0,
+      orders: 2,
+    })
+    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.ORDERS)).toEqual([
+      food,
+      shopping,
+    ])
+    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL)).toEqual([
+      manual,
+    ])
+
+    const summary = store.summarizeCounterpartyLedger('Shopping')
+    expect(summary).toMatchObject({
+      count: 1,
+      chatCount: 0,
+      orderCount: 1,
+      manualCount: 0,
+    })
   })
 
   test('summarizes counterparty ledger context for Contacts', () => {
@@ -163,6 +215,7 @@ describe('wallet store', () => {
       counterparty: 'nova',
       count: 2,
       chatCount: 1,
+      orderCount: 0,
       manualCount: 1,
     })
     expect(summary.currencies).toEqual([
@@ -175,6 +228,7 @@ describe('wallet store', () => {
     expect(summary.latestTransaction?.sourceModule).toBe('chat_transfer')
     expect(store.listTransactionsByCounterparty('nova').length).toBe(2)
     expect(store.summarizeCounterpartyLedger('Unknown').count).toBe(0)
+    expect(store.summarizeCounterpartyLedger('Unknown').orderCount).toBe(0)
   })
 
   test('rejects Chat ledger records without message source', () => {

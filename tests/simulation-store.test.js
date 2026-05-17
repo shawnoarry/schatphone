@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   SIMULATION_EVENT_STATUS,
+  SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
+  SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
   SIMULATION_SURPRISE_MODE,
   SIMULATION_TRIGGER_SOURCE,
   useSimulationStore,
@@ -153,5 +155,33 @@ describe('simulation store', () => {
     expect(restoredFromStorage.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
     expect(restoredFromStorage.isModuleEventsEnabled('shopping')).toBe(false)
     expect(restoredFromStorage.createBackupSnapshot().settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
+  })
+
+  test('persists foreground session tick controls without creating event logs', () => {
+    const store = useSimulationStore()
+    store.resetForTesting()
+
+    expect(store.settings.foregroundSessionTickEnabled).toBe(false)
+    expect(store.settings.foregroundSessionTickIntervalMs).toBe(SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS)
+
+    expect(store.setForegroundSessionTickEnabled(true)).toBe(true)
+    expect(store.setForegroundSessionTickIntervalMs(30 * 1000)).toBe(
+      SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+    )
+    expect(store.eventLogCount).toBe(0)
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.settings).toMatchObject({
+      foregroundSessionTickEnabled: true,
+      foregroundSessionTickIntervalMs: SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+    })
+
+    const restored = useSimulationStore()
+    restored.resetForTesting()
+    expect(restored.restoreFromBackup({ simulation: snapshot })).toBe(true)
+    expect(restored.settings.foregroundSessionTickEnabled).toBe(true)
+    expect(restored.settings.foregroundSessionTickIntervalMs).toBe(
+      SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+    )
   })
 })

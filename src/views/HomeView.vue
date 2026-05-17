@@ -61,7 +61,10 @@ const smartPanelItems = computed(() => [
   },
 ])
 
-const currentPage = ref(0)
+const LEFT_HOME_PAGE_INDEX = -1
+const DEFAULT_HOME_RETURN_PAGE = 0
+
+const currentPage = ref(DEFAULT_HOME_RETURN_PAGE)
 const touchStartX = ref(0)
 const touchDeltaX = ref(0)
 
@@ -188,7 +191,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_shopping') return t('购物', 'Shopping')
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')
-  if (tileId === 'app_control_center') return t('导演台', 'Director')
+  if (tileId === 'app_control_center') return t('世界中枢', 'World Hub')
   if (tileId === 'app_more') return t('更多', 'More')
   return fallback
 }
@@ -247,6 +250,10 @@ const customWidgetSrcDocMap = computed(() => {
 
 const widgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const totalPages = computed(() => Math.max(widgetPages.value.length, 1))
+const homeTrackOffset = computed(() => currentPage.value - LEFT_HOME_PAGE_INDEX)
+const homeReturnPageForCurrentView = computed(() =>
+  currentPage.value < DEFAULT_HOME_RETURN_PAGE ? DEFAULT_HOME_RETURN_PAGE : currentPage.value,
+)
 const today = computed(() => new Date())
 const layoutSlotIndices = computed(() =>
   Array.from({ length: LAYOUT_SLOT_COLUMNS * LAYOUT_SLOT_ROWS }, (_, index) => index),
@@ -276,7 +283,7 @@ const widgetEditRouteRequested = computed(() => route.query.widgetEdit === '1')
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
 
-const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(0, page))
+const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(LEFT_HOME_PAGE_INDEX, page))
 
 const setPage = (page) => {
   currentPage.value = clampPage(page)
@@ -410,6 +417,30 @@ const openedFolderPreviewEntries = computed(() => {
     : []
   return entries.slice(0, 8)
 })
+
+const isWorldHubInstalled = computed(() => systemStore.isMoreFeatureToggleEnabled('control_center'))
+const leftPageUtilityEntries = computed(() => [
+  {
+    id: 'world-hub',
+    title: t('世界中枢', 'World Hub'),
+    subtitle: isWorldHubInstalled.value
+      ? t('运行控制已安装', 'Runtime control installed')
+      : t('等待安装或解锁', 'Waiting to install or unlock'),
+    status: isWorldHubInstalled.value ? t('已安装', 'Installed') : t('未安装', 'Not installed'),
+    icon: 'fas fa-wand-magic-sparkles',
+    route: widgetRegistry.app_control_center.route,
+    installed: isWorldHubInstalled.value,
+  },
+  {
+    id: 'cheats',
+    title: t('金手指', 'Cheats'),
+    subtitle: t('条件满足后开放数值与事件调节', 'Unlocks value and event tuning later'),
+    status: t('未安装', 'Not installed'),
+    icon: 'fas fa-key',
+    route: '',
+    installed: false,
+  },
+])
 
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
 
@@ -552,11 +583,24 @@ const openAppById = (tileId) => {
 
   if (tile.route) {
     maybeVibrate(8)
-    router.push(buildRouteWithReturnSource(tile.route, 'home', { homePage: currentPage.value }))
+    router.push(buildRouteWithReturnSource(tile.route, 'home', { homePage: homeReturnPageForCurrentView.value }))
     return
   }
 
   triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`))
+}
+
+const openLeftPageUtilityEntry = (entry) => {
+  if (layoutEditMode.value) return
+
+  if (!entry?.installed || !entry.route) {
+    maybeVibrate(6)
+    triggerLayoutToast(t('应用未安装', 'App not installed'))
+    return
+  }
+
+  maybeVibrate(8)
+  router.push(buildRouteWithReturnSource(entry.route, 'home', { homePage: DEFAULT_HOME_RETURN_PAGE }))
 }
 
 const closeHomeFolder = () => {
@@ -571,7 +615,7 @@ const openFolderChildEntry = (entry) => {
   const normalizedTarget = typeof target === 'string' ? { path: target } : target
   router.push({
     ...normalizedTarget,
-    query: buildHomeSourceQuery(currentPage.value, normalizedTarget.query || {}),
+    query: buildHomeSourceQuery(homeReturnPageForCurrentView.value, normalizedTarget.query || {}),
   })
 }
 
@@ -1209,38 +1253,77 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="home-page-track" :style="{ transform: `translate3d(-${currentPage * 100}%, 0, 0)` }">
-      <section v-for="(page, pageIndex) in widgetPages" :key="pageIndex" class="home-page">
-        <div class="home-headline" v-if="pageIndex === 0">
-          <h1 class="home-title">
-            {{ t('你好，', 'Hello,') }} <span class="home-accent">{{ user.name }}</span>
-          </h1>
-          <p class="home-subtitle">{{ t('一切准备就绪。', 'Everything is ready.') }}</p>
-        </div>
-
-        <section
-          v-if="pageIndex === 0 && smartPanelEnabled"
-          class="home-smart-panel"
-          data-testid="home-smart-panel"
-        >
-          <div class="home-smart-panel-head">
-            <div>
-              <p class="home-smart-kicker">{{ t('More Labs', 'More Labs') }}</p>
-              <h2>{{ t('智能面板', 'Smart Panel') }}</h2>
-            </div>
-            <span>{{ t('只读', 'Read-only') }}</span>
+    <div class="home-page-track" :style="{ transform: `translate3d(-${homeTrackOffset * 100}%, 0, 0)` }">
+      <section
+        class="home-page home-left-page"
+        data-testid="home-left-page"
+        data-no-layout-longpress
+      >
+        <div class="home-left-page-inner">
+          <div class="home-headline home-left-hero">
+            <p class="home-left-eyebrow">{{ t('今日视图', 'Today View') }}</p>
+            <h1 class="home-title">
+              {{ t('你好，', 'Hello,') }} <span class="home-accent">{{ user.name }}</span>
+            </h1>
+            <p class="home-subtitle">{{ t('一切准备就绪。', 'Everything is ready.') }}</p>
           </div>
-          <div class="home-smart-grid">
-            <article v-for="item in smartPanelItems" :key="item.id" class="home-smart-card">
-              <i :class="item.icon"></i>
+
+          <section
+            v-if="smartPanelEnabled"
+            class="home-smart-panel"
+            data-testid="home-smart-panel"
+          >
+            <div class="home-smart-panel-head">
               <div>
-                <p>{{ item.label }}</p>
-                <strong>{{ item.value }}</strong>
+                <p class="home-smart-kicker">{{ t('More Labs', 'More Labs') }}</p>
+                <h2>{{ t('智能面板', 'Smart Panel') }}</h2>
               </div>
-            </article>
-          </div>
-        </section>
+              <span>{{ t('只读', 'Read-only') }}</span>
+            </div>
+            <div class="home-smart-grid">
+              <article v-for="item in smartPanelItems" :key="item.id" class="home-smart-card">
+                <i :class="item.icon"></i>
+                <div>
+                  <p>{{ item.label }}</p>
+                  <strong>{{ item.value }}</strong>
+                </div>
+              </article>
+            </div>
+          </section>
 
+          <section class="home-left-utility-panel" data-testid="home-left-utility-panel">
+            <div class="home-left-section-head">
+              <div>
+                <p>{{ t('隐藏系统', 'Hidden System') }}</p>
+                <h2>{{ t('待安装应用', 'Pending Apps') }}</h2>
+              </div>
+              <span>{{ t('固定占位', 'Fixed') }}</span>
+            </div>
+            <div class="home-left-utility-grid">
+              <button
+                v-for="entry in leftPageUtilityEntries"
+                :key="entry.id"
+                type="button"
+                class="home-left-utility-card"
+                :class="{ 'is-installed': entry.installed, 'is-locked': !entry.installed }"
+                :data-testid="`home-left-shortcut-${entry.id}`"
+                @click="openLeftPageUtilityEntry(entry)"
+              >
+                <span class="home-left-utility-icon">
+                  <i :class="entry.icon"></i>
+                </span>
+                <span class="home-left-utility-copy">
+                  <strong>{{ entry.title }}</strong>
+                  <small>{{ entry.subtitle }}</small>
+                </span>
+                <span class="home-left-utility-status">{{ entry.status }}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section v-for="(page, pageIndex) in widgetPages" :key="pageIndex" class="home-page">
         <div class="home-search-pill" v-if="pageIndex === 1">
           <i class="fas fa-search"></i>
           <span>{{ t('搜索手机', 'Search phone') }}</span>
@@ -1402,6 +1485,13 @@ onBeforeUnmount(() => {
 
     <div class="home-bottom-area" :class="{ 'is-editing': layoutEditMode }" data-no-layout-longpress>
       <div class="home-page-dots">
+        <button
+          class="home-left-dot"
+          :class="{ 'is-active': currentPage === LEFT_HOME_PAGE_INDEX }"
+          @click="setPage(LEFT_HOME_PAGE_INDEX)"
+          :aria-label="t('前往今日视图', 'Go to Today View')"
+        ></button>
+        <span class="home-dot-divider" aria-hidden="true"></span>
         <button
           v-for="index in totalPages"
           :key="index"
@@ -1791,6 +1881,182 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
+.home-left-page {
+  padding-top: calc(38px + env(safe-area-inset-top));
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.home-left-page::-webkit-scrollbar {
+  display: none;
+}
+
+.home-left-page-inner {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.home-left-hero {
+  margin-bottom: 0;
+}
+
+.home-left-eyebrow {
+  margin: 0 0 9px;
+  color: var(--home-text-sub);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-left-utility-panel {
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 26px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(255, 255, 255, 0.18), transparent 38%),
+    rgba(11, 17, 28, 0.2);
+  box-shadow: 0 20px 48px rgba(8, 13, 22, 0.18);
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.1);
+}
+
+.home-left-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.home-left-section-head p {
+  margin: 0;
+  color: var(--home-text-sub);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-left-section-head h2 {
+  margin: 3px 0 0;
+  color: var(--home-text-main);
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 750;
+}
+
+.home-left-section-head span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--home-text-sub);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.home-left-utility-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.home-left-utility-card {
+  width: 100%;
+  min-height: 68px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  color: var(--home-text-main);
+  background: rgba(255, 255, 255, 0.12);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, filter 140ms ease;
+}
+
+.home-left-utility-card:active {
+  transform: scale(0.985);
+}
+
+.home-left-utility-card.is-installed {
+  border-color: rgba(255, 255, 255, 0.38);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1)),
+    var(--system-accent-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.home-left-utility-card.is-locked {
+  opacity: 0.6;
+  filter: saturate(0.28) brightness(0.72);
+}
+
+.home-left-utility-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.44);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 20px rgba(8, 13, 22, 0.16);
+}
+
+.home-left-utility-card.is-installed .home-left-utility-icon {
+  background: var(--home-icon-dark-bg);
+  color: var(--home-icon-dark-fg);
+}
+
+.home-left-utility-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-left-utility-copy strong,
+.home-left-utility-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-left-utility-copy strong {
+  color: var(--home-text-main);
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.home-left-utility-copy small {
+  color: var(--home-text-sub);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.home-left-utility-status {
+  align-self: start;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--home-text-sub);
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .home-grid.is-editing {
   min-height: calc(6 * 78px + 5 * 12px);
 }
@@ -1990,6 +2256,31 @@ onBeforeUnmount(() => {
 
 .home-bottom-area.is-editing {
   opacity: 0.72;
+}
+
+.home-left-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(20, 24, 34, 0.46);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  transition: width 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.home-left-dot.is-active {
+  width: 18px;
+  background: rgba(20, 24, 34, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.44);
+}
+
+.home-dot-divider {
+  width: 1px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .home-drag-ghost {

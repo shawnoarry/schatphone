@@ -115,6 +115,13 @@ const openMap = () => {
   router.push('/map')
 }
 
+const openReminders = () => {
+  router.push({
+    path: '/reminders',
+    query: route.query.from === 'home' && route.query.homePage ? { from: 'home', homePage: route.query.homePage } : {},
+  })
+}
+
 const openWorldBook = (options = {}) => {
   router.push({
     path: '/worldbook',
@@ -472,6 +479,22 @@ watch(
             )
           }}
         </p>
+        <div class="mt-3 rounded-lg border border-orange-100 bg-orange-50 p-3 text-xs leading-5 text-orange-700">
+          <div class="flex items-center justify-between gap-3">
+            <p class="font-semibold">{{ t('提醒事项拆分已开始', 'Reminders split has started') }}</p>
+            <button class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-orange-700" @click="openReminders">
+              {{ t('打开提醒事项', 'Open Reminders') }}
+            </button>
+          </div>
+          <p class="mt-1">
+            {{
+              t(
+                '当前线索仍兼容显示在 Calendar；新入口会逐步承接未确认的回拨、物流、地图和行情提醒。',
+                'Current cues remain compatible in Calendar; the new entry will gradually own unconfirmed callbacks, logistics, map, and market reminders.',
+              )
+            }}
+          </p>
+        </div>
       </section>
 
       <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">

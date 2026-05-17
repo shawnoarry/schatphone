@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import ContactsView from '../src/views/ContactsView.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
@@ -37,11 +38,26 @@ describe('ContactsView wallet ledger context', () => {
   test('shows read-only Wallet ledger summaries on matching role profiles', async () => {
     const chatStore = useChatStore()
     const walletStore = useWalletStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
     walletStore.resetForTesting()
-    chatStore.addRoleProfile({
+    const profile = chatStore.addRoleProfile({
       name: 'Nova',
       role: 'Trader',
       isMain: true,
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: 'Nova',
+      },
+      sourceModule: 'wallet',
+      factType: 'shared_expense',
+      summary: 'Settled a small coffee bill.',
+      metricDeltas: {
+        affinity: 6,
+        trust: 5,
+      },
+      milestone: 'First shared expense',
     })
     walletStore.addTransferTransaction({
       amount: '50.00',
@@ -71,6 +87,10 @@ describe('ContactsView wallet ledger context', () => {
     expect(wrapper.text()).toMatch(/账本 2 条|2 ledger item/)
     expect(wrapper.text()).toContain('38.00 CNY')
     expect(wrapper.text()).toMatch(/来自 Chat|from Chat/)
+    expect(wrapper.get(`[data-testid="contacts-relationship-summary-${profile.id}"]`).text()).toMatch(
+      /关系快照|Relationship snapshot/,
+    )
+    expect(wrapper.text()).toContain('First shared expense')
 
     wrapper.unmount()
   })

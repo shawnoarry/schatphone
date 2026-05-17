@@ -10,6 +10,7 @@ import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
 import { useCalendarStore } from '../stores/calendar'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
@@ -60,6 +61,7 @@ const walletStore = useWalletStore()
 const shoppingStore = useShoppingStore()
 const calendarStore = useCalendarStore()
 const foodDeliveryStore = useFoodDeliveryStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -149,6 +151,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/phone',
   '/map',
   '/calendar',
+  '/reminders',
   '/wallet',
   '/stock',
   '/shopping',
@@ -1220,6 +1223,26 @@ const buildTruthPromptBlock = (contact) => {
   ].join('\n')
 }
 
+const buildRelationshipRuntimePromptBlock = (contact) => {
+  const isRoleContact = (contact?.kind || 'role') === 'role'
+  const target = {
+    entityKey:
+      contact?.profileId > 0
+        ? `role:${contact.profileId}`
+        : contact?.id > 0
+          ? `contact:${contact.id}`
+          : '',
+    profileId: contact?.profileId,
+    contactId: contact?.id,
+    kind: contact?.kind,
+    name: contact?.name,
+  }
+  return relationshipRuntimeStore.buildPromptContextForTarget(target, {
+    eventLimit: 3,
+    includeNeutral: isRoleContact,
+  }) || (isRoleContact ? 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.' : '')
+}
+
 const getGlobalWorldviewText = () => {
   const fromGlobal =
     typeof user.value.globalWorldview === 'string' ? user.value.globalWorldview.trim() : ''
@@ -1378,6 +1401,7 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     : 'This is a normal reply scene. Respond based on context naturally.'
   const worldKernelInstruction = buildWorldKernelPromptBlock(contact)
   const truthInstruction = buildTruthPromptBlock(contact)
+  const relationshipRuntimeInstruction = buildRelationshipRuntimePromptBlock(contact)
   const imagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, options.imageReferences)
   const imageReferenceCount = imagePolicy.referenceCount
   const providerCapabilities =
@@ -1414,6 +1438,7 @@ Response style: ${responseStyle}
 Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
 ${truthInstruction}
+${relationshipRuntimeInstruction}
 ${imageReferenceInstruction}
 ${providerCapabilityInstruction}
 Stay in character and never claim you are an AI model.

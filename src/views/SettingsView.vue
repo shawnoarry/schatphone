@@ -15,6 +15,7 @@ import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import {
@@ -36,6 +37,7 @@ import {
   reconcilePersistedStateLayers,
 } from '../lib/persistence'
 import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
+import { SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS } from '../lib/simulation/foreground-session-tick'
 import {
   checkPushServerHealth,
   isWebPushSupported,
@@ -64,6 +66,7 @@ const foodDeliveryStore = useFoodDeliveryStore()
 const simulationStore = useSimulationStore()
 const stockStore = useStockStore()
 const walletStore = useWalletStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -111,6 +114,7 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:wallet', version: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger' },
   { key: 'store:phone', version: 1, labelZh: '电话记录', labelEn: 'Phone logs' },
   { key: 'store:stock', version: 1, labelZh: '模拟行情', labelEn: 'Simulated market' },
+  { key: 'store:relationship-runtime', version: 1, labelZh: '关系运行时', labelEn: 'Relationship runtime' },
 ])
 const storageAuditRunning = ref(false)
 const storageRepairRunning = ref(false)
@@ -1229,6 +1233,58 @@ const automationRuntimePolicy = computed(() =>
   systemStore.getAiAutomationRuntimePolicy('chat', Date.now()),
 )
 
+const simulationForegroundTickIntervalMinutes = computed(() => {
+  const intervalMs = Number(simulationStore.settings?.foregroundSessionTickIntervalMs)
+  const safeIntervalMs = Number.isFinite(intervalMs) && intervalMs > 0
+    ? intervalMs
+    : 10 * 60 * 1000
+  return Math.max(1, Math.round(safeIntervalMs / 60_000))
+})
+
+const simulationForegroundTickRuntimeLabel = computed(() => {
+  const enabled = simulationStore.settings?.foregroundSessionTickEnabled === true
+  const minutes = simulationForegroundTickIntervalMinutes.value
+  if (!enabled) {
+    return t(
+      '当前事件前台 Tick 关闭。不会自动检查随机事件。',
+      'Foreground event tick is currently off. Random events are not checked automatically.',
+    )
+  }
+  return t(
+    `当前仅保存为待接入状态：开启后计划每 ${minutes} 分钟检查一次安全事件。`,
+    `Saved as pending lifecycle wiring: when active, it is planned to check safe events every ${minutes} minute(s).`,
+  )
+})
+
+const updateSimulationForegroundTickEnabled = (enabled) => {
+  simulationStore.setForegroundSessionTickEnabled(enabled)
+}
+
+const updateSimulationForegroundTickIntervalMinutes = (minutes) => {
+  const value = Number(minutes)
+  const safeMinutes = Number.isFinite(value) ? Math.max(1, Math.min(120, Math.floor(value))) : 10
+  simulationStore.setForegroundSessionTickIntervalMs(
+    Math.max(SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS, safeMinutes * 60_000),
+  )
+}
+
+const updateAutomationField = (field, value) => {
+  if (!settings.value.aiAutomation || typeof field !== 'string' || !field) return
+  settings.value.aiAutomation[field] = value
+}
+
+const updateAutomationModuleEnabled = (moduleKey, enabled) => {
+  const moduleConfig = settings.value.aiAutomation?.modules?.[moduleKey]
+  if (!moduleConfig) return
+  moduleConfig.enabled = enabled === true
+}
+
+const updateAutomationModulePriority = (moduleKey, priority) => {
+  const moduleConfig = settings.value.aiAutomation?.modules?.[moduleKey]
+  if (!moduleConfig) return
+  moduleConfig.priority = clampAutomationPriority(priority)
+}
+
 const saveAutomationSettings = async () => {
   if (!settings.value.aiAutomation) return
 
@@ -1269,6 +1325,11 @@ const saveAutomationSettings = async () => {
     settings.value.aiAutomation.quietHoursEnd,
     '07:00',
   )
+  updateSimulationForegroundTickEnabled(
+    simulationStore.settings?.foregroundSessionTickEnabled === true,
+  )
+  updateSimulationForegroundTickIntervalMinutes(simulationForegroundTickIntervalMinutes.value)
+  simulationStore.saveNow()
 
   systemStore.saveNow()
   automationSaved.value = true
@@ -1368,6 +1429,7 @@ const buildBackupPayload = async () => {
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
     stock: stockStore.createBackupSnapshot(),
+    relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
   }
 }
 
@@ -1403,6 +1465,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.wallet && typeof payload.wallet === 'object') return true
   if (payload.phone && typeof payload.phone === 'object') return true
   if (payload.stock && typeof payload.stock === 'object') return true
+  if (payload.relationshipRuntime && typeof payload.relationshipRuntime === 'object') return true
   return false
 }
 
@@ -1611,6 +1674,7 @@ const createRollbackSnapshot = () => {
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
     stock: stockStore.createBackupSnapshot(),
+    relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
   }
 }
 
@@ -1676,6 +1740,10 @@ const importData = async (event) => {
     const walletOk = restoreOptionalBackupSection(walletStore, parsed.wallet)
     const phoneOk = restoreOptionalBackupSection(phoneStore, parsed.phone)
     const stockOk = restoreOptionalBackupSection(stockStore, parsed.stock)
+    const relationshipRuntimeOk = restoreOptionalBackupSection(
+      relationshipRuntimeStore,
+      parsed.relationshipRuntime,
+    )
     if (
       !systemOk ||
       !chatOk ||
@@ -1689,7 +1757,8 @@ const importData = async (event) => {
       !assetsOk ||
       !walletOk ||
       !phoneOk ||
-      !stockOk
+      !stockOk ||
+      !relationshipRuntimeOk
     ) {
       throw createBackupImportError(
         'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',
@@ -1710,6 +1779,7 @@ const importData = async (event) => {
     walletStore.saveNow()
     phoneStore.saveNow()
     stockStore.saveNow()
+    relationshipRuntimeStore.saveNow()
 
     const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
     const failedCount = Number(galleryRestoreResult.failedPackageCount || 0)
@@ -1749,6 +1819,7 @@ const importData = async (event) => {
     walletStore.restoreFromBackup(rollback.wallet)
     phoneStore.restoreFromBackup(rollback.phone)
     stockStore.restoreFromBackup(rollback.stock)
+    relationshipRuntimeStore.restoreFromBackup(rollback.relationshipRuntime)
     systemStore.saveNow()
     chatStore.saveNow()
     mapStore.saveNow()
@@ -1762,6 +1833,7 @@ const importData = async (event) => {
     walletStore.saveNow()
     phoneStore.saveNow()
     stockStore.saveNow()
+    relationshipRuntimeStore.saveNow()
     const resolved = resolveBackupImportFailure(error)
     const detail = resolved.detail ? ` ${resolved.detail}` : ''
     const message = `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`
@@ -1884,10 +1956,15 @@ if (initialMenu) {
           <SettingsAutomationSection
             :ai-automation="settings.aiAutomation"
             :automation-runtime-policy="automationRuntimePolicy"
+            :simulation-settings="simulationStore.settings"
+            :simulation-foreground-tick-interval-minutes="simulationForegroundTickIntervalMinutes"
+            :simulation-foreground-tick-runtime-label="simulationForegroundTickRuntimeLabel"
             :automation-saved="automationSaved"
             @update-automation-field="updateAutomationField"
             @update-module-enabled="updateAutomationModuleEnabled"
             @update-module-priority="updateAutomationModulePriority"
+            @update-simulation-foreground-tick-enabled="updateSimulationForegroundTickEnabled"
+            @update-simulation-foreground-tick-interval-minutes="updateSimulationForegroundTickIntervalMinutes"
             @open-chat-automation="openChatAutomation"
             @open-network-reports="openNetworkReports"
             @save-automation-settings="saveAutomationSettings"

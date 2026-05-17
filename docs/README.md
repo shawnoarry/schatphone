@@ -64,6 +64,10 @@ This is the single index for project documents. If two documents seem to overlap
     Product decision for Files: hidden as a standalone frontend entry, retained as an internal storage and coordination component.
     Files 产品决策：不作为独立前台入口展示，保留为内部储存与跨模块协调组件。
 
+15. `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+    Product decision for World Hub: optional runtime-control surface, hidden by default, with `/control-center` and `app_control_center` retained as compatibility identifiers.
+    世界中枢产品决策：可选运行控制入口，默认隐藏，并保留 `/control-center` 与 `app_control_center` 作为兼容技术标识。
+
 ## 2. Functional Categories / 按职能分类
 
 | Category / 分类 | Folder / 目录 | Purpose / 用途 |
@@ -106,6 +110,7 @@ This is the single index for project documents. If two documents seem to overlap
 - `docs/architecture/ROLE_BINDING_CONTRACT.md`: cross-module role-binding contract.
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`: proposed event engine architecture for deterministic random/condition triggers and module adapters.
 - `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`: standard requirement for WorldBook/worldview-driven event variants and local event variant packs.
+- `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`: standard requirement for affinity, relationship progress, interpersonal dynamics, character growth, world-aware relationship packs, and future World Hub controls.
 
 ## 6. Current Design Docs
 
@@ -116,3 +121,16 @@ This is the single index for project documents. If two documents seem to overlap
 Important visual rule:
 
 - SchatPhone visual ownership is decided by the user's actual entry and parent context before code ownership or data ownership. If a surface appears inside an installed app, preserve that app's immersion unless the user explicitly navigated to a system-owned full page.
+
+## 7. 2026-05-17 Product Naming And Calendar/Reminders Update
+
+New current references:
+
+- `docs/pm/MODULE_NAME_GLOSSARY.md`: clean Chinese/English glossary for modules, app ids, routes, folder entries, service accounts, and internal runtimes.
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`: product decision that Calendar should become the real schedule/date app, while Reminders should own cross-module cues, callbacks, follow-ups, logistics reminders, stock review cues, and world/task objectives.
+- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`: product decision that World Hub is the optional runtime-control app, while `control_center`, `app_control_center`, and `/control-center` remain compatibility identifiers.
+
+Execution impact:
+
+- Do not expand Calendar relationship facts before starting the Calendar / Reminders split.
+- Use the glossary when discussing module names with product, design, QA, users, or future AI assistants.

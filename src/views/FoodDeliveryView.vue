@@ -3,11 +3,23 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
-import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../stores/foodDelivery'
+import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
+import {
+  buildFoodDeliverySharedMealRelationshipSuggestion,
+  recordFoodDeliverySharedMealRelationshipFact,
+} from '../lib/relationship-fact-adapters'
+import {
+  FOOD_DELIVERY_ORDER_EVENT_TYPE,
+  FOOD_DELIVERY_ORDER_STATUS,
+  useFoodDeliveryStore,
+} from '../stores/foodDelivery'
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
+import { useChatStore } from '../stores/chat'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
+import { useWalletStore } from '../stores/wallet'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
@@ -21,10 +33,13 @@ const route = useRoute()
 const router = useRouter()
 const { t, languageBase } = useI18n()
 const foodDeliveryStore = useFoodDeliveryStore()
+const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
 const systemStore = useSystemStore()
+const walletStore = useWalletStore()
 const FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID = 'food-delivery-view'
 const foodImagePreviewMap = reactive({})
 
@@ -52,6 +67,7 @@ const menuDraft = reactive({
   imageUrl: '',
   imageGalleryAssetId: '',
 })
+const sharedMealTargets = reactive({})
 
 const activeCategoryKey = computed(() =>
   typeof route.query.category === 'string' ? route.query.category : 'restaurants',
@@ -134,6 +150,50 @@ const activeMapHandoffRouteSummary = computed(() =>
     : activeMapHandoff.value.routeSummaryEn,
 )
 const recentOrders = computed(() => foodDeliveryStore.recentOrders)
+const sharedMealContactOptions = computed(() =>
+  chatStore.contactsForList
+    .filter((contact) => Number(contact.id) > 0)
+    .slice(0, 60),
+)
+
+const selectedSharedMealContact = (orderId) =>
+  sharedMealContactOptions.value.find(
+    (contact) => String(contact.id) === String(sharedMealTargets[orderId] || ''),
+  ) || null
+
+const buildSharedMealSuggestion = (order) =>
+  buildFoodDeliverySharedMealRelationshipSuggestion({
+    relationshipRuntimeStore,
+    order,
+    target: selectedSharedMealContact(order?.id),
+  })
+
+const walletExpenseSuggestions = computed(() =>
+  foodDeliveryStore.orders
+    .filter((order) => order.status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
+    .map((order) => {
+      const sourceId = order.id
+      const walletImported = Boolean(walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, sourceId))
+      const relationshipSuggestion = buildSharedMealSuggestion(order)
+      return {
+        order,
+        orderId: order.id,
+        sourceId,
+        restaurantName: order.restaurantName,
+        amount: (Number(order.totalCents || 0) / 100).toFixed(2),
+        currency: order.currency,
+        itemCount: order.itemCount,
+        relationshipSuggestion,
+        relationshipAvailable: relationshipSuggestion.available,
+        relationshipImported: relationshipSuggestion.imported,
+        relationshipTargetName: relationshipSuggestion.targetName,
+        imported: walletImported && (!relationshipSuggestion.available || relationshipSuggestion.imported),
+        walletImported,
+      }
+    })
+    .filter((suggestion) => Number(suggestion.amount) > 0)
+    .slice(0, 6),
+)
 const chatSourceOrderId = computed(() =>
   typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
 )
@@ -146,6 +206,13 @@ const chatSourceOrder = computed(() => {
 })
 
 const isHighlightedOrder = (orderId) => isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
+
+const buildFoodDeliveryEventMapContext = (order, event) =>
+  mapStore.buildDeliveryEventMapHandoff({
+    ownerModule: 'food_delivery',
+    order,
+    event,
+  })
 
 const foodDeliveryEventTypeLabel = (type) => {
   if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY) return t('骑手延迟', 'Rider delay')
@@ -172,6 +239,7 @@ const orderEventRows = (order) =>
     ...event,
     typeLabel: foodDeliveryEventTypeLabel(event.type),
     timeLabel: formatFoodDeliveryEventTime(event.createdAt),
+    mapHandoff: buildFoodDeliveryEventMapContext(order, event),
     detail:
       event.summary ||
       (event.deliveryAddress
@@ -327,6 +395,31 @@ const checkoutFoodDelivery = () => {
     sourceModule: mapHandoff.sourceModule,
     sourceId: mapHandoff.sourceId,
   })
+}
+
+const markFoodOrderDelivered = (orderId) =>
+  foodDeliveryStore.updateOrderStatus(orderId, FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
+
+const transferFoodSuggestionToWallet = (suggestion) => {
+  if (!suggestion || suggestion.imported) return null
+  const existing = walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, suggestion.sourceId)
+  const transaction = existing || walletStore.addTransaction({
+    type: 'expense',
+    title: 'Food Delivery order',
+    amount: suggestion.amount,
+    currency: suggestion.currency,
+    counterparty: suggestion.restaurantName || 'Food Delivery',
+    note: t('Manually imported from a Food Delivery order.', 'Manually imported from a Food Delivery order.'),
+    sourceModule: FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
+    sourceId: suggestion.sourceId,
+  })
+  recordFoodDeliverySharedMealRelationshipFact({
+    relationshipRuntimeStore,
+    order: suggestion.order,
+    target: selectedSharedMealContact(suggestion.orderId),
+    transaction,
+  })
+  return transaction
 }
 
 const goHome = () => {
@@ -838,6 +931,15 @@ onBeforeUnmount(() => {
             >
               {{ t('触发配送事件', 'Trigger delivery event') }}
             </button>
+            <button
+              v-if="order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED && order.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED"
+              type="button"
+              class="ml-2 mt-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+              :data-testid="`food-delivery-mark-delivered-${order.id}`"
+              @click="markFoodOrderDelivered(order.id)"
+            >
+              {{ t('标记已送达', 'Mark delivered') }}
+            </button>
             <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
               <article
                 v-for="event in orderEventRows(order)"
@@ -854,6 +956,10 @@ onBeforeUnmount(() => {
                     {{ event.timeLabel }}
                   </span>
                 </div>
+                <DeliveryRouteContextCard
+                  :context="event.mapHandoff"
+                  :test-id="`food-delivery-event-map-context-${order.id}-${event.id}`"
+                />
               </article>
             </div>
           </article>
@@ -861,6 +967,80 @@ onBeforeUnmount(() => {
         <p v-else class="mt-3 rounded-2xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
           {{ t('还没有外卖订单。', 'No food orders yet.') }}
         </p>
+      </section>
+
+      <section class="rounded-3xl border border-emerald-100 bg-white p-4" data-testid="food-delivery-wallet-suggestions">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">{{ t('Wallet 外卖消费建议', 'Wallet food expense suggestions') }}</p>
+            <p class="mt-1 text-xs leading-5 text-gray-500">
+              {{ t('只有已送达订单会出现在这里；点击后才会写入 Wallet。', 'Only delivered orders appear here; click to write them to Wallet.') }}
+            </p>
+          </div>
+          <span class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+            {{ walletExpenseSuggestions.length }}
+          </span>
+        </div>
+        <div
+          v-if="walletExpenseSuggestions.length === 0"
+          class="mt-3 rounded-2xl bg-gray-50 p-3 text-center text-xs text-gray-500"
+        >
+          {{ t('暂无可写入 Wallet 的已送达外卖订单。', 'No delivered food orders are ready for Wallet yet.') }}
+        </div>
+        <div v-else class="mt-3 space-y-2">
+          <article
+            v-for="suggestion in walletExpenseSuggestions"
+            :key="suggestion.orderId"
+            class="rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3"
+            :data-testid="`food-delivery-wallet-suggestion-${suggestion.orderId}`"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-bold text-gray-900">{{ suggestion.restaurantName }}</p>
+                <p class="mt-1 text-[11px] text-gray-500">
+                  {{ suggestion.itemCount }} {{ t('份', 'item(s)') }} / {{ suggestion.amount }} {{ suggestion.currency }}
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    v-model="sharedMealTargets[suggestion.orderId]"
+                    class="rounded-xl border border-emerald-100 bg-white px-2 py-1 text-[11px] text-gray-600 outline-none"
+                    :data-testid="`food-delivery-shared-meal-contact-${suggestion.orderId}`"
+                  >
+                    <option value="">{{ t('No shared-meal target', 'No shared-meal target') }}</option>
+                    <option
+                      v-for="contact in sharedMealContactOptions"
+                      :key="contact.id"
+                      :value="String(contact.id)"
+                    >
+                      {{ contact.name }}
+                    </option>
+                  </select>
+                  <span
+                    v-if="suggestion.relationshipAvailable"
+                    class="text-[11px] font-semibold"
+                    :class="suggestion.relationshipImported ? 'text-emerald-600' : 'text-amber-600'"
+                    :data-testid="`food-delivery-relationship-suggestion-${suggestion.orderId}`"
+                  >
+                    {{
+                      suggestion.relationshipImported
+                        ? t(`Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`, `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`)
+                        : t(`Shared-meal fact ready for ${suggestion.relationshipTargetName}.`, `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`)
+                    }}
+                  </span>
+                </div>
+              </div>
+              <button
+                class="rounded-full px-3 py-1.5 text-[11px] font-semibold"
+                :class="suggestion.imported ? 'bg-gray-100 text-gray-400' : 'bg-emerald-600 text-white'"
+                :disabled="suggestion.imported"
+                :data-testid="`food-delivery-transfer-wallet-${suggestion.orderId}`"
+                @click="transferFoodSuggestionToWallet(suggestion)"
+              >
+                {{ suggestion.imported ? t('已记账', 'Recorded') : t('记入 Wallet', 'Record') }}
+              </button>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="rounded-3xl border border-lime-100 bg-white p-4" data-testid="food-delivery-map-boundary">

@@ -3,7 +3,12 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
+import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import { useI18n } from '../composables/useI18n'
+import {
+  buildShoppingGiftRelationshipSuggestion,
+  recordShoppingGiftRelationshipFact,
+} from '../lib/relationship-fact-adapters'
 import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
@@ -18,6 +23,8 @@ import { useAssetsStore } from '../stores/assets'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
+import { useMapStore } from '../stores/map'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { SHOPPING_ORDER_STATUS, useShoppingStore } from '../stores/shopping'
 import { useWalletStore } from '../stores/wallet'
 
@@ -29,6 +36,8 @@ const assetsStore = useAssetsStore()
 const calendarStore = useCalendarStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
+const mapStore = useMapStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const walletStore = useWalletStore()
 const {
   productCount,
@@ -148,6 +157,14 @@ const recentOrders = computed(() => {
 const selectedOrder = computed(() =>
   selectedOrderId.value ? orders.value.find((order) => order.id === selectedOrderId.value) || null : null,
 )
+
+const buildShoppingEventMapContext = (order, event = {}) =>
+  mapStore.buildDeliveryEventMapHandoff({
+    ownerModule: 'shopping',
+    order,
+    event,
+  })
+
 const assetTransferSuggestions = computed(() =>
   orders.value
     .flatMap((order) =>
@@ -172,15 +189,28 @@ const assetTransferSuggestions = computed(() =>
 )
 const walletExpenseSuggestions = computed(() =>
   orders.value
+    .filter((order) => order.status === SHOPPING_ORDER_STATUS.COMPLETED)
     .map((order) => {
       const sourceId = order.id
+      const walletImported = Boolean(walletStore.findTransactionBySource(SHOPPING_SOURCE_KEYS.WALLET_EXPENSE, sourceId))
+      const relationshipSuggestion = buildShoppingGiftRelationshipSuggestion({
+        relationshipRuntimeStore,
+        order,
+      })
       return {
+        order,
         orderId: order.id,
         sourceId,
         amount: (Number(order.totalCents || 0) / 100).toFixed(2),
         currency: order.currency,
         itemCount: order.itemCount,
-        imported: Boolean(walletStore.findTransactionBySource(SHOPPING_SOURCE_KEYS.WALLET_EXPENSE, sourceId)),
+        giftRecipient: order.giftRecipient,
+        relationshipSuggestion,
+        relationshipAvailable: relationshipSuggestion.available,
+        relationshipImported: relationshipSuggestion.imported,
+        relationshipTargetName: relationshipSuggestion.targetName,
+        imported: walletImported && (!relationshipSuggestion.available || relationshipSuggestion.imported),
+        walletImported,
       }
     })
     .filter((suggestion) => Number(suggestion.amount) > 0)
@@ -198,6 +228,7 @@ const logisticsOrderRows = computed(() =>
       title: cue?.title || order.items.map((item) => item.title).join(' / '),
       summary: cue?.summary || t('Waiting for delivery follow-up cue.', 'Waiting for delivery follow-up cue.'),
       latestEvent,
+      mapHandoff: latestEvent ? buildShoppingEventMapContext(order, latestEvent) : null,
       suggestedAt: cue?.suggestedAt || order.createdAt,
       total: formatOrderTotal(order),
       route: cue?.route || '/shopping',
@@ -466,6 +497,8 @@ const buildGiftCheckoutPayload = () => {
         name: giftContact?.name || manualRecipient,
         chatId: giftContact ? Number(giftContact.id) : 0,
         contactId: giftContact ? Number(giftContact.id) : 0,
+        profileId: giftContact ? Number(giftContact.profileId || 0) : 0,
+        kind: giftContact?.kind || (giftContact?.profileId ? 'role' : 'contact'),
         sourceModule: giftContact ? 'chat' : 'shopping_manual_recipient',
         sourceId: giftContact ? String(giftContact.id) : manualRecipient,
       }
@@ -532,8 +565,7 @@ const transferSuggestionToAsset = (suggestion) => {
 const transferSuggestionToWallet = (suggestion) => {
   if (!suggestion || suggestion.imported) return null
   const existing = walletStore.findTransactionBySource(SHOPPING_SOURCE_KEYS.WALLET_EXPENSE, suggestion.sourceId)
-  if (existing) return existing
-  return walletStore.addTransaction({
+  const transaction = existing || walletStore.addTransaction({
     type: 'expense',
     title: 'Shopping order',
     amount: suggestion.amount,
@@ -543,6 +575,12 @@ const transferSuggestionToWallet = (suggestion) => {
     sourceModule: SHOPPING_SOURCE_KEYS.WALLET_EXPENSE,
     sourceId: suggestion.sourceId,
   })
+  recordShoppingGiftRelationshipFact({
+    relationshipRuntimeStore,
+    order: suggestion.order,
+    transaction,
+  })
+  return transaction
 }
 
 watch(
@@ -795,6 +833,10 @@ onBeforeUnmount(() => {
                 }}
               </p>
             </div>
+            <DeliveryRouteContextCard
+              :context="row.mapHandoff"
+              :test-id="`shopping-logistics-map-context-${row.order.id}`"
+            />
             <div class="mt-2 flex flex-wrap items-center gap-2">
               <button
                 class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-sky-700"
@@ -807,9 +849,9 @@ onBeforeUnmount(() => {
                 v-if="row.cue?.id"
                 class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-orange-700"
                 :data-testid="`shopping-logistics-calendar-${row.order.id}`"
-                @click="router.push('/calendar')"
+                @click="router.push('/reminders')"
               >
-                {{ t('去 Calendar 确认', 'Confirm in Calendar') }}
+                {{ t('去提醒事项确认', 'Confirm in Reminders') }}
               </button>
             </div>
           </article>
@@ -1266,6 +1308,18 @@ onBeforeUnmount(() => {
                 </p>
                 <p class="mt-1 text-[11px] text-gray-500">
                   {{ suggestion.amount }} {{ suggestion.currency }}
+                </p>
+                <p
+                  v-if="suggestion.relationshipAvailable"
+                  class="mt-1 text-[11px] font-semibold"
+                  :class="suggestion.relationshipImported ? 'text-emerald-600' : 'text-amber-600'"
+                  :data-testid="`shopping-relationship-suggestion-${suggestion.orderId}`"
+                >
+                  {{
+                    suggestion.relationshipImported
+                      ? t(`Relationship fact recorded for ${suggestion.relationshipTargetName}.`, `Relationship fact recorded for ${suggestion.relationshipTargetName}.`)
+                      : t(`Relationship fact ready for ${suggestion.relationshipTargetName}.`, `Relationship fact ready for ${suggestion.relationshipTargetName}.`)
+                  }}
                 </p>
               </div>
               <button

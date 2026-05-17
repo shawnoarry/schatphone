@@ -1,7 +1,12 @@
 import { runSimulationEventTick } from './event-tick-runner'
-
-export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
-export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
+export {
+  SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
+  SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+} from '../../stores/simulation'
+import {
+  SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
+  SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+} from '../../stores/simulation'
 
 const normalizePositiveMs = (value, fallback) => {
   const num = Number(value)

@@ -57,7 +57,7 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
   [CONTROL_CENTER_HOME_APP_ID]: Object.freeze({
     kind: 'app',
     icon: 'fas fa-wand-magic-sparkles',
-    label: 'Director',
+    label: 'World Hub',
     accent: 'dark',
     route: CONTROL_CENTER_ROUTE,
   }),

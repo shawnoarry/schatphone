@@ -141,7 +141,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
   })
 
-  test('runtime control toggle restores and removes the optional Director Home entry', () => {
+  test('runtime control toggle restores and removes the optional World Hub Home entry', () => {
     const store = useSystemStore()
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')

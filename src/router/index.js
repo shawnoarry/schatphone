@@ -15,6 +15,7 @@ const GalleryView = () => import('../views/GalleryView.vue')
 const PhoneView = () => import('../views/PhoneView.vue')
 const MapView = () => import('../views/MapView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
+const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
 const WorldBookView = () => import('../views/WorldBookView.vue')
 const StockView = () => import('../views/StockView.vue')
@@ -45,6 +46,7 @@ const router = createRouter({
     { path: '/phone', component: PhoneView },
     { path: '/map', component: MapView },
     { path: '/calendar', component: CalendarView },
+    { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },
     { path: '/worldbook', component: WorldBookView },
     { path: '/profile', component: UserProfileView },

@@ -61,7 +61,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('shows the optional Director app only after the runtime control toggle is enabled', async () => {
+  test('shows the optional World Hub app only after the runtime control toggle is enabled', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -84,7 +84,82 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('导演台')
+    expect(wrapper.text()).toContain('世界中枢')
+    wrapper.unmount()
+  })
+
+  test('keeps the -1 Today View separate from editable Home pages', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
+    expect(wrapper.findAll('.home-dot')).toHaveLength(5)
+    expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain('is-locked')
+    expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain('is-locked')
+    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('shows App not installed feedback for locked -1 shortcuts', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.find('[data-testid="home-left-shortcut-world-hub"]').trigger('click')
+
+    expect(wrapper.find('.home-layout-toast').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/home')
+    wrapper.unmount()
+  })
+
+  test('lights the -1 World Hub shortcut after install and opens the runtime route', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setMoreFeatureToggle('control_center', true)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const shortcut = wrapper.find('[data-testid="home-left-shortcut-world-hub"]')
+    expect(shortcut.classes()).toContain('is-installed')
+
+    await shortcut.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/control-center')
+    expect(router.currentRoute.value.query.from).toBe('home')
+    expect(router.currentRoute.value.query.homePage).toBe('0')
     wrapper.unmount()
   })
 

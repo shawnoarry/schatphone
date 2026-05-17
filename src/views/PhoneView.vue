@@ -4,15 +4,21 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { recordPhoneCallRelationshipFact } from '../lib/relationship-fact-adapters'
+import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
+const chatStore = useChatStore()
 const phoneStore = usePhoneStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { callCount, missedCallCount, completedCallCount, recentCalls } = storeToRefs(phoneStore)
 
 const callDraft = ref({
+  contactId: '',
   contactName: '',
   direction: PHONE_CALL_DIRECTION.OUTGOING,
   durationMinutes: '3',
@@ -22,6 +28,22 @@ const feedback = ref('')
 const feedbackType = ref('success')
 
 const sortedRecentCalls = computed(() => recentCalls.value)
+
+const relationshipContactOptions = computed(() =>
+  chatStore.contacts
+    .filter((contact) => contact.kind !== 'service' && contact.kind !== 'official')
+    .map((contact) => ({
+      ...contact,
+      optionValue: String(contact.id),
+      optionLabel: contact.name || `Contact ${contact.id}`,
+    })),
+)
+
+const selectedRelationshipContact = computed(() =>
+  relationshipContactOptions.value.find(
+    (contact) => contact.optionValue === String(callDraft.value.contactId || ''),
+  ) || null,
+)
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -66,14 +88,16 @@ const directionToneClass = (call) => {
 
 const submitCallLog = () => {
   const direction = callDraft.value.direction
+  const relationshipTarget = selectedRelationshipContact.value
+  const contactName = relationshipTarget?.name || callDraft.value.contactName
   const created =
     direction === PHONE_CALL_DIRECTION.MISSED
       ? phoneStore.addMissedCallWithNotification({
-          contactName: callDraft.value.contactName,
+          contactName,
           summary: callDraft.value.summary,
         })
       : phoneStore.addRoleCallLog({
-          contactName: callDraft.value.contactName,
+          contactName,
           direction,
           durationMinutes: callDraft.value.durationMinutes,
           summary: callDraft.value.summary,
@@ -84,6 +108,16 @@ const submitCallLog = () => {
     return
   }
 
+  const call = created?.call || created
+  if (relationshipTarget && call) {
+    recordPhoneCallRelationshipFact({
+      relationshipRuntimeStore,
+      call,
+      target: relationshipTarget,
+    })
+  }
+
+  callDraft.value.contactId = ''
   callDraft.value.contactName = ''
   callDraft.value.summary = ''
   callDraft.value.durationMinutes = '3'
@@ -140,10 +174,26 @@ const removeCall = (callId) => {
 
       <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
         <p class="text-sm font-semibold">{{ t('记录一次通话', 'Record a call') }}</p>
+        <select
+          v-model="callDraft.contactId"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+          data-testid="phone-relationship-contact"
+        >
+          <option value="">{{ t('Optional Chat contact binding', 'Optional Chat contact binding') }}</option>
+          <option
+            v-for="contact in relationshipContactOptions"
+            :key="contact.id"
+            :value="contact.optionValue"
+          >
+            {{ contact.optionLabel }}
+          </option>
+        </select>
         <input
           v-model="callDraft.contactName"
           type="text"
           class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+          data-testid="phone-contact-name"
+          :disabled="Boolean(selectedRelationshipContact)"
           :placeholder="t('联系人或角色名', 'Contact or role name')"
         />
         <div class="grid grid-cols-2 gap-2">
@@ -174,6 +224,7 @@ const removeCall = (callId) => {
         <button
           @click="submitCallLog"
           class="w-full rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+          data-testid="phone-save-call"
         >
           {{ t('保存通话', 'Save call') }}
         </button>

@@ -59,6 +59,7 @@ describe('system More feature toggles', () => {
       smart_panel: false,
       focus_mode: true,
       scene_switch: false,
+      control_center: false,
     })
   })
 })

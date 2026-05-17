@@ -33,6 +33,7 @@ const ACTION_LABELS = {
   schedule: ['安排定时推送', 'Schedule push delivery'],
   cancel_schedule: ['取消定时推送', 'Cancel scheduled push'],
   run_event_tick: ['运行事件 tick', 'Run event tick'],
+  foreground_event_tick: ['前台事件 tick', 'Foreground event tick'],
 }
 
 const REASON_LABELS = {
@@ -46,6 +47,8 @@ const REASON_LABELS = {
   STORAGE_REPAIR_PARTIAL: ['存储修复部分失败', 'Storage repair partially failed'],
   SIMULATION_TICK_TRIGGERED: ['事件 tick 已触发', 'Simulation tick triggered'],
   SIMULATION_TICK_SKIPPED: ['事件 tick 已跳过', 'Simulation tick skipped'],
+  SIMULATION_FOREGROUND_TICK_TRIGGERED: ['前台事件 tick 已触发', 'Foreground event tick triggered'],
+  SIMULATION_FOREGROUND_TICK_SKIPPED: ['前台事件 tick 已跳过', 'Foreground event tick skipped'],
   BACKUP_EXPORT_METADATA_ONLY: ['备份导出成功（元数据）', 'Backup export succeeded (metadata)'],
   BACKUP_EXPORT_WITH_ASSET_PACKAGE: ['备份导出成功（含素材包）', 'Backup export succeeded (with asset package)'],
   BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL: [
@@ -102,6 +105,14 @@ const SUGGESTION_LABELS = {
   SIMULATION_TICK_SKIPPED: [
     '本次 tick 未触发事件，通常是 Surprise Mode、冷却、每日上限或无活跃订单导致。',
     'This tick did not trigger an event, usually due to Surprise Mode, cooldowns, daily caps, or no active order.',
+  ],
+  SIMULATION_FOREGROUND_TICK_TRIGGERED: [
+    '前台运行期间已触发安全事件，可在事件日志或相关模块查看结果。',
+    'A safe event triggered during foreground runtime; review event logs or the related module.',
+  ],
+  SIMULATION_FOREGROUND_TICK_SKIPPED: [
+    '前台运行期间本次未触发事件，通常是开关、冷却、每日上限或条件不满足导致。',
+    'No event triggered during this foreground tick, usually because of toggles, cooldowns, daily caps, or unmet conditions.',
   ],
   BACKUP_EXPORT_METADATA_ONLY: [
     '这是轻量备份，恢复时不含本地素材二进制。',

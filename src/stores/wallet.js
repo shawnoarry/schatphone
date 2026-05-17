@@ -10,6 +10,7 @@ export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
   ALL: 'all',
   MANUAL: 'manual',
   CHAT: 'chat',
+  ORDERS: 'orders',
 })
 const WALLET_TRANSACTION_TYPES = new Set(['income', 'expense', 'transfer'])
 const WALLET_TRANSACTION_SOURCE_FILTER_VALUES = new Set(
@@ -56,6 +57,10 @@ const normalizeTransactionType = (value, fallback = 'transfer') => {
 }
 
 const isChatTransferTransaction = (transaction) => transaction?.sourceModule === 'chat_transfer'
+
+const isOrderExpenseTransaction = (transaction) =>
+  transaction?.sourceModule === 'shopping_wallet_expense' ||
+  transaction?.sourceModule === 'food_delivery_wallet_expense'
 
 const normalizeCounterpartyKey = (value) => normalizeText(value, '', 120).toLowerCase()
 
@@ -135,11 +140,13 @@ export const useWalletStore = defineStore('wallet', () => {
   const transactionCount = computed(() => transactions.value.length)
   const transactionSourceSummary = computed(() => {
     const chat = transactions.value.filter(isChatTransferTransaction).length
-    const manual = transactions.value.length - chat
+    const orders = transactions.value.filter(isOrderExpenseTransaction).length
+    const manual = transactions.value.length - chat - orders
     return {
       all: transactions.value.length,
       manual,
       chat,
+      orders,
     }
   })
   const balances = computed(() => {
@@ -182,8 +189,13 @@ export const useWalletStore = defineStore('wallet', () => {
     if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.CHAT) {
       return transactions.value.filter(isChatTransferTransaction)
     }
+    if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.ORDERS) {
+      return transactions.value.filter(isOrderExpenseTransaction)
+    }
     if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL) {
-      return transactions.value.filter((transaction) => !isChatTransferTransaction(transaction))
+      return transactions.value.filter(
+        (transaction) => !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
+      )
     }
     return transactions.value.slice()
   }
@@ -203,6 +215,7 @@ export const useWalletStore = defineStore('wallet', () => {
         counterparty: normalizeText(counterparty, '', 120),
         count: 0,
         chatCount: 0,
+        orderCount: 0,
         manualCount: 0,
         currencies: [],
         latestTransaction: null,
@@ -220,7 +233,10 @@ export const useWalletStore = defineStore('wallet', () => {
       counterparty: records[0].counterparty,
       count: records.length,
       chatCount: records.filter(isChatTransferTransaction).length,
-      manualCount: records.filter((transaction) => !isChatTransferTransaction(transaction)).length,
+      orderCount: records.filter(isOrderExpenseTransaction).length,
+      manualCount: records.filter(
+        (transaction) => !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
+      ).length,
       currencies: [...totals.entries()]
         .map(([currency, amountCents]) => ({
           currency,

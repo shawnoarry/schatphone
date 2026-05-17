@@ -1,0 +1,217 @@
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { nextTick } from 'vue'
+import ControlCenterView from '../src/views/ControlCenterView.vue'
+import {
+  SIMULATION_EVENT_STATUS,
+  SIMULATION_SURPRISE_MODE,
+  SIMULATION_TRIGGER_SOURCE,
+  useSimulationStore,
+} from '../src/stores/simulation'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useSystemStore } from '../src/stores/system'
+
+const DummyView = { template: '<div />' }
+
+const createTestRouter = () =>
+  createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/control-center', component: ControlCenterView },
+      { path: '/home', component: DummyView },
+      { path: '/more', component: DummyView },
+    ],
+  })
+
+const flushUi = async () => {
+  await flushPromises()
+  await nextTick()
+  await flushPromises()
+}
+
+const mountControlCenterView = async () => {
+  const router = createTestRouter()
+  await router.push('/control-center')
+  await router.isReady()
+
+  const wrapper = mount(ControlCenterView, {
+    global: {
+      plugins: [router],
+    },
+  })
+  await flushUi()
+  return { wrapper, router }
+}
+
+describe('ControlCenterView', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T08:00:00.000Z'))
+    setActivePinia(createPinia())
+  })
+
+  test('renders simulation runtime state as a read-only World Hub panel', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+    simulationStore.setSurpriseMode(SIMULATION_SURPRISE_MODE.BALANCED)
+    simulationStore.setModuleEventsEnabled('shopping', false)
+    simulationStore.recordEventLog({
+      eventId: 'food_delivery.rider_delay.v1',
+      moduleKey: 'food_delivery',
+      targetId: 'order-1',
+      adapterKey: 'food_delivery.add_order_event',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'eligible_random_passed',
+      variantId: 'food_delivery.rider_delay.sci_fi.corridor_queue.v1',
+      variantPackId: 'variant_pack_sci_fi',
+      worldContextId: 'world_context_sci_fi',
+      activeWorldBookIds: ['wb_sci_fi'],
+      at: Date.now(),
+    })
+    simulationStore.recordEventLog({
+      eventId: 'simulation.session_tick.v1',
+      moduleKey: 'simulation',
+      targetId: 'global',
+      adapterKey: 'simulation.event_tick_runner',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.SCHEDULED,
+      status: SIMULATION_EVENT_STATUS.SKIPPED,
+      reason: 'tick_cooldown_active',
+      at: Date.now() - 1000,
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 1,
+        contactId: 1,
+        name: 'Eva',
+        kind: 'role',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_order_1:gift',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Eva: Moon Lamp (68.00 CNY).',
+      intensity: 2,
+      metricDeltas: {
+        affinity: 8,
+        trust: 3,
+        intimacy: 4,
+      },
+      milestone: 'Gift purchase recorded',
+    })
+
+    const eventLogCountBeforeMount = simulationStore.eventLogCount
+    const relationshipEventCountBeforeMount = relationshipRuntimeStore.events.length
+    const { wrapper } = await mountControlCenterView()
+
+    expect(wrapper.get('[data-testid="control-center-runtime-panel"]').text()).toContain('Read-only')
+    expect(wrapper.get('[data-testid="control-center-stat-surprise-mode"]').text()).toContain('Balanced')
+    expect(wrapper.get('[data-testid="control-center-stat-event-logs"]').text()).toContain('2')
+    expect(wrapper.get('[data-testid="control-center-module-status"]').text()).toContain('Food Delivery')
+    expect(wrapper.get('[data-testid="control-center-module-status"]').text()).toContain('Shopping / Logistics')
+    expect(wrapper.get('[data-testid="control-center-module-status"]').text()).toContain('Off')
+    expect(wrapper.get('[data-testid="control-center-world-panel"]').text()).toContain('world_context_sci_fi')
+    expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain('Food Delivery rider delay')
+    expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain('Random gate passed')
+    expect(wrapper.findAll('[data-testid="control-center-event-log-item"]')).toHaveLength(2)
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('Relationship Runtime')
+    expect(wrapper.get('[data-testid="control-center-relationship-stat-entities"]').text()).toContain('1')
+    expect(wrapper.get('[data-testid="control-center-relationship-stat-events"]').text()).toContain('1')
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('Eva')
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('Gift purchased')
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('Applied')
+    expect(wrapper.findAll('[data-testid="control-center-relationship-event"]')).toHaveLength(1)
+    expect(simulationStore.eventLogCount).toBe(eventLogCountBeforeMount)
+    expect(relationshipRuntimeStore.events).toHaveLength(relationshipEventCountBeforeMount)
+
+    wrapper.unmount()
+  })
+
+  test('shows the disabled entry explanation without requiring runtime logs', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', false)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const { wrapper } = await mountControlCenterView()
+
+    expect(wrapper.get('[data-testid="control-center-status"]').text()).toContain('Runtime Control Disabled')
+    expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain('No event logs yet')
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('No relationship facts yet')
+    expect(wrapper.get('[data-testid="control-center-runtime-panel"]').text()).toContain(
+      'does not trigger events or mutate module data',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('applies and dismisses pending relationship events from World Hub review', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const applyCandidate = relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 4,
+        name: 'Rin',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'pending_apply',
+      factType: 'confession_candidate',
+      summary: 'A major relationship step waits for World Hub approval.',
+      metricDeltas: {
+        affinity: 20,
+        intimacy: 20,
+      },
+      requiresConfirmation: true,
+    })
+    const dismissCandidate = relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 5,
+        name: 'Mika',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'pending_dismiss',
+      factType: 'conflict_candidate',
+      summary: 'A major conflict can be dismissed.',
+      metricDeltas: {
+        tension: 20,
+      },
+      requiresConfirmation: true,
+    })
+
+    const { wrapper } = await mountControlCenterView()
+
+    await wrapper
+      .get(`[data-testid="control-center-relationship-apply-${applyCandidate.id}"]`)
+      .trigger('click')
+    await flushUi()
+
+    expect(relationshipRuntimeStore.events.find((event) => event.id === applyCandidate.id)?.status).toBe('applied')
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 4, name: 'Rin' }).metrics.affinity).toBe(70)
+
+    await wrapper
+      .get(`[data-testid="control-center-relationship-dismiss-${dismissCandidate.id}"]`)
+      .trigger('click')
+    await flushUi()
+
+    expect(relationshipRuntimeStore.events.find((event) => event.id === dismissCandidate.id)?.status).toBe('dismissed')
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 5, name: 'Mika' }).exists).toBe(false)
+
+    wrapper.unmount()
+  })
+})

@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import SettingsView from '../src/views/SettingsView.vue'
 import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import { useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -140,6 +141,32 @@ describe('SettingsView general section', () => {
     await flushUi()
 
     expect(wrapper.find('[data-testid="settings-general-language"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('edits foreground simulation tick controls from the automation subpage without running events', async () => {
+    const simulationStore = useSimulationStore()
+    simulationStore.resetForTesting()
+
+    const { wrapper } = await mountSettingsView('/settings?menu=automation')
+
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('15')
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(false)
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('0')
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('15')
+    await wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').trigger('click')
+    await wrapper.get('button.w-full').trigger('click')
+    await flushUi()
+
+    expect(simulationStore.settings.foregroundSessionTickEnabled).toBe(true)
+    expect(simulationStore.settings.foregroundSessionTickIntervalMs).toBe(15 * 60 * 1000)
+    expect(simulationStore.eventLogCount).toBe(0)
+    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
+      '15',
+    )
 
     wrapper.unmount()
   })

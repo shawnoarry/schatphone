@@ -17,6 +17,13 @@ Authority note / 职责说明:
 - World-aware event variant rules live in `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
 - Visual event presentation should still follow `docs/process/VISUAL_WORKFLOW.md`.
 
+North star / 北极星原则:
+
+- Events are not meant to restrict the user or turn SchatPhone into a task checklist.
+- Event, growth, and numeric systems should make the virtual phone world feel more alive, more continuous, and more real.
+- If an event mechanic reduces free roleplay, exposes too much machinery, or feels like artificial control, redesign it as optional, lower-impact, or behind World Hub review.
+- The recurring question for future work: does this increase immersive freedom, or does it make the system feel more managed?
+
 ## 2. Current Working State / 当前状态
 
 Recently landed event-relevant baseline:
@@ -26,6 +33,7 @@ Recently landed event-relevant baseline:
 - Chat now has read-only Food Delivery service-account context.
 - Food Delivery order events now support status/exception records such as rider delay, restaurant cancellation, address change, ETA update, and status update.
 - Food Delivery event records are displayed in Food Delivery order cards and Chat Food Delivery service-account cards.
+- Relationship runtime now has its first safe fact-adapter batch: Shopping gift purchase and Food Delivery shared meal.
 - Targeted tests already cover Food Delivery event persistence and display.
 
 Recently installed event-supporting skills:
@@ -202,6 +210,7 @@ Candidate events:
 - Rider arrived downstairs.
 - Address clarification requested.
 - Order completed and Wallet expense suggestion created.
+- Shared meal with a selected contact recorded as a low-impact relationship memory.
 
 Ownership:
 
@@ -209,6 +218,55 @@ Ownership:
 - Chat displays service-account pushes.
 - Map provides ETA/address context.
 - Wallet only receives downstream expense suggestions.
+
+### P2.6 Relationship Fact Adapters
+
+Status:
+
+- DONE for the first expanded safe adapter batch on 2026-05-17.
+
+Landed:
+
+- Shared adapter seam: `src/lib/relationship-fact-adapters.js`.
+- Shopping gift facts: completed gift orders can create `gift_purchased` relationship facts when written to Wallet.
+- Food Delivery shared-meal facts: delivered orders can create `shared_meal` relationship facts when the user selects a contact and writes the expense to Wallet.
+- Phone call facts: completed and missed calls can create low-impact relationship facts when the user binds the call to an existing Chat contact.
+- Map shared-route facts: arrived trips can create low-impact shared-route facts when the user selects a companion.
+- Wallet transfer/expense facts: manual virtual transfers can create low-impact wallet interaction facts when the user binds the transfer to an existing Chat contact.
+- Runtime dedupe: `relationshipRuntimeStore.findEventBySource(sourceModule, sourceId)` prevents duplicate value changes from repeated imports.
+
+Acceptance already covered:
+
+- Shopping and Food Delivery keep ownership of orders.
+- Wallet keeps ownership of ledger records.
+- Relationship runtime receives compact facts only.
+- Contacts and Chat can later read the resulting relationship snapshot.
+- Tests cover adapters and page-level behavior.
+
+Next candidates:
+
+- Calendar scheduled-date / anniversary / missed-plan relationship facts.
+- Gallery shared-photo / people-album / trip-memory relationship facts.
+- Assets property / vehicle / special-item relationship facts.
+- World Hub relationship-event filtering/detail view if pending/applied/dismissed lists become noisy.
+
+### P2.7 World Hub Relationship Runtime Review
+
+Status:
+
+- PARTIAL_DONE on 2026-05-17 for review plus narrow pending-event controls.
+
+Landed:
+
+- World Hub now reads relationship runtime status without mutating it.
+- The panel shows relationship entity count, relationship event count, pending effects, runtime enabled state, top snapshots, and recent facts.
+- Pending relationship events can be applied or dismissed from World Hub.
+- Tests confirm mounting World Hub does not create relationship events, and explicit buttons are required for apply/dismiss.
+
+Remaining:
+
+- Keep direct value editing for affinity, money, unlocks, and task state behind a later explicit optional World Hub design.
+- Add filtering/detail controls if the relationship event list becomes difficult for PM/QA to review.
 
 ### P2.3 Phone And Chat Events
 
@@ -610,20 +668,20 @@ Alternative same-size slice:
 
 - Wire the foreground-session tick controller into an explicit Settings control after the user-facing control location is chosen.
 
-## 17. 2026-05-17 Optional Runtime Control / Director App Baseline
+## 17. 2026-05-17 Optional Runtime Control / World Hub App Baseline
 
 Status:
 
-- `Runtime Control / Director App optional entry baseline` is DONE.
+- `Runtime Control / World Hub App optional entry baseline` is DONE.
 - The event system remains reusable across modules, but the user-facing control surface is optional.
 
 Product decision:
 
-- Runtime control is exposed as the Director app (`app_control_center`, `/control-center`) only when the More toggle `control_center` is enabled.
-- When disabled, Home hides the Director entry and normal module flows continue unchanged.
+- Runtime control is exposed as the World Hub app (`app_control_center`, `/control-center`) only when the More toggle `control_center` is enabled.
+- When disabled, Home hides the World Hub entry and normal module flows continue unchanged.
 - Data intake remains immersive and distributed: roles, assets, map places, shopping products, food delivery restaurants, and other records should still be created inside their owning modules.
-- Director is for orchestration, review, override, and future game-like controls such as event frequency, logs, affinity, funds, unlocks, and task state.
-- Product decision reference: `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_DIRECTOR_APP.md`.
+- World Hub is for orchestration, review, override, and future game-like controls such as event frequency, logs, affinity, funds, unlocks, and task state.
+- Product decision reference: `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`.
 
 Landed code:
 
@@ -642,6 +700,305 @@ Validation target:
 
 Next recommended code slice:
 
-- Connect the Director placeholder to read-only `simulationStore` data first.
+- Connect the World Hub placeholder to read-only `simulationStore` data first.
 - Suggested first read-only fields: event mode, event-log count, recent triggered events, adapter enablement status, and world-variant pack status.
 - Do not add mutation controls until the read-only boundary is verified.
+
+## 18. 2026-05-17 World Hub Readonly Simulation Runtime Panel
+
+Status:
+
+- `P1.10 World Hub Readonly Simulation Runtime Panel` is DONE.
+- `/control-center` now provides a read-only runtime panel backed by `simulationStore`.
+- The panel does not trigger events and does not mutate module-owned data.
+
+Landed code:
+
+- `src/views/ControlCenterView.vue`
+- `tests/control-center-view.test.js`
+
+Runtime coverage:
+
+- Displays Surprise Mode, event-log count, active cooldown count, and recent triggered/skipped/failed counts.
+- Displays module event enablement for Food Delivery, Shopping/logistics, Map, Chat, Calendar, Wallet, and Assets.
+- Displays recent event logs with event/module/source/status/reason/target/world-variant metadata.
+- Displays world-context and event-variant metadata without copying raw WorldBook text.
+
+Validation:
+
+- `npm test -- tests\control-center-view.test.js`
+
+Next recommended code slice:
+
+- Add an explicit user-facing foreground-session tick control location before automatic runtime execution is enabled.
+- Preferred location: Settings > Automation, because it is a real settings surface and can explain Surprise Mode clearly.
+- Keep automatic runtime execution limited to the existing Food Delivery ETA/rider-delay safe-list.
+
+Alternative same-size slice:
+
+- Expose the existing Map read-only delivery event handoff from Food Delivery/Shopping cards as "View route context", without auto-starting Map trips.
+
+## 19. 2026-05-17 Settings Foreground Tick Control Baseline
+
+Status:
+
+- `P1.11 Settings Foreground Tick Control Baseline` is DONE.
+- Settings > Automation now has an explicit Foreground event tick control.
+- This is a persisted control baseline only; app lifecycle automatic execution is still not connected.
+
+Landed code:
+
+- `simulationStore.settings.foregroundSessionTickEnabled`
+- `simulationStore.settings.foregroundSessionTickIntervalMs`
+- `SettingsAutomationSection.vue` foreground event tick controls
+- `SettingsView.vue` save/normalization handlers
+
+Safety policy:
+
+- Toggling this setting does not run an event immediately.
+- The minimum interval is clamped to 1 minute.
+- The first future automatic runtime path must remain limited to Food Delivery ETA/rider-delay safe-list events.
+
+Validation:
+
+- `npm test -- tests\simulation-store.test.js tests\settings-general-section.test.js tests\simulation-foreground-session-tick.test.js`
+
+Next recommended code slice:
+
+- Wire the foreground-session tick controller into `App.vue` lifecycle only when `simulationStore.settings.foregroundSessionTickEnabled === true`.
+- Use a visibility guard, reuse the persisted interval, and write system reports for triggered/skipped ticks.
+- Keep automatic execution off by default.
+
+Alternative same-size slice:
+
+- Expose the existing Map read-only delivery event handoff in Food Delivery/Shopping UI before automatic foreground ticks.
+
+## 20. 2026-05-17 App Lifecycle Foreground Tick Wiring
+
+Status:
+
+- `P1.12 App Lifecycle Foreground Tick Wiring` is DONE.
+- The foreground-session event tick can now run from `App.vue`, but only when the persisted Settings > Automation switch is enabled.
+- Automatic runtime execution remains off by default.
+
+Landed code:
+
+- `src/lib/simulation/foreground-session-tick-lifecycle.js`
+- `src/App.vue`
+- `src/lib/network-report-labels.js`
+- `tests/simulation-foreground-session-tick-lifecycle.test.js`
+- `tests/network-guidance.test.js`
+
+Runtime safety rules:
+
+- The lifecycle does not start unless `simulationStore.settings.foregroundSessionTickEnabled === true`.
+- The lifecycle stops or refuses to start when the phone is locked, the route is `/lock`, or the document is hidden.
+- The interval is read from `foregroundSessionTickIntervalMs` and clamped through the shared foreground tick minimum.
+- Triggered/skipped results write `simulation/foreground_event_tick` diagnostics reports so PM/QA can audit what happened.
+- The underlying tick remains limited to the existing Food Delivery ETA/rider-delay safe-list path.
+
+Product meaning:
+
+- This is the first real bridge from the optional event system into normal app runtime.
+- The bridge is still user-controlled and low-risk: no automatic events happen for users who do not enable the Settings switch.
+- World Hub remains a read-only observation surface for now; it does not trigger or mutate events.
+
+Validation:
+
+- `npm test -- tests\simulation-foreground-session-tick-lifecycle.test.js tests\network-guidance.test.js`
+
+Next recommended code slice:
+
+- Expose the existing Map read-only delivery event handoff in Food Delivery/Shopping cards as a non-mutating "View route context" action.
+- This keeps the next step product-visible while preserving ownership: orders stay in Food Delivery/Shopping, Map only explains route/location context.
+
+Alternative same-size slice:
+
+- Add Wallet expense suggestions from completed Shopping/Food Delivery orders, keeping Wallet as downstream ledger only.
+
+---
+
+## 21. 2026-05-17 Delivery Route Context UI Handoff
+
+Status:
+
+- `P1.13 Delivery Route Context UI Handoff` is DONE.
+- Food Delivery order-event cards now show read-only Map route context.
+- Shopping logistics cards now show the same read-only Map route context when a real logistics event exists.
+
+Landed code:
+
+- `src/components/map/DeliveryRouteContextCard.vue`
+- `src/views/FoodDeliveryView.vue`
+- `src/views/ShoppingView.vue`
+- `tests/food-delivery-view.test.js`
+- `tests/shopping-view.test.js`
+
+Runtime and ownership rules:
+
+- Rendering the card does not start a Map trip.
+- Rendering the card does not write Map trip history.
+- Food Delivery and Shopping still own their orders and events.
+- Map only explains pickup/dropoff, ETA, route summary, carrier, and tracking context.
+
+Product meaning:
+
+- Delivery events now feel less like isolated backend logs and more like visible mobile-app logistics context.
+- The same shared card can later be reused in Chat service-account pushes or Map drawers.
+- This is still a functional handoff baseline, not a final visual rebuild.
+
+Validation:
+
+- `npm test -- tests\food-delivery-view.test.js tests\shopping-view.test.js tests\map-trip-baseline.test.js`
+
+Next recommended code slice:
+
+- Add Wallet expense suggestions from completed Shopping/Food Delivery orders, still requiring explicit user confirmation before Wallet writes.
+
+Alternative same-size slice:
+
+- Add Chat service-account delivery/logistics push cards that reference the same order/event ids without owning fulfillment.
+
+---
+
+## 22. 2026-05-17 Wallet Completed-Order Expense Suggestions
+
+Status:
+
+- `P2 downstream Wallet ledger loop` is DONE for completed Shopping orders and delivered Food Delivery orders.
+- Wallet remains a downstream ledger and does not own Shopping or Food Delivery orders.
+
+Landed behavior:
+
+- Shopping Wallet suggestions now appear only after a Shopping order is completed.
+- Food Delivery Wallet suggestions now appear only after a Food Delivery order is marked delivered.
+- Writing an expense to Wallet requires an explicit user click.
+- Wallet source filters now separate `Orders` from `Manual` and `Chat`.
+- Contacts relationship ledger summaries can distinguish order-origin ledger records from manual and Chat-origin records.
+
+Validation:
+
+- `npm test -- tests\wallet-store.test.js tests\contacts-wallet-ledger-context.test.js tests\shopping-view.test.js tests\food-delivery-view.test.js`
+
+Product meaning:
+
+- Shopping and Food Delivery can now feed life-simulation spending records into Wallet without moving order ownership.
+- These records are suitable future facts for relationship/growth adapters, for example gifts, shared meals, repayments, or expense-related tension.
+
+Next recommended code slice:
+
+- Start the Relationship Growth Event System baseline documented in `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`.
+- Build the relationship runtime store/truth-layer slice before adding automatic affinity or stage changes.
+
+Alternative same-size slice:
+
+- Add Chat service-account delivery/logistics push cards using existing order/event ids and the same ownership boundaries.
+
+---
+
+## 23. 2026-05-17 Relationship Runtime Baseline
+
+Status:
+
+- `P1 relationship/growth runtime baseline` is DONE for the shared store, backup support, Contacts read-only display, and Chat prompt context.
+- Automatic romance/conflict progression is still intentionally deferred.
+
+Landed behavior:
+
+- Added `src/stores/relationshipRuntime.js` as the shared relationship/growth truth layer.
+- Relationship runtime can store role/contact entities, affinity/trust/intimacy/tension/dependency metrics, relationship stage, milestones, growth traits, event history, and pending major effects.
+- Low-impact facts can apply locally; high-impact or explicitly risky facts remain `pending_confirmation`.
+- Contacts now shows a read-only relationship snapshot for role profiles.
+- Chat prompt assembly now includes compact relationship runtime context for role conversations.
+- Settings backup/import rollback and storage diagnostics include `store:relationship-runtime`.
+
+Validation:
+
+- `npm test -- tests\relationship-runtime-store.test.js tests\contacts-wallet-ledger-context.test.js tests\chat-worldbook-binding-visibility.test.js`
+
+Product meaning:
+
+- The project now has a reusable relationship-growth foundation that can serve Chat, Contacts, Map, Shopping, Food Delivery, Wallet, Phone, Calendar, Gallery, Assets, and future World Hub controls.
+- This does not limit user freedom. It stores continuity so the virtual phone world can feel more alive.
+
+Next recommended code slice:
+
+- Add the first safe fact adapter: Wallet/Shopping gift or shared-expense facts into `relationshipRuntimeStore.recordRelationshipFact(...)`.
+- Keep all writes explicit, low-impact, and test-covered.
+
+Alternative same-size slice:
+
+- Add a World Hub read-only panel showing relationship runtime status and pending relationship events, without enabling direct value editing yet.
+
+---
+
+## 24. 2026-05-17 Expanded Relationship Fact Adapter Batch
+
+Status:
+
+- `P2.6 Relationship Fact Adapters` is DONE for the first expanded safe adapter batch.
+- `P2.7 World Hub Relationship Runtime Review` is PARTIAL_DONE with narrow pending-event controls.
+
+Landed behavior:
+
+- Phone can record completed-call and missed-call relationship facts when the user binds the call to an existing Chat contact.
+- Map can record shared-route relationship facts when the user selects a companion and acknowledges an arrived trip.
+- Wallet can record transfer/shared-expense relationship facts when the user binds a manual virtual transfer to an existing Chat contact.
+- World Hub can apply or dismiss `pending_confirmation` relationship events.
+- Direct value editing, funds editing, unlock editing, and hidden romance/conflict automation remain deferred.
+
+Ownership:
+
+- Phone owns call logs and missed-call notifications.
+- Map owns trips, route state, and trip history.
+- Wallet owns ledger records.
+- Relationship runtime owns only compact relationship facts and snapshots.
+- World Hub only reviews pending effects; it does not become the data-entry surface for normal module records.
+
+Validation:
+
+- `npm test -- tests\relationship-fact-adapters.test.js tests\relationship-runtime-store.test.js tests\phone-store.test.js tests\phone-view.test.js tests\wallet-store.test.js tests\wallet-view.test.js tests\map-view-information-architecture.test.js tests\control-center-view.test.js`
+
+Product meaning:
+
+- More ordinary phone-life actions can now become relationship continuity: calls, missed calls, shared routes, and money interactions.
+- These memories are explicit and low-impact by default, so they support immersion without restricting user freedom.
+- Chat and Contacts can read these facts through the existing relationship runtime context.
+
+Next recommended code slice:
+
+- Start the Calendar / Reminders split before adding Calendar relationship facts.
+- Add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
+
+Alternative same-size slice:
+
+- Add Assets relationship facts for home/property, vehicle, investment pressure, and special-item ownership memories.
+
+---
+
+## 25. 2026-05-17 Calendar / Reminders Split For Event And Task Cues
+
+Status:
+
+- `P2.8 Calendar / Reminders product boundary` is DOCUMENTED.
+- Product decision: `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`.
+- Module naming table: `docs/pm/MODULE_NAME_GLOSSARY.md`.
+
+Product meaning:
+
+- Calendar should be the real schedule/date app: plans, dates, anniversaries, recurring events, and confirmed timed items.
+- Reminders should be the user-facing action queue: callbacks, package follow-ups, Food Delivery updates, Stock review cues, Map place follow-ups, and world/task objectives.
+- World Hub remains optional runtime control. It can review/override event systems later, but normal reminder management should not require World Hub.
+
+Event-system rule:
+
+- Raw generated cues should enter Reminders first.
+- Only user-confirmed, date/time-bearing items should become Calendar events.
+- Relationship runtime should not treat every raw cue as a relationship memory.
+- World-aware task packs may surface actionable objectives through Reminders while World Hub keeps advanced controls optional.
+
+Recommended next:
+
+- Add a non-breaking `Reminders / 提醒事项` code seam before moving existing Calendar cue arrays.
+- Defer Calendar relationship facts until Calendar owns only true schedule/date facts.
+- Continue Gallery relationship facts as a parallel safe candidate if Calendar split needs more planning.

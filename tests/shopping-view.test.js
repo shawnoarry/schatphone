@@ -8,6 +8,8 @@ import { useAssetsStore } from '../src/stores/assets'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
+import { useMapStore } from '../src/stores/map'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import {
   SHOPPING_ORDER_EVENT_TYPE,
   useShoppingStore,
@@ -40,9 +42,11 @@ describe('ShoppingView', () => {
     const store = useShoppingStore()
     const assetsStore = useAssetsStore()
     const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
     const walletStore = useWalletStore()
     store.resetForTesting()
     assetsStore.resetForTesting()
+    relationshipRuntimeStore.resetForTesting()
     walletStore.resetForTesting()
     const product = store.upsertProduct({
       id: 'product_view_lens',
@@ -86,6 +90,8 @@ describe('ShoppingView', () => {
       name: sourceContact.name,
       chatId: 1,
       contactId: 1,
+      profileId: sourceContact.profileId,
+      kind: sourceContact.kind,
       sourceModule: 'chat',
     })
     expect(wrapper.find(`[data-testid="shopping-order-gift-${order.id}"]`).text()).toContain(sourceContact.name)
@@ -107,10 +113,22 @@ describe('ShoppingView', () => {
     expect(wrapper.find(`[data-testid="shopping-transfer-asset-${product.id}"]`).attributes('disabled')).toBeDefined()
 
     expect(walletStore.transactionCount).toBe(0)
+    expect(wrapper.find(`[data-testid="shopping-wallet-suggestion-${order.id}"]`).exists()).toBe(false)
+
+    store.markOrderCompleted(order.id)
+    await flushPromises()
     expect(wrapper.find(`[data-testid="shopping-wallet-suggestion-${order.id}"]`).exists()).toBe(true)
+    expect(wrapper.get(`[data-testid="shopping-relationship-suggestion-${order.id}"]`).text()).toContain(
+      sourceContact.name,
+    )
 
     await wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).trigger('click')
     const walletTransaction = walletStore.findTransactionBySource('shopping_wallet_expense', order.id)
+    const relationshipSummary = relationshipRuntimeStore.summarizeEntityForTarget({
+      profileId: sourceContact.profileId,
+      contactId: sourceContact.id,
+      name: sourceContact.name,
+    })
 
     expect(walletTransaction).toMatchObject({
       type: 'expense',
@@ -121,6 +139,9 @@ describe('ShoppingView', () => {
       sourceModule: 'shopping_wallet_expense',
       sourceId: order.id,
     })
+    expect(relationshipSummary.metrics.affinity).toBe(58)
+    expect(relationshipSummary.metrics.intimacy).toBe(24)
+    expect(relationshipSummary.latestEventSummary).toContain('Gift purchased')
     expect(wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
 
     await wrapper.find('[data-testid="shopping-return-chat"]').trigger('click')
@@ -301,8 +322,10 @@ describe('ShoppingView', () => {
     const router = createTestRouter()
     const store = useShoppingStore()
     const calendarStore = useCalendarStore()
+    const mapStore = useMapStore()
     store.resetForTesting()
     calendarStore.resetForTesting()
+    mapStore.resetTripRuntimeForTesting()
     const product = store.upsertProduct({
       id: 'logistics_order_lens',
       title: 'Mira Lens',
@@ -317,6 +340,9 @@ describe('ShoppingView', () => {
       summary: 'Standard courier picked up Mira Lens.',
       carrierName: 'Standard Courier',
       trackingCode: 'TRACK-MIRA-01',
+      pickupPoint: 'Standard Courier Station 8',
+      locationHint: 'North Hub',
+      etaDays: 2,
     })
 
     await router.push('/shopping?category=logistics')
@@ -339,6 +365,14 @@ describe('ShoppingView', () => {
     expect(wrapper.get(`[data-testid="shopping-logistics-latest-event-${order.id}"]`).text()).toContain(
       'TRACK-MIRA-01',
     )
+    const mapContext = wrapper.get(`[data-testid="shopping-logistics-map-context-${order.id}"]`)
+    expect(mapContext.text()).toContain('Map route context')
+    expect(mapContext.text()).toContain('Shopping logistics')
+    expect(mapContext.text()).toContain('Standard Courier Station 8')
+    expect(mapContext.text()).toContain('TRACK-MIRA-01')
+    expect(mapContext.text()).toContain('does not start a trip')
+    expect(mapStore.tripState.status).toBe('idle')
+    expect(mapStore.tripHistory).toHaveLength(0)
     expect(wrapper.get(`[data-testid="shopping-logistics-status-${order.id}"]`).text()).toContain(
       'Pending follow-up',
     )

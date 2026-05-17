@@ -6,6 +6,8 @@ const SIMULATION_STORAGE_KEY = 'store:simulation'
 const SIMULATION_STORAGE_VERSION = 1
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
+export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
+export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
 
 export const SIMULATION_SURPRISE_MODE = Object.freeze({
   OFF: 'off',
@@ -35,6 +37,8 @@ const EVENT_STATUS_VALUES = new Set(Object.values(SIMULATION_EVENT_STATUS))
 const DEFAULT_SIMULATION_SETTINGS = Object.freeze({
   surpriseMode: SIMULATION_SURPRISE_MODE.LOW,
   enabledModules: Object.freeze({}),
+  foregroundSessionTickEnabled: false,
+  foregroundSessionTickIntervalMs: SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
 })
 
 let eventLogSequence = 0
@@ -137,6 +141,14 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
   return {
     surpriseMode: normalizeSurpriseMode(source.surpriseMode),
     enabledModules: normalizeEnabledModules(source.enabledModules),
+    foregroundSessionTickEnabled: source.foregroundSessionTickEnabled === true,
+    foregroundSessionTickIntervalMs: Math.max(
+      SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+      normalizePositiveMs(
+        source.foregroundSessionTickIntervalMs,
+        SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
+      ),
+    ),
   }
 }
 
@@ -300,6 +312,26 @@ export const useSimulationStore = defineStore('simulation', () => {
       surpriseMode: nextMode,
     }
     return nextMode
+  }
+
+  const setForegroundSessionTickEnabled = (enabled = true) => {
+    settings.value = {
+      ...settings.value,
+      foregroundSessionTickEnabled: enabled === true,
+    }
+    return settings.value.foregroundSessionTickEnabled
+  }
+
+  const setForegroundSessionTickIntervalMs = (intervalMs) => {
+    const nextIntervalMs = Math.max(
+      SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+      normalizePositiveMs(intervalMs, SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS),
+    )
+    settings.value = {
+      ...settings.value,
+      foregroundSessionTickIntervalMs: nextIntervalMs,
+    }
+    return nextIntervalMs
   }
 
   const recordEventLog = (input = {}) => {
@@ -484,6 +516,8 @@ export const useSimulationStore = defineStore('simulation', () => {
     settings: {
       surpriseMode: settings.value.surpriseMode,
       enabledModules: { ...settings.value.enabledModules },
+      foregroundSessionTickEnabled: settings.value.foregroundSessionTickEnabled === true,
+      foregroundSessionTickIntervalMs: settings.value.foregroundSessionTickIntervalMs,
     },
   })
 
@@ -540,6 +574,8 @@ export const useSimulationStore = defineStore('simulation', () => {
     isModuleEventsEnabled,
     setModuleEventsEnabled,
     setSurpriseMode,
+    setForegroundSessionTickEnabled,
+    setForegroundSessionTickIntervalMs,
     recordEventLog,
     recordEventTrigger,
     markCooldown,

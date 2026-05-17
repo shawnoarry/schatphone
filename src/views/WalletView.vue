@@ -4,15 +4,21 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { recordWalletSharedTransferRelationshipFact } from '../lib/relationship-fact-adapters'
+import { useChatStore } from '../stores/chat'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
+const chatStore = useChatStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const walletStore = useWalletStore()
 const { transactionCount, transactionSourceSummary, primaryBalance, balances } = storeToRefs(walletStore)
 
 const transferDraft = ref({
+  contactId: '',
   amount: '',
   currency: 'CNY',
   counterparty: '',
@@ -38,10 +44,31 @@ const sourceFilterOptions = computed(() => [
     label: t('Chat', 'Chat'),
     count: transactionSourceSummary.value.chat,
   },
+  {
+    key: WALLET_TRANSACTION_SOURCE_FILTERS.ORDERS,
+    label: t('订单', 'Orders'),
+    count: transactionSourceSummary.value.orders,
+  },
 ])
 
 const recentTransactions = computed(() =>
   walletStore.listTransactionsBySourceFilter(sourceFilter.value).slice(0, 20),
+)
+
+const relationshipContactOptions = computed(() =>
+  chatStore.contacts
+    .filter((contact) => contact.kind !== 'service' && contact.kind !== 'official')
+    .map((contact) => ({
+      ...contact,
+      optionValue: String(contact.id),
+      optionLabel: contact.name || `Contact ${contact.id}`,
+    })),
+)
+
+const selectedRelationshipContact = computed(() =>
+  relationshipContactOptions.value.find(
+    (contact) => contact.optionValue === String(transferDraft.value.contactId || ''),
+  ) || null,
 )
 
 const goHome = () => {
@@ -61,17 +88,30 @@ const showFeedback = (type, message) => {
 
 const isChatSource = (transaction) => transaction?.sourceModule === 'chat_transfer'
 
+const isOrderSource = (transaction) =>
+  transaction?.sourceModule === 'shopping_wallet_expense' ||
+  transaction?.sourceModule === 'food_delivery_wallet_expense'
+
 const getTransactionSourceLabel = (transaction) =>
-  isChatSource(transaction) ? t('来自 Chat', 'From Chat') : t('手动记录', 'Manual')
+  isChatSource(transaction)
+    ? t('来自 Chat', 'From Chat')
+    : isOrderSource(transaction)
+      ? t('来自订单', 'From Orders')
+      : t('手动记录', 'Manual')
 
 const getTransactionSourceClass = (transaction) =>
-  isChatSource(transaction) ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
+  isChatSource(transaction)
+    ? 'bg-amber-50 text-amber-700'
+    : isOrderSource(transaction)
+      ? 'bg-emerald-50 text-emerald-700'
+      : 'bg-gray-100 text-gray-600'
 
 const submitTransfer = () => {
+  const relationshipTarget = selectedRelationshipContact.value
   const created = walletStore.addTransferTransaction({
     amount: transferDraft.value.amount,
     currency: transferDraft.value.currency,
-    counterparty: transferDraft.value.counterparty,
+    counterparty: relationshipTarget?.name || transferDraft.value.counterparty,
     note: transferDraft.value.note,
   })
 
@@ -80,6 +120,15 @@ const submitTransfer = () => {
     return
   }
 
+  if (relationshipTarget) {
+    recordWalletSharedTransferRelationshipFact({
+      relationshipRuntimeStore,
+      transaction: created,
+      target: relationshipTarget,
+    })
+  }
+
+  transferDraft.value.contactId = ''
   transferDraft.value.amount = ''
   transferDraft.value.counterparty = ''
   transferDraft.value.note = ''
@@ -127,11 +176,26 @@ const removeTransaction = (transactionId) => {
 
       <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
         <p class="text-sm font-semibold">{{ t('记录虚拟转账', 'Record virtual transfer') }}</p>
+        <select
+          v-model="transferDraft.contactId"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+          data-testid="wallet-relationship-contact"
+        >
+          <option value="">{{ t('Optional Chat contact binding', 'Optional Chat contact binding') }}</option>
+          <option
+            v-for="contact in relationshipContactOptions"
+            :key="contact.id"
+            :value="contact.optionValue"
+          >
+            {{ contact.optionLabel }}
+          </option>
+        </select>
         <div class="grid grid-cols-2 gap-2">
           <input
             v-model="transferDraft.amount"
             type="text"
             class="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+            data-testid="wallet-transfer-amount"
             :placeholder="t('金额', 'Amount')"
           />
           <input
@@ -146,6 +210,8 @@ const removeTransaction = (transactionId) => {
           v-model="transferDraft.counterparty"
           type="text"
           class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+          data-testid="wallet-transfer-counterparty"
+          :disabled="Boolean(selectedRelationshipContact)"
           :placeholder="t('对象，例如角色名', 'Counterparty, e.g. role name')"
         />
         <input
@@ -157,6 +223,7 @@ const removeTransaction = (transactionId) => {
         <button
           @click="submitTransfer"
           class="w-full rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+          data-testid="wallet-submit-transfer"
         >
           {{ t('添加流水', 'Add transaction') }}
         </button>

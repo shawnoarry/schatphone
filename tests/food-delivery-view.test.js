@@ -3,8 +3,11 @@ import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useMapStore } from '../src/stores/map'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useWalletStore } from '../src/stores/wallet'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 
 const DummyView = { template: '<div />' }
@@ -120,8 +123,18 @@ describe('FoodDeliveryView', () => {
   test('shows Chat service source banner and highlights linked food order', async () => {
     const router = createTestRouter()
     const store = useFoodDeliveryStore()
-    const activeRestaurant = store.listRestaurantsByCategory('restaurants')[0]
-    const menuItem = store.listMenuByRestaurant(activeRestaurant.id)[0]
+    const activeRestaurant = store.upsertRestaurant({
+      id: 'food_wallet_shop',
+      name: 'Wallet Kitchen',
+      category: 'restaurants',
+      deliveryFee: '4.00',
+    })
+    const menuItem = store.upsertMenuItem({
+      id: 'food_wallet_item',
+      restaurantId: activeRestaurant.id,
+      title: 'Wallet Meal',
+      price: '36.00',
+    })
     store.addToCart(menuItem.id)
     const order = store.checkoutCart({
       deliveryAddress: 'Map Pin A',
@@ -141,6 +154,7 @@ describe('FoodDeliveryView', () => {
         plugins: [router],
       },
     })
+    const mapStore = useMapStore()
 
     expect(wrapper.get('[data-testid="food-delivery-chat-source-banner"]').text()).toContain(
       activeRestaurant.name,
@@ -150,6 +164,14 @@ describe('FoodDeliveryView', () => {
     )
     const eventCard = wrapper.get(`[data-testid="food-delivery-order-event-${order.id}-${event.id}"]`)
     expect(eventCard.text()).toContain('Rider is delayed by rain.')
+    const mapContext = wrapper.get(`[data-testid="food-delivery-event-map-context-${order.id}-${event.id}"]`)
+    expect(mapContext.text()).toContain('Map route context')
+    expect(mapContext.text()).toContain('Food Delivery')
+    expect(mapContext.text()).toContain('Map Pin A')
+    expect(mapContext.text()).toContain('42 min')
+    expect(mapContext.text()).toContain('does not start a trip')
+    expect(mapStore.tripState.status).toBe('idle')
+    expect(mapStore.tripHistory).toHaveLength(0)
     expect(store.orderCount).toBe(1)
     expect(store.cartQuantity).toBe(0)
     wrapper.unmount()
@@ -189,6 +211,83 @@ describe('FoodDeliveryView', () => {
     expect(
       wrapper.find(`[data-testid="food-delivery-order-event-${order.id}-${store.orders[0].events[0].id}"]`).exists(),
     ).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('suggests delivered food orders for explicit Wallet expense recording', async () => {
+    const router = createTestRouter()
+    const store = useFoodDeliveryStore()
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    relationshipRuntimeStore.resetForTesting()
+    walletStore.resetForTesting()
+    const activeRestaurant = store.upsertRestaurant({
+      id: 'food_wallet_shop',
+      name: 'Wallet Kitchen',
+      category: 'restaurants',
+      deliveryFee: '4.00',
+    })
+    const menuItem = store.upsertMenuItem({
+      id: 'food_wallet_item',
+      restaurantId: activeRestaurant.id,
+      title: 'Wallet Meal',
+      price: '36.00',
+    })
+    store.addToCart(menuItem.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Wallet Address',
+      note: 'Wallet food order.',
+    })
+
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find(`[data-testid="food-delivery-wallet-suggestion-${order.id}"]`).exists()).toBe(false)
+
+    await wrapper.get(`[data-testid="food-delivery-mark-delivered-${order.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(store.orders[0]?.status).toBe('delivered')
+    expect(wrapper.get(`[data-testid="food-delivery-wallet-suggestion-${order.id}"]`).text()).toContain(
+      activeRestaurant.name,
+    )
+    expect(walletStore.transactionCount).toBe(0)
+
+    const sharedMealContact = chatStore.getContactById(1)
+    await wrapper.get(`[data-testid="food-delivery-shared-meal-contact-${order.id}"]`).setValue('1')
+    await flushPromises()
+    expect(wrapper.get(`[data-testid="food-delivery-relationship-suggestion-${order.id}"]`).text()).toContain(
+      sharedMealContact.name,
+    )
+
+    await wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).trigger('click')
+    await flushPromises()
+
+    const transaction = walletStore.findTransactionBySource('food_delivery_wallet_expense', order.id)
+    const relationshipSummary = relationshipRuntimeStore.summarizeEntityForTarget({
+      profileId: sharedMealContact.profileId,
+      contactId: sharedMealContact.id,
+      name: sharedMealContact.name,
+    })
+    expect(transaction).toMatchObject({
+      type: 'expense',
+      title: 'Food Delivery order',
+      counterparty: activeRestaurant.name,
+      sourceModule: 'food_delivery_wallet_expense',
+      sourceId: order.id,
+    })
+    expect(relationshipSummary.metrics.affinity).toBe(56)
+    expect(relationshipSummary.metrics.intimacy).toBe(25)
+    expect(relationshipSummary.latestEventSummary).toContain('Shared meal')
+    expect(wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })
 

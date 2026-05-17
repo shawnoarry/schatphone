@@ -129,15 +129,19 @@ const normalizeGiftRecipient = (value = {}) => {
     : value
   const chatId = toInt(rawRecipient.chatId || rawRecipient.contactId || rawRecipient.recipientChatId, 0)
   const contactId = toInt(rawRecipient.contactId || rawRecipient.chatId || rawRecipient.recipientContactId, 0)
+  const profileId = toInt(rawRecipient.profileId || rawRecipient.roleProfileId, 0)
   const name = normalizeText(rawRecipient.name || rawRecipient.recipientName || rawRecipient.recipient, '', 120)
+  const kind = normalizeText(rawRecipient.kind, profileId > 0 ? 'role' : 'contact', 40)
   const sourceModule = normalizeText(rawRecipient.sourceModule || rawRecipient.recipientSourceModule, '', 40)
   const sourceId = normalizeText(rawRecipient.sourceId || rawRecipient.recipientSourceId, '', 140)
 
-  if (!name && chatId <= 0 && contactId <= 0 && !sourceModule && !sourceId) {
+  if (!name && chatId <= 0 && contactId <= 0 && profileId <= 0 && !sourceModule && !sourceId) {
     return {
       name: '',
       chatId: 0,
       contactId: 0,
+      profileId: 0,
+      kind: '',
       sourceModule: '',
       sourceId: '',
     }
@@ -147,6 +151,8 @@ const normalizeGiftRecipient = (value = {}) => {
     name,
     chatId: Math.max(0, chatId),
     contactId: Math.max(0, contactId),
+    profileId: Math.max(0, profileId),
+    kind,
     sourceModule,
     sourceId,
   }

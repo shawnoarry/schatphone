@@ -7,11 +7,14 @@ import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useGalleryStore } from './stores/gallery'
 import { useMapStore } from './stores/map'
+import { useSimulationStore } from './stores/simulation'
+import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
 import {
   appendForegroundBannerQueue,
   collectForegroundBannerNotes,
 } from './lib/foreground-banner-queue'
+import { createForegroundSessionTickLifecycle } from './lib/simulation/foreground-session-tick-lifecycle'
 import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from './lib/notification-presentation'
 import {
   cancelScheduledPushNotification,
@@ -29,6 +32,8 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
+const simulationStore = useSimulationStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings, notifications } = storeToRefs(systemStore)
@@ -68,6 +73,8 @@ let backupReminderTimerId = null
 let backupReminderVisibilityHandler = null
 let automationTickTimerId = null
 let automationVisibilityHandler = null
+let simulationForegroundTickLifecycle = null
+let simulationForegroundVisibilityHandler = null
 let customCssStyleEl = null
 let mapAutoNextAt = 0
 let chatAutoPushSyncPromise = null
@@ -377,6 +384,19 @@ watch(
 
 watch(
   () => ({
+    foregroundSessionTickEnabled: simulationStore.settings?.foregroundSessionTickEnabled,
+    foregroundSessionTickIntervalMs: simulationStore.settings?.foregroundSessionTickIntervalMs,
+    isLocked: systemStore.isLocked,
+    routePath: route.path,
+  }),
+  () => {
+    restartSimulationForegroundTickLifecycle()
+  },
+  { deep: true },
+)
+
+watch(
+  () => ({
     pushEnabled: settings.value.system?.realPushEnabled,
     pushActive: settings.value.system?.pushSubscriptionActive,
     pushServerUrl: settings.value.system?.pushServerUrl,
@@ -495,6 +515,29 @@ const restartAutomationTickTimer = () => {
     if (document.hidden) return
     void runAutomationRootTick()
   }, interval)
+}
+
+const ensureSimulationForegroundTickLifecycle = () => {
+  if (simulationForegroundTickLifecycle) return simulationForegroundTickLifecycle
+  simulationForegroundTickLifecycle = createForegroundSessionTickLifecycle({
+    simulationStore,
+    foodDeliveryStore,
+    systemStore,
+    route,
+    documentRef: typeof document !== 'undefined' ? document : null,
+    writeReport: (report) => {
+      systemStore.addApiReport(report)
+    },
+  })
+  return simulationForegroundTickLifecycle
+}
+
+const restartSimulationForegroundTickLifecycle = () => {
+  ensureSimulationForegroundTickLifecycle().restart()
+}
+
+const stopSimulationForegroundTickLifecycle = () => {
+  simulationForegroundTickLifecycle?.stop()
 }
 
 const runPushStartupSelfHeal = async () => {
@@ -773,6 +816,11 @@ onMounted(() => {
     void runAutomationRootTick()
   }
   document.addEventListener('visibilitychange', automationVisibilityHandler, { passive: true })
+  restartSimulationForegroundTickLifecycle()
+  simulationForegroundVisibilityHandler = () => {
+    restartSimulationForegroundTickLifecycle()
+  }
+  document.addEventListener('visibilitychange', simulationForegroundVisibilityHandler, { passive: true })
   chatAutoPushVisibilityHandler = () => {
     void syncChatAutoPushSchedules({
       force: document.hidden === true,
@@ -806,6 +854,11 @@ onBeforeUnmount(() => {
   if (automationVisibilityHandler) {
     document.removeEventListener('visibilitychange', automationVisibilityHandler)
     automationVisibilityHandler = null
+  }
+  stopSimulationForegroundTickLifecycle()
+  if (simulationForegroundVisibilityHandler) {
+    document.removeEventListener('visibilitychange', simulationForegroundVisibilityHandler)
+    simulationForegroundVisibilityHandler = null
   }
   if (chatAutoPushVisibilityHandler) {
     document.removeEventListener('visibilitychange', chatAutoPushVisibilityHandler)

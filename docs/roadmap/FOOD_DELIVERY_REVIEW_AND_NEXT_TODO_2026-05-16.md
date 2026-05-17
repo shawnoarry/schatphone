@@ -42,7 +42,7 @@ Current user-facing entry:
 - Chat only displays Food Delivery service-account pushes and routes back to Food Delivery.
 - Map only provides location, route, pickup/dropoff, nearby, and ETA context.
 - Gallery owns local image files and preview lifecycles.
-- Wallet may later consume completed-order expense suggestions, but Wallet must not own Food Delivery orders.
+- Wallet consumes delivered-order expense suggestions after explicit user confirmation, but Wallet must not own Food Delivery orders.
 - Home and Appearance own the folder shell and visual folder behavior. Food Delivery owns the destination app surface after navigation.
 
 ## Not Fully Implemented Yet
@@ -50,7 +50,7 @@ Current user-facing entry:
 - Detailed status and exception events are not deep enough yet.
 - Rider delay, restaurant cancellation, address change, and ETA update need explicit event/message-card treatment.
 - Chat Food Delivery service-account cards should show those events as read-only notifications.
-- Wallet food-expense suggestions from completed Food Delivery orders are not implemented yet.
+- Wallet food-expense suggestions from delivered Food Delivery orders are implemented as an explicit-confirmation downstream ledger loop.
 - Map still provides read-only context only; deeper courier route/progress presentation remains future work.
 - Visual polish is still pending. The current page is a functional baseline, not the final immersive Food Delivery app look.
 
@@ -68,7 +68,7 @@ Current user-facing entry:
 2. DONE: Render Food Delivery status/exception message cards in Food Delivery.
 3. DONE: Surface the same events in the Chat Food Delivery service account as read-only notification cards.
 4. NEXT: Add richer generated event presets/copy for rider delay, restaurant cancellation, address change, and ETA update.
-5. NEXT: Add Wallet food-expense suggestions from completed Food Delivery orders.
+5. DONE: Add Wallet food-expense suggestions from delivered Food Delivery orders.
 6. LATER: Deepen Map courier route/progress presentation while keeping Map as a location/ETA provider only.
 
 ## Acceptance Criteria For Next Slice
