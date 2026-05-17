@@ -6,6 +6,7 @@ import HomeView from '../src/views/HomeView.vue'
 import ShoppingView from '../src/views/ShoppingView.vue'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 import AssetsView from '../src/views/AssetsView.vue'
+import ControlCenterView from '../src/views/ControlCenterView.vue'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -18,6 +19,7 @@ const createTestRouter = () =>
       { path: '/shopping', component: ShoppingView },
       { path: '/food-delivery', component: FoodDeliveryView },
       { path: '/assets', component: AssetsView },
+      { path: '/control-center', component: ControlCenterView },
       { path: '/chat', component: DummyView },
       { path: '/contacts', component: DummyView },
       { path: '/settings', component: DummyView },
@@ -53,8 +55,36 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('购物')
     expect(wrapper.text()).toContain('资产')
+    wrapper.unmount()
+  })
+
+  test('shows the optional Director app only after the runtime control toggle is enabled', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.findAll('.home-dot')[1].trigger('click')
+    expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
+
+    store.setMoreFeatureToggle('control_center', true)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('导演台')
     wrapper.unmount()
   })
 

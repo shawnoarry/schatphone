@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import SettingsView from '../src/views/SettingsView.vue'
+import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -148,6 +149,55 @@ describe('SettingsView general section', () => {
 
     expect(wrapper.get('[data-testid="settings-about-info-card"]').text()).toContain('SchatPhone')
     expect(wrapper.get('[data-testid="settings-about-info-card"]').text()).toContain('1.2.0')
+
+    wrapper.unmount()
+  })
+
+  test('runs a manual simulation tick diagnostic from the about subpage', async () => {
+    const systemStore = useSystemStore()
+    const foodDeliveryStore = useFoodDeliveryStore()
+    foodDeliveryStore.resetForTesting()
+    const restaurant = foodDeliveryStore.upsertRestaurant({
+      id: 'settings_tick_restaurant',
+      name: 'Settings Tick Kitchen',
+      category: 'restaurants',
+      deliveryFee: '5.00',
+    })
+    const menuItem = foodDeliveryStore.upsertMenuItem({
+      id: 'settings_tick_item',
+      restaurantId: restaurant.id,
+      title: 'Settings Tick Meal',
+      price: '30.00',
+    })
+    foodDeliveryStore.addToCart(menuItem.id)
+    const order = foodDeliveryStore.checkoutCart({
+      deliveryAddress: 'Settings Tick Address',
+    })
+
+    const { wrapper } = await mountSettingsView('/settings?menu=about')
+
+    await wrapper.get('[data-testid="settings-run-simulation-tick"]').trigger('click')
+    await flushUi()
+
+    expect(foodDeliveryStore.orders.find((item) => item.id === order.id)?.events[0]).toMatchObject({
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+    })
+    expect(systemStore.apiReports[0]).toMatchObject({
+      module: 'simulation',
+      action: 'run_event_tick',
+      code: 'SIMULATION_TICK_TRIGGERED',
+      level: 'info',
+    })
+    expect(wrapper.get('[data-testid="settings-simulation-tick-card"]').text()).toContain(
+      'food_delivery.random_order_pilot.v1',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(
+      '外卖 ETA 更新',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(
+      '已触发',
+    )
+    expect(wrapper.findAll('[data-testid="settings-simulation-event-log-item"]').length).toBeGreaterThan(0)
 
     wrapper.unmount()
   })

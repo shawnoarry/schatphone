@@ -96,6 +96,7 @@ const reportModuleOptions = computed(() => [
   { value: 'push', label: t('推送', 'Push') },
   { value: 'map', label: t('地图', 'Map') },
   { value: 'shopping', label: t('购物', 'Shopping') },
+  { value: 'simulation', label: t('事件模拟', 'Simulation') },
 ])
 const reportLevelOptions = computed(() => [
   { value: 'all', label: t('全部级别', 'All levels') },

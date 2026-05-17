@@ -3,15 +3,19 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
-import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
+import { useSimulationStore } from '../stores/simulation'
+import { useSystemStore } from '../stores/system'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
   findFoodDeliveryCategory,
 } from '../lib/planned-module-registry'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
+import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,10 +23,13 @@ const { t, languageBase } = useI18n()
 const foodDeliveryStore = useFoodDeliveryStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
+const simulationStore = useSimulationStore()
+const systemStore = useSystemStore()
 const FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID = 'food-delivery-view'
 const foodImagePreviewMap = reactive({})
 
 const customFeedback = ref('')
+const eventFeedback = ref('')
 const restaurantDraft = reactive({
   name: '',
   category: 'restaurants',
@@ -139,6 +146,88 @@ const chatSourceOrder = computed(() => {
 })
 
 const isHighlightedOrder = (orderId) => isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
+
+const foodDeliveryEventTypeLabel = (type) => {
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY) return t('骑手延迟', 'Rider delay')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) return t('商家取消', 'Restaurant cancelled')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE) return t('地址变更', 'Address changed')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE) return t('ETA 更新', 'ETA update')
+  return t('状态更新', 'Status update')
+}
+
+const formatFoodDeliveryEventTime = (timestamp) => {
+  const date = new Date(Number(timestamp || 0))
+  if (Number.isNaN(date.getTime())) return t('时间待定', 'Time TBD')
+  const locale = languageBase.value === 'zh' ? 'zh-CN' : 'en-US'
+  return date.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const orderEventRows = (order) =>
+  (Array.isArray(order?.events) ? order.events : []).slice(0, 3).map((event) => ({
+    ...event,
+    typeLabel: foodDeliveryEventTypeLabel(event.type),
+    timeLabel: formatFoodDeliveryEventTime(event.createdAt),
+    detail:
+      event.summary ||
+      (event.deliveryAddress
+        ? t(`配送地址更新为 ${event.deliveryAddress}`, `Delivery address changed to ${event.deliveryAddress}`)
+        : event.etaMinutes !== null && event.etaMinutes !== undefined
+          ? t(`预计 ${event.etaMinutes} 分钟送达`, `ETA ${event.etaMinutes} min`)
+          : t('外卖履约状态有新变化。', 'Food delivery status changed.')),
+  }))
+
+const triggerOrderSurpriseEvent = (order) => {
+  eventFeedback.value = ''
+  const result = runFoodDeliveryRandomOrderEventPilot({
+    foodDeliveryStore,
+    simulationStore,
+    orderId: order?.id || '',
+    randomValue: 0,
+    seed: `${order?.id || 'food_order'}:${Date.now()}`,
+    worldContext: resolveWorldContextFromSystemStore(systemStore, {
+      sourceScope: 'module',
+      now: Date.now(),
+    }),
+    now: Date.now(),
+  })
+
+  if (result.ok) {
+    eventFeedback.value = t('Delivery event added to this order.', 'Delivery event added to this order.')
+    return
+  }
+
+  const reason = result.reason || result.log?.reason || result.evaluation?.reason || ''
+  if (reason === 'cooldown_active') {
+    eventFeedback.value = t(
+      'Delivery events are cooling down for this order.',
+      'Delivery events are cooling down for this order.',
+    )
+    return
+  }
+  if (reason === 'daily_limit_reached') {
+    eventFeedback.value = t(
+      'Daily delivery-event limit reached for this order.',
+      'Daily delivery-event limit reached for this order.',
+    )
+    return
+  }
+  if (reason === 'module_events_disabled') {
+    eventFeedback.value = t(
+      'Food Delivery events are disabled in Simulation settings.',
+      'Food Delivery events are disabled in Simulation settings.',
+    )
+    return
+  }
+  eventFeedback.value = t(
+    'No delivery surprise was triggered this time.',
+    'No delivery surprise was triggered this time.',
+  )
+}
 
 const resetRestaurantDraft = () => {
   restaurantDraft.name = ''
@@ -319,6 +408,7 @@ onBeforeUnmount(() => {
       <section class="rounded-[2rem] bg-gradient-to-br from-orange-400 via-amber-300 to-lime-200 p-5 text-white shadow-xl">
         <button
           class="mb-4 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white"
+          data-testid="food-delivery-go-home"
           @click="goHome"
         >
           ← {{ t('Home', 'Home') }}
@@ -714,6 +804,13 @@ onBeforeUnmount(() => {
 
       <section class="rounded-3xl border border-gray-100 bg-white p-4" data-testid="food-delivery-orders-panel">
         <p class="text-sm font-bold">{{ t('最近外卖订单', 'Recent food orders') }}</p>
+        <p
+          v-if="eventFeedback"
+          class="mt-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700"
+          data-testid="food-delivery-event-feedback"
+        >
+          {{ eventFeedback }}
+        </p>
         <div v-if="recentOrders.length > 0" class="mt-3 space-y-2">
           <article
             v-for="order in recentOrders"
@@ -732,6 +829,32 @@ onBeforeUnmount(() => {
               <span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700">
                 {{ order.totalCents / 100 }} {{ order.currency }}
               </span>
+            </div>
+            <button
+              type="button"
+              class="mt-2 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
+              :data-testid="`food-delivery-trigger-event-${order.id}`"
+              @click="triggerOrderSurpriseEvent(order)"
+            >
+              {{ t('触发配送事件', 'Trigger delivery event') }}
+            </button>
+            <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
+              <article
+                v-for="event in orderEventRows(order)"
+                :key="event.id"
+                class="rounded-xl border border-orange-100 bg-white px-2.5 py-2 text-[11px]"
+                :data-testid="`food-delivery-order-event-${order.id}-${event.id}`"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-orange-900">{{ event.typeLabel }}</p>
+                    <p class="mt-1 line-clamp-2 leading-4 text-orange-700">{{ event.detail }}</p>
+                  </div>
+                  <span class="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 font-semibold text-orange-600">
+                    {{ event.timeLabel }}
+                  </span>
+                </div>
+              </article>
             </div>
           </article>
         </div>

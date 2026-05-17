@@ -10,7 +10,11 @@ import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
 import { useCalendarStore } from '../stores/calendar'
-import { FOOD_DELIVERY_ORDER_STATUS, useFoodDeliveryStore } from '../stores/foodDelivery'
+import {
+  FOOD_DELIVERY_ORDER_EVENT_TYPE,
+  FOOD_DELIVERY_ORDER_STATUS,
+  useFoodDeliveryStore,
+} from '../stores/foodDelivery'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
@@ -508,6 +512,22 @@ const foodDeliveryStatusLabel = (status) => {
   return t('待接单', 'Pending acceptance')
 }
 
+const foodDeliveryEventTypeLabel = (type) => {
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY) return t('骑手延迟', 'Rider delay')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) return t('商家取消', 'Restaurant cancelled')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE) return t('地址变更', 'Address changed')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE) return t('ETA 更新', 'ETA update')
+  return t('状态更新', 'Status update')
+}
+
+const shoppingLogisticsEventTypeLabel = (type) => {
+  if (type === 'package_shipped') return t('已发货', 'Package shipped')
+  if (type === 'package_arrived') return t('已到达', 'Package arrived')
+  if (type === 'pickup_point_changed') return t('取件点变更', 'Pickup changed')
+  if (type === 'international_delay') return t('国际物流延迟', 'International delay')
+  return t('物流更新', 'Logistics update')
+}
+
 const formatLogisticsCueDate = (timestamp) => {
   const date = new Date(Number(timestamp || 0))
   if (Number.isNaN(date.getTime())) return t('时间待定', 'Time TBD')
@@ -538,6 +558,13 @@ const activeShoppingServiceLogisticsRows = computed(() => {
         statusLabel: logisticsStatusLabel(cue.status || order.status || ''),
         suggestedAt: formatLogisticsCueDate(cue.suggestedAt || order.createdAt),
         summary: cue.summary || t('该订单已有配送跟进线索。', 'This order has a delivery follow-up cue.'),
+        latestEvent: Array.isArray(order.events) && order.events[0]
+          ? {
+              ...order.events[0],
+              typeLabel: shoppingLogisticsEventTypeLabel(order.events[0].type),
+              createdAtLabel: formatLogisticsCueDate(order.events[0].createdAt),
+            }
+          : null,
       }
     })
     .filter(Boolean)
@@ -552,6 +579,7 @@ const activeFoodDeliveryOrderRows = computed(() => {
     .map((order) => {
       const deliveryAddress = typeof order.deliveryAddress === 'string' ? order.deliveryAddress.trim() : ''
       const primaryItem = order.items?.[0]
+      const latestEvent = Array.isArray(order.events) ? order.events[0] : null
       return {
         order,
         id: order.id,
@@ -562,6 +590,23 @@ const activeFoodDeliveryOrderRows = computed(() => {
         status: order.status || '',
         statusLabel: foodDeliveryStatusLabel(order.status || ''),
         updatedAt: formatLogisticsCueDate(order.updatedAt || order.createdAt),
+        latestEvent: latestEvent
+          ? {
+              ...latestEvent,
+              typeLabel: foodDeliveryEventTypeLabel(latestEvent.type),
+              timeLabel: formatLogisticsCueDate(latestEvent.createdAt),
+              detail:
+                latestEvent.summary ||
+                (latestEvent.deliveryAddress
+                  ? t(
+                      `配送地址更新为 ${latestEvent.deliveryAddress}`,
+                      `Delivery address changed to ${latestEvent.deliveryAddress}`,
+                    )
+                  : latestEvent.etaMinutes !== null && latestEvent.etaMinutes !== undefined
+                    ? t(`预计 ${latestEvent.etaMinutes} 分钟送达`, `ETA ${latestEvent.etaMinutes} min`)
+                    : t('外卖履约状态有新变化。', 'Food delivery status changed.')),
+            }
+          : null,
         summary: deliveryAddress
           ? t(`送往 ${deliveryAddress}`, `Delivering to ${deliveryAddress}`)
           : t('外卖订单状态由 Food Delivery 持有，Chat 只显示服务号推送。', 'Food Delivery owns this order status; Chat only shows service-account pushes.'),
@@ -4489,6 +4534,16 @@ onBeforeUnmount(() => {
                     <span v-if="row.itemCount > 1"> · {{ row.itemCount }} {{ t('件', 'items') }}</span>
                   </p>
                   <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-sky-600">{{ row.summary }}</p>
+                  <div
+                    v-if="row.latestEvent"
+                    class="mt-1 rounded-lg bg-sky-50 px-2 py-1 text-[11px] text-sky-700"
+                    :data-testid="`chat-service-logistics-event-${row.id}`"
+                  >
+                    <p class="font-semibold">{{ row.latestEvent.typeLabel }} · {{ row.latestEvent.createdAtLabel }}</p>
+                    <p class="mt-0.5 line-clamp-2 leading-4">
+                      {{ row.latestEvent.summary || row.latestEvent.title }}
+                    </p>
+                  </div>
                 </div>
                 <div class="shrink-0 text-right">
                   <span
@@ -4546,6 +4601,14 @@ onBeforeUnmount(() => {
                     <span v-if="row.itemCount > 1"> · {{ row.itemCount }} {{ t('件', 'items') }}</span>
                   </p>
                   <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-orange-600">{{ row.summary }}</p>
+                  <div
+                    v-if="row.latestEvent"
+                    class="mt-1.5 rounded-lg border border-orange-100 bg-orange-50 px-2 py-1 text-[11px] leading-4 text-orange-700"
+                    :data-testid="`chat-food-delivery-event-${row.id}`"
+                  >
+                    <p class="font-semibold">{{ row.latestEvent.typeLabel }} · {{ row.latestEvent.timeLabel }}</p>
+                    <p class="mt-0.5 line-clamp-2">{{ row.latestEvent.detail }}</p>
+                  </div>
                 </div>
                 <div class="shrink-0 text-right">
                   <span

@@ -26,6 +26,22 @@ defineProps({
     type: String,
     default: '',
   },
+  simulationTickRunning: {
+    type: Boolean,
+    default: false,
+  },
+  simulationTickLastRunAt: {
+    type: Number,
+    default: 0,
+  },
+  simulationTickResultLabel: {
+    type: String,
+    default: '',
+  },
+  simulationEventLogs: {
+    type: Array,
+    default: () => [],
+  },
   latestStorageReport: {
     type: Object,
     default: null,
@@ -78,9 +94,16 @@ defineEmits([
   'open-network-storage-errors',
   'repair-storage-drift',
   'run-storage-audit',
+  'run-simulation-tick',
 ])
 
 const { t } = useI18n()
+
+const simulationEventStatusClass = (status) => {
+  if (status === 'triggered') return 'bg-green-100 text-green-700'
+  if (status === 'failed') return 'bg-red-100 text-red-700'
+  return 'bg-amber-100 text-amber-700'
+}
 </script>
 
 <template>
@@ -100,6 +123,108 @@ const { t } = useI18n()
       DB: {{ persistenceCapabilities.indexedDbDatabaseName }} ·
       Store: {{ persistenceCapabilities.indexedDbStoreName }}
     </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 space-y-3" data-testid="settings-simulation-tick-card">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-sm font-semibold">{{ t('事件 Tick 诊断', 'Event Tick Diagnostics') }}</p>
+        <p class="text-[10px] text-gray-500 mt-1">
+          {{
+            t(
+              '手动运行一次安全事件 tick，用于验证 Surprise Mode、冷却和每日上限；不会开启后台自动触发。',
+              'Manually runs one safe event tick to verify Surprise Mode, cooldowns, and daily caps; it does not enable background automation.',
+            )
+          }}
+        </p>
+        <p class="text-[10px] text-gray-400 mt-1">
+          {{ t('上次运行', 'Last run') }}: {{ formatStorageAuditTime(simulationTickLastRunAt) }}
+        </p>
+      </div>
+      <button
+        class="px-3 py-2 rounded-lg border border-orange-200 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        data-testid="settings-run-simulation-tick"
+        :disabled="simulationTickRunning"
+        @click="$emit('run-simulation-tick')"
+      >
+        {{ simulationTickRunning ? t('运行中...', 'Running...') : t('运行一次 Tick', 'Run one tick') }}
+      </button>
+    </div>
+    <div class="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2">
+      <p class="text-[11px] font-medium text-orange-800">
+        {{ simulationTickResultLabel || t('尚未运行', 'Not run yet') }}
+      </p>
+      <p class="text-[10px] text-orange-600 mt-1">
+        {{
+          t(
+            '当前仅允许安全的外卖 ETA / 骑手延迟 pilot；Shopping/物流随机事件仍保持关闭。',
+            'Currently only safe Food Delivery ETA / rider-delay pilots are allowed; Shopping/logistics random events remain disabled.',
+          )
+        }}
+      </p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 space-y-3" data-testid="settings-simulation-event-log-card">
+    <div>
+      <p class="text-sm font-semibold">{{ t('最近事件解释', 'Recent event explanations') }}</p>
+      <p class="text-[10px] text-gray-500 mt-1">
+        {{
+          t(
+            '只读展示最近事件日志，用于说明随机/条件事件为什么触发、跳过或失败；该面板不会修改任何模块数据。',
+            'Readonly view of recent event logs, explaining why random or condition events triggered, skipped, or failed; this panel never mutates module data.',
+          )
+        }}
+      </p>
+    </div>
+
+    <div v-if="simulationEventLogs.length" class="space-y-2">
+      <div
+        v-for="item in simulationEventLogs"
+        :key="item.id"
+        class="rounded-xl border border-gray-200 bg-gray-50 p-3"
+        data-testid="settings-simulation-event-log-item"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-[12px] font-semibold text-gray-800 truncate">{{ item.eventLabel }}</p>
+            <p class="text-[10px] text-gray-500 mt-1">
+              {{ item.moduleLabel }} · {{ item.triggerSourceLabel }} · {{ formatStorageAuditTime(item.at) }}
+            </p>
+          </div>
+          <span
+            class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            :class="simulationEventStatusClass(item.status)"
+          >
+            {{ item.statusLabel }}
+          </span>
+        </div>
+
+        <p class="text-[11px] text-gray-700 mt-2">
+          {{ t('原因', 'Reason') }}: {{ item.reasonLabel }}
+        </p>
+        <p class="text-[10px] text-gray-500 mt-1">
+          {{ t('目标', 'Target') }}: {{ item.targetLabel }}
+        </p>
+        <p v-if="item.variantLabel" class="text-[10px] text-gray-500 mt-1">
+          {{ t('世界观变体', 'World variant') }}: {{ item.variantLabel }}
+        </p>
+        <p class="text-[10px] text-gray-400 mt-1 break-all">
+          {{ item.technicalSummary }}
+        </p>
+      </div>
+    </div>
+
+    <div v-else class="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-3">
+      <p class="text-[11px] text-gray-500">
+        {{
+          t(
+            '暂无事件日志。可以先运行一次 Event Tick Diagnostics，或等待后续安全事件写入。',
+            'No event logs yet. Run Event Tick Diagnostics once, or wait for future safe events to write logs.',
+          )
+        }}
+      </p>
+    </div>
   </div>
 
   <div class="bg-white rounded-2xl p-4 space-y-3">

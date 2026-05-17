@@ -6,8 +6,15 @@ import { nextTick } from 'vue'
 import ChatView from '../src/views/ChatView.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useCalendarStore } from '../src/stores/calendar'
-import { useShoppingStore } from '../src/stores/shopping'
-import { FOOD_DELIVERY_ORDER_STATUS, useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import {
+  SHOPPING_ORDER_EVENT_TYPE,
+  useShoppingStore,
+} from '../src/stores/shopping'
+import {
+  FOOD_DELIVERY_ORDER_EVENT_TYPE,
+  FOOD_DELIVERY_ORDER_STATUS,
+  useFoodDeliveryStore,
+} from '../src/stores/foodDelivery'
 
 const DummyView = { template: '<div />' }
 
@@ -270,6 +277,11 @@ describe('ChatView Shopping product preview routing', () => {
     const order = shoppingStore.checkoutCart({
       note: 'Delivery follow-up for Style Cloud.',
     })
+    shoppingStore.addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED,
+      summary: 'Style Cloud parcel is ready for pickup.',
+      carrierName: 'Standard Courier',
+    })
     const chatStore = useChatStore()
     const shopContact = chatStore.addContact({
       name: 'Style Cloud',
@@ -305,6 +317,7 @@ describe('ChatView Shopping product preview routing', () => {
     const logisticsContext = wrapper.get('[data-testid="chat-service-logistics-context"]')
     expect(logisticsContext.text()).toContain('Style Cloud Jacket')
     expect(logisticsContext.text()).toContain('399.00 CNY')
+    expect(logisticsContext.text()).toContain('Style Cloud parcel is ready for pickup.')
     expect(wrapper.get(`[data-testid="chat-service-logistics-status-${order.id}"]`).text()).toMatch(
       /待跟进|Pending follow-up/,
     )
@@ -355,6 +368,12 @@ describe('ChatView Shopping product preview routing', () => {
       note: 'Dinner delivery.',
     })
     foodDeliveryStore.updateOrderStatus(order.id, FOOD_DELIVERY_ORDER_STATUS.COOKING)
+    foodDeliveryStore.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+      summary: 'ETA changed to 40 minutes.',
+      etaMinutes: 40,
+      sourceModule: 'food_delivery_dispatch',
+    })
 
     const chatStore = useChatStore()
     const shopContact = chatStore.addContact({
@@ -393,6 +412,9 @@ describe('ChatView Shopping product preview routing', () => {
     expect(foodContext.text()).toContain('Lunar Rice Set')
     expect(foodContext.text()).toContain('64.00 CNY')
     expect(foodContext.text()).toContain('Map Pin A')
+    expect(wrapper.get(`[data-testid="chat-food-delivery-event-${order.id}"]`).text()).toContain(
+      'ETA changed to 40 minutes.',
+    )
     expect(wrapper.get(`[data-testid="chat-food-delivery-status-${order.id}"]`).text()).toMatch(
       /备餐中|Cooking/,
     )

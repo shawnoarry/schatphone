@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
+  FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
   useFoodDeliveryStore,
 } from '../src/stores/foodDelivery'
@@ -130,6 +131,56 @@ describe('food delivery store', () => {
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.COOKING)
   })
 
+  test('adds normalized order events without moving ownership out of Food Delivery', () => {
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+    const restaurant = store.upsertRestaurant({
+      id: 'food_event_shop',
+      name: 'Event Shop',
+      category: 'restaurants',
+    })
+    const item = store.upsertMenuItem({
+      id: 'food_event_item',
+      restaurantId: restaurant.id,
+      title: 'Event Meal',
+      price: '21.00',
+    })
+    store.addToCart(item.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Old Address',
+    })
+
+    const etaEvent = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+      summary: 'Rider needs five more minutes.',
+      etaMinutes: 35,
+      sourceModule: 'food_delivery_dispatch',
+    })
+    expect(etaEvent).toMatchObject({
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+      summary: 'Rider needs five more minutes.',
+      etaMinutes: 35,
+      sourceModule: 'food_delivery_dispatch',
+    })
+
+    const addressEvent = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE,
+      deliveryAddress: 'New Address',
+    })
+    expect(addressEvent?.deliveryAddress).toBe('New Address')
+    expect(store.orders[0]?.deliveryAddress).toBe('New Address')
+
+    const cancelledEvent = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED,
+      summary: 'Restaurant closed early.',
+    })
+    expect(cancelledEvent?.type).toBe(FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED)
+    expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.CANCELLED)
+    expect(store.orders[0]?.events).toHaveLength(3)
+    expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
+    expect(store.addOrderEvent('missing', { type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY })).toBeNull()
+  })
+
   test('persists and restores backup-compatible snapshots', () => {
     const store = useFoodDeliveryStore()
     store.resetForTesting()
@@ -171,7 +222,30 @@ describe('food delivery store', () => {
           },
         ],
         cartItems: [{ menuItemId: 'food_backup_latte', quantity: 2 }],
-        orders: [],
+        orders: [
+          {
+            id: 'food_backup_order',
+            restaurantId: 'food_backup_shop',
+            restaurantName: 'Backup Shop',
+            status: FOOD_DELIVERY_ORDER_STATUS.COOKING,
+            items: [
+              {
+                id: 'food_backup_latte_1',
+                menuItemId: 'food_backup_latte',
+                title: 'Backup Latte',
+                price: '18.00',
+                quantity: 1,
+              },
+            ],
+            events: [
+              {
+                id: 'food_backup_event',
+                type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+                summary: 'Rider is delayed.',
+              },
+            ],
+          },
+        ],
       },
     }
 
@@ -180,5 +254,10 @@ describe('food delivery store', () => {
     expect(restoredStore.menuItemCount).toBe(1)
     expect(restoredStore.cartQuantity).toBe(2)
     expect(restoredStore.createBackupSnapshot().restaurants[0]?.id).toBe('food_backup_shop')
+    expect(restoredStore.createBackupSnapshot().orders[0]?.events[0]).toMatchObject({
+      id: 'food_backup_event',
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+      summary: 'Rider is delayed.',
+    })
   })
 })

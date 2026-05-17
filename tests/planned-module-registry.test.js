@@ -21,6 +21,8 @@ import {
 import {
   HOME_FOLDER_REGISTRY,
   HOME_FOLDER_TILE_KIND,
+  HOME_PLANNED_LOCKED_TILE_IDS,
+  HOME_PLANNED_TILE_IDS,
   resolveHomeFolderChildRoute,
 } from '../src/lib/home-entry-registry'
 
@@ -59,6 +61,11 @@ describe('planned module registry', () => {
     })
     expect(FOOD_DELIVERY_SOURCE_KEYS.MAP_RESTAURANT_LOCATION).toBe('food_delivery_map_restaurant_location')
     expect(FOOD_DELIVERY_SOURCE_KEYS.MAP_COURIER_ROUTE).toBe('food_delivery_map_courier_route')
+  })
+
+  test('keeps Director as an optional planned Home entry rather than a locked module', () => {
+    expect(HOME_PLANNED_TILE_IDS).toContain('app_control_center')
+    expect(HOME_PLANNED_LOCKED_TILE_IDS).not.toContain('app_control_center')
   })
 
   test('keeps Assets categories and Stock relationship separate', () => {

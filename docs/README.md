@@ -26,6 +26,7 @@ This is the single index for project documents. If two documents seem to overlap
 
 5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
    Module maturity audit and candidate task pool. It is not a second roadmap.
+   Related focused review: `docs/roadmap/FOOD_DELIVERY_REVIEW_AND_NEXT_TODO_2026-05-16.md` records the Food Delivery review after the visual/home-return update.
    模块成熟度梳理与候选任务池。它不是第二路线图。
 
 6. `docs/overview/PROJECT_MASTER_GUIDE.md`
@@ -40,23 +41,26 @@ This is the single index for project documents. If two documents seem to overlap
    Functional-code next steps: concrete maintainability and feature candidates after visual work was parked, without becoming a second live roadmap.
    功能代码推进项：视觉工作搁置后的可维护性与功能候选，不作为第二动态路线图。
 
-9. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
+9. `docs/overview/IMMERSIVE_EVENT_TODO.md`
+   Event-specialist TODO: handoff board for random, condition-driven, scheduled, and module-owned immersive events.
+   事件专项 TODO：记录随机触发、条件触发、定时触发与模块自有沉浸式事件的接手顺序。
+10. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
    Visual rebuild reference: which appearance surfaces are technically present, which are still visually immature, and which should be treated as full rebuild targets.
    外观重建参考：哪些外观能力技术上已存在、哪些视觉仍未成熟、以及哪些界面应被视为完整重建对象。
 
-10. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
+11. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
     Visual style direction brief: global and module-level references for the appearance rebuild, including iOS-like shell, KakaoTalk-style Chat, Google Maps-style Map, and iOS Photos-style Gallery.
     视觉风格方向简报：外观重建的全局与模块级参考，包括 iOS-like 壳层、KakaoTalk 风格 Chat、Google Maps 风格 Map、iOS Photos 风格 Gallery。
 
-11. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
+12. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
     Deferred visual TODO archive: parked visual-rebuild suggestions for future use while current work returns to functional code.
     暂存视觉 TODO：当前阶段转回功能代码时，为后续视觉重建保留的建议清单。
 
-12. `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
+13. `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
     Product decision for reusable Home folders, Shopping as the first folder-backed module, Assets as a standalone module, and Stock/Files boundaries.
     主屏文件夹、购物文件夹式模块、资产独立模块，以及 Stock/Files 边界的产品决策。
 
-13. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+14. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
     Product decision for Files: hidden as a standalone frontend entry, retained as an internal storage and coordination component.
     Files 产品决策：不作为独立前台入口展示，保留为内部储存与跨模块协调组件。
 
@@ -93,7 +97,15 @@ This is the single index for project documents. If two documents seem to overlap
 
 - `docs/process/AI_WORK_MODE.md`: AI collaboration and documentation governance.
 - `docs/process/OPERATION_GUIDE.md`: implementation and validation operation guide.
+- `docs/process/EVENT_WORKFLOW.md`: event-specialist workflow for random, condition-driven, scheduled, and module-owned immersive events.
 - `docs/process/VISUAL_WORKFLOW.md`: visual-design-only workflow, skill setup, reference-library setup, and cross-PC reuse notes.
+
+## 5.5 Current Architecture Docs
+
+- `docs/architecture/ARCHITECTURE.md`: current application architecture, layers, stores, and extension rules.
+- `docs/architecture/ROLE_BINDING_CONTRACT.md`: cross-module role-binding contract.
+- `docs/architecture/SIMULATION_EVENT_ENGINE.md`: proposed event engine architecture for deterministic random/condition triggers and module adapters.
+- `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`: standard requirement for WorldBook/worldview-driven event variants and local event variant packs.
 
 ## 6. Current Design Docs
 

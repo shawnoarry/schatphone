@@ -28,6 +28,14 @@ const featureToggleMeta = computed(() => [
     label: t('场景切换', 'Scene Switch'),
     desc: t('一键切换工作/生活布局预设', 'Switch work/life layout presets with one tap'),
   },
+  {
+    id: 'control_center',
+    label: t('运行控制台', 'Runtime Control'),
+    desc: t(
+      '开启后主屏显示导演台入口；关闭时隐藏入口，聊天、地图等常规功能照常使用。',
+      'Show the Director entry on Home when enabled; when off, regular Chat, Map, and other flows stay unchanged.',
+    ),
+  },
 ])
 
 const featureToggles = computed(() =>
@@ -149,6 +157,7 @@ const toggleFeature = (toggleId) => {
             </div>
             <button
               @click="toggleFeature(item.id)"
+              :data-testid="`more-feature-toggle-${item.id}`"
               class="px-3 py-1.5 text-xs rounded-full border transition"
               :class="item.enabled ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200'"
             >

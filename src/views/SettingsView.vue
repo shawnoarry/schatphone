@@ -12,6 +12,7 @@ import { usePhoneStore } from '../stores/phone'
 import { useAssetsStore } from '../stores/assets'
 import { useShoppingStore } from '../stores/shopping'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useDialog } from '../composables/useDialog'
@@ -34,6 +35,7 @@ import {
   inspectPersistedStateLayers,
   reconcilePersistedStateLayers,
 } from '../lib/persistence'
+import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
 import {
   checkPushServerHealth,
   isWebPushSupported,
@@ -59,6 +61,7 @@ const phoneStore = usePhoneStore()
 const assetsStore = useAssetsStore()
 const shoppingStore = useShoppingStore()
 const foodDeliveryStore = useFoodDeliveryStore()
+const simulationStore = useSimulationStore()
 const stockStore = useStockStore()
 const walletStore = useWalletStore()
 const { t } = useI18n()
@@ -103,6 +106,7 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:files', version: 1, labelZh: '文件索引', labelEn: 'Files index' },
   { key: 'store:shopping', version: 1, labelZh: '购物记录', labelEn: 'Shopping records' },
   { key: 'store:food-delivery', version: 1, labelZh: '外卖记录', labelEn: 'Food delivery records' },
+  { key: 'store:simulation', version: 1, labelZh: '事件模拟', labelEn: 'Simulation events' },
   { key: 'store:assets', version: 1, labelZh: '资产记录', labelEn: 'Assets records' },
   { key: 'store:wallet', version: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger' },
   { key: 'store:phone', version: 1, labelZh: '电话记录', labelEn: 'Phone logs' },
@@ -114,6 +118,9 @@ const storageAuditResults = ref([])
 const storageAuditAt = ref(0)
 const storageAuditFeedbackType = ref('')
 const storageAuditFeedbackMessage = ref('')
+const simulationTickRunning = ref(false)
+const simulationTickLastResult = ref(null)
+const simulationTickLastRunAt = ref(0)
 const backupReminderIntervalOptions = BACKUP_REMINDER_INTERVAL_OPTIONS
 const BACKUP_SCHEMA_VERSION = 2
 const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
@@ -381,6 +388,8 @@ const storageReportErrorCount = computed(() => {
 
 const storageReportReasonLabel = (report) => {
   const code = (report?.code || '').toUpperCase()
+  if (code === 'SIMULATION_TICK_TRIGGERED') return t('事件 tick 已触发', 'Simulation tick triggered')
+  if (code === 'SIMULATION_TICK_SKIPPED') return t('事件 tick 已跳过', 'Simulation tick skipped')
   if (code === 'STORAGE_HEALTHY') return t('存储状态健康', 'Storage is healthy')
   if (code === 'STORAGE_MIRROR_DRIFT') return t('存储层不同步', 'Storage mirror drift detected')
   if (code === 'STORAGE_LAYER_INVALID') return t('存储层数据异常', 'Invalid payload in storage layer')
@@ -413,6 +422,122 @@ const storageReportReasonLabel = (report) => {
     return t('备份导入失败', 'Backup import failed')
   return t('无存储报告', 'No storage report')
 }
+
+const simulationTickResultLabel = computed(() => {
+  const result = simulationTickLastResult.value
+  if (!result) return t('尚未运行', 'Not run yet')
+  if (result.ok) {
+    return t(
+      `已触发事件：${result.reason || 'simulation'}`,
+      `Triggered event: ${result.reason || 'simulation'}`,
+    )
+  }
+  return t(
+    `本次未触发：${result.reason || 'no_event_triggered'}`,
+    `No event triggered: ${result.reason || 'no_event_triggered'}`,
+  )
+})
+
+const simulationModuleLabel = (moduleKey = '') => {
+  if (moduleKey === 'food_delivery') return t('外卖', 'Food Delivery')
+  if (moduleKey === 'shopping') return t('购物', 'Shopping')
+  if (moduleKey === 'logistics') return t('物流', 'Logistics')
+  if (moduleKey === 'simulation') return t('事件模拟', 'Simulation')
+  return moduleKey || t('未知模块', 'Unknown module')
+}
+
+const simulationTriggerSourceLabel = (source = '') => {
+  if (source === 'manual') return t('手动', 'Manual')
+  if (source === 'condition') return t('条件触发', 'Condition')
+  if (source === 'random') return t('随机触发', 'Random')
+  if (source === 'scheduled') return t('定时/会话 Tick', 'Scheduled/session tick')
+  if (source === 'ai_assisted') return t('AI 辅助', 'AI assisted')
+  if (source === 'system') return t('系统', 'System')
+  return source || t('未知来源', 'Unknown source')
+}
+
+const simulationEventStatusLabel = (status = '') => {
+  if (status === 'triggered') return t('已触发', 'Triggered')
+  if (status === 'skipped') return t('已跳过', 'Skipped')
+  if (status === 'failed') return t('失败', 'Failed')
+  return status || t('未知', 'Unknown')
+}
+
+const simulationEventReasonLabel = (reason = '') => {
+  if (reason === 'eligible_non_random') return t('条件满足，已执行非随机事件', 'Eligible non-random event executed')
+  if (reason === 'eligible_random_passed') return t('随机门槛通过，已执行事件', 'Random gate passed and event executed')
+  if (reason === 'random_failed') return t('随机门槛未通过', 'Random gate did not pass')
+  if (reason === 'random_missing') return t('缺少随机值，未执行随机事件', 'Missing random value, random event skipped')
+  if (reason === 'probability_zero') return t('事件概率为 0', 'Event probability is zero')
+  if (reason === 'trigger_source_not_allowed') return t('该触发来源未被事件允许', 'Trigger source is not allowed')
+  if (reason === 'conditions_failed') return t('事件条件未满足', 'Event conditions were not met')
+  if (reason === 'cooldown_active') return t('事件仍在冷却中', 'Event is still cooling down')
+  if (reason === 'daily_limit_reached') return t('已达到每日上限', 'Daily limit reached')
+  if (reason === 'surprise_mode_off') return t('惊喜模式关闭', 'Surprise Mode is off')
+  if (reason === 'module_events_disabled') return t('该模块事件已关闭', 'Module events are disabled')
+  if (reason === 'tick_cooldown_active') return t('会话 Tick 冷却中', 'Session tick is cooling down')
+  if (reason === 'tick_daily_limit_reached') return t('会话 Tick 已达每日上限', 'Session tick daily limit reached')
+  if (reason === 'no_active_order') return t('没有可作用的进行中订单', 'No active order available')
+  if (reason === 'no_safe_preset') return t('没有可安全执行的事件预设', 'No safe event preset available')
+  if (reason === 'adapter_missing') return t('缺少事件适配器', 'Event adapter is missing')
+  if (reason === 'adapter_threw') return t('事件适配器执行异常', 'Event adapter threw an error')
+  if (reason === 'adapter_returned_empty') return t('适配器未返回有效结果', 'Adapter returned no result')
+  return reason || t('未记录原因', 'No reason recorded')
+}
+
+const simulationEventLabel = (eventId = '') => {
+  if (eventId === 'simulation.session_tick.v1') return t('会话事件 Tick', 'Session event tick')
+  if (eventId === 'food_delivery.random_order_pilot.v1')
+    return t('外卖随机订单 Pilot', 'Food Delivery random order pilot')
+  if (eventId === 'food_delivery.eta_update.v1') return t('外卖 ETA 更新', 'Food Delivery ETA update')
+  if (eventId === 'food_delivery.rider_delay.v1') return t('外卖骑手延迟', 'Food Delivery rider delay')
+  if (eventId === 'food_delivery.restaurant_cancelled.v1')
+    return t('外卖商家取消', 'Food Delivery restaurant cancelled')
+  if (eventId === 'food_delivery.address_change.v1')
+    return t('外卖地址变更', 'Food Delivery address change')
+  if (eventId === 'food_delivery.status_update.v1')
+    return t('外卖状态更新', 'Food Delivery status update')
+  if (eventId === 'shopping.logistics.package_shipped.v1')
+    return t('购物物流发货', 'Shopping package shipped')
+  if (eventId === 'shopping.logistics.package_arrived.v1')
+    return t('购物物流到达', 'Shopping package arrived')
+  if (eventId === 'shopping.logistics.pickup_point_changed.v1')
+    return t('购物取件点变更', 'Shopping pickup point changed')
+  if (eventId === 'shopping.logistics.international_delay.v1')
+    return t('国际物流延迟', 'International logistics delay')
+  return eventId || t('未知事件', 'Unknown event')
+}
+
+const simulationEventTargetLabel = (log = {}) => {
+  const targetId = typeof log.targetId === 'string' ? log.targetId.trim() : ''
+  if (!targetId) return t('全局/无特定目标', 'Global / no specific target')
+  if (targetId === 'global') return t('全局会话', 'Global session')
+  return targetId
+}
+
+const simulationEventVariantLabel = (log = {}) => {
+  const parts = [log.worldContextId, log.variantId, log.variantPackId]
+    .filter((item) => typeof item === 'string' && item.trim())
+  return parts.join(' · ')
+}
+
+const simulationEventLogsForDiagnostics = computed(() =>
+  simulationStore.recentEventLogs.slice(0, 8).map((log) => ({
+    ...log,
+    eventLabel: simulationEventLabel(log.eventId),
+    moduleLabel: simulationModuleLabel(log.moduleKey),
+    triggerSourceLabel: simulationTriggerSourceLabel(log.triggerSource),
+    statusLabel: simulationEventStatusLabel(log.status),
+    reasonLabel: simulationEventReasonLabel(log.reason),
+    targetLabel: simulationEventTargetLabel(log),
+    variantLabel: simulationEventVariantLabel(log),
+    technicalSummary: [
+      `eventId=${log.eventId || '-'}`,
+      `adapter=${log.adapterKey || '-'}`,
+      `reason=${log.reason || '-'}`,
+    ].join(' · '),
+  })),
+)
 
 const formatStorageReportTime = (timestamp) => {
   const ts = Number(timestamp)
@@ -575,6 +700,56 @@ const repairStorageDrift = async () => {
     )
   } finally {
     storageRepairRunning.value = false
+  }
+}
+
+const runSimulationTickDiagnostic = async () => {
+  if (simulationTickRunning.value) return
+  simulationTickRunning.value = true
+  try {
+    const result = runSimulationEventTick({
+      simulationStore,
+      foodDeliveryStore,
+      now: Date.now(),
+      randomValue: 0,
+    })
+    simulationTickLastResult.value = result
+    simulationTickLastRunAt.value = Date.now()
+    const ok = result?.ok === true
+    const reason = typeof result?.reason === 'string' && result.reason.trim()
+      ? result.reason.trim()
+      : ok
+        ? 'triggered'
+        : 'skipped'
+    const pilotCount = Array.isArray(result?.pilotResults) ? result.pilotResults.length : 0
+
+    systemStore.addApiReport({
+      level: ok ? 'info' : 'error',
+      module: 'simulation',
+      action: 'run_event_tick',
+      provider: 'local_event_engine',
+      model: `pilots:${pilotCount}`,
+      code: ok ? 'SIMULATION_TICK_TRIGGERED' : 'SIMULATION_TICK_SKIPPED',
+      message: ok
+        ? t(
+            `事件 tick 已触发：${reason}。`,
+            `Simulation tick triggered: ${reason}.`,
+          )
+        : t(
+            `事件 tick 未触发：${reason}。`,
+            `Simulation tick skipped: ${reason}.`,
+          ),
+      createdAt: simulationTickLastRunAt.value,
+    })
+
+    setStorageAuditFeedback(
+      ok ? 'success' : 'warn',
+      ok
+        ? t('事件 tick 已运行并触发安全事件。', 'Event tick ran and triggered a safe event.')
+        : t(`事件 tick 已运行但未触发：${reason}。`, `Event tick ran without trigger: ${reason}.`),
+    )
+  } finally {
+    simulationTickRunning.value = false
   }
 }
 
@@ -1188,6 +1363,7 @@ const buildBackupPayload = async () => {
     files: filesStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
     foodDelivery: foodDeliveryStore.createBackupSnapshot(),
+    simulation: simulationStore.createBackupSnapshot(),
     assets: assetsStore.createBackupSnapshot(),
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
@@ -1221,6 +1397,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.files && typeof payload.files === 'object') return true
   if (payload.shopping && typeof payload.shopping === 'object') return true
   if (payload.foodDelivery && typeof payload.foodDelivery === 'object') return true
+  if (payload.simulation && typeof payload.simulation === 'object') return true
   if (isAssetsBackupSection(payload.assets)) return true
   if (Array.isArray(payload.assets)) return true
   if (payload.wallet && typeof payload.wallet === 'object') return true
@@ -1429,6 +1606,7 @@ const createRollbackSnapshot = () => {
     files: filesStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
     foodDelivery: foodDeliveryStore.createBackupSnapshot(),
+    simulation: simulationStore.createBackupSnapshot(),
     assets: assetsStore.createBackupSnapshot(),
     wallet: walletStore.createBackupSnapshot(),
     phone: phoneStore.createBackupSnapshot(),
@@ -1493,6 +1671,7 @@ const importData = async (event) => {
     const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
     const shoppingOk = restoreOptionalBackupSection(shoppingStore, parsed.shopping)
     const foodDeliveryOk = restoreOptionalBackupSection(foodDeliveryStore, parsed.foodDelivery)
+    const simulationOk = restoreOptionalBackupSection(simulationStore, parsed.simulation)
     const assetsOk = restoreAssetsBackupSection(parsed.assets)
     const walletOk = restoreOptionalBackupSection(walletStore, parsed.wallet)
     const phoneOk = restoreOptionalBackupSection(phoneStore, parsed.phone)
@@ -1506,6 +1685,7 @@ const importData = async (event) => {
       !filesOk ||
       !shoppingOk ||
       !foodDeliveryOk ||
+      !simulationOk ||
       !assetsOk ||
       !walletOk ||
       !phoneOk ||
@@ -1525,6 +1705,7 @@ const importData = async (event) => {
     filesStore.saveNow()
     shoppingStore.saveNow()
     foodDeliveryStore.saveNow()
+    simulationStore.saveNow()
     assetsStore.saveNow()
     walletStore.saveNow()
     phoneStore.saveNow()
@@ -1563,6 +1744,7 @@ const importData = async (event) => {
     filesStore.restoreFromBackup(rollback.files)
     shoppingStore.restoreFromBackup(rollback.shopping)
     foodDeliveryStore.restoreFromBackup(rollback.foodDelivery)
+    simulationStore.restoreFromBackup(rollback.simulation)
     assetsStore.restoreFromBackup(rollback.assets)
     walletStore.restoreFromBackup(rollback.wallet)
     phoneStore.restoreFromBackup(rollback.phone)
@@ -1575,6 +1757,7 @@ const importData = async (event) => {
     filesStore.saveNow()
     shoppingStore.saveNow()
     foodDeliveryStore.saveNow()
+    simulationStore.saveNow()
     assetsStore.saveNow()
     walletStore.saveNow()
     phoneStore.saveNow()
@@ -1766,6 +1949,10 @@ if (initialMenu) {
             :storage-audit-at="storageAuditAt"
             :storage-audit-feedback-type="storageAuditFeedbackType"
             :storage-audit-feedback-message="storageAuditFeedbackMessage"
+            :simulation-tick-running="simulationTickRunning"
+            :simulation-tick-last-run-at="simulationTickLastRunAt"
+            :simulation-tick-result-label="simulationTickResultLabel"
+            :simulation-event-logs="simulationEventLogsForDiagnostics"
             :latest-storage-report="latestStorageReport"
             :storage-report-error-count="storageReportErrorCount"
             :storage-audit-results="storageAuditResults"
@@ -1780,6 +1967,7 @@ if (initialMenu) {
             @run-storage-audit="runStorageAudit()"
             @clear-storage-reports="clearStorageReports"
             @repair-storage-drift="repairStorageDrift"
+            @run-simulation-tick="runSimulationTickDiagnostic"
             @open-network-reports="openNetworkReports('storage')"
             @open-network-storage-errors="openNetworkReports('storage', 'error')"
           />

@@ -45,6 +45,11 @@ const BUILT_IN_APP_ICON_META = {
 
 APP_ICON_LABELS.app_food_delivery = { zh: '外卖', en: 'Food', ko: 'Delivery' }
 BUILT_IN_APP_ICON_META.app_food_delivery = { icon: 'fas fa-bowl-food', accent: 'warm' }
+APP_ICON_LABELS.app_control_center = { zh: '导演台', en: 'Director', ko: 'Director' }
+BUILT_IN_APP_ICON_META.app_control_center = {
+  icon: 'fas fa-wand-magic-sparkles',
+  accent: 'dark',
+}
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -60,6 +65,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_shopping',
   'app_food_delivery',
   'app_assets',
+  'app_control_center',
   'app_settings',
   'app_contacts',
   'app_more',

@@ -7,7 +7,7 @@ import {
   cancelScheduledPushNotification,
   schedulePushNotification,
 } from '../lib/push'
-import { FOOD_DELIVERY_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { FOOD_DELIVERY_SOURCE_KEYS, LOGISTICS_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -714,6 +714,58 @@ const normalizeFoodDeliveryRestaurantContext = (restaurant = {}) => {
     address,
     distanceKm: Number(rawRestaurant.distanceKm),
     deliveryEtaMinutes: Number(rawRestaurant.deliveryEtaMinutes || rawRestaurant.etaMinutes),
+  }
+}
+
+const normalizeDeliveryEventLocationContext = ({
+  ownerModule = '',
+  order = {},
+  event = {},
+} = {}) => {
+  const rawOrder = order && typeof order === 'object' ? order : {}
+  const rawEvent = event && typeof event === 'object' ? event : {}
+  const normalizedOwner = trimLine(ownerModule, 40) || 'delivery'
+  const orderId = trimLine(rawOrder.id || rawEvent.orderId || '', 140)
+  const eventId = trimLine(rawEvent.id || rawEvent.eventId || '', 140)
+  const pickupPoint = trimLine(
+    rawEvent.pickupPoint ||
+      rawEvent.pickupAddress ||
+      rawEvent.restaurantAddress ||
+      rawOrder.pickupPoint ||
+      rawOrder.restaurantAddress ||
+      rawOrder.restaurantName ||
+      rawOrder.restaurant ||
+      '',
+    180,
+  )
+  const dropoffPoint = trimLine(
+    rawEvent.deliveryAddress ||
+      rawEvent.dropoffPoint ||
+      rawOrder.deliveryAddress ||
+      rawOrder.recipientAddress ||
+      '',
+    180,
+  )
+  const locationHint = trimLine(rawEvent.locationHint || rawEvent.location || rawEvent.city || '', 160)
+  const title = trimLine(rawEvent.title || rawOrder.title || '', 120)
+  const summary = trimLine(rawEvent.summary || rawEvent.desc || rawOrder.note || '', 240)
+  const etaMinutesRaw = Number(rawEvent.etaMinutes || rawOrder.etaMinutes || rawOrder.deliveryEtaMinutes)
+  const etaDaysRaw = Number(rawEvent.etaDays)
+
+  return {
+    ownerModule: normalizedOwner,
+    orderId,
+    eventId,
+    eventType: trimLine(rawEvent.type || rawEvent.eventType || '', 80),
+    title,
+    summary,
+    pickupPoint,
+    dropoffPoint,
+    locationHint,
+    trackingCode: trimLine(rawEvent.trackingCode || rawEvent.trackingNo || '', 120),
+    carrierName: trimLine(rawEvent.carrierName || rawEvent.carrier || '', 120),
+    etaMinutes: Number.isFinite(etaMinutesRaw) && etaMinutesRaw > 0 ? Math.round(etaMinutesRaw) : 0,
+    etaDays: Number.isFinite(etaDaysRaw) && etaDaysRaw >= 0 ? Math.round(etaDaysRaw) : null,
   }
 }
 
@@ -1724,6 +1776,64 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
+  const buildDeliveryEventMapHandoff = ({
+    ownerModule = '',
+    order = {},
+    event = {},
+  } = {}) => {
+    const current = normalizeCurrentLocation(currentLocation.value)
+    const context = normalizeDeliveryEventLocationContext({
+      ownerModule,
+      order,
+      event,
+    })
+    const dropoffPoint = context.dropoffPoint || current.detail || ''
+    const pickupPoint = context.pickupPoint || context.locationHint || ''
+    const estimate = pickupPoint && dropoffPoint
+      ? computeTripEstimate(pickupPoint, dropoffPoint)
+      : { distanceKm: 0, minutes: 0, fare: 0 }
+    const etaMinutes = context.etaMinutes > 0
+      ? Math.max(1, context.etaMinutes)
+      : context.etaDays !== null
+        ? Math.max(0, context.etaDays) * 24 * 60
+        : Math.max(0, Math.round(estimate.minutes || 0))
+    const ownerLabel = context.ownerModule === 'food_delivery'
+      ? 'Food Delivery'
+      : context.ownerModule === 'shopping'
+        ? 'Shopping logistics'
+        : context.ownerModule
+    const sourceId = `map_delivery_event_${context.ownerModule}_${context.orderId || context.eventId || 'context'}`.slice(0, 140)
+
+    return {
+      sourceModule:
+        context.ownerModule === 'food_delivery'
+          ? FOOD_DELIVERY_SOURCE_KEYS.MAP_COURIER_ROUTE
+          : LOGISTICS_SOURCE_KEYS.MAP_DELIVERY_LOCATION,
+      sourceId,
+      readOnly: true,
+      eventOwner: context.ownerModule,
+      orderOwner: context.ownerModule,
+      mapOwner: 'delivery_location_context',
+      orderId: context.orderId,
+      eventId: context.eventId,
+      eventType: context.eventType,
+      title: context.title,
+      summary: context.summary,
+      trackingCode: context.trackingCode,
+      carrierName: context.carrierName,
+      currentLocationLabel: current.label,
+      currentLocationDetail: current.detail,
+      pickupPoint,
+      dropoffPoint,
+      locationHint: context.locationHint,
+      distanceKm: estimate.distanceKm,
+      etaMinutes,
+      etaDays: context.etaDays,
+      routeSummaryZh: `${ownerLabel} · ${pickupPoint || context.locationHint || '位置待定'} → ${dropoffPoint || '当前位置'} · ${etaMinutes ? `${etaMinutes} min` : 'ETA TBD'}`,
+      routeSummaryEn: `${ownerLabel} · ${pickupPoint || context.locationHint || 'Location TBD'} -> ${dropoffPoint || 'Current location'} · ${etaMinutes ? `${etaMinutes} min` : 'ETA TBD'}`,
+    }
+  }
+
   const startTrip = () => {
     refreshTripState(Date.now())
     if (tripState.value.status === TRIP_STATUS_TRAVELING) {
@@ -2079,6 +2189,7 @@ export const useMapStore = defineStore('map', () => {
     addAddress,
     removeAddress,
     buildFoodDeliveryMapHandoff,
+    buildDeliveryEventMapHandoff,
     startTrip,
     cancelTrip,
     acknowledgeTripArrival,

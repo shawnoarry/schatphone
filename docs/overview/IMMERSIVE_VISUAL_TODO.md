@@ -366,3 +366,19 @@ Recommended next sequence:
 2. Keep `VISUAL_ENTRY_OWNERSHIP_MAP.md` synchronized with system-controlled folder decisions.
 3. Continue `P1.1 System-Controlled Home Folder Visual`.
 4. Then start `P1.2 Shopping Platform App Shells`.
+
+---
+
+## 10. 2026-05-16 Food Delivery Visual Follow-Up Note
+
+Functional review result:
+
+- Food Delivery remains functionally valid after the visual refresh and app-to-Home navigation update.
+- Detailed implementation and functional next steps are recorded in `docs/roadmap/FOOD_DELIVERY_REVIEW_AND_NEXT_TODO_2026-05-16.md`.
+- `FoodDeliveryView.vue` uses the shared return helper, so the visual rebuild does not need to recreate return-navigation plumbing.
+- Visual work should focus on making `/food-delivery` feel like an installed food app rather than a project status panel.
+- Keep functional ownership stable during visual rebuild: Food Delivery owns restaurant/menu/cart/order/status; Chat, Map, Gallery, and Wallet remain handoff or downstream consumers.
+
+Next visual task:
+
+- Continue `P2.1 Food Delivery Visual Direction` after current P1 system-folder and Shopping platform-shell tasks, unless product work explicitly reprioritizes Food Delivery visual polish sooner.

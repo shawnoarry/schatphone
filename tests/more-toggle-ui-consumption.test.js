@@ -124,6 +124,28 @@ describe('More toggle UI consumption', () => {
     enabledWrapper.unmount()
   })
 
+  test('control_center toggle controls the optional Director Home entry', async () => {
+    const router = createTestRouter()
+    await router.push('/more')
+    await router.isReady()
+    const systemStore = useSystemStore()
+
+    const moreWrapper = mount(MoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(moreWrapper.text()).toContain('运行控制台')
+    expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
+
+    await moreWrapper.find('[data-testid="more-feature-toggle-control_center"]').trigger('click')
+
+    expect(systemStore.isMoreFeatureToggleEnabled('control_center')).toBe(true)
+    expect(systemStore.settings.appearance.homeWidgetPages.flat()).toContain('app_control_center')
+    moreWrapper.unmount()
+  })
+
   test('Files remains hidden from user-facing Home and More entries', async () => {
     const router = createTestRouter()
     await router.push('/more')

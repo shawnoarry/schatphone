@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useMapStore } from '../src/stores/map'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
@@ -50,6 +50,25 @@ describe('FoodDeliveryView', () => {
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query.category).toBe('cafe')
+    wrapper.unmount()
+  })
+
+  test('returns to the originating Home page when opened from a Home folder', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby&from=home&homePage=1')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="food-delivery-go-home"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query.homePage).toBe('1')
     wrapper.unmount()
   })
 
@@ -108,6 +127,11 @@ describe('FoodDeliveryView', () => {
       deliveryAddress: 'Map Pin A',
       note: 'From Chat service.',
     })
+    const event = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+      summary: 'Rider is delayed by rain.',
+      etaMinutes: 42,
+    })
 
     await router.push(`/food-delivery?source=chat&intent=food_delivery_order&orderId=${order.id}`)
     await router.isReady()
@@ -124,8 +148,47 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get(`[data-testid="food-delivery-order-${order.id}"]`).classes()).toContain(
       'border-orange-300',
     )
+    const eventCard = wrapper.get(`[data-testid="food-delivery-order-event-${order.id}-${event.id}"]`)
+    expect(eventCard.text()).toContain('Rider is delayed by rain.')
     expect(store.orderCount).toBe(1)
     expect(store.cartQuantity).toBe(0)
+    wrapper.unmount()
+  })
+
+  test('can trigger a safe delivery event from an order card through the simulation pilot', async () => {
+    const router = createTestRouter()
+    const store = useFoodDeliveryStore()
+    const activeRestaurant = store.listRestaurantsByCategory('restaurants')[0]
+    const menuItem = store.listMenuByRestaurant(activeRestaurant.id)[0]
+    store.addToCart(menuItem.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Map Pin B',
+      note: 'Random event pilot.',
+    })
+
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="food-delivery-trigger-event-${order.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(store.orders[0]?.events).toHaveLength(1)
+    expect([
+      FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+      FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+    ]).toContain(store.orders[0]?.events[0]?.type)
+    expect(wrapper.get('[data-testid="food-delivery-event-feedback"]').text()).toContain(
+      'Delivery event added',
+    )
+    expect(
+      wrapper.find(`[data-testid="food-delivery-order-event-${order.id}-${store.orders[0].events[0].id}"]`).exists(),
+    ).toBe(true)
     wrapper.unmount()
   })
 

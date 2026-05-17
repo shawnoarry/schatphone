@@ -21,6 +21,7 @@ const StockView = () => import('../views/StockView.vue')
 const ShoppingView = () => import('../views/ShoppingView.vue')
 const FoodDeliveryView = () => import('../views/FoodDeliveryView.vue')
 const AssetsView = () => import('../views/AssetsView.vue')
+const ControlCenterView = () => import('../views/ControlCenterView.vue')
 const UserProfileView = () => import('../views/UserProfileView.vue')
 const FilesView = () => import('../views/FilesView.vue')
 const MoreView = () => import('../views/MoreView.vue')
@@ -51,6 +52,7 @@ const router = createRouter({
     { path: '/shopping', component: ShoppingView },
     { path: '/food-delivery', component: FoodDeliveryView },
     { path: '/assets', component: AssetsView },
+    { path: '/control-center', component: ControlCenterView },
     { path: '/files', component: FilesView },
     { path: '/more', component: MoreView },
   ],

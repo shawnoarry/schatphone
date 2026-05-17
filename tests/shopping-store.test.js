@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
-import { useShoppingStore } from '../src/stores/shopping'
+import {
+  SHOPPING_ORDER_EVENT_TYPE,
+  useShoppingStore,
+} from '../src/stores/shopping'
 
 describe('shopping store', () => {
   beforeEach(() => {
@@ -229,6 +232,51 @@ describe('shopping store', () => {
     expect(store.updateOrderStatus(cancelledOrder.id, 'unknown')).toBe(false)
   })
 
+  test('adds logistics events to orders without changing Shopping order lifecycle', () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'product_logistics_event',
+      title: 'Logistics Event Item',
+      category: 'digital',
+      price: '88.00',
+    })
+
+    store.addToCart(product.id)
+    const order = store.checkoutCart()
+    const event = store.addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
+      title: 'Package shipped',
+      summary: 'Standard courier picked up this parcel.',
+      trackingCode: 'TRACK-001',
+      carrierName: 'Standard Courier',
+      etaDays: 2,
+      sourceModule: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
+      sourceId: 'manual_test_event',
+    })
+
+    expect(event).toMatchObject({
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
+      title: 'Package shipped',
+      summary: 'Standard courier picked up this parcel.',
+      trackingCode: 'TRACK-001',
+      carrierName: 'Standard Courier',
+      etaDays: 2,
+      sourceModule: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
+      sourceId: 'manual_test_event',
+    })
+    expect(store.orders[0]).toMatchObject({
+      id: order.id,
+      status: 'placed',
+    })
+    expect(store.orders[0]?.events[0]).toMatchObject({
+      id: event.id,
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
+    })
+    expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
+    expect(store.addOrderEvent('missing_order', { type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED })).toBeNull()
+  })
+
   test('persists, restores, and keeps backup-compatible snapshots', () => {
     const store = useShoppingStore()
     store.resetForTesting()
@@ -239,12 +287,22 @@ describe('shopping store', () => {
       price: '66.00',
     })
     store.addToCart(product.id)
+    const order = store.checkoutCart()
+    store.addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED,
+      summary: 'Parcel arrived before persistence.',
+    })
+    store.addToCart(product.id)
     store.saveNow()
 
     setActivePinia(createPinia())
     const restoredStore = useShoppingStore()
     expect(restoredStore.findProductById(product.id)?.title).toBe('Persisted Product')
     expect(restoredStore.cartQuantity).toBe(1)
+    expect(restoredStore.orders[0]?.events[0]).toMatchObject({
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED,
+      summary: 'Parcel arrived before persistence.',
+    })
 
     const snapshot = {
       shopping: {
@@ -267,5 +325,6 @@ describe('shopping store', () => {
     expect(restoredStore.favoriteCount).toBe(1)
     expect(restoredStore.cartQuantity).toBe(2)
     expect(restoredStore.createBackupSnapshot().products[0]?.id).toBe('product_backup')
+    expect(restoredStore.createBackupSnapshot().orders).toEqual([])
   })
 })

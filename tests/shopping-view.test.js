@@ -8,7 +8,10 @@ import { useAssetsStore } from '../src/stores/assets'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
-import { useShoppingStore } from '../src/stores/shopping'
+import {
+  SHOPPING_ORDER_EVENT_TYPE,
+  useShoppingStore,
+} from '../src/stores/shopping'
 import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
@@ -309,6 +312,12 @@ describe('ShoppingView', () => {
     })
     store.addToCart(product.id)
     const order = store.checkoutCart()
+    store.addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
+      summary: 'Standard courier picked up Mira Lens.',
+      carrierName: 'Standard Courier',
+      trackingCode: 'TRACK-MIRA-01',
+    })
 
     await router.push('/shopping?category=logistics')
     await router.isReady()
@@ -324,6 +333,12 @@ describe('ShoppingView', () => {
       false,
     )
     expect(wrapper.get(`[data-testid="shopping-logistics-order-${order.id}"]`).text()).toContain('Mira Lens')
+    expect(wrapper.get(`[data-testid="shopping-logistics-latest-event-${order.id}"]`).text()).toContain(
+      'Standard courier picked up Mira Lens.',
+    )
+    expect(wrapper.get(`[data-testid="shopping-logistics-latest-event-${order.id}"]`).text()).toContain(
+      'TRACK-MIRA-01',
+    )
     expect(wrapper.get(`[data-testid="shopping-logistics-status-${order.id}"]`).text()).toContain(
       'Pending follow-up',
     )

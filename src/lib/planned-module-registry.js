@@ -4,6 +4,8 @@ export const FOOD_DELIVERY_HOME_APP_ID = 'app_food_delivery'
 export const FOOD_DELIVERY_ROUTE = '/food-delivery'
 export const ASSETS_HOME_APP_ID = 'app_assets'
 export const ASSETS_ROUTE = '/assets'
+export const CONTROL_CENTER_HOME_APP_ID = 'app_control_center'
+export const CONTROL_CENTER_ROUTE = '/control-center'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

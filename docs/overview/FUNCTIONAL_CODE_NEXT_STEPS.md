@@ -26,6 +26,10 @@ Authority note / 职责说明:
 Source set / 参考来源:
 
 - `docs/roadmap/TODO_ROADMAP.md`
+- `docs/roadmap/FOOD_DELIVERY_REVIEW_AND_NEXT_TODO_2026-05-16.md`
+- `docs/process/EVENT_WORKFLOW.md`
+- `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/overview/IMMERSIVE_EVENT_TODO.md`
 - `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
 - `docs/pm/TODO_PM_STATUS_REPORT.md`
 - Current source scan of `src/views`, `src/components`, and `tests`
@@ -1804,6 +1808,294 @@ Recommended next:
   中文：下一步建议补用户自定义餐厅/菜单图片来源字段，复用共享 Gallery/URL 图片来源契约。
 - EN: Then deepen Food Delivery status/exception message cards, such as rider delay, restaurant cancellation, address change, and ETA update.
   中文：随后深化外卖状态/异常消息卡，例如骑手延迟、商家取消、改地址和预计送达变化。
+
+---
+
+## 2026-05-16 Update: Event Specialist Track Created
+
+Status:
+
+- EN: Event-specialist workflow docs now exist for random, condition-driven, scheduled, and module-owned immersive events.
+  中文：事件专项流程已建立，用于随机触发、条件触发、定时触发与模块自有沉浸式事件。
+- EN: Architecture baseline is recorded in `docs/architecture/SIMULATION_EVENT_ENGINE.md`; it keeps event orchestration separate from module state ownership.
+  中文：事件引擎架构基线已记录在 `docs/architecture/SIMULATION_EVENT_ENGINE.md`；事件编排与模块状态归属保持分离。
+- EN: Event TODO is now tracked in `docs/overview/IMMERSIVE_EVENT_TODO.md`.
+  中文：事件专项 TODO 已记录在 `docs/overview/IMMERSIVE_EVENT_TODO.md`。
+
+Recommended next:
+
+- EN: Promote the current Food Delivery order-event behavior into explicit presets, then add a `simulationStore` for event logs, cooldowns, caps, and future Surprise Mode.
+  中文：下一步建议把当前外卖订单事件行为整理为显式预设，然后新增 `simulationStore` 承载事件日志、冷却、上限与未来“惊喜模式”。
+- EN: Alternative pure-foundation slice: add deterministic random and condition-evaluator helpers before touching module adapters.
+  中文：同体量纯基座方案是先补确定性随机与条件评估 helper，再进入模块适配器。
+
+---
+
+## 2026-05-16 Update: Food Delivery Event Preset Adapter
+
+Status:
+
+- EN: Food Delivery order-event behavior is now exposed through reusable presets and an adapter seam in `src/lib/simulation/adapters/food-delivery-events.js`.
+  中文：外卖订单事件行为已通过 `src/lib/simulation/adapters/food-delivery-events.js` 暴露为可复用预设与适配器 seam。
+- EN: The adapter keeps real order mutation inside `foodDeliveryStore.addOrderEvent(...)`.
+  中文：适配器不接管订单状态，真实变更仍留在 `foodDeliveryStore.addOrderEvent(...)`。
+- EN: Presets cover rider delay, restaurant cancellation, address change, ETA update, and status update.
+  中文：预设已覆盖骑手延迟、商家取消、地址变更、ETA 更新与状态更新。
+- EN: Validation passed: `npm test -- tests\food-delivery-event-adapter.test.js tests\food-delivery-store.test.js tests\food-delivery-view.test.js tests\chat-shopping-preview-routing.test.js`.
+  中文：验证通过：`npm test -- tests\food-delivery-event-adapter.test.js tests\food-delivery-store.test.js tests\food-delivery-view.test.js tests\chat-shopping-preview-routing.test.js`。
+
+Recommended next:
+
+- EN: Add `simulationStore` for event logs, cooldown history, daily caps, and future Surprise Mode.
+  中文：下一步建议新增 `simulationStore`，承载事件日志、冷却历史、每日上限与未来“惊喜模式”。
+- EN: Alternative same-size slice: add deterministic random and condition-evaluator helpers before wiring them into the store.
+  中文：同体量备选是先补确定性随机与条件评估 helper，再接入 store。
+
+---
+
+## 2026-05-16 Update: Simulation Event Foundation
+
+Status:
+
+- EN: `simulationStore` now persists event logs, cooldown history, daily caps, module enable flags, and Surprise Mode.
+  中文：`simulationStore` 已持久化事件日志、冷却历史、每日上限、模块启用标记与“惊喜模式”。
+- EN: Shared simulation helpers now cover deterministic random gates, weighted selection, condition evaluation, event template evaluation, cooldown/cap checks, adapter execution, and audit logs.
+  中文：共享 simulation helper 已覆盖确定性随机门、权重选择、条件评估、事件模板评估、冷却/上限检查、适配器执行与审计日志。
+- EN: Settings backup/import/rollback and storage diagnostics now include `store:simulation`.
+  中文：Settings 备份、导入、回滚与存储诊断已纳入 `store:simulation`。
+- EN: Food Delivery presets can run through the shared engine via `runFoodDeliveryOrderEventPreset(...)`.
+  中文：外卖事件预设可通过 `runFoodDeliveryOrderEventPreset(...)` 走共享引擎执行。
+- EN: Validation passed: `npm test -- tests\simulation-store.test.js tests\simulation-random.test.js tests\simulation-condition-evaluator.test.js tests\simulation-event-engine.test.js tests\food-delivery-event-adapter.test.js tests\food-delivery-store.test.js`.
+  中文：验证通过：`npm test -- tests\simulation-store.test.js tests\simulation-random.test.js tests\simulation-condition-evaluator.test.js tests\simulation-event-engine.test.js tests\food-delivery-event-adapter.test.js tests\food-delivery-store.test.js`。
+
+Recommended next:
+
+- EN: Wire a guarded low-frequency Food Delivery random pilot for active orders, starting with ETA update or rider delay.
+  中文：下一步建议给活跃外卖订单接入受保护的低频随机 pilot，优先从 ETA 更新或骑手延迟开始。
+- EN: Alternative same-size slice: add Shopping/logistics event presets but keep them manual/test-only until the Food Delivery pilot proves stable.
+  中文：同体量备选是新增 Shopping/物流事件预设，但先保持手动/测试态，等外卖 pilot 稳定后再开放运行时随机。
+
+---
+
+## 2026-05-16 Update: WorldBook-Aware Event Variant Standard
+
+Status:
+
+- EN: Standard requirement added in `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
+  中文：标准需求已新增到 `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`。
+- EN: The standard defines `worldContext`, `eventVariant`, and `eventVariantPack` as the shared way to make events change by WorldBook/worldview.
+  中文：该标准定义了 `worldContext`、`eventVariant`、`eventVariantPack`，作为事件随 WorldBook/世界观变化的统一方式。
+- EN: Runtime random events should use local saved variants. API calls are reserved for generating or refreshing variant packs.
+  中文：运行时随机事件应使用本地已保存变体。API 调用只保留给生成或刷新事件变体包。
+- EN: Future adapters for Shopping, Logistics, Map, Phone, Gallery, Assets, Calendar, Wallet, and Chat should follow the same chain.
+  中文：后续 Shopping、物流、地图、电话、相册、资产、日历、钱包、Chat 适配器都应遵守同一链路。
+
+Recommended next:
+
+- EN: After the Food Delivery random pilot, add a deterministic `worldContext` resolver from WorldBook bindings.
+  中文：外卖随机 pilot 后，建议新增从 WorldBook 绑定解析 `worldContext` 的确定性 resolver。
+- EN: Then add built-in `daily`, `sci_fi`, and `apocalypse` variants for Food Delivery ETA/rider-delay events.
+  中文：随后为外卖 ETA/骑手延迟事件内置 `daily`、`sci_fi`、`apocalypse` 三类变体。
+
+---
+
+## 2026-05-16 Update: Food Delivery Random Pilot And World Variants
+
+Status:
+
+- EN: Food Delivery now has a guarded low-frequency random pilot for active orders.
+  中文：Food Delivery 现在已有受保护的低频随机事件 pilot，可作用于进行中的外卖订单。
+- EN: The pilot safe-list only includes non-destructive ETA update and rider delay events.
+  中文：pilot 白名单只包含非破坏性的 ETA 更新与骑手延误事件。
+- EN: The pilot checks module enable flags, pilot-level cooldown, pilot-level daily cap, and event-level cooldown/cap before mutating Food Delivery.
+  中文：pilot 在变更外卖数据前会检查模块启用状态、pilot 级冷却、pilot 级每日上限，以及事件自身冷却/上限。
+- EN: WorldBook/worldview now resolves into compact local `worldContext`, and Food Delivery ETA/rider-delay can select built-in `daily`, `sci_fi`, or `apocalypse` variants without API calls.
+  中文：WorldBook/世界观现在可解析为紧凑的本地 `worldContext`，外卖 ETA/骑手延误可选择内置 `daily`、`sci_fi`、`apocalypse` 变体，运行时不调用 API。
+- EN: Event logs now preserve `variantId`, `variantPackId`, `worldContextId`, and `activeWorldBookIds` for future explanation and debugging.
+  中文：事件日志现在保留 `variantId`、`variantPackId`、`worldContextId`、`activeWorldBookIds`，便于后续解释与排查。
+- EN: Validation passed: `npm test -- tests\simulation-world-context.test.js tests\simulation-event-variants.test.js tests\simulation-store.test.js tests\simulation-event-engine.test.js tests\food-delivery-event-adapter.test.js tests\food-delivery-view.test.js`.
+  中文：验证通过：`npm test -- tests\simulation-world-context.test.js tests\simulation-event-variants.test.js tests\simulation-store.test.js tests\simulation-event-engine.test.js tests\food-delivery-event-adapter.test.js tests\food-delivery-view.test.js`。
+
+Recommended next:
+
+- EN: Add Shopping/logistics event presets using the same adapter seam, starting manual/test-only before runtime random triggers.
+  中文：下一步建议为 Shopping/物流新增事件预设，并复用同一适配器 seam；先保持手动/测试态，再开放运行时随机触发。
+- EN: Alternative same-size slice: add a session/scheduled event tick helper that calls existing pilots at low frequency and respects Surprise Mode.
+  中文：同体量备选任务是新增会话/定时事件 tick helper，以低频调用已有 pilot，并遵守 Surprise Mode。
+
+---
+
+## 2026-05-16 Update: Shopping Logistics Event Presets
+
+Status:
+
+- EN: Shopping orders now persist structured logistics events in `order.events`.
+  中文：Shopping 订单现在在 `order.events` 中持久化结构化物流事件。
+- EN: `shoppingStore.addOrderEvent(...)` is the Shopping-owned write seam; adapters and views should not mutate logistics event arrays directly.
+  中文：`shoppingStore.addOrderEvent(...)` 是由 Shopping 拥有的写入 seam；适配器和视图不应直接改物流事件数组。
+- EN: `src/lib/simulation/adapters/shopping-logistics-events.js` adds reusable presets for package shipped, package arrived, pickup point changed, and international logistics delay.
+  中文：`src/lib/simulation/adapters/shopping-logistics-events.js` 已新增可复用预设，覆盖发货、到达、取件点变更与国际物流延迟。
+- EN: Shopping logistics panel and Chat Logistics service-account context now read the same latest Shopping order event.
+  中文：Shopping 物流页和 Chat 物流服务号上下文现在读取同一条 Shopping 订单最新事件。
+- EN: Shopping/logistics remains manual/condition-only; runtime random triggers are deferred.
+  中文：Shopping/物流目前保持手动/条件触发，运行时随机触发后置。
+- EN: Validation passed: `npm test -- tests\shopping-store.test.js tests\shopping-logistics-event-adapter.test.js tests\shopping-view.test.js tests\chat-shopping-preview-routing.test.js tests\simulation-event-engine.test.js tests\simulation-store.test.js`.
+  中文：验证通过：`npm test -- tests\shopping-store.test.js tests\shopping-logistics-event-adapter.test.js tests\shopping-view.test.js tests\chat-shopping-preview-routing.test.js tests\simulation-event-engine.test.js tests\simulation-store.test.js`。
+
+Recommended next:
+
+- EN: Add a session/scheduled event tick helper that calls safe pilots at low frequency and respects Surprise Mode, module enable flags, cooldowns, and daily caps.
+  中文：下一步建议新增会话/定时事件 tick helper，以低频调用安全 pilot，并遵守 Surprise Mode、模块开关、冷却与每日上限。
+- EN: Keep the first runtime tick scope limited to Food Delivery ETA/rider-delay; Shopping/logistics random notices should wait for explanation/dismissal rules.
+  中文：第一阶段运行时 tick 范围仍应限制在外卖 ETA/骑手延迟；Shopping/物流随机通知应等待解释/关闭规则明确后再开放。
+- EN: Alternative same-size slice: add Map read-only delivery-address/pickup-point handoff from Shopping logistics events.
+  中文：同体量备选任务：从 Shopping 物流事件向 Map 增加只读配送地址/取件点交接。
+
+---
+
+## 2026-05-16 Update: Session Event Tick Helper
+
+Status:
+
+- EN: `src/lib/simulation/event-tick-runner.js` now provides a deterministic session/scheduled tick helper.
+  中文：`src/lib/simulation/event-tick-runner.js` 现在提供确定性的会话/定时 tick helper。
+- EN: The helper checks Surprise Mode, tick-level cooldown, tick-level daily cap, and then calls only the existing safe Food Delivery random pilot.
+  中文：该 helper 会先检查 Surprise Mode、tick 级冷却、tick 级每日上限，然后只调用现有安全的外卖随机 pilot。
+- EN: Shopping/logistics random execution is still intentionally disabled.
+  中文：Shopping/物流随机执行仍然刻意禁用。
+- EN: The helper is library-only for now; it is not wired into automatic app lifecycle execution yet.
+  中文：当前 helper 仍是纯 library，尚未接入自动应用生命周期执行。
+- EN: Validation passed: `npm test -- tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js tests\simulation-store.test.js tests\simulation-event-engine.test.js`.
+  中文：验证通过：`npm test -- tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js tests\simulation-store.test.js tests\simulation-event-engine.test.js`。
+
+Recommended next:
+
+- EN: Add one explicit low-risk caller for the tick helper, preferably a manual/developer-only Settings or Diagnostics action before any automatic background tick.
+  中文：下一步建议为 tick helper 增加一个显式低风险调用方，优先放在手动/开发者用 Settings 或 Diagnostics 操作中，而不是立刻自动后台执行。
+- EN: After manual diagnostics proves stable, add a guarded app-session foreground tick with long interval and user-facing explanation.
+  中文：手动诊断稳定后，再考虑加入带长间隔和用户解释的前台会话 tick。
+- EN: Alternative same-size slice: add Map read-only handoff for delivery locations before enabling automatic ticks.
+  中文：同体量备选任务：在启用自动 tick 前，先补 Map 对配送位置的只读交接。
+
+---
+
+## 2026-05-17 Update: Manual Event Tick Diagnostics
+
+Status:
+
+- EN: Settings > About now exposes a manual Event Tick Diagnostics action.
+  中文：Settings > About 现在提供手动 Event Tick Diagnostics 操作。
+- EN: The action calls `runSimulationEventTick(...)`, writes a `simulation/run_event_tick` report, and displays the latest tick result.
+  中文：该操作会调用 `runSimulationEventTick(...)`，写入 `simulation/run_event_tick` 报告，并显示最新 tick 结果。
+- EN: Network reports now include a `simulation` module filter and labels for tick triggered/skipped results.
+  中文：Network 报告现在包含 `simulation` 模块筛选项，并补充 tick 触发/跳过的标签。
+- EN: Automatic app lifecycle/background execution remains disabled.
+  中文：自动应用生命周期/后台执行仍保持关闭。
+- EN: Validation passed: `npm test -- tests\settings-general-section.test.js tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js`.
+  中文：验证通过：`npm test -- tests\settings-general-section.test.js tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js`。
+
+Recommended next:
+
+- EN: Add a readonly event-log explanation surface before enabling automatic foreground ticks.
+  中文：下一步建议在启用自动前台 tick 前，先补一个只读事件日志解释界面。
+- EN: Good first option: Settings/About recent simulation report summary or a small Simulation/Event Log panel.
+  中文：优先选项：Settings/About 最近 simulation 报告摘要，或一个小型 Simulation/Event Log 面板。
+- EN: Alternative same-size slice: Map read-only delivery-event handoff for Food Delivery and Shopping logistics locations.
+  中文：同体量备选任务：为 Food Delivery 和 Shopping 物流位置增加 Map 只读交接。
+
+---
+
+## 2026-05-17 Update: Readonly Event Log Explanation Surface
+
+Status:
+
+- EN: Settings > About now includes a readonly recent simulation event-log panel.
+  中文：Settings > About 现在包含只读的最近事件日志解释面板。
+- EN: The panel explains event id, module, trigger source, status, reason, target, and world variant metadata in user-readable copy while preserving technical ids for debugging.
+  中文：该面板会用可读文案解释事件 id、模块、触发来源、状态、原因、目标与世界观变体元数据，同时保留技术 id 便于排障。
+- EN: It does not mutate module data and does not enable automatic foreground/background ticks.
+  中文：该面板不修改任何模块数据，也不启用自动前台/后台 tick。
+- EN: Validation target: `npm test -- tests\settings-general-section.test.js tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js`.
+  中文：验证目标：`npm test -- tests\settings-general-section.test.js tests\simulation-event-tick-runner.test.js tests\food-delivery-event-adapter.test.js`。
+
+Recommended next:
+
+- EN: Add a guarded foreground-session tick caller with a long interval, still limited to Food Delivery ETA/rider-delay safe-list events.
+  中文：下一步建议加入受保护的前台会话 tick 调用方，保持较长间隔，并仍只允许外卖 ETA/骑手延迟安全事件。
+- EN: Alternative same-size slice: add Map read-only handoff for Food Delivery and Shopping logistics event locations.
+  中文：同体量备选任务：为 Food Delivery 和 Shopping 物流事件位置补 Map 只读交接。
+
+---
+
+## 2026-05-17 Update: Foreground Session Tick Controller Foundation
+
+Status:
+
+- EN: Added a guarded foreground-session tick controller library at `src/lib/simulation/foreground-session-tick.js`.
+  中文：已在 `src/lib/simulation/foreground-session-tick.js` 新增受保护的前台会话 tick 控制器库。
+- EN: The controller supports start/stop/execute/state and delegates real execution to `runSimulationEventTick(...)`.
+  中文：控制器支持启动、停止、执行一次、读取状态，并将真实执行委托给 `runSimulationEventTick(...)`。
+- EN: It enforces a 10-minute default interval and 1-minute minimum interval, but is not yet wired into app lifecycle.
+  中文：它强制默认 10 分钟间隔和最小 1 分钟间隔，但尚未接入应用生命周期。
+- EN: Validation target: `npm test -- tests\simulation-foreground-session-tick.test.js tests\simulation-event-tick-runner.test.js`.
+  中文：验证目标：`npm test -- tests\simulation-foreground-session-tick.test.js tests\simulation-event-tick-runner.test.js`。
+
+Recommended next:
+
+- EN: Decide and wire an explicit user-facing control location before automatic ticks become active.
+  中文：在自动 tick 真正生效前，先确定并接入显式用户控制位置。
+- EN: Preferred options are Settings > Automation for real user control, or Settings > About diagnostics for developer-only pilot control.
+  中文：优先选项是 Settings > Automation 作为真实用户控制，或 Settings > About diagnostics 作为开发/诊断 pilot 控制。
+
+---
+
+## 2026-05-17 Update: Map Readonly Delivery Event Handoff
+
+Status:
+
+- EN: `mapStore.buildDeliveryEventMapHandoff(...)` now builds readonly route/location context from Food Delivery order events and Shopping logistics events.
+  中文：`mapStore.buildDeliveryEventMapHandoff(...)` 现在可从外卖订单事件和购物物流事件构建只读路线/位置上下文。
+- EN: The handoff does not start a Map trip, does not write trip history, and does not move order ownership into Map.
+  中文：该交接不会启动 Map 行程，不写入行程历史，也不会把订单所有权转移给 Map。
+- EN: Validation target: `npm test -- tests\map-trip-baseline.test.js`.
+  中文：验证目标：`npm test -- tests\map-trip-baseline.test.js`。
+
+Recommended next:
+
+- EN: Decide whether to expose a read-only "View route context" action in Food Delivery/Shopping now, or keep this store-only until the visual rebuild.
+  中文：下一步建议决定现在是否在 Food Delivery/Shopping 展示只读“查看路线上下文”动作，或先保持 store-only 等待视觉重建。
+- EN: Alternative same-size slice: wire the foreground-session tick controller into an explicit Settings control after the control location is chosen.
+  中文：同体量备选任务：在控制位置确定后，把前台会话 tick 控制器接入显式 Settings 开关。
+
+---
+
+## 2026-05-17 Update: Optional Runtime Control / Director App
+
+Status:
+
+- EN: Optional Runtime Control / Director App baseline is landed.
+  中文：可选运行控制 / 导演台基线已落地。
+- EN: `control_center` is off by default, so Home does not show `app_control_center` for users who prefer free chat and normal module use.
+  中文：`control_center` 默认关闭，因此偏好自由聊天和常规模块使用的用户不会在主屏看到 `app_control_center`。
+- EN: Enabling the More toggle restores the Director entry on Home; disabling it removes the entry without changing other module tiles.
+  中文：开启 More 开关会把导演台入口恢复到主屏；关闭会移除入口，且不影响其他模块图标。
+- EN: `/control-center` currently provides a safe placeholder that explains the optional boundary.
+  中文：`/control-center` 当前是安全占位页，用于解释可选边界。
+- EN: Product decision reference: `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_DIRECTOR_APP.md`.
+  中文：产品决策参考 `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_DIRECTOR_APP.md`。
+
+Validation target:
+
+- `npm test -- tests\system-widget-import.test.js tests\home-folder-entry.test.js tests\more-toggle-ui-consumption.test.js tests\app-icon-presentation.test.js tests\planned-module-registry.test.js`
+
+Next recommended slice:
+
+- EN: Connect `ControlCenterView.vue` to read-only `simulationStore` state: event-log count, recent event summaries, adapter enablement, Surprise Mode state, and world-variant pack status.
+  中文：将 `ControlCenterView.vue` 接入只读 `simulationStore` 状态：事件日志数量、最近事件摘要、适配器启用状态、Surprise Mode 状态、世界观变体包状态。
+- EN: Do not add mutation controls yet; prove the read-only boundary first.
+  中文：暂不加入改写控件，先验证只读边界。
+- EN: Alternative same-size slice: extract the Network provider-template/setup/preset display area into a small component without moving preset save/remove logic.
+  中文：同体量备选切片是继续抽取 Network 供应商模板/配置向导/预设展示区，但不迁移预设保存/删除逻辑。
 
 ---
 

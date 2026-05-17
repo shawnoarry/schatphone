@@ -13,6 +13,7 @@ const FOOD_RESTAURANT_LIMIT = 120
 const FOOD_MENU_ITEM_LIMIT = 360
 const FOOD_CART_LINE_LIMIT = 40
 const FOOD_ORDER_LIMIT = 120
+const FOOD_ORDER_EVENT_LIMIT = 24
 const DEFAULT_CURRENCY = 'CNY'
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
@@ -24,7 +25,23 @@ export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 })
 
+export const FOOD_DELIVERY_ORDER_EVENT_TYPE = Object.freeze({
+  RIDER_DELAY: 'rider_delay',
+  RESTAURANT_CANCELLED: 'restaurant_cancelled',
+  ADDRESS_CHANGE: 'address_change',
+  ETA_UPDATE: 'eta_update',
+  STATUS_UPDATE: 'status_update',
+})
+
 const FOOD_DELIVERY_ORDER_STATUS_VALUES = new Set(Object.values(FOOD_DELIVERY_ORDER_STATUS))
+const FOOD_DELIVERY_ORDER_EVENT_TYPE_VALUES = new Set(Object.values(FOOD_DELIVERY_ORDER_EVENT_TYPE))
+const FOOD_DELIVERY_ORDER_EVENT_TITLES = Object.freeze({
+  [FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY]: 'Rider delay',
+  [FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED]: 'Restaurant cancelled',
+  [FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE]: 'Address changed',
+  [FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE]: 'ETA updated',
+  [FOOD_DELIVERY_ORDER_EVENT_TYPE.STATUS_UPDATE]: 'Status updated',
+})
 const FOOD_CATEGORY_KEYS = FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => entry.key)
 const FOOD_CATEGORY_KEY_SET = new Set(FOOD_CATEGORY_KEYS)
 
@@ -74,6 +91,11 @@ const normalizeStatus = (value, fallback = FOOD_DELIVERY_ORDER_STATUS.PLACED) =>
   return FOOD_DELIVERY_ORDER_STATUS_VALUES.has(normalized) ? normalized : fallback
 }
 
+const normalizeOrderEventType = (value, fallback = '') => {
+  const normalized = normalizeText(value, fallback, 60)
+  return FOOD_DELIVERY_ORDER_EVENT_TYPE_VALUES.has(normalized) ? normalized : fallback
+}
+
 const normalizeRating = (value, fallback = 4.6) => {
   const num = Number(value)
   if (!Number.isFinite(num)) return fallback
@@ -91,6 +113,7 @@ const normalizeQuantity = (value, fallback = 1) => clamp(toInt(value, fallback),
 const createRestaurantId = () => `food_restaurant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createMenuItemId = () => `food_menu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createFoodOrderId = () => `food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createFoodOrderEventId = () => `food_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const normalizeRestaurant = (rawRestaurant, index = 0) => {
   if (!rawRestaurant || typeof rawRestaurant !== 'object') return null
@@ -246,6 +269,46 @@ const normalizeOrderItem = (rawItem, index = 0) => {
   }
 }
 
+const normalizeOrderEvent = (rawEvent, index = 0) => {
+  if (!rawEvent || typeof rawEvent !== 'object') return null
+  const type = normalizeOrderEventType(rawEvent.type || rawEvent.eventType)
+  if (!type) return null
+
+  const now = Date.now()
+  const createdAt = Math.max(0, toInt(rawEvent.createdAt, now + index))
+  const etaMinutes =
+    rawEvent.etaMinutes === undefined || rawEvent.etaMinutes === null
+      ? null
+      : clamp(toInt(rawEvent.etaMinutes, 0), 0, 240)
+
+  return {
+    id: normalizeText(rawEvent.id, `food_event_legacy_${now}_${index}`, 140),
+    type,
+    title: normalizeText(rawEvent.title, FOOD_DELIVERY_ORDER_EVENT_TITLES[type] || 'Food delivery update', 120),
+    summary: normalizeText(rawEvent.summary || rawEvent.desc || rawEvent.note, '', 280),
+    etaMinutes,
+    deliveryAddress: normalizeText(rawEvent.deliveryAddress || rawEvent.address, '', 160),
+    sourceModule: normalizeText(rawEvent.sourceModule, 'food_delivery_status_event', 80),
+    sourceId: normalizeText(rawEvent.sourceId, '', 140),
+    createdAt,
+  }
+}
+
+const normalizeOrderEvents = (rawEvents) => {
+  if (!Array.isArray(rawEvents)) return []
+  const seen = new Set()
+  const normalized = []
+  rawEvents.forEach((item, index) => {
+    const event = normalizeOrderEvent(item, index)
+    if (!event || seen.has(event.id)) return
+    seen.add(event.id)
+    normalized.push(event)
+  })
+  return normalized
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, FOOD_ORDER_EVENT_LIMIT)
+}
+
 const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
   const totals = new Map()
   items.forEach((item) => {
@@ -299,6 +362,7 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
     currency: primaryTotal.currency,
     deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
     note: normalizeText(rawOrder.note, '', 240),
+    events: normalizeOrderEvents(rawOrder.events || rawOrder.statusEvents || rawOrder.eventCards),
     sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_checkout', 60),
     sourceId: normalizeText(rawOrder.sourceId, '', 140),
     createdAt,
@@ -698,6 +762,37 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return true
   }
 
+  const addOrderEvent = (orderId, eventInput = {}) => {
+    const id = normalizeText(orderId, '', 140)
+    if (!id) return null
+    const order = orders.value.find((item) => item.id === id)
+    if (!order) return null
+
+    const now = Date.now()
+    const event = normalizeOrderEvent(
+      {
+        ...eventInput,
+        id: eventInput.id || createFoodOrderEventId(),
+        createdAt: eventInput.createdAt || now,
+      },
+      0,
+    )
+    if (!event) return null
+
+    const currentEvents = Array.isArray(order.events) ? order.events : []
+    order.events = [event, ...currentEvents.filter((item) => item.id !== event.id)].slice(0, FOOD_ORDER_EVENT_LIMIT)
+
+    if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) {
+      order.status = FOOD_DELIVERY_ORDER_STATUS.CANCELLED
+    }
+    if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE && event.deliveryAddress) {
+      order.deliveryAddress = event.deliveryAddress
+    }
+
+    order.updatedAt = Math.max(now, event.createdAt)
+    return event
+  }
+
   const removeOrder = (orderId) => {
     const id = normalizeText(orderId, '', 140)
     const before = orders.value.length
@@ -742,6 +837,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ...order,
       items: order.items.map((item) => ({ ...item })),
       totals: order.totals.map((item) => ({ ...item })),
+      events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],
     })),
   })
 
@@ -822,6 +918,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     clearCart,
     checkoutCart,
     updateOrderStatus,
+    addOrderEvent,
     removeOrder,
     createBackupSnapshot,
     createBackupSnapshotAsync,

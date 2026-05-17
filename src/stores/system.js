@@ -13,6 +13,7 @@ import {
 import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import {
   ASSETS_HOME_APP_ID,
+  CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
@@ -86,20 +87,39 @@ const CORE_HOME_TILE_IDS = [
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
+  CONTROL_CENTER_HOME_APP_ID,
   'app_more',
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
+const OPTIONAL_HOME_TILE_IDS = new Set([CONTROL_CENTER_HOME_APP_ID])
 const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
   (tileId) => typeof tileId === 'string' && !tileId.startsWith('app_'),
 )
 
 const MIN_HOME_PAGES = 5
+const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page, pageIndex) => {
+  if (pageIndex !== 1) return [...page]
+  const appMoreIndex = page.indexOf('app_more')
+  if (appMoreIndex < 0) return [...page, CONTROL_CENTER_HOME_APP_ID]
+  return [
+    ...page.slice(0, appMoreIndex),
+    CONTROL_CENTER_HOME_APP_ID,
+    ...page.slice(appMoreIndex),
+  ]
+})
 
 const LOCKED_HOME_TILE_IDS = DEFAULT_WIDGET_PAGES
   .flat()
-  .filter((tileId) => typeof tileId === 'string' && tileId.startsWith('app_'))
+  .filter(
+    (tileId) =>
+      typeof tileId === 'string' &&
+      tileId.startsWith('app_') &&
+      !OPTIONAL_HOME_TILE_IDS.has(tileId),
+  )
 const DEFAULT_TILE_PAGE_INDEX = Object.fromEntries(
-  DEFAULT_WIDGET_PAGES.flatMap((page, pageIndex) => page.map((tileId) => [tileId, pageIndex])),
+  DEFAULT_HOME_TILE_ORDER_PAGES.flatMap((page, pageIndex) =>
+    page.map((tileId) => [tileId, pageIndex]),
+  ),
 )
 
 const CUSTOM_WIDGET_ID_PREFIX = 'custom_widget_'
@@ -124,11 +144,12 @@ const BACKUP_REMINDER_MAX_INTERVAL_HOURS = 24 * 30
 const BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS = 24
 const BACKUP_COPY_TONE_VALUES = ['direct', 'immersive']
 const DEFAULT_BACKUP_COPY_TONE = 'direct'
-const MORE_FEATURE_TOGGLE_IDS = ['smart_panel', 'focus_mode', 'scene_switch']
+const MORE_FEATURE_TOGGLE_IDS = ['smart_panel', 'focus_mode', 'scene_switch', 'control_center']
 const DEFAULT_MORE_FEATURE_TOGGLES = Object.freeze({
   smart_panel: true,
   focus_mode: false,
   scene_switch: false,
+  control_center: false,
 })
 const USER_AI_CONTEXT_RECOMMENDED_KEYS = ['name', 'occupation', 'relationship', 'bio']
 const USER_AI_CONTEXT_FIELD_LIMITS = Object.freeze({
@@ -236,7 +257,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...page])
 
 const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
-  const order = DEFAULT_WIDGET_PAGES[pageIndex] || []
+  const order = DEFAULT_HOME_TILE_ORDER_PAGES[pageIndex] || []
   const targetOrder = order.indexOf(tileId)
   const nextPage = Array.isArray(page) ? page.filter((itemId) => itemId !== tileId) : []
 
@@ -257,6 +278,20 @@ const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
 
   nextPage.splice(insertIndex, 0, tileId)
   return nextPage
+}
+
+const buildDefaultHomeWidgetPages = (enabledOptionalTileIds = []) => {
+  const pages = cloneDefaultWidgetPages()
+  enabledOptionalTileIds.forEach((tileId) => {
+    if (!OPTIONAL_HOME_TILE_IDS.has(tileId)) return
+    const targetPage = DEFAULT_TILE_PAGE_INDEX[tileId]
+    if (!Number.isInteger(targetPage)) return
+    while (pages.length <= targetPage) {
+      pages.push([])
+    }
+    pages[targetPage] = insertHomeTileByDefaultOrder(pages[targetPage], tileId, targetPage)
+  })
+  return pages
 }
 
 const createDefaultAiAutomationSettings = () => ({
@@ -312,6 +347,11 @@ const normalizeMoreSettings = (input = {}) => {
   return {
     featureToggles: normalizeMoreFeatureToggles(source.featureToggles),
   }
+}
+
+const getEnabledOptionalHomeTileIdsFromMoreSettings = (moreSettings = {}) => {
+  const normalized = normalizeMoreSettings(moreSettings)
+  return normalized.featureToggles.control_center === true ? [CONTROL_CENTER_HOME_APP_ID] : []
 }
 
 const normalizeUserAiContextText = (value, maxLength = 160) => {
@@ -699,11 +739,15 @@ const normalizeCustomWidgets = (widgetsInput) => {
     .filter(Boolean)
 }
 
-const normalizeHomeWidgetPages = (pages, customWidgetIds = []) => {
+const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => {
   const allowedIds = new Set([...CORE_HOME_TILE_IDS, ...customWidgetIds])
+  const shouldUseDefaultWhenEmpty = options.defaultWhenEmpty !== false
+  const enabledOptionalTileIds = new Set(
+    Array.isArray(options.enabledOptionalTileIds) ? options.enabledOptionalTileIds : [],
+  )
 
   if (!Array.isArray(pages)) {
-    return cloneDefaultWidgetPages()
+    return buildDefaultHomeWidgetPages([...enabledOptionalTileIds])
   }
 
   const seen = new Set()
@@ -714,6 +758,7 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = []) => {
         .map((tileId) => HOME_TILE_ALIASES[tileId] || tileId)
         .filter((tileId) => {
           if (HIDDEN_FRONTEND_HOME_TILE_IDS.has(tileId)) return false
+          if (OPTIONAL_HOME_TILE_IDS.has(tileId) && !enabledOptionalTileIds.has(tileId)) return false
           if (!allowedIds.has(tileId)) return false
           if (seen.has(tileId)) return false
           seen.add(tileId)
@@ -722,7 +767,9 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = []) => {
     )
 
   if (normalized.length === 0) {
-    return cloneDefaultWidgetPages()
+    return shouldUseDefaultWhenEmpty
+      ? buildDefaultHomeWidgetPages([...enabledOptionalTileIds])
+      : ensureMinimumHomePages([])
   }
 
   const withMinimumPages = ensureMinimumHomePages(normalized)
@@ -1099,6 +1146,19 @@ export const useSystemStore = defineStore('system', () => {
   const currentCustomWidgetIds = () =>
     settings.appearance.customWidgets.map((widget) => widget.id)
 
+  const currentEnabledOptionalHomeTileIds = () =>
+    getEnabledOptionalHomeTileIdsFromMoreSettings(settings.more)
+
+  const normalizeHomeWidgetPagesForCurrentSettings = (
+    pages,
+    customWidgetIds = currentCustomWidgetIds(),
+    options = {},
+  ) =>
+    normalizeHomeWidgetPages(pages, customWidgetIds, {
+      ...options,
+      enabledOptionalTileIds: currentEnabledOptionalHomeTileIds(),
+    })
+
   const getThemeById = (themeId = '') => {
     const normalizedThemeId = normalizeThemeId(themeId, '')
     if (!normalizedThemeId) return availableThemes.value[0] || null
@@ -1153,8 +1213,16 @@ export const useSystemStore = defineStore('system', () => {
   const isMoreFeatureToggleEnabled = (toggleId) => {
     const normalizedId = normalizeMoreFeatureToggleId(toggleId)
     if (!normalizedId) return false
-    settings.more = normalizeMoreSettings(settings.more)
-    return settings.more.featureToggles[normalizedId] === true
+    const normalizedMore = normalizeMoreSettings(settings.more)
+    return normalizedMore.featureToggles[normalizedId] === true
+  }
+
+  const normalizeCurrentHomeWidgetPages = () => {
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
+      settings.appearance.homeWidgetPages,
+      currentCustomWidgetIds(),
+    )
+    return settings.appearance.homeWidgetPages
   }
 
   const setMoreFeatureToggle = (toggleId, enabled) => {
@@ -1162,6 +1230,13 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalizedId) return false
     settings.more = normalizeMoreSettings(settings.more)
     settings.more.featureToggles[normalizedId] = enabled === true
+    if (normalizedId === 'control_center') {
+      if (settings.more.featureToggles.control_center === true) {
+        restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
+      } else {
+        normalizeCurrentHomeWidgetPages()
+      }
+    }
     return true
   }
 
@@ -1387,11 +1462,13 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const setHomeWidgetPages = (pages) => {
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(pages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(pages)
   }
 
   const resetHomeWidgetPages = () => {
-    settings.appearance.homeWidgetPages = cloneDefaultWidgetPages()
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
+      cloneDefaultWidgetPages(),
+    )
   }
 
   const addCustomWidget = ({ name, size, code, pageIndex = 0, placeOnHome = true } = {}) => {
@@ -1406,7 +1483,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.customWidgets = [...settings.appearance.customWidgets, widget]
 
     if (placeOnHome === false || pageIndex === null) {
-      settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
+      settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
         settings.appearance.homeWidgetPages,
         currentCustomWidgetIds(),
       )
@@ -1421,7 +1498,7 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     nextPages[targetPage].push(widget.id)
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
 
     return widget.id
   }
@@ -1443,7 +1520,7 @@ export const useSystemStore = defineStore('system', () => {
 
     const nextWidgets = settings.appearance.customWidgets.map((item, idx) => (idx === index ? next : item))
     settings.appearance.customWidgets = nextWidgets
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )
@@ -1457,7 +1534,7 @@ export const useSystemStore = defineStore('system', () => {
     const nextPages = settings.appearance.homeWidgetPages.map((page) =>
       page.filter((tileId) => tileId !== widgetId),
     )
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
   }
 
   const placeCustomWidget = (widgetId, pageIndex = 0) => {
@@ -1474,7 +1551,7 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     nextPages[targetPage].push(widgetId)
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
   }
 
   const importCustomWidgets = (importPayload, pageIndex = 0, options = {}) => {
@@ -1522,7 +1599,7 @@ export const useSystemStore = defineStore('system', () => {
       }
 
       const mergedWidgetIds = mergedWidgets.map((widget) => widget.id)
-      const normalizedPages = normalizeHomeWidgetPages(nextPages, mergedWidgetIds)
+      const normalizedPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages, mergedWidgetIds)
 
       settings.appearance.customWidgets = mergedWidgets
       settings.appearance.homeWidgetPages = normalizedPages
@@ -1560,12 +1637,18 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     nextPages[targetPage].push(tileId)
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
     return true
   }
 
-  const restoreBuiltInWidgetTile = (tileId) => {
-    if (!BUILT_IN_WIDGET_TILE_IDS.includes(tileId)) return false
+  const restoreHomeTileByDefaultOrder = (tileId) => {
+    if (!CORE_HOME_TILE_IDS.includes(tileId)) return false
+    if (
+      OPTIONAL_HOME_TILE_IDS.has(tileId) &&
+      !currentEnabledOptionalHomeTileIds().includes(tileId)
+    ) {
+      return false
+    }
     const targetPage = DEFAULT_TILE_PAGE_INDEX[tileId]
     if (!Number.isInteger(targetPage)) return false
 
@@ -1578,8 +1661,13 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     nextPages[targetPage] = insertHomeTileByDefaultOrder(nextPages[targetPage], tileId, targetPage)
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(nextPages, currentCustomWidgetIds())
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
     return true
+  }
+
+  const restoreBuiltInWidgetTile = (tileId) => {
+    if (!BUILT_IN_WIDGET_TILE_IDS.includes(tileId)) return false
+    return restoreHomeTileByDefaultOrder(tileId)
   }
 
   const addNotification = (rawNote = {}) => {
@@ -2604,7 +2692,7 @@ export const useSystemStore = defineStore('system', () => {
       }
 
       settings.appearance.customWidgets = normalizeCustomWidgets(appearance.customWidgets)
-      settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
+      settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
         appearance.homeWidgetPages,
         currentCustomWidgetIds(),
       )
@@ -2660,6 +2748,11 @@ export const useSystemStore = defineStore('system', () => {
       settings.more = normalizeMoreSettings(persisted.settings.more)
     } else {
       settings.more = normalizeMoreSettings(settings.more)
+    }
+    if (settings.more.featureToggles.control_center === true) {
+      restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
+    } else {
+      normalizeCurrentHomeWidgetPages()
     }
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
@@ -2748,7 +2841,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.appIconOverrides = normalizeAppIconOverrides(
       settings.appearance.appIconOverrides,
     )
-    settings.appearance.homeWidgetPages = normalizeHomeWidgetPages(
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )

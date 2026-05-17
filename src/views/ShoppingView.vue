@@ -190,12 +190,14 @@ const walletExpenseSuggestions = computed(() =>
 const logisticsOrderRows = computed(() =>
   orders.value.slice(0, 8).map((order) => {
     const cue = calendarStore.findShoppingDeliveryCueByOrderId(order.id)
+    const latestEvent = Array.isArray(order.events) ? order.events[0] : null
     return {
       order,
       cue,
       status: cue?.status || (order.status === SHOPPING_ORDER_STATUS.PLACED ? 'pending' : order.status),
       title: cue?.title || order.items.map((item) => item.title).join(' / '),
       summary: cue?.summary || t('Waiting for delivery follow-up cue.', 'Waiting for delivery follow-up cue.'),
+      latestEvent,
       suggestedAt: cue?.suggestedAt || order.createdAt,
       total: formatOrderTotal(order),
       route: cue?.route || '/shopping',
@@ -216,6 +218,14 @@ const logisticsStatusLabel = (status) => {
   if (status === SHOPPING_ORDER_STATUS.COMPLETED) return t('Completed', 'Completed')
   if (status === SHOPPING_ORDER_STATUS.CANCELLED) return t('Cancelled', 'Cancelled')
   return t('Pending follow-up', 'Pending follow-up')
+}
+
+const logisticsEventTypeLabel = (type) => {
+  if (type === 'package_shipped') return t('Package shipped', 'Package shipped')
+  if (type === 'package_arrived') return t('Package arrived', 'Package arrived')
+  if (type === 'pickup_point_changed') return t('Pickup changed', 'Pickup changed')
+  if (type === 'international_delay') return t('International delay', 'International delay')
+  return t('Logistics update', 'Logistics update')
 }
 
 const formatLogisticsDate = (value) => {
@@ -757,6 +767,33 @@ onBeforeUnmount(() => {
               >
                 {{ logisticsStatusLabel(row.status) }}
               </span>
+            </div>
+            <div
+              v-if="row.latestEvent"
+              class="mt-2 rounded-lg border border-white bg-white/80 px-2.5 py-2 text-[11px] text-sky-800"
+              :data-testid="`shopping-logistics-latest-event-${row.order.id}`"
+            >
+              <p class="font-semibold">
+                {{ logisticsEventTypeLabel(row.latestEvent.type) }}
+                <span v-if="row.latestEvent.carrierName" class="font-normal text-sky-600">
+                  路 {{ row.latestEvent.carrierName }}
+                </span>
+              </p>
+              <p class="mt-1 line-clamp-2 leading-4 text-sky-600">
+                {{ row.latestEvent.summary || row.latestEvent.title }}
+              </p>
+              <p
+                v-if="row.latestEvent.trackingCode || row.latestEvent.pickupPoint || row.latestEvent.locationHint"
+                class="mt-1 text-[10px] text-sky-500"
+              >
+                {{
+                  [
+                    row.latestEvent.trackingCode,
+                    row.latestEvent.pickupPoint,
+                    row.latestEvent.locationHint,
+                  ].filter(Boolean).join(' · ')
+                }}
+              </p>
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-2">
               <button

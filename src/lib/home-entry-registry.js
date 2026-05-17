@@ -1,6 +1,8 @@
 import {
   ASSETS_HOME_APP_ID,
   ASSETS_ROUTE,
+  CONTROL_CENTER_HOME_APP_ID,
+  CONTROL_CENTER_ROUTE,
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_HOME_APP_ID,
   FOOD_DELIVERY_ROUTE,
@@ -52,12 +54,20 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
     accent: 'cool',
     route: ASSETS_ROUTE,
   }),
+  [CONTROL_CENTER_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-wand-magic-sparkles',
+    label: 'Director',
+    accent: 'dark',
+    route: CONTROL_CENTER_ROUTE,
+  }),
 })
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
+  CONTROL_CENTER_HOME_APP_ID,
 ])
 
 export const HOME_PLANNED_LOCKED_TILE_IDS = Object.freeze([

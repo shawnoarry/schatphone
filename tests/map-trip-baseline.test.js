@@ -288,6 +288,93 @@ describe('map trip baseline loop', () => {
     expect(store.tripHistory).toHaveLength(0)
   })
 
+  test('builds read-only delivery event handoff for Food Delivery order events', () => {
+    const store = useMapStore()
+    store.setCurrentLocation({
+      label: 'Apartment',
+      detail: 'Apartment Gate 5',
+      source: 'test',
+    })
+
+    const handoff = store.buildDeliveryEventMapHandoff({
+      ownerModule: 'food_delivery',
+      order: {
+        id: 'food_order_1',
+        restaurantName: 'Night Noodle',
+        restaurantAddress: 'Noodle Alley 7',
+        deliveryAddress: 'Apartment Gate 5',
+      },
+      event: {
+        id: 'food_event_1',
+        type: 'eta_update',
+        title: 'ETA update',
+        etaMinutes: 22,
+      },
+    })
+
+    expect(handoff).toMatchObject({
+      sourceModule: 'food_delivery_map_courier_route',
+      readOnly: true,
+      eventOwner: 'food_delivery',
+      orderOwner: 'food_delivery',
+      mapOwner: 'delivery_location_context',
+      orderId: 'food_order_1',
+      eventId: 'food_event_1',
+      pickupPoint: 'Noodle Alley 7',
+      dropoffPoint: 'Apartment Gate 5',
+      etaMinutes: 22,
+    })
+    expect(handoff.routeSummaryEn).toContain('Food Delivery')
+    expect(store.tripState.status).toBe('idle')
+    expect(store.tripHistory).toHaveLength(0)
+  })
+
+  test('builds read-only delivery event handoff for Shopping logistics events', () => {
+    const store = useMapStore()
+    store.setCurrentLocation({
+      label: 'Studio',
+      detail: 'Studio Street 9',
+      source: 'test',
+    })
+
+    const handoff = store.buildDeliveryEventMapHandoff({
+      ownerModule: 'shopping',
+      order: {
+        id: 'shopping_order_1',
+        note: 'Gift order',
+      },
+      event: {
+        id: 'shopping_event_1',
+        type: 'pickup_point_changed',
+        pickupPoint: 'Locker A12',
+        locationHint: 'West Gate',
+        trackingCode: 'TRACK-9',
+        carrierName: 'Standard Courier',
+        etaDays: 2,
+      },
+    })
+
+    expect(handoff).toMatchObject({
+      sourceModule: 'logistics_map_delivery_location',
+      readOnly: true,
+      eventOwner: 'shopping',
+      orderOwner: 'shopping',
+      mapOwner: 'delivery_location_context',
+      orderId: 'shopping_order_1',
+      eventId: 'shopping_event_1',
+      pickupPoint: 'Locker A12',
+      dropoffPoint: 'Studio Street 9',
+      locationHint: 'West Gate',
+      trackingCode: 'TRACK-9',
+      carrierName: 'Standard Courier',
+      etaDays: 2,
+      etaMinutes: 2880,
+    })
+    expect(handoff.routeSummaryEn).toContain('Shopping logistics')
+    expect(store.tripState.status).toBe('idle')
+    expect(store.tripHistory).toHaveLength(0)
+  })
+
   test('map AI visual refresh executes when system automation policy allows it', async () => {
     const mapStore = useMapStore()
     const systemStore = useSystemStore()

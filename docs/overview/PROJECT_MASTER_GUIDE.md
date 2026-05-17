@@ -282,11 +282,13 @@ Rule of thumb / 使用原则：
    `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md` 是面向接手者的工程成熟度参考；可用于判断模块成熟度、文件体量热点与拆分顺序。
 5. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md` records concrete functional-code candidates after visual work was parked; use it to choose a safe next code slice without creating a second live roadmap.
    `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md` 记录视觉工作搁置后的具体功能代码候选；用于选择安全的下一刀代码工作，但不作为第二动态路线图。
-6. `docs/overview/APPEARANCE_REBUILD_SCOPE.md` is the visual rebuild reference; use it to judge which shell and module surfaces should be fully redesigned instead of incrementally polished.
+6. `docs/process/EVENT_WORKFLOW.md`, `docs/architecture/SIMULATION_EVENT_ENGINE.md`, and `docs/overview/IMMERSIVE_EVENT_TODO.md` define the event-specialist track for random, condition-driven, scheduled, and module-owned immersive events.
+   `docs/process/EVENT_WORKFLOW.md`、`docs/architecture/SIMULATION_EVENT_ENGINE.md` 与 `docs/overview/IMMERSIVE_EVENT_TODO.md` 定义事件专项，用于随机触发、条件触发、定时触发与模块自有沉浸式事件。
+7. `docs/overview/APPEARANCE_REBUILD_SCOPE.md` is the visual rebuild reference; use it to judge which shell and module surfaces should be fully redesigned instead of incrementally polished.
    `docs/overview/APPEARANCE_REBUILD_SCOPE.md` 是外观重建参考文档；用于判断哪些壳层与模块界面应做完整视觉重建，而不是继续局部打磨。
-7. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` is the visual style direction brief; use it to judge the desired references and mood for the rebuild.
+8. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` is the visual style direction brief; use it to judge the desired references and mood for the rebuild.
    `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` 是视觉风格方向简报；用于判断外观重建应参考哪些 App/系统，以及整体气质应如何收敛。
-8. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` parks visual-rebuild next steps while current focus returns to functional code.
+9. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` parks visual-rebuild next steps while current focus returns to functional code.
    `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` 用于暂存视觉重建后续建议，当前阶段则先回到功能代码推进。
 
 Functional folders / 职能目录：
@@ -320,15 +322,17 @@ Archived docs / 已归档文档：
    当判断工程工作从哪里开始最安全、最易维护时，参考 `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`。
 4. When visual work is parked and the next question is code implementation, read `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`.
    当视觉工作搁置、下一步问题转为代码实现时，阅读 `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`。
-5. For visual-direction decisions, also read `docs/overview/APPEARANCE_REBUILD_SCOPE.md` before treating an existing UI as final.
+5. When the task involves random/condition/scheduled triggers, simulated events, surprise mode, or event logs, read `docs/process/EVENT_WORKFLOW.md` first.
+   当任务涉及随机/条件/定时触发、模拟事件、惊喜模式或事件日志时，先阅读 `docs/process/EVENT_WORKFLOW.md`。
+6. For visual-direction decisions, also read `docs/overview/APPEARANCE_REBUILD_SCOPE.md` before treating an existing UI as final.
    涉及视觉方向判断时，也应先阅读 `docs/overview/APPEARANCE_REBUILD_SCOPE.md`，不要默认现有 UI 已接近最终态。
-6. When choosing a concrete visual style, read `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` so module-specific references are preserved.
+7. When choosing a concrete visual style, read `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md` so module-specific references are preserved.
    选择具体视觉风格时，应阅读 `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`，确保模块级参考方向被保留。
-7. If visual work is intentionally paused, use `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` as the parked reference and return to the functional roadmap docs.
+8. If visual work is intentionally paused, use `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` as the parked reference and return to the functional roadmap docs.
    如果视觉工作被暂时搁置，使用 `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` 作为暂存参考，并回到功能路线文档。
-8. When route/schema/core behavior changes, update docs in the same PR/commit batch.
+9. When route/schema/core behavior changes, update docs in the same PR/commit batch.
    涉及路由、数据结构或核心行为变更时，要在同批次同步文档。
-9. Keep product-facing language readable; avoid deep technical shorthand in status summaries.
+10. Keep product-facing language readable; avoid deep technical shorthand in status summaries.
    面向产品的状态总结要保持可读，避免只写技术缩写。
 
 ---
@@ -349,5 +353,7 @@ Archived docs / 已归档文档：
    2026-05-02：新增对 `DEFERRED_VISUAL_REBUILD_TODO.md` 的显式引用，作为暂存视觉重建 TODO 存档。
 7. 2026-05-02: added explicit reference to `FUNCTIONAL_CODE_NEXT_STEPS.md` as the post-visual-pause functional-code handoff.
    2026-05-02：新增对 `FUNCTIONAL_CODE_NEXT_STEPS.md` 的引用，作为视觉暂停后的功能代码接手单。
-8. 2026-05-14: synced the current Home Widget Center behavior and preserved the expanded visual/functional handoff document references.
+8. 2026-05-16: added the event-specialist track and linked Event Workflow, Simulation Event Engine, and Immersive Event TODO.
+   2026-05-16：新增事件专项，并挂载 Event Workflow、Simulation Event Engine 与 Immersive Event TODO。
+9. 2026-05-14: synced the current Home Widget Center behavior and preserved the expanded visual/functional handoff document references.
    2026-05-14：同步当前 Home Widget Center 行为，并保留扩展后的视觉与功能接手文档引用。

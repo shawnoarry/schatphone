@@ -14,6 +14,7 @@ const SHOPPING_STORAGE_VERSION = 1
 const SHOPPING_PRODUCT_LIMIT = 160
 const SHOPPING_CART_LINE_LIMIT = 60
 const SHOPPING_ORDER_LIMIT = 120
+const SHOPPING_ORDER_EVENT_LIMIT = 32
 const DEFAULT_CURRENCY = 'CNY'
 
 export const SHOPPING_ORDER_STATUS = Object.freeze({
@@ -23,7 +24,23 @@ export const SHOPPING_ORDER_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 })
 
+export const SHOPPING_ORDER_EVENT_TYPE = Object.freeze({
+  PACKAGE_SHIPPED: 'package_shipped',
+  PACKAGE_ARRIVED: 'package_arrived',
+  PICKUP_POINT_CHANGED: 'pickup_point_changed',
+  INTERNATIONAL_DELAY: 'international_delay',
+  STATUS_UPDATE: 'status_update',
+})
+
 const SHOPPING_ORDER_STATUS_VALUES = new Set(Object.values(SHOPPING_ORDER_STATUS))
+const SHOPPING_ORDER_EVENT_TYPE_VALUES = new Set(Object.values(SHOPPING_ORDER_EVENT_TYPE))
+const SHOPPING_ORDER_EVENT_TITLES = Object.freeze({
+  [SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED]: 'Package shipped',
+  [SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED]: 'Package arrived',
+  [SHOPPING_ORDER_EVENT_TYPE.PICKUP_POINT_CHANGED]: 'Pickup point changed',
+  [SHOPPING_ORDER_EVENT_TYPE.INTERNATIONAL_DELAY]: 'International logistics delay',
+  [SHOPPING_ORDER_EVENT_TYPE.STATUS_UPDATE]: 'Logistics status updated',
+})
 const SHOPPING_STOCK_STATUS_VALUES = new Set(['available', 'limited', 'preorder', 'sold_out'])
 const SHOPPING_PRODUCT_ORIGIN_VALUES = new Set(['seed', 'user', 'ai'])
 const SHOPPING_CATEGORY_KEYS = SHOPPING_CATEGORY_ENTRIES.map((entry) => entry.key)
@@ -101,6 +118,11 @@ const normalizeOrderStatus = (value, fallback = SHOPPING_ORDER_STATUS.PLACED) =>
   return SHOPPING_ORDER_STATUS_VALUES.has(normalized) ? normalized : fallback
 }
 
+const normalizeOrderEventType = (value, fallback = '') => {
+  const normalized = normalizeText(value, fallback, 80)
+  return SHOPPING_ORDER_EVENT_TYPE_VALUES.has(normalized) ? normalized : fallback
+}
+
 const normalizeGiftRecipient = (value = {}) => {
   const rawRecipient = value.giftRecipient && typeof value.giftRecipient === 'object'
     ? value.giftRecipient
@@ -137,6 +159,7 @@ const normalizeQuantity = (value, fallback = 1) => {
 
 const createShoppingProductId = () => `shopping_product_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createShoppingOrderId = () => `shopping_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createShoppingOrderEventId = () => `shopping_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const normalizeShoppingProduct = (rawProduct, index = 0) => {
   if (!rawProduct || typeof rawProduct !== 'object') return null
@@ -265,6 +288,49 @@ const normalizeOrderItem = (rawItem, index = 0) => {
   }
 }
 
+const normalizeOrderEvent = (rawEvent, index = 0) => {
+  if (!rawEvent || typeof rawEvent !== 'object') return null
+  const type = normalizeOrderEventType(rawEvent.type || rawEvent.eventType)
+  if (!type) return null
+
+  const now = Date.now()
+  const createdAt = Math.max(0, toInt(rawEvent.createdAt, now + index))
+  const etaDays =
+    rawEvent.etaDays === undefined || rawEvent.etaDays === null
+      ? null
+      : Math.max(0, Math.min(90, toInt(rawEvent.etaDays, 0)))
+
+  return {
+    id: normalizeText(rawEvent.id, `shopping_event_legacy_${now}_${index}`, 140),
+    type,
+    title: normalizeText(rawEvent.title, SHOPPING_ORDER_EVENT_TITLES[type] || 'Logistics update', 120),
+    summary: normalizeText(rawEvent.summary || rawEvent.desc || rawEvent.note, '', 320),
+    trackingCode: normalizeText(rawEvent.trackingCode || rawEvent.trackingNo, '', 120),
+    carrierName: normalizeText(rawEvent.carrierName || rawEvent.carrier || rawEvent.logisticsProvider, '', 120),
+    pickupPoint: normalizeText(rawEvent.pickupPoint || rawEvent.pickupAddress, '', 180),
+    locationHint: normalizeText(rawEvent.locationHint || rawEvent.location || rawEvent.city, '', 160),
+    etaDays,
+    sourceModule: normalizeText(rawEvent.sourceModule, SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING, 80),
+    sourceId: normalizeText(rawEvent.sourceId, '', 140),
+    createdAt,
+  }
+}
+
+const normalizeOrderEvents = (rawEvents) => {
+  if (!Array.isArray(rawEvents)) return []
+  const seen = new Set()
+  const normalized = []
+  rawEvents.forEach((item, index) => {
+    const event = normalizeOrderEvent(item, index)
+    if (!event || seen.has(event.id)) return
+    seen.add(event.id)
+    normalized.push(event)
+  })
+  return normalized
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, SHOPPING_ORDER_EVENT_LIMIT)
+}
+
 const summarizeOrderTotals = (items) => {
   const totals = new Map()
   items.forEach((item) => {
@@ -307,6 +373,7 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     note: normalizeText(rawOrder.note, '', 240),
     recipient: normalizeText(rawOrder.recipient, '', 120),
     giftRecipient: normalizeGiftRecipient(rawOrder),
+    events: normalizeOrderEvents(rawOrder.events || rawOrder.logisticsEvents || rawOrder.statusEvents),
     sourceModule: normalizeText(rawOrder.sourceModule, 'shopping_checkout', 40),
     sourceId: normalizeText(rawOrder.sourceId, '', 140),
     createdAt,
@@ -641,6 +708,30 @@ export const useShoppingStore = defineStore('shopping', () => {
 
   const cancelOrder = (orderId) => updateOrderStatus(orderId, SHOPPING_ORDER_STATUS.CANCELLED)
 
+  const addOrderEvent = (orderId, eventInput = {}) => {
+    const id = normalizeText(orderId, '', 140)
+    if (!id) return null
+    const order = orders.value.find((item) => item.id === id)
+    if (!order) return null
+
+    const now = Date.now()
+    const event = normalizeOrderEvent(
+      {
+        ...eventInput,
+        id: eventInput.id || createShoppingOrderEventId(),
+        createdAt: eventInput.createdAt || now,
+      },
+      0,
+    )
+    if (!event) return null
+
+    const currentEvents = Array.isArray(order.events) ? order.events : []
+    order.events = [event, ...currentEvents.filter((item) => item.id !== event.id)]
+      .slice(0, SHOPPING_ORDER_EVENT_LIMIT)
+    order.updatedAt = Math.max(now, event.createdAt)
+    return event
+  }
+
   const applyPersistedSource = (source) => {
     const rawSource = Array.isArray(source)
       ? { products: source }
@@ -683,6 +774,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       ...order,
       items: order.items.map((item) => ({ ...item })),
       totals: order.totals.map((item) => ({ ...item })),
+      events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],
     })),
   })
 
@@ -765,6 +857,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     updateOrderStatus,
     markOrderCompleted,
     cancelOrder,
+    addOrderEvent,
     removeOrder,
     createBackupSnapshot,
     createBackupSnapshotAsync,

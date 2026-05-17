@@ -188,6 +188,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_shopping') return t('购物', 'Shopping')
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')
+  if (tileId === 'app_control_center') return t('导演台', 'Director')
   if (tileId === 'app_more') return t('更多', 'More')
   return fallback
 }

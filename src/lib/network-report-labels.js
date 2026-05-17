@@ -11,6 +11,7 @@ const MODULE_LABELS = {
   push: ['推送', 'Push'],
   map: ['地图', 'Map'],
   shopping: ['购物', 'Shopping'],
+  simulation: ['事件模拟', 'Simulation'],
 }
 
 const ACTION_LABELS = {
@@ -31,6 +32,7 @@ const ACTION_LABELS = {
   resync: ['重同步订阅', 'Resync subscription'],
   schedule: ['安排定时推送', 'Schedule push delivery'],
   cancel_schedule: ['取消定时推送', 'Cancel scheduled push'],
+  run_event_tick: ['运行事件 tick', 'Run event tick'],
 }
 
 const REASON_LABELS = {
@@ -42,6 +44,8 @@ const REASON_LABELS = {
   STORAGE_REPAIR_DONE: ['存储修复完成', 'Storage repair completed'],
   STORAGE_REPAIR_NOOP: ['无需修复', 'No repair needed'],
   STORAGE_REPAIR_PARTIAL: ['存储修复部分失败', 'Storage repair partially failed'],
+  SIMULATION_TICK_TRIGGERED: ['事件 tick 已触发', 'Simulation tick triggered'],
+  SIMULATION_TICK_SKIPPED: ['事件 tick 已跳过', 'Simulation tick skipped'],
   BACKUP_EXPORT_METADATA_ONLY: ['备份导出成功（元数据）', 'Backup export succeeded (metadata)'],
   BACKUP_EXPORT_WITH_ASSET_PACKAGE: ['备份导出成功（含素材包）', 'Backup export succeeded (with asset package)'],
   BACKUP_EXPORT_WITH_ASSET_PACKAGE_PARTIAL: [
@@ -91,6 +95,14 @@ const SUGGESTION_LABELS = {
   STORAGE_REPAIR_DONE: ['建议再次执行检查确认一致性。', 'Run audit again to verify consistency.'],
   STORAGE_REPAIR_NOOP: ['当前无不同步项，可继续正常使用。', 'No drift found; continue normal usage.'],
   STORAGE_REPAIR_PARTIAL: ['查看报告后重试，必要时导出并恢复备份。', 'Review report and retry; export/restore backup if needed.'],
+  SIMULATION_TICK_TRIGGERED: [
+    '事件 tick 已触发安全 pilot，可在事件日志或相关模块中查看结果。',
+    'The event tick triggered a safe pilot; review event logs or the related module for results.',
+  ],
+  SIMULATION_TICK_SKIPPED: [
+    '本次 tick 未触发事件，通常是 Surprise Mode、冷却、每日上限或无活跃订单导致。',
+    'This tick did not trigger an event, usually due to Surprise Mode, cooldowns, daily caps, or no active order.',
+  ],
   BACKUP_EXPORT_METADATA_ONLY: [
     '这是轻量备份，恢复时不含本地素材二进制。',
     'This is a lightweight backup and does not include local binary assets.',
