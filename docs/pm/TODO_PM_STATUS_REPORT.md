@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-17
+Updated: 2026-05-18
 
 Audience: product managers, designers, non-engineering collaborators, and future AI assistants.
 
@@ -32,12 +32,14 @@ Current capability:
 - Calendar and Reminders now have an explicit product split decision at `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`.
 - Calendar should become the real schedule/date app.
 - Reminders should become the cross-module cue, follow-up, and task surface.
-- Current code still combines these responsibilities in Calendar until the refactor lands.
+- Current code has started splitting these responsibilities: Reminders owns raw cue queues for Phone, Shopping, and Stock, while Calendar owns confirmed schedule events and push scheduling.
+- Reminders now has a normal Home app entry beside Calendar, plus source/status filters for managing active cues.
 
 PM meaning:
 
 - Non-technical collaborators can use the glossary to discuss modules without remembering route names or code names.
-- Future Calendar work should not deepen the cue-inbox behavior before the Reminders seam exists.
+- Future Calendar work should not reintroduce cue-inbox behavior; raw cue handling should stay in Reminders.
+- More should not absorb Reminders; More remains for settings-adjacent and experimental surfaces.
 - Reminder-style tasks can later connect to World Hub/world control without making World Hub mandatory for normal users.
 
 ### Phone Shell / Home / Settings
@@ -155,12 +157,16 @@ Current capability:
 - Real push relay integration exists for scheduled notifications.
 - Network diagnostics can label API, storage, push, and simulation reports.
 - Product decision now says Calendar and Reminders should split: Calendar keeps confirmed schedule/date meaning, while raw cue queues move toward Reminders.
+- Phone, Shopping, and Stock raw cue arrays now live in `src/stores/reminders.js`; Calendar keeps compatibility wrappers and still owns confirmed events plus real push scheduling.
+- `/calendar` now leads with schedule overview, confirmed events, event time editing, push state, and a pending Reminders summary instead of raw cue operation cards.
+- `/reminders` is reachable from Home and can filter cues by source and handling state before confirmation/dismissal.
+- Confirmed Calendar events can now record low-impact relationship facts when the user explicitly selects a Chat contact from the event card.
 
 PM meaning:
 
 - Reminder and push infrastructure is usable.
 - Push delivery history is not the same as server-side delivery proof unless a backend later provides receipt APIs.
-- Do not add more Calendar-specific relationship facts until the Calendar/Reminders responsibility split is started.
+- Calendar-specific relationship facts now start from true confirmed schedule/date events; raw cue drafts still do not write relationship facts.
 
 ### World Hub / Optional Runtime Control
 
@@ -191,7 +197,7 @@ Current capability:
 - Settings > Automation now has an opt-in foreground event tick switch and interval.
 - `App.vue` now wires the foreground tick lifecycle, but only when the user enables it. It stops while locked, on `/lock`, or when the browser tab is hidden.
 - Triggered/skipped foreground ticks write Network diagnostics reports.
-- Relationship runtime has an expanded safe fact-adapter batch: Shopping gift purchase, Food Delivery shared meal, Phone completed/missed calls, Map shared routes, and Wallet shared transfer/expense records.
+- Relationship runtime has an expanded safe fact-adapter batch: Shopping gift purchase, Food Delivery shared meal, Phone completed/missed calls, Map shared routes, Wallet shared transfer/expense records, and confirmed Calendar event plans.
 
 PM meaning:
 
@@ -228,8 +234,8 @@ PM meaning:
 
 ### P0: Keep The Event Runtime Safe And Understandable
 
-0. Start the Calendar / Reminders split before expanding Calendar relationship facts.
-   Outcome: Calendar remains immersive as a real schedule app, while Reminders becomes the user-facing follow-up/task surface for cross-module cues and world-control-linked objectives.
+0. Continue after the first true schedule/date memory slice.
+   Outcome: Calendar now submits relationship facts only from confirmed schedule-like events; raw cue drafts remain owned by Reminders.
 
 1. Continue the relationship-growth event system through safe adapters.
    Outcome: affinity, relationship progress, and character growth use one shared truth layer instead of being scattered across modules.
@@ -283,9 +289,24 @@ PM meaning:
 - Whether true closed-page background events are worth backend complexity.
 - Whether Wallet should support editable fictional funds soon, or only consume downstream expense suggestions first.
 
+## 5.5 Frozen Requirement Added
+
+- `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_REQUIREMENTS.md` is now the frozen requirement for:
+  - Contacts vs Chat Directory boundary;
+  - visible role ID rules;
+  - role deletion flow;
+  - relationship reset flow;
+  - single memory-group deletion;
+  - Contacts V2 role-hub upgrade.
+- PM meaning:
+  - Contacts should become the role-centered management hub.
+  - Chat Directory should remain the Chat-side binding surface.
+  - destructive actions must clearly explain scope, use multi-step confirmation, and distinguish manual entries from event-attached entries.
+- Implementation breakdown companion: `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_IMPLEMENTATION_BREAKDOWN.md`
+
 ## 6. Recommended Next Engineering Slice
 
-Recommended next: start the Calendar / Reminders split, then add Gallery relationship facts.
+Recommended next: deepen text-first memory consolidation and Calendar relationship review details.
 
 Why this is the best next step:
 
@@ -293,11 +314,11 @@ Why this is the best next step:
 - Shopping, Food Delivery, Phone, Map, and Wallet prove that explicit user actions can become relationship memories without moving module ownership.
 - World Hub can now approve/dismiss pending relationship effects, so high-impact candidates have a safe review path.
 - Contacts and Chat can already read relationship runtime snapshots.
-- Calendar is currently carrying both schedule events and raw cue confirmation, so Calendar relationship facts should wait until Reminders owns the cue/follow-up layer.
-- The next useful step is to split Calendar/Reminders first, then let Calendar submit true schedule/date facts and Gallery submit shared photo/memory facts.
-- This keeps future affinity, relationship stages, milestones, and character growth consistent across Chat, Contacts, Map, Shopping, Wallet, Phone, Calendar, Gallery, and later Assets.
+- Calendar now carries confirmed schedule events and a pending Reminders summary; raw cue processing has moved to Reminders.
+- Reminders visibility and basic management are now decided, and Calendar true schedule/date facts have a first safe slice; the next useful step is to tighten how text/event memories dedupe, merge, and get recalled.
+- This keeps future affinity, relationship stages, milestones, and character growth consistent across Chat, Contacts, Map, Shopping, Wallet, Phone, Calendar, and later optional media-aware features.
 
-Fallback same-size task: add Gallery relationship facts first, or add World Hub relationship-event filters/details without changing Calendar yet.
+Fallback same-size task: add World Hub relationship-event filters/details.
 
 ## 7. Reading Path
 

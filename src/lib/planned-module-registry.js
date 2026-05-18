@@ -1,5 +1,7 @@
 export const SHOPPING_HOME_APP_ID = 'app_shopping'
 export const SHOPPING_ROUTE = '/shopping'
+export const REMINDERS_HOME_APP_ID = 'app_reminders'
+export const REMINDERS_ROUTE = '/reminders'
 export const FOOD_DELIVERY_HOME_APP_ID = 'app_food_delivery'
 export const FOOD_DELIVERY_ROUTE = '/food-delivery'
 export const ASSETS_HOME_APP_ID = 'app_assets'

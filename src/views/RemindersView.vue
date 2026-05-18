@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
@@ -19,8 +19,16 @@ const {
   sourceCounts,
 } = storeToRefs(remindersStore)
 
-const visibleReminders = computed(() => activeReminderItems.value.slice(0, 12))
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const activeSourceFilter = ref('all')
+const activeStatusFilter = ref('all')
+
+const REMINDER_STATUS_FILTERS = Object.freeze([
+  { key: 'all', labelZh: '全部状态', labelEn: 'All status' },
+  { key: 'pending', labelZh: '待处理', labelEn: 'Pending' },
+  { key: 'confirmed', labelZh: '已确认', labelEn: 'Confirmed' },
+  { key: 'pinned', labelZh: '已固定', labelEn: 'Pinned' },
+])
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -93,6 +101,57 @@ const sourceSummaryItems = computed(() => [
   { key: 'stock', labelZh: '股票', labelEn: 'Stock', count: sourceCounts.value.stock || 0 },
 ])
 
+const sourceFilterOptions = computed(() => [
+  { key: 'all', labelZh: '全部来源', labelEn: 'All sources', count: activeReminderCount.value },
+  ...sourceSummaryItems.value,
+])
+
+const isPendingReminder = (item) =>
+  item?.pinned !== true && item?.status !== 'confirmed' && item?.status !== 'dismissed'
+
+const matchesStatusFilter = (item, filterKey) => {
+  if (filterKey === 'confirmed') return item.status === 'confirmed'
+  if (filterKey === 'pinned') return item.pinned === true
+  if (filterKey === 'pending') return isPendingReminder(item)
+  return true
+}
+
+const statusFilterOptions = computed(() =>
+  REMINDER_STATUS_FILTERS.map((option) => ({
+    ...option,
+    count: activeReminderItems.value.filter((item) => matchesStatusFilter(item, option.key)).length,
+  })),
+)
+
+const filteredReminderItems = computed(() =>
+  activeReminderItems.value.filter((item) => {
+    const sourceMatches = activeSourceFilter.value === 'all' || item.source === activeSourceFilter.value
+    return sourceMatches && matchesStatusFilter(item, activeStatusFilter.value)
+  }),
+)
+const visibleReminders = computed(() => filteredReminderItems.value.slice(0, 12))
+const filteredReminderCount = computed(() => filteredReminderItems.value.length)
+const hiddenFilteredReminderCount = computed(() =>
+  Math.max(0, filteredReminderCount.value - visibleReminders.value.length),
+)
+const hasAnyReminders = computed(() => activeReminderItems.value.length > 0)
+const hasActiveFilters = computed(
+  () => activeSourceFilter.value !== 'all' || activeStatusFilter.value !== 'all',
+)
+
+const setSourceFilter = (sourceKey) => {
+  activeSourceFilter.value = sourceKey || 'all'
+}
+
+const setStatusFilter = (statusKey) => {
+  activeStatusFilter.value = statusKey || 'all'
+}
+
+const resetFilters = () => {
+  activeSourceFilter.value = 'all'
+  activeStatusFilter.value = 'all'
+}
+
 watch(
   activeReminderItems,
   () => {
@@ -149,8 +208,11 @@ watch(
             <p class="text-xs text-gray-500">{{ t('来源统计', 'Sources') }}</p>
             <h2 class="font-semibold">{{ t('当前提醒', 'Current reminders') }}</h2>
           </div>
-          <span class="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600">
-            {{ t(`${activeReminderCount} 条`, `${activeReminderCount} items`) }}
+          <span
+            class="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600"
+            data-testid="reminders-filtered-count"
+          >
+            {{ t(`${filteredReminderCount} / ${activeReminderCount} 条`, `${filteredReminderCount} / ${activeReminderCount} items`) }}
           </span>
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
@@ -161,6 +223,51 @@ watch(
           >
             <p class="text-[11px] text-gray-500">{{ t(source.labelZh, source.labelEn) }}</p>
             <strong class="text-base">{{ source.count }}</strong>
+          </div>
+        </div>
+        <div class="mt-4 space-y-3">
+          <div class="flex flex-wrap gap-2" data-testid="reminders-source-filters">
+            <button
+              v-for="source in sourceFilterOptions"
+              :key="source.key"
+              type="button"
+              class="rounded-full border px-3 py-1.5 text-[11px] font-semibold transition"
+              :class="
+                activeSourceFilter === source.key
+                  ? 'border-gray-900 bg-gray-900 text-white'
+                  : 'border-gray-200 bg-white text-gray-600'
+              "
+              :data-testid="`reminders-source-filter-${source.key}`"
+              @click="setSourceFilter(source.key)"
+            >
+              {{ t(source.labelZh, source.labelEn) }} · {{ source.count }}
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2" data-testid="reminders-status-filters">
+            <button
+              v-for="status in statusFilterOptions"
+              :key="status.key"
+              type="button"
+              class="rounded-full border px-3 py-1.5 text-[11px] font-semibold transition"
+              :class="
+                activeStatusFilter === status.key
+                  ? 'border-orange-500 bg-orange-50 text-orange-700'
+                  : 'border-gray-200 bg-white text-gray-600'
+              "
+              :data-testid="`reminders-status-filter-${status.key}`"
+              @click="setStatusFilter(status.key)"
+            >
+              {{ t(status.labelZh, status.labelEn) }} · {{ status.count }}
+            </button>
+            <button
+              v-if="hasActiveFilters"
+              type="button"
+              class="rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-semibold text-gray-700"
+              data-testid="reminders-reset-filters"
+              @click="resetFilters"
+            >
+              {{ t('重置筛选', 'Reset') }}
+            </button>
           </div>
         </div>
       </section>
@@ -197,11 +304,18 @@ watch(
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
+              v-if="item.status !== 'confirmed'"
               class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
               @click="confirmReminder(item)"
             >
               {{ t('确认进日历', 'Confirm to Calendar') }}
             </button>
+            <span
+              v-else
+              class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+            >
+              {{ t('已进入日历', 'In Calendar') }}
+            </span>
             <button
               v-if="item.source === 'map'"
               class="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700"
@@ -223,18 +337,34 @@ watch(
             </button>
           </div>
         </article>
+        <p v-if="hiddenFilteredReminderCount > 0" class="px-1 text-center text-[11px] text-gray-400">
+          {{ t(`还有 ${hiddenFilteredReminderCount} 条匹配提醒未显示`, `${hiddenFilteredReminderCount} more matching reminders`) }}
+        </p>
       </section>
 
       <section v-else class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold">{{ t('暂无提醒事项', 'No reminders yet') }}</p>
+        <p class="font-semibold">
+          {{ hasAnyReminders ? t('当前筛选下暂无提醒', 'No reminders match these filters') : t('暂无提醒事项', 'No reminders yet') }}
+        </p>
         <p class="mt-2 text-sm leading-6 text-gray-600">
           {{
-            t(
-              '地图地点反馈、未接来电、购物配送和股票复盘线索会先来到这里；确认后再进入日历日程。',
-              'Map follow-ups, missed calls, Shopping delivery, and Stock review cues will land here first; confirmation sends them to Calendar.',
-            )
+            hasAnyReminders
+              ? t('换一个来源或状态继续查看；被确认的提醒会留在这里作为处理记录，同时同步到日历。', 'Try another source or status. Confirmed reminders stay here as handling records and sync to Calendar.')
+              : t(
+                  '地图地点反馈、未接来电、购物配送和股票复盘线索会先来到这里；确认后再进入日历日程。',
+                  'Map follow-ups, missed calls, Shopping delivery, and Stock review cues will land here first; confirmation sends them to Calendar.',
+                )
           }}
         </p>
+        <button
+          v-if="hasAnyReminders && hasActiveFilters"
+          type="button"
+          class="mt-3 rounded-full bg-gray-900 px-3 py-2 text-xs font-semibold text-white"
+          data-testid="reminders-empty-reset"
+          @click="resetFilters"
+        >
+          {{ t('查看全部提醒', 'Show all reminders') }}
+        </button>
       </section>
 
       <section class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">

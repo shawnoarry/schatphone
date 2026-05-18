@@ -21,7 +21,7 @@ Recommended next:
 
 - Start with a non-breaking Reminders seam: define the target store/view boundary and keep compatibility with existing Calendar cue behavior.
 - Move cue queues before adding Calendar relationship facts, so relationship runtime only receives true schedule/date memories from Calendar.
-- Gallery relationship facts remain a safe same-size candidate because they are not blocked by the Calendar/Reminders split.
+- Gallery relationship facts are no longer a near-term mainline candidate; until image sources become naturally produced and low-friction, prioritize text/event-first memory dedupe and merge rules instead.
 
 本文记录视觉重建被主动搁置后，当前功能代码层面仍可推进的事项。  
 它面向后续开发同事与 AI 编程助手，用于判断下一步代码工作从哪里开最安全、最有收益。
@@ -2370,8 +2370,8 @@ Recommended next:
 
 - EN: Add Calendar relationship facts for scheduled dates, anniversaries, missed plans, and recurring reminders.
   Chinese: Next, add Calendar relationship facts for scheduled dates, anniversaries, missed plans, and recurring reminders.
-- EN: Add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
-  Chinese: Same-size next slice: add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
+- EN: Tighten text/event-first relationship-memory dedupe, merge, and recall rules before adding new media-driven memory inputs.
+  Chinese: 同体量下一步：在新增媒体驱动记忆入口前，先收紧文字/事件优先的关系记忆去重、归并与召回规则。
 - EN: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
   Chinese: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
 

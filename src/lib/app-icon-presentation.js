@@ -14,6 +14,7 @@ const APP_ICON_LABELS = {
   app_phone: { zh: '电话', en: 'Phone', ko: '전화' },
   app_map: { zh: '地图', en: 'Map', ko: '지도' },
   app_calendar: { zh: '日历', en: 'Calendar', ko: '캘린더' },
+  app_reminders: { zh: '提醒事项', en: 'Reminders', ko: 'Reminders' },
   app_stock: { zh: '股市', en: 'Stock', ko: '주식' },
   app_chat: { zh: '聊天', en: 'Chat', ko: '채팅' },
   app_contacts: { zh: '通讯录', en: 'Contacts', ko: '연락처' },
@@ -33,6 +34,7 @@ const BUILT_IN_APP_ICON_META = {
   app_phone: { icon: 'fas fa-phone', accent: 'default' },
   app_map: { icon: 'fas fa-map-location-dot', accent: 'cool' },
   app_calendar: { icon: 'fas fa-calendar-days', accent: 'light' },
+  app_reminders: { icon: 'fas fa-list-check', accent: 'warm' },
   app_stock: { icon: 'fas fa-chart-line', accent: 'cool' },
   app_chat: { icon: 'fas fa-comment', accent: 'default' },
   app_contacts: { icon: 'fas fa-address-book', accent: 'light' },
@@ -61,6 +63,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_chat',
   'app_map',
   'app_calendar',
+  'app_reminders',
   'app_stock',
   'app_shopping',
   'app_food_delivery',
@@ -87,6 +90,7 @@ export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-table-cells-large', zh: '组件网格', en: 'Widget Grid', ko: '위젯 그리드' },
   { value: 'fas fa-puzzle-piece', zh: '组件拼块', en: 'Widget Piece', ko: '위젯 조각' },
   { value: 'fas fa-shapes', zh: '组合图形', en: 'Shapes', ko: '도형' },
+  { value: 'fas fa-list-check', zh: '待办清单', en: 'Checklist', ko: 'Checklist' },
 ]
 
 export const APP_ICON_ACCENT_OPTIONS = [
@@ -178,6 +182,7 @@ export const resolveAppCustomizationTargetMeta = (appId, locale = 'en-US', overr
 export const resolveNotificationModuleAppId = (moduleKey) => {
   if (moduleKey === 'chat') return 'app_chat'
   if (moduleKey === 'map') return 'app_map'
+  if (moduleKey === 'reminders') return 'app_reminders'
   if (moduleKey === 'gallery') return 'app_gallery'
   if (moduleKey === 'shopping') return 'app_shopping'
   if (moduleKey === 'food_delivery') return 'app_food_delivery'

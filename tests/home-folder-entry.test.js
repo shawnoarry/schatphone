@@ -19,6 +19,7 @@ const createTestRouter = () =>
       { path: '/shopping', component: ShoppingView },
       { path: '/food-delivery', component: FoodDeliveryView },
       { path: '/assets', component: AssetsView },
+      { path: '/reminders', component: DummyView },
       { path: '/control-center', component: ControlCenterView },
       { path: '/chat', component: DummyView },
       { path: '/contacts', component: DummyView },
@@ -35,7 +36,7 @@ describe('Home folder entries', () => {
     setActivePinia(createPinia())
   })
 
-  test('renders Shopping and Food Delivery as folder tiles and Assets as a normal app tile', async () => {
+  test('renders Reminders, Shopping, Food Delivery, and Assets on Home', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -55,8 +56,10 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="app_reminders"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('购物')
+    expect(wrapper.text()).toContain('提醒事项')
     expect(wrapper.text()).toContain('资产')
     wrapper.unmount()
   })
@@ -235,6 +238,7 @@ describe('Home folder entries', () => {
     const flattened = store.settings.appearance.homeWidgetPages.flat()
     expect(flattened).not.toContain('app_files')
     expect(flattened).toContain('app_shopping')
+    expect(flattened).toContain('app_reminders')
     expect(flattened).toContain('app_food_delivery')
     expect(flattened).toContain('app_assets')
   })

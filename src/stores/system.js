@@ -15,6 +15,7 @@ import {
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  REMINDERS_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
@@ -47,6 +48,7 @@ const DEFAULT_WIDGET_PAGES = [
     'app_phone',
     'app_map',
     'app_calendar',
+    REMINDERS_HOME_APP_ID,
     'app_stock',
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
@@ -61,6 +63,9 @@ const DEFAULT_WIDGET_PAGES = [
 const HOME_TILE_ALIASES = {
   app_mail: 'app_network',
   app_maps: 'app_map',
+  app_reminder: REMINDERS_HOME_APP_ID,
+  app_todo: REMINDERS_HOME_APP_ID,
+  app_tasks: REMINDERS_HOME_APP_ID,
   app_profile: 'app_chat',
   app_worldbook: 'app_files',
 }
@@ -79,6 +84,7 @@ const CORE_HOME_TILE_IDS = [
   'app_phone',
   'app_map',
   'app_calendar',
+  REMINDERS_HOME_APP_ID,
   'app_stock',
   'app_chat',
   'app_contacts',

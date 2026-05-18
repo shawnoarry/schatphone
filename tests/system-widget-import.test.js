@@ -124,6 +124,7 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_reminders')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
@@ -137,6 +138,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_reminders')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
   })

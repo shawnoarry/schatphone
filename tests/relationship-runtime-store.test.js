@@ -122,6 +122,72 @@ describe('relationship runtime store', () => {
     expect(promptContext).toContain('Relationship runtime snapshot: Mika.')
     expect(promptContext).toContain('Stage: friend')
     expect(promptContext).toContain('First shared meal')
+    expect(promptContext).toContain('Memory summaries:')
     expect(promptContext).toContain('food_delivery:shared_meal')
+  })
+
+  test('merges multiple applied facts into one memory summary when they share a memory key', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 5,
+        name: 'Aki',
+      },
+      sourceModule: 'calendar',
+      sourceId: 'calendar_event_date_aki',
+      memoryKey: 'aki_dorayaki_day',
+      factType: 'scheduled_calendar_event',
+      summary: 'Planned a dorayaki date with Aki.',
+      metricDeltas: {
+        affinity: 4,
+        trust: 2,
+      },
+      growthTraits: ['calendar-plan'],
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 5,
+        name: 'Aki',
+      },
+      sourceModule: 'chat',
+      sourceId: 'chat_msg_dorayaki_1',
+      memoryKey: 'aki_dorayaki_day',
+      factType: 'shared_memory_note',
+      summary: 'Talked about the same dorayaki outing in chat.',
+      metricDeltas: {
+        intimacy: 2,
+      },
+      growthTraits: ['chat-memory'],
+    })
+
+    const memories = store.listMemoryAggregatesForTarget({ profileId: 5, name: 'Aki' })
+    const summary = store.summarizeEntityForTarget({ profileId: 5, name: 'Aki' })
+
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      memoryKey: 'aki_dorayaki_day',
+      supportingCount: 2,
+      sourceModules: ['chat', 'calendar'],
+      primarySourceModule: 'calendar',
+      primaryFactType: 'scheduled_calendar_event',
+    })
+    expect(memories[0].displaySummary).toBe('Planned a dorayaki date with Aki.')
+    expect(memories[0].primarySummary).toBe('Planned a dorayaki date with Aki.')
+    expect(memories[0].latestSummary).toContain('dorayaki')
+    expect(summary.memorySummaries).toHaveLength(1)
+    expect(summary.metrics).toMatchObject({
+      affinity: 54,
+      trust: 52,
+      intimacy: 20,
+    })
+    expect(store.buildPromptContextForTarget({ profileId: 5, name: 'Aki' })).toContain(
+      'Memory summaries: Planned a dorayaki date with Aki.',
+    )
+    expect(store.events[0].effectApplied).toBe(false)
+    expect(store.events[0].memoryRole).toBe('supporting')
+    expect(store.events[1].effectApplied).toBe(true)
+    expect(store.events[1].memoryRole).toBe('primary')
   })
 })

@@ -6,8 +6,10 @@ import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import { useI18n } from '../composables/useI18n'
 import {
+  buildShoppingGiftRelationshipMemoryKey,
   buildShoppingGiftRelationshipSuggestion,
   recordShoppingGiftRelationshipFact,
+  recordWalletOrderSupportRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import {
   ASSET_SOURCE_KEYS,
@@ -580,6 +582,15 @@ const transferSuggestionToWallet = (suggestion) => {
     order: suggestion.order,
     transaction,
   })
+  if (suggestion.relationshipSuggestion?.available) {
+    recordWalletOrderSupportRelationshipFact({
+      relationshipRuntimeStore,
+      target: suggestion.relationshipSuggestion.target,
+      transaction,
+      memoryKey: buildShoppingGiftRelationshipMemoryKey(suggestion.order),
+      summary: `Wallet expense recorded for the same Shopping gift with ${suggestion.relationshipTargetName || 'a relationship contact'}.`,
+    })
+  }
   return transaction
 }
 

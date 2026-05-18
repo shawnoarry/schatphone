@@ -1,5 +1,29 @@
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  REMINDER_CUE_STATUS_CONFIRMED,
+  REMINDER_CUE_STATUS_DISMISSED,
+  REMINDER_CUE_STATUS_SUGGESTED,
+  REMINDER_PHONE_CUE_LIMIT,
+  REMINDER_SHOPPING_CUE_LIMIT,
+  REMINDER_STOCK_CUE_LIMIT,
+  REMINDERS_STORAGE_KEY,
+  REMINDERS_STORAGE_VERSION,
+  createPhoneMissedCallCueId,
+  createShoppingDeliveryCueId,
+  createStockMarketCueId,
+  normalizePhoneMissedCallCue,
+  normalizePhoneMissedCallCues,
+  normalizeReminderId,
+  normalizeShoppingDeliveryCue,
+  normalizeShoppingDeliveryCues,
+  normalizeStockMarketCue,
+  normalizeStockMarketCues,
+  toReminderInt,
+  trimReminderLine,
+} from '../lib/reminder-cues'
+import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useCalendarStore } from './calendar'
 import { useMapStore } from './map'
 
@@ -10,8 +34,9 @@ const REMINDER_SOURCES = Object.freeze({
   STOCK: 'stock',
 })
 
-const REMINDER_STATUS_DISMISSED = 'dismissed'
-const REMINDER_STATUS_CONFIRMED = 'confirmed'
+const LEGACY_CALENDAR_STORAGE_KEY = 'store:calendar'
+const REMINDER_STATUS_DISMISSED = REMINDER_CUE_STATUS_DISMISSED
+const REMINDER_STATUS_CONFIRMED = REMINDER_CUE_STATUS_CONFIRMED
 
 const toInt = (value, fallback = 0) => {
   const parsed = Number(value)
@@ -57,8 +82,234 @@ const compareReminderItems = (a, b) => {
 }
 
 export const useRemindersStore = defineStore('reminders', () => {
-  const calendarStore = useCalendarStore()
+  const getCalendarStore = () => useCalendarStore()
   const mapStore = useMapStore()
+  const phoneMissedCallCues = ref([])
+  const stockMarketCues = ref([])
+  const shoppingDeliveryCues = ref([])
+  const hasFinishedStorageHydration = ref(false)
+
+  const activePhoneMissedCallCues = computed(() =>
+    phoneMissedCallCues.value.filter((cue) => cue.status !== REMINDER_STATUS_DISMISSED),
+  )
+
+  const phoneMissedCallCueCount = computed(() => activePhoneMissedCallCues.value.length)
+
+  const activeStockMarketCues = computed(() =>
+    stockMarketCues.value.filter((cue) => cue.status !== REMINDER_STATUS_DISMISSED),
+  )
+
+  const stockMarketCueCount = computed(() => activeStockMarketCues.value.length)
+
+  const activeShoppingDeliveryCues = computed(() =>
+    shoppingDeliveryCues.value.filter((cue) => cue.status !== REMINDER_STATUS_DISMISSED),
+  )
+
+  const shoppingDeliveryCueCount = computed(() => activeShoppingDeliveryCues.value.length)
+
+  const findPhoneMissedCallCueById = (cueId) => {
+    const id = normalizeReminderId(cueId)
+    if (!id) return null
+    return phoneMissedCallCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findPhoneMissedCallCueByCallId = (callId) => {
+    const normalizedCallId = normalizeReminderId(callId)
+    if (!normalizedCallId) return null
+    return phoneMissedCallCues.value.find((cue) => cue.callId === normalizedCallId) || null
+  }
+
+  const findStockMarketCueById = (cueId) => {
+    const id = normalizeReminderId(cueId)
+    if (!id) return null
+    return stockMarketCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findStockMarketCueByStockId = (stockId) => {
+    const normalizedStockId = normalizeReminderId(stockId)
+    if (!normalizedStockId) return null
+    return stockMarketCues.value.find((cue) => cue.stockId === normalizedStockId) || null
+  }
+
+  const findShoppingDeliveryCueById = (cueId) => {
+    const id = normalizeReminderId(cueId)
+    if (!id) return null
+    return shoppingDeliveryCues.value.find((cue) => cue.id === id) || null
+  }
+
+  const findShoppingDeliveryCueByOrderId = (orderId) => {
+    const normalizedOrderId = normalizeReminderId(orderId)
+    if (!normalizedOrderId) return null
+    return shoppingDeliveryCues.value.find((cue) => cue.orderId === normalizedOrderId) || null
+  }
+
+  const upsertCueRecord = ({ listRef, input, normalizer, findById, limit }) => {
+    const now = Date.now()
+    const normalized = normalizer({
+      ...input,
+      updatedAt: now,
+      createdAt: input.createdAt || now,
+    })
+    if (!normalized) return null
+    const index = listRef.value.findIndex((cue) => cue.id === normalized.id)
+    if (index >= 0) {
+      const existing = listRef.value[index]
+      listRef.value.splice(index, 1, {
+        ...existing,
+        ...normalized,
+        createdAt: existing.createdAt || normalized.createdAt,
+      })
+    } else {
+      listRef.value.unshift(normalized)
+      if (listRef.value.length > limit) {
+        listRef.value.splice(limit)
+      }
+    }
+    return findById(normalized.id)
+  }
+
+  const upsertPhoneMissedCallCue = (input = {}) =>
+    upsertCueRecord({
+      listRef: phoneMissedCallCues,
+      input,
+      normalizer: normalizePhoneMissedCallCue,
+      findById: findPhoneMissedCallCueById,
+      limit: REMINDER_PHONE_CUE_LIMIT,
+    })
+
+  const upsertPhoneMissedCallCueFromCall = (call = {}) => {
+    const callId = normalizeReminderId(call.id)
+    if (!callId) return null
+    const existing = findPhoneMissedCallCueByCallId(callId)
+    return upsertPhoneMissedCallCue({
+      id: existing?.id || createPhoneMissedCallCueId(callId),
+      callId,
+      contactName: call.contactName || '',
+      phoneNumber: call.phoneNumber || '',
+      summary: call.summary || '',
+      suggestedAt:
+        existing?.suggestedAt ||
+        Math.max(0, toReminderInt(call.startedAt, Date.now())) + 30 * 60 * 1000,
+      status: existing?.status || REMINDER_CUE_STATUS_SUGGESTED,
+      route: '/phone',
+      icon: 'fas fa-phone-slash',
+      tone: 'rose',
+      source: 'phone_missed_call',
+      createdAt: existing?.createdAt || call.createdAt || Date.now(),
+    })
+  }
+
+  const upsertStockMarketCue = (input = {}) =>
+    upsertCueRecord({
+      listRef: stockMarketCues,
+      input,
+      normalizer: normalizeStockMarketCue,
+      findById: findStockMarketCueById,
+      limit: REMINDER_STOCK_CUE_LIMIT,
+    })
+
+  const upsertStockMarketCueFromStock = (stock = {}) => {
+    const stockId = normalizeReminderId(stock.id || stock.symbol)
+    if (!stockId) return null
+    const existing = findStockMarketCueByStockId(stockId)
+    const symbol = trimReminderLine(stock.symbol, '', 24).toUpperCase()
+    const changePercent = Number.isFinite(Number(stock.changePercent))
+      ? Math.round(Number(stock.changePercent) * 100) / 100
+      : 0
+    const directionZh = changePercent >= 0 ? '上涨' : '下跌'
+    const directionEn = changePercent >= 0 ? 'up' : 'down'
+    return upsertStockMarketCue({
+      id: existing?.id || createStockMarketCueId(stockId),
+      stockId,
+      symbol,
+      name: stock.name || symbol,
+      priceCents: stock.priceCents || 0,
+      currency: stock.currency || 'CNY',
+      changePercent,
+      summary:
+        stock.note ||
+        `${symbol || stock.name || 'Asset'} ${directionEn} ${Math.abs(changePercent).toFixed(2)}%.`,
+      suggestedAt:
+        existing?.suggestedAt ||
+        Math.max(0, toReminderInt(stock.updatedAt, Date.now())) + 2 * 60 * 60 * 1000,
+      status: existing?.status || REMINDER_CUE_STATUS_SUGGESTED,
+      route: '/stock',
+      icon: 'fas fa-chart-line',
+      tone: changePercent >= 0 ? 'red' : 'emerald',
+      source: 'stock_market_move',
+      createdAt: existing?.createdAt || stock.createdAt || Date.now(),
+      summaryZh: `${symbol || stock.name || '标的'} ${directionZh} ${Math.abs(changePercent).toFixed(2)}%。`,
+    })
+  }
+
+  const upsertShoppingDeliveryCue = (input = {}) =>
+    upsertCueRecord({
+      listRef: shoppingDeliveryCues,
+      input,
+      normalizer: normalizeShoppingDeliveryCue,
+      findById: findShoppingDeliveryCueById,
+      limit: REMINDER_SHOPPING_CUE_LIMIT,
+    })
+
+  const upsertShoppingDeliveryCueFromOrder = (order = {}) => {
+    const orderId = normalizeReminderId(order.id)
+    if (!orderId) return null
+    const existing = findShoppingDeliveryCueByOrderId(orderId)
+    const createdAt = Math.max(0, toReminderInt(order.createdAt, Date.now()))
+    const itemCount = Math.max(
+      0,
+      toReminderInt(order.itemCount, Array.isArray(order.items) ? order.items.length : 0),
+    )
+    const totalCents = Math.max(0, toReminderInt(order.totalCents, 0))
+    const currency = trimReminderLine(order.currency, 'CNY', 12).toUpperCase()
+    const orderTitle =
+      itemCount > 1
+        ? `${itemCount} Shopping items`
+        : trimReminderLine(order.items?.[0]?.title, 'Shopping order', 100)
+    return upsertShoppingDeliveryCue({
+      id: existing?.id || createShoppingDeliveryCueId(orderId),
+      orderId,
+      title: orderTitle,
+      itemCount,
+      totalCents,
+      currency,
+      summary: order.note || `Track delivery or follow up for ${itemCount || 1} Shopping item(s).`,
+      suggestedAt: existing?.suggestedAt || createdAt + 24 * 60 * 60 * 1000,
+      status: existing?.status || REMINDER_CUE_STATUS_SUGGESTED,
+      route: '/shopping',
+      icon: 'fas fa-truck-fast',
+      tone: 'orange',
+      source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+      createdAt: existing?.createdAt || createdAt,
+    })
+  }
+
+  const markPhoneMissedCallCueStatus = (cueId, status) => {
+    const cue = findPhoneMissedCallCueById(cueId)
+    if (!cue) return null
+    return upsertPhoneMissedCallCue({
+      ...cue,
+      status,
+    })
+  }
+
+  const markStockMarketCueStatus = (cueId, status) => {
+    const cue = findStockMarketCueById(cueId)
+    if (!cue) return null
+    return upsertStockMarketCue({
+      ...cue,
+      status,
+    })
+  }
+
+  const markShoppingDeliveryCueStatus = (cueId, status) => {
+    const cue = findShoppingDeliveryCueById(cueId)
+    if (!cue) return null
+    return upsertShoppingDeliveryCue({
+      ...cue,
+      status,
+    })
+  }
 
   const normalizeMapReminder = (reminder = {}) => ({
     key: buildReminderKey(REMINDER_SOURCES.MAP, reminder.id),
@@ -143,15 +394,15 @@ export const useRemindersStore = defineStore('reminders', () => {
   )
 
   const phoneReminderItems = computed(() =>
-    calendarStore.activePhoneMissedCallCues.map(normalizePhoneCue),
+    activePhoneMissedCallCues.value.map(normalizePhoneCue),
   )
 
   const shoppingReminderItems = computed(() =>
-    calendarStore.activeShoppingDeliveryCues.map(normalizeShoppingCue),
+    activeShoppingDeliveryCues.value.map(normalizeShoppingCue),
   )
 
   const stockReminderItems = computed(() =>
-    calendarStore.activeStockMarketCues.map(normalizeStockCue),
+    activeStockMarketCues.value.map(normalizeStockCue),
   )
 
   const activeReminderItems = computed(() =>
@@ -191,27 +442,27 @@ export const useRemindersStore = defineStore('reminders', () => {
   const syncMapReminderEvent = (reminder = {}) => {
     if (!reminder?.id) return null
     if (reminder.status === REMINDER_STATUS_DISMISSED) {
-      void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
+      void getCalendarStore().cancelEventPushScheduledBySourceReminderId(reminder.id, {
         source: 'reminders_map_dismiss',
       })
-      calendarStore.removeEventBySourceReminderId(reminder.id)
+      getCalendarStore().removeEventBySourceReminderId(reminder.id)
       return null
     }
 
     if (reminder.status === REMINDER_STATUS_CONFIRMED || reminder.pinned === true) {
-      const event = calendarStore.upsertEventFromMapReminder(reminder)
+      const event = getCalendarStore().upsertEventFromMapReminder(reminder)
       if (event?.id) {
-        void calendarStore.ensureEventPushScheduled(event.id, {
+        void getCalendarStore().ensureEventPushScheduled(event.id, {
           source: 'reminders_map_confirm',
         })
       }
       return event
     }
 
-    void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
+    void getCalendarStore().cancelEventPushScheduledBySourceReminderId(reminder.id, {
       source: 'reminders_map_remove',
     })
-    calendarStore.removeEventBySourceReminderId(reminder.id)
+    getCalendarStore().removeEventBySourceReminderId(reminder.id)
     return null
   }
 
@@ -219,6 +470,75 @@ export const useRemindersStore = defineStore('reminders', () => {
     mapStore.mapCalendarReminders.forEach((reminder) => {
       syncMapReminderEvent(reminder)
     })
+  }
+
+  const confirmPhoneMissedCallCue = (cueId) => {
+    const cue = findPhoneMissedCallCueById(cueId)
+    if (!cue || cue.status === REMINDER_CUE_STATUS_DISMISSED) return null
+    const event = getCalendarStore().upsertEventFromPhoneMissedCallCue(cue)
+    if (!event?.id) return null
+    markPhoneMissedCallCueStatus(cue.id, REMINDER_CUE_STATUS_CONFIRMED)
+    return event
+  }
+
+  const dismissPhoneMissedCallCue = (cueId) => {
+    const cue = findPhoneMissedCallCueById(cueId)
+    if (!cue) return false
+    void getCalendarStore().cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'reminders_phone_cue_dismiss',
+    })
+    getCalendarStore().removeEventBySourceReminderId(cue.id)
+    return Boolean(markPhoneMissedCallCueStatus(cue.id, REMINDER_CUE_STATUS_DISMISSED))
+  }
+
+  const confirmStockMarketCue = (cueId) => {
+    const cue = findStockMarketCueById(cueId)
+    if (!cue || cue.status === REMINDER_CUE_STATUS_DISMISSED) return null
+    const event = getCalendarStore().upsertEventFromStockMarketCue(cue)
+    if (!event?.id) return null
+    markStockMarketCueStatus(cue.id, REMINDER_CUE_STATUS_CONFIRMED)
+    return event
+  }
+
+  const dismissStockMarketCue = (cueId) => {
+    const cue = findStockMarketCueById(cueId)
+    if (!cue) return false
+    void getCalendarStore().cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'reminders_stock_cue_dismiss',
+    })
+    getCalendarStore().removeEventBySourceReminderId(cue.id)
+    return Boolean(markStockMarketCueStatus(cue.id, REMINDER_CUE_STATUS_DISMISSED))
+  }
+
+  const dismissStockMarketCueByStockId = (stockId) => {
+    const cue = findStockMarketCueByStockId(stockId)
+    if (!cue) return false
+    return dismissStockMarketCue(cue.id)
+  }
+
+  const confirmShoppingDeliveryCue = (cueId) => {
+    const cue = findShoppingDeliveryCueById(cueId)
+    if (!cue || cue.status === REMINDER_CUE_STATUS_DISMISSED) return null
+    const event = getCalendarStore().upsertEventFromShoppingDeliveryCue(cue)
+    if (!event?.id) return null
+    markShoppingDeliveryCueStatus(cue.id, REMINDER_CUE_STATUS_CONFIRMED)
+    return event
+  }
+
+  const dismissShoppingDeliveryCue = (cueId) => {
+    const cue = findShoppingDeliveryCueById(cueId)
+    if (!cue) return false
+    void getCalendarStore().cancelEventPushScheduledBySourceReminderId(cue.id, {
+      source: 'reminders_shopping_delivery_dismiss',
+    })
+    getCalendarStore().removeEventBySourceReminderId(cue.id)
+    return Boolean(markShoppingDeliveryCueStatus(cue.id, REMINDER_CUE_STATUS_DISMISSED))
+  }
+
+  const dismissShoppingDeliveryCueByOrderId = (orderId) => {
+    const cue = findShoppingDeliveryCueByOrderId(orderId)
+    if (!cue) return false
+    return dismissShoppingDeliveryCue(cue.id)
   }
 
   const confirmReminderByKey = (key) => {
@@ -232,15 +552,15 @@ export const useRemindersStore = defineStore('reminders', () => {
 
     const event =
       source === REMINDER_SOURCES.PHONE
-        ? calendarStore.confirmPhoneMissedCallCue(id)
+        ? confirmPhoneMissedCallCue(id)
         : source === REMINDER_SOURCES.SHOPPING
-          ? calendarStore.confirmShoppingDeliveryCue(id)
+          ? confirmShoppingDeliveryCue(id)
           : source === REMINDER_SOURCES.STOCK
-            ? calendarStore.confirmStockMarketCue(id)
+            ? confirmStockMarketCue(id)
             : null
 
     if (event?.id) {
-      void calendarStore.ensureEventPushScheduled(event.id, {
+      void getCalendarStore().ensureEventPushScheduled(event.id, {
         source: `reminders_${source}_confirm`,
       })
     }
@@ -252,17 +572,17 @@ export const useRemindersStore = defineStore('reminders', () => {
     if (!source || !id) return false
 
     if (source === REMINDER_SOURCES.MAP) {
-      void calendarStore.cancelEventPushScheduledBySourceReminderId(id, {
+      void getCalendarStore().cancelEventPushScheduledBySourceReminderId(id, {
         source: 'reminders_map_dismiss',
       })
       mapStore.dismissMapCalendarReminder(id)
-      calendarStore.removeEventBySourceReminderId(id)
+      getCalendarStore().removeEventBySourceReminderId(id)
       return true
     }
 
-    if (source === REMINDER_SOURCES.PHONE) return calendarStore.dismissPhoneMissedCallCue(id)
-    if (source === REMINDER_SOURCES.SHOPPING) return calendarStore.dismissShoppingDeliveryCue(id)
-    if (source === REMINDER_SOURCES.STOCK) return calendarStore.dismissStockMarketCue(id)
+    if (source === REMINDER_SOURCES.PHONE) return dismissPhoneMissedCallCue(id)
+    if (source === REMINDER_SOURCES.SHOPPING) return dismissShoppingDeliveryCue(id)
+    if (source === REMINDER_SOURCES.STOCK) return dismissStockMarketCue(id)
     return false
   }
 
@@ -277,18 +597,139 @@ export const useRemindersStore = defineStore('reminders', () => {
     return true
   }
 
+  const applyPersistedSource = (source = {}) => {
+    if (!source || typeof source !== 'object') return false
+    phoneMissedCallCues.value = normalizePhoneMissedCallCues(
+      source.phoneMissedCallCues || source.phoneCues,
+    )
+    stockMarketCues.value = normalizeStockMarketCues(source.stockMarketCues || source.stockCues)
+    shoppingDeliveryCues.value = normalizeShoppingDeliveryCues(
+      source.shoppingDeliveryCues || source.shoppingCues,
+    )
+    return true
+  }
+
+  const hydrateFromStorage = () => {
+    const persisted = readPersistedState(REMINDERS_STORAGE_KEY, {
+      version: REMINDERS_STORAGE_VERSION,
+    })
+    if (applyPersistedSource(persisted)) return true
+    const legacyCalendar = readPersistedState(LEGACY_CALENDAR_STORAGE_KEY, {
+      version: 1,
+    })
+    return applyPersistedSource(legacyCalendar)
+  }
+
+  const hydrateFromStorageAsync = async () => {
+    const persisted = await readPersistedStateAsync(REMINDERS_STORAGE_KEY, {
+      version: REMINDERS_STORAGE_VERSION,
+    })
+    if (applyPersistedSource(persisted)) return true
+    const legacyCalendar = await readPersistedStateAsync(LEGACY_CALENDAR_STORAGE_KEY, {
+      version: 1,
+    })
+    return applyPersistedSource(legacyCalendar)
+  }
+
+  const createBackupSnapshot = () => ({
+    phoneMissedCallCues: phoneMissedCallCues.value.map((cue) => ({ ...cue })),
+    stockMarketCues: stockMarketCues.value.map((cue) => ({ ...cue })),
+    shoppingDeliveryCues: shoppingDeliveryCues.value.map((cue) => ({ ...cue })),
+  })
+
+  const createBackupSnapshotAsync = async () => createBackupSnapshot()
+
+  const restoreFromBackup = (snapshot = {}) => {
+    const source =
+      snapshot && typeof snapshot.reminders === 'object' && snapshot.reminders
+        ? snapshot.reminders
+        : snapshot && typeof snapshot.calendar === 'object' && snapshot.calendar
+          ? snapshot.calendar
+          : snapshot
+    return applyPersistedSource(source)
+  }
+
+  const persistToStorage = () => {
+    writePersistedState(REMINDERS_STORAGE_KEY, createBackupSnapshot(), {
+      version: REMINDERS_STORAGE_VERSION,
+    })
+  }
+
+  const saveNow = () => {
+    persistToStorage()
+  }
+
+  const resetForTesting = () => {
+    phoneMissedCallCues.value = []
+    stockMarketCues.value = []
+    shoppingDeliveryCues.value = []
+  }
+
+  const hydratedFromLocal = hydrateFromStorage()
+  void (async () => {
+    if (!hydratedFromLocal) {
+      await hydrateFromStorageAsync()
+    }
+    hasFinishedStorageHydration.value = true
+    persistToStorage()
+  })()
+
+  watch(
+    [phoneMissedCallCues, stockMarketCues, shoppingDeliveryCues],
+    () => {
+      if (!hasFinishedStorageHydration.value) return
+      persistToStorage()
+    },
+    { deep: true },
+  )
+
   return {
+    phoneMissedCallCues,
+    stockMarketCues,
+    shoppingDeliveryCues,
+    activePhoneMissedCallCues,
+    activeStockMarketCues,
+    activeShoppingDeliveryCues,
+    phoneMissedCallCueCount,
+    stockMarketCueCount,
+    shoppingDeliveryCueCount,
     activeReminderItems,
     activeReminderCount,
     confirmedReminderCount,
     pinnedReminderCount,
     suggestedReminderCount,
     sourceCounts,
+    hasFinishedStorageHydration,
     findReminderByKey,
+    findPhoneMissedCallCueById,
+    findPhoneMissedCallCueByCallId,
+    findStockMarketCueById,
+    findStockMarketCueByStockId,
+    findShoppingDeliveryCueById,
+    findShoppingDeliveryCueByOrderId,
+    upsertPhoneMissedCallCue,
+    upsertPhoneMissedCallCueFromCall,
+    upsertStockMarketCue,
+    upsertStockMarketCueFromStock,
+    upsertShoppingDeliveryCue,
+    upsertShoppingDeliveryCueFromOrder,
+    confirmPhoneMissedCallCue,
+    dismissPhoneMissedCallCue,
+    confirmStockMarketCue,
+    dismissStockMarketCue,
+    dismissStockMarketCueByStockId,
+    confirmShoppingDeliveryCue,
+    dismissShoppingDeliveryCue,
+    dismissShoppingDeliveryCueByOrderId,
     syncMapReminderEvent,
     syncMapReminderEvents,
     confirmReminderByKey,
     dismissReminderByKey,
     toggleMapReminderPinByKey,
+    createBackupSnapshot,
+    createBackupSnapshotAsync,
+    restoreFromBackup,
+    resetForTesting,
+    saveNow,
   }
 })

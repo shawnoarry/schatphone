@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useMapStore } from '../src/stores/map'
 import { useRemindersStore } from '../src/stores/reminders'
+import { writePersistedState } from '../src/lib/persistence'
 
 describe('reminders store bridge', () => {
   beforeEach(() => {
@@ -127,5 +128,91 @@ describe('reminders store bridge', () => {
     expect(remindersStore.dismissReminderByKey(`map:${reminder.id}`)).toBe(true)
     expect(mapStore.mapCalendarReminders[0]?.status).toBe('dismissed')
     expect(calendarStore.findEventBySourceReminderId(reminder.id)).toBeNull()
+  })
+
+  test('hydrates cue ownership from legacy Calendar storage', () => {
+    writePersistedState(
+      'store:calendar',
+      {
+        phoneMissedCallCues: [
+          {
+            id: 'phone_missed_call_cue_legacy',
+            callId: 'legacy',
+            contactName: 'Legacy',
+            suggestedAt: Date.now() + 60_000,
+            status: 'suggested',
+          },
+        ],
+        stockMarketCues: [
+          {
+            id: 'stock_market_cue_legacy_stock',
+            stockId: 'legacy_stock',
+            symbol: 'OLD',
+            name: 'Old Labs',
+            suggestedAt: Date.now() + 120_000,
+            status: 'suggested',
+          },
+        ],
+        shoppingDeliveryCues: [
+          {
+            id: 'shopping_delivery_cue_legacy_order',
+            orderId: 'legacy_order',
+            title: 'Legacy Order',
+            suggestedAt: Date.now() + 180_000,
+            status: 'suggested',
+          },
+        ],
+      },
+      { version: 1 },
+    )
+    setActivePinia(createPinia())
+
+    const remindersStore = useRemindersStore()
+
+    expect(
+      remindersStore.findPhoneMissedCallCueById('phone_missed_call_cue_legacy')?.contactName,
+    ).toBe('Legacy')
+    expect(remindersStore.findStockMarketCueByStockId('legacy_stock')?.symbol).toBe('OLD')
+    expect(remindersStore.findShoppingDeliveryCueByOrderId('legacy_order')?.title).toBe('Legacy Order')
+  })
+
+  test('migrates legacy Calendar cues when Calendar hydrates first', () => {
+    writePersistedState(
+      'store:calendar',
+      {
+        events: [
+          {
+            id: 'calendar_event_existing',
+            titleZh: 'Existing event',
+            titleEn: 'Existing event',
+            startsAt: Date.now() + 60_000,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+        ],
+        phoneMissedCallCues: [
+          {
+            id: 'phone_missed_call_cue_calendar_first',
+            callId: 'calendar_first',
+            contactName: 'Calendar First',
+            suggestedAt: Date.now() + 120_000,
+            status: 'suggested',
+          },
+        ],
+      },
+      { version: 1 },
+    )
+    setActivePinia(createPinia())
+
+    const calendarStore = useCalendarStore()
+    const remindersStore = useRemindersStore()
+
+    expect(calendarStore.findEventById('calendar_event_existing')?.titleEn).toBe('Existing event')
+    expect(
+      remindersStore.findPhoneMissedCallCueByCallId('calendar_first')?.contactName,
+    ).toBe('Calendar First')
+    expect(calendarStore.findPhoneMissedCallCueByCallId('calendar_first')?.contactName).toBe(
+      'Calendar First',
+    )
   })
 })

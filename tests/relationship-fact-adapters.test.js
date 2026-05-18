@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   buildFoodDeliverySharedMealRelationshipSuggestion,
+  buildCalendarConfirmedEventRelationshipSuggestion,
+  buildRelationshipMemoryKey,
   buildMapSharedRouteRelationshipSuggestion,
   buildPhoneCallRelationshipSuggestion,
   buildShoppingGiftRelationshipSuggestion,
   buildWalletSharedTransferRelationshipSuggestion,
   recordFoodDeliverySharedMealRelationshipFact,
+  recordCalendarConfirmedEventRelationshipFact,
   recordMapSharedRouteRelationshipFact,
   recordPhoneCallRelationshipFact,
   recordShoppingGiftRelationshipFact,
@@ -63,6 +66,7 @@ describe('relationship fact adapters', () => {
     expect(summary.metrics.affinity).toBe(58)
     expect(summary.metrics.intimacy).toBe(24)
     expect(summary.latestEventSummary).toContain('Gift purchased')
+    expect(firstEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
   })
 
   test('records optional food delivery shared-meal facts for the selected target', () => {
@@ -226,5 +230,101 @@ describe('relationship fact adapters', () => {
     expect(event.summary).toContain('Shared taxi')
     expect(summary.metrics.trust).toBe(54)
     expect(summary.growthTraits).toContain('wallet')
+  })
+
+  test('records confirmed calendar event facts for the selected target', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const event = {
+      id: 'calendar_event_date_1',
+      status: 'confirmed',
+      titleEn: 'Coffee date',
+      startsAt: Date.now() + 24 * 60 * 60 * 1000,
+    }
+    const target = {
+      id: 3,
+      profileId: 3,
+      kind: 'role',
+      name: 'Mika',
+    }
+
+    const suggestion = buildCalendarConfirmedEventRelationshipSuggestion({
+      relationshipRuntimeStore,
+      event,
+      target,
+    })
+    const firstEvent = recordCalendarConfirmedEventRelationshipFact({
+      relationshipRuntimeStore,
+      event,
+      target,
+    })
+    const secondEvent = recordCalendarConfirmedEventRelationshipFact({
+      relationshipRuntimeStore,
+      event,
+      target,
+    })
+    const cancelledSuggestion = buildCalendarConfirmedEventRelationshipSuggestion({
+      relationshipRuntimeStore,
+      event: { ...event, id: 'calendar_event_cancelled', status: 'cancelled' },
+      target,
+    })
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(suggestion).toMatchObject({
+      available: true,
+      sourceId: 'calendar_event_date_1:calendar_event:role_3',
+      targetName: 'Mika',
+    })
+    expect(secondEvent.id).toBe(firstEvent.id)
+    expect(cancelledSuggestion.available).toBe(false)
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(firstEvent.factType).toBe('scheduled_calendar_event')
+    expect(firstEvent.summary).toContain('Coffee date')
+    expect(summary.metrics.affinity).toBe(54)
+    expect(summary.growthTraits).toContain('calendar-plan')
+    expect(firstEvent.memoryKey).toBe(buildRelationshipMemoryKey('calendar_event', event.id))
+  })
+
+  test('reuses the same memory key when a phone callback becomes a calendar event', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const target = {
+      id: 8,
+      profileId: 8,
+      kind: 'role',
+      name: 'Rin',
+    }
+
+    const phoneEvent = recordPhoneCallRelationshipFact({
+      relationshipRuntimeStore,
+      call: {
+        id: 'phone_call_rin_1',
+        direction: 'incoming',
+        status: 'missed',
+      },
+      target,
+    })
+
+    const calendarEvent = recordCalendarConfirmedEventRelationshipFact({
+      relationshipRuntimeStore,
+      event: {
+        id: 'calendar_event_rin_callback',
+        source: 'phone_missed_call',
+        sourceReminderId: 'phone_missed_call_cue_phone_call_rin_1',
+        status: 'confirmed',
+        titleEn: 'Call back Rin',
+      },
+      target,
+    })
+
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
+
+    expect(phoneEvent.memoryKey).toBe(buildRelationshipMemoryKey('phone_call', 'phone_call_rin_1'))
+    expect(calendarEvent.memoryKey).toBe(phoneEvent.memoryKey)
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_phone_call',
+    })
   })
 })

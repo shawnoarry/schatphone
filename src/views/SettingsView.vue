@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useCalendarStore } from '../stores/calendar'
+import { useRemindersStore } from '../stores/reminders'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useFilesStore } from '../stores/files'
@@ -56,6 +57,7 @@ const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const calendarStore = useCalendarStore()
+const remindersStore = useRemindersStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const filesStore = useFilesStore()
@@ -105,6 +107,7 @@ const STORAGE_AUDIT_TARGETS = Object.freeze([
   { key: 'store:chat', version: 2, labelZh: '聊天存档', labelEn: 'Chat state' },
   { key: 'store:map', version: 2, labelZh: '地图存档', labelEn: 'Map state' },
   { key: 'store:calendar', version: 1, labelZh: '日历存档', labelEn: 'Calendar state' },
+  { key: 'store:reminders', version: 1, labelZh: '提醒事项', labelEn: 'Reminders state' },
   { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
   { key: 'store:files', version: 1, labelZh: '文件索引', labelEn: 'Files index' },
   { key: 'store:shopping', version: 1, labelZh: '购物记录', labelEn: 'Shopping records' },
@@ -1420,6 +1423,7 @@ const buildBackupPayload = async () => {
     calendar: {
       ...calendarStore.createBackupSnapshot(),
     },
+    reminders: remindersStore.createBackupSnapshot(),
     gallery: gallerySnapshot,
     files: filesStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
@@ -1665,6 +1669,7 @@ const createRollbackSnapshot = () => {
     calendar: {
       ...deepClone(calendarStore.createBackupSnapshot()),
     },
+    reminders: remindersStore.createBackupSnapshot(),
     gallery: galleryStore.createBackupSnapshot(),
     files: filesStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
@@ -1729,6 +1734,9 @@ const importData = async (event) => {
     const chatOk = chatStore.restoreFromBackup(parsed)
     const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
     const calendarOk = calendarStore.restoreFromBackup(parsed.calendar || parsed)
+    const remindersOk = remindersStore.restoreFromBackup(
+      parsed.reminders || parsed.calendar || parsed,
+    )
     const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
       restoreAssetPackage: true,
     })
@@ -1749,6 +1757,7 @@ const importData = async (event) => {
       !chatOk ||
       !mapOk ||
       !calendarOk ||
+      !remindersOk ||
       !galleryRestoreResult?.ok ||
       !filesOk ||
       !shoppingOk ||
@@ -1770,6 +1779,7 @@ const importData = async (event) => {
     chatStore.saveNow()
     mapStore.saveNow()
     calendarStore.saveNow()
+    remindersStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
     shoppingStore.saveNow()
@@ -1810,6 +1820,7 @@ const importData = async (event) => {
     chatStore.restoreFromBackup(rollback.chat)
     mapStore.restoreFromBackup(rollback.map)
     calendarStore.restoreFromBackup(rollback.calendar)
+    remindersStore.restoreFromBackup(rollback.reminders)
     galleryStore.restoreFromBackup(rollback.gallery)
     filesStore.restoreFromBackup(rollback.files)
     shoppingStore.restoreFromBackup(rollback.shopping)
@@ -1824,6 +1835,7 @@ const importData = async (event) => {
     chatStore.saveNow()
     mapStore.saveNow()
     calendarStore.saveNow()
+    remindersStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
     shoppingStore.saveNow()

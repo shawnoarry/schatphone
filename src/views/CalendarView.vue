@@ -1,53 +1,88 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { useCalendarStore } from '../stores/calendar'
+import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
+import { useRemindersStore } from '../stores/reminders'
 import { useSystemStore } from '../stores/system'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
-import CalendarMapReminderCard from '../components/calendar/CalendarMapReminderCard.vue'
-import CalendarPhoneCueCard from '../components/calendar/CalendarPhoneCueCard.vue'
-import CalendarShoppingCueCard from '../components/calendar/CalendarShoppingCueCard.vue'
-import CalendarStockCueCard from '../components/calendar/CalendarStockCueCard.vue'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 const calendarStore = useCalendarStore()
+const chatStore = useChatStore()
 const mapStore = useMapStore()
+const remindersStore = useRemindersStore()
 const systemStore = useSystemStore()
-const {
-  activePhoneMissedCallCues,
-  activeShoppingDeliveryCues,
-  activeStockMarketCues,
-  phoneMissedCallCueCount,
-  shoppingDeliveryCueCount,
-  stockMarketCueCount,
-  upcomingEvents,
-} = storeToRefs(calendarStore)
+const { upcomingEvents } = storeToRefs(calendarStore)
+const { activeReminderItems } = storeToRefs(remindersStore)
 const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
 const { settings } = storeToRefs(systemStore)
+const calendarRelationshipDrafts = ref({})
+const relationshipFeedbackByEventId = ref({})
 
-const activeMapReminders = computed(() =>
-  mapCalendarReminders.value.filter((reminder) => reminder.status !== 'dismissed'),
-)
-const visibleMapReminders = computed(() => activeMapReminders.value.slice(0, 4))
-const mapReminderCount = computed(() => activeMapReminders.value.length)
-const visiblePhoneCues = computed(() => activePhoneMissedCallCues.value.slice(0, 4))
-const visibleShoppingCues = computed(() => activeShoppingDeliveryCues.value.slice(0, 4))
-const visibleStockCues = computed(() => activeStockMarketCues.value.slice(0, 4))
-const dismissedMapReminderCount = computed(
-  () => mapCalendarReminders.value.filter((reminder) => reminder.status === 'dismissed').length,
-)
 const visibleCalendarEvents = computed(() => upcomingEvents.value.slice(0, 4))
+const calendarEventCount = computed(() => upcomingEvents.value.length)
+const pendingReminderItems = computed(() =>
+  activeReminderItems.value.filter((item) => item.status !== 'confirmed' && item.pinned !== true),
+)
+const pendingReminderCount = computed(() => pendingReminderItems.value.length)
+const pendingReminderSourceCounts = computed(() =>
+  pendingReminderItems.value.reduce((counts, item) => {
+    counts[item.source] = (counts[item.source] || 0) + 1
+    return counts
+  }, {}),
+)
+const reminderSummaryItems = computed(() => [
+  {
+    key: 'map',
+    labelZh: '地图',
+    labelEn: 'Map',
+    count: pendingReminderSourceCounts.value.map || 0,
+    className: 'bg-blue-50 text-blue-600',
+  },
+  {
+    key: 'phone',
+    labelZh: '电话',
+    labelEn: 'Phone',
+    count: pendingReminderSourceCounts.value.phone || 0,
+    className: 'bg-rose-50 text-rose-600',
+  },
+  {
+    key: 'shopping',
+    labelZh: '购物',
+    labelEn: 'Shopping',
+    count: pendingReminderSourceCounts.value.shopping || 0,
+    className: 'bg-orange-50 text-orange-600',
+  },
+  {
+    key: 'stock',
+    labelZh: '股票',
+    labelEn: 'Stock',
+    count: pendingReminderSourceCounts.value.stock || 0,
+    className: 'bg-amber-50 text-amber-600',
+  },
+])
 const eventTimeQuickShiftOptions = [
   { key: 'plus_hour', labelZh: '+1 小时', labelEn: '+1h', offsetMs: 60 * 60 * 1000 },
   { key: 'plus_day', labelZh: '+1 天', labelEn: '+1d', offsetMs: 24 * 60 * 60 * 1000 },
 ]
+const relationshipContactOptions = computed(() =>
+  chatStore.contacts
+    .filter((contact) => contact.kind !== 'service' && contact.kind !== 'official')
+    .map((contact) => ({
+      ...contact,
+      optionValue: String(contact.id),
+      optionLabel: contact.name || `Contact ${contact.id}`,
+    })),
+)
+
 const calendarPushRuntime = computed(() => {
   const systemSettings = settings.value.system || {}
   const automationSettings = settings.value.aiAutomation || {}
@@ -170,9 +205,6 @@ const buildRelatedKnowledgePointIndex = (items = []) =>
     ]),
   )
 
-const reminderKnowledgePoints = computed(() =>
-  buildRelatedKnowledgePointIndex(visibleMapReminders.value),
-)
 const eventKnowledgePoints = computed(() =>
   buildRelatedKnowledgePointIndex(visibleCalendarEvents.value),
 )
@@ -182,8 +214,82 @@ const getRelatedKnowledgePoints = (collection, itemId) => {
   return source[itemId] || []
 }
 
-const getLatestReminder = (reminder) =>
-  mapCalendarReminders.value.find((item) => item.id === reminder?.id) || reminder
+const getSelectedRelationshipContact = (eventId) => {
+  const selectedId = String(calendarRelationshipDrafts.value[eventId] || '')
+  if (!selectedId) return null
+  return relationshipContactOptions.value.find((contact) => contact.optionValue === selectedId) || null
+}
+
+const getEventRelationshipSuggestion = (event) =>
+  calendarStore.buildEventRelationshipSuggestion(
+    event?.id,
+    event?.id ? getSelectedRelationshipContact(event.id) : null,
+  )
+
+const getRelationshipFeedbackForEvent = (eventId) => relationshipFeedbackByEventId.value[eventId] || null
+
+const setRelationshipFeedbackForEvent = (eventId, feedback = null) => {
+  if (!eventId) return
+  const nextFeedback = { ...relationshipFeedbackByEventId.value }
+  if (feedback) {
+    nextFeedback[eventId] = feedback
+  } else {
+    delete nextFeedback[eventId]
+  }
+  relationshipFeedbackByEventId.value = nextFeedback
+}
+
+const setEventRelationshipContact = (event, contactId) => {
+  if (!event?.id) return
+  calendarRelationshipDrafts.value = {
+    ...calendarRelationshipDrafts.value,
+    [event.id]: String(contactId || ''),
+  }
+  setRelationshipFeedbackForEvent(event.id, null)
+}
+
+const recordEventRelationship = (event) => {
+  if (!event?.id) return
+  const target = getSelectedRelationshipContact(event.id)
+  if (!target) {
+    setRelationshipFeedbackForEvent(event.id, {
+      type: 'warning',
+      className: 'text-amber-600',
+      messageZh: 'Select a relationship contact first.',
+      messageEn: 'Select a relationship contact first.',
+    })
+    return
+  }
+
+  const suggestion = calendarStore.buildEventRelationshipSuggestion(event.id, target)
+  if (suggestion.imported) {
+    setRelationshipFeedbackForEvent(event.id, {
+      type: 'success',
+      className: 'text-emerald-600',
+      messageZh: 'Relationship fact already recorded.',
+      messageEn: 'Relationship fact already recorded.',
+    })
+    return
+  }
+
+  const fact = calendarStore.recordEventRelationshipFact(event.id, target)
+  setRelationshipFeedbackForEvent(
+    event.id,
+    fact
+      ? {
+          type: 'success',
+          className: 'text-emerald-600',
+          messageZh: 'Relationship fact recorded.',
+          messageEn: 'Relationship fact recorded.',
+        }
+      : {
+          type: 'warning',
+          className: 'text-amber-600',
+          messageZh: 'This event cannot be recorded as a relationship fact.',
+          messageEn: 'This event cannot be recorded as a relationship fact.',
+        },
+  )
+}
 
 const syncReminderEvent = (reminder) => {
   if (!reminder?.id) return
@@ -207,75 +313,6 @@ const syncReminderEvent = (reminder) => {
     source: 'calendar_reminder_remove',
   })
   calendarStore.removeEventBySourceReminderId(reminder.id)
-}
-
-const confirmReminder = (reminder) => {
-  mapStore.confirmMapCalendarReminder(reminder.id)
-  syncReminderEvent(getLatestReminder(reminder))
-}
-
-const toggleReminderPin = (reminder) => {
-  mapStore.setMapCalendarReminderPinned(reminder.id, reminder.pinned !== true)
-  syncReminderEvent(getLatestReminder(reminder))
-}
-
-const dismissReminder = (reminder) => {
-  void calendarStore.cancelEventPushScheduledBySourceReminderId(reminder.id, {
-    source: 'calendar_reminder_dismiss',
-  })
-  mapStore.dismissMapCalendarReminder(reminder.id)
-  calendarStore.removeEventBySourceReminderId(reminder.id)
-}
-
-const confirmPhoneCue = (cue) => {
-  const event = calendarStore.confirmPhoneMissedCallCue(cue.id)
-  if (event?.id) {
-    void calendarStore.ensureEventPushScheduled(event.id, {
-      source: 'calendar_phone_missed_call_confirm',
-    })
-  }
-}
-
-const dismissPhoneCue = (cue) => {
-  calendarStore.dismissPhoneMissedCallCue(cue.id)
-}
-
-const confirmStockCue = (cue) => {
-  const event = calendarStore.confirmStockMarketCue(cue.id)
-  if (event?.id) {
-    void calendarStore.ensureEventPushScheduled(event.id, {
-      source: 'calendar_stock_market_confirm',
-    })
-  }
-}
-
-const dismissStockCue = (cue) => {
-  calendarStore.dismissStockMarketCue(cue.id)
-}
-
-const confirmShoppingCue = (cue) => {
-  const event = calendarStore.confirmShoppingDeliveryCue(cue.id)
-  if (event?.id) {
-    void calendarStore.ensureEventPushScheduled(event.id, {
-      source: 'calendar_shopping_delivery_confirm',
-    })
-  }
-}
-
-const dismissShoppingCue = (cue) => {
-  calendarStore.dismissShoppingDeliveryCue(cue.id)
-}
-
-const getReminderStatusLabel = (reminder) => {
-  if (reminder.pinned) return t('已固定', 'Pinned')
-  if (reminder.status === 'confirmed') return t('已确认', 'Confirmed')
-  return t('建议提醒', 'Suggested')
-}
-
-const getReminderStatusClass = (reminder) => {
-  if (reminder.pinned) return 'bg-blue-50 text-blue-600'
-  if (reminder.status === 'confirmed') return 'bg-emerald-50 text-emerald-600'
-  return 'bg-amber-50 text-amber-600'
 }
 
 const padDatePart = (value) => String(value).padStart(2, '0')
@@ -464,192 +501,69 @@ watch(
     </div>
 
     <div class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-schedule-overview">
         <p class="text-xs font-semibold uppercase tracking-wide text-blue-500">
-          {{ t('线索确认层', 'Cue confirmation layer') }}
+          {{ t('日程中心', 'Schedule center') }}
         </p>
         <h2 class="mt-2 text-lg font-bold text-gray-950">
-          {{ t('外部模块先给出线索，确认后才进入日历。', 'Source modules suggest cues first; only confirmed cues become events.') }}
+          {{ t('已确认的事项在这里排程。', 'Confirmed items are scheduled here.') }}
         </h2>
         <p class="mt-2 text-xs leading-5 text-gray-500">
           {{
             t(
-              'Map、Phone、Shopping 与 Stock 的提醒都先停留在这里，避免其它模块自动占用日程；用户确认后才会安排事件和真实推送。',
-              'Map, Phone, Shopping, and Stock reminders land here as cues first, preventing source modules from taking over the schedule. Confirmation creates events and real push schedules.',
+              '未确认线索先进入提醒事项；进入日历后才会显示时间、调整排程并安排真实推送。',
+              'Unconfirmed cues go to Reminders first; Calendar shows timed events, edits, and real push scheduling.',
             )
           }}
         </p>
-        <div class="mt-3 rounded-lg border border-orange-100 bg-orange-50 p-3 text-xs leading-5 text-orange-700">
-          <div class="flex items-center justify-between gap-3">
-            <p class="font-semibold">{{ t('提醒事项拆分已开始', 'Reminders split has started') }}</p>
-            <button class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-orange-700" @click="openReminders">
-              {{ t('打开提醒事项', 'Open Reminders') }}
-            </button>
+
+        <div class="mt-4 grid grid-cols-3 gap-2">
+          <div class="rounded-lg bg-blue-50 px-3 py-2">
+            <p class="text-[10px] text-blue-500">{{ t('日程', 'Events') }}</p>
+            <strong class="text-lg text-blue-700">{{ calendarEventCount }}</strong>
           </div>
-          <p class="mt-1">
-            {{
-              t(
-                '当前线索仍兼容显示在 Calendar；新入口会逐步承接未确认的回拨、物流、地图和行情提醒。',
-                'Current cues remain compatible in Calendar; the new entry will gradually own unconfirmed callbacks, logistics, map, and market reminders.',
-              )
-            }}
-          </p>
+          <div class="rounded-lg bg-orange-50 px-3 py-2">
+            <p class="text-[10px] text-orange-500">{{ t('待处理', 'Pending') }}</p>
+            <strong class="text-lg text-orange-700">{{ pendingReminderCount }}</strong>
+          </div>
+          <div class="rounded-lg px-3 py-2" :class="calendarPushRuntime.toneClass">
+            <p class="text-[10px] opacity-80">{{ t('推送', 'Push') }}</p>
+            <strong class="text-sm">{{ t(calendarPushRuntime.labelZh, calendarPushRuntime.labelEn) }}</strong>
+          </div>
         </div>
       </section>
 
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
+      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-reminder-summary">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs text-gray-500">{{ t('来自地图', 'From Map') }}</p>
-            <h2 class="font-semibold">{{ t('地点反馈提醒', 'Location feedback reminders') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('提醒事项', 'Reminders') }}</p>
+            <h2 class="font-semibold">{{ t('待处理线索', 'Pending cues') }}</h2>
           </div>
-          <span class="rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-600">
-            {{ t(`${mapReminderCount} 条`, `${mapReminderCount} items`) }}
-          </span>
+          <button
+            class="rounded-full bg-orange-500 px-3 py-2 text-xs font-semibold text-white"
+            data-testid="calendar-open-reminders"
+            @click="openReminders"
+          >
+            {{ t('打开提醒事项', 'Open Reminders') }}
+          </button>
         </div>
-
-        <p class="mt-2 text-xs text-gray-500">
-          {{ t('地图解锁区域后，会把地点反馈整理成可确认的日程线索。', 'Unlocked map areas become follow-up cues you can confirm from Calendar.') }}
-        </p>
-        <p v-if="dismissedMapReminderCount > 0" class="mt-2 text-[11px] text-gray-400">
-          {{ t(`${dismissedMapReminderCount} 条已忽略`, `${dismissedMapReminderCount} dismissed`) }}
-        </p>
-      </section>
-
-      <section v-if="visibleMapReminders.length > 0" class="space-y-2">
-        <CalendarMapReminderCard
-          v-for="reminder in visibleMapReminders"
-          :key="reminder.id"
-          :reminder="reminder"
-          :related-knowledge-points="getRelatedKnowledgePoints(reminderKnowledgePoints, reminder.id)"
-          :status-label="getReminderStatusLabel(reminder)"
-          :status-class="getReminderStatusClass(reminder)"
-          :formatted-due-at="formatDateTime(reminder.dueAt)"
-          @confirm="confirmReminder"
-          @toggle-pin="toggleReminderPin"
-          @dismiss="dismissReminder"
-          @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
-        />
-      </section>
-
-      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold mb-2">{{ t('暂无地点反馈提醒', 'No location feedback reminders yet') }}</p>
-        <p class="text-sm text-gray-600">
-          {{ t('完成地图行程并解锁区域后，这里会显示可跟进的地点提醒。', 'Complete map trips and unlock areas to see follow-up location reminders here.') }}
-        </p>
-      </section>
-
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('来自电话', 'From Phone') }}</p>
-            <h2 class="font-semibold">{{ t('未接来电线索', 'Missed-call cues') }}</h2>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <div
+            v-for="source in reminderSummaryItems"
+            :key="source.key"
+            class="rounded-lg border border-gray-100 px-3 py-2"
+            :data-testid="`calendar-reminder-source-${source.key}`"
+          >
+            <p class="text-[11px] text-gray-500">{{ t(source.labelZh, source.labelEn) }}</p>
+            <strong class="text-base" :class="source.className">{{ source.count }}</strong>
           </div>
-          <span class="rounded-full bg-rose-50 px-2 py-1 text-[11px] text-rose-600">
-            {{ t(`${phoneMissedCallCueCount} 条`, `${phoneMissedCallCueCount} items`) }}
-          </span>
         </div>
-        <p class="mt-2 text-xs text-gray-500">
+        <p class="mt-3 text-xs leading-5 text-gray-500">
           {{
-            t(
-              'Phone 新增未接来电后，会在这里形成可确认的回拨提醒；确认后才进入日历事件和真实推送链路。',
-              'New missed calls from Phone become callback cues here; only confirmed cues become Calendar events and real push schedules.',
-            )
+            pendingReminderCount > 0
+              ? t('确认、固定或忽略都在提醒事项里处理。', 'Confirm, pin, or dismiss them in Reminders.')
+              : t('暂无待处理提醒事项。', 'No pending reminders.')
           }}
-        </p>
-      </section>
-
-      <section v-if="visiblePhoneCues.length > 0" class="space-y-2">
-        <CalendarPhoneCueCard
-          v-for="cue in visiblePhoneCues"
-          :key="cue.id"
-          :cue="cue"
-          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
-          @confirm="confirmPhoneCue"
-          @dismiss="dismissPhoneCue"
-        />
-      </section>
-
-      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold mb-2">{{ t('暂无未接来电线索', 'No missed-call cues yet') }}</p>
-        <p class="text-sm text-gray-600">
-          {{ t('在 Phone 里记录新的未接来电后，这里会出现可确认的回拨提醒。', 'Record a new missed call in Phone to see callback cues here.') }}
-        </p>
-      </section>
-
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('来自购物', 'From Shopping') }}</p>
-            <h2 class="font-semibold">{{ t('配送跟进线索', 'Delivery follow-up cues') }}</h2>
-          </div>
-          <span class="rounded-full bg-orange-50 px-2 py-1 text-[11px] text-orange-600">
-            {{ t(`${shoppingDeliveryCueCount} 条`, `${shoppingDeliveryCueCount} items`) }}
-          </span>
-        </div>
-        <p class="mt-2 text-xs text-gray-500">
-          {{
-            t(
-              'Shopping 订单会先在这里形成配送或预约跟进线索；Calendar 内确认后才进入日历事件和真实推送链路。',
-              'Shopping orders first become delivery or appointment follow-up cues here; only Calendar confirmation turns them into events and real push schedules.',
-            )
-          }}
-        </p>
-      </section>
-
-      <section v-if="visibleShoppingCues.length > 0" class="space-y-2">
-        <CalendarShoppingCueCard
-          v-for="cue in visibleShoppingCues"
-          :key="cue.id"
-          :cue="cue"
-          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
-          @confirm="confirmShoppingCue"
-          @dismiss="dismissShoppingCue"
-        />
-      </section>
-
-      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold mb-2">{{ t('暂无购物跟进线索', 'No Shopping cues yet') }}</p>
-        <p class="text-sm text-gray-600">
-          {{ t('在 Shopping 中生成本地订单后，这里会出现可确认的配送或预约提醒。', 'Create a local Shopping order to see confirmable delivery or appointment reminders here.') }}
-        </p>
-      </section>
-
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('来自股票', 'From Stock') }}</p>
-            <h2 class="font-semibold">{{ t('行情复盘线索', 'Market review cues') }}</h2>
-          </div>
-          <span class="rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-600">
-            {{ t(`${stockMarketCueCount} 条`, `${stockMarketCueCount} items`) }}
-          </span>
-        </div>
-        <p class="mt-2 text-xs text-gray-500">
-          {{
-            t(
-              'Stock 模拟标的出现明显波动后，会在这里形成可确认的复盘提醒；确认后进入日历事件和真实推送链路。',
-              'Large simulated Stock moves become market review cues here; confirmed cues become Calendar events and real push schedules.',
-            )
-          }}
-        </p>
-      </section>
-
-      <section v-if="visibleStockCues.length > 0" class="space-y-2">
-        <CalendarStockCueCard
-          v-for="cue in visibleStockCues"
-          :key="cue.id"
-          :cue="cue"
-          :formatted-suggested-at="formatDateTime(cue.suggestedAt)"
-          @confirm="confirmStockCue"
-          @dismiss="dismissStockCue"
-        />
-      </section>
-
-      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold mb-2">{{ t('暂无行情复盘线索', 'No market review cues yet') }}</p>
-        <p class="text-sm text-gray-600">
-          {{ t('在 Stock 中添加或更新明显波动的模拟标的后，这里会出现可确认的复盘提醒。', 'Add or update a simulated Stock asset with a large move to see review cues here.') }}
         </p>
       </section>
 
@@ -688,14 +602,27 @@ watch(
             :push-status-meta="getCalendarPushStatusMeta(event)"
             :push-detail="getCalendarPushDetail(event)"
             :push-history="getEventPushHistory(event)"
+            :relationship-contact-options="relationshipContactOptions"
+            :selected-relationship-contact-id="calendarRelationshipDrafts[event.id] || ''"
+            :relationship-suggestion="getEventRelationshipSuggestion(event)"
+            :relationship-feedback="getRelationshipFeedbackForEvent(event.id)"
             :format-push-history-entry="formatPushHistoryEntry"
             :format-date-time="formatDateTime"
             @update-starts-at="updateEventStartsAt"
             @shift-starts-at="shiftEventStartsAt"
             @reset-starts-at="resetEventStartsAt"
             @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
+            @update-relationship-contact="setEventRelationshipContact"
+            @record-relationship="recordEventRelationship"
           />
         </div>
+      </section>
+
+      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-empty-events">
+        <p class="font-semibold">{{ t('暂无已确认日程', 'No confirmed events yet') }}</p>
+        <p class="mt-2 text-sm leading-6 text-gray-600">
+          {{ t('到提醒事项中确认线索后，它们会出现在这里。', 'Confirm cues in Reminders, and they will appear here.') }}
+        </p>
       </section>
 
       <div class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">

@@ -95,6 +95,62 @@ describe('ContactsView wallet ledger context', () => {
     wrapper.unmount()
   })
 
+  test('prefers the primary shared memory summary over later supporting facts in Contacts', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const profile = chatStore.addRoleProfile({
+      name: 'Aki',
+      role: 'Baker',
+      isMain: true,
+    })
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: 'Aki',
+      },
+      sourceModule: 'relationship_food_delivery_shared_meal',
+      sourceId: 'food_order_aki_1:shared_meal:role_3',
+      memoryKey: 'aki_dorayaki_day',
+      factType: 'shared_meal',
+      summary: 'Shared a dorayaki meal with Aki.',
+      metricDeltas: {
+        affinity: 6,
+        intimacy: 5,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: 'Aki',
+      },
+      sourceModule: 'relationship_wallet_order_support',
+      sourceId: 'wallet_tx_aki_1:wallet_support:role_3',
+      memoryKey: 'aki_dorayaki_day',
+      factType: 'wallet_order_support',
+      summary: 'Wallet expense recorded for the same dorayaki meal with Aki.',
+      metricDeltas: {},
+      forceSupportingMemory: true,
+    })
+
+    const router = createTestRouter()
+    await router.push('/contacts')
+    await router.isReady()
+
+    const wrapper = mount(ContactsView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    expect(wrapper.text()).toContain('Aki')
+    expect(wrapper.text()).toContain('共同记忆：Shared a dorayaki meal with Aki.')
+    expect(wrapper.text()).not.toContain('共同记忆：Wallet expense recorded for the same dorayaki meal with Aki.')
+
+    wrapper.unmount()
+  })
+
   test('creates role profiles with shared avatar image sources', async () => {
     const chatStore = useChatStore()
     const galleryStore = useGalleryStore()

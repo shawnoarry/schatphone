@@ -16,6 +16,8 @@ const createTestRouter = () =>
       { path: '/calendar', component: CalendarView },
       { path: '/home', component: DummyView },
       { path: '/map', component: DummyView },
+      { path: '/reminders', component: DummyView },
+      { path: '/stock', component: DummyView },
       { path: '/worldbook', component: DummyView },
     ],
   })
@@ -26,7 +28,7 @@ const flushUi = async () => {
   await flushPromises()
 }
 
-describe('CalendarView stock cue interactions', () => {
+describe('CalendarView stock cue boundary', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useFakeTimers()
@@ -34,7 +36,7 @@ describe('CalendarView stock cue interactions', () => {
     setActivePinia(createPinia())
   })
 
-  test('confirms and dismisses Stock market review cues from Calendar', async () => {
+  test('summarizes Stock market cues and routes processing to Reminders', async () => {
     const stockStore = useStockStore()
     const calendarStore = useCalendarStore()
     stockStore.resetForTesting()
@@ -60,21 +62,15 @@ describe('CalendarView stock cue interactions', () => {
     })
     await flushUi()
 
-    const cueCard = wrapper.get(`[data-testid="calendar-stock-cue-card-${cue.id}"]`)
-    expect(cueCard.text()).toContain('NOVA')
-
-    await cueCard.get('button[title="确认行情复盘提醒"]').trigger('click')
-    await flushUi()
-
-    expect(calendarStore.findStockMarketCueById(cue.id)?.status).toBe('confirmed')
-    expect(calendarStore.findEventBySourceReminderId(cue.id)?.titleEn).toBe('Review NOVA')
-    expect(wrapper.get(`[data-testid="calendar-event-card-calendar_event_${cue.id}"]`).text()).toContain('NOVA')
-
-    await wrapper.get(`[data-testid="calendar-stock-cue-card-${cue.id}"] button[title="忽略行情线索"]`).trigger('click')
-    await flushUi()
-
-    expect(calendarStore.findStockMarketCueById(cue.id)?.status).toBe('dismissed')
+    expect(wrapper.get('[data-testid="calendar-reminder-source-stock"]').text()).toContain('1')
+    expect(wrapper.find(`[data-testid="calendar-stock-cue-card-${cue.id}"]`).exists()).toBe(false)
+    expect(calendarStore.findStockMarketCueById(cue.id)?.status).toBe('suggested')
     expect(calendarStore.findEventBySourceReminderId(cue.id)).toBeNull()
+
+    await wrapper.get('[data-testid="calendar-open-reminders"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/reminders')
 
     wrapper.unmount()
   })

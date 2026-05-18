@@ -142,6 +142,12 @@ describe('ShoppingView', () => {
     expect(relationshipSummary.metrics.affinity).toBe(58)
     expect(relationshipSummary.metrics.intimacy).toBe(24)
     expect(relationshipSummary.latestEventSummary).toContain('Gift purchased')
+    expect(relationshipSummary.memorySummaries).toHaveLength(1)
+    expect(relationshipSummary.memorySummaries[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_shopping_gift',
+    })
+    expect(relationshipSummary.memorySummaries[0].sourceModules).toContain('relationship_wallet_order_support')
     expect(wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
 
     await wrapper.find('[data-testid="shopping-return-chat"]').trigger('click')

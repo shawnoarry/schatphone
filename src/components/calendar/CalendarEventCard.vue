@@ -38,6 +38,22 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  relationshipContactOptions: {
+    type: Array,
+    default: () => [],
+  },
+  selectedRelationshipContactId: {
+    type: String,
+    default: '',
+  },
+  relationshipSuggestion: {
+    type: Object,
+    default: null,
+  },
+  relationshipFeedback: {
+    type: Object,
+    default: null,
+  },
   formatPushHistoryEntry: {
     type: Function,
     required: true,
@@ -48,7 +64,14 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['update-starts-at', 'shift-starts-at', 'reset-starts-at', 'open-worldbook'])
+const emit = defineEmits([
+  'update-starts-at',
+  'shift-starts-at',
+  'reset-starts-at',
+  'open-worldbook',
+  'update-relationship-contact',
+  'record-relationship',
+])
 
 const { t } = useI18n()
 </script>
@@ -76,6 +99,55 @@ const { t } = useI18n()
     <p v-if="event.summaryZh || event.summaryEn" class="mt-2 text-xs text-gray-600">
       {{ t(event.summaryZh, event.summaryEn) }}
     </p>
+    <div
+      v-if="relationshipContactOptions.length > 0"
+      class="mt-3 rounded-lg border border-emerald-100 bg-white p-3"
+      :data-testid="`calendar-event-relationship-${event.id}`"
+    >
+      <div class="grid grid-cols-[1fr_auto] items-center gap-2">
+        <select
+          class="min-w-0 rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-800"
+          :data-testid="`calendar-event-relationship-contact-${event.id}`"
+          :value="selectedRelationshipContactId"
+          @change="emit('update-relationship-contact', event, $event.target.value)"
+        >
+          <option value="">{{ t('Select contact', 'Select contact') }}</option>
+          <option
+            v-for="contact in relationshipContactOptions"
+            :key="contact.optionValue"
+            :value="contact.optionValue"
+          >
+            {{ contact.optionLabel }}
+          </option>
+        </select>
+        <button
+          type="button"
+          class="shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold"
+          :class="
+            relationshipSuggestion?.imported
+              ? 'bg-emerald-50 text-emerald-600'
+              : 'bg-emerald-500 text-white'
+          "
+          :disabled="!selectedRelationshipContactId || relationshipSuggestion?.imported"
+          :data-testid="`calendar-event-record-relationship-${event.id}`"
+          @click="emit('record-relationship', event)"
+        >
+          {{
+            relationshipSuggestion?.imported
+              ? t('Recorded', 'Recorded')
+              : t('Record fact', 'Record fact')
+          }}
+        </button>
+      </div>
+      <p
+        v-if="relationshipFeedback"
+        class="mt-2 text-[11px]"
+        :class="relationshipFeedback.className"
+        :data-testid="`calendar-event-relationship-feedback-${event.id}`"
+      >
+        {{ t(relationshipFeedback.messageZh, relationshipFeedback.messageEn) }}
+      </p>
+    </div>
     <div
       v-if="relatedKnowledgePoints.length > 0"
       :data-testid="`calendar-event-worldbook-${event.id}`"

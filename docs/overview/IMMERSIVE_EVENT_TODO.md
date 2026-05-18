@@ -968,7 +968,7 @@ Product meaning:
 Next recommended code slice:
 
 - Start the Calendar / Reminders split before adding Calendar relationship facts.
-- Add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
+- Tighten relationship-memory dedupe/merge rules before adding new media-driven memory inputs.
 
 Alternative same-size slice:
 
@@ -1001,4 +1001,4 @@ Recommended next:
 
 - Add a non-breaking `Reminders / 提醒事项` code seam before moving existing Calendar cue arrays.
 - Defer Calendar relationship facts until Calendar owns only true schedule/date facts.
-- Continue Gallery relationship facts as a parallel safe candidate if Calendar split needs more planning.
+- Defer Gallery relationship facts until image sources become naturally produced and low-friction; prioritize text/event-first memory dedupe if Calendar split needs more planning.

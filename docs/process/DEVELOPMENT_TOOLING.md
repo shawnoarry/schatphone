@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-05-16
+Updated: 2026-05-18
 
 This document records shared development tools outside the visual-workflow skill group. Its purpose is to keep different PCs and future handoffs on the same operating assumptions.
 
@@ -74,11 +74,38 @@ Run from the confirmed SchatPhone project root:
 npm.cmd install
 npm.cmd run dev
 npm.cmd run lint
-npm.cmd run build
 npm.cmd test
+npm.cmd run build
 ```
 
 If a command fails because plain `npm` is blocked, retry with `npm.cmd`.
+
+## 3.1 Dependency Update Policy
+
+Dependency updates should protect product work from avoidable tooling churn.
+
+Safe default:
+
+1. Batch patch and minor dependency updates only when the baseline verification passes:
+
+```powershell
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+```
+
+2. Do not mix major dependency upgrades with feature work.
+3. Major upgrades need a dedicated migration branch or task record with rollback notes.
+4. Treat major jumps in these packages as migration work:
+   - `vite`
+   - `vitest`
+   - `eslint`
+   - `jsdom`
+   - `marked`
+   - `vue`
+   - `vue-router`
+   - `pinia`
+5. After dependency changes, update `package-lock.json` in the same batch and record the validation command output in the active roadmap item.
 
 ## 4. OpenCLI
 

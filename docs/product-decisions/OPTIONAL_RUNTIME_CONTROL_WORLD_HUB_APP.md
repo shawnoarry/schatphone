@@ -97,4 +97,4 @@ Why:
 - Reminders should own callbacks, follow-ups, logistics reminders, stock review cues, and world/task objectives.
 - World Hub should remain optional runtime review and override, not the normal app where users manage everyday reminders.
 
-Alternative same-size target: add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
+Alternative same-size target: deepen relationship-memory dedupe/review rules before introducing new media-driven memory inputs.

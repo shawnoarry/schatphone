@@ -1,6 +1,6 @@
 # Calendar And Reminders Split / 日历与提醒事项拆分决策
 
-Updated: 2026-05-17
+Updated: 2026-05-18
 
 Audience: product managers, designers, engineers, QA, and future AI assistants.
 
@@ -43,9 +43,12 @@ Current code is still combined:
 
 | Current code area | Current behavior |
 | --- | --- |
-| `src/stores/calendar.js` | Owns `events`, Map reminders, Phone missed-call cues, Stock market cues, Shopping delivery cues, and real push scheduling state. |
-| `src/views/CalendarView.vue` | Renders a cue confirmation layer plus confirmed Calendar events and push status. |
-| `/calendar` | Current route for both schedule events and cue confirmation. |
+| `src/stores/calendar.js` | Owns confirmed Calendar `events`, event time editing, compatibility wrappers for old cue methods, and real push scheduling state. |
+| `src/stores/reminders.js` | Owns Phone missed-call cues, Stock market cues, Shopping delivery cues, Reminders persistence, legacy Calendar cue migration, and Reminders confirmation/dismissal entry points. |
+| `src/views/CalendarView.vue` | Leads with confirmed Calendar events, push status, and a Reminders summary link; raw cue cards are no longer processed here. |
+| `src/views/RemindersView.vue` | Renders the user-facing cross-module cue inbox. |
+| `/calendar` | Current route for confirmed schedule events, event time editing, push status, and a pending-cue summary. |
+| `/reminders` | Current route for cross-module follow-ups and cue confirmation. |
 
 This document does not mean the code has already been split. It records the target direction and the next refactor sequence.
 
@@ -131,12 +134,12 @@ Recommended sequence:
 | 1 | Record product decision and module naming glossary. | DONE |
 | 2 | Introduce `Reminders / 提醒事项` as a planned module name in docs and PM catalog. | DONE |
 | 3 | Add a code seam for Reminders without changing existing Calendar behavior. | DONE |
-| 4 | Move cue arrays and confirmation/dismissal methods from `calendarStore` into a future `remindersStore`, with compatibility wrappers if needed. | TODO |
-| 5 | Keep Calendar events and real push scheduling in Calendar. | TODO |
-| 6 | Update `/calendar` UI so it leads with schedule/date content instead of cue confirmation. | TODO |
-| 7 | Decide whether Reminders has a visible Home entry, appears inside More, or stays as a system app reachable from notifications. | TODO |
-| 8 | Add tests proving Map/Phone/Shopping/Stock cues still work after the split. | TODO |
-| 9 | Add Calendar relationship facts only after Calendar no longer contains raw cue queues. | TODO |
+| 4 | Move cue arrays and confirmation/dismissal methods from `calendarStore` into `remindersStore`, with compatibility wrappers. | DONE |
+| 5 | Keep Calendar events and real push scheduling in Calendar. | DONE |
+| 6 | Update `/calendar` UI so it leads with schedule/date content instead of cue confirmation. | DONE |
+| 7 | Decide whether Reminders has a visible Home entry, appears inside More, or stays as a system app reachable from notifications. | DONE |
+| 8 | Add tests proving Map/Phone/Shopping/Stock cues still work after the split. | PARTIAL_DONE |
+| 9 | Add Calendar relationship facts only after Calendar no longer contains raw cue queues. | DONE |
 
 Implementation note, 2026-05-17:
 
@@ -144,6 +147,20 @@ Implementation note, 2026-05-17:
 - This phase intentionally does not migrate persisted data out of `store:calendar`.
 - Reminders currently reads Map, Phone, Shopping, and Stock cue sources and delegates confirm/dismiss actions back to existing owners.
 - Calendar remains compatible and still displays the old cue-confirmation surface until cue arrays and lifecycle methods are moved in a later phase.
+
+Implementation note, 2026-05-18:
+
+- Phone, Stock, and Shopping cue arrays now live in `src/stores/reminders.js`.
+- Reminders persists its own `store:reminders` state and migrates old cue arrays from legacy `store:calendar` when needed.
+- `src/stores/calendar.js` keeps compatibility wrappers such as `upsertPhoneMissedCallCueFromCall`, `confirmShoppingDeliveryCue`, and `findStockMarketCueByStockId`, but these wrappers delegate raw cue ownership to Reminders.
+- Calendar still owns confirmed events, event time editing, push schedule/cancel state, and backup-compatible event snapshots.
+- Settings backup/export now includes a standalone `reminders` section while keeping Calendar cue mirrors in Calendar snapshots for compatibility.
+- `/calendar` now presents a schedule-first overview, confirmed events, push status, and a pending Reminders summary; raw cue confirmation/dismissal UI now lives in `/reminders`.
+- Calendar Shopping/Stock view tests now assert that Calendar summarizes raw cues and routes processing to Reminders instead of rendering cue operation cards.
+- Reminders is now a visible daily Home app entry (`app_reminders` -> `/reminders`), placed beside Calendar in the default Home layout rather than inside More.
+- `/reminders` now supports source filters, handling-status filters, filtered empty states, and explicit reset behavior.
+- Calendar confirmed events can now write low-impact relationship facts only after the user selects an existing Chat contact from the Calendar event card.
+- Raw Reminders cues still cannot write relationship facts directly; they must first become confirmed Calendar events.
 
 ## 7. Guardrails
 

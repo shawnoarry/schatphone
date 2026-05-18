@@ -5,8 +5,10 @@ import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import {
+  buildFoodDeliverySharedMealRelationshipMemoryKey,
   buildFoodDeliverySharedMealRelationshipSuggestion,
   recordFoodDeliverySharedMealRelationshipFact,
+  recordWalletOrderSupportRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
@@ -419,6 +421,15 @@ const transferFoodSuggestionToWallet = (suggestion) => {
     target: selectedSharedMealContact(suggestion.orderId),
     transaction,
   })
+  if (selectedSharedMealContact(suggestion.orderId)) {
+    recordWalletOrderSupportRelationshipFact({
+      relationshipRuntimeStore,
+      target: selectedSharedMealContact(suggestion.orderId),
+      transaction,
+      memoryKey: buildFoodDeliverySharedMealRelationshipMemoryKey(suggestion.order),
+      summary: `Wallet expense recorded for the same shared meal with ${selectedSharedMealContact(suggestion.orderId)?.name || 'a relationship contact'}.`,
+    })
+  }
   return transaction
 }
 

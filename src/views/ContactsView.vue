@@ -639,6 +639,7 @@ const profileRelationshipTarget = (profile) => ({
 const profileRelationshipSnapshot = (profile) =>
   relationshipRuntimeStore.summarizeEntityForTarget(profileRelationshipTarget(profile), {
     eventLimit: 2,
+    memoryLimit: 1,
   })
 
 const profileRelationshipSummary = (profile) => {
@@ -654,6 +655,14 @@ const profileRelationshipSummary = (profile) => {
 const profileRelationshipLatestSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
   if (!snapshot?.exists) return t('暂无跨模块关系事件', 'No cross-module relationship facts yet')
+  const latestMemory = snapshot.memorySummaries?.[0]
+  const memorySummary = latestMemory?.displaySummary || latestMemory?.primarySummary || latestMemory?.latestSummary || ''
+  if (memorySummary) {
+    return t(
+      `共同记忆：${memorySummary}`,
+      `Shared memory: ${memorySummary}`,
+    )
+  }
   const milestone = snapshot.milestones?.[0]?.label || ''
   if (milestone) return t(`最近里程碑：${milestone}`, `Latest milestone: ${milestone}`)
   if (snapshot.latestEventSummary) {

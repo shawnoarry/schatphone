@@ -16,6 +16,7 @@ const createTestRouter = () =>
       { path: '/calendar', component: CalendarView },
       { path: '/home', component: DummyView },
       { path: '/map', component: DummyView },
+      { path: '/reminders', component: DummyView },
       { path: '/shopping', component: DummyView },
       { path: '/worldbook', component: DummyView },
     ],
@@ -27,7 +28,7 @@ const flushUi = async () => {
   await flushPromises()
 }
 
-describe('CalendarView Shopping cue interactions', () => {
+describe('CalendarView Shopping cue boundary', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useFakeTimers()
@@ -35,7 +36,7 @@ describe('CalendarView Shopping cue interactions', () => {
     setActivePinia(createPinia())
   })
 
-  test('confirms and dismisses Shopping delivery cues from Calendar', async () => {
+  test('summarizes Shopping delivery cues and routes processing to Reminders', async () => {
     const shoppingStore = useShoppingStore()
     const calendarStore = useCalendarStore()
     shoppingStore.resetForTesting()
@@ -65,31 +66,17 @@ describe('CalendarView Shopping cue interactions', () => {
     })
     await flushUi()
 
-    expect(wrapper.text()).toContain('线索确认层')
-    expect(wrapper.text()).toContain('外部模块先给出线索')
-    expect(wrapper.text()).toContain('配送跟进线索')
-
-    const cueCard = wrapper.get(`[data-testid="calendar-shopping-cue-card-${cue.id}"]`)
-    expect(cueCard.text()).toContain('Mira Lens')
-
-    await cueCard.get('button[title="确认购物跟进提醒"]').trigger('click')
-    await flushUi()
-
-    expect(calendarStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('confirmed')
-    expect(calendarStore.findEventBySourceReminderId(cue.id)?.titleEn).toBe(
-      'Shopping follow-up: Mira Lens',
-    )
-    expect(wrapper.get(`[data-testid="calendar-event-card-calendar_event_${cue.id}"]`).text()).toContain(
-      'Mira Lens',
-    )
-
-    await wrapper
-      .get(`[data-testid="calendar-shopping-cue-card-${cue.id}"] button[title="忽略购物线索"]`)
-      .trigger('click')
-    await flushUi()
-
-    expect(calendarStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('dismissed')
+    expect(wrapper.get('[data-testid="calendar-schedule-overview"]').text()).toContain('日程中心')
+    expect(wrapper.get('[data-testid="calendar-reminder-summary"]').text()).toContain('待处理线索')
+    expect(wrapper.get('[data-testid="calendar-reminder-source-shopping"]').text()).toContain('1')
+    expect(wrapper.find(`[data-testid="calendar-shopping-cue-card-${cue.id}"]`).exists()).toBe(false)
+    expect(calendarStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('suggested')
     expect(calendarStore.findEventBySourceReminderId(cue.id)).toBeNull()
+
+    await wrapper.get('[data-testid="calendar-open-reminders"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/reminders')
 
     wrapper.unmount()
   })

@@ -257,6 +257,8 @@ const relationshipSourceLabel = (sourceModule = '') => {
   if (sourceModule === 'relationship_map_shared_route') return t('Map shared route', 'Map shared route')
   if (sourceModule === 'relationship_wallet_shared_transfer')
     return t('Wallet shared transfer', 'Wallet shared transfer')
+  if (sourceModule === 'relationship_calendar_confirmed_event')
+    return t('Calendar confirmed event', 'Calendar confirmed event')
   if (sourceModule === 'relationship_runtime') return t('Relationship runtime', 'Relationship runtime')
   return sourceModule || t('Unknown source', 'Unknown source')
 }
@@ -269,6 +271,7 @@ const relationshipFactTypeLabel = (factType = '') => {
   if (factType === 'shared_route') return t('Shared route', 'Shared route')
   if (factType === 'shared_expense') return t('Shared expense', 'Shared expense')
   if (factType === 'transfer_recorded') return t('Transfer recorded', 'Transfer recorded')
+  if (factType === 'scheduled_calendar_event') return t('Scheduled calendar event', 'Scheduled calendar event')
   return factType || t('Relationship fact', 'Relationship fact')
 }
 
@@ -328,6 +331,7 @@ const relationshipRuntimeEntityRows = computed(() =>
     ...entity,
     stageLabel: relationshipStageLabel(entity.relationshipStage),
     updatedAtLabel: formatRuntimeTime(entity.updatedAt),
+    memorySummaries: relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2),
   })),
 )
 
@@ -539,6 +543,17 @@ const dismissRelationshipEvent = (eventId) => {
               <p class="mt-2 text-[11px] leading-4 text-slate-400">
                 {{ t('Metrics: affinity/trust/intimacy/tension/dependency', 'Metrics: affinity/trust/intimacy/tension/dependency') }}
                 {{ entity.metrics.affinity }}/{{ entity.metrics.trust }}/{{ entity.metrics.intimacy }}/{{ entity.metrics.tension }}/{{ entity.metrics.dependency }}
+              </p>
+              <p
+                v-if="entity.memorySummaries.length"
+                class="mt-1 text-[11px] leading-4 text-rose-100/85"
+              >
+                {{
+                  t(
+                    `Shared memory: ${entity.memorySummaries[0].displaySummary || entity.memorySummaries[0].primarySummary || entity.memorySummaries[0].latestSummary || entity.memorySummaries[0].memoryKey}`,
+                    `Shared memory: ${entity.memorySummaries[0].displaySummary || entity.memorySummaries[0].primarySummary || entity.memorySummaries[0].latestSummary || entity.memorySummaries[0].memoryKey}`,
+                  )
+                }}
               </p>
               <p class="mt-1 text-[10px] text-slate-600">
                 {{ t('Updated', 'Updated') }}: {{ entity.updatedAtLabel }}

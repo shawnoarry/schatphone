@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-05-05
+Updated / 更新时间: 2026-05-18
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -10,6 +10,8 @@ Updated / 更新时间: 2026-05-05
    中文：需要产品全局背景时，先读 `docs/overview/PROJECT_MASTER_GUIDE.md`，再回到本文件执行。
 4. EN: If any old document conflicts with this file, this file wins.
    中文：若旧文档与本文件冲突，以本文件为准。
+5. EN: This file is the only concrete execution board. Project-level direction lives in `docs/strategy/PROJECT_ITERATION_PLAN.md`; specialist and module documents must promote active work here before implementation.
+   中文：本文件是唯一具体执行看板。项目级方向放在 `docs/strategy/PROJECT_ITERATION_PLAN.md`；专项与模块文档中的活动任务进入实现前必须提升到这里。
 
 ## 0.5 AI Quick Start (10 min) / AI 接手速览（10分钟）
 1. EN: Current target moved to P1 kickoff after closing all P0 items.
@@ -68,7 +70,38 @@ Updated / 更新时间: 2026-05-05
 
 ## 4. Next Up (Immediate) / 下一项待办（立即执行）
 
-### 4.0 Visual Track Immediate Correction / 视觉专项立即修正
+### 4.0 Project Governance Reset / 项目治理复位
+
+Status / 状态: `DONE`
+
+1. EN: Align root `README.md` with the current project state, route list, Files internal role, Calendar/Reminders split, World Hub optional role, and current project-level plan.
+   中文：将根目录 `README.md` 对齐当前项目状态、路由列表、Files 内部角色、Calendar/Reminders 拆分、World Hub 可选角色与项目级计划。
+2. EN: Add `npm test` to CI so regressions are caught before build/deploy confidence.
+   中文：在 CI 中加入 `npm test`，让测试回归能在 build/deploy 信心之前被捕获。
+3. EN: Record dependency update policy in tooling docs so patch/minor and major upgrades do not mix with feature work unexpectedly.
+   中文：在工具文档中记录依赖升级策略，避免 patch/minor 与 major 升级和功能开发意外混在一起。
+4. EN: Remove unreferenced Vite/Vue scaffold assets after verifying there are no code references.
+   中文：确认无代码引用后清理 Vite/Vue 脚手架残留资产。
+
+Acceptance / 验收:
+
+- EN: `README.md`, `docs/README.md`, this roadmap, and the project iteration plan agree on the current direction.
+  中文：`README.md`、`docs/README.md`、本路线图与项目级迭代计划在当前方向上保持一致。
+- EN: CI runs lint, test, and build.
+  中文：CI 运行 lint、test 与 build。
+- EN: Dependency update policy is documented.
+  中文：依赖升级策略已记录。
+- EN: Removed assets have no remaining references.
+  中文：被删除资产没有剩余引用。
+
+Regression checks / 回归检查:
+
+- `npm run lint` passed.
+- `npm test` passed: 81 test files, 391 tests.
+- `npm run build` passed.
+- `git diff --check` passed.
+
+### 4.1 Visual Track Immediate Correction / 视觉专项立即修正
 
 Status / 状态: `IN_PROGRESS`
 
@@ -2076,8 +2109,8 @@ Recommended next:
 
 - EN: Start the Calendar / Reminders split before adding Calendar relationship facts.
   Chinese: 在添加 Calendar 关系事实前，先启动 Calendar / Reminders 拆分。
-- EN: Add Gallery relationship facts for shared photos, people albums, trip memories, and memory collections.
-  Chinese: 同体量下一步：添加 Gallery 关系事实，用于共享照片、人物相册、旅程回忆和回忆合集。
+- EN: Tighten relationship-memory dedupe and recall rules before adding new media-driven memory inputs.
+  Chinese: 在新增媒体驱动记忆入口前，先收紧关系记忆的去重与召回规则。
 - EN: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
   Chinese: Keep high-impact romance/conflict automation deferred until world-aware event packs and World Hub review details are stronger.
 
@@ -2091,25 +2124,33 @@ Status: PARTIAL_DONE
    Chinese: 产品决策已记录：`Calendar / 日历` 回归真实日程/日期应用，`Reminders / 提醒事项` 承接跨模块线索、回拨、跟进、物流提醒、股票复盘线索与世界观任务目标。
 2. EN: Module Chinese/English glossary documented in `docs/pm/MODULE_NAME_GLOSSARY.md`.
    Chinese: 模块中英对照表已记录在 `docs/pm/MODULE_NAME_GLOSSARY.md`。
-3. EN: Current code still combines these responsibilities in `src/stores/calendar.js` and `src/views/CalendarView.vue`.
-   Chinese: 当前代码仍暂时合并在 `src/stores/calendar.js` 与 `src/views/CalendarView.vue`。
+3. EN: Cue ownership has started moving out of Calendar: Phone, Shopping, and Stock cue arrays now live in `src/stores/reminders.js`, while Calendar keeps compatibility wrappers.
+   Chinese: 线索归属已开始移出 Calendar：Phone、Shopping、Stock 线索数组现在由 `src/stores/reminders.js` 持有，Calendar 保留兼容 wrapper。
 4. EN: First non-breaking Reminders seam landed as `src/stores/reminders.js`, `/reminders`, and `src/views/RemindersView.vue`.
    Chinese: 第一阶段非破坏性 Reminders 接缝已落地：`src/stores/reminders.js`、`/reminders` 与 `src/views/RemindersView.vue`。
-5. EN: Reminders currently aggregates Map, Phone, Shopping, and Stock cues while delegating confirmation/dismissal to existing Calendar/Map owners.
-   Chinese: 当前 Reminders 聚合 Map、Phone、Shopping、Stock 线索，并把确认/忽略委托回现有 Calendar/Map 所有者。
-6. EN: Calendar remains compatible and still shows its old cue confirmation layer until persisted cue ownership is migrated.
-   Chinese: Calendar 仍保持兼容并继续显示旧线索确认层，直到后续迁移持久化线索所有权。
-7. EN: Validation target: `npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\calendar-worldbook-context.test.js`.
-   Chinese: 验证目标：`npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\calendar-worldbook-context.test.js`。
+5. EN: Reminders now owns its own `store:reminders` persistence, migrates legacy cue arrays from `store:calendar`, and is included in Settings backup/export/import.
+   Chinese: Reminders 现在拥有独立 `store:reminders` 持久化，会从旧 `store:calendar` 迁移线索数组，并已接入 Settings 备份/导出/导入。
+6. EN: Calendar remains API-compatible, but `/calendar` now leads with schedule overview, confirmed events, event time editing, push status, and a pending Reminders summary instead of raw cue operation cards.
+   Chinese: Calendar 保持 API 兼容，但 `/calendar` 现在以日程概览、已确认事件、事件时间编辑、推送状态与待处理 Reminders 摘要为主，不再展示原始线索操作卡。
+7. EN: Raw cue confirmation/dismissal is now routed through `/reminders`, while Calendar summary cards only show pending counts by source.
+   Chinese: 原始线索的确认/忽略现在转到 `/reminders`，Calendar 摘要卡只展示各来源待处理数量。
+8. EN: Validation passed: `npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-event-store.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\shopping-store.test.js tests\stock-store.test.js tests\phone-store.test.js`.
+   Chinese: 验证通过：`npm test -- tests\reminders-store.test.js tests\reminders-view.test.js tests\calendar-event-store.test.js tests\calendar-shopping-cue-view.test.js tests\calendar-stock-cue-view.test.js tests\shopping-store.test.js tests\stock-store.test.js tests\phone-store.test.js`。
+9. EN: Reminders visibility decision is landed: `app_reminders` is a normal Home app entry beside Calendar, not a More-only or notification-only surface.
+   Chinese: Reminders 可见性决策已落地：`app_reminders` 是与 Calendar 并列的 Home 日常应用入口，不放进 More，也不只靠通知进入。
+10. EN: Reminders management baseline is landed: `/reminders` now has source filters, handling-status filters, clearer filtered empty states, and reset behavior.
+    Chinese: Reminders 管理基线已落地：`/reminders` 现在支持来源筛选、处理状态筛选、更清楚的筛选空状态与重置操作。
+11. EN: Calendar confirmed-event relationship facts are landed: users can choose a Chat contact from a confirmed event card and record a low-impact `scheduled_calendar_event` fact.
+    Chinese: Calendar 已确认事件关系事实已落地：用户可在已确认事件卡片中选择 Chat 联系人，并记录低影响 `scheduled_calendar_event` 关系事实。
+12. EN: Raw Reminders cues still cannot write relationship facts directly; they must first become confirmed Calendar events.
+    Chinese: Reminders 原始线索仍不能直接写入关系事实；必须先成为已确认 Calendar 事件。
 
 Recommended next:
 
-- EN: Move cue arrays and confirmation/dismissal methods from `calendarStore` into `remindersStore` with compatibility wrappers.
-  Chinese: 下一步把线索数组与确认/忽略方法从 `calendarStore` 迁移到 `remindersStore`，同时保留兼容 wrapper。
-- EN: After ownership migration, make `/calendar` lead with schedule/date content and keep cue confirmation primarily in `/reminders`.
-  Chinese: 所有权迁移后，让 `/calendar` 首屏回到日程/日期内容，线索确认主要留在 `/reminders`。
-- EN: Keep Gallery relationship facts as the next independent same-size task if Calendar/Reminders migration is paused.
-  Chinese: 若 Calendar/Reminders 迁移暂缓，Gallery 关系事实可作为独立同体量任务推进。
+- EN: Deepen relationship-memory dedupe/merge rules and Calendar relationship-fact review polish.
+  Chinese: 下一步建议继续打磨关系记忆的去重/归并规则，以及 Calendar 关系事实审阅体验。
+- EN: Alternative same-size slice: add World Hub relationship-event filters/details.
+  Chinese: 同体量备选：补 World Hub 关系事件筛选/详情。
 
 ---
 

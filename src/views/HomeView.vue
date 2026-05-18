@@ -158,6 +158,7 @@ const widgetRegistry = {
   app_phone: { kind: 'app', icon: 'fas fa-phone', label: 'Phone', accent: 'default', route: '/phone' },
   app_map: { kind: 'app', icon: 'fas fa-map-location-dot', label: 'Map', accent: 'cool', route: '/map' },
   app_calendar: { kind: 'app', icon: 'fas fa-calendar-days', label: 'Calendar', accent: 'light', route: '/calendar' },
+  app_reminders: { kind: 'app', icon: 'fas fa-list-check', label: 'Reminders', accent: 'warm', route: '/reminders' },
   app_stock: { kind: 'app', icon: 'fas fa-chart-line', label: 'Stock', accent: 'cool', route: '/stock' },
   app_chat: { kind: 'app', icon: 'fas fa-comment', label: 'Chat', accent: 'default', route: '/chat' },
   app_contacts: {
@@ -183,6 +184,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_phone') return t('电话', 'Phone')
   if (tileId === 'app_map') return t('地图', 'Map')
   if (tileId === 'app_calendar') return t('日历', 'Calendar')
+  if (tileId === 'app_reminders') return t('提醒事项', 'Reminders')
   if (tileId === 'app_stock') return t('股票', 'Stock')
   if (tileId === 'app_chat') return t('聊天', 'Chat')
   if (tileId === 'app_contacts') return t('联系人', 'Contacts')

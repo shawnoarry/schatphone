@@ -214,4 +214,55 @@ describe('ControlCenterView', () => {
 
     wrapper.unmount()
   })
+
+  test('shows primary shared memory summaries instead of supporting wallet details', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 6,
+        name: 'Aki',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_order_aki_1:gift',
+      memoryKey: 'aki_gift_day',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Aki: Moon Lamp.',
+      metricDeltas: {
+        affinity: 8,
+        trust: 3,
+        intimacy: 4,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 6,
+        name: 'Aki',
+      },
+      sourceModule: 'relationship_wallet_order_support',
+      sourceId: 'wallet_tx_aki_1:wallet_support:role_6',
+      memoryKey: 'aki_gift_day',
+      factType: 'wallet_order_support',
+      summary: 'Wallet expense recorded for the same Shopping gift with Aki.',
+      metricDeltas: {},
+      forceSupportingMemory: true,
+    })
+
+    const { wrapper } = await mountControlCenterView()
+
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain(
+      'Shared memory: Gift purchased for Aki: Moon Lamp.',
+    )
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).not.toContain(
+      'Shared memory: Wallet expense recorded for the same Shopping gift with Aki.',
+    )
+
+    wrapper.unmount()
+  })
 })

@@ -1,0 +1,89 @@
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { nextTick } from 'vue'
+import CalendarView from '../src/views/CalendarView.vue'
+import { useCalendarStore } from '../src/stores/calendar'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+
+const DummyView = { template: '<div />' }
+
+const createTestRouter = () =>
+  createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/calendar', component: CalendarView },
+      { path: '/home', component: DummyView },
+      { path: '/map', component: DummyView },
+      { path: '/reminders', component: DummyView },
+      { path: '/worldbook', component: DummyView },
+    ],
+  })
+
+const flushUi = async () => {
+  await flushPromises()
+  await nextTick()
+  await flushPromises()
+}
+
+const mountCalendarView = async () => {
+  const router = createTestRouter()
+  await router.push('/calendar')
+  await router.isReady()
+  const wrapper = mount(CalendarView, {
+    global: {
+      plugins: [router],
+    },
+  })
+  await flushUi()
+  return { wrapper, router }
+}
+
+describe('CalendarView relationship facts', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-17T08:00:00.000Z'))
+    setActivePinia(createPinia())
+    useCalendarStore().resetForTesting()
+    useRelationshipRuntimeStore().resetForTesting()
+  })
+
+  test('records selected contacts from confirmed events as relationship facts', async () => {
+    const calendarStore = useCalendarStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const event = calendarStore.upsertEvent({
+      id: 'calendar_event_date_eva',
+      titleZh: 'Dinner with Eva',
+      titleEn: 'Dinner with Eva',
+      summaryZh: 'Table booked after work.',
+      summaryEn: 'Table booked after work.',
+      startsAt: Date.now() + 2 * 60 * 60 * 1000,
+    })
+    const { wrapper } = await mountCalendarView()
+
+    await wrapper.get(`[data-testid="calendar-event-relationship-contact-${event.id}"]`).setValue('1')
+    await wrapper.get(`[data-testid="calendar-event-record-relationship-${event.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(relationshipRuntimeStore.events[0]).toMatchObject({
+      factType: 'scheduled_calendar_event',
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: `${event.id}:calendar_event:role_1`,
+      targetLabel: 'Eva',
+      status: 'applied',
+    })
+    expect(
+      wrapper.get(`[data-testid="calendar-event-relationship-feedback-${event.id}"]`).text(),
+    ).toContain('Relationship fact recorded.')
+
+    expect(
+      wrapper.get(`[data-testid="calendar-event-record-relationship-${event.id}"]`).attributes('disabled'),
+    ).toBeDefined()
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 1, name: 'Eva' }).metrics.affinity).toBe(54)
+
+    wrapper.unmount()
+  })
+})

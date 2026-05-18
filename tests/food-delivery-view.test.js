@@ -287,6 +287,12 @@ describe('FoodDeliveryView', () => {
     expect(relationshipSummary.metrics.affinity).toBe(56)
     expect(relationshipSummary.metrics.intimacy).toBe(25)
     expect(relationshipSummary.latestEventSummary).toContain('Shared meal')
+    expect(relationshipSummary.memorySummaries).toHaveLength(1)
+    expect(relationshipSummary.memorySummaries[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_food_delivery_shared_meal',
+    })
+    expect(relationshipSummary.memorySummaries[0].sourceModules).toContain('relationship_wallet_order_support')
     expect(wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })

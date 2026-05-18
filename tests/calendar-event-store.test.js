@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import * as pushLib from '../src/lib/push'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 
 describe('calendar event store', () => {
@@ -134,6 +135,49 @@ describe('calendar event store', () => {
     expect(restoredStore.findPhoneMissedCallCueById(cue.id)?.status).toBe('dismissed')
     expect(restoredStore.findEventBySourceReminderId(cue.id)).toBeNull()
     expect(restoredStore.phoneMissedCallCueCount).toBe(0)
+  })
+
+  test('records relationship facts only from confirmed calendar events', () => {
+    const store = useCalendarStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const target = {
+      id: 7,
+      profileId: 7,
+      kind: 'role',
+      name: 'Mika',
+    }
+
+    const rawCue = store.upsertPhoneMissedCallCueFromCall({
+      id: 'phone_call_mika',
+      contactName: 'Mika',
+      startedAt: Date.now(),
+    })
+
+    expect(store.buildEventRelationshipSuggestion(rawCue.id, target).available).toBe(false)
+    expect(store.recordEventRelationshipFact(rawCue.id, target)).toBeNull()
+    expect(relationshipRuntimeStore.events).toHaveLength(0)
+
+    const event = store.confirmPhoneMissedCallCue(rawCue.id)
+    const suggestion = store.buildEventRelationshipSuggestion(event.id, target)
+    const firstFact = store.recordEventRelationshipFact(event.id, target)
+    const secondFact = store.recordEventRelationshipFact(event.id, target)
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(suggestion).toMatchObject({
+      available: true,
+      sourceId: `${event.id}:calendar_event:role_7`,
+      targetName: 'Mika',
+      imported: false,
+    })
+    expect(secondFact.id).toBe(firstFact.id)
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(firstFact).toMatchObject({
+      sourceModule: 'relationship_calendar_confirmed_event',
+      factType: 'scheduled_calendar_event',
+    })
+    expect(summary.metrics.affinity).toBe(54)
+    expect(summary.growthTraits).toContain('calendar-plan')
   })
 
   test('turns Shopping delivery cues into confirmable calendar events', () => {

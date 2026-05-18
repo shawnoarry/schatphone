@@ -55,6 +55,8 @@ const normalizeMetricDeltas = (rawDeltas = {}) => {
   }, {})
 }
 
+const normalizeMemoryKey = (value) => normalizeText(value, '', 160).toLowerCase()
+
 const createRelationshipEventId = () =>
   `relationship_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
@@ -220,6 +222,9 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
   return {
     id: normalizeText(source.id, `relationship_event_legacy_${createdAt}_${index}`, 120),
     entityKey: meta.entityKey,
+    memoryKey: normalizeMemoryKey(source.memoryKey),
+    memoryRole: normalizeText(source.memoryRole, '', 20),
+    forceSupportingMemory: source.forceSupportingMemory === true,
     targetLabel: normalizeText(source.targetLabel || meta.displayName, '', 100),
     sourceModule: normalizeText(source.sourceModule, 'relationship_runtime', 60),
     sourceId: normalizeText(source.sourceId, '', 140),
@@ -231,6 +236,7 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
     growthTraits: normalizeGrowthTraits(source.growthTraits),
     requiresConfirmation: source.requiresConfirmation === true,
     status: normalizedStatus,
+    effectApplied: source.effectApplied !== false,
     worldContext: normalizeWorldContext(source.worldContext),
     createdAt,
     appliedAt: Math.max(0, toInt(source.appliedAt, 0)),
@@ -271,6 +277,31 @@ const summarizeEventsForPrompt = (items = []) => {
     .join('; ')
 }
 
+const buildDefaultMemoryAggregate = (memoryKey, entityKey = '') => ({
+  memoryKey,
+  entityKey,
+  sourceModules: [],
+  sourceIds: [],
+  factTypes: [],
+  growthTraits: [],
+  milestones: [],
+  supportingCount: 0,
+  primarySourceModule: '',
+  primaryFactType: '',
+  primarySummary: '',
+  primaryCreatedAt: 0,
+  displaySummary: '',
+  latestSummary: '',
+  latestCreatedAt: 0,
+})
+
+const buildMemoryAggregateMapKey = (entityKey, memoryKey) => {
+  const normalizedEntityKey = normalizeText(entityKey, '', 120)
+  const normalizedMemoryKey = normalizeMemoryKey(memoryKey)
+  if (!normalizedEntityKey || !normalizedMemoryKey) return ''
+  return `${normalizedEntityKey}::${normalizedMemoryKey}`
+}
+
 export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', () => {
   const settings = ref(createDefaultSettings())
   const entities = ref([])
@@ -288,6 +319,52 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const pendingEventCount = computed(
     () => events.value.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION).length,
   )
+  const memoryAggregateMap = computed(() => {
+    const map = new Map()
+    events.value.forEach((event) => {
+      if (event.status !== RELATIONSHIP_EVENT_STATUS.APPLIED) return
+      if (!event.memoryKey) return
+      const aggregateKey = buildMemoryAggregateMapKey(event.entityKey, event.memoryKey)
+      if (!aggregateKey) return
+      const existing = map.get(aggregateKey) || buildDefaultMemoryAggregate(event.memoryKey, event.entityKey)
+      existing.entityKey = existing.entityKey || event.entityKey
+      existing.supportingCount += 1
+      if (event.sourceModule && !existing.sourceModules.includes(event.sourceModule)) {
+        existing.sourceModules.push(event.sourceModule)
+      }
+      if (event.sourceId && !existing.sourceIds.includes(event.sourceId)) {
+        existing.sourceIds.push(event.sourceId)
+      }
+      if (event.factType && !existing.factTypes.includes(event.factType)) {
+        existing.factTypes.push(event.factType)
+      }
+      event.growthTraits.forEach((trait) => {
+        if (trait && !existing.growthTraits.includes(trait)) {
+          existing.growthTraits.push(trait)
+        }
+      })
+      if (event.milestone && !existing.milestones.includes(event.milestone)) {
+        existing.milestones.push(event.milestone)
+      }
+      if (event.createdAt >= existing.latestCreatedAt) {
+        existing.latestCreatedAt = event.createdAt
+        existing.latestSummary = event.summary || existing.latestSummary
+      }
+      if (!existing.primarySourceModule && event.effectApplied !== false) {
+        existing.primarySourceModule = event.sourceModule
+      }
+      if (!existing.primaryFactType && event.effectApplied !== false) {
+        existing.primaryFactType = event.factType
+      }
+      if (event.effectApplied !== false && event.createdAt >= existing.primaryCreatedAt) {
+        existing.primaryCreatedAt = event.createdAt
+        existing.primarySummary = event.summary || existing.primarySummary
+      }
+      existing.displaySummary = existing.primarySummary || existing.latestSummary || existing.displaySummary
+      map.set(aggregateKey, existing)
+    })
+    return map
+  })
 
   const findEntity = (target = {}) => {
     const key = buildRelationshipEntityKey(target)
@@ -300,6 +377,42 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!moduleKey || !id) return null
     const event = events.value.find((item) => item.sourceModule === moduleKey && item.sourceId === id)
     return event ? { ...event, metricDeltas: { ...event.metricDeltas } } : null
+  }
+
+  const hasAppliedEffectForMemory = (event) => {
+    if (!event?.memoryKey || !event?.entityKey) return false
+    return events.value.some(
+      (item) =>
+        item.entityKey === event.entityKey &&
+        item.memoryKey === event.memoryKey &&
+        item.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
+        item.effectApplied !== false,
+    )
+  }
+
+  const listMemoryAggregatesForTarget = (target = {}, limit = 5) => {
+    const key = buildRelationshipEntityKey(target)
+    if (!key) return []
+    return [...memoryAggregateMap.value.values()]
+      .filter((item) => item.entityKey === key)
+      .sort((a, b) => b.latestCreatedAt - a.latestCreatedAt)
+      .slice(0, clamp(toInt(limit, 5), 0, 50))
+      .map((item) => ({
+        memoryKey: item.memoryKey,
+        entityKey: item.entityKey,
+        sourceModules: [...item.sourceModules],
+        sourceIds: [...item.sourceIds],
+        factTypes: [...item.factTypes],
+        growthTraits: [...item.growthTraits],
+        milestones: [...item.milestones],
+        supportingCount: item.supportingCount,
+        primarySourceModule: item.primarySourceModule || '',
+        primaryFactType: item.primaryFactType || '',
+        primarySummary: item.primarySummary || '',
+        displaySummary: item.displaySummary || item.primarySummary || item.latestSummary || '',
+        latestSummary: item.latestSummary,
+        latestCreatedAt: item.latestCreatedAt,
+      }))
   }
 
   const ensureEntity = (target = {}) => {
@@ -392,14 +505,28 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const major = settings.value.requireConfirmationForMajorEffects && isMajorRelationshipEvent(event)
     if (!settings.value.enabled && input.force !== true) {
       event.status = RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED
+      event.effectApplied = false
     } else if (major) {
       event.status = RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+      event.effectApplied = false
+    } else if (input.forceSupportingMemory === true) {
+      event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
+      event.appliedAt = Date.now()
+      event.effectApplied = false
+      event.memoryRole = event.memoryKey ? 'supporting' : ''
     } else if (settings.value.autoApplyLowImpact) {
       event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
       event.appliedAt = Date.now()
-      applyEventToEntity(event)
+      const shouldApplyEffect =
+        input.allowMetricStackWithinMemory === true || !hasAppliedEffectForMemory(event)
+      event.effectApplied = shouldApplyEffect
+      event.memoryRole = event.memoryKey ? (shouldApplyEffect ? 'primary' : 'supporting') : ''
+      if (shouldApplyEffect) {
+        applyEventToEntity(event)
+      }
     } else {
       event.status = RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+      event.effectApplied = false
     }
 
     events.value.unshift(event)
@@ -416,7 +543,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!event || event.status !== RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return false
     event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
     event.appliedAt = Date.now()
-    applyEventToEntity(event)
+    const shouldApplyEffect = event.forceSupportingMemory !== true && !hasAppliedEffectForMemory(event)
+    event.effectApplied = shouldApplyEffect
+    event.memoryRole = event.memoryKey ? (shouldApplyEffect ? 'primary' : 'supporting') : ''
+    if (shouldApplyEffect) {
+      applyEventToEntity(event)
+    }
     return true
   }
 
@@ -446,8 +578,14 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const fallback = entity || createDefaultEntity(meta)
     const eventLimit = clamp(toInt(options.eventLimit, 3), 0, 20)
     const recentEvents = eventLimit > 0 ? listEventsForTarget(meta, eventLimit) : []
-    const appliedEvents = recentEvents.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.APPLIED)
+    const appliedEvents = recentEvents.filter(
+      (event) =>
+        event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
+        event.effectApplied !== false,
+    )
     const latestEvent = appliedEvents[0] || null
+    const memoryLimit = clamp(toInt(options.memoryLimit, 3), 0, 20)
+    const memorySummaries = memoryLimit > 0 ? listMemoryAggregatesForTarget(meta, memoryLimit) : []
 
     return {
       exists: Boolean(entity),
@@ -461,6 +599,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       milestones: fallback.milestones.map((item) => ({ ...item })),
       growthTraits: [...fallback.growthTraits],
       recentEvents,
+      memorySummaries,
       latestEventSummary: latestEvent?.summary || latestEvent?.factType || '',
       pendingEventCount: events.value.filter(
         (event) =>
@@ -483,14 +622,25 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const milestones = snapshot.milestones.map((item) => item.label).slice(0, 3).join('; ') || 'none'
     const traits = snapshot.growthTraits.slice(0, 6).join(', ') || 'none'
     const recentEvents = summarizeEventsForPrompt(
-      snapshot.recentEvents.filter((event) => event.status === RELATIONSHIP_EVENT_STATUS.APPLIED),
+      snapshot.recentEvents.filter(
+        (event) =>
+          event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
+          event.effectApplied !== false,
+      ),
     )
+    const memories = snapshot.memorySummaries.length > 0
+      ? snapshot.memorySummaries
+          .slice(0, 3)
+          .map((item) => item.displaySummary || item.primarySummary || item.latestSummary || item.memoryKey || 'memory')
+          .join('; ')
+      : 'none'
 
     return [
       `Relationship runtime snapshot: ${snapshot.displayName || 'unknown target'}.`,
       `Stage: ${snapshot.relationshipStage}; metrics affinity/trust/intimacy/tension/dependency: ${metrics.affinity}/${metrics.trust}/${metrics.intimacy}/${metrics.tension}/${metrics.dependency}.`,
       `Milestones: ${milestones}.`,
       `Growth traits: ${traits}.`,
+      `Memory summaries: ${memories}.`,
       `Recent relationship events: ${recentEvents}.`,
     ].join('\n')
   }
@@ -615,6 +765,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     hasFinishedStorageHydration,
     findEntity,
     findEventBySource,
+    listMemoryAggregatesForTarget,
     upsertEntity,
     recordRelationshipFact,
     applyPendingRelationshipEvent,

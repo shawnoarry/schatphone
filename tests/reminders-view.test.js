@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import RemindersView from '../src/views/RemindersView.vue'
 import CalendarView from '../src/views/CalendarView.vue'
 import { useCalendarStore } from '../src/stores/calendar'
+import { useRemindersStore } from '../src/stores/reminders'
 
 const DummyView = { template: '<div />' }
 
@@ -73,6 +74,60 @@ describe('RemindersView', () => {
 
     expect(calendarStore.findPhoneMissedCallCueById(phoneCue.id)?.status).toBe('confirmed')
     expect(calendarStore.findEventBySourceReminderId(phoneCue.id)?.titleEn).toBe('Call back Nova')
+    wrapper.unmount()
+  })
+
+  test('filters reminders by source and handling status', async () => {
+    const calendarStore = useCalendarStore()
+    calendarStore.resetForTesting()
+
+    const phoneCue = calendarStore.upsertPhoneMissedCallCueFromCall({
+      id: 'call_nova',
+      contactName: 'Nova',
+      startedAt: Date.now(),
+    })
+    const shoppingCue = calendarStore.upsertShoppingDeliveryCueFromOrder({
+      id: 'order_lens',
+      items: [{ title: 'Mira Lens' }],
+      createdAt: Date.now(),
+    })
+
+    const router = createTestRouter()
+    await router.push('/reminders')
+    await router.isReady()
+
+    const wrapper = mount(RemindersView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="reminders-source-filter-shopping"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.find(`[data-testid="reminder-card-shopping:${shoppingCue.id}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="reminder-card-phone:${phoneCue.id}"]`).exists()).toBe(false)
+
+    await wrapper.get('[data-testid="reminders-source-filter-all"]').trigger('click')
+    await wrapper.get('[data-testid="reminders-status-filter-confirmed"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.text()).toContain('当前筛选下暂无提醒')
+
+    const remindersStore = useRemindersStore()
+    remindersStore.confirmReminderByKey(`phone:${phoneCue.id}`)
+    await flushUi()
+
+    expect(wrapper.find(`[data-testid="reminder-card-phone:${phoneCue.id}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="reminder-card-shopping:${shoppingCue.id}"]`).exists()).toBe(false)
+    expect(wrapper.text()).toContain('已进入日历')
+
+    await wrapper.get('[data-testid="reminders-reset-filters"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.find(`[data-testid="reminder-card-phone:${phoneCue.id}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="reminder-card-shopping:${shoppingCue.id}"]`).exists()).toBe(true)
     wrapper.unmount()
   })
 

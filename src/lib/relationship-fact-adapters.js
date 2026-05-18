@@ -1,9 +1,11 @@
 export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   SHOPPING_GIFT: 'relationship_shopping_gift',
   FOOD_DELIVERY_SHARED_MEAL: 'relationship_food_delivery_shared_meal',
+  WALLET_ORDER_SUPPORT: 'relationship_wallet_order_support',
   PHONE_CALL: 'relationship_phone_call',
   MAP_SHARED_ROUTE: 'relationship_map_shared_route',
   WALLET_SHARED_TRANSFER: 'relationship_wallet_shared_transfer',
+  CALENDAR_CONFIRMED_EVENT: 'relationship_calendar_confirmed_event',
 })
 
 const toInt = (value, fallback = 0) => {
@@ -50,6 +52,37 @@ const formatDurationSummary = (seconds) => {
   return `${minutes}m ${remain}s`
 }
 
+const stripKnownPrefix = (value, prefix) => {
+  const normalizedValue = normalizeText(value, '', 160)
+  const normalizedPrefix = normalizeText(prefix, '', 80)
+  if (!normalizedValue || !normalizedPrefix) return ''
+  return normalizedValue.startsWith(normalizedPrefix)
+    ? normalizedValue.slice(normalizedPrefix.length)
+    : ''
+}
+
+const resolveCalendarEventMemoryKey = (event = {}, fallbackSourceId = '') => {
+  const source = normalizeText(event?.source, '', 80)
+  const sourceReminderId = normalizeText(event?.sourceReminderId, '', 160)
+
+  if (source === 'phone_missed_call') {
+    const callId = stripKnownPrefix(sourceReminderId, 'phone_missed_call_cue_')
+    return buildRelationshipMemoryKey('phone_call', callId || sourceReminderId || event?.id || fallbackSourceId)
+  }
+
+  if (source === 'map_calendar_reminder') {
+    return buildRelationshipMemoryKey(
+      'map_reminder',
+      event?.sourceAreaId || sourceReminderId || event?.id || fallbackSourceId,
+    )
+  }
+
+  return buildRelationshipMemoryKey(
+    'calendar_event',
+    sourceReminderId || event?.id || fallbackSourceId,
+  )
+}
+
 export const resolveRelationshipTargetFromGiftRecipient = (giftRecipient = {}) => {
   const source = giftRecipient && typeof giftRecipient === 'object' ? giftRecipient : {}
   const profileId = toInt(source.profileId ?? source.roleProfileId, 0)
@@ -83,6 +116,18 @@ export const buildRelationshipSourceId = (...parts) =>
     .map((part) => normalizeText(String(part ?? ''), '', 80))
     .filter(Boolean)
     .join(':')
+
+export const buildRelationshipMemoryKey = (...parts) =>
+  parts
+    .map((part) => normalizeText(String(part ?? ''), '', 80).toLowerCase().replace(/[^a-z0-9_-]+/gi, '_'))
+    .filter(Boolean)
+    .join('__')
+
+export const buildShoppingGiftRelationshipMemoryKey = (order = {}) =>
+  buildRelationshipMemoryKey('shopping_gift', order?.id)
+
+export const buildFoodDeliverySharedMealRelationshipMemoryKey = (order = {}) =>
+  buildRelationshipMemoryKey('food_shared_meal', order?.id)
 
 export const findRelationshipFactBySource = (relationshipRuntimeStore, sourceModule, sourceId) => {
   if (!relationshipRuntimeStore || typeof relationshipRuntimeStore.findEventBySource !== 'function') return null
@@ -135,6 +180,7 @@ export const recordShoppingGiftRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
     sourceId: suggestion.sourceId,
+    memoryKey: buildShoppingGiftRelationshipMemoryKey(order || { id: suggestion.sourceId }),
     factType: 'gift_purchased',
     summary,
     intensity: 2,
@@ -206,6 +252,7 @@ export const recordFoodDeliverySharedMealRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.FOOD_DELIVERY_SHARED_MEAL,
     sourceId: suggestion.sourceId,
+    memoryKey: buildFoodDeliverySharedMealRelationshipMemoryKey(order || { id: suggestion.sourceId }),
     factType: 'shared_meal',
     summary,
     intensity: 2,
@@ -270,6 +317,7 @@ export const recordPhoneCallRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.PHONE_CALL,
     sourceId: suggestion.sourceId,
+    memoryKey: buildRelationshipMemoryKey('phone_call', call?.id || suggestion.sourceId),
     factType: isMissed ? 'missed_call' : 'completed_call',
     summary,
     intensity: isMissed ? 1 : 2,
@@ -338,6 +386,7 @@ export const recordMapSharedRouteRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.MAP_SHARED_ROUTE,
     sourceId: suggestion.sourceId,
+    memoryKey: buildRelationshipMemoryKey('shared_route', trip?.id || suggestion.sourceId),
     factType: 'shared_route',
     summary,
     intensity: 2,
@@ -407,6 +456,7 @@ export const recordWalletSharedTransferRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_SHARED_TRANSFER,
     sourceId: suggestion.sourceId,
+    memoryKey: buildRelationshipMemoryKey('wallet_transfer', transaction?.id || transaction?.sourceId || suggestion.sourceId),
     factType,
     summary,
     intensity: 2,
@@ -417,6 +467,124 @@ export const recordWalletSharedTransferRelationshipFact = ({
     },
     milestone: 'Wallet interaction recorded',
     growthTraits: ['shared-expense', 'wallet'],
+    worldContext,
+  })
+}
+
+export const recordWalletOrderSupportRelationshipFact = ({
+  relationshipRuntimeStore,
+  target,
+  transaction,
+  memoryKey = '',
+  summary = '',
+  worldContext,
+} = {}) => {
+  const resolvedTarget = resolveRelationshipTargetFromContact(target)
+  const resolvedMemoryKey = normalizeText(memoryKey, '', 160)
+  const transactionSourceId = normalizeText(transaction?.id || transaction?.sourceId, '', 140)
+  if (!relationshipRuntimeStore || !resolvedTarget || !resolvedMemoryKey || !transactionSourceId) return null
+
+  const sourceId = buildRelationshipSourceId(transactionSourceId, 'wallet_support', relationshipTargetKey(resolvedTarget))
+  const existing = findRelationshipFactBySource(
+    relationshipRuntimeStore,
+    RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
+    sourceId,
+  )
+  if (existing) return existing
+
+  const amount = normalizeAmount(Number(transaction?.amountCents || 0) / 100 || transaction?.amount)
+  const currency = normalizeText(transaction?.currency, 'CNY', 8)
+  const normalizedSummary = normalizeText(summary, '', 220) || (
+    amount
+      ? `Wallet support recorded with ${resolvedTarget.name || 'a relationship contact'}: ${amount} ${currency}.`
+      : `Wallet support recorded with ${resolvedTarget.name || 'a relationship contact'}.`
+  )
+
+  return relationshipRuntimeStore.recordRelationshipFact({
+    target: resolvedTarget,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
+    sourceId,
+    memoryKey: resolvedMemoryKey,
+    factType: 'wallet_order_support',
+    summary: normalizedSummary,
+    intensity: 1,
+    metricDeltas: {},
+    growthTraits: ['wallet-support'],
+    worldContext,
+    forceSupportingMemory: true,
+  })
+}
+
+export const buildCalendarConfirmedEventRelationshipSuggestion = ({
+  relationshipRuntimeStore,
+  event,
+  target,
+} = {}) => {
+  const resolvedTarget = resolveRelationshipTargetFromContact(target || event?.relationshipTarget)
+  const sourceId = buildRelationshipSourceId(
+    event?.id,
+    'calendar_event',
+    relationshipTargetKey(resolvedTarget),
+  )
+  const available = Boolean(resolvedTarget && sourceId && event?.status === 'confirmed')
+  return {
+    available,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+    sourceId,
+    target: resolvedTarget,
+    targetName: resolvedTarget?.name || '',
+    imported: available
+      ? Boolean(findRelationshipFactBySource(
+          relationshipRuntimeStore,
+          RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+          sourceId,
+        ))
+      : false,
+  }
+}
+
+export const recordCalendarConfirmedEventRelationshipFact = ({
+  relationshipRuntimeStore,
+  event,
+  target,
+  worldContext,
+} = {}) => {
+  const suggestion = buildCalendarConfirmedEventRelationshipSuggestion({
+    relationshipRuntimeStore,
+    event,
+    target,
+  })
+  if (!relationshipRuntimeStore || !suggestion.available) return null
+  const existing = findRelationshipFactBySource(
+    relationshipRuntimeStore,
+    RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+    suggestion.sourceId,
+  )
+  if (existing) return existing
+
+  const title = normalizeText(event?.titleEn || event?.titleZh, 'Calendar event', 100)
+  const date = toInt(event?.startsAt, 0) > 0
+    ? new Date(toInt(event.startsAt, 0)).toISOString().slice(0, 10)
+    : ''
+  const summary = date
+    ? `Calendar plan recorded with ${suggestion.targetName || 'a relationship contact'}: ${title} on ${date}.`
+    : `Calendar plan recorded with ${suggestion.targetName || 'a relationship contact'}: ${title}.`
+
+  return relationshipRuntimeStore.recordRelationshipFact({
+    target: suggestion.target,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+    sourceId: suggestion.sourceId,
+    memoryKey: resolveCalendarEventMemoryKey(event, suggestion.sourceId),
+    factType: 'scheduled_calendar_event',
+    summary,
+    intensity: 2,
+    metricDeltas: {
+      affinity: 4,
+      trust: 2,
+      intimacy: 2,
+    },
+    milestone: 'Calendar plan recorded',
+    growthTraits: ['calendar-plan', 'schedule'],
     worldContext,
   })
 }

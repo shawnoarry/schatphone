@@ -102,7 +102,7 @@ describe('calendar worldbook context', () => {
     systemStore = null
   })
 
-  test('shows related WorldBook knowledge points for reminders and confirmed events', async () => {
+  test('shows related WorldBook knowledge points for confirmed events', async () => {
     const reminderId = mapStore.mapCalendarReminders[0]?.id
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
     const eventId = calendarStore.upcomingEvents[0]?.id
@@ -111,26 +111,27 @@ describe('calendar worldbook context', () => {
     expect(routePoint?.id).toBeTruthy()
     expect(eventId).toBeTruthy()
 
-    const reminderContext = wrapper.get(`[data-testid="calendar-reminder-worldbook-${reminderId}"]`)
-    expect(reminderContext.text()).toContain('Route memory')
-    expect(reminderContext.text()).not.toContain('Tea rituals')
+    expect(wrapper.find(`[data-testid="calendar-reminder-worldbook-${reminderId}"]`).exists()).toBe(
+      false,
+    )
 
     const eventContext = wrapper.get(`[data-testid="calendar-event-worldbook-${eventId}"]`)
     expect(eventContext.text()).toContain('Route memory')
+    expect(eventContext.text()).not.toContain('Tea rituals')
     expect(
       wrapper.find(`[data-testid="calendar-event-worldbook-chip-${eventId}-${routePoint.id}"]`).exists(),
     ).toBe(true)
   })
 
-  test('deep-links reminder context into WorldBook filters', async () => {
-    const reminderId = mapStore.mapCalendarReminders[0]?.id
+  test('deep-links confirmed event context into WorldBook filters', async () => {
+    const eventId = calendarStore.upcomingEvents[0]?.id
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
 
-    expect(reminderId).toBeTruthy()
+    expect(eventId).toBeTruthy()
     expect(routePoint?.id).toBeTruthy()
 
     await wrapper
-      .get(`[data-testid="calendar-reminder-worldbook-chip-${reminderId}-${routePoint.id}"]`)
+      .get(`[data-testid="calendar-event-worldbook-chip-${eventId}-${routePoint.id}"]`)
       .trigger('click')
     await flushPromises()
     await nextTick()

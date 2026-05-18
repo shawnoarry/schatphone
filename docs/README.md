@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map / SchatPhone 文档地图
 
-Updated / 更新时间: 2026-05-13
+Updated / 更新时间: 2026-05-18
 
 This is the single index for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -18,53 +18,58 @@ This is the single index for project documents. If two documents seem to overlap
 
 3. `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`
    Product module catalog: entry names, routes, visible menus, submenus, and PM-readable function details for all current modules.
+   Related frozen requirement: `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_REQUIREMENTS.md`
+   Related implementation breakdown: `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_IMPLEMENTATION_BREAKDOWN.md`
    产品模块功能目录：当前所有模块的入口名称、路由、一级菜单、次级菜单与产品视角功能说明。
 
-4. `docs/roadmap/TODO_ROADMAP.md`
+4. `docs/strategy/PROJECT_ITERATION_PLAN.md`
+   Project-level iteration plan: portfolio-level direction, phase order, and promotion rules for deciding what becomes execution work.
+   项目级迭代计划：用于确认整体方向、阶段顺序与任务提升规则，不承载模块专项 TODO。
+5. `docs/roadmap/TODO_ROADMAP.md`
    The only live execution board. Any active task with status must be here.
    唯一动态执行看板。任何带状态的执行任务都必须在这里。
 
-5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
+6. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
    Module maturity audit and candidate task pool. It is not a second roadmap.
    Related focused review: `docs/roadmap/FOOD_DELIVERY_REVIEW_AND_NEXT_TODO_2026-05-16.md` records the Food Delivery review after the visual/home-return update.
    模块成熟度梳理与候选任务池。它不是第二路线图。
 
-6. `docs/overview/PROJECT_MASTER_GUIDE.md`
+7. `docs/overview/PROJECT_MASTER_GUIDE.md`
    Full project guide for product context, architecture context, and AI engineer handoff.
    项目总说明，用于理解产品全貌、架构背景与 AI 工程师接手。
 
-7. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
+8. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
    Engineering-oriented maturity map: module tiers, file-size hotspots, test-coverage signals, and recommended decomposition order.
    面向工程接手的成熟度地图：模块分层、文件体量热点、测试覆盖信号与推荐拆分顺序。
 
-8. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
+9. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
    Functional-code next steps: concrete maintainability and feature candidates after visual work was parked, without becoming a second live roadmap.
    功能代码推进项：视觉工作搁置后的可维护性与功能候选，不作为第二动态路线图。
 
-9. `docs/overview/IMMERSIVE_EVENT_TODO.md`
+10. `docs/overview/IMMERSIVE_EVENT_TODO.md`
    Event-specialist TODO: handoff board for random, condition-driven, scheduled, and module-owned immersive events.
    事件专项 TODO：记录随机触发、条件触发、定时触发与模块自有沉浸式事件的接手顺序。
-10. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
+11. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
    Visual rebuild reference: which appearance surfaces are technically present, which are still visually immature, and which should be treated as full rebuild targets.
    外观重建参考：哪些外观能力技术上已存在、哪些视觉仍未成熟、以及哪些界面应被视为完整重建对象。
 
-11. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
+12. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
     Visual style direction brief: global and module-level references for the appearance rebuild, including iOS-like shell, KakaoTalk-style Chat, Google Maps-style Map, and iOS Photos-style Gallery.
     视觉风格方向简报：外观重建的全局与模块级参考，包括 iOS-like 壳层、KakaoTalk 风格 Chat、Google Maps 风格 Map、iOS Photos 风格 Gallery。
 
-12. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
+13. `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md`
     Deferred visual TODO archive: parked visual-rebuild suggestions for future use while current work returns to functional code.
     暂存视觉 TODO：当前阶段转回功能代码时，为后续视觉重建保留的建议清单。
 
-13. `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
+14. `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
     Product decision for reusable Home folders, Shopping as the first folder-backed module, Assets as a standalone module, and Stock/Files boundaries.
     主屏文件夹、购物文件夹式模块、资产独立模块，以及 Stock/Files 边界的产品决策。
 
-14. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+15. `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
     Product decision for Files: hidden as a standalone frontend entry, retained as an internal storage and coordination component.
     Files 产品决策：不作为独立前台入口展示，保留为内部储存与跨模块协调组件。
 
-15. `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+16. `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
     Product decision for World Hub: optional runtime-control surface, hidden by default, with `/control-center` and `app_control_center` retained as compatibility identifiers.
     世界中枢产品决策：可选运行控制入口，默认隐藏，并保留 `/control-center` 与 `app_control_center` 作为兼容技术标识。
 
@@ -78,7 +83,7 @@ This is the single index for project documents. If two documents seem to overlap
 | Process and workflow / 流程规范 | `docs/process/` | AI collaboration rules, operation guide, validation flow. / AI 协作规则、操作指引与验收流程。 |
 | Architecture contracts / 架构契约 | `docs/architecture/` | Architecture boundaries and cross-module contracts. / 架构边界与跨模块契约。 |
 | Product decisions / 产品决策 | `docs/product-decisions/` | Topic-level decisions that are current but not active task boards. / 当前有效的专题决策，不作为任务看板。 |
-| Strategy / 长期策略 | `docs/strategy/` | Long-range product/technical direction. / 长线产品与技术方向。 |
+| Strategy / 长期策略 | `docs/strategy/` | Project-level iteration plan plus long-range product/technical direction. / 项目级迭代计划，以及长线产品与技术方向。 |
 | Templates / 模板 | `docs/templates/` | Reusable requirement, audit, and prompt templates. / 可复用需求、审查与 AI 协作模板。 |
 | Archive / 归档 | `docs/archive/` | Historical or obsolete docs only. / 仅用于历史查询或过时归档。 |
 
@@ -133,4 +138,5 @@ New current references:
 Execution impact:
 
 - Do not expand Calendar relationship facts before starting the Calendar / Reminders split.
+- Reminders is now a visible Home app beside Calendar; More remains for settings-adjacent and experimental surfaces.
 - Use the glossary when discussing module names with product, design, QA, users, or future AI assistants.
