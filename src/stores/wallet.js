@@ -1,6 +1,12 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  anonymizeRelationshipText,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+  normalizeRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 
 const WALLET_STORAGE_KEY = 'store:wallet'
 const WALLET_STORAGE_VERSION = 1
@@ -96,6 +102,7 @@ const normalizeWalletTransaction = (rawTransaction, index = 0) => {
     currency: normalizeCurrency(rawTransaction.currency),
     sourceModule: normalizeText(rawTransaction.sourceModule, 'wallet', 40),
     sourceId: normalizeText(rawTransaction.sourceId, '', 140),
+    relationshipBinding: normalizeRelationshipBinding(rawTransaction.relationshipBinding),
     createdAt,
     updatedAt: Math.max(0, toInt(rawTransaction.updatedAt, createdAt)),
   }
@@ -264,7 +271,13 @@ export const useWalletStore = defineStore('wallet', () => {
     return transaction
   }
 
-  const addTransferTransaction = ({ amount, currency = DEFAULT_CURRENCY, counterparty = '', note = '' } = {}) =>
+  const addTransferTransaction = ({
+    amount,
+    currency = DEFAULT_CURRENCY,
+    counterparty = '',
+    note = '',
+    relationshipBinding = null,
+  } = {}) =>
     addTransaction({
       type: 'transfer',
       title: '聊天转账',
@@ -273,6 +286,7 @@ export const useWalletStore = defineStore('wallet', () => {
       counterparty,
       note,
       sourceModule: 'wallet_manual',
+      relationshipBinding,
     })
 
   const addChatTransferTransaction = ({
@@ -307,6 +321,36 @@ export const useWalletStore = defineStore('wallet', () => {
     if (!transaction) return false
     transactions.value = transactions.value.filter((item) => item.id !== transaction.id)
     return true
+  }
+
+  const anonymizeTransaction = (transactionId, profile = {}, replacementName = 'Unknown counterparty') => {
+    const transaction = findTransactionById(transactionId)
+    if (!transaction) return false
+    const nextName = normalizeText(replacementName, 'Unknown counterparty', 120)
+    transaction.counterparty = nextName
+    transaction.note = anonymizeRelationshipText(transaction.note, profile?.name, nextName)
+    transaction.title = anonymizeRelationshipText(transaction.title, profile?.name, nextName)
+    transaction.relationshipBinding = clearRelationshipBinding()
+    transaction.updatedAt = Date.now()
+    return true
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const replacementName = normalizeText(options.replacementName, 'Unknown counterparty', 120)
+    const matchedTransactions = transactions.value.filter((transaction) =>
+      bindingMatchesProfile(transaction.relationshipBinding, profile),
+    )
+    let anonymizedCount = 0
+    matchedTransactions.forEach((transaction) => {
+      if (anonymizeTransaction(transaction.id, profile, replacementName)) {
+        anonymizedCount += 1
+      }
+    })
+    return {
+      requestedCount: matchedTransactions.length,
+      removedCount: 0,
+      anonymizedCount,
+    }
   }
 
   const applyPersistedSource = (source) => {
@@ -400,6 +444,8 @@ export const useWalletStore = defineStore('wallet', () => {
     addTransferTransaction,
     addChatTransferTransaction,
     removeTransaction,
+    anonymizeTransaction,
+    cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

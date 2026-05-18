@@ -66,6 +66,50 @@ describe('wallet store', () => {
     })
   })
 
+  test('stores relationship binding on manual transfer records and anonymizes them during cleanup', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const transfer = store.addTransferTransaction({
+      amount: '66.00',
+      currency: 'CNY',
+      counterparty: 'HJ',
+      note: 'Dinner with HJ',
+      relationshipBinding: {
+        profileId: 77,
+        contactId: 307,
+        kind: 'role',
+        name: 'HJ',
+        sourceModule: 'chat',
+        sourceId: '307',
+      },
+    })
+
+    expect(transfer?.relationshipBinding).toMatchObject({
+      profileId: 77,
+      contactId: 307,
+      name: 'HJ',
+    })
+
+    const cleanup = store.cleanupRelationshipForProfile(
+      { id: 77, name: 'HJ' },
+      { replacementName: 'Unknown counterparty' },
+    )
+
+    expect(cleanup).toMatchObject({
+      requestedCount: 1,
+      anonymizedCount: 1,
+    })
+    expect(store.findTransactionById(transfer.id)).toMatchObject({
+      counterparty: 'Unknown counterparty',
+      note: 'Dinner with Unknown counterparty',
+      relationshipBinding: {
+        profileId: 0,
+        contactId: 0,
+      },
+    })
+  })
+
   test('records Chat transfer cards as deduped ledger expenses', () => {
     const store = useWalletStore()
     store.resetForTesting()

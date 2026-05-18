@@ -86,4 +86,36 @@ describe('CalendarView relationship facts', () => {
 
     wrapper.unmount()
   })
+
+  test('removes a confirmed calendar event from the module detail card', async () => {
+    const calendarStore = useCalendarStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const event = calendarStore.upsertEvent({
+      id: 'calendar_event_delete_local',
+      titleZh: 'Delete this event',
+      titleEn: 'Delete this event',
+      summaryZh: 'Single event cleanup.',
+      summaryEn: 'Single event cleanup.',
+      startsAt: Date.now() + 2 * 60 * 60 * 1000,
+    })
+    calendarStore.recordEventRelationshipFact(event.id, {
+      profileId: 1,
+      contactId: 1,
+      kind: 'role',
+      name: 'Eva',
+    })
+    const { wrapper } = await mountCalendarView()
+
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(wrapper.find(`[data-testid="calendar-event-card-${event.id}"]`).exists()).toBe(true)
+    await wrapper.get(`[data-testid="calendar-event-delete-${event.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(calendarStore.findEventById(event.id)).toBeNull()
+    expect(relationshipRuntimeStore.events).toHaveLength(0)
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 1, name: 'Eva' }).exists).toBe(false)
+    expect(wrapper.find(`[data-testid="calendar-event-card-${event.id}"]`).exists()).toBe(false)
+
+    wrapper.unmount()
+  })
 })

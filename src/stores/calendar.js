@@ -9,6 +9,13 @@ import {
   buildCalendarConfirmedEventRelationshipSuggestion,
   recordCalendarConfirmedEventRelationshipFact,
 } from '../lib/relationship-fact-adapters'
+import {
+  anonymizeRelationshipText,
+  anonymizeRelationshipTextByBinding,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+  normalizeRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useRemindersStore } from './reminders'
 import { useRelationshipRuntimeStore } from './relationshipRuntime'
@@ -125,6 +132,7 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     source: trimLine(raw.source, 'manual', 80),
     sourceReminderId: normalizeEventId(raw.sourceReminderId),
     sourceAreaId: normalizeEventId(raw.sourceAreaId || raw.areaId),
+    relationshipBinding: normalizeRelationshipBinding(raw.relationshipBinding),
     titleZh,
     titleEn: titleEn || titleZh,
     summaryZh: trimLine(raw.summaryZh, '', 240),
@@ -455,6 +463,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     return getRemindersStore().dismissPhoneMissedCallCue(cueId)
   }
 
+  const dismissPhoneMissedCallCueByCallId = (callId) => {
+    const cue = findPhoneMissedCallCueByCallId(callId)
+    if (!cue) return false
+    return dismissPhoneMissedCallCue(cue.id)
+  }
+
   const confirmStockMarketCue = (cueId) => {
     return getRemindersStore().confirmStockMarketCue(cueId)
   }
@@ -486,6 +500,85 @@ export const useCalendarStore = defineStore('calendar', () => {
     if (index < 0) return false
     events.value.splice(index, 1)
     return true
+  }
+
+  const removeEventById = (eventId) => {
+    const id = normalizeEventId(eventId)
+    if (!id) return false
+    const index = events.value.findIndex((event) => event.id === id)
+    if (index < 0) return false
+    events.value.splice(index, 1)
+    return true
+  }
+
+  const clearRelationshipBindingForEvent = (
+    eventId,
+    profile = {},
+    replacementName = 'Someone',
+  ) => {
+    const event = findEventById(eventId)
+    if (!event) return false
+    if (!bindingMatchesProfile(event.relationshipBinding, profile)) return false
+    const nextName = trimLine(replacementName, 'Someone', 120)
+    event.titleZh =
+      anonymizeRelationshipTextByBinding(event.titleZh, event.relationshipBinding, nextName) ||
+      anonymizeRelationshipText(event.titleZh, profile?.name, nextName)
+    event.titleEn =
+      anonymizeRelationshipTextByBinding(event.titleEn, event.relationshipBinding, nextName) ||
+      anonymizeRelationshipText(event.titleEn, profile?.name, nextName)
+    event.summaryZh =
+      anonymizeRelationshipTextByBinding(event.summaryZh, event.relationshipBinding, nextName) ||
+      anonymizeRelationshipText(event.summaryZh, profile?.name, nextName)
+    event.summaryEn =
+      anonymizeRelationshipTextByBinding(event.summaryEn, event.relationshipBinding, nextName) ||
+      anonymizeRelationshipText(event.summaryEn, profile?.name, nextName)
+    event.relationshipBinding = clearRelationshipBinding()
+    event.updatedAt = Date.now()
+    return true
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const mode = trimLine(options.cleanupMode, 'delete_role', 60)
+    const replacementName = trimLine(options.replacementName, 'Someone', 120)
+    const matchedEvents = events.value.filter((event) =>
+      bindingMatchesProfile(event.relationshipBinding, profile),
+    )
+
+    let removedCount = 0
+    let unlinkedCount = 0
+    matchedEvents.forEach((event) => {
+      if (mode === 'delete_role') {
+        if (event.sourceReminderId) {
+          void cancelEventPushScheduledBySourceReminderId(event.sourceReminderId, {
+            source: 'calendar_relationship_cleanup_delete',
+          })
+        } else {
+          void cancelEventPushScheduled({
+            eventId: event.id,
+            source: 'calendar_relationship_cleanup_delete',
+          })
+        }
+        if (event.sourceReminderId) {
+          removeEventBySourceReminderId(event.sourceReminderId)
+        } else if (removeEventById(event.id)) {
+          removedCount += 1
+          return
+        }
+        removedCount += 1
+        return
+      }
+      if (clearRelationshipBindingForEvent(event.id, profile, replacementName)) {
+        unlinkedCount += 1
+      }
+    })
+
+    return {
+      ok: removedCount > 0 || unlinkedCount > 0 || matchedEvents.length === 0,
+      removedCount,
+      unlinkedCount,
+      anonymizedCount: unlinkedCount,
+      updatedCount: unlinkedCount,
+    }
   }
 
   const setEventPinnedBySourceReminderId = (reminderId, pinned = true) => {
@@ -847,6 +940,15 @@ export const useCalendarStore = defineStore('calendar', () => {
   const recordEventRelationshipFact = (eventId, target = null, options = {}) => {
     const event = findEventById(eventId)
     if (!event || event.status !== CALENDAR_EVENT_STATUS_CONFIRMED) return null
+    event.relationshipBinding = normalizeRelationshipBinding({
+      profileId: target?.profileId,
+      contactId: target?.id ?? target?.contactId,
+      kind: target?.kind,
+      name: target?.name,
+      sourceModule: 'chat',
+      sourceId: String(target?.id || target?.contactId || ''),
+    })
+    event.updatedAt = Date.now()
     return recordCalendarConfirmedEventRelationshipFact({
       relationshipRuntimeStore: getRelationshipRuntimeStore(),
       event,
@@ -974,6 +1076,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     upsertEventFromShoppingDeliveryCue,
     confirmPhoneMissedCallCue,
     dismissPhoneMissedCallCue,
+    dismissPhoneMissedCallCueByCallId,
     confirmStockMarketCue,
     dismissStockMarketCue,
     dismissStockMarketCueByStockId,
@@ -981,6 +1084,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     dismissShoppingDeliveryCue,
     dismissShoppingDeliveryCueByOrderId,
     removeEventBySourceReminderId,
+    removeEventById,
     setEventPinnedBySourceReminderId,
     ensureEventPushScheduled,
     rescheduleEventPush,
@@ -992,6 +1096,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     resetEventStartsAtBySourceReminderId,
     buildEventRelationshipSuggestion,
     recordEventRelationshipFact,
+    clearRelationshipBindingForEvent,
+    cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

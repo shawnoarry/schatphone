@@ -176,6 +176,12 @@ describe('calendar event store', () => {
       sourceModule: 'relationship_calendar_confirmed_event',
       factType: 'scheduled_calendar_event',
     })
+    expect(store.findEventById(event.id)?.relationshipBinding).toMatchObject({
+      profileId: 7,
+      contactId: 7,
+      kind: 'role',
+      name: 'Mika',
+    })
     expect(summary.metrics.affinity).toBe(54)
     expect(summary.growthTraits).toContain('calendar-plan')
   })

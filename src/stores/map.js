@@ -8,6 +8,13 @@ import {
   schedulePushNotification,
 } from '../lib/push'
 import { FOOD_DELIVERY_SOURCE_KEYS, LOGISTICS_SOURCE_KEYS } from '../lib/planned-module-registry'
+import {
+  anonymizeRelationshipText,
+  anonymizeRelationshipTextByBinding,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+  normalizeRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -344,6 +351,7 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
       typeof raw.eventSummaryEn === 'string' && raw.eventSummaryEn.trim()
         ? raw.eventSummaryEn.trim().slice(0, 180)
         : '',
+    relationshipBinding: normalizeRelationshipBinding(raw.relationshipBinding),
   }
 }
 
@@ -1206,6 +1214,96 @@ export const useMapStore = defineStore('map', () => {
     const normalized = normalizeTripHistoryItem(entry, 0)
     if (!normalized) return
     tripHistory.value = [normalized, ...tripHistory.value].slice(0, TRIP_HISTORY_LIMIT)
+  }
+
+  const updateTripHistoryItem = (tripId, patch = {}) => {
+    const id = trimLine(tripId, 140)
+    if (!id) return false
+    const index = tripHistory.value.findIndex((item) => item.id === id)
+    if (index < 0) return false
+    const next = normalizeTripHistoryItem(
+      {
+        ...tripHistory.value[index],
+        ...patch,
+      },
+      index,
+    )
+    if (!next) return false
+    tripHistory.value.splice(index, 1, next)
+    return true
+  }
+
+  const removeTripHistoryItem = (tripId) => {
+    const id = trimLine(tripId, 140)
+    if (!id) return false
+    const before = tripHistory.value.length
+    tripHistory.value = tripHistory.value.filter((item) => item.id !== id)
+    return tripHistory.value.length !== before
+  }
+
+  const bindRelationshipToTrip = (tripId, binding = {}) =>
+    updateTripHistoryItem(tripId, {
+      relationshipBinding: normalizeRelationshipBinding(binding),
+    })
+
+  const neutralizeRelationshipTrip = (
+    tripId,
+    profile = {},
+    replacementName = 'someone',
+  ) => {
+    const id = trimLine(tripId, 140)
+    if (!id) return false
+    const trip = tripHistory.value.find((item) => item.id === id)
+    if (!trip) return false
+    if (!bindingMatchesProfile(trip.relationshipBinding, profile)) return false
+    const nextName = trimLine(replacementName, 'someone', 120)
+    const nextEventTitleEn =
+      anonymizeRelationshipText(trip.eventTitleEn, profile?.name, nextName) ||
+      `Trip with ${nextName}`
+    const nextEventSummaryEn =
+      anonymizeRelationshipText(trip.eventSummaryEn, profile?.name, nextName) ||
+      `Shared route with ${nextName}.`
+    const nextEventTitleZh =
+      anonymizeRelationshipText(trip.eventTitleZh, profile?.name, nextName) ||
+      `与${nextName}的行程`
+    const nextEventSummaryZh =
+      anonymizeRelationshipText(trip.eventSummaryZh, profile?.name, nextName) ||
+      `与${nextName}的同行路线。`
+    return updateTripHistoryItem(id, {
+      eventTitleZh: nextEventTitleZh,
+      eventTitleEn: nextEventTitleEn,
+      eventSummaryZh: nextEventSummaryZh,
+      eventSummaryEn: nextEventSummaryEn,
+      relationshipBinding: clearRelationshipBinding(),
+    })
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const mode = trimLine(options.cleanupMode, 'delete_role', 60)
+    const replacementName = trimLine(options.replacementName, 'someone', 120)
+    const matchedTrips = tripHistory.value.filter((trip) =>
+      bindingMatchesProfile(trip.relationshipBinding, profile),
+    )
+
+    let removedCount = 0
+    let unlinkedCount = 0
+    matchedTrips.forEach((trip) => {
+      if (mode === 'delete_role') {
+        if (removeTripHistoryItem(trip.id)) removedCount += 1
+        return
+      }
+      if (neutralizeRelationshipTrip(trip.id, profile, replacementName)) {
+        unlinkedCount += 1
+      }
+    })
+
+    return {
+      ok: removedCount > 0 || unlinkedCount > 0 || matchedTrips.length === 0,
+      removedCount,
+      unlinkedCount,
+      anonymizedCount: unlinkedCount,
+      updatedCount: unlinkedCount,
+    }
   }
 
   const refreshTripState = (nowInput = Date.now()) => {
@@ -2199,6 +2297,11 @@ export const useMapStore = defineStore('map', () => {
     resetMapCalendarReminderPreference,
     refreshTripState,
     tickTripRuntime,
+    updateTripHistoryItem,
+    removeTripHistoryItem,
+    bindRelationshipToTrip,
+    neutralizeRelationshipTrip,
+    cleanupRelationshipForProfile,
     setMapVisualMode,
     setMapVisualAssetId,
     setMapAiVisualEnabled,

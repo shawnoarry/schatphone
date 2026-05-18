@@ -327,4 +327,51 @@ describe('shopping store', () => {
     expect(restoredStore.createBackupSnapshot().products[0]?.id).toBe('product_backup')
     expect(restoredStore.createBackupSnapshot().orders).toEqual([])
   })
+
+  test('neutralizes relationship-linked gift orders during cleanup without deleting the order', () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'product_cleanup_gift',
+      title: 'Cleanup Gift',
+      category: 'gifts',
+      price: '18.00',
+    })
+
+    store.addToCart(product.id)
+    const order = store.checkoutCart({
+      recipient: 'HJ',
+      note: 'Gift picked for HJ.',
+      giftRecipient: {
+        name: 'HJ',
+        contactId: 7,
+        profileId: 77,
+        kind: 'role',
+        sourceModule: 'chat',
+        sourceId: '7',
+      },
+    })
+
+    const result = store.cleanupRelationshipForProfile(
+      { id: 77, name: 'HJ' },
+      {
+        cleanupMode: 'reset_relationship',
+        replacementName: 'Someone',
+      },
+    )
+
+    expect(result).toMatchObject({
+      removedCount: 0,
+      unlinkedCount: 1,
+    })
+    expect(store.findOrderById(order.id)).toMatchObject({
+      recipient: 'Someone',
+      giftRecipient: {
+        profileId: 0,
+        contactId: 0,
+        name: '',
+      },
+    })
+    expect(store.findOrderById(order.id)?.note).toContain('Someone')
+  })
 })

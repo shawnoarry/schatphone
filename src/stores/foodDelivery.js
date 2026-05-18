@@ -6,6 +6,12 @@ import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
 } from '../lib/planned-module-registry'
+import {
+  anonymizeRelationshipText,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+  normalizeRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 1
@@ -362,6 +368,7 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
     currency: primaryTotal.currency,
     deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
     note: normalizeText(rawOrder.note, '', 240),
+    relationshipBinding: normalizeRelationshipBinding(rawOrder.relationshipBinding),
     events: normalizeOrderEvents(rawOrder.events || rawOrder.statusEvents || rawOrder.eventCards),
     sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_checkout', 60),
     sourceId: normalizeText(rawOrder.sourceId, '', 140),
@@ -582,6 +589,12 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return menuItemMap.value.get(id) || null
   }
 
+  const findOrderById = (orderId) => {
+    const id = normalizeFoodId(orderId)
+    if (!id) return null
+    return orders.value.find((order) => order.id === id) || null
+  }
+
   const listRestaurantsByCategory = (category = '') => {
     const normalized = normalizeCategory(category, '')
     if (!normalized) return restaurants.value.slice()
@@ -713,6 +726,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const checkoutCart = ({
     deliveryAddress = '',
     note = '',
+    relationshipBinding = null,
     sourceModule = FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
     sourceId = '',
   } = {}) => {
@@ -739,6 +753,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       })),
       deliveryAddress,
       note,
+      relationshipBinding,
       sourceModule,
       sourceId,
       createdAt: now,
@@ -798,6 +813,49 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const before = orders.value.length
     orders.value = orders.value.filter((order) => order.id !== id)
     return orders.value.length !== before
+  }
+
+  const neutralizeRelationshipOrder = (
+    orderId,
+    profile = {},
+    replacementName = 'Someone',
+  ) => {
+    const order = findOrderById(orderId)
+    if (!order) return false
+    if (!bindingMatchesProfile(order.relationshipBinding, profile)) return false
+    const nextName = normalizeText(replacementName, 'Someone', 120)
+    order.note = anonymizeRelationshipText(order.note, profile?.name, nextName)
+    order.relationshipBinding = clearRelationshipBinding()
+    order.updatedAt = Date.now()
+    return true
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const mode = normalizeText(options.cleanupMode, 'delete_role', 60)
+    const replacementName = normalizeText(options.replacementName, 'Someone', 120)
+    const matchedOrders = orders.value.filter((order) =>
+      bindingMatchesProfile(order.relationshipBinding, profile),
+    )
+
+    let removedCount = 0
+    let unlinkedCount = 0
+    matchedOrders.forEach((order) => {
+      if (mode === 'delete_role') {
+        if (removeOrder(order.id)) removedCount += 1
+        return
+      }
+      if (neutralizeRelationshipOrder(order.id, profile, replacementName)) {
+        unlinkedCount += 1
+      }
+    })
+
+    return {
+      ok: removedCount > 0 || unlinkedCount > 0 || matchedOrders.length === 0,
+      removedCount,
+      unlinkedCount,
+      anonymizedCount: unlinkedCount,
+      updatedCount: unlinkedCount,
+    }
   }
 
   const applyPersistedSource = (source) => {
@@ -909,6 +967,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     hasFinishedStorageHydration,
     findRestaurantById,
     findMenuItemById,
+    findOrderById,
     listRestaurantsByCategory,
     listMenuByRestaurant,
     upsertRestaurant,
@@ -920,6 +979,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     updateOrderStatus,
     addOrderEvent,
     removeOrder,
+    neutralizeRelationshipOrder,
+    cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

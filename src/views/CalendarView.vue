@@ -10,7 +10,9 @@ import { useRemindersStore } from '../stores/reminders'
 import { useSystemStore } from '../stores/system'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { RELATIONSHIP_FACT_SOURCE_KEYS } from '../lib/relationship-fact-adapters'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
+import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,6 +22,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const remindersStore = useRemindersStore()
 const systemStore = useSystemStore()
+const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { upcomingEvents } = storeToRefs(calendarStore)
 const { activeReminderItems } = storeToRefs(remindersStore)
 const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
@@ -370,6 +373,29 @@ const resetEventStartsAt = (event) => {
 
 const isEventTimeEdited = (event) => Number(event.timeEditedAt || 0) > 0
 
+const deleteCalendarEvent = (event) => {
+  if (!event?.id) return
+  if (event.sourceReminderId) {
+    void calendarStore.cancelEventPushScheduledBySourceReminderId(event.sourceReminderId, {
+      source: 'calendar_event_delete',
+    })
+  } else {
+    void calendarStore.cancelEventPushScheduled({
+      eventId: event.id,
+      source: 'calendar_event_delete',
+    })
+  }
+  if (!calendarStore.removeEventById(event.id)) return
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+    event.id,
+  )
+  const nextDrafts = { ...calendarRelationshipDrafts.value }
+  delete nextDrafts[event.id]
+  calendarRelationshipDrafts.value = nextDrafts
+  setRelationshipFeedbackForEvent(event.id, null)
+}
+
 const getEventPushHistory = (event) =>
   Array.isArray(event?.pushHistory) ? event.pushHistory.slice(0, 3) : []
 
@@ -611,6 +637,7 @@ watch(
             @update-starts-at="updateEventStartsAt"
             @shift-starts-at="shiftEventStartsAt"
             @reset-starts-at="resetEventStartsAt"
+            @delete-event="deleteCalendarEvent"
             @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
             @update-relationship-contact="setEventRelationshipContact"
             @record-relationship="recordEventRelationship"

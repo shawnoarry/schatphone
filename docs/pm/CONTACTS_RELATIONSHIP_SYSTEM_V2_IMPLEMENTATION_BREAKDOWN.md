@@ -1,6 +1,6 @@
 # Contacts & Relationship System V2 Implementation Breakdown
 
-Updated: 2026-05-18
+Updated: 2026-05-19
 
 Audience: product managers, engineers, QA, and future AI assistants.
 
@@ -11,6 +11,33 @@ This document breaks the frozen requirement in `docs/pm/CONTACTS_RELATIONSHIP_SY
 3. Contacts detail information architecture and UI upgrade.
 
 This is not the live roadmap. It is the implementation breakdown that should be used when turning the requirement into code tasks.
+
+## 0. Implementation Status Snapshot
+
+Updated on 2026-05-19 after the first Contacts Relationship System V2 implementation batch.
+
+Status:
+
+- Sequence 1 Foundation: `PARTIAL_DONE`
+- Sequence 2 Destructive Actions: `PARTIAL_DONE`
+- Sequence 3 Contacts UI: `PARTIAL_DONE`
+
+Completed baseline:
+
+1. Role ID schema is implemented with numeric / numeric-plus-letter validation, duplicate checks, UI display/edit support, and backup/restore migration.
+2. Static role profile ownership, Chat Directory binding, and relationship runtime progress now have clearer boundaries.
+3. Relationship runtime has explicit memory-group APIs, target reset/delete APIs, recompute helpers, source refs, source-module summaries, and source-record fact removal.
+4. Cross-module cleanup metadata and handlers exist for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map source records.
+5. Contacts can run role delete, relationship reset, and single-memory delete flows with impact summary, typed confirmation, optional linked-record cleanup, and backup/import rollback coverage.
+6. World Hub can review relationship runtime entities, reset a relationship route, and delete one memory group while preserving the Contacts role profile.
+7. Module-owned single-record delete paths now also clean matching relationship runtime facts for Phone, Wallet, Calendar, Shopping, Food Delivery, and Map.
+
+Still open:
+
+1. Contacts detail IA needs a stronger product-grade layout for static profile, relationship progress, memory groups, and future detail sections.
+2. Manual vs event-attached detail entries have the helper shape, but the full visual language and section behavior are not complete.
+3. Preferences, life pattern, social graph, long-term memory pinning, and automatic memory expiry/compression settings remain future work.
+4. Chat free-text deletion remains separate and should keep being explained as Chat-owned.
 
 ## 1. Workstream Map
 

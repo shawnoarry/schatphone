@@ -573,4 +573,60 @@ describe('map trip baseline loop', () => {
     expect(cancelSpy).toHaveBeenCalledTimes(1)
     expect(mapStore.tripState.status).toBe('idle')
   })
+
+  test('can bind and later neutralize a shared-route trip record for relationship cleanup', () => {
+    const store = useMapStore()
+    store.restoreFromBackup({
+      map: {
+        tripHistory: [
+          {
+            id: 'trip_cleanup_1',
+            status: 'arrived',
+            from: 'Home',
+            to: 'Cafe',
+            fromLabel: 'Home',
+            toLabel: 'Cafe',
+            distanceKm: 4,
+            fare: 1200,
+            durationSeconds: 900,
+            startedAt: Date.now() - 1800_000,
+            endedAt: Date.now() - 900_000,
+            rewardPoints: 12,
+            eventTitleEn: 'Trip with HJ',
+            eventSummaryEn: 'Shared route with HJ to Cafe.',
+          },
+        ],
+      },
+    })
+
+    expect(
+      store.bindRelationshipToTrip('trip_cleanup_1', {
+        profileId: 66,
+        contactId: 6,
+        kind: 'role',
+        name: 'HJ',
+        sourceModule: 'chat',
+        sourceId: '6',
+      }),
+    ).toBe(true)
+
+    const result = store.cleanupRelationshipForProfile(
+      { id: 66, name: 'HJ' },
+      {
+        cleanupMode: 'reset_relationship',
+        replacementName: 'someone',
+      },
+    )
+
+    expect(result).toMatchObject({
+      removedCount: 0,
+      unlinkedCount: 1,
+    })
+    expect(store.tripHistory[0]?.relationshipBinding).toMatchObject({
+      profileId: 0,
+      contactId: 0,
+      name: '',
+    })
+    expect(store.tripHistory[0]?.eventSummaryEn).not.toContain('HJ')
+  })
 })

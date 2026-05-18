@@ -302,6 +302,39 @@ const buildMemoryAggregateMapKey = (entityKey, memoryKey) => {
   return `${normalizedEntityKey}::${normalizedMemoryKey}`
 }
 
+const cloneRelationshipEvent = (event) => ({
+  ...event,
+  metricDeltas: { ...event.metricDeltas },
+  growthTraits: [...event.growthTraits],
+  worldContext: {
+    ...event.worldContext,
+    tags: Array.isArray(event.worldContext?.tags) ? [...event.worldContext.tags] : [],
+  },
+})
+
+const buildSourceRefsFromEvents = (items = []) => {
+  const seen = new Set()
+  return items
+    .map((event) => ({
+      sourceModule: normalizeText(event?.sourceModule, '', 60),
+      sourceId: normalizeText(event?.sourceId, '', 140),
+    }))
+    .filter((ref) => ref.sourceModule && ref.sourceId)
+    .filter((ref) => {
+      const key = `${ref.sourceModule}:${ref.sourceId}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+const summarizeSourceModules = (items = []) =>
+  items.reduce((acc, event) => {
+    const moduleKey = normalizeText(event?.sourceModule, 'relationship_runtime', 60)
+    acc[moduleKey] = (acc[moduleKey] || 0) + 1
+    return acc
+  }, {})
+
 export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', () => {
   const settings = ref(createDefaultSettings())
   const entities = ref([])
@@ -415,6 +448,38 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       }))
   }
 
+  const listMemoryGroupsForTarget = (target = {}, limit = 50) =>
+    listMemoryAggregatesForTarget(target, limit)
+
+  const listSourceRefsForTarget = (target = {}) => {
+    const key = buildRelationshipEntityKey(target)
+    if (!key) return []
+    return buildSourceRefsFromEvents(events.value.filter((event) => event.entityKey === key))
+  }
+
+  const getMemoryGroupDetail = (target = {}, memoryKey = '') => {
+    const key = buildRelationshipEntityKey(target)
+    const normalizedMemoryKey = normalizeMemoryKey(memoryKey)
+    if (!key || !normalizedMemoryKey) return null
+    const aggregate =
+      memoryAggregateMap.value.get(buildMemoryAggregateMapKey(key, normalizedMemoryKey)) || null
+    const groupEvents = events.value
+      .filter((event) => event.entityKey === key && event.memoryKey === normalizedMemoryKey)
+      .sort((a, b) => b.createdAt - a.createdAt)
+    if (!aggregate && groupEvents.length === 0) return null
+    return {
+      ...(aggregate || buildDefaultMemoryAggregate(normalizedMemoryKey, key)),
+      sourceModules: aggregate ? [...aggregate.sourceModules] : [],
+      sourceIds: aggregate ? [...aggregate.sourceIds] : [],
+      factTypes: aggregate ? [...aggregate.factTypes] : [],
+      growthTraits: aggregate ? [...aggregate.growthTraits] : [],
+      milestones: aggregate ? [...aggregate.milestones] : [],
+      events: groupEvents.map(cloneRelationshipEvent),
+      sourceRefs: buildSourceRefsFromEvents(groupEvents),
+      sourceModuleCounts: summarizeSourceModules(groupEvents),
+    }
+  }
+
   const ensureEntity = (target = {}) => {
     const meta = normalizeTargetMeta(target)
     if (!meta) return null
@@ -490,6 +555,54 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     entity.relationshipStage = deriveRelationshipStage(entity.metrics)
     entity.updatedAt = Date.now()
     return entity
+  }
+
+  const removeEntityByKey = (entityKey) => {
+    const key = normalizeText(entityKey, '', 120)
+    if (!key) return false
+    const before = entities.value.length
+    entities.value = entities.value.filter((entity) => entity.entityKey !== key)
+    return entities.value.length !== before
+  }
+
+  const recomputeEntityForKey = (entityKey) => {
+    const key = normalizeText(entityKey, '', 120)
+    if (!key) return null
+    const remainingEvents = events.value
+      .filter(
+        (event) =>
+          event.entityKey === key &&
+          event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
+          event.effectApplied !== false,
+      )
+      .sort((a, b) => a.createdAt - b.createdAt)
+    const existing = entityMap.value.get(key)
+    const fallbackMeta =
+      existing ||
+      events.value.find((event) => event.entityKey === key) ||
+      remainingEvents[0] ||
+      null
+    removeEntityByKey(key)
+    if (remainingEvents.length === 0) return null
+    const meta = normalizeTargetMeta({
+      entityKey: key,
+      profileId: fallbackMeta?.profileId,
+      contactId: fallbackMeta?.contactId,
+      kind: fallbackMeta?.kind,
+      displayName: fallbackMeta?.displayName || fallbackMeta?.targetLabel,
+      name: fallbackMeta?.displayName || fallbackMeta?.targetLabel,
+    })
+    const recreated = ensureEntity(meta || { entityKey: key })
+    if (recreated && meta) {
+      recreated.profileId = meta.profileId || recreated.profileId
+      recreated.contactId = meta.contactId || recreated.contactId
+      recreated.kind = meta.kind || recreated.kind
+      recreated.displayName = meta.displayName || recreated.displayName
+    }
+    remainingEvents.forEach((event) => {
+      applyEventToEntity(event)
+    })
+    return entityMap.value.get(key) || recreated || null
   }
 
   const recordRelationshipFact = (input = {}) => {
@@ -570,6 +683,132 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .slice(0, clamp(toInt(limit, 5), 0, 50))
       .map((event) => ({ ...event, metricDeltas: { ...event.metricDeltas } }))
   }
+
+  const removeRelationshipFactsForSourceRecord = (sourceModule, recordId) => {
+    const moduleKey = normalizeText(sourceModule, '', 60)
+    const id = normalizeText(recordId, '', 140)
+    if (!moduleKey || !id) {
+      return {
+        ok: false,
+        reason: 'source_not_found',
+        sourceModule: moduleKey,
+        recordId: id,
+        removedEventCount: 0,
+        sourceRefs: [],
+        sourceModuleCounts: {},
+      }
+    }
+
+    const sourcePrefix = `${id}:`
+    const removedEvents = events.value.filter(
+      (event) =>
+        event.sourceModule === moduleKey &&
+        (event.sourceId === id || event.sourceId.startsWith(sourcePrefix)),
+    )
+
+    if (removedEvents.length === 0) {
+      return {
+        ok: false,
+        reason: 'source_not_found',
+        sourceModule: moduleKey,
+        recordId: id,
+        removedEventCount: 0,
+        sourceRefs: [],
+        sourceModuleCounts: {},
+      }
+    }
+
+    const removedIds = new Set(removedEvents.map((event) => event.id))
+    const affectedEntityKeys = [...new Set(removedEvents.map((event) => event.entityKey).filter(Boolean))]
+    events.value = events.value.filter((event) => !removedIds.has(event.id))
+    affectedEntityKeys.forEach((key) => {
+      recomputeEntityForKey(key)
+    })
+
+    return {
+      ok: true,
+      sourceModule: moduleKey,
+      recordId: id,
+      removedEventCount: removedEvents.length,
+      sourceRefs: buildSourceRefsFromEvents(removedEvents),
+      sourceModuleCounts: summarizeSourceModules(removedEvents),
+      removedEvents: removedEvents.map(cloneRelationshipEvent),
+    }
+  }
+
+  const removeMemoryGroupForTarget = (target = {}, memoryKey = '') => {
+    const key = buildRelationshipEntityKey(target)
+    const normalizedMemoryKey = normalizeMemoryKey(memoryKey)
+    if (!key || !normalizedMemoryKey) {
+      return {
+        ok: false,
+        reason: 'memory_group_not_found',
+        entityKey: key,
+        memoryKey: normalizedMemoryKey,
+        removedEventCount: 0,
+        sourceRefs: [],
+        sourceModuleCounts: {},
+      }
+    }
+    const removedEvents = events.value.filter(
+      (event) => event.entityKey === key && event.memoryKey === normalizedMemoryKey,
+    )
+    if (removedEvents.length === 0) {
+      return {
+        ok: false,
+        reason: 'memory_group_not_found',
+        entityKey: key,
+        memoryKey: normalizedMemoryKey,
+        removedEventCount: 0,
+        sourceRefs: [],
+        sourceModuleCounts: {},
+      }
+    }
+    events.value = events.value.filter(
+      (event) => !(event.entityKey === key && event.memoryKey === normalizedMemoryKey),
+    )
+    const remainingEntity = recomputeEntityForKey(key)
+    return {
+      ok: true,
+      entityKey: key,
+      memoryKey: normalizedMemoryKey,
+      removedEventCount: removedEvents.length,
+      sourceRefs: buildSourceRefsFromEvents(removedEvents),
+      sourceModuleCounts: summarizeSourceModules(removedEvents),
+      removedEvents: removedEvents.map(cloneRelationshipEvent),
+      remainingSummary: remainingEntity
+        ? summarizeEntityForTarget({ entityKey: key }, { eventLimit: 3, memoryLimit: 3 })
+        : null,
+    }
+  }
+
+  const resetRelationshipForTarget = (target = {}) => {
+    const key = buildRelationshipEntityKey(target)
+    if (!key) {
+      return {
+        ok: false,
+        reason: 'target_not_found',
+        entityKey: '',
+        removedEventCount: 0,
+        sourceRefs: [],
+        sourceModuleCounts: {},
+      }
+    }
+    const removedEvents = events.value.filter((event) => event.entityKey === key)
+    const hadEntity = removeEntityByKey(key)
+    events.value = events.value.filter((event) => event.entityKey !== key)
+    return {
+      ok: removedEvents.length > 0 || hadEntity,
+      entityKey: key,
+      removedEventCount: removedEvents.length,
+      removedEntityCount: hadEntity ? 1 : 0,
+      sourceRefs: buildSourceRefsFromEvents(removedEvents),
+      sourceModuleCounts: summarizeSourceModules(removedEvents),
+      removedEvents: removedEvents.map(cloneRelationshipEvent),
+    }
+  }
+
+  const deleteRuntimeForTarget = (target = {}) => resetRelationshipForTarget(target)
 
   const summarizeEntityForTarget = (target = {}, options = {}) => {
     const meta = normalizeTargetMeta(target)
@@ -766,11 +1005,18 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     findEntity,
     findEventBySource,
     listMemoryAggregatesForTarget,
+    listMemoryGroupsForTarget,
+    listSourceRefsForTarget,
+    getMemoryGroupDetail,
     upsertEntity,
     recordRelationshipFact,
     applyPendingRelationshipEvent,
     dismissRelationshipEvent,
     listEventsForTarget,
+    removeRelationshipFactsForSourceRecord,
+    removeMemoryGroupForTarget,
+    resetRelationshipForTarget,
+    deleteRuntimeForTarget,
     summarizeEntityForTarget,
     buildPromptContextForTarget,
     setRuntimeEnabled,

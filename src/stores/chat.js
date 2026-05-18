@@ -20,6 +20,18 @@ import {
   sanitizeRoleBindingAssetId,
   toRoleBindingAssetContext,
 } from '../lib/role-binding-contract'
+import {
+  cloneRoleDetailItems,
+  createRoleDetailItem,
+  createRoleIdFromProfileId,
+  ensureUniqueRoleProfileRoleIds,
+  filterRoleDetailItemsForMemoryDelete,
+  filterRoleDetailItemsForReset,
+  isValidRoleId,
+  normalizeRoleDetailItems,
+  normalizeRoleDetailSection,
+  normalizeRoleId,
+} from '../lib/role-profile-schema'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -96,6 +108,7 @@ const DEFAULT_CHAT_MODULE_IDENTITY = Object.freeze({
 const DEFAULT_ROLE_PROFILES = [
   {
     id: 1,
+    roleId: '1',
     name: 'Eva',
     role: '私人 AI 助手',
     isMain: true,
@@ -105,6 +118,7 @@ const DEFAULT_ROLE_PROFILES = [
   },
   {
     id: 2,
+    roleId: '2',
     name: 'Jackie',
     role: '雇佣兵搭档',
     isMain: false,
@@ -670,6 +684,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
   const avatarImage = normalizeAvatarImageSource(rawProfile?.avatarImage, legacyAvatar, name)
   return {
     id,
+    roleId: normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex)),
     name,
     role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
     isMain: Boolean(rawProfile?.isMain),
@@ -677,6 +692,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     avatarImage,
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
     knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
+    detailItems: normalizeRoleDetailItems(rawProfile?.detailItems, fallbackIndex),
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
     assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
     tags: Array.isArray(rawProfile?.tags)
@@ -694,6 +710,13 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
         : nowTs(),
   }
 }
+
+const normalizeRoleProfileList = (rawProfiles = []) =>
+  ensureUniqueRoleProfileRoleIds(
+    Array.isArray(rawProfiles)
+      ? rawProfiles.map((item, index) => normalizeRoleProfile(item, index))
+      : [],
+  )
 
 const normalizeContact = (rawContact, fallbackIndex = 0) => {
   const parsedId = Number(rawContact?.id)
@@ -851,6 +874,23 @@ export const useChatStore = defineStore('chat', () => {
   const getRoleProfileById = (profileId) =>
     roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
 
+  const getRoleProfileByRoleId = (roleId) => {
+    const normalized = normalizeRoleId(roleId)
+    if (!normalized) return null
+    return roleProfiles.find((item) => normalizeRoleId(item.roleId).toLowerCase() === normalized.toLowerCase()) || null
+  }
+
+  const isRoleIdAvailable = (roleId, excludeProfileId = 0) => {
+    const normalized = normalizeRoleId(roleId)
+    if (!isValidRoleId(normalized)) return false
+    const excluded = Number(excludeProfileId) || 0
+    return !roleProfiles.some(
+      (item) =>
+        Number(item.id) !== excluded &&
+        normalizeRoleId(item.roleId).toLowerCase() === normalized.toLowerCase(),
+    )
+  }
+
   const getRoleProfileAssetPack = (profileId) => {
     const profile = getRoleProfileById(profileId)
     return cloneRoleProfileAssetPack(profile?.assetPack)
@@ -887,6 +927,51 @@ export const useChatStore = defineStore('chat', () => {
     target.assetFolderBindings = normalized
     target.updatedAt = nowTs()
     return true
+  }
+
+  const listRoleDetailItems = (profileId, section = '') => {
+    const profile = getRoleProfileById(profileId)
+    if (!profile) return []
+    const normalizedSection = section ? normalizeRoleDetailSection(section) : ''
+    return cloneRoleDetailItems(profile.detailItems).filter(
+      (item) => !normalizedSection || item.section === normalizedSection,
+    )
+  }
+
+  const addRoleDetailItem = (profileId, section, input = {}) => {
+    const profile = getRoleProfileById(profileId)
+    if (!profile) return null
+    const item = createRoleDetailItem(section, input)
+    if (!item) return null
+    profile.detailItems = normalizeRoleDetailItems([item, ...(profile.detailItems || [])])
+    profile.updatedAt = nowTs()
+    return { ...item }
+  }
+
+  const removeRoleDetailItem = (profileId, itemId) => {
+    const profile = getRoleProfileById(profileId)
+    const id = typeof itemId === 'string' ? itemId.trim() : ''
+    if (!profile || !id) return false
+    const current = normalizeRoleDetailItems(profile.detailItems)
+    const next = current.filter((item) => item.id !== id)
+    if (next.length === current.length) return false
+    profile.detailItems = next
+    profile.updatedAt = nowTs()
+    return true
+  }
+
+  const clearRoleEventAttachedDetailItems = (profileId, options = {}) => {
+    const profile = getRoleProfileById(profileId)
+    if (!profile) return 0
+    const current = normalizeRoleDetailItems(profile.detailItems)
+    const next = options?.memoryKey || Array.isArray(options?.sourceRefs)
+      ? filterRoleDetailItemsForMemoryDelete(current, options)
+      : filterRoleDetailItemsForReset(current)
+    const removedCount = current.length - next.length
+    if (removedCount <= 0) return 0
+    profile.detailItems = next
+    profile.updatedAt = nowTs()
+    return removedCount
   }
 
   const getRoleBindingContract = (contactId, options = {}) => {
@@ -1719,6 +1804,36 @@ export const useChatStore = defineStore('chat', () => {
     return removed || null
   }
 
+  const clearContactConversationHistory = (contactId) => {
+    const numericId = Number(contactId)
+    if (!Number.isFinite(numericId) || numericId <= 0) return false
+    const contact = getRawContactById(numericId)
+    if (!contact) return false
+    const key = conversationKeyForContact(numericId)
+    const conversation = ensureConversationForContact(numericId)
+    messagesByConversation[key] = []
+    conversation.unread = 0
+    conversation.draft = ''
+    conversation.lastMessage = ''
+    conversation.lastMessageAt = 0
+    conversation.updatedAt = nowTs()
+    contact.lastMessage = ''
+    return true
+  }
+
+  const clearRoleProfileChatHistory = (profileId) => {
+    const numericId = Number(profileId)
+    if (!Number.isFinite(numericId) || numericId <= 0) return 0
+    const bindingIds = contacts
+      .filter((contact) => contact.kind === 'role' && Number(contact.profileId) === numericId)
+      .map((contact) => contact.id)
+    let cleared = 0
+    bindingIds.forEach((contactId) => {
+      if (clearContactConversationHistory(contactId)) cleared += 1
+    })
+    return cleared
+  }
+
   const replaceMessage = (contactId, targetMessageId, rawMessage, options = {}) => {
     const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return null
@@ -1740,13 +1855,17 @@ export const useChatStore = defineStore('chat', () => {
 
   const addRoleProfile = (payload = {}) => {
     const maxProfileId = roleProfiles.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0)
+    const nextId = payload.id ?? maxProfileId + 1
     const normalized = normalizeRoleProfile(
       {
         ...payload,
-        id: payload.id ?? maxProfileId + 1,
+        id: nextId,
       },
       roleProfiles.length,
     )
+    if (!isValidRoleId(normalized.roleId) || !isRoleIdAvailable(normalized.roleId)) {
+      return null
+    }
     roleProfiles.push(normalized)
     return normalized
   }
@@ -1754,6 +1873,12 @@ export const useChatStore = defineStore('chat', () => {
   const updateRoleProfile = (profileId, updates = {}) => {
     const target = getRoleProfileById(profileId)
     if (!target || !updates || typeof updates !== 'object') return false
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'roleId')) {
+      const roleId = normalizeRoleId(updates.roleId)
+      if (!isValidRoleId(roleId) || !isRoleIdAvailable(roleId, target.id)) return false
+      target.roleId = roleId
+    }
 
     if (typeof updates.name === 'string' && updates.name.trim()) {
       target.name = updates.name.trim()
@@ -1782,6 +1907,9 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Array.isArray(updates.knowledgePointIds)) {
       target.knowledgePointIds = normalizeKnowledgePointIds(updates.knowledgePointIds)
+    }
+    if (Array.isArray(updates.detailItems)) {
+      target.detailItems = normalizeRoleDetailItems(updates.detailItems)
     }
     if (updates.assetPack && typeof updates.assetPack === 'object') {
       target.assetPack = normalizeRoleProfileAssetPack({
@@ -1985,22 +2113,19 @@ export const useChatStore = defineStore('chat', () => {
     applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
     applyModuleIdentity(DEFAULT_CHAT_MODULE_IDENTITY)
     const sourceProfiles = Array.isArray(legacyContacts)
-      ? normalizedContacts
-          .filter((contact) => (contact.kind || 'role') === 'role')
-          .map((contact, index) =>
-            normalizeRoleProfile(
-              {
-                id: contact.profileId || contact.id,
-                name: contact.name,
-                role: contact.role,
-                avatar: contact.avatar,
-                bio: contact.bio,
-                isMain: contact.isMain,
-              },
-              index,
-            ),
-          )
-      : DEFAULT_ROLE_PROFILES.map((item, index) => normalizeRoleProfile(item, index))
+      ? normalizeRoleProfileList(
+          normalizedContacts
+            .filter((contact) => (contact.kind || 'role') === 'role')
+            .map((contact) => ({
+              id: contact.profileId || contact.id,
+              name: contact.name,
+              role: contact.role,
+              avatar: contact.avatar,
+              bio: contact.bio,
+              isMain: contact.isMain,
+            })),
+        )
+      : normalizeRoleProfileList(DEFAULT_ROLE_PROFILES)
 
     roleProfiles.push(...sourceProfiles)
 
@@ -2057,7 +2182,7 @@ export const useChatStore = defineStore('chat', () => {
     )
 
     const normalizedProfiles = Array.isArray(persisted.roleProfiles)
-      ? persisted.roleProfiles.map((item, index) => normalizeRoleProfile(item, index))
+      ? normalizeRoleProfileList(persisted.roleProfiles)
       : []
     resetReactiveObject(roleProfiles)
     if (normalizedProfiles.length > 0) {
@@ -2069,21 +2194,18 @@ export const useChatStore = defineStore('chat', () => {
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
 
     if (roleProfiles.length === 0) {
-      const derivedProfiles = normalizedContacts
-        .filter((contact) => (contact.kind || 'role') === 'role')
-        .map((contact, index) =>
-          normalizeRoleProfile(
-            {
-              id: contact.profileId || contact.id,
-              name: contact.name,
-              role: contact.role,
-              avatar: contact.avatar,
-              bio: contact.bio,
-              isMain: contact.isMain,
-            },
-            index,
-          ),
-        )
+      const derivedProfiles = normalizeRoleProfileList(
+        normalizedContacts
+          .filter((contact) => (contact.kind || 'role') === 'role')
+          .map((contact) => ({
+            id: contact.profileId || contact.id,
+            name: contact.name,
+            role: contact.role,
+            avatar: contact.avatar,
+            bio: contact.bio,
+            isMain: contact.isMain,
+          })),
+      )
       roleProfiles.push(...derivedProfiles)
     }
 
@@ -2199,6 +2321,7 @@ export const useChatStore = defineStore('chat', () => {
         moduleIdentity: normalizeModuleIdentity(moduleIdentity),
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
+          detailItems: cloneRoleDetailItems(profile.detailItems),
           assetPack: cloneRoleProfileAssetPack(profile.assetPack),
           assetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
         })),
@@ -2294,6 +2417,8 @@ export const useChatStore = defineStore('chat', () => {
     restoreMessageSemanticRevision,
     removeMessage,
     replaceMessage,
+    clearContactConversationHistory,
+    clearRoleProfileChatHistory,
     getContactById,
     resolveContactAvatar,
     getModuleAvatarOverrides,
@@ -2306,6 +2431,8 @@ export const useChatStore = defineStore('chat', () => {
     getConversationIdentityOverrides,
     setConversationIdentityOverrides,
     getRoleProfileById,
+    getRoleProfileByRoleId,
+    isRoleIdAvailable,
     getRoleProfileAssetPack,
     getRoleProfileAssetFolderBindings,
     setRoleProfileAssetPack,
@@ -2313,6 +2440,10 @@ export const useChatStore = defineStore('chat', () => {
     getRoleBindingContract,
     listRoleBindingContracts,
     getRoleBindingAssetContext,
+    listRoleDetailItems,
+    addRoleDetailItem,
+    removeRoleDetailItem,
+    clearRoleEventAttachedDetailItems,
     addRoleProfile,
     updateRoleProfile,
     removeRoleProfile,

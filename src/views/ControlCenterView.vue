@@ -4,11 +4,32 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { useDialog } from '../composables/useDialog'
+import {
+  buildRoleDeleteImpact,
+  cleanupRelationshipSourceRecords,
+  deleteRoleMemoryGroup,
+  resetRoleRelationshipState,
+} from '../lib/contacts-relationship-actions'
+import {
+  cleanupCoverageText,
+  cleanupResultSummaryText,
+  createRelationshipSourceCleanupHandlers,
+  sourceModuleSummaryText,
+} from '../lib/relationship-source-cleanup-handlers'
 import {
   RELATIONSHIP_EVENT_STATUS,
   useRelationshipRuntimeStore,
 } from '../stores/relationshipRuntime'
+import { RELATIONSHIP_CLEANUP_MODES } from '../lib/relationship-cleanup-helpers'
+import { useCalendarStore } from '../stores/calendar'
+import { useChatStore } from '../stores/chat'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { useMapStore } from '../stores/map'
+import { usePhoneStore } from '../stores/phone'
+import { useShoppingStore } from '../stores/shopping'
 import { useSystemStore } from '../stores/system'
+import { useWalletStore } from '../stores/wallet'
 import {
   SIMULATION_EVENT_STATUS,
   SIMULATION_SURPRISE_MODE,
@@ -18,7 +39,15 @@ import {
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
+const { confirmDialog, promptDialog } = useDialog()
+const calendarStore = useCalendarStore()
+const chatStore = useChatStore()
+const foodDeliveryStore = useFoodDeliveryStore()
+const mapStore = useMapStore()
+const phoneStore = usePhoneStore()
 const systemStore = useSystemStore()
+const shoppingStore = useShoppingStore()
+const walletStore = useWalletStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
 
@@ -332,7 +361,30 @@ const relationshipRuntimeEntityRows = computed(() =>
     stageLabel: relationshipStageLabel(entity.relationshipStage),
     updatedAtLabel: formatRuntimeTime(entity.updatedAt),
     memorySummaries: relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2),
+    sourceRefs: relationshipRuntimeStore.listSourceRefsForTarget(entity),
+    impact: buildRoleDeleteImpact({
+      chatStore,
+      relationshipRuntimeStore,
+      profile: {
+        id: entity.profileId,
+        name: entity.displayName,
+      },
+    }),
+    roleProfile: entity.profileId ? chatStore.getRoleProfileById(entity.profileId) : null,
+    canManage: entity.profileId > 0 || Boolean(entity.entityKey),
   })),
+)
+
+const relationshipSourceCleanupHandlers = computed(() =>
+  createRelationshipSourceCleanupHandlers({
+    phoneStore,
+    shoppingStore,
+    foodDeliveryStore,
+    walletStore,
+    calendarStore,
+    mapStore,
+    t,
+  }),
 )
 
 const relationshipRuntimeEventRows = computed(() =>
@@ -376,6 +428,134 @@ const applyRelationshipEvent = (eventId) => {
 
 const dismissRelationshipEvent = (eventId) => {
   relationshipRuntimeStore.dismissRelationshipEvent(eventId)
+}
+
+const resetRuntimeEntityFromWorldHub = async (entity) => {
+  if (!entity?.entityKey) return
+  const profile = entity.roleProfile || {
+    id: entity.profileId,
+    roleId: String(entity.profileId || entity.entityKey),
+    name: entity.displayName || entity.entityKey,
+  }
+  const sourceRefs = relationshipRuntimeStore.listSourceRefsForTarget(entity)
+  const sourceModuleCounts = sourceRefs.reduce((acc, ref) => {
+    const moduleKey = ref.sourceModule || ''
+    if (!moduleKey) return acc
+    acc[moduleKey] = (acc[moduleKey] || 0) + 1
+    return acc
+  }, {})
+  const impact = profile.id
+    ? buildRoleDeleteImpact({ chatStore, relationshipRuntimeStore, profile })
+    : {
+        memoryGroupCount: relationshipRuntimeStore.listMemoryGroupsForTarget(entity, 50).length,
+        sourceModuleCounts,
+      }
+  const firstOk = await confirmDialog({
+    title: t('重置关系上下文', 'Reset relationship context'),
+    message: t(
+      'World Hub 会清除该对象的关系运行时、记忆组、事件挂载详情、聊天记录，并对已关联来源记录做解绑或匿名改写。',
+      'World Hub will clear this relationship runtime, memories, event-attached details, chat history, and unlink or anonymize linked source records.',
+    ),
+    details: [
+      `${t('对象', 'Target')}: ${entity.displayName || entity.entityKey}`,
+      `${t('记忆组', 'Memory groups')}: ${impact.memoryGroupCount || 0}`,
+      `${t('来源', 'Sources')}: ${sourceModuleSummaryText(impact.sourceModuleCounts, t)}`,
+      cleanupCoverageText(impact.sourceModuleCounts, relationshipSourceCleanupHandlers.value, t),
+    ],
+    confirmText: t('继续', 'Continue'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!firstOk) return
+  const expected = entity.entityKey
+  const typed = await promptDialog({
+    title: t('确认重置关系上下文', 'Confirm relationship reset'),
+    message: t(
+      '请输入该关系对象键，避免误清理 World Hub 中的关系上下文。',
+      'Type the relationship entity key to avoid clearing the wrong World Hub context.',
+    ),
+    inputLabel: t('关系对象键', 'Relationship entity key'),
+    inputPlaceholder: expected,
+    inputRequired: true,
+    confirmText: t('确认重置', 'Confirm reset'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+    validate: (value) =>
+      value === expected
+        ? ''
+        : t('输入的对象键不一致。', 'Entity key does not match.'),
+  })
+  if (typed === null) return
+  const result = profile.id
+    ? resetRoleRelationshipState({
+        chatStore,
+        relationshipRuntimeStore,
+        profile,
+        cleanupHandlers: relationshipSourceCleanupHandlers.value,
+      })
+    : (() => {
+        const runtimeResult = relationshipRuntimeStore.resetRelationshipForTarget(entity)
+        const cleanupResult = cleanupRelationshipSourceRecords(
+          runtimeResult?.sourceRefs || sourceRefs,
+          relationshipSourceCleanupHandlers.value,
+          {
+            cleanupMode: RELATIONSHIP_CLEANUP_MODES.RESET_RELATIONSHIP,
+            profile,
+          },
+        )
+        return {
+          ok: Boolean(runtimeResult?.ok || cleanupResult.requestedCount),
+          runtimeResult,
+          cleanupResult,
+        }
+      })()
+  const summary = cleanupResultSummaryText(result.cleanupResult, t)
+  await confirmDialog({
+    title: result.ok ? t('关系上下文已重置', 'Relationship context reset') : t('没有可重置的关系上下文', 'No relationship context to reset'),
+    message: summary || t('World Hub 已完成该操作。', 'World Hub completed the operation.'),
+    confirmText: t('知道了', 'Done'),
+    cancelText: '',
+    dismissible: true,
+  })
+}
+
+const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
+  if (!entity?.entityKey || !memory?.memoryKey) return
+  const profile = entity.roleProfile || {
+    id: entity.profileId,
+    roleId: String(entity.profileId || entity.entityKey),
+    name: entity.displayName || entity.entityKey,
+  }
+  const detail = relationshipRuntimeStore.getMemoryGroupDetail(entity, memory.memoryKey)
+  const firstOk = await confirmDialog({
+    title: t('删除关系记忆组', 'Delete relationship memory'),
+    message: detail?.displaySummary || memory.displaySummary || memory.primarySummary || memory.memoryKey,
+    details: [
+      `${t('对象', 'Target')}: ${entity.displayName || entity.entityKey}`,
+      `${t('记忆键', 'Memory key')}: ${memory.memoryKey}`,
+      `${t('包含关系事件', 'Relationship events')}: ${detail?.events?.length || memory.supportingCount || 0}`,
+      cleanupCoverageText(detail?.sourceModuleCounts, relationshipSourceCleanupHandlers.value, t),
+    ],
+    confirmText: t('继续', 'Continue'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!firstOk) return
+  const result = deleteRoleMemoryGroup({
+    chatStore: profile.id ? chatStore : null,
+    relationshipRuntimeStore,
+    profile,
+    memoryKey: memory.memoryKey,
+    cleanupHandlers: relationshipSourceCleanupHandlers.value,
+  })
+  const summary = cleanupResultSummaryText(result.cleanupResult, t)
+  await confirmDialog({
+    title: result.ok ? t('关系记忆组已删除', 'Relationship memory deleted') : t('未找到关系记忆组', 'Relationship memory not found'),
+    message: summary || t('World Hub 已完成该操作。', 'World Hub completed the operation.'),
+    confirmText: t('知道了', 'Done'),
+    cancelText: '',
+    dismissible: true,
+  })
 }
 </script>
 
@@ -494,11 +674,11 @@ const dismissRelationshipEvent = (eventId) => {
             </h2>
           </div>
           <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200">
-            {{ t('Read-only', 'Read-only') }}
+            {{ t('Review + cleanup', 'Review + cleanup') }}
           </span>
         </div>
         <p class="mt-2 text-xs leading-5 text-slate-300">
-          {{ t('World Hub now reads relationship runtime state: role snapshots, recent relationship facts, and pending counts, without value editing or forced overrides.', 'World Hub now reads relationship runtime state: role snapshots, recent relationship facts, and pending counts, without value editing or forced overrides.') }}
+          {{ t('World Hub now reviews relationship runtime state and can clean relationship context without owning Contacts profiles or module records.', 'World Hub now reviews relationship runtime state and can clean relationship context without owning Contacts profiles or module records.') }}
         </p>
         <div class="mt-4 grid grid-cols-2 gap-2">
           <article
@@ -558,6 +738,25 @@ const dismissRelationshipEvent = (eventId) => {
               <p class="mt-1 text-[10px] text-slate-600">
                 {{ t('Updated', 'Updated') }}: {{ entity.updatedAtLabel }}
               </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-full bg-rose-300 px-3 py-1.5 text-[11px] font-semibold text-slate-950"
+                  :data-testid="`control-center-relationship-reset-${entity.entityKey}`"
+                  @click="resetRuntimeEntityFromWorldHub(entity)"
+                >
+                  {{ t('重置上下文', 'Reset context') }}
+                </button>
+                <button
+                  v-if="entity.memorySummaries[0]"
+                  type="button"
+                  class="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-slate-200"
+                  :data-testid="`control-center-relationship-delete-memory-${entity.entityKey}-${entity.memorySummaries[0].memoryKey}`"
+                  @click="deleteRuntimeMemoryFromWorldHub(entity, entity.memorySummaries[0])"
+                >
+                  {{ t('删除这段记忆', 'Delete memory') }}
+                </button>
+              </div>
             </article>
           </div>
           <p v-else class="mt-3 rounded-2xl bg-white/8 px-3 py-3 text-xs leading-5 text-slate-400">

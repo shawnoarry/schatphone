@@ -7,6 +7,11 @@ import {
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
 } from '../lib/planned-module-registry'
+import {
+  anonymizeRelationshipText,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 import { useCalendarStore } from './calendar'
 
 const SHOPPING_STORAGE_KEY = 'store:shopping'
@@ -533,6 +538,12 @@ export const useShoppingStore = defineStore('shopping', () => {
     return productMap.value.get(id) || null
   }
 
+  const findOrderById = (orderId) => {
+    const id = normalizeText(orderId, '', 140)
+    if (!id) return null
+    return orders.value.find((order) => order.id === id) || null
+  }
+
   const listProductsByCategory = (category = '') => {
     const normalized = normalizeCategory(category, '')
     if (!normalized) return products.value.slice()
@@ -688,6 +699,50 @@ export const useShoppingStore = defineStore('shopping', () => {
     const removed = orders.value.length !== before
     if (removed) getCalendarStore().dismissShoppingDeliveryCueByOrderId(id)
     return removed
+  }
+
+  const neutralizeRelationshipOrder = (
+    orderId,
+    profile = {},
+    replacementName = 'Someone',
+  ) => {
+    const order = findOrderById(orderId)
+    if (!order) return false
+    if (!bindingMatchesProfile(order.giftRecipient, profile)) return false
+    const nextName = normalizeText(replacementName, 'Someone', 120)
+    order.recipient = nextName
+    order.note = anonymizeRelationshipText(order.note, profile?.name, nextName)
+    order.giftRecipient = clearRelationshipBinding()
+    order.updatedAt = Date.now()
+    return true
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const mode = normalizeText(options.cleanupMode, 'delete_role', 60)
+    const replacementName = normalizeText(options.replacementName, 'Someone', 120)
+    const matchedOrders = orders.value.filter((order) =>
+      bindingMatchesProfile(order.giftRecipient, profile),
+    )
+
+    let removedCount = 0
+    let unlinkedCount = 0
+    matchedOrders.forEach((order) => {
+      if (mode === 'delete_role') {
+        if (removeOrder(order.id)) removedCount += 1
+        return
+      }
+      if (neutralizeRelationshipOrder(order.id, profile, replacementName)) {
+        unlinkedCount += 1
+      }
+    })
+
+    return {
+      ok: removedCount > 0 || unlinkedCount > 0 || matchedOrders.length === 0,
+      removedCount,
+      unlinkedCount,
+      anonymizedCount: unlinkedCount,
+      updatedCount: unlinkedCount,
+    }
   }
 
   const updateOrderStatus = (orderId, status) => {
@@ -849,6 +904,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     cartPrimaryTotal,
     hasFinishedStorageHydration,
     findProductById,
+    findOrderById,
     listProductsByCategory,
     listProductsByService,
     isProductFavorite,
@@ -865,6 +921,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     cancelOrder,
     addOrderEvent,
     removeOrder,
+    neutralizeRelationshipOrder,
+    cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

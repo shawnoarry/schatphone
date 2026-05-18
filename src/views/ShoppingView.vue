@@ -6,6 +6,7 @@ import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import { useI18n } from '../composables/useI18n'
 import {
+  RELATIONSHIP_FACT_SOURCE_KEYS,
   buildShoppingGiftRelationshipMemoryKey,
   buildShoppingGiftRelationshipSuggestion,
   recordShoppingGiftRelationshipFact,
@@ -522,7 +523,16 @@ const checkoutCart = () => {
 }
 
 const removeOrder = (orderId) => {
-  shoppingStore.removeOrder(orderId)
+  if (!shoppingStore.removeOrder(orderId)) return
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
+    orderId,
+  )
+  const walletTransaction = walletStore.findTransactionBySource(SHOPPING_SOURCE_KEYS.WALLET_EXPENSE, orderId)
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
+    walletTransaction?.id || walletTransaction?.sourceId || orderId,
+  )
   if (selectedOrderId.value === orderId) selectedOrderId.value = ''
 }
 

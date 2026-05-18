@@ -4,7 +4,10 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
-import { recordPhoneCallRelationshipFact } from '../lib/relationship-fact-adapters'
+import {
+  RELATIONSHIP_FACT_SOURCE_KEYS,
+  recordPhoneCallRelationshipFact,
+} from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
@@ -95,12 +98,32 @@ const submitCallLog = () => {
       ? phoneStore.addMissedCallWithNotification({
           contactName,
           summary: callDraft.value.summary,
+          relationshipBinding: relationshipTarget
+            ? {
+                contactId: Number(relationshipTarget.id) || 0,
+                profileId: Number(relationshipTarget.profileId || 0),
+                kind: relationshipTarget.kind || (relationshipTarget.profileId ? 'role' : 'contact'),
+                name: relationshipTarget.name || '',
+                sourceModule: 'chat',
+                sourceId: String(relationshipTarget.id),
+              }
+            : null,
         })
       : phoneStore.addRoleCallLog({
           contactName,
           direction,
           durationMinutes: callDraft.value.durationMinutes,
           summary: callDraft.value.summary,
+          relationshipBinding: relationshipTarget
+            ? {
+                contactId: Number(relationshipTarget.id) || 0,
+                profileId: Number(relationshipTarget.profileId || 0),
+                kind: relationshipTarget.kind || (relationshipTarget.profileId ? 'role' : 'contact'),
+                name: relationshipTarget.name || '',
+                sourceModule: 'chat',
+                sourceId: String(relationshipTarget.id),
+              }
+            : null,
         })
 
   if (!created) {
@@ -134,6 +157,10 @@ const submitCallLog = () => {
 
 const removeCall = (callId) => {
   if (phoneStore.removeCallLog(callId)) {
+    relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+      RELATIONSHIP_FACT_SOURCE_KEYS.PHONE_CALL,
+      callId,
+    )
     showFeedback('success', t('通话记录已删除。', 'Call log removed.'))
   }
 }
@@ -267,6 +294,7 @@ const removeCall = (callId) => {
             </div>
             <button
               @click="removeCall(call.id)"
+              :data-testid="`phone-remove-call-${call.id}`"
               class="text-[11px] text-red-500 hover:text-red-600"
             >
               {{ t('删除', 'Delete') }}

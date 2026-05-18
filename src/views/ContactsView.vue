@@ -6,9 +6,32 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
+import { useShoppingStore } from '../stores/shopping'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { usePhoneStore } from '../stores/phone'
+import { useCalendarStore } from '../stores/calendar'
+import { useMapStore } from '../stores/map'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
+import {
+  ROLE_DETAIL_SECTIONS,
+  ROLE_DETAIL_SOURCE_KINDS,
+  isValidRoleId,
+  normalizeRoleId,
+} from '../lib/role-profile-schema'
+import {
+  buildRoleDeleteImpact,
+  deleteRoleMemoryGroup,
+  deleteRoleProfileCascade,
+  resetRoleRelationshipState,
+} from '../lib/contacts-relationship-actions'
+import {
+  cleanupCoverageText as formatCleanupCoverageText,
+  cleanupResultSummaryText as formatCleanupResultSummaryText,
+  createRelationshipSourceCleanupHandlers,
+  sourceModuleSummaryText as formatSourceModuleSummaryText,
+} from '../lib/relationship-source-cleanup-handlers'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
@@ -22,9 +45,14 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
+const shoppingStore = useShoppingStore()
+const foodDeliveryStore = useFoodDeliveryStore()
+const phoneStore = usePhoneStore()
+const calendarStore = useCalendarStore()
+const mapStore = useMapStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
-const { confirmDialog } = useDialog()
+const { confirmDialog, promptDialog } = useDialog()
 
 const { user, settings } = storeToRefs(systemStore)
 const { roleProfiles, loadingAI } = storeToRefs(chatStore)
@@ -32,6 +60,9 @@ const { roleProfiles, loadingAI } = storeToRefs(chatStore)
 const showProfileModal = ref(false)
 const profileModalMode = ref('create')
 const editingProfileId = ref(0)
+const selectedProfileId = ref(0)
+const dangerIncludeLinkedRecords = ref(false)
+const selectedMemoryKey = ref('')
 const assetPackCategory = ref('reference')
 const draftPreviewMap = reactive({})
 const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
@@ -113,6 +144,7 @@ const buildDraftAvatarImage = () => ({
 })
 
 const profileDraft = reactive({
+  roleId: '',
   name: '',
   role: '',
   avatarImageSourceType: 'none',
@@ -123,6 +155,21 @@ const profileDraft = reactive({
   knowledgePointIds: [],
   assetPack: createEmptyAssetPack(),
   assetFolderBindings: createEmptyAssetFolderBindings(),
+})
+
+const detailDrafts = reactive({
+  [ROLE_DETAIL_SECTIONS.PREFERENCES]: {
+    title: '',
+    detail: '',
+  },
+  [ROLE_DETAIL_SECTIONS.LIFE_PATTERN]: {
+    title: '',
+    detail: '',
+  },
+  [ROLE_DETAIL_SECTIONS.SOCIAL_GRAPH]: {
+    title: '',
+    detail: '',
+  },
 })
 
 const showUiNoticeType = ref('')
@@ -327,9 +374,148 @@ const availableKnowledgePoints = computed(() => {
 
 const mainProfiles = computed(() => roleProfiles.value.filter((item) => Boolean(item.isMain)))
 const npcProfiles = computed(() => roleProfiles.value.filter((item) => !item.isMain))
+const selectedProfile = computed(
+  () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
+)
+
+const selectedRelationshipSnapshot = computed(() =>
+  selectedProfile.value
+    ? relationshipRuntimeStore.summarizeEntityForTarget(profileRelationshipTarget(selectedProfile.value), {
+        eventLimit: 5,
+        memoryLimit: 6,
+      })
+    : null,
+)
+
+const selectedDeleteImpact = computed(() =>
+  selectedProfile.value
+    ? buildRoleDeleteImpact({
+        chatStore,
+        relationshipRuntimeStore,
+        profile: selectedProfile.value,
+      })
+    : null,
+)
+
+const selectedMemoryGroups = computed(() =>
+  selectedProfile.value
+    ? relationshipRuntimeStore.listMemoryGroupsForTarget(profileRelationshipTarget(selectedProfile.value), 12)
+    : [],
+)
+
+const selectedMemoryDetail = computed(() =>
+  selectedProfile.value && selectedMemoryKey.value
+    ? relationshipRuntimeStore.getMemoryGroupDetail(
+        profileRelationshipTarget(selectedProfile.value),
+        selectedMemoryKey.value,
+      )
+    : null,
+)
+
+const roleDetailSections = computed(() => [
+  {
+    key: ROLE_DETAIL_SECTIONS.PREFERENCES,
+    title: t('偏好', 'Preferences'),
+    empty: t('暂无偏好条目。', 'No preference entries yet.'),
+    placeholderTitle: t('偏好标题', 'Preference title'),
+    placeholderDetail: t('偏好说明', 'Preference detail'),
+  },
+  {
+    key: ROLE_DETAIL_SECTIONS.LIFE_PATTERN,
+    title: t('生活模式', 'Life Pattern'),
+    empty: t('暂无生活模式条目。', 'No life-pattern entries yet.'),
+    placeholderTitle: t('模式标题', 'Pattern title'),
+    placeholderDetail: t('生活节奏、作息或习惯', 'Rhythm, schedule, or habit'),
+  },
+  {
+    key: ROLE_DETAIL_SECTIONS.SOCIAL_GRAPH,
+    title: t('社会关系', 'Social Graph'),
+    empty: t('暂无社会关系条目。', 'No social-graph entries yet.'),
+    placeholderTitle: t('关系标题', 'Relationship title'),
+    placeholderDetail: t('人物、组织或关系说明', 'Person, group, or relationship detail'),
+  },
+])
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
+}
+
+const getNextRoleIdDraft = () => {
+  const maxRoleIdNumber = roleProfiles.value.reduce((max, profile) => {
+    const match = normalizeRoleId(profile?.roleId || profile?.id).match(/^(\d+)/)
+    const numeric = match ? Number(match[1]) : 0
+    return Math.max(max, Number.isFinite(numeric) ? numeric : 0)
+  }, 0)
+  let next = String(Math.max(1, maxRoleIdNumber + 1))
+  while (!chatStore.isRoleIdAvailable(next, editingProfileId.value)) {
+    next = String(Number(next) + 1)
+  }
+  return next
+}
+
+const selectProfile = (profile) => {
+  if (!profile?.id) return
+  selectedProfileId.value = Number(profile.id)
+  dangerIncludeLinkedRecords.value = false
+  selectedMemoryKey.value = ''
+}
+
+const selectMemoryGroup = (memory) => {
+  selectedMemoryKey.value = memory?.memoryKey || ''
+}
+
+const detailItemsForSection = (profile, section) =>
+  profile?.id ? chatStore.listRoleDetailItems(profile.id, section) : []
+
+const roleDetailSourceLabel = (item) =>
+  item?.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED
+    ? t('事件挂载', 'Event-attached')
+    : t('手动', 'Manual')
+
+const addManualDetailItem = (section) => {
+  const profile = selectedProfile.value
+  const draft = detailDrafts[section]
+  if (!profile?.id || !draft) return
+  const title = draft.title.trim()
+  const detail = draft.detail.trim()
+  if (!title && !detail) {
+    setUiNotice('warning', t('请先填写条目标题或内容。', 'Enter a title or detail first.'))
+    return
+  }
+  const created = chatStore.addRoleDetailItem(profile.id, section, {
+    sourceKind: ROLE_DETAIL_SOURCE_KINDS.MANUAL,
+    title,
+    detail,
+  })
+  if (!created) {
+    setUiNotice('error', t('条目添加失败。', 'Failed to add entry.'))
+    return
+  }
+  draft.title = ''
+  draft.detail = ''
+  setUiNotice('success', t('条目已添加。', 'Entry added.'))
+}
+
+const removeManualDetailItem = async (item) => {
+  const profile = selectedProfile.value
+  if (!profile?.id || !item?.id) return
+  if (item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.MANUAL) {
+    setUiNotice(
+      'warning',
+      t('事件挂载条目需要通过删除对应记忆或重置关系来清理。', 'Event-attached entries are cleared by deleting the linked memory or resetting the relationship.'),
+    )
+    return
+  }
+  const ok = await confirmDialog({
+    title: t('删除手动条目', 'Delete manual entry'),
+    message: item.title || item.detail || t('确认删除该条目？', 'Delete this entry?'),
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!ok) return
+  chatStore.removeRoleDetailItem(profile.id, item.id)
+  setUiNotice('success', t('条目已删除。', 'Entry deleted.'))
 }
 
 const clearDraftPreviewMap = () => {
@@ -391,6 +577,7 @@ watch(
 )
 
 const resetProfileDraft = () => {
+  profileDraft.roleId = getNextRoleIdDraft()
   profileDraft.name = ''
   profileDraft.role = ''
   profileDraft.avatarImageSourceType = 'none'
@@ -416,6 +603,7 @@ const openEditProfile = (profile) => {
   if (!profile) return
   profileModalMode.value = 'edit'
   editingProfileId.value = Number(profile.id) || 0
+  profileDraft.roleId = normalizeRoleId(profile.roleId, profile.id)
   profileDraft.name = profile.name || ''
   profileDraft.role = profile.role || ''
   const avatarImage = normalizeDraftAvatarImage(profile)
@@ -502,8 +690,19 @@ const saveProfile = () => {
     setUiNotice('error', t('请填写角色名称。', 'Please enter a profile name.'))
     return
   }
+  const roleId = normalizeRoleId(profileDraft.roleId)
+  const excludedProfileId = profileModalMode.value === 'edit' ? editingProfileId.value : 0
+  if (!isValidRoleId(roleId)) {
+    setUiNotice('error', t('角色 ID 需以数字开头，可附加英文字母。', 'Role ID must start with numbers and may append letters.'))
+    return
+  }
+  if (!chatStore.isRoleIdAvailable(roleId, excludedProfileId)) {
+    setUiNotice('error', t('角色 ID 已存在，请更换。', 'Role ID already exists. Choose another one.'))
+    return
+  }
 
   const payload = {
+    roleId,
     name,
     role: profileDraft.role,
     avatarImage: buildDraftAvatarImage(),
@@ -516,9 +715,14 @@ const saveProfile = () => {
   }
 
   if (profileModalMode.value === 'create') {
-    chatStore.addRoleProfile({
+    const created = chatStore.addRoleProfile({
       ...payload,
     })
+    if (!created) {
+      setUiNotice('error', t('角色档案创建失败，请检查角色 ID。', 'Role profile creation failed. Check the role ID.'))
+      return
+    }
+    selectProfile(created)
     setUiNotice('success', t('角色档案已创建。', 'Role profile created.'))
     closeProfileModal()
     return
@@ -534,22 +738,234 @@ const saveProfile = () => {
   closeProfileModal()
 }
 
-const removeProfile = async (profile) => {
+const sourceModuleSummaryText = (sourceModuleCounts = {}) => {
+  return formatSourceModuleSummaryText(sourceModuleCounts, t)
+}
+
+const cleanupCoverageText = (sourceModuleCounts = {}) => {
+  return formatCleanupCoverageText(sourceModuleCounts, relationshipSourceCleanupHandlers.value, t)
+}
+
+const cleanupResultSummaryText = (cleanupResult) => {
+  return formatCleanupResultSummaryText(cleanupResult, t)
+}
+
+const selectedDangerImpactText = computed(() =>
+  selectedDeleteImpact.value
+    ? `${t('影响', 'Impact')}: ${t('Chat 绑定', 'Chat bindings')} ${selectedDeleteImpact.value.chatBindingCount || 0} · ${t('记忆组', 'memories')} ${selectedDeleteImpact.value.memoryGroupCount || 0} · ${t('来源', 'sources')} ${sourceModuleSummaryText(selectedDeleteImpact.value.sourceModuleCounts)}`
+    : '',
+)
+
+const relationshipSourceCleanupHandlers = computed(() =>
+  createRelationshipSourceCleanupHandlers({
+    phoneStore,
+    shoppingStore,
+    foodDeliveryStore,
+    walletStore,
+    calendarStore,
+    mapStore,
+    t,
+  }),
+)
+
+const confirmTypedRole = async (profile, title, message) => {
+  const expected = normalizeRoleId(profile?.roleId, profile?.id)
+  const input = await promptDialog({
+    title,
+    message,
+    inputLabel: t('输入角色 ID 确认', 'Type role ID to confirm'),
+    inputPlaceholder: expected,
+    inputRequired: true,
+    confirmText: t('确认', 'Confirm'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+    validate: (value) =>
+      normalizeRoleId(value) === expected
+        ? ''
+        : t('输入的角色 ID 不一致。', 'Role ID does not match.'),
+  })
+  return input !== null
+}
+
+const resetSelectedRelationship = async () => {
+  const profile = selectedProfile.value
   if (!profile?.id) return
-  const boundHint = chatStore.isRoleProfileBound(profile.id)
-    ? t('该角色已绑定会话，删除后会同步移除会话侧绑定。', 'This profile is bound to chat entries. Deleting it will remove those bindings too.')
-    : t('删除后不可恢复。', 'This action cannot be undone.')
-  const ok = await confirmDialog({
+  const snapshot = selectedRelationshipSnapshot.value
+  const impact = selectedDeleteImpact.value
+  const firstOk = await confirmDialog({
+    title: t('重置关系进度', 'Reset relationship progress'),
+    message: t(
+      '该操作会保留角色档案，但清除关系指标、阶段、里程碑、成长特征、记忆组、事件挂载详情和聊天记录。',
+      'This keeps the role profile but clears metrics, stage, milestones, growth traits, memories, event-attached details, and chat history.',
+    ),
+    details: [
+      `${t('当前阶段', 'Current stage')}: ${relationshipStageLabel(snapshot?.relationshipStage)}`,
+      `${t('记忆组', 'Memory groups')}: ${impact?.memoryGroupCount || 0}`,
+      `${t('跨模块来源', 'Cross-module sources')}: ${sourceModuleSummaryText(impact?.sourceModuleCounts)}`,
+      cleanupCoverageText(impact?.sourceModuleCounts),
+    ],
+    confirmText: t('继续', 'Continue'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!firstOk) return
+  const typedOk = await confirmTypedRole(
+    profile,
+    t('确认重置关系', 'Confirm relationship reset'),
+    t('为避免误操作，请输入该角色 ID。', 'Type this role ID to avoid accidental reset.'),
+  )
+  if (!typedOk) return
+  const result = resetRoleRelationshipState({
+    chatStore,
+    relationshipRuntimeStore,
+    profile,
+    includeLinkedRecords: true,
+    cleanupHandlers: relationshipSourceCleanupHandlers.value,
+  })
+  if (!result.ok) {
+    setUiNotice('warning', t('没有可重置的关系进度。', 'No relationship state to reset.'))
+    return
+  }
+  setUiNotice(
+    'success',
+    [t('关系进度已重置。', 'Relationship progress reset.'), cleanupResultSummaryText(result.cleanupResult)]
+      .filter(Boolean)
+      .join(' '),
+  )
+}
+
+const deleteSelectedProfile = async () => {
+  const profile = selectedProfile.value
+  if (!profile?.id) return
+  const impact = selectedDeleteImpact.value
+  const firstOk = await confirmDialog({
     title: t('删除角色档案', 'Delete role profile'),
-    message: `${t('确认删除角色档案', 'Delete role profile')}「${profile.name || ''}」？`,
-    details: [boundHint],
-    confirmText: t('删除', 'Delete'),
+    message: t(
+      '该操作不可撤销，会删除 Contacts 档案、Chat Directory 绑定、该角色聊天记录、关系进度和记忆组。',
+      'This cannot be undone. It deletes the Contacts profile, Chat Directory binding, role chat history, relationship progress, and memories.',
+    ),
+    details: [
+      `${t('角色', 'Role')}: ${profile.name || ''} · ID ${normalizeRoleId(profile.roleId, profile.id)}`,
+      `${t('Chat 绑定', 'Chat bindings')}: ${impact?.chatBindingCount || 0}`,
+      `${t('记忆组', 'Memory groups')}: ${impact?.memoryGroupCount || 0}`,
+      t(
+        'Photos 素材不会被静默删除，只会解除角色档案引用；如需删除图片，请前往相册手动处理。',
+        'Photos assets are not silently deleted; role references are unbound only. Delete images manually in Gallery if needed.',
+      ),
+    ],
+    confirmText: t('继续', 'Continue'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!firstOk) return
+  const scopeOk = await confirmDialog({
+    title: t('确认删除范围', 'Confirm delete scope'),
+    message: t(
+      '请再次确认这次删除会跨越 Contacts、Chat Directory、聊天记录和关系运行时数据。',
+      'Confirm this deletion crosses Contacts, Chat Directory, chat history, and relationship runtime data.',
+    ),
+    details: [
+      `${t('范围', 'Scope')}: Contacts profile · Chat Directory binding · Chat history · Relationship runtime`,
+      `${t('角色', 'Role')}: ${profile.name || ''} · ID ${normalizeRoleId(profile.roleId, profile.id)}`,
+      selectedDangerImpactText.value,
+      dangerIncludeLinkedRecords.value
+        ? cleanupCoverageText(impact?.sourceModuleCounts)
+        : t('不会删除跨模块源记录；它们只保留在影响清单中。', 'Cross-module source records will not be deleted; they stay in the impact summary only.'),
+      t(
+        'Photos 素材只解除引用，不会静默删除源图片。',
+        'Photos assets are unbound only; source images are not silently deleted.',
+      ),
+    ],
+    confirmText: t('继续输入 ID', 'Continue to ID'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!scopeOk) return
+  const typedOk = await confirmTypedRole(
+    profile,
+    t('确认删除角色', 'Confirm role deletion'),
+    t('为避免误操作，请输入该角色 ID。', 'Type this role ID to avoid accidental deletion.'),
+  )
+  if (!typedOk) return
+  const result = deleteRoleProfileCascade({
+    chatStore,
+    relationshipRuntimeStore,
+    profile,
+    includeLinkedRecords: dangerIncludeLinkedRecords.value,
+    cleanupHandlers: relationshipSourceCleanupHandlers.value,
+  })
+  if (!result.ok) {
+    setUiNotice('error', t('删除失败，请重试。', 'Delete failed, please retry.'))
+    return
+  }
+  selectedProfileId.value = roleProfiles.value[0]?.id || 0
+  dangerIncludeLinkedRecords.value = false
+  setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))
+}
+
+const deleteMemoryGroup = async (memory) => {
+  const profile = selectedProfile.value
+  if (!profile?.id || !memory?.memoryKey) return
+  const detail = memory.events
+    ? memory
+    : relationshipRuntimeStore.getMemoryGroupDetail(
+        profileRelationshipTarget(profile),
+        memory.memoryKey,
+      )
+  const ok = await confirmDialog({
+    title: t('删除记忆组', 'Delete memory group'),
+    message: detail?.displaySummary || memory.displaySummary || memory.primarySummary || memory.memoryKey,
+    details: [
+      `${t('包含关系事件', 'Relationship events')}: ${detail?.events?.length || memory.supportingCount || 0}`,
+      `${t('来源', 'Sources')}: ${sourceModuleSummaryText(detail?.sourceModuleCounts)}`,
+      cleanupCoverageText(detail?.sourceModuleCounts),
+    ],
+    confirmText: t('继续', 'Continue'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
   })
   if (!ok) return
-  chatStore.removeRoleProfile(profile.id, { removeBindings: true })
-  setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))
+  const finalOk = await confirmDialog({
+    title: t('确认删除记忆组', 'Confirm memory deletion'),
+    message: t(
+      '将删除该记忆组、直接挂载的关系事件和事件挂载详情。',
+      'This deletes this memory group, directly attached relationship events, and event-attached details.',
+    ),
+    details: [
+      `${t('记忆键', 'Memory key')}: ${memory.memoryKey}`,
+      t(
+        '普通自由聊天消息不会被删除。',
+        'Normal free-form chat messages will not be deleted.',
+      ),
+      t(
+        '如需删除原始聊天文本，请前往 Chat 对话中处理。',
+        'Delete original chat text from the Chat conversation if needed.',
+      ),
+    ],
+    confirmText: t('删除记忆组', 'Delete memory'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!finalOk) return
+  const result = deleteRoleMemoryGroup({
+    chatStore,
+    relationshipRuntimeStore,
+    profile,
+    memoryKey: memory.memoryKey,
+    includeLinkedRecords: true,
+    cleanupHandlers: relationshipSourceCleanupHandlers.value,
+  })
+  if (!result.ok) {
+    setUiNotice('warning', t('未找到对应记忆组。', 'Memory group not found.'))
+    return
+  }
+  if (selectedMemoryKey.value === memory.memoryKey) selectedMemoryKey.value = ''
+  setUiNotice(
+    'success',
+    [t('记忆组已删除。', 'Memory group deleted.'), cleanupResultSummaryText(result.cleanupResult)]
+      .filter(Boolean)
+      .join(' '),
+  )
 }
 
 const profileAssetSummary = (profile) => {
@@ -699,6 +1115,24 @@ const autoGenerateProfile = async () => {
   }
 }
 
+watch(
+  roleProfiles,
+  (profiles) => {
+    if (profiles.some((profile) => Number(profile.id) === Number(selectedProfileId.value))) return
+    selectedProfileId.value = profiles[0]?.id || 0
+  },
+  { immediate: true },
+)
+
+watch(
+  selectedMemoryGroups,
+  (groups) => {
+    if (groups.some((memory) => memory.memoryKey === selectedMemoryKey.value)) return
+    selectedMemoryKey.value = groups[0]?.memoryKey || ''
+  },
+  { immediate: true },
+)
+
 onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearDraftPreviewMap()
@@ -754,6 +1188,13 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="contacts-modal-scroll space-y-3 overflow-y-auto pb-6 no-scrollbar">
+        <input
+          data-testid="contacts-profile-role-id"
+          v-model="profileDraft.roleId"
+          :placeholder="t('角色 ID（数字开头，可附加字母）', 'Role ID (starts with numbers, letters allowed)')"
+          class="w-full border-b py-2 outline-none"
+        />
+
         <input
           v-model="profileDraft.name"
           :placeholder="t('名字 / 昵称', 'Name / Display Name')"
@@ -1202,6 +1643,14 @@ onBeforeUnmount(() => {
           <i class="fas fa-search mr-2"></i> {{ t('搜索', 'Search') }}
         </div>
       </div>
+      <p class="contacts-boundary-copy px-4 pb-2 text-[11px]" data-testid="contacts-boundary-copy">
+        {{
+          t(
+            'Contacts 是角色档案库与角色中枢。角色可以只存在于这里，不一定成为 Chat 会话；需要进入聊天时再到 Chat Directory 绑定。',
+            'Contacts is the role archive and role hub. A role can live here without becoming a Chat thread; bind it in Chat Directory when it should enter Chat.',
+          )
+        }}
+      </p>
 
       <div class="contacts-my-card px-4 py-3 flex items-center gap-3 border-b border-gray-100">
         <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
@@ -1222,6 +1671,9 @@ onBeforeUnmount(() => {
           v-for="contact in mainProfiles"
           :key="contact.id"
           class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
+          :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
+          :data-testid="`contacts-row-${contact.id}`"
+          @click="selectProfile(contact)"
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
@@ -1230,7 +1682,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-medium truncate">{{ contact.name }}</p>
+            <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
@@ -1249,8 +1701,8 @@ onBeforeUnmount(() => {
               {{ profileRelationshipLatestSummary(contact) }}
             </p>
           </div>
-          <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
+          <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
         </div>
 
         <div class="contacts-section-title text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('其他联系人（NPC）', 'Other Contacts (NPC)') }}</div>
@@ -1258,6 +1710,9 @@ onBeforeUnmount(() => {
           v-for="contact in npcProfiles"
           :key="contact.id"
           class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
+          :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
+          :data-testid="`contacts-row-${contact.id}`"
+          @click="selectProfile(contact)"
         >
           <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
             <img
@@ -1266,7 +1721,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-medium truncate">{{ contact.name }}</p>
+            <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
             <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
             <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
@@ -1285,8 +1740,227 @@ onBeforeUnmount(() => {
               {{ profileRelationshipLatestSummary(contact) }}
             </p>
           </div>
-          <button @click="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
-          <button @click="removeProfile(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+          <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
+          <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
+        </div>
+
+        <div
+          v-if="selectedProfile"
+          class="contacts-detail mt-5 space-y-3"
+          data-testid="contacts-role-detail"
+        >
+          <section class="contacts-detail-section">
+            <div class="flex items-start gap-3">
+              <div class="w-14 h-14 rounded-full bg-gray-200 overflow-hidden shrink-0">
+                <img :src="contactAvatarUrl(selectedProfile)" class="w-full h-full object-cover" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('Profile', 'Profile') }}</p>
+                <h2 class="text-lg font-bold truncate">{{ selectedProfile.name }}</h2>
+                <p class="text-xs text-gray-500 truncate">
+                  {{ selectedProfile.role || t('未设置角色', 'Role not set') }} · ID {{ normalizeRoleId(selectedProfile.roleId, selectedProfile.id) }}
+                </p>
+                <p class="text-[11px] text-gray-500 mt-1 line-clamp-3">
+                  {{ selectedProfile.bio || t('暂无档案简介。', 'No profile intro yet.') }}
+                </p>
+              </div>
+              <button @click="openEditProfile(selectedProfile)" class="contacts-small-action">
+                {{ t('编辑', 'Edit') }}
+              </button>
+            </div>
+          </section>
+
+          <section class="contacts-detail-section">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('关系快照', 'Relationship Snapshot') }}</p>
+                <p class="text-sm font-semibold">
+                  {{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}
+                </p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-600">
+                <span>{{ t('好感', 'Affinity') }} {{ selectedRelationshipSnapshot?.metrics?.affinity ?? 50 }}</span>
+                <span>{{ t('信任', 'Trust') }} {{ selectedRelationshipSnapshot?.metrics?.trust ?? 50 }}</span>
+                <span>{{ t('亲密', 'Intimacy') }} {{ selectedRelationshipSnapshot?.metrics?.intimacy ?? 20 }}</span>
+                <span>{{ t('张力', 'Tension') }} {{ selectedRelationshipSnapshot?.metrics?.tension ?? 10 }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            v-for="section in roleDetailSections"
+            :key="section.key"
+            class="contacts-detail-section space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-bold">{{ section.title }}</p>
+              <span class="text-[10px] text-gray-500">
+                {{ detailItemsForSection(selectedProfile, section.key).length }}
+              </span>
+            </div>
+            <div
+              v-if="detailItemsForSection(selectedProfile, section.key).length === 0"
+              class="contacts-empty-detail"
+            >
+              {{ section.empty }}
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="item in detailItemsForSection(selectedProfile, section.key)"
+                :key="item.id"
+                class="contacts-detail-item"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[12px] font-semibold truncate">{{ item.title || item.detail }}</p>
+                    <p v-if="item.detail" class="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{{ item.detail }}</p>
+                  </div>
+                  <span
+                    class="contacts-source-chip"
+                    :class="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED ? 'contacts-source-chip-event' : ''"
+                  >
+                    {{ roleDetailSourceLabel(item) }}
+                  </span>
+                </div>
+                <button
+                  v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.MANUAL"
+                  @click="removeManualDetailItem(item)"
+                  class="text-[11px] text-red-500 mt-1"
+                >
+                  {{ t('删除', 'Delete') }}
+                </button>
+              </div>
+            </div>
+            <div class="contacts-detail-add grid grid-cols-1 gap-2">
+              <input
+                v-model="detailDrafts[section.key].title"
+                :placeholder="section.placeholderTitle"
+                class="rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none"
+              />
+              <textarea
+                v-model="detailDrafts[section.key].detail"
+                :placeholder="section.placeholderDetail"
+                class="rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none resize-none h-16"
+              ></textarea>
+              <button @click="addManualDetailItem(section.key)" class="contacts-primary-action">
+                {{ t('添加手动条目', 'Add manual entry') }}
+              </button>
+            </div>
+          </section>
+
+          <section class="contacts-detail-section space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-bold">{{ t('记忆', 'Memories') }}</p>
+              <span class="text-[10px] text-gray-500">{{ selectedMemoryGroups.length }}</span>
+            </div>
+            <div v-if="selectedMemoryGroups.length === 0" class="contacts-empty-detail">
+              {{ t('暂无关系记忆组。', 'No relationship memory groups yet.') }}
+            </div>
+            <div v-else class="space-y-2">
+              <button
+                v-for="memory in selectedMemoryGroups"
+                :key="memory.memoryKey"
+                type="button"
+                class="contacts-memory-item"
+                :class="memory.memoryKey === selectedMemoryKey ? 'contacts-memory-item-active' : ''"
+                :data-testid="`contacts-memory-open-${memory.memoryKey}`"
+                @click="selectMemoryGroup(memory)"
+              >
+                <div class="min-w-0">
+                  <p class="text-[12px] font-semibold line-clamp-2">
+                    {{ memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey }}
+                  </p>
+                  <p class="text-[11px] text-gray-500 mt-1 truncate">
+                    {{ memory.sourceModules.join(' · ') || t('来源未标记', 'Unlabeled source') }} · {{ memory.supportingCount }} {{ t('条', 'item(s)') }}
+                  </p>
+                </div>
+                <span class="contacts-small-action shrink-0">{{ t('查看', 'Open') }}</span>
+              </button>
+              <div
+                v-if="selectedMemoryDetail"
+                class="contacts-memory-detail space-y-2"
+                data-testid="contacts-memory-detail"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('记忆详情', 'Memory Detail') }}</p>
+                    <p class="text-[12px] font-semibold line-clamp-2">
+                      {{
+                        selectedMemoryDetail.displaySummary ||
+                        selectedMemoryDetail.primarySummary ||
+                        selectedMemoryDetail.latestSummary ||
+                        selectedMemoryDetail.memoryKey
+                      }}
+                    </p>
+                  </div>
+                  <span class="contacts-source-chip">{{ selectedMemoryDetail.events.length }}</span>
+                </div>
+                <p class="text-[11px] text-gray-500">
+                  {{ t('来源', 'Sources') }}: {{ sourceModuleSummaryText(selectedMemoryDetail.sourceModuleCounts) }}
+                </p>
+                <p class="text-[11px] text-gray-500">
+                  {{ cleanupCoverageText(selectedMemoryDetail.sourceModuleCounts) }}
+                </p>
+                <p class="text-[11px] text-gray-500">
+                  {{
+                    t(
+                      '普通自由聊天消息不会被删除；如需删除原始聊天文本，请前往 Chat 对话处理。',
+                      'Normal free-form chat messages are not deleted; delete original chat text from the Chat conversation if needed.',
+                    )
+                  }}
+                </p>
+                <button
+                  type="button"
+                  class="contacts-danger-inline"
+                  :data-testid="`contacts-memory-delete-${selectedMemoryDetail.memoryKey}`"
+                  @click="deleteMemoryGroup(selectedMemoryDetail)"
+                >
+                  {{ t('删除记忆组', 'Delete memory group') }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="contacts-detail-section contacts-danger-zone space-y-3">
+            <div>
+              <p class="text-sm font-bold">{{ t('危险区', 'Danger Zone') }}</p>
+              <p class="text-[11px] text-gray-500 mt-1">
+                {{ t('重置关系会保留档案；删除角色会移除档案、聊天绑定、聊天记录与关系运行时记录。', 'Reset keeps the profile. Delete removes the profile, chat binding, chat history, and runtime relationship records.') }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-red-100 bg-red-50/70 px-3 py-2 text-[11px] text-red-700">
+              {{ selectedDangerImpactText }}
+            </div>
+            <label class="flex items-start gap-2 text-[11px] text-gray-600">
+              <input
+                v-model="dangerIncludeLinkedRecords"
+                type="checkbox"
+                class="mt-0.5"
+                data-testid="contacts-danger-include-linked-records"
+              />
+              <span>
+                {{ t('同时尝试删除已明确接入 cleanup 的跨模块源记录；未接入或语义不明的记录只会出现在影响清单中。', 'Also attempt to delete cross-module source records with explicit cleanup handlers. Missing or ambiguous records stay in the impact summary only.') }}
+              </span>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                data-testid="contacts-reset-relationship"
+                @click="resetSelectedRelationship"
+                class="contacts-danger-secondary"
+              >
+                {{ t('重置关系', 'Reset') }}
+              </button>
+              <button
+                type="button"
+                data-testid="contacts-delete-role"
+                @click="deleteSelectedProfile"
+                class="contacts-danger-primary"
+              >
+                {{ t('删除角色', 'Delete Role') }}
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -1343,7 +2017,7 @@ onBeforeUnmount(() => {
 
 .contacts-nav-button,
 .contacts-modal-header button,
-.contacts-row button {
+.contacts-row button:not(.contacts-danger-primary):not(.contacts-danger-secondary):not(.contacts-danger-inline) {
   color: var(--contacts-accent);
   -webkit-tap-highlight-color: transparent;
 }
@@ -1401,6 +2075,11 @@ onBeforeUnmount(() => {
 
 .contacts-search i {
   color: var(--contacts-soft);
+}
+
+.contacts-boundary-copy {
+  color: var(--contacts-muted);
+  line-height: 1.45;
 }
 
 .contacts-my-card {
@@ -1489,6 +2168,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 18px rgba(45, 63, 89, 0.08);
 }
 
+.contacts-row-active {
+  border-color: rgba(66, 111, 143, 0.36);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(231, 242, 246, 0.94)),
+    var(--contacts-surface-strong);
+}
+
 .contacts-row p,
 .contacts-my-card span {
   letter-spacing: 0;
@@ -1500,8 +2186,125 @@ onBeforeUnmount(() => {
   color: var(--contacts-muted);
 }
 
-.contacts-row button:last-child {
+.contacts-detail-section {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 18px;
+  background: var(--contacts-surface-strong);
+  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  padding: 14px;
+}
+
+.contacts-small-action,
+.contacts-primary-action {
+  min-height: 34px;
+  border-radius: 12px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.contacts-small-action,
+.contacts-primary-action {
+  color: var(--contacts-accent-strong);
+  background: var(--contacts-accent-soft);
+}
+
+.contacts-empty-detail {
+  border: 1px dashed rgba(49, 64, 86, 0.16);
+  border-radius: 14px;
+  padding: 12px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.contacts-detail-item,
+.contacts-memory-item {
+  border: 1px solid var(--contacts-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px;
+}
+
+.contacts-memory-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.contacts-memory-item-active {
+  border-color: rgba(66, 111, 143, 0.42);
+  background: rgba(66, 111, 143, 0.1);
+  box-shadow: inset 3px 0 0 rgba(66, 111, 143, 0.72);
+}
+
+.contacts-memory-detail {
+  border: 1px solid rgba(66, 111, 143, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.contacts-source-chip {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(49, 64, 86, 0.08);
+  color: var(--contacts-muted);
+  padding: 3px 7px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.contacts-source-chip-event {
+  background: var(--contacts-warm-soft);
+  color: #9d583e;
+}
+
+.contacts-detail-add input,
+.contacts-detail-add textarea {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--contacts-text);
+}
+
+.contacts-danger-zone {
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.contacts-danger-inline,
+.contacts-danger-secondary,
+.contacts-danger-primary {
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.contacts-danger-inline {
+  flex-shrink: 0;
   color: var(--system-danger);
+}
+
+.contacts-danger-secondary,
+.contacts-danger-primary {
+  min-height: 38px;
+}
+
+.contacts-danger-secondary {
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  color: var(--system-danger);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.contacts-danger-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--system-danger), #b91c1c);
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.18);
 }
 
 .contacts-modal {
@@ -1633,6 +2436,11 @@ onBeforeUnmount(() => {
 .contacts-nav-button:focus-visible,
 .contacts-add-button:focus-visible,
 .contacts-modal-header button:focus-visible,
+.contacts-small-action:focus-visible,
+.contacts-primary-action:focus-visible,
+.contacts-danger-inline:focus-visible,
+.contacts-danger-secondary:focus-visible,
+.contacts-danger-primary:focus-visible,
 .contacts-modal-scroll button:focus-visible,
 .contacts-modal-scroll input:focus-visible,
 .contacts-modal-scroll textarea:focus-visible,

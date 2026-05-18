@@ -3,6 +3,12 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { useCalendarStore } from './calendar'
 import { useSystemStore } from './system'
+import {
+  anonymizeRelationshipText,
+  bindingMatchesProfile,
+  clearRelationshipBinding,
+  normalizeRelationshipBinding,
+} from '../lib/relationship-cleanup-helpers'
 
 const PHONE_STORAGE_KEY = 'store:phone'
 const PHONE_STORAGE_VERSION = 1
@@ -95,6 +101,7 @@ const normalizeCallLog = (rawCall, index = 0) => {
     summary: normalizeText(rawCall.summary || rawCall.note, '', 240),
     sourceModule: normalizeText(rawCall.sourceModule, 'phone', 40),
     sourceId: normalizeText(rawCall.sourceId, '', 140),
+    relationshipBinding: normalizeRelationshipBinding(rawCall.relationshipBinding),
     startedAt,
     createdAt: Math.max(0, toInt(rawCall.createdAt, startedAt)),
     updatedAt: Math.max(0, toInt(rawCall.updatedAt, startedAt)),
@@ -192,6 +199,7 @@ export const usePhoneStore = defineStore('phone', () => {
     direction = PHONE_CALL_DIRECTION.OUTGOING,
     durationMinutes = 0,
     summary = '',
+    relationshipBinding = null,
   } = {}) =>
     addCallLog({
       contactName,
@@ -201,9 +209,15 @@ export const usePhoneStore = defineStore('phone', () => {
       durationMinutes,
       summary,
       sourceModule: 'phone_manual',
+      relationshipBinding,
     })
 
-  const addMissedCall = ({ contactName = '', phoneNumber = '', summary = '' } = {}) =>
+  const addMissedCall = ({
+    contactName = '',
+    phoneNumber = '',
+    summary = '',
+    relationshipBinding = null,
+  } = {}) =>
     addCallLog({
       contactName,
       phoneNumber,
@@ -212,6 +226,7 @@ export const usePhoneStore = defineStore('phone', () => {
       durationSec: 0,
       summary,
       sourceModule: 'phone_manual',
+      relationshipBinding,
     })
 
   const notifyMissedCall = (call) => {
@@ -236,8 +251,39 @@ export const usePhoneStore = defineStore('phone', () => {
   const removeCallLog = (callId) => {
     const record = findCallById(callId)
     if (!record) return false
+    if (record.status === PHONE_CALL_STATUS.MISSED || record.direction === PHONE_CALL_DIRECTION.MISSED) {
+      useCalendarStore().dismissPhoneMissedCallCueByCallId(record.id)
+    }
     calls.value = calls.value.filter((item) => item.id !== record.id)
     return true
+  }
+
+  const anonymizeCallLog = (callId, profile = {}, replacementName = 'Unknown caller') => {
+    const record = findCallById(callId)
+    if (!record) return false
+    record.contactName = normalizeText(replacementName, 'Unknown caller', 80)
+    record.summary = anonymizeRelationshipText(record.summary, profile?.name, record.contactName)
+    record.relationshipBinding = clearRelationshipBinding()
+    record.updatedAt = Date.now()
+    return true
+  }
+
+  const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
+    const replacementName = normalizeText(options.replacementName, 'Unknown caller', 80)
+    const matchedCalls = calls.value.filter((call) =>
+      bindingMatchesProfile(call.relationshipBinding, profile),
+    )
+    let anonymizedCount = 0
+    matchedCalls.forEach((call) => {
+      if (anonymizeCallLog(call.id, profile, replacementName)) {
+        anonymizedCount += 1
+      }
+    })
+    return {
+      requestedCount: matchedCalls.length,
+      removedCount: 0,
+      anonymizedCount,
+    }
   }
 
   const applyPersistedSource = (source) => {
@@ -329,6 +375,8 @@ export const usePhoneStore = defineStore('phone', () => {
     notifyMissedCall,
     addMissedCallWithNotification,
     removeCallLog,
+    anonymizeCallLog,
+    cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

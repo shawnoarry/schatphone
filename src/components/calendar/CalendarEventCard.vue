@@ -68,6 +68,7 @@ const emit = defineEmits([
   'update-starts-at',
   'shift-starts-at',
   'reset-starts-at',
+  'delete-event',
   'open-worldbook',
   'update-relationship-contact',
   'record-relationship',
@@ -95,6 +96,14 @@ const { t } = useI18n()
       >
         {{ t('已固定', 'Pinned') }}
       </span>
+      <button
+        type="button"
+        class="shrink-0 rounded-full bg-rose-50 px-2.5 py-1.5 text-[11px] font-semibold text-rose-600"
+        :data-testid="`calendar-event-delete-${event.id}`"
+        @click="emit('delete-event', event)"
+      >
+        {{ t('Delete', 'Delete') }}
+      </button>
     </div>
     <p v-if="event.summaryZh || event.summaryEn" class="mt-2 text-xs text-gray-600">
       {{ t(event.summaryZh, event.summaryEn) }}

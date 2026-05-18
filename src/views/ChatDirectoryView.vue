@@ -1194,11 +1194,11 @@ onBeforeUnmount(() => {
         <span class="font-bold">{{ t('会话通讯录', 'Chat Directory') }}</span>
         <span class="text-[11px] text-gray-400">{{ t('绑定层', 'Binding Layer') }}</span>
       </div>
-      <p class="mt-2 text-xs text-gray-500">
+      <p class="mt-2 text-xs text-gray-500" data-testid="chat-directory-boundary-copy">
         {{
           t(
-            '角色档案来自主通讯录；本页只做角色绑定与会话变量设置。服务号可在此新建/编辑/删除。',
-            'Role profiles come from main Contacts. This page handles bindings and thread variables only. Service accounts are managed here.',
+            'Chat Directory 决定谁能进入 Chat：角色档案来自 Contacts；一个角色可以先只保存在 Contacts，绑定后才成为会话对象。服务号可在此新建/编辑/删除。',
+            'Chat Directory decides who can enter Chat: role profiles come from Contacts; a role may remain only in Contacts until it is bound as a chat target. Service accounts are managed here.',
           )
         }}
       </p>

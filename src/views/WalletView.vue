@@ -4,7 +4,10 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
-import { recordWalletSharedTransferRelationshipFact } from '../lib/relationship-fact-adapters'
+import {
+  RELATIONSHIP_FACT_SOURCE_KEYS,
+  recordWalletSharedTransferRelationshipFact,
+} from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../stores/wallet'
@@ -113,6 +116,16 @@ const submitTransfer = () => {
     currency: transferDraft.value.currency,
     counterparty: relationshipTarget?.name || transferDraft.value.counterparty,
     note: transferDraft.value.note,
+    relationshipBinding: relationshipTarget
+      ? {
+          contactId: Number(relationshipTarget.id) || 0,
+          profileId: Number(relationshipTarget.profileId || 0),
+          kind: relationshipTarget.kind || (relationshipTarget.profileId ? 'role' : 'contact'),
+          name: relationshipTarget.name || '',
+          sourceModule: 'chat',
+          sourceId: String(relationshipTarget.id),
+        }
+      : null,
   })
 
   if (!created) {
@@ -137,6 +150,14 @@ const submitTransfer = () => {
 
 const removeTransaction = (transactionId) => {
   if (walletStore.removeTransaction(transactionId)) {
+    relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+      RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_SHARED_TRANSFER,
+      transactionId,
+    )
+    relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+      RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
+      transactionId,
+    )
     showFeedback('success', t('流水已删除。', 'Transaction removed.'))
   }
 }
@@ -293,6 +314,7 @@ const removeTransaction = (transactionId) => {
               </p>
               <button
                 @click="removeTransaction(item.id)"
+                :data-testid="`wallet-remove-transaction-${item.id}`"
                 class="mt-1 text-[11px] text-red-500 hover:text-red-600"
               >
                 {{ t('删除', 'Delete') }}

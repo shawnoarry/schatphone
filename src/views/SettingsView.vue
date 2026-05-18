@@ -1608,7 +1608,13 @@ const exportData = async () => {
 }
 
 const deepClone = (value) => {
-  if (typeof structuredClone === 'function') return structuredClone(value)
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue reactive proxies are not always structured-cloneable in the import rollback path.
+    }
+  }
   return JSON.parse(JSON.stringify(value))
 }
 

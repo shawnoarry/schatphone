@@ -9,7 +9,10 @@ import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
-import { recordMapSharedRouteRelationshipFact } from '../lib/relationship-fact-adapters'
+import {
+  RELATIONSHIP_FACT_SOURCE_KEYS,
+  recordMapSharedRouteRelationshipFact,
+} from '../lib/relationship-fact-adapters'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
@@ -983,10 +986,20 @@ const cancelTrip = () => {
 }
 
 const acknowledgeArrival = () => {
-  const latestReward = tripHistory.value.find((item) => item?.status === 'arrived' && Number(item.rewardPoints) > 0)
   const sharedRouteTarget = selectedSharedRouteContact.value
   const ok = mapStore.acknowledgeTripArrival()
   if (!ok) return
+  const latestReward = tripHistory.value.find((item) => item?.status === 'arrived' && Number(item.rewardPoints) > 0)
+  if (latestReward && sharedRouteTarget) {
+    mapStore.bindRelationshipToTrip(latestReward.id, {
+      contactId: Number(sharedRouteTarget.id) || 0,
+      profileId: Number(sharedRouteTarget.profileId || 0),
+      kind: sharedRouteTarget.kind,
+      name: sharedRouteTarget.name,
+      sourceModule: 'chat',
+      sourceId: String(sharedRouteTarget.id || ''),
+    })
+  }
   if (latestReward && sharedRouteTarget) {
     recordMapSharedRouteRelationshipFact({
       relationshipRuntimeStore,
@@ -1003,6 +1016,14 @@ const acknowledgeArrival = () => {
         )
       : t('行程已完成。', 'Trip marked as completed.'),
   }
+}
+
+const deleteTripHistoryItem = (tripId) => {
+  if (!mapStore.removeTripHistoryItem(tripId)) return
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.MAP_SHARED_ROUTE,
+    tripId,
+  )
 }
 
 const tickRuntime = () => {
@@ -1307,6 +1328,7 @@ onBeforeUnmount(() => {
         :format-time="formatTime"
         :get-related-knowledge-points="getRelatedKnowledgePoints"
         @open-worldbook="openWorldBook"
+        @delete-trip="deleteTripHistoryItem"
       />
 
       <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">

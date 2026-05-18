@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import {
+  FOOD_DELIVERY_ORDER_EVENT_TYPE,
+  FOOD_DELIVERY_ORDER_STATUS,
+  useFoodDeliveryStore,
+} from '../src/stores/foodDelivery'
 import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useMapStore } from '../src/stores/map'
@@ -295,6 +299,107 @@ describe('FoodDeliveryView', () => {
     expect(relationshipSummary.memorySummaries[0].sourceModules).toContain('relationship_wallet_order_support')
     expect(wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
     wrapper.unmount()
+  })
+
+  test('deletes a food order and clears its relationship runtime facts', async () => {
+    const router = createTestRouter()
+    const store = useFoodDeliveryStore()
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    relationshipRuntimeStore.resetForTesting()
+    walletStore.resetForTesting()
+    const activeRestaurant = store.upsertRestaurant({
+      id: 'food_delete_shop',
+      name: 'Delete Kitchen',
+      category: 'restaurants',
+    })
+    const menuItem = store.upsertMenuItem({
+      id: 'food_delete_item',
+      restaurantId: activeRestaurant.id,
+      title: 'Delete Meal',
+      price: '28.00',
+    })
+    store.addToCart(menuItem.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Delete Address',
+      note: 'Delete food order.',
+    })
+    const sharedMealContact = chatStore.getContactById(1)
+    store.updateOrderStatus(order.id, FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
+
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="food-delivery-shared-meal-contact-${order.id}"]`).setValue('1')
+    await flushPromises()
+    await wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({
+      profileId: sharedMealContact.profileId,
+      contactId: sharedMealContact.id,
+      name: sharedMealContact.name,
+    }).exists).toBe(true)
+
+    await wrapper.get(`[data-testid="food-delivery-delete-order-${order.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(store.findOrderById(order.id)).toBeNull()
+    expect(wrapper.find(`[data-testid="food-delivery-order-${order.id}"]`).exists()).toBe(false)
+    expect(relationshipRuntimeStore.events).toHaveLength(0)
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({
+      profileId: sharedMealContact.profileId,
+      contactId: sharedMealContact.id,
+      name: sharedMealContact.name,
+    }).exists).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('persists relationship binding on checkout when provided by the caller', async () => {
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+    const activeRestaurant = store.upsertRestaurant({
+      id: 'food_binding_shop',
+      name: 'Binding Kitchen',
+      category: 'restaurants',
+      deliveryFee: '4.00',
+    })
+    const menuItem = store.upsertMenuItem({
+      id: 'food_binding_item',
+      restaurantId: activeRestaurant.id,
+      title: 'Binding Meal',
+      price: '30.00',
+    })
+
+    store.addToCart(menuItem.id)
+    store.checkoutCart({
+      deliveryAddress: 'Studio Street 9',
+      note: 'Shared meal route.',
+      relationshipBinding: {
+        contactId: 1,
+        profileId: 1,
+        kind: 'role',
+        name: 'Aki',
+        sourceModule: 'chat',
+        sourceId: '1',
+      },
+    })
+
+    expect(store.orders[0]?.relationshipBinding).toMatchObject({
+      contactId: 1,
+      profileId: 1,
+      name: 'Aki',
+      sourceModule: 'chat',
+      sourceId: '1',
+    })
   })
 
   test('creates custom restaurant and menu images from URL and Gallery sources', async () => {

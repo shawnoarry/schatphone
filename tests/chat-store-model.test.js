@@ -714,6 +714,72 @@ describe('chat store model', () => {
     expect(store.getRoleProfileById(profile.id)?.name).toBe('Mia Prime')
   })
 
+  test('enforces visible role ids and preserves manual detail items through relationship resets', () => {
+    const store = useChatStore()
+    const created = store.addRoleProfile({
+      roleId: '100A',
+      name: 'Role Id Tester',
+      role: 'Archivist',
+      detailItems: [
+        {
+          section: 'preferences',
+          sourceKind: 'manual',
+          title: 'Tea',
+          detail: 'Likes jasmine tea.',
+        },
+        {
+          section: 'lifePattern',
+          sourceKind: 'event_attached',
+          title: 'Late call',
+          detail: 'Stayed up for a call.',
+          memoryKey: 'late_call',
+        },
+      ],
+    })
+
+    expect(created?.roleId).toBe('100A')
+    expect(store.getRoleProfileByRoleId('100A')?.id).toBe(created.id)
+    expect(store.isRoleIdAvailable('100A')).toBe(false)
+    expect(store.addRoleProfile({ roleId: '100A', name: 'Duplicate Role' })).toBe(null)
+    expect(store.addRoleProfile({ roleId: 'alpha', name: 'Invalid Role' })).toBe(null)
+    expect(store.updateRoleProfile(created.id, { roleId: '200B' })).toBe(true)
+    expect(store.getRoleProfileByRoleId('200B')?.name).toBe('Role Id Tester')
+
+    const manual = store.listRoleDetailItems(created.id, 'preferences')
+    expect(manual).toHaveLength(1)
+    expect(manual[0]).toMatchObject({
+      sourceKind: 'manual',
+      title: 'Tea',
+    })
+
+    const removed = store.clearRoleEventAttachedDetailItems(created.id)
+    expect(removed).toBe(1)
+    expect(store.listRoleDetailItems(created.id)).toHaveLength(1)
+    expect(store.listRoleDetailItems(created.id)[0]?.sourceKind).toBe('manual')
+  })
+
+  test('clears role chat history without unbinding the Chat Directory contact', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '300',
+      name: 'History Reset',
+      role: 'Guide',
+    })
+    const binding = store.bindRoleProfile(profile.id)
+    store.appendMessage(binding.id, {
+      role: 'user',
+      content: 'Please remember this for now.',
+      status: 'delivered',
+    })
+    expect(store.getMessagesByContactId(binding.id).length).toBeGreaterThan(0)
+
+    const cleared = store.clearRoleProfileChatHistory(profile.id)
+    expect(cleared).toBe(1)
+    expect(store.getMessagesByContactId(binding.id)).toEqual([])
+    expect(store.contacts.some((item) => Number(item.profileId) === profile.id)).toBe(true)
+    expect(store.getConversationByContactId(binding.id).lastMessage).toBe('')
+  })
+
   test('supports role profile asset pack binding and role chat asset context resolution', () => {
     const store = useChatStore()
     const profile = store.addRoleProfile({

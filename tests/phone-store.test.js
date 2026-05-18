@@ -57,6 +57,50 @@ describe('phone store', () => {
     expect(store.missedCallCount).toBe(1)
   })
 
+  test('stores relationship binding on calls and anonymizes the call during relationship cleanup', () => {
+    const store = usePhoneStore()
+    store.resetForTesting()
+
+    const call = store.addRoleCallLog({
+      contactName: 'HJ',
+      direction: PHONE_CALL_DIRECTION.OUTGOING,
+      durationMinutes: '4',
+      summary: 'Called HJ about the route.',
+      relationshipBinding: {
+        profileId: 88,
+        contactId: 208,
+        kind: 'role',
+        name: 'HJ',
+        sourceModule: 'chat',
+        sourceId: '208',
+      },
+    })
+
+    expect(call?.relationshipBinding).toMatchObject({
+      profileId: 88,
+      contactId: 208,
+      name: 'HJ',
+    })
+
+    const cleanup = store.cleanupRelationshipForProfile(
+      { id: 88, name: 'HJ' },
+      { replacementName: 'Unknown caller' },
+    )
+
+    expect(cleanup).toMatchObject({
+      requestedCount: 1,
+      anonymizedCount: 1,
+    })
+    expect(store.findCallById(call.id)).toMatchObject({
+      contactName: 'Unknown caller',
+      summary: 'Called Unknown caller about the route.',
+      relationshipBinding: {
+        profileId: 0,
+        contactId: 0,
+      },
+    })
+  })
+
   test('creates system notifications for newly recorded missed calls', () => {
     const store = usePhoneStore()
     const calendarStore = useCalendarStore()
@@ -90,6 +134,25 @@ describe('phone store', () => {
       status: 'suggested',
       source: 'phone_missed_call',
     })
+  })
+
+  test('dismisses missed-call calendar cues when the source call is removed', () => {
+    const store = usePhoneStore()
+    const calendarStore = useCalendarStore()
+    store.resetForTesting()
+    calendarStore.resetForTesting()
+
+    const result = store.addMissedCallWithNotification({
+      contactName: 'Nova',
+      summary: 'Call me back.',
+    })
+
+    expect(calendarStore.findPhoneMissedCallCueByCallId(result.call.id)?.status).toBe('suggested')
+
+    expect(store.removeCallLog(result.call.id)).toBe(true)
+
+    expect(calendarStore.findPhoneMissedCallCueByCallId(result.call.id)?.status).toBe('dismissed')
+    expect(calendarStore.phoneMissedCallCueCount).toBe(0)
   })
 
   test('respects disabled system notifications for missed calls', () => {

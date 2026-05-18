@@ -1,5 +1,5 @@
 # SchatPhone TODO Roadmap / SchatPhone 动态待办清单
-Updated / 更新时间: 2026-05-18
+Updated / 更新时间: 2026-05-19
 
 ## 0. Read First / 阅读顺序
 1. EN: This file is the live execution board for implementation order.
@@ -2151,6 +2151,34 @@ Recommended next:
   Chinese: 下一步建议继续打磨关系记忆的去重/归并规则，以及 Calendar 关系事实审阅体验。
 - EN: Alternative same-size slice: add World Hub relationship-event filters/details.
   Chinese: 同体量备选：补 World Hub 关系事件筛选/详情。
+
+---
+
+## 2026-05-19 Contacts Relationship System V2 Baseline
+
+Status: PARTIAL_DONE
+
+1. EN: Contacts Relationship System V2 foundation is now implemented as a baseline: role ID validation, duplicate checks, migration, relationship ownership boundaries, memory-group runtime APIs, and source-record cleanup metadata.
+   Chinese: Contacts Relationship System V2 的基础层已落地为基线：角色 ID 校验、重复检查、迁移、关系所有权边界、记忆组运行时 API、来源记录清理元数据。
+2. EN: Contacts can now run role delete, relationship reset, and single-memory delete flows with impact summaries, typed confirmation, backup/import rollback coverage, and optional linked-record cleanup.
+   Chinese: Contacts 现在支持删除角色、重置关系、删除单个记忆组流程，包含影响摘要、输入确认、备份/导入回滚覆盖，以及可选关联记录清理。
+3. EN: World Hub can review relationship runtime entities and run relationship reset or one-memory cleanup while preserving the Contacts role profile.
+   Chinese: World Hub 现在可以审阅关系运行时实体，并在保留通讯录角色档案的前提下执行关系重置或单个记忆清理。
+4. EN: Shared cleanup handlers cover Calendar, Phone, Wallet, Shopping, Food Delivery, and Map; source records can be removed or anonymized without moving module ownership into Contacts.
+   Chinese: 共享清理处理器覆盖 Calendar、Phone、Wallet、Shopping、Food Delivery 和 Map；来源记录可被删除或匿名化，但模块所有权不会转移到 Contacts。
+5. EN: Module-level single-record delete paths now clear matching relationship runtime facts for Phone, Wallet, Calendar, Shopping, Food Delivery, and Map.
+   Chinese: 模块内单条记录删除现在会同步清理 Phone、Wallet、Calendar、Shopping、Food Delivery 和 Map 中匹配的关系运行时事实。
+6. EN: Contacts vs Chat Directory boundary remains preserved: Contacts owns the global role archive and destructive relationship management; Chat Directory owns Chat-side binding/thread entry.
+   Chinese: Contacts 与 Chat Directory 的边界继续保留：Contacts 负责全局角色档案与破坏性关系管理，Chat Directory 负责 Chat 侧绑定和会话入口。
+7. EN: Validation passed: `npm test -- --run` passed with 87 test files and 433 tests; `npm run build` passed; `git diff --check` passed.
+   Chinese: 验证通过：`npm test -- --run` 通过 87 个测试文件、433 条测试；`npm run build` 通过；`git diff --check` 通过。
+
+Recommended next:
+
+- EN: Finish Contacts detail IA: static profile, relationship progress, memory groups, manual entries, and event-attached entries need clearer product-grade sections.
+  Chinese: 下一步建议完成 Contacts 详情页 IA：静态档案、关系进度、记忆组、手动条目、事件挂载条目需要更清晰的产品级分区。
+- EN: Then deepen text-first memory dedupe/merge rules and Calendar relationship review details.
+  Chinese: 随后继续打磨文本优先的记忆去重/归并规则，以及 Calendar 关系事实审阅细节。
 
 ---
 

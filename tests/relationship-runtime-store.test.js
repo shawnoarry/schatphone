@@ -190,4 +190,174 @@ describe('relationship runtime store', () => {
     expect(store.events[1].effectApplied).toBe(true)
     expect(store.events[1].memoryRole).toBe('primary')
   })
+
+  test('deletes one memory group and recomputes relationship metrics from remaining events', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 12,
+        name: 'Lena',
+      },
+      sourceModule: 'calendar',
+      sourceId: 'calendar_lena_1',
+      memoryKey: 'lena_market_day',
+      factType: 'scheduled_calendar_event',
+      summary: 'Visited the market with Lena.',
+      metricDeltas: {
+        affinity: 8,
+        trust: 4,
+      },
+      milestone: 'Market day',
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 12,
+        name: 'Lena',
+      },
+      sourceModule: 'phone',
+      sourceId: 'phone_lena_1',
+      memoryKey: 'lena_call',
+      factType: 'completed_call',
+      summary: 'Called Lena after dinner.',
+      metricDeltas: {
+        affinity: 5,
+        intimacy: 3,
+      },
+      milestone: 'Dinner call',
+    })
+
+    expect(store.summarizeEntityForTarget({ profileId: 12, name: 'Lena' }).metrics.affinity).toBe(63)
+
+    const result = store.removeMemoryGroupForTarget({ profileId: 12, name: 'Lena' }, 'lena_market_day')
+    expect(result).toMatchObject({
+      ok: true,
+      removedEventCount: 1,
+      sourceModuleCounts: {
+        calendar: 1,
+      },
+    })
+    expect(result.sourceRefs).toEqual([{ sourceModule: 'calendar', sourceId: 'calendar_lena_1' }])
+
+    const summary = store.summarizeEntityForTarget({ profileId: 12, name: 'Lena' })
+    expect(summary.metrics).toMatchObject({
+      affinity: 55,
+      trust: 50,
+      intimacy: 23,
+    })
+    expect(summary.milestones.map((item) => item.label)).toEqual(['Dinner call'])
+    expect(store.listMemoryGroupsForTarget({ profileId: 12, name: 'Lena' })).toHaveLength(1)
+  })
+
+  test('removes relationship facts for one source record and leaves sibling records intact', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 31,
+        name: 'Source One',
+      },
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'call_1:call:role_31',
+      memoryKey: 'call_1',
+      factType: 'completed_call',
+      summary: 'First call.',
+      metricDeltas: {
+        affinity: 4,
+        trust: 2,
+      },
+      milestone: 'First call',
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 31,
+        name: 'Source One',
+      },
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'call_2:call:role_31',
+      memoryKey: 'call_2',
+      factType: 'completed_call',
+      summary: 'Second call.',
+      metricDeltas: {
+        affinity: 5,
+        intimacy: 2,
+      },
+      milestone: 'Second call',
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 32,
+        name: 'Other Role',
+      },
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'call_1:call:role_32',
+      memoryKey: 'other_call',
+      factType: 'completed_call',
+      summary: 'Same source record, different target.',
+      metricDeltas: {
+        trust: 3,
+      },
+    })
+
+    const result = store.removeRelationshipFactsForSourceRecord('relationship_phone_call', 'call_1')
+
+    expect(result).toMatchObject({
+      ok: true,
+      removedEventCount: 2,
+      sourceModuleCounts: {
+        relationship_phone_call: 2,
+      },
+    })
+    expect(store.events.map((event) => event.sourceId)).toEqual(['call_2:call:role_31'])
+    expect(store.summarizeEntityForTarget({ profileId: 31, name: 'Source One' }).metrics).toMatchObject({
+      affinity: 55,
+      trust: 50,
+      intimacy: 22,
+    })
+    expect(store.summarizeEntityForTarget({ profileId: 32, name: 'Other Role' }).exists).toBe(false)
+  })
+
+  test('resets all relationship runtime state for one role target', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 21,
+        name: 'Reset Me',
+      },
+      sourceModule: 'wallet',
+      sourceId: 'wallet_reset_1',
+      factType: 'shared_expense',
+      summary: 'Shared a bill.',
+      metricDeltas: {
+        trust: 6,
+      },
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 22,
+        name: 'Keep Me',
+      },
+      sourceModule: 'wallet',
+      sourceId: 'wallet_keep_1',
+      factType: 'shared_expense',
+      summary: 'Shared another bill.',
+      metricDeltas: {
+        trust: 6,
+      },
+    })
+
+    const result = store.resetRelationshipForTarget({ profileId: 21, name: 'Reset Me' })
+    expect(result).toMatchObject({
+      ok: true,
+      removedEventCount: 1,
+      removedEntityCount: 1,
+    })
+    expect(result.sourceRefs).toEqual([{ sourceModule: 'wallet', sourceId: 'wallet_reset_1' }])
+    expect(store.summarizeEntityForTarget({ profileId: 21, name: 'Reset Me' }).exists).toBe(false)
+    expect(store.summarizeEntityForTarget({ profileId: 22, name: 'Keep Me' }).exists).toBe(true)
+  })
 })

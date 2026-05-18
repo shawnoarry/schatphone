@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-18
+Updated: 2026-05-19
 
 Audience: product managers, designers, non-engineering collaborators, and future AI assistants.
 
@@ -198,12 +198,21 @@ Current capability:
 - `App.vue` now wires the foreground tick lifecycle, but only when the user enables it. It stops while locked, on `/lock`, or when the browser tab is hidden.
 - Triggered/skipped foreground ticks write Network diagnostics reports.
 - Relationship runtime has an expanded safe fact-adapter batch: Shopping gift purchase, Food Delivery shared meal, Phone completed/missed calls, Map shared routes, Wallet shared transfer/expense records, and confirmed Calendar event plans.
+- Contacts Relationship System V2 implementation has a partial baseline:
+  - visible role ID schema, validation, duplicate checks, and backup/restore migration are in place;
+  - Contacts and Chat Directory now keep a clearer boundary between global role archive and Chat-side binding;
+  - relationship runtime can list/delete one memory group, reset one target, recompute relationship state, and remove facts by source record;
+  - Contacts exposes safe role delete, relationship reset, and single-memory delete flows with impact summaries and typed confirmation;
+  - World Hub can review relationship runtime entities and run reset/delete-memory cleanup without deleting the Contacts role profile;
+  - module-owned source records can be deleted or anonymized through shared cleanup handlers for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map;
+  - module-level single-record deletion now also clears matching relationship facts for Phone, Wallet, Calendar, Shopping, Food Delivery, and Map.
 
 PM meaning:
 
 - The event system is now a reusable base, not a per-module one-off.
 - It can support future game-like surprises, but it is still controlled and off by default.
 - Relationship facts are still starting from explicit, low-risk user actions before any automatic romance/conflict mutation is introduced.
+- Destructive relationship management now follows the product boundary: Contacts and World Hub orchestrate cleanup, while each module still owns its own records and can keep/anonymize history where appropriate.
 
 ### Delivery Route Context
 
@@ -227,6 +236,7 @@ PM meaning:
 - Map delivery route context is now exposed inside Food Delivery order-event cards and Shopping logistics cards as read-only context; it still does not create Map trips or move order ownership.
 - Map still needs a later full visual pass for Google Maps-like detail, markers, route drawing, and ride-hailing polish.
 - Wallet is now a downstream ledger for completed Shopping orders and delivered Food Delivery orders, but deeper fictional funds and relationship-value controls are still future work.
+- Contacts Relationship System V2 is not fully complete: the destructive-action baseline has landed, but full Contacts detail IA polish, manual-vs-event-attached visual language, preferences/life-pattern/social-graph sections, and long-term memory compression/expiry settings are still future work.
 - Assets, Stock, Phone, and several secondary modules still need deeper product loops.
 - Backend/server-side runtime is not required for current foreground events, but true background event generation after the page is closed would require a larger backend design.
 
@@ -249,8 +259,8 @@ PM meaning:
 
 ### P1: Build Useful Cross-Module Loops
 
-1. Relationship runtime store / truth-layer baseline plus safe adapters.
-   Outcome: Contacts and Chat can read stable affinity, stage, milestone, growth summaries, Shopping gift memories, Food Delivery shared-meal memories, Phone call memories, Map shared-route memories, and Wallet transfer/expense memories.
+1. Relationship runtime store / truth-layer baseline plus Contacts V2 destructive actions.
+   Outcome: Contacts and Chat can read stable affinity, stage, milestone, growth summaries, Shopping gift memories, Food Delivery shared-meal memories, Phone call memories, Map shared-route memories, Wallet transfer/expense memories, and confirmed Calendar plans. Contacts and World Hub can now reset/delete relationship memory with source-record cleanup.
 
 2. Shopping logistics service-account pushes in Chat.
    Outcome: discounts/new arrivals and logistics updates can feel like real app/service notifications.
@@ -306,19 +316,16 @@ PM meaning:
 
 ## 6. Recommended Next Engineering Slice
 
-Recommended next: deepen text-first memory consolidation and Calendar relationship review details.
+Recommended next: finish the Contacts V2 detail IA layer and memory-management presentation.
 
 Why this is the best next step:
 
-- The Relationship Growth Event System baseline and expanded adapter batch are now in place.
-- Shopping, Food Delivery, Phone, Map, and Wallet prove that explicit user actions can become relationship memories without moving module ownership.
-- World Hub can now approve/dismiss pending relationship effects, so high-impact candidates have a safe review path.
-- Contacts and Chat can already read relationship runtime snapshots.
-- Calendar now carries confirmed schedule events and a pending Reminders summary; raw cue processing has moved to Reminders.
-- Reminders visibility and basic management are now decided, and Calendar true schedule/date facts have a first safe slice; the next useful step is to tighten how text/event memories dedupe, merge, and get recalled.
-- This keeps future affinity, relationship stages, milestones, and character growth consistent across Chat, Contacts, Map, Shopping, Wallet, Phone, Calendar, and later optional media-aware features.
+- Role ID, relationship runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and module cleanup seams are now implemented as a baseline.
+- Contacts already has the destructive-action surface, but the role-detail page still needs a clearer product-grade information architecture for static profile, relationship progress, memory groups, and future event-attached details.
+- The next useful step is to make manual information and event-attached information visibly distinct before adding more derived facts.
+- This keeps later preferences, life pattern, social graph, memory compression, expiry, and "save as long-term memory" controls from becoming ambiguous.
 
-Fallback same-size task: add World Hub relationship-event filters/details.
+Fallback same-size task: deepen text-first memory dedupe/merge rules and Calendar relationship review details.
 
 ## 7. Reading Path
 

@@ -4,14 +4,17 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import ControlCenterView from '../src/views/ControlCenterView.vue'
+import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import {
   SIMULATION_EVENT_STATUS,
   SIMULATION_SURPRISE_MODE,
   SIMULATION_TRIGGER_SOURCE,
   useSimulationStore,
 } from '../src/stores/simulation'
+import { useChatStore } from '../src/stores/chat'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
+import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
 
@@ -50,6 +53,7 @@ describe('ControlCenterView', () => {
     localStorage.clear()
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T08:00:00.000Z'))
+    resetDialogServiceForTest()
     setActivePinia(createPinia())
   })
 
@@ -262,6 +266,75 @@ describe('ControlCenterView', () => {
     expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).not.toContain(
       'Shared memory: Wallet expense recorded for the same Shopping gift with Aki.',
     )
+
+    wrapper.unmount()
+  })
+
+  test('deletes a relationship memory group from World Hub without deleting the Contacts profile', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    const walletStore = useWalletStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const profile = chatStore.addRoleProfile({
+      roleId: '905A',
+      name: 'World Hub Role',
+      role: 'Archivist',
+    })
+    const transaction = walletStore.addTransferTransaction({
+      amount: 42,
+      counterparty: profile.name,
+      note: 'Ticket with World Hub Role',
+      relationshipBinding: {
+        profileId: profile.id,
+        contactId: 0,
+        kind: 'role',
+        name: profile.name,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_wallet_shared_transfer',
+      sourceId: `${transaction.id}:shared_transfer:role_${profile.id}`,
+      memoryKey: 'world_hub_memory',
+      factType: 'shared_expense',
+      summary: 'Ticket with World Hub Role.',
+      metricDeltas: {
+        trust: 4,
+      },
+    })
+
+    const { wrapper } = await mountControlCenterView()
+    const { dialogState, submitDialog } = useDialog()
+
+    await wrapper
+      .get(`[data-testid="control-center-relationship-delete-memory-role:${profile.id}-world_hub_memory"]`)
+      .trigger('click')
+    await flushUi()
+    expect(dialogState.title).toBe('Delete relationship memory')
+    submitDialog()
+    await flushUi()
+    expect(dialogState.title).toBe('Relationship memory deleted')
+    submitDialog()
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(profile.id)).toBeTruthy()
+    expect(relationshipRuntimeStore.listMemoryGroupsForTarget({ profileId: profile.id })).toEqual([])
+    expect(walletStore.findTransactionById(transaction.id)).toMatchObject({
+      counterparty: 'Unknown counterparty',
+      relationshipBinding: expect.objectContaining({
+        profileId: 0,
+        contactId: 0,
+      }),
+    })
 
     wrapper.unmount()
   })

@@ -5,6 +5,7 @@ import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import {
+  RELATIONSHIP_FACT_SOURCE_KEYS,
   buildFoodDeliverySharedMealRelationshipMemoryKey,
   buildFoodDeliverySharedMealRelationshipSuggestion,
   recordFoodDeliverySharedMealRelationshipFact,
@@ -391,9 +392,22 @@ const addMenuItemToCart = (menuItemId) => {
 
 const checkoutFoodDelivery = () => {
   const mapHandoff = activeMapHandoff.value
+  const relationshipTarget = activeRestaurant.value
+    ? selectedSharedMealContact(activeRestaurant.value.id)
+    : null
   foodDeliveryStore.checkoutCart({
     deliveryAddress: mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
     note: activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
+    relationshipBinding: relationshipTarget
+      ? {
+          contactId: Number(relationshipTarget.id) || 0,
+          profileId: Number(relationshipTarget.profileId || 0),
+          kind: relationshipTarget.kind,
+          name: relationshipTarget.name,
+          sourceModule: 'chat',
+          sourceId: String(relationshipTarget.id || ''),
+        }
+      : null,
     sourceModule: mapHandoff.sourceModule,
     sourceId: mapHandoff.sourceId,
   })
@@ -401,6 +415,20 @@ const checkoutFoodDelivery = () => {
 
 const markFoodOrderDelivered = (orderId) =>
   foodDeliveryStore.updateOrderStatus(orderId, FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
+
+const removeFoodOrder = (orderId) => {
+  if (!foodDeliveryStore.removeOrder(orderId)) return
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.FOOD_DELIVERY_SHARED_MEAL,
+    orderId,
+  )
+  const walletTransaction = walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, orderId)
+  relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
+    walletTransaction?.id || walletTransaction?.sourceId || orderId,
+  )
+  delete sharedMealTargets[orderId]
+}
 
 const transferFoodSuggestionToWallet = (suggestion) => {
   if (!suggestion || suggestion.imported) return null
@@ -950,6 +978,14 @@ onBeforeUnmount(() => {
               @click="markFoodOrderDelivered(order.id)"
             >
               {{ t('标记已送达', 'Mark delivered') }}
+            </button>
+            <button
+              type="button"
+              class="ml-2 mt-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+              :data-testid="`food-delivery-delete-order-${order.id}`"
+              @click="removeFoodOrder(order.id)"
+            >
+              {{ t('删除', 'Delete') }}
             </button>
             <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
               <article

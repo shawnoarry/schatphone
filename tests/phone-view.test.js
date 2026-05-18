@@ -76,4 +76,26 @@ describe('PhoneView', () => {
 
     wrapper.unmount()
   })
+
+  test('removes a call log and clears its relationship fact from the module list', async () => {
+    const phoneStore = usePhoneStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { wrapper } = await mountPhoneView()
+
+    await wrapper.get('[data-testid="phone-relationship-contact"]').setValue('1')
+    await wrapper.get('[data-testid="phone-save-call"]').trigger('click')
+    await flushUi()
+
+    const call = phoneStore.recentCalls[0]
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+
+    await wrapper.get(`[data-testid="phone-remove-call-${call.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(phoneStore.findCallById(call.id)).toBeNull()
+    expect(relationshipRuntimeStore.events).toHaveLength(0)
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 1, name: 'Eva' }).exists).toBe(false)
+
+    wrapper.unmount()
+  })
 })

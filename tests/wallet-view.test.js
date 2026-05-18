@@ -74,4 +74,27 @@ describe('WalletView', () => {
 
     wrapper.unmount()
   })
+
+  test('removes a transaction and clears its relationship fact from the module list', async () => {
+    const walletStore = useWalletStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-relationship-contact"]').setValue('2')
+    await wrapper.get('[data-testid="wallet-transfer-amount"]').setValue('36.50')
+    await wrapper.get('[data-testid="wallet-submit-transfer"]').trigger('click')
+    await flushUi()
+
+    const transaction = walletStore.listTransactionsBySourceFilter('all')[0]
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+
+    await wrapper.get(`[data-testid="wallet-remove-transaction-${transaction.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(walletStore.findTransactionById(transaction.id)).toBeNull()
+    expect(relationshipRuntimeStore.events).toHaveLength(0)
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 2, name: 'Jackie' }).exists).toBe(false)
+
+    wrapper.unmount()
+  })
 })

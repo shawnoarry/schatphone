@@ -33,7 +33,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['open-worldbook'])
+const emit = defineEmits(['open-worldbook', 'delete-trip'])
 
 const { t } = useI18n()
 
@@ -50,6 +50,10 @@ const openWorldBookForPoint = (pointId) => {
   emit('open-worldbook', {
     pointIds: [pointId],
   })
+}
+
+const deleteTrip = (tripId) => {
+  emit('delete-trip', tripId)
 }
 </script>
 
@@ -85,6 +89,14 @@ const openWorldBookForPoint = (pointId) => {
           {{ t('时长', 'Duration') }} {{ formatSeconds(item.durationSeconds) }} ·
           {{ t('费用', 'Fare') }} ₩ {{ Number(item.fare || 0).toLocaleString() }}
         </p>
+        <button
+          type="button"
+          class="mt-2 rounded-full border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-600"
+          :data-testid="`map-trip-history-delete-${item.id}`"
+          @click="deleteTrip(item.id)"
+        >
+          {{ t('删除', 'Delete') }}
+        </button>
         <div
           v-if="item.status === 'arrived' && Number(item.rewardPoints) > 0"
           class="mt-2 rounded-lg border border-emerald-200/50 bg-emerald-50/80 px-2.5 py-2 text-[11px] text-emerald-700"
