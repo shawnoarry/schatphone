@@ -83,7 +83,7 @@ export const cleanupRelationshipSourceRecords = (
           ? rawResult
           : {
               ok: Boolean(rawResult),
-              removedCount: Boolean(rawResult) ? 1 : 0,
+              removedCount: rawResult ? 1 : 0,
               unlinkedCount: 0,
               anonymizedCount: 0,
             }

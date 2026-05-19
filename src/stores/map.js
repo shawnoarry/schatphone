@@ -10,7 +10,6 @@ import {
 import { FOOD_DELIVERY_SOURCE_KEYS, LOGISTICS_SOURCE_KEYS } from '../lib/planned-module-registry'
 import {
   anonymizeRelationshipText,
-  anonymizeRelationshipTextByBinding,
   bindingMatchesProfile,
   clearRelationshipBinding,
   normalizeRelationshipBinding,

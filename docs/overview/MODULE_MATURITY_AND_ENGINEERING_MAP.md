@@ -1,798 +1,324 @@
-# SchatPhone Module Maturity and Engineering Map / SchatPhone 模块成熟度与工程接手地图
+# SchatPhone Module Maturity And Engineering Map
 
-Updated / 更新时间: 2026-05-04
+Updated: 2026-05-19
 
-## 1. Purpose / 用途
+Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
 
-This document is a handoff-oriented reference for future developers and AI coding assistants.  
-It translates the current roadmap, PM status, module audit, routes, file sizes, and test coverage into a practical map for implementation sequencing.
+It translates the current roadmap, PM status, module ownership, file-size hotspots, and test posture into a practical map for deciding:
 
-本文档是给后续开发同事与 AI 编程助手使用的“接手参考图”。  
-它把当前路线图、PM 状态、模块审计、路由、文件体量与测试覆盖，整理成更适合实施排序的工程地图。
+- where new work is cheapest;
+- where edit risk is highest;
+- which modules are mature enough to expand;
+- which ones need boundary protection before more features.
 
-Authority note / 职责说明：
+Authority:
 
-- This file is a current reference document for understanding module maturity and engineering risk.
-  本文是当前有效的“模块成熟度与工程风险参考文档”。
-- It is not a live execution board and must not carry task status changes.
-  它不是动态执行看板，不承载任务状态变更。
-- Active work with status still belongs only in `docs/roadmap/TODO_ROADMAP.md`.
-  任何带状态的执行任务仍只允许进入 `docs/roadmap/TODO_ROADMAP.md`。
-- Use this file to decide where implementation is cheapest, riskiest, or most ready to expand.
-  使用本文来判断哪些地方最适合扩展、最该稳住、以及哪些改动风险最高。
+- this file is a current engineering-reference document, not a live task board;
+- active work with status still belongs in `docs/roadmap/TODO_ROADMAP.md`;
+- use this file to judge maturity, ownership clarity, and engineering risk;
+- use task packages and workflow docs for the actual execution path.
 
-Source set / 参考来源：
+Main references:
 
+- `docs/overview/PROJECT_MASTER_GUIDE.md`
 - `docs/pm/TODO_PM_STATUS_REPORT.md`
-- `docs/pm/PRODUCT_MANAGER_PROJECT_BRIEF.md`
 - `docs/roadmap/TODO_ROADMAP.md`
 - `docs/roadmap/PROJECT_MODULE_AUDIT.md`
-- `docs/overview/PROJECT_MASTER_GUIDE.md`
 - `docs/process/AI_WORK_MODE.md`
-- `src/router/index.js`
+- current route/store/view scan
 
----
+## 1. Quick Judgment
 
-## 2. Quick Judgment / 快速结论
+SchatPhone is no longer in the "can it run?" stage.
 
-The project is no longer in the "can it run?" stage.  
-It is now in the "stable baseline + selective P1 expansion" stage.
+It is now in:
 
-项目已经不处于“能不能跑起来”的阶段。  
-当前阶段更准确地说是“稳定基线 + 选择性 P1 扩展”。
+> stable baseline + selective P1 expansion + ownership cleanup
 
-The main engineering risk is not missing architecture, but maturity imbalance and oversized views.
+The biggest engineering risk is no longer missing architecture. It is:
 
-当前最大的工程风险并不是架构缺失，而是模块成熟度不均，以及几个关键页面已经过大。
+1. maturity imbalance across modules;
+2. oversized views/stores that continue absorbing product growth;
+3. old compatibility fields or ownership seams drifting back into product truth.
 
-The strongest user-facing loops today are:
+The strongest current user-visible loops are:
 
-当前最强的用户闭环是：
+1. Lock -> Home -> Chat -> notification feedback
+2. WorldBook -> Chat prompt context
+3. Map / Reminders / Calendar / push handoff
+4. Gallery asset references across multiple modules
+5. Shopping / Food Delivery / Wallet / relationship-memory continuity
 
-1. Lock -> Home -> Chat -> Notification feedback  
-   锁屏 -> 桌面 -> 聊天 -> 通知反馈
-2. WorldBook -> Chat prompt injection  
-   世界书 -> Chat 提示词注入
-3. Map simulation -> Calendar reminder -> Calendar event -> Scheduled push  
-   地图模拟 -> 日历提醒 -> 日历事件 -> 定时推送
-4. Gallery asset hub -> cross-module asset consumption  
-   相册素材中台 -> 跨模块素材消费
+## 2. Current Maturity Tiers
 
-The cheapest next engineering work is still low-risk view decomposition, especially in Chat, Settings, and Map.
+### Tier A: stable core loops
 
-当前最划算的下一类工程工作仍是低风险视图拆分，尤其是 Chat、Settings、Map。
+These are active foundations, not placeholders:
 
----
-
-## 3. Maturity Tiers / 成熟度分层
-
-### 3.1 Tier A: Stable Core Loops / A 档：稳定核心闭环
-
-These modules already form real product loops and should be treated as active foundations, not placeholders.
-
-这些模块已经形成真实产品闭环，应视为主基础设施，而不是占位页。
-
-| Module / 模块 | Maturity / 成熟度 | Why / 原因 |
+| Module | Maturity | Why |
 | --- | --- | --- |
-| Lock Screen / 锁屏 | Stable | Default entry, lock guard, notification tap-through are all in place. / 默认入口、锁定守卫、通知点击跳转都已成形。 |
-| Home / 桌面 | Stable | Protected app entries, multi-page shell, edit gating are working. / 受保护应用入口、多屏壳层、编辑门控已工作。 |
-| Chat / 聊天 | Stable but oversized | Main gameplay path is usable and deep, but view size is a risk. / 主玩法链路完整可用，但视图体量已成风险。 |
-| Gallery / 相册素材中台 | Stable | Cross-module asset hub responsibilities are already real. / 全局素材中台职责已真实存在。 |
-| WorldBook / 世界书 | Stable for current scope | Split worldview/knowledge-point model is online and already consumed by multiple modules. / 世界观与知识点拆分已上线，并被多个模块消费。 |
-| Map / 地图 | Stable baseline + active expansion | Simulation-first progression is online and already connected to Calendar. / 模拟优先进度已上线，并已和 Calendar 接通。 |
-| Calendar / 日历 | Stable MVP | Reminder -> event -> scheduled push loop is already meaningful. / 提醒 -> 事件 -> 定时推送链路已形成。 |
-| Persistence / 存储 | Stable infrastructure | Backup, restore, diagnostics, layered persistence, and local MVP module coverage are all active. / 备份、恢复、诊断、分层持久化与本地 MVP 模块覆盖都已可用。 |
-| Push Server / 推送服务 | Stable delivery infrastructure | Real delivery and scheduled delivery are both online. / 即时与定时送达能力都已上线。 |
+| Lock Screen | stable | default entry, lock guard, notification tap-through all exist |
+| Home | stable | protected app entries, page shell, edit gating, and folder model are in place |
+| Chat | stable but heavy | strongest gameplay loop, but still one of the biggest engineering hotspots |
+| Gallery | stable | real cross-module asset hub with meaningful ownership |
+| WorldBook | stable for current scope | shared world-context layer already consumed across modules |
+| Map | stable baseline + active expansion | route/trip/reward/context loop is real and already integrated outward |
+| Calendar | stable MVP | confirmed schedule/date behavior is meaningful and connected to push |
+| Reminders | stable MVP | cross-module cue queue has its own visible product identity now |
+| Persistence / backup / diagnostics | stable infrastructure | backup, restore, diagnostics, and storage checks are real system foundations |
 
-### 3.2 Tier B: Usable but Structurally Heavy / B 档：可用，但结构偏重
+### Tier B: usable but structurally heavy
 
-These modules are useful today, but continued feature growth without decomposition will become expensive.
+These modules are useful now, but feature growth without cleanup will get expensive:
 
-这些模块今天已经可用，但如果不先拆分，继续长功能会越来越贵。
-
-| Module / 模块 | Maturity / 成熟度 | Main Risk / 主要风险 |
+| Module | Maturity | Main risk |
 | --- | --- | --- |
-| Settings / 设置 | Usable but dense | Too many subdomains live in one page. / 太多子领域堆在同一页。 |
-| Chat Directory / 会话通讯录 | Strong internal tool | Role/service/template concepts are cognitively dense. / 角色/服务号/模板概念叠加，理解成本高。 |
-| Contacts / 主通讯录 | Usable admin-like flow | More like configuration than character-creation UX. / 更像配置后台，不像角色创建流程。 |
-| Map / 地图 | Feature-rich but concentrated | View/store now carry too many concerns together. / 视图与 store 同时承担过多子职责。 |
-| Gallery / 相册素材中台 | Stable but multi-identity | Must balance “Photos app” feel and asset management. / 既要像相册，又要像素材管理台。 |
+| Settings | usable but dense | too many subdomains still meet in one view |
+| Chat Directory | strong internal tool | concept density is high: role/service/template/binding semantics |
+| Contacts | active growth area | now product-critical, but large and semantically dense |
+| Map | feature-rich | still concentrated despite previous extraction work |
+| World Hub | narrow baseline | runtime review is useful, but detail quality must improve before stronger controls |
 
-### 3.3 Tier C: MVP Present, Role Still Unclear / C 档：已有 MVP，但产品角色仍需收束
+### Tier C: MVP present, long-term role still controlled
 
-These modules exist and can be used, but their long-term product identity is still open.
+These modules are real, but their long-term product role is still intentionally constrained:
 
-这些模块已经存在并可使用，但长期产品定位仍未完全收束。
-
-| Module / 模块 | Maturity / 成熟度 | Open Question / 未决问题 |
+| Module | Maturity | Open constraint |
 | --- | --- | --- |
-| Network / 网络 | Strong MVP | Should provider setup become more guided for non-technical users? / 是否要把供应商配置进一步产品化引导？ |
-| Appearance / 外观 | Strong MVP | Are uploaded custom app icons in scope, or are presets the official path? / 自定义上传图标要不要做，还是预设图标就是官方模型？ |
-| Profile / 用户信息 | Prompt-visible MVP / 提示词可见 MVP | What downstream effects beyond Chat prompt context should be shown? / 除 Chat 提示词上下文外，还要展示哪些下游影响？ |
-| Files / 文件 | Internal storage/index component / 内部储存与索引组件 | Keep hidden from standalone frontend entry; owning modules should surface user-facing assets. / 不作为独立前台入口展示；用户可见素材应由所属模块承载。 |
-| More / 更多 | Persisted shortcut/Labs MVP / 持久化快捷与实验入口 MVP | Let existing toggles mature before adding more. / 先让已有开关成熟，再添加更多开关。 |
+| Network | strong MVP | provider setup could become more guided, but transport semantics should stay stable |
+| Appearance | strong MVP | visual lane is parked; do not casually reopen larger style direction |
+| Profile | useful support surface | mostly a prompt/context-facing identity layer, not a deep standalone loop yet |
+| Files | internal component | hidden as a standalone app; only expand when another module needs an internal metadata bridge |
+| More | lightweight utility/labs surface | let existing toggles mature before adding more ownership there |
+| Assets | meaningful support module | product loops still lighter than Chat/Map/Shopping/Food Delivery |
+| Stock | working support loop | useful, but should not compete with primary immersion loops yet |
+| Phone | working support loop | useful, but still a support lane rather than a top-level fantasy anchor |
+| Wallet | working support loop | real downstream ledger, but broader economy simulation stays controlled |
 
-### 3.4 Tier D: Placeholder / D 档：明确占位
+## 3. Engineering Hotspots Right Now
 
-These modules should not compete with the main immersion loop yet.
+### Largest views
 
-这些模块暂时不应和主沉浸循环争优先级。
+Current approximate sizes:
 
-| Module / 模块 | Maturity / 成熟度 | Best Future Starting Point / 最合理起点 |
-| --- | --- | --- |
-| Phone / 电话 | Local call-log MVP / 本地通话记录 MVP | Defer AI summaries until callback cues are clearer. / 回拨线索更清楚后再推进 AI 摘要。 |
-| Wallet / 钱包 | Local ledger MVP / 本地账本 MVP | Defer economy simulation until narrative consumers exist. / 等叙事消费者明确后再做经济模拟。 |
-| Stock / 股票 | Local simulated-market MVP / 本地模拟行情 MVP | Tie simulated movement to world/calendar events if it becomes a narrative economy surface. / 若进入叙事经济线，再接入世界观或日历事件驱动波动。 |
+| File | Approx. lines | Meaning |
+| --- | ---: | --- |
+| `src/views/ChatView.vue` | 4534 | still the largest maintainability hotspot |
+| `src/views/ContactsView.vue` | 2255 | now a major product-critical surface; needs careful IA and ownership protection |
+| `src/views/SettingsView.vue` | 2181 | dense system/config surface |
+| `src/views/ChatDirectoryView.vue` | 1872 | concept-heavy management surface |
+| `src/views/MapView.vue` | 1670 | still concentrated, though healthier than before |
+| `src/views/GalleryView.vue` | 1159 | manageable, but still important because of shared asset contracts |
+| `src/views/ControlCenterView.vue` | 914 | review/control surface now large enough to deserve explicit engineering attention |
+| `src/views/WorldBookView.vue` | 928 | still understandable, but should not grow blindly |
+| `src/views/CalendarView.vue` | 622 | comparatively healthy |
 
----
+### Largest stores
 
-## 4. Engineering Risk Map / 工程风险地图
+Current approximate sizes:
 
-### 4.1 Largest Views / 最大视图文件
+| File | Approx. lines | Meaning |
+| --- | ---: | --- |
+| `src/stores/system.js` | 2790 | central infrastructure store; change carefully |
+| `src/stores/chat.js` | 2190 | rich domain logic with high coordination responsibility |
+| `src/stores/map.js` | 2137 | broad product logic; prefer improving seams before deep redesign |
+| `src/stores/gallery.js` | 1325 | important asset rules live here; avoid casual contract churn |
+| `src/stores/calendar.js` | 1005 | larger than before because of compatibility and schedule responsibilities |
+| `src/stores/relationshipRuntime.js` | 939 | now a real cross-module truth layer; deserves stricter semantic protection |
+| `src/stores/foodDelivery.js` | 903 | active commerce/event lane |
+| `src/stores/shopping.js` | 844 | active commerce/event lane |
+| `src/stores/reminders.js` | 660 | key ownership seam for cross-module cue handling |
 
-These files are the clearest “edit risk hot spots”.
-
-这些文件是最明显的“修改风险热点”。
-
-| File / 文件 | Approx. Lines / 行数 | Interpretation / 解读 |
-| --- | --- | --- |
-| `src/views/ChatView.vue` | 4968 | Highest-priority decomposition candidate. / 最高优先级拆分对象。 |
-| `src/views/SettingsView.vue` | 2302 | High-density configuration surface. / 高密度配置页面。 |
-| `src/views/MapView.vue` | 1802 | Multiple feature layers are concentrated here. / 多层功能叠在同一视图。 |
-| `src/views/ChatDirectoryView.vue` | 1659 | Role/service/template management is concentrated. / 角色/服务号/模板管理集中。 |
-| `src/views/GalleryView.vue` | 1259 | Still manageable, but future shared picker work should reduce pressure. / 仍可控，但后续共享选择器应减压。 |
-| `src/views/ContactsView.vue` | 1118 | Dense form-heavy page. / 偏表单型、信息密集。 |
-| `src/views/WorldBookView.vue` | 850 | Still understandable, but should not keep growing blindly. / 还可控，但不适合继续无节制堆功能。 |
-| `src/views/CalendarView.vue` | 675 | Comparatively healthy. / 相对健康。 |
-
-### 4.2 Largest Stores / 最大状态文件
-
-Store size alone is not the current problem, because many of these files already have test coverage.
-
-状态文件大并不是当前首要问题，因为其中不少已经有较强测试护城河。
-
-| File / 文件 | Approx. Lines / 行数 | Interpretation / 解读 |
-| --- | --- | --- |
-| `src/stores/system.js` | 2735 | Central infrastructure store; change carefully. / 核心基础设施 store，改动要谨慎。 |
-| `src/stores/chat.js` | 2226 | Rich domain logic, but relatively well-defended by tests. / 领域逻辑很重，但测试相对完整。 |
-| `src/stores/map.js` | 2047 | Map logic is broad; prefer UI extraction before store redesign. / 地图逻辑范围广，优先拆 UI 而不是改 store 结构。 |
-| `src/stores/gallery.js` | 1461 | Important asset rules live here; avoid casual refactors. / 关键素材规则在这里，不宜随意大改。 |
-| `src/stores/calendar.js` | 672 | Compact and still manageable. / 较小且可控。 |
-
-### 4.3 Practical Rule / 实操建议
+## 4. Practical Engineering Rules
 
 Prefer this order when improving maintainability:
 
-提升可维护性时，优先遵循这个顺序：
+1. extract display and interaction panels from oversized views first;
+2. improve semantics and ownership boundaries second;
+3. touch store/domain contracts only when product behavior truly changes.
 
-1. Extract display components from large views first.  
-   先从大视图里抽展示组件。
-2. Extract interaction panels and modal state next.  
-   再抽交互面板与弹层状态。
-3. Touch store/domain contracts only when product behavior truly changes.  
-   只有在产品行为真的变化时，才改 store 和领域契约。
+More guardrails:
 
----
+1. do not rewrite data contracts and do component extraction in the same slice unless absolutely necessary;
+2. if a slice touches ownership or runtime truth, update docs in the same round;
+3. if the task is visual, do not smuggle in functional ownership changes;
+4. if the task is event/runtime, do not move module-owned records into a review/control surface.
 
-## 5. Test Coverage Signals / 测试覆盖信号
+## 5. Test Coverage Signals
 
-The current repo already has meaningful coverage around the core domain stores and the most important cross-module loops.
+The current repo has meaningful protection around core domain stores and important cross-module loops.
 
-当前仓库在核心领域 store 和关键跨模块链路上，已经有比较实质的测试覆盖。
+Stronger defended areas include:
 
-### 5.1 Strongly Defended Areas / 护城河较强的区域
+- system and persistence
+- chat behavior and prompt assembly
+- map route/trip/world-context behavior
+- calendar event and world-context behavior
+- gallery asset logic
+- relationship runtime and fact adapters
+- control-center/world-hub review behavior
+- shopping / food-delivery / wallet connectors
 
-- `system` store:
-  - `tests/system-automation.test.js`
-  - `tests/system-world-kernel.test.js`
-  - `tests/system-widget-import.test.js`
-  - `tests/system-backup-reminder.test.js`
-  - `tests/system-backup-copy-tone.test.js`
-  - `tests/system-truth.test.js`
-- `chat` store and chat behavior:
-  - `tests/chat-store-model.test.js`
-  - `tests/chat-role-knowledge-binding.test.js`
-  - `tests/chat-view-semantic-revision.test.js`
-  - `tests/chat-worldbook-binding-visibility.test.js`
-- `map` store and baseline flow:
-  - `tests/map-trip-baseline.test.js`
-  - `tests/map-worldbook-context.test.js`
-- `calendar` store and cross-module flow:
-  - `tests/calendar-event-store.test.js`
-  - `tests/calendar-worldbook-context.test.js`
-- `gallery` asset logic:
-  - `tests/gallery-store.test.js`
-- `worldbook` filtering UX:
-  - `tests/worldbook-view-filters.test.js`
+Engineering meaning:
 
-### 5.2 Engineering Meaning / 工程含义
+1. store refactors are possible, but validation is more expensive than view-level cleanup;
+2. view extraction and ownership clarification are still the cheapest maintainability investments;
+3. relationship/runtime changes should be deliberate because multiple surfaces now consume them.
 
-These signals suggest:
+## 6. Module-By-Module Notes
 
-这些信号意味着：
+### Lock Screen
 
-1. Store refactors are not impossible, but are more expensive to validate.  
-   Store 重构不是不能做，但验证成本更高。
-2. View extraction is currently the lowest-risk maintainability investment.  
-   视图拆分是当前风险最低的可维护性投资。
-3. Calendar/Map/WorldBook cross-module behavior now has enough tests that major behavior changes should be deliberate and documented.  
-   Calendar / Map / WorldBook 的跨模块行为已有一定测试，后续大改必须更明确地记录和验证。
+- product state: stable
+- engineering note: reuse existing notification metadata path; do not invent parallel lock behavior
+- recommendation: no proactive refactor needed
 
----
+### Home
 
-## 6. Module-by-Module Engineering Notes / 按模块的工程接手备注
+- product state: stable shell
+- engineering note: layout editing stays intentionally gated
+- recommendation: treat as shell infrastructure, not a general experimentation surface
 
-### 6.1 Lock Screen / 锁屏
+### Settings
 
-- Product state: stable.
-- Engineering note: future modules must reuse the existing notification metadata path instead of inventing their own foreground/lock behavior.
-- Recommendation: no proactive refactor needed.
+- product state: strong configuration center
+- engineering note: still dense, but many display-only extractions already landed
+- recommendation: avoid deep behavior rewrites; only continue low-risk cleanup if a clear UX need appears
 
-### 6.2 Home / 桌面
+### Network
 
-- Product state: stable shell.
-- Engineering note: layout editing is intentionally gated and should not be casually promoted into a user-facing feature without product confirmation.
-- Recommendation: treat as shell infrastructure, not a place for rapid experimentation.
+- product state: technically usable
+- engineering note: provider setup is still more "technical" than "guided"
+- recommendation: if revisited, prefer guided copy, examples, and diagnostics clarity over transport-layer churn
 
-### 6.3 Settings / 设置
+### Chat
 
-- Product state: strong configuration center.
-- Engineering note: high-value but high-density surface.
-- Recommendation: continue low-risk section extraction; do not redesign backup/push logic while splitting.
+- product state: strongest gameplay module
+- engineering note: still the single biggest maintainability hotspot
+- recommendation: prefer extraction and IA cleanup before more thread-side feature growth
 
-### 6.4 Network / 网络
+### Chat Directory
 
-- Product state: technically usable.
-- Engineering note: provider setup is functional but still technical in tone.
-- Recommendation: next product polish should be examples, guided states, and connection testing rather than deeper transport changes.
+- product state: real management tool
+- engineering note: concept density is a bigger problem than raw capability
+- recommendation: keep product meaning narrow and plain-language before adding more management power
 
-### 6.5 Chat / 聊天
+### Contacts
 
-- Product state: strongest gameplay module.
-- Engineering note: most important maintainability hotspot.
-- Recommendation: split thread menu, action sheet, rich-send panel, and AI status sections before adding more thread-side features.
+- product state: active strategic module
+- engineering note: large, semantically important, and now part of destructive flows / role-hub direction
+- recommendation: current best investment is Contacts detail IA and manual-vs-event-attached presentation, not field sprawl
 
-### 6.6 Chat Directory / 会话通讯录
+### Gallery
 
-- Product state: real management tool.
-- Engineering note: concept density is the bigger problem than raw capability.
-- Recommendation: improve plain-language guidance before adding more management actions.
+- product state: real platform-level asset hub
+- engineering note: must not turn into a second admin console
+- recommendation: keep it asset/atmosphere-first for now; do not force relationship-memory authoring into it yet
 
-### 6.7 Contacts / 主通讯录
+### Appearance
 
-- Product state: useful archive/configuration module.
-- Engineering note: dense combined form for role profile, asset slots, and knowledge binding.
-- Recommendation: if revisited, improve first-time role creation flow instead of expanding raw fields.
+- product state: strong MVP
+- engineering note: visual lane is separate; do not mix it with ownership work
+- recommendation: revisit only in explicit visual slices
 
-### 6.8 Gallery / 相册素材中台
+### WorldBook
 
-- Product state: true platform-level asset hub.
-- Engineering note: avoid letting Gallery become a second admin console.
-- Recommendation: keep Gallery photo-first, and extract shared pickers/status pieces outward where possible.
+- product state: real cross-module world kernel
+- engineering note: readability matters more than piling on more features
+- recommendation: protect clarity
 
-### 6.9 Appearance / 外观
+### Map
 
-- Product state: strong MVP.
-- Engineering note: do not let widget/editor concerns blur with appearance basics.
-- Recommendation: clarify whether app-icon uploads are intentionally out of scope.
+- product state: active expansion core
+- engineering note: product depth is rising quickly, so boundaries matter
+- recommendation: keep Map as context/progression/trip owner; do not let it re-absorb reminders or other modules' records
 
-### 6.10 WorldBook / 世界书
+### Calendar
 
-- Product state: now a real cross-module world kernel, not just a Chat helper.
-- Engineering note: feature growth is no longer the main need; comprehensibility is.
-- Recommendation: pause feature growth and protect readability.
+- product state: meaningful schedule/date app
+- engineering note: no longer a placeholder; ownership matters
+- recommendation: continue schedule/date semantics, not raw cue-inbox regression
 
-### 6.11 Map / 地图
+### Reminders
 
-- Product state: active P1 expansion core.
-- Engineering note: product depth is rising quickly, so ownership boundaries matter.
-- Recommendation: keep Map as a cue/progression source; keep reminder scheduling and delivery semantics owned by Calendar + Push.
+- product state: meaningful cross-module cue surface
+- engineering note: key ownership seam that protects Calendar from inbox drift
+- recommendation: keep raw cues and follow-up flows here
 
-### 6.12 Calendar / 日历
+### Files
 
-- Product state: meaningful MVP with live workflow.
-- Engineering note: already has real business responsibility and should not be mistaken for a placeholder anymore.
-- Recommendation: next step is either richer event management or server delivery receipts, not redoing baseline cue consumption.
+- product state: internal metadata/index component
+- engineering note: hidden as a standalone app by decision
+- recommendation: only expand when another module needs an internal bridge
 
-### 6.13 Files / 文件
+### More
 
-- Product state: internal metadata-only storage/index component; standalone frontend entry is hidden.
-- Engineering note: quick notes, favorites, deletes, and local file metadata import now live in `src/stores/files.js`; original file content is not copied or stored.
-- Recommendation: keep user-facing file/asset management in owning modules; only expand Files when another module needs an internal metadata bridge.
-- Decision record: `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`.
+- product state: utility/labs surface
+- engineering note: existing toggles now have some UI consumers
+- recommendation: let current toggles mature before adding more control ownership
 
-### 6.14 More / 更多
+### Phone
 
-- Product state: persisted shortcut/Labs MVP.
-- Engineering note: experimental toggles live under `settings.more.featureToggles` and now have first low-risk UI consumers in Home, Lock, and More.
-- Recommendation: let the existing toggles mature before adding more toggles or deeper automation ownership.
+- product state: working support loop
+- engineering note: useful for logs, callbacks, and relationship facts, but not yet a primary fantasy anchor
+- recommendation: keep it support-focused for now
 
-### 6.15 Phone / 电话
-
-- Product state: local role-call log MVP.
-- Engineering note: `src/stores/phone.js` owns recent calls, missed/completed counters, manual simulated records, shared missed-call notification handoff, Calendar callback cue handoff, persistence, backup/restore, and regression tests; it does not dial real phone calls.
-- Recommendation: defer AI call summaries until the Calendar callback cue loop is clearer.
-
-### 6.16 Wallet / 钱包
-
-- Product state: local virtual ledger MVP.
-- Engineering note: `src/stores/wallet.js` owns manual transfer records, Chat `transfer_virtual` source entries, source summary/filter helpers, balance summary, persistence, and restore behavior; it is not real payment infrastructure.
-- Recommendation: defer economy simulation until more narrative consumers exist.
-
-### 6.17 Stock / 股票
-
-- Product state: local simulated-market MVP.
-- Engineering note: `src/stores/stock.js` owns watchlist, holdings value, top movers, manual simulated assets, persistence, backup/restore, and regression tests; no real-market API is included.
-- Recommendation: keep simulation-first; attach world/calendar events only if Stock becomes part of the narrative economy loop.
-
----
-
-## 7. Recommended Next Engineering Order / 推荐的下一工程顺序
-
-### 7.1 Best Immediate Work / 最推荐的近期工作
-
-1. Return to low-risk component extraction.
-   回到低风险组件拆分。
-2. Start with Chat thread menu / WorldBook summary surfaces.
-   优先从 Chat 线程菜单 / WorldBook 摘要区开始。
-3. Continue Settings display decomposition if Chat scope is too risky in the current branch.
-   如果当前分支不适合碰 Chat，就继续拆 Settings 展示层。
-4. Only then consider Map view extraction.
-   之后再考虑 Map 视图拆分。
-
-### 7.2 Work to Avoid Right Now / 当前不建议优先做的事
-
-1. Do not start major Chat store redesign.
-   不建议现在启动 Chat store 大改。
-2. Do not expand Phone/Wallet/Stock before the main immersion loops are more settled.
-   不建议在主沉浸循环更稳之前扩 Phone / Wallet / Stock。
-3. Do not keep adding WorldBook features without first protecting page readability.
-   不建议在没有先保护可理解性的前提下继续堆 WorldBook 功能。
-4. Do not move reminder ownership back from Calendar to Map.
-   不建议把提醒调度职责从 Calendar 拉回 Map。
-
----
-
-## 8. Component Extraction Candidate List / 组件拆分候选清单
-
-This section turns the maturity map into concrete decomposition candidates for future implementation.
-
-这一节把成熟度地图进一步落成“可以执行的拆分候选清单”，方便后续直接开工。
-
-### 8.1 ChatView.vue Candidates / ChatView.vue 拆分候选
-
-Current size / 当前体量: about 4968 lines.  
-Engineering meaning / 工程含义: highest-priority large-view hotspot.
-
-#### Candidate A: Thread Menu Panel / 会话线程菜单面板
-
-- Source signals:
-  - `showThreadMenu`
-  - thread settings
-  - service template summary
-  - current WorldBook context
-  - thread-level AI preferences
-- Approximate template area:
-  - around the thread menu block near `v-if="showThreadMenu"`
-- Why first:
-  - mostly display + form controls
-  - already visually distinct
-  - limited interaction boundary
-- Suggested component name:
-  - `src/components/chat/ChatThreadMenuPanel.vue`
-- Props to pass first:
-  - active chat identity data
-  - active AI prefs
-  - service summary state
-  - WorldBook context summary
-  - save-state flags and callbacks
-- Avoid changing:
-  - prompt assembly order
-  - conversation persistence shape
-  - role-binding contract logic
-- Acceptance:
-  - same thread menu behavior
-  - same save feedback
-  - same WorldBook jump behavior
-
-#### Candidate B: User Rich-Send Action Panel / 用户富消息发送面板
-
-- Source signals:
-  - `showUserActionPanel`
-  - gallery picker
-  - link/transfer/voice-card inline forms
-  - user action grid hints
-- Why second:
-  - already internally segmented
-  - strong UI boundary
-  - can reduce main-thread clutter without touching AI call core
-- Suggested component names:
-  - `src/components/chat/ChatUserActionPanel.vue`
-  - optional subcomponents later:
-    - `ChatGalleryPicker.vue`
-    - `ChatInlineActionForms.vue`
-- Avoid changing:
-  - media import policy
-  - gallery asset selection logic
-  - send payload normalization
-- Acceptance:
-  - same panel open/close behavior
-  - same inline validation
-  - same one-off import / send path
-
-#### Candidate C: Message Edit Modal / 消息编辑弹层
-
-- Source signals:
-  - `showEditMessageModal`
-  - `editingMessage*`
-  - `messageEditState`
-- Why third:
-  - highly isolated state
-  - behavior already has targeted regression coverage
-- Suggested component name:
-  - `src/components/chat/ChatMessageEditModal.vue`
-- Avoid changing:
-  - semantic revision policy
-  - revision restore flow
-  - message-edit validation helper contract
-- Acceptance:
-  - same edit/save/cancel behavior
-  - existing semantic-revision tests remain green
-
-#### Candidate D: AI Status and Suggestion Strip / AI 状态与建议条
-
-- Source signals:
-  - `showSuggestions`
-  - `suggestions`
-  - `headerSecondaryStatusText`
-  - automation hint texts
-- Why later:
-  - lower risk, but less payoff than thread menu and action panel
-- Suggested component name:
-  - `src/components/chat/ChatAiStatusStrip.vue`
-
-### 8.2 SettingsView.vue Candidates / SettingsView.vue 拆分候选
-
-Current size / 当前体量: about 2302 lines.  
-Engineering meaning / 工程含义: dense multi-domain configuration page.
-
-#### Candidate A: Backup and Restore Section / 备份与恢复区块
-
-- Source signals:
-  - backup export/import state
-  - export mode hints
-  - import rollback feedback
-- Why first:
-  - visually independent
-  - product language-heavy
-  - can improve readability without touching routing
-- Suggested component name:
-  - `src/components/settings/SettingsBackupSection.vue`
-- Avoid changing:
-  - backup schema logic
-  - asset package export behavior
-  - rollback semantics
-- Acceptance:
-  - same export/import actions
-  - same feedback messages
-  - same file-input trigger behavior
-
-#### Candidate B: Push and Notification Section / 推送与通知区块
-
-- Source signals:
-  - push subscription/unsubscription
-  - health check
-  - external push display mode
-  - test push
-- Suggested component name:
-  - `src/components/settings/SettingsPushSection.vue`
-- Status:
-  - `DONE` on 2026-05-02; component extracted and push orchestration / diagnostics ownership kept in `SettingsView.vue`.
-  - 2026-05-02 已落地；组件已抽出，推送编排与诊断职责仍留在 `SettingsView.vue`。
-- Why second:
-  - strongly grouped by one domain
-  - currently one of the densest parts of the page
-- Avoid changing:
-  - actual push orchestration
-  - diagnostics report writing
-  - browser capability detection
-
-#### Candidate C: Storage Diagnostics Section / 存储诊断区块
-
-- Source signals:
-  - storage audit / repair
-  - latest storage report
-  - clear report actions
-- Suggested component name:
-  - `src/components/settings/SettingsStorageDiagnosticsSection.vue`
-- Why third:
-  - mostly self-contained
-  - good low-risk extraction target
-- Avoid changing:
-  - persistence inspect/reconcile API contracts
-  - report normalization
-
-#### Candidate D: AI Automation Section / AI 自动响应区块
-
-- Source signals:
-  - automation toggles
-  - quiet hours
-  - policy summaries
-  - save state
-- Suggested component name:
-  - `src/components/settings/SettingsAutomationSection.vue`
-- Status:
-  - `DONE` on 2026-05-02; component extracted and enable confirmation / normalization / runtime policy ownership kept in `SettingsView.vue`.
-  - 2026-05-02 已落地；组件已抽出，开启确认、归一化与运行策略职责仍留在 `SettingsView.vue`。
-- Why later:
-  - domain is self-contained, but state interactions are broader than backup/storage
-- Avoid changing:
-  - automation runtime policy semantics
-  - per-module policy ownership
-
-### 8.3 MapView.vue Candidates / MapView.vue 拆分候选
-
-Current size / 当前体量: about 1802 lines.  
-Engineering meaning / 工程含义: rich product layer with concentrated display concerns.
-
-#### Candidate A: Map Visual Settings Panel / 地图视觉设置面板
-
-- Source signals:
-  - `map-visual-panel`
-  - visual mode switch
-  - gallery background binding
-  - AI visual refresh
-  - provider visual status
-- Suggested component name:
-  - `src/components/map/MapVisualSettingsPanel.vue`
-- Status:
-  - `DONE` on 2026-05-02; component extracted and store writes/provider logic kept in `MapView.vue`.
-  - 2026-05-02 已落地；组件已抽出，store 写入与供应商逻辑仍留在 `MapView.vue`。
-- Why first:
-  - strongest visual boundary
-  - least entangled with trip progression
-- Avoid changing:
-  - provider call path
-  - one-off upload policy
-  - gallery fallback semantics
-
-#### Candidate B: Area Feedback Panel / 区域反馈面板
-
-- Source signals:
-  - area feedback list
-  - WorldBook relevance chips
-  - direct WorldBook jumps
-- Suggested component name:
-  - `src/components/map/MapAreaFeedbackPanel.vue`
-- Status:
-  - `DONE` on 2026-05-02; component extracted and feedback derivation / WorldBook route query ownership kept in `MapView.vue`.
-  - 2026-05-02 已落地；组件已抽出，反馈派生与 WorldBook 路由 query 职责仍留在 `MapView.vue`。
-- Why second:
-  - read-only derived data
-  - limited mutation behavior
-- Avoid changing:
-  - feedback derivation rules
-  - WorldBook route query building
-
-#### Candidate C: Trip Control and Status Panel / 行程控制与状态面板
-
-- Source signals:
-  - trip start/cancel
-  - background arrival push status
-  - trip progress display
-- Suggested component name:
-  - `src/components/map/MapTripControlPanel.vue`
-- Status:
-  - `DONE` on 2026-05-02; component extracted and trip lifecycle / push arming ownership kept in `MapView.vue`.
-  - 2026-05-02 已落地；组件已抽出，行程生命周期与推送布置职责仍留在 `MapView.vue`。
-- Why third:
-  - central interaction block, but still visually separable
-- Avoid changing:
-  - trip lifecycle logic
-  - arrival scheduling ownership
-  - push arming semantics
-
-#### Candidate D: Route Familiarity Panel / 路线熟悉度面板
-
-- Source signals:
-  - route familiarity list
-  - tier labels
-  - related WorldBook chips
-- Suggested component name:
-  - `src/components/map/MapRouteFamiliarityPanel.vue`
-- Status:
-  - `DONE` on 2026-05-03; component extracted and route derivation / WorldBook route query ownership kept in `MapView.vue`.
-  - 2026-05-03 已落地；组件已抽出，路线派生与 WorldBook 路由 query 职责仍留在 `MapView.vue`。
-- Why fourth:
-  - derived display-only zone
-  - low business-side mutation risk
-
-#### Candidate E: Trip History Panel / 行程记录面板
-
-- Source signals:
-  - trip history list
-  - reward summaries
-  - related WorldBook chips
-- Suggested component name:
-  - `src/components/map/MapTripHistoryPanel.vue`
-- Current status:
-  - `DONE` on 2026-05-03; component extracted and trip-history derivation / WorldBook route query ownership kept in `MapView.vue`.
-  - 2026-05-03 已落地；组件已抽出，行程记录派生与 WorldBook 路由 query 职责仍留在 `MapView.vue`。
-- Why fifth:
-  - also display-heavy and derived
-  - good candidate after visual and control panel split
-
-### 8.4 Recommended Decomposition Order / 推荐拆分顺序
-
-If future contributors want a practical low-risk order, use this:
-
-如果后续接手者需要一个更实际的低风险顺序，建议按这个顺序拆：
-
-1. `ChatThreadMenuPanel`
-2. `SettingsBackupSection`
-3. `SettingsStorageDiagnosticsSection`
-4. `ChatMessageEditModal`
-5. `MapVisualSettingsPanel`
-6. `ChatUserActionPanel`
-7. `MapAreaFeedbackPanel`
-8. `SettingsPushSection`
-9. `MapTripControlPanel`
-10. `SettingsAutomationSection`
-11. `MapRouteFamiliarityPanel`
-12. `MapTripHistoryPanel`
-
-### 8.5 Shared Extraction Rules / 共享拆分规则
-
-For all of the candidates above:
-
-以上候选块统一遵循这些规则：
-
-1. Prefer “display extraction first, logic extraction second”.
-   先抽展示，再抽逻辑。
-2. Keep store writes in the parent view on the first extraction unless the boundary is already very clear.
-   第一轮拆分时，除非边界特别清楚，否则先把 store 写操作留在父视图。
-3. Do not rewrite data contracts and component extraction in the same step.
-   不要在同一刀里同时改数据契约和做组件拆分。
-4. Preserve existing tests before adding new features in the extracted area.
-   先保住现有测试，再在拆出的区域上长新功能。
-5. If extraction affects route/schema/core interaction, sync docs in the same batch.
-   如果拆分影响路由/数据结构/核心交互，同批同步文档。
-
----
-
-## 9. Reading Path for Future Contributors / 给后续接手者的阅读路径
-
-If you are taking over implementation work, read in this order:
-
-如果你要接手开发，建议按这个顺序阅读：
+### Wallet
+
+- product state: working downstream ledger
+- engineering note: now important because of order/relationship continuity
+- recommendation: preserve downstream-ledger semantics before expanding into deeper economy systems
+
+### Stock
+
+- product state: support module with real baseline
+- engineering note: useful connector, but not a mainline product fantasy yet
+- recommendation: keep it secondary until broader economy/gameplay decisions harden
+
+### World Hub
+
+- product state: narrow optional runtime review app
+- engineering note: now a genuine engineering hotspot because it reads multiple truth layers
+- recommendation: improve review quality and filtering before exposing stronger mutation controls
+
+## 7. Recommended Near-Term Engineering Order
+
+Best immediate work:
+
+1. Contacts detail IA and memory-management presentation
+2. text/event-first relationship-memory dedupe, merge, and recall cleanup
+3. World Hub review/detail readability
+4. Chat/Contacts/Chat Directory semantic cleanup where old compatibility fields can still confuse truth ownership
+5. only then consider the next cross-module expansion slice
+
+Work to avoid right now:
+
+1. major Chat store redesign
+2. broad new Phone/Wallet/Stock fantasy tracks
+3. renewed WorldBook feature sprawl without readability protection
+4. moving reminder ownership back from Reminders/Calendar boundaries
+5. broad value-editing controls in World Hub before review quality is strong enough
+
+## 8. Reading Path For Future Contributors
+
+If you are taking over implementation work, read:
 
 1. `docs/README.md`
-2. `docs/pm/TODO_PM_STATUS_REPORT.md`
+2. `docs/overview/PROJECT_MASTER_GUIDE.md`
 3. `docs/roadmap/TODO_ROADMAP.md`
-4. `docs/overview/PROJECT_MASTER_GUIDE.md`
-5. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-6. Module-specific files and tests you plan to touch
+4. `docs/pm/TASK_PACKAGE_INDEX.md`
+5. the matching package `README.md`
+6. the matching package `STATUS_AND_HANDOFF.md`
+7. this file
 
 If you are deciding what to build next:
 
-如果你是在判断下一步做什么：
+1. check `docs/roadmap/TODO_ROADMAP.md` for active execution order;
+2. use this file to judge engineering risk and maturity;
+3. use `docs/roadmap/PROJECT_MODULE_AUDIT.md` for candidate discovery only.
 
-1. Check `docs/roadmap/TODO_ROADMAP.md` for active execution order.
-2. Use this file to judge engineering risk and maturity.
-3. Use `docs/roadmap/PROJECT_MODULE_AUDIT.md` only for candidate discovery, not for live status.
+## 9. Change Log
 
----
-
-## 10. Change Log / 变更记录
-
-1. 2026-05-02 EN: Created as a dedicated handoff reference that bridges PM status, roadmap, module audit, file-size hotspots, and test-coverage signals for future developers and AI assistants.
-   2026-05-02 中文：新增为面向后续开发同事与 AI 助手的接手参考文档，打通 PM 状态、路线图、模块审计、文件体量热点与测试覆盖信号。
-2. 2026-05-02 EN: Added a concrete component extraction candidate list for `ChatView.vue`, `SettingsView.vue`, and `MapView.vue`, including suggested boundaries, sequencing, and guardrails.
-   2026-05-02 中文：补充 `ChatView.vue`、`SettingsView.vue`、`MapView.vue` 的具体组件拆分候选清单，包含推荐边界、拆分顺序与守则。
-3. 2026-05-03 EN: Marked `MapTripHistoryPanel.vue` as landed after extracting the trip-history display panel from `MapView.vue`.
-   2026-05-03 中文：在从 `MapView.vue` 抽出行程记录展示面板后，将 `MapTripHistoryPanel.vue` 标记为已落地。
-4. 2026-05-04 EN: Updated Phone and Wallet maturity notes after landing missed-call shell notifications and Chat transfer-card Wallet ledger sync.
-   2026-05-04 中文：在未接来电 shell 通知与 Chat 转账卡同步 Wallet 流水落地后，更新 Phone 与 Wallet 成熟度说明。
-5. 2026-05-04 EN: Marked Phone missed-call Calendar callback cues as landed and moved the next practical work toward Wallet source visibility.
-   2026-05-04 中文：标记 Phone 未接来电 Calendar 回拨线索已落地，并将下一实际推进项顺延到 Wallet 来源可见性。
-6. 2026-05-04 EN: Marked Wallet Chat-origin source visibility as landed and moved the next practical work toward More/Labs toggle consumption.
-   2026-05-04 中文：标记 Wallet 的 Chat 来源可见性已落地，并将下一实际推进项顺延到 More/Labs 开关消费。
-7. 2026-05-04 EN: Marked More/Labs toggle consumption as landed across Home, Lock, and More, then moved the next practical work toward Network component coverage or a Files role decision.
-   2026-05-04 中文：标记 More/Labs 开关消费已在 Home、Lock、More 落地，并将下一实际推进项顺延到 Network 组件覆盖或 Files 角色决策。
-8. 2026-05-04 EN: Marked Files product role as decided: hidden standalone frontend entry, retained internal storage/coordination component, with next practical work moved to Network component coverage.
-   2026-05-04 中文：标记 Files 产品角色已决策：隐藏独立前台入口，保留内部储存/协调组件，并将下一实际推进项顺延到 Network 组件覆盖。
-9. 2026-05-04 EN: Marked Network smoke-control component coverage as landed; next practical Network work is display-only extraction of smoke/diagnostics sections.
-   2026-05-04 中文：标记 Network 烟测控件组件覆盖已落地；下一实际 Network 工作为烟测/诊断区的展示层拆分。
-10. 2026-05-04 EN: Marked Network smoke/diagnostics display extraction as landed; next practical Network work is provider-template/setup/preset display extraction.
-    2026-05-04 中文：标记 Network 烟测/诊断展示层拆分已落地；下一实际 Network 工作为供应商模板/配置向导/预设展示区拆分。
----
-
-## 2026-05-04 Network Engineering Note
-
-EN: Network maintainability has improved after the follow-up decomposition batch. `NetworkView.vue` now delegates setup/preset display, smoke controls, manual model/save display, and diagnostics display to dedicated components, while reusable report labels and report filtering/summary logic live in `src/lib/network-report-labels.js` and `src/lib/network-report-state.js`.
-
-中文：Network 可维护性已在本轮连续拆分后提升。`NetworkView.vue` 现在将配置/预设展示、烟测控制、手动模型/保存展示、诊断展示交给独立组件；可复用的报告标签、报告筛选与汇总逻辑位于 `src/lib/network-report-labels.js` 和 `src/lib/network-report-state.js`。
-
-EN: Current recommendation is not to keep splitting Network by default. Prefer moving to the next small connector or hotspot unless a Network bug appears.
-
-中文：当前建议不是默认继续拆 Network；除非出现 Network 缺陷，否则优先转向下一个小功能连接点或其它热点。
-
----
-
-## 2026-05-04 Settings Engineering Note
-
-EN: Settings maintainability improved with the General/About follow-up batch. `SettingsView.vue` now delegates General display/input events, repeated subpage headers, and About version-card display to small components, while backup-reminder interval rules live in `src/lib/backup-reminder-settings.js`.
-
-中文：Settings 可维护性已通过本轮 General/About 批次提升。`SettingsView.vue` 现在将通用设置展示/输入事件、重复子页头部、About 版本卡展示交给小组件；备份提醒间隔规则位于 `src/lib/backup-reminder-settings.js`。
-
-EN: Next practical Settings work is one more display-only extraction from the landing page. Avoid changing backup/import, push, or storage semantics in the same slice.
-
-中文：下一步实用 Settings 工作是继续从首页做一个展示层拆分。不要在同一切片里改变备份/导入、推送或存储语义。
-
----
-
-## 2026-05-04 Settings Landing Engineering Note
-
-EN: Settings landing maintainability improved after extracting `SettingsLandingSection.vue`. The landing page now delegates profile entry, beginner tip, quick access, and content-menu display to a small component; `SettingsView.vue` remains responsible for route jumps and subpage state.
-
-中文：Settings 首页可维护性已通过 `SettingsLandingSection.vue` 拆分提升。首页现在把资料入口、新手提示、快捷入口与内容设置菜单展示交给小组件；`SettingsView.vue` 仍负责路由跳转与子页状态。
-
-EN: Current recommendation is to pause further Settings display splitting unless a Settings bug appears, and move to Calendar cue lifecycle polish as the next low-risk functional connector.
-
-中文：当前建议暂缓继续拆 Settings 展示层，除非出现 Settings 缺陷；下一步转向 Calendar 线索生命周期打磨，作为低风险功能连接点继续推进。
-
----
-
-## 2026-05-04 Calendar Engineering Note
-
-EN: Calendar real-push lifecycle reliability improved. Push schedule/cancel operations no longer share one global in-flight promise; they are keyed by event id and schedule id, preserving duplicate-click dedupe while allowing independent events to schedule concurrently.
-
-中文：Calendar 真实推送生命周期可靠性已提升。推送调度/取消不再共享单个全局 in-flight promise，而是按事件 id 与排程 id 隔离；这样既保留重复点击去重，又允许独立事件并发调度。
-
-EN: Next practical Calendar work can be a display-only extraction of cue/event cards, but avoid changing the visual language or interaction concept while the visual rebuild is parked.
-
-中文：下一步 Calendar 实用工作可以是线索/事件卡片的纯展示层拆分；但在视觉重建已搁置的前提下，不要改变视觉语言或交互概念。
-
----
-
-## 2026-05-04 Calendar Cue Card Engineering Note
-
-EN: Calendar view maintainability improved after extracting Map reminder and Phone callback cue cards into dedicated components. The parent view still owns synchronization, confirmation/dismissal, formatting, WorldBook lookups, and navigation.
-
-中文：Calendar 视图可维护性已通过拆出 Map 提醒卡与 Phone 回拨线索卡提升。父视图仍负责同步、确认/忽略、格式化、WorldBook 查询与导航。
-
-EN: Further Calendar extraction should stay display-only. Do not change cue lifecycle, push scheduling, or visual direction in the same slice.
-
-中文：后续 Calendar 拆分应保持纯展示层边界。不要在同一切片里改变线索生命周期、推送调度或视觉方向。
-
----
-
-## 2026-05-04 Calendar Event Card Engineering Note
-
-EN: Calendar event-card maintainability improved after extracting `CalendarEventCard.vue`. The parent view is now mostly orchestration for events, reminders, Phone cues, WorldBook routing, and push-state derivation.
-
-中文：Calendar 事件卡片可维护性已通过 `CalendarEventCard.vue` 拆分提升。父视图现在更接近事件、提醒、Phone 线索、WorldBook 路由与推送状态派生的编排层。
-
-EN: Current recommendation is to stop Calendar display-only extraction for now and choose the next module direction before adding a new cross-module behavior.
-
-中文：当前建议暂时停止 Calendar 纯展示拆分，并在新增跨模块行为前先选择下一模块方向。
-
----
-
-## 2026-05-04 Stock/Wallet Connector Engineering Note
-
-EN: Stock maturity improved from standalone simulated-market MVP to an integrated Calendar cue producer. Large simulated moves create persistent Calendar stock cues; confirmed cues become events through the same Calendar event/push path as Map and Phone cues.
-
-中文：Stock 成熟度已从独立模拟行情 MVP 提升为 Calendar 线索生产者。明显波动的模拟标的会生成持久化 Calendar 行情线索；确认后会通过与 Map、Phone 相同的 Calendar 事件/推送链路进入日程。
-
-EN: Wallet maturity improved as relationship context for Contacts. Wallet owns transaction aggregation by counterparty, while Contacts only reads and displays matching summaries, preserving module boundaries.
-
-中文：Wallet 成熟度已提升为 Contacts 的关系上下文来源。Wallet 负责按交易对象聚合流水，Contacts 只读取并展示匹配摘要，保持模块边界清晰。
-
-EN: Next practical work should add Calendar view-level interaction coverage for Stock cues before adding more connector types.
-
-中文：下一步实用工作建议先补 Calendar 行情线索的视图级交互覆盖，再新增更多连接类型。
-
-EN: Calendar Stock cue view coverage is now present, so further connector expansion should wait for the next module-pair decision.
-
-中文：Calendar 行情线索视图覆盖已补齐，因此后续连接点扩展应等待下一组模块组合决策。
+1. 2026-05-02: created as a dedicated handoff reference linking roadmap, module audit, hotspots, and test-coverage signals.
+2. 2026-05-03 to 2026-05-04: accumulated many extraction and connector notes.
+3. 2026-05-19: condensed historical mixed-encoding and long log-style content into a current-state engineering map, refreshed hotspot sizes, and added Contacts / Reminders / World Hub as first-class engineering guidance targets.

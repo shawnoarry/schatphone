@@ -1,14 +1,24 @@
-# World Context Event Variant Standard / 世界观事件变体标准需求
+# World Context Event Variant Standard
 
-Updated: 2026-05-16
+Updated: 2026-05-19
 
-This document is the standard requirement for making SchatPhone events world-aware. It extends the Simulation Event Engine with WorldBook-driven world context and local event variant packs.
+Purpose: define the shared standard for making SchatPhone events world-aware without breaking current ownership boundaries or turning runtime execution into an API-dependent black box.
 
-本文是事件专项的标准需求，用于规定后续所有事件适配器如何接入 WorldBook 绑定后的统一世界观。核心目标是：不同世界观可以触发不同风格的事件，但所有模块仍复用同一个事件基座，不为每个模块重新做一套随机系统。
+Use this file together with:
 
-## 1. Core Decision / 核心决策
+- `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
+- `docs/strategy/BACKGROUND_ACTIVITY_STRATEGY.md`
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
+- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
 
-SchatPhone events must be generated and executed through this shared chain:
+Core rule:
+
+> world-aware flavor should change how an event feels, not who owns the resulting truth.
+
+## 1. Standard Runtime Chain
+
+World-aware events should follow this shared chain:
 
 ```text
 WorldBook bindings
@@ -17,39 +27,44 @@ WorldBook bindings
 -> shared event engine
 -> module adapter
 -> module-owned store action
--> visible module/chat/notification surface
+-> visible module / Chat / notification surface
 ```
 
-The runtime event path should be local by default. API calls should not happen every time a random event triggers.
+Important baseline:
 
-运行时事件默认本地执行。API 不应在每次随机事件触发时调用。
+- ordinary runtime triggering should stay local by default;
+- API calls are allowed for generating or refreshing event material, not for every runtime tick.
 
-## 2. Goals / 目标
+## 2. Goals
 
-- Let the same functional event become different immersive events under different WorldBook/worldview bindings.
-- Keep random, condition, cooldown, daily cap, and event logging in the shared simulation foundation.
-- Keep real data mutation inside the owning module store.
-- Let AI generate or refresh event material in batches, then save it locally for later reuse.
-- Make future adapters for Shopping, Logistics, Map, Phone, Gallery, Assets, Calendar, Wallet, and Chat follow the same standard.
+This standard exists to:
 
-## 3. Non-Goals / 非目标
+1. let one functional event appear differently under different world contexts;
+2. keep cooldowns, daily caps, deterministic triggering, and event logs inside the shared runtime foundation;
+3. preserve module ownership even when event flavor changes;
+4. allow future AI-assisted event-copy generation in batches, then save the result locally for reuse;
+5. give future adapters one reusable contract instead of one random system per module.
 
-- Do not call an API for every event trigger by default.
-- Do not let AI directly mutate module state.
-- Do not let every module invent its own world-context format.
-- Do not store raw WorldBook text in every event log.
-- Do not make a visible standalone Simulation/Event app unless product explicitly decides it later.
-- Do not use `game-engine` patterns unless the surface is a real minigame, Canvas/WebGL scene, or game loop.
+## 3. Non-Goals
 
-## 4. Required Concepts / 必须统一的概念
+This standard does not exist to:
 
-### 4.1 World Context / 世界观上下文
+1. call an API for every runtime event;
+2. let AI directly mutate domain state;
+3. duplicate raw WorldBook text into every event log;
+4. move ordinary product ownership into the event engine;
+5. make `World Hub` the normal authoring surface for event data;
+6. reopen old ownership confusion such as `Calendar` absorbing raw reminder-cue meaning.
 
-`worldContext` is a compact, normalized summary derived from active WorldBook bindings. It is the event engine's worldview input.
+## 4. Required Shared Concepts
 
-它不是完整 WorldBook 原文，而是适合事件系统读取的结构化摘要。
+### 4.1 World context
 
-Required shape:
+`worldContext` is a compact, normalized summary derived from active WorldBook bindings.
+
+It is not the raw WorldBook text blob.
+
+Recommended shape:
 
 ```js
 {
@@ -72,20 +87,17 @@ Required shape:
 
 Field rules:
 
-- `id`: stable local id for the summarized context.
-- `source`: `default`, `worldbook_binding`, `manual`, or `ai_generated_summary`.
-- `activeWorldBookIds`: references only; avoid copying full WorldBook content into logs.
-- `sourceScope`: `global`, `conversation`, `role`, `module`, or `route`.
-- `genreTags`: broad world categories such as `daily`, `sci_fi`, `apocalypse`, `fantasy`, `cyberpunk`, `historical`, `supernatural`.
-- `toneTags`: surface tone hints; examples: `warm`, `tense`, `absurd`, `official`, `romantic`, `grim`, `luxury`.
-- `techLevel`, `dangerLevel`, `socialOrder`, `economyMode`, `magicLevel`: small enums, not free-form essays.
-- `locale`: event-copy language target.
+- `id`: stable local id for the summarized context;
+- `source`: `default`, `worldbook_binding`, `manual`, or `ai_generated_summary`;
+- `activeWorldBookIds`: references only, not raw text duplication;
+- `sourceScope`: `global`, `conversation`, `role`, `module`, or `route`;
+- tone and world tags should stay compact and enumerable where possible.
 
-### 4.2 Event Template / 事件模板
+### 4.2 Event template
 
-An event template defines the functional event. It should be stable across worlds.
+An event template defines the functional event.
 
-事件模板定义“功能上发生了什么”，不直接等同于最终文案。
+It should stay stable across worlds.
 
 Example:
 
@@ -109,11 +121,9 @@ Example:
 }
 ```
 
-### 4.3 Event Variant / 事件变体
+### 4.3 Event variant
 
 An event variant is the world-aware expression of one template.
-
-事件变体定义“在某个世界观中，这个功能事件被包装成什么沉浸式事件”。
 
 Example:
 
@@ -122,35 +132,29 @@ Example:
   id: 'food_delivery.rider_delay.sci_fi.drone_lane_queue.v1',
   templateId: 'food_delivery.rider_delay.v1',
   worldScope: ['sci_fi', 'city'],
-  title: '低空航道排队',
+  title: 'Low-Altitude Lane Queue',
   summaryTemplates: [
-    '配送无人机进入低空航道管制队列，预计晚到 {etaDeltaMinutes} 分钟。',
-    '城市空域调度延迟，配送路线已自动重排。'
+    'The courier drone entered a controlled low-altitude queue. ETA +{etaDeltaMinutes} min.'
   ],
   detailTemplates: [
-    '订单仍在派送中。系统已根据当前航道拥堵重新计算 ETA。'
+    'The order is still in transit. ETA was recalculated against current lane congestion.'
   ],
   payloadHints: {
     eventType: 'rider_delay',
     severity: 'soft_delay'
   },
-  probabilityMultiplier: 1,
-  cooldownMultiplier: 1,
   impactLevel: 'non_destructive',
   reversible: true,
   requiresUserConfirmation: false,
-  safetyTags: ['no_data_loss', 'explainable'],
-  locale: 'zh-CN'
+  locale: 'en-US'
 }
 ```
 
-### 4.4 Event Variant Pack / 事件变体包
+### 4.4 Event variant pack
 
-An event variant pack is a local library of variants generated or curated for a world context.
+An event variant pack is a local library of variants generated or curated for one world context.
 
-事件变体包是一组本地保存的世界观事件素材。它可以来自内置默认包、用户手写、AI 批量生成、或后续编辑。
-
-Required shape:
+Recommended shape:
 
 ```js
 {
@@ -165,8 +169,7 @@ Required shape:
     'food_delivery.rider_delay.v1': [
       {
         id: 'food_delivery.rider_delay.sci_fi.drone_lane_queue.v1',
-        title: '低空航道排队',
-        summaryTemplates: ['配送无人机进入低空航道管制队列，预计晚到 {etaDeltaMinutes} 分钟。']
+        title: 'Low-Altitude Lane Queue'
       }
     ]
   },
@@ -176,80 +179,92 @@ Required shape:
 }
 ```
 
-## 5. Runtime Flow / 运行时流程
+## 5. Ownership Rules
 
-The runtime event flow must not depend on an API call.
+World-aware flavor must not break module ownership.
 
-运行时流程必须可以完全本地执行：
+Current ownership reminders:
 
-1. Resolve active `worldContext`.
-2. Load matching local `eventVariantPack`.
-3. Find eligible event templates for the module.
-4. Resolve the best event variant for each template.
-5. Evaluate template conditions through `condition-evaluator`.
-6. Evaluate random gate through deterministic random helper.
-7. Check cooldowns and daily caps through `simulationStore`.
-8. Call the module adapter.
-9. Adapter calls the owning module store action.
-10. Write event log with template id, variant id, world context id, trigger source, and result.
-11. Existing module surfaces display the result.
+- `Shopping` owns orders and logistics-facing order state.
+- `Food Delivery` owns restaurant/order state.
+- `Map` owns routes, trips, place/travel context, and location continuity.
+- `Wallet` owns ledger records and balances.
+- `Calendar` owns confirmed schedule/date meaning.
+- `Reminders` owns raw cues, callbacks, follow-ups, logistics reminders, and task-like prompts.
+- `relationship runtime` owns relationship truth and compact memory groups.
+- `World Hub` may review runtime state, but it is not the default authoring surface.
 
-If no variant pack exists, use the built-in fallback variant for `daily`.
+Important correction:
 
-## 6. API Usage Policy / API 使用策略
+- world-aware runtime adapters must not treat `Calendar` as the owner of raw reminder-style queues;
+- if an event produces a raw cue or callback prompt, that belongs to `Reminders` unless it becomes a confirmed schedule/date event.
 
-API usage is allowed for material generation, not ordinary runtime execution.
+## 6. Runtime Flow
 
-Recommended API moments:
+The ordinary runtime flow should not depend on a live API call:
 
-- User clicks "generate world event pack" after binding a WorldBook.
-- User refreshes or expands an existing event variant pack.
-- User asks for richer copy for a selected event.
-- Future advanced mode asks AI to suggest candidate event packs, which the engine still validates.
+1. resolve active `worldContext`;
+2. load a matching local `eventVariantPack`;
+3. find eligible event templates for the module;
+4. select the best available variant;
+5. evaluate conditions, random gate, cooldowns, and caps;
+6. call the module adapter;
+7. let the adapter call the owning module store action;
+8. write a runtime log with world metadata;
+9. let existing product surfaces display the result.
 
-Forbidden default pattern:
+If no specific pack exists, use the built-in `daily` fallback family.
+
+## 7. API Usage Policy
+
+API usage is allowed for event material generation, not routine runtime execution.
+
+Good API moments:
+
+- user explicitly generates or refreshes a world event pack;
+- advanced tooling asks AI to draft or expand variant families;
+- future moderation or review flow wants improved copy for a selected variant.
+
+Bad default pattern:
 
 ```text
-random event triggers
+runtime tick
+-> random event eligible
 -> call API
--> generate copy
+-> wait for copy
 -> mutate module state
 ```
 
 Required default pattern:
 
 ```text
-WorldBook selected or changed
--> optionally call API once to generate/refresh a variant pack
--> save variant pack locally
--> later random events use local variants only
+WorldBook changed
+-> optionally generate or refresh variant pack
+-> save locally
+-> later runtime ticks use the local pack only
 ```
 
-This keeps cost predictable, preserves deterministic tests, and prevents slow/random network behavior from blocking immersion.
+## 8. World Context Priority
 
-## 7. World Context Priority / 世界观来源优先级
+When several bindings exist, resolve `worldContext` in this order unless a stronger module rule explicitly overrides it:
 
-When multiple WorldBook bindings exist, resolve world context in this order unless a module has a stronger product rule:
+1. explicit module or route context;
+2. active Chat conversation binding;
+3. active role binding;
+4. global worldview;
+5. default `daily` context.
 
-1. Explicit module/route context.
-2. Active Chat conversation binding.
-3. Active role binding.
-4. Global worldview or world kernel.
-5. Default `daily` context.
+The chosen context id should be loggable and explainable.
 
-The selected context id should be logged so future developers and AI assistants can explain why an event appeared in a given style.
+## 9. Adapter Contract
 
-## 8. Adapter Standard / 适配器标准
+Every world-aware adapter should:
 
-Every module event adapter must follow this interface discipline:
-
-- Accept event input from the shared event engine, not from a module-local random system.
-- Accept or resolve a `variant`, but do not read raw WorldBook text directly.
-- Mutate only the owning module's store through existing or new module-owned actions.
-- Return a normalized adapter result that can be logged.
-- Preserve module ownership: Shopping owns orders, Food Delivery owns food orders, Map owns routes/ETA, Calendar owns reminders, Wallet owns ledger entries.
-- Provide a default `daily` variant so the module works without API and without WorldBook.
-- Add tests for at least default daily behavior and one world-context variant.
+- accept the shared event-engine input rather than inventing a private random flow;
+- accept a selected `variant` or resolve one through the shared helper;
+- mutate only the owning module store through explicit module-owned actions;
+- return a normalized result that can be logged and reviewed;
+- provide a built-in `daily` fallback.
 
 Recommended adapter input:
 
@@ -280,11 +295,11 @@ Recommended adapter result:
 }
 ```
 
-## 9. Event Log Standard / 事件日志标准
+## 10. Event Log Standard
 
-Future simulation event logs should include world metadata.
+World-aware event logs should include metadata about the chosen context and variant, but not raw WorldBook text.
 
-Required fields to add when this feature is implemented:
+Recommended fields:
 
 ```js
 {
@@ -303,30 +318,27 @@ Required fields to add when this feature is implemented:
 }
 ```
 
-Do not log raw WorldBook content by default.
+## 11. Safety Rules
 
-## 10. Safety Standard / 安全标准
-
-Random events must stay fair and explainable.
+Random world-aware events must stay fair and reviewable.
 
 Rules:
 
-- `impactLevel: non_destructive` events may run randomly when cooldown/cap/user settings allow.
-- `impactLevel: reversible` events may run randomly only if the visible surface explains what changed.
-- `impactLevel: destructive` events must not run randomly by default.
-- Events that cancel orders, delete content, spend currency, alter assets, or change relationships need explicit confirmation or a product-approved high-intensity mode.
-- Every negative event must have a user-facing explanation and a dismissal/acknowledgement path.
-- Surprise Mode must be respected once exposed.
+1. `non_destructive` events may run automatically when settings, caps, and cooldowns allow.
+2. `reversible` events may run automatically only when the user-facing surface can explain the change.
+3. `destructive` events must not run automatically by default.
+4. Events that spend money, cancel meaningful records, delete content, or make high-impact relationship changes require confirmation or an explicitly designed stronger mode.
+5. Any negative event should have a user-facing explanation and acknowledgement path.
 
-## 11. Required Built-In Variant Families / 必须内置的基础世界观
+## 12. Built-In Variant Families
 
-To avoid API dependency, the project should eventually include built-in local variants for at least:
+To avoid hard API dependence, the project should maintain built-in local variant families for at least:
 
-- `daily`: normal modern phone life.
-- `sci_fi`: high-tech, drone, orbital, AI, cyber-city language.
-- `apocalypse`: scarcity, checkpoints, sealed roads, supply teams, unstable infrastructure.
+- `daily`
+- `sci_fi`
+- `apocalypse`
 
-Later optional families:
+Later optional families may include:
 
 - `fantasy`
 - `cyberpunk`
@@ -335,143 +347,42 @@ Later optional families:
 - `romance`
 - `slice_of_life`
 
-## 12. Module Examples / 模块示例
+## 13. Current Baseline And Limits
 
-### Food Delivery
+Current baseline:
 
-Template: `food_delivery.rider_delay.v1`
+- world-aware event variants already exist as a supported architectural direction;
+- Food Delivery is the first meaningful pilot lane;
+- runtime triggering still stays local-first;
+- destructive random execution remains blocked.
 
-- `daily`: rider delayed by traffic or rain.
-- `sci_fi`: delivery drone delayed by low-altitude corridor control.
-- `apocalypse`: courier reroutes around a sealed checkpoint.
+Current limits:
 
-### Shopping / Logistics
+- not every module is world-aware yet;
+- persisted user-authored or AI-authored variant packs are still a future step;
+- ordinary runtime triggering still must not rely on network availability.
 
-Template: `shopping.package_delayed.v1`
+## 14. Acceptance Checklist
 
-- `daily`: courier network delay.
-- `sci_fi`: orbital customs queue or autonomous sorting node delay.
-- `apocalypse`: convoy delayed by supply checkpoint.
+Before a world-aware event adapter is treated as complete:
 
-### Map
+1. it uses the shared event engine;
+2. it has a `daily` fallback;
+3. it can resolve at least one non-default world family;
+4. it does not call an API during ordinary runtime trigger;
+5. it respects cooldowns, caps, and current safety controls;
+6. it logs enough metadata for PM, QA, and later AI handoff;
+7. it preserves module ownership;
+8. it has deterministic tests.
 
-Template: `map.route_disrupted.v1`
+## 15. Recommended Next Expansion Order
 
-- `daily`: road congestion or accident.
-- `sci_fi`: air-lane congestion or signal blackout.
-- `apocalypse`: blocked road, patrol zone, unstable bridge.
+1. keep improving the existing pilot lane;
+2. expand to the next safest adapters through the same contract;
+3. deepen explanation and review quality before broadening automation;
+4. only later add richer pack authoring or AI-generated pack workflows.
 
-### Assets
+## 16. Change Log
 
-Template: `assets.maintenance_due.v1`
-
-- `daily`: vehicle service/property maintenance.
-- `sci_fi`: ship module calibration or apartment oxygen filter service.
-- `apocalypse`: shelter reinforcement or generator maintenance.
-
-## 13. Persistence Requirement / 持久化要求
-
-Initial implementation should extend `simulationStore` unless event packs become too large.
-
-Suggested future fields:
-
-```js
-{
-  worldContexts: [],
-  variantPacks: [],
-  activeWorldContextId: '',
-  activeVariantPackId: ''
-}
-```
-
-If variant packs become large, create a dedicated store only after the interface is stable. The event engine should still consume the same normalized shape.
-
-Backup/export/import/storage diagnostics must include any persistent event-pack state.
-
-## 14. Test Requirements / 测试要求
-
-Every world-aware adapter must cover:
-
-- World context normalization.
-- Variant pack fallback to `daily`.
-- Variant selection for at least one non-default world, preferably `sci_fi` or `apocalypse`.
-- Runtime trigger path does not call API.
-- Cooldown and daily cap still work.
-- Event log includes `worldContextId`, `variantPackId`, and `variantId` once implemented.
-- Adapter mutates only the owning module store.
-- Existing visible surfaces display the result without exposing internal ids.
-
-## 15. Implementation Phases / 实施阶段
-
-### Phase A: Standard and Data Shape
-
-- Land this standard requirement.
-- Keep existing event engine unchanged unless needed for metadata passthrough.
-
-### Phase B: World Context Resolver
-
-- Add a resolver that converts active WorldBook bindings into `worldContext`.
-- Start with deterministic local mapping; AI summary is optional later.
-
-### Phase C: Variant Pack Storage
-
-- Add local built-in packs for `daily`, `sci_fi`, and `apocalypse`.
-- Persist user/AI-generated packs.
-
-### Phase D: Food Delivery Pilot
-
-- Add world-aware variants for ETA update and rider delay.
-- Log variant metadata.
-- Keep cancellation/manual-only until safety design is finished.
-
-### Phase E: Cross-Module Adapter Expansion
-
-- Add Shopping/logistics, Map, Phone, Gallery, Assets, Calendar, and Wallet event presets using this same standard.
-
-## 16. Acceptance Checklist / 验收清单
-
-Before closing any world-aware event adapter:
-
-- It uses the shared event engine.
-- It has a `daily` fallback.
-- It can resolve at least one WorldBook-derived variant.
-- It does not call API during ordinary runtime trigger.
-- It respects cooldowns, daily caps, and future Surprise Mode.
-- It logs enough metadata for future AI/developer handoff.
-- It does not move module ownership into the event engine.
-- It has deterministic tests.
-
-## 17. 2026-05-16 Implementation Baseline
-
-The first implementation baseline is now available in code.
-
-Landed files:
-
-- `src/lib/simulation/world-context.js`
-- `src/lib/simulation/event-variants.js`
-- `src/lib/simulation/adapters/food-delivery-events.js`
-- `src/stores/simulation.js`
-
-Implemented behavior:
-
-- `resolveWorldContextFromWorldBook(...)` derives a compact `worldContext` from global worldview text and enabled knowledge points.
-- The first built-in families are `daily`, `sci_fi`, and `apocalypse`.
-- `createBuiltInVariantPack(...)`, `selectEventVariant(...)`, and `renderEventVariantCopy(...)` provide local variant selection and copy rendering.
-- Food Delivery ETA update and rider-delay events now use built-in local variants.
-- Event logs can record `variantId`, `variantPackId`, `worldContextId`, and `activeWorldBookIds`.
-
-Important limits:
-
-- Variant packs are currently built-in code assets, not persisted user/AI-generated packs.
-- Only Food Delivery ETA update and rider delay are world-aware.
-- Runtime event triggering still does not call API.
-- Destructive events remain blocked from random execution.
-
-Validation:
-
-- `npm test -- tests\simulation-world-context.test.js tests\simulation-event-variants.test.js tests\simulation-store.test.js tests\simulation-event-engine.test.js tests\food-delivery-event-adapter.test.js tests\food-delivery-view.test.js`
-
-Next standard requirement for future adapters:
-
-- Shopping/logistics, Map, Assets, Phone, Calendar, Wallet, Gallery, and Chat adapters should reuse these same `worldContext` and `eventVariantPack` shapes.
-- New adapters should start with one `daily` fallback and one non-default family before adding AI-generated packs.
+1. 2026-05-16: created as the first world-aware event standard.
+2. 2026-05-19: rewritten to remove mixed-encoding residue, align with the current Calendar/Reminders split, preserve module ownership, and keep world-aware flavor clearly separated from runtime truth ownership.

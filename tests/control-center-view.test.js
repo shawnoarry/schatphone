@@ -320,6 +320,8 @@ describe('ControlCenterView', () => {
       .trigger('click')
     await flushUi()
     expect(dialogState.title).toBe('Delete relationship memory')
+    expect(dialogState.details).toContain('Role ID: 905A')
+    expect(dialogState.details.join(' ')).not.toContain(`Role ID: ${profile.id}`)
     submitDialog()
     await flushUi()
     expect(dialogState.title).toBe('Relationship memory deleted')
@@ -335,6 +337,59 @@ describe('ControlCenterView', () => {
         contactId: 0,
       }),
     })
+
+    wrapper.unmount()
+  })
+
+  test('labels orphaned relationship runtime entities by runtime key instead of role id', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 77,
+        name: 'Archived Stranger',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'runtime_orphan_1',
+      memoryKey: 'orphan_memory',
+      factType: 'runtime_note',
+      summary: 'An orphaned runtime memory stays manageable without becoming a role ID.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+
+    const { wrapper } = await mountControlCenterView()
+    const panelText = wrapper.get('[data-testid="control-center-relationship-panel"]').text()
+
+    expect(panelText).toContain('Archived Stranger')
+    expect(panelText).toContain('Runtime key: role:77')
+    expect(panelText).toContain('Contacts profile is missing')
+    expect(panelText).not.toContain('Role ID: 77')
+
+    const { dialogState, submitDialog } = useDialog()
+    await wrapper
+      .get('[data-testid="control-center-relationship-delete-memory-role:77-orphan_memory"]')
+      .trigger('click')
+    await flushUi()
+
+    expect(dialogState.title).toBe('Delete relationship memory')
+    expect(dialogState.details).toContain('Runtime key: role:77')
+    expect(dialogState.details.join(' ')).not.toContain('Role ID: 77')
+
+    submitDialog()
+    await flushUi()
+    expect(dialogState.title).toBe('Relationship memory deleted')
+    submitDialog()
+    await flushUi()
+
+    expect(relationshipRuntimeStore.listMemoryGroupsForTarget({ profileId: 77 })).toEqual([])
 
     wrapper.unmount()
   })

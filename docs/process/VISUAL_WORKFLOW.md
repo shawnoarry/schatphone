@@ -1,8 +1,22 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-16
+Updated: 2026-05-19
 
-This document defines the "Visual专项" workflow. It is separate from the feature-progress track and should be used when the team is discussing or implementing UI polish, visual design, interaction feel, layout refinement, motion, typography, color, or product-grade surface quality.
+This document defines the `视觉专项` workflow.
+
+Use it when the team is discussing or implementing:
+
+- UI polish;
+- visual design;
+- interaction feel;
+- layout refinement;
+- motion;
+- typography;
+- color;
+- product-grade surface quality;
+- information architecture cleanup for visible frontend surfaces.
+
+This workflow is separate from the main feature-progress track.
 
 ## 1. Trigger Phrase
 
@@ -16,33 +30,42 @@ Recommended variants:
 
 ```text
 视觉专项：先审查，不改代码
-视觉专项：直接改 Home/Lock/Appearance
+视觉专项：直接改 Home / Lock / Appearance
 视觉专项：只做设计规范，不推进功能
-视觉专项：参考 awesome-design-md，提炼 SchatPhone 自己的 DESIGN.md
+视觉专项：参考 awesome-design-md，整理 SchatPhone 自己的 DESIGN.md
 ```
 
-When this phrase appears, the assistant should treat the task as a design-focused workflow, not a feature-roadmap task.
+When this phrase appears, the assistant should treat the task as design-focused workflow work, not as a feature-roadmap task.
 
 ## 2. Scope Boundary
 
-Visual专项 may change files that directly affect visual quality and interaction feel:
+`视觉专项` may change files that directly affect visual quality and interaction feel:
 
-- Global styles and tokens: `src/style.css`
-- Shell surfaces: `src/App.vue`, `src/views/LockScreen.vue`, `src/views/HomeView.vue`
-- Appearance and customization: `src/views/AppearanceView.vue`, `src/views/WidgetsView.vue`
-- Settings presentation: `src/views/SettingsView.vue`, `src/components/settings/*`
-- Shared visual components: `src/components/*`
-- Module surfaces only when the requested polish requires it
-- Project visual docs, such as `DESIGN.md` or `docs/design/*`
+- global styles and tokens:
+  - `src/style.css`
+- shell surfaces:
+  - `src/App.vue`
+  - `src/views/LockScreen.vue`
+  - `src/views/HomeView.vue`
+- appearance and customization:
+  - `src/views/AppearanceView.vue`
+  - `src/views/WidgetsView.vue`
+- settings presentation:
+  - `src/views/SettingsView.vue`
+  - `src/components/settings/*`
+- shared visual components:
+  - `src/components/*`
+- module surfaces only when the requested polish requires it;
+- project visual docs such as `docs/design/DESIGN.md` or `docs/design/*`.
 
-Visual专项 should avoid:
+`视觉专项` should avoid:
 
-- Starting new product feature tracks
-- Expanding Chat, Map, Calendar, Push, backup, or storage behavior unless the change is a small design-supporting adjustment
-- Large business-logic refactors
-- Roadmap status changes unless the user explicitly asks for project-management sync
+- starting new product feature tracks;
+- expanding Chat, Map, Calendar, Push, backup, or storage behavior unless the change is a small design-supporting adjustment;
+- large business-logic refactors;
+- roadmap status changes unless the user explicitly asks for PM sync.
 
-If a visual change requires touching functional code, keep the change minimal and state why it is needed.
+If a visual change needs functional code, keep the change minimal and explain why it is needed.
 
 ## 3. Default Working Rules
 
@@ -50,30 +73,32 @@ If a visual change requires touching functional code, keep the change minimal an
 2. Prefer design-system consistency over one-off styling.
 3. Work in small slices: audit, define target, implement, verify.
 4. Do not copy another brand directly. Use references to extract principles, then create SchatPhone-specific rules.
-5. Keep the virtual-phone identity central: lock screen, home, notifications, app icons, and settings should feel like one coherent device.
+5. Keep the virtual-phone identity central: lock screen, Home, notifications, app icons, and Settings should feel like one coherent device.
 6. Favor stable, tactile, system-like UI over marketing-page composition.
 7. Avoid turning operational screens into decorative landing pages.
 8. When adding motion, keep it short, useful, and respectful of reduced-motion preferences.
-9. Determine visual ownership from the user's entry and parent context before looking at code ownership or data ownership.
+9. Determine visual ownership from the user's entry path and parent context before looking at code ownership or data ownership.
 10. Do not restyle an in-app surface as a system page merely because it reads system/shared data.
-11. Audit all visible frontend copy during visual work. Developer comments, implementation notes, TODO text, debug labels, route names, store names, and temporary explanations must not appear in the rendered UI.
-12. For Home widget customization, prefer the visible Widgets entry over hidden gestures: tap opens the Widget Center, long-press enters widget edit mode, then same-size replacement happens from the Home context.
+11. Audit all visible frontend copy during visual work. Developer comments, implementation notes, TODO text, debug labels, route names, store names, and temporary explanations must not appear in rendered UI.
+12. For Home widget customization, prefer the visible Widgets entry over hidden gestures.
 13. When working on themes, review `default` and `zen` together as a native-system day/night pair.
-14. On native-system surfaces, replace raw white/gray utility backgrounds and hardcoded semantic colors with system tokens unless the element is app-owned, media/content preview, or user-authored widget/template content.
+14. On native-system surfaces, replace raw utility backgrounds and hardcoded semantic colors with system tokens unless the element is app-owned, media/content preview, or user-authored widget/template content.
 15. Dark-theme approval requires checking panels, forms, list rows, dialogs, hover/active states, disabled states, and teleported overlays for contrast and background completeness.
-16. Return controls must name their actual target layer (`Home`, `Settings`, `Chat`, `Map`, etc.); avoid ambiguous Back labels when the route can be reached from multiple parents.
+16. Return controls must name their actual target layer (`Home`, `Settings`, `Chat`, `Map`, etc.). Avoid ambiguous `Back` labels when a route can be reached from multiple parents.
 17. Widget Center must stay a library/import/create surface. Placement belongs to Home widget edit mode and should use same-size slot replacement, not screen-number selectors.
-18. New or changed app/module navigation must preserve Home page return context. Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md` so a route opened from Home page N returns to Home page N.
+18. New or changed navigation must preserve Home-page return context. Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 
 ## 4. Entry-Context Audit
 
-Before changing visual design, run this audit mentally or write it in the task notes.
+Before changing visual design, run this audit mentally or write it in task notes.
 
-For current SchatPhone routes, app entries, and cross-module surfaces, check:
+Reference:
 
 ```text
 docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 ```
+
+Audit shape:
 
 ```text
 Target surface:
@@ -88,242 +113,78 @@ Must not visually jump to:
 
 Decision rules:
 
-1. **System entry wins system style.** If the user entered through Lock, Home, Settings, Appearance, status chrome, notification center, or an OS dialog, the native system layer owns the container.
-2. **App entry wins app style.** If the user is inside Chat, Map, Gallery, Calendar, Contacts, Files, or another installed app, app-local panels and subviews should follow that app's visual logic.
-3. **Data source does not own the look.** WorldBook, Gallery, Contacts, Calendar, Map, and Chat data may appear across modules, but the host surface decides the outer style.
-4. **Shell renders shell.** Lock-screen notifications, foreground banners, status bar surfaces, and global dialogs use system materials, with app icon/accent metadata as a secondary cue.
-5. **Full route is not always full ownership.** A full-screen route opened from Home can use its app identity; a compact embedded preview inside another app must stay host-local.
-6. **System-controlled folders keep system material.** A Home folder overlay is native-system even when its children launch app-owned destinations. The ownership changes only after the child route opens.
+1. System entry wins system style.
+2. App entry wins app style.
+3. Data source does not own the outer look.
+4. Shell renders shell.
+5. Full route is not always full ownership.
+6. System-controlled folders keep system material until the child route opens.
 
 Examples:
 
 - Chat thread WorldBook summary: Chat visual owner, WorldBook data source.
 - Chat attachment gallery picker: Chat visual owner, Gallery data source.
-- Map area card with related knowledge points: Map visual owner, WorldBook data source.
+- Map area card with knowledge points: Map visual owner, WorldBook data source.
 - Calendar event created from Map: Calendar visual owner after opening Calendar; Map visual owner while still inside Map.
-- Contacts role profile asset binding: Contacts visual owner, Gallery/WorldBook data sources.
+- Contacts role-profile asset binding: Contacts visual owner, Gallery/WorldBook data sources.
 - Lock-screen Chat notification: Native System container, Chat accent/icon.
-- Shopping Home folder overlay: Native System container, Shopping platform child entries.
-- Shopping folder child route: Installed App identity for the selected Shopping platform.
-- Food Delivery folder overlay: Native System container, Food Delivery category child entries.
+- Shopping Home-folder overlay: Native System container, Shopping child entries.
+- Shopping child route: Installed App identity for the selected Shopping platform.
 
 ## 5. Visible Copy Audit
 
-Visual专项 reviews the words users can actually see, not only layout, color, and motion.
+Visual work reviews the words users can actually see, not only layout, color, and motion.
 
 Before finishing a visual change, check:
 
-- Buttons, tabs, menus, settings rows, empty states, toasts, banners, dialogs, tooltips, and form helper text.
-- `aria-label`, `title`, and icon-only control labels when they affect what assistive tools or browser tooltips expose.
-- New placeholder copy and temporary labels introduced while building a visual state.
+- buttons, tabs, menus, settings rows, empty states, toasts, banners, dialogs, tooltips, and form helper text;
+- `aria-label`, `title`, and icon-only control labels when they affect exposed UI text;
+- new placeholder copy and temporary labels introduced while building a visual state;
 - i18n keys and translated strings when the touched surface supports multiple languages.
 
 Do not render:
 
-- Code comments or implementation explanations.
-- `TODO`, `FIXME`, `debug`, `mock`, `placeholder`, `dev`, or similar development markers.
-- Internal route names, component names, store names, token names, file names, or class names unless the page is explicitly a developer tool.
-- Text that explains the design implementation itself, such as "glass effect", "new visual style", or "slot prototype", unless the user-facing feature genuinely needs that term.
+- code comments or implementation explanations;
+- `TODO`, `FIXME`, `debug`, `mock`, `placeholder`, `dev`, or similar development markers;
+- internal route names, component names, store names, token names, file names, or class names unless the page is explicitly a developer tool;
+- text that explains the design implementation itself, such as "glass effect" or "new visual style", unless the user-facing feature genuinely needs that term.
 
-If temporary copy is needed, write it as product copy, not developer copy. For example, use a calm empty state like "暂无可用组件" instead of "TODO: widget selector not implemented".
+If temporary copy is needed, write product copy, not developer copy.
 
 ## 6. Installed Skills
 
-The current visual workflow expects these Codex skills to be installed locally.
+The current visual workflow expects these skills.
 
-### `ui-aesthetics`
+### Global machine-local support skills
 
-Purpose:
+These may exist outside the repo on the current machine:
 
-- Visual judgment
-- Product-grade composition
-- Color, depth, lighting, motion, component polish
-- Diagnosing UI that feels generic, flat, cluttered, or AI-generated
+- `ui-aesthetics`
+  - visual judgment, product-grade composition, color/depth/motion, diagnosis of generic or cluttered UI.
+- `ui-ux-pro-max`
+  - accessibility, touch targets, interaction states, layout, typography, color systems, and product-type recommendations.
 
-Installed on the current machine:
+These are helpful, but repo portability should not depend on them unless explicitly documented for a given workflow.
 
-```text
-C:\Users\Administrator\.codex\skills\ui-aesthetics
-```
+### Project-local skills
 
-Source:
+These are expected in `.agents/skills` for repo-local visual work:
 
-```text
-https://github.com/kasonye/ui-aesthetics-skill.git
-```
+- `frontend-design`
+  - stronger creative direction for pages, components, and app surfaces.
+- `frontend-logic-design`
+  - information architecture, navigation depth, MECE grouping, and interaction consistency.
+- `impeccable`
+  - strict second pass across hierarchy, edge states, responsive behavior, UX copy, and implementation-shaped UI.
+- `web-design-guidelines`
+  - framework-neutral UI/UX/accessibility review pass.
 
-### `ui-ux-pro-max`
+### Skill routing guidance
 
-Purpose:
-
-- UI/UX design intelligence
-- Accessibility, touch targets, interaction states
-- Layout, responsive rules, typography, color systems
-- Product-type and style recommendations
-
-Installed on the current machine:
-
-```text
-C:\Users\Administrator\.codex\skills\ui-ux-pro-max
-```
-
-Source:
-
-```text
-https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
-```
-
-Note:
-
-- This repository is not a root-level Codex `SKILL.md` repository.
-- The installed skill is based on `.claude/skills/ui-ux-pro-max/SKILL.md`.
-- The real `data/` and `scripts/` folders should be copied from `src/ui-ux-pro-max/` into the installed skill directory.
-
-After installing or updating skills, restart Codex so the new skills are loaded.
-
-### `frontend-design`
-
-Purpose:
-
-- Distinctive, production-grade frontend creation
-- Stronger aesthetic direction for pages, components, and app surfaces
-- Avoiding generic AI-looking UI patterns
-- Useful when a new visual slice needs a clear point of view, not only small polish
-
-Installed in the current project:
-
-```text
-.\.agents\skills\frontend-design
-```
-
-Source:
-
-```text
-https://github.com/anthropics/claude-code.git
-```
-
-Installed subpath:
-
-```text
-plugins/frontend-design/skills/frontend-design/SKILL.md
-```
-
-Install command used on Windows:
-
-```powershell
-npx.cmd skills add https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design/skills/frontend-design
-```
-
-Note:
-
-- Use this skill when building or reshaping a frontend surface that needs a stronger creative direction.
-- For SchatPhone, its boldness must still be moderated by the default system style, entry-context ownership, and visible-copy rules.
-
-### `frontend-logic-design`
-
-Purpose:
-
-- Frontend information-architecture and interaction-logic review
-- MECE checks, progressive disclosure, navigation depth, and consistent drill-down behavior
-- Useful when a page feels confusing, inconsistent, poorly grouped, or hard to navigate
-- Especially useful before visual polish on complex settings, management, or multi-module pages
-
-Installed in the current project:
-
-```text
-.\.agents\skills\frontend-logic-design
-```
-
-Source:
-
-```text
-http://gitlab.clouddreamai.com/clouddreamai-tools-public/frontend-logic-design.git
-```
-
-Install command used on Windows:
-
-```powershell
-npx.cmd skills add http://gitlab.clouddreamai.com/clouddreamai-tools-public/frontend-logic-design.git
-```
-
-Note:
-
-- Use this skill before aesthetic polish when the problem may be information hierarchy, entry placement, or inconsistent interaction behavior.
-- It should support the visual workflow, not reopen unrelated feature scope.
-
-### `impeccable`
-
-Purpose:
-
-- Product-grade frontend shaping, auditing, polishing, and hardening
-- Visual hierarchy, layout, motion, typography, accessibility, and responsive behavior
-- UX copy, cognitive load, edge states, design tokens, and reusable design systems
-- A stricter second pass when a UI still feels generic, noisy, or implementation-shaped
-
-Installed in the current project:
-
-```text
-.\.agents\skills\impeccable
-```
-
-Source:
-
-```text
-https://github.com/pbakaus/impeccable.git
-```
-
-Install command used on Windows:
-
-```powershell
-npx.cmd skills add pbakaus/impeccable
-```
-
-Note:
-
-- This skill is project-local under `.agents/skills`, not under the global Codex skills directory.
-- Review the skill before use because installed skills run with full agent permissions.
-- Restart Codex or the agent host if the skill does not appear in the active skill list.
-- When using it for SchatPhone, still obey this workflow's entry-context ownership and visible-copy audit rules.
-
-### `web-design-guidelines`
-
-Purpose:
-
-- Web Interface Guidelines review for UI, UX, accessibility, and implementation quality.
-- A framework-neutral review pass that can be applied to Vue files, templates, and shared UI components.
-- Useful before or after visual polish when a changed surface needs an external best-practice audit.
-
-Installed in the current project:
-
-```text
-.\.agents\skills\web-design-guidelines
-```
-
-Source:
-
-```text
-https://github.com/vercel-labs/agent-skills.git
-```
-
-Installed subpath:
-
-```text
-skills/web-design-guidelines/SKILL.md
-```
-
-Install command used on Windows:
-
-```powershell
-npx.cmd skills add vercel-labs/agent-skills --skill web-design-guidelines
-```
-
-Install note:
-
-- Installed on 2026-05-16.
-- Installer security summary: Gen Safe, Socket 0 alerts, Snyk Med Risk.
-- The skill fetches the latest Vercel Web Interface Guidelines before each review, so network access may be needed at review time.
-- Review the skill before use because installed skills run with full agent permissions.
-- Restart Codex or the agent host if the skill does not appear in the active skill list.
+- use `frontend-logic-design` first when the problem may be page structure, grouping, entry placement, or inconsistent interaction logic;
+- use `frontend-design` when a surface needs stronger creative direction rather than only cleanup;
+- use `impeccable` when the UI is already close but still feels noisy, generic, or under-finished;
+- use `web-design-guidelines` for an external best-practice review before or after visual polish.
 
 ## 7. Reference Library
 
@@ -333,34 +194,15 @@ The current machine keeps the `awesome-design-md` reference library here:
 D:\github\_references\awesome-design-md
 ```
 
-Source:
-
-```text
-https://github.com/VoltAgent/awesome-design-md.git
-```
-
-Primary reference folder:
-
-```text
-D:\github\_references\awesome-design-md\design-md
-```
-
 Usage:
 
-- Treat it as a design reference library, not a package dependency.
-- Do not copy a brand style directly into SchatPhone.
-- Use it to compare visual directions and extract reusable design principles.
-- For lasting project consistency, convert selected references into a SchatPhone-specific `DESIGN.md`.
+- treat it as a design reference library, not a package dependency;
+- do not copy another brand directly into SchatPhone;
+- extract principles and convert them into SchatPhone-specific rules.
 
 ## 8. Recommended Project Artifacts
 
-Visual专项 should eventually create or maintain:
-
-```text
-DESIGN.md
-```
-
-or:
+Visual work should eventually create or maintain:
 
 ```text
 docs/design/DESIGN.md
@@ -368,47 +210,31 @@ docs/design/DESIGN.md
 
 Suggested content:
 
-- Visual positioning for SchatPhone
-- Entry-context ownership rules for system, installed app, and embedded hybrid surfaces
-- Color tokens and theme rules
-- Typography scale
-- Spacing, radius, border, blur, and shadow system
-- Home icon and fixed widget-slot rules
-- Lock-screen visual rules
-- Settings and utility-screen density rules
-- Chat, Map, Calendar, Gallery visual surface rules
-- Motion and interaction-state rules
-- Accessibility and responsive constraints
-- Visible UI copy rules and no developer-comment leakage
-
-Home visual rule:
-
-- Treat Home as a native-system surface with a fixed layout skeleton.
-- Improve widget appearance, slot picker states, icon style, wallpaper fit, and Dock polish without making free drag the default experience.
-- When changing Home customization, prefer same-size slot replacement over arbitrary drag placement.
-
-Visible copy rule:
-
-- Every visible string must be written for the user, not for the developer.
-- Do not expose code comments, TODOs, implementation notes, debug markers, or internal names in rendered UI.
-- If a visual state is unfinished, use a real product empty/loading/unavailable state rather than a development note.
+- visual positioning for SchatPhone;
+- entry-context ownership rules for system, installed app, and hybrid surfaces;
+- color tokens and theme rules;
+- typography scale;
+- spacing, radius, border, blur, and shadow system;
+- Home icon and fixed widget-slot rules;
+- lock-screen visual rules;
+- settings and utility-screen density rules;
+- Chat, Map, Calendar, Gallery visual surface rules;
+- motion and interaction-state rules;
+- accessibility and responsive constraints;
+- visible UI copy rules.
 
 ## 9. Reuse On Another PC
 
 To reuse this workflow on another machine:
 
-1. Clone the SchatPhone repo.
-2. Ask the machine owner to confirm all local installation paths before installing anything.
-3. Install or copy the current visual skills: `ui-aesthetics`, `ui-ux-pro-max`, `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines`.
-4. Clone the design reference library to the confirmed path.
-5. Restart Codex.
-6. Use the trigger phrase `视觉专项`.
+1. clone the SchatPhone repo;
+2. ask the machine owner to confirm local installation paths before installing anything;
+3. install or confirm the current visual skills;
+4. clone the design reference library to a confirmed path if needed;
+5. restart Codex;
+6. use the trigger phrase `视觉专项`.
 
-### Confirm Local Paths First
-
-Do not assume every PC has the same user profile, drive letters, repo path, npm setup, or Codex home.
-
-Ask the machine owner to confirm:
+Confirm local paths first:
 
 ```text
 1. SchatPhone project root:
@@ -418,198 +244,56 @@ Ask the machine owner to confirm:
 5. Whether PowerShell should use npx or npx.cmd:
 ```
 
-Recommended defaults on Windows:
-
-```text
-SchatPhone project root: D:\github\schatphone
-Global Codex skills directory: %USERPROFILE%\.codex\skills
-Project-local skills directory: <SchatPhone project root>\.agents\skills
-Design reference library parent directory: ask owner; do not assume D:
-PowerShell command runner: npx.cmd
-```
-
 Rules:
 
-- `ui-aesthetics` and `ui-ux-pro-max` are global Codex skills in the confirmed global Codex skills directory.
-- `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines` are project-local skills in the confirmed SchatPhone project root under `.agents\skills`.
-- Run every `npx.cmd skills add ...` command from the confirmed SchatPhone project root so the skill is installed into the correct `.agents\skills`.
-- If the owner chooses a different project path, replace every project-root-relative path in this section accordingly.
-- If the owner chooses a different reference-library path, tell Codex that path before starting `视觉专项`.
-
-### Install `ui-aesthetics`
-
-Use the confirmed global Codex skills directory. If the owner accepts the Windows default, use:
-
-```powershell
-git clone https://github.com/kasonye/ui-aesthetics-skill.git "$env:USERPROFILE\.codex\skills\ui-aesthetics"
-```
-
-The destination must contain:
-
-```text
-SKILL.md
-```
-
-### Install `ui-ux-pro-max`
-
-Clone the source repo first:
-
-```powershell
-git clone https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git "$env:TEMP\ui-ux-pro-max-skill"
-```
-
-Create the Codex skill directory:
-
-```powershell
-New-Item -ItemType Directory -Path "$env:USERPROFILE\.codex\skills\ui-ux-pro-max" -Force
-```
-
-Copy the skill entry:
-
-```powershell
-Copy-Item "$env:TEMP\ui-ux-pro-max-skill\.claude\skills\ui-ux-pro-max\SKILL.md" "$env:USERPROFILE\.codex\skills\ui-ux-pro-max\SKILL.md"
-```
-
-Copy the real data and scripts:
-
-```powershell
-Copy-Item "$env:TEMP\ui-ux-pro-max-skill\src\ui-ux-pro-max\data" "$env:USERPROFILE\.codex\skills\ui-ux-pro-max\data" -Recurse
-Copy-Item "$env:TEMP\ui-ux-pro-max-skill\src\ui-ux-pro-max\scripts" "$env:USERPROFILE\.codex\skills\ui-ux-pro-max\scripts" -Recurse
-```
-
-The destination should contain:
-
-```text
-SKILL.md
-data/
-scripts/
-```
-
-### Install `frontend-design`
-
-From the confirmed SchatPhone project root:
-
-```powershell
-npx.cmd skills add https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design/skills/frontend-design
-```
-
-The destination should contain:
-
-```text
-.agents\skills\frontend-design\SKILL.md
-```
-
-### Install `frontend-logic-design`
-
-From the confirmed SchatPhone project root:
-
-```powershell
-npx.cmd skills add http://gitlab.clouddreamai.com/clouddreamai-tools-public/frontend-logic-design.git
-```
-
-The destination should contain:
-
-```text
-.agents\skills\frontend-logic-design\SKILL.md
-```
-
-### Install `impeccable`
-
-From the confirmed SchatPhone project root:
-
-```powershell
-npx.cmd skills add pbakaus/impeccable
-```
-
-The destination should contain:
-
-```text
-.agents\skills\impeccable\SKILL.md
-```
-
-### Install `web-design-guidelines`
-
-From the confirmed SchatPhone project root:
-
-```powershell
-npx.cmd skills add vercel-labs/agent-skills --skill web-design-guidelines
-```
-
-The destination should contain:
-
-```text
-.agents\skills\web-design-guidelines\SKILL.md
-```
-
-### Clone `awesome-design-md`
-
-Do not assume every PC has a `D:` drive. Before cloning, ask the machine owner to confirm the local reference-library path.
-
-Current machine path:
-
-```text
-D:\github\_references\awesome-design-md
-```
-
-Example path if the owner confirms `D:\github\_references`:
-
-```powershell
-New-Item -ItemType Directory -Path "D:\github\_references" -Force
-git clone https://github.com/VoltAgent/awesome-design-md.git "D:\github\_references\awesome-design-md"
-```
-
-If another PC uses a different path, tell Codex the path before starting a visual workflow and record it in the local handoff notes if needed.
+- project-local visual skills belong under `<repo>\.agents\skills`;
+- run `npx.cmd skills add ...` from the confirmed SchatPhone project root;
+- do not assume every PC has a `D:` drive or the same global Codex skill location.
 
 ## 10. Standard Work Sequence
 
-Use this sequence for visual work unless the user asks for a narrower path.
+Use this sequence for visual work unless the user asks for a narrower path:
 
 1. Read `docs/process/VISUAL_WORKFLOW.md` and the relevant design docs.
 2. Decide the target surface and scope: system shell, installed app, hybrid surface, or project documentation only.
-3. Run the entry-context audit: actual user path, parent context, visual owner, borrowed accents, and forbidden visual jumps.
+3. Run the entry-context audit.
 4. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
 5. Choose the design-supporting skills:
-   - `ui-aesthetics` for restrained product-grade polish, spacing, depth, component craft, and visual diagnosis.
-   - `ui-ux-pro-max` for accessibility, touch targets, responsive behavior, interaction states, and UX rules.
-   - `frontend-design` for stronger creative direction on a page, component, or app surface.
-   - `frontend-logic-design` for information architecture, MECE grouping, navigation depth, and interaction consistency.
-   - `impeccable` for a strict second pass across visual hierarchy, UX copy, edge states, and implementation-shaped UI.
-   - `web-design-guidelines` for external Web Interface Guidelines review of UI, UX, accessibility, and implementation details.
+   - `frontend-design` for stronger creative direction;
+   - `frontend-logic-design` for IA and interaction consistency;
+   - `impeccable` for strict second-pass shaping;
+   - `web-design-guidelines` for external review;
+   - machine-local support skills when they are available and useful.
 6. Define the smallest useful change slice before editing.
 7. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
 8. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
-9. If themes are touched, verify both `default` and `zen` on the same surfaces before declaring the slice complete.
-10. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md` and search for hardcoded `router.push('/home')` regressions.
+9. If themes are touched, verify both `default` and `zen`.
+10. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 11. Verify with `git diff --check`, then lint/build/test when code changed.
-12. Summarize the changed surfaces, the visual owner decisions, remaining risks, and any follow-up visual slices.
+12. Summarize:
+   - changed surfaces;
+   - visual-owner decisions;
+   - remaining risks;
+   - next visual slice.
 
-## 11. First Prompt Template
+## 11. First Prompt Templates
 
-Use this prompt to start a visual session:
+Audit-first visual session:
 
 ```text
-视觉专项：先读取 docs/process/VISUAL_WORKFLOW.md，然后只围绕视觉设计工作。
-先确认本机 awesome-design-md 参考库路径；如果不存在或路径未知，先询问我。
-本轮不推进功能路线。先审查 [页面/模块] 的上级入口属于【本机系统】还是【装载APP】，再输出问题清单、设计方向和最小改造切片。
-同时审核前端显示文案，禁止把开发注释、TODO、调试提示、实现说明显示给用户。
+视觉专项：先读取 docs/process/VISUAL_WORKFLOW.md，然后只围绕视觉设计工作。先确认本机 awesome-design-md 参考库路径；如果不存在或路径未知，先询问我。本轮不推进功能路线。先审查 [页面/模块] 的上级入口属于【本机系统】还是【装载 App】，再输出问题清单、设计方向和最小改造切片。同时审查前端显示文案，禁止把开发注释、TODO、调试提示、实现说明显示给用户。
 ```
 
-For direct implementation:
+Direct implementation:
 
 ```text
-视觉专项：参考 docs/process/VISUAL_WORKFLOW.md，直接改 [页面/模块] 的视觉表现。
-先确认用户实际入口和父级上下文；保持现有功能行为，只做必要的样式、布局、动效和轻量交互支撑。
-改完后检查页面真实显示文字，不能出现开发注释、临时说明或内部命名。
+视觉专项：参考 docs/process/VISUAL_WORKFLOW.md，直接改 [页面/模块] 的视觉表现。先确认用户实际入口和父级上下文；保持现有功能行为，只做必要的样式、布局、动效和轻量交互支持。改完后检查页面真实显示文字，不能出现开发注释、临时说明或内部命名。
 ```
 
-For hybrid / cross-module surfaces:
+Hybrid or cross-module surface:
 
 ```text
-视觉专项：先做入口归属排查。
-目标：[页面/弹层/卡片]
-我希望你不要只看代码或数据来源，而是判断用户看到它时仍处于哪个上级入口。
-如果它在装载 APP 内，就保持该 APP 的沉浸式视觉逻辑。
-同时检查该表面的可见文字是否是用户文案，而不是开发说明。
+视觉专项：先做入口归属排查。目标：[页面/弹层/卡片]。我希望你不要只看代码或数据来源，而是判断用户看到它时仍然处于哪个上级入口。如果它在装载 App 内，就保持该 App 的沉浸式视觉逻辑。同时检查该表面的可见文字是否是用户文案，而不是开发说明。
 ```
 
 ## 12. Verification
@@ -630,6 +314,15 @@ npm run build
 
 For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports.
 
-For theme changes, inspect both built-in themes. The dark theme must not show light text on leftover raw white system panels. Allowed exceptions are installed-app-owned surfaces, image/media previews, and user-authored widget/template content.
+For theme changes, inspect both built-in themes and ensure there are no leftover raw-light panels in dark mode except where app-owned or content-owned surfaces intentionally differ.
 
-For visible-copy checks, inspect the rendered page and review changed templates for development markers such as `TODO`, `FIXME`, `debug`, `mock`, `placeholder`, `dev`, `注释`, `开发`, or `临时`. The goal is not to remove legitimate code comments; it is to ensure those markers are not shown to the user.
+For visible-copy checks, inspect rendered pages and changed templates for development markers such as:
+
+- `TODO`
+- `FIXME`
+- `debug`
+- `mock`
+- `placeholder`
+- `dev`
+
+The goal is not to remove legitimate code comments. The goal is to ensure those markers are not shown to users.

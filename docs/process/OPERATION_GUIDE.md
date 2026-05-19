@@ -1,213 +1,230 @@
-# SchatPhone 操作指南（新版）
+# SchatPhone Operation Guide
 
-Updated / 更新时间: 2026-05-14
+Updated: 2026-05-19
 
-This guide covers daily development, validation, and release workflow.  
-本指南用于日常开发、验收与提交流程。
+This is the practical guide for daily development, validation, and release flow.
 
-Shared development tools outside the visual专项 workflow are documented in:
+For workflow governance and documentation sync rules, read:
 
-```text
-docs/process/DEVELOPMENT_TOOLING.md
-```
+- `docs/process/AI_WORK_MODE.md`
+- `docs/process/DEVELOPMENT_TOOLING.md`
 
-## 1. Setup / 开发前准备
+## 1. Local Setup
 
 ```bash
-cd h:\SchatPhone\schatphone
+cd D:\github\schatphone
 npm install
 npm run dev
 ```
 
-## 2. Stack Overview / 技术栈速览
+## 2. Stack Overview
 
 - Vue 3 + Composition API
 - Vite 7 + `@vitejs/plugin-vue`
 - Tailwind CSS v4 (`@tailwindcss/vite`)
 - Pinia
-- Vue Router (Hash) / Hash 模式
+- Vue Router (hash mode)
 - Vitest + jsdom
 - ESLint + Prettier
 
-## 3. Most Used Pages / 常用页面
+## 3. Core Routes
 
-- `/lock` (Lock Screen / 锁屏页)
-- `/home` (Home)
-- `/settings` (Settings)
-- `/profile` (Profile)
-- `/worldbook` (WorldBook)
-- `/network` (Network)
-- `/appearance` (Appearance)
-- `/widgets` (Widget Center / Widget 中心)
-- `/chat` (Chat list)
-- `/chat-contacts` (Chat directory / 会话通讯录)
-- `/files` (Files internal/compatibility route; not a promoted frontend entry)
-- `/more` (More)
+Main user-facing routes:
 
-## 4. Lock and Home Rules / 锁屏与 Home 规则
+- `/lock`
+- `/home`
+- `/settings`
+- `/appearance`
+- `/widgets`
+- `/network`
+- `/chat`
+- `/chat-contacts`
+- `/contacts`
+- `/gallery`
+- `/phone`
+- `/map`
+- `/calendar`
+- `/reminders`
+- `/wallet`
+- `/worldbook`
+- `/profile`
+- `/stock`
+- `/shopping`
+- `/food-delivery`
+- `/assets`
+- `/more`
 
-- App default entry is `/lock` (`/` redirects to lock screen)  
-应用默认入口是 `/lock`（`/` 自动重定向到锁屏）
-- Non-lock routes are blocked while `isLocked` is true  
-`isLocked` 为 true 时阻止访问非锁屏路由
-- Lock screen notifications can be tapped to unlock and open target route  
-锁屏通知可直接点击解锁并进入目标页面
-- Home customization should default to fixed slots and same-size widget replacement / Home 美化默认采用固定槽位与同尺寸 Widget 替换
-- Tap the Home Widgets icon to open `/widgets`; long-press it to enter Home widget edit mode / 点击 Home 的组件图标进入 `/widgets`；长按该图标进入 Home Widget 编辑模式
-- Legacy long-press layout edit may exist only behind experimental feature flags / 旧版长按布局编辑仅作为实验开关能力保留
+Controlled or hidden routes:
 
-### 4A. Return Navigation Rule / 返回导航规则
+- `/control-center`
+- `/files`
 
-- Full installed apps return to Home by default / 完整装载 App 默认返回 Home
-- System customization pages preserve entry source with `from=home` or `from=settings` / 系统美化页通过 `from=home` 或 `from=settings` 保留入口来源
-- In-app child pages return to their parent app, not to a generic system layer / App 内子页返回上级 App，不跳到泛化系统层
-- Cross-module management deep links may use `source=chat|map|calendar` so the back button names the source context / 跨模块管理链接可使用 `source=chat|map|calendar`，让返回按钮明确来源
-- Do not label a button only as Back if the target layer is not obvious / 如果返回目标不清晰，不要只写 Back
+## 4. Lock And Home Rules
 
-## 5. Home Rules / Home 交互规则
+- The app default entry is `/lock`; `/` redirects to `/lock`.
+- Non-lock routes are blocked while `isLocked` is true.
+- Lock-screen notifications can unlock the phone and route to the target page.
+- Home is the main shell for app tiles, widgets, and future folders.
+- Widget editing is the default Home customization path.
+- Long-press layout experiments may still exist behind feature flags, but they are not the default UX model.
 
-- Fixed page skeleton is the default Home model / 固定页面骨架是默认 Home 模型
-- Widget slots have stable sizes such as `1x1`, `2x1`, `2x2`, `4x2`, `4x3` / Widget 槽位保持稳定尺寸
-- In widget edit mode, tap a placed widget to choose a same-size replacement / Widget 编辑模式中，点击已放置的 Widget 可选择同尺寸替换项
-- Free drag and cross-page drag are experimental, not the default user path / 自由拖拽与跨屏拖拽是实验能力，不是默认用户路径
-- Default 5 pages (pages 3-5 reserved) / 默认 5 屏，后 3 屏预留
-- App entries and Dock items stay in fixed system-owned zones / App 入口与 Dock 项保持在系统固定区域
-- `app_*` entries cannot be deleted; visibility and overflow should be managed by system-owned Home/App Library rules / `app_*` 不可删除，显示与溢出由系统 Home/App Library 规则管理
-- Widgets and custom widgets can be hidden or assigned to compatible slots / Widget 与自定义 Widget 可隐藏或分配到兼容槽位
-- Widget Center is a library/import/create surface; it must not expose screen-number placement controls / Widget 中心是库、导入与创建界面，不再暴露屏幕编号的放置控件
-- New or imported custom widgets stay in the library until the user chooses a compatible Home slot / 新建或导入的自定义 Widget 先进入库，由用户在 Home 槽位中选择
+### Return Navigation Rule
 
-## 6. Settings Structure / Settings 分层
+- Full installed apps return to Home by default.
+- Appearance and similar system-customization pages may preserve source context with query parameters such as `from=home` or `from=settings`.
+- In-app child pages should return to their parent app, not to a vague system layer.
+- Cross-module deep links may use source markers such as `source=chat|map|calendar` so the back button can name the source context clearly.
+- Do not label a button only as `Back` when the target layer would be ambiguous.
 
-Settings home includes / Settings 首页包括：
-- User card -> `/profile`
-- Worldbook + General + Notifications / 世界书 + 通用 + 通知
-- Backup export + About / 备份导出 + 关于
+## 5. Home, Widgets, And Folder Rules
 
-Independent entries / 独立入口：
+- Fixed page skeleton remains the default Home model.
+- Widget slots should use stable sizes such as `1x1`, `2x1`, `2x2`, `4x2`, and `4x3`.
+- In widget edit mode, replacing a placed widget should prefer same-size replacements.
+- Free drag and cross-page drag remain experimental, not the main user path.
+- App entries and Dock items stay in system-owned zones.
+- `app_*` entries are not user-deletable; visibility and overflow should be governed by system-owned Home rules.
+- Widget Center is a library/import/create surface, not a screen-placement control panel.
+- Folder capability belongs to Home as a general desktop capability. Business modules supply child-entry metadata; they do not each build their own folder UI.
+
+## 6. Settings Structure
+
+Settings home includes:
+
+- user card -> `/profile`
+- WorldBook, General, and Notifications sections
+- backup/export and diagnostics/about sections
+
+Independent entries:
+
 - `/network`
 - `/appearance`
 - `/widgets`
 
-Appearance sections / Appearance 二级菜单：
-- Theme and wallpaper / 主题与壁纸
-- Lock clock style / 锁屏时间样式
-- Font presets and custom stack / 字体预设与自定义字体栈
-- Widget Center shortcut / Widget 中心快捷入口
+Appearance sections currently cover:
 
-## 7. System Language Rule / 系统语言规则
+- theme and wallpaper
+- lock clock style
+- icon presentation and visual presets
+- Widget Center shortcut
 
-- Source of truth / 数据来源：`settings.system.language`
-- Supported values / 支持值：`zh-CN`, `en-US`, `ko-KR`
-- Scope / 生效范围：system UI labels, settings text, navigation labels  
-系统 UI 文案、设置文案、导航标签
-- Out of scope / 不在范围：AI-generated chat message content  
-AI 生成的聊天内容不受系统语言强制改写
+## 7. System Language Rule
 
-Visible copy rule / 可见文案规则：
+Source of truth:
 
-- UI text must be user-facing product copy / UI 文字必须是面向用户的产品文案
-- Do not render developer comments, TODOs, debug labels, implementation notes, component names, store names, route names, class names, or token names / 不得把开发注释、TODO、调试标签、实现说明、组件名、store 名、路由名、class 名或 token 名显示给用户
-- Placeholder or unfinished states must use real empty/loading/unavailable copy / 占位或未完成状态也必须使用正式的空态、加载态或不可用状态文案
+- `settings.system.language`
 
-## 8. Chat Rules / Chat 交互规则
+Supported values:
 
-### 8.1 Chat List (`/chat`) / 聊天列表页
+- `zh-CN`
+- `en-US`
+- `ko-KR`
 
-- Header: back home + status + create + add service account  
-顶部：返回桌面 + 用户状态 + 新建 + 添加服务号
-- Status options: idle / busy / away  
-用户状态：空闲 / 忙碌 / 离开
-- Entry to chat directory / 可进入会话通讯录管理对象
+Scope:
 
-### 8.2 Chat Directory (`/chat-contacts`) / 会话通讯录
+- system UI labels
+- settings text
+- navigation labels
 
-- Category split: role/group and service/official  
-分层管理：角色/群聊 与 服务号/公众号
-- Supports create/edit/delete/open conversation  
-支持新建、编辑、删除、进入会话
-- Separate from global Contacts / 与全局 Contacts 分离
-- Role deletion in chat directory is unbind-only; it will not delete global role profiles in `/contacts`  
-会话通讯录中删除角色为“仅解绑”，不会删除 `/contacts` 中的全局角色档案
-- Service/official entries remain full CRUD within chat directory  
-服务号/公众号仍在会话通讯录内完整支持增删改
+Out of scope:
 
-### 8.3 Chat Thread (`/chat/:id`) / 对话页
+- AI-generated chat content
 
-- Sending user message does not auto-call AI / 发送消息默认不自动调 AI
-- "Trigger Reply" manually calls AI / “触发回复”按钮手动调用
-- Supports continuous trigger / 支持连续触发
-- `Trigger Reply` is a persistent explicit lane and is independent from user rich-message sending  
-`Trigger Reply` 为常驻显式调用通道，且与用户富消息发送能力解耦
-- Message actions are triggered by long-press/right-click and executed in bottom action sheet  
-消息操作通过长按/右键触发，并在底部动作面板执行
-- Input `+` panel supports user rich messages: image/gif/link/location/transfer/voice-card  
-输入区 `+` 面板支持用户富消息：图片/gif/链接/位置/转账/语音卡片
-- Link/transfer/voice-card are composed via inline forms in `+` panel (no prompt dialog)  
-链接/转账/语音卡片通过 `+` 面板内联表单填写（不再使用 prompt 弹窗）
-- Service template configurable in thread menu / 会话菜单可配置服务模板
-- Supports cancel and retry / 支持取消与失败重试
-- If locked, completed AI replies can emit lock-screen notifications  
-若设备锁定，AI 回复完成后可触发锁屏通知
+Visible copy rule:
 
-## 9. Custom Widget Quick Flow / 自定义 Widget 快速操作
+- UI text must be user-facing product copy.
+- Do not expose raw developer comments, TODOs, debug labels, route names, store names, CSS token names, or implementation notes to users.
+- Empty, loading, and unavailable states must use proper product copy instead of placeholder engineering text.
 
-1. Tap the Home Widgets icon or open `/widgets` from Appearance / 点击 Home 的组件图标，或从 Appearance 进入 `/widgets`
-2. Choose Library, Custom, or Import / 选择组件库、自定义或导入
-3. Fill name/size/content and add to the library / 填写名称、尺寸与内容并加入组件库
-4. Long-press the Home Widgets icon to enter widget edit mode / 长按 Home 的组件图标进入 Widget 编辑模式
-5. Tap a placed widget and choose a same-size replacement / 点击已放置 Widget，选择同尺寸替换项
+## 8. Chat And Contact Rules
 
-Built-in widget recovery / 内置 Widget 恢复：  
-Use `/widgets` to restore built-in widgets to their default Home slots, then use Home widget edit mode for same-size replacement. / 在 `/widgets` 中将内置 Widget 恢复到默认 Home 槽位，再通过 Home Widget 编辑模式进行同尺寸替换。
+### Chat (`/chat`, `/chat/:id`)
 
-Import / 导入：  
-Paste widget array in `/widgets` Import. Imported widgets remain in the library until assigned from Home widget edit mode.
-在 `/widgets` 的导入区粘贴 Widget 数组后导入；导入项先留在组件库，直到用户在 Home Widget 编辑模式中选择槽位。
+- Chat owns message history and thread interaction.
+- Sending a user message does not automatically call the AI unless that specific surface is designed to do so.
+- `Trigger Reply` remains the explicit AI invocation lane where that pattern is used.
+- Rich message creation belongs to the chat input and its action panel.
 
-## 10. Network API Quick Flow / 网络 API 快速操作
+### Chat Directory (`/chat-contacts`)
 
-1. Open `/network`
-2. Input URL + Key
-3. Refresh models (or wait for auto pull)
-4. Choose model and save
-5. Save preset and switch via dropdown
+- Chat Directory is the Chat-side contact and service-account manager.
+- It supports create, edit, delete, and open-conversation actions for Chat-side entries.
+- It is not the global role archive.
+- Unbinding a role from Chat Directory must not destroy the global role profile in `通讯录 / Contacts`.
 
-Error classification / 错误分级：  
-URL, auth, 404, rate-limit, timeout, network/CORS, server.  
-支持 URL、鉴权、404、限流、超时、网络/CORS、服务端异常分级。
+### Contacts (`/contacts`)
 
-## 11. Data and Privacy Rules / 数据与隐私规则
+- Contacts is the global role archive and future role hub.
+- Destructive role management belongs here, not in Chat Directory.
 
-- Local persistence only by default / 默认本地持久化
-- No platform cloud hosting / 不做平台云托管
-- Request context sent only on explicit user trigger / 仅在用户触发时发送上下文
-- Deleting conversation object means local delete / 删除会话对象是本地删除
+## 9. Calendar And Reminders Rule
 
-## 12. New Feature Standard Flow / 新增功能标准流程
+- `日历 / Calendar` owns confirmed schedules, dates, and calendar-shaped review surfaces.
+- `提醒事项 / Reminders` owns raw cues, callbacks, and cross-module follow-up intake.
+- Do not collapse every reminder-like queue back into Calendar.
 
-1. Create view: `src/views/XXXView.vue`
-2. Register route: `src/router/index.js`
-3. Evaluate whether Home entry is required
-4. Put state in proper store (`system/chat/map`)
-5. Route AI requests through `src/lib/ai.js`
-6. Keep explicit Save action on key input pages
-7. Update docs: `docs/overview/PROJECT_MASTER_GUIDE.md`, `docs/roadmap/TODO_ROADMAP.md`, `docs/pm/TODO_PM_STATUS_REPORT.md`, `docs/architecture/ARCHITECTURE.md`
+## 10. Commerce, Assets, And Files Rule
 
-## 13. Pre-commit Checks / 提交前检查
+- Shopping owns store, product, and order behavior.
+- Food Delivery owns restaurant, menu, cart, and delivery-order behavior.
+- Wallet owns ledger outcomes, not upstream order truth.
+- Assets owns long-term owned things and property-like records.
+- Files is hidden/internal and should not be treated as a normal user-facing file manager.
+
+## 11. Common Task Flows
+
+### Widget Flow
+
+1. Open `/widgets` from Home or Appearance.
+2. Choose library, custom, or import.
+3. Create or import the widget into the library.
+4. Enter Home widget edit mode.
+5. Assign or replace using a compatible slot.
+
+### Network / Model Setup Flow
+
+1. Open `/network`.
+2. Fill provider URL and API key.
+3. Refresh models or wait for auto-pull.
+4. Choose model and save.
+5. Save preset if needed.
+
+### New Feature Flow
+
+1. Create or update the needed view/store/component files.
+2. Register route changes in `src/router/index.js` if routing changes are needed.
+3. Decide whether a Home app entry is required.
+4. Put state in the proper store instead of ad hoc component state when it becomes shared behavior.
+5. Route AI requests through the project AI integration layer.
+6. Keep explicit save/confirm actions on important editing surfaces.
+7. Sync docs:
+   - `docs/overview/PROJECT_MASTER_GUIDE.md`
+   - `docs/roadmap/TODO_ROADMAP.md`
+   - `docs/pm/TODO_PM_STATUS_REPORT.md`
+   - `docs/architecture/ARCHITECTURE.md`
+
+## 12. Validation And Pre-Commit Checks
+
+Required for code changes:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-Recommended / 建议补跑：
+Recommended when behavior changed:
 
 ```bash
 npm run test
 ```
 
-## 14. Deployment (GitHub Pages) / 部署流程
+Useful doc-only check:
+
+```bash
+git diff --check
+```
+
+## 13. Release / Deployment Flow
 
 ```bash
 git add .
@@ -215,23 +232,27 @@ git commit -m "feat: your message"
 git push origin main
 ```
 
-Deployment is automatic via GitHub Actions.  
-推送后由 GitHub Actions 自动部署。
+Deployment is handled by the existing GitHub Actions pipeline.
 
-## 15. FAQ / 常见问题
+## 14. Quick Troubleshooting
 
-1. Changes seem not applied / 修改看起来没生效  
-Check Save action first, then refresh for validation.  
-先检查是否已保存，再刷新验证。
+### Changes seem not applied
 
-2. Home layout still old / Home 入口仍是旧布局  
-Likely local cached layout; use Home reset action.  
-多为本地缓存布局，使用 Home 编辑栏“重置”恢复默认。
+- Check whether the flow requires an explicit save/confirm action.
+- Refresh and verify persisted state.
 
-3. Model pull failed / 模型拉取失败  
-Check URL/Key, then CORS or gateway limits, then fallback model input.  
-先查 URL/Key，再查跨域和网关限制，必要时手动填写模型兜底。
+### Home layout looks old
 
-4. Why some pages are not fully localized yet? / 为什么部分页面仍未完全切语言？  
-P0-2 baseline has been completed for current target pages; if any page is still mixed-language, treat it as a regression and migrate with `useI18n` + `t(...)` immediately.  
-当前目标页面的 P0-2 基线已完成；若仍出现混合语言页面，应按回归问题处理并立即补齐 `useI18n` + `t(...)`。
+- Check whether local layout state is cached.
+- Use the Home reset path if the feature provides one.
+
+### Model pull failed
+
+- Check provider URL and API key first.
+- Then check CORS, gateway, or rate-limit issues.
+- Fall back to manual model input only when the UX already supports it.
+
+### Mixed-language UI still appears
+
+- Treat it as a regression.
+- Align that surface with the project i18n pattern instead of leaving temporary mixed copy in place.

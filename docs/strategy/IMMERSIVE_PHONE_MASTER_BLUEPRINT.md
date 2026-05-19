@@ -1,317 +1,255 @@
-﻿# SchatPhone Immersive Phone Master Blueprint / SchatPhone 沉浸式虚拟手机总蓝图
+# SchatPhone Immersive Phone Master Blueprint
 
-Updated / 更新时间: 2026-04-12
+Updated: 2026-05-19
 
-## 1. Purpose / 用途
+Purpose: this is the highest-level strategic blueprint for SchatPhone.
 
-This document is the master entry point for the next-stage design of SchatPhone.  
-本文是 SchatPhone 下一阶段设计的总入口文档。
+Use it to answer:
 
-It consolidates the product definition, expansion direction, background-time strategy, state ownership rules, storage guidance, and implementation priorities into one readable overview.  
-它把项目定义、扩展方向、后台时间策略、状态归属规则、存储方案和实现优先级整合为一份可直接阅读的总览。
+- what kind of product SchatPhone is becoming;
+- which long-range principles should stay stable even when modules change;
+- how product, runtime, memory, ownership, and storage strategy fit together.
 
-Recommended usage / 推荐用法：
+This file is not the live execution board.
 
-1. Read this file first / 先读本文件
-2. Jump to referenced detail docs as needed / 再按需跳转到细项文档
-3. Use this as the high-level brief for future AI assistants / 也可将其作为后续 AI 接手项目时的总提示
+For active sequencing and implementation order, read:
 
-## 2. Product Definition / 项目定义
+- `docs/strategy/PROJECT_ITERATION_PLAN.md`
+- `docs/roadmap/TODO_ROADMAP.md`
+- `docs/process/AI_WORK_MODE.md`
 
-SchatPhone should be treated as a real-time immersive virtual phone game, not just a chat shell.  
-SchatPhone 应被定义为一个“现实时间驱动的沉浸式虚拟手机游戏”，而不只是聊天外壳。
+## 1. Product Definition
 
-Core definition / 核心定义：
+SchatPhone is not just a chat shell.
 
-- the user participates through a customizable in-world identity / 用户通过可自定义的虚拟身份参与生态
-- AI roles live across multiple phone modules / AI 角色应存在于多个手机模块之中
-- the world rhythm is anchored to real device time / 世界节奏锚定真实设备时间
-- continuity, relationship growth, and cross-module coherence are more important than page count / 连续性、关系养成和跨模块联动比页面数量更重要
+It is a virtual-phone-based relationship simulation and interactive narrative system with:
 
-In short / 简述：  
-This is a virtual-phone-based relationship simulation and interactive narrative system.  
-这是一个套用虚拟手机外壳的关系养成与互动叙事系统。
+- a believable phone shell;
+- multiple app-like modules;
+- AI roles that can appear across those modules;
+- continuity anchored by system-owned truth, not by hoping the model remembers everything;
+- optional runtime/game-like control surfaces for users who want them.
 
-## 3. Core Design Principles / 核心设计原则
+Short version:
 
-### 3.1 Real Time Over Fake Session Time / 真实时间优先于假想会话时间
+> a local-first immersive virtual phone where relationships, world context, and everyday module actions form one coherent life loop.
 
-The project should feel tied to the user's actual clock, notifications, waiting, and missed moments.  
-项目应与用户真实的时间、通知、等待和错过时机形成关联。
+## 2. Core Strategic Principles
 
-### 3.2 System Truth Over Model Memory / 系统真值优先于模型记忆
+### 2.1 System truth over model memory
 
-Anything that affects continuity must be saved by the project itself.  
-凡是影响连续性的内容，都必须由项目自己保存。
+Anything that affects continuity must be owned by the project itself.
 
-### 3.3 Cross-Module Life Over Single-View Novelty / 跨模块生活感优先于单页新奇
+This includes:
 
-The same role should appear consistently across chat, map, wallet, calendar, files, and future modules.  
-同一个角色应一致地出现在聊天、地图、钱包、日历、文件及后续模块中。
+- relationship progress;
+- event state;
+- task/objective state;
+- balances and transfers;
+- trip and schedule state;
+- notification state;
+- memory summaries accepted into long-term continuity.
 
-### 3.4 User Control Over Hidden Automation / 用户控制优先于黑箱自动化
+### 2.2 Cross-module life over single-page novelty
 
-Autonomous AI actions should always be governed by explicit user switches and intervals.  
-AI 自主行为必须始终受用户明确的开关和间隔控制。
+The product should feel like one lived-in phone, not a collection of isolated demos.
 
-### 3.5 Layered World Kernel Over Single Text Blob / 分层世界内核优先于单文本堆叠
+That means the same role, memory, asset, or event may appear across:
 
-Global worldview should be separated from role-targeted knowledge patches.  
-全局世界观应与角色定向知识补丁分离管理。
+- Chat
+- Contacts
+- Map
+- Calendar
+- Reminders
+- Wallet
+- Shopping
+- Food Delivery
+- Gallery
 
-Why / 作用：  
-This keeps prompts cleaner, reduces drift, and improves cross-module reuse.  
-这样可降低提示词污染，减少漂移，并提升跨模块复用效率。
+### 2.3 Explicit user action before hidden automation
 
-## 4. What the Project Already Has / 当前项目已具备的基础
+Near-term continuity should come from explicit, low-risk user actions first.
 
-The current project already provides a strong shell baseline.  
-当前项目已经具备较完整的手机壳基础能力。
+This is why the current relationship-memory direction is:
 
-Main completed foundations / 已完成的核心基础：
+- text/event-first;
+- low-impact;
+- reviewable;
+- deduped;
+- source-aware.
 
-- iOS-like phone-shell UI / 仿 iOS 手机壳界面
-- lock-screen route and notification loop / 锁屏入口与通知闭环
-- chat as the main interactive hub / 以聊天为主互动中枢
-- global role profile archive + per-chat binding split / 全局角色档案与会话绑定拆分
-- per-thread AI controls / 会话级 AI 控制
-- backup and restore safety baseline / 备份恢复安全基线
-- widget import safety baseline / Widget 导入安全基线
-- global system-language UI baseline / 全局系统语言 UI 基线
+High-impact hidden automation remains deliberately constrained.
 
-Interpretation / 判断：  
-The shell is usable. The next stage should focus on making the inner world feel alive, persistent, and coherent.  
-外壳已经可用，下一阶段应聚焦于让“壳内世界”显得活着、持续、连贯。
+### 2.4 Optional runtime control, not forced game admin
 
-## 5. Must-Have Systems for the Vision / 为了实现目标必须补齐的系统
+`World Hub / 世界中枢` belongs to the product, but it must remain optional.
 
-### 5.1 Real-Time World Layer / 现实时间世界层
+It is useful for:
 
-- real-time scheduler / 现实时间调度器
-- restore-time settlement / 恢复时补算
-- quiet-hour logic / 安静时段逻辑
-- time-aware notifications / 时间感知通知
+- runtime review;
+- pending-effect review;
+- future narrow overrides;
+- future deeper control lanes such as Cheats.
 
-Why / 作用：  
-Without this layer, the world disappears whenever the user is not actively touching it.  
-没有这层，用户一停下操作，整个世界就像停止存在。
+It must not become the normal place where users are forced to manage ordinary phone life.
 
-### 5.2 Relationship and Growth Layer / 关系与养成层
+### 2.5 Immersion through ownership clarity
 
-- relationship values / 关系数值
-- relationship stages / 关系阶段
-- memory summaries / 记忆摘要
-- long-term impressions / 长期印象
+Immersion is not just visual.
 
-Why / 作用：  
-This is the backbone of romance growth and long-term emotional continuity.  
-这是恋爱养成和长期情感连续性的骨架。
+It also depends on each concept having a stable home:
 
-### 5.3 Role Behavior Layer / 角色行为层
+- `Contacts` owns global role archive and role-centered management;
+- `Chat Directory` owns Chat-side binding;
+- `Chat` owns message history;
+- `relationship runtime` owns relationship progress and memory groups;
+- `Calendar` owns confirmed schedule/date meaning;
+- `Reminders` owns raw cross-module cues and follow-ups;
+- `Files` stays internal;
+- `Gallery` is asset-first before it becomes anything else.
 
-- availability / 在线与可用状态
-- schedule-based behavior / 作息驱动行为
-- emotional state / 情绪状态
-- proactive outreach rules / 主动联系规则
-- silence reaction logic / 沉默后的反应逻辑
+## 3. Current Product Thesis
 
-Why / 作用：  
-This makes roles feel like people instead of on-demand responders.  
-这一层让角色更像活人，而不是只会按需回复的脚本。
+The project has already moved beyond shell-building.
 
-### 5.4 Event and Consequence Layer / 事件与后果层
+It now has:
 
-- triggered events / 条件触发事件
-- delayed events / 延迟事件
-- missed-event consequences / 错过事件后的后果
-- cross-module event chains / 跨模块事件链
+- a usable phone shell;
+- meaningful module loops;
+- relationship-runtime baseline;
+- event-runtime baseline;
+- optional World Hub baseline;
+- cross-module asset and continuity seams;
+- stronger doc/workflow/task-package governance.
 
-### 5.5 Cross-Module Role Binding Layer / 跨模块角色绑定层
+So the next strategic risk is no longer "can we build more modules?"
+The real risk is:
 
-The same role should be reusable everywhere.  
-同一个角色应能在各模块中被复用。
+> piling more behavior onto already-heavy surfaces before ownership, memory semantics, and runtime review quality are stable enough.
 
-### 5.6 Structured Interaction Media Layer / 结构化互动媒介层
+## 4. Strategic System Pillars
 
-The project should continue supporting more than plain text.  
-项目应继续支持不止纯文本的互动形式。
+### 4.1 Shell and entry coherence
 
-- text / 文本
-- virtual voice / 虚拟语音
-- images / 图片型消息
-- module links / 模块链接
-- transfer cards / 转账卡片
-- mini HTML scenes / HTML 小互动
+The phone shell is the delivery surface.
 
-### 5.7 World Kernel and Map Baseline Layer / 世界内核与地图基线层
+This includes:
 
-- global worldview (always-on context) / 全局世界观（常驻上下文）
-- bindable knowledge points / 可绑定知识点
-- simulation-first map core (location/travel/time by system logic) / 模拟优先地图核心（地点/行程/时间由系统逻辑计算）
-- optional AI map enhancements (visual/event flavor only) / 可选地图 AI 增强（仅视觉/事件文案）
+- lock/home/notifications;
+- system-owned vs installed-app-owned visual entry rules;
+- stable navigation return behavior;
+- restrained optional-system surfaces such as World Hub.
 
-## 6. Ownership Rules / 数据归属规则
+### 4.2 Relationship and memory truth layer
 
-The project must distinguish between user-defined data, system-owned truth, AI-assisted drafts, and AI-generated presentation.  
-项目必须明确区分用户定义数据、系统真值、AI 辅助草稿和 AI 生成表现层。
+This is now one of the main strategic pillars.
 
-### 6.1 Must Be User-Defined / 必须由用户定义
+It should continue evolving around:
 
-- user identity / 用户身份
-- global worldview / 全局世界观
-- knowledge-point library / 知识点库
-- boundaries and preferences / 边界与偏好
-- primary role foundations / 核心角色底稿
-- high-level automation permissions / 自动化权限
+- system-owned relationship metrics and stages;
+- compact memory groups rather than scattered module-local "relationship" fields;
+- explicit source-aware facts;
+- dedupe, merge, recall, and review rules;
+- Contacts as the main human-facing role-management hub.
 
-### 6.2 Can Be AI-Assisted / 可由 AI 辅助建立
+### 4.3 Runtime and event layer
 
-- extended role copy / 扩展人设文案
-- memory summaries / 记忆摘要
-- event templates / 事件模板
-- service account templates / 服务号模板
-- scene text drafts / 场景草稿
+This layer should remain:
 
-### 6.3 Must Be System-Owned Truth / 必须由系统保存为真值
+- opt-in where needed;
+- explainable;
+- deterministic enough to test;
+- adapter-based rather than module-invasive;
+- reviewable before it becomes more powerful.
 
-- relationship values / 关系数值
-- event states / 事件状态
-- task progress / 任务进度
-- balances and transfers / 余额与转账状态
-- itinerary and location states / 行程与地点状态
-- notification state / 通知状态
-- message read/delivered status / 消息已读与送达状态
-- scheduler timestamps / 调度时间戳
+### 4.4 Role behavior and continuity layer
 
-### 6.4 Can Be AI-Generated Presentation / 可由 AI 直接生成的表现层
+Roles should feel persistent and situated, not like stateless responders.
 
-- reply text / 回复正文
-- multi-message sequences / 连续消息
-- voice-style wording / 语音条文案
-- image descriptions / 图片说明
-- transfer wording / 转账文案
-- HTML interaction copy / HTML 互动文案
+That eventually includes:
 
-## 7. Storage Strategy Summary / 存储策略摘要
+- schedule and availability logic;
+- emotional continuity;
+- proactive outreach rules;
+- silence and missed-moment reactions;
+- world-aware event and memory context.
 
-The project should not keep scaling on `localStorage` alone.  
-项目不能继续单靠 `localStorage` 扩张。
+### 4.5 Storage and archival layer
 
-Recommended layered storage / 推荐分层：
+The long-range storage strategy is layered, not "everything in one browser bucket."
+Small hot config can stay light.
 
-### 7.1 `localStorage`
+Large structured archives, histories, and runtime truth should follow a stronger layered model over time.
 
-For small hot config only / 只保存轻量高频配置：
+### 4.6 Cross-module evidence and media layer
 
-- settings / 设置
-- switches / 开关
-- active IDs / 当前活跃对象 ID
-- scheduler checkpoints / 调度检查点
+Images, route context, ledger context, service-account context, and other structured artifacts should support immersion without stealing ownership from their source modules.
 
-### 7.2 `IndexedDB`
+## 5. Current Frozen Product Boundaries
 
-For long-term structured archive / 保存长期结构化存档：
+These are not the places to improvise casually:
 
-- role profiles / 角色档案
-- relationship states / 关系状态
-- conversations and message history / 会话与消息历史
-- event logs / 事件日志
-- wallet and itinerary records / 钱包与行程记录
-- memory summaries / 记忆摘要
+1. `Contacts` vs `Chat Directory`
+2. `Calendar` vs `Reminders`
+3. `World Hub` vs future `Cheats`
+4. `Files` internal role
+5. `relationshipLevel` / `relationshipNote` as compatibility fields, not relationship truth
+6. Gallery as asset-first, not current mainline relationship-memory input surface
 
-### 7.3 Optional Server Layer / 可选服务端层
+## 6. Near-To-Mid-Term Strategic Sequence
 
-Only when the product later needs:  
-只有在后续需要以下能力时再引入：
+The current strategic order is:
 
-- cross-device sync / 跨设备同步
-- remote backup / 远程备份
-- push delivery / 推送送达
-- persistent scheduled jobs / 持续调度任务
+1. finish ownership closure;
+2. deepen architecture around existing hotspots;
+3. tighten cross-module memory loops;
+4. improve runtime review quality before stronger control;
+5. return to broad visual rebuild only after the above is stable.
 
-## 8. Autonomous AI Control Rules / AI 自主行为控制规则
+That sequence is tracked in more operational form inside:
 
-Autonomous AI activity should be explicit, configurable, and interruptible.  
-AI 自主行为必须是明确的、可配置的、可打断的。
+- `docs/strategy/PROJECT_ITERATION_PLAN.md`
+- `docs/roadmap/TODO_ROADMAP.md`
 
-Recommended controls / 推荐控制项：
+## 7. Anti-Goals
 
-- global master switch / 全局总开关
-- per-feature switch / 按功能模块开关
-- per-role or per-thread switch / 按角色或按会话开关
-- interval in 60-second steps / 以 60 秒为单位的间隔
-- quiet hours / 安静时段
-- notify-only mode / 仅通知模式
-- offline settlement toggle / 是否补算离线期间事件
+Do not let the project drift into these traps:
 
-Rule / 规则：  
-Manual user-triggered actions should always have higher priority than autonomous activity.  
-用户手动触发的行为必须始终高于自主调用优先级。
+1. more pages without stronger continuity;
+2. visible backend/admin feeling in ordinary user flows;
+3. hidden automation before explanation and review quality;
+4. duplicating the same truth across module-local fields and runtime truth layers;
+5. forcing Gallery/media workflows before input friction is low enough;
+6. making World Hub mandatory for users who only want immersive phone-life/chat play.
 
-## 9. Recommended Implementation Phases / 推荐实现阶段
+## 8. Companion Strategy Docs
 
-### Phase A / 阶段 A
+After reading this file, use these documents by topic:
 
-Foundational realism layer / 现实基础层：
+- `docs/strategy/PROJECT_ITERATION_PLAN.md`
+  - current sequence and exit criteria
+- `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
+  - what belongs to user-defined core, system truth, AI-assisted draft, or AI-generated presentation
+- `docs/strategy/STORAGE_STRATEGY.md`
+  - layered storage target and migration posture
+- `docs/strategy/BACKGROUND_ACTIVITY_STRATEGY.md`
+  - real-time rhythm, restore-time logic, and background/autonomy decisions
+- `docs/strategy/PROJECT_EXPANSION_BLUEPRINT.md`
+  - long-range ecosystem expansion themes, not the main current execution order
 
-- real-time scheduler / 现实时间调度器
-- restore-time settlement / 恢复补算
-- stronger autonomous control rules / 更稳的自主调用控制
+## 9. Practical Rule For Future Work
 
-### Phase B / 阶段 B
+Whenever a major new feature is proposed, evaluate it with these questions:
 
-State and relationship layer / 状态与关系层：
+1. Does it strengthen continuity?
+2. Does it reuse one shared world/relationship/runtime truth instead of inventing another?
+3. Does it preserve module ownership?
+4. Does it keep user control ahead of hidden automation?
+5. Does it improve immersion without turning the product into a visible admin console?
 
-- relationship values / 关系数值
-- system-owned memory pipeline / 系统记忆流水线
-- role behavior logic / 角色行为逻辑
+If the answer is mostly no, it should not be prioritized yet.
 
-### Phase C / 阶段 C
+## 10. Change Log
 
-Narrative interaction layer / 叙事互动层：
-
-- event and consequence system / 事件与后果系统
-- structured message hardening / 结构化消息加固
-- richer media interaction / 更丰富的互动媒介
-
-### Phase D / 阶段 D
-
-Ecosystem expansion layer / 生态扩展层：
-
-- map and itinerary loops (simulation-first, low-API baseline) / 地图与行程闭环（模拟优先、低 API 基线）
-- wallet and gift loops / 钱包与礼物闭环
-- gallery/files evidence chain / 相册与文件证据链
-- future public-social modules / 未来公共社交模块
-
-## 10. Recommended Reading Map / 推荐阅读路径
-
-Use the following docs for detail after reading this master blueprint:  
-读完本总蓝图后，可按以下顺序进入细项文档：
-
-1. `docs/strategy/BACKGROUND_ACTIVITY_STRATEGY.md`  
-   For real-time rhythm, background behavior, notifications, and restore-time logic.  
-   用于查看现实时间、后台活动、通知和恢复补算的策略。
-2. `docs/strategy/PROJECT_EXPANSION_BLUEPRINT.md`  
-   For the full product expansion direction and module roadmap.  
-   用于查看完整的模块扩展方向和产品路线。
-3. `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`  
-   For deciding what must be stored by the system versus generated by AI.  
-   用于判断哪些内容应由系统保存，哪些可以交给 AI。
-4. `docs/strategy/STORAGE_STRATEGY.md`  
-   For deciding where long-term data should live.  
-   用于决定长期数据应保存在哪里。
-
-## 11. Practical Rule for Future Work / 后续工作的实际原则
-
-Whenever a new feature is proposed, evaluate it with four questions:  
-后续每当提出一个新功能，都先用这四个问题判断：
-
-1. Does it strengthen real-time immersion? / 它是否增强了现实时间沉浸感？
-2. Does it strengthen continuity? / 它是否增强了连续性？
-3. Does it reuse the same world state across modules? / 它是否复用了同一套跨模块状态？
-4. Can it be maintained without giving AI too much hidden authority? / 它是否可维护，并且没有把过多隐性控制交给 AI？
-
-If the answer is mostly no, it should not be prioritized yet.  
-如果答案大多是否定的，就不应优先开发。
-
-
+1. 2026-04-12: created as a high-level immersive virtual-phone blueprint.
+2. 2026-05-19: rewritten to align with the current task-package system, ownership closures, relationship runtime, World Hub strategy, Calendar/Reminders split, Files decision, and workflow governance.

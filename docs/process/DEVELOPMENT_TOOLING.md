@@ -1,14 +1,16 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-05-18
+Updated: 2026-05-19
 
-This document records shared development tools outside the visual-workflow skill group. Its purpose is to keep different PCs and future handoffs on the same operating assumptions.
+Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
-Visual-only tools and design skills are documented separately in:
+This file is the tooling companion to:
 
-```text
-docs/process/VISUAL_WORKFLOW.md
-```
+- `docs/process/AI_WORK_MODE.md` for execution rules;
+- `docs/process/EVENT_WORKFLOW.md` for event/runtime lane skill routing;
+- `docs/process/VISUAL_WORKFLOW.md` for visual/IA lane skill routing.
+
+It is not a second roadmap and it does not replace package docs.
 
 ## 1. Confirm Local Paths First
 
@@ -21,7 +23,7 @@ Before installing tools on another PC, ask the machine owner to confirm:
 4. Preferred shell in VSCode:
 5. Whether PowerShell should use npm/npx or npm.cmd/npx.cmd:
 6. OpenCLI global install location:
-7. Any local reference/tool directories outside the repo:
+7. Any local reference or tool directories outside the repo:
 ```
 
 Current machine values:
@@ -36,15 +38,15 @@ OpenCLI command: C:\Users\Administrator\AppData\Roaming\npm\opencli.cmd
 VSCode shell: PowerShell
 ```
 
-Do not assume another PC has the same `D:` drive, user name, npm prefix, or PowerShell policy.
+Do not assume another PC has the same drive letters, user profile, npm prefix, or PowerShell policy.
 
 ## 2. Runtime Toolchain
 
-Project runtime:
+Project runtime on the current machine:
 
 ```text
-Node.js: v22.13.0 on the current machine
-npm: 10.9.2 on the current machine
+Node.js: v22.13.0
+npm: 10.9.2
 ```
 
 Recommended checks:
@@ -56,7 +58,7 @@ npx.cmd --version
 npm.cmd config get prefix
 ```
 
-On this Windows machine, PowerShell blocks `.ps1` shims by policy. Prefer command shims ending in `.cmd`:
+On this Windows machine, PowerShell may block `.ps1` shims by policy. Prefer `.cmd` command shims:
 
 ```powershell
 npm.cmd
@@ -64,7 +66,7 @@ npx.cmd
 opencli.cmd
 ```
 
-Avoid assuming plain `npm`, `npx`, or `opencli` will work in PowerShell, because those names may resolve to blocked `.ps1` files.
+Avoid assuming plain `npm`, `npx`, or `opencli` will work in PowerShell.
 
 ## 3. Project Commands
 
@@ -78,15 +80,13 @@ npm.cmd test
 npm.cmd run build
 ```
 
-If a command fails because plain `npm` is blocked, retry with `npm.cmd`.
+If plain `npm` fails because of PowerShell policy, retry with `npm.cmd`.
 
-## 3.1 Dependency Update Policy
-
-Dependency updates should protect product work from avoidable tooling churn.
+## 4. Dependency Update Policy
 
 Safe default:
 
-1. Batch patch and minor dependency updates only when the baseline verification passes:
+1. Batch patch and minor updates only after the baseline passes:
 
 ```powershell
 npm.cmd run lint
@@ -95,7 +95,7 @@ npm.cmd run build
 ```
 
 2. Do not mix major dependency upgrades with feature work.
-3. Major upgrades need a dedicated migration branch or task record with rollback notes.
+3. Major upgrades need a dedicated migration branch or tracked task slice.
 4. Treat major jumps in these packages as migration work:
    - `vite`
    - `vitest`
@@ -105,11 +105,11 @@ npm.cmd run build
    - `vue`
    - `vue-router`
    - `pinia`
-5. After dependency changes, update `package-lock.json` in the same batch and record the validation command output in the active roadmap item.
+5. After dependency changes, update `package-lock.json` in the same batch and record validation in the active roadmap item.
 
-## 4. OpenCLI
+## 5. OpenCLI
 
-OpenCLI is a general tool outside the visual专项 skill group.
+OpenCLI is a general tool outside the visual-only skill group.
 
 Current installation:
 
@@ -136,12 +136,84 @@ opencli.cmd doctor
 
 PowerShell note:
 
-- `opencli.cmd` is the recommended invocation on Windows.
-- Plain `opencli` may resolve to `opencli.ps1`, which can fail if PowerShell script execution is restricted.
+- `opencli.cmd` is the recommended Windows invocation.
+- Plain `opencli` may resolve to `opencli.ps1`, which can fail if script execution is restricted.
 
-## 5. Skills CLI
+## 6. Skills System Overview
 
-The `skills` installer is used for project-local skills and may be invoked through `npx.cmd`.
+Project-local skills are installed under:
+
+```text
+.\.agents\skills
+```
+
+The lock file for project-local skill sources is:
+
+```text
+skills-lock.json
+```
+
+These two sources are the truth for "what this repo expects to be locally installed."
+
+Workflow ownership is split like this:
+
+- `schatphone-workflow`: general SchatPhone takeover and documentation sync.
+- `docs/process/EVENT_WORKFLOW.md`: event/runtime lane skill routing.
+- `docs/process/VISUAL_WORKFLOW.md`: visual/IA lane skill routing.
+- `docs/process/AI_WORK_MODE.md`: overall workflow-to-skill map across lanes.
+
+Global machine-local skills may also exist outside the repo. Those can support work on the current machine, but they are not required for repo portability unless explicitly documented.
+
+## 7. Current Project-Local Skill Inventory
+
+The current repo-local skills recorded in `.agents/skills` and `skills-lock.json` are:
+
+| Skill | Main use | Primary workflow owner |
+| --- | --- | --- |
+| `schatphone-workflow` | SchatPhone takeover, reading order, doc-sync matrix, semantic guardrails | `docs/process/AI_WORK_MODE.md` |
+| `brainstorming` | New feature/design discovery before implementation planning; produces reviewed specs | `docs/process/AI_WORK_MODE.md` |
+| `grill-me` | Stress-test plans, architecture proposals, and requirement assumptions one decision branch at a time | `docs/process/AI_WORK_MODE.md` |
+| `writing-plans` | Convert approved specs or clear requirements into executable implementation plans | `docs/process/AI_WORK_MODE.md` |
+| `find-skills` | Skill discovery and installation help when a new capability is needed | `docs/process/DEVELOPMENT_TOOLING.md` |
+| `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
+| `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
+| `impeccable` | Strict second-pass polish for layout, hierarchy, copy, and edge states | `docs/process/VISUAL_WORKFLOW.md` |
+| `web-design-guidelines` | External UI/UX/accessibility review pass | `docs/process/VISUAL_WORKFLOW.md` |
+| `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `pinia` | Store shape, actions, hydration, persistence patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `vue-pinia-best-practices` | Vue + Pinia reactivity and store-consumption patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `unit-test-vue-pinia` | Vue/Pinia unit tests for stores, components, composables | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `playwright-testing` | Browser-level journey testing and E2E verification | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `game-engine` | Real game-loop, Canvas/WebGL, minigame work only | `docs/process/EVENT_WORKFLOW.md` |
+
+### 7.1 What Is Already Covered Well
+
+These workflow docs already wire skills in a clear way:
+
+- `docs/process/EVENT_WORKFLOW.md`
+  - explicit installed-skills section;
+  - explicit invocation matrix for `pinia`, `vue-pinia-best-practices`, `unit-test-vue-pinia`, `playwright-testing`, `game-engine`, `improve-codebase-architecture`, and `frontend-logic-design`.
+- `docs/process/VISUAL_WORKFLOW.md`
+  - explicit installed-skills section;
+  - explicit routing for `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines`;
+  - machine-local visual support skills are documented there too.
+
+### 7.2 What Must Not Be Lost In Future Cleanup
+
+When cleaning or splitting docs, preserve these rules:
+
+1. `schatphone-workflow` remains the baseline skill for any non-trivial SchatPhone continuation task.
+2. Event/runtime work keeps its own skill matrix in `EVENT_WORKFLOW.md`.
+3. Visual/IA work keeps its own skill matrix in `VISUAL_WORKFLOW.md`.
+4. `skills-lock.json` and `.agents/skills` remain the inventory truth for repo-local skills.
+5. If a new workflow starts depending on a project-local skill, document that dependency in:
+   - the workflow doc;
+   - `docs/process/AI_WORK_MODE.md`;
+   - this file when install/inventory assumptions change.
+
+## 8. Skills CLI
+
+The `skills` installer is used for repo-local skills and is usually invoked through `npx.cmd`.
 
 Common pattern:
 
@@ -155,102 +227,23 @@ Run project-local skill installs from the confirmed SchatPhone project root so t
 <SchatPhone project root>\.agents\skills
 ```
 
-Current project-local skills are tracked in:
+After installing or updating project-local skills:
 
-```text
-skills-lock.json
-.agents\skills
-```
+1. confirm `.agents\skills` contains the new skill;
+2. confirm `skills-lock.json` contains the new source entry;
+3. restart Codex or the agent host so the skill is loaded.
 
-The visual skill list and installation commands live separately in:
-
-```text
-docs/process/VISUAL_WORKFLOW.md
-```
-
-### 5.1 Non-Visual Project Skills
-
-Use this section for project-local skills that support engineering, architecture, review, refactoring, testing, or handoff work outside the visual workflow.
-
-#### `improve-codebase-architecture`
-
-Purpose:
-
-- Architecture review and refactoring discovery.
-- Finding shallow modules, high-friction interfaces, and deepening opportunities.
-- Making large Vue/Pinia modules easier to test, maintain, and navigate with AI assistance.
-- Useful for SchatPhone hotspots such as large views, stores, cross-module handoffs, and domain contracts.
-
-Installed in the current project:
-
-```text
-.\.agents\skills\improve-codebase-architecture
-```
-
-Source:
-
-```text
-https://github.com/mattpocock/skills.git
-```
-
-Install command used on Windows:
-
-```powershell
-npx.cmd skills add mattpocock/skills --skill improve-codebase-architecture
-```
-
-Use when:
-
-- Reviewing `ChatView.vue`, `SettingsView.vue`, large Pinia stores, or other high-change modules.
-- Planning component/store extraction before implementation.
-- Looking for better seams, adapters, and test surfaces.
-- Preparing an architecture-focused handoff for another project group.
-
-Cross-PC notes:
-
-- Run the install command from the confirmed SchatPhone project root so it lands under `.agents\skills`.
-- If PowerShell blocks plain `npx`, use `npx.cmd`.
-- After installing or updating skills, restart Codex or the agent host so the new skills are loaded.
-- Review installed skills before use because project-local skills run with full agent permissions.
-
-## 6. VSCode Notes
-
-Current environment:
-
-```text
-Editor detected: VSCode Insiders
-Integrated shell: PowerShell
-```
-
-Recommended VSCode terminal checks:
-
-```powershell
-Get-Command node,npm.cmd,npx.cmd,opencli.cmd
-node --version
-npm.cmd --version
-opencli.cmd --version
-```
-
-If a tool works in an external terminal but not in VSCode:
-
-1. Restart VSCode so PATH changes are reloaded.
-2. Check `Get-Command <tool>` to see which shim is being resolved.
-3. Prefer `.cmd` shims if PowerShell blocks `.ps1`.
-4. Confirm the npm global prefix is on PATH.
-
-## 7. Cross-PC Setup Checklist
+## 9. Cross-PC Setup Checklist
 
 Use this checklist before another device takes over development:
 
-Non-visual project skills are covered by Section 5. Install or confirm them before visual-only skills when another project group takes over the repo.
-
 1. Confirm local paths with the machine owner.
-2. Install Node.js/npm or confirm the existing Node version is suitable.
+2. Confirm Node.js / npm versions are suitable.
 3. Confirm PowerShell can run `npm.cmd` and `npx.cmd`.
-4. Clone SchatPhone and run project install from the confirmed project root.
+4. Clone SchatPhone and run project install from the confirmed root.
 5. Install OpenCLI globally if that PC needs browser/app CLI tooling.
-6. Install visual专项 skills by following `docs/process/VISUAL_WORKFLOW.md`.
-7. Confirm `skills-lock.json` and `.agents\skills` are present after project-local skill installs.
+6. Install or confirm project-local skills from `.agents\skills` and `skills-lock.json`.
+7. If visual work is in scope, follow `docs/process/VISUAL_WORKFLOW.md` for visual skill setup.
 8. Run verification commands:
 
 ```powershell
@@ -261,18 +254,13 @@ opencli.cmd --version
 git status --short
 ```
 
-## 8. Ownership Rule
+## 10. Ownership Rule
 
-This file is for shared development tooling only.
+This file is for shared tooling and skill inventory only.
 
-Keep visual design skills, visual workflow, design reference libraries, and visual专项 triggers in:
+Keep:
 
-```text
-docs/process/VISUAL_WORKFLOW.md
-```
-
-Keep product behavior rules and day-to-day app operation rules in:
-
-```text
-docs/process/OPERATION_GUIDE.md
-```
+- process rules in `docs/process/AI_WORK_MODE.md`;
+- event-lane skill routing in `docs/process/EVENT_WORKFLOW.md`;
+- visual-lane skill routing in `docs/process/VISUAL_WORKFLOW.md`;
+- product semantics in package docs and architecture/product-decision docs.

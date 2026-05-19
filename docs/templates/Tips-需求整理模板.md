@@ -1,87 +1,64 @@
-﻿# 需求整理与自检模板（给自己用）
+# Requirement Self-Check Template
 
-Purpose / 用途: clarify requirements before coding to reduce rework.  
-在改代码前把需求讲清楚，减少返工。
+Purpose: clarify requirements before coding so rework stays low.
 
----
+Use this when you want to sanity-check your own task before implementation.
 
-## A. Goal and Scope / 目标与范围
+## A. Goal And Scope
 
-- One-sentence goal / 本次目标（1 句话）：
-- Must-have items / 必做项（必须完成）：
-- Non-goals / 非目标（本次不做）：
-- Target devices/browsers / 适配范围（设备/浏览器）：
+- One-sentence goal:
+- Must-have items:
+- Non-goals:
+- Target devices/browsers:
 
----
+## B. Impact Scope
 
-## B. Impact Scope / 影响范围
+- Files to modify:
+- Files explicitly not touched:
+- New dependency required? Yes / No
+- New route required? Yes / No
 
-- Files to modify / 会改哪些文件：
-- Files explicitly not touched / 明确不改哪些文件：
-- New dependency required? / 是否新增依赖：Yes/No（是/否）
-- New route required? / 是否涉及路由新增：Yes/No（是/否）
+## C. Interaction And Visual
 
----
+- Core interactions:
+  click / swipe / long-press / drag / page-swipe
+- Visual direction:
+  default system / graphite quiet / world-specific / other
+- Custom CSS capability involved? Yes / No
 
-## C. Interaction and Visual / 交互与视觉
+## D. Data And API
 
-- Core interactions (click/swipe/long-press/drag/page-swipe)  
-核心交互（点击/滑动/长按/拖拽/切屏）：
-- Visual direction (Default System / Graphite Quiet / World-specific / Other)
-视觉方向（默认系统 / 石墨静夜 / 世界观专项 / 其他）：
-- Custom CSS capability involved? / 是否涉及自定义 CSS：Yes/No（是/否）
+- AI call involved? Yes / No
+- If yes, use `src/lib/ai.js` only
+- Persistence schema change? Yes / No
+- Legacy migration needed? Yes / No
 
----
+## E. Home / Settings Rule Check
 
-## D. Data and API / 数据与接口
+- Duplicate entry between Home and Settings? Yes / No
+- Touching the locked Home rule (`app_*` not hideable)? Yes / No
+- New widget involved? Yes / No
+- Explicit save action on all key input pages? Yes / No
+- Visible feedback after save? Yes / No
 
-- AI call involved? / 是否涉及 AI 调用：Yes/No（是/否）
-- If yes, use `src/lib/ai.js` only (no direct fetch in components)  
-如涉及 AI：统一走 `src/lib/ai.js`（组件内不直写 fetch）
-- Persistence schema change? / 是否涉及持久化字段变更：Yes/No（是/否）
-- Legacy migration needed? / 是否涉及历史数据迁移：Yes/No（是/否）
+## F. Acceptance Criteria
 
----
+- Functional definition of done:
+- Minimum regression routes to verify:
+  `/home`, `/settings`, `/network`, `/appearance`, `/chat`, `/files`, `/more`
+- Mobile gesture validation required? Yes / No
+- Error and retry validation required? Yes / No
 
-## E. Home/Settings Rule Check / Home 与 Settings 规则检查（必读）
-
-- Duplicate entry between Home and Settings?  
-Home 与 Settings 是否重复放入口：Yes/No（是/否）
-- Touching locked Home rule (`app_*` not hideable)?  
-是否触碰 Home 锁定入口规则（`app_*` 不可隐藏）：Yes/No（是/否）
-- New widget involved (built-in or custom)?  
-是否新增 Widget（内置或自定义）：Yes/No（是/否）
-- Explicit save action on all key input pages?  
-所有输入页是否有显式“保存按钮”：Yes/No（是/否）
-- Visible feedback after save?  
-保存后是否有反馈（如“已保存”）：Yes/No（是/否）
-
----
-
-## F. Acceptance Criteria / 验收标准
-
-- Functional acceptance definition / 功能验收（看到什么算完成）：
-- Minimum regression routes to verify:  
-回归路径至少检查：
-`/home`, `/settings`, `/network`, `/appearance`, `/chat`, `/files`, `/more`
-- Mobile gesture validation required?  
-是否需要移动端手势验证（长按/拖拽/滑动）：Yes/No（是/否）
-- Error and retry validation required (Network/Chat)?  
-是否需要错误提示与重试验证（Network/Chat）：Yes/No（是/否）
-
----
-
-## G. Pre-Commit Checks / 提交前检查
+## G. Pre-Commit Checks
 
 - `npm run lint`
 - `npm run build`
-- Run `npm run test` for behavior logic changes  
-行为逻辑改动时补 `npm run test`
+- run `npm run test` for behavior-logic changes
 
----
+## H. Result Notes
 
-## H. Result Notes (fill after implementation) / 结果记录（改完再填）
+Fill after implementation:
 
-- Actual changes / 本次实际改动：
-- Remaining TODO / 还剩待办：
-- Risks and cautions / 风险与注意事项：
+- Actual changes:
+- Remaining TODO:
+- Risks and cautions:

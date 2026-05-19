@@ -355,24 +355,77 @@ const formatRuntimeTime = (timestamp) => {
   }
 }
 
+const toRuntimeProfileId = (value) => {
+  const num = Number(value)
+  return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0
+}
+
+const summarizeRuntimeSourceRefs = (sourceRefs = []) =>
+  (Array.isArray(sourceRefs) ? sourceRefs : []).reduce((acc, ref) => {
+    const moduleKey = ref?.sourceModule || ''
+    if (!moduleKey) return acc
+    acc[moduleKey] = (acc[moduleKey] || 0) + 1
+    return acc
+  }, {})
+
+const resolveRuntimeRoleProfile = (entity = {}) => {
+  if (entity?.roleProfile?.id) return entity.roleProfile
+  const profileId = toRuntimeProfileId(entity?.profileId)
+  return profileId > 0 ? chatStore.getRoleProfileById(profileId) : null
+}
+
+const buildRuntimeCleanupProfile = (entity = {}, roleProfile = resolveRuntimeRoleProfile(entity)) => {
+  if (roleProfile) return roleProfile
+  const profileId = toRuntimeProfileId(entity?.profileId)
+  return {
+    id: profileId,
+    profileId,
+    name: entity?.displayName || '',
+  }
+}
+
+const runtimeEntityIdentifierLine = (entity = {}, roleProfile = resolveRuntimeRoleProfile(entity)) =>
+  roleProfile?.roleId
+    ? `${t('Role ID', 'Role ID')}: ${roleProfile.roleId}`
+    : `${t('Runtime key', 'Runtime key')}: ${entity?.entityKey || '-'}`
+
+const buildRuntimeOnlyImpact = (entity = {}, sourceRefs = []) => ({
+  memoryGroupCount: relationshipRuntimeStore.listMemoryGroupsForTarget(entity, 50).length,
+  sourceModuleCounts: summarizeRuntimeSourceRefs(sourceRefs),
+})
+
 const relationshipRuntimeEntityRows = computed(() =>
-  relationshipRuntimeStore.entities.slice(0, 4).map((entity) => ({
-    ...entity,
-    stageLabel: relationshipStageLabel(entity.relationshipStage),
-    updatedAtLabel: formatRuntimeTime(entity.updatedAt),
-    memorySummaries: relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2),
-    sourceRefs: relationshipRuntimeStore.listSourceRefsForTarget(entity),
-    impact: buildRoleDeleteImpact({
-      chatStore,
-      relationshipRuntimeStore,
-      profile: {
-        id: entity.profileId,
-        name: entity.displayName,
-      },
-    }),
-    roleProfile: entity.profileId ? chatStore.getRoleProfileById(entity.profileId) : null,
-    canManage: entity.profileId > 0 || Boolean(entity.entityKey),
-  })),
+  relationshipRuntimeStore.entities.slice(0, 4).map((entity) => {
+    const roleProfile = resolveRuntimeRoleProfile(entity)
+    const sourceRefs = relationshipRuntimeStore.listSourceRefsForTarget(entity)
+    const impact = roleProfile
+      ? buildRoleDeleteImpact({
+          chatStore,
+          relationshipRuntimeStore,
+          profile: roleProfile,
+        })
+      : buildRuntimeOnlyImpact(entity, sourceRefs)
+    const hasMissingProfile = !roleProfile && toRuntimeProfileId(entity.profileId) > 0
+    return {
+      ...entity,
+      stageLabel: relationshipStageLabel(entity.relationshipStage),
+      updatedAtLabel: formatRuntimeTime(entity.updatedAt),
+      memorySummaries: relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2),
+      sourceRefs,
+      impact,
+      roleProfile,
+      identifierLabel: runtimeEntityIdentifierLine(entity, roleProfile),
+      profileStatusLabel: roleProfile
+        ? `${t('Contacts profile', 'Contacts profile')}: ${roleProfile.name}`
+        : hasMissingProfile
+          ? t(
+              'Contacts profile is missing; only runtime context can be cleared here.',
+              'Contacts profile is missing; only runtime context can be cleared here.',
+            )
+          : t('Runtime-only relationship target', 'Runtime-only relationship target'),
+      canManage: toRuntimeProfileId(entity.profileId) > 0 || Boolean(entity.entityKey),
+    }
+  }),
 )
 
 const relationshipSourceCleanupHandlers = computed(() =>
@@ -432,24 +485,12 @@ const dismissRelationshipEvent = (eventId) => {
 
 const resetRuntimeEntityFromWorldHub = async (entity) => {
   if (!entity?.entityKey) return
-  const profile = entity.roleProfile || {
-    id: entity.profileId,
-    roleId: String(entity.profileId || entity.entityKey),
-    name: entity.displayName || entity.entityKey,
-  }
+  const roleProfile = resolveRuntimeRoleProfile(entity)
+  const cleanupProfile = buildRuntimeCleanupProfile(entity, roleProfile)
   const sourceRefs = relationshipRuntimeStore.listSourceRefsForTarget(entity)
-  const sourceModuleCounts = sourceRefs.reduce((acc, ref) => {
-    const moduleKey = ref.sourceModule || ''
-    if (!moduleKey) return acc
-    acc[moduleKey] = (acc[moduleKey] || 0) + 1
-    return acc
-  }, {})
-  const impact = profile.id
-    ? buildRoleDeleteImpact({ chatStore, relationshipRuntimeStore, profile })
-    : {
-        memoryGroupCount: relationshipRuntimeStore.listMemoryGroupsForTarget(entity, 50).length,
-        sourceModuleCounts,
-      }
+  const impact = roleProfile
+    ? buildRoleDeleteImpact({ chatStore, relationshipRuntimeStore, profile: roleProfile })
+    : buildRuntimeOnlyImpact(entity, sourceRefs)
   const firstOk = await confirmDialog({
     title: t('重置关系上下文', 'Reset relationship context'),
     message: t(
@@ -458,6 +499,7 @@ const resetRuntimeEntityFromWorldHub = async (entity) => {
     ),
     details: [
       `${t('对象', 'Target')}: ${entity.displayName || entity.entityKey}`,
+      runtimeEntityIdentifierLine(entity, roleProfile),
       `${t('记忆组', 'Memory groups')}: ${impact.memoryGroupCount || 0}`,
       `${t('来源', 'Sources')}: ${sourceModuleSummaryText(impact.sourceModuleCounts, t)}`,
       cleanupCoverageText(impact.sourceModuleCounts, relationshipSourceCleanupHandlers.value, t),
@@ -486,11 +528,11 @@ const resetRuntimeEntityFromWorldHub = async (entity) => {
         : t('输入的对象键不一致。', 'Entity key does not match.'),
   })
   if (typed === null) return
-  const result = profile.id
+  const result = roleProfile
     ? resetRoleRelationshipState({
         chatStore,
         relationshipRuntimeStore,
-        profile,
+        profile: roleProfile,
         cleanupHandlers: relationshipSourceCleanupHandlers.value,
       })
     : (() => {
@@ -500,7 +542,7 @@ const resetRuntimeEntityFromWorldHub = async (entity) => {
           relationshipSourceCleanupHandlers.value,
           {
             cleanupMode: RELATIONSHIP_CLEANUP_MODES.RESET_RELATIONSHIP,
-            profile,
+            profile: cleanupProfile,
           },
         )
         return {
@@ -521,17 +563,15 @@ const resetRuntimeEntityFromWorldHub = async (entity) => {
 
 const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
   if (!entity?.entityKey || !memory?.memoryKey) return
-  const profile = entity.roleProfile || {
-    id: entity.profileId,
-    roleId: String(entity.profileId || entity.entityKey),
-    name: entity.displayName || entity.entityKey,
-  }
+  const roleProfile = resolveRuntimeRoleProfile(entity)
+  const cleanupProfile = buildRuntimeCleanupProfile(entity, roleProfile)
   const detail = relationshipRuntimeStore.getMemoryGroupDetail(entity, memory.memoryKey)
   const firstOk = await confirmDialog({
     title: t('删除关系记忆组', 'Delete relationship memory'),
     message: detail?.displaySummary || memory.displaySummary || memory.primarySummary || memory.memoryKey,
     details: [
       `${t('对象', 'Target')}: ${entity.displayName || entity.entityKey}`,
+      runtimeEntityIdentifierLine(entity, roleProfile),
       `${t('记忆键', 'Memory key')}: ${memory.memoryKey}`,
       `${t('包含关系事件', 'Relationship events')}: ${detail?.events?.length || memory.supportingCount || 0}`,
       cleanupCoverageText(detail?.sourceModuleCounts, relationshipSourceCleanupHandlers.value, t),
@@ -541,13 +581,35 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
     tone: 'danger',
   })
   if (!firstOk) return
-  const result = deleteRoleMemoryGroup({
-    chatStore: profile.id ? chatStore : null,
-    relationshipRuntimeStore,
-    profile,
-    memoryKey: memory.memoryKey,
-    cleanupHandlers: relationshipSourceCleanupHandlers.value,
-  })
+  const result = roleProfile
+    ? deleteRoleMemoryGroup({
+        chatStore,
+        relationshipRuntimeStore,
+        profile: roleProfile,
+        memoryKey: memory.memoryKey,
+        cleanupHandlers: relationshipSourceCleanupHandlers.value,
+      })
+    : (() => {
+        const runtimeResult = relationshipRuntimeStore.removeMemoryGroupForTarget(
+          entity,
+          memory.memoryKey,
+        )
+        const cleanupResult = cleanupRelationshipSourceRecords(
+          runtimeResult?.sourceRefs || detail?.sourceRefs || [],
+          relationshipSourceCleanupHandlers.value,
+          {
+            cleanupMode: RELATIONSHIP_CLEANUP_MODES.DELETE_MEMORY_GROUP,
+            profile: cleanupProfile,
+            memoryKey: memory.memoryKey,
+          },
+        )
+        return {
+          ok: Boolean(runtimeResult?.ok || cleanupResult.requestedCount),
+          runtimeResult,
+          cleanupResult,
+          clearedDetailItems: 0,
+        }
+      })()
   const summary = cleanupResultSummaryText(result.cleanupResult, t)
   await confirmDialog({
     title: result.ok ? t('关系记忆组已删除', 'Relationship memory deleted') : t('未找到关系记忆组', 'Relationship memory not found'),
@@ -713,7 +775,10 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
                     {{ entity.displayName || entity.entityKey }}
                   </p>
                   <p class="mt-1 text-[11px] text-slate-500">
-                    {{ entity.stageLabel }} / {{ entity.entityKey }}
+                    {{ entity.stageLabel }} / {{ entity.identifierLabel }}
+                  </p>
+                  <p class="mt-1 text-[10px] leading-4 text-slate-600">
+                    {{ entity.profileStatusLabel }}
                   </p>
                 </div>
                 <span class="rounded-full bg-rose-300/15 px-2 py-1 text-[10px] font-semibold text-rose-100">

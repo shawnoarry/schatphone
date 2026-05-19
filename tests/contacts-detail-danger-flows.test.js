@@ -133,6 +133,16 @@ describe('ContactsView relationship danger flows', () => {
     await wrapper.get('[data-testid="contacts-memory-open-one_memory"]').trigger('click')
     await flushUi()
 
+    expect(wrapper.get('[data-testid="contacts-detail-counts-preferences"]').text()).toContain('Manual 1')
+    expect(wrapper.get('[data-testid="contacts-detail-counts-preferences"]').text()).toContain('Event 0')
+    expect(wrapper.get('[data-testid="contacts-detail-counts-lifePattern"]').text()).toContain('Manual 0')
+    expect(wrapper.get('[data-testid="contacts-detail-counts-lifePattern"]').text()).toContain('Event 1')
+    expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain(
+      'This entry cannot be deleted here directly.',
+    )
+    expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain(
+      'Attached by relationship events',
+    )
     expect(wrapper.get('[data-testid="contacts-memory-detail"]').text()).toContain('Paid for tickets together.')
     expect(wrapper.get('[data-testid="contacts-memory-detail"]').text()).toContain('Normal free-form chat messages')
 

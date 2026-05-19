@@ -1,142 +1,119 @@
-﻿# Chat Feature Decisions / Chat 功能决议记录
+# Chat Feature Decisions
 
-Updated / 更新时间: 2026-04-12
+Updated: 2026-05-19
 
-Purpose / 用途: persist user feedback on Chat feature proposals, so future sessions can continue without context loss.  
-用于沉淀用户对 Chat 功能建议的反馈，便于下次对话直接续接，不丢上下文。
+Purpose: preserve user-confirmed Chat product decisions so future sessions can continue without context loss.
 
-Reference / 关联来源: discussion after KakaoTalk-style Chat enhancement proposals (items 1-18).  
-对应“模拟 KakaoTalk 风格聊天增强建议（1-18）”后的用户逐条修正反馈。
+This file is a product-decision history and alignment note, not a live execution board.
 
----
+## 1. Confirmed Directions
 
-## 0) Status Sync (2026-04-06) / 状态同步（2026-04-06）
+### Delivery / Read / Typing State
 
-- Message action entry migration is completed: now long-press/context-menu + bottom action sheet (bubble top-right entry removed).  
-消息操作入口迁移已完成：现为长按/右键 + 底部动作面板（气泡右上角入口已移除）。
-- User rich-send lane baseline is online in `+` panel; link/transfer/voice-card are inline forms, and hardening remains in progress.  
-用户富消息发送链路基线已在 `+` 面板上线；链接/转账/语音卡片已改为内联表单，当前仍在加固阶段。
-- Avatar hierarchy baseline is landed (`thread > module > global > fallback`) with module/thread override entries.  
-头像层级基线已落地（`会话 > 模块 > 全局 > 兜底`），并提供模块级/会话级覆写入口。
-- Autonomous trigger governance baseline is completed (global/module/thread controls + report center path).  
-自主调用治理基线已完成（全局/模块/会话控制 + 报告中心链路）。
+Direction:
 
-## 1) Confirmed Directions / 已确认方向
+- show "typing" only while the system is actually waiting for an AI reply
+- before manual reply trigger, the user message can remain in a delivered state
+- once AI generation starts, that user message may switch to read
 
-### #1 Input/Delivery/Read State (AI-side immersive display) / 输入中与送达已读状态（偏 AI 侧沉浸展示）
+Current status:
 
-- Show "对方正在输入..." only while waiting for AI reply.  
-仅在等待 AI 回复时展示“对方正在输入...”。
-- Before pressing generate-reply in Chat thread, user message shows "Delivered".  
-在用户未按“生成回复”前，用户消息显示“已送达”。
-- When AI call starts, that user message becomes "Read".  
-开始调用 AI 回复时，用户消息状态切到“已读”。
-- Implementation status / 实现状态: baseline landed in Chat thread (`delivered -> read` + typing text).  
-已实现基础版本（`已送达 -> 已读` 状态切换 + 输入中文本提示）。
+- baseline behavior is already landed in the thread UI
 
-### #2 Suggested Replies as Optional Toggle / 可选回复做成可开关
+### Suggested Replies
 
-- Suggested replies must be controlled by a setting in layered menus.  
-可选回复必须放在分级菜单中可开启/关闭。
-- Rationale: avoid forced automation for users who dislike AI assistance.  
-原因：避免对不喜欢自动辅助的用户造成干扰。
-- Implementation status / 实现状态: landed in Chat layered menu as per-thread toggle.  
-已在 Chat 分级菜单中落地为会话级开关。
+Direction:
 
-### #3 Quote Reply Logic (Revised) / 引用回复逻辑（已修正理解）
+- suggested replies must be optional
+- control belongs in layered settings rather than being forced
 
-- Quote is a **focus anchor**, not a standalone-context generation mode.  
-“引用”应是**焦点锚点**，不是“脱离上下文的单句生成”。
-- AI reply must always include persona + world context + multi-turn history.  
-AI 每次回复都必须带上人设、世界上下文和多轮历史。
-- World context direction is now layered: global worldview is always-on, and role-bound knowledge points are selectively injected.
-  世界上下文现已明确为分层方向：全局世界观常驻注入，角色绑定知识点按需注入。
-- Reading window size (how many previous turns) must be configurable in layered settings.  
-“读取几轮上文”需要在分级菜单中可配置。
-- Implementation status / 实现状态: context window turns are now configurable per conversation.  
-已支持会话级上下文轮数配置。
+Reason:
 
-### #4 One-click Rewrite / 一键改写
+- avoid making AI assistance feel mandatory
 
-- Explicitly rejected for now.  
-当前明确不做。
-- Reason: over-polishing user messages can reduce immersion.  
-原因：过度润色会破坏沉浸感。
+Current status:
 
-### #8 Bilingual Translation / 双语翻译
+- baseline toggle landed as a per-thread control
 
-- Needed and approved in direction.  
-方向认可，确定要做。
-- Target: AI message arrives with bilingual content in one call path if possible, avoiding extra translation calls.  
-目标：尽量在一次调用中直接产出双语版本，避免为翻译再追加一次调用。
-- Implementation status / 实现状态: baseline landed via structured `text` blocks (primary/secondary) in one call path.  
-已实现基础版本：单次调用返回结构化 `text` 块（主/副语言）。
+### Quote Reply Logic
 
-### #9 Voice-related Direction / 语音相关方向
+Direction:
 
-- Keep integration points in global Settings.  
-在整体 Settings 保留语音接口配置。
-- Add enable/disable options in persona module and per-chat-role scope.  
-在人设模块中有开关，并在 Chat 页支持按角色开关。
-- Preserve "virtual voice" presentation (voice-bubble UI with text description).  
-必须保留“虚拟语音”形态（语音条外观 + 文本描述）。
-- Implementation status / 实现状态: virtual voice block rendering + per-thread enable flag are landed.  
-已落地虚拟语音消息块渲染与会话级开关。
+- quote is a focus anchor, not a standalone context mode
+- AI replies must still read persona, world context, and multi-turn history
+- reading-window size should remain configurable
 
-### #12 Autonomous Trigger Governance / 自主调用治理
+Current status:
 
-- No in-project quota counting is needed; provider-side usage pages remain source of truth.  
-项目内不做额度计数，供应商侧用量页面为唯一准绳。
-- Keep explicit entry-level reminders where AI calls are triggered (chat/manual/auto/module features).  
-在会触发 AI 调用的入口（chat 手动/自动/模块功能）保留明确提示即可。
-- Add hierarchical switches: global master switch -> module switch -> per-thread interval switch.  
-开关采用分级控制：全局总开关 -> 模块开关 -> 会话级间隔开关。
-- Manual trigger must keep higher priority than autonomous trigger when timing overlaps.  
-手动触发与自动触发时间重叠时，手动优先。
-- Keep call/error history in Network/API area for user diagnostics (400/403/429/network/cancel, etc.).  
-在 Network/API 区域保留调用/报错历史，便于用户诊断（400/403/429/网络/取消等）。
-- Implementation status / 实现状态: baseline completed, with acceptance tuning continuing in UX details and policy thresholds.  
-实现状态：基线已完成，当前继续做体验细节与策略阈值的验收调优。
+- context-window turns are configurable per conversation
 
----
+### One-Click Rewrite
 
-## 2) Deferred by User / 用户明确暂缓
+Direction:
 
-- #5 Group chat features / 群聊功能：认可方向，暂时搁置，后续再细化。
-- #6 Group unread summary / 群聊未读摘要：同上，暂时搁置。
-- #7 Semantic search / 语义搜索：复杂度较高，暂时搁置。
-- #11 to #18 proposals / 11 到 18 项：当前阶段先搁置，避免分散注意力。
+- rejected for now
 
----
+Reason:
 
-## 3) Pending Clarifications / 待补充细节
+- heavy rewrite of user text weakens immersion
 
-- #1 Exact state transitions and UI style for Delivered/Read/Typing.  
-#1 已送达/已读/输入中 的精确切换时机与 UI 细节。
-- #3 Context-window strategy: default turns, max turns, token cap, and truncation priority.  
-#3 上下文窗口策略：默认轮数、上限轮数、token 上限、截断优先级。
-- #8 Dual-language rendering strategy in thread UI (primary/secondary language order, collapse behavior).  
-#8 对话页双语展示策略（主次语言顺序、折叠方式）。
-- #9 Voice provider path and fallback behavior when TTS is unavailable.  
-#9 语音服务供应路径及 TTS 不可用时的回退策略。
+### Bilingual Translation
 
----
+Direction:
 
-## 4) Not Yet Explicitly Replied / 尚未明确回复项
+- approved
+- ideally produced in one call path instead of a second translation pass
 
-- #10 Image-message intelligence (OCR/Vision Q&A/description) has not received an explicit go/no-go.  
-#10 图片消息智能化（OCR/视觉问答/描述）尚未获得明确“做/不做”结论。
+Current status:
 
----
+- baseline structured bilingual output already exists through text blocks
 
-## 5) Recommended Follow-up Questions / 下次对话建议追问
+### Voice-Related Direction
 
-1. For #3, should context window be configured by turns, tokens, or both?  
-针对 #3，上下文窗口按“轮数”还是“token”配置，或两者同时？
-2. For #8, should bilingual output be always-on or role-based optional?  
-针对 #8，双语输出是全局常开，还是按角色可选？
-3. For #9, should virtual voice be shown by default even when TTS is disabled?  
-针对 #9，TTS 关闭时是否默认仍展示虚拟语音条？
-4. For #10, keep deferred or include in a later P2 backlog?  
-针对 #10，是继续搁置，还是纳入后续 P2 待办？
+Direction:
 
+- keep integration points in global Settings
+- allow persona/module or per-thread enable/disable
+- preserve virtual-voice presentation rather than forcing literal audio-only treatment
+
+Current status:
+
+- virtual voice block rendering and per-thread enable flags are already landed
+
+### Autonomous Trigger Governance
+
+Direction:
+
+- do not build an in-project quota meter as source of truth
+- keep explicit reminders at entry points that trigger AI usage
+- use hierarchical switches: global -> module -> thread
+- manual trigger should outrank autonomous trigger on timing collision
+- keep call/error history in Network/API for diagnostics
+
+Current status:
+
+- baseline governance landed; UX thresholds and policy tuning continue
+
+## 2. Deferred Directions
+
+Still intentionally deferred:
+
+- group chat features
+- group unread summary
+- semantic search
+- several lower-priority proposal items from the earlier Chat expansion discussion
+
+These should not silently re-enter the roadmap without an explicit decision.
+
+## 3. Clarifications Still Worth Asking Later
+
+When Chat returns to deeper product design, the next useful clarifications are:
+
+1. should context window be configured by turns, tokens, or both?
+2. should bilingual output be always-on or role-based optional?
+3. should virtual voice remain visible even when TTS is disabled?
+4. should image-message intelligence stay deferred or move into a later P2 backlog?
+
+## 4. Practical Rule
+
+If a future Chat proposal conflicts with this file, update this file in the same round instead of leaving the accepted decision only in chat history.

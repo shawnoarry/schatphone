@@ -1,158 +1,151 @@
-# Visual Redesign Brief Template / 视觉改版需求模板
+# Visual Redesign Brief Template
 
-Purpose / 用途: provide a reusable brief for page beautification, style unification, and immersive visual upgrades.  
-用于页面美化、风格统一、沉浸感升级的可复用需求模板。
+Purpose: provide a reusable brief for page beautification, style unification, immersive visual upgrades, and polished UI rebuild work.
 
-Best practice / 最佳实践:
-- Provide at least one current screenshot and one reference screenshot.  
-  至少提供 1 张当前页面截图和 1 张参考截图。
-- If you cannot describe style clearly, write “like / unlike / keywords”.  
-  如果你说不清风格，就写“像什么 / 不像什么 / 关键词”。
-- If layout may change, say so explicitly.  
-  如果允许调整页面结构，请明确写出来。
-- For SchatPhone, write where the user enters from before deciding the visual style.
-  对 SchatPhone，请先写清楚用户从哪里进入，再判断视觉风格。
+Use this when the main question is:
 
----
+- beauty
+- style
+- immersion
+- atmosphere
+- page polish
+- visual identity
 
-## 1. What You Can Provide / 你可以提供什么
+Best practice:
 
-Any subset is useful / 任意一部分都有效:
-1. Current page screenshots / 当前页面截图
-2. Reference screenshots / 参考截图
-3. Figma or design links / Figma 或设计链接
-4. App or website names / App 或网站名称
-5. Screen recordings / 录屏
-6. Text keywords / 风格关键词
-7. “Like / Unlike” statements / “像什么 / 不像什么”
+- provide at least one current screenshot and one reference screenshot
+- if you cannot describe style clearly, write `like / unlike / key words`
+- if layout may change, say so explicitly
+- for SchatPhone, describe the user entry path before deciding the visual style
 
----
+## 1. What You Can Provide
 
-## 2. Quick Version / 快速版
+Any subset is useful:
+
+1. current page screenshots
+2. reference screenshots
+3. Figma or design links
+4. app or website references
+5. screen recordings
+6. text keywords
+7. "like / unlike" statements
+
+## 2. Quick Version
 
 ```md
-# Quick Visual Brief / 快速视觉需求
+# Quick Visual Brief
+- Page:
+  e.g. Home / Chat / Settings / Photos
 
-- Page / 页面:
-  例如：Home / Chat / Settings / Gallery
+- User entry path:
+  e.g. Home tile -> Chat -> thread settings -> WorldBook summary
 
-- User entry path / 用户入口路径:
-  例如：Home 图标 -> Chat -> 会话设置 -> WorldBook 摘要
+- Parent context:
+  system shell / installed app / app-internal panel
 
-- Parent context / 上级上下文:
-  本机系统 / 装载 APP / APP 内弹层或抽屉
+- Current problem:
+  e.g. too plain, too messy, too much like a dashboard, hierarchy unclear
 
-- Current problem / 当前问题:
-  例如：太丑、太乱、太像后台、层级不清楚、按钮都长一样
+- Desired feeling:
+  e.g. more like a real phone, more delicate, more immersive, more like a social app
 
-- Desired feeling / 想要的感觉:
-  例如：更像真实手机、更细腻、更有沉浸感、更像社交 App
+- References:
+  screenshots / Figma / URL / app name
 
-- References / 参考:
-  截图 / Figma / 网址 / App 名称
+- Must keep:
+  e.g. core logic, one key button, one key entry path
 
-- Must keep / 必须保留:
-  例如：功能逻辑、某个按钮位置、某个入口
-
-- Must avoid / 绝对不要:
-  例如：太白、太像表单、太像工作软件
+- Must avoid:
+  e.g. too white, too form-like, too office-software-like
 ```
 
----
-
-## 3. Full Version / 完整版
+## 3. Full Version
 
 ```md
-# Visual Redesign Brief / 视觉改版需求单
+# Visual Redesign Brief
 
-## 1) Basic Info / 基础信息
-- Task name / 任务名称:
-- Page or module / 页面或模块:
-- Priority / 优先级: P0 / P1 / P2
-- Is this a global style change? / 是否为全局风格改动:
+## 1) Basic Info
+- Task name:
+- Page or module:
+- Priority: P0 / P1 / P2
+- Is this a global style change?
 
-## 2) Entry Context / 入口上下文
-- Actual user path / 实际用户路径:
+## 2) Entry Context
+- Actual user path:
   1.
   2.
   3.
-- Parent context when seen / 看到该界面时的上级上下文:
-  本机系统 / 装载 APP / APP 内弹层或抽屉
-- Visual owner you expect / 你认为应归属的视觉层:
-  例如：Chat / Map / Gallery / Contacts / Native System
-- Shared data involved / 涉及的共享数据:
-  例如：WorldBook / Gallery assets / Contacts / Calendar / Map
-- Must not visually jump to / 不应该跳到哪种视觉:
-  例如：不要从 Chat 内突然变成 Settings 风格
+- Parent context when seen:
+  system shell / installed app / app-internal panel
+- Visual owner you expect:
+  e.g. Chat / Map / Photos / Contacts / native system
+- Shared data involved:
+  e.g. WorldBook / Photos assets / Contacts / Calendar / Map
+- Must not visually jump to:
+  e.g. should not suddenly look like Settings when still inside Chat
 
-## 3) Current Situation / 当前现状
-- What looks bad now / 现在最不好看的地方:
-- What feels confusing / 现在最让人困惑的地方:
-- What feels too weak / 现在最没质感的地方:
+## 3) Current Situation
+- What looks bad now:
+- What feels confusing:
+- What feels too weak:
 
-## 4) Desired Direction / 目标方向
-- Like / 像什么:
-- Unlike / 不像什么:
-- Keywords / 关键词:
-- Emotion / 情绪气质:
-  例如：真实、暧昧、精致、克制、轻盈、系统感、恋爱感
+## 4) Desired Direction
+- Like:
+- Unlike:
+- Key words:
+- Emotion:
+  e.g. believable, delicate, restrained, warm, immersive, native
 
-## 5) Visual Details / 视觉细节
-- Background style / 背景风格:
-- Card style / 卡片风格:
-- Button style / 按钮风格:
-- Typography / 字体气质:
-- Icon style / 图标风格:
-- Motion style / 动效风格:
-- Density / 页面疏密感:
+## 5) Visual Details
+- Background style:
+- Card style:
+- Button style:
+- Typography:
+- Icon style:
+- Motion style:
+- Density:
 
-## 6) Structure Flexibility / 结构调整空间
-- Can layout change? / 是否允许改布局:
-- Can button positions change? / 是否允许改按钮位置:
-- Can entry hierarchy change? / 是否允许改入口层级:
-- What must stay fixed? / 哪些必须不动:
+## 6) Structure Flexibility
+- Can layout change?
+- Can button positions change?
+- Can entry hierarchy change?
+- What must stay fixed?
 
-## 7) References / 参考资料
-- Current screenshots / 当前截图:
-- Reference screenshots / 参考截图:
-- Figma / 设计稿:
-- Website / 网页参考:
-- Recording / 录屏:
-- Notes / 说明:
+## 7) References
+- Current screenshots:
+- Reference screenshots:
+- Figma:
+- Website:
+- Recording:
+- Notes:
 
-## 8) Acceptance / 验收标准
-- What should feel improved first / 最先应改善什么:
-- What should become clearer / 哪些地方应更清楚:
-- What should feel more immersive / 哪些地方应更沉浸:
-- What should remain familiar / 哪些地方仍应保持熟悉:
-- Does it preserve parent-context immersion? / 是否保持上级入口沉浸感:
+## 8) Acceptance
+- What should feel improved first:
+- What should become clearer:
+- What should feel more immersive:
+- What should remain familiar:
+- Does it preserve parent-context immersion?
 
-## 9) Notes / 补充说明
-- Open questions / 还没想清楚的问题:
-- Areas where AI should decide / 希望 AI 帮你判断的部分:
+## 9) Notes
+- Open questions:
+- Areas where AI should decide:
 ```
 
----
+## 4. Good Prompt Examples
 
-## 4. Good Prompt Examples / 好用的话术示例
+Example 1:
 
-Example 1 / 示例 1:
-- “Chat 页太像网页，不像聊天软件。我想更像 KakaoTalk，但要更细腻、更像恋爱互动产品。”  
-  “The Chat page feels like a webpage, not a messaging app. I want it to feel more like KakaoTalk, but more delicate and more romance-product oriented.”
+- "The Chat page feels like a webpage, not a messaging app. I want it to feel more like KakaoTalk, but more delicate and more romance-product oriented."
 
-Example 2 / 示例 2:
-- “Settings 的结构还行，但视觉太普通。希望像 iPhone 设置一样清楚，但不要那么素。”  
-  “The Settings structure is acceptable, but the visuals are too plain. I want it to be as clear as iPhone Settings, but less plain.”
+Example 2:
 
-Example 3 / 示例 3:
-- “Chat 里的 WorldBook 摘要不要做成系统设置风格。用户还在 Chat 里，只是看到了世界观上下文，所以它应该像聊天 App 的会话信息面板。”
-  “The WorldBook summary inside Chat should not become a system-settings surface. The user is still in Chat, so it should feel like a chat thread info panel.”
+- "The Settings structure is acceptable, but the visuals are too plain. I want it to be as clear as iPhone Settings, but less plain."
 
----
+Example 3:
 
-## 5. Recommended Use / 建议用法
+- "The WorldBook summary inside Chat should not become a system-settings surface. The user is still in Chat, so it should feel like a thread info panel."
 
-- Use this when the main question is beauty, style, immersion, atmosphere, or polish.  
-  当你的问题主要是观感、风格、沉浸感、氛围或质感时，用这份模板。
-- If the main issue is “I cannot find the entry”, combine it with `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md`.  
-  如果主要问题是“找不到入口”，建议和 `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md` 一起使用。
+## 5. Recommended Use
+
+- use this when the main issue is visual quality or immersion
+- if the main issue is entry confusion, combine it with `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md`

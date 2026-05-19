@@ -2,339 +2,258 @@
 
 Updated: 2026-05-19
 
+> **PM status mirror / 产品状态镜像**
+>
+> This file is not an active TODO, roadmap, or implementation source. It explains current product state for PM/design/review work. Concrete execution order still belongs only in `docs/roadmap/TODO_ROADMAP.md`.
+
 Audience: product managers, designers, non-engineering collaborators, and future AI assistants.
 
 ## 1. Product Positioning
 
-SchatPhone is an immersive virtual-phone product. The user should feel like they are using a believable phone with many app-like modules, while the system behind it can coordinate AI chat, world settings, local records, maps, shopping, delivery, assets, wallet-like ledgers, and optional game-style events.
+SchatPhone is an immersive virtual-phone product. The user should feel like they are using a believable phone with many app-like modules, while the system behind it can coordinate AI chat, world settings, local records, maps, shopping, delivery, assets, wallet-style ledgers, and optional game-style runtime systems.
 
-The current product direction is not a simple chat UI. It is closer to:
+It is not a simple chat UI. It is closer to:
 
-- A virtual phone shell with app modules.
-- A local-first role/world/life-simulation workspace.
-- An AI relationship and story system with optional game-like runtime.
-- A modular product where each app owns its own data, while shared services coordinate storage, media, events, push, and diagnostics.
+- a virtual phone shell with app modules;
+- a local-first role/world/life-simulation workspace;
+- an AI relationship and story system with optional game-like runtime;
+- a modular product where each app owns its own data, while shared services coordinate storage, media, events, push, and diagnostics.
 
 Important boundary:
 
-- Users do not need to understand the technical runtime to use normal modules.
-- The optional World Hub app is for advanced runtime review and future override controls. Its technical route/code name remains `/control-center` / `control_center`.
-- Data creation should stay immersive and distributed: roles in Contacts/Chat, places in Map, products in Shopping, restaurants in Food Delivery, images in Gallery.
-- Events, growth systems, tasks, and numeric data exist to make the virtual phone life feel freer, more continuous, and more real; they should not make the product feel like a rigid task manager or visible backend.
+- ordinary users should not need to understand the runtime layer to use normal modules;
+- `World Hub` is an optional advanced runtime review/control app, not a required user path;
+- data creation should stay immersive and distributed across the owning apps;
+- events, growth systems, and numeric state should support continuity, not make the product feel like a visible backend console.
 
 ## 2. What Works Now
 
-### Module Naming / Calendar-Reminders Decision
+### Module Naming And Core Boundaries
 
-Current capability:
-
-- A clean module Chinese/English glossary now exists at `docs/pm/MODULE_NAME_GLOSSARY.md`.
-- Calendar and Reminders now have an explicit product split decision at `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`.
-- Calendar should become the real schedule/date app.
-- Reminders should become the cross-module cue, follow-up, and task surface.
-- Current code has started splitting these responsibilities: Reminders owns raw cue queues for Phone, Shopping, and Stock, while Calendar owns confirmed schedule events and push scheduling.
-- Reminders now has a normal Home app entry beside Calendar, plus source/status filters for managing active cues.
+- `docs/pm/MODULE_NAME_GLOSSARY.md` now provides a stable Chinese/English naming map.
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md` now defines the Calendar vs Reminders split.
+- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md` now defines World Hub as optional.
+- `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md` now defines Files as an internal component, not a normal user-facing app.
 
 PM meaning:
 
-- Non-technical collaborators can use the glossary to discuss modules without remembering route names or code names.
-- Future Calendar work should not reintroduce cue-inbox behavior; raw cue handling should stay in Reminders.
-- More should not absorb Reminders; More remains for settings-adjacent and experimental surfaces.
-- Reminder-style tasks can later connect to World Hub/world control without making World Hub mandatory for normal users.
+- product and engineering can speak about the same modules without falling back to route names or code terms;
+- ownership rules are much less ambiguous than before.
 
 ### Phone Shell / Home / Settings
 
-Current capability:
-
 - Lock screen, Home screen, app entry layout, status bar, wallpaper settings, notifications, and app navigation are available.
-- Home supports normal app entries and folder-style entry patterns for grouped modules.
+- Home supports normal entries plus folder-style grouped entries.
 - More / Experimental Toggles can hide or show optional entries such as World Hub.
 - Settings owns backup, restore, storage diagnostics, API/network configuration, push settings, automation settings, and appearance settings.
 
 PM meaning:
 
-- The phone metaphor already has a usable functional base.
-- Visual design is still not final; appearance rebuild remains a separate visual workstream.
+- the phone metaphor already has a functional base;
+- visual quality is still not the final target, but shell behavior is stable enough to support deeper module work.
 
 ### Chat
 
-Current capability:
-
 - Chat supports contact threads, AI replies, rich message behavior, WorldBook prompt context, message editing, and service-account style contexts.
-- Shopping, logistics, and food delivery service contexts have started to connect into Chat.
-- WorldBook binding is visible enough to verify what knowledge enters the prompt path.
-- Role chats can now receive compact relationship runtime context, including relationship stage, affinity/trust/intimacy/tension/dependency, milestones, growth traits, and recent relationship facts.
+- Shopping, logistics, and Food Delivery service contexts have started connecting into Chat.
+- Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
 
-- Chat is a core mature module, but the file is large and should continue to be refactored carefully.
-- Future product work can make Chat feel more like KakaoTalk / WhatsApp / iMessage, but current priority is functional stability.
-- Relationship runtime context is meant to help characters remember cross-module life events more naturally, not to restrict free chat.
+- Chat is one of the product cores;
+- future product work can make it feel closer to polished messaging apps, but current priority remains ownership clarity and functional stability.
 
-### WorldBook / Knowledge / Contacts
+### Contacts / Relationship Runtime
 
-Current capability:
+- Contacts can show read-only relationship snapshots for role profiles.
+- Contacts Relationship System V2 baseline is now partially implemented:
+  - visible `roleId` schema, validation, duplicate checks, and backup/restore migration exist;
+  - Contacts and Chat Directory now have a clearer boundary between global role archive and Chat-side binding;
+  - relationship runtime can list/delete one memory group, reset one target, recompute relationship state, and remove facts by source record;
+  - Contacts exposes safe role delete, relationship reset, and single-memory delete flows with impact summaries and typed confirmation;
+  - World Hub can review relationship runtime entities and run reset/delete-memory cleanup without deleting the Contacts role profile;
+  - module-owned source records can be deleted or anonymized through shared cleanup handlers for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map.
+
+PM meaning:
+
+- the product finally has a realistic path toward "delete one role", "reset one relationship", and "delete one memory group" without pretending everything lives in one module;
+- Contacts is clearly becoming the role-centered management hub.
+
+### Calendar / Reminders / Push
+
+- Calendar can turn confirmed Map reminders into stored Calendar events.
+- Calendar event times can be edited, shifted, restored, scheduled, rescheduled, and canceled.
+- Push relay integration exists for scheduled notifications.
+- Calendar and Reminders are now explicitly split:
+  - `Reminders` owns raw cues and follow-up style queues;
+  - `Calendar` owns confirmed schedule/date events and real push scheduling.
+- `/calendar` now emphasizes schedule overview, confirmed events, event time editing, push state, and Reminders summary.
+- `/reminders` is reachable from Home and can filter cues by source and handling state.
+- Confirmed Calendar events can now record low-impact relationship facts after explicit Chat-contact selection.
+
+PM meaning:
+
+- the split is no longer just theoretical;
+- future work should not pull raw cue-inbox behavior back into Calendar.
+
+### WorldBook / Knowledge
 
 - WorldBook can store global worldview and knowledge points.
 - Knowledge points can be searched, filtered, tagged, edited, enabled/disabled, and linked to context.
 - Calendar, Chat, and Map can read WorldBook context.
-- Contacts can participate in knowledge usage and profile linkage.
-- Contacts can now show read-only relationship snapshots for role profiles.
 
 PM meaning:
 
-- WorldBook is becoming the shared world-context layer.
-- The preferred future direction is not to force all imports into one central console; users should still enter data from immersive module locations.
-- Contacts is becoming the natural place to review a character's identity plus lightweight relationship continuity.
+- WorldBook is becoming the shared world-context layer;
+- data entry should still stay distributed instead of forcing everything into one control console.
 
 ### Gallery / Media Assets
 
-Current capability:
-
 - Gallery acts as the shared media asset center.
-- Modules can reference Gallery assets instead of duplicating local binary files.
+- Other modules can reference Gallery assets instead of duplicating local binary files.
 - URL/Gallery image source contracts are used by modules such as Food Delivery.
 
 PM meaning:
 
-- Local uploads should generally enter Gallery first, then other modules store structured references.
-- This avoids each module inventing its own incompatible file storage.
+- Gallery is currently more about asset ownership and atmosphere than about being a core relationship-memory input surface.
 
 ### Map
 
-Current capability:
-
-- Map supports route/trip concepts, exploration points, route familiarity, area unlock progress, and area feedback.
+- Map supports route/trip concepts, exploration points, familiarity, area unlock progress, and area feedback.
 - Calendar can consume Map-derived reminders.
-- Map can build read-only delivery route/location context from Food Delivery order events and Shopping logistics events.
-- Map now has a map-first information architecture baseline: the primary screen leads with a map canvas, destination search, route summary, and bottom navigation; secondary tools move into an in-app drawer.
+- Map can build read-only route/location context for Food Delivery and Shopping logistics events.
+- Map now has a map-first IA baseline with map canvas, destination search, route summary, and bottom navigation.
 
 PM meaning:
 
-- Map is evolving from a utility page into a gameplay/immersion surface.
-- The current Map change is structural, not the final Google Maps visual rebuild.
-- The next practical product-visible step is to expose read-only delivery route context from Food Delivery/Shopping cards.
+- Map is no longer just a placeholder utility view;
+- current gains are structural and ownership-related, not yet the final visual rebuild.
 
-### Shopping
+### Shopping / Logistics
 
-Current capability:
-
-- Shopping has independent Home entry planning and product/store/order concepts.
+- Shopping has its own Home entry planning and product/store/order concepts.
 - Orders can persist logistics/status events.
 - Logistics has service-account context in Chat.
-- Shopping logistics event presets exist for manual/condition use.
-- Completed gift orders can now write a low-impact relationship memory when the user records the order into Wallet.
+- Completed gift orders can now write low-impact relationship memory when recorded into Wallet.
 
 PM meaning:
 
-- Shopping should remain its own app/module.
-- Logistics can be a peer entry inside Shopping, while Chat receives service-account pushes.
-- Random Shopping logistics events are intentionally deferred until explanation and dismissal rules are designed.
-- Gifts are now the first Shopping behavior that can quietly support relationship continuity across Contacts and Chat.
+- Shopping is stable as an independent app lane;
+- gifts are now a real bridge into relationship continuity.
 
 ### Food Delivery
-
-Current capability:
 
 - Food Delivery has folder-style app planning, restaurant categories, menu items, custom restaurant/menu creation, cart/order flow, and URL/Gallery image sources.
 - Food Delivery order events support rider delay, ETA update, restaurant cancellation, address change, and status update concepts.
 - A guarded random pilot exists for active orders.
-- The automatic event safe-list currently only allows non-destructive ETA update / rider-delay style outcomes.
-- Delivered orders can now optionally mark a selected contact as a shared-meal target when recording the order into Wallet, creating a low-impact relationship memory.
+- The automatic event safe-list currently allows only non-destructive ETA-update / rider-delay style outcomes.
+- Delivered orders can now mark a selected contact as a shared-meal target when recorded into Wallet, creating a low-impact relationship memory.
 
 PM meaning:
 
-- Food Delivery is the first module where random runtime events are becoming real.
-- It is a good pilot because small delivery updates feel immersive and low-risk.
-- Food Delivery can now support relationship texture without guessing who the user ate with; the user chooses the target explicitly.
+- Food Delivery is still the best low-risk event-runtime pilot lane;
+- shared-meal memory now supports relationship continuity without forcing hidden inference.
 
-### Calendar / Push / Network
+### Event Runtime / World Hub
 
-Current capability:
-
-- Calendar can turn confirmed Map reminders into stored Calendar events.
-- Calendar event times can be edited, shifted, restored, scheduled, rescheduled, and canceled.
-- Real push relay integration exists for scheduled notifications.
-- Network diagnostics can label API, storage, push, and simulation reports.
-- Product decision now says Calendar and Reminders should split: Calendar keeps confirmed schedule/date meaning, while raw cue queues move toward Reminders.
-- Phone, Shopping, and Stock raw cue arrays now live in `src/stores/reminders.js`; Calendar keeps compatibility wrappers and still owns confirmed events plus real push scheduling.
-- `/calendar` now leads with schedule overview, confirmed events, event time editing, push state, and a pending Reminders summary instead of raw cue operation cards.
-- `/reminders` is reachable from Home and can filter cues by source and handling state before confirmation/dismissal.
-- Confirmed Calendar events can now record low-impact relationship facts when the user explicitly selects a Chat contact from the event card.
-
-PM meaning:
-
-- Reminder and push infrastructure is usable.
-- Push delivery history is not the same as server-side delivery proof unless a backend later provides receipt APIs.
-- Calendar-specific relationship facts now start from true confirmed schedule/date events; raw cue drafts still do not write relationship facts.
-
-### World Hub / Optional Runtime Control
-
-Current capability:
-
-- World Hub (`/control-center`) is optional and hidden by default.
-- Users can enable it from More / Experimental Toggles.
-- World Hub currently reads simulation runtime state without triggering or mutating events.
-- It shows Surprise Mode, event log counts, cooldowns, module event enablement, recent events, and world-variant metadata.
-- World Hub now also shows a read-only relationship runtime review: relationship entity count, recent relationship facts, pending effect count, and top relationship snapshots.
-- Relationship runtime pending-confirmation data can now be approved or dismissed from World Hub. Direct value editing is still future work.
-
-PM meaning:
-
-- World Hub is the future "GM / cheat / runtime control" app.
-- It should eventually control event intensity, affinity, funds, unlocks, task state, and runtime overrides.
-- It should remain optional so users who only want free chat are not forced into game controls.
-- The current World Hub relationship panel is intentionally narrow: it can review pending relationship effects, but it still does not expose freeform value editing.
-
-### Event Runtime
-
-Current capability:
-
-- A shared `simulationStore` persists event logs, cooldowns, daily caps, module enablement, Surprise Mode, and foreground tick settings.
+- `simulationStore` persists event logs, cooldowns, daily caps, module enablement, Surprise Mode, and foreground tick settings.
 - A shared event engine handles condition checks, logs, cooldowns, caps, and adapter exceptions.
-- Food Delivery has the first safe random adapter.
-- World-aware event variants exist as a standard direction: WorldBook context can lead to different event wording/packs for daily, sci-fi, apocalypse, etc.
-- Settings > Automation now has an opt-in foreground event tick switch and interval.
-- `App.vue` now wires the foreground tick lifecycle, but only when the user enables it. It stops while locked, on `/lock`, or when the browser tab is hidden.
-- Triggered/skipped foreground ticks write Network diagnostics reports.
-- Relationship runtime has an expanded safe fact-adapter batch: Shopping gift purchase, Food Delivery shared meal, Phone completed/missed calls, Map shared routes, Wallet shared transfer/expense records, and confirmed Calendar event plans.
-- Contacts Relationship System V2 implementation has a partial baseline:
-  - visible role ID schema, validation, duplicate checks, and backup/restore migration are in place;
-  - Contacts and Chat Directory now keep a clearer boundary between global role archive and Chat-side binding;
-  - relationship runtime can list/delete one memory group, reset one target, recompute relationship state, and remove facts by source record;
-  - Contacts exposes safe role delete, relationship reset, and single-memory delete flows with impact summaries and typed confirmation;
-  - World Hub can review relationship runtime entities and run reset/delete-memory cleanup without deleting the Contacts role profile;
-  - module-owned source records can be deleted or anonymized through shared cleanup handlers for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map;
-  - module-level single-record deletion now also clears matching relationship facts for Phone, Wallet, Calendar, Shopping, Food Delivery, and Map.
+- Food Delivery has the first safe automatic pilot.
+- World-aware event variants exist as a standard direction.
+- Settings > Automation has an opt-in foreground event tick switch.
+- App lifecycle wiring exists for foreground ticking only when the user enables it.
+- World Hub reads simulation runtime state and relationship runtime review data.
+- Relationship pending-confirmation effects can be approved or dismissed from World Hub.
 
 PM meaning:
 
-- The event system is now a reusable base, not a per-module one-off.
-- It can support future game-like surprises, but it is still controlled and off by default.
-- Relationship facts are still starting from explicit, low-risk user actions before any automatic romance/conflict mutation is introduced.
-- Destructive relationship management now follows the product boundary: Contacts and World Hub orchestrate cleanup, while each module still owns its own records and can keep/anonymize history where appropriate.
-
-### Delivery Route Context
-
-Current capability:
-
-- Food Delivery order-event cards can show Map-provided route/location context.
-- Shopping logistics cards can show Map-provided route/location context when a logistics event exists.
-- The card can show route summary, pickup/dropoff, ETA, carrier/tracking metadata, and a clear ownership boundary.
-
-PM meaning:
-
-- Delivery updates are no longer just internal logs; users can see route context where the order/logistics event appears.
-- This does not mean Map owns the delivery. Food Delivery and Shopping still own orders, while Map only explains location and ETA.
+- the runtime is now a reusable base, not a one-off trick inside one module;
+- World Hub is still intentionally narrow and optional.
 
 ## 3. What Is Not Finished
 
-- Visual rebuild is not finished. Current UI should be treated as functional scaffolding, not final iOS-like immersion.
-- World Hub can approve or dismiss pending relationship effects, but it does not yet offer user-facing sliders, freeform overrides, funds editing, affinity editing, or unlock editing.
-- Event runtime has only one automatic safe-list path: Food Delivery ETA/rider-delay pilot.
-- Shopping/logistics random events are not enabled automatically.
-- Map delivery route context is now exposed inside Food Delivery order-event cards and Shopping logistics cards as read-only context; it still does not create Map trips or move order ownership.
-- Map still needs a later full visual pass for Google Maps-like detail, markers, route drawing, and ride-hailing polish.
-- Wallet is now a downstream ledger for completed Shopping orders and delivered Food Delivery orders, but deeper fictional funds and relationship-value controls are still future work.
-- Contacts Relationship System V2 is not fully complete: the destructive-action baseline has landed, but full Contacts detail IA polish, manual-vs-event-attached visual language, preferences/life-pattern/social-graph sections, and long-term memory compression/expiry settings are still future work.
-- Assets, Stock, Phone, and several secondary modules still need deeper product loops.
-- Backend/server-side runtime is not required for current foreground events, but true background event generation after the page is closed would require a larger backend design.
+- visual rebuild is not finished;
+- World Hub still does not offer broad user-facing sliders, freeform overrides, funds editing, affinity editing, or unlock editing;
+- event runtime has only one automatic safe-list path: the Food Delivery ETA/rider-delay pilot;
+- Shopping/logistics random events are not enabled automatically;
+- Map route context is still read-only and does not transfer ownership away from Shopping/Food Delivery;
+- Contacts Relationship System V2 is not fully complete:
+  - destructive-action baseline is in;
+  - full Contacts detail IA polish is still pending;
+  - manual-vs-event-attached visual language is still pending;
+  - preferences, life-pattern, social-graph, and long-term memory compression/expiry controls are still future work;
+- Assets, Stock, Phone, and several secondary modules still need deeper product loops;
+- true closed-page background event generation would still require a larger backend design.
 
-## 4. Current Priority TODO
+## 4. Current Priority
 
-### P0: Keep The Event Runtime Safe And Understandable
+### P0: Keep Runtime And Memory Systems Safe And Understandable
 
-0. Continue after the first true schedule/date memory slice.
-   Outcome: Calendar now submits relationship facts only from confirmed schedule-like events; raw cue drafts remain owned by Reminders.
-
-1. Continue the relationship-growth event system through safe adapters.
-   Outcome: affinity, relationship progress, and character growth use one shared truth layer instead of being scattered across modules.
-
-2. Add clearer user-facing explanation for automatic foreground events.
-   Outcome: PM/QA/users can understand why an event did or did not trigger.
-
-3. Keep World Hub controls narrow until the event logs and Settings controls are trusted.
-   Outcome: users can approve/dismiss pending relationship effects without exposing broad value editing too early.
-   Current status: World Hub can read simulation runtime, read relationship runtime, and approve/dismiss pending relationship events only.
+1. Continue from the first true schedule/date memory slice.
+   - Calendar now writes relationship facts only from confirmed schedule-like events.
+   - raw cue drafts remain owned by Reminders.
+2. Continue the relationship-growth event system through safe adapters.
+   - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
+3. Add clearer user-facing explanation for automatic foreground events.
+4. Keep World Hub controls narrow until event logs and Settings controls are trusted.
 
 ### P1: Build Useful Cross-Module Loops
 
-1. Relationship runtime store / truth-layer baseline plus Contacts V2 destructive actions.
-   Outcome: Contacts and Chat can read stable affinity, stage, milestone, growth summaries, Shopping gift memories, Food Delivery shared-meal memories, Phone call memories, Map shared-route memories, Wallet transfer/expense memories, and confirmed Calendar plans. Contacts and World Hub can now reset/delete relationship memory with source-record cleanup.
+1. Finish the Contacts V2 detail IA and memory-management presentation layer.
+2. Keep relationship runtime, Contacts, and Chat aligned on one memory truth layer.
+3. Continue Shopping logistics service-account pushes in Chat.
+4. Continue Food Delivery service-account pushes in Chat.
+5. Continue Map and delivery integration as read-only context, not ownership transfer.
 
-2. Shopping logistics service-account pushes in Chat.
-   Outcome: discounts/new arrivals and logistics updates can feel like real app/service notifications.
-
-3. Food Delivery service-account pushes in Chat.
-   Outcome: order updates and restaurant promotions can arrive in a dedicated service account.
-
-4. Map and delivery integration.
-   Outcome: delivery events can show route/location context, but trip creation remains manual unless explicitly designed.
-
-### P2: Expand World-Aware Gameplay
+### P2: Expand World-Aware Gameplay Carefully
 
 1. Generate or confirm world-specific event packs from WorldBook.
-   Outcome: school, sci-fi, apocalypse, fantasy, and daily-life worlds can produce different event/task sets.
-
-2. Add task/unlock system behind World Hub.
-   Outcome: examples include "check in at 3 campus club locations to unlock a feature" or "discover monster shop to unlock fantasy control."
-
+2. Add task/unlock systems behind World Hub.
 3. Add more adapters through the shared event engine.
-   Outcome: Shopping, Map, Wallet, Assets, and Chat can receive events without each module inventing its own random system.
 
-### P3: Visual Rebuild
+### P3: Visual Rebuild Return
 
-1. Rebuild global shell toward iOS-like real-phone immersion.
-2. Rebuild Chat with KakaoTalk as the primary reference and WhatsApp/iMessage as secondary references.
-3. Rebuild Map with Google Maps plus ride-hailing/trip-system references.
-4. Rebuild Gallery toward iOS Photos style collections: wallpapers, memories, people, journeys.
-5. Rebuild Shopping/Food Delivery folder-style Home presentation once functional modules are stable.
+1. Rebuild the global shell toward stronger real-phone immersion.
+2. Rebuild Chat with messaging-app references.
+3. Rebuild Map with stronger mapping and ride-hailing references.
+4. Rebuild Gallery toward stronger Photos-style collections.
+5. Rebuild Shopping/Food Delivery Home-folder presentation once module behavior is stable.
 
-## 5. Product Decisions Needed Later
+## 5. Product Decisions Still Needed Later
 
-- Whether automatic foreground events should be shown to users as a normal feature or remain experimental.
+- Whether automatic foreground events should become a normal visible feature or remain experimental.
 - What default event intensity should be for new users.
 - Whether World Hub unlock conditions should be world-dependent from the beginning.
-- Which world examples should be prioritized first: campus, fantasy, sci-fi, apocalypse, daily city life, or another set.
+- Which world packs should be prioritized first.
 - Whether true closed-page background events are worth backend complexity.
-- Whether Wallet should support editable fictional funds soon, or only consume downstream expense suggestions first.
-
-## 5.5 Frozen Requirement Added
-
-- `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_REQUIREMENTS.md` is now the frozen requirement for:
-  - Contacts vs Chat Directory boundary;
-  - visible role ID rules;
-  - role deletion flow;
-  - relationship reset flow;
-  - single memory-group deletion;
-  - Contacts V2 role-hub upgrade.
-- PM meaning:
-  - Contacts should become the role-centered management hub.
-  - Chat Directory should remain the Chat-side binding surface.
-  - destructive actions must clearly explain scope, use multi-step confirmation, and distinguish manual entries from event-attached entries.
-- Implementation breakdown companion: `docs/pm/CONTACTS_RELATIONSHIP_SYSTEM_V2_IMPLEMENTATION_BREAKDOWN.md`
+- Whether Wallet should support editable fictional funds soon or remain downstream first.
 
 ## 6. Recommended Next Engineering Slice
 
-Recommended next: finish the Contacts V2 detail IA layer and memory-management presentation.
+Recommended next:
 
-Why this is the best next step:
+Finish the Contacts V2 detail IA layer and memory-management presentation.
 
-- Role ID, relationship runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and module cleanup seams are now implemented as a baseline.
-- Contacts already has the destructive-action surface, but the role-detail page still needs a clearer product-grade information architecture for static profile, relationship progress, memory groups, and future event-attached details.
-- The next useful step is to make manual information and event-attached information visibly distinct before adding more derived facts.
-- This keeps later preferences, life pattern, social graph, memory compression, expiry, and "save as long-term memory" controls from becoming ambiguous.
+Why:
 
-Fallback same-size task: deepen text-first memory dedupe/merge rules and Calendar relationship review details.
+- role ID, relationship-runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and module cleanup seams are now in place as a baseline;
+- Contacts already has destructive-action surfaces, but the role-detail page still needs clearer product-grade information architecture;
+- the next useful step is to make manual information and event-attached information visibly distinct before adding more derived facts.
 
-## 7. Reading Path
+Fallback same-size task:
+
+- deepen text-first memory dedupe/merge rules;
+- improve Calendar relationship review details.
+
+## 7. Workflow And Skill Reading Path
 
 Use this file as the PM entry point, then read:
 
-- `docs/roadmap/TODO_ROADMAP.md` for the active engineering board.
-- `docs/overview/IMMERSIVE_EVENT_TODO.md` for the event-special-topic history and next slices.
-- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md` for World Hub/runtime-control decisions.
-- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md` for the Calendar vs Reminders product boundary.
-- `docs/pm/MODULE_NAME_GLOSSARY.md` for module Chinese/English naming.
-- `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md` for module-by-module feature catalog.
-- `docs/overview/DEFERRED_VISUAL_REBUILD_TODO.md` for parked visual rebuild scope.
+- `docs/roadmap/TODO_ROADMAP.md` for the live engineering board;
+- `docs/pm/TASK_PACKAGE_INDEX.md` for package ownership;
+- `docs/process/AI_WORK_MODE.md` for workflow rules and top-level skill routing;
+- `docs/process/DEVELOPMENT_TOOLING.md` for skill inventory and setup assumptions;
+- `docs/process/EVENT_WORKFLOW.md` for event/runtime lane skill usage;
+- `docs/process/VISUAL_WORKFLOW.md` for visual/IA lane skill usage.
+
+This matters because the skill guidance is not lost, but intentionally split by workflow lane.

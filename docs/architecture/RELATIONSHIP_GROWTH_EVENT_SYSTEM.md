@@ -48,7 +48,9 @@ Recommended ownership:
 - `simulationStore` owns event logs, cooldowns, caps, Surprise Mode, and runtime execution metadata.
 - `relationshipRuntimeStore` owns affinity values, relationship stages, growth traits, milestones, pending confirmations, cross-module relationship event history, and compact memory summaries.
 - Chat owns conversation messages, role replies, service-account display, and prompt assembly.
-- Contacts and Chat Directory own role identity, profile binding, avatar/context metadata, and manually authored relationship notes.
+- Contacts owns the global role archive, visible role identity, role detail semantics, and destructive relationship management.
+- Chat Directory owns Chat-side role binding and service-account entry management.
+- Manually authored role-detail notes may live in Contacts or Chat-side compatibility fields, but current relationship progress must remain owned by `relationshipRuntimeStore`.
 - WorldBook owns worldview, lore, knowledge points, and world-specific rule inputs.
 - Map, Shopping, Food Delivery, Wallet, Phone, Calendar, Gallery, and Assets may submit structured facts through adapters.
 - World Hub reads, reviews, and later adjusts runtime state, but should not become the main data entry surface for role/world records.

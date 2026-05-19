@@ -16,8 +16,6 @@ const normalizeText = (value, fallback = '', max = 160) => {
   return normalized.slice(0, max)
 }
 
-const escapeRegExp = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
 export const normalizeRelationshipCleanupMode = (value) => {
   const normalized = normalizeText(value, '', 60)
   return Object.values(RELATIONSHIP_CLEANUP_MODES).includes(normalized)

@@ -1,192 +1,234 @@
-﻿# SchatPhone State Ownership Strategy / SchatPhone 状态归属策略
+# SchatPhone State Ownership Strategy
 
-Updated / 更新时间: 2026-04-12
+Updated: 2026-05-19
 
-## 1. Purpose / 用途
+Purpose: define which parts of SchatPhone should be user-defined, system-owned, AI-assisted, or directly AI-generated.
 
-This document defines which parts of SchatPhone should be user-defined, system-owned, AI-assisted, or directly AI-generated.  
-本文用于定义 SchatPhone 中哪些内容应由用户定义、哪些应由系统保存、哪些适合 AI 辅助建立，以及哪些属于 AI 直接生成的表现层内容。
+Core rule:
 
-Core rule / 核心规则：  
-Anything that affects continuity, save integrity, or cross-provider consistency must not rely on the AI model as the only source of truth.  
-凡是影响连续性、存档完整性或跨供应商一致性的内容，都不能把 AI 模型当作唯一真值来源。
+> anything that affects continuity, save integrity, cross-provider consistency, or cross-module truth must not rely on the model as the only source of truth.
 
-## 2. Four Ownership Categories / 四类归属
+Use this file together with:
 
-### 2.1 User-Defined Core / 用户定义核心
+- `docs/architecture/ARCHITECTURE.md`
+- `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
+- `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+- `docs/process/AI_WORK_MODE.md`
 
-These are root settings and should not be silently changed by AI.  
-这些属于根设定，不应被 AI 静默修改。
+## 1. Four Ownership Categories
 
-- player identity / 用户身份
-- player boundaries and preferences / 用户边界与偏好
-- global worldview baseline / 全局世界观基线
-- knowledge-point library (bindable patches) / 知识点库（可绑定补丁）
-- primary role definitions / 核心角色底稿
-- important relationship starting positions / 重要关系初始定位
-- automation switches and permissions / 自动化开关与权限
+### 1.1 User-defined core
 
-AI may read these, but should not rewrite them on its own.  
-AI 可以读取这些内容，但不应自行改写。
+These are root product settings and should not be silently rewritten by AI:
 
-### 2.2 AI-Assisted but User-Editable / AI 辅助建立但用户可编辑
+- player identity
+- player boundaries and preferences
+- global worldview baseline
+- knowledge-point library
+- primary role definitions
+- important role-facing defaults or permissions
+- automation switches and permissions
+- major destructive-action confirmations
 
-These are good candidates for AI drafting, but users should be able to review and edit them.  
-这些内容适合让 AI 起草，但用户应能审核和修改。
+AI may read these, but should not rewrite them on its own.
 
-- extended role profile copy / 扩展人设文案
-- relationship summaries / 关系摘要
-- memory summary drafts / 记忆摘要草稿
-- event templates / 事件模板
-- service account templates / 服务号模板
-- public-post or forum drafts / 动态或论坛草稿
-- mini-scene copy / 小剧场文案
+### 1.2 AI-assisted but user-editable
 
-AI can speed up creation here, but the accepted result should still be stored locally by the project.  
-AI 在这里负责提效，但最终采纳结果仍应由项目本地保存。
+These are good candidates for AI drafting, but users should be able to review and edit them:
 
-### 2.3 System-Owned Truth / 系统真值层
+- extended role-profile copy
+- relationship summaries
+- memory summary drafts
+- event templates
+- service-account templates
+- public-post or forum drafts
+- mini-scene copy
+- suggestions for preference/life-pattern/social-graph entries
 
-These values must be stored and updated by project logic, not by hoping that a model remembers them.  
-这些值必须由项目逻辑保存和更新，而不是依赖模型“记住它们”。
+AI can speed up creation here, but the accepted result should still be saved by the project.
 
-- relationship numeric values / 关系数值
-- event states / 事件状态
-- task progress / 任务进度
-- transaction states / 交易状态
-- wallet balances / 钱包余额
-- location and itinerary states / 地点与行程状态
-- notification state / 通知状态
-- delivered, read, and unread flags / 已送达、已读与未读状态
-- scheduler timestamps / 调度时间戳
-- last active time and restore-settlement state / 上次活跃时间与恢复补算状态
+### 1.3 System-owned truth
 
-This layer must remain stable even if the user changes AI providers from one turn to another.  
-即使用户每一轮切换不同 AI 供应商，这一层也必须保持稳定。
+These values must be stored and updated by project logic:
 
-### 2.4 AI-Generated Presentation / AI 生成表现层
+- relationship progress, metrics, stages, milestones, and memory groups
+- event state
+- task/objective state
+- transaction and ledger state
+- balances
+- trip, place, and itinerary state
+- confirmed schedule/date state
+- raw reminder/cue state
+- notification state
+- delivered/read/unread state
+- scheduler timestamps
+- active feature-toggle/runtime-control state
+- last-active and restore-settlement state
 
-These are outputs, not the source of truth.  
-这些是表现层输出，不是存档真值。
+This layer must remain stable even if the user changes AI providers from one turn to another.
 
-- chat reply text / 聊天回复正文
-- multi-message sequences / 多条连续回复
-- virtual voice wording / 虚拟语音条文案
-- image descriptions / 图片描述
-- module-link descriptions / 模块跳转描述
-- transfer card wording / 转账卡片文案
-- mini HTML interaction content / HTML 互动内容
+### 1.4 AI-generated presentation
 
-These can be regenerated later and should not be the only place where continuity lives.  
-这些内容可以后续重新生成，不应成为连续性的唯一载体。
+These are outputs, not truth:
 
-## 3. Relationship Values / 关系数值设计
+- reply text
+- multi-message sequences
+- virtual-voice wording
+- image descriptions
+- module-link descriptions
+- transfer-card wording
+- mini HTML interaction content
+- event/explanation phrasing
 
-Relationship values should belong to the system, not to the model.  
-关系数值应归属于系统，而不是归属于模型记忆。
+These can be regenerated later and should not be the only place where continuity lives.
 
-Suggested structure / 建议结构：
+## 2. Ownership Rules For Current Strategic Boundaries
 
-- `affinity`
-- `trust`
-- `distance`
-- `dependency`
-- `tension`
-- `relationshipStage`
-- `lastWarmMomentAt`
-- `lastConflictAt`
+### Contacts / Chat Directory / Chat / relationship runtime
 
-Suggested rule / 建议规则：  
-The system updates the values; AI reads them to generate tone and reaction.  
-系统负责更新数值；AI 读取这些值来生成反应和语气。
+- `Contacts` owns the global role archive and role-centered management.
+- `Chat Directory` owns Chat-side binding and service-account entry management.
+- `Chat` owns ordinary message history and manual chat deletion.
+- `relationship runtime` owns relationship truth:
+  - metrics
+  - stages
+  - milestones
+  - memory groups
+  - relationship facts
 
-This makes the project stable across providers and easier to balance as a game.  
-这样既能保证跨供应商稳定，也更符合游戏系统的可调性。
+Important compatibility rule:
 
-## 4. Memory Design / 记忆设计
+- `relationshipLevel` and `relationshipNote` may still exist in Chat-side structures, but they are compatibility or annotation fields only unless a future product decision explicitly redefines them.
 
-Memory should not be a single blob placed entirely inside prompts.  
-记忆不应只是塞进 Prompt 的一大段文本。
+### Calendar / Reminders
 
-Recommended three-layer design / 推荐采用三层设计：
+- `Calendar` owns confirmed schedule/date meaning.
+- `Reminders` owns raw cues, callbacks, follow-ups, logistics reminders, and future objective/task-like prompts.
 
-### 4.1 Raw Persistent Layer / 原始持久层
+Important rule:
 
-Store structured truth locally.  
-本地保存结构化真值。
+- raw reminder cues must not directly act as relationship-memory truth;
+- they must first become confirmed Calendar events if they are going to carry schedule/date meaning into relationship continuity.
 
-Examples / 例如：
+### World Hub / Cheats
 
-- role archives / 角色档案
-- relationship values / 关系数值
-- event history / 事件历史
-- wallet and itinerary state / 钱包与行程状态
-- notification history / 通知历史
+- `World Hub` owns optional runtime review and narrow control.
+- future `Cheats` belongs to the same family, but is a separate, stronger override lane.
 
-### 4.2 Summary Memory Layer / 摘要记忆层
+Important rule:
 
-Store compact summaries derived from the raw layer.  
-保存从原始层提炼出的摘要记忆。
+- neither of them should become the main authoring surface for ordinary module records.
 
-Examples / 例如：
+### Files / Gallery
 
-- recent important interactions / 最近的重要互动
-- current role impression of the player / 角色当前对用户的印象
-- current sensitive topics / 当前敏感点
-- current relationship direction / 当前关系走向
+- `Files` remains an internal metadata/index/bridge component.
+- `Gallery` owns user-facing media assets and related visible asset workflows.
 
-This layer may be AI-assisted, but the accepted summary should still be saved by the project.  
-这一层可以借助 AI 辅助生成，但最终采纳的摘要仍应由项目保存。
+Important rule:
 
-### 4.3 Prompt Assembly Layer / Prompt 组装层
+- Files must not become the user-facing owner of role profiles, relationship truth, Calendar state, reminder state, or Gallery media.
 
-Each AI call should assemble only the necessary pieces from the saved layers.  
-每次调用 AI 时，只应从已保存的层中抽取必要信息进行组装。
+## 3. Relationship Ownership Rule
 
-Recommended prompt inputs / 推荐输入：
+Relationship values belong to the system, not to the model.
 
-- current chat window context / 当前会话上下文
-- user identity / 用户身份
-- role profile / 角色档案
-- global worldview baseline / 全局世界观基线
-- role-bound knowledge points / 角色绑定知识点
-- relationship snapshot / 关系快照
-- memory summary / 记忆摘要
-- real-time context / 现实时间上下文
+Current practical structure includes:
 
-World-kernel rule / 世界内核规则：
-1. Global worldview is always-on context for every AI call.  
-   全局世界观是每次 AI 调用的常驻上下文。
-2. Knowledge points are selectively injected by role/module/thread bindings.  
-   知识点按角色/模块/会话绑定选择性注入。
-3. Unbinding a role must never delete global knowledge-point records.  
-   角色解绑绝不能删除全局知识点记录。
+- affinity
+- trust
+- intimacy
+- tension
+- dependency
+- relationship stage
+- milestones
+- growth traits
+- compact memory groups
 
-## 5. Cross-Provider Rule / 跨供应商规则
+Rule:
 
-AI providers may change from turn to turn.  
-用户每一轮可能使用不同的 AI 供应商。
+- the system updates these values or queues pending effects;
+- AI reads them to generate tone, continuity, and reaction;
+- modules submit compact facts through adapters rather than editing relationship metrics directly.
 
-Therefore / 因此：
+## 4. Memory Ownership Rule
 
-- save truth locally / 真值必须本地保存
-- pass necessary state into each call / 每次调用都传入必要状态
-- never treat provider memory as the archive / 不能把供应商记忆当作存档
+Memory should not be a single giant prompt blob.
 
-This is essential for stability.  
-这是保持体验稳定的必要条件。
+Recommended layered model:
 
-## 6. Decision Heuristic / 判断准则
+### 4.1 Raw persistent layer
 
-When deciding whether something should be stored by the system or generated by AI, ask:  
-当判断某项内容应由系统保存还是交给 AI 生成时，可以用以下问题判断：
+Structured truth saved by the project:
 
-1. Does it affect long-term continuity? / 它会影响长期连续性吗？
-2. Does it affect cross-module consistency? / 它会影响跨模块一致性吗？
-3. Would it drift if the AI provider changed? / 如果切换供应商，它会漂移吗？
+- role archives
+- relationship runtime state
+- source records
+- event history
+- wallet and itinerary state
+- notification history
 
-If the answer is yes, it should be system-owned.  
-如果答案是“会”，就应归系统保存。
+### 4.2 Summary memory layer
 
-If the answer is no, it is usually safe to let AI generate it.  
-如果答案是“不会”，通常就可以交给 AI 生成。
+Compact summaries derived from the raw layer:
+
+- recent important interactions
+- current role impression of the player
+- current sensitive topics
+- current relationship direction
+- primary memory summary plus supporting anchors
+
+This layer may be AI-assisted, but the accepted summary still belongs to the project.
+
+### 4.3 Prompt assembly layer
+
+Each AI call should assemble only the necessary pieces from saved layers:
+
+- current conversation context
+- user identity
+- role profile
+- global worldview baseline
+- role-bound knowledge points
+- relationship snapshot
+- memory summary
+- time/context state
+
+## 5. Cross-Provider Rule
+
+AI providers may change from turn to turn.
+
+Therefore:
+
+- save truth locally;
+- pass needed state into each call;
+- never treat provider memory as the archive.
+
+This is essential for continuity.
+
+## 6. Decision Heuristic
+
+When deciding whether something should be stored by the system or generated by AI, ask:
+
+1. Does it affect long-term continuity?
+2. Does it affect cross-module consistency?
+3. Would it drift if the AI provider changed?
+4. Would deleting or resetting it need product-grade review or recovery rules?
+
+If the answer is yes, it should be system-owned or explicitly user-defined.
+
+If the answer is no, it is usually safe to let AI generate it as presentation or draft.
+
+## 7. Practical Rule For Future Work
+
+Before adding a new field or workflow, decide all three:
+
+1. who is the product owner of this concept;
+2. where its truth is stored;
+3. whether AI is drafting it, presenting it, or actually owning it.
+
+If those answers are unclear, the feature is not ready to implement cleanly.
+
+## 8. Change Log
+
+1. 2026-04-12: created as the ownership-strategy baseline.
+2. 2026-05-19: rewritten to align with current Contacts/Chat Directory boundaries, Calendar/Reminders split, World Hub optional-control model, Files internal role, and relationship-runtime truth ownership.

@@ -1,149 +1,188 @@
-﻿# SchatPhone Storage Strategy / SchatPhone 存储策略
+# SchatPhone Storage Strategy
 
-Updated / 更新时间: 2026-03-29
+Updated: 2026-05-19
 
-## 1. Purpose / 用途
+Purpose: summarize how SchatPhone should store settings, saves, chat records, world state, runtime truth, and AI-related data without making browser storage too large, too fragile, or too semantically muddy.
 
-This document summarizes how SchatPhone should store settings, saves, chat records, world state, and AI-related data without making browser storage too large or too fragile.  
-本文用于总结 SchatPhone 应如何保存设置、存档、聊天记录、世界状态与 AI 相关数据，同时避免浏览器本地存储过大或过于脆弱。
+Core recommendation:
 
-Core recommendation / 核心建议：  
-Do not treat `localStorage` as the main database. Use layered storage.  
-不要把 `localStorage` 当作主数据库，应采用分层存储。
+> do not treat `localStorage` as the main database; use layered storage with clear ownership.
 
-## 2. Main Risk / 主要风险
+Use this file together with:
 
-If all long-term project data is stored directly in browser local storage, the project will eventually encounter quota limits, performance issues, and recovery problems.  
-如果把所有长期数据都直接塞进浏览器本地存储，项目迟早会遇到容量限制、性能问题和恢复问题。
+- `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
+- `docs/architecture/ARCHITECTURE.md`
+- `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 
-High-risk data types / 高风险数据类型：
+## 1. Main Risk
 
-- large multi-role chat histories / 多角色的大量聊天记录
-- repeated prompt fragments / 重复保存的 Prompt 片段
-- HTML mini-scene payloads / HTML 小剧场内容
-- base64-heavy assets / 大型 base64 资源
-- long event logs / 超长事件日志
+If all long-term project data is stored directly in browser `localStorage`, the project will eventually hit:
 
-## 3. Recommended Layered Storage Model / 推荐的分层存储模型
+- quota limits;
+- performance problems;
+- fragile restore/import behavior;
+- noisy duplication of truth;
+- harder future migration.
 
-### 3.1 Layer A: `localStorage` for hot small state / 第一层：`localStorage` 存热数据与小状态
+High-risk data types:
 
-Use this layer only for small, high-frequency, configuration-like values.  
-这一层只应用于小型、高频、偏配置性质的数据。
+- long chat histories;
+- repeated prompt fragments;
+- large event logs;
+- relationship-memory snapshots duplicated too many times;
+- image/base64-heavy assets;
+- growing runtime/audit histories.
 
-Recommended examples / 推荐保存内容：
+## 2. Recommended Layered Storage Model
 
-- user settings / 用户设置
-- language and notification switches / 语言与通知开关
-- automation switches / 自动化开关
-- active conversation or route hints / 当前会话或页面提示
-- scheduler index values / 调度器索引值
-- last active timestamp / 上次活跃时间戳
-- import/export metadata / 导入导出元数据
+### Layer A: `localStorage` for small hot state
 
-Rule / 规则：  
-Keep this layer small and fast. It should not become the main archive.  
-这一层应保持小而快，不应发展成主存档层。
+Use this only for small, high-frequency, configuration-like values:
 
-### 3.2 Layer B: `IndexedDB` for main save data / 第二层：`IndexedDB` 作为主存档层
+- user settings;
+- language, notification, and automation switches;
+- active IDs and light route/session hints;
+- scheduler checkpoints;
+- last-active timestamps;
+- import/export metadata;
+- lightweight UI preferences.
 
-This should become the long-term structured storage layer for the project.  
-这一层应成为项目长期结构化存档的主存储层。
+Rule:
 
-Recommended examples / 推荐保存内容：
+- keep this layer small and fast;
+- do not let it become the main archive;
+- do not keep large histories here just because it is easy.
 
-- role profile archives / 角色档案
-- relationship states / 关系状态
-- conversation records / 会话记录
-- message history / 消息历史
-- event logs / 事件日志
-- wallet and transfer state / 钱包与转账状态
-- map and itinerary state / 地图与行程状态
-- notification history / 通知历史
-- summary memories / 摘要记忆
+### Layer B: structured local archive for long-lived app truth
 
-Why / 原因：
+This should be the main long-term structured storage layer over time.
 
-- better suited for structured app data / 更适合结构化应用数据
-- better capacity and organization / 容量与组织能力更强
-- less fragile than endlessly expanding `localStorage` / 比无限扩张 `localStorage` 更稳
+Recommended contents:
 
-### 3.3 Layer C: Optional Server Storage / 第三层：可选服务端存储
+- role profile archives;
+- relationship runtime state;
+- conversation records and message history;
+- event logs;
+- wallet and ledger state;
+- map and itinerary state;
+- Calendar event state;
+- Reminders cue state;
+- notification history;
+- accepted memory summaries;
+- module-owned long-lived records.
 
-This is only needed when product goals go beyond single-device local play.  
-只有当产品目标超出单设备本地使用时，才需要服务端存储。
+This layer should favor:
 
-Typical use cases / 常见用途：
+- structured retrieval;
+- better capacity posture;
+- clearer migration/recovery behavior than endlessly expanding `localStorage`.
 
-- cross-device sync / 跨设备同步
-- remote backup / 远程备份
-- push notification delivery / 推送通知
-- persistent scheduled jobs / 持续调度任务
-- account-based progression / 基于账号的成长数据
+### Layer C: optional server storage
 
-## 4. Suggested Data Placement / 建议的数据归位
+This is only needed when product goals go beyond local-first single-device play.
 
-### 4.1 Put in `localStorage` / 建议放入 `localStorage`
+Typical uses:
 
-- `settings`
-- language, notification, and automation switches / 语言、通知与自动化开关
-- last open time / 上次打开时间
-- next scheduler checkpoints / 下次调度检查点
-- small cache version flags / 小型缓存版本标记
+- cross-device sync;
+- remote backup;
+- durable push delivery;
+- persistent scheduled jobs;
+- later backend-orchestrated autonomy if the product explicitly chooses it.
 
-### 4.2 Put in `IndexedDB` / 建议放入 `IndexedDB`
+## 3. Current Placement Guidance
 
-- all role profile archives / 全部角色档案
-- relationship values and stage history / 关系数值与阶段历史
-- long chat histories / 长期聊天记录
-- event and consequence records / 事件与后果记录
-- map records and itinerary history / 地图记录与行程历史
-- wallet records, gifts, receipts, and balances / 钱包记录、礼物、收据与余额
-- memory summaries and snapshots / 记忆摘要与快照
+### Good candidates for lightweight storage
 
-### 4.3 Avoid storing raw long-term duplicates / 避免长期保存的原始重复内容
+- settings;
+- toggles;
+- last-open metadata;
+- lightweight checkpoint values;
+- tiny compatibility flags.
 
-- repeated full prompt payloads / 重复的完整 Prompt 内容
-- multiple derived copies of the same state / 同一状态的多份派生副本
-- large base64 assets / 大型 base64 资源
-- long text that can later be summarized / 未来可摘要化的长文本
+### Good candidates for structured archive storage
 
-## 5. Anti-Bloat Strategies / 防膨胀策略
+- role profiles;
+- relationship metrics, stages, milestones, and memory groups;
+- long chat histories;
+- event and consequence records;
+- map records and itinerary history;
+- wallet records, gifts, receipts, and balances;
+- Calendar confirmed events;
+- Reminders raw cues;
+- summary memories and continuity snapshots.
 
-To prevent local storage from growing uncontrollably, the project should adopt these rules:  
-为了防止本地数据无限膨胀，项目应采用以下规则：
+### Avoid long-term duplicate clutter
 
-1. Keep recent raw history, summarize older history / 近期保留原文，较早内容做摘要
-2. Store structured state instead of repeated prose / 优先保存结构化状态，而不是重复大段文本
-3. Cap notification and event log size / 对通知与事件日志设置上限
-4. Archive or compress low-priority historical data / 对低优先级旧数据归档或压缩
-5. Avoid storing regenerated content twice / 避免重复保存可重新生成的内容
+Avoid storing:
 
-## 6. Safety and Reliability / 安全与可靠性
+- repeated full prompt payloads;
+- many derived copies of the same truth;
+- large base64 asset payloads outside their owning asset strategy;
+- giant raw text that should later become structured summary or archive.
 
-Storage design should support recovery, migration, and user trust.  
-存储设计应支持恢复、迁移和用户信任。
+## 4. Ownership-Aware Storage Rules
 
-Recommended practices / 建议做法：
+Storage must respect product ownership.
 
-- version backup formats / 对备份格式做版本管理
-- keep import rollback ability / 保留导入失败回滚能力
-- support legacy-to-new migration / 支持旧结构到新结构迁移
-- make export readable and inspectable / 让导出内容可读可检查
+Examples:
 
-## 7. Migration Recommendation / 迁移建议
+- `Contacts` may display relationship summaries, but `relationship runtime` owns the underlying relationship truth.
+- `Chat Directory` may store binding/config data, but not the live relationship truth.
+- `Calendar` owns confirmed schedule/date records.
+- `Reminders` owns raw cues and follow-up records.
+- `Files` may keep metadata/index/bridge records, but should not become the main user-facing owner of assets or relationship data.
+- `Gallery` owns visible media asset workflows; do not duplicate those records into Files as if Files were the asset source of truth.
 
-Current project stage / 当前阶段建议：
+## 5. Anti-Bloat Strategy
 
-1. Keep settings and lightweight indexes in `localStorage` / 继续把设置和轻量索引保留在 `localStorage`
-2. Plan a gradual move of long-term records into `IndexedDB` / 逐步把长期记录迁移到 `IndexedDB`
-3. Keep server storage optional until cross-device sync or strong push delivery becomes necessary / 在真正需要跨设备同步或强推送前，服务端存储保持可选
+To prevent local storage from growing uncontrollably:
 
-## 8. Practical Rule / 实际原则
+1. keep recent raw history, summarize older history where appropriate;
+2. prefer structured state over repeated prose;
+3. cap diagnostic/event log growth where safe;
+4. archive or compress low-priority historical data later if needed;
+5. avoid storing regenerated content twice;
+6. avoid storing the same continuity concept in several unrelated module-local mirrors.
 
-The project should save truth, not clutter.  
-项目要保存的是真值，而不是杂乱堆积物。
+## 6. Safety And Reliability
 
-Storage is not only about capacity. It is also about long-term maintainability.  
-存储问题不只是容量问题，更是长期维护问题。
+Storage design should support:
 
+- recovery;
+- migration;
+- import/export trust;
+- backward compatibility where appropriate.
+
+Recommended practices:
+
+- version backup formats;
+- preserve import rollback ability;
+- support legacy-to-new migration;
+- keep export readable and inspectable;
+- treat ownership-shifting migrations as product-boundary changes, not only technical refactors.
+
+## 7. Practical Migration Posture
+
+Current practical posture:
+
+1. keep settings and lightweight indexes small and hot;
+2. let long-lived truth move toward stronger structured storage and clearer archive seams over time;
+3. keep server storage optional until cross-device sync, durable push, or backend autonomy is truly justified;
+4. do not let convenience storage choices quietly redefine product ownership.
+
+## 8. Practical Rule
+
+The project should save truth, not clutter.
+
+Storage is not only a capacity problem. It is also:
+
+- a continuity problem;
+- an ownership problem;
+- a migration problem;
+- a long-term maintainability problem.
+
+## 9. Change Log
+
+1. 2026-03-29: created as the first layered-storage strategy note.
+2. 2026-05-19: rewritten to align with current ownership boundaries, relationship runtime, Calendar/Reminders split, and Files/Gallery roles.

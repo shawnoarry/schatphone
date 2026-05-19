@@ -467,10 +467,34 @@ const selectMemoryGroup = (memory) => {
 const detailItemsForSection = (profile, section) =>
   profile?.id ? chatStore.listRoleDetailItems(profile.id, section) : []
 
+const detailItemStatsForSection = (profile, section) => {
+  const items = detailItemsForSection(profile, section)
+  return {
+    total: items.length,
+    manual: items.filter((item) => item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED).length,
+    eventAttached: items.filter((item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED).length,
+  }
+}
+
 const roleDetailSourceLabel = (item) =>
   item?.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED
     ? t('事件挂载', 'Event-attached')
     : t('手动', 'Manual')
+
+const roleDetailSourceHint = (item) => {
+  if (item?.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED) {
+    return t('用户手动输入，可单独删除。', 'User-entered detail. It can be deleted directly.')
+  }
+  const refs = [
+    item.memoryKey ? `${t('记忆', 'Memory')}: ${item.memoryKey}` : '',
+    item.sourceModule ? `${t('来源', 'Source')}: ${item.sourceModule}` : '',
+  ].filter(Boolean)
+  const suffix = refs.length ? ` ${refs.join(' · ')}` : ''
+  return `${t(
+    '事件发展挂载，需删除对应记忆或重置关系后自动清理。',
+    'Attached by relationship events; delete the linked memory or reset the relationship to clear it.',
+  )}${suffix}`
+}
 
 const addManualDetailItem = (section) => {
   const profile = selectedProfile.value
@@ -1794,10 +1818,17 @@ onBeforeUnmount(() => {
           >
             <div class="flex items-center justify-between">
               <p class="text-sm font-bold">{{ section.title }}</p>
-              <span class="text-[10px] text-gray-500">
-                {{ detailItemsForSection(selectedProfile, section.key).length }}
-              </span>
+              <div
+                class="contacts-detail-counts"
+                :data-testid="`contacts-detail-counts-${section.key}`"
+              >
+                <span>{{ t('手动', 'Manual') }} {{ detailItemStatsForSection(selectedProfile, section.key).manual }}</span>
+                <span>{{ t('事件', 'Event') }} {{ detailItemStatsForSection(selectedProfile, section.key).eventAttached }}</span>
+              </div>
             </div>
+            <p class="text-[11px] leading-4 text-gray-500">
+              {{ t('手动条目由用户维护；事件挂载条目来自聊天、地图、日程等发展，会随记忆删除或关系重置一起清理。', 'Manual entries are user-maintained; event-attached entries come from Chat, Map, Calendar, and other development, and are cleared with memory deletion or relationship reset.') }}
+            </p>
             <div
               v-if="detailItemsForSection(selectedProfile, section.key).length === 0"
               class="contacts-empty-detail"
@@ -1814,14 +1845,27 @@ onBeforeUnmount(() => {
                   <div class="min-w-0">
                     <p class="text-[12px] font-semibold truncate">{{ item.title || item.detail }}</p>
                     <p v-if="item.detail" class="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{{ item.detail }}</p>
+                    <p
+                      class="mt-1 text-[10px] leading-4 text-gray-400"
+                      :data-testid="`contacts-detail-source-hint-${item.id}`"
+                    >
+                      {{ roleDetailSourceHint(item) }}
+                    </p>
                   </div>
                   <span
                     class="contacts-source-chip"
                     :class="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED ? 'contacts-source-chip-event' : ''"
+                    :data-testid="`contacts-detail-source-chip-${item.id}`"
                   >
                     {{ roleDetailSourceLabel(item) }}
                   </span>
                 </div>
+                <p
+                  v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED"
+                  class="contacts-event-locked-note"
+                >
+                  {{ t('此条不能在这里单独删除。', 'This entry cannot be deleted here directly.') }}
+                </p>
                 <button
                   v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.MANUAL"
                   @click="removeManualDetailItem(item)"
@@ -2218,6 +2262,21 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+.contacts-detail-counts {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--contacts-muted);
+}
+
+.contacts-detail-counts span {
+  border-radius: 999px;
+  background: rgba(49, 64, 86, 0.07);
+  padding: 3px 7px;
+  line-height: 1.2;
+}
+
 .contacts-detail-item,
 .contacts-memory-item {
   border: 1px solid var(--contacts-border);
@@ -2265,6 +2324,16 @@ onBeforeUnmount(() => {
 .contacts-source-chip-event {
   background: var(--contacts-warm-soft);
   color: #9d583e;
+}
+
+.contacts-event-locked-note {
+  margin-top: 6px;
+  border-radius: 10px;
+  background: rgba(191, 115, 84, 0.08);
+  padding: 6px 8px;
+  color: #9d583e;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .contacts-detail-add input,

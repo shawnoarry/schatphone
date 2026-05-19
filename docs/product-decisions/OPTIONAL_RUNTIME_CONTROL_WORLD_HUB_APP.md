@@ -1,100 +1,91 @@
 # Optional Runtime Control / World Hub App
 
-Updated: 2026-05-17
+Updated: 2026-05-19
 
 ## Decision
 
-The runtime-control system is optional. Its product-facing name is `世界中枢 / World Hub`.
+The runtime-control system is optional.
+
+Its product-facing name is:
+
+- `世界中枢 / World Hub`
 
 Technical compatibility names remain unchanged:
 
 - Home app id: `app_control_center`
-- Feature toggle id: `control_center`
-- Route: `/control-center`
-- View file: `src/views/ControlCenterView.vue`
+- feature toggle id: `control_center`
+- route: `/control-center`
+- view file: `src/views/ControlCenterView.vue`
 
-These technical names are intentionally preserved so existing Home layouts, tests, imported backups, and route contracts do not need a migration just because the product name changed.
-
-When disabled, the Home screen does not generate the World Hub entry and all normal module flows continue unchanged: Chat, Map, Shopping, Food Delivery, Assets, Wallet, Phone, Calendar, Photos, and Settings remain usable without runtime control.
-
-When enabled, Home restores a standalone World Hub entry (`app_control_center`, route `/control-center`) in the planned second-screen app area. This entry is a control surface, not a required core app.
+These technical names remain stable so Home layouts, tests, imports, and route contracts do not need unnecessary migration.
 
 ## Product Meaning
 
-World Hub is the future optional "GM / cheat / runtime control" surface for game-like systems.
+World Hub is the optional runtime review and narrow-control app.
 
-It may later coordinate:
+It is the softer, safer runtime-control surface in the same family as future `金手指 / Cheats`, but it is not the same thing.
 
-- Event controls: surprise mode, random trigger frequency, cooldowns, module event toggles, event logs.
-- Value controls: affinity, funds, inventory-like values, asset state, unlock state, task state.
-- World-aware runtime packs: generated or confirmed event/task rules that fit the user's active worldview.
-- Override tools: manual correction, debug review, and controlled rewrite of generated runtime data.
+World Hub may coordinate:
 
-It should not become the place where users must import all immersive data. Role cards, assets, map places, shopping products, food delivery restaurants, images, and other module-native records should still be created inside their own immersive module surfaces.
+- event review;
+- event intensity or enablement controls;
+- relationship runtime review;
+- pending confirmation approval or dismissal;
+- later limited override or correction actions.
+
+It must not become:
+
+- the main role-authoring surface;
+- the main reminders/task surface;
+- the everyday place where users are forced to manage normal phone life.
 
 ## Architecture Boundary
 
-World Hub is a coordination and override layer. It does not replace domain stores.
+World Hub is a coordination layer, not the owner of domain records.
 
-- `src/stores/system.js` owns the optional Home-entry toggle and page normalization.
+- `src/stores/system.js` owns the optional Home-entry toggle.
 - `src/views/ControlCenterView.vue` owns the current World Hub UI.
-- Event orchestration remains in `src/lib/simulation/*` and `src/stores/simulation.js`.
-- Relationship runtime state remains in `src/stores/relationshipRuntime.js`.
-- Domain mutation still belongs to module-owned actions, for example Food Delivery order events, Wallet ledger records, or future Assets updates.
-- Home entry metadata is registered through `src/lib/planned-module-registry.js` and `src/lib/home-entry-registry.js`.
+- event execution remains in simulation/runtime files.
+- relationship truth remains in `src/stores/relationshipRuntime.js`.
+- domain records still belong to their own modules, such as Calendar, Wallet, Shopping, Food Delivery, Map, or Contacts.
 
 ## Acceptance Rules
 
-- Default state: `control_center` is off and `app_control_center` is absent from Home.
-- Enabling `control_center` restores `app_control_center` before `app_more` on the second Home page.
-- Disabling `control_center` removes `app_control_center` from Home without changing other app tiles.
-- Old or imported layouts containing `app_control_center` must be normalized away while the toggle is off.
-- `/control-center` may be visited directly, but the page must explain disabled state and point users back to More for enabling.
-- Product copy should say `世界中枢 / World Hub`; technical docs may mention `Control Center` only as route/code compatibility.
+- Default state: `control_center` is off and `app_control_center` is hidden from Home.
+- Enabling `control_center` restores the World Hub app entry.
+- Disabling `control_center` removes the entry without disturbing unrelated app tiles.
+- Direct route visits to `/control-center` are allowed, but the UI should explain disabled state when the toggle is off.
+- Product copy should say `世界中枢 / World Hub`; `Control Center` is a technical compatibility label only.
 
 ## Current Implementation Status
 
-Status: baseline plus read-only runtime panel, relationship review, and opt-in foreground runtime wiring landed.
-
-Landed files:
-
-- `src/views/ControlCenterView.vue`
-- `src/router/index.js`
-- `src/stores/system.js`
-- `src/lib/planned-module-registry.js`
-- `src/lib/home-entry-registry.js`
-- `src/lib/app-icon-presentation.js`
-- `src/views/HomeView.vue`
-- `src/views/MoreView.vue`
-- `tests/control-center-view.test.js`
-- `src/lib/simulation/foreground-session-tick-lifecycle.js`
-- `tests/simulation-foreground-session-tick-lifecycle.test.js`
-
-Regression coverage:
-
-- `tests/system-widget-import.test.js`
-- `tests/home-folder-entry.test.js`
-- `tests/more-toggle-ui-consumption.test.js`
-- `tests/app-icon-presentation.test.js`
-- `tests/planned-module-registry.test.js`
-- `tests/control-center-view.test.js`
+Status: baseline landed.
 
 Current World Hub capabilities:
 
-- Reads `simulationStore` without mutating it.
-- Shows Surprise Mode, event log count, active cooldown count, recent triggered/skipped/failed counts, module event enablement, world-variant metadata, and latest event logs.
-- Reads relationship runtime state: entity count, recent facts, pending effects, and top snapshots.
-- Can approve or dismiss `pending_confirmation` relationship runtime events.
-- Does not expose freeform value editing, funds editing, unlock editing, or automatic high-impact romance/conflict mutation yet.
+1. reads simulation runtime status;
+2. shows runtime counts, logs, cooldowns, and enablement state;
+3. reads relationship runtime status and top snapshots;
+4. can approve or dismiss pending relationship events when that review path is enabled;
+5. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
+
+## Relationship To Cheats
+
+`金手指 / Cheats` is still a future lane.
+
+Current status:
+
+- placeholder concept exists;
+- product wording exists;
+- unlock source, route design, and final surface are not frozen.
+
+Important rule:
+
+- do not design Cheats as a normal default app;
+- do not freeze Cheats before World Hub review surfaces are stable enough.
 
 ## Next Recommended Slice
 
-Start the Calendar / Reminders split before expanding Calendar relationship facts.
-
-Why:
-
-- Calendar should return to real schedule/date meaning.
-- Reminders should own callbacks, follow-ups, logistics reminders, stock review cues, and world/task objectives.
-- World Hub should remain optional runtime review and override, not the normal app where users manage everyday reminders.
-
-Alternative same-size target: deepen relationship-memory dedupe/review rules before introducing new media-driven memory inputs.
+1. improve World Hub review detail quality;
+2. keep runtime-trigger explanation understandable in product language;
+3. freeze Cheats only after the World Hub review surface is strong enough to support a clearer control hierarchy.

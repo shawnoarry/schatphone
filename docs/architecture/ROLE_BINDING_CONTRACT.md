@@ -1,82 +1,108 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated / 更新时间: 2026-04-09
+Updated: 2026-05-19
 
-## 1. Purpose / 目的
+## 1. Purpose
 
-EN: This document defines the reusable cross-module contract for role profile, avatar hierarchy, relationship metadata, and asset context consumption.  
-中文：本文件定义“角色档案、头像层级、关系元数据、素材上下文”的跨模块复用契约。
+This document defines the reusable cross-module contract for role profile, avatar hierarchy, Chat-side binding metadata, and asset-context consumption.
 
-EN: Goal: future modules (map/forum/scenario/etc.) should consume one stable contract instead of reassembling role data on their own.  
-中文：目标：后续模块（地图/论坛/场景等）统一消费同一份契约，避免各模块重复拼装角色数据。
+Goal:
 
-## 2. Contract Entry / 契约入口
+- future modules should consume one stable contract instead of reassembling role data on their own;
+- Chat-side binding data should stay reusable without pretending to be the full relationship-truth layer.
 
-EN: Primary API in `src/stores/chat.js`:  
-中文：`src/stores/chat.js` 中的主入口：
+## 2. Contract Entry
+
+Primary API in `src/stores/chat.js`:
 
 1. `getRoleBindingContract(contactId, { moduleKey })`
 2. `listRoleBindingContracts(contactIds?, { moduleKey })`
 
-EN: Compatibility API kept for existing chat asset flow:  
-中文：为兼容现有 Chat 素材链路，保留兼容入口：
+Compatibility API kept for existing chat asset flow:
 
 1. `getRoleBindingAssetContext(contactId)` (legacy-friendly shape)
 
-## 3. Contract Shape / 契约结构
+## 3. Contract Shape
 
-EN: `getRoleBindingContract` returns:  
-中文：`getRoleBindingContract` 返回结构：
+`getRoleBindingContract` returns:
 
-1. `contractVersion`: current schema version (`1.0.0`)
-2. `moduleKey`: consumer module key (for traceability)
+1. `contractVersion`: current schema version
+2. `moduleKey`: consumer module key
 3. `roleBound`: whether this contact is actually bound to a global role profile
 4. `contact`: `{ id, kind, name, profileId }`
 5. `profile`: `{ id, name, role, isMain, tags }`
 6. `relationship`: `{ level, note }`
 7. `avatar`:
-`resolved`: final avatar URL after hierarchy resolution
-`activeLayer`: one of `thread | module | global | fallback`
-`threadAvatar`, `moduleAvatar`, `globalAvatar`, `fallbackSeed`: source traces
+   - `resolved`
+   - `activeLayer`
+   - `threadAvatar`
+   - `moduleAvatar`
+   - `globalAvatar`
+   - `fallbackSeed`
 8. `assets`:
-`preferredImageAssetId`: thread-level preferred asset
-`recommendedImageAssetId`: preferred first, otherwise profile-pack fallback
-`profileAssetPack`: categorized asset ids (`wallpaper/emoji/reference/scenario`)
-`profileAssetIds`: flattened unique ids for quick filtering
+   - `preferredImageAssetId`
+   - `recommendedImageAssetId`
+   - `profileAssetPack`
+   - `profileAssetIds`
 
-## 4. Hierarchy Rules / 层级规则
+## 4. Important Semantic Boundary
 
-EN: Avatar priority is fixed as `thread > module > global > fallback`.  
-中文：头像优先级固定为 `会话 > 模块 > 全局 > 兜底`。
+This contract is not the owner of full relationship truth.
 
-EN: Recommended image asset priority is fixed as:  
-中文：推荐图片素材优先级固定为：
+Treat fields this way:
 
-1. `preferredImageAssetId` (thread-level explicit override)
-2. `referenceAssetIds[0]`
-3. `scenarioAssetIds[0]`
-4. `emojiAssetIds[0]`
-5. `wallpaperAssetIds[0]`
+- `profileId`
+  - internal role-profile key for binding and lookup
+- `relationship.level`
+  - Chat-side compatibility or lightweight annotation field
+- `relationship.note`
+  - Chat-side compatibility or lightweight annotation field
 
-## 5. New Module Checklist / 新模块接入清单
+Current relationship truth must stay owned by `relationshipRuntimeStore`, including:
 
-EN: For every new module that needs role context:  
-中文：每个需要角色上下文的新模块：
+- affinity/trust/intimacy/tension/dependency
+- relationship stage
+- milestones
+- growth traits
+- shared memory groups
 
-1. Do not read `contacts/roleProfiles` directly for assembly.
-2. Use `getRoleBindingContract` as the only role-context source.
-3. Pass a module-specific `moduleKey` for diagnostics.
-4. Treat `roleBound=false` as valid input; module must degrade gracefully.
-5. Never assume `preferredImageAssetId` exists; fallback to `recommendedImageAssetId`.
-6. Use `avatar.activeLayer` only for UI hints/debug, not for business branching that changes data truth.
+Do not use this contract alone to decide the authoritative current relationship-progress state in product-facing UI.
 
-## 6. Regression Baseline / 回归基线
+## 5. Hierarchy Rules
 
-EN: Current tests covering this contract:  
-中文：当前覆盖该契约的测试：
+Avatar priority is fixed as:
+
+1. `thread`
+2. `module`
+3. `global`
+4. `fallback`
+
+Recommended image asset priority is fixed as:
+
+1. `preferredImageAssetId`
+2. first reference asset
+3. first scenario asset
+4. first emoji asset
+5. first wallpaper asset
+
+## 6. New Module Checklist
+
+For every new module that needs role context:
+
+1. do not read `contacts/roleProfiles` directly for assembly
+2. use `getRoleBindingContract` as the only role-context source for Chat-side binding data
+3. pass a module-specific `moduleKey` for diagnostics
+4. treat `roleBound=false` as valid input and degrade gracefully
+5. never assume `preferredImageAssetId` exists
+6. use `avatar.activeLayer` only for UI hints or debug, not for business-truth branching
+
+If the module needs current relationship progress, also read from relationship runtime instead of trusting `relationship.level/note`.
+
+## 7. Regression Baseline
+
+Current tests covering this contract:
 
 1. `tests/role-binding-contract.test.js`
-2. `tests/chat-store-model.test.js` (`getRoleBindingContract`/`listRoleBindingContracts` path)
+2. `tests/chat-store-model.test.js`
 
-EN: Any contract field change must update tests and this document in the same commit batch.  
-中文：若契约字段发生变更，必须在同一提交批次同步更新测试与本文件。
+Any contract field or semantic change must update tests and this document in the same commit batch.
