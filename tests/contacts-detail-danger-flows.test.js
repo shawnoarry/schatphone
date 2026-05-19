@@ -164,6 +164,328 @@ describe('ContactsView relationship danger flows', () => {
     wrapper.unmount()
   })
 
+  test('groups manual and event-attached detail items and opens the linked memory from an event item', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951B',
+      name: 'Grouped Detail',
+      detailItems: [
+        {
+          section: 'preferences',
+          sourceKind: 'manual',
+          title: 'Manual cafe note',
+          detail: 'Keep as user-authored profile detail.',
+        },
+        {
+          section: 'preferences',
+          sourceKind: 'event_attached',
+          title: 'Shared route preference',
+          detail: 'Attached from a route event.',
+          memoryKey: 'grouped_memory',
+          sourceModule: 'relationship_map_shared_route',
+          sourceId: 'route_grouped_1',
+        },
+      ],
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'route_grouped_1:shared_route:role_951B',
+      memoryKey: 'grouped_memory',
+      factType: 'shared_route',
+      summary: 'Walked the same route together.',
+      metricDeltas: {
+        affinity: 3,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+
+    const preferences = wrapper.get('[data-testid="contacts-detail-section-preferences"]')
+    expect(preferences.get('[data-testid="contacts-detail-group-preferences-manual"]').text()).toContain(
+      'Manual details',
+    )
+    expect(preferences.get('[data-testid="contacts-detail-group-preferences-event_attached"]').text()).toContain(
+      'Event-attached',
+    )
+    expect(preferences.text()).toContain('Manual cafe note')
+    expect(preferences.text()).toContain('Shared route preference')
+
+    await preferences.get('[data-testid="contacts-detail-open-memory-grouped_memory"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-memory-detail"]').text()).toContain(
+      'Walked the same route together.',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('shows memory source audit cards and supporting events for the selected memory', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951C',
+      name: 'Memory Audit',
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_audit_1:calendar_event:role_951C',
+      memoryKey: 'audit_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Locked in dinner plans.',
+      metricDeltas: {
+        trust: 3,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'trip_audit_2:shared_route:role_951C',
+      memoryKey: 'audit_memory',
+      factType: 'shared_route',
+      summary: 'Took the same route home.',
+      metricDeltas: {
+        affinity: 2,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+    await wrapper.get('[data-testid="contacts-memory-open-audit_memory"]').trigger('click')
+    await flushUi()
+
+    const detail = wrapper.get('[data-testid="contacts-memory-detail"]')
+    expect(detail.text()).toContain('Locked in dinner plans.')
+    expect(detail.get('[data-testid="contacts-memory-source-audit"]').text()).toContain(
+      'Calendar event',
+    )
+    expect(detail.get('[data-testid="contacts-memory-source-audit"]').text()).toContain(
+      'Map route',
+    )
+    expect(detail.get('[data-testid="contacts-memory-source-relationship_calendar_confirmed_event"]').text()).toContain(
+      'calendar_audit_1',
+    )
+    expect(detail.get('[data-testid="contacts-memory-source-relationship_map_shared_route"]').text()).toContain(
+      'trip_audit_2',
+    )
+    expect(detail.get('[data-testid="contacts-memory-event-list"]').text()).toContain(
+      'Supporting events',
+    )
+    expect(detail.get('[data-testid="contacts-memory-event-list"]').text()).toContain(
+      'Took the same route home.',
+    )
+    expect(detail.get('[data-testid="contacts-memory-event-list"]').text()).toContain(
+      'Map route',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('edits manual detail items inline and expands linked activity entries', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951D',
+      name: 'Inline Editor',
+      detailItems: [
+        {
+          section: 'preferences',
+          sourceKind: 'manual',
+          title: 'Tea',
+          detail: 'Likes jasmine tea.',
+        },
+        {
+          section: 'lifePattern',
+          sourceKind: 'event_attached',
+          title: 'Shared dinner',
+          detail: 'Attached from calendar.',
+          memoryKey: 'inline_memory',
+          sourceModule: 'relationship_calendar_confirmed_event',
+          sourceId: 'calendar_inline_1',
+        },
+      ],
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_inline_1:calendar_event:role_951D',
+      memoryKey: 'inline_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Dinner plan locked in.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+
+    const manualItem = chatStore.listRoleDetailItems(profile.id, 'preferences')[0]
+    await wrapper.get(`[data-testid="contacts-detail-edit-open-${manualItem.id}"]`).trigger('click')
+    await flushUi()
+
+    const editBox = wrapper.get(`[data-testid="contacts-detail-edit-${manualItem.id}"]`)
+    await editBox.get('input').setValue('Coffee')
+    await editBox.get('textarea').setValue('Prefers pour-over coffee.')
+    await wrapper.get(`[data-testid="contacts-detail-edit-save-${manualItem.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-detail-section-preferences"]').text()).toContain('Coffee')
+    expect(wrapper.get('[data-testid="contacts-detail-section-preferences"]').text()).toContain(
+      'Prefers pour-over coffee.',
+    )
+
+    const linkedActivity = wrapper.get('[data-testid="contacts-linked-activity-list"]')
+    expect(linkedActivity.text()).toContain('Life Pattern')
+    expect(linkedActivity.text()).toContain('Calendar event')
+    expect(linkedActivity.text()).toContain('Dinner plan locked in.')
+
+    await wrapper.get('[data-testid="contacts-linked-activity-open-memory-inline_memory"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-memory-detail"]').text()).toContain('Dinner plan locked in.')
+
+    wrapper.unmount()
+  })
+
+  test('filters memories by source and shows headline review facts', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951E',
+      name: 'Memory Review',
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_filter_1:calendar_event:role_951E',
+      memoryKey: 'calendar_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Calendar memory summary.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'map_filter_1:shared_route:role_951E',
+      memoryKey: 'map_memory',
+      factType: 'shared_route',
+      summary: 'Map memory summary.',
+      metricDeltas: {
+        affinity: 2,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+
+    const toolbar = wrapper.get('[data-testid="contacts-memory-toolbar"]')
+    expect(toolbar.text()).toContain('All sources')
+    await toolbar.get('select').setValue('relationship_calendar_confirmed_event')
+    await flushUi()
+
+    expect(wrapper.find('[data-testid="contacts-memory-open-calendar_memory"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="contacts-memory-open-map_memory"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="contacts-memory-open-calendar_memory"]').trigger('click')
+    await flushUi()
+
+    const facts = wrapper.get('[data-testid="contacts-memory-headline-facts"]').text()
+    expect(facts).toContain('Source modules')
+    expect(facts).toContain('Supporting events')
+    expect(facts).toContain('Latest update')
+
+    wrapper.unmount()
+  })
+
+  test('updates memory lifecycle state and review note from Contacts detail', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951F',
+      name: 'Lifecycle Memory',
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_lifecycle_1:calendar_event:role_951F',
+      memoryKey: 'lifecycle_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Lifecycle memory summary.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'map_lifecycle_1:shared_route:role_951F',
+      memoryKey: 'other_memory',
+      factType: 'shared_route',
+      summary: 'Other memory summary.',
+      metricDeltas: {
+        affinity: 2,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+    await wrapper.get('[data-testid="contacts-memory-open-lifecycle_memory"]').trigger('click')
+    await flushUi()
+
+    const controls = wrapper.get('[data-testid="contacts-memory-review-controls"]')
+    await controls.findAll('button')[0].trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="contacts-memory-open-lifecycle_memory"]').text()).toContain('Pinned')
+
+    const reviewNote = wrapper.get('[data-testid="contacts-memory-review-note"]')
+    await reviewNote.get('textarea').setValue('Keep this visible until 4.2 dedupe is done.')
+    await wrapper.get('[data-testid="contacts-memory-review-save"]').trigger('click')
+    await flushUi()
+
+    const detail = relationshipRuntimeStore.getMemoryGroupDetail({ profileId: profile.id }, 'lifecycle_memory')
+    expect(detail).toMatchObject({
+      reviewStatus: 'pinned',
+      reviewNote: 'Keep this visible until 4.2 dedupe is done.',
+    })
+
+    await controls.findAll('button')[2].trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="contacts-memory-open-other_memory"]').text()).toContain('Active')
+
+    wrapper.unmount()
+  })
+
   test('requires irreversible, scope, and typed-id confirmations before deleting a role', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

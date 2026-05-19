@@ -177,11 +177,13 @@ describe('chat worldbook binding visibility', () => {
     expect(aiMockState.calls).toHaveLength(1)
     const systemPrompt = aiMockState.calls[0]?.systemPrompt || ''
 
-    expect(systemPrompt).toContain('Global worldview: Night city baseline. Formal etiquette in public.')
+    expect(systemPrompt).toContain('Primary worldview rules: Night city baseline. Formal etiquette in public.')
     expect(systemPrompt).toContain('User profile context:')
     expect(systemPrompt).toContain('Occupation: Courier')
     expect(systemPrompt).toContain('Relationship setting: Trusted partner')
     expect(systemPrompt).toContain('Profile bio: Keeps promises and prefers direct answers.')
+    expect(systemPrompt).toContain('Current role profile values:')
+    expect(systemPrompt).toContain('Visible user self-profile values:')
     expect(systemPrompt).toContain('City etiquette: Formal greeting only. [tags: style]')
     expect(systemPrompt).toContain('Relationship runtime snapshot: Nova.')
     expect(systemPrompt).toContain('First shared meal')
@@ -203,6 +205,38 @@ describe('chat worldbook binding visibility', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       point: injectedPoint.id,
+    })
+  })
+
+  test('chat role binding contract carries profile template fields and gates self profile out of chat targets', () => {
+    const selfProfile = chatStore.addRoleProfile({
+      roleId: '1400',
+      name: 'My profile',
+      entityType: 'self_profile',
+      profileValues: [
+        { fieldId: 'public_identity', value: 'Public identity', visibilityLevel: 'public' },
+        { fieldId: 'private_secret', value: 'Intimate secret', visibilityLevel: 'intimate' },
+      ],
+    })
+    expect(chatStore.bindRoleProfile(selfProfile.id)).toBeNull()
+
+    const role = chatStore.addRoleProfile({
+      roleId: '1401',
+      name: 'Template role',
+      entityType: 'main_role',
+      profileValues: [{ fieldId: 'pheromone', value: 'Snow pine', visibilityLevel: 'public' }],
+    })
+    const roleBinding = chatStore.bindRoleProfile(role.id)
+
+    const contract = chatStore.getRoleBindingContract(roleBinding.id, { moduleKey: 'chat' })
+    expect(contract.profile).toMatchObject({
+      entityType: 'main_role',
+      profileValues: expect.arrayContaining([
+        expect.objectContaining({ fieldId: 'pheromone', value: 'Snow pine' }),
+      ]),
+      capabilities: expect.objectContaining({
+        canUseFullRelationshipProgress: true,
+      }),
     })
   })
 })

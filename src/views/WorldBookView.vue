@@ -36,6 +36,8 @@ const globalWorldview = computed({
 
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
+const profileTemplatePresets = computed(() => systemStore.listProfileTemplatePresets())
+const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplates('default_world'))
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
@@ -94,6 +96,18 @@ const pulseSaved = (message = '') => {
 const saveWorldBook = () => {
   systemStore.saveNow()
   pulseSaved(t('世界观已保存。', 'Worldview saved.'))
+}
+
+const copyProfileTemplatePreset = (presetId) => {
+  const created = systemStore.createWorldProfileTemplateFromPreset(presetId, {
+    worldId: 'default_world',
+  })
+  if (!created) {
+    uiNotice.value = 'Template copy failed.'
+    return
+  }
+  systemStore.saveNow()
+  pulseSaved('Profile template copied into this worldview.')
 }
 
 const parseTagDraft = (raw) =>
@@ -609,6 +623,58 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
+      <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-profile-templates">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {{ t('Role profile templates', 'Role profile templates') }}
+          </p>
+          <h2 class="text-lg font-semibold">
+            {{ t('WorldBook defines profile structure', 'WorldBook defines profile structure') }}
+          </h2>
+          <p class="text-sm text-gray-500">
+            {{
+              t(
+                'Copy a preset into the current worldview, then fill concrete values in Contacts.',
+                'Copy a preset into the current worldview, then fill concrete values in Contacts.',
+              )
+            }}
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm font-semibold">{{ t('Global preset templates', 'Global preset templates') }}</p>
+          <div v-for="preset in profileTemplatePresets" :key="preset.id" class="worldbook-template-row">
+            <div class="min-w-0">
+              <p class="font-medium truncate">{{ preset.title }}</p>
+              <p class="text-xs text-gray-500">{{ preset.fields.length }} {{ t('fields', 'fields') }}</p>
+            </div>
+            <button
+              type="button"
+              class="worldbook-secondary-action"
+              :data-testid="`worldbook-template-copy-${preset.id}`"
+              @click="copyProfileTemplatePreset(preset.id)"
+            >
+              {{ t('Copy to worldview', 'Copy to worldview') }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm font-semibold">{{ t('World-specific templates', 'World-specific templates') }}</p>
+          <p v-if="worldProfileTemplates.length === 0" class="text-sm text-gray-500">
+            {{ t('No world-specific templates yet.', 'No world-specific templates yet.') }}
+          </p>
+          <div v-for="template in worldProfileTemplates" :key="template.id" class="worldbook-template-row">
+            <div class="min-w-0">
+              <p class="font-medium truncate">{{ template.title }}</p>
+              <p class="text-xs text-gray-500">
+                v{{ template.version }} · {{ template.fields.length }} {{ t('fields', 'fields') }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
         <div class="flex items-center justify-between">
           <p class="text-sm font-semibold">{{ t('知识点（可绑定角色）', 'Knowledge points (bindable)') }}</p>
@@ -898,6 +964,28 @@ onBeforeUnmount(() => {
   border-radius: var(--system-radius-lg);
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
+}
+
+.worldbook-template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.worldbook-secondary-action {
+  flex-shrink: 0;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4338ca;
+  background: rgba(238, 242, 255, 0.9);
 }
 
 .worldbook-scroll p {

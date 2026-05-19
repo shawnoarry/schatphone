@@ -21,13 +21,19 @@ import {
   toRoleBindingAssetContext,
 } from '../lib/role-binding-contract'
 import {
+  CONTACTS_ENTITY_TYPES,
   cloneRoleDetailItems,
   createRoleDetailItem,
+  createDefaultCapabilitiesForEntityType,
   createRoleIdFromProfileId,
   ensureUniqueRoleProfileRoleIds,
   filterRoleDetailItemsForMemoryDelete,
   filterRoleDetailItemsForReset,
   isValidRoleId,
+  normalizeContactsEntityType,
+  normalizeProfileCapabilities,
+  normalizeProfileTemplateLink,
+  normalizeProfileValues,
   normalizeRoleDetailItems,
   normalizeRoleDetailSection,
   normalizeRoleId,
@@ -682,16 +688,31 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
       : `角色 ${id}`
   const legacyAvatar = typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : ''
   const avatarImage = normalizeAvatarImageSource(rawProfile?.avatarImage, legacyAvatar, name)
+  const entityType = normalizeContactsEntityType(
+    rawProfile?.entityType,
+    rawProfile?.isSelfProfile
+      ? CONTACTS_ENTITY_TYPES.SELF_PROFILE
+      : rawProfile?.isMain === false
+        ? CONTACTS_ENTITY_TYPES.NPC
+        : CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+  )
   return {
     id,
     roleId: normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex)),
     name,
     role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
-    isMain: Boolean(rawProfile?.isMain),
+    entityType,
+    isMain:
+      typeof rawProfile?.isMain === 'boolean'
+        ? rawProfile.isMain
+        : entityType === CONTACTS_ENTITY_TYPES.MAIN_ROLE,
     avatar: avatarImageToLegacyAvatar(avatarImage) || legacyAvatar,
     avatarImage,
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
     knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
+    templateLink: normalizeProfileTemplateLink(rawProfile?.templateLink),
+    profileValues: normalizeProfileValues(rawProfile?.profileValues),
+    capabilities: normalizeProfileCapabilities(rawProfile?.capabilities, entityType),
     detailItems: normalizeRoleDetailItems(rawProfile?.detailItems, fallbackIndex),
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
     assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
@@ -960,6 +981,34 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  const updateRoleDetailItem = (profileId, itemId, updates = {}) => {
+    const profile = getRoleProfileById(profileId)
+    const id = typeof itemId === 'string' ? itemId.trim() : ''
+    if (!profile || !id || !updates || typeof updates !== 'object') return null
+    const current = normalizeRoleDetailItems(profile.detailItems)
+    const index = current.findIndex((item) => item.id === id)
+    if (index < 0) return null
+    const existing = current[index]
+    const nextItem = createRoleDetailItem(existing.section, {
+      ...existing,
+      ...updates,
+      id: existing.id,
+      sourceKind: existing.sourceKind,
+      sourceModule: existing.sourceModule,
+      sourceId: existing.sourceId,
+      memoryKey: existing.memoryKey,
+      relationshipEventId: existing.relationshipEventId,
+      createdAt: existing.createdAt,
+      updatedAt: nowTs(),
+    })
+    if (!nextItem) return null
+    const next = [...current]
+    next.splice(index, 1, nextItem)
+    profile.detailItems = normalizeRoleDetailItems(next)
+    profile.updatedAt = nowTs()
+    return { ...nextItem }
+  }
+
   const clearRoleEventAttachedDetailItems = (profileId, options = {}) => {
     const profile = getRoleProfileById(profileId)
     if (!profile) return 0
@@ -1023,6 +1072,13 @@ export const useChatStore = defineStore('chat', () => {
           name: resolved.name,
           role: resolved.role,
           isMain: resolved.isMain,
+          entityType: resolved.isMain ? CONTACTS_ENTITY_TYPES.MAIN_ROLE : CONTACTS_ENTITY_TYPES.NPC,
+          templateLink: normalizeProfileTemplateLink(),
+          profileValues: [],
+          capabilities: normalizeProfileCapabilities(
+            {},
+            resolved.isMain ? CONTACTS_ENTITY_TYPES.MAIN_ROLE : CONTACTS_ENTITY_TYPES.NPC,
+          ),
           tags: [],
         },
       relationshipLevel: resolved.relationshipLevel,
@@ -1900,6 +1956,21 @@ export const useChatStore = defineStore('chat', () => {
     if (typeof updates.isMain === 'boolean') {
       target.isMain = updates.isMain
     }
+    if (typeof updates.entityType === 'string') {
+      const entityType = normalizeContactsEntityType(updates.entityType, target.entityType)
+      target.entityType = entityType
+      target.isMain = entityType === CONTACTS_ENTITY_TYPES.MAIN_ROLE
+      target.capabilities = normalizeProfileCapabilities(target.capabilities, entityType)
+    }
+    if (updates.templateLink && typeof updates.templateLink === 'object') {
+      target.templateLink = normalizeProfileTemplateLink(updates.templateLink)
+    }
+    if (Array.isArray(updates.profileValues)) {
+      target.profileValues = normalizeProfileValues(updates.profileValues)
+    }
+    if (updates.capabilities && typeof updates.capabilities === 'object') {
+      target.capabilities = normalizeProfileCapabilities(updates.capabilities, target.entityType)
+    }
     if (Array.isArray(updates.tags)) {
       target.tags = updates.tags
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
@@ -1925,6 +1996,28 @@ export const useChatStore = defineStore('chat', () => {
     }
     target.updatedAt = nowTs()
     return true
+  }
+
+  const upgradeNpcToMainRole = (profileId, options = {}) => {
+    const target = getRoleProfileById(profileId)
+    if (!target || target.entityType !== CONTACTS_ENTITY_TYPES.NPC) return null
+
+    const relationshipMode = options.relationshipMode === 'full' ? 'full' : 'lightweight'
+    target.entityType = CONTACTS_ENTITY_TYPES.MAIN_ROLE
+    target.isMain = true
+    if (typeof options.role === 'string') target.role = options.role
+    if (typeof options.bio === 'string') target.bio = options.bio
+    target.capabilities = normalizeProfileCapabilities(
+      {
+        ...createDefaultCapabilitiesForEntityType(CONTACTS_ENTITY_TYPES.MAIN_ROLE),
+        canUseFullRelationshipProgress: relationshipMode === 'full',
+        canUseMemoryGroups: relationshipMode === 'full',
+        canUseRouteProgression: relationshipMode === 'full',
+      },
+      CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    )
+    target.updatedAt = nowTs()
+    return target
   }
 
   const removeRoleProfile = (profileId, options = {}) => {
@@ -1953,6 +2046,7 @@ export const useChatStore = defineStore('chat', () => {
   const bindRoleProfile = (profileId, options = {}) => {
     const profile = getRoleProfileById(profileId)
     if (!profile) return null
+    if (profile.capabilities?.canAppearInChatDirectory === false) return null
 
     const existing = contacts.find(
       (contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profile.id),
@@ -2321,6 +2415,11 @@ export const useChatStore = defineStore('chat', () => {
         moduleIdentity: normalizeModuleIdentity(moduleIdentity),
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
+          templateLink: { ...profile.templateLink },
+          profileValues: Array.isArray(profile.profileValues)
+            ? profile.profileValues.map((item) => ({ ...item }))
+            : [],
+          capabilities: { ...profile.capabilities },
           detailItems: cloneRoleDetailItems(profile.detailItems),
           assetPack: cloneRoleProfileAssetPack(profile.assetPack),
           assetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
@@ -2443,9 +2542,11 @@ export const useChatStore = defineStore('chat', () => {
     listRoleDetailItems,
     addRoleDetailItem,
     removeRoleDetailItem,
+    updateRoleDetailItem,
     clearRoleEventAttachedDetailItems,
     addRoleProfile,
     updateRoleProfile,
+    upgradeNpcToMainRole,
     removeRoleProfile,
     isRoleProfileBound,
     bindRoleProfile,

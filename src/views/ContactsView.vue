@@ -11,10 +11,14 @@ import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { usePhoneStore } from '../stores/phone'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
-import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
+import {
+  RELATIONSHIP_MEMORY_REVIEW_STATES,
+  useRelationshipRuntimeStore,
+} from '../stores/relationshipRuntime'
 import { callAI } from '../lib/ai'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import {
+  CONTACTS_ENTITY_TYPES,
   ROLE_DETAIL_SECTIONS,
   ROLE_DETAIL_SOURCE_KINDS,
   isValidRoleId,
@@ -30,6 +34,7 @@ import {
   cleanupCoverageText as formatCleanupCoverageText,
   cleanupResultSummaryText as formatCleanupResultSummaryText,
   createRelationshipSourceCleanupHandlers,
+  sourceRecordIdFromRelationshipSourceId,
   sourceModuleSummaryText as formatSourceModuleSummaryText,
 } from '../lib/relationship-source-cleanup-handlers'
 import { useDialog } from '../composables/useDialog'
@@ -171,6 +176,14 @@ const detailDrafts = reactive({
     detail: '',
   },
 })
+const editingDetailItemId = ref('')
+const detailEditDraft = reactive({
+  title: '',
+  detail: '',
+})
+const memorySourceFilter = ref('all')
+const memorySortMode = ref('recent')
+const memoryReviewDraft = ref('')
 
 const showUiNoticeType = ref('')
 const showUiNoticeMessage = ref('')
@@ -372,11 +385,60 @@ const availableKnowledgePoints = computed(() => {
   return source.slice(0, 160)
 })
 
-const mainProfiles = computed(() => roleProfiles.value.filter((item) => Boolean(item.isMain)))
-const npcProfiles = computed(() => roleProfiles.value.filter((item) => !item.isMain))
+const selfProfiles = computed(() =>
+  roleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE),
+)
+const mainRoleProfiles = computed(() =>
+  roleProfiles.value.filter(
+    (item) => (item.entityType || CONTACTS_ENTITY_TYPES.MAIN_ROLE) === CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+  ),
+)
+const npcRoleProfiles = computed(() =>
+  roleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.NPC),
+)
+const mainProfiles = mainRoleProfiles
+const npcProfiles = npcRoleProfiles
 const selectedProfile = computed(
   () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
 )
+
+const selectedProfileValues = computed(() =>
+  Array.isArray(selectedProfile.value?.profileValues) ? selectedProfile.value.profileValues : [],
+)
+const selectedProfileEntityType = computed(
+  () => selectedProfile.value?.entityType || CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+)
+const selectedProfileIsNpc = computed(() => selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.NPC)
+const selectedProfileChatBound = computed(() =>
+  selectedProfile.value?.id ? chatStore.isRoleProfileBound(selectedProfile.value.id) : false,
+)
+
+const selectedRoleChatContact = computed(() => {
+  const profileId = selectedProfile.value?.id
+  if (!profileId) return null
+  return chatStore.contacts.find((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId)) || null
+})
+
+const selectedRoleHubStats = computed(() => {
+  const profile = selectedProfile.value
+  const totals = {
+    manual: 0,
+    eventAttached: 0,
+  }
+  if (profile?.id) {
+    for (const section of Object.values(ROLE_DETAIL_SECTIONS)) {
+      const stats = detailItemStatsForSection(profile, section)
+      totals.manual += stats.manual
+      totals.eventAttached += stats.eventAttached
+    }
+  }
+  return {
+    ...totals,
+    worldFieldCount: selectedProfileValues.value.length,
+    memoryCount: selectedMemoryGroups.value.length,
+    chatBound: selectedProfileChatBound.value,
+  }
+})
 
 const selectedRelationshipSnapshot = computed(() =>
   selectedProfile.value
@@ -411,6 +473,338 @@ const selectedMemoryDetail = computed(() =>
       )
     : null,
 )
+
+const relationshipSourceModuleLabel = (sourceModule) => {
+  if (sourceModule === 'relationship_phone_call') return t('Phone 通话', 'Phone call')
+  if (sourceModule === 'relationship_calendar_confirmed_event') return t('Calendar 日程', 'Calendar event')
+  if (sourceModule === 'relationship_map_shared_route') return t('Map 路线', 'Map route')
+  if (sourceModule === 'relationship_wallet_shared_transfer') return t('Wallet 转账', 'Wallet transfer')
+  if (sourceModule === 'relationship_wallet_order_support') return t('Wallet 订单入账', 'Wallet order support')
+  if (sourceModule === 'relationship_shopping_gift') return t('Shopping 礼物订单', 'Shopping gift order')
+  if (sourceModule === 'relationship_food_delivery_shared_meal') {
+    return t('Food Delivery 共同用餐', 'Food Delivery shared meal')
+  }
+  return sourceModule || t('未标记来源', 'Unlabeled source')
+}
+
+const relationshipFactTypeLabel = (factType) => {
+  if (factType === 'phone_call' || factType === 'completed_call') return t('通话', 'Call')
+  if (factType === 'scheduled_calendar_event') return t('日程', 'Calendar event')
+  if (factType === 'shared_route') return t('共同路线', 'Shared route')
+  if (factType === 'shared_transfer') return t('共同转账', 'Shared transfer')
+  if (factType === 'shared_meal') return t('共同用餐', 'Shared meal')
+  if (factType === 'gift_purchased') return t('礼物购买', 'Gift purchase')
+  return factType || t('关系事件', 'Relationship fact')
+}
+
+const memoryReviewStatusLabel = (status) => {
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED) return t('置顶', 'Pinned')
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED) return t('归档', 'Archived')
+  return t('活跃', 'Active')
+}
+
+const formatRelationshipAuditTimestamp = (value) => {
+  const timestamp = Number(value)
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return t('时间未标记', 'Time not recorded')
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(timestamp)
+}
+
+const selectedMemorySourceAudit = computed(() => {
+  const detail = selectedMemoryDetail.value
+  const sourceCounts = detail?.sourceModuleCounts || {}
+  const sourceRefs = Array.isArray(detail?.sourceRefs) ? detail.sourceRefs : []
+  if (!detail || Object.keys(sourceCounts).length === 0) return []
+
+  const refsByModule = sourceRefs.reduce((acc, ref) => {
+    const moduleKey = ref?.sourceModule || ''
+    if (!moduleKey) return acc
+    if (!acc[moduleKey]) acc[moduleKey] = []
+    if (ref?.sourceId) acc[moduleKey].push(ref.sourceId)
+    return acc
+  }, {})
+
+  return Object.entries(sourceCounts)
+    .sort(([leftModule], [rightModule]) => leftModule.localeCompare(rightModule))
+    .map(([sourceModule, count]) => {
+      const rawSourceIds = [...new Set((refsByModule[sourceModule] || []).filter(Boolean))]
+      return {
+        sourceModule,
+        label: relationshipSourceModuleLabel(sourceModule),
+        count: Number(count) || 0,
+        cleanupConnected: typeof relationshipSourceCleanupHandlers.value[sourceModule] === 'function',
+        rawSourceIds,
+        recordIds: rawSourceIds.map((sourceId) => sourceRecordIdFromRelationshipSourceId(sourceId)),
+      }
+    })
+})
+
+const selectedMemoryEventTimeline = computed(() => {
+  const detail = selectedMemoryDetail.value
+  const events = Array.isArray(detail?.events) ? detail.events : []
+  return events.slice(0, 4).map((event, index) => ({
+    id: event.id || `${detail?.memoryKey || 'memory'}_${index}`,
+    sourceModule: event.sourceModule || '',
+    sourceModuleLabel: relationshipSourceModuleLabel(event.sourceModule),
+    factTypeLabel: relationshipFactTypeLabel(event.factType),
+    summary:
+      event.summary ||
+      detail?.displaySummary ||
+      detail?.primarySummary ||
+      detail?.latestSummary ||
+      detail?.memoryKey ||
+      '',
+    createdAtText: formatRelationshipAuditTimestamp(event.createdAt),
+    sourceId: event.sourceId || '',
+    recordId: sourceRecordIdFromRelationshipSourceId(event.sourceId || ''),
+  }))
+})
+
+const availableMemorySourceFilters = computed(() => {
+  const modules = new Set()
+  selectedMemoryGroups.value.forEach((memory) => {
+    ;(memory.sourceModules || []).forEach((moduleKey) => {
+      if (moduleKey) modules.add(moduleKey)
+    })
+  })
+  return [
+    { value: 'all', label: t('全部来源', 'All sources') },
+    ...[...modules]
+      .sort((left, right) => left.localeCompare(right))
+      .map((moduleKey) => ({
+        value: moduleKey,
+        label: relationshipSourceModuleLabel(moduleKey),
+      })),
+  ]
+})
+
+const filteredMemoryGroups = computed(() => {
+  const filterValue = memorySourceFilter.value
+  const sourceFiltered =
+    filterValue === 'all'
+      ? selectedMemoryGroups.value
+      : selectedMemoryGroups.value.filter((memory) => (memory.sourceModules || []).includes(filterValue))
+
+  const sorted = [...sourceFiltered]
+  sorted.sort((left, right) => {
+    const leftPinned = left.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED ? 1 : 0
+    const rightPinned = right.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED ? 1 : 0
+    if (leftPinned !== rightPinned) return rightPinned - leftPinned
+    const leftArchived = left.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 1 : 0
+    const rightArchived = right.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 1 : 0
+    if (leftArchived !== rightArchived) return leftArchived - rightArchived
+    if (memorySortMode.value === 'supporting') {
+      return (Number(right.supportingCount) || 0) - (Number(left.supportingCount) || 0)
+    }
+    return (Number(right.latestCreatedAt) || 0) - (Number(left.latestCreatedAt) || 0)
+  })
+  return sorted
+})
+
+const selectedMemoryHeadlineFacts = computed(() => {
+  const detail = selectedMemoryDetail.value
+  if (!detail) return []
+  return [
+    {
+      key: 'sources',
+      label: t('来源模块', 'Source modules'),
+      value: String((detail.sourceModules || []).length || 0),
+      detail: sourceModuleSummaryText(detail.sourceModuleCounts),
+    },
+    {
+      key: 'supporting',
+      label: t('支撑事件', 'Supporting events'),
+      value: String((detail.events || []).length || 0),
+      detail: t('该记忆组当前承接的关系事件数', 'Relationship events attached to this memory group'),
+    },
+    {
+      key: 'latest',
+      label: t('最近沉淀', 'Latest update'),
+      value: formatRelationshipAuditTimestamp(detail.latestCreatedAt),
+      detail: detail.latestSummary || detail.primarySummary || detail.memoryKey,
+    },
+    {
+      key: 'review',
+      label: t('管理状态', 'Review state'),
+      value: memoryReviewStatusLabel(detail.reviewStatus),
+      detail: detail.reviewNote || t('暂无管理备注', 'No review note yet'),
+    },
+  ]
+})
+
+const selectedLinkedActivityEntries = computed(() => {
+  const detailItems = selectedProfile.value?.id
+    ? Object.values(ROLE_DETAIL_SECTIONS).flatMap((section) =>
+        detailItemsForSection(selectedProfile.value, section).filter(
+          (item) =>
+            item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED &&
+            (item.sourceModule || item.memoryKey || item.sourceId),
+        ),
+      )
+    : []
+  const memorySummaries = Array.isArray(selectedRelationshipSnapshot.value?.memorySummaries)
+    ? selectedRelationshipSnapshot.value.memorySummaries
+    : []
+  const memorySummaryByKey = new Map(
+    memorySummaries.map((memory) => [
+      memory.memoryKey,
+      memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey || '',
+    ]),
+  )
+  const eventByMemoryKey = new Map(
+    (selectedRelationshipSnapshot.value?.recentEvents || []).map((event) => [event.memoryKey, event]),
+  )
+
+  return detailItems
+    .map((item) => {
+      const sourceModuleLabel = relationshipSourceModuleLabel(item.sourceModule)
+      const latestEvent = item.memoryKey ? eventByMemoryKey.get(item.memoryKey) : null
+      return {
+        id: item.id,
+        title: item.title || item.detail || sourceModuleLabel,
+        sectionLabel:
+          item.section === ROLE_DETAIL_SECTIONS.LIFE_PATTERN
+            ? t('生活模式', 'Life Pattern')
+            : item.section === ROLE_DETAIL_SECTIONS.SOCIAL_GRAPH
+              ? t('社会关系', 'Social Graph')
+              : t('偏好', 'Preferences'),
+        sourceModule: item.sourceModule || '',
+        sourceModuleLabel,
+        memoryKey: item.memoryKey || '',
+        sourceId: item.sourceId || '',
+        recordId: sourceRecordIdFromRelationshipSourceId(item.sourceId || ''),
+        summary:
+          memorySummaryByKey.get(item.memoryKey) ||
+          latestEvent?.summary ||
+          item.detail ||
+          t('等待更多关系事件沉淀。', 'Waiting for more relationship events.'),
+      }
+    })
+    .sort((left, right) => left.sourceModuleLabel.localeCompare(right.sourceModuleLabel))
+})
+
+const selectedLinkedActivitySummary = computed(() => {
+  const profile = selectedProfile.value
+  if (!profile?.id) {
+    return {
+      sourceText: t('No linked activity yet', 'No linked activity yet'),
+      supportingCount: 0,
+      eventAttachedCount: 0,
+      latestSummary: '',
+    }
+  }
+  const sourceCounts = { ...(selectedRelationshipSnapshot.value?.sourceModuleCounts || {}) }
+  const eventAttachedCount = Object.values(ROLE_DETAIL_SECTIONS).reduce((sum, section) => {
+    const items = detailItemsForSection(profile, section).filter(
+      (item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
+    )
+    for (const item of items) {
+      if (!item.sourceModule) continue
+      sourceCounts[item.sourceModule] = (Number(sourceCounts[item.sourceModule]) || 0) + 1
+    }
+    return sum + items.length
+  }, 0)
+  const latestMemory = selectedRelationshipSnapshot.value?.memorySummaries?.[0]
+  return {
+    sourceText: sourceModuleSummaryText(sourceCounts),
+    supportingCount: Object.values(sourceCounts).reduce((sum, count) => sum + (Number(count) || 0), 0),
+    eventAttachedCount,
+    latestSummary:
+      latestMemory?.displaySummary ||
+      latestMemory?.primarySummary ||
+      latestMemory?.latestSummary ||
+      selectedRelationshipSnapshot.value?.latestEventSummary ||
+      '',
+  }
+})
+
+const contactsEntityTypeLabel = (entityType) => {
+  if (entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return t('自我档案', 'Self Profile')
+  if (entityType === CONTACTS_ENTITY_TYPES.NPC) return t('NPC / 世界角色', 'NPC / World Role')
+  return t('主要角色', 'Main Role')
+}
+
+const selectedChatStateLabel = computed(() => {
+  if (selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+    return t('不作为 Chat 目标', 'Not a Chat target')
+  }
+  return selectedProfileChatBound.value ? t('Chat 目标', 'Chat target') : t('仅在 Contacts', 'Contacts only')
+})
+
+const selectedChatStateDetail = computed(() => {
+  if (selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+    return t(
+      '自我档案只通过可见性门控进入上下文，不会绑定成聊天对象。',
+      'Self Profile only enters context through visibility gates and is not bound as a chat target.',
+    )
+  }
+  if (selectedProfileChatBound.value) {
+    return t(
+      '已进入 Chat Directory；这里仍保留档案、关系和记忆管理。',
+      'Already in Chat Directory; Contacts still owns profile, relationship, and memory management.',
+    )
+  }
+  return t(
+    '需要聊天时到 Chat Directory 绑定；Contacts 仍可先维护完整档案。',
+    'Bind in Chat Directory when this role should enter Chat; Contacts can maintain the profile first.',
+  )
+})
+
+const selectedRoleHubCards = computed(() => [
+  {
+    key: 'entity',
+    label: t('实体', 'Entity'),
+    value: contactsEntityTypeLabel(selectedProfileEntityType.value),
+    detail: selectedChatStateDetail.value,
+  },
+  {
+    key: 'chat',
+    label: t('Chat 状态', 'Chat state'),
+    value: selectedChatStateLabel.value,
+    detail: selectedRoleChatContact.value
+      ? t(`会话 ID ${selectedRoleChatContact.value.id}`, `Chat ID ${selectedRoleChatContact.value.id}`)
+      : t('还没有会话入口', 'No chat entry yet'),
+  },
+  {
+    key: 'manual',
+    label: t('手动条目', 'Manual details'),
+    value: String(selectedRoleHubStats.value.manual),
+    detail: t('用户维护的稳定设定', 'User-maintained stable facts'),
+  },
+  {
+    key: 'event',
+    label: t('事件挂载', 'Event-attached'),
+    value: String(selectedRoleHubStats.value.eventAttached),
+    detail: t('随记忆或关系重置清理', 'Cleared with memory or relationship reset'),
+  },
+  {
+    key: 'world',
+    label: t('世界字段', 'World fields'),
+    value: String(selectedRoleHubStats.value.worldFieldCount),
+    detail: t('来自 WorldBook 模板', 'From WorldBook templates'),
+  },
+  {
+    key: 'memory',
+    label: t('记忆组', 'Memories'),
+    value: String(selectedRoleHubStats.value.memoryCount),
+    detail: selectedLinkedActivitySummary.value.sourceText,
+  },
+])
+
+const openSelectedChatTarget = () => {
+  const contact = selectedRoleChatContact.value
+  if (contact?.id) router.push(`/chat/${contact.id}`)
+}
+
+const openChatDirectory = () => {
+  router.push('/chat-contacts')
+}
 
 const roleDetailSections = computed(() => [
   {
@@ -476,6 +870,27 @@ const detailItemStatsForSection = (profile, section) => {
   }
 }
 
+const detailItemGroupsForSection = (profile, section) => {
+  const items = detailItemsForSection(profile, section)
+  return [
+    {
+      key: ROLE_DETAIL_SOURCE_KINDS.MANUAL,
+      title: t('手动条目', 'Manual details'),
+      description: t('用户维护的稳定设定，可在这里单独删除。', 'User-maintained stable facts that can be deleted here.'),
+      items: items.filter((item) => item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED),
+    },
+    {
+      key: ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
+      title: t('事件挂载', 'Event-attached'),
+      description: t(
+        '由聊天、地图、日程等发展挂载；通过对应记忆或关系重置清理。',
+        'Attached by Chat, Map, Calendar, or other development; clear through the linked memory or relationship reset.',
+      ),
+      items: items.filter((item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED),
+    },
+  ].filter((group) => group.items.length > 0)
+}
+
 const roleDetailSourceLabel = (item) =>
   item?.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED
     ? t('事件挂载', 'Event-attached')
@@ -494,6 +909,103 @@ const roleDetailSourceHint = (item) => {
     '事件发展挂载，需删除对应记忆或重置关系后自动清理。',
     'Attached by relationship events; delete the linked memory or reset the relationship to clear it.',
   )}${suffix}`
+}
+
+const openLinkedMemoryFromDetailItem = (item) => {
+  if (!item?.memoryKey) return
+  selectedMemoryKey.value = item.memoryKey
+}
+
+const updateSelectedMemoryReview = (updates = {}) => {
+  const profile = selectedProfile.value
+  const memory = selectedMemoryDetail.value
+  if (!profile?.id || !memory?.memoryKey) return
+  const updated = relationshipRuntimeStore.updateMemoryReviewForTarget(
+    profileRelationshipTarget(profile),
+    memory.memoryKey,
+    updates,
+  )
+  if (!updated) {
+    setUiNotice('error', t('记忆管理状态保存失败。', 'Failed to save memory review state.'))
+    return
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'note')) {
+    memoryReviewDraft.value = updated.note || ''
+  }
+  setUiNotice('success', t('记忆管理状态已更新。', 'Memory review state updated.'))
+}
+
+const saveSelectedMemoryReviewNote = () => {
+  updateSelectedMemoryReview({ note: memoryReviewDraft.value.trim() })
+}
+
+const startEditingManualDetailItem = (item) => {
+  if (!item?.id || item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.MANUAL) return
+  editingDetailItemId.value = item.id
+  detailEditDraft.title = item.title || ''
+  detailEditDraft.detail = item.detail || ''
+}
+
+const cancelEditingManualDetailItem = () => {
+  editingDetailItemId.value = ''
+  detailEditDraft.title = ''
+  detailEditDraft.detail = ''
+}
+
+const saveManualDetailItemEdit = (item) => {
+  const profile = selectedProfile.value
+  if (!profile?.id || !item?.id) return
+  const title = detailEditDraft.title.trim()
+  const detail = detailEditDraft.detail.trim()
+  if (!title && !detail) {
+    setUiNotice('warning', t('请至少保留标题或内容。', 'Keep a title or detail.'))
+    return
+  }
+  const updated = chatStore.updateRoleDetailItem(profile.id, item.id, {
+    title,
+    detail,
+  })
+  if (!updated) {
+    setUiNotice('error', t('条目保存失败。', 'Failed to save entry.'))
+    return
+  }
+  cancelEditingManualDetailItem()
+  setUiNotice('success', t('条目已更新。', 'Entry updated.'))
+}
+
+const profileValueLabel = (value) => {
+  if (!value?.fieldId) return t('Custom field', 'Custom field')
+  if (value.fieldId === 'pheromone') return t('Pheromone', 'Pheromone')
+  if (value.fieldId === 'relationship_setting') return t('Relationship setting', 'Relationship setting')
+  return value.fieldId
+}
+
+const formatProfileValue = (value) => {
+  if (Array.isArray(value?.value)) return value.value.join(', ')
+  return typeof value?.value === 'string' ? value.value : ''
+}
+
+const upgradeSelectedNpcToMainRole = async () => {
+  const profile = selectedProfile.value
+  if (!profile || profile.entityType !== CONTACTS_ENTITY_TYPES.NPC) return
+  const confirmed = await confirmDialog({
+    title: t('Upgrade to main role', 'Upgrade to main role'),
+    message: t(
+      'This preserves the NPC profile, linked activity, and existing chat binding while unlocking main-role capabilities. Lightweight relationship is used by default.',
+      'This preserves the NPC profile, linked activity, and existing chat binding while unlocking main-role capabilities. Lightweight relationship is used by default.',
+    ),
+    confirmText: t('Upgrade', 'Upgrade'),
+    cancelText: t('Cancel', 'Cancel'),
+    tone: 'primary',
+  })
+  if (!confirmed) return
+  const upgraded = chatStore.upgradeNpcToMainRole(profile.id, {
+    relationshipMode: 'lightweight',
+  })
+  if (upgraded) {
+    setUiNotice('success', t('NPC upgraded to main role.', 'NPC upgraded to main role.'))
+    chatStore.saveNow?.()
+  }
 }
 
 const addManualDetailItem = (section) => {
@@ -1149,10 +1661,18 @@ watch(
 )
 
 watch(
-  selectedMemoryGroups,
+  filteredMemoryGroups,
   (groups) => {
     if (groups.some((memory) => memory.memoryKey === selectedMemoryKey.value)) return
     selectedMemoryKey.value = groups[0]?.memoryKey || ''
+  },
+  { immediate: true },
+)
+
+watch(
+  selectedMemoryDetail,
+  (detail) => {
+    memoryReviewDraft.value = detail?.reviewNote || ''
   },
   { immediate: true },
 )
@@ -1690,7 +2210,33 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="contacts-list px-4 py-2">
-        <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('我的 AI（主角色）', 'My AI (Main)') }}</div>
+        <section v-if="selfProfiles.length > 0" class="contacts-list-section">
+          <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('My Profile', 'My Profile') }}</div>
+          <div
+            v-for="contact in selfProfiles"
+            :key="contact.id"
+            class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
+            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
+            :data-testid="`contacts-row-${contact.id}`"
+            @click="selectProfile(contact)"
+          >
+            <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+              <img
+                :src="contactAvatarUrl(contact)"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
+              <p class="text-[11px] text-gray-400 truncate">{{ t('Self Profile', 'Self Profile') }}</p>
+              <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
+            </div>
+            <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
+            <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
+          </div>
+        </section>
+
+        <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('Main Roles', 'Main Roles') }}</div>
         <div
           v-for="contact in mainProfiles"
           :key="contact.id"
@@ -1729,7 +2275,7 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
         </div>
 
-        <div class="contacts-section-title text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('其他联系人（NPC）', 'Other Contacts (NPC)') }}</div>
+        <div class="contacts-section-title text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('NPC / World roles', 'NPC / World roles') }}</div>
         <div
           v-for="contact in npcProfiles"
           :key="contact.id"
@@ -1792,17 +2338,79 @@ onBeforeUnmount(() => {
                 {{ t('编辑', 'Edit') }}
               </button>
             </div>
+            <div v-if="selectedProfileIsNpc" class="mt-3 space-y-2">
+              <button
+                type="button"
+                class="contacts-primary-action"
+                data-testid="contacts-upgrade-npc"
+                @click="upgradeSelectedNpcToMainRole"
+              >
+                {{ t('Upgrade to main role', 'Upgrade to main role') }}
+              </button>
+              <p class="text-xs text-gray-500">
+                {{
+                  selectedProfileChatBound
+                    ? t('Existing Chat binding will be preserved.', 'Existing Chat binding will be preserved.')
+                    : t('Upgrade will not force Chat Directory binding.', 'Upgrade will not force Chat Directory binding.')
+                }}
+              </p>
+            </div>
           </section>
 
-          <section class="contacts-detail-section">
-            <div class="flex items-center justify-between gap-3">
+          <section
+            class="contacts-detail-section contacts-role-hub-overview space-y-3"
+            data-testid="contacts-role-hub-summary"
+          >
+            <div class="flex items-start justify-between gap-3">
               <div>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('角色中枢', 'Role Hub') }}</p>
+                <h3 class="text-sm font-bold">{{ contactsEntityTypeLabel(selectedProfileEntityType) }}</h3>
+                <p class="text-[11px] text-gray-500 mt-1">{{ selectedChatStateDetail }}</p>
+              </div>
+              <div class="contacts-chat-actions">
+                <button
+                  v-if="selectedRoleChatContact"
+                  type="button"
+                  class="contacts-small-action"
+                  @click="openSelectedChatTarget"
+                >
+                  {{ t('打开 Chat', 'Open Chat') }}
+                </button>
+                <button
+                  v-else-if="selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
+                  type="button"
+                  class="contacts-small-action"
+                  @click="openChatDirectory"
+                >
+                  {{ t('管理绑定', 'Manage Binding') }}
+                </button>
+              </div>
+            </div>
+            <div class="contacts-role-hub-grid">
+              <div
+                v-for="card in selectedRoleHubCards"
+                :key="card.key"
+                class="contacts-role-hub-card"
+              >
+                <p class="contacts-role-hub-label">{{ card.label }}</p>
+                <p class="contacts-role-hub-value">{{ card.value }}</p>
+                <p class="contacts-role-hub-detail">{{ card.detail }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="contacts-detail-section contacts-relationship-panel">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
                 <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('关系快照', 'Relationship Snapshot') }}</p>
                 <p class="text-sm font-semibold">
                   {{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}
                 </p>
+                <p class="mt-1 text-[11px] text-gray-500 line-clamp-2">
+                  {{ profileRelationshipLatestSummary(selectedProfile) }}
+                </p>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-600">
+              <div class="contacts-metric-grid">
                 <span>{{ t('好感', 'Affinity') }} {{ selectedRelationshipSnapshot?.metrics?.affinity ?? 50 }}</span>
                 <span>{{ t('信任', 'Trust') }} {{ selectedRelationshipSnapshot?.metrics?.trust ?? 50 }}</span>
                 <span>{{ t('亲密', 'Intimacy') }} {{ selectedRelationshipSnapshot?.metrics?.intimacy ?? 20 }}</span>
@@ -1812,9 +2420,101 @@ onBeforeUnmount(() => {
           </section>
 
           <section
+            class="contacts-detail-section contacts-linked-activity space-y-2"
+            data-testid="contacts-linked-activity-summary"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">
+                  {{ t('关联活动摘要', 'Linked activity summary') }}
+                </p>
+                <p class="text-sm font-semibold">{{ selectedLinkedActivitySummary.sourceText }}</p>
+              </div>
+              <span class="contacts-source-chip">
+                {{ t('Memories', 'Memories') }} {{ selectedRoleHubStats.memoryCount }}
+              </span>
+            </div>
+            <div class="contacts-linked-activity-grid">
+              <div>
+                <p class="contacts-role-hub-label">{{ t('事件挂载', 'Event-attached') }}</p>
+                <p class="contacts-role-hub-value">{{ selectedLinkedActivitySummary.eventAttachedCount }}</p>
+              </div>
+              <div>
+                <p class="contacts-role-hub-label">{{ t('来源记录', 'Source records') }}</p>
+                <p class="contacts-role-hub-value">{{ selectedLinkedActivitySummary.supportingCount }}</p>
+              </div>
+            </div>
+            <p class="text-[11px] leading-4 text-gray-500">
+              {{
+                selectedLinkedActivitySummary.latestSummary ||
+                t(
+                  '这里汇总关系运行时与事件挂载线索；原始记录仍由对应模块拥有。',
+                  'This summarizes relationship runtime and event-attached clues; original records remain owned by their modules.',
+                )
+              }}
+            </p>
+            <div
+              v-if="selectedLinkedActivityEntries.length"
+              class="space-y-2"
+              data-testid="contacts-linked-activity-list"
+            >
+              <div
+                v-for="entry in selectedLinkedActivityEntries"
+                :key="entry.id"
+                class="contacts-detail-item"
+                :data-testid="`contacts-linked-activity-${entry.id}`"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[12px] font-semibold truncate">{{ entry.title }}</p>
+                    <p class="mt-0.5 text-[11px] text-gray-500">
+                      {{ entry.sectionLabel }} · {{ entry.sourceModuleLabel }}
+                    </p>
+                  </div>
+                  <span class="contacts-source-chip contacts-source-chip-event">
+                    {{ t('事件挂载', 'Event-attached') }}
+                  </span>
+                </div>
+                <p class="mt-1 text-[11px] leading-4 text-gray-500">
+                  {{ entry.summary }}
+                </p>
+                <p class="mt-1 text-[10px] leading-4 text-gray-400">
+                  {{ t('原始记录', 'Source record') }}: {{ entry.recordId || t('未标记', 'Unlabeled') }}
+                </p>
+                <button
+                  v-if="entry.memoryKey"
+                  type="button"
+                  class="contacts-link-action mt-2"
+                  :data-testid="`contacts-linked-activity-open-memory-${entry.memoryKey}`"
+                  @click="openLinkedMemoryFromDetailItem(entry)"
+                >
+                  {{ t('查看对应记忆', 'Open linked memory') }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section v-if="selectedProfileValues.length > 0" class="contacts-detail-section space-y-2">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {{ t('World profile fields', 'World profile fields') }}
+              </p>
+              <h3 class="font-semibold">{{ t('Extended settings', 'Extended settings') }}</h3>
+            </div>
+            <div v-for="value in selectedProfileValues" :key="value.fieldId" class="contacts-detail-item">
+              <div>
+                <p class="font-medium">{{ profileValueLabel(value) }}</p>
+                <p class="text-sm text-gray-600">{{ formatProfileValue(value) }}</p>
+              </div>
+              <span class="contacts-source-chip">{{ value.visibilityLevel }}</span>
+            </div>
+          </section>
+
+          <section
             v-for="section in roleDetailSections"
             :key="section.key"
             class="contacts-detail-section space-y-2"
+            :data-testid="`contacts-detail-section-${section.key}`"
           >
             <div class="flex items-center justify-between">
               <p class="text-sm font-bold">{{ section.title }}</p>
@@ -1837,42 +2537,114 @@ onBeforeUnmount(() => {
             </div>
             <div v-else class="space-y-2">
               <div
-                v-for="item in detailItemsForSection(selectedProfile, section.key)"
-                :key="item.id"
-                class="contacts-detail-item"
+                v-for="group in detailItemGroupsForSection(selectedProfile, section.key)"
+                :key="group.key"
+                class="contacts-detail-group"
+                :data-testid="`contacts-detail-group-${section.key}-${group.key}`"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="text-[12px] font-semibold truncate">{{ item.title || item.detail }}</p>
-                    <p v-if="item.detail" class="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{{ item.detail }}</p>
-                    <p
-                      class="mt-1 text-[10px] leading-4 text-gray-400"
-                      :data-testid="`contacts-detail-source-hint-${item.id}`"
-                    >
-                      {{ roleDetailSourceHint(item) }}
-                    </p>
+                <div class="contacts-detail-group-header">
+                  <div>
+                    <p class="text-[12px] font-bold">{{ group.title }}</p>
+                    <p class="text-[10px] leading-4 text-gray-500">{{ group.description }}</p>
                   </div>
-                  <span
-                    class="contacts-source-chip"
-                    :class="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED ? 'contacts-source-chip-event' : ''"
-                    :data-testid="`contacts-detail-source-chip-${item.id}`"
-                  >
-                    {{ roleDetailSourceLabel(item) }}
-                  </span>
+                  <span class="contacts-source-chip">{{ group.items.length }}</span>
                 </div>
-                <p
-                  v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED"
-                  class="contacts-event-locked-note"
-                >
-                  {{ t('此条不能在这里单独删除。', 'This entry cannot be deleted here directly.') }}
-                </p>
-                <button
-                  v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.MANUAL"
-                  @click="removeManualDetailItem(item)"
-                  class="text-[11px] text-red-500 mt-1"
-                >
-                  {{ t('删除', 'Delete') }}
-                </button>
+                <div class="space-y-2">
+                  <div
+                    v-for="item in group.items"
+                    :key="item.id"
+                    class="contacts-detail-item"
+                  >
+                    <template v-if="editingDetailItemId === item.id">
+                      <div class="space-y-2" :data-testid="`contacts-detail-edit-${item.id}`">
+                        <input
+                          v-model="detailEditDraft.title"
+                          :placeholder="section.placeholderTitle"
+                          class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none"
+                        />
+                        <textarea
+                          v-model="detailEditDraft.detail"
+                          :placeholder="section.placeholderDetail"
+                          class="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none resize-none h-16"
+                        ></textarea>
+                        <div class="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            class="contacts-small-action"
+                            :data-testid="`contacts-detail-edit-cancel-${item.id}`"
+                            @click="cancelEditingManualDetailItem"
+                          >
+                            {{ t('取消', 'Cancel') }}
+                          </button>
+                          <button
+                            type="button"
+                            class="contacts-primary-action"
+                            :data-testid="`contacts-detail-edit-save-${item.id}`"
+                            @click="saveManualDetailItemEdit(item)"
+                          >
+                            {{ t('保存条目', 'Save entry') }}
+                          </button>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                          <p class="text-[12px] font-semibold truncate">{{ item.title || item.detail }}</p>
+                          <p v-if="item.detail" class="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{{ item.detail }}</p>
+                          <p
+                            class="mt-1 text-[10px] leading-4 text-gray-400"
+                            :data-testid="`contacts-detail-source-hint-${item.id}`"
+                          >
+                            {{ roleDetailSourceHint(item) }}
+                          </p>
+                        </div>
+                        <span
+                          class="contacts-source-chip"
+                          :class="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED ? 'contacts-source-chip-event' : ''"
+                          :data-testid="`contacts-detail-source-chip-${item.id}`"
+                        >
+                          {{ roleDetailSourceLabel(item) }}
+                        </span>
+                      </div>
+                    </template>
+                    <div
+                      v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED"
+                      class="contacts-event-locked-note"
+                    >
+                      <p>{{ t('此条不能在这里单独删除。', 'This entry cannot be deleted here directly.') }}</p>
+                      <button
+                        v-if="item.memoryKey"
+                        type="button"
+                        class="contacts-link-action"
+                        :data-testid="`contacts-detail-open-memory-${item.memoryKey}`"
+                        @click="openLinkedMemoryFromDetailItem(item)"
+                      >
+                        {{ t('查看对应记忆', 'Open linked memory') }}
+                      </button>
+                    </div>
+                    <div
+                      v-if="item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.MANUAL && editingDetailItemId !== item.id"
+                      class="mt-2 flex items-center justify-end gap-2"
+                    >
+                      <button
+                        type="button"
+                        class="contacts-small-action"
+                        :data-testid="`contacts-detail-edit-open-${item.id}`"
+                        @click="startEditingManualDetailItem(item)"
+                      >
+                        {{ t('编辑条目', 'Edit entry') }}
+                      </button>
+                      <button
+                        @click="removeManualDetailItem(item)"
+                        class="text-[11px] text-red-500"
+                        :data-testid="`contacts-detail-delete-${item.id}`"
+                      >
+                        {{ t('删除', 'Delete') }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="contacts-detail-add grid grid-cols-1 gap-2">
@@ -1895,14 +2667,35 @@ onBeforeUnmount(() => {
           <section class="contacts-detail-section space-y-2">
             <div class="flex items-center justify-between">
               <p class="text-sm font-bold">{{ t('记忆', 'Memories') }}</p>
-              <span class="text-[10px] text-gray-500">{{ selectedMemoryGroups.length }}</span>
+              <span class="text-[10px] text-gray-500">{{ filteredMemoryGroups.length }}</span>
             </div>
-            <div v-if="selectedMemoryGroups.length === 0" class="contacts-empty-detail">
+            <div class="contacts-memory-toolbar" data-testid="contacts-memory-toolbar">
+              <label class="contacts-memory-toolbar-field">
+                <span>{{ t('来源', 'Source') }}</span>
+                <select v-model="memorySourceFilter">
+                  <option
+                    v-for="option in availableMemorySourceFilters"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+              <label class="contacts-memory-toolbar-field">
+                <span>{{ t('排序', 'Sort') }}</span>
+                <select v-model="memorySortMode">
+                  <option value="recent">{{ t('最近更新', 'Recent update') }}</option>
+                  <option value="supporting">{{ t('事件数量', 'Event count') }}</option>
+                </select>
+              </label>
+            </div>
+            <div v-if="filteredMemoryGroups.length === 0" class="contacts-empty-detail">
               {{ t('暂无关系记忆组。', 'No relationship memory groups yet.') }}
             </div>
             <div v-else class="space-y-2">
               <button
-                v-for="memory in selectedMemoryGroups"
+                v-for="memory in filteredMemoryGroups"
                 :key="memory.memoryKey"
                 type="button"
                 class="contacts-memory-item"
@@ -1918,7 +2711,15 @@ onBeforeUnmount(() => {
                     {{ memory.sourceModules.join(' · ') || t('来源未标记', 'Unlabeled source') }} · {{ memory.supportingCount }} {{ t('条', 'item(s)') }}
                   </p>
                 </div>
-                <span class="contacts-small-action shrink-0">{{ t('查看', 'Open') }}</span>
+                <div class="shrink-0 flex items-center gap-2">
+                  <span
+                    class="contacts-source-chip"
+                    :class="memory.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 'contacts-source-chip-event' : ''"
+                  >
+                    {{ memoryReviewStatusLabel(memory.reviewStatus) }}
+                  </span>
+                  <span class="contacts-small-action shrink-0">{{ t('查看', 'Open') }}</span>
+                </div>
               </button>
               <div
                 v-if="selectedMemoryDetail"
@@ -1939,12 +2740,156 @@ onBeforeUnmount(() => {
                   </div>
                   <span class="contacts-source-chip">{{ selectedMemoryDetail.events.length }}</span>
                 </div>
+                <div class="contacts-memory-review-row" data-testid="contacts-memory-review-controls">
+                  <div class="contacts-memory-review-statuses">
+                    <button
+                      type="button"
+                      class="contacts-memory-status-button"
+                      :class="selectedMemoryDetail.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED ? 'contacts-memory-status-button-active' : ''"
+                      @click="updateSelectedMemoryReview({ status: RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED })"
+                    >
+                      {{ t('置顶', 'Pinned') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="contacts-memory-status-button"
+                      :class="selectedMemoryDetail.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE ? 'contacts-memory-status-button-active' : ''"
+                      @click="updateSelectedMemoryReview({ status: RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE })"
+                    >
+                      {{ t('活跃', 'Active') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="contacts-memory-status-button"
+                      :class="selectedMemoryDetail.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 'contacts-memory-status-button-active' : ''"
+                      @click="updateSelectedMemoryReview({ status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED })"
+                    >
+                      {{ t('归档', 'Archived') }}
+                    </button>
+                  </div>
+                  <span class="contacts-source-chip">
+                    {{ memoryReviewStatusLabel(selectedMemoryDetail.reviewStatus) }}
+                  </span>
+                </div>
+                <div class="contacts-memory-headline-grid" data-testid="contacts-memory-headline-facts">
+                  <div
+                    v-for="fact in selectedMemoryHeadlineFacts"
+                    :key="fact.key"
+                    class="contacts-memory-headline-card"
+                  >
+                    <p class="contacts-role-hub-label">{{ fact.label }}</p>
+                    <p class="contacts-role-hub-value">{{ fact.value }}</p>
+                    <p class="contacts-role-hub-detail">{{ fact.detail }}</p>
+                  </div>
+                </div>
                 <p class="text-[11px] text-gray-500">
                   {{ t('来源', 'Sources') }}: {{ sourceModuleSummaryText(selectedMemoryDetail.sourceModuleCounts) }}
                 </p>
                 <p class="text-[11px] text-gray-500">
                   {{ cleanupCoverageText(selectedMemoryDetail.sourceModuleCounts) }}
                 </p>
+                <div
+                  v-if="selectedMemorySourceAudit.length"
+                  class="contacts-memory-audit-grid"
+                  data-testid="contacts-memory-source-audit"
+                >
+                  <div
+                    v-for="source in selectedMemorySourceAudit"
+                    :key="source.sourceModule"
+                    class="contacts-memory-audit-card"
+                    :data-testid="`contacts-memory-source-${source.sourceModule}`"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="text-[11px] font-bold">{{ source.label }}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">
+                          {{ source.count }} {{ t('条关联记录', 'linked record(s)') }}
+                        </p>
+                      </div>
+                      <span
+                        class="contacts-source-chip"
+                        :class="source.cleanupConnected ? '' : 'contacts-source-chip-event'"
+                      >
+                        {{
+                          source.cleanupConnected
+                            ? t('已接 cleanup', 'Cleanup ready')
+                            : t('仅影响提示', 'Impact only')
+                        }}
+                      </span>
+                    </div>
+                    <p
+                      v-if="source.recordIds.length"
+                      class="mt-2 text-[10px] leading-4 text-gray-500"
+                    >
+                      {{ t('原始记录', 'Source records') }}:
+                      {{ source.recordIds.join(' · ') }}
+                    </p>
+                    <p
+                      v-if="source.rawSourceIds.length && source.rawSourceIds.join(' · ') !== source.recordIds.join(' · ')"
+                      class="mt-1 text-[10px] leading-4 text-gray-400"
+                    >
+                      {{ t('关系 sourceId', 'Relationship sourceId') }}:
+                      {{ source.rawSourceIds.join(' · ') }}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  v-if="selectedMemoryEventTimeline.length"
+                  class="contacts-memory-event-list"
+                  data-testid="contacts-memory-event-list"
+                >
+                  <div class="contacts-memory-event-header">
+                    <p class="text-[11px] font-bold">{{ t('支撑事件', 'Supporting events') }}</p>
+                    <span class="contacts-source-chip">
+                      {{ selectedMemoryEventTimeline.length }}
+                    </span>
+                  </div>
+                  <div
+                    v-for="event in selectedMemoryEventTimeline"
+                    :key="event.id"
+                    class="contacts-memory-event-item"
+                    :data-testid="`contacts-memory-event-${event.id}`"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="text-[11px] font-semibold">
+                          {{ event.summary }}
+                        </p>
+                        <p class="mt-0.5 text-[10px] text-gray-500">
+                          {{ event.sourceModuleLabel }} · {{ event.factTypeLabel }}
+                        </p>
+                      </div>
+                      <span class="contacts-source-chip">{{ event.createdAtText }}</span>
+                    </div>
+                    <p class="mt-1 text-[10px] leading-4 text-gray-500">
+                      {{ t('原始记录', 'Source record') }}: {{ event.recordId || t('未标记', 'Unlabeled') }}
+                    </p>
+                    <p
+                      v-if="event.sourceId && event.sourceId !== event.recordId"
+                      class="mt-1 text-[10px] leading-4 text-gray-400"
+                    >
+                      {{ t('关系 sourceId', 'Relationship sourceId') }}: {{ event.sourceId }}
+                    </p>
+                  </div>
+                </div>
+                <div class="contacts-memory-review-note" data-testid="contacts-memory-review-note">
+                  <p class="text-[11px] font-bold">{{ t('管理备注', 'Review note') }}</p>
+                  <textarea
+                    v-model="memoryReviewDraft"
+                    class="mt-2 w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none resize-none h-20"
+                    :placeholder="t('例如：保留为长期锚点，或等待 4.2 去重后再归档。', 'For example: keep as a long-term anchor, or archive after 4.2 dedupe.')"
+                  ></textarea>
+                  <div class="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      class="contacts-primary-action"
+                      data-testid="contacts-memory-review-save"
+                      @click="saveSelectedMemoryReviewNote"
+                    >
+                      {{ t('保存备注', 'Save note') }}
+                    </button>
+                  </div>
+                </div>
                 <p class="text-[11px] text-gray-500">
                   {{
                     t(
@@ -2238,6 +3183,91 @@ onBeforeUnmount(() => {
   padding: 14px;
 }
 
+.contacts-role-hub-overview {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(229, 240, 245, 0.9)),
+    var(--contacts-surface-strong);
+}
+
+.contacts-chat-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.contacts-role-hub-grid,
+.contacts-linked-activity-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.contacts-role-hub-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contacts-linked-activity-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contacts-role-hub-card,
+.contacts-linked-activity-grid > div {
+  min-width: 0;
+  border: 1px solid rgba(49, 64, 86, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 9px 10px;
+}
+
+.contacts-role-hub-label {
+  color: var(--contacts-muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.contacts-role-hub-value {
+  margin-top: 2px;
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.contacts-role-hub-detail {
+  margin-top: 3px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.contacts-relationship-panel {
+  box-shadow: 0 8px 20px rgba(45, 63, 89, 0.06);
+}
+
+.contacts-metric-grid {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+}
+
+.contacts-metric-grid span {
+  border-radius: 999px;
+  background: rgba(49, 64, 86, 0.07);
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.contacts-linked-activity {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 239, 233, 0.72)),
+    var(--contacts-surface-strong);
+}
+
 .contacts-small-action,
 .contacts-primary-action {
   min-height: 34px;
@@ -2277,6 +3307,78 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 
+.contacts-detail-group {
+  display: grid;
+  gap: 8px;
+}
+
+.contacts-detail-group + .contacts-detail-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(49, 64, 86, 0.08);
+}
+
+.contacts-detail-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contacts-memory-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.contacts-memory-toolbar-field {
+  display: grid;
+  gap: 4px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.contacts-memory-toolbar-field select {
+  min-height: 34px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--contacts-text);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.contacts-memory-review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contacts-memory-review-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contacts-memory-status-button {
+  min-height: 30px;
+  border: 1px solid rgba(49, 64, 86, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--contacts-muted);
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.contacts-memory-status-button-active {
+  border-color: rgba(66, 111, 143, 0.35);
+  background: rgba(66, 111, 143, 0.12);
+  color: var(--contacts-accent-strong);
+}
+
 .contacts-detail-item,
 .contacts-memory-item {
   border: 1px solid var(--contacts-border);
@@ -2311,6 +3413,38 @@ onBeforeUnmount(() => {
   padding: 10px;
 }
 
+.contacts-memory-audit-grid,
+.contacts-memory-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.contacts-memory-headline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.contacts-memory-audit-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.contacts-memory-headline-card,
+.contacts-memory-audit-card,
+.contacts-memory-event-item {
+  border: 1px solid rgba(49, 64, 86, 0.1);
+  border-radius: 12px;
+  background: rgba(245, 248, 250, 0.78);
+  padding: 8px 9px;
+}
+
+.contacts-memory-event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .contacts-source-chip {
   flex-shrink: 0;
   border-radius: 999px;
@@ -2327,6 +3461,10 @@ onBeforeUnmount(() => {
 }
 
 .contacts-event-locked-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-top: 6px;
   border-radius: 10px;
   background: rgba(191, 115, 84, 0.08);
@@ -2334,6 +3472,17 @@ onBeforeUnmount(() => {
   color: #9d583e;
   font-size: 10px;
   line-height: 1.4;
+}
+
+.contacts-link-action {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(191, 115, 84, 0.12);
+  color: #8a4b35;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .contacts-detail-add input,

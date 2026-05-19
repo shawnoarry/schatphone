@@ -36,3 +36,4 @@ Executable plan for that design:
 - `Relationship Runtime` owns relationship progress and memory groups.
 - `World Hub` is an optional review and cleanup surface, not the main role-authoring page.
 - `WorldBook` should define profile-template rules; `Contacts` should store concrete profile values.
+- Contacts entity types now include Self Profile, Main Role, and NPC. Chat Directory is a chat target list, not a Main Role filter; Self Profile must not be bound as a Chat target, and NPC can be bound before upgrade.

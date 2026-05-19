@@ -42,15 +42,37 @@ Each role needs its own detail page.
 Recommended section order:
 
 1. overview
-2. profile basics
-3. preferences
-4. life pattern
-5. memories
-6. social graph
-7. linked activity summary
-8. danger zone
+2. role hub summary
+3. relationship snapshot
+4. linked activity summary
+5. profile basics and WorldBook fields
+6. preferences
+7. life pattern
+8. social graph
+9. memories
+10. danger zone
 
 ## 3. Section Meaning
+
+### 3.0 Current Landed IA Baseline
+
+The selected Contacts detail page now starts with a Role Hub summary before deeper sections.
+
+The landed baseline shows:
+
+- profile entity type: Self Profile, Main Role, or NPC;
+- Chat-bound state without implying Chat Directory owns the role;
+- manual detail count;
+- event-attached detail count;
+- WorldBook profile field count;
+- memory-group count;
+- a linked-activity summary built from relationship runtime source counts plus event-attached detail sources.
+
+Bound roles can jump to their Chat thread. Unbound Main Role/NPC profiles can jump to Chat Directory for binding. Self Profile explains that it is context-only and not a Chat target.
+
+The linked-activity summary is only a summary surface. Source records still belong to their owning modules.
+
+Below the summary, preferences, life pattern, and social graph sections now split their entries into Manual details and Event-attached groups. Event-attached entries remain locked from direct deletion and can open the linked memory detail when a `memoryKey` is present. Manual entries can now be edited inline in place. Inside the memory detail itself, Contacts now shows a source-audit layer with per-module source cards, cleanup coverage hints, source record IDs, a short supporting-event list, and lightweight review facts. The memory list itself now supports basic source filtering and sort mode.
 
 ### 3.1 Overview / 概览
 
@@ -96,7 +118,10 @@ Shows:
 
 - memory groups
 - memory summaries
+- source/sort review controls
 - source-module hints
+- source-audit cards for module ownership and cleanup coverage
+- supporting relationship-event drill-down
 - delete-memory entry
 
 ### 3.6 Social Graph / 人物关系网
@@ -118,6 +143,12 @@ Optional supporting area for:
 
 This is a summary surface, not the owner of those records.
 
+Current landed baseline:
+
+- the summary card still provides top-level counts and source text;
+- an expanded event-attached activity list now appears below it;
+- each linked-activity row shows section label, source module, source record ID, a short summary, and a direct entry into the linked memory when available.
+
 ### 3.8 Danger Zone / 危险操作区
 
 Must contain:
@@ -126,7 +157,32 @@ Must contain:
 - delete role
 - readable explanation of scope
 
-## 4. Visible Role ID Rule
+## 4. Profile Entity Types
+
+### 4.1 Self Profile / User Self Profile
+
+Self Profile represents the user inside a world. It can appear in Contacts and can feed Chat context through visibility-gated profile values, but it is not an AI role, not a romance/route target, and must not be bound as a Chat target.
+
+### 4.2 Main Role
+
+Main Role is a full person/role profile. It can be bound into Chat Directory when the user wants a conversation target, and it can use relationship progress, memory groups, and route-style continuity.
+
+### 4.3 NPC / World Role
+
+NPC is a lightweight world-person record. NPCs can appear in world events, social/feed contexts, linked activity, and Chat Directory. They are not broken Main Roles. Upgrading an NPC to Main Role preserves the profile, existing Chat binding, and history while unlocking Main Role capabilities.
+
+## 5. WorldBook-Driven Extensible Sections
+
+WorldBook defines profile-template fields. Contacts stores concrete values for each Self Profile, Main Role, or NPC.
+
+V1 rules:
+
+- a profile has one primary world/template context;
+- template changes do not silently overwrite user-entered profile values;
+- Contacts can show template-applied values as extensible profile fields;
+- manual profile values remain higher priority than event-attached clues.
+
+## 6. Visible Role ID Rule
 
 `roleId` should be visible in the detail page in a phone-like readable style.
 
@@ -136,16 +192,16 @@ Recommended behavior:
 - duplicate role IDs must block save with a clear warning;
 - show it like a role number or contact-style identifier, not like a backend primary key.
 
-## 5. Manual vs Event-Attached Presentation
+## 7. Manual vs Event-Attached Presentation
 
-### 5.1 Why It Matters
+### 7.1 Why It Matters
 
 The user must be able to tell:
 
 - what they typed themselves;
 - what the system attached from later events and memory development.
 
-### 5.2 Required UI Treatment
+### 7.2 Required UI Treatment
 
 Every detail item in Preferences, Life Pattern, and Social Graph should expose source kind:
 
@@ -161,10 +217,12 @@ Recommended presentation:
 Current landed baseline:
 
 - role detail sections show manual and event-attached counts;
+- detail sections group manual and event-attached items separately;
 - source chips and short hints are visible on each item;
-- event-attached entries tell the user they cannot be deleted directly from the detail item and must be cleared through the linked memory, relationship reset, or role deletion.
+- event-attached entries tell the user they cannot be deleted directly from the detail item and must be cleared through the linked memory, relationship reset, or role deletion;
+- event-attached entries with a memory key expose an entry point to the linked memory detail.
 
-### 5.3 Product Rule
+### 7.3 Product Rule
 
 Event-attached entries can be auto-cleared by:
 
@@ -174,7 +232,7 @@ Event-attached entries can be auto-cleared by:
 
 Manual entries should remain unless the destructive action explicitly removes the whole role profile.
 
-## 6. Contacts vs Chat Directory Copy Rule
+## 8. Contacts vs Chat Directory Copy Rule
 
 The product copy must help users understand:
 
@@ -184,9 +242,12 @@ The product copy must help users understand:
 Required product meaning:
 
 - a role may exist in Contacts without becoming a Chat target;
+- Chat Directory is a chat target list, not a Main Role filter;
+- NPCs may be bound as Chat targets before upgrade;
+- Self Profile must not be bound as a Chat target;
 - deleting/unbinding in Chat Directory must not be confused with deleting the role archive in Contacts.
 
-## 7. IA Acceptance Checklist
+## 9. IA Acceptance Checklist
 
 - users can understand the role without opening code-like panels
 - users can see the difference between manual and event-attached items

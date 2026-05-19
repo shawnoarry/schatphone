@@ -21,6 +21,13 @@ import {
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl } from '../lib/ai'
+import {
+  PROFILE_TEMPLATE_SCOPES,
+  cloneProfileTemplate,
+  createDefaultProfileTemplatePresets,
+  normalizeProfileTemplate,
+  normalizeProfileTemplates,
+} from '../lib/profile-template-schema'
 
 const AVAILABLE_THEMES = [
   {
@@ -563,6 +570,11 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
   return {
     globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
     knowledgePoints: normalizeKnowledgePointList(source.knowledgePoints),
+    profileTemplates: normalizeProfileTemplates(
+      Array.isArray(source.profileTemplates) && source.profileTemplates.length > 0
+        ? source.profileTemplates
+        : createDefaultProfileTemplatePresets(),
+    ),
   }
 }
 
@@ -1129,6 +1141,7 @@ export const useSystemStore = defineStore('system', () => {
     worldBook: DEFAULT_GLOBAL_WORLDVIEW,
     globalWorldview: DEFAULT_GLOBAL_WORLDVIEW,
     knowledgePoints: [],
+    profileTemplates: createDefaultProfileTemplatePresets(),
   })
 
   const notifications = ref([])
@@ -1865,6 +1878,73 @@ export const useSystemStore = defineStore('system', () => {
     if (index < 0) return false
     user.knowledgePoints.splice(index, 1)
     return true
+  }
+
+  const listProfileTemplates = () => normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate)
+
+  const listProfileTemplatePresets = () =>
+    listProfileTemplates().filter(
+      (template) => template.scope === PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET,
+    )
+
+  const listWorldProfileTemplates = (worldId = '') => {
+    const targetWorldId = typeof worldId === 'string' && worldId.trim() ? worldId.trim() : 'default_world'
+    return listProfileTemplates().filter(
+      (template) => template.scope === PROFILE_TEMPLATE_SCOPES.WORLD && template.worldId === targetWorldId,
+    )
+  }
+
+  const getProfileTemplateById = (templateId = '') => {
+    const id = typeof templateId === 'string' ? templateId.trim() : ''
+    if (!id) return null
+    return listProfileTemplates().find((template) => template.id === id) || null
+  }
+
+  const replaceProfileTemplateList = (templates = []) => {
+    user.profileTemplates = normalizeProfileTemplates(templates)
+  }
+
+  const upsertProfileTemplate = (templateInput = {}) => {
+    const template = normalizeProfileTemplate(templateInput)
+    const current = listProfileTemplates()
+    const index = current.findIndex((item) => item.id === template.id)
+    if (index >= 0) {
+      current.splice(index, 1, template)
+    } else {
+      current.push(template)
+    }
+    replaceProfileTemplateList(current)
+    return cloneProfileTemplate(template)
+  }
+
+  const createWorldProfileTemplateFromPreset = (presetId, options = {}) => {
+    const preset = getProfileTemplateById(presetId)
+    if (!preset) return null
+    return upsertProfileTemplate({
+      ...preset,
+      id: `world_template_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: options.worldId || 'default_world',
+      title: options.title || preset.title,
+      version: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+  }
+
+  const updateWorldProfileTemplate = (templateId, updates = {}) => {
+    const existing = getProfileTemplateById(templateId)
+    if (!existing || existing.scope !== PROFILE_TEMPLATE_SCOPES.WORLD) return null
+    return upsertProfileTemplate({
+      ...existing,
+      ...updates,
+      id: existing.id,
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: updates.worldId || existing.worldId || 'default_world',
+      version: Math.max(1, Number(existing.version) || 1) + 1,
+      createdAt: existing.createdAt,
+      updatedAt: Date.now(),
+    })
   }
 
   const resolveChatTruthEntityMeta = (rawContact = {}) => {
@@ -2780,6 +2860,7 @@ export const useSystemStore = defineStore('system', () => {
     user.globalWorldview = normalizedWorldKernel.globalWorldview
     user.worldBook = normalizedWorldKernel.globalWorldview
     user.knowledgePoints = normalizedWorldKernel.knowledgePoints
+    user.profileTemplates = normalizedWorldKernel.profileTemplates
     if (typeof user.chatStatus !== 'string') {
       user.chatStatus = 'idle'
     }
@@ -2967,6 +3048,7 @@ export const useSystemStore = defineStore('system', () => {
                 tags: Array.isArray(item.tags) ? [...item.tags] : [],
               }))
             : [],
+          profileTemplates: normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate),
         },
         notifications: notifications.value.map((note) => ({ ...note })),
         apiReports: apiReports.value.map((report) => ({ ...report })),
@@ -3064,6 +3146,13 @@ export const useSystemStore = defineStore('system', () => {
     upsertKnowledgePoint,
     setKnowledgePointEnabled,
     removeKnowledgePoint,
+    listProfileTemplates,
+    listProfileTemplatePresets,
+    listWorldProfileTemplates,
+    getProfileTemplateById,
+    upsertProfileTemplate,
+    createWorldProfileTemplateFromPreset,
+    updateWorldProfileTemplate,
     touchChatTruth,
     getChatTruthSnapshot,
     clearChatTruthState,
@@ -3089,6 +3178,9 @@ export const useSystemStore = defineStore('system', () => {
     lockPhone,
     unlockPhone,
     saveNow,
+    hydrateFromStorage,
+    hydrateFromStorageAsync,
+    restoreFromStorage: hydrateFromStorage,
     restoreFromBackup,
   }
 })

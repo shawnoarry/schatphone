@@ -1333,8 +1333,26 @@ const resolveBoundKnowledgePointsForContact = (contact) => {
   return Array.isArray(bindingState.enabledPoints) ? bindingState.enabledPoints.slice(0, 8) : []
 }
 
+const formatProfileValuesForPrompt = (values = []) =>
+  Array.isArray(values) && values.length > 0
+    ? values
+        .map((item) => `${item.fieldId}: ${Array.isArray(item.value) ? item.value.join(', ') : item.value}`)
+        .join('; ')
+    : 'none'
+
+const visibleSelfProfileValuesForRole = (visibilityLimit = 'familiar') => {
+  const selfProfile = chatStore.roleProfiles.find((profile) => profile.entityType === 'self_profile')
+  if (!selfProfile || !Array.isArray(selfProfile.profileValues)) return []
+  const allowed = new Set(['public', 'familiar'])
+  if (visibilityLimit === 'intimate') allowed.add('intimate')
+  return selfProfile.profileValues.filter((value) => allowed.has(value.visibilityLevel))
+}
+
 const buildWorldKernelPromptBlock = (contact) => {
   const worldview = getGlobalWorldviewText() || 'none'
+  const profile = contact?.profileId ? chatStore.getRoleProfileById(contact.profileId) : null
+  const roleProfileValues = profile?.profileValues || []
+  const visibleSelfValues = visibleSelfProfileValuesForRole('familiar')
   const boundPoints = resolveBoundKnowledgePointsForContact(contact)
   const boundSummary =
     boundPoints.length > 0
@@ -1349,8 +1367,10 @@ const buildWorldKernelPromptBlock = (contact) => {
       : 'none'
 
   return [
-    `Global worldview: ${worldview}`,
-    `Role-bound knowledge points: ${boundSummary}.`,
+    `Primary worldview rules: ${worldview}`,
+    `Current role profile values: ${formatProfileValuesForPrompt(roleProfileValues)}.`,
+    `Visible user self-profile values: ${formatProfileValuesForPrompt(visibleSelfValues)}.`,
+    `Supplemental role-bound knowledge points: ${boundSummary}.`,
   ].join('\n')
 }
 
@@ -1462,7 +1482,7 @@ Rules:
 - ${quoteRule}
 - ${bilingualRule}
 - ${voiceRule}
-- Always respect the global worldview and role-bound knowledge points.
+- Always respect primary worldview rules, current role profile values, visible user self-profile values, and supplemental role-bound knowledge points.
 - ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
 - Each message must include at least one text block.

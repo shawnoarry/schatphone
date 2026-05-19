@@ -73,6 +73,9 @@ PM meaning:
   - Contacts exposes safe role delete, relationship reset, and single-memory delete flows with impact summaries and typed confirmation;
   - World Hub can review relationship runtime entities and run reset/delete-memory cleanup without deleting the Contacts role profile;
   - module-owned source records can be deleted or anonymized through shared cleanup handlers for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map.
+- Contacts now has a V1 designed/implemented path for Self Profile, Main Role, NPC, and WorldBook-driven profile templates. WorldBook owns template rules; Contacts owns concrete person values.
+- NPC profiles can be upgraded to Main Role without losing the existing profile, Chat binding, or chat history.
+- Chat context can consume primary worldview rules, current role profile values, visible user self-profile values, relationship runtime context, and supplemental WorldBook knowledge in a clearer order.
 
 PM meaning:
 
@@ -179,10 +182,9 @@ PM meaning:
 - Map route context is still read-only and does not transfer ownership away from Shopping/Food Delivery;
 - Contacts Relationship System V2 is not fully complete:
   - destructive-action baseline is in;
-  - full Contacts detail IA polish is still pending;
-  - manual-vs-event-attached visual language is still pending;
-  - preferences, life-pattern, social-graph, and long-term memory compression/expiry controls are still future work;
-- Assets, Stock, Phone, and several secondary modules still need deeper product loops;
+  - Contacts 4.1 detail IA and memory presentation acceptance is now reached;
+  - later memory dedupe/merge and recall cleanup move to 4.2;
+  - Assets, Stock, Phone, and several secondary modules still need deeper product loops;
 - true closed-page background event generation would still require a larger backend design.
 
 ## 4. Current Priority

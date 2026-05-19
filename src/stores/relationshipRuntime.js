@@ -14,6 +14,11 @@ export const RELATIONSHIP_EVENT_STATUS = Object.freeze({
   DISMISSED: 'dismissed',
   SKIPPED_DISABLED: 'skipped_disabled',
 })
+export const RELATIONSHIP_MEMORY_REVIEW_STATES = Object.freeze({
+  ACTIVE: 'active',
+  PINNED: 'pinned',
+  ARCHIVED: 'archived',
+})
 const DEFAULT_RELATIONSHIP_METRICS = Object.freeze({
   affinity: 50,
   trust: 50,
@@ -21,6 +26,7 @@ const DEFAULT_RELATIONSHIP_METRICS = Object.freeze({
   tension: 10,
   dependency: 10,
 })
+const MAX_MEMORY_REVIEW_NOTE_LENGTH = 400
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -56,6 +62,12 @@ const normalizeMetricDeltas = (rawDeltas = {}) => {
 }
 
 const normalizeMemoryKey = (value) => normalizeText(value, '', 160).toLowerCase()
+const normalizeMemoryReviewStatus = (value) => {
+  const status = normalizeText(value, '', 40)
+  return Object.values(RELATIONSHIP_MEMORY_REVIEW_STATES).includes(status)
+    ? status
+    : RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE
+}
 
 const createRelationshipEventId = () =>
   `relationship_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -302,6 +314,49 @@ const buildMemoryAggregateMapKey = (entityKey, memoryKey) => {
   return `${normalizedEntityKey}::${normalizedMemoryKey}`
 }
 
+const createDefaultMemoryReviewEntry = (entityKey, memoryKey) => {
+  const now = Date.now()
+  return {
+    entityKey: normalizeText(entityKey, '', 120),
+    memoryKey: normalizeMemoryKey(memoryKey),
+    status: RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
+    note: '',
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+const normalizeMemoryReviewEntry = (rawEntry = {}, index = 0) => {
+  const source = rawEntry && typeof rawEntry === 'object' ? rawEntry : {}
+  const entityKey = normalizeText(source.entityKey, '', 120)
+  const memoryKey = normalizeMemoryKey(source.memoryKey)
+  if (!entityKey || !memoryKey) return null
+  const createdAt = Math.max(0, toInt(source.createdAt, Date.now() - index))
+  return {
+    entityKey,
+    memoryKey,
+    status: normalizeMemoryReviewStatus(source.status),
+    note: normalizeText(source.note, '', MAX_MEMORY_REVIEW_NOTE_LENGTH),
+    createdAt,
+    updatedAt: Math.max(createdAt, toInt(source.updatedAt, createdAt)),
+  }
+}
+
+const normalizeMemoryReviewEntries = (rawEntries = []) => {
+  if (!Array.isArray(rawEntries)) return []
+  const seen = new Set()
+  return rawEntries
+    .map((entry, index) => normalizeMemoryReviewEntry(entry, index))
+    .filter(Boolean)
+    .filter((entry) => {
+      const key = buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
 const cloneRelationshipEvent = (event) => ({
   ...event,
   metricDeltas: { ...event.metricDeltas },
@@ -339,6 +394,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const settings = ref(createDefaultSettings())
   const entities = ref([])
   const events = ref([])
+  const memoryReviews = ref([])
   const hasFinishedStorageHydration = ref(false)
 
   const entityMap = computed(() => {
@@ -398,6 +454,24 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     })
     return map
   })
+  const memoryReviewMap = computed(() => {
+    const map = new Map()
+    normalizeMemoryReviewEntries(memoryReviews.value).forEach((entry) => {
+      map.set(buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey), entry)
+    })
+    return map
+  })
+
+  const pruneMemoryReviews = () => {
+    const validKeys = new Set(memoryAggregateMap.value.keys())
+    const current = normalizeMemoryReviewEntries(memoryReviews.value)
+    const next = current.filter((entry) =>
+      validKeys.has(buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey)),
+    )
+    if (next.length !== current.length) {
+      memoryReviews.value = next
+    }
+  }
 
   const findEntity = (target = {}) => {
     const key = buildRelationshipEntityKey(target)
@@ -431,6 +505,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .sort((a, b) => b.latestCreatedAt - a.latestCreatedAt)
       .slice(0, clamp(toInt(limit, 5), 0, 50))
       .map((item) => ({
+        ...(memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}),
         memoryKey: item.memoryKey,
         entityKey: item.entityKey,
         sourceModules: [...item.sourceModules],
@@ -445,6 +520,14 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         displaySummary: item.displaySummary || item.primarySummary || item.latestSummary || '',
         latestSummary: item.latestSummary,
         latestCreatedAt: item.latestCreatedAt,
+        reviewStatus:
+          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.status ||
+          RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
+        reviewNote:
+          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.note || '',
+        reviewUpdatedAt:
+          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.updatedAt ||
+          item.latestCreatedAt,
       }))
   }
 
@@ -467,6 +550,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .filter((event) => event.entityKey === key && event.memoryKey === normalizedMemoryKey)
       .sort((a, b) => b.createdAt - a.createdAt)
     if (!aggregate && groupEvents.length === 0) return null
+    const review = memoryReviewMap.value.get(buildMemoryAggregateMapKey(key, normalizedMemoryKey)) || null
     return {
       ...(aggregate || buildDefaultMemoryAggregate(normalizedMemoryKey, key)),
       sourceModules: aggregate ? [...aggregate.sourceModules] : [],
@@ -477,7 +561,43 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       events: groupEvents.map(cloneRelationshipEvent),
       sourceRefs: buildSourceRefsFromEvents(groupEvents),
       sourceModuleCounts: summarizeSourceModules(groupEvents),
+      reviewStatus: review?.status || RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
+      reviewNote: review?.note || '',
+      reviewUpdatedAt: review?.updatedAt || (aggregate?.latestCreatedAt || 0),
     }
+  }
+
+  const updateMemoryReviewForTarget = (target = {}, memoryKey = '', updates = {}) => {
+    const key = buildRelationshipEntityKey(target)
+    const normalizedMemoryKey = normalizeMemoryKey(memoryKey)
+    const aggregateKey = buildMemoryAggregateMapKey(key, normalizedMemoryKey)
+    if (!key || !normalizedMemoryKey || !aggregateKey || !memoryAggregateMap.value.has(aggregateKey)) return null
+
+    const current =
+      memoryReviewMap.value.get(aggregateKey) || createDefaultMemoryReviewEntry(key, normalizedMemoryKey)
+    const next = normalizeMemoryReviewEntry({
+      entityKey: key,
+      memoryKey: normalizedMemoryKey,
+      status:
+        Object.prototype.hasOwnProperty.call(updates, 'status')
+          ? updates.status
+          : current.status,
+      note:
+        Object.prototype.hasOwnProperty.call(updates, 'note')
+          ? updates.note
+          : current.note,
+      createdAt: current.createdAt,
+      updatedAt: Date.now(),
+    })
+    if (!next) return null
+
+    const currentEntries = normalizeMemoryReviewEntries(memoryReviews.value)
+    const nextEntries = currentEntries.filter(
+      (entry) => buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey) !== aggregateKey,
+    )
+    nextEntries.unshift(next)
+    memoryReviews.value = normalizeMemoryReviewEntries(nextEntries)
+    return { ...next }
   }
 
   const ensureEntity = (target = {}) => {
@@ -724,6 +844,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     affectedEntityKeys.forEach((key) => {
       recomputeEntityForKey(key)
     })
+    pruneMemoryReviews()
 
     return {
       ok: true,
@@ -768,6 +889,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       (event) => !(event.entityKey === key && event.memoryKey === normalizedMemoryKey),
     )
     const remainingEntity = recomputeEntityForKey(key)
+    pruneMemoryReviews()
     return {
       ok: true,
       entityKey: key,
@@ -797,6 +919,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const removedEvents = events.value.filter((event) => event.entityKey === key)
     const hadEntity = removeEntityByKey(key)
     events.value = events.value.filter((event) => event.entityKey !== key)
+    pruneMemoryReviews()
     return {
       ok: removedEvents.length > 0 || hadEntity,
       entityKey: key,
@@ -909,6 +1032,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       : Array.isArray(rawSource.relationshipEvents)
         ? rawSource.relationshipEvents
         : null
+    const rawMemoryReviews = Array.isArray(rawSource.memoryReviews)
+      ? rawSource.memoryReviews
+      : Array.isArray(rawSource.relationshipMemoryReviews)
+        ? rawSource.relationshipMemoryReviews
+        : null
 
     settings.value = normalizeSettings(rawSource.settings)
     entities.value = (rawEntities || [])
@@ -920,6 +1048,8 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .filter(Boolean)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, RELATIONSHIP_EVENT_LIMIT)
+    memoryReviews.value = normalizeMemoryReviewEntries(rawMemoryReviews || [])
+    pruneMemoryReviews()
     return true
   }
 
@@ -954,6 +1084,9 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         tags: [...event.worldContext.tags],
       },
     })),
+    memoryReviews: normalizeMemoryReviewEntries(memoryReviews.value).filter((entry) =>
+      memoryAggregateMap.value.has(buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey)),
+    ),
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()
@@ -974,6 +1107,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     settings.value = createDefaultSettings()
     entities.value = []
     events.value = []
+    memoryReviews.value = []
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -987,7 +1121,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   })()
 
   watch(
-    [settings, entities, events],
+    [settings, entities, events, memoryReviews],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -999,6 +1133,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     settings,
     entities,
     events,
+    memoryReviews,
     entityCount,
     pendingEventCount,
     hasFinishedStorageHydration,
@@ -1008,6 +1143,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     listMemoryGroupsForTarget,
     listSourceRefsForTarget,
     getMemoryGroupDetail,
+    updateMemoryReviewForTarget,
     upsertEntity,
     recordRelationshipFact,
     applyPendingRelationshipEvent,

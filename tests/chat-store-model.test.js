@@ -758,6 +758,41 @@ describe('chat store model', () => {
     expect(store.listRoleDetailItems(created.id)[0]?.sourceKind).toBe('manual')
   })
 
+  test('updates manual role detail items without changing event-attached metadata', () => {
+    const store = useChatStore()
+    const created = store.addRoleProfile({
+      roleId: '100C',
+      name: 'Role Detail Editor',
+      detailItems: [
+        {
+          section: 'preferences',
+          sourceKind: 'manual',
+          title: 'Tea',
+          detail: 'Likes jasmine tea.',
+        },
+      ],
+    })
+
+    const item = store.listRoleDetailItems(created.id, 'preferences')[0]
+    const updated = store.updateRoleDetailItem(created.id, item.id, {
+      title: 'Coffee',
+      detail: 'Now prefers pour-over coffee.',
+    })
+
+    expect(updated).toMatchObject({
+      id: item.id,
+      section: 'preferences',
+      sourceKind: 'manual',
+      title: 'Coffee',
+      detail: 'Now prefers pour-over coffee.',
+    })
+    expect(store.listRoleDetailItems(created.id, 'preferences')[0]).toMatchObject({
+      id: item.id,
+      title: 'Coffee',
+      detail: 'Now prefers pour-over coffee.',
+    })
+  })
+
   test('clears role chat history without unbinding the Chat Directory contact', () => {
     const store = useChatStore()
     const profile = store.addRoleProfile({

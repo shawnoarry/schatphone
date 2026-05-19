@@ -30,7 +30,7 @@ Compatibility API kept for existing chat asset flow:
 2. `moduleKey`: consumer module key
 3. `roleBound`: whether this contact is actually bound to a global role profile
 4. `contact`: `{ id, kind, name, profileId }`
-5. `profile`: `{ id, name, role, isMain, tags }`
+5. `profile`: `{ id, name, role, isMain, entityType, templateLink, profileValues, capabilities, tags }`
 6. `relationship`: `{ level, note }`
 7. `avatar`:
    - `resolved`
@@ -44,6 +44,18 @@ Compatibility API kept for existing chat asset flow:
    - `recommendedImageAssetId`
    - `profileAssetPack`
    - `profileAssetIds`
+   - `profileAssetFolderBindings`
+
+Profile extension fields:
+
+- `entityType`
+  - one of `self_profile`, `main_role`, `npc`
+- `templateLink`
+  - one primary world/template context and supplemental knowledge point ids
+- `profileValues`
+  - copied profile-template values owned by Contacts
+- `capabilities`
+  - feature flags such as `canAppearInChatDirectory`, `canUseFullRelationshipProgress`, `canUseMemoryGroups`, and `canUseRouteProgression`
 
 ## 4. Important Semantic Boundary
 
@@ -57,6 +69,10 @@ Treat fields this way:
   - Chat-side compatibility or lightweight annotation field
 - `relationship.note`
   - Chat-side compatibility or lightweight annotation field
+- `entityType`
+  - describes Contacts profile type, not Chat Directory membership
+- `profileValues`
+  - concrete Contacts-owned person values copied from WorldBook templates
 
 Current relationship truth must stay owned by `relationshipRuntimeStore`, including:
 
@@ -67,6 +83,15 @@ Current relationship truth must stay owned by `relationshipRuntimeStore`, includ
 - shared memory groups
 
 Do not use this contract alone to decide the authoritative current relationship-progress state in product-facing UI.
+
+Chat Directory is a chat target list, not a Main Role filter.
+
+Rules:
+
+- Self Profile must not be bound as a Chat target.
+- NPC may be bound as a Chat target before being upgraded to Main Role.
+- Chat binding does not prove that an entity is a Main Role.
+- NPC -> Main Role upgrade must preserve existing Chat binding and history.
 
 ## 5. Hierarchy Rules
 

@@ -42,7 +42,7 @@ Current project risk:
 
 ### 4.1 Contacts V2 Detail IA And Memory Presentation
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 Why this is first:
 
@@ -56,12 +56,21 @@ Scope:
 2. separate static profile, relationship progress, memory groups, manual entries, and event-attached entries clearly;
 3. make manual vs event-attached information visually distinct;
 4. keep destructive actions isolated and readable.
+5. land the V1 WorldBook-driven profile-template baseline for Self Profile, Main Role, NPC, and Chat context visibility.
 
 Acceptance:
 
 - a role detail page can present current relationship state and memory groups without semantic confusion;
 - users can tell which items are manually entered and which came from events;
 - Contacts remains distinct from Chat Directory.
+- WorldBook owns template definitions, while Contacts owns concrete profile values.
+- NPC -> Main Role upgrade preserves existing Chat binding and history.
+
+Current implementation note:
+
+- V1 profile-template schema, WorldBook preset/world-template storage, Contacts entity grouping, profile-value display, NPC upgrade, and Chat profile-context gates have landed.
+- Contacts detail now covers grouped manual/event-attached sections, inline manual-detail editing, expanded linked-activity drill-down, memory source-audit, supporting-event drill-down, memory review filtering/sort, and lifecycle controls (`Pinned / Active / Archived` plus review note).
+- 4.1 acceptance is considered reached; later memory dedupe/merge and further polish continue under 4.2 and later visual passes.
 
 Primary references:
 

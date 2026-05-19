@@ -1,3 +1,13 @@
+export {
+  CONTACTS_ENTITY_TYPES,
+  PROFILE_VISIBILITY_LEVELS,
+  createDefaultCapabilitiesForEntityType,
+  normalizeContactsEntityType,
+  normalizeProfileCapabilities,
+  normalizeProfileTemplateLink,
+  normalizeProfileValues,
+} from './profile-template-schema'
+
 export const ROLE_PROFILE_ID_PATTERN = /^\d+[A-Za-z]*$/
 
 export const ROLE_DETAIL_SECTIONS = Object.freeze({

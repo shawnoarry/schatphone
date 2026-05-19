@@ -9,6 +9,15 @@ const MAX_FOLDER_IDS_PER_SLOT = 8
 const MAX_SLOT_PRIORITY = 999
 const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE = 80
+const VALID_PROFILE_ENTITY_TYPES = new Set(['self_profile', 'main_role', 'npc'])
+const VALID_PROFILE_VISIBILITY_LEVELS = new Set([
+  'public',
+  'familiar',
+  'intimate',
+  'hidden',
+  'world_specific',
+])
+const VALID_PROFILE_VALUE_SOURCE_KINDS = new Set(['manual', 'template_default', 'event_attached'])
 
 export const ROLE_ASSET_FOLDER_SLOT_KEYS = Object.freeze([
   'profileImage',
@@ -98,6 +107,64 @@ const normalizeKnowledgePointIdList = (input) => {
     uniqueIds.push(id)
   })
   return uniqueIds.slice(0, MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE)
+}
+
+const normalizeProfileTemplateLinkForContract = (input = {}) => {
+  const source = input && typeof input === 'object' ? input : {}
+  return {
+    primaryWorldId: sanitizeKnowledgePointId(source.primaryWorldId),
+    profileTemplateId: sanitizeKnowledgePointId(source.profileTemplateId),
+    profileTemplateVersion: Math.max(0, toInt(source.profileTemplateVersion, 0)),
+    supplementalKnowledgePointIds: normalizeKnowledgePointIdList(
+      source.supplementalKnowledgePointIds || source.knowledgePointIds,
+    ),
+  }
+}
+
+const normalizeProfileValuesForContract = (input = []) => {
+  if (!Array.isArray(input)) return []
+  const seen = new Set()
+  return input
+    .map((item, index) => {
+      const source = item && typeof item === 'object' ? item : {}
+      const fieldId = sanitizeKnowledgePointId(source.fieldId || source.id)
+      if (!fieldId || seen.has(fieldId)) return null
+      seen.add(fieldId)
+      return {
+        id: sanitizeKnowledgePointId(source.id) || `${fieldId}_${index}`,
+        fieldId,
+        value: Array.isArray(source.value)
+          ? source.value.map((value) => trimTo(value, 120)).filter(Boolean).slice(0, 80)
+          : trimTo(source.value, 600),
+        visibilityLevel: VALID_PROFILE_VISIBILITY_LEVELS.has(source.visibilityLevel)
+          ? source.visibilityLevel
+          : 'familiar',
+        sourceKind: VALID_PROFILE_VALUE_SOURCE_KINDS.has(source.sourceKind)
+          ? source.sourceKind
+          : 'manual',
+        updatedAt: Math.max(0, toInt(source.updatedAt, 0)),
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 160)
+}
+
+const normalizeProfileCapabilitiesForContract = (input = {}) => {
+  const source = input && typeof input === 'object' ? input : {}
+  const defaults = {
+    canAppearInChatDirectory: true,
+    canUseFullRelationshipProgress: true,
+    canUseMemoryGroups: true,
+    canUseRouteProgression: true,
+    canAppearInWorldEvents: true,
+    canAppearInSocialFeed: true,
+  }
+  return Object.fromEntries(
+    Object.entries(defaults).map(([key, fallback]) => [
+      key,
+      typeof source[key] === 'boolean' ? source[key] : fallback,
+    ]),
+  )
 }
 
 export const normalizeRoleAssetPack = (rawPack) => {
@@ -218,6 +285,14 @@ export const createRoleBindingContract = (input = {}) => {
       name: trimTo(profileInput.name, 120),
       role: trimTo(profileInput.role, 120),
       isMain: Boolean(profileInput.isMain),
+      entityType: VALID_PROFILE_ENTITY_TYPES.has(profileInput.entityType)
+        ? profileInput.entityType
+        : profileInput.isMain
+          ? 'main_role'
+          : 'npc',
+      templateLink: normalizeProfileTemplateLinkForContract(profileInput.templateLink),
+      profileValues: normalizeProfileValuesForContract(profileInput.profileValues),
+      capabilities: normalizeProfileCapabilitiesForContract(profileInput.capabilities),
       knowledgePointIds: normalizeKnowledgePointIdList(profileInput.knowledgePointIds),
       tags: Array.isArray(profileInput.tags)
         ? profileInput.tags

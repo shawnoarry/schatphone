@@ -56,17 +56,24 @@ Objective:
 
 Current landed baseline:
 
+- role detail starts with a Role Hub summary for entity type, Chat-bound state, manual/event-attached counts, WorldBook field count, memory count, and linked activity sources;
 - role detail sections show manual and event-attached counts;
+- role detail sections group manual and event-attached items separately;
 - each item exposes a source chip and short source hint;
-- event-attached entries are visibly locked from direct deletion and point users to memory deletion or relationship reset.
+- event-attached entries are visibly locked from direct deletion and point users to memory deletion or relationship reset;
+- event-attached entries with a memory key can open the linked memory detail directly;
+- memory detail now exposes source-audit cards and supporting-event drill-down without moving source-record ownership away from the source modules;
+- manual detail items now support inline editing, and linked activity expands into a source-aware event-attached list.
+- the memory list now supports basic source filtering, sort mode, and selected-memory headline facts.
+- memory lifecycle review is now user-manageable through `Pinned / Active / Archived` plus a review note.
 
 Main tasks:
 
-1. role detail page sections and hierarchy;
+1. deepen role detail page sections and hierarchy below the Role Hub summary;
 2. readable role ID presentation;
-3. clear memory list and memory detail behavior;
-4. manual vs event-attached visual language polish beyond the current baseline;
-5. Chat-bound state and navigation hints;
+3. richer memory list and memory detail behavior;
+4. after this completed baseline, move deeper memory dedupe/merge and recall rules into Workstream 4.2 instead of extending 4.1 further;
+5. richer Chat-bound state and navigation hints;
 6. danger-zone isolation and confirmation copy.
 
 Semantic traps to avoid:

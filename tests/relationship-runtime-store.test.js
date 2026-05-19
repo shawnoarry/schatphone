@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import {
+  RELATIONSHIP_MEMORY_REVIEW_STATES,
+  useRelationshipRuntimeStore,
+} from '../src/stores/relationshipRuntime'
 
 describe('relationship runtime store', () => {
   beforeEach(() => {
@@ -359,5 +362,49 @@ describe('relationship runtime store', () => {
     expect(result.sourceRefs).toEqual([{ sourceModule: 'wallet', sourceId: 'wallet_reset_1' }])
     expect(store.summarizeEntityForTarget({ profileId: 21, name: 'Reset Me' }).exists).toBe(false)
     expect(store.summarizeEntityForTarget({ profileId: 22, name: 'Keep Me' }).exists).toBe(true)
+  })
+
+  test('stores and restores memory review lifecycle metadata for a memory group', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 41,
+        name: 'Review Me',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_review_1:calendar_event:role_41',
+      memoryKey: 'review_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Reviewable memory.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+
+    const updated = store.updateMemoryReviewForTarget({ profileId: 41, name: 'Review Me' }, 'review_memory', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED,
+      note: 'Keep at the top for now.',
+    })
+
+    expect(updated).toMatchObject({
+      status: 'pinned',
+      note: 'Keep at the top for now.',
+    })
+    expect(store.getMemoryGroupDetail({ profileId: 41, name: 'Review Me' }, 'review_memory')).toMatchObject({
+      reviewStatus: 'pinned',
+      reviewNote: 'Keep at the top for now.',
+    })
+
+    const backup = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restored = useRelationshipRuntimeStore()
+    restored.resetForTesting()
+    expect(restored.restoreFromBackup({ relationshipRuntime: backup })).toBe(true)
+    expect(restored.getMemoryGroupDetail({ profileId: 41, name: 'Review Me' }, 'review_memory')).toMatchObject({
+      reviewStatus: 'pinned',
+      reviewNote: 'Keep at the top for now.',
+    })
   })
 })
