@@ -1,6 +1,6 @@
 # Relationship Growth Event System / 好感度、关系进展与角色成长事件系统
 
-Updated: 2026-05-18
+Updated: 2026-05-20
 
 ## 1. Purpose
 
@@ -108,6 +108,7 @@ Cross-module memory rule:
 - Source-level dedupe prevents the same module record from stacking twice.
 - Memory-level merge prevents several modules from surfacing the same life event as several equally weighted memories.
 - Metric deltas should remain tied to explicit facts; memory summaries exist to keep recall clean and explainable.
+- When one module creates the primary life event and a later module only schedules or follows up that same event, both records should reuse one shared `memoryKey` whenever the source lineage is explicit.
 
 ## 6. WorldBook And World-Aware Packs
 
@@ -261,6 +262,7 @@ Landed expanded adapter batch:
 - All new adapters reuse `src/lib/relationship-fact-adapters.js` and source-level dedupe.
 - Phone, Map, Wallet, and Calendar still own their own call, trip, ledger, and schedule records; relationship runtime receives compact facts only.
 - Regression coverage exists in `tests/phone-view.test.js`, `tests/wallet-view.test.js`, `tests/map-view-information-architecture.test.js`, `tests/calendar-relationship-fact-view.test.js`, and `tests/relationship-fact-adapters.test.js`.
+- The first 4.2 merge tightening is also landed: a Shopping gift fact and the downstream Shopping delivery follow-up Calendar event now reuse one shared `shopping_gift` memory key when they point to the same order.
 
 ### Phase 5: World Hub Review And Optional Controls
 
@@ -316,7 +318,11 @@ Current reusable interface:
 - `recordRelationshipFact(input)`: module adapters submit facts with target, source module or id, fact type, summary, metric deltas, milestone, growth traits, world context, optional `memoryKey`, and optional confirmation requirement.
 - `findEventBySource(sourceModule, sourceId)`: module adapters can dedupe imported facts before applying relationship effects.
 - `listMemoryAggregatesForTarget(target)`: runtime can group multiple applied facts under one shared memory summary when they point to the same `memoryKey`.
+- UI consumers should filter from the full sorted aggregate list first and only then apply any visible-item cap; otherwise source-specific review flows can accidentally hide valid memory groups.
+- Runtime recent-event summaries should sort by event timestamp, not raw insertion order, so delayed imports or backfilled facts cannot replace the true latest relationship event in Chat or Contacts summaries.
+- Archived memories should behave like background history by default. They may remain inspectable and auditable, but callers must opt in before archived-only memories or their supporting events become headline summary content again.
 - `summarizeEntityForTarget(target)`: Contacts, World Hub, and future UI panels read a safe snapshot, including compact memory summaries for the target.
+- The runtime snapshot contract now includes `primaryMemory`, `totalMemoryCount`, `visibleMemoryCount`, `archivedMemoryCount`, `hasArchivedOnlyMemories`, `sourceRefs`, and `sourceModuleCounts`; UI consumers should prefer these canonical fields over rebuilding headline-memory or source-summary logic locally.
 - `buildPromptContextForTarget(target)`: Chat reads compact context for role conversations without triggering an API call.
 - `applyPendingRelationshipEvent(eventId)` and `dismissRelationshipEvent(eventId)`: future World Hub controls can approve or reject risky effects.
 - `createBackupSnapshot()` and `restoreFromBackup(snapshot)`: Settings backup and rollback can preserve relationship runtime state.
@@ -337,6 +343,9 @@ Landed behavior:
 - These flows are low-impact and locally applied when relationship runtime is enabled.
 - Duplicate clicks or re-imports do not stack relationship values because adapters dedupe by source module and source id.
 - Cross-module memory cleanup is a separate layer: multiple safe facts may still point to one shared `memoryKey` so the user sees one cleaner memory summary instead of repeated fragments.
+- Shopping-specific 4.2 tightening: when a gift order already created a `shopping_gift` memory, the later Calendar delivery follow-up for that same order becomes a supporting fact inside the same memory group instead of a second top-level Calendar memory.
+- Review-lifecycle visibility tightening: `Pinned / Active / Archived` plus review note should be visible anywhere the product surfaces a primary shared-memory summary, not only inside Contacts detail.
+- Summary-consumer tightening: when only archived memories remain, UI surfaces should show archive/history hinting plus management state, but should not keep presenting that archived memory as the default-current shared-memory headline.
 
 Product meaning:
 

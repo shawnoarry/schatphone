@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -66,6 +66,10 @@ Current landed baseline:
 - manual detail items now support inline editing, and linked activity expands into a source-aware event-attached list.
 - the memory list now supports basic source filtering, sort mode, and selected-memory headline facts.
 - memory lifecycle review is now user-manageable through `Pinned / Active / Archived` plus a review note.
+- Contacts memory filtering now evaluates the full sorted runtime list before applying the visible-item cap, so source-filtered audit work does not lose off-screen matches.
+- World Hub now mirrors primary memory lifecycle state and review note for the top shared memory summary instead of hiding that management signal inside Contacts only.
+- runtime summary snapshots now provide canonical `primaryMemory`, memory-count totals, archive-only state, and source summary fields so Contacts/World Hub no longer need to rebuild those semantics separately.
+- linked-activity source totals now dedupe runtime source refs against event-attached detail refs before counting, preventing one shared event from appearing as several source records.
 
 Main tasks:
 
@@ -126,3 +130,19 @@ Recommended review after implementation:
 - check one role delete flow
 - check one relationship reset flow
 - check one memory-group delete flow
+
+## 7. 4.2 Entry Slice
+
+Current active 4.2 baseline:
+
+1. start by tightening same-life-event memory-key reuse in the runtime and adapter layer before changing Contacts or Chat presentation again;
+2. preserve source-record auditability and cleanup coverage while reducing duplicate top-level memories;
+3. treat Shopping gift memory plus downstream Calendar delivery follow-up as the first canonical merge case.
+4. keep review ordering and memory visibility behavior aligned between runtime, Contacts, and World Hub while 4.2 continues.
+5. keep `summarizeEntityForTarget()` as the canonical read contract for headline memory, archive-only hinting, and source-summary totals instead of letting UI layers infer those fields independently.
+
+Why this first:
+
+- it is a real cross-module chain already present in the product;
+- the user should remember "that gift/order" as one memory, not as a Shopping memory plus a second Calendar memory;
+- Contacts detail and World Hub source audit already have the right surfaces to explain the merged result.

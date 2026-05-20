@@ -180,6 +180,19 @@ describe('relationship runtime store', () => {
     expect(memories[0].primarySummary).toBe('Planned a dorayaki date with Aki.')
     expect(memories[0].latestSummary).toContain('dorayaki')
     expect(summary.memorySummaries).toHaveLength(1)
+    expect(summary.primaryMemory?.memoryKey).toBe('aki_dorayaki_day')
+    expect(summary.totalMemoryCount).toBe(1)
+    expect(summary.visibleMemoryCount).toBe(1)
+    expect(summary.archivedMemoryCount).toBe(0)
+    expect(summary.hasArchivedOnlyMemories).toBe(false)
+    expect(summary.sourceRefs).toEqual([
+      { sourceModule: 'calendar', sourceId: 'calendar_event_date_aki' },
+      { sourceModule: 'chat', sourceId: 'chat_msg_dorayaki_1' },
+    ])
+    expect(summary.sourceModuleCounts).toEqual({
+      calendar: 1,
+      chat: 1,
+    })
     expect(summary.metrics).toMatchObject({
       affinity: 54,
       trust: 52,
@@ -405,6 +418,204 @@ describe('relationship runtime store', () => {
     expect(restored.getMemoryGroupDetail({ profileId: 41, name: 'Review Me' }, 'review_memory')).toMatchObject({
       reviewStatus: 'pinned',
       reviewNote: 'Keep at the top for now.',
+    })
+  })
+
+  test('omits archived memories from prompt context by default and prioritizes pinned memories', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 51,
+        name: 'Recall Me',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_prompt_1:calendar_event:role_51',
+      memoryKey: 'archived_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Archived memory should stay out of default prompt recall.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 51,
+        name: 'Recall Me',
+      },
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'phone_prompt_1:call:role_51',
+      memoryKey: 'active_memory',
+      factType: 'completed_call',
+      summary: 'Active memory should remain in prompt recall.',
+      metricDeltas: {
+        affinity: 2,
+      },
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 51,
+        name: 'Recall Me',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_prompt_1:gift',
+      memoryKey: 'pinned_memory',
+      factType: 'gift_purchased',
+      summary: 'Pinned memory should be recalled first.',
+      metricDeltas: {
+        intimacy: 2,
+      },
+    })
+
+    store.updateMemoryReviewForTarget({ profileId: 51, name: 'Recall Me' }, 'archived_memory', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    })
+    store.updateMemoryReviewForTarget({ profileId: 51, name: 'Recall Me' }, 'pinned_memory', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED,
+    })
+
+    const memoryOrder = store
+      .listMemoryAggregatesForTarget({ profileId: 51, name: 'Recall Me' }, 10)
+      .map((item) => item.memoryKey)
+    const defaultPrompt = store.buildPromptContextForTarget({ profileId: 51, name: 'Recall Me' })
+    const promptWithArchived = store.buildPromptContextForTarget(
+      { profileId: 51, name: 'Recall Me' },
+      { includeArchivedMemories: true },
+    )
+    const summaryWithArchived = store.summarizeEntityForTarget(
+      { profileId: 51, name: 'Recall Me' },
+      { eventLimit: 5, memoryLimit: 5, includeArchivedMemories: true },
+    )
+
+    expect(memoryOrder).toEqual(['pinned_memory', 'active_memory', 'archived_memory'])
+    expect(defaultPrompt).toContain('Pinned memory should be recalled first.')
+    expect(defaultPrompt).toContain('Active memory should remain in prompt recall.')
+    expect(defaultPrompt).not.toContain('Archived memory should stay out of default prompt recall.')
+    expect(defaultPrompt.indexOf('Pinned memory should be recalled first.')).toBeLessThan(
+      defaultPrompt.indexOf('Active memory should remain in prompt recall.'),
+    )
+    expect(summaryWithArchived.memorySummaries.map((item) => item.memoryKey)).toEqual([
+      'pinned_memory',
+      'active_memory',
+      'archived_memory',
+    ])
+    expect(summaryWithArchived.recentEvents.map((item) => item.summary)).toContain(
+      'Archived memory should stay out of default prompt recall.',
+    )
+    expect(promptWithArchived).toContain('Archived memory should stay out of default prompt recall.')
+  })
+
+  test('summarizes recent events by createdAt instead of insertion order', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 61,
+        name: 'Time Order',
+      },
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'time_order_newer:call:role_61',
+      memoryKey: 'time_order_newer',
+      factType: 'completed_call',
+      summary: 'Newer relationship event.',
+      metricDeltas: {
+        trust: 2,
+      },
+      createdAt: Date.parse('2026-05-17T10:00:00.000Z'),
+    })
+    store.recordRelationshipFact({
+      target: {
+        profileId: 61,
+        name: 'Time Order',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'time_order_older:calendar_event:role_61',
+      memoryKey: 'time_order_older',
+      factType: 'scheduled_calendar_event',
+      summary: 'Older relationship event imported later.',
+      metricDeltas: {
+        affinity: 2,
+      },
+      createdAt: Date.parse('2026-05-17T09:00:00.000Z'),
+    })
+
+    const summary = store.summarizeEntityForTarget({ profileId: 61, name: 'Time Order' }, {
+      eventLimit: 2,
+      memoryLimit: 2,
+    })
+    const promptContext = store.buildPromptContextForTarget({ profileId: 61, name: 'Time Order' }, {
+      eventLimit: 2,
+    })
+
+    expect(summary.recentEvents.map((event) => event.summary)).toEqual([
+      'Newer relationship event.',
+      'Older relationship event imported later.',
+    ])
+    expect(summary.latestEventSummary).toBe('Newer relationship event.')
+    expect(promptContext.indexOf('Newer relationship event.')).toBeLessThan(
+      promptContext.indexOf('Older relationship event imported later.'),
+    )
+  })
+
+  test('hides archived-only memories and their events from default entity summaries', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    store.recordRelationshipFact({
+      target: {
+        profileId: 62,
+        name: 'Archived Summary',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'archived_only_1:calendar_event:role_62',
+      memoryKey: 'archived_only_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Archived-only memory should stay out of default summaries.',
+      metricDeltas: {
+        trust: 2,
+      },
+      createdAt: Date.parse('2026-05-17T10:00:00.000Z'),
+    })
+
+    store.updateMemoryReviewForTarget({ profileId: 62, name: 'Archived Summary' }, 'archived_only_memory', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    })
+
+    const defaultSummary = store.summarizeEntityForTarget({ profileId: 62, name: 'Archived Summary' }, {
+      eventLimit: 3,
+      memoryLimit: 3,
+    })
+    const fullSummary = store.summarizeEntityForTarget(
+      { profileId: 62, name: 'Archived Summary' },
+      {
+        eventLimit: 3,
+        memoryLimit: 3,
+        includeArchivedMemories: true,
+      },
+    )
+
+    expect(defaultSummary.memorySummaries).toEqual([])
+    expect(defaultSummary.recentEvents).toEqual([])
+    expect(defaultSummary.latestEventSummary).toBe('')
+    expect(defaultSummary.primaryMemory).toBe(null)
+    expect(defaultSummary.totalMemoryCount).toBe(1)
+    expect(defaultSummary.visibleMemoryCount).toBe(0)
+    expect(defaultSummary.archivedMemoryCount).toBe(1)
+    expect(defaultSummary.hasArchivedOnlyMemories).toBe(true)
+    expect(defaultSummary.sourceRefs).toEqual([])
+    expect(defaultSummary.sourceModuleCounts).toEqual({})
+    expect(fullSummary.memorySummaries).toHaveLength(1)
+    expect(fullSummary.recentEvents).toHaveLength(1)
+    expect(fullSummary.latestEventSummary).toBe('Archived-only memory should stay out of default summaries.')
+    expect(fullSummary.primaryMemory?.memoryKey).toBe('archived_only_memory')
+    expect(fullSummary.totalMemoryCount).toBe(1)
+    expect(fullSummary.visibleMemoryCount).toBe(1)
+    expect(fullSummary.archivedMemoryCount).toBe(1)
+    expect(fullSummary.hasArchivedOnlyMemories).toBe(false)
+    expect(fullSummary.sourceModuleCounts).toEqual({
+      relationship_calendar_confirmed_event: 1,
     })
   })
 })

@@ -12,7 +12,10 @@ import {
   useSimulationStore,
 } from '../src/stores/simulation'
 import { useChatStore } from '../src/stores/chat'
-import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import {
+  RELATIONSHIP_MEMORY_REVIEW_STATES,
+  useRelationshipRuntimeStore,
+} from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 
@@ -266,6 +269,92 @@ describe('ControlCenterView', () => {
     expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).not.toContain(
       'Shared memory: Wallet expense recorded for the same Shopping gift with Aki.',
     )
+
+    wrapper.unmount()
+  })
+
+  test('shows memory review state and note for the primary shared memory in World Hub', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 16,
+        name: 'Review State Role',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_order_review_1:gift',
+      memoryKey: 'review_state_memory',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Review State Role: Tea Tin.',
+      metricDeltas: {
+        affinity: 8,
+      },
+    })
+    relationshipRuntimeStore.updateMemoryReviewForTarget(
+      { profileId: 16, name: 'Review State Role' },
+      'review_state_memory',
+      {
+        status: RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED,
+        note: 'Keep this surfaced in World Hub.',
+      },
+    )
+
+    const { wrapper } = await mountControlCenterView()
+    const panelText = wrapper.get('[data-testid="control-center-relationship-panel"]').text()
+
+    expect(panelText).toContain('Pinned')
+    expect(panelText).toContain('Keep this surfaced in World Hub.')
+
+    wrapper.unmount()
+  })
+
+  test('hides archive-only shared memory summary in World Hub while keeping management state visible', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 17,
+        name: 'Archive Hub Role',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'archive_hub_memory:calendar_event:role_17',
+      memoryKey: 'archive_hub_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Archived World Hub memory should stay out of the default headline.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+    relationshipRuntimeStore.updateMemoryReviewForTarget(
+      { profileId: 17, name: 'Archive Hub Role' },
+      'archive_hub_memory',
+      {
+        status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+        note: 'Historical only.',
+      },
+    )
+
+    const { wrapper } = await mountControlCenterView()
+    const panelText = wrapper.get('[data-testid="control-center-relationship-panel"]').text()
+
+    expect(panelText).toContain('Only archived memories remain, so the default summary is hidden.')
+    expect(panelText).not.toContain(
+      'Shared memory: Archived World Hub memory should stay out of the default headline.',
+    )
+    expect(panelText).toContain('Archived')
+    expect(panelText).toContain('Historical only.')
 
     wrapper.unmount()
   })

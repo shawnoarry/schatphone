@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 This is the only live execution board for implementation order.
 
@@ -79,7 +79,7 @@ Primary references:
 
 ### 4.2 Text-First Memory Dedupe And Recall Rules
 
-Status: `NEXT`
+Status: `IN_PROGRESS`
 
 Why this is next:
 
@@ -98,6 +98,12 @@ Acceptance:
 - the same life event does not appear as several competing top-level memories;
 - supporting facts remain available without becoming duplicate primary memories;
 - Chat and Contacts can consume cleaner memory summaries.
+
+Current implementation note:
+
+- the first 4.2 runtime tightening slice is now landed: Shopping gift memory and its downstream Calendar delivery follow-up now reuse one shared memory group instead of surfacing as two competing top-level memories;
+- source-level traceability remains intact because the Shopping gift fact and Calendar confirmed-event fact still keep their own source module and source id entries inside the shared memory group;
+- further 4.2 work should continue on the same pattern for other same-life-event reminder/schedule chains before expanding recall behavior in Chat.
 
 Primary references:
 

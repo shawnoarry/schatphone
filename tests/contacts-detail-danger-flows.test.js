@@ -486,6 +486,96 @@ describe('ContactsView relationship danger flows', () => {
     wrapper.unmount()
   })
 
+  test('keeps source filtering correct even when the matching memory is outside the first visible 12 entries', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951G',
+      name: 'Deep Memory List',
+    })
+
+    for (let index = 0; index < 12; index += 1) {
+      relationshipRuntimeStore.recordRelationshipFact({
+        target: {
+          profileId: profile.id,
+          name: profile.name,
+        },
+        sourceModule: 'relationship_calendar_confirmed_event',
+        sourceId: `calendar_deep_${index}:calendar_event:role_951G`,
+        memoryKey: `calendar_memory_${index}`,
+        factType: 'scheduled_calendar_event',
+        summary: `Calendar memory ${index}.`,
+        metricDeltas: {
+          trust: 1,
+        },
+        createdAt: Date.now() - (13 - index) * 60_000,
+      })
+    }
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'map_deep_tail:shared_route:role_951G',
+      memoryKey: 'map_tail_memory',
+      factType: 'shared_route',
+      summary: 'Map tail memory.',
+      metricDeltas: {
+        affinity: 2,
+      },
+      createdAt: Date.now() - 14 * 60_000,
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+
+    const toolbar = wrapper.get('[data-testid="contacts-memory-toolbar"]')
+    await toolbar.get('select').setValue('relationship_map_shared_route')
+    await flushUi()
+
+    expect(wrapper.find('[data-testid="contacts-memory-open-map_tail_memory"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Showing 1 memory groups.')
+
+    wrapper.unmount()
+  })
+
+  test('shows an archive-only hint instead of surfacing archived memory as the default profile summary', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951H',
+      name: 'Archive Only',
+    })
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'archive_only_memory:calendar_event:role_951H',
+      memoryKey: 'archive_only_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Archived memory should not become the default profile summary.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+    relationshipRuntimeStore.updateMemoryReviewForTarget({ profileId: profile.id, name: profile.name }, 'archive_only_memory', {
+      status: 'archived',
+    })
+
+    const wrapper = await mountContactsView()
+
+    expect(wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).text()).toContain(
+      'Only archived memories remain, so the default summary is hidden.',
+    )
+
+    wrapper.unmount()
+  })
+
   test('requires irreversible, scope, and typed-id confirmations before deleting a role', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

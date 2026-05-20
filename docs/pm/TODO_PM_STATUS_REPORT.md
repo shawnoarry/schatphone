@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -183,7 +183,12 @@ PM meaning:
 - Contacts Relationship System V2 is not fully complete:
   - destructive-action baseline is in;
   - Contacts 4.1 detail IA and memory presentation acceptance is now reached;
-  - later memory dedupe/merge and recall cleanup move to 4.2;
+  - 4.2 memory dedupe/merge and recall cleanup is now active, with the first Shopping gift plus Calendar follow-up merge slice landed;
+  - memory review state is now visible in both Contacts and World Hub, and Contacts memory source filtering no longer drops off-screen matches because of early list truncation;
+  - relationship snapshots now sort recent events by timestamp rather than insertion order, reducing wrong “latest event” summaries after delayed imports or backfilled facts;
+  - archived memories are now hidden from default live summaries across runtime, Contacts, and Chat unless a caller explicitly opts in;
+  - runtime relationship snapshots now expose canonical primary-memory, memory-count, and source-summary fields that both Contacts and World Hub consume directly;
+  - Contacts linked-activity source totals now dedupe runtime refs against event-attached detail refs, preventing one shared event from inflating source counts;
   - Assets, Stock, Phone, and several secondary modules still need deeper product loops;
 - true closed-page background event generation would still require a larger backend design.
 
@@ -194,6 +199,7 @@ PM meaning:
 1. Continue from the first true schedule/date memory slice.
    - Calendar now writes relationship facts only from confirmed schedule-like events.
    - raw cue drafts remain owned by Reminders.
+   - same-life-event schedule follow-ups should merge into the existing memory when upstream lineage is explicit.
 2. Continue the relationship-growth event system through safe adapters.
    - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
 3. Add clearer user-facing explanation for automatic foreground events.
@@ -201,7 +207,7 @@ PM meaning:
 
 ### P1: Build Useful Cross-Module Loops
 
-1. Finish the Contacts V2 detail IA and memory-management presentation layer.
+1. Continue the 4.2 memory dedupe lane now that Contacts V2 detail IA is landed.
 2. Keep relationship runtime, Contacts, and Chat aligned on one memory truth layer.
 3. Continue Shopping logistics service-account pushes in Chat.
 4. Continue Food Delivery service-account pushes in Chat.
@@ -234,18 +240,18 @@ PM meaning:
 
 Recommended next:
 
-Finish the Contacts V2 detail IA layer and memory-management presentation.
+Continue 4.2 text-first memory dedupe and recall cleanup from the newly landed Shopping gift plus Calendar follow-up merge baseline.
 
 Why:
 
-- role ID, relationship-runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and module cleanup seams are now in place as a baseline;
-- Contacts already has destructive-action surfaces, but the role-detail page still needs clearer product-grade information architecture;
-- the next useful step is to make manual information and event-attached information visibly distinct before adding more derived facts.
+- role ID, relationship-runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and Contacts 4.1 detail IA are now in place as a baseline;
+- the next useful step is to reduce fragmented memory summaries before adding more memory sources or stronger recall behavior;
+- the first real same-life-event merge rule is now proven on the Shopping -> Calendar chain and can be extended carefully.
 
 Fallback same-size task:
 
-- deepen text-first memory dedupe/merge rules;
-- improve Calendar relationship review details.
+- improve Calendar relationship review details;
+- continue Chat-side recall cleanup once more merge rules are in place.
 
 ## 7. Workflow And Skill Reading Path
 

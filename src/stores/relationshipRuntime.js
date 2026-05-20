@@ -326,6 +326,29 @@ const createDefaultMemoryReviewEntry = (entityKey, memoryKey) => {
   }
 }
 
+const getMemoryReviewPriority = (status) => {
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED) return 0
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE) return 1
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED) return 2
+  return 3
+}
+
+const compareMemorySummaryEntries = (left = {}, right = {}, options = {}) => {
+  const sortMode = normalizeText(options.sortMode, 'recent', 20)
+  const reviewDelta = getMemoryReviewPriority(left.reviewStatus) - getMemoryReviewPriority(right.reviewStatus)
+  if (reviewDelta !== 0) return reviewDelta
+  if (sortMode === 'supporting') {
+    const supportingDelta = (Number(right.supportingCount) || 0) - (Number(left.supportingCount) || 0)
+    if (supportingDelta !== 0) return supportingDelta
+  }
+  return (Number(right.latestCreatedAt) || 0) - (Number(left.latestCreatedAt) || 0)
+}
+
+const compareRelationshipEventsByCreatedAtDesc = (left = {}, right = {}) =>
+  (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)
+
+const shouldIncludeArchivedMemories = (options = {}) => options.includeArchivedMemories === true
+
 const normalizeMemoryReviewEntry = (rawEntry = {}, index = 0) => {
   const source = rawEntry && typeof rawEntry === 'object' ? rawEntry : {}
   const entityKey = normalizeText(source.entityKey, '', 120)
@@ -381,6 +404,9 @@ const buildSourceRefsFromEvents = (items = []) => {
       seen.add(key)
       return true
     })
+    .sort((left, right) =>
+      `${left.sourceModule}:${left.sourceId}`.localeCompare(`${right.sourceModule}:${right.sourceId}`),
+    )
 }
 
 const summarizeSourceModules = (items = []) =>
@@ -497,13 +523,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     )
   }
 
-  const listMemoryAggregatesForTarget = (target = {}, limit = 5) => {
+  const listMemoryAggregatesForTarget = (target = {}, limit = 5, options = {}) => {
     const key = buildRelationshipEntityKey(target)
     if (!key) return []
     return [...memoryAggregateMap.value.values()]
       .filter((item) => item.entityKey === key)
-      .sort((a, b) => b.latestCreatedAt - a.latestCreatedAt)
-      .slice(0, clamp(toInt(limit, 5), 0, 50))
       .map((item) => ({
         ...(memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}),
         memoryKey: item.memoryKey,
@@ -529,10 +553,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
           memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.updatedAt ||
           item.latestCreatedAt,
       }))
+      .sort((left, right) => compareMemorySummaryEntries(left, right, options))
+      .slice(0, clamp(toInt(limit, 5), 0, 50))
   }
 
-  const listMemoryGroupsForTarget = (target = {}, limit = 50) =>
-    listMemoryAggregatesForTarget(target, limit)
+  const listMemoryGroupsForTarget = (target = {}, limit = 50, options = {}) =>
+    listMemoryAggregatesForTarget(target, limit, options)
 
   const listSourceRefsForTarget = (target = {}) => {
     const key = buildRelationshipEntityKey(target)
@@ -800,6 +826,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!key) return []
     return events.value
       .filter((event) => event.entityKey === key)
+      .sort(compareRelationshipEventsByCreatedAtDesc)
       .slice(0, clamp(toInt(limit, 5), 0, 50))
       .map((event) => ({ ...event, metricDeltas: { ...event.metricDeltas } }))
   }
@@ -938,16 +965,62 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!meta) return null
     const entity = entityMap.value.get(meta.entityKey)
     const fallback = entity || createDefaultEntity(meta)
+    const memoryLimit = clamp(toInt(options.memoryLimit, 3), 0, 20)
+    const memorySortMode = normalizeText(options.memorySortMode, 'recent', 20)
+    const rawMemorySummaries =
+      memoryLimit > 0
+        ? listMemoryAggregatesForTarget(meta, 50, { sortMode: memorySortMode })
+        : []
+    const hiddenArchivedMemoryKeys = shouldIncludeArchivedMemories(options)
+      ? new Set()
+      : new Set(
+          rawMemorySummaries
+            .filter((item) => item.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED)
+            .map((item) => item.memoryKey)
+            .filter(Boolean),
+        )
+    const memorySummaries =
+      memoryLimit > 0
+        ? rawMemorySummaries
+            .filter((item) =>
+              shouldIncludeArchivedMemories(options)
+                ? true
+                : item.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+            )
+            .slice(0, memoryLimit)
+        : []
+    const allEntityEvents = events.value.filter((event) => event.entityKey === meta.entityKey)
+    const visibleEntityEvents = shouldIncludeArchivedMemories(options)
+      ? allEntityEvents
+      : allEntityEvents.filter(
+          (event) => !event.memoryKey || !hiddenArchivedMemoryKeys.has(event.memoryKey),
+        )
+    const visibleAppliedEntityEvents = visibleEntityEvents.filter(
+      (event) => event.status === RELATIONSHIP_EVENT_STATUS.APPLIED,
+    )
     const eventLimit = clamp(toInt(options.eventLimit, 3), 0, 20)
-    const recentEvents = eventLimit > 0 ? listEventsForTarget(meta, eventLimit) : []
+    const recentEventCandidates =
+      eventLimit > 0
+        ? visibleEntityEvents
+            .slice()
+            .sort(compareRelationshipEventsByCreatedAtDesc)
+        : []
+    const recentEvents =
+      eventLimit > 0
+        ? recentEventCandidates
+            .slice(0, eventLimit)
+            .map(cloneRelationshipEvent)
+        : []
     const appliedEvents = recentEvents.filter(
       (event) =>
         event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
         event.effectApplied !== false,
     )
     const latestEvent = appliedEvents[0] || null
-    const memoryLimit = clamp(toInt(options.memoryLimit, 3), 0, 20)
-    const memorySummaries = memoryLimit > 0 ? listMemoryAggregatesForTarget(meta, memoryLimit) : []
+    const archivedMemoryCount = rawMemorySummaries.filter(
+      (item) => item.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    ).length
+    const primaryMemory = memorySummaries[0] || null
 
     return {
       exists: Boolean(entity),
@@ -962,6 +1035,16 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       growthTraits: [...fallback.growthTraits],
       recentEvents,
       memorySummaries,
+      primaryMemory,
+      totalMemoryCount: rawMemorySummaries.length,
+      visibleMemoryCount: memorySummaries.length,
+      archivedMemoryCount,
+      hasArchivedOnlyMemories:
+        rawMemorySummaries.length > 0 &&
+        archivedMemoryCount > 0 &&
+        memorySummaries.length === 0,
+      sourceRefs: buildSourceRefsFromEvents(visibleAppliedEntityEvents),
+      sourceModuleCounts: summarizeSourceModules(visibleAppliedEntityEvents),
       latestEventSummary: latestEvent?.summary || latestEvent?.factType || '',
       pendingEventCount: events.value.filter(
         (event) =>
@@ -976,6 +1059,8 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!settings.value.enabled && options.includeDisabled !== true) return ''
     const snapshot = summarizeEntityForTarget(target, {
       eventLimit: options.eventLimit ?? 3,
+      memoryLimit: options.memoryLimit ?? 3,
+      includeArchivedMemories: options.includeArchivedMemories === true,
     })
     if (!snapshot) return ''
     if (!snapshot.exists && options.includeNeutral !== true) return ''
@@ -983,15 +1068,32 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const metrics = snapshot.metrics
     const milestones = snapshot.milestones.map((item) => item.label).slice(0, 3).join('; ') || 'none'
     const traits = snapshot.growthTraits.slice(0, 6).join(', ') || 'none'
+    const hiddenArchivedMemoryKeys =
+      options.includeArchivedMemories === true
+        ? new Set()
+        : new Set(
+            snapshot.memorySummaries
+              .filter((item) => item.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED)
+              .map((item) => item.memoryKey)
+              .filter(Boolean),
+          )
     const recentEvents = summarizeEventsForPrompt(
       snapshot.recentEvents.filter(
         (event) =>
           event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
-          event.effectApplied !== false,
+          event.effectApplied !== false &&
+          (!event.memoryKey || !hiddenArchivedMemoryKeys.has(event.memoryKey)),
       ),
     )
-    const memories = snapshot.memorySummaries.length > 0
-      ? snapshot.memorySummaries
+    const promptMemorySummaries = snapshot.memorySummaries
+      .filter((item) =>
+        options.includeArchivedMemories === true
+          ? true
+          : item.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+      )
+      .sort((left, right) => compareMemorySummaryEntries(left, right))
+    const memories = promptMemorySummaries.length > 0
+      ? promptMemorySummaries
           .slice(0, 3)
           .map((item) => item.displaySummary || item.primarySummary || item.latestSummary || item.memoryKey || 'memory')
           .join('; ')

@@ -15,6 +15,7 @@ import {
   recordShoppingGiftRelationshipFact,
   recordWalletSharedTransferRelationshipFact,
 } from '../src/lib/relationship-fact-adapters'
+import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 
 describe('relationship fact adapters', () => {
@@ -326,5 +327,65 @@ describe('relationship fact adapters', () => {
       supportingCount: 2,
       primarySourceModule: 'relationship_phone_call',
     })
+  })
+
+  test('reuses the same memory key when a shopping gift follow-up becomes a calendar event', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const order = {
+      id: 'shopping_order_rin_1',
+      totalCents: 8800,
+      currency: 'CNY',
+      giftRecipient: {
+        name: 'Rin',
+        contactId: 8,
+        profileId: 8,
+        kind: 'role',
+      },
+      items: [{ title: 'Dorayaki Box', quantity: 1, unitPriceCents: 8800, currency: 'CNY' }],
+    }
+    const target = {
+      id: 8,
+      profileId: 8,
+      kind: 'role',
+      name: 'Rin',
+    }
+
+    const shoppingEvent = recordShoppingGiftRelationshipFact({
+      relationshipRuntimeStore,
+      order,
+      transaction: { amount: '88.00', currency: 'CNY' },
+    })
+
+    const calendarEvent = recordCalendarConfirmedEventRelationshipFact({
+      relationshipRuntimeStore,
+      event: {
+        id: 'calendar_event_rin_gift_followup',
+        source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
+        sourceReminderId: 'shopping_delivery_cue_shopping_order_rin_1',
+        status: 'confirmed',
+        titleEn: 'Gift delivery follow-up',
+      },
+      target,
+    })
+
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(shoppingEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
+    expect(calendarEvent.memoryKey).toBe(shoppingEvent.memoryKey)
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_shopping_gift',
+    })
+    expect(memories[0].sourceModules).toContain('relationship_calendar_confirmed_event')
+    expect(summary.metrics).toMatchObject({
+      affinity: 58,
+      trust: 53,
+      intimacy: 24,
+    })
+    expect(calendarEvent.effectApplied).toBe(false)
+    expect(calendarEvent.memoryRole).toBe('supporting')
   })
 })

@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import ContactsView from '../src/views/ContactsView.vue'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { useChatStore } from '../src/stores/chat'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 import { CONTACTS_ENTITY_TYPES } from '../src/lib/profile-template-schema'
 
@@ -100,6 +101,7 @@ describe('Contacts profile template entity UI', () => {
 
   test('presents the selected role as a role hub with chat state, entity type, and memory source summary', async () => {
     const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
     const profile = chatStore.addRoleProfile({
       roleId: '1206',
       name: 'Role hub subject',
@@ -125,6 +127,20 @@ describe('Contacts profile template entity UI', () => {
       profileValues: [{ fieldId: 'pheromone', value: 'Rain wood', visibilityLevel: 'public' }],
     })
     chatStore.bindRoleProfile(profile.id)
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'route_1206',
+      memoryKey: 'hub_memory',
+      factType: 'shared_route',
+      summary: 'Shared route recorded with Role hub subject.',
+      metricDeltas: {
+        affinity: 5,
+      },
+    })
 
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
@@ -141,6 +157,7 @@ describe('Contacts profile template entity UI', () => {
     expect(activity).toContain('relationship_map_shared_route')
     expect(activity).toContain('Event-attached')
     expect(activity).toContain('Memories')
+    expect(activity).toContain('relationship_map_shared_route 1')
 
     wrapper.unmount()
   })

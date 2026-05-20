@@ -435,7 +435,7 @@ const selectedRoleHubStats = computed(() => {
   return {
     ...totals,
     worldFieldCount: selectedProfileValues.value.length,
-    memoryCount: selectedMemoryGroups.value.length,
+    memoryCount: selectedRelationshipSnapshot.value?.totalMemoryCount || 0,
     chatBound: selectedProfileChatBound.value,
   }
 })
@@ -461,7 +461,11 @@ const selectedDeleteImpact = computed(() =>
 
 const selectedMemoryGroups = computed(() =>
   selectedProfile.value
-    ? relationshipRuntimeStore.listMemoryGroupsForTarget(profileRelationshipTarget(selectedProfile.value), 12)
+    ? relationshipRuntimeStore.listMemoryGroupsForTarget(
+        profileRelationshipTarget(selectedProfile.value),
+        50,
+        { sortMode: memorySortMode.value },
+      )
     : [],
 )
 
@@ -586,26 +590,51 @@ const availableMemorySourceFilters = computed(() => {
 
 const filteredMemoryGroups = computed(() => {
   const filterValue = memorySourceFilter.value
-  const sourceFiltered =
-    filterValue === 'all'
-      ? selectedMemoryGroups.value
-      : selectedMemoryGroups.value.filter((memory) => (memory.sourceModules || []).includes(filterValue))
-
-  const sorted = [...sourceFiltered]
-  sorted.sort((left, right) => {
-    const leftPinned = left.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED ? 1 : 0
-    const rightPinned = right.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED ? 1 : 0
-    if (leftPinned !== rightPinned) return rightPinned - leftPinned
-    const leftArchived = left.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 1 : 0
-    const rightArchived = right.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED ? 1 : 0
-    if (leftArchived !== rightArchived) return leftArchived - rightArchived
-    if (memorySortMode.value === 'supporting') {
-      return (Number(right.supportingCount) || 0) - (Number(left.supportingCount) || 0)
-    }
-    return (Number(right.latestCreatedAt) || 0) - (Number(left.latestCreatedAt) || 0)
-  })
-  return sorted
+  return filterValue === 'all'
+    ? selectedMemoryGroups.value
+    : selectedMemoryGroups.value.filter((memory) => (memory.sourceModules || []).includes(filterValue))
 })
+
+const visibleMemoryGroups = computed(() =>
+  filteredMemoryGroups.value.slice(0, 12),
+)
+
+const visibleMemoryCount = computed(() => visibleMemoryGroups.value.length)
+
+const totalMemoryCount = computed(() => filteredMemoryGroups.value.length)
+
+const hiddenMemoryCount = computed(() => Math.max(0, totalMemoryCount.value - visibleMemoryCount.value))
+
+const memoryListSummaryText = computed(() => {
+  if (totalMemoryCount.value === 0) {
+    return t('暂无关系记忆组。', 'No relationship memory groups yet.')
+  }
+  if (hiddenMemoryCount.value <= 0) {
+    return t(
+      `当前展示 ${visibleMemoryCount.value} 条记忆组。`,
+      `Showing ${visibleMemoryCount.value} memory groups.`,
+    )
+  }
+  return t(
+    `当前展示前 ${visibleMemoryCount.value} 条，另有 ${hiddenMemoryCount.value} 条符合筛选。`,
+    `Showing the first ${visibleMemoryCount.value}; ${hiddenMemoryCount.value} more match the current filter.`,
+  )
+})
+
+const selectedMemoryListCountLabel = computed(() =>
+  hiddenMemoryCount.value > 0
+    ? `${visibleMemoryCount.value} / ${totalMemoryCount.value}`
+    : String(visibleMemoryCount.value),
+)
+
+const selectedMemoryListOverflowText = computed(() =>
+  hiddenMemoryCount.value > 0
+    ? t(
+        `${hiddenMemoryCount.value} 条其余记忆已按当前排序保留在列表外，避免详情页过长。`,
+        `${hiddenMemoryCount.value} additional memories stay outside the visible list to keep the detail page manageable.`,
+      )
+    : '',
+)
 
 const selectedMemoryHeadlineFacts = computed(() => {
   const detail = selectedMemoryDetail.value
@@ -699,26 +728,50 @@ const selectedLinkedActivitySummary = computed(() => {
       latestSummary: '',
     }
   }
-  const sourceCounts = { ...(selectedRelationshipSnapshot.value?.sourceModuleCounts || {}) }
-  const eventAttachedCount = Object.values(ROLE_DETAIL_SECTIONS).reduce((sum, section) => {
-    const items = detailItemsForSection(profile, section).filter(
+  const runtimeSourceRefs = Array.isArray(selectedRelationshipSnapshot.value?.sourceRefs)
+    ? selectedRelationshipSnapshot.value.sourceRefs
+    : []
+  const sourceRefMap = new Map(
+    runtimeSourceRefs
+      .filter((ref) => ref?.sourceModule)
+      .map((ref) => [
+        `${ref.sourceModule}:${ref.sourceId || ''}`,
+        {
+          sourceModule: ref.sourceModule,
+          sourceId: ref.sourceId || '',
+        },
+      ]),
+  )
+  const eventAttachedItems = Object.values(ROLE_DETAIL_SECTIONS).flatMap((section) =>
+    detailItemsForSection(profile, section).filter(
       (item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
-    )
-    for (const item of items) {
-      if (!item.sourceModule) continue
-      sourceCounts[item.sourceModule] = (Number(sourceCounts[item.sourceModule]) || 0) + 1
+    ),
+  )
+  eventAttachedItems.forEach((item) => {
+    if (!item.sourceModule) return
+    const key = `${item.sourceModule}:${item.sourceId || `detail_item:${item.id}`}`
+    if (!sourceRefMap.has(key)) {
+      sourceRefMap.set(key, {
+        sourceModule: item.sourceModule,
+        sourceId: item.sourceId || '',
+      })
     }
-    return sum + items.length
-  }, 0)
-  const latestMemory = selectedRelationshipSnapshot.value?.memorySummaries?.[0]
+  })
+  const sourceCounts = [...sourceRefMap.values()].reduce((acc, ref) => {
+    acc[ref.sourceModule] = (Number(acc[ref.sourceModule]) || 0) + 1
+    return acc
+  }, {})
   return {
-    sourceText: sourceModuleSummaryText(sourceCounts),
+    sourceText:
+      Object.keys(sourceCounts).length > 0
+        ? sourceModuleSummaryText(sourceCounts)
+        : t('No linked activity yet', 'No linked activity yet'),
     supportingCount: Object.values(sourceCounts).reduce((sum, count) => sum + (Number(count) || 0), 0),
-    eventAttachedCount,
+    eventAttachedCount: eventAttachedItems.length,
     latestSummary:
-      latestMemory?.displaySummary ||
-      latestMemory?.primarySummary ||
-      latestMemory?.latestSummary ||
+      selectedRelationshipSnapshot.value?.primaryMemory?.displaySummary ||
+      selectedRelationshipSnapshot.value?.primaryMemory?.primarySummary ||
+      selectedRelationshipSnapshot.value?.primaryMemory?.latestSummary ||
       selectedRelationshipSnapshot.value?.latestEventSummary ||
       '',
   }
@@ -1594,6 +1647,15 @@ const profileRelationshipSnapshot = (profile) =>
     memoryLimit: 1,
   })
 
+const profileRelationshipArchiveHint = (snapshot = null) => {
+  if (!snapshot?.exists) return ''
+  if (snapshot.hasArchivedOnlyMemories !== true) return ''
+  return t(
+    '当前只剩归档记忆，默认摘要已隐藏。',
+    'Only archived memories remain, so the default summary is hidden.',
+  )
+}
+
 const profileRelationshipSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
   if (!snapshot) return t('关系快照：暂不可用', 'Relationship snapshot unavailable')
@@ -1607,8 +1669,11 @@ const profileRelationshipSummary = (profile) => {
 const profileRelationshipLatestSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
   if (!snapshot?.exists) return t('暂无跨模块关系事件', 'No cross-module relationship facts yet')
-  const latestMemory = snapshot.memorySummaries?.[0]
-  const memorySummary = latestMemory?.displaySummary || latestMemory?.primarySummary || latestMemory?.latestSummary || ''
+  const memorySummary =
+    snapshot.primaryMemory?.displaySummary ||
+    snapshot.primaryMemory?.primarySummary ||
+    snapshot.primaryMemory?.latestSummary ||
+    ''
   if (memorySummary) {
     return t(
       `共同记忆：${memorySummary}`,
@@ -1617,6 +1682,8 @@ const profileRelationshipLatestSummary = (profile) => {
   }
   const milestone = snapshot.milestones?.[0]?.label || ''
   if (milestone) return t(`最近里程碑：${milestone}`, `Latest milestone: ${milestone}`)
+  const archiveHint = profileRelationshipArchiveHint(snapshot)
+  if (archiveHint) return archiveHint
   if (snapshot.latestEventSummary) {
     return t(`最近关系事件：${snapshot.latestEventSummary}`, `Latest relationship event: ${snapshot.latestEventSummary}`)
   }
@@ -1661,7 +1728,7 @@ watch(
 )
 
 watch(
-  filteredMemoryGroups,
+  visibleMemoryGroups,
   (groups) => {
     if (groups.some((memory) => memory.memoryKey === selectedMemoryKey.value)) return
     selectedMemoryKey.value = groups[0]?.memoryKey || ''
@@ -2667,7 +2734,7 @@ onBeforeUnmount(() => {
           <section class="contacts-detail-section space-y-2">
             <div class="flex items-center justify-between">
               <p class="text-sm font-bold">{{ t('记忆', 'Memories') }}</p>
-              <span class="text-[10px] text-gray-500">{{ filteredMemoryGroups.length }}</span>
+              <span class="text-[10px] text-gray-500">{{ selectedMemoryListCountLabel }}</span>
             </div>
             <div class="contacts-memory-toolbar" data-testid="contacts-memory-toolbar">
               <label class="contacts-memory-toolbar-field">
@@ -2690,12 +2757,15 @@ onBeforeUnmount(() => {
                 </select>
               </label>
             </div>
-            <div v-if="filteredMemoryGroups.length === 0" class="contacts-empty-detail">
-              {{ t('暂无关系记忆组。', 'No relationship memory groups yet.') }}
+            <p class="text-[10px] text-gray-500">
+              {{ memoryListSummaryText }}
+            </p>
+            <div v-if="visibleMemoryGroups.length === 0" class="contacts-empty-detail">
+              {{ memoryListSummaryText }}
             </div>
             <div v-else class="space-y-2">
               <button
-                v-for="memory in filteredMemoryGroups"
+                v-for="memory in visibleMemoryGroups"
                 :key="memory.memoryKey"
                 type="button"
                 class="contacts-memory-item"
@@ -2721,6 +2791,9 @@ onBeforeUnmount(() => {
                   <span class="contacts-small-action shrink-0">{{ t('查看', 'Open') }}</span>
                 </div>
               </button>
+              <p v-if="selectedMemoryListOverflowText" class="text-[10px] text-gray-500">
+                {{ selectedMemoryListOverflowText }}
+              </p>
               <div
                 v-if="selectedMemoryDetail"
                 class="contacts-memory-detail space-y-2"

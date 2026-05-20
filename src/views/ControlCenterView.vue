@@ -19,6 +19,7 @@ import {
 } from '../lib/relationship-source-cleanup-handlers'
 import {
   RELATIONSHIP_EVENT_STATUS,
+  RELATIONSHIP_MEMORY_REVIEW_STATES,
   useRelationshipRuntimeStore,
 } from '../stores/relationshipRuntime'
 import { RELATIONSHIP_CLEANUP_MODES } from '../lib/relationship-cleanup-helpers'
@@ -278,6 +279,18 @@ const relationshipEventStatusClass = (status = '') => {
   return 'bg-white/10 text-slate-400'
 }
 
+const relationshipMemoryReviewLabel = (status = '') => {
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED) return t('置顶', 'Pinned')
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED) return t('归档', 'Archived')
+  return t('活跃', 'Active')
+}
+
+const relationshipMemoryReviewClass = (status = '') => {
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED) return 'bg-cyan-300/15 text-cyan-100'
+  if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED) return 'bg-white/10 text-slate-400'
+  return 'bg-emerald-300/15 text-emerald-100'
+}
+
 const relationshipSourceLabel = (sourceModule = '') => {
   if (sourceModule === 'relationship_shopping_gift') return t('Shopping gift', 'Shopping gift')
   if (sourceModule === 'relationship_food_delivery_shared_meal')
@@ -396,8 +409,24 @@ const buildRuntimeOnlyImpact = (entity = {}, sourceRefs = []) => ({
 
 const relationshipRuntimeEntityRows = computed(() =>
   relationshipRuntimeStore.entities.slice(0, 4).map((entity) => {
+    const snapshot = relationshipRuntimeStore.summarizeEntityForTarget(entity, {
+      eventLimit: 3,
+      memoryLimit: 2,
+    })
     const roleProfile = resolveRuntimeRoleProfile(entity)
     const sourceRefs = relationshipRuntimeStore.listSourceRefsForTarget(entity)
+    const allMemorySummaries = relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2)
+    const memorySummaries = snapshot?.memorySummaries || []
+    const primaryMemory = snapshot?.primaryMemory || null
+    const managementMemory = primaryMemory || allMemorySummaries[0] || null
+    const archiveOnlyHint =
+      snapshot?.hasArchivedOnlyMemories === true
+        ? t(
+            'Only archived memories remain, so the default summary is hidden.',
+            'Only archived memories remain, so the default summary is hidden.',
+          )
+        : ''
+    const displayMemory = primaryMemory || (archiveOnlyHint ? managementMemory : null)
     const impact = roleProfile
       ? buildRoleDeleteImpact({
           chatStore,
@@ -410,7 +439,17 @@ const relationshipRuntimeEntityRows = computed(() =>
       ...entity,
       stageLabel: relationshipStageLabel(entity.relationshipStage),
       updatedAtLabel: formatRuntimeTime(entity.updatedAt),
-      memorySummaries: relationshipRuntimeStore.listMemoryAggregatesForTarget(entity, 2),
+      memorySummaries,
+      primaryMemorySummaryText:
+        primaryMemory?.displaySummary ||
+        primaryMemory?.primarySummary ||
+        primaryMemory?.latestSummary ||
+        '',
+      archiveOnlyHint,
+      primaryMemoryStatusLabel: displayMemory ? relationshipMemoryReviewLabel(displayMemory.reviewStatus) : '',
+      primaryMemoryStatusClass: displayMemory ? relationshipMemoryReviewClass(displayMemory.reviewStatus) : '',
+      primaryMemoryReviewNote: displayMemory?.reviewNote || '',
+      managementMemory,
       sourceRefs,
       impact,
       roleProfile,
@@ -790,16 +829,39 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
                 {{ entity.metrics.affinity }}/{{ entity.metrics.trust }}/{{ entity.metrics.intimacy }}/{{ entity.metrics.tension }}/{{ entity.metrics.dependency }}
               </p>
               <p
-                v-if="entity.memorySummaries.length"
+                v-if="entity.primaryMemorySummaryText"
                 class="mt-1 text-[11px] leading-4 text-rose-100/85"
               >
                 {{
                   t(
-                    `Shared memory: ${entity.memorySummaries[0].displaySummary || entity.memorySummaries[0].primarySummary || entity.memorySummaries[0].latestSummary || entity.memorySummaries[0].memoryKey}`,
-                    `Shared memory: ${entity.memorySummaries[0].displaySummary || entity.memorySummaries[0].primarySummary || entity.memorySummaries[0].latestSummary || entity.memorySummaries[0].memoryKey}`,
+                    `Shared memory: ${entity.primaryMemorySummaryText}`,
+                    `Shared memory: ${entity.primaryMemorySummaryText}`,
                   )
                 }}
               </p>
+              <p
+                v-else-if="entity.archiveOnlyHint"
+                class="mt-1 text-[11px] leading-4 text-slate-400"
+              >
+                {{ entity.archiveOnlyHint }}
+              </p>
+              <div
+                v-if="entity.primaryMemoryStatusLabel"
+                class="mt-2 flex flex-wrap items-center gap-2"
+              >
+                <span
+                  class="rounded-full px-2 py-1 text-[10px] font-semibold"
+                  :class="entity.primaryMemoryStatusClass"
+                >
+                  {{ entity.primaryMemoryStatusLabel }}
+                </span>
+                <span
+                  v-if="entity.primaryMemoryReviewNote"
+                  class="text-[10px] leading-4 text-slate-300"
+                >
+                  {{ entity.primaryMemoryReviewNote }}
+                </span>
+              </div>
               <p class="mt-1 text-[10px] text-slate-600">
                 {{ t('Updated', 'Updated') }}: {{ entity.updatedAtLabel }}
               </p>
@@ -813,11 +875,11 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
                   {{ t('重置上下文', 'Reset context') }}
                 </button>
                 <button
-                  v-if="entity.memorySummaries[0]"
+                  v-if="entity.managementMemory"
                   type="button"
                   class="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-slate-200"
-                  :data-testid="`control-center-relationship-delete-memory-${entity.entityKey}-${entity.memorySummaries[0].memoryKey}`"
-                  @click="deleteRuntimeMemoryFromWorldHub(entity, entity.memorySummaries[0])"
+                  :data-testid="`control-center-relationship-delete-memory-${entity.entityKey}-${entity.managementMemory.memoryKey}`"
+                  @click="deleteRuntimeMemoryFromWorldHub(entity, entity.managementMemory)"
                 >
                   {{ t('删除这段记忆', 'Delete memory') }}
                 </button>

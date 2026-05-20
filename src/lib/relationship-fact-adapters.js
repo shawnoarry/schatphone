@@ -1,3 +1,5 @@
+import { SHOPPING_SOURCE_KEYS } from './planned-module-registry'
+
 export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   SHOPPING_GIFT: 'relationship_shopping_gift',
   FOOD_DELIVERY_SHARED_MEAL: 'relationship_food_delivery_shared_meal',
@@ -61,6 +63,19 @@ const stripKnownPrefix = (value, prefix) => {
     : ''
 }
 
+const resolveShoppingCalendarOrderId = (event = {}) => {
+  const sourceReminderId = normalizeText(event?.sourceReminderId, '', 160)
+  const fromReminder = stripKnownPrefix(sourceReminderId, 'shopping_delivery_cue_')
+  if (fromReminder) return fromReminder
+
+  const eventId = normalizeText(event?.id, '', 160)
+  const eventReminderId = stripKnownPrefix(eventId, 'calendar_event_')
+  const fromEventId = stripKnownPrefix(eventReminderId, 'shopping_delivery_cue_')
+  if (fromEventId) return fromEventId
+
+  return ''
+}
+
 const resolveCalendarEventMemoryKey = (event = {}, fallbackSourceId = '') => {
   const source = normalizeText(event?.source, '', 80)
   const sourceReminderId = normalizeText(event?.sourceReminderId, '', 160)
@@ -74,6 +89,13 @@ const resolveCalendarEventMemoryKey = (event = {}, fallbackSourceId = '') => {
     return buildRelationshipMemoryKey(
       'map_reminder',
       event?.sourceAreaId || sourceReminderId || event?.id || fallbackSourceId,
+    )
+  }
+
+  if (source === SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY) {
+    return buildRelationshipMemoryKey(
+      'shopping_gift',
+      resolveShoppingCalendarOrderId(event) || sourceReminderId || event?.id || fallbackSourceId,
     )
   }
 

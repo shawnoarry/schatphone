@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 ## 1. Purpose
 
@@ -82,6 +82,12 @@ Still not final:
 3. stronger World Hub controls and frozen Cheats design;
 4. deeper product loops for some secondary modules such as Assets and Stock.
 
+Immediate active lane:
+
+- 4.2 memory dedupe is now in progress, starting with same-life-event merge rules for existing cross-module chains such as Shopping gift memory plus Calendar delivery follow-up.
+- the current polish sub-slice is making memory review semantics render consistently across Contacts and World Hub while removing filtered-list visibility bugs in Contacts detail.
+- the current runtime/UI tightening also makes `summarizeEntityForTarget()` the canonical source for primary-memory headline, memory-count totals, archive-only hinting, and source-summary data across Contacts and World Hub.
+
 ## 5. Technical Stack
 
 Current stack from the codebase:
@@ -91,7 +97,7 @@ Current stack from the codebase:
 3. Pinia `3.0.4`
 4. Vite `7.2.4`
 5. Tailwind CSS `4.1.18`
-6. Vitest `1.6.0` with jsdom
+6. Vitest `1.6.1` with jsdom
 7. ESLint 9 plus Prettier 3
 
 ## 6. Core Architecture
