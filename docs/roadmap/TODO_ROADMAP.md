@@ -209,6 +209,33 @@ Primary references:
 - `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
 - `docs/process/AI_WORK_MODE.md`
 
+### 4.6 World Pack / App Archetype / Service Template System
+
+Status: `DECISION`
+
+Why this may become a main lane:
+
+- WorldBook, service accounts, Shopping, Logistics, Food Delivery, Calendar, Map, Wallet, Assets, and Stock are now mature enough to need a reusable world-driven extension model;
+- future modes such as black markets, auction houses, hospitals, flights, subscriptions, task boards, and publication accounts should not become one-off custom data chains;
+- the current service-notification boundary already proves the right direction: Chat owns communication history, while source modules own business truth.
+
+Scope to decide before implementation:
+
+1. define WorldBook vs World Pack ownership;
+2. define the app archetype registry and world app binding model;
+3. define service-account and subscription-account templates for user-created accounts;
+4. decide the V1 world scope rule;
+5. select the first archetype implementation target.
+
+Current design reference:
+
+- `docs/superpowers/specs/2026-05-23-world-pack-app-archetype-service-template-design.md`
+
+Decision note:
+
+- this is intentionally not implemented directly from conversation notes;
+- promote it from `DECISION` only after PM confirms V1 scope and first archetype target.
+
 ## 5. Deferred Or Guarded Directions
 
 These are known directions, but should not jump ahead of the current work.

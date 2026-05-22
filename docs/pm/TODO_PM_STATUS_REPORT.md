@@ -104,10 +104,12 @@ PM meaning:
 - WorldBook can store global worldview and knowledge points.
 - Knowledge points can be searched, filtered, tagged, edited, enabled/disabled, and linked to context.
 - Calendar, Chat, and Map can read WorldBook context.
+- A new review-ready design proposes a reusable World Pack / App Archetype / Service Account Template system so world-specific apps and user-created service accounts can be assembled from templates instead of hand-coded one by one.
 
 PM meaning:
 
 - WorldBook is becoming the shared world-context layer;
+- World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source;
 - data entry should still stay distributed instead of forcing everything into one control console.
 
 ### Gallery / Media Assets
@@ -238,6 +240,8 @@ PM meaning:
 - What default event intensity should be for new users.
 - Whether World Hub unlock conditions should be world-dependent from the beginning.
 - Which world packs should be prioritized first.
+- Whether the World Pack / App Archetype / Service Account Template system should use one active world per save in V1 or a narrower per-profile/per-thread world scope.
+- Which first app archetype should be promoted after service-account notifications: marketplace/auction, reservation, transit, subscription, or publication feed.
 - Whether true closed-page background events are worth backend complexity.
 - Whether Wallet should support editable fictional funds soon or remain downstream first.
 
@@ -245,7 +249,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design now exists and can be promoted after PM confirms V1 scope and first archetype target.
 
 Why:
 
@@ -260,6 +264,7 @@ Fallback same-size task:
 
 - add another read-only World Hub explanation slice only if PM/QA finds a concrete review gap;
 - polish service-notification visual language only if product review asks for it; the functional 4.4 baseline is complete.
+- turn the world-pack design into an implementation plan only after confirming its V1 scope, because it is a multi-slice architecture lane rather than a small polish task.
 
 ## 7. Workflow And Skill Reading Path
 
