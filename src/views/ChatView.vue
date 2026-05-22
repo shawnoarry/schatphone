@@ -1507,6 +1507,7 @@ const extractMessageTextForContext = (message) => {
       if (block.type === 'module_link') return `[link] ${block.label || ''}`
       if (block.type === 'link_external') return `[external_link] ${block.label || ''} ${block.url || ''}`
       if (block.type === 'transfer_virtual') return `[transfer] ${block.amount || ''} ${block.currency || ''}`
+      if (block.type === 'service_notification') return `[service] ${block.title || ''} ${block.summary || ''}`
       if (block.type === 'image_virtual') return `[image] ${block.alt || ''}`
       if (block.type === 'mini_scene') return `[scene] ${block.title || ''} ${block.description || ''}`
       return ''
@@ -2252,6 +2253,10 @@ const normalizeAssistantBlock = (rawBlock, aiPrefs, options = {}) => {
     }
   }
 
+  if (blockType === 'service_notification') {
+    return null
+  }
+
   if (blockType === 'image_virtual') {
     if (options.allowImageVirtual === false) return null
     return {
@@ -2346,6 +2351,13 @@ const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
   if (first.type === 'product_card') {
     return trimAssistantText(
       `${first.title} ${first.price || ''} ${first.currency || ''}`.trim(),
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'service_notification') {
+    return trimAssistantText(
+      `${first.title || ''} ${first.summary || ''}`.trim(),
       MAX_ASSISTANT_TEXT_CHARS,
       '',
     )
@@ -4023,6 +4035,27 @@ const openModuleRoute = (routePath) => {
   router.push(routePath)
 }
 
+const openServiceNotificationRoute = (block = {}, action = null) => {
+  const routePath = typeof action?.route === 'string' ? action.route : block.route
+  if (typeof routePath !== 'string' || !routePath.startsWith('/')) {
+    showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
+    return
+  }
+  const [path, rawQuery = ''] = routePath.split('?')
+  if (!SAFE_MODULE_ROUTES.has(path)) {
+    showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
+    return
+  }
+  if (!rawQuery) {
+    router.push(path)
+    return
+  }
+  router.push({
+    path,
+    query: Object.fromEntries(new URLSearchParams(rawQuery)),
+  })
+}
+
 const openShoppingFromChat = (payload = {}) => {
   const productId = typeof payload?.productId === 'string' ? payload.productId.trim() : ''
   const category = typeof payload?.category === 'string' ? payload.category.trim() : ''
@@ -4783,6 +4816,51 @@ onBeforeUnmount(() => {
                   >
                     {{ t('去 Shopping 确认', 'Confirm in Shopping') }}
                   </button>
+                </div>
+
+                <div
+                  v-else-if="block.type === 'service_notification'"
+                  class="rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-2"
+                  :data-testid="`chat-service-notification-${block.sourceModule}-${block.sourceId}${block.sourceEventId ? `-${block.sourceEventId}` : ''}`"
+                >
+                  <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
+                    {{ t('服务号通知', 'Service notification') }}
+                  </p>
+                  <p v-if="block.serviceLabel || block.serviceKey" class="mt-1 text-[10px] font-semibold text-indigo-700">
+                    {{ block.serviceLabel || block.serviceKey }}
+                  </p>
+                  <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
+                  <p v-if="block.summary" class="mt-1 text-[11px] leading-4 text-indigo-900/75">{{ block.summary }}</p>
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span v-if="block.statusLabel" class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+                      {{ block.statusLabel }}
+                    </span>
+                    <span v-if="block.amount" class="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-gray-700">
+                      {{ block.amount }}
+                    </span>
+                    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700">
+                      {{ block.sourceModule }}
+                    </span>
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    <button
+                      v-for="(action, actionIndex) in block.actions"
+                      :key="`${action.route}-${actionIndex}`"
+                      class="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[11px] text-indigo-700"
+                      :data-testid="`chat-service-notification-action-${block.sourceId}-${actionIndex}`"
+                      @click="openServiceNotificationRoute(block, action)"
+                    >
+                      {{ action.label }}
+                    </button>
+                    <button
+                      v-if="!block.actions?.length"
+                      class="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[11px] text-indigo-700"
+                      :data-testid="`chat-service-notification-open-${block.sourceId}`"
+                      @click="openServiceNotificationRoute(block)"
+                    >
+                      {{ t('查看详情', 'View details') }}
+                    </button>
+                  </div>
                 </div>
 
                 <div v-else-if="block.type === 'image_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">

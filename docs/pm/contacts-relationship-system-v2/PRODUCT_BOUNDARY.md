@@ -163,3 +163,4 @@ If any of these happens, treat it as a product-semantic bug:
 3. Contacts and Chat Directory both expose destructive role management.
 4. A single life event becomes multiple unrelated memories instead of one memory group.
 5. A user cannot tell whether a role-detail item was manually entered or event-attached.
+6. A downstream follow-up with explicit source lineage stacks relationship growth instead of attaching as supporting context to the existing memory group.

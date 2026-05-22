@@ -435,4 +435,63 @@ describe('ChatView Shopping product preview routing', () => {
     expect(foodDeliveryStore.cartQuantity).toBe(0)
     wrapper.unmount()
   })
+
+  test('renders service-account notification messages and opens source module without side effects', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const serviceContact = chatStore.addContact({
+      name: 'Standard Courier',
+      kind: 'service',
+      role: 'Service account',
+      logisticsServiceKey: 'standard_courier',
+    })
+    chatStore.appendServiceNotification(serviceContact.id, {
+      kind: 'logistics_update',
+      title: 'Package shipped · Mira Lens',
+      summary: 'Standard courier picked up this parcel.',
+      statusLabel: 'Shipped',
+      amount: '1288.00 CNY',
+      sourceModule: 'shopping_logistics_tracking',
+      sourceId: 'shopping_order_4_4',
+      sourceEventId: 'shopping_event_4_4',
+      serviceKey: 'standard_courier',
+      serviceLabel: 'Standard Courier',
+      route: '/shopping?source=chat&intent=logistics&category=logistics&orderId=shopping_order_4_4',
+      actions: [
+        {
+          label: 'Open logistics',
+          route: '/shopping?source=chat&intent=logistics&category=logistics&orderId=shopping_order_4_4',
+        },
+      ],
+    })
+
+    await router.push(`/chat/${serviceContact.id}`)
+    await router.isReady()
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await nextTick()
+
+    const card = wrapper.get(
+      '[data-testid="chat-service-notification-shopping_logistics_tracking-shopping_order_4_4-shopping_event_4_4"]',
+    )
+    expect(card.text()).toContain('Package shipped · Mira Lens')
+    expect(card.text()).toContain('Standard courier picked up this parcel.')
+    expect(card.text()).toContain('shopping_logistics_tracking')
+
+    await wrapper.get('[data-testid="chat-service-notification-action-shopping_order_4_4-0"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'chat',
+      intent: 'logistics',
+      category: 'logistics',
+      orderId: 'shopping_order_4_4',
+    })
+    wrapper.unmount()
+  })
 })

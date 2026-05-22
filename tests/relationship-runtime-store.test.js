@@ -207,6 +207,72 @@ describe('relationship runtime store', () => {
     expect(store.events[1].memoryRole).toBe('primary')
   })
 
+  test('builds recall summaries from the primary memory while exposing linked supporting facts', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    const primary = store.recordRelationshipFact({
+      target: {
+        profileId: 6,
+        name: 'Rin',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_order_rin_1:gift',
+      memoryKey: 'shopping_gift__shopping_order_rin_1',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Rin: Dorayaki Box.',
+      metricDeltas: {
+        affinity: 8,
+        trust: 3,
+        intimacy: 4,
+      },
+      createdAt: Date.parse('2026-05-17T09:00:00.000Z'),
+    })
+    const supporting = store.recordRelationshipFact({
+      target: {
+        profileId: 6,
+        name: 'Rin',
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_event_rin_delivery:calendar_event:role_6',
+      memoryKey: 'shopping_gift__shopping_order_rin_1',
+      factType: 'scheduled_calendar_event',
+      summary: 'Calendar plan recorded with Rin: Gift delivery follow-up.',
+      metricDeltas: {
+        affinity: 4,
+        trust: 2,
+        intimacy: 2,
+      },
+      createdAt: Date.parse('2026-05-17T10:00:00.000Z'),
+    })
+
+    const summary = store.summarizeEntityForTarget({ profileId: 6, name: 'Rin' }, {
+      eventLimit: 3,
+      memoryLimit: 2,
+    })
+    const promptContext = store.buildPromptContextForTarget({ profileId: 6, name: 'Rin' })
+
+    expect(primary.effectApplied).toBe(true)
+    expect(supporting.effectApplied).toBe(false)
+    expect(summary.primaryMemory).toMatchObject({
+      memoryKey: 'shopping_gift__shopping_order_rin_1',
+      displaySummary: 'Gift purchased for Rin: Dorayaki Box.',
+      latestSummary: 'Calendar plan recorded with Rin: Gift delivery follow-up.',
+      supportingCount: 2,
+    })
+    expect(summary.primaryMemory.recallSummary).toBe(
+      'Gift purchased for Rin: Dorayaki Box. (2 linked records: Shopping gift, Calendar plan)',
+    )
+    expect(summary.primaryMemory.reviewSummary).toBe(
+      'Gift purchased for Rin: Dorayaki Box. (2 related records)',
+    )
+    expect(summary.latestEventSummary).toBe('Gift purchased for Rin: Dorayaki Box.')
+    expect(promptContext).toContain(
+      'Memory summaries: Gift purchased for Rin: Dorayaki Box. (2 linked records: Shopping gift, Calendar plan).',
+    )
+    expect(promptContext).not.toContain('Memory summaries: Calendar plan recorded with Rin')
+  })
+
   test('deletes one memory group and recomputes relationship metrics from remaining events', () => {
     const store = useRelationshipRuntimeStore()
     store.resetForTesting()

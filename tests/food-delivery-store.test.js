@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { useChatStore } from '../src/stores/chat'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
@@ -179,6 +180,73 @@ describe('food delivery store', () => {
     expect(store.orders[0]?.events).toHaveLength(3)
     expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
     expect(store.addOrderEvent('missing', { type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY })).toBeNull()
+  })
+
+  test('pushes Food Delivery service notifications while Food Delivery keeps order state', () => {
+    const store = useFoodDeliveryStore()
+    const chatStore = useChatStore()
+    store.resetForTesting()
+    const serviceContact = chatStore.addContact({
+      name: 'Food Delivery Dispatch',
+      kind: 'service',
+      role: 'Service account',
+      foodDeliveryServiceKey: 'food_delivery_dispatch',
+    })
+    const restaurant = store.upsertRestaurant({
+      id: 'food_service_shop',
+      name: 'Service Kitchen',
+      category: 'restaurants',
+      deliveryFee: '5.00',
+    })
+    const item = store.upsertMenuItem({
+      id: 'food_service_item',
+      restaurantId: restaurant.id,
+      title: 'Service Meal',
+      price: '31.00',
+    })
+    store.addToCart(item.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Map Pin B',
+    })
+    const orderNotification = chatStore.findServiceNotificationBySource(
+      serviceContact.id,
+      'food_delivery_chat_push',
+      order.id,
+    )
+    expect(orderNotification?.blocks[0]).toMatchObject({
+      type: 'service_notification',
+      kind: 'food_delivery_order',
+      sourceModule: 'food_delivery_chat_push',
+      sourceId: order.id,
+      serviceKey: 'food_delivery_dispatch',
+      amount: '36.00 CNY',
+    })
+
+    const event = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
+      summary: 'ETA changed to 28 minutes.',
+      etaMinutes: 28,
+    })
+    const eventNotification = chatStore.findServiceNotificationBySource(
+      serviceContact.id,
+      'food_delivery_chat_push',
+      order.id,
+      event.id,
+    )
+    expect(eventNotification?.blocks[0]).toMatchObject({
+      type: 'service_notification',
+      kind: 'food_delivery_update',
+      sourceId: order.id,
+      sourceEventId: event.id,
+      statusLabel: 'ETA updated',
+    })
+    expect(store.orders[0]).toMatchObject({
+      id: order.id,
+      status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
+      deliveryAddress: 'Map Pin B',
+    })
+    expect(store.orderCount).toBe(1)
+    expect(chatStore.getConversationByContactId(serviceContact.id).unread).toBe(2)
   })
 
   test('persists and restores backup-compatible snapshots', () => {

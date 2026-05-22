@@ -67,7 +67,10 @@ Current World Hub capabilities:
 2. shows runtime counts, logs, cooldowns, and enablement state;
 3. reads relationship runtime status and top snapshots;
 4. can approve or dismiss pending relationship events when that review path is enabled;
-5. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
+5. consumes primary-led relationship-memory recall summaries while preserving source-audit detail;
+6. can filter event logs by module/status and inspect selected logs with trigger, reason, adapter, target, and world-variant explanations;
+7. can filter relationship facts by status/source and inspect selected facts with metric-delta, source-record, pending-effect, and supporting-only explanations;
+8. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
 
 ## Relationship To Cheats
 
@@ -86,6 +89,6 @@ Important rule:
 
 ## Next Recommended Slice
 
-1. improve World Hub review detail quality;
-2. keep runtime-trigger explanation understandable in product language;
+1. preserve the filtered review-pack baseline while adding future event adapters;
+2. add another read-only explanation slice only when product review finds a concrete gap;
 3. freeze Cheats only after the World Hub review surface is strong enough to support a clearer control hierarchy.

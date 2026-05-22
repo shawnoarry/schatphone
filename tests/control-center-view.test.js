@@ -162,6 +162,59 @@ describe('ControlCenterView', () => {
     wrapper.unmount()
   })
 
+  test('filters event logs and shows review detail without retriggering events', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    simulationStore.recordEventLog({
+      eventId: 'food_delivery.rider_delay.v1',
+      moduleKey: 'food_delivery',
+      targetId: 'order-review-1',
+      adapterKey: 'food_delivery.add_order_event',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'eligible_random_passed',
+      variantId: 'variant_rider_delay_review',
+      worldContextId: 'world_review',
+      at: Date.now(),
+    })
+    simulationStore.recordEventLog({
+      eventId: 'shopping.logistics.package_arrived.v1',
+      moduleKey: 'shopping',
+      targetId: 'shopping-order-review-2',
+      adapterKey: 'shopping.add_logistics_event',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.CONDITION,
+      status: SIMULATION_EVENT_STATUS.SKIPPED,
+      reason: 'cooldown_active',
+      at: Date.now() - 1000,
+    })
+
+    const eventLogCountBeforeMount = simulationStore.eventLogCount
+    const { wrapper } = await mountControlCenterView()
+
+    await wrapper.get('[data-testid="control-center-event-log-module-filter"]').setValue('shopping')
+    await flushUi()
+
+    const panel = wrapper.get('[data-testid="control-center-event-log-panel"]')
+    expect(wrapper.findAll('[data-testid="control-center-event-log-item"]')).toHaveLength(1)
+    expect(panel.text()).toContain('Shopping package arrived')
+    expect(panel.text()).not.toContain('Food Delivery rider delay')
+    expect(wrapper.get('[data-testid="control-center-event-log-detail"]').text()).toContain(
+      'skipped behavior can be audited without mutating module data',
+    )
+    expect(wrapper.get('[data-testid="control-center-event-log-detail"]').text()).toContain(
+      'Adapter boundary: shopping.add_logistics_event',
+    )
+    expect(simulationStore.eventLogCount).toBe(eventLogCountBeforeMount)
+
+    wrapper.unmount()
+  })
+
   test('applies and dismisses pending relationship events from World Hub review', async () => {
     const systemStore = useSystemStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
@@ -222,6 +275,67 @@ describe('ControlCenterView', () => {
     wrapper.unmount()
   })
 
+  test('filters relationship facts and explains pending effects before review', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const pending = relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 18,
+        name: 'Pending Detail',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'pending_detail_review',
+      factType: 'confession_candidate',
+      summary: 'A relationship step needs review detail.',
+      metricDeltas: {
+        affinity: 15,
+        intimacy: 12,
+      },
+      requiresConfirmation: true,
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: 18,
+        name: 'Pending Detail',
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_detail_review:gift',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased while the pending effect waits.',
+      metricDeltas: {
+        affinity: 4,
+      },
+    })
+
+    const eventCountBeforeMount = relationshipRuntimeStore.events.length
+    const { wrapper } = await mountControlCenterView()
+
+    await wrapper
+      .get('[data-testid="control-center-relationship-status-filter"]')
+      .setValue('pending_confirmation')
+    await flushUi()
+
+    const panel = wrapper.get('[data-testid="control-center-relationship-panel"]')
+    expect(wrapper.findAll('[data-testid="control-center-relationship-event"]')).toHaveLength(1)
+    expect(panel.text()).toContain('confession_candidate')
+    expect(panel.text()).not.toContain('Gift purchased while the pending effect waits.')
+
+    const detail = wrapper.get('[data-testid="control-center-relationship-detail"]').text()
+    expect(detail).toContain('waiting for explicit World Hub review')
+    expect(detail).toContain('Metric delta: affinity +15 / intimacy +12')
+    expect(detail).toContain('Pending review: no metric change is applied until this is approved.')
+    expect(wrapper.find(`[data-testid="control-center-relationship-apply-${pending.id}"]`).exists()).toBe(true)
+    expect(relationshipRuntimeStore.events).toHaveLength(eventCountBeforeMount)
+
+    wrapper.unmount()
+  })
+
   test('shows primary shared memory summaries instead of supporting wallet details', async () => {
     const systemStore = useSystemStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
@@ -264,7 +378,10 @@ describe('ControlCenterView', () => {
     const { wrapper } = await mountControlCenterView()
 
     expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain(
-      'Shared memory: Gift purchased for Aki: Moon Lamp.',
+      'Shared memory: Gift purchased for Aki: Moon Lamp. (2 related records)',
+    )
+    expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).not.toContain(
+      'Wallet support',
     )
     expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).not.toContain(
       'Shared memory: Wallet expense recorded for the same Shopping gift with Aki.',

@@ -17,6 +17,10 @@ Updated: 2026-05-19
 - pending confirmation logic
 - cleanup and recall rules
 
+Current landed guardrail:
+
+- 4.2 relationship-memory cleanup has reached current explicit-lineage acceptance. Chat should consume source-aware `recallSummary` text for prompt context, while World Hub should use UI-facing related-record summaries and reserve source-audit detail for focused review surfaces.
+
 ## 3. Workstream C: World Hub
 
 - runtime review
@@ -28,6 +32,7 @@ Current landed guardrail:
 
 - World Hub relationship rows and cleanup dialogs show product-facing `roleId` only when a Contacts role profile exists.
 - Missing-profile or runtime-only relationship targets are labeled by runtime key, so `profileId` / `entityKey` are not mistaken for the user's role number.
+- The 4.3 review-pack baseline adds filtered event-log and relationship-fact detail views with product-facing explanations, while still deferring broad value, funds, unlock, and freeform override controls.
 
 ## 4. Workstream D: Cheats / 金手指
 

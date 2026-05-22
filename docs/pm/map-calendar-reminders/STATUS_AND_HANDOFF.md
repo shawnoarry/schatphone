@@ -14,7 +14,8 @@ What is already landed:
 2. Reminders owns cross-module cue queues and is reachable from Home;
 3. Calendar leads with confirmed schedule/date meaning and push scheduling;
 4. Calendar can create low-impact relationship facts only from confirmed events;
-5. Map provides route, ETA, and route-context support without taking ownership of business records.
+5. Map provides route, ETA, and route-context support without taking ownership of business records;
+6. Map-derived Calendar follow-ups preserve `sourceTripId` when available, so Calendar can attach as supporting context to the originating shared-route memory.
 
 Still incomplete:
 
@@ -45,4 +46,3 @@ At the end of a meaningful round, check and update:
 4. `IMPLEMENTATION_WORKSTREAMS.md`
 5. `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 6. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` when relationship-fact semantics changed
-

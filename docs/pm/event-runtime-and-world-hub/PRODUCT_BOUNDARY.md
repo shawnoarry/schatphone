@@ -31,6 +31,7 @@ Owns:
 - milestones
 - growth traits
 - memory groups
+- primary-led memory recall summaries consumed by Chat, Contacts, and World Hub
 
 ### World Hub / 世界中枢
 
@@ -39,12 +40,14 @@ Owns:
 - optional runtime review
 - narrow override/review actions
 - future GM-like control entry
+- filtered event-log and relationship-fact review details
 
 Does not own:
 
 - normal role/data entry
 - daily reminders
 - role profile editing
+- broad value, funds, unlock, or freeform override editing in the current baseline
 
 ### Cheats / 金手指
 
@@ -58,4 +61,3 @@ Does not own yet:
 - stable route
 - default Home visibility
 - mandatory user workflow
-

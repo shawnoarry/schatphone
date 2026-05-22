@@ -13,6 +13,7 @@ Updated: 2026-05-19
 - confirmed event flows
 - schedule/date presentation
 - relationship-fact safe adapters only after confirmation
+- confirmed follow-ups should reuse upstream `sourceTripId` lineage when Map created the cue
 
 ## 3. Workstream C: Reminders As Cue Layer
 
@@ -29,4 +30,3 @@ Treat these as bugs:
 1. Calendar becomes a generic cue dump again
 2. Reminders starts replacing confirmed schedule meaning
 3. Map starts owning business records that only need route context
-

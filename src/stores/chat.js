@@ -61,8 +61,22 @@ const VALID_BLOCK_TYPES = new Set([
   'link_external',
   'transfer_virtual',
   'product_card',
+  'service_notification',
   'image_virtual',
   'mini_scene',
+])
+export const CHAT_SERVICE_NOTIFICATION_KIND = Object.freeze({
+  SHOPPING_ORDER: 'shopping_order',
+  LOGISTICS_UPDATE: 'logistics_update',
+  FOOD_DELIVERY_ORDER: 'food_delivery_order',
+  FOOD_DELIVERY_UPDATE: 'food_delivery_update',
+})
+
+const SERVICE_NOTIFICATION_KINDS = new Set([
+  CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
+  CHAT_SERVICE_NOTIFICATION_KIND.LOGISTICS_UPDATE,
+  CHAT_SERVICE_NOTIFICATION_KIND.FOOD_DELIVERY_ORDER,
+  CHAT_SERVICE_NOTIFICATION_KIND.FOOD_DELIVERY_UPDATE,
 ])
 const VALID_REPLY_TYPES = new Set(['plain', 'quote_user', 'quote_self'])
 const VALID_IMAGE_REFERENCE_TRANSPORT_MODES = new Set(['none', 'context_only', 'native_url'])
@@ -73,6 +87,7 @@ const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
 const MAX_AI_META_PROVIDER_LENGTH = 32
 const MAX_BLOCK_COUNT = 16
+const MAX_SERVICE_ACTION_COUNT = 3
 const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
 const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const SAFE_ROUTE_FALLBACK = '/home'
@@ -200,6 +215,15 @@ const normalizeFoodDeliveryServiceKey = (value) => {
 const normalizeShoppingServiceLabel = (value) => normalizeSingleLineText(value, 80)
 
 const sanitizeAssetId = (value) => sanitizeRoleBindingAssetId(value)
+
+const normalizeSourceModule = (value) => normalizeSingleLineText(value, 80)
+
+const normalizeSourceId = (value) => normalizeSingleLineText(value, 140)
+
+const normalizeSourceEventId = (value) => normalizeSingleLineText(value, 140)
+
+const normalizeServiceNotificationKind = (value) =>
+  SERVICE_NOTIFICATION_KINDS.has(value) ? value : 'shopping_order'
 
 const sanitizeKnowledgePointId = (value) => {
   const raw = trimTo(value, MAX_KNOWLEDGE_POINT_ID_LENGTH)
@@ -359,6 +383,22 @@ const sanitizeHtmlSnippet = (value) => {
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/javascript:/gi, '')
 }
+
+const normalizeServiceNotificationAction = (rawAction) => {
+  if (!rawAction || typeof rawAction !== 'object') return null
+  const label = normalizeSingleLineText(rawAction.label, MAX_SHORT_LABEL_LENGTH)
+  const route = sanitizeRoutePath(rawAction.route, '')
+  if (!label || !route) return null
+  return {
+    label,
+    route,
+  }
+}
+
+const normalizeServiceNotificationActions = (rawActions) =>
+  Array.isArray(rawActions)
+    ? rawActions.map(normalizeServiceNotificationAction).filter(Boolean).slice(0, MAX_SERVICE_ACTION_COUNT)
+    : []
 
 const resetReactiveObject = (obj) => {
   if (Array.isArray(obj)) {
@@ -583,6 +623,28 @@ const normalizeMessageBlock = (rawBlock) => {
     }
   }
 
+  if (blockType === 'service_notification') {
+    const title = normalizeSingleLineText(rawBlock.title || rawBlock.label, MAX_SHORT_LABEL_LENGTH, '服务通知')
+    const sourceModule = normalizeSourceModule(rawBlock.sourceModule)
+    const sourceId = normalizeSourceId(rawBlock.sourceId)
+    if (!title || !sourceModule || !sourceId) return null
+    return {
+      type: 'service_notification',
+      kind: normalizeServiceNotificationKind(rawBlock.kind),
+      title,
+      summary: trimTo(rawBlock.summary || rawBlock.description, MAX_DETAIL_TEXT_LENGTH),
+      statusLabel: normalizeSingleLineText(rawBlock.statusLabel, MAX_SHORT_LABEL_LENGTH),
+      amount: normalizeSingleLineText(rawBlock.amount, 40),
+      sourceModule,
+      sourceId,
+      sourceEventId: normalizeSourceEventId(rawBlock.sourceEventId),
+      serviceKey: normalizeSingleLineText(rawBlock.serviceKey, 80),
+      serviceLabel: normalizeSingleLineText(rawBlock.serviceLabel, MAX_SHORT_LABEL_LENGTH),
+      route: sanitizeRoutePath(rawBlock.route, SAFE_ROUTE_FALLBACK),
+      actions: normalizeServiceNotificationActions(rawBlock.actions),
+    }
+  }
+
   if (blockType === 'image_virtual') {
     return {
       type: 'image_virtual',
@@ -639,6 +701,11 @@ const normalizeMessageBlocks = (rawBlocks, fallbackContent = '', role = 'assista
 }
 
 const summarizeBlocks = (blocks) => {
+  const firstServiceNotification = Array.isArray(blocks)
+    ? blocks.find((block) => block?.type === 'service_notification' && block.title)
+    : null
+  if (firstServiceNotification) return `[服务] ${firstServiceNotification.title}`
+
   const firstProductCard = Array.isArray(blocks)
     ? blocks.find((block) => block?.type === 'product_card' && block.title)
     : null
@@ -804,6 +871,11 @@ const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
     status,
   }
 }
+
+const getMessageServiceNotificationBlock = (message = {}) =>
+  Array.isArray(message.blocks)
+    ? message.blocks.find((block) => block?.type === 'service_notification') || null
+    : null
 
 const normalizeConversation = (rawConversation, contactId) => {
   return {
@@ -1675,6 +1747,76 @@ export const useChatStore = defineStore('chat', () => {
     return normalized
   }
 
+  const findServiceContact = (fieldName, serviceKey) => {
+    const key = normalizeSingleLineText(serviceKey, 80)
+    if (!key) return null
+    return contacts.find((contact) => {
+      if (contact.kind !== 'service' && contact.kind !== 'official') return false
+      return contact[fieldName] === key
+    }) || null
+  }
+
+  const findShoppingServiceContact = (serviceKey) =>
+    findServiceContact('shoppingServiceKey', normalizeShoppingServiceKey(serviceKey))
+
+  const findLogisticsServiceContact = (serviceKey) =>
+    findServiceContact('logisticsServiceKey', normalizeLogisticsServiceKey(serviceKey))
+
+  const findFoodDeliveryServiceContact = (serviceKey) =>
+    findServiceContact('foodDeliveryServiceKey', normalizeFoodDeliveryServiceKey(serviceKey))
+
+  const findServiceNotificationBySource = (contactId, sourceModule, sourceId, sourceEventId = '') => {
+    const moduleKey = normalizeSourceModule(sourceModule)
+    const recordId = normalizeSourceId(sourceId)
+    const eventId = normalizeSourceEventId(sourceEventId)
+    if (!moduleKey || !recordId) return null
+    const list = getMessagesByContactId(contactId)
+    return list.find((message) => {
+      const block = getMessageServiceNotificationBlock(message)
+      if (!block) return false
+      if (block.sourceModule !== moduleKey || block.sourceId !== recordId) return false
+      return eventId ? block.sourceEventId === eventId : !block.sourceEventId
+    }) || null
+  }
+
+  const appendServiceNotification = (contactId, notification = {}, options = {}) => {
+    const contact = getRawContactById(contactId)
+    if (!contact || (contact.kind !== 'service' && contact.kind !== 'official')) return null
+
+    const normalized = normalizeMessage(
+      {
+        role: 'assistant',
+        content: notification.summary || notification.title || 'Service notification',
+        blocks: [
+          {
+            type: 'service_notification',
+            ...notification,
+          },
+        ],
+        status: 'sent',
+        createdAt: notification.createdAt,
+      },
+      'assistant',
+    )
+    const block = getMessageServiceNotificationBlock(normalized)
+    if (!block) return null
+
+    const existing = findServiceNotificationBySource(
+      contact.id,
+      block.sourceModule,
+      block.sourceId,
+      block.sourceEventId,
+    )
+    if (existing) return existing
+
+    const key = conversationKeyForContact(contact.id)
+    ensureConversationForContact(contact.id)
+    messagesByConversation[key].push(normalized)
+    syncConversationSummary(contact.id)
+    if (options.markUnread !== false) incrementConversationUnread(contact.id, 1)
+    return normalized
+  }
+
   const getMessageIndex = (contactId, targetMessageId) => {
     const list = getMessagesByContactId(contactId)
     const index = list.findIndex((item) => item.id === targetMessageId)
@@ -2510,6 +2652,11 @@ export const useChatStore = defineStore('chat', () => {
     markConversationRead,
     incrementConversationUnread,
     appendMessage,
+    appendServiceNotification,
+    findShoppingServiceContact,
+    findLogisticsServiceContact,
+    findFoodDeliveryServiceContact,
+    findServiceNotificationBySource,
     updateMessageStatus,
     updateMessageContent,
     reviseMessageSemantic,

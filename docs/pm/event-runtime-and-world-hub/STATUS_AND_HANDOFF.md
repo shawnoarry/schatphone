@@ -15,19 +15,20 @@ What is already landed:
 3. relationship runtime memory grouping and cleanup baseline;
 4. World Hub read-only runtime review and narrow relationship cleanup/review actions;
 5. World Hub now distinguishes visible role IDs from runtime entity keys; missing role profiles are labeled as missing/runtime-only contexts rather than fabricating a role ID.
-6. Cheats exists as a hidden-system product concept and placeholder, but not as a finished feature lane.
+6. relationship memory 4.2 has reached current acceptance for explicit-lineage dedupe and recall/review copy: Chat keeps source-aware recall text, Calendar shows source-audit review detail, and Contacts/World Hub show product-facing related-record summaries.
+7. World Hub review quality 4.3 now has a filtered review-pack baseline: event logs can be filtered by module/status and inspected with trigger, reason, adapter, target, and world-variant explanations; relationship facts can be filtered by status/source and inspected with metric-delta, source-record, pending-effect, and supporting-only explanations.
+8. Cheats exists as a hidden-system product concept and placeholder, but not as a finished feature lane.
 
 Still incomplete:
 
-1. automatic runtime events still need clearer user-facing explanation and safer review details;
-2. World Hub still needs richer filtered detail panels before stronger overrides;
-3. Cheats still has no frozen unlock source, route shape, or editing surface;
-4. high-impact romance/conflict automation remains intentionally deferred.
+1. broad affinity/funds/unlock/freeform override controls remain deferred;
+2. Cheats still has no frozen unlock source, route shape, or editing surface;
+3. high-impact romance/conflict automation remains intentionally deferred.
 
 ## 2. Recommended Next Slice
 
-1. Improve World Hub review detail quality before adding stronger mutation controls.
-2. Keep runtime-trigger explanation readable in product language.
+1. Move to service-account continuity unless product review identifies another concrete read-only World Hub explanation gap.
+2. Keep runtime-trigger explanation readable in product language as new event adapters are added.
 3. Freeze Cheats only after World Hub review surfaces are trusted enough.
 
 ## 3. Do Not Do

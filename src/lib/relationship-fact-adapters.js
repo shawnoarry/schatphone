@@ -86,6 +86,10 @@ const resolveCalendarEventMemoryKey = (event = {}, fallbackSourceId = '') => {
   }
 
   if (source === 'map_calendar_reminder') {
+    const sourceTripId = normalizeText(event?.sourceTripId, '', 160)
+    if (sourceTripId) {
+      return buildRelationshipMemoryKey('shared_route', sourceTripId)
+    }
     return buildRelationshipMemoryKey(
       'map_reminder',
       event?.sourceAreaId || sourceReminderId || event?.id || fallbackSourceId,

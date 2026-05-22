@@ -22,6 +22,8 @@ Updated: 2026-05-19
 - Logistics service accounts
 - Food Delivery service accounts
 - system notification identities
+- reusable `service_notification` rich messages with source references and dedupe
+- source modules push only into existing Chat Directory service accounts
 
 ## 4. Semantic Guardrails
 
@@ -31,4 +33,3 @@ Treat these as bugs:
 2. Chat starts owning destructive role cleanup
 3. service accounts are mixed into role-profile logic without a clear contract
 4. Chat-side `relationshipLevel` or `relationshipNote` is shown as the main current relationship truth
-

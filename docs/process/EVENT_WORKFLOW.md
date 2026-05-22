@@ -94,6 +94,7 @@ If an event change needs visual work, first decide visual ownership through `doc
 12. Event logs should be readable by future AI assistants, not only rendered to users.
 13. World-aware events must follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
 14. Runtime event triggers should use local event variant packs by default; API calls are for generating or refreshing packs, not for every random event.
+15. World Hub review should keep event-log explanations read-only and inspectable by module, status, trigger source, reason, adapter boundary, target, and world variant context.
 
 ## 4. Event Entry Audit
 

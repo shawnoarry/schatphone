@@ -68,4 +68,5 @@ Phone does not own:
 
 - Reminders can promote something into Calendar when it becomes a real confirmed schedule/date item.
 - Map can provide route/location context, but does not absorb schedule ownership.
+- Map-derived cues should pass explicit trip lineage into Calendar when available, while Calendar remains the owner of the confirmed event.
 - Phone can generate callback context, but callback scheduling belongs to Reminders until it becomes a real Calendar item.

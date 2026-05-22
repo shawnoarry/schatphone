@@ -360,4 +360,4 @@ Already landed:
 
 Recommended next step:
 
-- wire a guarded low-frequency Food Delivery random pilot on active orders
+- preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added

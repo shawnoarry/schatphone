@@ -27,6 +27,9 @@ Current implemented direction:
 - enabled by `control_center`
 - review-first and narrow-control-first
 - shows visible role IDs only for real Contacts profiles; runtime-only or missing-profile targets stay labeled as runtime keys
+- filters and inspects event logs and relationship facts with product-facing explanations
+- uses UI-facing relationship memory summaries by default, reserving source-audit detail for focused review surfaces
+- does not take ownership of relationship truth, event execution, or source records
 
 ## 3. Cheats
 

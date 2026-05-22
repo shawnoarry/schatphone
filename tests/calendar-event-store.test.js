@@ -88,6 +88,38 @@ describe('calendar event store', () => {
     expect(restoredStore.upcomingEvents.length).toBe(0)
   })
 
+  test('preserves map source trip lineage on map reminder calendar events', () => {
+    const store = useCalendarStore()
+    const dueAt = Date.now() + 24 * 60 * 60 * 1000
+    const reminder = {
+      id: 'map_calendar_city_core',
+      areaId: 'city_core',
+      sourceTripId: 'trip_hist_city_core_1',
+      titleZh: '城市核心回访',
+      titleEn: 'City core follow-up',
+      summaryZh: '基于已解锁区域的地点反馈。',
+      summaryEn: 'Location feedback from an unlocked area.',
+      dueAt,
+    }
+
+    const event = store.upsertEventFromMapReminder(reminder)
+
+    expect(event).toMatchObject({
+      source: 'map_calendar_reminder',
+      sourceReminderId: 'map_calendar_city_core',
+      sourceAreaId: 'city_core',
+      sourceTripId: 'trip_hist_city_core_1',
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(restoredStore.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    expect(restoredStore.findEventBySourceReminderId(reminder.id)?.sourceTripId).toBe(
+      'trip_hist_city_core_1',
+    )
+  })
+
   test('turns missed-call cues into confirmable calendar events', () => {
     const store = useCalendarStore()
     const callStartedAt = Date.now() - 5 * 60 * 1000

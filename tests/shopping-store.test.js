@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
+import { useChatStore } from '../src/stores/chat'
 import {
   SHOPPING_ORDER_EVENT_TYPE,
   useShoppingStore,
@@ -275,6 +276,73 @@ describe('shopping store', () => {
     })
     expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
     expect(store.addOrderEvent('missing_order', { type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED })).toBeNull()
+  })
+
+  test('pushes Shopping and logistics service notifications into Chat without moving order state', () => {
+    const store = useShoppingStore()
+    const chatStore = useChatStore()
+    store.resetForTesting()
+    const shopContact = chatStore.addContact({
+      name: 'Nova Digital',
+      kind: 'service',
+      role: 'Service account',
+      shoppingServiceKey: 'nova_digital',
+    })
+    const logisticsContact = chatStore.addContact({
+      name: 'Standard Courier',
+      kind: 'service',
+      role: 'Service account',
+      logisticsServiceKey: 'standard_courier',
+    })
+    const product = store.upsertProduct({
+      id: 'product_service_notification',
+      title: 'Service Notification Lens',
+      category: 'digital',
+      serviceKey: 'nova_digital',
+      price: '1288.00',
+    })
+
+    store.addToCart(product.id)
+    const order = store.checkoutCart()
+    const shopMessages = chatStore.getMessagesByContactId(shopContact.id)
+    const orderNotification = shopMessages.find((message) =>
+      message.blocks.some((block) => block.type === 'service_notification' && block.sourceId === order.id),
+    )
+    expect(orderNotification?.blocks[0]).toMatchObject({
+      type: 'service_notification',
+      kind: 'shopping_order',
+      sourceModule: SHOPPING_SOURCE_KEYS.ORDER_UPDATE,
+      sourceId: order.id,
+      serviceKey: 'nova_digital',
+      amount: '1288.00 CNY',
+    })
+    expect(chatStore.getConversationByContactId(shopContact.id).unread).toBe(1)
+
+    const event = store.addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
+      summary: 'Standard courier picked up this parcel.',
+      carrierName: 'Standard Courier',
+    })
+    const logisticsNotification = chatStore.findServiceNotificationBySource(
+      logisticsContact.id,
+      SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
+      order.id,
+      event.id,
+    )
+    expect(logisticsNotification?.blocks[0]).toMatchObject({
+      type: 'service_notification',
+      kind: 'logistics_update',
+      sourceModule: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
+      sourceId: order.id,
+      sourceEventId: event.id,
+      serviceKey: 'standard_courier',
+    })
+    expect(store.orders[0]).toMatchObject({
+      id: order.id,
+      status: 'placed',
+    })
+    expect(store.orderCount).toBe(1)
+    expect(chatStore.getRoleBindingContract(shopContact.id).roleBound).toBe(false)
   })
 
   test('persists, restores, and keeps backup-compatible snapshots', () => {

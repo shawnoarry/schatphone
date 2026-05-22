@@ -87,6 +87,64 @@ describe('CalendarView relationship facts', () => {
     wrapper.unmount()
   })
 
+  test('shows calendar memory review detail without exposing duplicate growth as primary', async () => {
+    const calendarStore = useCalendarStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const target = {
+      profileId: 1,
+      contactId: 1,
+      kind: 'role',
+      name: 'Eva',
+    }
+    relationshipRuntimeStore.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_map_shared_route',
+      sourceId: 'trip_hist_calendar_review:shared_route:role_1',
+      memoryKey: 'shared_route__trip_hist_calendar_review',
+      factType: 'shared_route',
+      summary: 'Shared route completed with Eva: Dorm to City core.',
+      metricDeltas: {
+        affinity: 5,
+        trust: 2,
+        intimacy: 3,
+      },
+    })
+    const event = calendarStore.upsertEvent({
+      id: 'calendar_event_map_review',
+      source: 'map_calendar_reminder',
+      sourceReminderId: 'map_calendar_city_core',
+      sourceTripId: 'trip_hist_calendar_review',
+      sourceAreaId: 'city_core',
+      titleZh: 'City core follow-up',
+      titleEn: 'City core follow-up',
+      summaryZh: 'Review the shared city route.',
+      summaryEn: 'Review the shared city route.',
+      startsAt: Date.now() + 2 * 60 * 60 * 1000,
+    })
+    const { wrapper } = await mountCalendarView()
+
+    await wrapper.get(`[data-testid="calendar-event-relationship-contact-${event.id}"]`).setValue('1')
+    await wrapper.get(`[data-testid="calendar-event-record-relationship-${event.id}"]`).trigger('click')
+    await flushUi()
+
+    const review = wrapper.get(`[data-testid="calendar-event-relationship-review-${event.id}"]`).text()
+
+    expect(review).toContain('Relationship review')
+    expect(review).toContain('Map follow-up')
+    expect(review).toContain('Eva')
+    expect(review).toContain('Shared route completed with Eva: Dorm to City core.')
+    expect(review).toContain('2 linked records: Shared route, Calendar plan')
+    expect(review).toContain('未重复增加关系数值')
+    expect(review).toContain('trip_hist_calendar_review')
+    expect(relationshipRuntimeStore.summarizeEntityForTarget(target).metrics).toMatchObject({
+      affinity: 55,
+      trust: 52,
+      intimacy: 23,
+    })
+
+    wrapper.unmount()
+  })
+
   test('removes a confirmed calendar event from the module detail card', async () => {
     const calendarStore = useCalendarStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

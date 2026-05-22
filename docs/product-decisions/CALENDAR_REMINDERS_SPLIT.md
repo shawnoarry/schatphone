@@ -149,6 +149,7 @@ Implementation notes:
 - Reminder persistence is separate from Calendar persistence.
 - Calendar still contains compatibility seams where needed, but raw cue ownership no longer belongs there conceptually.
 - Raw reminders do not directly write relationship facts; they must first become meaningful confirmed Calendar events.
+- When a confirmed Calendar event comes from a Map cue with explicit `sourceTripId`, Calendar should preserve that lineage so relationship runtime can attach the event as supporting context to the existing route memory.
 
 ## 7. Guardrails
 

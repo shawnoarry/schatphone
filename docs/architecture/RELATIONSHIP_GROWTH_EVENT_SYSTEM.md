@@ -263,6 +263,8 @@ Landed expanded adapter batch:
 - Phone, Map, Wallet, and Calendar still own their own call, trip, ledger, and schedule records; relationship runtime receives compact facts only.
 - Regression coverage exists in `tests/phone-view.test.js`, `tests/wallet-view.test.js`, `tests/map-view-information-architecture.test.js`, `tests/calendar-relationship-fact-view.test.js`, and `tests/relationship-fact-adapters.test.js`.
 - The first 4.2 merge tightening is also landed: a Shopping gift fact and the downstream Shopping delivery follow-up Calendar event now reuse one shared `shopping_gift` memory key when they point to the same order.
+- Map-derived Calendar follow-ups now carry explicit `sourceTripId` lineage when available, letting a Calendar follow-up reuse the originating `shared_route` memory key instead of creating a second top-level memory.
+- Wallet order-support facts for Shopping gifts and Food Delivery shared meals are supporting-only facts inside the upstream `shopping_gift` or `food_shared_meal` memory key; they preserve ledger traceability but do not apply their own relationship metric deltas.
 
 ### Phase 5: World Hub Review And Optional Controls
 
@@ -323,6 +325,8 @@ Current reusable interface:
 - Archived memories should behave like background history by default. They may remain inspectable and auditable, but callers must opt in before archived-only memories or their supporting events become headline summary content again.
 - `summarizeEntityForTarget(target)`: Contacts, World Hub, and future UI panels read a safe snapshot, including compact memory summaries for the target.
 - The runtime snapshot contract now includes `primaryMemory`, `totalMemoryCount`, `visibleMemoryCount`, `archivedMemoryCount`, `hasArchivedOnlyMemories`, `sourceRefs`, and `sourceModuleCounts`; UI consumers should prefer these canonical fields over rebuilding headline-memory or source-summary logic locally.
+- Memory summaries now include primary-led `recallSummary` text for prompt/source recall and UI-facing review summaries for Contacts and World Hub. Downstream supporting facts enrich one life event without replacing the original memory headline or leaking source-audit labels into default user copy.
+- Consumer contract: use `recallSummary` only for Chat prompt context or explicit audit/review surfaces; ordinary Contacts and World Hub headline copy should use `reviewSummary` or a localized UI formatter, while Calendar relationship review may show source-audit labels because it is a focused confirmation surface.
 - `buildPromptContextForTarget(target)`: Chat reads compact context for role conversations without triggering an API call.
 - `applyPendingRelationshipEvent(eventId)` and `dismissRelationshipEvent(eventId)`: future World Hub controls can approve or reject risky effects.
 - `createBackupSnapshot()` and `restoreFromBackup(snapshot)`: Settings backup and rollback can preserve relationship runtime state.
@@ -344,6 +348,10 @@ Landed behavior:
 - Duplicate clicks or re-imports do not stack relationship values because adapters dedupe by source module and source id.
 - Cross-module memory cleanup is a separate layer: multiple safe facts may still point to one shared `memoryKey` so the user sees one cleaner memory summary instead of repeated fragments.
 - Shopping-specific 4.2 tightening: when a gift order already created a `shopping_gift` memory, the later Calendar delivery follow-up for that same order becomes a supporting fact inside the same memory group instead of a second top-level Calendar memory.
+- Map-specific 4.2 tightening: when a shared route has an explicit trip id and a later Map-derived Calendar follow-up preserves that `sourceTripId`, the Calendar fact becomes supporting context inside the same `shared_route` memory group.
+- Wallet-support 4.2 tightening: when Wallet only records downstream support for a Shopping gift or Food Delivery shared meal, it must stay a supporting fact inside the upstream order memory group and must not stack relationship metrics.
+- Recall 4.2 tightening: Chat should prefer runtime `recallSummary` for source-aware prompt context, while Contacts and World Hub should prefer UI-facing review summaries that keep the primary life-event summary first and only expose the related-record count by default.
+- Calendar-review 4.2 tightening: confirmed Calendar event cards should show whether their relationship fact is primary or supporting, what explicit lineage attached it to a memory, and whether it changed metrics or only enriched the source audit.
 - Review-lifecycle visibility tightening: `Pinned / Active / Archived` plus review note should be visible anywhere the product surfaces a primary shared-memory summary, not only inside Contacts detail.
 - Summary-consumer tightening: when only archived memories remain, UI surfaces should show archive/history hinting plus management state, but should not keep presenting that archived memory as the default-current shared-memory headline.
 

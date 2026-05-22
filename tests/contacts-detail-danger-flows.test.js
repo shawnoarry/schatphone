@@ -576,6 +576,52 @@ describe('ContactsView relationship danger flows', () => {
     wrapper.unmount()
   })
 
+  test('uses product-facing linked-memory summaries on Contacts rows', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '951I',
+      name: 'Linked Copy',
+    })
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_linked_copy_1:gift',
+      memoryKey: 'linked_copy_memory',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Linked Copy: Tea Set.',
+      metricDeltas: {
+        affinity: 8,
+      },
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: {
+        profileId: profile.id,
+        name: profile.name,
+      },
+      sourceModule: 'relationship_calendar_confirmed_event',
+      sourceId: 'calendar_linked_copy_1:calendar_event:role_951I',
+      memoryKey: 'linked_copy_memory',
+      factType: 'scheduled_calendar_event',
+      summary: 'Calendar plan recorded for the same gift delivery.',
+      metricDeltas: {
+        trust: 2,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    const rowText = wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).text()
+
+    expect(rowText).toContain('Shared memory: Gift purchased for Linked Copy: Tea Set. (2 related records)')
+    expect(rowText).not.toContain('Calendar plan')
+
+    wrapper.unmount()
+  })
+
   test('requires irreversible, scope, and typed-id confirmations before deleting a role', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

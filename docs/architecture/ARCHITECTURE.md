@@ -66,6 +66,7 @@ Main stores:
   - service accounts
   - conversations
   - messages
+  - service notification rich messages with source references
   - thread-level AI prefs
 - `src/stores/relationshipRuntime.js`
   - entity snapshots
@@ -191,6 +192,7 @@ Important rule:
 - user send and AI invoke are decoupled;
 - manual AI trigger remains explicit;
 - rich message surfaces are supported;
+- service-account notification rich messages may keep source module, source record id, optional source event id, and route actions, but they must not copy or own Shopping, Logistics, Food Delivery, Wallet, or Map business state;
 - thread-level preferences control prompt behavior;
 - Chat prompt assembly can read role, worldview, and relationship-runtime summaries, but Chat does not own the relationship truth itself.
 

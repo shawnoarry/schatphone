@@ -102,6 +102,9 @@ const openedFromChatProductCard = computed(() =>
 const openedFromChatGiftOrder = computed(() =>
   sourceModule.value === 'chat' && sourceIntent.value === 'gift_order',
 )
+const openedFromChatShoppingOrder = computed(() =>
+  sourceModule.value === 'chat' && sourceIntent.value === 'shopping_order',
+)
 const openedFromChatLogistics = computed(() =>
   sourceModule.value === 'chat' && sourceIntent.value === 'logistics',
 )
@@ -708,22 +711,24 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="openedFromChatProductCard || openedFromChatGiftOrder || openedFromChatLogistics"
+        v-if="openedFromChatProductCard || openedFromChatGiftOrder || openedFromChatShoppingOrder || openedFromChatLogistics"
         class="rounded-2xl border bg-white p-4"
-        :class="openedFromChatGiftOrder ? 'border-rose-200' : openedFromChatLogistics ? 'border-sky-200' : 'border-orange-200'"
+        :class="openedFromChatGiftOrder ? 'border-rose-200' : openedFromChatLogistics ? 'border-sky-200' : openedFromChatShoppingOrder ? 'border-indigo-200' : 'border-orange-200'"
         data-testid="shopping-chat-source-banner"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
             <p
               class="text-xs font-semibold"
-              :class="openedFromChatGiftOrder ? 'text-rose-600' : openedFromChatLogistics ? 'text-sky-600' : 'text-orange-600'"
+              :class="openedFromChatGiftOrder ? 'text-rose-600' : openedFromChatLogistics ? 'text-sky-600' : openedFromChatShoppingOrder ? 'text-indigo-600' : 'text-orange-600'"
             >
               {{
                 openedFromChatGiftOrder
                   ? t('From Chat gift order', 'From Chat gift order')
                   : openedFromChatLogistics
                     ? t('From Chat logistics reminder', 'From Chat logistics reminder')
+                    : openedFromChatShoppingOrder
+                      ? t('From Chat service order notification', 'From Chat service order notification')
                   : t('From Chat product card', 'From Chat product card')
               }}
             </p>
@@ -733,6 +738,8 @@ onBeforeUnmount(() => {
                   ? t('Shopping owns the confirmed gift order; Chat only shows the gift context.', 'Shopping owns the confirmed gift order; Chat only shows the gift context.')
                   : openedFromChatLogistics
                     ? t('Shopping owns logistics review; Chat only surfaced the shop service-account reminder.', 'Shopping owns logistics review; Chat only surfaced the shop service-account reminder.')
+                    : openedFromChatShoppingOrder
+                      ? t('Shopping owns the order; Chat only keeps a service-account notification and source link.', 'Shopping owns the order; Chat only keeps a service-account notification and source link.')
                   : t('Shopping owns browsing, cart, and checkout here; Chat only keeps discussion and recommendation records.', 'Shopping owns browsing, cart, and checkout here; Chat only keeps discussion and recommendation records.')
               }}
             </p>
@@ -742,7 +749,7 @@ onBeforeUnmount(() => {
             data-testid="shopping-return-chat"
             @click="goBackToChat"
             class="shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
-            :class="openedFromChatGiftOrder ? 'border-rose-200 text-rose-600' : openedFromChatLogistics ? 'border-sky-200 text-sky-600' : 'border-orange-200 text-orange-600'"
+            :class="openedFromChatGiftOrder ? 'border-rose-200 text-rose-600' : openedFromChatLogistics ? 'border-sky-200 text-sky-600' : openedFromChatShoppingOrder ? 'border-indigo-200 text-indigo-600' : 'border-orange-200 text-orange-600'"
           >
             {{ t('Back to Chat', 'Back to Chat') }}
           </button>

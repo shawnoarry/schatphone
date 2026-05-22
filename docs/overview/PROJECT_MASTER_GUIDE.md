@@ -84,9 +84,12 @@ Still not final:
 
 Immediate active lane:
 
-- 4.2 memory dedupe is now in progress, starting with same-life-event merge rules for existing cross-module chains such as Shopping gift memory plus Calendar delivery follow-up.
-- the current polish sub-slice is making memory review semantics render consistently across Contacts and World Hub while removing filtered-list visibility bugs in Contacts detail.
-- the current runtime/UI tightening also makes `summarizeEntityForTarget()` the canonical source for primary-memory headline, memory-count totals, archive-only hinting, and source-summary data across Contacts and World Hub.
+- 4.2 memory dedupe has reached current acceptance for explicit-lineage chains across Phone callback, Shopping gift plus Calendar delivery follow-up, Food Delivery shared meal plus Wallet support, Shopping gift plus Wallet support, and Map shared-route plus Map-derived Calendar follow-up.
+- relationship runtime now separates prompt-facing `recallSummary` from UI-facing review summaries, so Chat can keep source context while Contacts and World Hub show product-facing related-record copy.
+- Calendar now exposes relationship review detail on confirmed events, including lineage, target, memory role, and duplicate-growth status.
+- 4.3 World Hub review quality now has a complete review-pack baseline: event logs and relationship facts can be filtered, selected, and inspected with product-facing explanations before any stronger controls are considered.
+- 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
+- fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack
 
@@ -131,6 +134,7 @@ Major stores:
   - role profiles
   - Chat Directory contacts and service accounts
   - conversations and messages
+  - service notification messages with source references, not copied order state
   - thread-level AI preferences
 - `src/stores/relationshipRuntime.js`
   - relationship metrics
@@ -193,6 +197,7 @@ Rule: views and components should not invent their own provider-calling logic or
 - thread-level preferences;
 - rich message surfaces;
 - service-account style communication;
+- service-account notifications with source module/id references and route actions;
 - compact relationship context consumption.
 
 ### 7.6 Contacts and Chat Directory

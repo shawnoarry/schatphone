@@ -35,6 +35,7 @@ Folders help solve:
 | folder visual style, blur, corner radius, open animation, preview density | Appearance | visual control only |
 | child-entry title, icon, route, and launch params | business module metadata, rendered by Home | business modules supply entry metadata; Home renders it |
 | products, orders, carts, wishlists | Shopping | Shopping owns store/product/order truth |
+| service-account notification messages | Chat | Chat owns message history and source links, not Shopping/Food order truth |
 | owned things, asset categories, valuation, asset status | Assets | Assets owns long-term ownership records |
 | ledger outcomes, balances, expense records | Wallet | Wallet records downstream financial effects |
 | market state, watchlists, holdings changes | Stock | Stock owns market-facing behavior |
@@ -148,6 +149,8 @@ Wallet should stay downstream.
 That means:
 
 - Shopping and Food Delivery can produce Wallet records;
+- Shopping, Logistics, and Food Delivery can produce Chat service-account notifications into existing Chat Directory service accounts;
+- Wallet can attach supporting relationship traceability to those records when explicit upstream lineage exists, but it should not create a competing primary memory for the same order or shared meal;
 - Assets-related purchases or ownership changes may produce Wallet records;
 - Wallet does not become the owner of products, stores, or asset truth.
 

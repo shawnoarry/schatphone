@@ -13,6 +13,7 @@ import {
   clearRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { useCalendarStore } from './calendar'
+import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
 
 const SHOPPING_STORAGE_KEY = 'store:shopping'
 const SHOPPING_STORAGE_VERSION = 1
@@ -35,6 +36,14 @@ export const SHOPPING_ORDER_EVENT_TYPE = Object.freeze({
   PICKUP_POINT_CHANGED: 'pickup_point_changed',
   INTERNATIONAL_DELAY: 'international_delay',
   STATUS_UPDATE: 'status_update',
+})
+
+const LOGISTICS_EVENT_SERVICE_KEY = Object.freeze({
+  [SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED]: 'standard_courier',
+  [SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED]: 'standard_courier',
+  [SHOPPING_ORDER_EVENT_TYPE.PICKUP_POINT_CHANGED]: 'local_express',
+  [SHOPPING_ORDER_EVENT_TYPE.INTERNATIONAL_DELAY]: 'international_logistics',
+  [SHOPPING_ORDER_EVENT_TYPE.STATUS_UPDATE]: 'standard_courier',
 })
 
 const SHOPPING_ORDER_STATUS_VALUES = new Set(Object.values(SHOPPING_ORDER_STATUS))
@@ -342,6 +351,46 @@ const normalizeOrderEvents = (rawEvents) => {
     .slice(0, SHOPPING_ORDER_EVENT_LIMIT)
 }
 
+const formatOrderAmount = (order = {}) =>
+  `${(Number(order?.totalCents || 0) / 100).toFixed(2)} ${order?.currency || DEFAULT_CURRENCY}`
+
+const orderTitle = (order = {}, fallback = 'Shopping order') => {
+  const firstItem = Array.isArray(order.items) ? order.items[0] : null
+  const title = normalizeText(firstItem?.title, '', 90)
+  if (title) return title
+  return fallback
+}
+
+const orderItemSummary = (order = {}) => {
+  const firstItem = Array.isArray(order.items) ? order.items[0] : null
+  const title = normalizeText(firstItem?.title, 'Shopping order', 90)
+  const itemCount = toInt(order.itemCount || order.items?.length, 0)
+  return itemCount > 1 ? `${title} +${itemCount - 1}` : title
+}
+
+const buildShoppingOrderRoute = (order = {}) => {
+  const firstItem = Array.isArray(order.items) ? order.items[0] : null
+  const service = normalizeServiceKey(firstItem?.serviceKey || '', firstItem?.category)
+  return `/shopping?source=chat&intent=shopping_order&orderId=${encodeURIComponent(order.id)}${service ? `&service=${encodeURIComponent(service)}` : ''}`
+}
+
+const buildShoppingLogisticsRoute = (order = {}) =>
+  `/shopping?source=chat&intent=logistics&category=logistics&orderId=${encodeURIComponent(order.id)}`
+
+const shoppingStatusLabel = (status = '') => {
+  if (status === SHOPPING_ORDER_STATUS.COMPLETED) return 'Completed'
+  if (status === SHOPPING_ORDER_STATUS.CANCELLED) return 'Cancelled'
+  return 'Placed'
+}
+
+const logisticsStatusLabel = (event = {}) => {
+  if (event.type === SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED) return 'Shipped'
+  if (event.type === SHOPPING_ORDER_EVENT_TYPE.PACKAGE_ARRIVED) return 'Arrived'
+  if (event.type === SHOPPING_ORDER_EVENT_TYPE.PICKUP_POINT_CHANGED) return 'Pickup changed'
+  if (event.type === SHOPPING_ORDER_EVENT_TYPE.INTERNATIONAL_DELAY) return 'Delayed'
+  return 'Updated'
+}
+
 const summarizeOrderTotals = (items) => {
   const totals = new Map()
   items.forEach((item) => {
@@ -473,6 +522,7 @@ const createSeedProducts = () => normalizeShoppingProducts([
 
 export const useShoppingStore = defineStore('shopping', () => {
   const getCalendarStore = () => useCalendarStore()
+  const getChatStore = () => useChatStore()
   const products = ref([])
   const favoriteProductIds = ref([])
   const cartItems = ref([])
@@ -650,6 +700,65 @@ export const useShoppingStore = defineStore('shopping', () => {
     return removed
   }
 
+  const pushShoppingOrderServiceMessage = (order = {}) => {
+    const serviceKey = normalizeServiceKey(order.items?.[0]?.serviceKey || '', order.items?.[0]?.category)
+    if (!serviceKey) return null
+    const chatStore = getChatStore()
+    const serviceContact = chatStore.findShoppingServiceContact(serviceKey)
+    if (!serviceContact) return null
+
+    return chatStore.appendServiceNotification(serviceContact.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
+      title: `Order placed · ${orderItemSummary(order)}`,
+      summary: `We received your ${orderItemSummary(order)} order. Shopping keeps checkout and order state; this thread only carries service updates.`,
+      statusLabel: shoppingStatusLabel(order.status),
+      amount: formatOrderAmount(order),
+      sourceModule: SHOPPING_SOURCE_KEYS.ORDER_UPDATE,
+      sourceId: order.id,
+      serviceKey,
+      serviceLabel: resolveServiceLabel(serviceKey),
+      route: buildShoppingOrderRoute(order),
+      actions: [
+        {
+          label: 'View order',
+          route: buildShoppingOrderRoute(order),
+        },
+      ],
+      createdAt: order.createdAt,
+    })
+  }
+
+  const pushShoppingLogisticsServiceMessage = (order = {}, event = {}) => {
+    const serviceKey = LOGISTICS_EVENT_SERVICE_KEY[event.type] || 'standard_courier'
+    const chatStore = getChatStore()
+    const serviceContact = chatStore.findLogisticsServiceContact(serviceKey)
+    if (!serviceContact) return null
+
+    const carrierLabel = event.carrierName || serviceContact.name || 'Logistics'
+    return chatStore.appendServiceNotification(serviceContact.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.LOGISTICS_UPDATE,
+      title: `${event.title || 'Logistics update'} · ${orderTitle(order)}`,
+      summary:
+        event.summary ||
+        `${carrierLabel} updated the parcel for ${orderItemSummary(order)}. Shopping keeps the order; Logistics only carries the tracking message.`,
+      statusLabel: logisticsStatusLabel(event),
+      amount: formatOrderAmount(order),
+      sourceModule: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
+      sourceId: order.id,
+      sourceEventId: event.id,
+      serviceKey,
+      serviceLabel: carrierLabel,
+      route: buildShoppingLogisticsRoute(order),
+      actions: [
+        {
+          label: 'Open logistics',
+          route: buildShoppingLogisticsRoute(order),
+        },
+      ],
+      createdAt: event.createdAt,
+    })
+  }
+
   const checkoutCart = ({
     note = '',
     recipient = '',
@@ -688,6 +797,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     orders.value.unshift(order)
     if (orders.value.length > SHOPPING_ORDER_LIMIT) orders.value.splice(SHOPPING_ORDER_LIMIT)
     getCalendarStore().upsertShoppingDeliveryCueFromOrder(order)
+    pushShoppingOrderServiceMessage(order)
     clearCart()
     return order
   }
@@ -790,6 +900,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     order.events = [event, ...currentEvents.filter((item) => item.id !== event.id)]
       .slice(0, SHOPPING_ORDER_EVENT_LIMIT)
     order.updatedAt = Math.max(now, event.createdAt)
+    pushShoppingLogisticsServiceMessage(order, event)
     return event
   }
 

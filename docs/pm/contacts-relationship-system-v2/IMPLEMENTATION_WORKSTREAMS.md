@@ -131,15 +131,22 @@ Recommended review after implementation:
 - check one relationship reset flow
 - check one memory-group delete flow
 
-## 7. 4.2 Entry Slice
+## 7. 4.2 Closure Baseline
 
-Current active 4.2 baseline:
+Current 4.2 baseline:
 
 1. start by tightening same-life-event memory-key reuse in the runtime and adapter layer before changing Contacts or Chat presentation again;
 2. preserve source-record auditability and cleanup coverage while reducing duplicate top-level memories;
 3. treat Shopping gift memory plus downstream Calendar delivery follow-up as the first canonical merge case.
-4. keep review ordering and memory visibility behavior aligned between runtime, Contacts, and World Hub while 4.2 continues.
+4. keep review ordering and memory visibility behavior aligned between runtime, Contacts, and World Hub.
 5. keep `summarizeEntityForTarget()` as the canonical read contract for headline memory, archive-only hinting, and source-summary totals instead of letting UI layers infer those fields independently.
+6. treat Map shared-route memory plus downstream Map-derived Calendar follow-up as the second explicit-lineage merge case when `sourceTripId` is present.
+7. treat Wallet order-support facts for Shopping gifts and Food Delivery shared meals as supporting-only facts inside the upstream order memory, not as new relationship-growth memories.
+8. use primary-led memory recall summaries in Chat, Contacts, and World Hub so supporting facts do not replace the original life-event headline.
+9. show Calendar relationship review detail for confirmed events so users can see lineage, target, memory role, and duplicate-growth status.
+10. Contacts and World Hub use product-facing related-record copy by default, while Calendar keeps source-audit review detail for confirmed-event relationship checks.
+11. 4.2 is `DONE` for current explicit-lineage acceptance; future fuzzy same-text merging should start from a separate product decision.
+11. fuzzy same-text merging remains out of scope until a separate product decision promotes it.
 
 Why this first:
 

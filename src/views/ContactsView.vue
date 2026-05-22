@@ -402,6 +402,23 @@ const selectedProfile = computed(
   () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
 )
 
+const relationshipMemoryReviewSummaryText = (memory = {}) => {
+  const base =
+    memory?.displaySummary ||
+    memory?.primarySummary ||
+    memory?.latestSummary ||
+    memory?.reviewSummary ||
+    memory?.recallSummary ||
+    ''
+  if (!base) return ''
+  const relatedRecordCount = Number(memory?.supportingCount) || 0
+  if (relatedRecordCount <= 1) return base
+  return t(
+    `${base}（包含 ${relatedRecordCount} 条关联记录）`,
+    `${base} (${relatedRecordCount} related records)`,
+  )
+}
+
 const selectedProfileValues = computed(() =>
   Array.isArray(selectedProfile.value?.profileValues) ? selectedProfile.value.profileValues : [],
 )
@@ -769,6 +786,8 @@ const selectedLinkedActivitySummary = computed(() => {
     supportingCount: Object.values(sourceCounts).reduce((sum, count) => sum + (Number(count) || 0), 0),
     eventAttachedCount: eventAttachedItems.length,
     latestSummary:
+      relationshipMemoryReviewSummaryText(selectedRelationshipSnapshot.value?.primaryMemory) ||
+      selectedRelationshipSnapshot.value?.primaryMemory?.recallSummary ||
       selectedRelationshipSnapshot.value?.primaryMemory?.displaySummary ||
       selectedRelationshipSnapshot.value?.primaryMemory?.primarySummary ||
       selectedRelationshipSnapshot.value?.primaryMemory?.latestSummary ||
@@ -1670,6 +1689,8 @@ const profileRelationshipLatestSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
   if (!snapshot?.exists) return t('暂无跨模块关系事件', 'No cross-module relationship facts yet')
   const memorySummary =
+    relationshipMemoryReviewSummaryText(snapshot.primaryMemory) ||
+    snapshot.primaryMemory?.recallSummary ||
     snapshot.primaryMemory?.displaySummary ||
     snapshot.primaryMemory?.primarySummary ||
     snapshot.primaryMemory?.latestSummary ||

@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
+  buildFoodDeliverySharedMealRelationshipMemoryKey,
   buildFoodDeliverySharedMealRelationshipSuggestion,
   buildCalendarConfirmedEventRelationshipSuggestion,
   buildRelationshipMemoryKey,
   buildMapSharedRouteRelationshipSuggestion,
   buildPhoneCallRelationshipSuggestion,
+  buildShoppingGiftRelationshipMemoryKey,
   buildShoppingGiftRelationshipSuggestion,
   buildWalletSharedTransferRelationshipSuggestion,
   recordFoodDeliverySharedMealRelationshipFact,
@@ -13,6 +15,7 @@ import {
   recordMapSharedRouteRelationshipFact,
   recordPhoneCallRelationshipFact,
   recordShoppingGiftRelationshipFact,
+  recordWalletOrderSupportRelationshipFact,
   recordWalletSharedTransferRelationshipFact,
 } from '../src/lib/relationship-fact-adapters'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
@@ -384,6 +387,175 @@ describe('relationship fact adapters', () => {
       affinity: 58,
       trust: 53,
       intimacy: 24,
+    })
+    expect(calendarEvent.effectApplied).toBe(false)
+    expect(calendarEvent.memoryRole).toBe('supporting')
+  })
+
+  test('keeps shopping wallet support inside the gift memory without stacking metrics', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const order = {
+      id: 'shopping_order_rin_wallet_support',
+      totalCents: 8800,
+      currency: 'CNY',
+      giftRecipient: {
+        name: 'Rin',
+        contactId: 8,
+        profileId: 8,
+        kind: 'role',
+      },
+      items: [{ title: 'Dorayaki Box', quantity: 1, unitPriceCents: 8800, currency: 'CNY' }],
+    }
+    const target = {
+      id: 8,
+      profileId: 8,
+      kind: 'role',
+      name: 'Rin',
+    }
+
+    const shoppingEvent = recordShoppingGiftRelationshipFact({
+      relationshipRuntimeStore,
+      order,
+      transaction: { amount: '88.00', currency: 'CNY' },
+    })
+
+    const walletEvent = recordWalletOrderSupportRelationshipFact({
+      relationshipRuntimeStore,
+      target,
+      transaction: {
+        id: 'wallet_tx_shopping_support',
+        amountCents: 8800,
+        currency: 'CNY',
+      },
+      memoryKey: buildShoppingGiftRelationshipMemoryKey(order),
+    })
+
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(shoppingEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
+    expect(walletEvent.memoryKey).toBe(shoppingEvent.memoryKey)
+    expect(walletEvent.effectApplied).toBe(false)
+    expect(walletEvent.memoryRole).toBe('supporting')
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_shopping_gift',
+    })
+    expect(memories[0].sourceModules).toContain('relationship_wallet_order_support')
+    expect(summary.metrics).toMatchObject({
+      affinity: 58,
+      trust: 53,
+      intimacy: 24,
+    })
+  })
+
+  test('keeps food delivery wallet support inside the shared-meal memory without stacking metrics', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const order = {
+      id: 'food_order_rin_wallet_support',
+      restaurantName: 'Moon Bistro',
+      totalCents: 4200,
+      currency: 'CNY',
+      items: [{ title: 'Shared Bento', quantity: 1, unitPriceCents: 4200, currency: 'CNY' }],
+    }
+    const target = {
+      id: 8,
+      profileId: 8,
+      kind: 'role',
+      name: 'Rin',
+    }
+
+    const foodEvent = recordFoodDeliverySharedMealRelationshipFact({
+      relationshipRuntimeStore,
+      order,
+      target,
+      transaction: { amount: '42.00', currency: 'CNY', counterparty: 'Moon Bistro' },
+    })
+
+    const walletEvent = recordWalletOrderSupportRelationshipFact({
+      relationshipRuntimeStore,
+      target,
+      transaction: {
+        id: 'wallet_tx_food_support',
+        amountCents: 4200,
+        currency: 'CNY',
+      },
+      memoryKey: buildFoodDeliverySharedMealRelationshipMemoryKey(order),
+    })
+
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(foodEvent.memoryKey).toBe(buildRelationshipMemoryKey('food_shared_meal', order.id))
+    expect(walletEvent.memoryKey).toBe(foodEvent.memoryKey)
+    expect(walletEvent.effectApplied).toBe(false)
+    expect(walletEvent.memoryRole).toBe('supporting')
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_food_delivery_shared_meal',
+    })
+    expect(memories[0].sourceModules).toContain('relationship_wallet_order_support')
+    expect(summary.metrics).toMatchObject({
+      affinity: 56,
+      trust: 52,
+      intimacy: 25,
+    })
+  })
+
+  test('reuses the same memory key when a map route follow-up becomes a calendar event', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const target = {
+      id: 8,
+      profileId: 8,
+      kind: 'role',
+      name: 'Rin',
+    }
+
+    const mapEvent = recordMapSharedRouteRelationshipFact({
+      relationshipRuntimeStore,
+      trip: {
+        id: 'trip_hist_rin_city_core',
+        fromLabel: 'Dorm',
+        toLabel: 'City core',
+        distanceKm: 4.5,
+      },
+      target,
+    })
+
+    const calendarEvent = recordCalendarConfirmedEventRelationshipFact({
+      relationshipRuntimeStore,
+      event: {
+        id: 'calendar_event_rin_city_core_followup',
+        source: 'map_calendar_reminder',
+        sourceReminderId: 'map_calendar_city_core',
+        sourceAreaId: 'city_core',
+        sourceTripId: 'trip_hist_rin_city_core',
+        status: 'confirmed',
+        titleEn: 'City core follow-up',
+      },
+      target,
+    })
+
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
+
+    expect(mapEvent.memoryKey).toBe(buildRelationshipMemoryKey('shared_route', 'trip_hist_rin_city_core'))
+    expect(calendarEvent.memoryKey).toBe(mapEvent.memoryKey)
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      supportingCount: 2,
+      primarySourceModule: 'relationship_map_shared_route',
+    })
+    expect(memories[0].sourceModules).toContain('relationship_calendar_confirmed_event')
+    expect(summary.metrics).toMatchObject({
+      affinity: 55,
+      trust: 52,
+      intimacy: 23,
     })
     expect(calendarEvent.effectApplied).toBe(false)
     expect(calendarEvent.memoryRole).toBe('supporting')

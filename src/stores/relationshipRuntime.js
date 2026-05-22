@@ -303,6 +303,8 @@ const buildDefaultMemoryAggregate = (memoryKey, entityKey = '') => ({
   primarySummary: '',
   primaryCreatedAt: 0,
   displaySummary: '',
+  recallSummary: '',
+  reviewSummary: '',
   latestSummary: '',
   latestCreatedAt: 0,
 })
@@ -348,6 +350,68 @@ const compareRelationshipEventsByCreatedAtDesc = (left = {}, right = {}) =>
   (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)
 
 const shouldIncludeArchivedMemories = (options = {}) => options.includeArchivedMemories === true
+
+const RELATIONSHIP_SOURCE_RECALL_LABELS = Object.freeze({
+  relationship_shopping_gift: 'Shopping gift',
+  relationship_food_delivery_shared_meal: 'Shared meal',
+  relationship_wallet_order_support: 'Wallet support',
+  relationship_phone_call: 'Phone call',
+  relationship_map_shared_route: 'Shared route',
+  relationship_wallet_shared_transfer: 'Wallet transfer',
+  relationship_calendar_confirmed_event: 'Calendar plan',
+})
+
+const formatMemorySourceModuleForRecall = (sourceModule = '') => {
+  const moduleKey = normalizeText(sourceModule, '', 80)
+  if (!moduleKey) return ''
+  return RELATIONSHIP_SOURCE_RECALL_LABELS[moduleKey] ||
+    moduleKey.replace(/^relationship_/, '').replace(/_/g, ' ')
+}
+
+const buildMemorySourceModulesForRecall = (memory = {}) => {
+  const seen = new Set()
+  const ordered = []
+  const add = (sourceModule) => {
+    const moduleKey = normalizeText(sourceModule, '', 80)
+    if (!moduleKey || seen.has(moduleKey)) return
+    seen.add(moduleKey)
+    ordered.push(moduleKey)
+  }
+  add(memory.primarySourceModule)
+  ;(Array.isArray(memory.sourceModules) ? memory.sourceModules : []).forEach(add)
+  return ordered
+}
+
+// Prompt/audit recall may expose source labels. Default UI should prefer reviewSummary
+// or a local formatter so source-audit labels do not leak into ordinary copy.
+const buildMemoryRecallSummary = (memory = {}) => {
+  const base = normalizeText(
+    memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey,
+    '',
+    280,
+  )
+  if (!base) return ''
+  const linkedFactCount = toInt(memory.supportingCount, 0)
+  if (linkedFactCount <= 1) return base
+  const sourceLabels = buildMemorySourceModulesForRecall(memory)
+    .map(formatMemorySourceModuleForRecall)
+    .filter(Boolean)
+    .slice(0, 3)
+  const sourceText = sourceLabels.length > 0 ? `: ${sourceLabels.join(', ')}` : ''
+  return `${base} (${linkedFactCount} linked records${sourceText})`
+}
+
+const buildMemoryReviewSummary = (memory = {}) => {
+  const base = normalizeText(
+    memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey,
+    '',
+    280,
+  )
+  if (!base) return ''
+  const linkedFactCount = toInt(memory.supportingCount, 0)
+  if (linkedFactCount <= 1) return base
+  return `${base} (${linkedFactCount} related records)`
+}
 
 const normalizeMemoryReviewEntry = (rawEntry = {}, index = 0) => {
   const source = rawEntry && typeof rawEntry === 'object' ? rawEntry : {}
@@ -528,31 +592,34 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!key) return []
     return [...memoryAggregateMap.value.values()]
       .filter((item) => item.entityKey === key)
-      .map((item) => ({
-        ...(memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}),
-        memoryKey: item.memoryKey,
-        entityKey: item.entityKey,
-        sourceModules: [...item.sourceModules],
-        sourceIds: [...item.sourceIds],
-        factTypes: [...item.factTypes],
-        growthTraits: [...item.growthTraits],
-        milestones: [...item.milestones],
-        supportingCount: item.supportingCount,
-        primarySourceModule: item.primarySourceModule || '',
-        primaryFactType: item.primaryFactType || '',
-        primarySummary: item.primarySummary || '',
-        displaySummary: item.displaySummary || item.primarySummary || item.latestSummary || '',
-        latestSummary: item.latestSummary,
-        latestCreatedAt: item.latestCreatedAt,
-        reviewStatus:
-          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.status ||
-          RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
-        reviewNote:
-          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.note || '',
-        reviewUpdatedAt:
-          memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey))?.updatedAt ||
-          item.latestCreatedAt,
-      }))
+      .map((item) => {
+        const review = memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}
+        const summary = {
+          ...review,
+          memoryKey: item.memoryKey,
+          entityKey: item.entityKey,
+          sourceModules: [...item.sourceModules],
+          sourceIds: [...item.sourceIds],
+          factTypes: [...item.factTypes],
+          growthTraits: [...item.growthTraits],
+          milestones: [...item.milestones],
+          supportingCount: item.supportingCount,
+          primarySourceModule: item.primarySourceModule || '',
+          primaryFactType: item.primaryFactType || '',
+          primarySummary: item.primarySummary || '',
+          displaySummary: item.displaySummary || item.primarySummary || item.latestSummary || '',
+          latestSummary: item.latestSummary,
+          latestCreatedAt: item.latestCreatedAt,
+          reviewStatus: review.status || RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
+          reviewNote: review.note || '',
+          reviewUpdatedAt: review.updatedAt || item.latestCreatedAt,
+        }
+        return {
+          ...summary,
+          recallSummary: buildMemoryRecallSummary(summary),
+          reviewSummary: buildMemoryReviewSummary(summary),
+        }
+      })
       .sort((left, right) => compareMemorySummaryEntries(left, right, options))
       .slice(0, clamp(toInt(limit, 5), 0, 50))
   }
@@ -577,7 +644,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .sort((a, b) => b.createdAt - a.createdAt)
     if (!aggregate && groupEvents.length === 0) return null
     const review = memoryReviewMap.value.get(buildMemoryAggregateMapKey(key, normalizedMemoryKey)) || null
-    return {
+    const detail = {
       ...(aggregate || buildDefaultMemoryAggregate(normalizedMemoryKey, key)),
       sourceModules: aggregate ? [...aggregate.sourceModules] : [],
       sourceIds: aggregate ? [...aggregate.sourceIds] : [],
@@ -590,6 +657,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       reviewStatus: review?.status || RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
       reviewNote: review?.note || '',
       reviewUpdatedAt: review?.updatedAt || (aggregate?.latestCreatedAt || 0),
+    }
+    return {
+      ...detail,
+      recallSummary: buildMemoryRecallSummary(detail),
+      reviewSummary: buildMemoryReviewSummary(detail),
     }
   }
 
@@ -829,6 +901,22 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .sort(compareRelationshipEventsByCreatedAtDesc)
       .slice(0, clamp(toInt(limit, 5), 0, 50))
       .map((event) => ({ ...event, metricDeltas: { ...event.metricDeltas } }))
+  }
+
+  const listRelationshipFactsForSourceRecord = (sourceModule, recordId, limit = 10) => {
+    const moduleKey = normalizeText(sourceModule, '', 60)
+    const id = normalizeText(recordId, '', 140)
+    if (!moduleKey || !id) return []
+    const sourcePrefix = `${id}:`
+    return events.value
+      .filter(
+        (event) =>
+          event.sourceModule === moduleKey &&
+          (event.sourceId === id || event.sourceId.startsWith(sourcePrefix)),
+      )
+      .sort(compareRelationshipEventsByCreatedAtDesc)
+      .slice(0, clamp(toInt(limit, 10), 0, 50))
+      .map(cloneRelationshipEvent)
   }
 
   const removeRelationshipFactsForSourceRecord = (sourceModule, recordId) => {
@@ -1095,7 +1183,14 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const memories = promptMemorySummaries.length > 0
       ? promptMemorySummaries
           .slice(0, 3)
-          .map((item) => item.displaySummary || item.primarySummary || item.latestSummary || item.memoryKey || 'memory')
+          .map((item) =>
+            item.recallSummary ||
+            item.displaySummary ||
+            item.primarySummary ||
+            item.latestSummary ||
+            item.memoryKey ||
+            'memory',
+          )
           .join('; ')
       : 'none'
 
@@ -1251,6 +1346,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     applyPendingRelationshipEvent,
     dismissRelationshipEvent,
     listEventsForTarget,
+    listRelationshipFactsForSourceRecord,
     removeRelationshipFactsForSourceRecord,
     removeMemoryGroupForTarget,
     resetRelationshipForTarget,

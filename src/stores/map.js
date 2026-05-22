@@ -521,6 +521,9 @@ const buildMapAreaFeedback = ({ areaUnlocks = [], tripHistory = [], routeFamilia
     (latest, item) => Math.max(latest, toInt(item.endedAt, 0)),
     0,
   )
+  const latestArrivedTrip = arrivedTrips
+    .slice()
+    .sort((a, b) => toInt(b.endedAt, 0) - toInt(a.endedAt, 0))[0] || null
   const topRoute = Array.isArray(routeFamiliarity) ? routeFamiliarity[0] : null
   const routeLabel = topRoute
     ? `${resolveFeedbackRouteEndpoint(topRoute.fromLabel, topRoute.from)} -> ${resolveFeedbackRouteEndpoint(topRoute.toLabel, topRoute.to)}`.trim()
@@ -546,6 +549,7 @@ const buildMapAreaFeedback = ({ areaUnlocks = [], tripHistory = [], routeFamilia
         tone: area.tone,
         icon: area.icon || 'fas fa-location-dot',
         triggeredAt: latestArrivedAt,
+        sourceTripId: latestArrivedTrip?.id || '',
         routeLabel,
         completedTrips: area.currentCompletedTrips,
         explorationPoints: area.currentPoints,
@@ -624,6 +628,7 @@ const buildMapCalendarReminders = ({ areaFeedback = [], preferences = {} } = {})
         id,
         source: 'map_area_feedback',
         areaId: feedback.areaId,
+        sourceTripId: feedback.sourceTripId || '',
         titleZh: `${feedback.areaLabelZh || '地图区域'}回访`,
         titleEn: `${feedback.areaLabelEn || 'Map area'} follow-up`,
         summaryZh: routeCue

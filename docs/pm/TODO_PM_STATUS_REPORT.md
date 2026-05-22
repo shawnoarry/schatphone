@@ -55,7 +55,7 @@ PM meaning:
 ### Chat
 
 - Chat supports contact threads, AI replies, rich message behavior, WorldBook prompt context, message editing, and service-account style contexts.
-- Shopping, logistics, and Food Delivery service contexts have started connecting into Chat.
+- Shopping, logistics, and Food Delivery service contexts now connect into Chat through reusable service-notification messages with source references and route actions.
 - Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
@@ -136,7 +136,8 @@ PM meaning:
 
 - Shopping has its own Home entry planning and product/store/order concepts.
 - Orders can persist logistics/status events.
-- Logistics has service-account context in Chat.
+- Shopping checkout can push order notifications into matching Shopping service accounts.
+- Logistics events can push tracking notifications into matching Logistics service accounts.
 - Completed gift orders can now write low-impact relationship memory when recorded into Wallet.
 
 PM meaning:
@@ -148,6 +149,7 @@ PM meaning:
 
 - Food Delivery has folder-style app planning, restaurant categories, menu items, custom restaurant/menu creation, cart/order flow, and URL/Gallery image sources.
 - Food Delivery order events support rider delay, ETA update, restaurant cancellation, address change, and status update concepts.
+- Food Delivery checkout and order events can push service notifications into the Food Delivery Dispatch service account.
 - A guarded random pilot exists for active orders.
 - The automatic event safe-list currently allows only non-destructive ETA-update / rider-delay style outcomes.
 - Delivered orders can now mark a selected contact as a shared-meal target when recorded into Wallet, creating a low-impact relationship memory.
@@ -183,7 +185,9 @@ PM meaning:
 - Contacts Relationship System V2 is not fully complete:
   - destructive-action baseline is in;
   - Contacts 4.1 detail IA and memory presentation acceptance is now reached;
-  - 4.2 memory dedupe/merge and recall cleanup is now active, with the first Shopping gift plus Calendar follow-up merge slice landed;
+  - 4.2 memory dedupe/merge and recall cleanup has reached current acceptance, with explicit-lineage coverage across Phone callback, Shopping gift plus Calendar follow-up, Shopping/Food Wallet support, and Map shared-route plus Calendar follow-up chains;
+  - Chat consumes prompt-facing primary-led recall summaries, while Contacts and World Hub show UI-facing related-record summaries so supporting Calendar/Wallet facts enrich the same memory instead of taking over the memory headline;
+  - Calendar confirmed-event cards now show relationship review detail for lineage, target, memory role, and duplicate-growth status;
   - memory review state is now visible in both Contacts and World Hub, and Contacts memory source filtering no longer drops off-screen matches because of early list truncation;
   - relationship snapshots now sort recent events by timestamp rather than insertion order, reducing wrong “latest event” summaries after delayed imports or backfilled facts;
   - archived memories are now hidden from default live summaries across runtime, Contacts, and Chat unless a caller explicitly opts in;
@@ -196,10 +200,12 @@ PM meaning:
 
 ### P0: Keep Runtime And Memory Systems Safe And Understandable
 
-1. Continue from the first true schedule/date memory slice.
+1. Preserve the completed 4.3 World Hub review-pack baseline before adding stronger controls.
    - Calendar now writes relationship facts only from confirmed schedule-like events.
    - raw cue drafts remain owned by Reminders.
-   - same-life-event schedule follow-ups should merge into the existing memory when upstream lineage is explicit.
+   - same-life-event schedule follow-ups merge into the existing memory when upstream lineage is explicit.
+   - Calendar keeps source-audit review detail, while Contacts/World Hub use product-grade related-record copy instead of technical source labels.
+   - World Hub can now filter and inspect event logs and relationship facts with selected-detail explanations.
 2. Continue the relationship-growth event system through safe adapters.
    - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
 3. Add clearer user-facing explanation for automatic foreground events.
@@ -207,11 +213,10 @@ PM meaning:
 
 ### P1: Build Useful Cross-Module Loops
 
-1. Continue the 4.2 memory dedupe lane now that Contacts V2 detail IA is landed.
+1. Preserve the 4.2 memory dedupe baseline and 4.3 World Hub review-pack baseline.
 2. Keep relationship runtime, Contacts, and Chat aligned on one memory truth layer.
-3. Continue Shopping logistics service-account pushes in Chat.
-4. Continue Food Delivery service-account pushes in Chat.
-5. Continue Map and delivery integration as read-only context, not ownership transfer.
+3. Preserve the 4.4 service-notification boundary: Chat stores messages and source links, source modules own business state.
+4. Continue Map and delivery integration as read-only context, not ownership transfer.
 
 ### P2: Expand World-Aware Gameplay Carefully
 
@@ -240,18 +245,21 @@ PM meaning:
 
 Recommended next:
 
-Continue 4.2 text-first memory dedupe and recall cleanup from the newly landed Shopping gift plus Calendar follow-up merge baseline.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass.
 
 Why:
 
 - role ID, relationship-runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and Contacts 4.1 detail IA are now in place as a baseline;
-- the next useful step is to reduce fragmented memory summaries before adding more memory sources or stronger recall behavior;
-- the first real same-life-event merge rule is now proven on the Shopping -> Calendar chain and can be extended carefully.
+- fragmented memory summaries are controlled for current explicit source-id chains;
+- primary-led recall summaries are now available for Chat prompt context, and UI-facing review summaries are used by Contacts and World Hub;
+- Calendar relationship review detail now exposes lineage and duplicate-growth status without forcing that audit language into default Contacts/World Hub summaries;
+- World Hub now supports filtered event-log and relationship-fact review with selected-detail explanations, while still deferring broad value, funds, unlock, and freeform override controls.
+- Shopping/logistics/Food Delivery now push Chat service-notification messages without transferring order, wallet, or route ownership.
 
 Fallback same-size task:
 
-- improve Calendar relationship review details;
-- continue Chat-side recall cleanup once more merge rules are in place.
+- add another read-only World Hub explanation slice only if PM/QA finds a concrete review gap;
+- polish service-notification visual language only if product review asks for it; the functional 4.4 baseline is complete.
 
 ## 7. Workflow And Skill Reading Path
 

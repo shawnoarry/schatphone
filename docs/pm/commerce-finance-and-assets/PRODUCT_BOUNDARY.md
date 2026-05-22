@@ -18,6 +18,7 @@ Shopping does not own:
 
 - Wallet ledger truth
 - long-term asset ownership truth
+- Chat service-account identity lifecycle
 
 ## 2. Logistics
 
@@ -25,12 +26,14 @@ Logistics owns:
 
 - delivery-status context
 - tracking-facing communication surface
+- tracking notification payloads sent into existing Chat service accounts
 
 Logistics does not own:
 
 - shopping cart
 - checkout
 - Wallet ledger truth
+- storefront behavior
 
 ## 3. Food Delivery
 
@@ -46,6 +49,7 @@ Food Delivery does not own:
 
 - Wallet ledger truth
 - long-term asset ownership truth
+- Chat service-account identity lifecycle
 
 ## 4. Wallet
 
@@ -92,6 +96,8 @@ Stock does not own:
 ## 7. Cross-Module Rule
 
 - Shopping and Food Delivery can feed Wallet.
+- Shopping, Logistics, and Food Delivery can push Chat service-account notification messages, but those messages are snapshots and source links rather than copied business state.
+- Wallet may provide supporting relationship traceability for Shopping/Food records, but the primary order or shared-meal memory remains owned by the upstream module lineage.
 - Shopping and qualifying purchases can later feed Assets.
 - Stock can later feed cues or investment summaries, but should not absorb Wallet or Assets ownership.
 - Files or Photos may support these modules, but do not become the business owner of their records.

@@ -229,6 +229,60 @@ const getEventRelationshipSuggestion = (event) =>
     event?.id ? getSelectedRelationshipContact(event.id) : null,
   )
 
+const calendarSourceLabel = (event = {}) => {
+  if (event.source === 'map_calendar_reminder') return t('Map follow-up', 'Map follow-up')
+  if (event.source === 'phone_missed_call') return t('Phone callback', 'Phone callback')
+  if (event.source === 'shopping_delivery') return t('Shopping delivery', 'Shopping delivery')
+  if (event.source === 'stock_market_move') return t('Stock review', 'Stock review')
+  return t('Manual calendar event', 'Manual calendar event')
+}
+
+const buildCalendarEventLineageNotes = (event = {}) => [
+  event.sourceReminderId ? t(`提醒来源：${event.sourceReminderId}`, `Reminder source: ${event.sourceReminderId}`) : '',
+  event.sourceTripId ? t(`路线来源：${event.sourceTripId}`, `Route source: ${event.sourceTripId}`) : '',
+  event.sourceAreaId ? t(`地点来源：${event.sourceAreaId}`, `Area source: ${event.sourceAreaId}`) : '',
+].filter(Boolean)
+
+const getCalendarEventRelationshipReview = (event) => {
+  if (!event?.id) return null
+  const facts = relationshipRuntimeStore.listRelationshipFactsForSourceRecord(
+    RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
+    event.id,
+    3,
+  )
+  const fact = facts[0] || null
+  const summary = fact
+    ? relationshipRuntimeStore.summarizeEntityForTarget({ entityKey: fact.entityKey }, {
+        eventLimit: 3,
+        memoryLimit: 3,
+      })
+    : null
+  const memory =
+    fact?.memoryKey && Array.isArray(summary?.memorySummaries)
+      ? summary.memorySummaries.find((item) => item.memoryKey === fact.memoryKey) || null
+      : null
+  const binding = event.relationshipBinding || {}
+  const targetName = fact?.targetLabel || binding.name || ''
+  const notes = [
+    ...buildCalendarEventLineageNotes(event),
+    fact
+      ? fact.effectApplied === false
+        ? t('作为补充记录加入同一段记忆；不重复增加关系数值。', 'Supporting record in the same memory; no duplicate relationship growth.')
+        : t('已作为主要日程记忆计入关系进展。', 'Applied as the primary calendar relationship memory.')
+      : t('确认联系人后可写入关系记忆。', 'Choose a contact to record this as relationship memory.'),
+  ].filter(Boolean)
+  return {
+    sourceLabel: calendarSourceLabel(event),
+    targetName,
+    memoryKey: fact?.memoryKey || '',
+    memoryRole: fact?.memoryRole || '',
+    effectApplied: fact?.effectApplied === true,
+    imported: Boolean(fact),
+    recallSummary: memory?.recallSummary || memory?.displaySummary || fact?.summary || '',
+    notes,
+  }
+}
+
 const getRelationshipFeedbackForEvent = (eventId) => relationshipFeedbackByEventId.value[eventId] || null
 
 const setRelationshipFeedbackForEvent = (eventId, feedback = null) => {
@@ -631,6 +685,7 @@ watch(
             :relationship-contact-options="relationshipContactOptions"
             :selected-relationship-contact-id="calendarRelationshipDrafts[event.id] || ''"
             :relationship-suggestion="getEventRelationshipSuggestion(event)"
+            :relationship-review="getCalendarEventRelationshipReview(event)"
             :relationship-feedback="getRelationshipFeedbackForEvent(event.id)"
             :format-push-history-entry="formatPushHistoryEntry"
             :format-date-time="formatDateTime"

@@ -61,6 +61,15 @@ Service accounts are Chat-native communication identities such as:
 
 They are not role profiles unless explicitly designed as such.
 
+Service-account messages may store:
+
+- display copy;
+- status or amount snapshots;
+- source module, source record id, and optional source event id;
+- route actions back to the owning module.
+
+Service-account messages must not store the authoritative order, logistics, Wallet, route, or fulfillment state. The owning module remains responsible for business records.
+
 ## 4. Product Boundaries To Protect
 
 1. deleting or unbinding in Chat Directory must not be confused with deleting the global role archive

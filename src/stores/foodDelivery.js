@@ -12,6 +12,7 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 1
@@ -315,6 +316,44 @@ const normalizeOrderEvents = (rawEvents) => {
     .slice(0, FOOD_ORDER_EVENT_LIMIT)
 }
 
+const formatOrderAmount = (order = {}) =>
+  `${(Number(order?.totalCents || 0) / 100).toFixed(2)} ${order?.currency || DEFAULT_CURRENCY}`
+
+const foodOrderTitle = (order = {}, fallback = 'Food delivery order') => {
+  const firstItem = Array.isArray(order.items) ? order.items[0] : null
+  const itemTitle = normalizeText(firstItem?.title, '', 90)
+  const restaurantName = normalizeText(order.restaurantName, '', 90)
+  if (restaurantName && itemTitle) return `${restaurantName} · ${itemTitle}`
+  return restaurantName || itemTitle || fallback
+}
+
+const foodStatusLabel = (status = '') => {
+  if (status === FOOD_DELIVERY_ORDER_STATUS.ACCEPTED) return 'Accepted'
+  if (status === FOOD_DELIVERY_ORDER_STATUS.COOKING) return 'Cooking'
+  if (status === FOOD_DELIVERY_ORDER_STATUS.RIDER_PICKUP) return 'Rider pickup'
+  if (status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED) return 'Delivered'
+  if (status === FOOD_DELIVERY_ORDER_STATUS.CANCELLED) return 'Cancelled'
+  return 'Placed'
+}
+
+const foodEventStatusLabel = (event = {}) => {
+  if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY) return 'Delayed'
+  if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) return 'Cancelled'
+  if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE) return 'Address changed'
+  if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE) return 'ETA updated'
+  return 'Updated'
+}
+
+const buildFoodDeliveryOrderRoute = (order = {}) =>
+  `/food-delivery?source=chat&intent=food_delivery_order&service=food_delivery_dispatch&orderId=${encodeURIComponent(order.id)}`
+
+const buildFoodDeliveryEventSummary = (order = {}, event = {}) => {
+  if (event.summary) return event.summary
+  if (event.deliveryAddress) return `Delivery address changed to ${event.deliveryAddress}.`
+  if (event.etaMinutes !== null && event.etaMinutes !== undefined) return `ETA updated to ${event.etaMinutes} minutes.`
+  return `Food Delivery updated ${foodOrderTitle(order)}.`
+}
+
 const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
   const totals = new Map()
   items.forEach((item) => {
@@ -511,6 +550,7 @@ const createSeedMenuItems = () =>
   )
 
 export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
+  const getChatStore = () => useChatStore()
   const restaurants = ref([])
   const menuItems = ref([])
   const cartItems = ref([])
@@ -723,6 +763,59 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return removed
   }
 
+  const pushFoodDeliveryOrderServiceMessage = (order = {}) => {
+    const chatStore = getChatStore()
+    const serviceContact = chatStore.findFoodDeliveryServiceContact('food_delivery_dispatch')
+    if (!serviceContact) return null
+
+    return chatStore.appendServiceNotification(serviceContact.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.FOOD_DELIVERY_ORDER,
+      title: `Order placed · ${foodOrderTitle(order)}`,
+      summary: `Food Delivery received this order for ${foodOrderTitle(order)}. This thread only carries service pushes; restaurants, menus, fulfillment, and payment records stay in their modules.`,
+      statusLabel: foodStatusLabel(order.status),
+      amount: formatOrderAmount(order),
+      sourceModule: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
+      sourceId: order.id,
+      serviceKey: 'food_delivery_dispatch',
+      serviceLabel: serviceContact.name || 'Food Delivery Dispatch',
+      route: buildFoodDeliveryOrderRoute(order),
+      actions: [
+        {
+          label: 'View order',
+          route: buildFoodDeliveryOrderRoute(order),
+        },
+      ],
+      createdAt: order.createdAt,
+    })
+  }
+
+  const pushFoodDeliveryEventServiceMessage = (order = {}, event = {}) => {
+    const chatStore = getChatStore()
+    const serviceContact = chatStore.findFoodDeliveryServiceContact('food_delivery_dispatch')
+    if (!serviceContact) return null
+
+    return chatStore.appendServiceNotification(serviceContact.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.FOOD_DELIVERY_UPDATE,
+      title: `${event.title || 'Food delivery update'} · ${foodOrderTitle(order)}`,
+      summary: buildFoodDeliveryEventSummary(order, event),
+      statusLabel: foodEventStatusLabel(event),
+      amount: formatOrderAmount(order),
+      sourceModule: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
+      sourceId: order.id,
+      sourceEventId: event.id,
+      serviceKey: 'food_delivery_dispatch',
+      serviceLabel: serviceContact.name || 'Food Delivery Dispatch',
+      route: buildFoodDeliveryOrderRoute(order),
+      actions: [
+        {
+          label: 'Open Food Delivery',
+          route: buildFoodDeliveryOrderRoute(order),
+        },
+      ],
+      createdAt: event.createdAt,
+    })
+  }
+
   const checkoutCart = ({
     deliveryAddress = '',
     note = '',
@@ -762,6 +855,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (!order) return null
     orders.value.unshift(order)
     if (orders.value.length > FOOD_ORDER_LIMIT) orders.value.splice(FOOD_ORDER_LIMIT)
+    pushFoodDeliveryOrderServiceMessage(order)
     clearCart()
     return order
   }
@@ -805,6 +899,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
 
     order.updatedAt = Math.max(now, event.createdAt)
+    pushFoodDeliveryEventServiceMessage(order, event)
     return event
   }
 

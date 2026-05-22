@@ -13,22 +13,23 @@ What is already landed:
 1. Chat is a mature core lane with threads, rich messages, AI reply flow, and thread-level preferences;
 2. Chat Directory and Contacts now have a clearer product boundary;
 3. role binding into Chat is treated as a Chat-side entry concern, not a replacement for the global role archive;
-4. service-account style messaging has started to connect Shopping, logistics, and Food Delivery into Chat.
+4. service-account style messaging now connects Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events into Chat through reusable notification messages.
 5. Chat role-binding contracts now carry Contacts entity type, WorldBook template links, profile values, and capability flags.
 6. Chat prompt context now orders primary worldview rules before current role profile values, visible user self-profile values, relationship runtime context, and supplemental role-bound knowledge points.
+7. service notifications store source module/id references, optional source event id, status, amount, service label, and route actions while avoiding copied business state.
 
 Still incomplete or risky:
 
 1. Chat remains a large surface and still needs careful decomposition work;
 2. legacy Chat-side relationship compatibility fields can still cause semantic drift if displayed carelessly;
-3. service-account behavior still needs deeper consistency across message surfaces and entry logic.
+3. service-account behavior is now coherent for Shopping/logistics/Food Delivery but still needs future visual polish and notification-style copy tuning.
 4. self-profile visibility remains a V1 familiar/public gate until relationship-stage visibility mapping is designed.
 
 ## 2. Recommended Next Slice
 
 1. Continue shrinking semantic drift in Chat Directory displays and binding flows.
-2. Deepen service-account push/message behavior for Shopping, logistics, and Food Delivery.
-3. Keep extracting low-risk Chat or Chat Directory UI pieces only when behavior can stay stable.
+2. Keep extracting low-risk Chat or Chat Directory UI pieces only when behavior can stay stable.
+3. Later visual work can polish the service-notification card language and layout without changing ownership.
 
 ## 3. Do Not Do
 

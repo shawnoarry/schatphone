@@ -35,20 +35,24 @@ What is already landed:
 23. `summarizeEntityForTarget()` now exposes a fuller standard snapshot contract: `primaryMemory`, total vs visible memory counts, archived-only state, and source-ref/source-module summary fields are available to UI consumers instead of being rebuilt ad hoc in each page.
 24. Contacts linked-activity summary now dedupes runtime source refs and event-attached detail refs before counting sources, so one real-life event no longer inflates source totals just because both runtime and detail items reference it.
 25. World Hub now reads the runtime primary-memory summary contract directly, so archive-only memory groups keep their management badge/note while no longer pretending to be default-current shared memory headlines.
+26. Map-derived Calendar follow-ups now preserve explicit `sourceTripId` lineage and reuse the originating shared-route memory key, so the follow-up becomes supporting context instead of a second top-level memory.
+27. Wallet order-support facts for Shopping gifts and Food Delivery shared meals are covered at the shared adapter layer as supporting-only facts inside the upstream order memory, so downstream ledger traceability does not double-count relationship growth.
+28. Relationship runtime now exposes primary-led `recallSummary` fields for prompt/source recall plus UI-facing review summaries for Contacts and World Hub, so supporting facts enrich the memory without stealing its headline or leaking source-audit labels into default user copy.
+29. Calendar confirmed-event cards now include relationship review detail for source lineage, selected target, memory role, and whether the Calendar fact applied growth or stayed supporting-only.
 
 Still incomplete:
 
-1. text-first dedupe/merge and recall cleanup is now in 4.2 active work, with the first same-life-event merge slice landed for Shopping gift memory plus Calendar delivery follow-up;
-2. legacy Chat-side relationship compatibility fields still need continued semantic containment.
-3. WorldBook template authoring remains a compact V1 baseline, not a full form-builder or onboarding flow.
+1. legacy Chat-side relationship compatibility fields still need continued semantic containment.
+2. WorldBook template authoring remains a compact V1 baseline, not a full form-builder or onboarding flow.
+3. deeper World Hub review quality continues under roadmap 4.3.
 
 ## 2. Recommended Next Slice
 
-1. Move to 4.2 text-first memory dedupe/merge and recall cleanup now that Contacts memory review and lifecycle controls exist.
+1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
 3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing and profile-value authoring ergonomics.
 
-4.2 started baseline:
+4.2 closure baseline:
 
 1. Shopping gift memory and Shopping delivery follow-up Calendar events now reuse one shared `shopping_gift` memory group when they refer to the same order.
 2. This keeps one top-level memory while preserving both source records for audit, cleanup, and supporting-event drill-down.
@@ -56,6 +60,12 @@ Still incomplete:
 4. Runtime recent-event summaries now respect event timestamps instead of raw insertion order, which keeps Chat/Contacts summary text aligned when older facts are imported later.
 5. Archived memory is now consistently treated as background history instead of default-current relationship signal across runtime, Contacts, and Chat summary assembly.
 6. Runtime snapshots are now the canonical source for primary-memory headline, memory-count totals, archive-only hinting, and source-summary data across Contacts and World Hub.
+7. Map shared-route memory plus downstream Map-derived Calendar follow-up now uses the same explicit-lineage pattern when `sourceTripId` is available.
+8. Shopping gift and Food Delivery shared-meal Wallet support facts now have shared adapter-level regressions proving they stay supporting-only in the upstream memory group.
+9. Memory group summaries now include prompt-facing primary-led recall text and UI-facing related-record summaries.
+10. Calendar event cards now expose review detail for the relationship memory link.
+11. Calendar keeps source-audit copy in its relationship review, while Contacts and World Hub use product-facing related-record copy by default.
+12. The current 4.2 dedupe baseline covers the explicit source-id chains already present in the product; fuzzy same-text merging remains out of scope until a product decision says otherwise.
 
 ## 3. Do Not Do
 
@@ -71,6 +81,10 @@ Still incomplete:
 - `npm.cmd test -- tests/contacts-profile-template-view.test.js tests/contacts-detail-danger-flows.test.js tests/contacts-chat-directory-boundary-copy.test.js tests/contacts-wallet-ledger-context.test.js`: pass
 - `npm.cmd test -- tests/contacts-detail-danger-flows.test.js tests/contacts-profile-template-view.test.js tests/contacts-chat-directory-boundary-copy.test.js tests/contacts-wallet-ledger-context.test.js tests/contacts-relationship-actions.test.js tests/contacts-profile-entities-store.test.js`: pass
 - `npm.cmd test -- tests/relationship-runtime-store.test.js tests/contacts-detail-danger-flows.test.js tests/chat-store-model.test.js`: pass
+- `npm.cmd test -- tests/relationship-fact-adapters.test.js tests/calendar-event-store.test.js tests/map-view-information-architecture.test.js tests/relationship-runtime-store.test.js`: pass
+- `npm.cmd test -- tests/relationship-fact-adapters.test.js tests/shopping-view.test.js tests/food-delivery-view.test.js tests/relationship-runtime-store.test.js`: pass
+- `npm.cmd test -- tests/relationship-runtime-store.test.js tests/relationship-fact-adapters.test.js tests/contacts-detail-danger-flows.test.js tests/control-center-view.test.js`: pass
+- `npm.cmd test -- tests/calendar-relationship-fact-view.test.js tests/relationship-runtime-store.test.js tests/relationship-fact-adapters.test.js tests/control-center-view.test.js tests/contacts-detail-danger-flows.test.js`: pass
 - `npm.cmd run lint`: pass
 - `npm.cmd run test`: pass
 - `npm.cmd run build`: pass

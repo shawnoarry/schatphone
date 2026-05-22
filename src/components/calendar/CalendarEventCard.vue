@@ -50,6 +50,10 @@ defineProps({
     type: Object,
     default: null,
   },
+  relationshipReview: {
+    type: Object,
+    default: null,
+  },
   relationshipFeedback: {
     type: Object,
     default: null,
@@ -156,6 +160,40 @@ const { t } = useI18n()
       >
         {{ t(relationshipFeedback.messageZh, relationshipFeedback.messageEn) }}
       </p>
+      <div
+        v-if="relationshipReview"
+        class="mt-3 rounded-lg border border-emerald-50 bg-emerald-50/50 p-2 text-[11px] text-gray-600"
+        :data-testid="`calendar-event-relationship-review-${event.id}`"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-medium text-gray-700">{{ t('Relationship review', 'Relationship review') }}</span>
+          <span class="shrink-0 rounded-full bg-white px-2 py-1 text-emerald-700">
+            {{ relationshipReview.sourceLabel }}
+          </span>
+        </div>
+        <p v-if="relationshipReview.targetName" class="mt-1">
+          {{ t(`对象：${relationshipReview.targetName}`, `Target: ${relationshipReview.targetName}`) }}
+        </p>
+        <p v-if="relationshipReview.recallSummary" class="mt-1">
+          {{ relationshipReview.recallSummary }}
+        </p>
+        <p v-if="relationshipReview.memoryKey" class="mt-1 text-gray-500">
+          {{
+            relationshipReview.effectApplied
+              ? t('主要记忆 / 已影响关系数值', 'Primary memory / relationship growth applied')
+              : t('补充记录 / 未重复增加关系数值', 'Supporting record / no duplicate growth')
+          }}
+        </p>
+        <ul v-if="relationshipReview.notes?.length" class="mt-2 space-y-1">
+          <li
+            v-for="note in relationshipReview.notes"
+            :key="note"
+            class="text-gray-500"
+          >
+            {{ note }}
+          </li>
+        </ul>
+      </div>
     </div>
     <div
       v-if="relatedKnowledgePoints.length > 0"

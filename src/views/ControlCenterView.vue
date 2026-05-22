@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
@@ -51,6 +51,13 @@ const shoppingStore = useShoppingStore()
 const walletStore = useWalletStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
+
+const eventLogModuleFilter = ref('all')
+const eventLogStatusFilter = ref('all')
+const selectedEventLogId = ref('')
+const relationshipEventStatusFilter = ref('all')
+const relationshipEventSourceFilter = ref('all')
+const selectedRelationshipEventId = ref('')
 
 const { settings } = storeToRefs(systemStore)
 const {
@@ -264,6 +271,64 @@ const simulationEventVariantLabel = (log = {}) =>
     .filter((item) => typeof item === 'string' && item.trim())
     .join(' / ')
 
+const simulationEventReviewExplanation = (log = {}) => {
+  if (log.status === SIMULATION_EVENT_STATUS.TRIGGERED) {
+    if (log.triggerSource === 'random') {
+      return t(
+        'The event passed eligibility, cooldown, daily-cap, and random-gate checks before the module adapter ran.',
+        'The event passed eligibility, cooldown, daily-cap, and random-gate checks before the module adapter ran.',
+      )
+    }
+    return t(
+      'The event was eligible and the module adapter ran. Domain data still belongs to the owning module.',
+      'The event was eligible and the module adapter ran. Domain data still belongs to the owning module.',
+    )
+  }
+  if (log.status === SIMULATION_EVENT_STATUS.SKIPPED) {
+    return t(
+      'The runtime recorded why this event did not run, so skipped behavior can be audited without mutating module data.',
+      'The runtime recorded why this event did not run, so skipped behavior can be audited without mutating module data.',
+    )
+  }
+  if (log.status === SIMULATION_EVENT_STATUS.FAILED) {
+    return t(
+      'The runtime caught a failed adapter path and preserved the record for review.',
+      'The runtime caught a failed adapter path and preserved the record for review.',
+    )
+  }
+  return t(
+    'This row is a read-only event-log record from the shared simulation runtime.',
+    'This row is a read-only event-log record from the shared simulation runtime.',
+  )
+}
+
+const simulationEventSafetyNotes = (log = {}) => {
+  const notes = [
+    t(
+      'World Hub is reviewing the log only; selecting this row does not trigger the event again.',
+      'World Hub is reviewing the log only; selecting this row does not trigger the event again.',
+    ),
+    log.adapterKey
+      ? t(
+          `Adapter boundary: ${log.adapterKey}`,
+          `Adapter boundary: ${log.adapterKey}`,
+        )
+      : t(
+          'No adapter boundary was recorded for this log.',
+          'No adapter boundary was recorded for this log.',
+        ),
+  ]
+  if (log.variantId || log.variantPackId || log.worldContextId) {
+    notes.push(
+      t(
+        'World-aware context is present, so the event can be reviewed against its active variant data.',
+        'World-aware context is present, so the event can be reviewed against its active variant data.',
+      ),
+    )
+  }
+  return notes
+}
+
 const relationshipEventStatusLabel = (status = '') => {
   if (status === RELATIONSHIP_EVENT_STATUS.APPLIED) return t('Applied', 'Applied')
   if (status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return t('Pending', 'Pending')
@@ -278,6 +343,77 @@ const relationshipEventStatusClass = (status = '') => {
   if (status === RELATIONSHIP_EVENT_STATUS.DISMISSED) return 'bg-slate-300/15 text-slate-200'
   return 'bg-white/10 text-slate-400'
 }
+
+const relationshipEventReviewExplanation = (event = {}) => {
+  if (event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) {
+    return t(
+      'This relationship fact is waiting for explicit World Hub review before it can change relationship metrics.',
+      'This relationship fact is waiting for explicit World Hub review before it can change relationship metrics.',
+    )
+  }
+  if (event.status === RELATIONSHIP_EVENT_STATUS.APPLIED && event.effectApplied === false) {
+    return t(
+      'This fact is attached as supporting context for the same memory and does not apply another relationship metric change.',
+      'This fact is attached as supporting context for the same memory and does not apply another relationship metric change.',
+    )
+  }
+  if (event.status === RELATIONSHIP_EVENT_STATUS.APPLIED) {
+    return t(
+      'This fact has been applied by the relationship runtime. Source records remain owned by their original module.',
+      'This fact has been applied by the relationship runtime. Source records remain owned by their original module.',
+    )
+  }
+  if (event.status === RELATIONSHIP_EVENT_STATUS.DISMISSED) {
+    return t(
+      'This fact was dismissed and is retained for review history without applying metrics.',
+      'This fact was dismissed and is retained for review history without applying metrics.',
+    )
+  }
+  if (event.status === RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED) {
+    return t(
+      'Relationship runtime was disabled when this fact arrived, so no relationship effect was applied.',
+      'Relationship runtime was disabled when this fact arrived, so no relationship effect was applied.',
+    )
+  }
+  return t(
+    'This row is a relationship fact submitted through the shared relationship runtime.',
+    'This row is a relationship fact submitted through the shared relationship runtime.',
+  )
+}
+
+const formatMetricDeltas = (metricDeltas = {}) => {
+  const entries = Object.entries(metricDeltas || {})
+    .filter(([, value]) => Number(value) !== 0)
+    .map(([key, value]) => `${key} ${Number(value) > 0 ? '+' : ''}${Number(value)}`)
+  return entries.length > 0 ? entries.join(' / ') : t('No metric change', 'No metric change')
+}
+
+const relationshipEventSafetyNotes = (event = {}) => [
+  event.memoryKey
+    ? t(
+        `Memory group: ${event.memoryKey}`,
+        `Memory group: ${event.memoryKey}`,
+      )
+    : t('No memory group attached.', 'No memory group attached.'),
+  event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+    ? t(
+        'Pending review: no metric change is applied until this is approved.',
+        'Pending review: no metric change is applied until this is approved.',
+      )
+    : event.effectApplied === false
+      ? t(
+          'Supporting-only: no duplicate relationship growth.',
+          'Supporting-only: no duplicate relationship growth.',
+        )
+      : t(
+          'Metric effect follows the relationship runtime status shown here.',
+          'Metric effect follows the relationship runtime status shown here.',
+        ),
+  t(
+    'Source cleanup remains delegated to the owning module handlers.',
+    'Source cleanup remains delegated to the owning module handlers.',
+  ),
+]
 
 const relationshipMemoryReviewLabel = (status = '') => {
   if (status === RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED) return t('置顶', 'Pinned')
@@ -326,6 +462,23 @@ const relationshipStageLabel = (stage = '') => {
   if (stage === 'distant') return t('Distant', 'Distant')
   if (stage === 'conflict') return t('Conflict', 'Conflict')
   return stage || t('Unknown', 'Unknown')
+}
+
+const relationshipMemoryReviewSummaryText = (memory = {}) => {
+  const base =
+    memory?.displaySummary ||
+    memory?.primarySummary ||
+    memory?.latestSummary ||
+    memory?.reviewSummary ||
+    memory?.recallSummary ||
+    ''
+  if (!base) return ''
+  const relatedRecordCount = Number(memory?.supportingCount) || 0
+  if (relatedRecordCount <= 1) return base
+  return t(
+    `${base}（包含 ${relatedRecordCount} 条关联记录）`,
+    `${base} (${relatedRecordCount} related records)`,
+  )
 }
 
 const relationshipRuntimeStats = computed(() => [
@@ -441,6 +594,8 @@ const relationshipRuntimeEntityRows = computed(() =>
       updatedAtLabel: formatRuntimeTime(entity.updatedAt),
       memorySummaries,
       primaryMemorySummaryText:
+        relationshipMemoryReviewSummaryText(primaryMemory) ||
+        primaryMemory?.recallSummary ||
         primaryMemory?.displaySummary ||
         primaryMemory?.primarySummary ||
         primaryMemory?.latestSummary ||
@@ -467,6 +622,41 @@ const relationshipRuntimeEntityRows = computed(() =>
   }),
 )
 
+const eventLogModuleOptions = computed(() => [
+  { value: 'all', label: t('All modules', 'All modules') },
+  ...[...new Set(recentEventLogs.value.map((log) => log.moduleKey).filter(Boolean))]
+    .sort()
+    .map((moduleKey) => ({
+      value: moduleKey,
+      label: simulationModuleLabel(moduleKey),
+    })),
+])
+
+const eventLogStatusOptions = computed(() => [
+  { value: 'all', label: t('All statuses', 'All statuses') },
+  { value: SIMULATION_EVENT_STATUS.TRIGGERED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.TRIGGERED) },
+  { value: SIMULATION_EVENT_STATUS.SKIPPED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.SKIPPED) },
+  { value: SIMULATION_EVENT_STATUS.FAILED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.FAILED) },
+])
+
+const relationshipEventStatusOptions = computed(() => [
+  { value: 'all', label: t('All statuses', 'All statuses') },
+  { value: RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION, label: relationshipEventStatusLabel(RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) },
+  { value: RELATIONSHIP_EVENT_STATUS.APPLIED, label: relationshipEventStatusLabel(RELATIONSHIP_EVENT_STATUS.APPLIED) },
+  { value: RELATIONSHIP_EVENT_STATUS.DISMISSED, label: relationshipEventStatusLabel(RELATIONSHIP_EVENT_STATUS.DISMISSED) },
+  { value: RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED, label: relationshipEventStatusLabel(RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED) },
+])
+
+const relationshipEventSourceOptions = computed(() => [
+  { value: 'all', label: t('All sources', 'All sources') },
+  ...[...new Set(relationshipRuntimeStore.events.map((event) => event.sourceModule).filter(Boolean))]
+    .sort()
+    .map((sourceModule) => ({
+      value: sourceModule,
+      label: relationshipSourceLabel(sourceModule),
+    })),
+])
+
 const relationshipSourceCleanupHandlers = computed(() =>
   createRelationshipSourceCleanupHandlers({
     phoneStore,
@@ -480,31 +670,83 @@ const relationshipSourceCleanupHandlers = computed(() =>
 )
 
 const relationshipRuntimeEventRows = computed(() =>
-  relationshipRuntimeStore.events.slice(0, 6).map((event) => ({
-    ...event,
-    sourceLabel: relationshipSourceLabel(event.sourceModule),
-    factTypeLabel: relationshipFactTypeLabel(event.factType),
-    statusLabel: relationshipEventStatusLabel(event.status),
-    statusClass: relationshipEventStatusClass(event.status),
-    canReview: event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION,
-    createdAtLabel: formatRuntimeTime(event.createdAt),
-  })),
+  relationshipRuntimeStore.events
+    .filter((event) =>
+      relationshipEventStatusFilter.value === 'all'
+        ? true
+        : event.status === relationshipEventStatusFilter.value,
+    )
+    .filter((event) =>
+      relationshipEventSourceFilter.value === 'all'
+        ? true
+        : event.sourceModule === relationshipEventSourceFilter.value,
+    )
+    .slice(0, 12)
+    .map((event) => ({
+      ...event,
+      sourceLabel: relationshipSourceLabel(event.sourceModule),
+      factTypeLabel: relationshipFactTypeLabel(event.factType),
+      statusLabel: relationshipEventStatusLabel(event.status),
+      statusClass: relationshipEventStatusClass(event.status),
+      canReview: event.status === RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION,
+      createdAtLabel: formatRuntimeTime(event.createdAt),
+      explanation: relationshipEventReviewExplanation(event),
+      metricDeltaText: formatMetricDeltas(event.metricDeltas),
+      safetyNotes: relationshipEventSafetyNotes(event),
+    })),
 )
 
 const recentRuntimeLogs = computed(() =>
-  recentEventLogs.value.slice(0, 6).map((log) => ({
-    ...log,
-    eventLabel: simulationEventLabel(log.eventId),
-    moduleLabel: simulationModuleLabel(log.moduleKey),
-    triggerSourceLabel: simulationTriggerSourceLabel(log.triggerSource),
-    statusLabel: simulationEventStatusLabel(log.status),
-    statusClass: simulationEventStatusClass(log.status),
-    reasonLabel: simulationEventReasonLabel(log.reason),
-    targetLabel: simulationEventTargetLabel(log),
-    variantLabel: simulationEventVariantLabel(log),
-    createdAtLabel: formatRuntimeTime(log.at),
-  })),
+  recentEventLogs.value
+    .filter((log) =>
+      eventLogModuleFilter.value === 'all'
+        ? true
+        : log.moduleKey === eventLogModuleFilter.value,
+    )
+    .filter((log) =>
+      eventLogStatusFilter.value === 'all'
+        ? true
+        : log.status === eventLogStatusFilter.value,
+    )
+    .slice(0, 12)
+    .map((log) => ({
+      ...log,
+      eventLabel: simulationEventLabel(log.eventId),
+      moduleLabel: simulationModuleLabel(log.moduleKey),
+      triggerSourceLabel: simulationTriggerSourceLabel(log.triggerSource),
+      statusLabel: simulationEventStatusLabel(log.status),
+      statusClass: simulationEventStatusClass(log.status),
+      reasonLabel: simulationEventReasonLabel(log.reason),
+      targetLabel: simulationEventTargetLabel(log),
+      variantLabel: simulationEventVariantLabel(log),
+      createdAtLabel: formatRuntimeTime(log.at),
+      explanation: simulationEventReviewExplanation(log),
+      safetyNotes: simulationEventSafetyNotes(log),
+    })),
 )
+
+const selectedRuntimeLog = computed(
+  () => recentRuntimeLogs.value.find((log) => log.id === selectedEventLogId.value) || recentRuntimeLogs.value[0] || null,
+)
+
+const selectedRelationshipEvent = computed(
+  () =>
+    relationshipRuntimeEventRows.value.find((event) => event.id === selectedRelationshipEventId.value) ||
+    relationshipRuntimeEventRows.value[0] ||
+    null,
+)
+
+watch(recentRuntimeLogs, (logs) => {
+  if (!logs.some((log) => log.id === selectedEventLogId.value)) {
+    selectedEventLogId.value = logs[0]?.id || ''
+  }
+}, { immediate: true })
+
+watch(relationshipRuntimeEventRows, (events) => {
+  if (!events.some((event) => event.id === selectedRelationshipEventId.value)) {
+    selectedRelationshipEventId.value = events[0]?.id || ''
+  }
+}, { immediate: true })
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -896,14 +1138,53 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
             <p class="text-xs font-semibold text-slate-100">
               {{ t('Recent relationship facts', 'Recent relationship facts') }}
             </p>
-            <span class="text-[11px] text-slate-500">{{ t('Latest 6', 'Latest 6') }}</span>
+            <span class="text-[11px] text-slate-500">{{ t('Filtered review', 'Filtered review') }}</span>
+          </div>
+          <div
+            class="mt-3 grid grid-cols-2 gap-2"
+            data-testid="control-center-relationship-filters"
+          >
+            <label class="text-[11px] text-slate-400">
+              {{ t('Status', 'Status') }}
+              <select
+                v-model="relationshipEventStatusFilter"
+                class="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-xs text-white"
+                data-testid="control-center-relationship-status-filter"
+              >
+                <option
+                  v-for="option in relationshipEventStatusOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+            <label class="text-[11px] text-slate-400">
+              {{ t('Source', 'Source') }}
+              <select
+                v-model="relationshipEventSourceFilter"
+                class="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-xs text-white"
+                data-testid="control-center-relationship-source-filter"
+              >
+                <option
+                  v-for="option in relationshipEventSourceOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
           </div>
           <div v-if="relationshipRuntimeEventRows.length" class="mt-3 space-y-2">
             <article
               v-for="event in relationshipRuntimeEventRows"
               :key="event.id"
-              class="rounded-2xl border border-white/10 bg-white/8 p-3"
+              class="rounded-2xl border p-3"
+              :class="selectedRelationshipEvent?.id === event.id ? 'border-rose-200/70 bg-rose-200/10' : 'border-white/10 bg-white/8'"
               data-testid="control-center-relationship-event"
+              @click="selectedRelationshipEventId = event.id"
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -923,8 +1204,8 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
                 {{ event.summary || event.sourceId }}
               </p>
               <p class="mt-1 text-[10px] leading-4 text-slate-600">
-                {{ event.createdAtLabel }} / source={{ event.sourceModule }} / {{ event.sourceId || '-' }}
-              </p>
+                  {{ event.createdAtLabel }} / source={{ event.sourceModule }} / {{ event.sourceId || '-' }}
+                </p>
               <div v-if="event.canReview" class="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -948,6 +1229,51 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
           <p v-else class="mt-3 rounded-2xl bg-white/8 px-3 py-3 text-xs leading-5 text-slate-400">
             {{ t('No relationship facts yet. This area only shows relationship facts explicitly submitted by modules.', 'No relationship facts yet. This area only shows relationship facts explicitly submitted by modules.') }}
           </p>
+          <article
+            v-if="selectedRelationshipEvent"
+            class="mt-3 rounded-2xl border border-rose-200/20 bg-rose-200/8 p-3"
+            data-testid="control-center-relationship-detail"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-white">{{ t('Relationship fact detail', 'Relationship fact detail') }}</p>
+                <p class="mt-1 text-[11px] text-slate-400">
+                  {{ selectedRelationshipEvent.factTypeLabel }} / {{ selectedRelationshipEvent.statusLabel }}
+                </p>
+              </div>
+              <span
+                class="rounded-full px-2 py-1 text-[10px] font-semibold"
+                :class="selectedRelationshipEvent.statusClass"
+              >
+                {{ selectedRelationshipEvent.statusLabel }}
+              </span>
+            </div>
+            <p class="mt-2 text-[11px] leading-4 text-slate-300">
+              {{ selectedRelationshipEvent.explanation }}
+            </p>
+            <div class="mt-3 grid gap-2 text-[11px]">
+              <span class="rounded-xl bg-white/8 px-3 py-2">
+                {{ t('Target', 'Target') }}:
+                {{ selectedRelationshipEvent.targetLabel || selectedRelationshipEvent.entityKey }}
+              </span>
+              <span class="rounded-xl bg-white/8 px-3 py-2">
+                {{ t('Metric delta', 'Metric delta') }}:
+                {{ selectedRelationshipEvent.metricDeltaText }}
+              </span>
+              <span class="rounded-xl bg-white/8 px-3 py-2">
+                {{ t('Source record', 'Source record') }}:
+                {{ selectedRelationshipEvent.sourceModule }} / {{ selectedRelationshipEvent.sourceId || '-' }}
+              </span>
+            </div>
+            <ul class="mt-3 space-y-1 text-[11px] leading-4 text-slate-400">
+              <li
+                v-for="note in selectedRelationshipEvent.safetyNotes"
+                :key="note"
+              >
+                {{ note }}
+              </li>
+            </ul>
+          </article>
         </div>
       </section>
 
@@ -1031,14 +1357,53 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
       >
         <div class="flex items-center justify-between gap-3">
           <p class="text-xs font-semibold text-slate-200">{{ t('Recent Event Logs', 'Recent Event Logs') }}</p>
-          <span class="text-[11px] text-slate-500">{{ t('Latest 6', 'Latest 6') }}</span>
+          <span class="text-[11px] text-slate-500">{{ t('Filtered review', 'Filtered review') }}</span>
+        </div>
+        <div
+          class="mt-3 grid grid-cols-2 gap-2"
+          data-testid="control-center-event-log-filters"
+        >
+          <label class="text-[11px] text-slate-400">
+            {{ t('Module', 'Module') }}
+            <select
+              v-model="eventLogModuleFilter"
+              class="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-xs text-white"
+              data-testid="control-center-event-log-module-filter"
+            >
+              <option
+                v-for="option in eventLogModuleOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+          <label class="text-[11px] text-slate-400">
+            {{ t('Status', 'Status') }}
+            <select
+              v-model="eventLogStatusFilter"
+              class="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-xs text-white"
+              data-testid="control-center-event-log-status-filter"
+            >
+              <option
+                v-for="option in eventLogStatusOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
         </div>
         <div v-if="recentRuntimeLogs.length" class="mt-3 space-y-2">
           <article
             v-for="log in recentRuntimeLogs"
             :key="log.id"
-            class="rounded-2xl border border-white/10 bg-white/8 p-3"
+            class="rounded-2xl border p-3"
+            :class="selectedRuntimeLog?.id === log.id ? 'border-cyan-200/70 bg-cyan-200/10' : 'border-white/10 bg-white/8'"
             data-testid="control-center-event-log-item"
+            @click="selectedEventLogId = log.id"
           >
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -1068,6 +1433,54 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         <p v-else class="mt-3 rounded-2xl bg-white/8 px-3 py-3 text-xs leading-5 text-slate-400">
           {{ t('No event logs yet. Run a diagnostics tick or a module event to see read-only records here.', 'No event logs yet. Run a diagnostics tick or a module event to see read-only records here.') }}
         </p>
+        <article
+          v-if="selectedRuntimeLog"
+          class="mt-3 rounded-2xl border border-cyan-200/20 bg-cyan-200/8 p-3"
+          data-testid="control-center-event-log-detail"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold text-white">{{ t('Event log detail', 'Event log detail') }}</p>
+              <p class="mt-1 text-[11px] text-slate-400">
+                {{ selectedRuntimeLog.eventLabel }} / {{ selectedRuntimeLog.moduleLabel }}
+              </p>
+            </div>
+            <span
+              class="rounded-full px-2 py-1 text-[10px] font-semibold"
+              :class="selectedRuntimeLog.statusClass"
+            >
+              {{ selectedRuntimeLog.statusLabel }}
+            </span>
+          </div>
+          <p class="mt-2 text-[11px] leading-4 text-slate-300">
+            {{ selectedRuntimeLog.explanation }}
+          </p>
+          <div class="mt-3 grid gap-2 text-[11px]">
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Reason', 'Reason') }}: {{ selectedRuntimeLog.reasonLabel }}
+            </span>
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Target', 'Target') }}: {{ selectedRuntimeLog.targetLabel }}
+            </span>
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Trigger source', 'Trigger source') }}: {{ selectedRuntimeLog.triggerSourceLabel }}
+            </span>
+            <span
+              v-if="selectedRuntimeLog.variantLabel"
+              class="rounded-xl bg-white/8 px-3 py-2"
+            >
+              {{ t('Variant', 'Variant') }}: {{ selectedRuntimeLog.variantLabel }}
+            </span>
+          </div>
+          <ul class="mt-3 space-y-1 text-[11px] leading-4 text-slate-400">
+            <li
+              v-for="note in selectedRuntimeLog.safetyNotes"
+              :key="note"
+            >
+              {{ note }}
+            </li>
+          </ul>
+        </article>
       </section>
 
       <section class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">

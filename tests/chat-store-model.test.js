@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useChatStore } from '../src/stores/chat'
+import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from '../src/stores/chat'
 
 describe('chat store model', () => {
   beforeEach(() => {
@@ -684,6 +684,57 @@ describe('chat store model', () => {
     const removed = store.removeContact(created.id)
     expect(removed).toBe(true)
     expect(store.contacts.some((item) => item.id === created.id)).toBe(false)
+  })
+
+  test('appends deduped service notifications without role binding state', () => {
+    const store = useChatStore()
+    const service = store.addContact({
+      name: 'Style Cloud',
+      kind: 'service',
+      role: 'Service account',
+      shoppingServiceKey: 'style_cloud',
+    })
+
+    const message = store.appendServiceNotification(service.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
+      title: 'Order placed · Nova Jacket',
+      summary: 'Shopping owns this order; Chat only carries the notification.',
+      statusLabel: 'Placed',
+      amount: '399.00 CNY',
+      sourceModule: 'shopping_order_update',
+      sourceId: 'order_4_4',
+      serviceKey: 'style_cloud',
+      serviceLabel: 'Style Cloud',
+      route: '/shopping?source=chat&intent=shopping_order&orderId=order_4_4',
+      actions: [
+        {
+          label: 'View order',
+          route: '/shopping?source=chat&intent=shopping_order&orderId=order_4_4',
+        },
+      ],
+    })
+    const duplicate = store.appendServiceNotification(service.id, {
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
+      title: 'Order placed duplicate',
+      sourceModule: 'shopping_order_update',
+      sourceId: 'order_4_4',
+      route: '/shopping',
+    })
+
+    expect(duplicate?.id).toBe(message?.id)
+    expect(store.getMessagesByContactId(service.id).filter((item) =>
+      item.blocks.some((block) => block.type === 'service_notification'),
+    )).toHaveLength(1)
+    expect(store.getConversationByContactId(service.id).unread).toBe(1)
+    expect(message?.blocks[0]).toMatchObject({
+      type: 'service_notification',
+      kind: CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
+      sourceModule: 'shopping_order_update',
+      sourceId: 'order_4_4',
+      serviceKey: 'style_cloud',
+      actions: [{ label: 'View order' }],
+    })
+    expect(store.getRoleBindingContract(service.id).roleBound).toBe(false)
   })
 
   test('supports role profile binding lifecycle without deleting global profile on unbind', () => {

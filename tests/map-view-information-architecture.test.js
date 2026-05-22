@@ -128,4 +128,37 @@ describe('MapView information architecture', () => {
       status: 'applied',
     })
   })
+
+  test('carries the latest trip lineage into map calendar reminders', async () => {
+    const mapStore = useMapStore()
+    const now = Date.now()
+    expect(
+      mapStore.restoreFromBackup({
+        map: {
+          tripHistory: [
+            {
+              id: 'trip_hist_city_core_lineage',
+              status: 'arrived',
+              from: 'Dorm',
+              to: 'City core',
+              fromLabel: 'Dorm',
+              toLabel: 'City core',
+              distanceKm: 3,
+              fare: 1200,
+              durationSeconds: 600,
+              startedAt: now - 600000,
+              endedAt: now - 1000,
+              rewardPoints: 12,
+            },
+          ],
+        },
+      }),
+    ).toBe(true)
+    await nextTick()
+
+    expect(mapStore.mapCalendarReminders[0]).toMatchObject({
+      areaId: 'city_core',
+      sourceTripId: 'trip_hist_city_core_lineage',
+    })
+  })
 })

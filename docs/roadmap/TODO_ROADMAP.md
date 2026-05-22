@@ -79,7 +79,7 @@ Primary references:
 
 ### 4.2 Text-First Memory Dedupe And Recall Rules
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 Why this is next:
 
@@ -102,8 +102,14 @@ Acceptance:
 Current implementation note:
 
 - the first 4.2 runtime tightening slice is now landed: Shopping gift memory and its downstream Calendar delivery follow-up now reuse one shared memory group instead of surfacing as two competing top-level memories;
-- source-level traceability remains intact because the Shopping gift fact and Calendar confirmed-event fact still keep their own source module and source id entries inside the shared memory group;
-- further 4.2 work should continue on the same pattern for other same-life-event reminder/schedule chains before expanding recall behavior in Chat.
+- the next explicit-lineage merge is also landed: Map shared-route facts can pass their source trip id into Map-derived Calendar follow-ups, so the confirmed Calendar follow-up becomes supporting context inside the same `shared_route` memory group;
+- Wallet order-support facts for Shopping gifts and Food Delivery shared meals are covered as supporting-only facts inside the upstream `shopping_gift` / `food_shared_meal` memory groups, preserving ledger traceability without stacking relationship metrics;
+- source-level traceability remains intact because each module fact still keeps its own source module and source id entries inside the shared memory group;
+- explicit-lineage coverage is now broad enough for the current adapter set: Phone callback, Shopping gift, Food Delivery shared meal, Wallet support, Map route, and Calendar follow-up chains all have regression coverage where source ids are explicit;
+- Chat prompt context now consumes primary-led `recallSummary` text, while Contacts and World Hub consume UI-facing review summaries that keep the original life-event headline and only mention the related-record count;
+- Calendar confirmed-event cards now expose a relationship review detail showing source lineage, target, memory role, and whether the Calendar fact applied growth or stayed supporting-only;
+- current 4.2 acceptance is reached for explicit source-id chains and product-facing review copy across Calendar, Contacts, and World Hub;
+- future dedupe work should only add another merge when a new explicit source-id chain appears, while fuzzy same-text merging remains out of scope.
 
 Primary references:
 
@@ -112,7 +118,7 @@ Primary references:
 
 ### 4.3 World Hub Review Quality Before Stronger Controls
 
-Status: `NEXT`
+Status: `DONE`
 
 Why this is next:
 
@@ -132,6 +138,12 @@ Acceptance:
 - pending relationship effects are easier to inspect before approval or dismissal;
 - Cheats remains a future lane, not a default user path.
 
+Current implementation note:
+
+- World Hub event logs now support module/status filters, selected-log detail, trigger-source/reason/target review, adapter-boundary notes, and world-variant context where present.
+- World Hub relationship facts now support status/source filters, selected-fact detail, metric-delta review, source-record visibility, pending-effect explanations, and supporting-only duplicate-growth explanations.
+- Review actions remain narrow: pending relationship facts can still be approved or dismissed, and relationship cleanup remains guarded; broad affinity, funds, unlock, or freeform override editing stays deferred.
+
 Primary references:
 
 - `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`
@@ -139,7 +151,7 @@ Primary references:
 
 ### 4.4 Service-Account Continuity For Shopping / Logistics / Food Delivery
 
-Status: `NEXT`
+Status: `DONE`
 
 Why this matters:
 
@@ -157,6 +169,14 @@ Acceptance:
 
 - service-account communications feel more like real app notifications or brand messages;
 - Chat receives richer module context without absorbing module business state.
+
+Current implementation note:
+
+- Chat now has a reusable `service_notification` rich message surface with source module, source record id, optional source event id, service label, status, amount, route actions, unread behavior, and source-level dedupe.
+- Shopping checkout can push order notifications into matching Shopping service-account threads, while Shopping remains the owner of products, cart, checkout, order status, and Calendar delivery cues.
+- Shopping logistics events can push tracking notifications into matching Logistics service-account threads, while logistics remains a tracking-facing communication lane and does not become a storefront.
+- Food Delivery checkout and order events can push order/update notifications into the Food Delivery Dispatch service-account thread, while restaurants, menus, order state, delivery fulfillment, Wallet expenses, and Map route context remain owned by their source modules.
+- Service-account pushes only target existing Chat Directory service accounts; source modules do not auto-create service identities.
 
 Primary references:
 
