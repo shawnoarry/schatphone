@@ -24,6 +24,7 @@ Before installing tools on another PC, ask the machine owner to confirm:
 5. Whether PowerShell should use npm/npx or npm.cmd/npx.cmd:
 6. OpenCLI global install location:
 7. Any local reference or tool directories outside the repo:
+8. Visual reference asset library path, if visual work is in scope:
 ```
 
 Current machine values:
@@ -36,9 +37,12 @@ npx.cmd path: D:\rabbitpro\npx.cmd
 npm global prefix: C:\Users\Administrator\AppData\Roaming\npm
 OpenCLI command: C:\Users\Administrator\AppData\Roaming\npm\opencli.cmd
 VSCode shell: PowerShell
+Visual reference asset library: D:\github\美化包
 ```
 
 Do not assume another PC has the same drive letters, user profile, npm prefix, or PowerShell policy.
+
+Do not assume another PC has the same visual reference asset library path. If the external visual asset library is not present, visual work may continue with project-local assets and docs only.
 
 ## 2. Runtime Toolchain
 
@@ -244,7 +248,8 @@ Use this checklist before another device takes over development:
 5. Install OpenCLI globally if that PC needs browser/app CLI tooling.
 6. Install or confirm project-local skills from `.agents\skills` and `skills-lock.json`.
 7. If visual work is in scope, follow `docs/process/VISUAL_WORKFLOW.md` for visual skill setup.
-8. Run verification commands:
+8. If visual reference assets are in scope, confirm the external asset library path documented in `docs/references/VISUAL_ASSET_LIBRARY.md`.
+9. Run verification commands:
 
 ```powershell
 node --version

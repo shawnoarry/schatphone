@@ -16,4 +16,5 @@ Also read when needed:
 - `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
 - `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
 - `docs/process/VISUAL_WORKFLOW.md`
-
+- `docs/product-decisions/HOME_DESKTOP_LAYOUT_SYSTEM.md`
+- `docs/references/VISUAL_ASSET_LIBRARY.md`

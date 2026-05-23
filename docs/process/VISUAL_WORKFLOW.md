@@ -200,6 +200,25 @@ Usage:
 - do not copy another brand directly into SchatPhone;
 - extract principles and convert them into SchatPhone-specific rules.
 
+The current machine also keeps an external visual asset reference library here:
+
+```text
+D:\github\美化包
+```
+
+Reference:
+
+```text
+docs/references/VISUAL_ASSET_LIBRARY.md
+```
+
+Usage:
+
+- treat it as an external, read-only reference library by default;
+- do not bulk-import it into the repo;
+- before copying any image or code reference into SchatPhone, confirm the concrete product use, rename/compress it, and place it under a purpose-specific project asset folder;
+- on another PC, ask the machine owner to confirm the local asset-library path before relying on it.
+
 ## 8. Recommended Project Artifacts
 
 Visual work should eventually create or maintain:
@@ -241,7 +260,8 @@ Confirm local paths first:
 2. Global Codex skills directory:
 3. Project-local skills directory:
 4. Design reference library parent directory:
-5. Whether PowerShell should use npx or npx.cmd:
+5. External visual asset library path:
+6. Whether PowerShell should use npx or npx.cmd:
 ```
 
 Rules:
@@ -256,21 +276,22 @@ Use this sequence for visual work unless the user asks for a narrower path:
 
 1. Read `docs/process/VISUAL_WORKFLOW.md` and the relevant design docs.
 2. Decide the target surface and scope: system shell, installed app, hybrid surface, or project documentation only.
-3. Run the entry-context audit.
-4. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
-5. Choose the design-supporting skills:
+3. If external visual references are useful, confirm the local visual asset library path using `docs/references/VISUAL_ASSET_LIBRARY.md`.
+4. Run the entry-context audit.
+5. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
+6. Choose the design-supporting skills:
    - `frontend-design` for stronger creative direction;
    - `frontend-logic-design` for IA and interaction consistency;
    - `impeccable` for strict second-pass shaping;
    - `web-design-guidelines` for external review;
    - machine-local support skills when they are available and useful.
-6. Define the smallest useful change slice before editing.
-7. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
-8. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
-9. If themes are touched, verify both `default` and `zen`.
-10. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
-11. Verify with `git diff --check`, then lint/build/test when code changed.
-12. Summarize:
+7. Define the smallest useful change slice before editing.
+8. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
+9. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
+10. If themes are touched, verify both `default` and `zen`.
+11. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
+12. Verify with `git diff --check`, then lint/build/test when code changed.
+13. Summarize:
    - changed surfaces;
    - visual-owner decisions;
    - remaining risks;

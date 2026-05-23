@@ -19,6 +19,8 @@ What is already landed:
 7. Contacts detail now also supports inline editing for manual role-detail items and a visible linked-activity list below the summary card, making the page feel more like an active role-management hub.
 8. Contacts memory presentation now includes a lightweight review toolbar and selected-memory headline facts, so memory management is no longer only a flat list-plus-delete flow.
 9. Contacts memory review now includes lifecycle status and note management, making the role hub feel functionally complete enough to leave 4.1 and move on.
+10. Home now has a product-decision baseline for a template-slot desktop layout system in `docs/product-decisions/HOME_DESKTOP_LAYOUT_SYSTEM.md`.
+11. External visual reference assets are documented as a cross-PC confirmed path in `docs/references/VISUAL_ASSET_LIBRARY.md`.
 
 Still incomplete:
 
@@ -49,3 +51,5 @@ At the end of a meaningful round, check and update:
 5. `docs/process/VISUAL_WORKFLOW.md`
 6. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
 7. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
+8. `docs/product-decisions/HOME_DESKTOP_LAYOUT_SYSTEM.md`
+9. `docs/references/VISUAL_ASSET_LIBRARY.md`
