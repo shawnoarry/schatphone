@@ -9,6 +9,7 @@ import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import {
   HOME_LAYOUT_TEMPLATES,
   assignHomeLayoutSlotPlacements,
+  canHomeLayoutTileSizeUseSlot,
   getHomeLayoutTemplate,
   homeLayoutSlotIndex,
   homeLayoutSlotToGridStyle,
@@ -156,8 +157,10 @@ const CUSTOM_WIDGET_SPAN_CLASS_MAP = {
   '1x1': 'col-span-1 row-span-1',
   '2x1': 'col-span-2 row-span-1',
   '2x2': 'col-span-2 row-span-2',
+  '4x1': 'col-span-4 row-span-1',
   '4x2': 'col-span-4 row-span-2',
   '4x3': 'col-span-4 row-span-3',
+  '4x4': 'col-span-4 row-span-4',
 }
 
 const widgetRegistry = {
@@ -488,8 +491,7 @@ const leftPageUtilityEntries = computed(() => [
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
 
 const canTileFitTemplateSlot = (tileId, slot) => {
-  const { cols, rows } = tileSpanForId(tileId)
-  return cols <= slot.colSpan && rows <= slot.rowSpan
+  return canHomeLayoutTileSizeUseSlot(tileSizeKeyForId(tileId), slot)
 }
 
 const homePageLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
@@ -1956,8 +1958,8 @@ onBeforeUnmount(() => {
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_settings').accent)" @click="openAppById('app_settings')">
           <i :class="dockAppMeta('app_settings').icon"></i>
         </button>
-        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_gallery').accent)" @click="openAppById('app_gallery')">
-          <i :class="dockAppMeta('app_gallery').icon"></i>
+        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_widgets').accent)" @click="openAppById('app_widgets')">
+          <i :class="dockAppMeta('app_widgets').icon"></i>
         </button>
       </div>
       <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>

@@ -134,10 +134,12 @@ describe('Home folder entries', () => {
     await flushPromises()
 
     expect(wrapper.find('.home-template-picker').exists()).toBe(true)
-    expect(wrapper.findAll('.home-template-card')).toHaveLength(6)
+    expect(wrapper.findAll('.home-template-card')).toHaveLength(7)
     expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
     expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
-    expect(wrapper.find('[data-home-tile-id="app_reminders"]').attributes('data-home-slot-id')).toBeTruthy()
+    expect(wrapper.find('[data-home-tile-id="app_phone"]').attributes('data-home-slot-id')).toBeTruthy()
+    expect(wrapper.find('[data-home-tile-id="app_phone"]').attributes('data-home-slot-size')).toBe('1x1')
+    expect(wrapper.find('[data-home-tile-id="app_reminders"]').attributes('data-home-slot-id')).toBeUndefined()
 
     await wrapper.findAll('.home-template-card')[4].trigger('click')
 
@@ -167,7 +169,7 @@ describe('Home folder entries', () => {
 
     expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(false)
 
-    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
@@ -178,7 +180,7 @@ describe('Home folder entries', () => {
 
     expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_gallery')
     expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
-      slotId: 'b-large',
+      slotId: 'b-small-1',
       tileId: 'app_gallery',
     })
     expect(wrapper.find('[data-home-tile-id="app_gallery"]').exists()).toBe(true)
@@ -212,14 +214,14 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(galleryCandidate.classes()).toContain('is-active')
-    expect(wrapper.find('[data-testid="home-empty-slot-4-b-large"]').classes()).toContain('is-compatible')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-compatible')
 
-    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_gallery')
     expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
-      slotId: 'b-large',
+      slotId: 'b-small-1',
       tileId: 'app_gallery',
     })
     expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').exists()).toBe(false)

@@ -63,8 +63,7 @@ export const HOME_LAYOUT_TEMPLATES = Object.freeze([
     key: 'D',
     slots: Object.freeze([
       createSlot('d-top', 1, 1, 4, 2),
-      createSlot('d-wide-1', 1, 3, 2, 1),
-      createSlot('d-wide-2', 3, 3, 2, 1),
+      createSlot('d-strip', 1, 3, 4, 1),
       createSlot('d-middle', 1, 4, 4, 2),
       createSlot('d-small-1', 1, 6, 1, 1),
       createSlot('d-small-2', 2, 6, 1, 1),
@@ -88,19 +87,22 @@ export const HOME_LAYOUT_TEMPLATES = Object.freeze([
     key: 'F',
     slots: Object.freeze([
       createSlot('f-left', 1, 1, 2, 2),
-      createSlot('f-small-1', 3, 1, 1, 1),
-      createSlot('f-small-2', 4, 1, 1, 1),
-      createSlot('f-small-3', 3, 2, 1, 1),
-      createSlot('f-small-4', 4, 2, 1, 1),
-      createSlot('f-small-5', 1, 3, 1, 1),
-      createSlot('f-small-6', 2, 3, 1, 1),
-      createSlot('f-small-7', 3, 3, 1, 1),
-      createSlot('f-small-8', 4, 3, 1, 1),
+      createSlot('f-right', 3, 1, 2, 2),
+      createSlot('f-strip', 1, 3, 4, 1),
       createSlot('f-wide', 1, 4, 4, 2),
-      createSlot('f-small-9', 1, 6, 1, 1),
-      createSlot('f-small-10', 2, 6, 1, 1),
-      createSlot('f-small-11', 3, 6, 1, 1),
-      createSlot('f-small-12', 4, 6, 1, 1),
+      createSlot('f-small-1', 1, 6, 1, 1),
+      createSlot('f-small-2', 2, 6, 1, 1),
+      createSlot('f-small-3', 3, 6, 1, 1),
+      createSlot('f-small-4', 4, 6, 1, 1),
+    ]),
+  },
+  {
+    id: 'layout-g',
+    key: 'G',
+    slots: Object.freeze([
+      createSlot('g-poster', 1, 1, 4, 4),
+      createSlot('g-bottom-left', 1, 5, 2, 2),
+      createSlot('g-bottom-right', 3, 5, 2, 2),
     ]),
   },
 ])
@@ -152,6 +154,7 @@ export const normalizeHomeLayoutSlotPlacements = (
   slotPlacements,
   pages = [],
   templateIds = [],
+  getTileSize,
 ) => {
   const pageCount = Math.max(
     1,
@@ -164,21 +167,24 @@ export const normalizeHomeLayoutSlotPlacements = (
   return Array.from({ length: pageCount }, (_, pageIndex) => {
     const pageTileIds = new Set(Array.isArray(pages[pageIndex]) ? pages[pageIndex] : [])
     const template = getHomeLayoutTemplate(normalizedTemplateIds[pageIndex])
-    const validSlotIds = new Set(template.slots.map((slot) => slot.id))
+    const slotById = new Map(template.slots.map((slot) => [slot.id, slot]))
     const usedSlotIds = new Set()
     const pagePlacements = Array.isArray(slotPlacements?.[pageIndex])
       ? slotPlacements[pageIndex]
       : []
+    const shouldValidateSize = typeof getTileSize === 'function'
 
     return pagePlacements
       .map((placement) => {
         const slotId = typeof placement?.slotId === 'string' ? placement.slotId.trim() : ''
         const tileId = typeof placement?.tileId === 'string' ? placement.tileId.trim() : ''
+        const slot = slotById.get(slotId)
         if (!slotId || !tileId) return null
-        if (!validSlotIds.has(slotId)) return null
+        if (!slot) return null
         if (!pageTileIds.has(tileId)) return null
         if (usedSlotIds.has(slotId)) return null
         if (usedTileIds.has(tileId)) return null
+        if (shouldValidateSize && !canHomeLayoutTileSizeUseSlot(getTileSize(tileId), slot)) return null
         usedSlotIds.add(slotId)
         usedTileIds.add(tileId)
         return { slotId, tileId }
@@ -238,7 +244,7 @@ export const assignHomeLayoutSlotPlacements = (
       const tile = tileById.get(placement?.tileId)
       if (!slot || !tile) return
       if (assignedSlotIds.has(slot.id) || assignedTileIndexes.has(tile.index)) return
-      if (!canTileSizeFitSlot(tile.size, slot)) return
+      if (!canHomeLayoutTileSizeUseSlot(tile.size, slot)) return
       assignTileToSlot(tile, slot, slot.size === tile.size, true)
     })
   }
@@ -259,7 +265,7 @@ export const assignHomeLayoutSlotPlacements = (
     .forEach((tile) => {
       const compatibleSlot = availableSlots
         .filter((slot) => !assignedSlotIds.has(slot.id))
-        .filter((slot) => canTileSizeFitSlot(tile.size, slot))
+        .filter((slot) => canHomeLayoutTileSizeUseSlot(tile.size, slot))
         .sort((a, b) => a.colSpan * a.rowSpan - b.colSpan * b.rowSpan || a.index - b.index)[0]
 
       if (!compatibleSlot) {
@@ -283,9 +289,9 @@ export const assignHomeLayoutSlots = (tileIds = [], template, getTileSize = () =
   return assignHomeLayoutSlotPlacements(tileIds, template, [], getTileSize)
 }
 
-const canTileSizeFitSlot = (size, slot) => {
+export const canHomeLayoutTileSizeUseSlot = (size, slot) => {
   const { cols, rows } = parseSlotSize(size)
-  return cols <= slot.colSpan && rows <= slot.rowSpan
+  return cols === slot?.colSpan && rows === slot?.rowSpan
 }
 
 const parseSlotSize = (size = '1x1') => {

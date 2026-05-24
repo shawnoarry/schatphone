@@ -69,7 +69,7 @@ const wallpaperQuickPreviewMap = reactive({})
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
 
 const wallpaperAssets = computed(() => galleryStore.getAssetsByCategory('wallpaper'))
-const homeLayoutPreviewTemplates = computed(() => HOME_LAYOUT_TEMPLATES.slice(0, 6))
+const homeLayoutPreviewTemplates = computed(() => HOME_LAYOUT_TEMPLATES)
 
 const fontPresetLabel = (preset) => {
   if (preset.id === 'system') return t('系统默认', 'System default')

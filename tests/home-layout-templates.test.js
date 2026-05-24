@@ -16,16 +16,16 @@ import {
 } from '../src/lib/home-layout-templates'
 
 describe('home layout templates', () => {
-  test('defines six neutral templates that fit the 4x6 grid', () => {
-    expect(HOME_LAYOUT_TEMPLATES).toHaveLength(6)
+  test('defines neutral templates that fit the 4x6 grid', () => {
+    expect(HOME_LAYOUT_TEMPLATES).toHaveLength(7)
 
     HOME_LAYOUT_TEMPLATES.forEach((template) => {
-      expect(template.id).toMatch(/^layout-[a-f]$/)
-      expect(template.key).toMatch(/^[A-F]$/)
+      expect(template.id).toMatch(/^layout-[a-g]$/)
+      expect(template.key).toMatch(/^[A-G]$/)
       expect(template.slots.length).toBeGreaterThan(0)
 
       template.slots.forEach((slot) => {
-        expect(['1x1', '2x1', '2x2', '4x2', '4x3']).toContain(slot.size)
+        expect(['1x1', '2x1', '2x2', '4x1', '4x2', '4x3', '4x4']).toContain(slot.size)
         expect(slot.col).toBeGreaterThanOrEqual(1)
         expect(slot.row).toBeGreaterThanOrEqual(1)
         expect(slot.col + slot.colSpan - 1).toBeLessThanOrEqual(HOME_LAYOUT_GRID_COLUMNS)
@@ -78,17 +78,32 @@ describe('home layout templates', () => {
 
     expect(result.placements.map((item) => item.tileId)).toEqual([
       'weather',
-      'appA',
       'music',
-      'appB',
-      'appC',
     ])
     expect(result.placements.find((item) => item.tileId === 'weather').slot.size).toBe('2x2')
     expect(result.placements.find((item) => item.tileId === 'music').slot.size).toBe('4x2')
-    expect(result.placements.find((item) => item.tileId === 'appA').slot.size).toBe('2x2')
-    expect(result.placements.find((item) => item.tileId === 'appA').isExactSize).toBe(false)
-    expect(result.overflow).toEqual(['hero'])
-    expect(result.emptySlots).toHaveLength(0)
+    expect(result.placements.every((item) => item.isExactSize)).toBe(true)
+    expect(result.overflow).toEqual(['hero', 'appA', 'appB', 'appC'])
+    expect(result.emptySlots).toHaveLength(3)
+  })
+
+  test('keeps app-sized content out of larger widget slots', () => {
+    const template = HOME_LAYOUT_TEMPLATES.find((item) => item.id === 'layout-e')
+    const result = assignHomeLayoutSlots(['appA', 'appB'], template, () => '1x1')
+
+    expect(result.placements).toEqual([])
+    expect(result.overflow).toEqual(['appA', 'appB'])
+    expect(result.emptySlots.map((slot) => slot.size)).toEqual(['2x2', '2x2', '4x2', '2x2', '2x2'])
+  })
+
+  test('includes strip and poster templates for imported widget styles', () => {
+    const layoutD = HOME_LAYOUT_TEMPLATES.find((item) => item.id === 'layout-d')
+    const layoutF = HOME_LAYOUT_TEMPLATES.find((item) => item.id === 'layout-f')
+    const layoutG = HOME_LAYOUT_TEMPLATES.find((item) => item.id === 'layout-g')
+
+    expect(layoutD.slots.map((slot) => slot.size)).toContain('4x1')
+    expect(layoutF.slots.map((slot) => slot.size)).toContain('4x1')
+    expect(layoutG.slots.map((slot) => slot.size)).toEqual(['4x4', '2x2', '2x2'])
   })
 
   test('prefers explicit slot placements before auto assigning remaining content', () => {
@@ -132,5 +147,25 @@ describe('home layout templates', () => {
 
     expect(result[0]).toEqual([{ slotId: 'c-wide', tileId: 'music' }])
     expect(result[1]).toEqual([{ slotId: 'f-small-1', tileId: 'appA' }])
+  })
+
+  test('drops persisted slot placements when the tile size no longer matches the slot', () => {
+    const result = normalizeHomeLayoutSlotPlacements(
+      [
+        [
+          { slotId: 'c-wide', tileId: 'appA' },
+          { slotId: 'c-small-1', tileId: 'appB' },
+          { slotId: 'c-top-left', tileId: 'weather' },
+        ],
+      ],
+      [['appA', 'appB', 'weather']],
+      ['layout-c'],
+      (tileId) => ({ weather: '2x2', appA: '1x1', appB: '1x1' })[tileId] || '1x1',
+    )
+
+    expect(result[0]).toEqual([
+      { slotId: 'c-small-1', tileId: 'appB' },
+      { slotId: 'c-top-left', tileId: 'weather' },
+    ])
   })
 })

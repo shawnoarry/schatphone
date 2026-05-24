@@ -46,8 +46,10 @@ Formal Home pages should be template-based. A page template defines slots such a
 - `1x1` app or small-widget slot;
 - `2x1` widget slot;
 - `2x2` widget slot;
+- `4x1` strip-widget slot;
 - `4x2` large-widget slot;
-- `4x3` large-widget slot.
+- `4x3` large-widget slot;
+- `4x4` poster-widget slot.
 
 The template owns slot shape. The user owns slot content.
 
@@ -71,10 +73,10 @@ Edit mode:
 
 Candidate filtering:
 
-- slots filter by capacity, not by a prescribed screen purpose;
-- apps, folders, built-in widgets, and custom widget instances may be arranged by the user when they fit the selected slot;
-- a `1x1` slot may hold only `1x1` content;
-- larger slots may hold matching widgets or smaller app/folder entries when the user intentionally chooses that arrangement;
+- slots filter by size and content type, not by a prescribed screen purpose;
+- apps and folders are `1x1` Home entries and may only use `1x1` slots;
+- built-in widgets and custom widget instances must match the selected slot size exactly;
+- larger slots are widget slots and should not accept smaller app or folder entries as automatic filler;
 - a built-in widget or custom widget definition may create multiple placed instances when repeat placement is supported.
 
 ## 4. Template Selection
@@ -101,7 +103,7 @@ Recommended ownership:
 Template rules:
 
 - every template must fit the formal Home page grid;
-- template slots must use approved sizes such as `1x1`, `2x1`, `2x2`, `4x2`, and `4x3`;
+- template slots must use approved sizes such as `1x1`, `2x1`, `2x2`, `4x1`, `4x2`, `4x3`, and `4x4`;
 - normal mode never shows empty template slots;
 - edit mode shows empty template slots clearly enough for users to understand size and placement;
 - changing a page template needs a conflict rule for content that no longer fits.
@@ -119,9 +121,10 @@ Starter template library:
 | Layout A | `4x2`, `2x2`, four `1x1`, `4x2` |
 | Layout B | `4x3`, two `2x1`, eight `1x1` |
 | Layout C | two `2x2`, `4x2`, eight `1x1` |
-| Layout D | `4x2`, two `2x1`, `4x2`, four `1x1` |
+| Layout D | `4x2`, `4x1`, `4x2`, four `1x1` |
 | Layout E | two `2x2`, `4x2`, two `2x2` |
-| Layout F | `2x2`, four `1x1`, four `1x1`, `4x2`, four `1x1` |
+| Layout F | two `2x2`, `4x1`, `4x2`, four `1x1` |
+| Layout G | `4x4`, two `2x2` |
 
 These names are deliberately neutral. The system may use them as defaults for initial pages, but the UI should not imply that a specific template belongs to a specific kind of content.
 
@@ -131,7 +134,7 @@ Current first-pass implementation:
 - page content is still stored as ordered tile ids for compatibility and recovery;
 - explicit `homeLayoutSlotPlacements` records can bind a tile id to a concrete template slot id;
 - the renderer honors explicit slot placements first, then assigns remaining ordered content into available compatible slots;
-- exact size matches are preferred, then compatible larger slots may hold smaller items;
+- compatible means exact size match; app and folder entries remain `1x1` and do not fill larger widget slots;
 - items that cannot fit the selected template stay recoverable in the same page overflow rather than being deleted;
 - in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot;
 - the picker groups available content as apps, folders, built-in widgets, and custom widgets;
@@ -250,6 +253,12 @@ Dock entries are visible from every formal Home page.
 When a Dock app is launched from Home page `N`, its return target should be Home page `N`.
 
 The left-side Today View is the exception: launching from Today View should normalize return to formal Home page 1.
+
+Current default Dock direction:
+
+- keep `组件 / Widgets` in the Dock so the Home beautification loop is reachable from every formal Home page;
+- keep `相册 / Photos` as a normal Home app entry by default, not as the default Dock entry;
+- avoid duplicating the Dock `组件 / Widgets` entry on the default Home page.
 
 Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 

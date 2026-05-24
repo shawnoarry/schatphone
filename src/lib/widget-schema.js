@@ -1,4 +1,4 @@
-export const VALID_WIDGET_SIZES = Object.freeze(['1x1', '2x1', '2x2', '4x2', '4x3'])
+export const VALID_WIDGET_SIZES = Object.freeze(['1x1', '2x1', '2x2', '4x1', '4x2', '4x3', '4x4'])
 
 export const WIDGET_IMPORT_LIMITS = Object.freeze({
   maxBatch: 50,

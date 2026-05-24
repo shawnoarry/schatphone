@@ -23,12 +23,93 @@ import {
 
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
 const BUILT_IN_WIDGET_OPTIONS = [
-  { id: 'weather', size: '2x2', icon: 'fas fa-cloud-sun' },
-  { id: 'calendar', size: '2x2', icon: 'fas fa-calendar-days' },
-  { id: 'music', size: '4x2', icon: 'fas fa-music' },
-  { id: 'system', size: '2x2', icon: 'fas fa-sliders' },
-  { id: 'quick_heart', size: '1x1', icon: 'fas fa-heart' },
-  { id: 'quick_disc', size: '1x1', icon: 'fas fa-compact-disc' },
+  { id: 'weather', size: '2x2', icon: 'fas fa-cloud-sun', preview: 'weather' },
+  { id: 'calendar', size: '2x2', icon: 'fas fa-calendar-days', preview: 'calendar' },
+  { id: 'music', size: '4x2', icon: 'fas fa-music', preview: 'music' },
+  { id: 'system', size: '2x2', icon: 'fas fa-sliders', preview: 'system' },
+  { id: 'quick_heart', size: '1x1', icon: 'fas fa-heart', preview: 'heart' },
+  { id: 'quick_disc', size: '1x1', icon: 'fas fa-compact-disc', preview: 'disc' },
+]
+
+const OFFICIAL_STYLE_PRESETS = [
+  {
+    id: 'polaroid_stack',
+    size: '2x2',
+    preview: 'polaroid',
+    icon: 'fas fa-camera-retro',
+    nameZh: '拍立得叠影',
+    nameEn: 'Polaroid Stack',
+    code: `<style>
+.sp-polaroid{width:100%;height:100%;box-sizing:border-box;padding:13px;border-radius:22px;background:linear-gradient(145deg,#f7f3ed,#d7dce0);position:relative;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#2a2e32}
+.sp-polaroid span{position:absolute;border-radius:14px;background:#fff;box-shadow:0 10px 22px rgba(41,47,54,.16)}
+.sp-polaroid span:nth-child(1){inset:23px 39px 38px 22px;transform:rotate(-8deg);background:linear-gradient(#fff 0 68%,#eee2d4 68% 100%)}
+.sp-polaroid span:nth-child(2){inset:28px 24px 30px 44px;transform:rotate(7deg);background:linear-gradient(#fff 0 68%,#dfe6ea 68% 100%)}
+.sp-polaroid strong{position:absolute;left:18px;bottom:16px;font-size:13px;letter-spacing:.02em}
+</style><div class="sp-polaroid"><span></span><span></span><strong>{{text:caption}}</strong></div>`,
+  },
+  {
+    id: 'glass_orb',
+    size: '2x2',
+    preview: 'orb',
+    icon: 'fas fa-circle-notch',
+    nameZh: '心情玻璃球',
+    nameEn: 'Mood Glass Orb',
+    code: `<style>
+.sp-orb{width:100%;height:100%;display:grid;place-items:center;border-radius:24px;background:radial-gradient(circle at 48% 40%,rgba(255,255,255,.35),rgba(168,183,190,.12) 42%,rgba(66,78,86,.42));overflow:hidden}
+.sp-orb div{width:70%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 32% 22%,rgba(255,255,255,.88),rgba(255,255,255,.22) 24%,rgba(129,148,156,.3) 55%,rgba(44,52,60,.32));border:1px solid rgba(255,255,255,.52);box-shadow:inset 0 0 28px rgba(255,255,255,.34),0 18px 32px rgba(23,31,39,.2);display:grid;place-items:center;color:#fff;font:800 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+</style><div class="sp-orb"><div>{{text:mood}}</div></div>`,
+  },
+  {
+    id: 'island_strip',
+    size: '4x1',
+    preview: 'island',
+    icon: 'fas fa-wave-square',
+    nameZh: '灵动横条',
+    nameEn: 'Island Strip',
+    code: `<style>
+.sp-island{width:100%;height:100%;box-sizing:border-box;padding:10px 14px;border-radius:999px;background:linear-gradient(135deg,rgba(39,45,52,.92),rgba(97,111,112,.82));color:#fff;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.sp-island i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);font-style:normal}.sp-island strong{font-size:14px}.sp-island small{display:block;font-size:10px;opacity:.7}
+</style><div class="sp-island"><i>♪</i><span><strong>{{text:title}}</strong><small>{{text:subtitle}}</small></span><b>●●</b></div>`,
+  },
+  {
+    id: 'idol_pass',
+    size: '2x2',
+    preview: 'pass',
+    icon: 'fas fa-id-badge',
+    nameZh: '小卡出入证',
+    nameEn: 'Idol Pass',
+    code: `<style>
+.sp-pass{width:100%;height:100%;box-sizing:border-box;padding:13px;border-radius:22px;background:linear-gradient(150deg,#f4edf1,#c8d1d8);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#30343a;display:grid;grid-template-rows:1fr auto;gap:10px}
+.sp-pass .photo{border-radius:17px;background:linear-gradient(135deg,#f8d9df,#869aa5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.42)}
+.sp-pass strong{font-size:15px}.sp-pass small{display:block;color:#69727a;font-size:10px;font-weight:800;letter-spacing:.08em}
+</style><div class="sp-pass"><div class="photo" data-cw-image="photo"></div><div><strong>{{text:name}}</strong><small>ACCESS CARD</small></div></div>`,
+  },
+  {
+    id: 'live_panel',
+    size: '4x2',
+    preview: 'live',
+    icon: 'fas fa-heart-pulse',
+    nameZh: '粉色直播面板',
+    nameEn: 'Pink Live Panel',
+    code: `<style>
+.sp-live{width:100%;height:100%;box-sizing:border-box;padding:15px;border-radius:24px;background:linear-gradient(135deg,#ffe8ef,#d6cad2);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#5f3a47;display:grid;grid-template-columns:1fr 1.2fr;gap:12px;overflow:hidden}
+.sp-live .badge{border-radius:20px;background:rgba(255,255,255,.48);display:grid;place-items:center;font-size:34px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+.sp-live strong{display:block;font-size:18px}.sp-live small{display:block;margin-top:4px;color:#8f6672;font-size:11px;font-weight:800}.sp-live p{margin:13px 0 0;font-size:12px;line-height:1.35}
+</style><div class="sp-live"><div class="badge">♡</div><div><strong>{{text:title}}</strong><small>LIVE ROOM</small><p>{{text:note}}</p></div></div>`,
+  },
+  {
+    id: 'magazine_cover',
+    size: '4x4',
+    preview: 'magazine',
+    icon: 'fas fa-newspaper',
+    nameZh: '杂志封面',
+    nameEn: 'Magazine Cover',
+    code: `<style>
+.sp-cover{width:100%;height:100%;box-sizing:border-box;padding:18px;border-radius:28px;background:linear-gradient(145deg,#efede8,#9facb0);position:relative;overflow:hidden;font-family:Georgia,"Times New Roman",serif;color:#24282d}
+.sp-cover:before{content:"";position:absolute;inset:72px 26px 46px;border-radius:24px;background:linear-gradient(160deg,#cfd8dc,#6f838c);box-shadow:0 18px 38px rgba(22,30,38,.2)}
+.sp-cover h1{position:relative;margin:0;font-size:36px;letter-spacing:.04em;line-height:.9}.sp-cover p{position:absolute;left:20px;right:20px;bottom:18px;margin:0;font:700 13px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+</style><div class="sp-cover"><h1>{{text:title}}</h1><p>{{text:caption}}</p></div>`,
+  },
 ]
 
 const WIDGET_TEMPLATE_CODE = `<style>
@@ -160,8 +241,6 @@ const importJsonPlaceholder = computed(() =>
   ),
 )
 
-const pageDisplayLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
-
 const builtInWidgetLabel = (widgetId) => {
   if (widgetId === 'weather') return t('天气', 'Weather')
   if (widgetId === 'calendar') return t('日历', 'Calendar')
@@ -172,23 +251,42 @@ const builtInWidgetLabel = (widgetId) => {
   return t('组件', 'Widget')
 }
 
-const widgetPageLabel = (widgetId) => {
-  const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(widgetId))
-  return pageIndex >= 0 ? pageDisplayLabel(pageIndex) : t('未放入主屏', 'Not on Home')
-}
-
 const builtInWidgetStates = computed(() =>
   BUILT_IN_WIDGET_OPTIONS.map((item) => {
     const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(item.id))
     return {
       ...item,
       label: builtInWidgetLabel(item.id),
-      pageIndex,
       visible: pageIndex >= 0,
-      pageLabel: pageIndex >= 0 ? pageDisplayLabel(pageIndex) : t('未放入主屏', 'Not on Home'),
     }
   }),
 )
+const officialStylePresetStates = computed(() =>
+  OFFICIAL_STYLE_PRESETS.map((preset) => ({
+    ...preset,
+    label: t(preset.nameZh, preset.nameEn),
+    added: customWidgets.value.some((widget) => widget.name === t(preset.nameZh, preset.nameEn)),
+  })),
+)
+
+const customWidgetPreviewSrcDoc = (widget = {}) => {
+  const body = typeof widget.code === 'string' ? widget.code : ''
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      #widget-root { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="widget-root">${body}</div>
+  </body>
+</html>`
+}
 
 const ensureCustomWidgetActionTarget = () => {
   const targets = currentCustomWidgetActionTargets.value
@@ -264,6 +362,19 @@ const restoreBuiltInWidget = (tileId) => {
     return
   }
   setImportFeedback('success', t('组件已恢复到默认位置。', 'Widget restored to its default Home slot.'))
+  triggerSaved()
+}
+
+const addOfficialStylePreset = (preset) => {
+  if (!preset?.code) return
+  systemStore.addCustomWidget({
+    name: t(preset.nameZh, preset.nameEn),
+    size: preset.size,
+    code: preset.code,
+    pageIndex: null,
+    placeOnHome: false,
+  })
+  setImportFeedback('success', t('样式已加入自定义组件库。', 'Style added to the custom widget library.'))
   triggerSaved()
 }
 
@@ -525,27 +636,100 @@ onBeforeUnmount(() => {
       <section v-if="activePanel === 'library'" class="widgets-section">
         <div class="widgets-section-head">
           <div>
-            <h2>{{ t('内置组件', 'Built-in widgets') }}</h2>
-            <p>{{ t('这里管理可用组件；具体放在哪个桌面槽位，由主屏编辑态决定。', 'Manage available widgets here; Home edit mode decides the slot.') }}</p>
+            <h2>{{ t('组件市场', 'Widget Market') }}</h2>
+            <p>{{ t('先看外观，再回到主屏模板槽位里选择使用。', 'Preview the look here, then choose it inside Home template slots.') }}</p>
           </div>
           <button class="widgets-secondary-btn" type="button" @click="openHomeWidgetEdit">
             <i class="fas fa-table-cells"></i>
-            <span>{{ t('编辑主屏组件', 'Edit Home Widgets') }}</span>
+            <span>{{ t('编辑模板', 'Edit Layout') }}</span>
           </button>
         </div>
 
-        <div class="widgets-library-list">
-          <article v-for="widget in builtInWidgetStates" :key="widget.id" class="widgets-library-item">
-            <span class="widgets-item-icon">
-              <i :class="widget.icon"></i>
-            </span>
-            <div class="widgets-item-body">
-              <h3>{{ widget.label }}</h3>
-              <p>{{ widget.size }} · {{ widget.pageLabel }}</p>
+        <div class="widgets-market-grid">
+          <article
+            v-for="widget in builtInWidgetStates"
+            :key="`built-in-${widget.id}`"
+            class="widgets-market-card"
+            :class="[`is-${widget.preview}`, `size-${widget.size.replace('x', '-')}`]"
+          >
+            <div class="widgets-preview-stage" :class="`preview-${widget.preview}`">
+              <div v-if="widget.preview === 'weather'" class="widget-preview weather-preview">
+                <div>
+                  <span>{{ t('晴', 'Sunny') }}</span>
+                  <strong>26°</strong>
+                </div>
+                <i class="fas fa-cloud-sun"></i>
+              </div>
+              <div v-else-if="widget.preview === 'calendar'" class="widget-preview calendar-preview">
+                <span>{{ t('周日', 'Sun') }}</span>
+                <strong>24</strong>
+                <small>{{ t('今日安排', 'Today') }}</small>
+              </div>
+              <div v-else-if="widget.preview === 'music'" class="widget-preview music-preview">
+                <span class="music-art"><i class="fas fa-music"></i></span>
+                <div>
+                  <strong>{{ t('夜间电台', 'Night Radio') }}</strong>
+                  <small>{{ t('正在播放', 'Now playing') }}</small>
+                </div>
+                <span class="music-control"><i class="fas fa-play"></i></span>
+              </div>
+              <div v-else-if="widget.preview === 'system'" class="widget-preview system-preview">
+                <span><i class="fas fa-wifi"></i>{{ t('在线', 'Online') }}</span>
+                <span><i class="fas fa-battery-three-quarters"></i>78%</span>
+                <div></div>
+              </div>
+              <div v-else-if="widget.preview === 'heart'" class="widget-preview square-preview heart-preview">
+                <i class="fas fa-heart"></i>
+              </div>
+              <div v-else class="widget-preview square-preview disc-preview">
+                <i class="fas fa-compact-disc"></i>
+              </div>
             </div>
-            <button class="widgets-action-btn" type="button" @click="restoreBuiltInWidget(widget.id)">
-              {{ widget.visible ? t('恢复默认', 'Restore') : t('恢复到主屏', 'Restore') }}
-            </button>
+            <div class="widgets-market-info">
+              <div>
+                <h3>{{ widget.label }}</h3>
+                <span>{{ widget.size }}</span>
+              </div>
+              <button class="widgets-action-btn" type="button" @click="restoreBuiltInWidget(widget.id)">
+                {{ widget.visible ? t('恢复', 'Restore') : t('添加', 'Add') }}
+              </button>
+            </div>
+          </article>
+          <article
+            v-for="preset in officialStylePresetStates"
+            :key="`preset-${preset.id}`"
+            class="widgets-market-card is-style-preset"
+            :class="[`is-${preset.preview}`, `size-${preset.size.replace('x', '-')}`]"
+          >
+            <div class="widgets-preview-stage" :class="`preview-${preset.preview}`">
+              <div v-if="preset.preview === 'polaroid'" class="widget-preview style-preview polaroid-preview">
+                <span></span><span></span><strong>mood</strong>
+              </div>
+              <div v-else-if="preset.preview === 'orb'" class="widget-preview style-preview orb-preview">
+                <span>♡</span>
+              </div>
+              <div v-else-if="preset.preview === 'island'" class="widget-preview style-preview island-preview">
+                <i>♪</i><span><strong>Night Drive</strong><small>soft radio</small></span><b>••</b>
+              </div>
+              <div v-else-if="preset.preview === 'pass'" class="widget-preview style-preview pass-preview">
+                <span></span><strong>ACCESS</strong><small>card</small>
+              </div>
+              <div v-else-if="preset.preview === 'live'" class="widget-preview style-preview live-preview">
+                <span>♡</span><div><strong>Live Room</strong><small>pink set</small></div>
+              </div>
+              <div v-else class="widget-preview style-preview magazine-preview">
+                <strong>VIBE</strong><span></span><small>cover story</small>
+              </div>
+            </div>
+            <div class="widgets-market-info">
+              <div>
+                <h3>{{ preset.label }}</h3>
+                <span>{{ preset.size }}</span>
+              </div>
+              <button class="widgets-action-btn" type="button" @click="addOfficialStylePreset(preset)">
+                {{ preset.added ? t('再添加', 'Add again') : t('加入库', 'Add') }}
+              </button>
+            </div>
           </article>
         </div>
       </section>
@@ -660,11 +844,19 @@ onBeforeUnmount(() => {
           </div>
 
           <article v-for="widget in customWidgets" :key="widget.id" class="widgets-created-item">
+            <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
+              <iframe
+                :srcdoc="customWidgetPreviewSrcDoc(widget)"
+                sandbox="allow-scripts"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+                title="Widget preview"
+              ></iframe>
+            </div>
             <div>
               <h4>{{ widget.name }}</h4>
               <div class="widgets-created-meta">
                 <span>{{ widget.size }}</span>
-                <span>{{ widgetPageLabel(widget.id) }}</span>
                 <span>{{ customWidgetActionLabel(widget.action) }}</span>
               </div>
             </div>
@@ -705,7 +897,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="widgets-import-note">
-          <p>{{ t('支持 name、size、code 三项；尺寸支持 1x1、2x1、2x2、4x2、4x3。', 'Supports name, size, and code; sizes: 1x1, 2x1, 2x2, 4x2, 4x3.') }}</p>
+          <p>{{ t(`支持 name、size、code 三项；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Supports name, size, and code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
         </div>
       </section>
     </main>
@@ -949,7 +1141,6 @@ onBeforeUnmount(() => {
 
 .widgets-section-head h2,
 .widgets-section-subhead h3,
-.widgets-library-item h3,
 .widgets-created-item h4 {
   margin: 0;
   letter-spacing: 0;
@@ -1029,7 +1220,7 @@ onBeforeUnmount(() => {
   min-height: 220px;
 }
 
-.widgets-library-list,
+.widgets-market-grid,
 .widgets-form,
 .widgets-created {
   display: flex;
@@ -1037,7 +1228,6 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
-.widgets-library-item,
 .widgets-created-item {
   border: 1px solid var(--system-subtle-border);
   border-radius: 20px;
@@ -1045,36 +1235,405 @@ onBeforeUnmount(() => {
   padding: 11px;
 }
 
-.widgets-library-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.widgets-market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
-.widgets-item-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
-  flex: 0 0 auto;
+.widgets-market-card {
+  min-width: 0;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 22px;
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+  overflow: hidden;
+}
+
+.widgets-market-card.size-4-1,
+.widgets-market-card.size-4-2,
+.widgets-market-card.size-4-4 {
+  grid-column: 1 / -1;
+}
+
+.widgets-preview-stage {
+  position: relative;
+  min-height: 142px;
+  padding: 10px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.58), transparent 28%),
+    linear-gradient(145deg, rgba(124, 147, 156, 0.34), rgba(70, 84, 91, 0.2));
+}
+
+.widgets-market-card.size-1-1 .widgets-preview-stage {
+  min-height: 118px;
+}
+
+.widgets-market-card.size-4-1 .widgets-preview-stage {
+  min-height: 86px;
+}
+
+.widgets-market-card.size-4-2 .widgets-preview-stage {
+  min-height: 128px;
+}
+
+.widgets-market-card.size-4-4 .widgets-preview-stage {
+  min-height: 230px;
+}
+
+.widget-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 96px;
+  border-radius: 20px;
+  color: #fff;
+  box-shadow:
+    0 14px 30px rgba(16, 24, 40, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.weather-preview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px;
+  background: linear-gradient(145deg, #8db7c8, #526d79 70%);
+}
+
+.weather-preview span,
+.weather-preview small,
+.music-preview small,
+.calendar-preview small {
+  font-size: 11px;
+  font-weight: 750;
+  opacity: 0.76;
+}
+
+.weather-preview strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.weather-preview i {
+  font-size: 25px;
+  opacity: 0.92;
+}
+
+.calendar-preview {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px;
+  background: linear-gradient(160deg, #f1efea, #b9c2c7);
+  color: #28323a;
+}
+
+.calendar-preview span {
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(255, 255, 255, 0.52);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.calendar-preview strong {
+  font-size: 42px;
+  line-height: 0.9;
+}
+
+.music-preview {
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  background: linear-gradient(135deg, #2b3037, #65716d);
+}
+
+.music-art,
+.music-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #f7fafc;
-  background: linear-gradient(135deg, #5d8295, #385e75);
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.14);
 }
 
-.widgets-item-body {
+.music-art {
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 9%, transparent 10%),
+    conic-gradient(from 120deg, #d6c8ad, #536a75, #1e252b, #d6c8ad);
+}
+
+.music-preview strong {
+  display: block;
   min-width: 0;
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  line-height: 1.2;
 }
 
-.widgets-item-body h3 {
+.music-control {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.system-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: center;
+  gap: 10px;
+  padding: 14px;
+  background: linear-gradient(145deg, #58666c, #26333c);
+}
+
+.system-preview span {
+  min-height: 38px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.system-preview div {
+  grid-column: 1 / -1;
+  height: 12px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.84) 0 68%, rgba(255, 255, 255, 0.18) 68% 100%),
+    rgba(255, 255, 255, 0.16);
+}
+
+.square-preview {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 0;
+  width: min(100%, 98px);
+  height: auto;
+  margin: auto;
+  font-size: 28px;
+}
+
+.heart-preview {
+  background: linear-gradient(145deg, #d7a5a2, #8f5e65);
+}
+
+.disc-preview {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.82) 0 8%, rgba(44, 51, 59, 0.86) 9% 21%, transparent 22%),
+    conic-gradient(from 40deg, #c4cdd2, #6c7779, #2f3a43, #c4cdd2);
+}
+
+.style-preview {
+  color: #30343a;
+}
+
+.polaroid-preview {
+  position: relative;
+  background: linear-gradient(145deg, #f6f1ea, #cfd8dd);
+}
+
+.polaroid-preview span {
+  position: absolute;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 20px rgba(46, 55, 63, 0.16);
+}
+
+.polaroid-preview span:first-child {
+  inset: 26px 39px 35px 20px;
+  transform: rotate(-8deg);
+}
+
+.polaroid-preview span:nth-child(2) {
+  inset: 29px 21px 29px 44px;
+  transform: rotate(7deg);
+}
+
+.polaroid-preview strong {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  font-size: 12px;
+}
+
+.orb-preview {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 48% 36%, rgba(255, 255, 255, 0.34), rgba(121, 144, 154, 0.42));
+}
+
+.orb-preview span {
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 28px;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.22) 25%, rgba(82, 101, 110, 0.36));
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  box-shadow: inset 0 0 26px rgba(255, 255, 255, 0.28), 0 16px 30px rgba(24, 31, 38, 0.2);
+}
+
+.island-preview {
+  min-height: 58px;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #242b32, #6a7776);
+  color: #fff;
+}
+
+.island-preview i {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-style: normal;
+}
+
+.island-preview strong,
+.live-preview strong {
+  display: block;
   font-size: 14px;
-  font-weight: 700;
+  line-height: 1.2;
 }
 
-.widgets-item-body p,
+.island-preview small,
+.live-preview small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  opacity: 0.72;
+}
+
+.pass-preview {
+  padding: 13px;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  gap: 6px;
+  background: linear-gradient(150deg, #f5edf1, #c7d2da);
+}
+
+.pass-preview span {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8d9df, #879aa4);
+}
+
+.pass-preview strong {
+  font-size: 15px;
+}
+
+.pass-preview small {
+  color: #69727a;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.live-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, #ffe8ef, #d6cad2);
+  color: #5f3a47;
+}
+
+.live-preview > span {
+  min-height: 82px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.48);
+  font-size: 34px;
+}
+
+.magazine-preview {
+  position: relative;
+  min-height: 204px;
+  padding: 18px;
+  background: linear-gradient(145deg, #efede8, #9facb0);
+  overflow: hidden;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.magazine-preview span {
+  position: absolute;
+  inset: 70px 24px 44px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #cfd8dc, #6f838c);
+  box-shadow: 0 18px 38px rgba(22, 30, 38, 0.2);
+}
+
+.magazine-preview strong {
+  position: relative;
+  z-index: 1;
+  font-size: 32px;
+  line-height: 0.9;
+  letter-spacing: 0;
+}
+
+.magazine-preview small {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  z-index: 1;
+  font: 800 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.widgets-market-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.widgets-market-info h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.widgets-market-info span {
+  display: inline-flex;
+  margin-top: 5px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  border: 1px solid var(--system-subtle-border);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .widgets-created-item p {
   margin: 3px 0 0;
   color: var(--system-text-muted);
@@ -1196,6 +1755,47 @@ onBeforeUnmount(() => {
 .widgets-created-item {
   display: grid;
   gap: 10px;
+}
+
+.widgets-created-preview {
+  position: relative;
+  min-height: 132px;
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.58), transparent 28%),
+    linear-gradient(145deg, rgba(124, 147, 156, 0.34), rgba(70, 84, 91, 0.2));
+}
+
+.widgets-created-preview.size-1-1 {
+  width: 104px;
+  min-height: 104px;
+}
+
+.widgets-created-preview.size-2-1 {
+  min-height: 94px;
+}
+
+.widgets-created-preview.size-4-1 {
+  min-height: 88px;
+}
+
+.widgets-created-preview.size-4-3 {
+  min-height: 188px;
+}
+
+.widgets-created-preview.size-4-4 {
+  min-height: 232px;
+}
+
+.widgets-created-preview iframe {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  border: 0;
+  display: block;
+  pointer-events: none;
+  background: transparent;
 }
 
 .widgets-created-item h4 {
@@ -1325,7 +1925,6 @@ onBeforeUnmount(() => {
   .widgets-section-head,
   .widgets-head-actions,
   .widgets-bridge-panel,
-  .widgets-library-item,
   .widgets-form-actions,
   .widgets-import-actions {
     align-items: stretch;
@@ -1342,6 +1941,28 @@ onBeforeUnmount(() => {
 
   .widgets-action-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 340px) {
+  .widgets-market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .widgets-market-card.size-4-1,
+  .widgets-market-card.size-4-2,
+  .widgets-market-card.size-4-4 {
+    grid-column: auto;
+  }
+
+  .music-preview {
+    grid-template-columns: 56px minmax(0, 1fr) 34px;
+  }
+
+  .music-art {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
   }
 }
 </style>

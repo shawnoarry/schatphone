@@ -23,6 +23,7 @@ import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl } from '../lib/ai'
 import {
   assignHomeLayoutSlots,
+  canHomeLayoutTileSizeUseSlot,
   createDefaultHomeLayoutTemplateIds,
   getHomeLayoutTemplate,
   normalizeHomeLayoutSlotPlacements,
@@ -59,7 +60,7 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_widgets'],
+  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
   [
     'system',
     'quick_heart',
@@ -806,7 +807,7 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => 
   return withMinimumPages
 }
 
-const homeTileSizeKey = (tileId) => {
+const builtInHomeTileSizeKey = (tileId) => {
   if (tileId === 'music') return '4x2'
   if (tileId === 'quick_heart' || tileId === 'quick_disc') return '1x1'
   if (typeof tileId === 'string' && tileId.startsWith('app_')) return '1x1'
@@ -820,7 +821,7 @@ const createHomeLayoutSlotPlacementsFromPages = (pages, templateIds) => {
   )
   return (Array.isArray(pages) ? pages : []).map((page, pageIndex) => {
     const template = getHomeLayoutTemplate(normalizedTemplateIds[pageIndex])
-    return assignHomeLayoutSlots(page, template, homeTileSizeKey).placements.map((placement) => ({
+    return assignHomeLayoutSlots(page, template, builtInHomeTileSizeKey).placements.map((placement) => ({
       slotId: placement.slot.id,
       tileId: placement.tileId,
     }))
@@ -1205,11 +1206,18 @@ export const useSystemStore = defineStore('system', () => {
   const normalizeHomeLayoutTemplateIdsForCurrentPages = (templateIds) =>
     normalizeHomeLayoutTemplateIds(templateIds, settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES)
 
+  const homeTileSizeKey = (tileId) => {
+    const customWidget = settings.appearance.customWidgets.find((widget) => widget.id === tileId)
+    if (customWidget) return normalizeCustomWidgetSize(customWidget.size)
+    return builtInHomeTileSizeKey(tileId)
+  }
+
   const normalizeHomeLayoutSlotPlacementsForCurrentSettings = (slotPlacements) =>
     normalizeHomeLayoutSlotPlacements(
       slotPlacements,
       settings.appearance.homeWidgetPages,
       settings.appearance.homeLayoutTemplateIds,
+      homeTileSizeKey,
     )
 
   const syncHomeLayoutSlotPlacementsFromPages = () => {
@@ -1568,6 +1576,14 @@ export const useSystemStore = defineStore('system', () => {
     const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : ''
     const normalizedTileId = typeof tileId === 'string' ? tileId.trim() : ''
     if (!normalizedSlotId || !normalizedTileId) return false
+    const nextTemplateIds = normalizeHomeLayoutTemplateIdsForCurrentPages(
+      settings.appearance.homeLayoutTemplateIds,
+    )
+    const template = getHomeLayoutTemplate(nextTemplateIds[normalizedPageIndex])
+    const slot = template.slots.find((item) => item.id === normalizedSlotId)
+    if (!slot || !canHomeLayoutTileSizeUseSlot(homeTileSizeKey(normalizedTileId), slot)) {
+      return false
+    }
 
     const nextPages = settings.appearance.homeWidgetPages.map((page) =>
       page.filter((itemId) => itemId !== normalizedTileId),
@@ -1580,9 +1596,7 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
-    settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIdsForCurrentPages(
-      settings.appearance.homeLayoutTemplateIds,
-    )
+    settings.appearance.homeLayoutTemplateIds = nextTemplateIds
 
     const nextPlacements = settings.appearance.homeLayoutSlotPlacements.map((page) =>
       Array.isArray(page)
@@ -2947,6 +2961,7 @@ export const useSystemStore = defineStore('system', () => {
         appearance.homeLayoutSlotPlacements,
         settings.appearance.homeWidgetPages,
         settings.appearance.homeLayoutTemplateIds,
+        homeTileSizeKey,
       )
     }
 
@@ -3106,6 +3121,7 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeLayoutSlotPlacements,
       settings.appearance.homeWidgetPages,
       settings.appearance.homeLayoutTemplateIds,
+      homeTileSizeKey,
     )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.system.notifications = settings.system.notifications !== false

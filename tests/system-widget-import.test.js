@@ -201,6 +201,8 @@ describe('system widget import safety', () => {
     store.resetHomeWidgetPages()
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_network')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_gallery')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
   })
 
   test('runtime control toggle restores and removes the optional World Hub Home entry', () => {
@@ -268,6 +270,31 @@ describe('system widget import safety', () => {
     })
   })
 
+  test('rejects Home slot placements when content size does not match the slot', () => {
+    const store = useSystemStore()
+
+    store.setHomeWidgetPages([['app_gallery', 'music', 'weather'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-c')
+
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-wide', 'app_gallery')).toBe(false)
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).not.toContainEqual({
+      slotId: 'c-wide',
+      tileId: 'app_gallery',
+    })
+
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-small-1', 'app_gallery')).toBe(true)
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-top-left', 'weather')).toBe(true)
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-small-2', 'weather')).toBe(false)
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
+      slotId: 'c-small-1',
+      tileId: 'app_gallery',
+    })
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
+      slotId: 'c-top-left',
+      tileId: 'weather',
+    })
+  })
+
   test('blocks invalid JSON and keeps previous state unchanged', () => {
     const store = useSystemStore()
     const beforeSnapshot = snapshotWidgetState(store)
@@ -324,6 +351,52 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.customWidgets.find((item) => item.id === result.importedIds[0])?.action).toEqual({
       type: CUSTOM_WIDGET_ACTION_TYPE_NONE,
       target: '',
+    })
+  })
+
+  test('supports strip and poster custom widget sizes', () => {
+    const store = useSystemStore()
+    const result = store.importCustomWidgets(
+      JSON.stringify([
+        {
+          name: 'Strip',
+          size: '4x1',
+          code: '<div>Strip</div>',
+        },
+        {
+          name: 'Poster',
+          size: '4x4',
+          code: '<div>Poster</div>',
+        },
+      ]),
+      null,
+      { placeOnHome: false },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.importedCount).toBe(2)
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === result.importedIds[0])?.size).toBe('4x1')
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === result.importedIds[1])?.size).toBe('4x4')
+  })
+
+  test('places a 4x4 custom widget only into a 4x4 template slot', () => {
+    const store = useSystemStore()
+    const widgetId = store.addCustomWidget({
+      name: 'Poster Widget',
+      size: '4x4',
+      code: '<div>Poster</div>',
+      pageIndex: null,
+      placeOnHome: false,
+    })
+
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-g')
+
+    expect(store.setHomeLayoutSlotPlacement(0, 'g-bottom-left', widgetId)).toBe(false)
+    expect(store.setHomeLayoutSlotPlacement(0, 'g-poster', widgetId)).toBe(true)
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
+      slotId: 'g-poster',
+      tileId: widgetId,
     })
   })
 })
