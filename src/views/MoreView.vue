@@ -5,12 +5,29 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { buildRouteWithReturnSource, pushReturnTarget } from '../lib/navigation-return'
 import { useSystemStore } from '../stores/system'
+import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 const systemStore = useSystemStore()
 const { settings } = storeToRefs(systemStore)
+
+const APP_LIBRARY_IDS = [
+  'app_network',
+  'app_chat',
+  'app_contacts',
+  'app_gallery',
+  'app_map',
+  'app_calendar',
+  'app_wallet',
+  'app_shopping',
+  'app_food_delivery',
+  'app_assets',
+  'app_themes',
+  'app_widgets',
+  'app_more',
+]
 
 const featureToggleMeta = computed(() => [
   {
@@ -92,6 +109,21 @@ const quickEntries = computed(() => [
     accent: 'bg-slate-600',
   },
 ])
+const visibleHomeAppIds = computed(
+  () => new Set((settings.value.appearance?.homeWidgetPages || []).flat()),
+)
+const appLibraryItems = computed(() =>
+  APP_LIBRARY_IDS.map((appId) => ({
+    id: appId,
+    ...resolveAppIconMeta(appId, settings.value.appearance?.appIconOverrides || {}, 'zh-CN'),
+    visible: visibleHomeAppIds.value.has(appId),
+  })),
+)
+const appLibraryPreviewItems = computed(() => appLibraryItems.value.slice(0, 8))
+const visibleAppCount = computed(
+  () => appLibraryItems.value.filter((item) => item.visible).length,
+)
+const hiddenAppCount = computed(() => Math.max(0, appLibraryItems.value.length - visibleAppCount.value))
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -99,6 +131,10 @@ const goHome = () => {
 
 const openEntry = (targetRoute) => {
   router.push(buildRouteWithReturnSource(targetRoute, 'home', { homePage: route.query.homePage }))
+}
+
+const openHomeAppEntryEditor = () => {
+  router.push(buildRouteWithReturnSource('/home', 'home', { homePage: route.query.homePage, widgetEdit: '1' }))
 }
 
 const toggleFeature = (toggleId) => {
@@ -131,6 +167,34 @@ const toggleFeature = (toggleId) => {
             </div>
             <p class="mt-2 text-sm font-semibold">{{ entry.title }}</p>
             <p class="text-[11px] text-gray-500">{{ entry.desc }}</p>
+          </button>
+        </div>
+      </section>
+
+      <section class="more-app-library-card bg-white rounded-2xl border border-gray-200 p-4">
+        <div class="more-app-library-head">
+          <div>
+            <p class="text-sm font-semibold">{{ t('App 入口', 'App Entries') }}</p>
+            <span>
+              {{ t(`${visibleAppCount} 个在主屏 · ${hiddenAppCount} 个在库`, `${visibleAppCount} on Home · ${hiddenAppCount} in Library`) }}
+            </span>
+          </div>
+          <button type="button" @click="openHomeAppEntryEditor" data-testid="more-app-library-edit-home">
+            <i class="fas fa-table-cells"></i>
+            <span>{{ t('整理主屏', 'Edit Home') }}</span>
+          </button>
+        </div>
+        <div class="more-app-library-grid" aria-label="App Library">
+          <button
+            v-for="app in appLibraryPreviewItems"
+            :key="app.id"
+            type="button"
+            class="more-app-library-icon"
+            :class="{ 'is-visible': app.visible }"
+            :title="app.label"
+          >
+            <i :class="app.icon"></i>
+            <small>{{ app.label }}</small>
           </button>
         </div>
       </section>
@@ -211,3 +275,83 @@ const toggleFeature = (toggleId) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.more-app-library-card {
+  box-shadow: var(--system-shadow-card, 0 12px 28px rgba(15, 23, 42, 0.08));
+}
+
+.more-app-library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.more-app-library-head p {
+  margin: 0;
+}
+
+.more-app-library-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--system-text-muted, #667085);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.more-app-library-head button {
+  min-height: 34px;
+  border: 1px solid var(--system-control-border, #d0d5dd);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--system-text, #182230);
+  background: var(--system-control-bg, #f8fafc);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.more-app-library-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.more-app-library-icon {
+  min-width: 0;
+  min-height: 64px;
+  border: 1px solid var(--system-subtle-border, #eaecf0);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--system-text-muted, #667085);
+  background: var(--system-surface-muted, #f2f4f7);
+  font-size: 14px;
+  opacity: 0.62;
+}
+
+.more-app-library-icon small {
+  max-width: 100%;
+  color: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-app-library-icon.is-visible {
+  color: var(--system-text-inverse, #f8fafc);
+  background: var(--system-accent, #446f87);
+  border-color: var(--system-accent, #446f87);
+  opacity: 1;
+}
+</style>

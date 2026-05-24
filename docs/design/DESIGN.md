@@ -137,9 +137,16 @@ Default direction:
 - Use a fixed page skeleton with named widget slots.
 - Each slot has a stable size, such as `1x1`, `2x1`, `2x2`, `4x2`, or `4x3`.
 - Users customize Home by replacing the content inside a slot, not by freely dragging every item.
-- A widget picker opened from a slot should only show widgets that match that slot size.
+- Explicit slot placements win first; remaining ordered page content is visually assigned into compatible template slots. Incompatible extras remain recoverable rather than disappearing.
+- Empty slots in edit mode may open a local content picker; the picker filters candidates by the selected slot's capacity.
+- Filled slots in edit mode use the same picker for replacing or clearing Home entry content.
+- The slot picker may show apps, folders, built-in widgets, and custom widgets as long as the item fits the selected slot.
+- Edit mode includes a lightweight content library for unplaced Home entries. Selecting an item highlights compatible empty slots so removed shortcuts can be recovered without opening a separate app manager.
+- Custom widget code is visual-only. Click behavior is configured in Widget Center as separate metadata, normalized through the system whitelist, and executed by Home in normal mode.
+- Layout templates should remain neutral geometry. Do not label templates by use case such as social, planning, media, or utilities.
+- Template thumbnails should use abstract grayscale placeholder blocks only. They should preview proportions and placement, not app icons, live widgets, popularity, price, or recommendation metadata.
 - The Home `Widgets` entry is the primary user-facing shortcut for widget customization: tap opens `/widgets`, long-press enters Home widget edit mode.
-- App entries and the Dock stay in fixed system-owned zones.
+- Dock entries stay globally reachable; Home app entries are user-managed shortcuts rather than permanently fixed requirements.
 - Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
 - Extra apps should go to an App Library, More page, or another system-owned overflow surface.
 - System-controlled Home folders are OS launch containers. Their tile preview, overlay material, close behavior, icon grid, and spacing belong to Home/Appearance.
@@ -150,7 +157,8 @@ Default direction:
 
 Current implementation note:
 
-- The current store uses `homeWidgetPages` as an ordered page array. Future visual work should evolve this toward a slot model, for example `homeLayoutSlots: [{ page, slotId, size, widgetId }]`.
+- The current store uses `homeWidgetPages` as an ordered page/recovery array, per-page `homeLayoutTemplateIds`, explicit `homeLayoutSlotPlacements`, and definition-level custom widget action metadata.
+- Future visual work should evolve this toward richer slot-owned placement records, for example `homeLayoutSlots: [{ page, slotId, size, tileId, actionOverride }]`.
 - Free drag can remain as an experimental or developer-only feature, but it is not the default visual direction.
 
 ## 3. Installed App Layer

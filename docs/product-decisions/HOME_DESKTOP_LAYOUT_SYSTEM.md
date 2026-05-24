@@ -1,6 +1,6 @@
 # Home Desktop Layout System
 
-Updated: 2026-05-23
+Updated: 2026-05-24
 
 This document defines the target Home model for SchatPhone.
 
@@ -9,6 +9,12 @@ It is a product-decision document, not an implementation plan.
 ## 1. Decision Summary
 
 Home should be treated as a phone desktop layout system, not as a fixed feature menu.
+
+Naming clarification:
+
+- `主屏 / 桌面 / Home` is the visible system desktop layer. It is not a user-facing app entry.
+- When product work says "apps", it should mean visible app destinations such as `外观 / Appearance`, `组件 / Widgets`, `更多 / More`, `聊天 / Chat`, and similar entries from `docs/pm/MODULE_NAME_GLOSSARY.md`.
+- The Home layout editor is a desktop edit state, not a `Home app`.
 
 Current direction:
 
@@ -23,6 +29,7 @@ Current direction:
 9. Dock entries stay globally reachable and should not need duplicate Home icons by default.
 10. Custom widgets should separate visual code from click behavior.
 11. Home return navigation must preserve the page that launched the app or widget action.
+12. Layout templates express geometry only. They should not tell users that a page is for social, planning, media, assets, or any other specific purpose.
 
 ## 2. Home Page Model
 
@@ -64,19 +71,32 @@ Edit mode:
 
 Candidate filtering:
 
-- `1x1` slots may hold app shortcuts, folders, small widgets, or quick actions;
-- widget slots may hold only widgets of the same size;
+- slots filter by capacity, not by a prescribed screen purpose;
+- apps, folders, built-in widgets, and custom widget instances may be arranged by the user when they fit the selected slot;
+- a `1x1` slot may hold only `1x1` content;
+- larger slots may hold matching widgets or smaller app/folder entries when the user intentionally chooses that arrangement;
 - a built-in widget or custom widget definition may create multiple placed instances when repeat placement is supported.
 
 ## 4. Template Selection
 
 The layout template is a Home/Appearance concern, not an App Store concern.
 
+Template selection should stay visually simple. The product meaning is "choose a layout framework", not "choose a workflow type".
+
+Preferred presentation:
+
+- show abstract 4-column x 6-row thumbnails;
+- use neutral labels such as `Layout A` through `Layout F`;
+- avoid category names, popularity badges, trend labels, user counts, pricing, or recommendations;
+- do not show sample app icons, real widget content, or example copy inside the thumbnails;
+- use grayscale placeholder blocks to communicate only slot proportions and placement.
+
 Recommended ownership:
 
 - Home edit mode owns quick per-page template changes because users see the slots there;
 - Appearance may also expose template management because it owns broader visual customization;
 - Widget Center owns widget creation/import and Home edit entry points, but not whole-page template catalogs.
+- App Library / App Store-like presentation owns app-entry visibility management only. It should not own layout templates, widget packs, themes, wallpapers, or icon styles.
 
 Template rules:
 
@@ -91,6 +111,38 @@ Recommended first conflict rule:
 1. preserve any placed item that still fits an equivalent slot;
 2. move unmatched placed items into a recoverable holding area such as the app-entry library or widget library;
 3. never silently delete user-created widgets or custom widget definitions.
+
+Starter template library:
+
+| Template | Neutral geometry |
+| --- | --- |
+| Layout A | `4x2`, `2x2`, four `1x1`, `4x2` |
+| Layout B | `4x3`, two `2x1`, eight `1x1` |
+| Layout C | two `2x2`, `4x2`, eight `1x1` |
+| Layout D | `4x2`, two `2x1`, `4x2`, four `1x1` |
+| Layout E | two `2x2`, `4x2`, two `2x2` |
+| Layout F | `2x2`, four `1x1`, four `1x1`, `4x2`, four `1x1` |
+
+These names are deliberately neutral. The system may use them as defaults for initial pages, but the UI should not imply that a specific template belongs to a specific kind of content.
+
+Current first-pass implementation:
+
+- template ids are stored per formal Home page;
+- page content is still stored as ordered tile ids for compatibility and recovery;
+- explicit `homeLayoutSlotPlacements` records can bind a tile id to a concrete template slot id;
+- the renderer honors explicit slot placements first, then assigns remaining ordered content into available compatible slots;
+- exact size matches are preferred, then compatible larger slots may hold smaller items;
+- items that cannot fit the selected template stay recoverable in the same page overflow rather than being deleted;
+- in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot;
+- the picker groups available content as apps, folders, built-in widgets, and custom widgets;
+- filled slots can be replaced or cleared from that picker;
+- edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; selecting an item highlights compatible empty slots for recovery;
+- default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
+- empty template slots remain invisible outside edit mode.
+- the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `更多 / More`;
+- `组件 / Widgets` provides direct entry into desktop slot editing and keeps custom-widget action controls;
+- `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
+- `更多 / More` contains a lightweight App Library-like entry-management preview and enters desktop editing, without acting as a real download store.
 
 ## 5. App Entry Placement
 
@@ -169,8 +221,8 @@ Preferred user path:
 
 1. user creates or imports widget visual code in Widget Center;
 2. user chooses an optional click action in SchatPhone UI;
-3. Home stores that action as metadata outside the user-authored code;
-4. normal-mode click runs the stored action;
+3. Home stores that action as normalized metadata outside the user-authored code;
+4. normal-mode click runs the stored action and preserves the current Home page return source;
 5. edit-mode click changes the slot content.
 
 Widget code should not be required to know SchatPhone routes.
@@ -184,6 +236,13 @@ Recommended first action types:
 
 Avoid giving imported widget code direct router control. If richer custom interaction is needed later, add a controlled message protocol instead of allowing arbitrary navigation.
 
+Current implementation:
+
+- Widget Center exposes the first click-action controls on custom widget definitions.
+- Imported widget JSON still accepts only `name`, `size`, and `code`; unsupported `action` fields are ignored with the same unsupported-field warning path.
+- Home normal mode executes only the normalized action metadata. Edit mode keeps using custom widget taps for slot replacement.
+- Supported app/system targets are centrally whitelisted in `src/lib/custom-widget-actions.js`.
+
 ## 9. Dock Return Rule
 
 Dock entries are visible from every formal Home page.
@@ -196,21 +255,23 @@ Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 
 ## 10. Implementation Implications
 
-The current implementation stores each page mostly as an ordered list of tile ids. That supports default ordering, but it does not fully represent fixed slot placement.
+The current implementation now stores both ordered page content and explicit slot placements. Ordered page arrays remain useful as a compatibility and recovery layer; slot placement records are the beginning of the fixed-slot model.
 
 The target model likely needs:
 
 - page templates;
 - slot ids;
 - slot dimensions;
-- placed item instances;
+- placed item instances with per-slot metadata;
+- per-page selected template ids;
+- abstract template thumbnails for edit mode;
 - an app-entry library;
 - an App Store-like presentation over that app-entry library;
 - a widget-definition library;
 - widget instances with per-instance placement and optional action metadata;
-- migration from the current ordered pages to the new template-slot model.
+- a fuller App Library / recovery manager for hidden, unmatched, or unplaced app and widget entries.
 
-This should be implemented as a dedicated Home layout slice after the product model is approved.
+The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, a lightweight edit-mode content library, and definition-level custom widget click actions are available. The next structural step is a fuller App Library / recovery manager and per-instance metadata if one widget definition needs different actions in different slots.
 
 ## 11. Guardrails
 

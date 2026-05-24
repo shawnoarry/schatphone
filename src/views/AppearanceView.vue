@@ -19,9 +19,11 @@ import {
 } from '../lib/app-icon-presentation'
 import {
   buildReturnSourceQuery,
+  buildRouteWithReturnSource,
   pushReturnTarget,
   resolveReturnLabel,
 } from '../lib/navigation-return'
+import { HOME_LAYOUT_TEMPLATES, homeLayoutSlotToGridStyle } from '../lib/home-layout-templates'
 
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
@@ -67,6 +69,7 @@ const wallpaperQuickPreviewMap = reactive({})
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
 
 const wallpaperAssets = computed(() => galleryStore.getAssetsByCategory('wallpaper'))
+const homeLayoutPreviewTemplates = computed(() => HOME_LAYOUT_TEMPLATES.slice(0, 6))
 
 const fontPresetLabel = (preset) => {
   if (preset.id === 'system') return t('系统默认', 'System default')
@@ -342,6 +345,15 @@ const openWidgetCenter = () => {
   })
 }
 
+const openHomeLayoutEditor = () => {
+  router.push(
+    buildRouteWithReturnSource('/home', 'home', {
+      widgetEdit: '1',
+      homePage: route.query.homePage,
+    }),
+  )
+}
+
 const goSettings = () => {
   pushReturnTarget(router, route, '/home')
 }
@@ -532,6 +544,33 @@ onBeforeUnmount(() => {
         </div>
         <i class="fas fa-chevron-right text-xs text-gray-300"></i>
       </button>
+
+      <section class="appearance-layout-card">
+        <div class="appearance-layout-head">
+          <div>
+            <p>{{ t('主屏布局', 'Home Layout') }}</p>
+            <h2>{{ t('桌面模板', 'Desktop Templates') }}</h2>
+          </div>
+          <button type="button" @click="openHomeLayoutEditor">
+            <i class="fas fa-mobile-screen"></i>
+            <span>{{ t('编辑主屏', 'Edit Home') }}</span>
+          </button>
+        </div>
+        <div class="appearance-layout-preview-row" aria-hidden="true">
+          <span
+            v-for="template in homeLayoutPreviewTemplates"
+            :key="template.id"
+            class="appearance-layout-preview"
+          >
+            <span
+              v-for="slot in template.slots"
+              :key="slot.id"
+              class="appearance-layout-preview-slot"
+              :style="homeLayoutSlotToGridStyle(slot)"
+            ></span>
+          </span>
+        </div>
+      </section>
 
       <button
         class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
@@ -1038,6 +1077,86 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, #6b7f8a 0%, #465a66 100%);
 }
 
+.appearance-layout-card {
+  border: 1px solid var(--system-card-border);
+  border-radius: 24px;
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+  padding: 14px;
+}
+
+.appearance-layout-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.appearance-layout-head p,
+.appearance-layout-head h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.appearance-layout-head p {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.appearance-layout-head h2 {
+  margin-top: 2px;
+  color: var(--system-text);
+  font-size: 17px;
+  line-height: 1.15;
+  font-weight: 750;
+}
+
+.appearance-layout-head button {
+  min-height: 36px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  box-shadow: var(--system-shadow-control);
+  font-size: 12px;
+  font-weight: 750;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-layout-preview-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.appearance-layout-preview {
+  min-width: 0;
+  aspect-ratio: 4 / 6;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  padding: 4px;
+  background: var(--system-surface-muted);
+  overflow: hidden;
+}
+
+.appearance-layout-preview-slot {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--system-text-muted) 20%, transparent);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
 .appearance-shell :deep(.bg-white) {
   background-color: var(--system-panel-bg);
 }
@@ -1131,6 +1250,12 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .appearance-menu-card {
     transition: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .appearance-layout-preview-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

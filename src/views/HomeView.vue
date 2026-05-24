@@ -7,6 +7,14 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import {
+  HOME_LAYOUT_TEMPLATES,
+  assignHomeLayoutSlotPlacements,
+  getHomeLayoutTemplate,
+  homeLayoutSlotIndex,
+  homeLayoutSlotToGridStyle,
+  normalizeHomeLayoutTemplateIds,
+} from '../lib/home-layout-templates'
+import {
   HOME_APP_REGISTRY_ADDITIONS,
   HOME_FOLDER_REGISTRY,
   HOME_FOLDER_TILE_KIND,
@@ -18,6 +26,13 @@ import {
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
 } from '../lib/navigation-return'
+import {
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP,
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
+  hasCustomWidgetAction,
+  normalizeCustomWidgetAction,
+  resolveCustomWidgetSystemActionTarget,
+} from '../lib/custom-widget-actions'
 
 const props = defineProps({
   currentTime: {
@@ -79,7 +94,9 @@ const dragEdgeDirection = ref('')
 const ignoreAppOpenUntil = ref(0)
 const widgetEntryPressStartX = ref(0)
 const widgetEntryPressStartY = ref(0)
-const widgetReplaceTarget = ref(null)
+const slotContentTarget = ref(null)
+const slotContentFilter = ref('all')
+const libraryPlacementTileId = ref('')
 
 const dragTileId = ref('')
 const dragPointerId = ref(null)
@@ -133,7 +150,7 @@ const WIDGET_VARIANT_META = {
   disc: { label: '快捷唱片', icon: 'fas fa-compact-disc' },
 }
 
-const BUILT_IN_WIDGET_ORDER = ['weather', 'calendar', 'music', 'system', 'quick_heart', 'quick_disc']
+const SLOT_CONTENT_FILTERS = ['all', 'apps', 'folders', 'widgets', 'custom']
 
 const CUSTOM_WIDGET_SPAN_CLASS_MAP = {
   '1x1': 'col-span-1 row-span-1',
@@ -252,14 +269,19 @@ const customWidgetSrcDocMap = computed(() => {
 
 const widgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const totalPages = computed(() => Math.max(widgetPages.value.length, 1))
+const homeLayoutTemplateIds = computed(() =>
+  normalizeHomeLayoutTemplateIds(settings.value.appearance.homeLayoutTemplateIds, totalPages.value),
+)
+const homeLayoutSlotPlacements = computed(() =>
+  Array.isArray(settings.value.appearance.homeLayoutSlotPlacements)
+    ? settings.value.appearance.homeLayoutSlotPlacements
+    : [],
+)
 const homeTrackOffset = computed(() => currentPage.value - LEFT_HOME_PAGE_INDEX)
 const homeReturnPageForCurrentView = computed(() =>
   currentPage.value < DEFAULT_HOME_RETURN_PAGE ? DEFAULT_HOME_RETURN_PAGE : currentPage.value,
 )
 const today = computed(() => new Date())
-const layoutSlotIndices = computed(() =>
-  Array.from({ length: LAYOUT_SLOT_COLUMNS * LAYOUT_SLOT_ROWS }, (_, index) => index),
-)
 
 const tilePageIndexMap = computed(() => {
   const map = new Map()
@@ -284,6 +306,19 @@ const canFreelyMoveHomeTiles = computed(() => layoutEditFeatureEnabled.value ===
 const widgetEditRouteRequested = computed(() => route.query.widgetEdit === '1')
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
+const currentHomeLayoutTemplate = computed(() =>
+  getHomeLayoutTemplate(homeLayoutTemplateIds.value[homeReturnPageForCurrentView.value]),
+)
+const homeLayoutAssignments = computed(() =>
+  widgetPages.value.map((page, pageIndex) =>
+    assignHomeLayoutSlotPlacements(
+      page,
+      homeLayoutTemplateForPage(pageIndex),
+      homeLayoutSlotPlacements.value[pageIndex],
+      tileSizeKeyForId,
+    ),
+  ),
+)
 
 const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(LEFT_HOME_PAGE_INDEX, page))
 
@@ -361,6 +396,13 @@ const tileSizeKeyForId = (tileId) => {
 }
 
 const customWidgetSrcDoc = (tileId) => customWidgetSrcDocMap.value.get(tileId) || ''
+const customWidgetAction = (tileId) =>
+  normalizeCustomWidgetAction(customWidgetMap.value.get(tileId)?.action)
+const customWidgetHasAction = (tileId) => hasCustomWidgetAction(customWidgetAction(tileId))
+const customWidgetActionLabel = (tileId) => {
+  const widget = customWidgetMap.value.get(tileId)
+  return t(`打开 ${widget?.name || '组件'}`, `Open ${widget?.name || 'widget'}`)
+}
 const hasActiveDrag = computed(() => layoutEditMode.value && !!dragTileId.value)
 const dragTileSpan = computed(() => tileSpanForId(dragTileId.value))
 
@@ -409,9 +451,8 @@ const dragGhostStyle = computed(() => {
   }
 })
 
-const isLockedEntryTile = (tileId) => typeof tileId === 'string' && tileId.startsWith('app_')
-
-const canHideTile = (tileId) => !isLockedEntryTile(tileId)
+const canHideTile = (tileId) => typeof tileId === 'string' && tileId !== 'app_files'
+const isLibraryPlacementActive = computed(() => layoutEditMode.value && !!libraryPlacementTileId.value)
 const openedFolderMeta = computed(() => tileMeta(openFolderTileId.value))
 const openedFolderPreviewEntries = computed(() => {
   const entries = Array.isArray(openedFolderMeta.value?.childEntries)
@@ -446,12 +487,34 @@ const leftPageUtilityEntries = computed(() => [
 
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
 
-const isReplaceableWidgetTile = (tileId) => {
-  const meta = tileMeta(tileId)
-  return meta?.kind === 'widget' || meta?.kind === 'custom_widget'
+const canTileFitTemplateSlot = (tileId, slot) => {
+  const { cols, rows } = tileSpanForId(tileId)
+  return cols <= slot.colSpan && rows <= slot.rowSpan
 }
 
 const homePageLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
+const homeLayoutTemplateLabel = (template) => t(`布局 ${template.key}`, `Layout ${template.key}`)
+const homeLayoutTemplateForPage = (pageIndex) =>
+  getHomeLayoutTemplate(homeLayoutTemplateIds.value[pageIndex])
+const isHomeLayoutTemplateSelected = (templateId) => currentHomeLayoutTemplate.value.id === templateId
+const homeLayoutAssignmentForPage = (pageIndex) =>
+  homeLayoutAssignments.value[pageIndex] || { placements: [], emptySlots: [], overflow: [] }
+const homeLayoutPlacementStyle = (placement) => homeLayoutSlotToGridStyle(placement.slot)
+const homeLayoutSlotSizeClass = (size = '1x1') => `is-size-${size.replace('x', '-')}`
+const homeEditScopeLabel = computed(
+  () =>
+    `${homePageLabel(homeReturnPageForCurrentView.value)} · ${homeLayoutTemplateLabel(currentHomeLayoutTemplate.value)}`,
+)
+
+const selectHomeLayoutTemplate = (templateId) => {
+  if (!layoutEditMode.value) return
+  closeSlotContentSheet()
+  closeHomeContentLibrary()
+  systemStore.setHomeLayoutTemplate(homeReturnPageForCurrentView.value, templateId)
+  triggerLayoutToast(t('布局已更新', 'Layout updated'))
+  maybeVibrate(10)
+  systemStore.saveNow()
+}
 
 const widgetCandidateLabel = (tileId) => {
   const meta = tileMeta(tileId)
@@ -468,66 +531,190 @@ const widgetCandidateIcon = (tileId) => {
   return variant?.icon || 'fas fa-puzzle-piece'
 }
 
-const widgetReplaceCandidates = computed(() => {
-  if (!widgetReplaceTarget.value?.size) return []
-  const targetSize = widgetReplaceTarget.value.size
-  const candidateIds = [...BUILT_IN_WIDGET_ORDER, ...customWidgets.value.map((widget) => widget.id)]
-  return candidateIds
-    .filter((tileId) => tileId !== widgetReplaceTarget.value.tileId)
-    .filter((tileId) => tileSizeKeyForId(tileId) === targetSize)
+const slotCandidateLabel = (tileId) => {
+  const meta = tileMeta(tileId)
+  if (!meta) return t('项目', 'Item')
+  if (meta.kind === 'widget' || meta.kind === 'custom_widget') return widgetCandidateLabel(tileId)
+  return meta.label || t('项目', 'Item')
+}
+
+const slotCandidateIcon = (tileId) => {
+  const meta = tileMeta(tileId)
+  if (!meta) return 'fas fa-square'
+  if (meta.kind === 'widget' || meta.kind === 'custom_widget') return widgetCandidateIcon(tileId)
+  return meta.icon || 'fas fa-square'
+}
+
+const slotCandidateFilter = (tileId) => {
+  const kind = tileMeta(tileId)?.kind
+  if (kind === 'app') return 'apps'
+  if (kind === HOME_FOLDER_TILE_KIND) return 'folders'
+  if (kind === 'widget') return 'widgets'
+  if (kind === 'custom_widget') return 'custom'
+  return 'all'
+}
+
+const slotContentFilterLabel = (filterId) => {
+  if (filterId === 'apps') return t('APP', 'Apps')
+  if (filterId === 'folders') return t('文件夹', 'Folders')
+  if (filterId === 'widgets') return t('组件', 'Widgets')
+  if (filterId === 'custom') return t('自定义', 'Custom')
+  return t('全部', 'All')
+}
+
+const availableHomeSlotCandidates = computed(() => {
+  const placedIds = new Set(widgetPages.value.flat())
+  return Object.keys(widgetRegistry)
+    .filter((tileId) => !placedIds.has(tileId))
+    .filter((tileId) => tileId !== 'app_files')
+    .filter((tileId) => {
+      if (tileId === 'app_control_center') return isWorldHubInstalled.value
+      return true
+    })
+    .concat(customWidgets.value.map((widget) => widget.id).filter((tileId) => !placedIds.has(tileId)))
+    .filter((tileId) => !!tileMeta(tileId))
+})
+
+const availableHomeLibraryCandidates = computed(() =>
+  availableHomeSlotCandidates.value.map((tileId) => ({
+    tileId,
+    label: slotCandidateLabel(tileId),
+    icon: slotCandidateIcon(tileId),
+    size: tileSizeKeyForId(tileId),
+    kind: tileMeta(tileId)?.kind || '',
+    accent: tileMeta(tileId)?.accent || 'default',
+  })),
+)
+const selectedHomeLibraryCandidate = computed(
+  () =>
+    availableHomeLibraryCandidates.value.find(
+      (candidate) => candidate.tileId === libraryPlacementTileId.value,
+    ) || null,
+)
+
+const slotContentCandidates = computed(() => {
+  const target = slotContentTarget.value
+  if (!target?.slot) return []
+
+  return availableHomeSlotCandidates.value
+    .filter((tileId) => tileId !== target.tileId)
+    .filter((tileId) => canTileFitTemplateSlot(tileId, target.slot))
+    .filter((tileId) => slotContentFilter.value === 'all' || slotCandidateFilter(tileId) === slotContentFilter.value)
     .map((tileId) => ({
       tileId,
-      label: widgetCandidateLabel(tileId),
-      icon: widgetCandidateIcon(tileId),
-      pageIndex: tilePageIndexMap.value.get(tileId),
+      label: slotCandidateLabel(tileId),
+      icon: slotCandidateIcon(tileId),
+      size: tileSizeKeyForId(tileId),
+      kind: tileMeta(tileId)?.kind || '',
+      accent: tileMeta(tileId)?.accent || 'default',
     }))
 })
 
-const closeWidgetReplaceSheet = () => {
-  widgetReplaceTarget.value = null
+const slotContentTargetTitle = computed(() =>
+  slotContentTarget.value?.tileId ? t('更换内容', 'Change Content') : t('放入内容', 'Add Content'),
+)
+
+const closeSlotContentSheet = () => {
+  slotContentTarget.value = null
+  slotContentFilter.value = 'all'
 }
 
-const openWidgetReplaceSheet = (tileId) => {
-  if (!layoutEditMode.value || !isReplaceableWidgetTile(tileId)) return
-  const pageIndex = tilePageIndexMap.value.get(tileId)
-  if (typeof pageIndex !== 'number') return
+const closeHomeContentLibrary = () => {
+  libraryPlacementTileId.value = ''
+}
 
-  widgetReplaceTarget.value = {
-    tileId,
-    label: widgetCandidateLabel(tileId),
-    size: tileSizeKeyForId(tileId),
-    pageIndex,
-  }
-  selectedTileId.value = tileId
+const selectHomeLibraryCandidate = (tileId) => {
+  if (!layoutEditMode.value || !tileId) return
+  if (!availableHomeSlotCandidates.value.includes(tileId)) return
+  closeSlotContentSheet()
+  libraryPlacementTileId.value = libraryPlacementTileId.value === tileId ? '' : tileId
+  selectedTileId.value = ''
   maybeVibrate(8)
 }
 
-const replaceWidgetAtTarget = (replacementTileId) => {
-  const target = widgetReplaceTarget.value
-  if (!target?.tileId || !replacementTileId) return
+const isHomeLibraryCandidateSelected = (tileId) => libraryPlacementTileId.value === tileId
 
-  const nextPages = widgetPages.value.map((page) => [...page])
-  nextPages.forEach((page) => {
-    for (let index = page.length - 1; index >= 0; index -= 1) {
-      if (page[index] === replacementTileId) {
-        page.splice(index, 1)
-      }
-    }
-  })
+const canPlaceLibraryCandidateInSlot = (slot) =>
+  !!libraryPlacementTileId.value && canTileFitTemplateSlot(libraryPlacementTileId.value, slot)
 
-  const targetPage = nextPages[target.pageIndex]
-  if (!targetPage) return
-
-  const targetIndex = targetPage.indexOf(target.tileId)
-  if (targetIndex < 0) return
-
-  targetPage[targetIndex] = replacementTileId
-  systemStore.setHomeWidgetPages(nextPages)
-  selectedTileId.value = replacementTileId
-  closeWidgetReplaceSheet()
-  triggerDroppedTileFeedback(replacementTileId)
-  triggerLayoutToast(t('组件已更换', 'Widget changed'))
+const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
+  if (!layoutEditMode.value || !slot || !libraryPlacementTileId.value) return
+  const tileId = libraryPlacementTileId.value
+  if (!canPlaceLibraryCandidateInSlot(slot)) {
+    triggerLayoutToast(t('尺寸不适合此槽位', 'Item does not fit this slot'))
+    maybeVibrate(6)
+    return
+  }
+  const placed = systemStore.setHomeLayoutSlotPlacement(pageIndex, slot.id, tileId)
+  if (!placed) return
+  closeHomeContentLibrary()
+  selectedTileId.value = tileId
+  triggerDroppedTileFeedback(tileId)
+  triggerLayoutToast(t('已放入槽位', 'Added to slot'))
   maybeVibrate(12)
+  systemStore.saveNow()
+}
+
+const openSlotContentSheet = (pageIndex, slot, tileId = '') => {
+  if (!layoutEditMode.value || !slot) return
+  closeHomeContentLibrary()
+  selectedTileId.value = tileId || ''
+  slotContentTarget.value = {
+    pageIndex,
+    slot,
+    slotIndex: homeLayoutSlotIndex(slot),
+    tileId,
+    label: tileId ? slotCandidateLabel(tileId) : '',
+  }
+  slotContentFilter.value = 'all'
+  maybeVibrate(8)
+}
+
+const placeTileInSlotTarget = (tileId) => {
+  const target = slotContentTarget.value
+  if (!target?.slot || !tileId) return
+  if (!canTileFitTemplateSlot(tileId, target.slot)) return
+
+  if (target.tileId && target.tileId !== tileId) {
+    removeTileFromHome(target.tileId)
+  }
+  const placed = systemStore.setHomeLayoutSlotPlacement(target.pageIndex, target.slot.id, tileId)
+  if (!placed) return
+  selectedTileId.value = tileId
+  closeSlotContentSheet()
+  triggerDroppedTileFeedback(tileId)
+  triggerLayoutToast(t('已放入槽位', 'Added to slot'))
+  maybeVibrate(12)
+  systemStore.saveNow()
+}
+
+const removeTileFromHome = (tileId) => {
+  if (!canHideTile(tileId)) return false
+  const nextPages = widgetPages.value.map((page) => page.filter((id) => id !== tileId))
+  systemStore.setHomeWidgetPages(nextPages)
+  if (dragTileId.value === tileId) {
+    resetDragState()
+  }
+  if (libraryPlacementTileId.value === tileId) {
+    libraryPlacementTileId.value = ''
+  }
+  if (selectedTileId.value === tileId) {
+    selectedTileId.value = ''
+  }
+  if (openFolderTileId.value === tileId) {
+    closeHomeFolder()
+  }
+  return true
+}
+
+const clearSlotContentTarget = () => {
+  const target = slotContentTarget.value
+  if (!target?.tileId) return
+  systemStore.clearHomeLayoutSlotPlacement(target.pageIndex, target.slot.id)
+  if (!removeTileFromHome(target.tileId)) return
+  closeSlotContentSheet()
+  triggerLayoutToast(t('槽位已清空', 'Slot cleared'))
+  maybeVibrate(10)
   systemStore.saveNow()
 }
 
@@ -592,6 +779,39 @@ const openAppById = (tileId) => {
   triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`))
 }
 
+const openCustomWidgetAction = (tileId) => {
+  if (layoutEditMode.value) return
+  if (Date.now() < ignoreAppOpenUntil.value) return
+
+  const action = customWidgetAction(tileId)
+  if (action.type === CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP) {
+    const tile = widgetRegistry[action.target]
+    if (!tile || (action.target === 'app_control_center' && !isWorldHubInstalled.value)) {
+      triggerLayoutToast(t('应用未安装', 'App not installed'))
+      return
+    }
+    openAppById(action.target)
+    return
+  }
+
+  if (action.type !== CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM) return
+
+  const target = resolveCustomWidgetSystemActionTarget(action.target)
+  if (!target?.route) return
+
+  maybeVibrate(8)
+  if (target.route === '/home') {
+    router.push({ path: '/home', query: { homePage: String(homeReturnPageForCurrentView.value) } })
+    return
+  }
+
+  router.push(
+    buildRouteWithReturnSource(target.route, 'home', {
+      homePage: homeReturnPageForCurrentView.value,
+    }),
+  )
+}
+
 const openLeftPageUtilityEntry = (entry) => {
   if (layoutEditMode.value) return
 
@@ -639,10 +859,11 @@ const enterWidgetLayoutMode = () => {
   resetDragState()
   layoutEditMode.value = true
   selectedTileId.value = ''
-  closeWidgetReplaceSheet()
+  closeSlotContentSheet()
+  closeHomeContentLibrary()
   clearTilePressed()
   ignoreAppOpenUntil.value = Date.now() + 420
-  triggerLayoutToast(t('点击组件进行同尺寸更换', 'Tap a widget to change it'))
+  triggerLayoutToast(t('点击槽位更换内容', 'Tap a slot to change content'))
   maybeVibrate(16)
 }
 
@@ -926,8 +1147,6 @@ const startTileDrag = (tileId, event) => {
 
   if (!canFreelyMoveHomeTiles.value) return
 
-  closeWidgetReplaceSheet()
-
   selectedTileId.value = tileId
   syncDragGhostSize(event)
   syncDragGhostPosition(event)
@@ -1024,28 +1243,38 @@ const stopTileDrag = (event) => {
   resetDragState()
 }
 
+const openTileSlotContentSheet = (tileId) => {
+  if (!layoutEditMode.value) return
+  const pageIndex = tilePageIndexMap.value.get(tileId)
+  if (typeof pageIndex !== 'number') return
+  const assignment = homeLayoutAssignmentForPage(pageIndex)
+  const placement = assignment.placements.find((item) => item.tileId === tileId)
+  if (!placement?.slot) return
+  openSlotContentSheet(pageIndex, placement.slot, tileId)
+}
+
 const onTileClick = (tileId) => {
   if (!layoutEditMode.value) return
   if (Date.now() < ignoreAppOpenUntil.value) return
-  if (isReplaceableWidgetTile(tileId)) {
-    openWidgetReplaceSheet(tileId)
-    return
-  }
+  openTileSlotContentSheet(tileId)
+  if (slotContentTarget.value?.tileId === tileId) return
   if (!canFreelyMoveHomeTiles.value) return
   selectTileForLayout(tileId)
 }
 
 const clearSelectedTile = () => {
   selectedTileId.value = ''
-  closeWidgetReplaceSheet()
+  closeSlotContentSheet()
+  closeHomeContentLibrary()
   maybeVibrate(8)
 }
 
 const onGridClick = (pageIndex, event) => {
+  if (isLibraryPlacementActive.value) return
   if (!layoutEditMode.value || !selectedTileId.value) return
   if (!canFreelyMoveHomeTiles.value) return
   if (hasActiveDrag.value) return
-  if (widgetReplaceTarget.value) return
+  if (slotContentTarget.value) return
 
   const target = event.target
   if (!(target instanceof HTMLElement)) return
@@ -1069,10 +1298,11 @@ const onGridClick = (pageIndex, event) => {
 }
 
 const onLayoutSlotClick = (pageIndex, slotIndex) => {
+  if (isLibraryPlacementActive.value) return
   if (!layoutEditMode.value || !selectedTileId.value) return
   if (!canFreelyMoveHomeTiles.value) return
   if (hasActiveDrag.value) return
-  if (widgetReplaceTarget.value) return
+  if (slotContentTarget.value) return
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
@@ -1084,22 +1314,9 @@ const onLayoutSlotClick = (pageIndex, slotIndex) => {
 
 const hideTileFromHome = (tileId) => {
   if (!canFreelyMoveHomeTiles.value) return
-  if (!canHideTile(tileId)) return
-  const nextPages = widgetPages.value.map((page) => page.filter((id) => id !== tileId))
-  systemStore.setHomeWidgetPages(nextPages)
-  if (dragTileId.value === tileId) {
-    resetDragState()
-  }
-  if (selectedTileId.value === tileId) {
-    selectedTileId.value = ''
-  }
-  if (widgetReplaceTarget.value?.tileId === tileId) {
-    closeWidgetReplaceSheet()
-  }
-  if (openFolderTileId.value === tileId) {
-    closeHomeFolder()
-  }
-  triggerLayoutToast(t('组件已隐藏', 'Widget hidden'))
+  if (!removeTileFromHome(tileId)) return
+  closeSlotContentSheet()
+  triggerLayoutToast(t('入口已移除', 'Entry removed'))
   maybeVibrate(10)
   systemStore.saveNow()
 }
@@ -1122,7 +1339,8 @@ const resetHomeLayout = async () => {
 const exitLayoutMode = () => {
   resetDragState()
   selectedTileId.value = ''
-  closeWidgetReplaceSheet()
+  closeSlotContentSheet()
+  closeHomeContentLibrary()
   clearTilePressed()
   dragEdgeDirection.value = ''
   layoutEditMode.value = false
@@ -1130,17 +1348,23 @@ const exitLayoutMode = () => {
   systemStore.saveNow()
 }
 
-if (widgetEditRouteRequested.value) {
+const consumeWidgetEditRouteRequest = () => {
+  if (!widgetEditRouteRequested.value) return
   enterWidgetLayoutMode()
   const homePage = normalizeHomePageQuery(route.query.homePage)
   router.replace(homePage ? { path: '/home', query: { homePage } } : '/home')
 }
+
+watch(() => [route.query.widgetEdit, route.query.homePage], consumeWidgetEditRouteRequest, {
+  immediate: true,
+})
 
 onBeforeUnmount(() => {
   clearLongPressTimer()
   clearWidgetEntryLongPressTimer()
   resetDragState()
   closeHomeFolder()
+  closeSlotContentSheet()
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   if (droppedTileTimerId) clearTimeout(droppedTileTimerId)
 })
@@ -1159,18 +1383,32 @@ onBeforeUnmount(() => {
     @mouseleave="onMouseUp"
   >
     <div v-if="layoutEditMode" class="home-edit-topbar" data-no-layout-longpress>
-      <button v-if="canFreelyMoveHomeTiles" @click="resetHomeLayout" class="home-edit-btn">
+      <button v-if="canFreelyMoveHomeTiles" @click="resetHomeLayout" class="home-edit-btn is-quiet">
         {{ t('重置', 'Reset') }}
       </button>
-      <span v-else class="home-edit-spacer" aria-hidden="true"></span>
-      <span class="home-edit-title">
-        {{ canFreelyMoveHomeTiles ? t('主屏位置', 'Home Layout') : t('更换组件', 'Change Widgets') }}
+      <span v-else class="home-edit-mode-pill">
+        <i class="fas fa-mobile-screen"></i>
+        {{ t('主屏', 'Home') }}
+      </span>
+      <span class="home-edit-title-wrap">
+        <strong class="home-edit-title">{{ t('自定义主屏', 'Customize Home') }}</strong>
+        <small class="home-edit-subtitle">{{ homeEditScopeLabel }}</small>
         <span v-if="selectedTileId" class="home-edit-tip">
-          {{ canFreelyMoveHomeTiles ? t(' · 已选择项目', ' · Item selected') : t(' · 已选择组件', ' · Widget selected') }}
+          {{ t('已选择内容', 'Item selected') }}
         </span>
       </span>
       <div class="home-edit-actions">
         <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">{{ t('取消', 'Clear') }}</button>
+        <button
+          v-if="availableHomeLibraryCandidates.length > 0"
+          type="button"
+          class="home-edit-btn"
+          :class="{ 'is-active': isLibraryPlacementActive }"
+          @click="isLibraryPlacementActive ? closeHomeContentLibrary() : selectHomeLibraryCandidate(availableHomeLibraryCandidates[0].tileId)"
+        >
+          <i class="fas fa-layer-group"></i>
+          <span>{{ availableHomeLibraryCandidates.length }}</span>
+        </button>
         <button @click="exitLayoutMode" class="home-edit-btn is-primary">{{ t('完成', 'Done') }}</button>
       </div>
     </div>
@@ -1180,48 +1418,111 @@ onBeforeUnmount(() => {
       <span>{{ layoutToastText }}</span>
     </div>
 
-    <div v-if="widgetReplaceTarget" class="home-widget-replace-sheet" data-no-layout-longpress>
-      <div class="home-widget-replace-head">
+    <div
+      v-if="layoutEditMode && availableHomeLibraryCandidates.length > 0"
+      class="home-content-library"
+      data-no-layout-longpress
+    >
+      <div class="home-content-library-head">
+        <span>
+          <i class="fas fa-layer-group"></i>
+          {{ t('内容库', 'Library') }}
+        </span>
+        <strong>{{ selectedHomeLibraryCandidate?.label || t('未选择', 'None selected') }}</strong>
+      </div>
+      <div class="home-content-library-row">
+        <button
+          v-for="candidate in availableHomeLibraryCandidates"
+          :key="candidate.tileId"
+          type="button"
+          class="home-content-library-item"
+          :class="{ 'is-active': isHomeLibraryCandidateSelected(candidate.tileId) }"
+          :data-testid="`home-library-candidate-${candidate.tileId}`"
+          @click="selectHomeLibraryCandidate(candidate.tileId)"
+        >
+          <span
+            class="home-content-library-icon"
+            :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
+          >
+            <i :class="candidate.icon"></i>
+          </span>
+          <span class="home-content-library-copy">
+            <strong>{{ candidate.label }}</strong>
+            <small>{{ candidate.size }}</small>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="slotContentTarget" class="home-slot-content-sheet" data-no-layout-longpress>
+      <div class="home-slot-content-head">
         <div>
-          <span>{{ widgetReplaceTarget.size }}</span>
-          <h2>{{ t('更换组件', 'Change Widget') }}</h2>
-          <p>{{ widgetReplaceTarget.label }} · {{ homePageLabel(widgetReplaceTarget.pageIndex) }}</p>
+          <span>{{ slotContentTarget.slot.size }}</span>
+          <h2>{{ slotContentTargetTitle }}</h2>
+          <p>
+            {{
+              slotContentTarget.label
+                ? `${slotContentTarget.label} · ${homePageLabel(slotContentTarget.pageIndex)}`
+                : homePageLabel(slotContentTarget.pageIndex)
+            }}
+          </p>
         </div>
         <button
-          class="home-widget-replace-close"
+          class="home-slot-content-close"
           type="button"
-          @click="closeWidgetReplaceSheet"
+          @click="closeSlotContentSheet"
           :aria-label="t('关闭', 'Close')"
         >
           <i class="fas fa-xmark"></i>
         </button>
       </div>
-      <div v-if="widgetReplaceCandidates.length > 0" class="home-widget-replace-list">
+      <div class="home-slot-content-filters" role="tablist" :aria-label="t('内容类型', 'Content types')">
         <button
-          v-for="candidate in widgetReplaceCandidates"
-          :key="candidate.tileId"
-          class="home-widget-replace-option"
+          v-for="filter in SLOT_CONTENT_FILTERS"
+          :key="filter"
           type="button"
-          @click="replaceWidgetAtTarget(candidate.tileId)"
+          class="home-slot-content-filter"
+          :class="{ 'is-active': slotContentFilter === filter }"
+          role="tab"
+          :aria-selected="slotContentFilter === filter"
+          @click="slotContentFilter = filter"
         >
-          <span class="home-widget-replace-icon">
+          {{ slotContentFilterLabel(filter) }}
+        </button>
+      </div>
+      <div v-if="slotContentCandidates.length > 0" class="home-slot-content-list">
+        <button
+          v-for="candidate in slotContentCandidates"
+          :key="candidate.tileId"
+          class="home-slot-content-option"
+          type="button"
+          :data-testid="`home-slot-candidate-${candidate.tileId}`"
+          @click="placeTileInSlotTarget(candidate.tileId)"
+        >
+          <span
+            class="home-slot-content-icon"
+            :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
+          >
             <i :class="candidate.icon"></i>
           </span>
-          <span class="home-widget-replace-copy">
+          <span class="home-slot-content-copy">
             <strong>{{ candidate.label }}</strong>
-            <small>
-              {{
-                typeof candidate.pageIndex === 'number'
-                  ? `${homePageLabel(candidate.pageIndex)} · ${t('将替换当前位置', 'Swap into this slot')}`
-                  : t('可加入当前位置', 'Available here')
-              }}
-            </small>
+            <small>{{ candidate.size }}</small>
           </span>
         </button>
       </div>
-      <p v-else class="home-widget-replace-empty">
-        {{ t('暂无同尺寸组件。', 'No same-size widgets yet.') }}
+      <p v-else class="home-slot-content-empty">
+        {{ t('暂无适合此槽位的内容。', 'No available content fits this slot.') }}
       </p>
+      <button
+        v-if="slotContentTarget.tileId && canHideTile(slotContentTarget.tileId)"
+        type="button"
+        class="home-slot-clear-btn"
+        @click="clearSlotContentTarget"
+      >
+        <i class="fas fa-minus"></i>
+        <span>{{ t('清空槽位', 'Clear Slot') }}</span>
+      </button>
     </div>
 
     <div v-if="layoutEditMode && hasActiveDrag" class="home-drag-edge-hints" aria-hidden="true">
@@ -1338,18 +1639,161 @@ onBeforeUnmount(() => {
             :data-home-grid-page="pageIndex"
             @click="onGridClick(pageIndex, $event)"
           >
-            <template v-for="tileId in page" :key="tileId">
+            <template v-for="placement in homeLayoutAssignmentForPage(pageIndex).placements" :key="placement.tileId">
               <div
                 :class="[
                   'home-tile',
-                  tileMeta(tileId)?.span || 'col-span-1 row-span-1',
+                  'home-layout-tile',
                   {
-                    'is-layout-dragging': canFreelyMoveHomeTiles && dragTileId === tileId,
-                    'is-layout-selected': isTileSelected(tileId),
-                    'is-pressed': pressedTileId === tileId,
-                    'is-drop-confirm': droppedTileId === tileId,
+                    'is-template-scaled': !placement.isExactSize,
+                  },
+                  {
+                    'is-layout-dragging': canFreelyMoveHomeTiles && dragTileId === placement.tileId,
+                    'is-layout-selected': isTileSelected(placement.tileId),
+                    'is-pressed': pressedTileId === placement.tileId,
+                    'is-drop-confirm': droppedTileId === placement.tileId,
                   },
                 ]"
+                :data-home-tile-id="placement.tileId"
+                :data-home-slot-id="placement.slot.id"
+                :data-home-slot-size="placement.slot.size"
+                :style="homeLayoutPlacementStyle(placement)"
+                @click.stop="onTileClick(placement.tileId)"
+                @pointerdown="startTileDrag(placement.tileId, $event)"
+                @pointermove="onTilePointerMove"
+                @pointerup="stopTileDrag"
+                @pointercancel="stopTileDrag"
+              >
+                <button
+                  v-if="layoutEditMode && canFreelyMoveHomeTiles && canHideTile(placement.tileId)"
+                  class="home-edit-hide"
+                  @pointerdown.stop
+                  @click.stop="hideTileFromHome(placement.tileId)"
+                  :title="t('隐藏', 'Hide')"
+                  data-no-layout-longpress
+                >
+                  <i class="fas fa-minus"></i>
+                </button>
+                <div v-if="isTileSelected(placement.tileId)" class="home-edit-selected-badge">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div
+                  v-if="layoutEditMode && !placement.isExactSize"
+                  class="home-template-scale-badge"
+                >
+                  {{ tileSizeKeyForId(placement.tileId) }}
+                </div>
+
+                <template v-if="tileMeta(placement.tileId)?.kind === 'widget'">
+                  <div class="home-widget-card" v-if="tileMeta(placement.tileId)?.variant === 'weather'">
+                    <div class="home-widget-topline">
+                      <i class="fas fa-location-dot"></i>
+                      <span>{{ t('东京', 'Tokyo') }}</span>
+                    </div>
+                    <div class="home-widget-temp">18°</div>
+                    <div class="home-widget-bottomline">
+                      <i class="fas fa-sun home-accent"></i>
+                      <span>{{ t('晴朗', 'Clear') }}</span>
+                    </div>
+                  </div>
+
+                  <div class="home-widget-card home-widget-center" v-else-if="tileMeta(placement.tileId)?.variant === 'calendar'">
+                    <span class="home-calendar-week">{{
+                      today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })
+                    }}</span>
+                    <span class="home-calendar-day">{{ today.getDate() }}</span>
+                  </div>
+
+                  <div class="home-widget-card home-widget-music" v-else-if="tileMeta(placement.tileId)?.variant === 'music'">
+                    <div class="home-music-cover"></div>
+                    <div class="home-music-meta">
+                      <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
+                      <h3>{{ t('晚间电台', 'Evening Radio') }}</h3>
+                      <p>{{ t('日常播放列表', 'Daily Mix') }}</p>
+                      <div class="home-progress">
+                        <div class="home-progress-fill"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="home-widget-card" v-else-if="tileMeta(placement.tileId)?.variant === 'system'">
+                    <div class="home-widget-topline">
+                      <i class="fas fa-microchip"></i>
+                      <span>{{ t('系统', 'System') }}</span>
+                    </div>
+                    <div class="home-widget-bottomline">
+                      <span>{{ t('电量 86%', 'Battery 86%') }}</span>
+                    </div>
+                    <div class="home-progress">
+                      <div class="home-progress-fill home-progress-fill-system"></div>
+                    </div>
+                  </div>
+
+                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(placement.tileId)?.variant === 'heart'">
+                    <i class="fas fa-heart"></i>
+                  </button>
+
+                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(placement.tileId)?.variant === 'disc'">
+                    <i class="fas fa-compact-disc"></i>
+                  </button>
+                </template>
+
+                <button class="home-app-tile" v-else-if="tileMeta(placement.tileId)?.kind === 'app'" @click="openAppById(placement.tileId)">
+                  <span class="home-app-icon" :style="iconStyle(tileMeta(placement.tileId).accent)">
+                    <i :class="tileMeta(placement.tileId).icon"></i>
+                  </span>
+                  <span class="home-app-label">{{ tileMeta(placement.tileId).label }}</span>
+                </button>
+
+                <button
+                  class="home-app-tile home-folder-tile"
+                  v-else-if="tileMeta(placement.tileId)?.kind === HOME_FOLDER_TILE_KIND"
+                  @click="openAppById(placement.tileId)"
+                  :data-testid="`home-folder-${placement.tileId}`"
+                >
+                  <span class="home-app-icon home-folder-icon" :style="iconStyle(tileMeta(placement.tileId).accent)">
+                    <span class="home-folder-preview-grid" aria-hidden="true">
+                      <span
+                        v-for="entry in tileMeta(placement.tileId).childEntries.slice(0, 4)"
+                        :key="entry.key"
+                        class="home-folder-preview-cell"
+                      >
+                        <i :class="entry.icon"></i>
+                      </span>
+                    </span>
+                  </span>
+                  <span class="home-app-label">{{ tileMeta(placement.tileId).label }}</span>
+                </button>
+
+                <div class="home-custom-widget-card" v-else-if="tileMeta(placement.tileId)?.kind === 'custom_widget'">
+                  <iframe
+                    class="home-custom-widget-frame"
+                    :class="{
+                      'is-editing': layoutEditMode,
+                      'is-actionable': customWidgetHasAction(placement.tileId),
+                    }"
+                    :srcdoc="customWidgetSrcDoc(placement.tileId)"
+                    sandbox="allow-scripts"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  ></iframe>
+                  <button
+                    v-if="!layoutEditMode && customWidgetHasAction(placement.tileId)"
+                    class="home-custom-widget-action"
+                    type="button"
+                    :aria-label="customWidgetActionLabel(placement.tileId)"
+                    :data-testid="`home-custom-widget-action-${placement.tileId}`"
+                    @click.stop="openCustomWidgetAction(placement.tileId)"
+                  ></button>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="homeLayoutAssignmentForPage(pageIndex).overflow.length > 0">
+              <div
+                v-for="tileId in homeLayoutAssignmentForPage(pageIndex).overflow"
+                :key="`overflow-${tileId}`"
+                class="home-tile home-layout-tile home-overflow-tile"
                 :data-home-tile-id="tileId"
                 @click.stop="onTileClick(tileId)"
                 @pointerdown="startTileDrag(tileId, $event)"
@@ -1367,79 +1811,20 @@ onBeforeUnmount(() => {
                 >
                   <i class="fas fa-minus"></i>
                 </button>
-                <div v-if="isTileSelected(tileId)" class="home-edit-selected-badge">
-                  <i class="fas fa-check"></i>
-                </div>
-
-                <template v-if="tileMeta(tileId)?.kind === 'widget'">
-                  <div class="home-widget-card" v-if="tileMeta(tileId)?.variant === 'weather'">
-                    <div class="home-widget-topline">
-                      <i class="fas fa-location-dot"></i>
-                      <span>{{ t('东京', 'Tokyo') }}</span>
-                    </div>
-                    <div class="home-widget-temp">18°</div>
-                    <div class="home-widget-bottomline">
-                      <i class="fas fa-sun home-accent"></i>
-                      <span>{{ t('晴朗', 'Clear') }}</span>
-                    </div>
-                  </div>
-
-                  <div class="home-widget-card home-widget-center" v-else-if="tileMeta(tileId)?.variant === 'calendar'">
-                    <span class="home-calendar-week">{{
-                      today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })
-                    }}</span>
-                    <span class="home-calendar-day">{{ today.getDate() }}</span>
-                  </div>
-
-                  <div class="home-widget-card home-widget-music" v-else-if="tileMeta(tileId)?.variant === 'music'">
-                    <div class="home-music-cover"></div>
-                    <div class="home-music-meta">
-                      <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
-                      <h3>{{ t('晚间电台', 'Evening Radio') }}</h3>
-                      <p>{{ t('日常播放列表', 'Daily Mix') }}</p>
-                      <div class="home-progress">
-                        <div class="home-progress-fill"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="home-widget-card" v-else-if="tileMeta(tileId)?.variant === 'system'">
-                    <div class="home-widget-topline">
-                      <i class="fas fa-microchip"></i>
-                      <span>{{ t('系统', 'System') }}</span>
-                    </div>
-                    <div class="home-widget-bottomline">
-                      <span>{{ t('电量 86%', 'Battery 86%') }}</span>
-                    </div>
-                    <div class="home-progress">
-                      <div class="home-progress-fill home-progress-fill-system"></div>
-                    </div>
-                  </div>
-
-                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(tileId)?.variant === 'heart'">
-                    <i class="fas fa-heart"></i>
-                  </button>
-
-                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(tileId)?.variant === 'disc'">
-                    <i class="fas fa-compact-disc"></i>
-                  </button>
-                </template>
-
-                <button class="home-app-tile" v-else-if="tileMeta(tileId)?.kind === 'app'" @click="openAppById(tileId)">
-                  <span class="home-app-icon" :style="iconStyle(tileMeta(tileId).accent)">
-                    <i :class="tileMeta(tileId).icon"></i>
-                  </span>
-                  <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
-                </button>
-
                 <button
-                  class="home-app-tile home-folder-tile"
-                  v-else-if="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
+                  v-if="tileMeta(tileId)?.kind === 'app' || tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
+                  class="home-app-tile"
+                  :class="{ 'home-folder-tile': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
                   @click="openAppById(tileId)"
-                  :data-testid="`home-folder-${tileId}`"
+                  :data-testid="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND ? `home-folder-${tileId}` : undefined"
                 >
-                  <span class="home-app-icon home-folder-icon" :style="iconStyle(tileMeta(tileId).accent)">
-                    <span class="home-folder-preview-grid" aria-hidden="true">
+                  <span
+                    class="home-app-icon"
+                    :class="{ 'home-folder-icon': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
+                    :style="iconStyle(tileMeta(tileId).accent)"
+                  >
+                    <i v-if="tileMeta(tileId)?.kind === 'app'" :class="tileMeta(tileId).icon"></i>
+                    <span v-else class="home-folder-preview-grid" aria-hidden="true">
                       <span
                         v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
                         :key="entry.key"
@@ -1451,16 +1836,9 @@ onBeforeUnmount(() => {
                   </span>
                   <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
                 </button>
-
-                <div class="home-custom-widget-card" v-else-if="tileMeta(tileId)?.kind === 'custom_widget'">
-                  <iframe
-                    class="home-custom-widget-frame"
-                    :class="{ 'is-editing': layoutEditMode }"
-                    :srcdoc="customWidgetSrcDoc(tileId)"
-                    sandbox="allow-scripts"
-                    loading="lazy"
-                    referrerpolicy="no-referrer"
-                  ></iframe>
+                <div v-else class="home-widget-card home-overflow-widget">
+                  <i :class="widgetCandidateIcon(tileId)"></i>
+                  <span>{{ widgetCandidateLabel(tileId) }}</span>
                 </div>
               </div>
             </template>
@@ -1468,12 +1846,15 @@ onBeforeUnmount(() => {
 
           <div v-if="layoutEditMode && canFreelyMoveHomeTiles" class="home-grid-slot-overlay" aria-hidden="true">
             <button
-              v-for="slotIndex in layoutSlotIndices"
-              :key="`slot-${pageIndex}-${slotIndex}`"
+              v-for="slot in homeLayoutTemplateForPage(pageIndex).slots"
+              :key="`slot-${pageIndex}-${slot.id}`"
               class="home-grid-slot"
-              :data-home-slot-index="slotIndex"
+              :class="homeLayoutSlotSizeClass(slot.size)"
+              :style="homeLayoutSlotToGridStyle(slot)"
+              :data-home-slot-index="homeLayoutSlotIndex(slot)"
               :data-home-slot-page="pageIndex"
-              @click.stop="onLayoutSlotClick(pageIndex, slotIndex)"
+              :data-home-template-slot-id="slot.id"
+              @click.stop="onLayoutSlotClick(pageIndex, homeLayoutSlotIndex(slot))"
             ></button>
             <div
               v-if="dragPreviewAreaStyleForPage(pageIndex)"
@@ -1481,8 +1862,70 @@ onBeforeUnmount(() => {
               :style="dragPreviewAreaStyleForPage(pageIndex)"
             ></div>
           </div>
+
+          <div v-if="layoutEditMode" class="home-template-slot-overlay" aria-hidden="true">
+            <span
+              v-for="slot in homeLayoutAssignmentForPage(pageIndex).emptySlots"
+              :key="slot.id"
+              class="home-template-slot"
+              :class="homeLayoutSlotSizeClass(slot.size)"
+              :style="homeLayoutSlotToGridStyle(slot)"
+            >
+              <small>{{ slot.size }}</small>
+            </span>
+          </div>
+          <div v-if="layoutEditMode" class="home-empty-slot-action-overlay">
+            <button
+              v-for="slot in homeLayoutAssignmentForPage(pageIndex).emptySlots"
+              :key="`empty-action-${pageIndex}-${slot.id}`"
+              class="home-empty-slot-action"
+              :class="[
+                homeLayoutSlotSizeClass(slot.size),
+                {
+                  'is-library-target': isLibraryPlacementActive,
+                  'is-compatible': canPlaceLibraryCandidateInSlot(slot),
+                },
+              ]"
+              :style="homeLayoutSlotToGridStyle(slot)"
+              type="button"
+              :data-testid="`home-empty-slot-${pageIndex}-${slot.id}`"
+              @click.stop="isLibraryPlacementActive ? placeSelectedLibraryCandidateInSlot(pageIndex, slot) : openSlotContentSheet(pageIndex, slot)"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
         </div>
       </section>
+    </div>
+
+    <div v-if="layoutEditMode" class="home-template-picker" data-no-layout-longpress>
+      <div class="home-template-picker-head">
+        <span>{{ t('模板', 'Templates') }}</span>
+        <strong>{{ homePageLabel(homeReturnPageForCurrentView) }}</strong>
+      </div>
+      <div class="home-template-list" role="listbox" :aria-label="t('主屏布局模板', 'Home layout templates')">
+        <button
+          v-for="template in HOME_LAYOUT_TEMPLATES"
+          :key="template.id"
+          type="button"
+          class="home-template-card"
+          :class="{ 'is-active': isHomeLayoutTemplateSelected(template.id) }"
+          role="option"
+          :aria-selected="isHomeLayoutTemplateSelected(template.id)"
+          @click="selectHomeLayoutTemplate(template.id)"
+        >
+          <span class="home-template-preview" aria-hidden="true">
+            <span
+              v-for="slot in template.slots"
+              :key="slot.id"
+              class="home-template-preview-slot"
+              :class="`is-size-${slot.size.replace('x', '-')}`"
+              :style="homeLayoutSlotToGridStyle(slot)"
+            ></span>
+          </span>
+          <span class="home-template-name">{{ homeLayoutTemplateLabel(template) }}</span>
+        </button>
+      </div>
     </div>
 
     <div class="home-bottom-area" :class="{ 'is-editing': layoutEditMode }" data-no-layout-longpress>
@@ -1568,8 +2011,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 18px;
+  padding: 9px 10px;
+  border-radius: 20px;
   background: rgba(20, 24, 34, 0.52);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
@@ -1583,15 +2026,47 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
-.home-edit-spacer {
-  width: 54px;
-  flex: 0 0 auto;
+.home-edit-mode-pill {
+  min-width: 64px;
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.home-edit-title-wrap {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .home-edit-title {
   color: #fff;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 750;
+  letter-spacing: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-edit-subtitle {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 700;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -1599,8 +2074,10 @@ onBeforeUnmount(() => {
 }
 
 .home-edit-tip {
-  font-weight: 500;
-  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 700;
 }
 
 .home-layout-toast {
@@ -1623,23 +2100,139 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(var(--system-blur-md));
 }
 
-.home-widget-replace-sheet {
+.home-content-library {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 92px;
+  z-index: 66;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(18, 24, 33, 0.58);
+  box-shadow: 0 18px 42px rgba(8, 13, 22, 0.18);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+}
+
+.home-content-library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 3px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.home-content-library-head span,
+.home-content-library-head strong {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-content-library-head strong {
+  justify-content: flex-end;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 750;
+}
+
+.home-content-library-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-content-library-row::-webkit-scrollbar {
+  display: none;
+}
+
+.home-content-library-item {
+  min-width: 112px;
+  max-width: 132px;
+  height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-content-library-item.is-active {
+  border-color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.home-content-library-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 13px;
+}
+
+.home-content-library-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-content-library-copy strong,
+.home-content-library-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-content-library-copy strong {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.home-content-library-copy small {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.home-slot-content-sheet {
   position: absolute;
   left: 12px;
   right: 12px;
   bottom: calc(96px + env(safe-area-inset-bottom));
-  z-index: 66;
+  z-index: 67;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(19, 25, 34, 0.72);
-  box-shadow: 0 24px 54px rgba(8, 13, 22, 0.28);
+  background: rgba(19, 25, 34, 0.74);
+  box-shadow: 0 24px 54px rgba(8, 13, 22, 0.3);
   color: #fff;
   padding: 12px;
   backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
   -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.14);
 }
 
-.home-widget-replace-head {
+.home-slot-content-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1647,7 +2240,7 @@ onBeforeUnmount(() => {
   margin-bottom: 10px;
 }
 
-.home-widget-replace-head span {
+.home-slot-content-head span {
   display: inline-flex;
   align-items: center;
   min-height: 20px;
@@ -1659,7 +2252,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.home-widget-replace-head h2 {
+.home-slot-content-head h2 {
   margin: 6px 0 2px;
   font-size: 15px;
   line-height: 1.15;
@@ -1667,14 +2260,14 @@ onBeforeUnmount(() => {
   letter-spacing: 0;
 }
 
-.home-widget-replace-head p {
+.home-slot-content-head p {
   margin: 0;
   color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
   line-height: 1.35;
 }
 
-.home-widget-replace-close {
+.home-slot-content-close {
   width: 34px;
   height: 34px;
   border: 0;
@@ -1687,38 +2280,70 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.home-widget-replace-list {
+.home-slot-content-filters {
   display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.home-slot-content-filter {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0 5px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.home-slot-content-filter.is-active {
+  border-color: rgba(255, 255, 255, 0.46);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.home-slot-content-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 210px;
+  max-height: 214px;
   overflow-y: auto;
   padding-right: 2px;
 }
 
-.home-widget-replace-option {
-  min-height: 52px;
+.home-slot-content-option {
+  min-width: 0;
+  min-height: 58px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 18px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   padding: 8px;
   color: #fff;
   background: rgba(255, 255, 255, 0.1);
   text-align: left;
   cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
-.home-widget-replace-option:active {
+.home-slot-content-option:active {
   transform: scale(0.98);
   background: rgba(255, 255, 255, 0.17);
 }
 
-.home-widget-replace-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 13px;
+.home-slot-content-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -1727,15 +2352,15 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-.home-widget-replace-copy {
+.home-slot-content-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.home-widget-replace-copy strong,
-.home-widget-replace-copy small {
+.home-slot-content-copy strong,
+.home-slot-content-copy small {
   display: block;
   max-width: 100%;
   overflow: hidden;
@@ -1743,18 +2368,18 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.home-widget-replace-copy strong {
+.home-slot-content-copy strong {
   font-size: 12px;
   line-height: 1.25;
 }
 
-.home-widget-replace-copy small {
+.home-slot-content-copy small {
   color: rgba(255, 255, 255, 0.66);
   font-size: 10px;
   line-height: 1.25;
 }
 
-.home-widget-replace-empty {
+.home-slot-content-empty {
   margin: 0;
   border-radius: 18px;
   padding: 14px;
@@ -1762,6 +2387,27 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.72);
   text-align: center;
   font-size: 12px;
+}
+
+.home-slot-clear-btn {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: rgba(254, 226, 226, 0.95);
+  background: rgba(127, 29, 29, 0.18);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.home-slot-clear-btn:active {
+  transform: scale(0.99);
 }
 
 .home-drag-edge-hints {
@@ -1806,11 +2452,21 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   font-size: 11px;
   line-height: 1;
   min-height: 28px;
+  min-width: 34px;
   padding: 7px 10px;
   background: rgba(255, 255, 255, 0.12);
+}
+
+.home-edit-btn.is-quiet {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .home-edit-btn.is-primary {
@@ -1818,9 +2474,47 @@ onBeforeUnmount(() => {
   border-color: var(--system-accent);
 }
 
+.home-edit-btn.is-active {
+  color: rgba(18, 26, 36, 0.92);
+  background: rgba(255, 255, 255, 0.86);
+}
+
 .home-tile {
   position: relative;
   z-index: 2;
+}
+
+.home-layout-tile {
+  min-width: 0;
+  min-height: 0;
+}
+
+.home-layout-tile.is-template-scaled .home-widget-card,
+.home-layout-tile.is-template-scaled .home-custom-widget-card {
+  border-style: dashed;
+}
+
+.home-overflow-tile {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.home-overflow-widget {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  color: var(--home-text-main);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.home-overflow-widget span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-tile.is-pressed .home-widget-card,
@@ -1879,8 +2573,168 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
 }
 
+.home-template-scale-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 22;
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(18, 26, 36, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 800;
+  pointer-events: none;
+}
+
 .home-grid-wrap {
   position: relative;
+}
+
+.home-template-picker {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: calc(128px + env(safe-area-inset-bottom));
+  z-index: 58;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.055)),
+    rgba(18, 23, 30, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 24px 54px rgba(8, 13, 22, 0.28);
+  color: #fff;
+  padding: 10px 10px 12px;
+  backdrop-filter: blur(var(--system-blur-lg)) saturate(1.16);
+  -webkit-backdrop-filter: blur(var(--system-blur-lg)) saturate(1.16);
+}
+
+.home-template-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+}
+
+.home-template-picker-head span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-template-picker-head strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.home-template-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 74px;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 1px 1px 2px;
+  scrollbar-width: none;
+}
+
+.home-template-list::-webkit-scrollbar {
+  display: none;
+}
+
+.home-template-card {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 6px 7px;
+  color: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.115), rgba(255, 255, 255, 0.045)),
+    rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.home-template-card:active {
+  transform: scale(0.97);
+}
+
+.home-template-card.is-active {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.095)),
+    rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 24px rgba(8, 13, 22, 0.22);
+}
+
+.home-template-preview {
+  position: relative;
+  height: 78px;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 3px;
+  padding: 5px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 10%, rgba(255, 255, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(8, 13, 20, 0.18)),
+    rgba(8, 13, 20, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.home-template-preview-slot {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(228, 231, 235, 0.22)),
+    rgba(235, 238, 241, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 6px rgba(8, 13, 22, 0.09);
+}
+
+.home-template-preview-slot.is-size-1-1 {
+  border-radius: 7px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(231, 234, 237, 0.26)),
+    rgba(238, 241, 244, 0.34);
+}
+
+.home-template-preview-slot.is-size-4-3 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(222, 226, 230, 0.18)),
+    rgba(246, 247, 248, 0.22);
+}
+
+.home-template-name {
+  display: block;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-left-page {
@@ -2144,14 +2998,17 @@ onBeforeUnmount(() => {
 .home-grid-slot-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(6, 78px);
   gap: 12px;
+  pointer-events: none;
 }
 
 .home-grid-slot {
+  min-width: 0;
+  min-height: 0;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.075);
@@ -2159,6 +3016,7 @@ onBeforeUnmount(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset 0 0 0 1px rgba(15, 23, 42, 0.045);
   transition: background 120ms ease, border-color 120ms ease;
+  pointer-events: auto;
 }
 
 .home-grid-slot:active {
@@ -2177,7 +3035,120 @@ onBeforeUnmount(() => {
   transition: all 150ms cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
+.home-template-slot-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, 78px);
+  gap: 12px;
+}
+
+.home-template-slot {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 22px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.38);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 24px rgba(8, 13, 22, 0.08);
+}
+
+.home-template-slot.is-size-1-1 {
+  border-radius: 19px;
+  padding: 6px;
+}
+
+.home-template-slot small {
+  min-width: 0;
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.74);
+  background: rgba(13, 19, 28, 0.24);
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.home-empty-slot-action-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, 78px);
+  gap: 12px;
+  pointer-events: none;
+}
+
+.home-empty-slot-action {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 22px;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.82);
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.home-empty-slot-action i {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 26, 36, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  font-size: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 16px rgba(8, 13, 22, 0.12);
+}
+
+.home-empty-slot-action:active {
+  transform: scale(0.98);
+  color: #fff;
+}
+
+.home-empty-slot-action.is-size-1-1 {
+  border-radius: 19px;
+}
+
+.home-empty-slot-action.is-library-target {
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.home-empty-slot-action.is-library-target i {
+  background: rgba(18, 26, 36, 0.22);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.home-empty-slot-action.is-library-target.is-compatible {
+  color: #fff;
+}
+
+.home-empty-slot-action.is-library-target.is-compatible i {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
 .home-custom-widget-card {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: var(--system-radius-lg);
@@ -2197,6 +3168,25 @@ onBeforeUnmount(() => {
 
 .home-custom-widget-frame.is-editing {
   pointer-events: none;
+}
+
+.home-custom-widget-frame.is-actionable {
+  pointer-events: none;
+}
+
+.home-custom-widget-action {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.home-custom-widget-action:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.78);
+  outline-offset: -4px;
 }
 
 .home-folder-tile {
@@ -2257,7 +3247,8 @@ onBeforeUnmount(() => {
 }
 
 .home-bottom-area.is-editing {
-  opacity: 0.72;
+  opacity: 0.54;
+  pointer-events: none;
 }
 
 .home-left-dot {

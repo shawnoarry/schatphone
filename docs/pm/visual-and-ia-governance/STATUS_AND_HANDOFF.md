@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-24
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -21,18 +21,24 @@ What is already landed:
 9. Contacts memory review now includes lifecycle status and note management, making the role hub feel functionally complete enough to leave 4.1 and move on.
 10. Home now has a product-decision baseline for a template-slot desktop layout system in `docs/product-decisions/HOME_DESKTOP_LAYOUT_SYSTEM.md`.
 11. External visual reference assets are documented as a cross-PC confirmed path in `docs/references/VISUAL_ASSET_LIBRARY.md`.
+12. Home now has a first-pass neutral template library: six abstract 4-column x 6-row layouts, per-formal-page template selection, explicit slot placement records, edit-mode grayscale slot previews, local slot content replacement, and a lightweight edit-mode content library for unplaced entries.
+13. Home slot editing is now content-type mixed: apps, folders, built-in widgets, and custom widgets can be placed when they fit the selected slot. Widget Center remains the widget creation/import and edit-entry surface; Appearance may later expose broader template management; App Store-like surfaces should remain app-entry visibility management only.
+14. Custom widget actions now have a first-pass functional loop: Widget Center stores optional click action metadata outside imported code, Home executes whitelisted app/system targets in normal mode, and edit mode still uses taps for slot editing.
+15. The first cross-entry visual pass is landed for Home customization: `主屏 / 桌面 / Home` is documented as a system desktop layer, not a visible app; `组件 / Widgets`, `外观 / Appearance`, and `更多 / More` now expose coordinated UI entry points into desktop editing without making App Library-like behavior a real download store.
 
 Still incomplete:
 
 1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes;
 2. some pages still mix destructive actions and ordinary edits too closely;
 3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
+4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add a fuller App Library / recovery manager and per-instance action overrides if users need the same widget definition to behave differently in different slots.
 
 ## 2. Recommended Next Slice
 
-1. Continue Contacts detail item-level IA polish before broad visual repainting.
-2. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
-3. Continue isolating destructive actions visually and structurally from normal edit flows.
+1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides if needed and fuller App Library entry management.
+2. After the loop is stable, polish the related UI surfaces together: desktop edit mode, `组件 / Widgets`, `外观 / Appearance`, and the App Library/App Store-like app-entry manager in `更多 / More`.
+3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
+4. Continue isolating destructive actions visually and structurally from normal edit flows.
 
 ## 3. Do Not Do
 

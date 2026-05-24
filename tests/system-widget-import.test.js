@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import {
+  CUSTOM_WIDGET_ACTION_TYPE_NONE,
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP,
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
+} from '../src/lib/custom-widget-actions'
+import { DEFAULT_HOME_LAYOUT_TEMPLATE_ID } from '../src/lib/home-layout-templates'
 import { useSystemStore } from '../src/stores/system'
 
 const snapshotWidgetState = (store) =>
@@ -9,6 +15,7 @@ const snapshotWidgetState = (store) =>
       name: item.name,
       size: item.size,
       code: item.code,
+      action: item.action,
       createdAt: item.createdAt,
     })),
     homeWidgetPages: store.settings.appearance.homeWidgetPages.map((page) => [...page]),
@@ -84,6 +91,44 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
   })
 
+  test('stores custom widget actions as UI metadata outside import code', () => {
+    const store = useSystemStore()
+
+    const widgetId = store.addCustomWidget({
+      name: 'Action Widget',
+      size: '2x2',
+      code: '<div>Action</div>',
+      action: { type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, target: 'app_chat' },
+      pageIndex: null,
+      placeOnHome: false,
+    })
+
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === widgetId)?.action).toEqual({
+      type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP,
+      target: 'app_chat',
+    })
+
+    expect(
+      store.updateCustomWidget(widgetId, {
+        action: { type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM, target: 'appearance' },
+      }),
+    ).toBe(true)
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === widgetId)?.action).toEqual({
+      type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
+      target: 'appearance',
+    })
+
+    expect(
+      store.updateCustomWidget(widgetId, {
+        action: { type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, target: 'javascript:alert(1)' },
+      }),
+    ).toBe(true)
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === widgetId)?.action).toEqual({
+      type: CUSTOM_WIDGET_ACTION_TYPE_NONE,
+      target: '',
+    })
+  })
+
   test('restores built-in widgets to their default page order', () => {
     const store = useSystemStore()
     store.setHomeWidgetPages([['calendar'], ['weather', 'music']])
@@ -137,10 +182,25 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_reminders')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_reminders')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_food_delivery')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
+  })
+
+  test('allows user-managed Home app entries to stay removed until reset', () => {
+    const store = useSystemStore()
+
+    store.setHomeWidgetPages([['weather'], [], [], [], []])
+
+    const flattened = store.settings.appearance.homeWidgetPages.flat()
+    expect(flattened).toContain('weather')
+    expect(flattened).not.toContain('app_network')
+    expect(flattened).not.toContain('app_chat')
+
+    store.resetHomeWidgetPages()
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
   })
 
   test('runtime control toggle restores and removes the optional World Hub Home entry', () => {
@@ -156,6 +216,56 @@ describe('system widget import safety', () => {
 
     store.setMoreFeatureToggle('control_center', false)
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
+  })
+
+  test('persists neutral Home layout template choices per formal page', () => {
+    const store = useSystemStore()
+
+    expect(store.settings.appearance.homeLayoutTemplateIds).toHaveLength(5)
+    expect(store.settings.appearance.homeLayoutSlotPlacements).toHaveLength(5)
+
+    store.setHomeLayoutTemplate(2, 'layout-e')
+    expect(store.settings.appearance.homeLayoutTemplateIds[2]).toBe('layout-e')
+
+    store.setHomeLayoutTemplate(2, 'not-a-layout')
+    expect(store.settings.appearance.homeLayoutTemplateIds[2]).toBe('layout-e')
+
+    store.setHomeLayoutTemplate(7, 'layout-c')
+    expect(store.settings.appearance.homeLayoutTemplateIds).toHaveLength(8)
+    expect(store.settings.appearance.homeLayoutTemplateIds[7]).toBe('layout-c')
+
+    store.resetHomeWidgetPages()
+    expect(store.settings.appearance.homeLayoutTemplateIds).toHaveLength(5)
+    expect(store.settings.appearance.homeLayoutTemplateIds).toContain(DEFAULT_HOME_LAYOUT_TEMPLATE_ID)
+  })
+
+  test('stores explicit Home slot placements without disabling recovery pages', () => {
+    const store = useSystemStore()
+
+    store.setHomeWidgetPages([['weather', 'music'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-c')
+
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-wide', 'music')).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
+      slotId: 'c-wide',
+      tileId: 'music',
+    })
+
+    store.setHomeLayoutTemplate(0, 'layout-e')
+    expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).not.toContainEqual({
+      slotId: 'c-wide',
+      tileId: 'music',
+    })
+
+    expect(store.setHomeLayoutSlotPlacement(0, 'e-wide', 'music')).toBe(true)
+    expect(store.clearHomeLayoutSlotPlacement(0, 'e-wide')).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).not.toContainEqual({
+      slotId: 'e-wide',
+      tileId: 'music',
+    })
   })
 
   test('blocks invalid JSON and keeps previous state unchanged', () => {
@@ -199,6 +309,7 @@ describe('system widget import safety', () => {
           name: 'Widget B',
           size: '2x1',
           code: '<div>B</div>',
+          action: { type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, target: 'app_chat' },
           id: 'hack',
           foo: 'bar',
         },
@@ -210,5 +321,9 @@ describe('system widget import safety', () => {
     expect(result.importedCount).toBe(1)
     expect(result.warnings.length).toBeGreaterThan(0)
     expect(result.warnings[0]?.code).toBe('IGNORED_FIELDS')
+    expect(store.settings.appearance.customWidgets.find((item) => item.id === result.importedIds[0])?.action).toEqual({
+      type: CUSTOM_WIDGET_ACTION_TYPE_NONE,
+      target: '',
+    })
   })
 })

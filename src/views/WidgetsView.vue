@@ -12,6 +12,14 @@ import {
   resolveReturnLabel,
 } from '../lib/navigation-return'
 import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
+import {
+  CUSTOM_WIDGET_ACTION_APP_TARGETS,
+  CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS,
+  CUSTOM_WIDGET_ACTION_TYPE_NONE,
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP,
+  CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
+  normalizeCustomWidgetAction,
+} from '../lib/custom-widget-actions'
 
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
 const BUILT_IN_WIDGET_OPTIONS = [
@@ -51,6 +59,8 @@ const templateCopied = ref(false)
 const customWidgetName = ref('')
 const customWidgetSize = ref('2x2')
 const customWidgetCode = ref('')
+const customWidgetActionType = ref(CUSTOM_WIDGET_ACTION_TYPE_NONE)
+const customWidgetActionTarget = ref('')
 const editingWidgetId = ref('')
 const importJsonText = ref('')
 const importFeedbackType = ref('')
@@ -69,6 +79,32 @@ const panels = computed(() => [
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const hasCustomWidgets = computed(() => customWidgets.value.length > 0)
+const customWidgetActionTypes = computed(() => [
+  { id: CUSTOM_WIDGET_ACTION_TYPE_NONE, label: t('无动作', 'No action') },
+  { id: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, label: t('打开 APP', 'Open app') },
+  { id: CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM, label: t('打开系统入口', 'Open system entry') },
+])
+const customWidgetAppActionTargets = computed(() =>
+  CUSTOM_WIDGET_ACTION_APP_TARGETS.map((target) => ({
+    id: target.id,
+    label: t(target.labelZh, target.labelEn),
+  })),
+)
+const customWidgetSystemActionTargets = computed(() =>
+  CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS.map((target) => ({
+    id: target.id,
+    label: t(target.labelZh, target.labelEn),
+  })),
+)
+const currentCustomWidgetActionTargets = computed(() => {
+  if (customWidgetActionType.value === CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP) {
+    return customWidgetAppActionTargets.value
+  }
+  if (customWidgetActionType.value === CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM) {
+    return customWidgetSystemActionTargets.value
+  }
+  return []
+})
 const editingCustomWidget = computed(() =>
   customWidgets.value.find((widget) => widget.id === editingWidgetId.value) || null,
 )
@@ -154,6 +190,38 @@ const builtInWidgetStates = computed(() =>
   }),
 )
 
+const ensureCustomWidgetActionTarget = () => {
+  const targets = currentCustomWidgetActionTargets.value
+  if (customWidgetActionType.value === CUSTOM_WIDGET_ACTION_TYPE_NONE) {
+    customWidgetActionTarget.value = ''
+    return
+  }
+  if (!targets.some((target) => target.id === customWidgetActionTarget.value)) {
+    customWidgetActionTarget.value = targets[0]?.id || ''
+  }
+}
+
+const normalizeCustomWidgetFormAction = () => {
+  ensureCustomWidgetActionTarget()
+  return normalizeCustomWidgetAction({
+    type: customWidgetActionType.value,
+    target: customWidgetActionTarget.value,
+  })
+}
+
+const customWidgetActionLabel = (actionInput) => {
+  const action = normalizeCustomWidgetAction(actionInput)
+  if (action.type === CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP) {
+    const target = customWidgetAppActionTargets.value.find((item) => item.id === action.target)
+    return target ? t('打开 ', 'Opens ') + target.label : t('打开 APP', 'Opens app')
+  }
+  if (action.type === CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM) {
+    const target = customWidgetSystemActionTargets.value.find((item) => item.id === action.target)
+    return target ? t('打开 ', 'Opens ') + target.label : t('打开系统入口', 'Opens system entry')
+  }
+  return t('无点击动作', 'No click action')
+}
+
 const openPanel = (panelId) => {
   activePanel.value = panelId
 }
@@ -180,6 +248,15 @@ const openHomeWidgetEdit = () => {
   )
 }
 
+const openAppearance = () => {
+  const source = returnLabelKey.value === 'Settings' ? 'settings' : 'home'
+  router.push(
+    buildRouteWithReturnSource('/appearance', source, {
+      ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
+    }),
+  )
+}
+
 const restoreBuiltInWidget = (tileId) => {
   const ok = systemStore.restoreBuiltInWidgetTile(tileId)
   if (!ok) {
@@ -195,14 +272,20 @@ const resetCustomWidgetForm = () => {
   customWidgetName.value = ''
   customWidgetSize.value = '2x2'
   customWidgetCode.value = ''
+  customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
+  customWidgetActionTarget.value = ''
 }
 
 const startEditCustomWidget = (widget) => {
+  const action = normalizeCustomWidgetAction(widget.action)
   activePanel.value = 'custom'
   editingWidgetId.value = widget.id
   customWidgetName.value = widget.name || ''
   customWidgetSize.value = widget.size || '2x2'
   customWidgetCode.value = widget.code || ''
+  customWidgetActionType.value = action.type
+  customWidgetActionTarget.value = action.target
+  ensureCustomWidgetActionTarget()
 }
 
 const submitCustomWidget = () => {
@@ -218,6 +301,7 @@ const submitCustomWidget = () => {
       ? editingCustomWidget.value?.size || customWidgetSize.value
       : customWidgetSize.value,
     code,
+    action: normalizeCustomWidgetFormAction(),
   }
 
   if (editingWidgetId.value) {
@@ -417,11 +501,32 @@ onBeforeUnmount(() => {
     </nav>
 
     <main class="widgets-content no-scrollbar">
+      <section class="widgets-bridge-panel">
+        <button class="widgets-bridge-action is-primary" type="button" @click="openHomeWidgetEdit">
+          <span class="widgets-bridge-icon">
+            <i class="fas fa-mobile-screen"></i>
+          </span>
+          <span>
+            <strong>{{ t('编辑主屏', 'Edit Home') }}</strong>
+            <small>{{ t('桌面槽位', 'Home slots') }}</small>
+          </span>
+        </button>
+        <button class="widgets-bridge-action" type="button" @click="openAppearance">
+          <span class="widgets-bridge-icon">
+            <i class="fas fa-palette"></i>
+          </span>
+          <span>
+            <strong>{{ t('外观', 'Appearance') }}</strong>
+            <small>{{ t('主题与布局', 'Themes and layout') }}</small>
+          </span>
+        </button>
+      </section>
+
       <section v-if="activePanel === 'library'" class="widgets-section">
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('内置组件', 'Built-in widgets') }}</h2>
-            <p>{{ t('这里只恢复默认组件；更换主屏位置请进入组件编辑。', 'Restore default widgets here; change Home slots in widget edit mode.') }}</p>
+            <p>{{ t('这里管理可用组件；具体放在哪个桌面槽位，由主屏编辑态决定。', 'Manage available widgets here; Home edit mode decides the slot.') }}</p>
           </div>
           <button class="widgets-secondary-btn" type="button" @click="openHomeWidgetEdit">
             <i class="fas fa-table-cells"></i>
@@ -485,6 +590,46 @@ onBeforeUnmount(() => {
             </label>
           </div>
 
+          <div class="widgets-action-config">
+            <div class="widgets-action-config-head">
+              <span>
+                <i class="fas fa-arrow-pointer"></i>
+                {{ t('点击动作', 'Click action') }}
+              </span>
+              <strong>{{ customWidgetActionType === CUSTOM_WIDGET_ACTION_TYPE_NONE ? t('无动作', 'No action') : t('已配置', 'Configured') }}</strong>
+            </div>
+            <div class="widgets-form-grid">
+            <label class="widgets-field">
+              <span>{{ t('动作类型', 'Action type') }}</span>
+              <select v-model="customWidgetActionType" @change="ensureCustomWidgetActionTarget">
+                <option
+                  v-for="actionType in customWidgetActionTypes"
+                  :key="actionType.id"
+                  :value="actionType.id"
+                >
+                  {{ actionType.label }}
+                </option>
+              </select>
+            </label>
+
+            <label
+              v-if="customWidgetActionType !== CUSTOM_WIDGET_ACTION_TYPE_NONE"
+              class="widgets-field"
+              >
+              <span>{{ t('目标入口', 'Target') }}</span>
+              <select v-model="customWidgetActionTarget">
+                <option
+                  v-for="target in currentCustomWidgetActionTargets"
+                  :key="target.id"
+                  :value="target.id"
+                >
+                  {{ target.label }}
+                </option>
+              </select>
+            </label>
+            </div>
+          </div>
+
           <label class="widgets-field">
             <span>{{ t('Widget 内容', 'Widget content') }}</span>
             <textarea
@@ -517,7 +662,11 @@ onBeforeUnmount(() => {
           <article v-for="widget in customWidgets" :key="widget.id" class="widgets-created-item">
             <div>
               <h4>{{ widget.name }}</h4>
-              <p>{{ widget.size }} · {{ widgetPageLabel(widget.id) }}</p>
+              <div class="widgets-created-meta">
+                <span>{{ widget.size }}</span>
+                <span>{{ widgetPageLabel(widget.id) }}</span>
+                <span>{{ customWidgetActionLabel(widget.action) }}</span>
+              </div>
             </div>
             <div class="widgets-created-actions">
               <button type="button" @click="startEditCustomWidget(widget)">{{ t('编辑', 'Edit') }}</button>
@@ -629,6 +778,7 @@ onBeforeUnmount(() => {
 .widgets-action-btn,
 .widgets-primary-btn,
 .widgets-secondary-btn,
+.widgets-bridge-action,
 .widgets-created-actions button {
   border: 0;
   cursor: pointer;
@@ -696,14 +846,81 @@ onBeforeUnmount(() => {
 .widgets-home-btn:active,
 .widgets-action-btn:active,
 .widgets-primary-btn:active,
-.widgets-secondary-btn:active {
+.widgets-secondary-btn:active,
+.widgets-bridge-action:active {
   transform: scale(0.97);
 }
 
 .widgets-content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 16px 104px;
+  padding: 10px 16px 104px;
+}
+
+.widgets-bridge-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.widgets-bridge-action {
+  min-height: 60px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 19px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  color: var(--system-text);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-control);
+  text-align: left;
+  transition: transform var(--system-motion-fast), background var(--system-motion-fast);
+}
+
+.widgets-bridge-action.is-primary {
+  color: var(--system-text-inverse);
+  background: var(--system-accent);
+  border-color: var(--system-accent);
+}
+
+.widgets-bridge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--system-control-bg);
+  color: var(--system-text);
+}
+
+.widgets-bridge-action.is-primary .widgets-bridge-icon {
+  color: var(--system-accent);
+  background: var(--system-text-inverse);
+}
+
+.widgets-bridge-action strong,
+.widgets-bridge-action small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widgets-bridge-action strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.widgets-bridge-action small {
+  margin-top: 2px;
+  opacity: 0.72;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .widgets-section {
@@ -899,6 +1116,41 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.widgets-action-config {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 20px;
+  background: var(--system-surface-muted);
+  padding: 11px;
+}
+
+.widgets-action-config-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.widgets-action-config-head span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.widgets-action-config-head strong {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  border: 1px solid var(--system-control-border);
+  font-size: 10px;
+}
+
 .widgets-form-actions,
 .widgets-import-actions {
   display: flex;
@@ -949,6 +1201,28 @@ onBeforeUnmount(() => {
 .widgets-created-item h4 {
   font-size: 14px;
   font-weight: 700;
+}
+
+.widgets-created-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.widgets-created-meta span {
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  border: 1px solid var(--system-subtle-border);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .widgets-created-actions {
@@ -1050,11 +1324,16 @@ onBeforeUnmount(() => {
 @media (max-width: 380px) {
   .widgets-section-head,
   .widgets-head-actions,
+  .widgets-bridge-panel,
   .widgets-library-item,
   .widgets-form-actions,
   .widgets-import-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .widgets-bridge-panel {
+    grid-template-columns: 1fr;
   }
 
   .widgets-select-field select {

@@ -7,6 +7,7 @@ import ShoppingView from '../src/views/ShoppingView.vue'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 import AssetsView from '../src/views/AssetsView.vue'
 import ControlCenterView from '../src/views/ControlCenterView.vue'
+import { CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP } from '../src/lib/custom-widget-actions'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -115,6 +116,168 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('shows neutral Home layout templates in edit mode and saves the current page choice', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=2')
+    await router.isReady()
+    const store = useSystemStore()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.home-template-picker').exists()).toBe(true)
+    expect(wrapper.findAll('.home-template-card')).toHaveLength(6)
+    expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
+    expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
+    expect(wrapper.find('[data-home-tile-id="app_reminders"]').attributes('data-home-slot-id')).toBeTruthy()
+
+    await wrapper.findAll('.home-template-card')[4].trigger('click')
+
+    expect(store.settings.appearance.homeLayoutTemplateIds[2]).toBe('layout-e')
+    expect(wrapper.findAll('.home-template-card')[4].classes()).toContain('is-active')
+    wrapper.unmount()
+  })
+
+  test('adds available content from an empty template slot in edit mode', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_gallery')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-large',
+      tileId: 'app_gallery',
+    })
+    expect(wrapper.find('[data-home-tile-id="app_gallery"]').exists()).toBe(true)
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('restores unplaced content through the edit-mode Home library', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const galleryCandidate = wrapper.find('[data-testid="home-library-candidate-app_gallery"]')
+    expect(galleryCandidate.exists()).toBe(true)
+
+    await galleryCandidate.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(galleryCandidate.classes()).toContain('is-active')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-large"]').classes()).toContain('is-compatible')
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_gallery')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-large',
+      tileId: 'app_gallery',
+    })
+    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('changes and clears content from a filled template slot in edit mode', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], ['app_gallery']])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+    vi.advanceTimersByTime(500)
+
+    await wrapper.find('[data-home-tile-id="app_gallery"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
+    expect(wrapper.find('.home-slot-content-head').text()).toContain('相册')
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_network"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="home-slot-candidate-app_network"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_gallery')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-small-1',
+      tileId: 'app_network',
+    })
+
+    vi.advanceTimersByTime(500)
+    await wrapper.find('[data-home-tile-id="app_network"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('.home-slot-clear-btn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).not.toContainEqual({
+      slotId: 'b-small-1',
+      tileId: 'app_network',
+    })
+    expect(wrapper.find('[data-home-tile-id="app_network"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   test('shows App not installed feedback for locked -1 shortcuts', async () => {
     const router = createTestRouter()
     await router.push('/home')
@@ -134,6 +297,44 @@ describe('Home folder entries', () => {
 
     expect(wrapper.find('.home-layout-toast').exists()).toBe(true)
     expect(router.currentRoute.value.path).toBe('/home')
+    wrapper.unmount()
+  })
+
+  test('opens configured custom widget actions from the current formal Home page', async () => {
+    const router = createTestRouter()
+    await router.push('/home?homePage=2')
+    await router.isReady()
+    const store = useSystemStore()
+    const widgetId = store.addCustomWidget({
+      name: 'Chat Shortcut',
+      size: '2x2',
+      code: '<div>Chat</div>',
+      action: { type: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, target: 'app_chat' },
+      pageIndex: 2,
+    })
+    store.setHomeLayoutTemplate(2, 'layout-e')
+    store.setHomeLayoutSlotPlacement(2, 'e-top-left', widgetId)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const actionButton = wrapper.find(`[data-testid="home-custom-widget-action-${widgetId}"]`)
+    expect(actionButton.exists()).toBe(true)
+
+    await actionButton.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/chat')
+    expect(router.currentRoute.value.query.from).toBe('home')
+    expect(router.currentRoute.value.query.homePage).toBe('2')
     wrapper.unmount()
   })
 
@@ -238,8 +439,8 @@ describe('Home folder entries', () => {
     const flattened = store.settings.appearance.homeWidgetPages.flat()
     expect(flattened).not.toContain('app_files')
     expect(flattened).toContain('app_shopping')
-    expect(flattened).toContain('app_reminders')
-    expect(flattened).toContain('app_food_delivery')
+    expect(flattened).not.toContain('app_reminders')
+    expect(flattened).not.toContain('app_food_delivery')
     expect(flattened).toContain('app_assets')
   })
 })

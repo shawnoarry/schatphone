@@ -22,6 +22,18 @@ import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-s
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl } from '../lib/ai'
 import {
+  assignHomeLayoutSlots,
+  createDefaultHomeLayoutTemplateIds,
+  getHomeLayoutTemplate,
+  normalizeHomeLayoutSlotPlacements,
+  normalizeHomeLayoutTemplateId,
+  normalizeHomeLayoutTemplateIds,
+} from '../lib/home-layout-templates'
+import {
+  DEFAULT_CUSTOM_WIDGET_ACTION,
+  normalizeCustomWidgetAction,
+} from '../lib/custom-widget-actions'
+import {
   PROFILE_TEMPLATE_SCOPES,
   cloneProfileTemplate,
   createDefaultProfileTemplatePresets,
@@ -121,14 +133,6 @@ const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page, pageIndex)
   ]
 })
 
-const LOCKED_HOME_TILE_IDS = DEFAULT_WIDGET_PAGES
-  .flat()
-  .filter(
-    (tileId) =>
-      typeof tileId === 'string' &&
-      tileId.startsWith('app_') &&
-      !OPTIONAL_HOME_TILE_IDS.has(tileId),
-  )
 const DEFAULT_TILE_PAGE_INDEX = Object.fromEntries(
   DEFAULT_HOME_TILE_ORDER_PAGES.flatMap((page, pageIndex) =>
     page.map((tileId) => [tileId, pageIndex]),
@@ -268,6 +272,12 @@ const toInt = (value, fallback = 0) => {
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 const cloneDefaultWidgetPages = () => DEFAULT_WIDGET_PAGES.map((page) => [...page])
+const cloneDefaultHomeLayoutTemplateIds = () => createDefaultHomeLayoutTemplateIds(MIN_HOME_PAGES)
+const cloneDefaultHomeLayoutSlotPlacements = () => {
+  const pages = cloneDefaultWidgetPages()
+  const templateIds = cloneDefaultHomeLayoutTemplateIds()
+  return createHomeLayoutSlotPlacementsFromPages(pages, templateIds)
+}
 
 const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
   const order = DEFAULT_HOME_TILE_ORDER_PAGES[pageIndex] || []
@@ -748,6 +758,7 @@ const normalizeCustomWidgets = (widgetsInput) => {
         name,
         size: normalizeCustomWidgetSize(widget.size),
         code,
+        action: normalizeCustomWidgetAction(widget.action),
         createdAt:
           typeof widget.createdAt === 'number' && Number.isFinite(widget.createdAt)
             ? widget.createdAt
@@ -792,17 +803,28 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => 
 
   const withMinimumPages = ensureMinimumHomePages(normalized)
 
-  LOCKED_HOME_TILE_IDS.forEach((tileId) => {
-    if (seen.has(tileId)) return
-    const targetPage = DEFAULT_TILE_PAGE_INDEX[tileId] ?? 0
-    while (withMinimumPages.length <= targetPage) {
-      withMinimumPages.push([])
-    }
-    withMinimumPages[targetPage].push(tileId)
-    seen.add(tileId)
-  })
-
   return withMinimumPages
+}
+
+const homeTileSizeKey = (tileId) => {
+  if (tileId === 'music') return '4x2'
+  if (tileId === 'quick_heart' || tileId === 'quick_disc') return '1x1'
+  if (typeof tileId === 'string' && tileId.startsWith('app_')) return '1x1'
+  return '2x2'
+}
+
+const createHomeLayoutSlotPlacementsFromPages = (pages, templateIds) => {
+  const normalizedTemplateIds = normalizeHomeLayoutTemplateIds(
+    templateIds,
+    Array.isArray(pages) ? pages.length || MIN_HOME_PAGES : MIN_HOME_PAGES,
+  )
+  return (Array.isArray(pages) ? pages : []).map((page, pageIndex) => {
+    const template = getHomeLayoutTemplate(normalizedTemplateIds[pageIndex])
+    return assignHomeLayoutSlots(page, template, homeTileSizeKey).placements.map((placement) => ({
+      slotId: placement.slot.id,
+      tileId: placement.tileId,
+    }))
+  })
 }
 
 const createCustomWidgetId = () =>
@@ -1103,6 +1125,8 @@ export const useSystemStore = defineStore('system', () => {
       customVars: {},
       appIconOverrides: {},
       homeWidgetPages: cloneDefaultWidgetPages(),
+      homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
+      homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
       customWidgets: [],
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
     },
@@ -1178,6 +1202,29 @@ export const useSystemStore = defineStore('system', () => {
       enabledOptionalTileIds: currentEnabledOptionalHomeTileIds(),
     })
 
+  const normalizeHomeLayoutTemplateIdsForCurrentPages = (templateIds) =>
+    normalizeHomeLayoutTemplateIds(templateIds, settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES)
+
+  const normalizeHomeLayoutSlotPlacementsForCurrentSettings = (slotPlacements) =>
+    normalizeHomeLayoutSlotPlacements(
+      slotPlacements,
+      settings.appearance.homeWidgetPages,
+      settings.appearance.homeLayoutTemplateIds,
+    )
+
+  const syncHomeLayoutSlotPlacementsFromPages = () => {
+    settings.appearance.homeLayoutSlotPlacements = createHomeLayoutSlotPlacementsFromPages(
+      settings.appearance.homeWidgetPages,
+      settings.appearance.homeLayoutTemplateIds,
+    )
+  }
+
+  const normalizeCurrentHomeLayoutSlotPlacements = () => {
+    settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacementsForCurrentSettings(
+      settings.appearance.homeLayoutSlotPlacements,
+    )
+  }
+
   const getThemeById = (themeId = '') => {
     const normalizedThemeId = normalizeThemeId(themeId, '')
     if (!normalizedThemeId) return availableThemes.value[0] || null
@@ -1241,6 +1288,7 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )
+    normalizeCurrentHomeLayoutSlotPlacements()
     return settings.appearance.homeWidgetPages
   }
 
@@ -1482,20 +1530,112 @@ export const useSystemStore = defineStore('system', () => {
 
   const setHomeWidgetPages = (pages) => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(pages)
+    settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIdsForCurrentPages(
+      settings.appearance.homeLayoutTemplateIds,
+    )
+    normalizeCurrentHomeLayoutSlotPlacements()
   }
 
   const resetHomeWidgetPages = () => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       cloneDefaultWidgetPages(),
     )
+    settings.appearance.homeLayoutTemplateIds = cloneDefaultHomeLayoutTemplateIds()
+    syncHomeLayoutSlotPlacementsFromPages()
   }
 
-  const addCustomWidget = ({ name, size, code, pageIndex = 0, placeOnHome = true } = {}) => {
+  const setHomeLayoutTemplate = (pageIndex, templateId) => {
+    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    const pageCount = Math.max(
+      MIN_HOME_PAGES,
+      settings.appearance.homeWidgetPages.length,
+      normalizedPageIndex + 1,
+    )
+    const nextTemplateIds = normalizeHomeLayoutTemplateIds(
+      settings.appearance.homeLayoutTemplateIds,
+      pageCount,
+    )
+    nextTemplateIds[normalizedPageIndex] = normalizeHomeLayoutTemplateId(
+      templateId,
+      nextTemplateIds[normalizedPageIndex],
+    )
+    settings.appearance.homeLayoutTemplateIds = nextTemplateIds
+    normalizeCurrentHomeLayoutSlotPlacements()
+  }
+
+  const setHomeLayoutSlotPlacement = (pageIndex, slotId, tileId) => {
+    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : ''
+    const normalizedTileId = typeof tileId === 'string' ? tileId.trim() : ''
+    if (!normalizedSlotId || !normalizedTileId) return false
+
+    const nextPages = settings.appearance.homeWidgetPages.map((page) =>
+      page.filter((itemId) => itemId !== normalizedTileId),
+    )
+    while (nextPages.length <= normalizedPageIndex) {
+      nextPages.push([])
+    }
+    if (!nextPages[normalizedPageIndex].includes(normalizedTileId)) {
+      nextPages[normalizedPageIndex].push(normalizedTileId)
+    }
+
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIdsForCurrentPages(
+      settings.appearance.homeLayoutTemplateIds,
+    )
+
+    const nextPlacements = settings.appearance.homeLayoutSlotPlacements.map((page) =>
+      Array.isArray(page)
+        ? page.filter(
+            (placement) =>
+              placement?.slotId !== normalizedSlotId && placement?.tileId !== normalizedTileId,
+          )
+        : [],
+    )
+    while (nextPlacements.length <= normalizedPageIndex) {
+      nextPlacements.push([])
+    }
+    nextPlacements[normalizedPageIndex].push({
+      slotId: normalizedSlotId,
+      tileId: normalizedTileId,
+    })
+    settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacementsForCurrentSettings(
+      nextPlacements,
+    )
+    return settings.appearance.homeWidgetPages[normalizedPageIndex]?.includes(normalizedTileId) === true
+  }
+
+  const clearHomeLayoutSlotPlacement = (pageIndex, slotId) => {
+    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : ''
+    if (!normalizedSlotId) return false
+    const currentPage = settings.appearance.homeLayoutSlotPlacements[normalizedPageIndex]
+    if (!Array.isArray(currentPage)) return false
+    const nextPage = currentPage.filter((placement) => placement?.slotId !== normalizedSlotId)
+    if (nextPage.length === currentPage.length) return false
+    const nextPlacements = settings.appearance.homeLayoutSlotPlacements.map((page, index) =>
+      index === normalizedPageIndex ? nextPage : Array.isArray(page) ? [...page] : [],
+    )
+    settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacementsForCurrentSettings(
+      nextPlacements,
+    )
+    return true
+  }
+
+  const addCustomWidget = ({
+    name,
+    size,
+    code,
+    action = DEFAULT_CUSTOM_WIDGET_ACTION,
+    pageIndex = 0,
+    placeOnHome = true,
+  } = {}) => {
     const widget = {
       id: createCustomWidgetId(),
       name: typeof name === 'string' && name.trim() ? name.trim() : '自定义组件',
       size: normalizeCustomWidgetSize(size),
       code: typeof code === 'string' ? code : '',
+      action: normalizeCustomWidgetAction(action),
       createdAt: Date.now(),
     }
 
@@ -1506,6 +1646,7 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.homeWidgetPages,
         currentCustomWidgetIds(),
       )
+      normalizeCurrentHomeLayoutSlotPlacements()
       return widget.id
     }
 
@@ -1518,6 +1659,7 @@ export const useSystemStore = defineStore('system', () => {
 
     nextPages[targetPage].push(widget.id)
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    normalizeCurrentHomeLayoutSlotPlacements()
 
     return widget.id
   }
@@ -1535,6 +1677,10 @@ export const useSystemStore = defineStore('system', () => {
           : current.name,
       size: updates.size ? normalizeCustomWidgetSize(updates.size) : current.size,
       code: typeof updates.code === 'string' ? updates.code : current.code,
+      action:
+        updates.action && typeof updates.action === 'object'
+          ? normalizeCustomWidgetAction(updates.action)
+          : normalizeCustomWidgetAction(current.action),
     }
 
     const nextWidgets = settings.appearance.customWidgets.map((item, idx) => (idx === index ? next : item))
@@ -1543,6 +1689,7 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )
+    normalizeCurrentHomeLayoutSlotPlacements()
     return true
   }
 
@@ -1554,6 +1701,7 @@ export const useSystemStore = defineStore('system', () => {
       page.filter((tileId) => tileId !== widgetId),
     )
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    normalizeCurrentHomeLayoutSlotPlacements()
   }
 
   const placeCustomWidget = (widgetId, pageIndex = 0) => {
@@ -1571,6 +1719,7 @@ export const useSystemStore = defineStore('system', () => {
 
     nextPages[targetPage].push(widgetId)
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    normalizeCurrentHomeLayoutSlotPlacements()
   }
 
   const importCustomWidgets = (importPayload, pageIndex = 0, options = {}) => {
@@ -1592,6 +1741,9 @@ export const useSystemStore = defineStore('system', () => {
 
     const currentWidgetsSnapshot = settings.appearance.customWidgets.map((widget) => ({ ...widget }))
     const currentPagesSnapshot = settings.appearance.homeWidgetPages.map((page) => [...page])
+    const currentPlacementsSnapshot = settings.appearance.homeLayoutSlotPlacements.map((page) =>
+      Array.isArray(page) ? page.map((placement) => ({ ...placement })) : [],
+    )
 
     try {
       const now = Date.now()
@@ -1600,6 +1752,7 @@ export const useSystemStore = defineStore('system', () => {
         name: item.name,
         size: normalizeCustomWidgetSize(item.size),
         code: item.code,
+        action: { ...DEFAULT_CUSTOM_WIDGET_ACTION },
         createdAt: now + index,
       }))
 
@@ -1622,6 +1775,7 @@ export const useSystemStore = defineStore('system', () => {
 
       settings.appearance.customWidgets = mergedWidgets
       settings.appearance.homeWidgetPages = normalizedPages
+      normalizeCurrentHomeLayoutSlotPlacements()
 
       return {
         ok: true,
@@ -1633,6 +1787,7 @@ export const useSystemStore = defineStore('system', () => {
     } catch {
       settings.appearance.customWidgets = currentWidgetsSnapshot
       settings.appearance.homeWidgetPages = currentPagesSnapshot
+      settings.appearance.homeLayoutSlotPlacements = currentPlacementsSnapshot
       return {
         ok: false,
         importedCount: 0,
@@ -1657,6 +1812,7 @@ export const useSystemStore = defineStore('system', () => {
 
     nextPages[targetPage].push(tileId)
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    normalizeCurrentHomeLayoutSlotPlacements()
     return true
   }
 
@@ -1681,6 +1837,7 @@ export const useSystemStore = defineStore('system', () => {
 
     nextPages[targetPage] = insertHomeTileByDefaultOrder(nextPages[targetPage], tileId, targetPage)
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(nextPages)
+    normalizeCurrentHomeLayoutSlotPlacements()
     return true
   }
 
@@ -2782,6 +2939,15 @@ export const useSystemStore = defineStore('system', () => {
         appearance.homeWidgetPages,
         currentCustomWidgetIds(),
       )
+      settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIds(
+        appearance.homeLayoutTemplateIds,
+        settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES,
+      )
+      settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacements(
+        appearance.homeLayoutSlotPlacements,
+        settings.appearance.homeWidgetPages,
+        settings.appearance.homeLayoutTemplateIds,
+      )
     }
 
     if (persisted.settings?.system && typeof persisted.settings.system === 'object') {
@@ -2932,6 +3098,15 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
     )
+    settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIds(
+      settings.appearance.homeLayoutTemplateIds,
+      settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES,
+    )
+    settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacements(
+      settings.appearance.homeLayoutSlotPlacements,
+      settings.appearance.homeWidgetPages,
+      settings.appearance.homeLayoutTemplateIds,
+    )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true
@@ -3018,7 +3193,16 @@ export const useSystemStore = defineStore('system', () => {
             customVars: { ...settings.appearance.customVars },
             appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
-            customWidgets: settings.appearance.customWidgets.map((widget) => ({ ...widget })),
+            homeLayoutTemplateIds: settings.appearance.homeLayoutTemplateIds.map(
+              (templateId) => templateId,
+            ),
+            homeLayoutSlotPlacements: settings.appearance.homeLayoutSlotPlacements.map((page) =>
+              Array.isArray(page) ? page.map((placement) => ({ ...placement })) : [],
+            ),
+            customWidgets: settings.appearance.customWidgets.map((widget) => ({
+              ...widget,
+              action: normalizeCustomWidgetAction(widget.action),
+            })),
           },
           system: { ...settings.system },
           more: {
@@ -3121,6 +3305,9 @@ export const useSystemStore = defineStore('system', () => {
     removeCustomVar,
     setHomeWidgetPages,
     resetHomeWidgetPages,
+    setHomeLayoutTemplate,
+    setHomeLayoutSlotPlacement,
+    clearHomeLayoutSlotPlacement,
     addCustomWidget,
     updateCustomWidget,
     removeCustomWidget,
