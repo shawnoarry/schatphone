@@ -3,9 +3,33 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './style.css'
-import '@fortawesome/fontawesome-free/css/fontawesome.css'
-import '@fortawesome/fontawesome-free/css/solid.css'
-import { ensurePushServiceWorkerRegistration } from './lib/push'
+
+const runAfterFirstPaint = (task) => {
+  if (typeof window === 'undefined') return
+  window.setTimeout(() => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(task, { timeout: 2000 })
+      return
+    }
+    task()
+  }, 0)
+}
+
+const loadDeferredIconStyles = () => {
+  void Promise.all([
+    import('@fortawesome/fontawesome-free/css/fontawesome.css'),
+    import('@fortawesome/fontawesome-free/css/solid.css'),
+  ])
+}
+
+const registerPushServiceWorker = () => {
+  if (typeof window === 'undefined' || window.isSecureContext !== true) return
+  void import('./lib/push')
+    .then(({ ensurePushServiceWorkerRegistration }) => ensurePushServiceWorkerRegistration())
+    .catch(() => {
+      // Notification subscription is still user-driven in Settings.
+    })
+}
 
 if (typeof window !== 'undefined') {
   const lockViewportContent =
@@ -51,8 +75,5 @@ app.use(createPinia())
 app.use(router)
 app.mount('#app')
 
-if (typeof window !== 'undefined' && window.isSecureContext === true) {
-  void ensurePushServiceWorkerRegistration().catch(() => {
-    // Notification subscription is still user-driven in Settings.
-  })
-}
+runAfterFirstPaint(loadDeferredIconStyles)
+runAfterFirstPaint(registerPushServiceWorker)
