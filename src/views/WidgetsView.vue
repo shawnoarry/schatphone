@@ -12,6 +12,7 @@ import {
   resolveReturnLabel,
 } from '../lib/navigation-return'
 import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
+import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../lib/widget-style-presets'
 import {
   CUSTOM_WIDGET_ACTION_APP_TARGETS,
   CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS,
@@ -29,87 +30,6 @@ const BUILT_IN_WIDGET_OPTIONS = [
   { id: 'system', size: '2x2', icon: 'fas fa-sliders', preview: 'system' },
   { id: 'quick_heart', size: '1x1', icon: 'fas fa-heart', preview: 'heart' },
   { id: 'quick_disc', size: '1x1', icon: 'fas fa-compact-disc', preview: 'disc' },
-]
-
-const OFFICIAL_STYLE_PRESETS = [
-  {
-    id: 'polaroid_stack',
-    size: '2x2',
-    preview: 'polaroid',
-    icon: 'fas fa-camera-retro',
-    nameZh: '拍立得叠影',
-    nameEn: 'Polaroid Stack',
-    code: `<style>
-.sp-polaroid{width:100%;height:100%;box-sizing:border-box;padding:13px;border-radius:22px;background:linear-gradient(145deg,#f7f3ed,#d7dce0);position:relative;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#2a2e32}
-.sp-polaroid span{position:absolute;border-radius:14px;background:#fff;box-shadow:0 10px 22px rgba(41,47,54,.16)}
-.sp-polaroid span:nth-child(1){inset:23px 39px 38px 22px;transform:rotate(-8deg);background:linear-gradient(#fff 0 68%,#eee2d4 68% 100%)}
-.sp-polaroid span:nth-child(2){inset:28px 24px 30px 44px;transform:rotate(7deg);background:linear-gradient(#fff 0 68%,#dfe6ea 68% 100%)}
-.sp-polaroid strong{position:absolute;left:18px;bottom:16px;font-size:13px;letter-spacing:.02em}
-</style><div class="sp-polaroid"><span></span><span></span><strong>{{text:caption}}</strong></div>`,
-  },
-  {
-    id: 'glass_orb',
-    size: '2x2',
-    preview: 'orb',
-    icon: 'fas fa-circle-notch',
-    nameZh: '心情玻璃球',
-    nameEn: 'Mood Glass Orb',
-    code: `<style>
-.sp-orb{width:100%;height:100%;display:grid;place-items:center;border-radius:24px;background:radial-gradient(circle at 48% 40%,rgba(255,255,255,.35),rgba(168,183,190,.12) 42%,rgba(66,78,86,.42));overflow:hidden}
-.sp-orb div{width:70%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 32% 22%,rgba(255,255,255,.88),rgba(255,255,255,.22) 24%,rgba(129,148,156,.3) 55%,rgba(44,52,60,.32));border:1px solid rgba(255,255,255,.52);box-shadow:inset 0 0 28px rgba(255,255,255,.34),0 18px 32px rgba(23,31,39,.2);display:grid;place-items:center;color:#fff;font:800 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-</style><div class="sp-orb"><div>{{text:mood}}</div></div>`,
-  },
-  {
-    id: 'island_strip',
-    size: '4x1',
-    preview: 'island',
-    icon: 'fas fa-wave-square',
-    nameZh: '灵动横条',
-    nameEn: 'Island Strip',
-    code: `<style>
-.sp-island{width:100%;height:100%;box-sizing:border-box;padding:10px 14px;border-radius:999px;background:linear-gradient(135deg,rgba(39,45,52,.92),rgba(97,111,112,.82));color:#fff;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
-.sp-island i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);font-style:normal}.sp-island strong{font-size:14px}.sp-island small{display:block;font-size:10px;opacity:.7}
-</style><div class="sp-island"><i>♪</i><span><strong>{{text:title}}</strong><small>{{text:subtitle}}</small></span><b>●●</b></div>`,
-  },
-  {
-    id: 'idol_pass',
-    size: '2x2',
-    preview: 'pass',
-    icon: 'fas fa-id-badge',
-    nameZh: '小卡出入证',
-    nameEn: 'Idol Pass',
-    code: `<style>
-.sp-pass{width:100%;height:100%;box-sizing:border-box;padding:13px;border-radius:22px;background:linear-gradient(150deg,#f4edf1,#c8d1d8);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#30343a;display:grid;grid-template-rows:1fr auto;gap:10px}
-.sp-pass .photo{border-radius:17px;background:linear-gradient(135deg,#f8d9df,#869aa5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.42)}
-.sp-pass strong{font-size:15px}.sp-pass small{display:block;color:#69727a;font-size:10px;font-weight:800;letter-spacing:.08em}
-</style><div class="sp-pass"><div class="photo" data-cw-image="photo"></div><div><strong>{{text:name}}</strong><small>ACCESS CARD</small></div></div>`,
-  },
-  {
-    id: 'live_panel',
-    size: '4x2',
-    preview: 'live',
-    icon: 'fas fa-heart-pulse',
-    nameZh: '粉色直播面板',
-    nameEn: 'Pink Live Panel',
-    code: `<style>
-.sp-live{width:100%;height:100%;box-sizing:border-box;padding:15px;border-radius:24px;background:linear-gradient(135deg,#ffe8ef,#d6cad2);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#5f3a47;display:grid;grid-template-columns:1fr 1.2fr;gap:12px;overflow:hidden}
-.sp-live .badge{border-radius:20px;background:rgba(255,255,255,.48);display:grid;place-items:center;font-size:34px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
-.sp-live strong{display:block;font-size:18px}.sp-live small{display:block;margin-top:4px;color:#8f6672;font-size:11px;font-weight:800}.sp-live p{margin:13px 0 0;font-size:12px;line-height:1.35}
-</style><div class="sp-live"><div class="badge">♡</div><div><strong>{{text:title}}</strong><small>LIVE ROOM</small><p>{{text:note}}</p></div></div>`,
-  },
-  {
-    id: 'magazine_cover',
-    size: '4x4',
-    preview: 'magazine',
-    icon: 'fas fa-newspaper',
-    nameZh: '杂志封面',
-    nameEn: 'Magazine Cover',
-    code: `<style>
-.sp-cover{width:100%;height:100%;box-sizing:border-box;padding:18px;border-radius:28px;background:linear-gradient(145deg,#efede8,#9facb0);position:relative;overflow:hidden;font-family:Georgia,"Times New Roman",serif;color:#24282d}
-.sp-cover:before{content:"";position:absolute;inset:72px 26px 46px;border-radius:24px;background:linear-gradient(160deg,#cfd8dc,#6f838c);box-shadow:0 18px 38px rgba(22,30,38,.2)}
-.sp-cover h1{position:relative;margin:0;font-size:36px;letter-spacing:.04em;line-height:.9}.sp-cover p{position:absolute;left:20px;right:20px;bottom:18px;margin:0;font:700 13px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-</style><div class="sp-cover"><h1>{{text:title}}</h1><p>{{text:caption}}</p></div>`,
-  },
 ]
 
 const WIDGET_TEMPLATE_CODE = `<style>
@@ -143,6 +63,7 @@ const customWidgetCode = ref('')
 const customWidgetActionType = ref(CUSTOM_WIDGET_ACTION_TYPE_NONE)
 const customWidgetActionTarget = ref('')
 const editingWidgetId = ref('')
+const customWidgetCodeTextarea = ref(null)
 const importJsonText = ref('')
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
@@ -155,6 +76,37 @@ const panels = computed(() => [
   { id: 'library', label: t('组件库', 'Library'), icon: 'fas fa-table-cells-large' },
   { id: 'custom', label: t('自定义', 'Custom'), icon: 'fas fa-code' },
   { id: 'import', label: t('导入', 'Import'), icon: 'fas fa-file-import' },
+])
+
+const CODE_SNIPPET_OPTIONS = Object.freeze([
+  {
+    id: 'title',
+    icon: 'fas fa-heading',
+    labelZh: '标题',
+    labelEn: 'Title',
+    snippet: '{{text:title}}',
+  },
+  {
+    id: 'subtitle',
+    icon: 'fas fa-align-left',
+    labelZh: '副标题',
+    labelEn: 'Subtitle',
+    snippet: '{{text:subtitle}}',
+  },
+  {
+    id: 'caption',
+    icon: 'fas fa-quote-left',
+    labelZh: '短句',
+    labelEn: 'Caption',
+    snippet: '{{text:caption}}',
+  },
+  {
+    id: 'image',
+    icon: 'fas fa-image',
+    labelZh: '图片位',
+    labelEn: 'Image slot',
+    snippet: '<div data-cw-image="photo"></div>',
+  },
 ])
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
@@ -195,6 +147,16 @@ const editingWidgetIsPlaced = computed(() =>
       homeWidgetPages.value.some((page) => Array.isArray(page) && page.includes(editingWidgetId.value)),
   ),
 )
+const customWidgetDraftSize = computed(() =>
+  editingWidgetIsPlaced.value
+    ? editingCustomWidget.value?.size || customWidgetSize.value
+    : customWidgetSize.value,
+)
+const customWidgetDraftPreview = computed(() => ({
+  size: customWidgetDraftSize.value,
+  code: customWidgetCode.value.trim(),
+}))
+const hasCustomWidgetDraftPreview = computed(() => customWidgetDraftPreview.value.code.length > 0)
 const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
 const returnButtonLabel = computed(() =>
   returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
@@ -262,7 +224,7 @@ const builtInWidgetStates = computed(() =>
   }),
 )
 const officialStylePresetStates = computed(() =>
-  OFFICIAL_STYLE_PRESETS.map((preset) => ({
+  OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => ({
     ...preset,
     label: t(preset.nameZh, preset.nameEn),
     added: customWidgets.value.some((widget) => widget.name === t(preset.nameZh, preset.nameEn)),
@@ -376,6 +338,58 @@ const addOfficialStylePreset = (preset) => {
   })
   setImportFeedback('success', t('样式已加入自定义组件库。', 'Style added to the custom widget library.'))
   triggerSaved()
+}
+
+const hasCustomWidgetDraftChanges = () =>
+  Boolean(
+    editingWidgetId.value ||
+      customWidgetName.value.trim() ||
+      customWidgetCode.value.trim() ||
+      customWidgetActionType.value !== CUSTOM_WIDGET_ACTION_TYPE_NONE ||
+      customWidgetActionTarget.value,
+  )
+
+const applyStylePresetToCustomForm = async (preset) => {
+  if (!preset?.code) return
+  if (hasCustomWidgetDraftChanges()) {
+    const ok = await confirmDialog({
+      title: t('套用样式模板', 'Use style template'),
+      message: t('当前编辑内容会被模板替换。', 'The current draft will be replaced by this template.'),
+      confirmText: t('套用', 'Use'),
+      cancelText: t('取消', 'Cancel'),
+    })
+    if (!ok) return
+  }
+
+  activePanel.value = 'custom'
+  editingWidgetId.value = ''
+  customWidgetName.value = t(preset.nameZh, preset.nameEn)
+  customWidgetSize.value = preset.size
+  customWidgetCode.value = preset.code
+  customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
+  customWidgetActionTarget.value = ''
+  clearImportFeedback()
+  setImportFeedback('success', t('模板已填入编辑器。', 'Template loaded into the editor.'))
+}
+
+const insertCodeSnippet = (snippet) => {
+  if (!snippet) return
+  const textarea = customWidgetCodeTextarea.value
+  const currentCode = customWidgetCode.value
+  const start = Number.isInteger(textarea?.selectionStart) ? textarea.selectionStart : currentCode.length
+  const end = Number.isInteger(textarea?.selectionEnd) ? textarea.selectionEnd : start
+  const prefix = currentCode.slice(0, start)
+  const suffix = currentCode.slice(end)
+  const leadingSpace = prefix && !/\s$/.test(prefix) ? ' ' : ''
+  const trailingSpace = suffix && !/^\s/.test(suffix) ? ' ' : ''
+  const inserted = `${leadingSpace}${snippet}${trailingSpace}`
+  customWidgetCode.value = `${prefix}${inserted}${suffix}`
+
+  requestAnimationFrame(() => {
+    textarea?.focus()
+    const nextPosition = start + inserted.length - trailingSpace.length
+    textarea?.setSelectionRange(nextPosition, nextPosition)
+  })
 }
 
 const resetCustomWidgetForm = () => {
@@ -738,7 +752,7 @@ onBeforeUnmount(() => {
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('自定义组件', 'Custom widgets') }}</h2>
-            <p>{{ t('创建或调整自己的主屏组件。', 'Create or adjust your own Home widgets.') }}</p>
+            <p>{{ t('选择一个起步样式，再改成自己的主屏组件。', 'Start from a style, then make it your own Home widget.') }}</p>
           </div>
           <div class="widgets-head-actions">
             <button class="widgets-secondary-btn" type="button" @click="copyWidgetTemplate">
@@ -752,85 +766,151 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="widgets-form">
-          <label class="widgets-field">
-            <span>{{ t('名称', 'Name') }}</span>
-            <input
-              v-model="customWidgetName"
-              type="text"
-              :placeholder="t('例如：时间胶囊', 'Example: Time Capsule')"
-            />
-          </label>
-
-          <div class="widgets-form-grid">
-            <label class="widgets-field">
-              <span>{{ t('尺寸', 'Size') }}</span>
-              <select v-model="customWidgetSize" :disabled="editingWidgetIsPlaced">
-                <option v-for="size in CUSTOM_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
-              </select>
-              <small v-if="editingWidgetIsPlaced" class="widgets-field-hint">
-                {{ t('已放置的组件保留当前尺寸。', 'Placed widgets keep their current size.') }}
-              </small>
-            </label>
+        <div class="widgets-starter-templates">
+          <div class="widgets-section-subhead">
+            <h3>{{ t('从样式开始', 'Start from a style') }}</h3>
+            <span>{{ officialStylePresetStates.length }}</span>
           </div>
-
-          <div class="widgets-action-config">
-            <div class="widgets-action-config-head">
-              <span>
-                <i class="fas fa-arrow-pointer"></i>
-                {{ t('点击动作', 'Click action') }}
+          <div class="widgets-template-strip">
+            <button
+              v-for="preset in officialStylePresetStates"
+              :key="`starter-${preset.id}`"
+              class="widgets-template-card"
+              :class="[`size-${preset.size.replace('x', '-')}`]"
+              type="button"
+              @click="applyStylePresetToCustomForm(preset)"
+            >
+              <span class="widgets-template-thumb">
+                <span v-if="preset.preview === 'polaroid'" class="template-thumb-art is-polaroid"></span>
+                <span v-else-if="preset.preview === 'orb'" class="template-thumb-art is-orb"></span>
+                <span v-else-if="preset.preview === 'island'" class="template-thumb-art is-island"></span>
+                <span v-else-if="preset.preview === 'pass'" class="template-thumb-art is-pass"></span>
+                <span v-else-if="preset.preview === 'live'" class="template-thumb-art is-live"></span>
+                <span v-else class="template-thumb-art is-magazine"></span>
               </span>
-              <strong>{{ customWidgetActionType === CUSTOM_WIDGET_ACTION_TYPE_NONE ? t('无动作', 'No action') : t('已配置', 'Configured') }}</strong>
-            </div>
-            <div class="widgets-form-grid">
+              <strong>{{ preset.label }}</strong>
+              <small>{{ preset.size }}</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="widgets-custom-composer">
+          <div class="widgets-form">
             <label class="widgets-field">
-              <span>{{ t('动作类型', 'Action type') }}</span>
-              <select v-model="customWidgetActionType" @change="ensureCustomWidgetActionTarget">
-                <option
-                  v-for="actionType in customWidgetActionTypes"
-                  :key="actionType.id"
-                  :value="actionType.id"
-                >
-                  {{ actionType.label }}
-                </option>
-              </select>
+              <span>{{ t('名称', 'Name') }}</span>
+              <input
+                v-model="customWidgetName"
+                type="text"
+                :placeholder="t('例如：时间胶囊', 'Example: Time Capsule')"
+              />
             </label>
 
-            <label
-              v-if="customWidgetActionType !== CUSTOM_WIDGET_ACTION_TYPE_NONE"
-              class="widgets-field"
-              >
-              <span>{{ t('目标入口', 'Target') }}</span>
-              <select v-model="customWidgetActionTarget">
-                <option
-                  v-for="target in currentCustomWidgetActionTargets"
-                  :key="target.id"
-                  :value="target.id"
+            <div class="widgets-form-grid">
+              <label class="widgets-field">
+                <span>{{ t('尺寸', 'Size') }}</span>
+                <select v-model="customWidgetSize" :disabled="editingWidgetIsPlaced">
+                  <option v-for="size in CUSTOM_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
+                </select>
+                <small v-if="editingWidgetIsPlaced" class="widgets-field-hint">
+                  {{ t('已放置的组件保留当前尺寸。', 'Placed widgets keep their current size.') }}
+                </small>
+              </label>
+            </div>
+
+            <div class="widgets-action-config">
+              <div class="widgets-action-config-head">
+                <span>
+                  <i class="fas fa-arrow-pointer"></i>
+                  {{ t('点击动作', 'Click action') }}
+                </span>
+                <strong>{{ customWidgetActionType === CUSTOM_WIDGET_ACTION_TYPE_NONE ? t('无动作', 'No action') : t('已配置', 'Configured') }}</strong>
+              </div>
+              <div class="widgets-form-grid">
+                <label class="widgets-field">
+                  <span>{{ t('动作类型', 'Action type') }}</span>
+                  <select v-model="customWidgetActionType" @change="ensureCustomWidgetActionTarget">
+                    <option
+                      v-for="actionType in customWidgetActionTypes"
+                      :key="actionType.id"
+                      :value="actionType.id"
+                    >
+                      {{ actionType.label }}
+                    </option>
+                  </select>
+                </label>
+
+                <label
+                  v-if="customWidgetActionType !== CUSTOM_WIDGET_ACTION_TYPE_NONE"
+                  class="widgets-field"
                 >
-                  {{ target.label }}
-                </option>
-              </select>
+                  <span>{{ t('目标入口', 'Target') }}</span>
+                  <select v-model="customWidgetActionTarget">
+                    <option
+                      v-for="target in currentCustomWidgetActionTargets"
+                      :key="target.id"
+                      :value="target.id"
+                    >
+                      {{ target.label }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <label class="widgets-field">
+              <span>{{ t('Widget 内容', 'Widget content') }}</span>
+              <div class="widgets-code-snippets" :aria-label="t('插入占位符', 'Insert placeholder')">
+                <button
+                  v-for="snippet in CODE_SNIPPET_OPTIONS"
+                  :key="snippet.id"
+                  type="button"
+                  @click="insertCodeSnippet(snippet.snippet)"
+                >
+                  <i :class="snippet.icon"></i>
+                  <span>{{ t(snippet.labelZh, snippet.labelEn) }}</span>
+                </button>
+              </div>
+              <textarea
+                ref="customWidgetCodeTextarea"
+                v-model="customWidgetCode"
+                spellcheck="false"
+                placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
+              ></textarea>
             </label>
+
+            <div class="widgets-form-actions">
+              <button class="widgets-primary-btn" type="button" @click="submitCustomWidget">
+                {{ editingWidgetId ? t('更新 Widget', 'Update Widget') : t('添加 Widget', 'Add Widget') }}
+              </button>
+              <button v-if="editingWidgetId" class="widgets-secondary-btn" type="button" @click="resetCustomWidgetForm">
+                {{ t('取消编辑', 'Cancel Edit') }}
+              </button>
             </div>
           </div>
 
-          <label class="widgets-field">
-            <span>{{ t('Widget 内容', 'Widget content') }}</span>
-            <textarea
-              v-model="customWidgetCode"
-              spellcheck="false"
-              placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
-            ></textarea>
-          </label>
-
-          <div class="widgets-form-actions">
-            <button class="widgets-primary-btn" type="button" @click="submitCustomWidget">
-              {{ editingWidgetId ? t('更新 Widget', 'Update Widget') : t('添加 Widget', 'Add Widget') }}
-            </button>
-            <button v-if="editingWidgetId" class="widgets-secondary-btn" type="button" @click="resetCustomWidgetForm">
-              {{ t('取消编辑', 'Cancel Edit') }}
-            </button>
-          </div>
+          <aside class="widgets-live-preview">
+            <div class="widgets-live-preview-head">
+              <span>{{ t('预览', 'Preview') }}</span>
+              <strong>{{ customWidgetDraftSize }}</strong>
+            </div>
+            <div
+              v-if="hasCustomWidgetDraftPreview"
+              class="widgets-created-preview widgets-draft-preview"
+              :class="`size-${customWidgetDraftSize.replace('x', '-')}`"
+            >
+              <iframe
+                :srcdoc="customWidgetPreviewSrcDoc(customWidgetDraftPreview)"
+                sandbox="allow-scripts"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+                title="Widget draft preview"
+              ></iframe>
+            </div>
+            <div v-else class="widgets-draft-empty">
+              <i class="fas fa-wand-magic-sparkles"></i>
+              <span>{{ t('选择样式或输入代码后显示预览。', 'Choose a style or enter code to preview.') }}</span>
+            </div>
+          </aside>
         </div>
 
         <div class="widgets-created">
@@ -967,6 +1047,7 @@ onBeforeUnmount(() => {
 .widgets-icon-btn,
 .widgets-home-btn,
 .widgets-tab,
+.widgets-template-card,
 .widgets-action-btn,
 .widgets-primary-btn,
 .widgets-secondary-btn,
@@ -1216,16 +1297,223 @@ onBeforeUnmount(() => {
   line-height: 1.35;
 }
 
+.widgets-code-snippets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.widgets-code-snippets button {
+  min-height: 30px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  color: var(--system-text);
+  background: var(--system-surface-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.widgets-code-snippets button:active {
+  transform: scale(0.97);
+}
+
 .widgets-import-textarea {
   min-height: 220px;
 }
 
 .widgets-market-grid,
 .widgets-form,
-.widgets-created {
+.widgets-created,
+.widgets-starter-templates {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.widgets-starter-templates {
+  margin-bottom: 12px;
+}
+
+.widgets-template-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.widgets-template-card {
+  min-width: 0;
+  min-height: 116px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--system-motion-fast), border-color var(--system-motion-fast), background var(--system-motion-fast);
+}
+
+.widgets-template-card:active {
+  transform: scale(0.98);
+}
+
+.widgets-template-thumb {
+  position: relative;
+  min-height: 56px;
+  border-radius: 14px;
+  display: block;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.62), transparent 30%),
+    linear-gradient(145deg, rgba(124, 147, 156, 0.32), rgba(70, 84, 91, 0.2));
+}
+
+.widgets-template-card.size-4-1 .widgets-template-thumb {
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.widgets-template-card.size-4-2 .widgets-template-thumb {
+  min-height: 50px;
+}
+
+.widgets-template-card.size-4-4 .widgets-template-thumb {
+  min-height: 70px;
+}
+
+.template-thumb-art {
+  position: absolute;
+  inset: 8px;
+  border-radius: 13px;
+}
+
+.template-thumb-art.is-polaroid {
+  background:
+    linear-gradient(112deg, transparent 0 20%, rgba(255, 255, 255, 0.88) 20% 54%, transparent 54%),
+    linear-gradient(145deg, #f6f1ea, #cfd8dd);
+}
+
+.template-thumb-art.is-orb {
+  inset: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 20%, #fff, rgba(255, 255, 255, 0.24) 26%, rgba(82, 101, 110, 0.38));
+  box-shadow: 0 8px 18px rgba(24, 31, 38, 0.18);
+}
+
+.template-thumb-art.is-island {
+  inset: 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #242b32, #6a7776);
+}
+
+.template-thumb-art.is-pass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0 62%, transparent 62%),
+    linear-gradient(150deg, #f5edf1, #c7d2da);
+}
+
+.template-thumb-art.is-live {
+  background:
+    radial-gradient(circle at 24% 48%, rgba(255, 255, 255, 0.62) 0 20%, transparent 21%),
+    linear-gradient(135deg, #ffe8ef, #d6cad2);
+}
+
+.template-thumb-art.is-magazine {
+  background:
+    linear-gradient(180deg, rgba(45, 50, 56, 0.78) 0 18%, transparent 18%),
+    linear-gradient(145deg, #efede8, #9facb0);
+}
+
+.widgets-template-card strong,
+.widgets-template-card small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widgets-template-card strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.widgets-template-card small {
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.widgets-custom-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.widgets-live-preview {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 22px;
+  background: var(--system-surface-muted);
+  padding: 11px;
+}
+
+.widgets-live-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.widgets-live-preview-head strong {
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  border: 1px solid var(--system-control-border);
+  font-size: 10px;
+}
+
+.widgets-draft-preview {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.62), transparent 28%),
+    linear-gradient(145deg, rgba(124, 147, 156, 0.36), rgba(70, 84, 91, 0.22));
+}
+
+.widgets-draft-empty {
+  min-height: 132px;
+  border: 1px dashed var(--system-control-border);
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 18px;
+  color: var(--system-text-muted);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.widgets-draft-empty i {
+  font-size: 18px;
+  color: var(--system-accent);
 }
 
 .widgets-created-item {
