@@ -470,9 +470,9 @@ const leftPageUtilityEntries = computed(() => [
     id: 'world-hub',
     title: t('世界中枢', 'World Hub'),
     subtitle: isWorldHubInstalled.value
-      ? t('运行控制已安装', 'Runtime control installed')
-      : t('等待安装或解锁', 'Waiting to install or unlock'),
-    status: isWorldHubInstalled.value ? t('已安装', 'Installed') : t('未安装', 'Not installed'),
+      ? t('已显示在主屏入口库', 'Visible in the Home entry library')
+      : t('可在系统开关中显示', 'Available from system switches'),
+    status: isWorldHubInstalled.value ? t('已显示', 'Visible') : t('未显示', 'Hidden'),
     icon: 'fas fa-wand-magic-sparkles',
     route: widgetRegistry.app_control_center.route,
     installed: isWorldHubInstalled.value,
@@ -480,8 +480,8 @@ const leftPageUtilityEntries = computed(() => [
   {
     id: 'cheats',
     title: t('金手指', 'Cheats'),
-    subtitle: t('条件满足后开放数值与事件调节', 'Unlocks value and event tuning later'),
-    status: t('未安装', 'Not installed'),
+    subtitle: t('保留给特殊规则与事件调节', 'Reserved for special rules and event tuning'),
+    status: t('未显示', 'Hidden'),
     icon: 'fas fa-key',
     route: '',
     installed: false,
@@ -1580,10 +1580,10 @@ onBeforeUnmount(() => {
           >
             <div class="home-smart-panel-head">
               <div>
-                <p class="home-smart-kicker">{{ t('More Labs', 'More Labs') }}</p>
+                <p class="home-smart-kicker">{{ t('今日摘要', 'Today Summary') }}</p>
                 <h2>{{ t('智能面板', 'Smart Panel') }}</h2>
               </div>
-              <span>{{ t('只读', 'Read-only') }}</span>
+              <span>{{ t('系统建议', 'System Cue') }}</span>
             </div>
             <div class="home-smart-grid">
               <article v-for="item in smartPanelItems" :key="item.id" class="home-smart-card">
@@ -1599,10 +1599,10 @@ onBeforeUnmount(() => {
           <section class="home-left-utility-panel" data-testid="home-left-utility-panel">
             <div class="home-left-section-head">
               <div>
-                <p>{{ t('隐藏系统', 'Hidden System') }}</p>
-                <h2>{{ t('待安装应用', 'Pending Apps') }}</h2>
+                <p>{{ t('系统入口', 'System Entries') }}</p>
+                <h2>{{ t('可选入口', 'Optional Entries') }}</h2>
               </div>
-              <span>{{ t('固定占位', 'Fixed') }}</span>
+              <span>{{ t('可管理', 'Managed') }}</span>
             </div>
             <div class="home-left-utility-grid">
               <button

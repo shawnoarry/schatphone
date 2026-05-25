@@ -70,4 +70,25 @@ describe('AppearanceView wallpaper source picker', () => {
 
     wrapper.unmount()
   })
+
+  test('presents the root Appearance screen as a system look control surface', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('.appearance-overview-card').exists()).toBe(true)
+    expect(wrapper.find('.appearance-layout-card').exists()).toBe(true)
+    expect(wrapper.findAll('.appearance-menu-card')).toHaveLength(4)
+    expect(wrapper.text()).toContain('当前外观')
+    expect(wrapper.text()).toContain('桌面模板')
+    expect(wrapper.text()).toContain('Widget 中心')
+
+    wrapper.unmount()
+  })
 })

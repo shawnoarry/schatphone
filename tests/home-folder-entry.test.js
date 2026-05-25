@@ -113,6 +113,9 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain('is-locked')
     expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain('is-locked')
     expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('可选入口')
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('待安装应用')
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('More Labs')
     wrapper.unmount()
   })
 

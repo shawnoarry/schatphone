@@ -181,4 +181,26 @@ describe('More toggle UI consumption', () => {
     expect(moreWrapper.find('[data-testid="more-quick-entry-network"]').exists()).toBe(true)
     moreWrapper.unmount()
   })
+
+  test('More presents the App Library as the primary system entry manager', async () => {
+    const router = createTestRouter()
+    await router.push('/more')
+    await router.isReady()
+
+    const wrapper = mount(MoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.text()).toContain('应用库')
+    expect(wrapper.text()).toContain('管理主屏入口')
+    expect(wrapper.findAll('.more-app-library-item').length).toBeGreaterThanOrEqual(10)
+    expect(wrapper.find('.more-view').exists()).toBe(true)
+    expect(wrapper.find('.more-panel').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('后续扩展建议')
+    expect(wrapper.text()).not.toContain('Experimental Toggles')
+
+    wrapper.unmount()
+  })
 })

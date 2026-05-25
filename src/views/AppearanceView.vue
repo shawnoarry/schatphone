@@ -502,48 +502,24 @@ onBeforeUnmount(() => {
       <button @click="goHome" class="appearance-nav-button text-blue-500 text-sm">{{ t('主页', 'Home') }}</button>
     </div>
 
-    <div v-if="activeMenu === ROOT_MENU" class="appearance-root-list flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-      <button
-        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
-        @click="openMenu('theme')"
-      >
-        <div class="appearance-menu-icon is-theme w-8 h-8 rounded-lg bg-violet-500 text-white flex items-center justify-center text-xs">
-          <i class="fas fa-palette"></i>
+    <div v-if="activeMenu === ROOT_MENU" class="appearance-root-list flex-1 overflow-y-auto p-4 no-scrollbar">
+      <section class="appearance-overview-card">
+        <div class="appearance-overview-copy">
+          <span>{{ t('当前外观', 'Current Look') }}</span>
+          <h2>{{ themeDisplayName(currentThemeMeta) || t('默认系统', 'Default System') }}</h2>
+          <p>{{ currentWallpaperModeLabel }} · {{ t('桌面、锁屏与系统入口同步', 'Home, Lock, and system entries stay aligned') }}</p>
         </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold">{{ t('整体主题美化', 'Theme Styling') }}</p>
-          <p class="text-[11px] text-gray-500">{{ t('主题、壁纸与自定义 CSS', 'Theme, wallpaper and custom CSS') }}</p>
+        <div class="appearance-overview-actions">
+          <button type="button" @click="openMenu('theme')">
+            <i class="fas fa-palette"></i>
+            <span>{{ t('整体主题美化', 'Theme Styling') }}</span>
+          </button>
+          <button type="button" @click="openWidgetCenter">
+            <i class="fas fa-puzzle-piece"></i>
+            <span>{{ t('组件', 'Widgets') }}</span>
+          </button>
         </div>
-        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
-      </button>
-
-      <button
-        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
-        @click="openMenu('font')"
-      >
-        <div class="appearance-menu-icon is-font w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center text-xs">
-          <i class="fas fa-font"></i>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold">{{ t('字体', 'Font') }}</p>
-          <p class="text-[11px] text-gray-500">{{ t('全局字体族与自定义字体栈', 'Global font family and custom stack') }}</p>
-        </div>
-        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
-      </button>
-
-      <button
-        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
-        @click="openMenu('icons')"
-      >
-        <div class="appearance-menu-icon is-icons w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs">
-          <i class="fas fa-icons"></i>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold">{{ t('功能图标', 'App Icons') }}</p>
-          <p class="text-[11px] text-gray-500">{{ t('调整核心功能入口的图标与色系', 'Adjust icon glyphs and accent colors for core app entries') }}</p>
-        </div>
-        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
-      </button>
+      </section>
 
       <section class="appearance-layout-card">
         <div class="appearance-layout-head">
@@ -572,19 +548,63 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <button
-        class="appearance-menu-card w-full bg-white rounded-xl p-4 shadow-sm text-left flex items-center gap-3"
-        @click="openWidgetCenter"
-      >
-        <div class="appearance-menu-icon is-widget w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs">
-          <i class="fas fa-puzzle-piece"></i>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold">{{ t('Widget 中心', 'Widget Center') }}</p>
-          <p class="text-[11px] text-gray-500">{{ t('创建、导入与管理主屏组件', 'Create, import, and manage Home widgets') }}</p>
-        </div>
-        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
-      </button>
+      <div class="appearance-menu-stack">
+        <button
+          class="appearance-menu-card"
+          @click="openMenu('theme')"
+        >
+          <div class="appearance-menu-icon is-theme">
+            <i class="fas fa-palette"></i>
+          </div>
+          <div class="appearance-menu-copy">
+            <p>{{ t('整体主题美化', 'Theme Styling') }}</p>
+            <span>{{ t('主题、壁纸与自定义 CSS', 'Theme, wallpaper and custom CSS') }}</span>
+          </div>
+          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
+        </button>
+
+        <button
+          class="appearance-menu-card"
+          @click="openMenu('font')"
+        >
+          <div class="appearance-menu-icon is-font">
+            <i class="fas fa-font"></i>
+          </div>
+          <div class="appearance-menu-copy">
+            <p>{{ t('字体', 'Font') }}</p>
+            <span>{{ t('全局字体族与自定义字体栈', 'Global font family and custom stack') }}</span>
+          </div>
+          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
+        </button>
+
+        <button
+          class="appearance-menu-card"
+          @click="openMenu('icons')"
+        >
+          <div class="appearance-menu-icon is-icons">
+            <i class="fas fa-icons"></i>
+          </div>
+          <div class="appearance-menu-copy">
+            <p>{{ t('功能图标', 'App Icons') }}</p>
+            <span>{{ t('调整核心功能入口的图标与色系', 'Adjust icon glyphs and accent colors for core app entries') }}</span>
+          </div>
+          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
+        </button>
+
+        <button
+          class="appearance-menu-card"
+          @click="openWidgetCenter"
+        >
+          <div class="appearance-menu-icon is-widget">
+            <i class="fas fa-puzzle-piece"></i>
+          </div>
+          <div class="appearance-menu-copy">
+            <p>{{ t('Widget 中心', 'Widget Center') }}</p>
+            <span>{{ t('创建、导入与管理主屏组件', 'Create, import, and manage Home widgets') }}</span>
+          </div>
+          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
+        </button>
+      </div>
     </div>
 
     <div v-else-if="activeMenu === 'theme'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
@@ -1033,14 +1053,23 @@ onBeforeUnmount(() => {
 
 .appearance-root-list {
   padding-top: 16px;
+  display: grid;
+  gap: 14px;
 }
 
 .appearance-menu-card {
+  width: 100%;
   min-height: 72px;
   border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
+  color: var(--system-text);
+  text-align: left;
   transition:
     transform var(--system-motion-fast),
     background var(--system-motion-fast),
@@ -1058,7 +1087,44 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--system-on-accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.appearance-menu-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.appearance-menu-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 3px;
+}
+
+.appearance-menu-copy p {
+  margin: 0;
+  color: var(--system-text);
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 790;
+}
+
+.appearance-menu-copy span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.appearance-menu-chevron {
+  flex: 0 0 auto;
+  color: var(--system-text-soft);
+  font-size: 11px;
 }
 
 .appearance-menu-icon.is-theme {
@@ -1083,6 +1149,78 @@ onBeforeUnmount(() => {
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
   padding: 14px;
+}
+
+.appearance-overview-card {
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-lg);
+  padding: 15px;
+  display: grid;
+  gap: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--system-accent-soft) 70%, transparent), transparent 62%),
+    var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
+}
+
+.appearance-overview-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.appearance-overview-copy span {
+  color: var(--system-text-soft);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.appearance-overview-copy h2 {
+  margin: 0;
+  color: var(--system-text);
+  font-size: 24px;
+  line-height: 1.08;
+  font-weight: 840;
+  letter-spacing: 0;
+}
+
+.appearance-overview-copy p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 680;
+}
+
+.appearance-overview-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.appearance-overview-actions button {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+  font-size: 12px;
+  font-weight: 780;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-overview-actions button:active {
+  transform: scale(0.985);
+  background: var(--system-pressed-bg);
 }
 
 .appearance-layout-head {
@@ -1159,6 +1297,7 @@ onBeforeUnmount(() => {
 
 .appearance-shell :deep(.bg-white) {
   background-color: var(--system-panel-bg);
+  border-color: var(--system-card-border);
 }
 
 .appearance-shell :deep(.bg-gray-50),
@@ -1220,12 +1359,35 @@ onBeforeUnmount(() => {
 
 .appearance-shell :deep(.bg-blue-50),
 .appearance-shell :deep(.bg-sky-50\/50),
-.appearance-shell :deep(.bg-violet-50\/50) {
+.appearance-shell :deep(.bg-violet-50\/50),
+.appearance-shell :deep(.bg-blue-100),
+.appearance-shell :deep(.bg-sky-100),
+.appearance-shell :deep(.bg-violet-100) {
   background-color: var(--system-accent-soft);
 }
 
 .appearance-shell :deep(.bg-gray-300) {
   background-color: var(--system-control-bg);
+}
+
+.appearance-shell :deep(.rounded-xl.p-4.shadow-sm),
+.appearance-shell :deep(.rounded-xl.p-4.shadow-sm.space-y-3),
+.appearance-shell :deep(.rounded-2xl.border.p-3),
+.appearance-shell :deep(.rounded-2xl.border.border-gray-100.bg-gray-50.p-3) {
+  border: 1px solid var(--system-card-border);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.appearance-shell :deep(.rounded-md),
+.appearance-shell :deep(.rounded-lg),
+.appearance-shell :deep(.rounded-xl),
+.appearance-shell :deep(.rounded-2xl) {
+  border-color: var(--system-control-border);
+}
+
+.appearance-shell :deep(.shadow-sm) {
+  box-shadow: var(--system-shadow-card);
 }
 
 .appearance-shell :deep(.bg-green-500) {
@@ -1239,6 +1401,18 @@ onBeforeUnmount(() => {
 .appearance-shell :deep(.bg-gray-900) {
   color: var(--system-on-accent);
   background-color: var(--system-accent);
+}
+
+.appearance-shell :deep(.text-white) {
+  color: var(--system-on-accent);
+}
+
+.appearance-shell :deep(.font-mono) {
+  color: var(--system-text);
+}
+
+.appearance-shell :deep(.break-all) {
+  color: var(--system-text-muted);
 }
 
 .appearance-shell :deep(.hover\:bg-gray-50:hover),

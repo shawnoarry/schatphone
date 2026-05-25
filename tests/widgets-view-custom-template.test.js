@@ -116,4 +116,20 @@ describe('Widgets custom template starters', () => {
 
     wrapper.unmount()
   })
+
+  test('renders style starter thumbnails without iframe previews', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.findAll('.widgets-tab')[1].trigger('click')
+    await nextTick()
+
+    const starterCards = wrapper.findAll('.widgets-template-card')
+    expect(starterCards.length).toBeGreaterThanOrEqual(6)
+    expect(wrapper.find('.widgets-template-strip iframe').exists()).toBe(false)
+    expect(starterCards.every((card) => card.find('.widgets-template-thumb').exists())).toBe(true)
+    expect(starterCards.every((card) => /\d+x\d+/.test(card.text()))).toBe(true)
+
+    wrapper.unmount()
+  })
 })

@@ -25,6 +25,10 @@ What is already landed:
 13. Home slot editing is now content-type mixed: apps, folders, built-in widgets, and custom widgets can be placed when they fit the selected slot. Widget Center remains the widget creation/import and edit-entry surface; Appearance may later expose broader template management; App Store-like surfaces should remain app-entry visibility management only.
 14. Custom widget actions now have a first-pass functional loop: Widget Center stores optional click action metadata outside imported code, Home executes whitelisted app/system targets in normal mode, and edit mode still uses taps for slot editing.
 15. The first cross-entry visual pass is landed for Home customization: `主屏 / 桌面 / Home` is documented as a system desktop layer, not a visible app; `组件 / Widgets`, `外观 / Appearance`, and `更多 / More` now expose coordinated UI entry points into desktop editing without making App Library-like behavior a real download store.
+16. `更多 / More` now uses the native-system visual token layer and presents App Library as the primary app-entry management surface, with system-style quick entries, switches, and scene preview instead of white utility cards or developer-facing expansion notes.
+17. `外观 / Appearance` root now has a first native-system control-surface pass: a current-look overview, Home desktop template preview, and grouped Theme/Font/Icon/Widget entries. The deeper Theme, Font, and Icon subpages also have a first token-coverage pass to reduce white-card and hardcoded-blue leakage in the dark system theme.
+18. Home Today View copy now uses native-system language for optional entries and smart summaries instead of developer-facing install, hidden-system, fixed-placeholder, or lab labels.
+19. Widget Center has a regression test that keeps style starter cards as lightweight thumbnails rather than iframe previews; live iframes remain reserved for draft and saved custom widget previews.
 
 Still incomplete:
 
@@ -36,7 +40,7 @@ Still incomplete:
 ## 2. Recommended Next Slice
 
 1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides if needed and fuller App Library entry management.
-2. After the loop is stable, polish the related UI surfaces together: desktop edit mode, `组件 / Widgets`, `外观 / Appearance`, and the App Library/App Store-like app-entry manager in `更多 / More`.
+2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode details, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` has its first native-system App Library pass but still needs a fuller recovery manager later.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 

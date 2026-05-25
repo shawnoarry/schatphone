@@ -10,8 +10,15 @@ Current Home customization baseline:
 - The desktop edit state owns per-page layout templates and fixed slot content editing.
 - `组件 / Widgets` owns widget creation, import, library state, and custom widget click-action configuration.
 - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings.
-- `更多 / More` may carry a lightweight App Library-like app-entry management surface.
+- `更多 / More` carries the current App Library-like app-entry management surface.
 - App Library / App Store-like surfaces own app-entry visibility only.
+
+Current visual pass:
+
+- `更多 / More` has a first native-system App Library surface.
+- `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
+- Home Today View user-facing copy has been cleaned up for native-system language.
+- Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
 
 ## Read This Package In This Order
 
