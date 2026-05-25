@@ -60,11 +60,8 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
+  ['weather', 'calendar', 'music', 'app_network', 'app_wallet', 'app_themes', 'app_gallery'],
   [
-    'system',
-    'quick_heart',
-    'quick_disc',
     'app_phone',
     'app_map',
     'app_calendar',
@@ -73,9 +70,13 @@ const DEFAULT_WIDGET_PAGES = [
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
     ASSETS_HOME_APP_ID,
+  ],
+  [
+    'system',
+    'quick_heart',
+    'quick_disc',
     'app_more',
   ],
-  [],
   [],
   [],
 ]
@@ -123,16 +124,24 @@ const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
 )
 
 const MIN_HOME_PAGES = 5
-const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page, pageIndex) => {
-  if (pageIndex !== 1) return [...page]
+const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page) => [...page])
+const DEFAULT_MORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
+  page.includes('app_more'),
+)
+if (DEFAULT_MORE_HOME_PAGE_INDEX >= 0) {
+  const page = DEFAULT_HOME_TILE_ORDER_PAGES[DEFAULT_MORE_HOME_PAGE_INDEX]
   const appMoreIndex = page.indexOf('app_more')
-  if (appMoreIndex < 0) return [...page, CONTROL_CENTER_HOME_APP_ID]
-  return [
-    ...page.slice(0, appMoreIndex),
+  if (appMoreIndex < 0) {
+    page.push(CONTROL_CENTER_HOME_APP_ID)
+  } else {
+    page.splice(appMoreIndex, 0, CONTROL_CENTER_HOME_APP_ID)
+  }
+} else {
+  DEFAULT_HOME_TILE_ORDER_PAGES[1] = [
+    ...(DEFAULT_HOME_TILE_ORDER_PAGES[1] || []),
     CONTROL_CENTER_HOME_APP_ID,
-    ...page.slice(appMoreIndex),
   ]
-})
+}
 
 const DEFAULT_TILE_PAGE_INDEX = Object.fromEntries(
   DEFAULT_HOME_TILE_ORDER_PAGES.flatMap((page, pageIndex) =>
@@ -1233,6 +1242,24 @@ export const useSystemStore = defineStore('system', () => {
     )
   }
 
+  const keepOnlyExplicitlyPlacedHomeTilesOnPage = (pageIndex) => {
+    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    const placedTileIds = new Set(
+      (settings.appearance.homeLayoutSlotPlacements[normalizedPageIndex] || [])
+        .map((placement) => placement?.tileId)
+        .filter((tileId) => typeof tileId === 'string' && tileId.trim()),
+    )
+
+    settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
+      settings.appearance.homeWidgetPages.map((page, index) =>
+        index === normalizedPageIndex
+          ? page.filter((tileId) => placedTileIds.has(tileId))
+          : page,
+      ),
+    )
+    normalizeCurrentHomeLayoutSlotPlacements()
+  }
+
   const getThemeById = (themeId = '') => {
     const normalizedThemeId = normalizeThemeId(themeId, '')
     if (!normalizedThemeId) return availableThemes.value[0] || null
@@ -1569,6 +1596,7 @@ export const useSystemStore = defineStore('system', () => {
     )
     settings.appearance.homeLayoutTemplateIds = nextTemplateIds
     normalizeCurrentHomeLayoutSlotPlacements()
+    keepOnlyExplicitlyPlacedHomeTilesOnPage(normalizedPageIndex)
   }
 
   const setHomeLayoutSlotPlacement = (pageIndex, slotId, tileId) => {

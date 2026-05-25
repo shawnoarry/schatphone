@@ -149,7 +149,7 @@ describe('Home folder entries', () => {
     expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
     expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-id')).toBeTruthy()
     expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-size')).toBe('1x1')
-    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_reminders"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_reminders"]').attributes('data-home-slot-size')).toBe('1x1')
 
     await wrapper.findAll('.home-template-card')[4].trigger('click')
     await wrapper.vm.$nextTick()
@@ -281,6 +281,99 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('shows the full compatible app library when changing a slot', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+    store.setHomeLayoutSlotPlacement(4, 'b-small-1', 'app_gallery')
+    store.setHomeLayoutSlotPlacement(4, 'b-small-2', 'app_network')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+    vi.advanceTimersByTime(500)
+
+    await wrapper.find('[data-home-tile-id="app_gallery"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_network"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_chat"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-music"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="home-slot-candidate-app_network"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-small-1',
+      tileId: 'app_network',
+    })
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).not.toContainEqual({
+      slotId: 'b-small-2',
+      tileId: 'app_network',
+    })
+    wrapper.unmount()
+  })
+
+  test('moves unmatched entries to recovery after switching to a smaller app-slot template', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+    const pageAppIds = [
+      'app_gallery',
+      'app_network',
+      'app_wallet',
+      'app_themes',
+      'app_phone',
+      'app_map',
+      'app_calendar',
+      'app_stock',
+    ]
+    pageAppIds.forEach((tileId, index) => {
+      store.setHomeLayoutSlotPlacement(4, `b-small-${index + 1}`, tileId)
+    })
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-template-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('.home-template-card')[3].trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeLayoutTemplateIds[4]).toBe('layout-d')
+    expect(wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_gallery"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_network"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-library-candidate-app_network"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   test('restores unplaced content through the edit-mode Home library', async () => {
     const router = createTestRouter()
     await router.push('/home?widgetEdit=1&homePage=4')
@@ -330,8 +423,8 @@ describe('Home folder entries', () => {
     await router.push('/home?widgetEdit=1&homePage=4')
     await router.isReady()
     const store = useSystemStore()
-    store.setHomeWidgetPages([[], [], [], [], ['app_gallery']])
     store.setHomeLayoutTemplate(4, 'layout-b')
+    store.setHomeLayoutSlotPlacement(4, 'b-small-1', 'app_gallery')
 
     const wrapper = mount(HomeView, {
       props: {

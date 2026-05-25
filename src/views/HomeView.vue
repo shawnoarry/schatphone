@@ -149,6 +149,7 @@ const readLayoutEditLocalFlag = () => {
 const layoutEditFeatureEnabled = ref(LAYOUT_EDIT_ENV_ENABLED && readLayoutEditLocalFlag())
 
 const SLOT_CONTENT_FILTERS = ['all', 'apps', 'folders', 'widgets', 'custom']
+const DOCK_TILE_IDS = Object.freeze(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
 
 const widgetRegistry = {
   ...HOME_WIDGET_REGISTRY_ENTRIES,
@@ -562,18 +563,29 @@ const visibleHomePlacedIds = computed(() => {
   return ids
 })
 
-const availableHomeSlotCandidates = computed(() => {
-  const placedIds = visibleHomePlacedIds.value
-  return Object.keys(widgetRegistry)
-    .filter((tileId) => !placedIds.has(tileId))
+const allHomeSlotCandidateIds = computed(() =>
+  Object.keys(widgetRegistry)
     .filter((tileId) => tileId !== 'app_files')
     .filter((tileId) => {
       if (tileId === 'app_control_center') return isWorldHubInstalled.value
       return true
     })
-    .concat(customWidgets.value.map((widget) => widget.id).filter((tileId) => !placedIds.has(tileId)))
+    .concat(customWidgets.value.map((widget) => widget.id))
     .filter((tileId) => !!tileMeta(tileId))
+)
+
+const availableHomeSlotCandidates = computed(() => {
+  const placedIds = visibleHomePlacedIds.value
+  return allHomeSlotCandidateIds.value.filter((tileId) => !placedIds.has(tileId))
 })
+
+const slotCandidateStatus = (tileId, target = null) => {
+  if (target?.tileId === tileId) return t('当前槽位', 'Current slot')
+  const pageIndex = tilePageIndexMap.value.get(tileId)
+  if (Number.isInteger(pageIndex)) return homePageLabel(pageIndex)
+  if (DOCK_TILE_IDS.includes(tileId)) return t('Dock 可用', 'Dock')
+  return t('应用库', 'Library')
+}
 
 const availableHomeLibraryCandidates = computed(() =>
   availableHomeSlotCandidates.value.map((tileId) => ({
@@ -581,6 +593,7 @@ const availableHomeLibraryCandidates = computed(() =>
     label: slotCandidateLabel(tileId),
     icon: slotCandidateIcon(tileId),
     size: tileSizeKeyForId(tileId),
+    status: slotCandidateStatus(tileId),
     kind: tileMeta(tileId)?.kind || '',
     accent: tileMeta(tileId)?.accent || 'default',
   })),
@@ -596,7 +609,7 @@ const slotContentCandidates = computed(() => {
   const target = slotContentTarget.value
   if (!target?.slot) return []
 
-  return availableHomeSlotCandidates.value
+  return allHomeSlotCandidateIds.value
     .filter((tileId) => tileId !== target.tileId)
     .filter((tileId) => canTileFitTemplateSlot(tileId, target.slot))
     .filter((tileId) => slotContentFilter.value === 'all' || slotCandidateFilter(tileId) === slotContentFilter.value)
@@ -605,6 +618,7 @@ const slotContentCandidates = computed(() => {
       label: slotCandidateLabel(tileId),
       icon: slotCandidateIcon(tileId),
       size: tileSizeKeyForId(tileId),
+      status: slotCandidateStatus(tileId, target),
       kind: tileMeta(tileId)?.kind || '',
       accent: tileMeta(tileId)?.accent || 'default',
     }))
@@ -1466,7 +1480,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="home-content-library-copy">
             <strong>{{ candidate.label }}</strong>
-            <small>{{ candidate.size }}</small>
+            <small>{{ candidate.size }} · {{ candidate.status }}</small>
           </span>
         </button>
       </div>
@@ -1525,7 +1539,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="home-slot-content-copy">
             <strong>{{ candidate.label }}</strong>
-            <small>{{ candidate.size }}</small>
+            <small>{{ candidate.size }} · {{ candidate.status }}</small>
           </span>
         </button>
       </div>
@@ -1860,47 +1874,6 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div
-            v-if="!layoutEditMode && homeLayoutAssignmentForPage(pageIndex).overflow.length > 0"
-            class="home-overflow-strip"
-          >
-            <div
-              v-for="tileId in homeLayoutAssignmentForPage(pageIndex).overflow"
-              :key="`overflow-${tileId}`"
-              class="home-tile home-overflow-tile"
-              :data-home-tile-id="tileId"
-            >
-              <button
-                v-if="tileMeta(tileId)?.kind === 'app' || tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
-                class="home-app-tile"
-                :class="{ 'home-folder-tile': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
-                @click="openAppById(tileId)"
-                :data-testid="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND ? `home-folder-${tileId}` : undefined"
-              >
-                <span
-                  class="home-app-icon"
-                  :class="{ 'home-folder-icon': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
-                  :style="iconStyle(tileMeta(tileId).accent)"
-                >
-                  <i v-if="tileMeta(tileId)?.kind === 'app'" :class="tileMeta(tileId).icon"></i>
-                  <span v-else class="home-folder-preview-grid" aria-hidden="true">
-                    <span
-                      v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
-                      :key="entry.key"
-                      class="home-folder-preview-cell"
-                    >
-                      <i :class="entry.icon"></i>
-                    </span>
-                  </span>
-                </span>
-                <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
-              </button>
-              <div v-else class="home-widget-card home-overflow-widget">
-                <i :class="widgetCandidateIcon(tileId)"></i>
-                <span>{{ widgetCandidateLabel(tileId) }}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -2503,36 +2476,6 @@ onBeforeUnmount(() => {
 .home-layout-tile {
   min-width: 0;
   min-height: 0;
-}
-
-.home-overflow-strip {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px 12px;
-}
-
-.home-overflow-tile {
-  min-width: 0;
-}
-
-.home-overflow-widget {
-  min-height: 72px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px;
-  color: var(--home-text-main);
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.home-overflow-widget span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .home-layout-tile.is-template-scaled .home-widget-card,

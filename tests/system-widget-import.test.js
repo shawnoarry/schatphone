@@ -200,7 +200,7 @@ describe('system widget import safety', () => {
 
     store.resetHomeWidgetPages()
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_network')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_phone')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_gallery')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
   })
@@ -211,9 +211,9 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
 
     store.setMoreFeatureToggle('control_center', true)
-    expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_control_center')
-    expect(store.settings.appearance.homeWidgetPages[1].indexOf('app_control_center')).toBeLessThan(
-      store.settings.appearance.homeWidgetPages[1].indexOf('app_more'),
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_control_center')
+    expect(store.settings.appearance.homeWidgetPages[2].indexOf('app_control_center')).toBeLessThan(
+      store.settings.appearance.homeWidgetPages[2].indexOf('app_more'),
     )
 
     store.setMoreFeatureToggle('control_center', false)
@@ -255,13 +255,14 @@ describe('system widget import safety', () => {
     })
 
     store.setHomeLayoutTemplate(0, 'layout-e')
-    expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
+    expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('music')
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).not.toContainEqual({
       slotId: 'c-wide',
       tileId: 'music',
     })
 
     expect(store.setHomeLayoutSlotPlacement(0, 'e-wide', 'music')).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
     expect(store.clearHomeLayoutSlotPlacement(0, 'e-wide')).toBe(true)
     expect(store.settings.appearance.homeWidgetPages[0]).toContain('music')
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).not.toContainEqual({

@@ -111,8 +111,8 @@ export const HOME_LAYOUT_TEMPLATE_IDS = Object.freeze(HOME_LAYOUT_TEMPLATES.map(
 export const DEFAULT_HOME_LAYOUT_TEMPLATE_ID = 'layout-c'
 export const DEFAULT_HOME_LAYOUT_TEMPLATE_SEQUENCE = Object.freeze([
   'layout-c',
-  'layout-f',
   'layout-b',
+  'layout-f',
   'layout-d',
   'layout-e',
 ])

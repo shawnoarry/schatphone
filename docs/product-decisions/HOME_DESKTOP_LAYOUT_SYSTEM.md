@@ -133,13 +133,14 @@ Current first-pass implementation:
 - template ids are stored per formal Home page;
 - page content is still stored as ordered tile ids for compatibility and recovery;
 - explicit `homeLayoutSlotPlacements` records can bind a tile id to a concrete template slot id;
-- the renderer honors explicit slot placements first, then assigns remaining ordered content into available compatible slots;
+- the renderer honors explicit slot placements first, and template changes keep only placements that remain valid for the selected template instead of auto-filling the new layout from the old page order;
 - compatible means exact size match; app and folder entries remain `1x1` and do not fill larger widget slots;
-- items that cannot fit the selected template stay recoverable rather than being deleted: in normal mode they may render in a separate overflow icon strip outside the template grid, and in edit mode they return to the on-demand content library;
-- in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot;
+- items that cannot fit the selected template stay recoverable rather than being deleted: normal mode does not render them, and edit mode returns them to the on-demand content library;
+- in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot, and the picker can show the full compatible app/widget library rather than only items that are currently unplaced;
 - the picker groups available content as apps, folders, built-in widgets, and custom widgets;
 - filled slots can be replaced or cleared from that picker;
 - edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; selecting an item highlights compatible empty slots for recovery;
+- default Home content is distributed across multiple formal pages so visible entries fit their selected template slots without relying on a normal-mode overflow row;
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
 - empty template slots remain invisible outside edit mode;
 - edit mode is now slot-first: tapping a filled or empty slot opens the same-size content picker, while the old free-move / grid-absorption path is disabled in the visible editing loop;
