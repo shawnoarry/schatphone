@@ -31,6 +31,7 @@ What is already landed:
 19. Widget Center has a regression test that keeps style starter cards as lightweight thumbnails rather than iframe previews; live iframes remain reserved for draft and saved custom widget previews.
 20. Home edit mode has been consolidated around fixed slots: template selection and the unplaced-content library are on-demand, Dock Widgets long-press enters the current page's edit mode, slot replacement candidates are exact-size filtered so app/folder entries stay in `1x1` slots, and incompatible overflow entries no longer render inside the template grid.
 21. Home template switching now behaves like a new-device layout setup: when a page changes to a template with fewer or different slots, unmatched entries leave the visible desktop and return to the recoverable library instead of being auto-filled into the new layout. Slot replacement can browse the full compatible app/widget library and marks whether an item is already on another Home page, in the Dock, or only in the library.
+22. Unversioned persisted Home desktop layouts now migrate once into the cleaned setup layout on hydration, so old local browser state does not keep showing the previous crowded Home arrangement after the template-slot model changes.
 
 Still incomplete:
 

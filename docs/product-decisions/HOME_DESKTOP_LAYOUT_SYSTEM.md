@@ -141,6 +141,7 @@ Current first-pass implementation:
 - filled slots can be replaced or cleared from that picker;
 - edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; selecting an item highlights compatible empty slots for recovery;
 - default Home content is distributed across multiple formal pages so visible entries fit their selected template slots without relying on a normal-mode overflow row;
+- persisted Home desktop layouts carry a setup version; unversioned local layouts are treated as legacy setup data and migrate once to the cleaned default so old browser state cannot keep the crowded pre-slot Home arrangement alive;
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
 - empty template slots remain invisible outside edit mode;
 - edit mode is now slot-first: tapping a filled or empty slot opens the same-size content picker, while the old free-move / grid-absorption path is disabled in the visible editing loop;

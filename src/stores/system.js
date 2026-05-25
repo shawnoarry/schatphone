@@ -81,6 +81,27 @@ const DEFAULT_WIDGET_PAGES = [
   [],
 ]
 
+const LEGACY_DEFAULT_WIDGET_PAGES = [
+  ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
+  [
+    'system',
+    'quick_heart',
+    'quick_disc',
+    'app_phone',
+    'app_map',
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    'app_stock',
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    ASSETS_HOME_APP_ID,
+    'app_more',
+  ],
+  [],
+  [],
+  [],
+]
+
 const HOME_TILE_ALIASES = {
   app_mail: 'app_network',
   app_maps: 'app_map',
@@ -257,6 +278,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
+const HOME_DESKTOP_SETUP_VERSION = 1
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -289,6 +311,12 @@ const cloneDefaultHomeLayoutSlotPlacements = () => {
   return createHomeLayoutSlotPlacementsFromPages(pages, templateIds)
 }
 
+const normalizeHomeDesktopSetupVersion = (value) => {
+  const normalized = Number(value)
+  if (!Number.isFinite(normalized) || normalized < HOME_DESKTOP_SETUP_VERSION) return 0
+  return Math.floor(normalized)
+}
+
 const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
   const order = DEFAULT_HOME_TILE_ORDER_PAGES[pageIndex] || []
   const targetOrder = order.indexOf(tileId)
@@ -312,6 +340,30 @@ const insertHomeTileByDefaultOrder = (page, tileId, pageIndex = 0) => {
   nextPage.splice(insertIndex, 0, tileId)
   return nextPage
 }
+
+const areHomeTilePagesEqual = (pages, expectedPages) => {
+  if (!Array.isArray(pages) || !Array.isArray(expectedPages)) return false
+  if (pages.length !== expectedPages.length) return false
+
+  return expectedPages.every((expectedPage, pageIndex) => {
+    const page = Array.isArray(pages[pageIndex]) ? pages[pageIndex] : []
+    const comparablePage = page.filter((tileId) => tileId !== CONTROL_CENTER_HOME_APP_ID)
+    if (comparablePage.length !== expectedPage.length) return false
+    return expectedPage.every((tileId, index) => comparablePage[index] === tileId)
+  })
+}
+
+const hasAnyHomeLayoutSlotPlacement = (slotPlacements) =>
+  Array.isArray(slotPlacements) &&
+  slotPlacements.some(
+    (page) =>
+      Array.isArray(page) &&
+      page.some((placement) => {
+        const slotId = typeof placement?.slotId === 'string' ? placement.slotId.trim() : ''
+        const tileId = typeof placement?.tileId === 'string' ? placement.tileId.trim() : ''
+        return !!slotId && !!tileId
+      }),
+  )
 
 const buildDefaultHomeWidgetPages = (enabledOptionalTileIds = []) => {
   const pages = cloneDefaultWidgetPages()
@@ -1134,6 +1186,7 @@ export const useSystemStore = defineStore('system', () => {
       customCss: '',
       customVars: {},
       appIconOverrides: {},
+      homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
       homeWidgetPages: cloneDefaultWidgetPages(),
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
       homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
@@ -1242,22 +1295,33 @@ export const useSystemStore = defineStore('system', () => {
     )
   }
 
-  const keepOnlyExplicitlyPlacedHomeTilesOnPage = (pageIndex) => {
-    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
-    const placedTileIds = new Set(
-      (settings.appearance.homeLayoutSlotPlacements[normalizedPageIndex] || [])
-        .map((placement) => placement?.tileId)
-        .filter((tileId) => typeof tileId === 'string' && tileId.trim()),
+  const keepOnlyExplicitlyPlacedHomeTilesOnPages = (pageIndexes = null) => {
+    const pageIndexSet = Array.isArray(pageIndexes)
+      ? new Set(pageIndexes.filter((pageIndex) => Number.isInteger(pageIndex)).map((pageIndex) => Math.max(0, pageIndex)))
+      : null
+    const shouldCleanPage = (pageIndex) => !pageIndexSet || pageIndexSet.has(pageIndex)
+    const placedTileIdsByPage = settings.appearance.homeLayoutSlotPlacements.map(
+      (page) =>
+        new Set(
+          (Array.isArray(page) ? page : [])
+            .map((placement) => placement?.tileId)
+            .filter((tileId) => typeof tileId === 'string' && tileId.trim()),
+        ),
     )
 
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages.map((page, index) =>
-        index === normalizedPageIndex
-          ? page.filter((tileId) => placedTileIds.has(tileId))
+        shouldCleanPage(index)
+          ? page.filter((tileId) => placedTileIdsByPage[index]?.has(tileId))
           : page,
       ),
     )
     normalizeCurrentHomeLayoutSlotPlacements()
+  }
+
+  const keepOnlyExplicitlyPlacedHomeTilesOnPage = (pageIndex) => {
+    const normalizedPageIndex = Number.isInteger(pageIndex) ? Math.max(0, pageIndex) : 0
+    keepOnlyExplicitlyPlacedHomeTilesOnPages([normalizedPageIndex])
   }
 
   const getThemeById = (themeId = '') => {
@@ -1576,7 +1640,26 @@ export const useSystemStore = defineStore('system', () => {
       cloneDefaultWidgetPages(),
     )
     settings.appearance.homeLayoutTemplateIds = cloneDefaultHomeLayoutTemplateIds()
+    settings.appearance.homeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
     syncHomeLayoutSlotPlacementsFromPages()
+  }
+
+  const migrateHomeDesktopLayoutAfterHydration = (persistedSetupVersion = HOME_DESKTOP_SETUP_VERSION) => {
+    const shouldRestoreControlCenter = settings.more.featureToggles.control_center === true
+    const shouldResetToCleanSetup =
+      normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES)
+
+    if (shouldResetToCleanSetup) {
+      resetHomeWidgetPages()
+      if (shouldRestoreControlCenter) {
+        restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
+      }
+      return
+    }
+
+    keepOnlyExplicitlyPlacedHomeTilesOnPages()
+    settings.appearance.homeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
   }
 
   const setHomeLayoutTemplate = (pageIndex, templateId) => {
@@ -2919,6 +3002,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const applyPersistedSnapshot = (persisted = {}) => {
     if (!persisted || typeof persisted !== 'object') return false
+    let persistedHomeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
 
     if (persisted.settings?.api && typeof persisted.settings.api === 'object') {
       Object.assign(settings.api, persisted.settings.api)
@@ -2932,6 +3016,10 @@ export const useSystemStore = defineStore('system', () => {
 
     if (persisted.settings?.appearance && typeof persisted.settings.appearance === 'object') {
       const appearance = persisted.settings.appearance
+      persistedHomeDesktopSetupVersion = normalizeHomeDesktopSetupVersion(
+        appearance.homeDesktopSetupVersion,
+      )
+      settings.appearance.homeDesktopSetupVersion = persistedHomeDesktopSetupVersion
 
       if (typeof appearance.currentTheme === 'string') {
         settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
@@ -2985,12 +3073,19 @@ export const useSystemStore = defineStore('system', () => {
         appearance.homeLayoutTemplateIds,
         settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES,
       )
-      settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacements(
+      settings.appearance.homeLayoutSlotPlacements = hasAnyHomeLayoutSlotPlacement(
         appearance.homeLayoutSlotPlacements,
-        settings.appearance.homeWidgetPages,
-        settings.appearance.homeLayoutTemplateIds,
-        homeTileSizeKey,
       )
+        ? normalizeHomeLayoutSlotPlacements(
+            appearance.homeLayoutSlotPlacements,
+            settings.appearance.homeWidgetPages,
+            settings.appearance.homeLayoutTemplateIds,
+            homeTileSizeKey,
+          )
+        : createHomeLayoutSlotPlacementsFromPages(
+            settings.appearance.homeWidgetPages,
+            settings.appearance.homeLayoutTemplateIds,
+          )
     }
 
     if (persisted.settings?.system && typeof persisted.settings.system === 'object') {
@@ -3145,12 +3240,20 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.homeLayoutTemplateIds,
       settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES,
     )
-    settings.appearance.homeLayoutSlotPlacements = normalizeHomeLayoutSlotPlacements(
+    settings.appearance.homeLayoutSlotPlacements = hasAnyHomeLayoutSlotPlacement(
       settings.appearance.homeLayoutSlotPlacements,
-      settings.appearance.homeWidgetPages,
-      settings.appearance.homeLayoutTemplateIds,
-      homeTileSizeKey,
     )
+      ? normalizeHomeLayoutSlotPlacements(
+          settings.appearance.homeLayoutSlotPlacements,
+          settings.appearance.homeWidgetPages,
+          settings.appearance.homeLayoutTemplateIds,
+          homeTileSizeKey,
+        )
+        : createHomeLayoutSlotPlacementsFromPages(
+            settings.appearance.homeWidgetPages,
+            settings.appearance.homeLayoutTemplateIds,
+          )
+    migrateHomeDesktopLayoutAfterHydration(persistedHomeDesktopSetupVersion)
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true

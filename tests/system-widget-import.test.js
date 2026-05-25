@@ -6,6 +6,7 @@ import {
   CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
 } from '../src/lib/custom-widget-actions'
 import { DEFAULT_HOME_LAYOUT_TEMPLATE_ID } from '../src/lib/home-layout-templates'
+import { writePersistedState } from '../src/lib/persistence'
 import { useSystemStore } from '../src/stores/system'
 
 const snapshotWidgetState = (store) =>
@@ -203,6 +204,121 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_phone')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_gallery')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
+  })
+
+  test('migrates persisted legacy default Home into the cleaned setup layout', () => {
+    writePersistedState(
+      'store:system',
+      {
+        settings: {
+          appearance: {
+            homeWidgetPages: [
+              ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
+              [
+                'system',
+                'quick_heart',
+                'quick_disc',
+                'app_phone',
+                'app_map',
+                'app_calendar',
+                'app_reminders',
+                'app_stock',
+                'app_shopping',
+                'app_food_delivery',
+                'app_assets',
+                'app_more',
+              ],
+              [],
+              [],
+              [],
+            ],
+            homeLayoutTemplateIds: ['layout-c', 'layout-f', 'layout-b', 'layout-d', 'layout-e'],
+            homeLayoutSlotPlacements: [
+              [
+                { slotId: 'c-top-left', tileId: 'weather' },
+                { slotId: 'c-top-right', tileId: 'calendar' },
+                { slotId: 'c-wide', tileId: 'music' },
+                { slotId: 'c-small-1', tileId: 'app_network' },
+                { slotId: 'c-small-2', tileId: 'app_chat' },
+                { slotId: 'c-small-3', tileId: 'app_wallet' },
+                { slotId: 'c-small-4', tileId: 'app_themes' },
+                { slotId: 'c-small-5', tileId: 'app_gallery' },
+              ],
+              [
+                { slotId: 'f-left', tileId: 'system' },
+                { slotId: 'f-small-1', tileId: 'quick_heart' },
+                { slotId: 'f-small-2', tileId: 'quick_disc' },
+                { slotId: 'f-small-3', tileId: 'app_phone' },
+                { slotId: 'f-small-4', tileId: 'app_map' },
+              ],
+              [],
+              [],
+              [],
+            ],
+          },
+          more: {
+            featureToggles: {
+              control_center: false,
+            },
+          },
+        },
+      },
+      { version: 1 },
+    )
+
+    const store = useSystemStore()
+
+    expect(store.settings.appearance.homeLayoutTemplateIds.slice(0, 3)).toEqual([
+      'layout-c',
+      'layout-b',
+      'layout-f',
+    ])
+    expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_shopping')
+    expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_food_delivery')
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_more')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
+      slotId: 'b-small-7',
+      tileId: 'app_food_delivery',
+    })
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(1)
+  })
+
+  test('keeps versioned Home slot setup during hydration', () => {
+    writePersistedState(
+      'store:system',
+      {
+        settings: {
+          appearance: {
+            homeDesktopSetupVersion: 1,
+            homeWidgetPages: [['weather'], [], [], [], []],
+            homeLayoutTemplateIds: ['layout-c', 'layout-b', 'layout-f', 'layout-d', 'layout-e'],
+            homeLayoutSlotPlacements: [
+              [{ slotId: 'c-top-left', tileId: 'weather' }],
+              [],
+              [],
+              [],
+              [],
+            ],
+          },
+          more: {
+            featureToggles: {
+              control_center: false,
+            },
+          },
+        },
+      },
+      { version: 1 },
+    )
+
+    const store = useSystemStore()
+
+    expect(store.settings.appearance.homeWidgetPages[0]).toEqual(['weather'])
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_phone')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
+      slotId: 'c-top-left',
+      tileId: 'weather',
+    })
   })
 
   test('runtime control toggle restores and removes the optional World Hub Home entry', () => {
