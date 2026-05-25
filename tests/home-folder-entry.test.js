@@ -276,8 +276,41 @@ describe('Home folder entries', () => {
 
     expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
     expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).classes()).toContain('is-widget-like')
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"] iframe`).attributes('srcdoc')).toContain('Poster')
     expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="home-slot-candidate-weather"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('shows visual built-in widget previews when choosing Home slot content', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-e')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-empty-slot-4-e-top-left"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const weatherCandidate = wrapper.find('[data-testid="home-slot-candidate-weather"]')
+    expect(weatherCandidate.exists()).toBe(true)
+    expect(weatherCandidate.classes()).toContain('is-widget-like')
+    expect(weatherCandidate.find('.home-slot-content-preview.is-weather').exists()).toBe(true)
+    expect(weatherCandidate.find('.home-slot-preview-widget.is-weather').text()).toContain('18°')
+
     wrapper.unmount()
   })
 

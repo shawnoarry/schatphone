@@ -4,6 +4,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WidgetsView from '../src/views/WidgetsView.vue'
+import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../src/lib/widget-style-presets'
+import { VALID_WIDGET_SIZES } from '../src/lib/widget-schema'
 import { useSystemStore } from '../src/stores/system'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 
@@ -60,9 +62,9 @@ describe('Widgets custom template starters', () => {
     const sizeSelect = wrapper.find('.widgets-field select')
     const codeTextarea = wrapper.find('textarea')
 
-    expect(nameInput.element.value).toBe('Polaroid Stack')
-    expect(sizeSelect.element.value).toBe('2x2')
-    expect(codeTextarea.element.value).toContain('sp-polaroid')
+    expect(nameInput.element.value).toBe('Mood Charm')
+    expect(sizeSelect.element.value).toBe('1x1')
+    expect(codeTextarea.element.value).toContain('sp-charm')
     expect(wrapper.find('.widgets-draft-preview iframe').exists()).toBe(true)
     expect(store.settings.appearance.customWidgets).toHaveLength(0)
 
@@ -82,6 +84,62 @@ describe('Widgets custom template starters', () => {
     expect(text).toContain('4x2')
     expect(text).toContain('Evening Radio')
     expect(text).toContain('Daily Mix')
+
+    wrapper.unmount()
+  })
+
+  test('filters the Widget Market by Home slot size', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    const sizeButton = wrapper.findAll('.widgets-size-filter button').find((button) => button.text() === '4x3')
+    expect(sizeButton).toBeTruthy()
+
+    await sizeButton.trigger('click')
+    await nextTick()
+
+    const marketCards = wrapper.findAll('.widgets-market-card')
+    expect(marketCards).toHaveLength(1)
+    expect(marketCards[0].text()).toContain('Theme Board')
+    expect(marketCards[0].text()).toContain('4x3')
+    expect(wrapper.text()).toContain('1 items')
+    expect(wrapper.text()).not.toContain('Weather')
+
+    wrapper.unmount()
+  })
+
+  test('opens an official style preview and can add or edit from it', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    const previewButton = wrapper.find('.widgets-market-card.is-style-preset .widgets-preview-open')
+    expect(previewButton.exists()).toBe(true)
+
+    await previewButton.trigger('click')
+    await nextTick()
+
+    const previewDialog = wrapper.find('.widgets-style-preview-dialog')
+    expect(previewDialog.exists()).toBe(true)
+    expect(previewDialog.text()).toContain('Mood Charm')
+    expect(previewDialog.text()).toContain('1x1')
+    expect(previewDialog.find('iframe').attributes('srcdoc')).toContain('sp-charm')
+    expect(store.settings.appearance.customWidgets).toHaveLength(0)
+
+    await wrapper.find('.widgets-style-preview-actions .widgets-secondary-btn').trigger('click')
+    await nextTick()
+
+    expect(store.settings.appearance.customWidgets).toHaveLength(1)
+    expect(store.settings.appearance.customWidgets[0].name).toBe('Mood Charm')
+    expect(wrapper.find('.widgets-style-preview-dialog').exists()).toBe(true)
+
+    await wrapper.find('.widgets-style-preview-actions .widgets-primary-btn').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(wrapper.find('.widgets-style-preview-dialog').exists()).toBe(false)
+    expect(wrapper.find('input[type="text"]').element.value).toBe('Mood Charm')
+    expect(wrapper.find('textarea').element.value).toContain('sp-charm')
 
     wrapper.unmount()
   })
@@ -107,8 +165,8 @@ describe('Widgets custom template starters', () => {
     await flushPromises()
     await nextTick()
 
-    expect(wrapper.find('input[type="text"]').element.value).toBe('Mood Glass Orb')
-    expect(wrapper.find('textarea').element.value).toContain('sp-orb')
+    expect(wrapper.find('input[type="text"]').element.value).toBe('Index Capsule')
+    expect(wrapper.find('textarea').element.value).toContain('sp-index')
 
     wrapper.unmount()
   })
@@ -142,11 +200,73 @@ describe('Widgets custom template starters', () => {
     await nextTick()
 
     const starterCards = wrapper.findAll('.widgets-template-card')
-    expect(starterCards.length).toBeGreaterThanOrEqual(6)
+    expect(starterCards.length).toBeGreaterThanOrEqual(7)
     expect(wrapper.find('.widgets-template-strip iframe').exists()).toBe(false)
     expect(starterCards.every((card) => card.find('.widgets-template-thumb').exists())).toBe(true)
     expect(starterCards.every((card) => /\d+x\d+/.test(card.text()))).toBe(true)
 
     wrapper.unmount()
+  })
+
+  test('keeps import as a visual-code library step with supported size chips', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.findAll('.widgets-tab')[2].trigger('click')
+    await nextTick()
+
+    const guide = wrapper.find('.widgets-import-guide')
+    expect(guide.exists()).toBe(true)
+    expect(guide.text()).toContain('Import visual code without placing it on Home automatically.')
+    expect(wrapper.findAll('.widgets-import-size-chips span').map((chip) => chip.text())).toEqual([
+      ...VALID_WIDGET_SIZES,
+    ])
+
+    wrapper.unmount()
+  })
+
+  test('renders created custom widgets as preview cards with icon actions', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    store.addCustomWidget({
+      name: 'Preview Card',
+      size: '1x1',
+      code: '<div style="height:100%;display:grid;place-items:center;">Demo</div>',
+    })
+
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.findAll('.widgets-tab')[1].trigger('click')
+    await nextTick()
+
+    const createdItem = wrapper.find('.widgets-created-item')
+    expect(createdItem.exists()).toBe(true)
+    expect(createdItem.find('.widgets-created-preview iframe').exists()).toBe(true)
+    expect(createdItem.find('.widgets-created-actions .fa-pen').exists()).toBe(true)
+    expect(createdItem.find('.widgets-created-actions .fa-trash').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('official style presets are complete rendered widgets across key Home sizes', () => {
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS).toHaveLength(7)
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.size)).toEqual([
+      '1x1',
+      '2x1',
+      '2x2',
+      '4x1',
+      '4x2',
+      '4x3',
+      '4x4',
+    ])
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain('Theme Board')
+
+    OFFICIAL_WIDGET_STYLE_PRESETS.forEach((preset) => {
+      expect(preset.code).toContain('<style>')
+      expect(preset.code).not.toContain('{{text:')
+      expect(preset.code).not.toContain('{{image:')
+      expect(preset.code).not.toContain('<script')
+      expect(preset.code).not.toMatch(/\son[a-z0-9_-]+\s*=/i)
+    })
   })
 })

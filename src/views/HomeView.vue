@@ -587,16 +587,22 @@ const slotCandidateStatus = (tileId, target = null) => {
   return t('应用库', 'Library')
 }
 
-const availableHomeLibraryCandidates = computed(() =>
-  availableHomeSlotCandidates.value.map((tileId) => ({
+const createHomeCandidate = (tileId, target = null) => {
+  const meta = tileMeta(tileId)
+  return {
     tileId,
     label: slotCandidateLabel(tileId),
     icon: slotCandidateIcon(tileId),
     size: tileSizeKeyForId(tileId),
-    status: slotCandidateStatus(tileId),
-    kind: tileMeta(tileId)?.kind || '',
-    accent: tileMeta(tileId)?.accent || 'default',
-  })),
+    status: slotCandidateStatus(tileId, target),
+    kind: meta?.kind || '',
+    accent: meta?.accent || 'default',
+    variant: meta?.variant || '',
+  }
+}
+
+const availableHomeLibraryCandidates = computed(() =>
+  availableHomeSlotCandidates.value.map((tileId) => createHomeCandidate(tileId)),
 )
 const selectedHomeLibraryCandidate = computed(
   () =>
@@ -613,15 +619,7 @@ const slotContentCandidates = computed(() => {
     .filter((tileId) => tileId !== target.tileId)
     .filter((tileId) => canTileFitTemplateSlot(tileId, target.slot))
     .filter((tileId) => slotContentFilter.value === 'all' || slotCandidateFilter(tileId) === slotContentFilter.value)
-    .map((tileId) => ({
-      tileId,
-      label: slotCandidateLabel(tileId),
-      icon: slotCandidateIcon(tileId),
-      size: tileSizeKeyForId(tileId),
-      status: slotCandidateStatus(tileId, target),
-      kind: tileMeta(tileId)?.kind || '',
-      accent: tileMeta(tileId)?.accent || 'default',
-    }))
+    .map((tileId) => createHomeCandidate(tileId, target))
 })
 
 const slotContentTargetTitle = computed(() =>
@@ -1527,11 +1525,53 @@ onBeforeUnmount(() => {
           v-for="candidate in slotContentCandidates"
           :key="candidate.tileId"
           class="home-slot-content-option"
+          :class="[
+            `is-size-${candidate.size.replace('x', '-')}`,
+            {
+              'is-widget-like': candidate.kind === 'widget' || candidate.kind === 'custom_widget',
+            },
+          ]"
           type="button"
           :data-testid="`home-slot-candidate-${candidate.tileId}`"
           @click="placeTileInSlotTarget(candidate.tileId)"
         >
+          <div v-if="candidate.kind === 'widget'" class="home-slot-content-preview" :class="`is-${candidate.variant}`">
+            <div v-if="candidate.variant === 'weather'" class="home-slot-preview-widget is-weather">
+              <span><i class="fas fa-location-dot"></i>{{ t('东京', 'Tokyo') }}</span>
+              <strong>18°</strong>
+              <small>{{ t('晴朗', 'Clear') }}</small>
+            </div>
+            <div v-else-if="candidate.variant === 'calendar'" class="home-slot-preview-widget is-calendar">
+              <span>{{ today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' }) }}</span>
+              <strong>{{ today.getDate() }}</strong>
+            </div>
+            <div v-else-if="candidate.variant === 'music'" class="home-slot-preview-widget is-music">
+              <span></span>
+              <div>
+                <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
+                <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
+                <i></i>
+              </div>
+            </div>
+            <div v-else-if="candidate.variant === 'system'" class="home-slot-preview-widget is-system">
+              <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
+              <strong>{{ t('电量 86%', 'Battery 86%') }}</strong>
+              <i></i>
+            </div>
+            <div v-else class="home-slot-preview-widget is-quick">
+              <i :class="candidate.icon"></i>
+            </div>
+          </div>
+          <div v-else-if="candidate.kind === 'custom_widget'" class="home-slot-content-preview is-custom-widget">
+            <iframe
+              :srcdoc="customWidgetSrcDoc(candidate.tileId)"
+              sandbox="allow-scripts"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            ></iframe>
+          </div>
           <span
+            v-else
             class="home-slot-content-icon"
             :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
           >
@@ -2324,6 +2364,21 @@ onBeforeUnmount(() => {
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
+.home-slot-content-option.is-size-4-1,
+.home-slot-content-option.is-size-4-2,
+.home-slot-content-option.is-size-4-3,
+.home-slot-content-option.is-size-4-4 {
+  grid-column: 1 / -1;
+}
+
+.home-slot-content-option.is-widget-like {
+  min-height: 132px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  padding: 9px;
+}
+
 .home-slot-content-option:active {
   transform: scale(0.98);
   background: rgba(255, 255, 255, 0.17);
@@ -2339,6 +2394,201 @@ onBeforeUnmount(() => {
   justify-content: center;
   background: rgba(255, 255, 255, 0.16);
   font-size: 14px;
+}
+
+.home-slot-content-preview {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.58), transparent 30%),
+    linear-gradient(145deg, rgba(205, 219, 224, 0.25), rgba(74, 88, 96, 0.18));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 18px rgba(8, 13, 22, 0.14);
+}
+
+.home-slot-content-option.is-size-1-1 .home-slot-content-preview {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto;
+  border-radius: 18px;
+}
+
+.home-slot-content-option.is-size-2-1 .home-slot-content-preview,
+.home-slot-content-option.is-size-4-1 .home-slot-content-preview {
+  height: 56px;
+  border-radius: 999px;
+}
+
+.home-slot-content-option.is-size-2-2 .home-slot-content-preview {
+  height: 104px;
+}
+
+.home-slot-content-option.is-size-4-2 .home-slot-content-preview {
+  height: 108px;
+}
+
+.home-slot-content-option.is-size-4-3 .home-slot-content-preview {
+  height: 134px;
+}
+
+.home-slot-content-option.is-size-4-4 .home-slot-content-preview {
+  height: 152px;
+}
+
+.home-slot-content-preview iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+  pointer-events: none;
+}
+
+.home-slot-preview-widget {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: inherit;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.home-slot-preview-widget.is-weather {
+  padding: 11px;
+  display: grid;
+  align-content: space-between;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.42), transparent 24%),
+    linear-gradient(145deg, rgba(129, 155, 166, 0.88), rgba(49, 66, 78, 0.82));
+}
+
+.home-slot-preview-widget.is-weather span,
+.home-slot-preview-widget.is-system span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.78;
+}
+
+.home-slot-preview-widget.is-weather strong {
+  align-self: center;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.home-slot-preview-widget.is-weather small,
+.home-slot-preview-widget.is-music small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 750;
+  opacity: 0.76;
+}
+
+.home-slot-preview-widget.is-calendar {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(190, 206, 212, 0.58));
+  color: rgba(35, 45, 52, 0.9);
+}
+
+.home-slot-preview-widget.is-calendar span {
+  color: rgba(116, 88, 98, 0.88);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-slot-preview-widget.is-calendar strong {
+  font-size: 36px;
+  line-height: 0.95;
+  font-weight: 320;
+}
+
+.home-slot-preview-widget.is-music {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  background: linear-gradient(135deg, rgba(54, 67, 78, 0.9), rgba(125, 101, 112, 0.78));
+}
+
+.home-slot-preview-widget.is-music > span {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.88), transparent 29%),
+    linear-gradient(135deg, rgba(205, 223, 229, 0.88), rgba(77, 97, 108, 0.9));
+  box-shadow: 0 8px 16px rgba(8, 13, 22, 0.18);
+}
+
+.home-slot-preview-widget.is-music div {
+  min-width: 0;
+}
+
+.home-slot-preview-widget.is-music strong {
+  display: block;
+  min-width: 0;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.home-slot-preview-widget.is-music i,
+.home-slot-preview-widget.is-system i:last-child {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.82) 0 42%, rgba(255, 255, 255, 0.22) 43%),
+    rgba(255, 255, 255, 0.18);
+}
+
+.home-slot-preview-widget.is-system {
+  padding: 11px;
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  background: linear-gradient(145deg, rgba(30, 40, 52, 0.86), rgba(90, 112, 122, 0.68));
+}
+
+.home-slot-preview-widget.is-system strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.home-slot-preview-widget.is-quick {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(177, 196, 202, 0.4));
+  color: rgba(105, 76, 88, 0.96);
+  font-size: 20px;
 }
 
 .home-slot-content-copy {

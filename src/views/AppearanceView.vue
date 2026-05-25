@@ -20,10 +20,15 @@ import {
 import {
   buildReturnSourceQuery,
   buildRouteWithReturnSource,
+  normalizeHomePageQuery,
   pushReturnTarget,
   resolveReturnLabel,
 } from '../lib/navigation-return'
-import { HOME_LAYOUT_TEMPLATES, homeLayoutSlotToGridStyle } from '../lib/home-layout-templates'
+import {
+  HOME_LAYOUT_TEMPLATES,
+  getHomeLayoutTemplate,
+  homeLayoutSlotToGridStyle,
+} from '../lib/home-layout-templates'
 
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
@@ -58,6 +63,7 @@ const appearanceLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' :
 
 const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
+const selectedHomeLayoutPage = ref(0)
 
 let savedTimerId = null
 const customFontStackInput = ref('')
@@ -70,6 +76,36 @@ const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
 
 const wallpaperAssets = computed(() => galleryStore.getAssetsByCategory('wallpaper'))
 const homeLayoutPreviewTemplates = computed(() => HOME_LAYOUT_TEMPLATES)
+const homeLayoutPageCount = computed(() =>
+  Math.max(
+    5,
+    Array.isArray(settings.value.appearance.homeWidgetPages)
+      ? settings.value.appearance.homeWidgetPages.length
+      : 0,
+    Array.isArray(settings.value.appearance.homeLayoutTemplateIds)
+      ? settings.value.appearance.homeLayoutTemplateIds.length
+      : 0,
+  ),
+)
+const clampHomeLayoutPage = (pageIndex) => {
+  const numeric = Number(pageIndex)
+  const fallback = Number.isInteger(numeric) ? numeric : 0
+  return Math.min(Math.max(0, fallback), Math.max(0, homeLayoutPageCount.value - 1))
+}
+const selectedHomeLayoutPageIndex = computed(() => clampHomeLayoutPage(selectedHomeLayoutPage.value))
+const homeLayoutPageSummaries = computed(() =>
+  Array.from({ length: homeLayoutPageCount.value }, (_, index) => {
+    const template = getHomeLayoutTemplate(settings.value.appearance.homeLayoutTemplateIds?.[index])
+    return {
+      index,
+      template,
+      templateId: template.id,
+    }
+  }),
+)
+const selectedHomeLayoutTemplate = computed(() =>
+  getHomeLayoutTemplate(settings.value.appearance.homeLayoutTemplateIds?.[selectedHomeLayoutPageIndex.value]),
+)
 
 const fontPresetLabel = (preset) => {
   if (preset.id === 'system') return t('系统默认', 'System default')
@@ -123,6 +159,9 @@ const backLabel = computed(() => {
   if (activeMenu.value !== ROOT_MENU) return t('外观工坊', 'Appearance Studio')
   return returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home')
 })
+
+const homeLayoutTemplateLabel = (template) => t(`布局 ${template.key}`, `Layout ${template.key}`)
+const homeLayoutPageLabel = (pageIndex) => `${t('第', 'Screen ')}${pageIndex + 1}${t('屏', '')}`
 
 const currentFontStack = computed(() => {
   const value = settings.value.appearance.customVars?.[FONT_VAR_NAME]
@@ -270,6 +309,18 @@ watch(
 )
 
 watch(
+  () => route.query.homePage,
+  (homePage) => {
+    selectedHomeLayoutPage.value = clampHomeLayoutPage(normalizeHomePageQuery(homePage))
+  },
+  { immediate: true },
+)
+
+watch(homeLayoutPageCount, () => {
+  selectedHomeLayoutPage.value = clampHomeLayoutPage(selectedHomeLayoutPage.value)
+})
+
+watch(
   () => [
     settings.value.appearance.wallpaperAssetId,
     wallpaperAssets.value.map((asset) => asset.id).join('|'),
@@ -346,12 +397,23 @@ const openWidgetCenter = () => {
 }
 
 const openHomeLayoutEditor = () => {
+  const pageIndex = selectedHomeLayoutPageIndex.value
   router.push(
     buildRouteWithReturnSource('/home', 'home', {
       widgetEdit: '1',
-      homePage: route.query.homePage,
+      homePage: pageIndex,
     }),
   )
+}
+
+const selectAppearanceHomePage = (pageIndex) => {
+  selectedHomeLayoutPage.value = clampHomeLayoutPage(pageIndex)
+}
+
+const setAppearanceHomeTemplate = (templateId) => {
+  const ok = systemStore.setHomeLayoutTemplate(selectedHomeLayoutPageIndex.value, templateId)
+  if (!ok) return
+  triggerSaved()
 }
 
 const goSettings = () => {
@@ -527,24 +589,63 @@ onBeforeUnmount(() => {
             <p>{{ t('主屏布局', 'Home Layout') }}</p>
             <h2>{{ t('桌面模板', 'Desktop Templates') }}</h2>
           </div>
-          <button type="button" @click="openHomeLayoutEditor">
+          <button type="button" data-testid="appearance-edit-home-layout" @click="openHomeLayoutEditor">
             <i class="fas fa-mobile-screen"></i>
             <span>{{ t('编辑主屏', 'Edit Home') }}</span>
           </button>
         </div>
-        <div class="appearance-layout-preview-row" aria-hidden="true">
-          <span
-            v-for="template in homeLayoutPreviewTemplates"
-            :key="template.id"
-            class="appearance-layout-preview"
+        <div class="appearance-layout-pages" role="tablist" :aria-label="t('主屏页面', 'Home screens')">
+          <button
+            v-for="page in homeLayoutPageSummaries"
+            :key="page.index"
+            type="button"
+            class="appearance-layout-page"
+            :class="{ 'is-active': selectedHomeLayoutPageIndex === page.index }"
+            role="tab"
+            :aria-selected="selectedHomeLayoutPageIndex === page.index"
+            :data-testid="`appearance-layout-screen-${page.index}`"
+            @click="selectAppearanceHomePage(page.index)"
           >
-            <span
-              v-for="slot in template.slots"
-              :key="slot.id"
-              class="appearance-layout-preview-slot"
-              :style="homeLayoutSlotToGridStyle(slot)"
-            ></span>
-          </span>
+            <span class="appearance-layout-page-label">{{ homeLayoutPageLabel(page.index) }}</span>
+            <span class="appearance-layout-preview" aria-hidden="true">
+              <span
+                v-for="slot in page.template.slots"
+                :key="slot.id"
+                class="appearance-layout-preview-slot"
+                :class="`is-size-${slot.size.replace('x', '-')}`"
+                :style="homeLayoutSlotToGridStyle(slot)"
+              ></span>
+            </span>
+            <small>{{ homeLayoutTemplateLabel(page.template) }}</small>
+          </button>
+        </div>
+        <div class="appearance-layout-library">
+          <div class="appearance-layout-library-head">
+            <span>{{ t('模板', 'Layouts') }}</span>
+            <strong>{{ homeLayoutTemplateLabel(selectedHomeLayoutTemplate) }}</strong>
+          </div>
+          <div class="appearance-layout-preview-row">
+            <button
+              v-for="template in homeLayoutPreviewTemplates"
+              :key="template.id"
+              type="button"
+              class="appearance-layout-template-option"
+              :class="{ 'is-active': selectedHomeLayoutTemplate.id === template.id }"
+              :data-testid="`appearance-layout-template-${template.id}`"
+              @click="setAppearanceHomeTemplate(template.id)"
+            >
+              <span class="appearance-layout-preview" aria-hidden="true">
+                <span
+                  v-for="slot in template.slots"
+                  :key="slot.id"
+                  class="appearance-layout-preview-slot"
+                  :class="`is-size-${slot.size.replace('x', '-')}`"
+                  :style="homeLayoutSlotToGridStyle(slot)"
+                ></span>
+              </span>
+              <span>{{ homeLayoutTemplateLabel(template) }}</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -1149,6 +1250,8 @@ onBeforeUnmount(() => {
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
   padding: 14px;
+  display: grid;
+  gap: 12px;
 }
 
 .appearance-overview-card {
@@ -1228,7 +1331,6 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .appearance-layout-head p,
@@ -1267,10 +1369,77 @@ onBeforeUnmount(() => {
   -webkit-tap-highlight-color: transparent;
 }
 
+.appearance-layout-pages,
 .appearance-layout-preview-row {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding: 1px 1px 2px;
+  scrollbar-width: none;
+}
+
+.appearance-layout-pages::-webkit-scrollbar,
+.appearance-layout-preview-row::-webkit-scrollbar {
+  display: none;
+}
+
+.appearance-layout-pages {
+  grid-auto-columns: 88px;
   gap: 8px;
+}
+
+.appearance-layout-page,
+.appearance-layout-template-option {
+  min-width: 0;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: grid;
+  gap: 6px;
+  padding: 7px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--system-motion-fast),
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.appearance-layout-page:active,
+.appearance-layout-template-option:active {
+  transform: scale(0.98);
+}
+
+.appearance-layout-page.is-active,
+.appearance-layout-template-option.is-active {
+  border-color: color-mix(in srgb, var(--system-accent) 72%, transparent);
+  background: var(--system-accent-soft);
+}
+
+.appearance-layout-page-label,
+.appearance-layout-template-option > span:last-child,
+.appearance-layout-page small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appearance-layout-page-label {
+  color: var(--system-text);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.appearance-layout-page small,
+.appearance-layout-template-option > span:last-child {
+  color: var(--system-text-muted);
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 800;
 }
 
 .appearance-layout-preview {
@@ -1287,12 +1456,68 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.appearance-layout-library {
+  display: grid;
+  gap: 8px;
+}
+
+.appearance-layout-library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.appearance-layout-library-head span,
+.appearance-layout-library-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appearance-layout-library-head span {
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.appearance-layout-library-head strong {
+  color: var(--system-text);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.appearance-layout-preview-row {
+  grid-auto-columns: 74px;
+  gap: 8px;
+}
+
+.appearance-layout-template-option {
+  border-radius: 16px;
+  padding: 6px;
+}
+
+.appearance-layout-template-option .appearance-layout-preview {
+  border-radius: 14px;
+}
+
 .appearance-layout-preview-slot {
   min-width: 0;
   min-height: 0;
   border-radius: 6px;
   background: color-mix(in oklab, var(--system-text-muted) 20%, transparent);
   box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.appearance-layout-preview-slot.is-size-1-1 {
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--system-text-muted) 24%, transparent);
+}
+
+.appearance-layout-preview-slot.is-size-4-3,
+.appearance-layout-preview-slot.is-size-4-4 {
+  background: color-mix(in oklab, var(--system-text-muted) 16%, transparent);
 }
 
 .appearance-shell :deep(.bg-white) {
@@ -1428,8 +1653,12 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 380px) {
+  .appearance-layout-pages {
+    grid-auto-columns: 84px;
+  }
+
   .appearance-layout-preview-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-columns: 70px;
   }
 }
 </style>

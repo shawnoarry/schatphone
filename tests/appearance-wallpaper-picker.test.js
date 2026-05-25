@@ -91,4 +91,35 @@ describe('AppearanceView wallpaper source picker', () => {
 
     wrapper.unmount()
   })
+
+  test('selects a Home layout template from the Appearance root screen', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance?from=home&homePage=1')
+    await router.isReady()
+    const systemStore = useSystemStore()
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="appearance-layout-screen-1"]').classes()).toContain('is-active')
+
+    await wrapper.find('[data-testid="appearance-layout-template-layout-g"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.homeLayoutTemplateIds[1]).toBe('layout-g')
+    expect(wrapper.find('[data-testid="appearance-layout-template-layout-g"]').classes()).toContain('is-active')
+
+    await wrapper.find('[data-testid="appearance-edit-home-layout"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query.widgetEdit).toBe('1')
+    expect(router.currentRoute.value.query.homePage).toBe('1')
+
+    wrapper.unmount()
+  })
 })

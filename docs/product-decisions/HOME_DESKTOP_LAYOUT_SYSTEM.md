@@ -150,6 +150,7 @@ Current first-pass implementation:
 - built-in widget metadata is shared between Home and Widget Center so size labels, icons, and library previews stay aligned.
 - the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `更多 / More`;
 - `组件 / Widgets` provides direct entry into desktop slot editing and keeps custom-widget action controls;
+- `组件 / Widgets` presents official and custom widgets as visual preview cards, supports exact-size filtering, and keeps imported visual code in the widget library until the user chooses a matching Home slot;
 - `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
 - `更多 / More` contains a lightweight App Library-like entry-management preview and enters desktop editing, without acting as a real download store.
 
