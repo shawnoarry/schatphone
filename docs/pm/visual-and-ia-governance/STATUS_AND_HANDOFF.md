@@ -29,7 +29,7 @@ What is already landed:
 17. `外观 / Appearance` root now has a first native-system control-surface pass: a current-look overview, Home desktop template preview, and grouped Theme/Font/Icon/Widget entries. The deeper Theme, Font, and Icon subpages also have a first token-coverage pass to reduce white-card and hardcoded-blue leakage in the dark system theme.
 18. Home Today View copy now uses native-system language for optional entries and smart summaries instead of developer-facing install, hidden-system, fixed-placeholder, or lab labels.
 19. Widget Center has a regression test that keeps style starter cards as lightweight thumbnails rather than iframe previews; live iframes remain reserved for draft and saved custom widget previews.
-20. Home edit mode has been consolidated around fixed slots: template selection and the unplaced-content library are on-demand, Dock Widgets long-press enters the current page's edit mode, and slot replacement candidates are exact-size filtered so app/folder entries stay in `1x1` slots.
+20. Home edit mode has been consolidated around fixed slots: template selection and the unplaced-content library are on-demand, Dock Widgets long-press enters the current page's edit mode, slot replacement candidates are exact-size filtered so app/folder entries stay in `1x1` slots, and incompatible overflow entries no longer render inside the template grid.
 
 Still incomplete:
 

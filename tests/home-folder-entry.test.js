@@ -122,7 +122,7 @@ describe('Home folder entries', () => {
 
   test('shows neutral Home layout templates in edit mode and saves the current page choice', async () => {
     const router = createTestRouter()
-    await router.push('/home?widgetEdit=1&homePage=2')
+    await router.push('/home?widgetEdit=1&homePage=1')
     await router.isReady()
     const store = useSystemStore()
 
@@ -147,16 +147,24 @@ describe('Home folder entries', () => {
     expect(wrapper.findAll('.home-template-card')).toHaveLength(7)
     expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
     expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
-    expect(wrapper.find('[data-home-tile-id="app_phone"]').attributes('data-home-slot-id')).toBeTruthy()
-    expect(wrapper.find('[data-home-tile-id="app_phone"]').attributes('data-home-slot-size')).toBe('1x1')
-    expect(wrapper.find('[data-home-tile-id="app_reminders"]').attributes('data-home-slot-id')).toBeUndefined()
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-id')).toBeTruthy()
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-size')).toBe('1x1')
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_reminders"]').exists()).toBe(false)
 
     await wrapper.findAll('.home-template-card')[4].trigger('click')
     await wrapper.vm.$nextTick()
 
-    expect(store.settings.appearance.homeLayoutTemplateIds[2]).toBe('layout-e')
+    expect(store.settings.appearance.homeLayoutTemplateIds[1]).toBe('layout-e')
     expect(wrapper.find('.home-template-picker').exists()).toBe(false)
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').exists()).toBe(false)
 
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="home-library-candidate-app_phone"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
     await wrapper.find('[data-testid="home-template-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
 

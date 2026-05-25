@@ -552,8 +552,18 @@ const slotContentFilterLabel = (filterId) => {
   return t('全部', 'All')
 }
 
+const visibleHomePlacedIds = computed(() => {
+  const ids = new Set()
+  homeLayoutAssignments.value.forEach((assignment) => {
+    assignment.placements.forEach((placement) => {
+      if (placement?.tileId) ids.add(placement.tileId)
+    })
+  })
+  return ids
+})
+
 const availableHomeSlotCandidates = computed(() => {
-  const placedIds = new Set(widgetPages.value.flat())
+  const placedIds = visibleHomePlacedIds.value
   return Object.keys(widgetRegistry)
     .filter((tileId) => !placedIds.has(tileId))
     .filter((tileId) => tileId !== 'app_files')
@@ -1797,59 +1807,6 @@ onBeforeUnmount(() => {
               </div>
             </template>
 
-            <template v-if="homeLayoutAssignmentForPage(pageIndex).overflow.length > 0">
-              <div
-                v-for="tileId in homeLayoutAssignmentForPage(pageIndex).overflow"
-                :key="`overflow-${tileId}`"
-                class="home-tile home-layout-tile home-overflow-tile"
-                :data-home-tile-id="tileId"
-                @click.stop="onTileClick(tileId)"
-                @pointerdown="startTileDrag(tileId, $event)"
-                @pointermove="onTilePointerMove"
-                @pointerup="stopTileDrag"
-                @pointercancel="stopTileDrag"
-              >
-                <button
-                  v-if="layoutEditMode && canFreelyMoveHomeTiles && canHideTile(tileId)"
-                  class="home-edit-hide"
-                  @pointerdown.stop
-                  @click.stop="hideTileFromHome(tileId)"
-                  :title="t('隐藏', 'Hide')"
-                  data-no-layout-longpress
-                >
-                  <i class="fas fa-minus"></i>
-                </button>
-                <button
-                  v-if="tileMeta(tileId)?.kind === 'app' || tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
-                  class="home-app-tile"
-                  :class="{ 'home-folder-tile': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
-                  @click="openAppById(tileId)"
-                  :data-testid="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND ? `home-folder-${tileId}` : undefined"
-                >
-                  <span
-                    class="home-app-icon"
-                    :class="{ 'home-folder-icon': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
-                    :style="iconStyle(tileMeta(tileId).accent)"
-                  >
-                    <i v-if="tileMeta(tileId)?.kind === 'app'" :class="tileMeta(tileId).icon"></i>
-                    <span v-else class="home-folder-preview-grid" aria-hidden="true">
-                      <span
-                        v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
-                        :key="entry.key"
-                        class="home-folder-preview-cell"
-                      >
-                        <i :class="entry.icon"></i>
-                      </span>
-                    </span>
-                  </span>
-                  <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
-                </button>
-                <div v-else class="home-widget-card home-overflow-widget">
-                  <i :class="widgetCandidateIcon(tileId)"></i>
-                  <span>{{ widgetCandidateLabel(tileId) }}</span>
-                </div>
-              </div>
-            </template>
           </div>
 
           <div v-if="layoutEditMode && canFreelyMoveHomeTiles" class="home-grid-slot-overlay" aria-hidden="true">
@@ -1901,6 +1858,48 @@ onBeforeUnmount(() => {
             >
               <i class="fas fa-plus"></i>
             </button>
+          </div>
+
+          <div
+            v-if="!layoutEditMode && homeLayoutAssignmentForPage(pageIndex).overflow.length > 0"
+            class="home-overflow-strip"
+          >
+            <div
+              v-for="tileId in homeLayoutAssignmentForPage(pageIndex).overflow"
+              :key="`overflow-${tileId}`"
+              class="home-tile home-overflow-tile"
+              :data-home-tile-id="tileId"
+            >
+              <button
+                v-if="tileMeta(tileId)?.kind === 'app' || tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND"
+                class="home-app-tile"
+                :class="{ 'home-folder-tile': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
+                @click="openAppById(tileId)"
+                :data-testid="tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND ? `home-folder-${tileId}` : undefined"
+              >
+                <span
+                  class="home-app-icon"
+                  :class="{ 'home-folder-icon': tileMeta(tileId)?.kind === HOME_FOLDER_TILE_KIND }"
+                  :style="iconStyle(tileMeta(tileId).accent)"
+                >
+                  <i v-if="tileMeta(tileId)?.kind === 'app'" :class="tileMeta(tileId).icon"></i>
+                  <span v-else class="home-folder-preview-grid" aria-hidden="true">
+                    <span
+                      v-for="entry in tileMeta(tileId).childEntries.slice(0, 4)"
+                      :key="entry.key"
+                      class="home-folder-preview-cell"
+                    >
+                      <i :class="entry.icon"></i>
+                    </span>
+                  </span>
+                </span>
+                <span class="home-app-label">{{ tileMeta(tileId).label }}</span>
+              </button>
+              <div v-else class="home-widget-card home-overflow-widget">
+                <i :class="widgetCandidateIcon(tileId)"></i>
+                <span>{{ widgetCandidateLabel(tileId) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -2506,17 +2505,19 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.home-layout-tile.is-template-scaled .home-widget-card,
-.home-layout-tile.is-template-scaled .home-custom-widget-card {
-  border-style: dashed;
+.home-overflow-strip {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 12px;
 }
 
 .home-overflow-tile {
-  grid-column: span 1;
-  grid-row: span 1;
+  min-width: 0;
 }
 
 .home-overflow-widget {
+  min-height: 72px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2532,6 +2533,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.home-layout-tile.is-template-scaled .home-widget-card,
+.home-layout-tile.is-template-scaled .home-custom-widget-card {
+  border-style: dashed;
 }
 
 .home-tile.is-pressed .home-widget-card,

@@ -135,7 +135,7 @@ Current first-pass implementation:
 - explicit `homeLayoutSlotPlacements` records can bind a tile id to a concrete template slot id;
 - the renderer honors explicit slot placements first, then assigns remaining ordered content into available compatible slots;
 - compatible means exact size match; app and folder entries remain `1x1` and do not fill larger widget slots;
-- items that cannot fit the selected template stay recoverable in the same page overflow rather than being deleted;
+- items that cannot fit the selected template stay recoverable rather than being deleted: in normal mode they may render in a separate overflow icon strip outside the template grid, and in edit mode they return to the on-demand content library;
 - in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot;
 - the picker groups available content as apps, folders, built-in widgets, and custom widgets;
 - filled slots can be replaced or cleared from that picker;
@@ -143,6 +143,7 @@ Current first-pass implementation:
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
 - empty template slots remain invisible outside edit mode;
 - edit mode is now slot-first: tapping a filled or empty slot opens the same-size content picker, while the old free-move / grid-absorption path is disabled in the visible editing loop;
+- overflow entries must not render inside `.home-grid`, because that makes app icons appear to occupy large widget slots after a template switch;
 - the per-page template picker and global content library are collapsed by default so the user can see the target slots before choosing a template or unplaced item;
 - built-in widget metadata is shared between Home and Widget Center so size labels, icons, and library previews stay aligned.
 - the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `更多 / More`;
