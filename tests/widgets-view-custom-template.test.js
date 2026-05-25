@@ -69,6 +69,23 @@ describe('Widgets custom template starters', () => {
     wrapper.unmount()
   })
 
+  test('presents built-in widget library entries with Home slot sizes', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    const text = wrapper.text()
+    expect(text).toContain('Weather')
+    expect(text).toContain('Calendar')
+    expect(text).toContain('Music')
+    expect(text).toContain('System Status')
+    expect(text).toContain('2x2')
+    expect(text).toContain('4x2')
+    expect(text).toContain('Evening Radio')
+    expect(text).toContain('Daily Mix')
+
+    wrapper.unmount()
+  })
+
   test('confirms before replacing an existing custom widget draft', async () => {
     useSystemStore().settings.system.language = 'en-US'
     const wrapper = await mountWidgetsView()

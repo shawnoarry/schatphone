@@ -13,6 +13,7 @@ import {
 } from '../lib/navigation-return'
 import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
 import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../lib/widget-style-presets'
+import { BUILT_IN_HOME_WIDGETS } from '../lib/home-widgets'
 import {
   CUSTOM_WIDGET_ACTION_APP_TARGETS,
   CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS,
@@ -23,15 +24,6 @@ import {
 } from '../lib/custom-widget-actions'
 
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
-const BUILT_IN_WIDGET_OPTIONS = [
-  { id: 'weather', size: '2x2', icon: 'fas fa-cloud-sun', preview: 'weather' },
-  { id: 'calendar', size: '2x2', icon: 'fas fa-calendar-days', preview: 'calendar' },
-  { id: 'music', size: '4x2', icon: 'fas fa-music', preview: 'music' },
-  { id: 'system', size: '2x2', icon: 'fas fa-sliders', preview: 'system' },
-  { id: 'quick_heart', size: '1x1', icon: 'fas fa-heart', preview: 'heart' },
-  { id: 'quick_disc', size: '1x1', icon: 'fas fa-compact-disc', preview: 'disc' },
-]
-
 const WIDGET_TEMPLATE_CODE = `<style>
   .widget-card {
     width: 100%;
@@ -112,6 +104,10 @@ const CODE_SNIPPET_OPTIONS = Object.freeze([
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
 const homeWidgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const hasCustomWidgets = computed(() => customWidgets.value.length > 0)
+const widgetPreviewDate = computed(() => new Date())
+const widgetPreviewWeekday = computed(() =>
+  widgetPreviewDate.value.toLocaleString(undefined, { weekday: 'short' }),
+)
 const customWidgetActionTypes = computed(() => [
   { id: CUSTOM_WIDGET_ACTION_TYPE_NONE, label: t('无动作', 'No action') },
   { id: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, label: t('打开 APP', 'Open app') },
@@ -203,22 +199,12 @@ const importJsonPlaceholder = computed(() =>
   ),
 )
 
-const builtInWidgetLabel = (widgetId) => {
-  if (widgetId === 'weather') return t('天气', 'Weather')
-  if (widgetId === 'calendar') return t('日历', 'Calendar')
-  if (widgetId === 'music') return t('音乐', 'Music')
-  if (widgetId === 'system') return t('系统状态', 'System Status')
-  if (widgetId === 'quick_heart') return t('快捷爱心', 'Quick Heart')
-  if (widgetId === 'quick_disc') return t('快捷唱片', 'Quick Disc')
-  return t('组件', 'Widget')
-}
-
 const builtInWidgetStates = computed(() =>
-  BUILT_IN_WIDGET_OPTIONS.map((item) => {
+  BUILT_IN_HOME_WIDGETS.map((item) => {
     const pageIndex = homeWidgetPages.value.findIndex((page) => page.includes(item.id))
     return {
       ...item,
-      label: builtInWidgetLabel(item.id),
+      label: t(item.nameZh, item.nameEn),
       visible: pageIndex >= 0,
     }
   }),
@@ -669,27 +655,27 @@ onBeforeUnmount(() => {
             <div class="widgets-preview-stage" :class="`preview-${widget.preview}`">
               <div v-if="widget.preview === 'weather'" class="widget-preview weather-preview">
                 <div>
-                  <span>{{ t('晴', 'Sunny') }}</span>
-                  <strong>26°</strong>
+                  <span>{{ t('东京 · 晴朗', 'Tokyo · Clear') }}</span>
+                  <strong>18°</strong>
                 </div>
                 <i class="fas fa-cloud-sun"></i>
               </div>
               <div v-else-if="widget.preview === 'calendar'" class="widget-preview calendar-preview">
-                <span>{{ t('周日', 'Sun') }}</span>
-                <strong>24</strong>
-                <small>{{ t('今日安排', 'Today') }}</small>
+                <span>{{ widgetPreviewWeekday }}</span>
+                <strong>{{ widgetPreviewDate.getDate() }}</strong>
+                <small>{{ t('日历', 'Calendar') }}</small>
               </div>
               <div v-else-if="widget.preview === 'music'" class="widget-preview music-preview">
                 <span class="music-art"><i class="fas fa-music"></i></span>
                 <div>
-                  <strong>{{ t('夜间电台', 'Night Radio') }}</strong>
-                  <small>{{ t('正在播放', 'Now playing') }}</small>
+                  <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
+                  <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
                 </div>
                 <span class="music-control"><i class="fas fa-play"></i></span>
               </div>
               <div v-else-if="widget.preview === 'system'" class="widget-preview system-preview">
-                <span><i class="fas fa-wifi"></i>{{ t('在线', 'Online') }}</span>
-                <span><i class="fas fa-battery-three-quarters"></i>78%</span>
+                <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
+                <span><i class="fas fa-battery-three-quarters"></i>86%</span>
                 <div></div>
               </div>
               <div v-else-if="widget.preview === 'heart'" class="widget-preview square-preview heart-preview">

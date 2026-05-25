@@ -26,6 +26,7 @@ const createTestRouter = () =>
       { path: '/contacts', component: DummyView },
       { path: '/settings', component: DummyView },
       { path: '/gallery', component: DummyView },
+      { path: '/widgets', component: DummyView },
     ],
   })
 
@@ -136,6 +137,12 @@ describe('Home folder entries', () => {
     })
     await flushPromises()
 
+    expect(wrapper.find('.home-template-picker').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-template-toggle"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="home-template-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
     expect(wrapper.find('.home-template-picker').exists()).toBe(true)
     expect(wrapper.findAll('.home-template-card')).toHaveLength(7)
     expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
@@ -145,8 +152,14 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_reminders"]').attributes('data-home-slot-id')).toBeUndefined()
 
     await wrapper.findAll('.home-template-card')[4].trigger('click')
+    await wrapper.vm.$nextTick()
 
     expect(store.settings.appearance.homeLayoutTemplateIds[2]).toBe('layout-e')
+    expect(wrapper.find('.home-template-picker').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="home-template-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
     expect(wrapper.findAll('.home-template-card')[4].classes()).toContain('is-active')
     wrapper.unmount()
   })
@@ -191,6 +204,75 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('long-presses Dock Widgets into Home slot edit mode without opening Widget Center', async () => {
+    const router = createTestRouter()
+    await router.push('/home?homePage=3')
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const dockWidgets = wrapper.find('[data-testid="home-dock-widgets"]')
+    expect(dockWidgets.exists()).toBe(true)
+
+    await dockWidgets.trigger('pointerdown', { clientX: 240, clientY: 720, pointerId: 1 })
+    vi.advanceTimersByTime(650)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-edit-topbar').exists()).toBe(true)
+    expect(wrapper.find('.home-template-picker').exists()).toBe(false)
+
+    await dockWidgets.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query.homePage).toBe('3')
+    wrapper.unmount()
+  })
+
+  test('filters slot replacement candidates by exact slot size', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+    const posterWidgetId = store.addCustomWidget({
+      name: 'Poster Widget',
+      size: '4x3',
+      code: '<div>Poster</div>',
+      placeOnHome: false,
+    })
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-slot-candidate-weather"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   test('restores unplaced content through the edit-mode Home library', async () => {
     const router = createTestRouter()
     await router.push('/home?widgetEdit=1&homePage=4')
@@ -209,6 +291,10 @@ describe('Home folder entries', () => {
       },
     })
     await flushPromises()
+
+    expect(wrapper.find('.home-content-library').exists()).toBe(false)
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
 
     const galleryCandidate = wrapper.find('[data-testid="home-library-candidate-app_gallery"]')
     expect(galleryCandidate.exists()).toBe(true)

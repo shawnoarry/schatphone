@@ -1,6 +1,6 @@
 # Home Desktop Layout System
 
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 This document defines the target Home model for SchatPhone.
 
@@ -141,7 +141,10 @@ Current first-pass implementation:
 - filled slots can be replaced or cleared from that picker;
 - edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; selecting an item highlights compatible empty slots for recovery;
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
-- empty template slots remain invisible outside edit mode.
+- empty template slots remain invisible outside edit mode;
+- edit mode is now slot-first: tapping a filled or empty slot opens the same-size content picker, while the old free-move / grid-absorption path is disabled in the visible editing loop;
+- the per-page template picker and global content library are collapsed by default so the user can see the target slots before choosing a template or unplaced item;
+- built-in widget metadata is shared between Home and Widget Center so size labels, icons, and library previews stay aligned.
 - the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `更多 / More`;
 - `组件 / Widgets` provides direct entry into desktop slot editing and keeps custom-widget action controls;
 - `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
@@ -257,6 +260,7 @@ The left-side Today View is the exception: launching from Today View should norm
 Current default Dock direction:
 
 - keep `组件 / Widgets` in the Dock so the Home beautification loop is reachable from every formal Home page;
+- short-pressing Dock `组件 / Widgets` opens Widget Center, while long-pressing it enters the current Home page's slot edit mode;
 - keep `相册 / Photos` as a normal Home app entry by default, not as the default Dock entry;
 - avoid duplicating the Dock `组件 / Widgets` entry on the default Home page.
 
@@ -280,7 +284,7 @@ The target model likely needs:
 - widget instances with per-instance placement and optional action metadata;
 - a fuller App Library / recovery manager for hidden, unmatched, or unplaced app and widget entries.
 
-The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, a lightweight edit-mode content library, and definition-level custom widget click actions are available. The next structural step is a fuller App Library / recovery manager and per-instance metadata if one widget definition needs different actions in different slots.
+The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, an on-demand edit-mode content library, shared built-in widget metadata, Dock Widgets long-press entry, and definition-level custom widget click actions are available. The next structural step is a fuller App Library / recovery manager and per-instance metadata if one widget definition needs different actions in different slots.
 
 ## 11. Guardrails
 

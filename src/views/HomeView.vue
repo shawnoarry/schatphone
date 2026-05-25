@@ -34,6 +34,11 @@ import {
   normalizeCustomWidgetAction,
   resolveCustomWidgetSystemActionTarget,
 } from '../lib/custom-widget-actions'
+import {
+  BUILT_IN_HOME_WIDGET_BY_VARIANT,
+  HOME_WIDGET_REGISTRY_ENTRIES,
+  HOME_WIDGET_SIZE_CLASS_MAP,
+} from '../lib/home-widgets'
 
 const props = defineProps({
   currentTime: {
@@ -85,6 +90,7 @@ const touchStartX = ref(0)
 const touchDeltaX = ref(0)
 
 const layoutEditMode = ref(false)
+const templatePickerOpen = ref(false)
 const longPressStartX = ref(0)
 const longPressStartY = ref(0)
 const selectedTileId = ref('')
@@ -142,34 +148,10 @@ const readLayoutEditLocalFlag = () => {
 
 const layoutEditFeatureEnabled = ref(LAYOUT_EDIT_ENV_ENABLED && readLayoutEditLocalFlag())
 
-const WIDGET_VARIANT_META = {
-  weather: { label: '天气', icon: 'fas fa-cloud-sun' },
-  calendar: { label: '日历', icon: 'fas fa-calendar-days' },
-  music: { label: '音乐', icon: 'fas fa-music' },
-  system: { label: '系统', icon: 'fas fa-microchip' },
-  heart: { label: '快捷爱心', icon: 'fas fa-heart' },
-  disc: { label: '快捷唱片', icon: 'fas fa-compact-disc' },
-}
-
 const SLOT_CONTENT_FILTERS = ['all', 'apps', 'folders', 'widgets', 'custom']
 
-const CUSTOM_WIDGET_SPAN_CLASS_MAP = {
-  '1x1': 'col-span-1 row-span-1',
-  '2x1': 'col-span-2 row-span-1',
-  '2x2': 'col-span-2 row-span-2',
-  '4x1': 'col-span-4 row-span-1',
-  '4x2': 'col-span-4 row-span-2',
-  '4x3': 'col-span-4 row-span-3',
-  '4x4': 'col-span-4 row-span-4',
-}
-
 const widgetRegistry = {
-  weather: { kind: 'widget', variant: 'weather', span: 'col-span-2 row-span-2' },
-  calendar: { kind: 'widget', variant: 'calendar', span: 'col-span-2 row-span-2' },
-  music: { kind: 'widget', variant: 'music', span: 'col-span-4 row-span-2' },
-  system: { kind: 'widget', variant: 'system', span: 'col-span-2 row-span-2' },
-  quick_heart: { kind: 'widget', variant: 'heart', span: 'col-span-1 row-span-1' },
-  quick_disc: { kind: 'widget', variant: 'disc', span: 'col-span-1 row-span-1' },
+  ...HOME_WIDGET_REGISTRY_ENTRIES,
   app_network: { kind: 'app', icon: 'fas fa-network-wired', label: 'Network', accent: 'cool', route: '/network' },
   app_wallet: { kind: 'app', icon: 'fas fa-wallet', label: 'Wallet', accent: 'warm', route: '/wallet' },
   app_gallery: { kind: 'app', icon: 'fas fa-images', label: 'Photos', accent: 'light', route: '/gallery' },
@@ -226,12 +208,8 @@ const localizeEntryText = (entry, zhKey = 'zh', enKey = 'en') => {
 }
 
 const resolveWidgetVariantLabel = (variant) => {
-  if (variant === 'weather') return t('天气', 'Weather')
-  if (variant === 'calendar') return t('日历', 'Calendar')
-  if (variant === 'music') return t('音乐', 'Music')
-  if (variant === 'system') return t('系统', 'System')
-  if (variant === 'heart') return t('快捷爱心', 'Quick Heart')
-  if (variant === 'disc') return t('快捷唱片', 'Quick Disc')
+  const widget = BUILT_IN_HOME_WIDGET_BY_VARIANT[variant]
+  if (widget) return t(widget.nameZh, widget.nameEn)
   return t('组件', 'Widget')
 }
 
@@ -305,7 +283,7 @@ const activeThemeName = computed(() => {
   if (activeTheme.value.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
   return activeTheme.value.name || ''
 })
-const canFreelyMoveHomeTiles = computed(() => layoutEditFeatureEnabled.value === true)
+const canFreelyMoveHomeTiles = computed(() => false)
 const widgetEditRouteRequested = computed(() => route.query.widgetEdit === '1')
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
@@ -374,7 +352,7 @@ const tileMeta = (tileId) => {
   return {
     kind: 'custom_widget',
     label: customWidget.name,
-    span: CUSTOM_WIDGET_SPAN_CLASS_MAP[customWidget.size] || 'col-span-2 row-span-2',
+    span: HOME_WIDGET_SIZE_CLASS_MAP[customWidget.size] || HOME_WIDGET_SIZE_CLASS_MAP['2x2'],
   }
 }
 
@@ -433,13 +411,14 @@ const dragGhostMeta = computed(() => {
     }
   }
 
-  const variant = WIDGET_VARIANT_META[meta.variant] || {
-    label: resolveWidgetVariantLabel(meta.variant),
+  const variant = BUILT_IN_HOME_WIDGET_BY_VARIANT[meta.variant] || {
+    nameZh: resolveWidgetVariantLabel(meta.variant),
+    nameEn: resolveWidgetVariantLabel(meta.variant),
     icon: 'fas fa-puzzle-piece',
   }
   return {
     kind: 'widget',
-    label: resolveWidgetVariantLabel(meta.variant) || variant.label,
+    label: resolveWidgetVariantLabel(meta.variant),
     icon: variant.icon,
   }
 })
@@ -513,9 +492,18 @@ const selectHomeLayoutTemplate = (templateId) => {
   closeSlotContentSheet()
   closeHomeContentLibrary()
   systemStore.setHomeLayoutTemplate(homeReturnPageForCurrentView.value, templateId)
+  templatePickerOpen.value = false
   triggerLayoutToast(t('布局已更新', 'Layout updated'))
   maybeVibrate(10)
   systemStore.saveNow()
+}
+
+const toggleHomeTemplatePicker = () => {
+  if (!layoutEditMode.value) return
+  closeSlotContentSheet()
+  closeHomeContentLibrary()
+  templatePickerOpen.value = !templatePickerOpen.value
+  maybeVibrate(6)
 }
 
 const widgetCandidateLabel = (tileId) => {
@@ -529,7 +517,7 @@ const widgetCandidateLabel = (tileId) => {
 const widgetCandidateIcon = (tileId) => {
   const meta = tileMeta(tileId)
   if (meta?.kind === 'custom_widget') return 'fas fa-code'
-  const variant = WIDGET_VARIANT_META[meta?.variant] || null
+  const variant = BUILT_IN_HOME_WIDGET_BY_VARIANT[meta?.variant] || null
   return variant?.icon || 'fas fa-puzzle-piece'
 }
 
@@ -629,6 +617,7 @@ const selectHomeLibraryCandidate = (tileId) => {
   if (!layoutEditMode.value || !tileId) return
   if (!availableHomeSlotCandidates.value.includes(tileId)) return
   closeSlotContentSheet()
+  templatePickerOpen.value = false
   libraryPlacementTileId.value = libraryPlacementTileId.value === tileId ? '' : tileId
   selectedTileId.value = ''
   maybeVibrate(8)
@@ -660,6 +649,7 @@ const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
 const openSlotContentSheet = (pageIndex, slot, tileId = '') => {
   if (!layoutEditMode.value || !slot) return
   closeHomeContentLibrary()
+  templatePickerOpen.value = false
   selectedTileId.value = tileId || ''
   slotContentTarget.value = {
     pageIndex,
@@ -860,6 +850,7 @@ const enterWidgetLayoutMode = () => {
   clearWidgetEntryLongPressTimer()
   resetDragState()
   layoutEditMode.value = true
+  templatePickerOpen.value = false
   selectedTileId.value = ''
   closeSlotContentSheet()
   closeHomeContentLibrary()
@@ -909,6 +900,7 @@ const scheduleLongPress = (event, x, y) => {
 
   longPressTimerId = setTimeout(() => {
     layoutEditMode.value = true
+    templatePickerOpen.value = false
     selectedTileId.value = ''
     clearTilePressed()
     clearLongPressTimer()
@@ -1346,6 +1338,7 @@ const exitLayoutMode = () => {
   clearTilePressed()
   dragEdgeDirection.value = ''
   layoutEditMode.value = false
+  templatePickerOpen.value = false
   ignoreAppOpenUntil.value = Date.now() + 220
   systemStore.saveNow()
 }
@@ -1402,10 +1395,23 @@ onBeforeUnmount(() => {
       <div class="home-edit-actions">
         <button v-if="selectedTileId" @click="clearSelectedTile" class="home-edit-btn">{{ t('取消', 'Clear') }}</button>
         <button
+          type="button"
+          class="home-edit-btn"
+          :class="{ 'is-active': templatePickerOpen }"
+          :aria-expanded="templatePickerOpen"
+          data-testid="home-template-toggle"
+          @click="toggleHomeTemplatePicker"
+        >
+          <i class="fas fa-table-cells"></i>
+          <span>{{ currentHomeLayoutTemplate.key }}</span>
+        </button>
+        <button
           v-if="availableHomeLibraryCandidates.length > 0"
           type="button"
           class="home-edit-btn"
           :class="{ 'is-active': isLibraryPlacementActive }"
+          :aria-expanded="isLibraryPlacementActive"
+          data-testid="home-library-toggle"
           @click="isLibraryPlacementActive ? closeHomeContentLibrary() : selectHomeLibraryCandidate(availableHomeLibraryCandidates[0].tileId)"
         >
           <i class="fas fa-layer-group"></i>
@@ -1421,7 +1427,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-if="layoutEditMode && availableHomeLibraryCandidates.length > 0"
+      v-if="layoutEditMode && isLibraryPlacementActive && availableHomeLibraryCandidates.length > 0"
       class="home-content-library"
       data-no-layout-longpress
     >
@@ -1900,7 +1906,7 @@ onBeforeUnmount(() => {
       </section>
     </div>
 
-    <div v-if="layoutEditMode" class="home-template-picker" data-no-layout-longpress>
+    <div v-if="layoutEditMode && templatePickerOpen" class="home-template-picker" data-no-layout-longpress>
       <div class="home-template-picker-head">
         <span>{{ t('模板', 'Templates') }}</span>
         <strong>{{ homePageLabel(homeReturnPageForCurrentView) }}</strong>
@@ -1958,7 +1964,16 @@ onBeforeUnmount(() => {
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_settings').accent)" @click="openAppById('app_settings')">
           <i :class="dockAppMeta('app_settings').icon"></i>
         </button>
-        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_widgets').accent)" @click="openAppById('app_widgets')">
+        <button
+          class="home-dock-icon"
+          :style="iconStyle(dockAppMeta('app_widgets').accent)"
+          data-testid="home-dock-widgets"
+          @click="openAppById('app_widgets')"
+          @pointerdown="scheduleWidgetEntryLongPress"
+          @pointermove="maybeCancelWidgetEntryLongPressByMove"
+          @pointerup="clearWidgetEntryLongPressTimer"
+          @pointercancel="clearWidgetEntryLongPressTimer"
+        >
           <i :class="dockAppMeta('app_widgets').icon"></i>
         </button>
       </div>

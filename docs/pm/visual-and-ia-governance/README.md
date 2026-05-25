@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -18,6 +18,7 @@ Current visual pass:
 - `更多 / More` has a first native-system App Library surface.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.
+- Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, and larger slots only offer exact-size widget/custom-widget candidates.
 - Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
 
 ## Read This Package In This Order

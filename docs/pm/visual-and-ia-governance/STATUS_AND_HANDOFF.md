@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -29,6 +29,7 @@ What is already landed:
 17. `外观 / Appearance` root now has a first native-system control-surface pass: a current-look overview, Home desktop template preview, and grouped Theme/Font/Icon/Widget entries. The deeper Theme, Font, and Icon subpages also have a first token-coverage pass to reduce white-card and hardcoded-blue leakage in the dark system theme.
 18. Home Today View copy now uses native-system language for optional entries and smart summaries instead of developer-facing install, hidden-system, fixed-placeholder, or lab labels.
 19. Widget Center has a regression test that keeps style starter cards as lightweight thumbnails rather than iframe previews; live iframes remain reserved for draft and saved custom widget previews.
+20. Home edit mode has been consolidated around fixed slots: template selection and the unplaced-content library are on-demand, Dock Widgets long-press enters the current page's edit mode, and slot replacement candidates are exact-size filtered so app/folder entries stay in `1x1` slots.
 
 Still incomplete:
 
@@ -39,8 +40,8 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides if needed and fuller App Library entry management.
-2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode details, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` has its first native-system App Library pass but still needs a fuller recovery manager later.
+1. Continue the Home template-slot function loop before deeper visual polish: fuller App Library entry management and per-instance action overrides if needed.
+2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` has its first native-system App Library pass but still needs a fuller recovery manager later.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 
