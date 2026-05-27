@@ -15,7 +15,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Settings | `/settings` | Home app | system settings, backup, diagnostics, push, and automation |
 | Appearance | `/appearance` | Home app | theme, wallpaper, app icons, and widget styling |
 | Network & API | `/network` | Home app | provider setup and diagnostics |
-| More | `/more` | Home app | secondary entries and experimental toggles |
+| App Store | `/app-store` | Home app | app-entry visibility, summaries, and Home placement |
 | Profile | `/profile` | Settings entry | player identity and AI context preview |
 
 ## 2. Module Notes
@@ -94,20 +94,22 @@ What users mainly do here:
 - choose models;
 - verify API and network readiness.
 
-### More
+### App Store
 
 What it is:
 
-- a secondary utility and toggle surface.
+- a native-system app-entry library presented like a lightweight app store.
 
 What users mainly do here:
 
-- access low-risk experimental or secondary entries;
-- toggle certain shell or runtime preview behaviors.
+- browse preinstalled app summaries;
+- open apps;
+- add app entries to Home slots;
+- remove app entries from Home without disabling the app.
 
 Important boundary:
 
-- More should not become the dumping ground for unresolved product ownership.
+- App Store should stay limited to app-entry visibility and Home placement. It must not become a widget/theme/download marketplace.
 
 ### Profile
 

@@ -66,6 +66,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  focusModeEnabled: {
+    type: Boolean,
+    default: false,
+  },
   formatStorageReportTime: {
     type: Function,
     required: true,
@@ -79,6 +83,7 @@ defineEmits([
   'send-real-push-test',
   'subscribe-real-push',
   'unsubscribe-real-push',
+  'update-focus-mode',
   'update-notifications',
   'update-push-display-mode',
   'update-push-server-url',
@@ -99,6 +104,22 @@ const { t } = useI18n()
       type="checkbox"
       class="w-5 h-5"
       @change="$emit('update-notifications', $event.target.checked)"
+    />
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 flex items-center justify-between gap-3">
+    <div>
+      <p class="text-sm">{{ t('专注模式', 'Focus Mode') }}</p>
+      <p class="text-[10px] text-gray-400">
+        {{ t('锁屏通知会收拢重复消息，保留最近重点。', 'Lock-screen notifications collapse repeats and keep the latest priority item.') }}
+      </p>
+    </div>
+    <input
+      :checked="focusModeEnabled"
+      type="checkbox"
+      class="w-5 h-5"
+      data-testid="settings-focus-mode-toggle"
+      @change="$emit('update-focus-mode', $event.target.checked)"
     />
   </div>
 

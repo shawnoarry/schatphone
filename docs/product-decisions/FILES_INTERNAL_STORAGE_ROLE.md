@@ -51,7 +51,7 @@ Important boundary:
 
 - Do not copy, upload, or store original binary file content in `Files` unless a later explicit product decision changes this.
 - Do not make `Files` the owner of Gallery assets, role profiles, map records, chat messages, reminder cues, or calendar events.
-- Do not add Home, More, dock, or onboarding entries that present `Files` as a normal app.
+- Do not add Home, App Store, dock, or onboarding entries that present `Files` as a normal app.
 
 ## 4. Frontend Entry Policy
 
@@ -59,7 +59,7 @@ Current frontend policy:
 
 - Hide `Files` from the Home default layout.
 - Remove or suppress old persisted `app_files` Home tiles during layout normalization.
-- Hide `Files` from More quick entries.
+- Hide `Files` from App Store listings.
 - Hide `Files` from user-facing app icon customization targets.
 - Keep `/files` route and store code only for internal, developer, compatibility, or future diagnostic use.
 
@@ -81,7 +81,7 @@ Any future visible surface must explain:
 - `src/stores/files.js`: internal metadata-only index store.
 - `src/stores/system.js`: Home layout normalization filters the hidden frontend entry tile `app_files`.
 - `src/views/HomeView.vue`: no user-facing `app_files` tile registry entry.
-- `src/views/MoreView.vue`: quick entries suppress the Files entry.
+- `src/views/AppStoreView.vue`: listings suppress the Files entry.
 - `src/lib/app-icon-presentation.js`: `app_files` metadata can remain for compatibility, but it is no longer a customization target.
 - `src/router/index.js`: `/files` remains available but should not be promoted as a normal frontend entry.
 

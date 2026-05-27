@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -10,12 +10,12 @@ Current Home customization baseline:
 - The desktop edit state owns per-page layout templates and fixed slot content editing.
 - `组件 / Widgets` owns widget creation, import, library state, and custom widget click-action configuration.
 - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings.
-- `更多 / More` carries the current App Library-like app-entry management surface.
+- `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
 
 Current visual pass:
 
-- `更多 / More` has a first native-system App Library management surface with category filters, selected app detail, and Home-entry actions.
+- `应用商城 / App Store` is now a standalone native-system app with category filters, selected app detail, and Home-entry actions.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.
 - Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, and larger slots only offer exact-size widget/custom-widget candidates.

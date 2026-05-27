@@ -46,7 +46,8 @@ Use it when the team needs to confirm:
 | 世界中枢 | World Hub | `/control-center` | `app_control_center` / `control_center` | optional hidden app | runtime review and narrow control |
 | 金手指 | Cheats | not frozen yet | future hidden surface | hidden placeholder | future stronger override lane |
 | 文件 | Files | `/files` | `app_files` | hidden/internal | internal storage/index role, not a normal public file manager |
-| 更多 | More | `/more` | `app_more` | Home app | secondary entries, toggles, and labs |
+| 应用商城 | App Store | `/app-store` | `app_store` | Home app | app-entry visibility, summaries, and Home placement |
+| 更多 | More | `/more` | legacy route | compatibility redirect | retired overflow surface |
 
 ## 3. Runtime And Internal Names
 

@@ -33,7 +33,7 @@ If this catalog conflicts with those docs, treat those docs as the current truth
 Read the matching category doc below:
 
 1. `docs/pm/product-module-feature-catalog/SHELL_AND_SYSTEM.md`
-   - Lock Screen, Home, Settings, Appearance, Network & API, More, Profile
+   - Lock Screen, Home, Settings, Appearance, App Store, Network & API, Profile
 2. `docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md`
    - Chat, Chat Directory, Contacts, WorldBook, World Hub, future Cheats lane
 3. `docs/pm/product-module-feature-catalog/MAP_CALENDAR_AND_REMINDERS.md`
@@ -52,7 +52,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Settings | `/settings` | Home app | `SHELL_AND_SYSTEM.md` |
 | Appearance | `/appearance` | Home app | `SHELL_AND_SYSTEM.md` |
 | Network & API | `/network` | Home app | `SHELL_AND_SYSTEM.md` |
-| More | `/more` | Home app | `SHELL_AND_SYSTEM.md` |
+| App Store | `/app-store` | Home app | `SHELL_AND_SYSTEM.md` |
 | Profile | `/profile` | Settings entry | `SHELL_AND_SYSTEM.md` |
 | Chat | `/chat`, `/chat/:id` | Home app | `ROLE_CHAT_AND_WORLD.md` |
 | Chat Directory | `/chat-contacts` | Chat/context entry | `ROLE_CHAT_AND_WORLD.md` |

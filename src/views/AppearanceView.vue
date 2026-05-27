@@ -146,6 +146,7 @@ const appIconCustomizationTargets = computed(() =>
     resolveAppCustomizationTargetMeta(appId, appearanceLocale.value, appIconOverrides.value),
   ),
 )
+const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
 
 const pageTitle = computed(() => {
   if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
@@ -526,6 +527,11 @@ const toggleHapticFeedback = () => {
   triggerSaved()
 }
 
+const toggleSmartPanel = () => {
+  systemStore.setMoreFeatureToggle('smart_panel', !smartPanelEnabled.value)
+  triggerSaved()
+}
+
 const setFontPreset = (value) => {
   systemStore.setCustomVar(FONT_VAR_NAME, value)
   customFontStackInput.value = value
@@ -647,6 +653,25 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
+      </section>
+
+      <section class="appearance-display-card">
+        <div class="appearance-display-copy">
+          <p>{{ t('桌面显示', 'Home Display') }}</p>
+          <h2>{{ t('今日视图智能面板', 'Today Smart Panel') }}</h2>
+          <span>{{ t('控制主屏左侧 Today View 是否显示智能概览。', 'Controls whether Today View shows the smart summary panel.') }}</span>
+        </div>
+        <button
+          type="button"
+          class="appearance-display-toggle"
+          :class="{ 'is-on': smartPanelEnabled }"
+          :aria-pressed="smartPanelEnabled"
+          data-testid="appearance-smart-panel-toggle"
+          @click="toggleSmartPanel"
+        >
+          <span></span>
+          <em>{{ smartPanelEnabled ? t('开', 'On') : t('关', 'Off') }}</em>
+        </button>
       </section>
 
       <div class="appearance-menu-stack">
@@ -1252,6 +1277,99 @@ onBeforeUnmount(() => {
   padding: 14px;
   display: grid;
   gap: 12px;
+}
+
+.appearance-display-card {
+  border: 1px solid var(--system-card-border);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.appearance-display-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.appearance-display-copy p,
+.appearance-display-copy h2,
+.appearance-display-copy span {
+  margin: 0;
+}
+
+.appearance-display-copy p {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.appearance-display-copy h2 {
+  color: var(--system-text);
+  font-size: 15px;
+  line-height: 1.18;
+  font-weight: 820;
+}
+
+.appearance-display-copy span {
+  color: var(--system-text-soft);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.appearance-display-toggle {
+  flex: 0 0 auto;
+  width: 62px;
+  height: 32px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  color: var(--system-text-soft);
+  background: var(--system-control-bg);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.appearance-display-toggle span {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--system-surface-primary);
+  box-shadow: var(--system-shadow-control);
+  transition: transform 180ms ease;
+}
+
+.appearance-display-toggle em {
+  position: absolute;
+  right: 8px;
+  color: currentColor;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 840;
+}
+
+.appearance-display-toggle.is-on {
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.appearance-display-toggle.is-on span {
+  transform: translateX(28px);
+}
+
+.appearance-display-toggle.is-on em {
+  right: auto;
+  left: 8px;
 }
 
 .appearance-overview-card {

@@ -1,6 +1,6 @@
 # Home Desktop Layout System
 
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 This document defines the target Home model for SchatPhone.
 
@@ -13,7 +13,7 @@ Home should be treated as a phone desktop layout system, not as a fixed feature 
 Naming clarification:
 
 - `主屏 / 桌面 / Home` is the visible system desktop layer. It is not a user-facing app entry.
-- When product work says "apps", it should mean visible app destinations such as `外观 / Appearance`, `组件 / Widgets`, `更多 / More`, `聊天 / Chat`, and similar entries from `docs/pm/MODULE_NAME_GLOSSARY.md`.
+- When product work says "apps", it should mean visible app destinations such as `外观 / Appearance`, `组件 / Widgets`, `应用商城 / App Store`, `聊天 / Chat`, and similar entries from `docs/pm/MODULE_NAME_GLOSSARY.md`.
 - The Home layout editor is a desktop edit state, not a `Home app`.
 
 Current direction:
@@ -148,11 +148,11 @@ Current first-pass implementation:
 - overflow entries must not render inside `.home-grid`, because that makes app icons appear to occupy large widget slots after a template switch;
 - the per-page template picker and global content library are collapsed by default so the user can see the target slots before choosing a template or unplaced item;
 - built-in widget metadata is shared between Home and Widget Center so size labels, icons, and library previews stay aligned.
-- the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `更多 / More`;
+- the first visual pass now connects the desktop edit state with three visible app surfaces: `组件 / Widgets`, `外观 / Appearance`, and `应用商城 / App Store`;
 - `组件 / Widgets` provides direct entry into desktop slot editing and keeps custom-widget action controls;
 - `组件 / Widgets` presents official and custom widgets as visual preview cards, supports exact-size filtering, and keeps imported visual code in the widget library until the user chooses a matching Home slot;
 - `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
-- `更多 / More` contains the first App Library-like entry-management surface: category filters, app detail, open/add-to-Home/remove-from-Home actions, and a protected system entry rule, without acting as a real download store.
+- `应用商城 / App Store` contains the first standalone App Library-like entry-management surface: category filters, app detail, open/add-to-Home/remove-from-Home actions, and a protected App Store entry rule, without acting as a real download store.
 
 ## 5. App Entry Placement
 
@@ -167,7 +167,7 @@ Rules:
 - default templates may place high-confidence app entries;
 - users can hide an app from Home without disabling the underlying function;
 - users can restore hidden entries from the app-entry library;
-- system-critical access should remain recoverable through Dock, More, Settings, or an app-library surface.
+- system-critical access should remain recoverable through Dock, Settings, or the App Store surface.
 
 ## 6. App Store Presentation
 
@@ -288,7 +288,7 @@ The target model likely needs:
 - widget instances with per-instance placement and optional action metadata;
 - stronger recovery affordances for hidden, unmatched, or unplaced app and widget entries.
 
-The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, an on-demand edit-mode content library, shared built-in widget metadata, Dock Widgets long-press entry, definition-level custom widget click actions, and first App Library-style entry management are available. The next structural step is per-instance metadata if one widget definition needs different actions in different slots, plus stronger recovery affordances if user testing shows the current library paths are still too indirect.
+The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, an on-demand edit-mode content library, shared built-in widget metadata, Dock Widgets long-press entry, definition-level custom widget click actions, and standalone App Store-style entry management are available. The next structural step is per-instance metadata if one widget definition needs different actions in different slots, plus stronger recovery affordances if user testing shows the current library paths are still too indirect.
 
 ## 11. Guardrails
 

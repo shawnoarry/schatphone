@@ -157,7 +157,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/shopping',
   '/food-delivery',
   '/files',
-  '/more',
+  '/app-store',
 ])
 
 const MANUAL_TRIGGER_ID = '__manual__'

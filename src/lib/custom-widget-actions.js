@@ -27,7 +27,7 @@ export const CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS = Object.freeze([
   { id: 'widgets', labelZh: '组件中心', labelEn: 'Widget Center', route: '/widgets' },
   { id: 'appearance', labelZh: '外观', labelEn: 'Appearance', route: '/appearance' },
   { id: 'settings', labelZh: '设置', labelEn: 'Settings', route: '/settings' },
-  { id: 'more', labelZh: '更多', labelEn: 'More', route: '/more' },
+  { id: 'app_store', labelZh: '应用商城', labelEn: 'App Store', route: '/app-store' },
 ])
 
 const ACTION_APP_TARGET_IDS = new Set(CUSTOM_WIDGET_ACTION_APP_TARGETS.map((target) => target.id))

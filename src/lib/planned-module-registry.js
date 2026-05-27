@@ -8,6 +8,8 @@ export const ASSETS_HOME_APP_ID = 'app_assets'
 export const ASSETS_ROUTE = '/assets'
 export const CONTROL_CENTER_HOME_APP_ID = 'app_control_center'
 export const CONTROL_CENTER_ROUTE = '/control-center'
+export const APP_STORE_HOME_APP_ID = 'app_store'
+export const APP_STORE_ROUTE = '/app-store'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

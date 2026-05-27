@@ -135,6 +135,7 @@ const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 const BACKUP_COPY_TONE_DIRECT = 'direct'
 const BACKUP_COPY_TONE_IMMERSIVE = 'immersive'
 const backupReminderIntervalLabel = createBackupReminderIntervalLabel(t)
+const focusModeEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('focus_mode'))
 
 const setPushFeedback = (type, message, durationMs = 2200) => {
   pushFeedbackType.value = type
@@ -886,6 +887,30 @@ const saveNotificationSettings = () => {
   notificationSavedTimerId = setTimeout(() => {
     notificationSaved.value = false
   }, 1200)
+}
+
+const updateNotificationEnabled = (enabled) => {
+  settings.value.system.notifications = enabled === true
+  saveNotificationSettings()
+}
+
+const updateFocusModeEnabled = (enabled) => {
+  systemStore.setMoreFeatureToggle('focus_mode', enabled === true)
+  saveNotificationSettings()
+}
+
+const updateRealPushEnabled = (enabled) => {
+  settings.value.system.realPushEnabled = enabled === true
+  saveNotificationSettings()
+}
+
+const updatePushDisplayMode = (mode) => {
+  settings.value.system.pushDisplayMode = mode
+  saveNotificationSettings()
+}
+
+const updatePushServerUrl = (serverUrl) => {
+  settings.value.system.pushServerUrl = serverUrl
 }
 
 const checkPushServerHealthNow = async ({ silent = false } = {}) => {
@@ -2014,8 +2039,10 @@ if (initialMenu) {
             :push-action-running="pushActionRunning"
             :push-health-running="pushHealthRunning"
             :notification-saved="notificationSaved"
+            :focus-mode-enabled="focusModeEnabled"
             :format-storage-report-time="formatStorageReportTime"
             @update-notifications="updateNotificationEnabled"
+            @update-focus-mode="updateFocusModeEnabled"
             @update-real-push-enabled="updateRealPushEnabled"
             @update-push-display-mode="updatePushDisplayMode"
             @update-push-server-url="updatePushServerUrl"

@@ -27,7 +27,7 @@ const createTestRouter = () =>
     routes: [
       { path: '/control-center', component: ControlCenterView },
       { path: '/home', component: DummyView },
-      { path: '/more', component: DummyView },
+      { path: '/app-store', component: DummyView },
     ],
   })
 
@@ -152,7 +152,7 @@ describe('ControlCenterView', () => {
 
     const { wrapper } = await mountControlCenterView()
 
-    expect(wrapper.get('[data-testid="control-center-status"]').text()).toContain('Runtime Control Disabled')
+    expect(wrapper.get('[data-testid="control-center-status"]').text()).toContain('Hidden from Home')
     expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain('No event logs yet')
     expect(wrapper.get('[data-testid="control-center-relationship-panel"]').text()).toContain('No relationship facts yet')
     expect(wrapper.get('[data-testid="control-center-runtime-panel"]').text()).toContain(

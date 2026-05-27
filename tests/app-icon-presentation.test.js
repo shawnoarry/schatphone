@@ -54,6 +54,7 @@ describe('app icon presentation helpers', () => {
     const food = resolveAppIconMeta('app_food_delivery', {}, 'en-US')
     const assets = resolveAppIconMeta('app_assets', {}, 'en-US')
     const worldHub = resolveAppIconMeta('app_control_center', {}, 'zh-CN')
+    const appStore = resolveAppIconMeta('app_store', {}, 'zh-CN')
 
     expect(shopping.label).toBe('购物')
     expect(shopping.icon).toBe('fas fa-bag-shopping')
@@ -70,6 +71,9 @@ describe('app icon presentation helpers', () => {
     expect(worldHub.label).toBe('世界中枢')
     expect(worldHub.icon).toBe('fas fa-wand-magic-sparkles')
     expect(worldHub.accent).toBe('dark')
+    expect(appStore.label).toBe('应用商城')
+    expect(appStore.icon).toBe('fas fa-store')
+    expect(appStore.accent).toBe('default')
   })
 
   test('reuses app icon overrides in in-shell notification presentation', () => {

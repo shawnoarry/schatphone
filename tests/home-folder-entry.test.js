@@ -66,7 +66,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('shows the optional World Hub app only after the runtime control toggle is enabled', async () => {
+  test('shows the World Hub app after App Store places it on Home', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -85,7 +85,13 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
 
-    store.setMoreFeatureToggle('control_center', true)
+    store.setHomeWidgetPages([
+      [],
+      ['app_control_center'],
+      [],
+      [],
+      [],
+    ])
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(true)
@@ -568,7 +574,13 @@ describe('Home folder entries', () => {
     await router.push('/home')
     await router.isReady()
     const store = useSystemStore()
-    store.setMoreFeatureToggle('control_center', true)
+    store.setHomeWidgetPages([
+      [],
+      [],
+      ['app_control_center'],
+      [],
+      [],
+    ])
 
     const wrapper = mount(HomeView, {
       props: {

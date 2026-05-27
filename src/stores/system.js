@@ -12,6 +12,7 @@ import {
 } from '../lib/push'
 import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import {
+  APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
@@ -75,7 +76,7 @@ const DEFAULT_WIDGET_PAGES = [
     'system',
     'quick_heart',
     'quick_disc',
-    'app_more',
+    APP_STORE_HOME_APP_ID,
   ],
   [],
   [],
@@ -110,6 +111,7 @@ const HOME_TILE_ALIASES = {
   app_tasks: REMINDERS_HOME_APP_ID,
   app_profile: 'app_chat',
   app_worldbook: 'app_files',
+  app_more: APP_STORE_HOME_APP_ID,
 }
 
 const CORE_HOME_TILE_IDS = [
@@ -136,26 +138,26 @@ const CORE_HOME_TILE_IDS = [
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
-  'app_more',
+  APP_STORE_HOME_APP_ID,
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
-const OPTIONAL_HOME_TILE_IDS = new Set([CONTROL_CENTER_HOME_APP_ID])
+const OPTIONAL_HOME_TILE_IDS = new Set()
 const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
   (tileId) => typeof tileId === 'string' && !tileId.startsWith('app_'),
 )
 
 const MIN_HOME_PAGES = 5
 const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page) => [...page])
-const DEFAULT_MORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
-  page.includes('app_more'),
+const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
+  page.includes(APP_STORE_HOME_APP_ID),
 )
-if (DEFAULT_MORE_HOME_PAGE_INDEX >= 0) {
-  const page = DEFAULT_HOME_TILE_ORDER_PAGES[DEFAULT_MORE_HOME_PAGE_INDEX]
-  const appMoreIndex = page.indexOf('app_more')
-  if (appMoreIndex < 0) {
+if (DEFAULT_APP_STORE_HOME_PAGE_INDEX >= 0) {
+  const page = DEFAULT_HOME_TILE_ORDER_PAGES[DEFAULT_APP_STORE_HOME_PAGE_INDEX]
+  const appStoreIndex = page.indexOf(APP_STORE_HOME_APP_ID)
+  if (appStoreIndex < 0) {
     page.push(CONTROL_CENTER_HOME_APP_ID)
   } else {
-    page.splice(appMoreIndex, 0, CONTROL_CENTER_HOME_APP_ID)
+    page.splice(appStoreIndex, 0, CONTROL_CENTER_HOME_APP_ID)
   }
 } else {
   DEFAULT_HOME_TILE_ORDER_PAGES[1] = [
@@ -349,7 +351,7 @@ const areHomeTilePagesEqual = (pages, expectedPages) => {
     const page = Array.isArray(pages[pageIndex]) ? pages[pageIndex] : []
     const comparablePage = page.filter((tileId) => tileId !== CONTROL_CENTER_HOME_APP_ID)
     if (comparablePage.length !== expectedPage.length) return false
-    return expectedPage.every((tileId, index) => comparablePage[index] === tileId)
+    return expectedPage.every((tileId, index) => comparablePage[index] === (HOME_TILE_ALIASES[tileId] || tileId))
   })
 }
 
@@ -435,8 +437,8 @@ const normalizeMoreSettings = (input = {}) => {
 }
 
 const getEnabledOptionalHomeTileIdsFromMoreSettings = (moreSettings = {}) => {
-  const normalized = normalizeMoreSettings(moreSettings)
-  return normalized.featureToggles.control_center === true ? [CONTROL_CENTER_HOME_APP_ID] : []
+  void normalizeMoreSettings(moreSettings)
+  return []
 }
 
 const normalizeUserAiContextText = (value, maxLength = 160) => {
@@ -1396,13 +1398,6 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalizedId) return false
     settings.more = normalizeMoreSettings(settings.more)
     settings.more.featureToggles[normalizedId] = enabled === true
-    if (normalizedId === 'control_center') {
-      if (settings.more.featureToggles.control_center === true) {
-        restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
-      } else {
-        normalizeCurrentHomeWidgetPages()
-      }
-    }
     return true
   }
 
@@ -1645,16 +1640,12 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const migrateHomeDesktopLayoutAfterHydration = (persistedSetupVersion = HOME_DESKTOP_SETUP_VERSION) => {
-    const shouldRestoreControlCenter = settings.more.featureToggles.control_center === true
     const shouldResetToCleanSetup =
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES)
 
     if (shouldResetToCleanSetup) {
       resetHomeWidgetPages()
-      if (shouldRestoreControlCenter) {
-        restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
-      }
       return
     }
 
@@ -3139,11 +3130,7 @@ export const useSystemStore = defineStore('system', () => {
     } else {
       settings.more = normalizeMoreSettings(settings.more)
     }
-    if (settings.more.featureToggles.control_center === true) {
-      restoreHomeTileByDefaultOrder(CONTROL_CENTER_HOME_APP_ID)
-    } else {
-      normalizeCurrentHomeWidgetPages()
-    }
+    normalizeCurrentHomeWidgetPages()
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
       settings.aiAutomation = normalizeAiAutomationSettings(persisted.settings.aiAutomation)

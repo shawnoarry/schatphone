@@ -177,12 +177,13 @@ describe('system widget import safety', () => {
 
     store.setHomeWidgetPages([
       ['app_chat', 'app_files', 'weather', 'app_control_center'],
-      ['app_more'],
+      ['app_store'],
     ])
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
-    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_control_center')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_store')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_shopping')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_reminders')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_food_delivery')
@@ -276,7 +277,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_shopping')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_food_delivery')
-    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_more')
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
     expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
       slotId: 'b-small-7',
       tileId: 'app_food_delivery',
@@ -321,19 +322,26 @@ describe('system widget import safety', () => {
     })
   })
 
-  test('runtime control toggle restores and removes the optional World Hub Home entry', () => {
+  test('World Hub Home entry is user-managed instead of controlled by legacy toggles', () => {
     const store = useSystemStore()
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
 
     store.setMoreFeatureToggle('control_center', true)
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
+
+    store.setHomeWidgetPages([
+      [],
+      [],
+      ['app_control_center', 'app_store'],
+      [],
+      [],
+    ])
     expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_control_center')
-    expect(store.settings.appearance.homeWidgetPages[2].indexOf('app_control_center')).toBeLessThan(
-      store.settings.appearance.homeWidgetPages[2].indexOf('app_more'),
-    )
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
 
     store.setMoreFeatureToggle('control_center', false)
-    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_control_center')
   })
 
   test('persists neutral Home layout template choices per formal page', () => {

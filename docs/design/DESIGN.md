@@ -148,7 +148,7 @@ Default direction:
 - The Home `Widgets` entry is the primary user-facing shortcut for widget customization: tap opens `/widgets`, long-press enters Home widget edit mode.
 - Dock entries stay globally reachable; Home app entries are user-managed shortcuts rather than permanently fixed requirements.
 - Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
-- Extra apps should go to an App Library, More page, or another system-owned overflow surface.
+- Extra apps should go to the standalone App Store/App Library surface or another system-owned overflow surface.
 - System-controlled Home folders are OS launch containers. Their tile preview, overlay material, close behavior, icon grid, and spacing belong to Home/Appearance.
 - Child entries inside a Home folder may represent installed app identities or app-internal category shortcuts. Once the user taps a child and navigation opens a route, visual ownership changes to the destination app.
 - Shopping is the first platform-style folder case: the folder shell stays native-system, while `Schat Mall`, `Style Cloud`, `Nova Digital`, and `Daily Fresh` should become selected Shopping platform identities after opening `/shopping?service=...`.
@@ -201,8 +201,8 @@ Installed app surfaces:
   - Assets vault/archive app
 - `src/views/FilesView.vue`
   - Files app MVP
-- `src/views/MoreView.vue`
-  - More app MVP
+- `src/views/AppStoreView.vue`
+  - Standalone App Store/App Library entry-management app
 - Future modules that appear as app icons on Home
 
 Installed app visual rules:
@@ -285,7 +285,8 @@ docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md
 | `/food-delivery` | Installed App: Food Delivery | Current Home folder children are category entry points. Destination stays Food Delivery-owned. |
 | `/assets` | Installed App: Assets | Direct app entry from Home. |
 | `/files` | Installed App / Utility App | File utility. If opened as a system import/export picker later, reassess by entry context. |
-| `/more` | Installed App | MVP collection/overflow app. |
+| `/app-store` | Native System App | Standalone app-entry manager for Home placement and app summaries. |
+| `/more` | Compatibility Redirect | Legacy route redirecting away from the retired More app. |
 | App dialogs | Native System Mechanics + Host Context | Dialog mechanics are system-owned, but app-local dialogs should keep the host app's accent and wording context where appropriate. |
 
 ## 6. Theme Strategy

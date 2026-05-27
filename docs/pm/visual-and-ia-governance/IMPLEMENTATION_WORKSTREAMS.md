@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-05-24
+Updated: 2026-05-27
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -11,7 +11,7 @@ Updated: 2026-05-24
 - `主屏 / 桌面 / Home` as a system desktop layer, not a user-facing app entry
 - `组件 / Widgets` as widget creation/import/action-config/edit entry, not a whole-page template catalog
 - `外观 / Appearance` as broader visual customization and possible template-management surface
-- `更多 / More` as the current lightweight App Library-like entry-management host
+- `应用商城 / App Store` as the standalone App Library-like entry-management host
 - App Library / App Store-like surface as app-entry visibility management only
 
 ## 2. Workstream B: Module IA

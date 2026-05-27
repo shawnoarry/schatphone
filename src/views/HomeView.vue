@@ -23,6 +23,10 @@ import {
   resolveHomeFolderPresentation,
 } from '../lib/home-entry-registry'
 import {
+  APP_STORE_HOME_APP_ID,
+  APP_STORE_ROUTE,
+} from '../lib/planned-module-registry'
+import {
   buildHomeSourceQuery,
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
@@ -175,7 +179,7 @@ const widgetRegistry = {
   app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
   ...HOME_APP_REGISTRY_ADDITIONS,
   ...HOME_FOLDER_REGISTRY,
-  app_more: { kind: 'app', icon: 'fas fa-ellipsis-h', label: 'More', accent: 'default', route: '/more' },
+  [APP_STORE_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-store', label: 'App Store', accent: 'default', route: APP_STORE_ROUTE },
 }
 
 const resolveAppTileLabel = (tileId, fallback = '') => {
@@ -197,7 +201,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')
   if (tileId === 'app_control_center') return t('世界中枢', 'World Hub')
-  if (tileId === 'app_more') return t('更多', 'More')
+  if (tileId === APP_STORE_HOME_APP_ID) return t('应用商城', 'App Store')
   return fallback
 }
 
@@ -443,7 +447,8 @@ const dragGhostStyle = computed(() => {
   }
 })
 
-const canHideTile = (tileId) => typeof tileId === 'string' && tileId !== 'app_files'
+const canHideTile = (tileId) =>
+  typeof tileId === 'string' && tileId !== 'app_files' && tileId !== APP_STORE_HOME_APP_ID
 const isLibraryPlacementActive = computed(() => layoutEditMode.value && !!libraryPlacementTileId.value)
 const openedFolderMeta = computed(() => tileMeta(openFolderTileId.value))
 const openedFolderPreviewEntries = computed(() => {
@@ -453,14 +458,16 @@ const openedFolderPreviewEntries = computed(() => {
   return entries.slice(0, 8)
 })
 
-const isWorldHubInstalled = computed(() => systemStore.isMoreFeatureToggleEnabled('control_center'))
+const isWorldHubInstalled = computed(() =>
+  widgetPages.value.some((page) => Array.isArray(page) && page.includes('app_control_center')),
+)
 const leftPageUtilityEntries = computed(() => [
   {
     id: 'world-hub',
     title: t('世界中枢', 'World Hub'),
     subtitle: isWorldHubInstalled.value
       ? t('已显示在主屏入口库', 'Visible in the Home entry library')
-      : t('可在系统开关中显示', 'Available from system switches'),
+      : t('可在应用商城加入主屏', 'Available from App Store'),
     status: isWorldHubInstalled.value ? t('已显示', 'Visible') : t('未显示', 'Hidden'),
     icon: 'fas fa-wand-magic-sparkles',
     route: widgetRegistry.app_control_center.route,
@@ -575,10 +582,6 @@ const visibleHomePlacedIds = computed(() => {
 const allHomeSlotCandidateIds = computed(() =>
   Object.keys(widgetRegistry)
     .filter((tileId) => tileId !== 'app_files')
-    .filter((tileId) => {
-      if (tileId === 'app_control_center') return isWorldHubInstalled.value
-      return true
-    })
     .concat(customWidgets.value.map((widget) => widget.id))
     .filter((tileId) => !!tileMeta(tileId))
 )

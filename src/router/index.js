@@ -25,7 +25,7 @@ const AssetsView = () => import('../views/AssetsView.vue')
 const ControlCenterView = () => import('../views/ControlCenterView.vue')
 const UserProfileView = () => import('../views/UserProfileView.vue')
 const FilesView = () => import('../views/FilesView.vue')
-const MoreView = () => import('../views/MoreView.vue')
+const AppStoreView = () => import('../views/AppStoreView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -56,7 +56,8 @@ const router = createRouter({
     { path: '/assets', component: AssetsView },
     { path: '/control-center', component: ControlCenterView },
     { path: '/files', component: FilesView },
-    { path: '/more', component: MoreView },
+    { path: '/app-store', component: AppStoreView },
+    { path: '/more', redirect: '/settings' },
   ],
 })
 

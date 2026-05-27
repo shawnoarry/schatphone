@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -24,8 +24,8 @@ What is already landed:
 12. Home now has a first-pass neutral template library: six abstract 4-column x 6-row layouts, per-formal-page template selection, explicit slot placement records, edit-mode grayscale slot previews, local slot content replacement, and a lightweight edit-mode content library for unplaced entries.
 13. Home slot editing is now content-type mixed: apps, folders, built-in widgets, and custom widgets can be placed when they fit the selected slot. Widget Center remains the widget creation/import and edit-entry surface; Appearance may later expose broader template management; App Store-like surfaces should remain app-entry visibility management only.
 14. Custom widget actions now have a first-pass functional loop: Widget Center stores optional click action metadata outside imported code, Home executes whitelisted app/system targets in normal mode, and edit mode still uses taps for slot editing.
-15. The first cross-entry visual pass is landed for Home customization: `主屏 / 桌面 / Home` is documented as a system desktop layer, not a visible app; `组件 / Widgets`, `外观 / Appearance`, and `更多 / More` now expose coordinated UI entry points into desktop editing without making App Library-like behavior a real download store.
-16. `更多 / More` now uses the native-system visual token layer and presents App Library as the primary app-entry management surface, with system-style quick entries, switches, and scene preview instead of white utility cards or developer-facing expansion notes.
+15. The first cross-entry visual pass is landed for Home customization: `主屏 / 桌面 / Home` is documented as a system desktop layer, not a visible app; `组件 / Widgets`, `外观 / Appearance`, and `应用商城 / App Store` now expose coordinated UI entry points into desktop editing without making App Store behavior a real download store.
+16. `更多 / More` has been retired as a Home app. Its useful responsibilities were merged into clearer owners: `应用商城 / App Store` owns app-entry visibility, `外观 / Appearance` owns the Home smart panel display switch, and `设置 / Settings` owns lock-screen focus mode.
 17. `外观 / Appearance` root now has a first native-system control-surface pass: a current-look overview, Home desktop template preview, and grouped Theme/Font/Icon/Widget entries. The deeper Theme, Font, and Icon subpages also have a first token-coverage pass to reduce white-card and hardcoded-blue leakage in the dark system theme.
 18. Home Today View copy now uses native-system language for optional entries and smart summaries instead of developer-facing install, hidden-system, fixed-placeholder, or lab labels.
 19. Widget Center has a regression test that keeps style starter cards as lightweight thumbnails rather than iframe previews; live iframes remain reserved for draft and saved custom widget previews.
@@ -33,7 +33,7 @@ What is already landed:
 21. Home template switching now behaves like a new-device layout setup: when a page changes to a template with fewer or different slots, unmatched entries leave the visible desktop and return to the recoverable library instead of being auto-filled into the new layout. Slot replacement can browse the full compatible app/widget library and marks whether an item is already on another Home page, in the Dock, or only in the library.
 22. Unversioned persisted Home desktop layouts now migrate once into the cleaned setup layout on hydration, so old local browser state does not keep showing the previous crowded Home arrangement after the template-slot model changes.
 23. Widget Center now has a more visual market/custom/import pass: official widget styles render as effect thumbnails with size filters and preview sheets, custom widget creation leads with starter thumbnails and live previews, saved widgets render as preview cards, and import stays a visual-code library step instead of placing content directly on Home.
-24. More/App Library now has a first simulated-app-store management pass: category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected system entry handling, and a route into Home slot edit mode with the selected hidden app ready for placement.
+24. `应用商城 / App Store` now has a first standalone simulated-store management pass: category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected App Store entry handling, and a route into Home slot edit mode with the selected hidden app ready for placement.
 
 Still incomplete:
 
@@ -45,7 +45,7 @@ Still incomplete:
 ## 2. Recommended Next Slice
 
 1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if needed.
-2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` now has a first fuller App Library management pass but can still receive visual refinement later.
+2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 

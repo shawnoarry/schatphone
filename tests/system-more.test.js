@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSystemStore } from '../src/stores/system'
 
-describe('system More feature toggles', () => {
+describe('legacy system feature toggles', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
   })
 
-  test('exposes normalized default More toggles', () => {
+  test('exposes normalized default legacy toggles', () => {
     const store = useSystemStore()
 
     expect(store.isMoreFeatureToggleEnabled('smart_panel')).toBe(true)
@@ -18,7 +18,7 @@ describe('system More feature toggles', () => {
     expect(store.isMoreFeatureToggleEnabled('unknown')).toBe(false)
   })
 
-  test('updates and persists More toggles through system storage', () => {
+  test('updates and persists legacy toggles through system storage', () => {
     const store = useSystemStore()
 
     expect(store.setMoreFeatureToggle('focus_mode', true)).toBe(true)
@@ -34,7 +34,7 @@ describe('system More feature toggles', () => {
     expect(restoredStore.isMoreFeatureToggleEnabled('scene_switch')).toBe(true)
   })
 
-  test('restores More toggle snapshots with backward-compatible defaults', () => {
+  test('restores legacy toggle snapshots with backward-compatible defaults', () => {
     const store = useSystemStore()
 
     expect(

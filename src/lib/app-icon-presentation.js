@@ -23,6 +23,7 @@ const APP_ICON_LABELS = {
   app_shopping: { zh: '购物', en: 'Shopping', ko: '쇼핑' },
   app_assets: { zh: '资产', en: 'Assets', ko: '자산' },
   app_more: { zh: '更多', en: 'More', ko: '더보기' },
+  app_store: { zh: '应用商城', en: 'App Store', ko: 'App Store' },
 }
 
 const BUILT_IN_APP_ICON_META = {
@@ -43,6 +44,7 @@ const BUILT_IN_APP_ICON_META = {
   app_shopping: { icon: 'fas fa-bag-shopping', accent: 'warm' },
   app_assets: { icon: 'fas fa-vault', accent: 'cool' },
   app_more: { icon: 'fas fa-ellipsis-h', accent: 'default' },
+  app_store: { icon: 'fas fa-store', accent: 'default' },
 }
 
 APP_ICON_LABELS.app_food_delivery = { zh: '外卖', en: 'Food', ko: 'Delivery' }
@@ -71,7 +73,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_control_center',
   'app_settings',
   'app_contacts',
-  'app_more',
+  'app_store',
 ]
 
 export const APP_ICON_PRESET_OPTIONS = [

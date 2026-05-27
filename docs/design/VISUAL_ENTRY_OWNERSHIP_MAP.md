@@ -63,7 +63,7 @@ These routes should feel like apps when opened as full-screen destinations.
 | Shopping folder child app | `/shopping?service=...` | Installed App: selected Shopping platform | The Home folder is system-owned, but tapping a child opens a platform-like Shopping app identity such as Schat Mall, Style Cloud, Nova Digital, or Daily Fresh. |
 | Food Delivery folder child | `/food-delivery?category=...` | Installed App: Food Delivery | Current children are category entry points inside the Food Delivery app. They are not editable OS folders and should not use Settings styling. |
 | Assets icon | `/assets` | Installed App: Assets | Assets is a direct app entry, not a Home folder child. |
-| More icon | `/more` | Installed App: More | Overflow/collection app placeholder. |
+| App Store icon | `/app-store` | Native System App: App Store | Standalone app-entry manager for preinstalled apps and Home placement. |
 
 ## 3A. System-Controlled Home Folders
 

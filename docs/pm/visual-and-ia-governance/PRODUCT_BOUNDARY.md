@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-05-24
+Updated: 2026-05-27
 
 ## 1. Core Rule
 
@@ -24,7 +24,7 @@ It also owns:
   - the desktop edit state owns per-page layout template selection and slot content editing;
   - `组件 / Widgets` owns widget creation, import, widget library, custom widget click-action configuration, and fast entry into desktop edit mode;
   - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings;
-  - `更多 / More` may host the current lightweight App Library-like app-entry management UI;
+  - `应用商城 / App Store` owns app-entry visibility and Home-entry placement recovery;
   - App Library / App Store-like presentation owns app-entry visibility only, not widget packs, themes, wallpapers, or layout templates.
 
 ## 3. What It Should Not Replace

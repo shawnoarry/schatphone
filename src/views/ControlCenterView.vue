@@ -36,6 +36,7 @@ import {
   SIMULATION_SURPRISE_MODE,
   useSimulationStore,
 } from '../stores/simulation'
+import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
 
 const router = useRouter()
 const route = useRoute()
@@ -109,9 +110,10 @@ const WORLD_HUB_RUNTIME_MODULES = Object.freeze([
   },
 ])
 
-const enabled = computed(() => systemStore.isMoreFeatureToggleEnabled('control_center'))
-const eventEngineEnabled = computed(
-  () => settings.value.more?.featureToggles?.control_center === true,
+const homeEntryVisible = computed(
+  () => (settings.value.appearance?.homeWidgetPages || []).some(
+    (page) => Array.isArray(page) && page.includes(CONTROL_CENTER_HOME_APP_ID),
+  ),
 )
 
 const surpriseModeLabel = computed(() => {
@@ -752,8 +754,8 @@ const goHome = () => {
   pushReturnTarget(router, route, '/home')
 }
 
-const openMore = () => {
-  router.push('/more')
+const openAppStore = () => {
+  router.push('/app-store')
 }
 
 const applyRelationshipEvent = (eventId) => {
@@ -925,36 +927,36 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold">
-              {{ enabled ? t('Runtime Control Enabled', 'Runtime Control Enabled') : t('Runtime Control Disabled', 'Runtime Control Disabled') }}
+              {{ homeEntryVisible ? t('主屏入口已显示', 'Home Entry Visible') : t('主屏入口已隐藏', 'Hidden from Home') }}
             </p>
             <p class="mt-2 text-xs leading-5 text-slate-300">
               {{
-                enabled
+                homeEntryVisible
                   ? t(
-                    'This is the shared observation and control entry for events, unlocks, money, affinity, and other play values; the current surface is read-only first.',
-                    'This is the shared observation and control entry for events, unlocks, money, affinity, and other play values; the current surface is read-only first.',
+                    '这个入口已放在主屏；当前页面用于查看事件、关系记忆和世界状态。',
+                    'This entry is on Home. This page reviews events, relationship memory, and world state.',
                   )
                   : t(
-                    'When disabled, Home hides the World Hub entry and regular Chat, Map, Shopping, Food Delivery, and other modules remain unaffected.',
-                    'When disabled, Home hides the World Hub entry and regular Chat, Map, Shopping, Food Delivery, and other modules remain unaffected.',
+                    '世界中枢仍可访问；如需放到主屏，请在应用商城中加入入口。',
+                    'World Hub remains available. Add it to Home from App Store if needed.',
                   )
               }}
             </p>
           </div>
           <span
             class="rounded-full px-3 py-1 text-[11px] font-semibold"
-            :class="enabled ? 'bg-cyan-300 text-slate-950' : 'bg-white/10 text-slate-300'"
+            :class="homeEntryVisible ? 'bg-cyan-300 text-slate-950' : 'bg-white/10 text-slate-300'"
           >
-            {{ enabled ? t('On', 'On') : t('Off', 'Off') }}
+            {{ homeEntryVisible ? t('主屏', 'Home') : t('库内', 'Library') }}
           </span>
         </div>
         <button
-          v-if="!enabled"
+          v-if="!homeEntryVisible"
           class="mt-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950"
           type="button"
-          @click="openMore"
+          @click="openAppStore"
         >
-          {{ t('Enable in More', 'Enable in More') }}
+          {{ t('在应用商城管理', 'Manage in App Store') }}
         </button>
       </section>
 
@@ -1488,7 +1490,7 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
           <span class="rounded-xl bg-white/8 px-3 py-2">{{ t('Home entry: optional', 'Home entry: optional') }}</span>
           <span class="rounded-xl bg-white/8 px-3 py-2">
-            {{ eventEngineEnabled ? t('Settings toggle: on', 'Settings toggle: on') : t('Settings toggle: off', 'Settings toggle: off') }}
+            {{ homeEntryVisible ? t('主屏入口：显示', 'Home entry: visible') : t('主屏入口：库内', 'Home entry: in library') }}
           </span>
           <span class="rounded-xl bg-white/8 px-3 py-2">{{ t('Event engine: read-only', 'Event engine: read-only') }}</span>
           <span class="rounded-xl bg-white/8 px-3 py-2">{{ t('Values panel: pending', 'Values panel: pending') }}</span>
