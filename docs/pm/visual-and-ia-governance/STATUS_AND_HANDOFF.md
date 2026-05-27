@@ -33,18 +33,19 @@ What is already landed:
 21. Home template switching now behaves like a new-device layout setup: when a page changes to a template with fewer or different slots, unmatched entries leave the visible desktop and return to the recoverable library instead of being auto-filled into the new layout. Slot replacement can browse the full compatible app/widget library and marks whether an item is already on another Home page, in the Dock, or only in the library.
 22. Unversioned persisted Home desktop layouts now migrate once into the cleaned setup layout on hydration, so old local browser state does not keep showing the previous crowded Home arrangement after the template-slot model changes.
 23. Widget Center now has a more visual market/custom/import pass: official widget styles render as effect thumbnails with size filters and preview sheets, custom widget creation leads with starter thumbnails and live previews, saved widgets render as preview cards, and import stays a visual-code library step instead of placing content directly on Home.
+24. More/App Library now has a first simulated-app-store management pass: category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected system entry handling, and a route into Home slot edit mode with the selected hidden app ready for placement.
 
 Still incomplete:
 
 1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes;
 2. some pages still mix destructive actions and ordinary edits too closely;
 3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
-4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add a fuller App Library / recovery manager and per-instance action overrides if users need the same widget definition to behave differently in different slots.
+4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 
 ## 2. Recommended Next Slice
 
-1. Continue the Home template-slot function loop before deeper visual polish: fuller App Library entry management and per-instance action overrides if needed.
-2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` has its first native-system App Library pass but still needs a fuller recovery manager later.
+1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if needed.
+2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, and any lingering deep `外观 / Appearance` controls that still feel utility-like; `更多 / More` now has a first fuller App Library management pass but can still receive visual refinement later.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 

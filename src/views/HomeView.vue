@@ -286,6 +286,15 @@ const activeThemeName = computed(() => {
 })
 const canFreelyMoveHomeTiles = computed(() => false)
 const widgetEditRouteRequested = computed(() => route.query.widgetEdit === '1')
+const readSingleRouteQuery = (value) => (Array.isArray(value) ? value[0] : value)
+const widgetEditLibraryTileId = computed(() => {
+  const value = readSingleRouteQuery(route.query.libraryTile)
+  return typeof value === 'string' ? value.trim() : ''
+})
+const widgetEditFocusTileId = computed(() => {
+  const value = readSingleRouteQuery(route.query.focusTile)
+  return typeof value === 'string' ? value.trim() : ''
+})
 const canDragToPrevPage = computed(() => currentPage.value > 0)
 const canDragToNextPage = computed(() => currentPage.value < totalPages.value - 1)
 const currentHomeLayoutTemplate = computed(() =>
@@ -1368,11 +1377,24 @@ const exitLayoutMode = () => {
 const consumeWidgetEditRouteRequest = () => {
   if (!widgetEditRouteRequested.value) return
   enterWidgetLayoutMode()
+  const requestedLibraryTileId = widgetEditLibraryTileId.value
+  const requestedFocusTileId = widgetEditFocusTileId.value
+  if (requestedLibraryTileId && availableHomeSlotCandidates.value.includes(requestedLibraryTileId)) {
+    libraryPlacementTileId.value = requestedLibraryTileId
+    selectedTileId.value = ''
+    triggerLayoutToast(t('选择兼容槽位放入', 'Choose a matching slot'))
+  } else if (requestedFocusTileId && tilePageIndexMap.value.has(requestedFocusTileId)) {
+    closeHomeContentLibrary()
+    selectedTileId.value = requestedFocusTileId
+    triggerLayoutToast(t('点击入口可更换内容', 'Tap the entry to change content'))
+  } else if (requestedLibraryTileId || requestedFocusTileId) {
+    triggerLayoutToast(t('入口已在主屏或暂不可用', 'Entry is already on Home or unavailable'))
+  }
   const homePage = normalizeHomePageQuery(route.query.homePage)
   router.replace(homePage ? { path: '/home', query: { homePage } } : '/home')
 }
 
-watch(() => [route.query.widgetEdit, route.query.homePage], consumeWidgetEditRouteRequest, {
+watch(() => [route.query.widgetEdit, route.query.homePage, route.query.libraryTile, route.query.focusTile], consumeWidgetEditRouteRequest, {
   immediate: true,
 })
 

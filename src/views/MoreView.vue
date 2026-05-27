@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
@@ -120,6 +120,14 @@ const APP_LIBRARY_ENTRIES = [
   },
 ]
 
+const APP_LIBRARY_PROTECTED_HOME_IDS = new Set(['app_more'])
+const APP_LIBRARY_FILTERS = ['all', 'home', 'library', 'System', 'Social', 'Life', 'Style', 'Media', 'Productivity', 'Finance', 'Archive']
+const selectedLibraryFilter = ref('all')
+const selectedAppId = ref('app_chat')
+const libraryNotice = ref('')
+
+let libraryNoticeTimerId = null
+
 const featureToggleMeta = computed(() => [
   {
     id: 'smart_panel',
@@ -203,6 +211,19 @@ const quickEntries = computed(() => [
 const visibleHomeAppIds = computed(
   () => new Set((settings.value.appearance?.homeWidgetPages || []).flat()),
 )
+const homeAppPageMap = computed(() => {
+  const map = new Map()
+  const pages = settings.value.appearance?.homeWidgetPages || []
+  pages.forEach((page, pageIndex) => {
+    const appIds = Array.isArray(page) ? page : []
+    appIds.forEach((appId) => {
+      if (typeof appId === 'string' && appId.startsWith('app_')) {
+        map.set(appId, pageIndex)
+      }
+    })
+  })
+  return map
+})
 const appLibraryItems = computed(() =>
   APP_LIBRARY_ENTRIES.map((entry) => ({
     ...entry,
@@ -210,13 +231,58 @@ const appLibraryItems = computed(() =>
     category: t(entry.categoryZh, entry.categoryEn),
     desc: t(entry.descZh, entry.descEn),
     visible: visibleHomeAppIds.value.has(entry.id),
+    homePageIndex: homeAppPageMap.value.get(entry.id),
+    protectedHomeEntry: APP_LIBRARY_PROTECTED_HOME_IDS.has(entry.id),
   })),
 )
 const visibleAppCount = computed(
   () => appLibraryItems.value.filter((item) => item.visible).length,
 )
 const hiddenAppCount = computed(() => Math.max(0, appLibraryItems.value.length - visibleAppCount.value))
+const appLibraryFilters = computed(() =>
+  APP_LIBRARY_FILTERS.map((filterId) => ({
+    id: filterId,
+    label: appLibraryFilterLabel(filterId),
+    count: appLibraryItems.value.filter((item) => appMatchesLibraryFilter(item, filterId)).length,
+  })).filter((filter) => filter.id === 'all' || filter.count > 0),
+)
+const filteredAppLibraryItems = computed(() =>
+  appLibraryItems.value.filter((item) => appMatchesLibraryFilter(item, selectedLibraryFilter.value)),
+)
+const selectedApp = computed(() => {
+  const selected = appLibraryItems.value.find((item) => item.id === selectedAppId.value)
+  if (selected && appMatchesLibraryFilter(selected, selectedLibraryFilter.value)) return selected
+  return filteredAppLibraryItems.value[0] || appLibraryItems.value[0] || null
+})
+const selectedAppHomePageLabel = computed(() => {
+  if (!selectedApp.value?.visible || !Number.isInteger(selectedApp.value.homePageIndex)) {
+    return t('应用库', 'Library')
+  }
+  return t(`第 ${selectedApp.value.homePageIndex + 1} 屏`, `Screen ${selectedApp.value.homePageIndex + 1}`)
+})
 const activeFeatureCount = computed(() => featureToggles.value.filter((item) => item.enabled).length)
+
+function appMatchesLibraryFilter(app, filterId) {
+  if (filterId === 'all') return true
+  if (filterId === 'home') return app.visible
+  if (filterId === 'library') return !app.visible
+  return app.categoryEn === filterId
+}
+
+function appLibraryFilterLabel(filterId) {
+  if (filterId === 'all') return t('全部', 'All')
+  if (filterId === 'home') return t('主屏', 'Home')
+  if (filterId === 'library') return t('应用库', 'Library')
+  if (filterId === 'System') return t('系统', 'System')
+  if (filterId === 'Social') return t('社交', 'Social')
+  if (filterId === 'Life') return t('生活', 'Life')
+  if (filterId === 'Style') return t('美化', 'Style')
+  if (filterId === 'Media') return t('媒体', 'Media')
+  if (filterId === 'Productivity') return t('效率', 'Productivity')
+  if (filterId === 'Finance') return t('财务', 'Finance')
+  if (filterId === 'Archive') return t('资料', 'Archive')
+  return filterId
+}
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -230,9 +296,69 @@ const openHomeAppEntryEditor = () => {
   router.push(buildRouteWithReturnSource('/home', 'home', { homePage: route.query.homePage, widgetEdit: '1' }))
 }
 
+const showLibraryNotice = (message) => {
+  libraryNotice.value = message
+  if (libraryNoticeTimerId) clearTimeout(libraryNoticeTimerId)
+  libraryNoticeTimerId = setTimeout(() => {
+    libraryNotice.value = ''
+  }, 1500)
+}
+
+const selectLibraryFilter = (filterId) => {
+  selectedLibraryFilter.value = filterId
+  const firstMatch = appLibraryItems.value.find((item) => appMatchesLibraryFilter(item, filterId))
+  if (firstMatch) selectedAppId.value = firstMatch.id
+}
+
+const selectAppLibraryItem = (appId) => {
+  selectedAppId.value = appId
+}
+
+const openSelectedApp = () => {
+  if (!selectedApp.value?.route) return
+  openEntry(selectedApp.value.route)
+}
+
+const currentHomePageQueryValue = () => {
+  const value = Array.isArray(route.query.homePage) ? route.query.homePage[0] : route.query.homePage
+  const pageIndex = Number(value)
+  return Number.isInteger(pageIndex) && pageIndex >= 0 ? String(pageIndex) : '0'
+}
+
+const editSelectedAppOnHome = () => {
+  if (!selectedApp.value) return
+  const query = {
+    homePage: Number.isInteger(selectedApp.value.homePageIndex)
+      ? String(selectedApp.value.homePageIndex)
+      : currentHomePageQueryValue(),
+    widgetEdit: '1',
+  }
+  if (selectedApp.value.visible) {
+    query.focusTile = selectedApp.value.id
+  } else {
+    query.libraryTile = selectedApp.value.id
+  }
+  router.push({ path: '/home', query })
+}
+
+const removeSelectedAppFromHome = () => {
+  if (!selectedApp.value?.visible || selectedApp.value.protectedHomeEntry) return
+  const appId = selectedApp.value.id
+  const pages = (settings.value.appearance?.homeWidgetPages || []).map((page) =>
+    (Array.isArray(page) ? page : []).filter((tileId) => tileId !== appId),
+  )
+  systemStore.setHomeWidgetPages(pages)
+  systemStore.saveNow()
+  showLibraryNotice(t('已从主屏移除，应用仍在库内', 'Removed from Home. The app stays in Library.'))
+}
+
 const toggleFeature = (toggleId) => {
   systemStore.toggleMoreFeatureToggle(toggleId)
 }
+
+onBeforeUnmount(() => {
+  if (libraryNoticeTimerId) clearTimeout(libraryNoticeTimerId)
+})
 </script>
 
 <template>
@@ -253,7 +379,7 @@ const toggleFeature = (toggleId) => {
         <div class="more-app-library-head">
           <div class="more-app-library-title">
             <span class="more-store-icon">
-              <i class="fas fa-table-cells-large"></i>
+              <i class="fas fa-store"></i>
             </span>
             <div>
               <p>{{ t('应用库', 'App Library') }}</p>
@@ -277,15 +403,33 @@ const toggleFeature = (toggleId) => {
           </span>
         </div>
 
-        <div class="more-app-library-grid" aria-label="App Library">
+        <div class="more-library-filter-row" role="tablist" :aria-label="t('应用分类', 'App categories')">
           <button
-            v-for="app in appLibraryItems"
+            v-for="filter in appLibraryFilters"
+            :key="filter.id"
+            type="button"
+            class="more-library-filter"
+            :class="{ 'is-active': selectedLibraryFilter === filter.id }"
+            role="tab"
+            :aria-selected="selectedLibraryFilter === filter.id"
+            @click="selectLibraryFilter(filter.id)"
+          >
+            <span>{{ filter.label }}</span>
+            <small>{{ filter.count }}</small>
+          </button>
+        </div>
+
+        <div class="more-app-store-layout">
+          <div class="more-app-library-grid" aria-label="App Library">
+          <button
+            v-for="app in filteredAppLibraryItems"
             :key="app.id"
             type="button"
             class="more-app-library-item"
-            :class="{ 'is-visible': app.visible }"
+            :class="{ 'is-visible': app.visible, 'is-selected': selectedApp?.id === app.id }"
             :title="app.label"
-            @click="openEntry(app.route)"
+            :data-testid="`more-app-library-item-${app.id}`"
+            @click="selectAppLibraryItem(app.id)"
           >
             <span class="more-app-icon" :class="app.toneClass">
               <i :class="app.icon"></i>
@@ -298,6 +442,59 @@ const toggleFeature = (toggleId) => {
               {{ app.visible ? t('主屏', 'Home') : t('库内', 'Library') }}
             </span>
           </button>
+          </div>
+
+          <article v-if="selectedApp" class="more-app-detail-card" data-testid="more-app-library-detail">
+            <div class="more-app-detail-hero">
+              <span class="more-app-detail-icon" :class="selectedApp.toneClass">
+                <i :class="selectedApp.icon"></i>
+              </span>
+              <div>
+                <p>{{ selectedApp.category }}</p>
+                <h2>{{ selectedApp.label }}</h2>
+                <span>{{ selectedApp.visible ? selectedAppHomePageLabel : t('等待加入主屏', 'Ready for Home') }}</span>
+              </div>
+            </div>
+            <p class="more-app-detail-desc">{{ selectedApp.desc }}</p>
+            <div class="more-app-detail-stats">
+              <span>
+                <small>{{ t('状态', 'Status') }}</small>
+                <strong>{{ selectedApp.visible ? t('主屏可见', 'On Home') : t('应用库内', 'In Library') }}</strong>
+              </span>
+              <span>
+                <small>{{ t('入口', 'Entry') }}</small>
+                <strong>{{ selectedApp.id === 'app_shopping' || selectedApp.id === 'app_food_delivery' ? t('文件夹', 'Folder') : t('APP', 'App') }}</strong>
+              </span>
+            </div>
+            <div class="more-app-detail-actions">
+              <button type="button" class="more-app-action is-primary" @click="openSelectedApp" data-testid="more-app-library-open">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+                <span>{{ t('打开', 'Open') }}</span>
+              </button>
+              <button type="button" class="more-app-action" @click="editSelectedAppOnHome" data-testid="more-app-library-add-home">
+                <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'"></i>
+                <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
+              </button>
+              <button
+                v-if="selectedApp.visible && !selectedApp.protectedHomeEntry"
+                type="button"
+                class="more-app-action is-danger"
+                @click="removeSelectedAppFromHome"
+                data-testid="more-app-library-remove-home"
+              >
+                <i class="fas fa-minus"></i>
+                <span>{{ t('移出主屏', 'Remove') }}</span>
+              </button>
+            </div>
+            <p v-if="selectedApp.protectedHomeEntry" class="more-app-protected-note">
+              {{ t('这是系统入口，保留在主屏可确保应用库始终可返回。', 'This system entry stays on Home so App Library remains reachable.') }}
+            </p>
+          </article>
+        </div>
+
+        <div v-if="libraryNotice" class="more-library-notice" aria-live="polite">
+          <i class="fas fa-check-circle"></i>
+          <span>{{ libraryNotice }}</span>
         </div>
       </section>
 
@@ -557,8 +754,61 @@ const toggleFeature = (toggleId) => {
   font-weight: 840;
 }
 
-.more-app-library-grid {
+.more-library-filter-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.more-library-filter {
+  flex: 0 0 auto;
+  min-height: 32px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.more-library-filter small {
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-text-soft);
+  background: var(--system-surface-muted);
+  font-size: 10px;
+  font-weight: 840;
+}
+
+.more-library-filter.is-active {
+  border-color: color-mix(in srgb, var(--system-accent) 34%, var(--system-control-border));
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.more-library-filter.is-active small {
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.more-app-store-layout {
   margin-top: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.more-app-library-grid {
   display: grid;
   gap: 9px;
 }
@@ -596,6 +846,166 @@ const toggleFeature = (toggleId) => {
     var(--system-control-bg-strong);
 }
 
+.more-app-library-item.is-selected {
+  border-color: color-mix(in srgb, var(--system-accent) 56%, var(--system-subtle-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--system-accent) 16%, transparent),
+    var(--system-shadow-control);
+}
+
+.more-app-detail-card {
+  border: 1px solid color-mix(in srgb, var(--system-accent) 22%, var(--system-subtle-border));
+  border-radius: 24px;
+  padding: 13px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--system-accent-soft) 48%, transparent), transparent 58%),
+    var(--system-control-bg-strong);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.more-app-detail-hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.more-app-detail-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  box-shadow: var(--system-shadow-control);
+}
+
+.more-app-detail-hero p,
+.more-app-detail-hero h2,
+.more-app-detail-desc,
+.more-app-protected-note {
+  margin: 0;
+}
+
+.more-app-detail-hero p {
+  color: var(--system-text-soft);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.more-app-detail-hero h2 {
+  margin-top: 2px;
+  color: var(--system-text);
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: 860;
+}
+
+.more-app-detail-hero span {
+  display: inline-flex;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+  font-size: 10px;
+  font-weight: 840;
+}
+
+.more-app-detail-desc {
+  margin-top: 12px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.more-app-detail-stats {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.more-app-detail-stats span {
+  min-width: 0;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 16px;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  background: var(--system-surface-muted);
+}
+
+.more-app-detail-stats small {
+  color: var(--system-text-soft);
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.more-app-detail-stats strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 820;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-app-detail-actions {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.more-app-action {
+  min-height: 38px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.more-app-action.is-primary {
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.more-app-action.is-danger {
+  color: var(--system-danger);
+  background: color-mix(in srgb, var(--system-danger) 10%, var(--system-control-bg));
+}
+
+.more-app-protected-note {
+  margin-top: 10px;
+  color: var(--system-text-soft);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.more-library-notice {
+  margin-top: 12px;
+  border: 1px solid color-mix(in srgb, var(--system-success) 26%, var(--system-subtle-border));
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  color: var(--system-success);
+  background: color-mix(in srgb, var(--system-success) 10%, var(--system-control-bg));
+  font-size: 12px;
+  font-weight: 780;
+}
+
 .more-app-icon,
 .more-shortcut-icon,
 .more-scene-row > span {
@@ -610,30 +1020,35 @@ const toggleFeature = (toggleId) => {
 }
 
 .more-app-icon.accent-default,
+.more-app-detail-icon.accent-default,
 .more-shortcut-icon.is-default {
   color: var(--home-icon-default-fg);
   background: var(--home-icon-default-bg);
 }
 
 .more-app-icon.accent-warm,
+.more-app-detail-icon.accent-warm,
 .more-shortcut-icon.is-warm {
   color: var(--home-icon-warm-fg);
   background: var(--home-icon-warm-bg);
 }
 
 .more-app-icon.accent-cool,
+.more-app-detail-icon.accent-cool,
 .more-shortcut-icon.is-cool {
   color: var(--home-icon-cool-fg);
   background: var(--home-icon-cool-bg);
 }
 
 .more-app-icon.accent-light,
+.more-app-detail-icon.accent-light,
 .more-shortcut-icon.is-light {
   color: var(--home-icon-light-fg);
   background: var(--home-icon-light-bg);
 }
 
 .more-app-icon.accent-dark,
+.more-app-detail-icon.accent-dark,
 .more-shortcut-icon.is-dark {
   color: var(--home-icon-dark-fg);
   background: var(--home-icon-dark-bg);

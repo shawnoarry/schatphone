@@ -152,7 +152,7 @@ Current first-pass implementation:
 - `组件 / Widgets` provides direct entry into desktop slot editing and keeps custom-widget action controls;
 - `组件 / Widgets` presents official and custom widgets as visual preview cards, supports exact-size filtering, and keeps imported visual code in the widget library until the user chooses a matching Home slot;
 - `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
-- `更多 / More` contains a lightweight App Library-like entry-management preview and enters desktop editing, without acting as a real download store.
+- `更多 / More` contains the first App Library-like entry-management surface: category filters, app detail, open/add-to-Home/remove-from-Home actions, and a protected system entry rule, without acting as a real download store.
 
 ## 5. App Entry Placement
 
@@ -286,9 +286,9 @@ The target model likely needs:
 - an App Store-like presentation over that app-entry library;
 - a widget-definition library;
 - widget instances with per-instance placement and optional action metadata;
-- a fuller App Library / recovery manager for hidden, unmatched, or unplaced app and widget entries.
+- stronger recovery affordances for hidden, unmatched, or unplaced app and widget entries.
 
-The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, an on-demand edit-mode content library, shared built-in widget metadata, Dock Widgets long-press entry, and definition-level custom widget click actions are available. The next structural step is a fuller App Library / recovery manager and per-instance metadata if one widget definition needs different actions in different slots.
+The current implementation has the first Home layout slice: template selection, edit-mode slot previews, explicit slot placement, slot content replacement, an on-demand edit-mode content library, shared built-in widget metadata, Dock Widgets long-press entry, definition-level custom widget click actions, and first App Library-style entry management are available. The next structural step is per-instance metadata if one widget definition needs different actions in different slots, plus stronger recovery affordances if user testing shows the current library paths are still too indirect.
 
 ## 11. Guardrails
 

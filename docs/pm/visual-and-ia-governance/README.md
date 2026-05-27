@@ -15,7 +15,7 @@ Current Home customization baseline:
 
 Current visual pass:
 
-- `更多 / More` has a first native-system App Library surface.
+- `更多 / More` has a first native-system App Library management surface with category filters, selected app detail, and Home-entry actions.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.
 - Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, and larger slots only offer exact-size widget/custom-widget candidates.
