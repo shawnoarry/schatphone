@@ -1,8 +1,15 @@
 # World Pack, App Archetype, And Service Account Template Design
 
-Updated: 2026-05-23
+Updated: 2026-05-27
 
 Status: `REVIEW_READY`
+
+2026-05-27 entry decision:
+
+- V1 should keep the older entry model: `WorldBook` remains a Settings/contextual management surface.
+- `World Pack` selection and activation should be added inside the full WorldBook page as a `Current World Pack / 当前设定包` area.
+- Do not introduce a standalone world-store app, Steam-like shell, token economy, DLC storefront, or separate World Library app in V1.
+- `World Hub` and future `Cheats` stay in the hidden runtime-control lane and must not become the WorldBook/World Pack activation surface.
 
 ## 1. Goal
 
@@ -223,6 +230,21 @@ This is the same boundary that the current service-notification work already use
 
 V1 should support two creation modes.
 
+### 7.0 Entry And Activation Shell
+
+V1 activation should happen inside the existing full WorldBook management route.
+
+Expected user path:
+
+1. open `Settings`;
+2. open `WorldBook`;
+3. review the `Current World Pack / 当前设定包` area;
+4. choose a built-in or user-created pack;
+5. review the pack's suggested WorldBook knowledge points, role-profile templates, app bindings, service-account templates, terminology, and default Home visibility;
+6. activate the pack after review.
+
+This keeps world setup close to the world-context source while avoiding a separate storefront metaphor.
+
 ### 7.1 Preset World Pack
 
 The user selects a built-in pack. The pack can install suggested:
@@ -327,7 +349,7 @@ Do not include in V1:
 Before implementation planning, confirm:
 
 1. whether V1 uses one active world pack per save, or one active world pack per profile/thread;
-2. the three built-in world pack themes and their first app bindings;
+2. the first built-in world pack examples and their first app bindings;
 3. which archetype should be implemented first beyond current service notifications;
 4. whether user-created apps can appear on Home in V1 or stay as template/config entries first;
 5. how much regex power is acceptable in V1.

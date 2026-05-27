@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-20
+Updated: 2026-05-27
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -105,11 +105,13 @@ PM meaning:
 - Knowledge points can be searched, filtered, tagged, edited, enabled/disabled, and linked to context.
 - Calendar, Chat, and Map can read WorldBook context.
 - A new review-ready design proposes a reusable World Pack / App Archetype / Service Account Template system so world-specific apps and user-created service accounts can be assembled from templates instead of hand-coded one by one.
+- Current product direction is the older, lower-complexity entry model: WorldBook stays under Settings/contextual links, and World Pack selection/activation should appear inside the full WorldBook management page.
 
 PM meaning:
 
 - WorldBook is becoming the shared world-context layer;
 - World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source;
+- World Pack activation should feel like choosing the current world configuration, not like shopping in a separate storefront;
 - data entry should still stay distributed instead of forcing everything into one control console.
 
 ### Gallery / Media Assets
@@ -222,9 +224,10 @@ PM meaning:
 
 ### P2: Expand World-Aware Gameplay Carefully
 
-1. Generate or confirm world-specific event packs from WorldBook.
-2. Add task/unlock systems behind World Hub.
-3. Add more adapters through the shared event engine.
+1. Add a lightweight `Current World Pack / 当前设定包` area inside WorldBook for selection, review, and activation.
+2. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
+3. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+4. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
 
@@ -249,7 +252,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design now exists and can be promoted after PM confirms V1 scope and first archetype target.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design exists, and its V1 shell should now follow the old model: `Settings -> WorldBook -> Current World Pack` rather than a standalone world-store app.
 
 Why:
 
@@ -264,7 +267,7 @@ Fallback same-size task:
 
 - add another read-only World Hub explanation slice only if PM/QA finds a concrete review gap;
 - polish service-notification visual language only if product review asks for it; the functional 4.4 baseline is complete.
-- turn the world-pack design into an implementation plan only after confirming its V1 scope, because it is a multi-slice architecture lane rather than a small polish task.
+- turn the world-pack design into an implementation plan only after confirming first pack examples and first archetype target, because it is a multi-slice architecture lane rather than a small polish task.
 
 ## 7. Workflow And Skill Reading Path
 

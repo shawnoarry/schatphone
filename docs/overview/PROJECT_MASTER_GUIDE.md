@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-05-20
+Updated: 2026-05-27
 
 ## 1. Purpose
 
@@ -90,7 +90,7 @@ Immediate active lane:
 - Calendar now exposes relationship review detail on confirmed events, including lineage, target, memory role, and duplicate-growth status.
 - 4.3 World Hub review quality now has a complete review-pack baseline: event logs and relationship facts can be filtered, selected, and inspected with product-facing explanations before any stronger controls are considered.
 - 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
-- a review-ready design now exists for a future World Pack / App Archetype / Service Account Template system; it should be treated as a decision-stage architecture lane, not as already-started implementation.
+- a review-ready design now exists for a future World Pack / App Archetype / Service Account Template system; it should be treated as a decision-stage architecture lane, not as already-started implementation. V1 should use the older entry model: `Settings -> WorldBook -> Current World Pack`, not a standalone world-store app.
 - fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack

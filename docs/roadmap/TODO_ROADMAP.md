@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-05-20
+Updated: 2026-05-27
 
 This is the only live execution board for implementation order.
 
@@ -213,19 +213,28 @@ Primary references:
 
 Status: `DECISION`
 
+Current product direction:
+
+- use the older, lower-complexity entry model first;
+- `WorldBook` remains reachable from `Settings` and contextual links, not as a new default Home app;
+- `World Pack` activation belongs inside the full `WorldBook` management page as a `Current World Pack / 当前设定包` area;
+- do not build a standalone world-store, Steam-like shell, DLC storefront, token economy, or separate World Library app for V1;
+- keep `World Hub` and future `Cheats` in the hidden runtime-control lane, separate from WorldBook/World Pack authoring and activation.
+
 Why this may become a main lane:
 
 - WorldBook, service accounts, Shopping, Logistics, Food Delivery, Calendar, Map, Wallet, Assets, and Stock are now mature enough to need a reusable world-driven extension model;
 - future modes such as black markets, auction houses, hospitals, flights, subscriptions, task boards, and publication accounts should not become one-off custom data chains;
 - the current service-notification boundary already proves the right direction: Chat owns communication history, while source modules own business truth.
 
-Scope to decide before implementation:
+Task structure before implementation:
 
 1. define WorldBook vs World Pack ownership;
-2. define the app archetype registry and world app binding model;
-3. define service-account and subscription-account templates for user-created accounts;
-4. decide the V1 world scope rule;
-5. select the first archetype implementation target.
+2. design the lightweight `WorldBook -> Current World Pack` section for selection, review, and activation;
+3. add world pack storage and activation-review semantics;
+4. define the app archetype registry and world app binding model;
+5. define service-account and subscription-account templates for user-created accounts;
+6. select the first archetype implementation target.
 
 Current design reference:
 
@@ -234,7 +243,8 @@ Current design reference:
 Decision note:
 
 - this is intentionally not implemented directly from conversation notes;
-- promote it from `DECISION` only after PM confirms V1 scope and first archetype target.
+- the V1 entry shell is now decided: stay inside `Settings -> WorldBook`;
+- promote it from `DECISION` only after PM confirms the V1 world scope rule, first pack examples, and first archetype target.
 
 ## 5. Deferred Or Guarded Directions
 
