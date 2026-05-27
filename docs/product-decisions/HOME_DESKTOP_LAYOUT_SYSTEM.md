@@ -138,8 +138,9 @@ Current first-pass implementation:
 - items that cannot fit the selected template stay recoverable rather than being deleted: normal mode does not render them, and edit mode returns them to the on-demand content library;
 - in edit mode, empty and filled slots open the same local content picker filtered by what fits that slot, and the picker can show the full compatible app/widget library rather than only items that are currently unplaced;
 - the picker groups available content as apps, folders, built-in widgets, and custom widgets;
+- the picker only shows content-type filters that have at least one exact-size candidate for the selected slot;
 - filled slots can be replaced or cleared from that picker;
-- edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; selecting an item highlights compatible empty slots for recovery;
+- edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; opening that library does not preselect an item, and selecting an item highlights compatible empty slots for recovery;
 - default Home content is distributed across multiple formal pages so visible entries fit their selected template slots without relying on a normal-mode overflow row;
 - persisted Home desktop layouts carry a setup version; unversioned local layouts are treated as legacy setup data and migrate once to the cleaned default so old browser state cannot keep the crowded pre-slot Home arrangement alive;
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;

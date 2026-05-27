@@ -88,6 +88,7 @@ If a visual change needs functional code, keep the change minimal and explain wh
 17. Widget Center must stay a library/import/create surface. Placement belongs to Home widget edit mode and should use same-size slot replacement, not screen-number selectors.
 18. New or changed navigation must preserve Home-page return context. Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 19. Home edit mode should default to visible slots, not persistent picker panels. Template selection and the unplaced-content library should open only on explicit user request so the target slots remain visible.
+20. Opening the Home content library is not the same as selecting a content item. Keep the unselected state explicit, and light compatible slots only after the user chooses a specific app, folder, built-in widget, or custom widget.
 
 ## 4. Entry-Context Audit
 

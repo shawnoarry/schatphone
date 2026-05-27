@@ -18,7 +18,7 @@ Current visual pass:
 - `应用商城 / App Store` is now a standalone native-system app with category filters, selected app detail, and Home-entry actions.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.
-- Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, and larger slots only offer exact-size widget/custom-widget candidates.
+- Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, larger slots only offer exact-size widget/custom-widget candidates, and opening the library no longer preselects a random item.
 - Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
 
 ## Read This Package In This Order

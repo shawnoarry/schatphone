@@ -107,6 +107,7 @@ const widgetEntryPressStartX = ref(0)
 const widgetEntryPressStartY = ref(0)
 const slotContentTarget = ref(null)
 const slotContentFilter = ref('all')
+const homeContentLibraryOpen = ref(false)
 const libraryPlacementTileId = ref('')
 
 const dragTileId = ref('')
@@ -449,7 +450,10 @@ const dragGhostStyle = computed(() => {
 
 const canHideTile = (tileId) =>
   typeof tileId === 'string' && tileId !== 'app_files' && tileId !== APP_STORE_HOME_APP_ID
-const isLibraryPlacementActive = computed(() => layoutEditMode.value && !!libraryPlacementTileId.value)
+const isLibraryPlacementActive = computed(() => layoutEditMode.value && homeContentLibraryOpen.value)
+const hasSelectedLibraryPlacementCandidate = computed(
+  () => isLibraryPlacementActive.value && !!libraryPlacementTileId.value,
+)
 const openedFolderMeta = computed(() => tileMeta(openFolderTileId.value))
 const openedFolderPreviewEntries = computed(() => {
   const entries = Array.isArray(openedFolderMeta.value?.childEntries)
@@ -569,6 +573,14 @@ const slotContentFilterLabel = (filterId) => {
   return t('全部', 'All')
 }
 
+const setSlotContentFilter = (filterId) => {
+  if (!availableSlotContentFilterIds.value.includes(filterId)) {
+    slotContentFilter.value = 'all'
+    return
+  }
+  slotContentFilter.value = filterId
+}
+
 const visibleHomePlacedIds = computed(() => {
   const ids = new Set()
   homeLayoutAssignments.value.forEach((assignment) => {
@@ -623,16 +635,27 @@ const selectedHomeLibraryCandidate = computed(
     ) || null,
 )
 
-const slotContentCandidates = computed(() => {
+const slotContentBaseCandidates = computed(() => {
   const target = slotContentTarget.value
   if (!target?.slot) return []
 
   return allHomeSlotCandidateIds.value
     .filter((tileId) => tileId !== target.tileId)
     .filter((tileId) => canTileFitTemplateSlot(tileId, target.slot))
-    .filter((tileId) => slotContentFilter.value === 'all' || slotCandidateFilter(tileId) === slotContentFilter.value)
     .map((tileId) => createHomeCandidate(tileId, target))
 })
+
+const availableSlotContentFilterIds = computed(() => {
+  if (slotContentBaseCandidates.value.length === 0) return ['all']
+  const activeKinds = new Set(slotContentBaseCandidates.value.map((candidate) => slotCandidateFilter(candidate.tileId)))
+  return SLOT_CONTENT_FILTERS.filter((filterId) => filterId === 'all' || activeKinds.has(filterId))
+})
+
+const slotContentCandidates = computed(() =>
+  slotContentBaseCandidates.value.filter(
+    (candidate) => slotContentFilter.value === 'all' || slotCandidateFilter(candidate.tileId) === slotContentFilter.value,
+  ),
+)
 
 const slotContentTargetTitle = computed(() =>
   slotContentTarget.value?.tileId ? t('更换内容', 'Change Content') : t('放入内容', 'Add Content'),
@@ -644,7 +667,31 @@ const closeSlotContentSheet = () => {
 }
 
 const closeHomeContentLibrary = () => {
+  homeContentLibraryOpen.value = false
   libraryPlacementTileId.value = ''
+}
+
+const openHomeContentLibrary = (tileId = '') => {
+  if (!layoutEditMode.value) return
+  closeSlotContentSheet()
+  templatePickerOpen.value = false
+  homeContentLibraryOpen.value = true
+  const normalizedTileId = typeof tileId === 'string' ? tileId.trim() : ''
+  libraryPlacementTileId.value =
+    normalizedTileId && availableHomeSlotCandidates.value.includes(normalizedTileId)
+      ? normalizedTileId
+      : ''
+  selectedTileId.value = ''
+  maybeVibrate(8)
+}
+
+const toggleHomeContentLibrary = () => {
+  if (!layoutEditMode.value) return
+  if (homeContentLibraryOpen.value) {
+    closeHomeContentLibrary()
+    return
+  }
+  openHomeContentLibrary()
 }
 
 const selectHomeLibraryCandidate = (tileId) => {
@@ -652,6 +699,7 @@ const selectHomeLibraryCandidate = (tileId) => {
   if (!availableHomeSlotCandidates.value.includes(tileId)) return
   closeSlotContentSheet()
   templatePickerOpen.value = false
+  homeContentLibraryOpen.value = true
   libraryPlacementTileId.value = libraryPlacementTileId.value === tileId ? '' : tileId
   selectedTileId.value = ''
   maybeVibrate(8)
@@ -660,7 +708,7 @@ const selectHomeLibraryCandidate = (tileId) => {
 const isHomeLibraryCandidateSelected = (tileId) => libraryPlacementTileId.value === tileId
 
 const canPlaceLibraryCandidateInSlot = (slot) =>
-  !!libraryPlacementTileId.value && canTileFitTemplateSlot(libraryPlacementTileId.value, slot)
+  hasSelectedLibraryPlacementCandidate.value && canTileFitTemplateSlot(libraryPlacementTileId.value, slot)
 
 const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
   if (!layoutEditMode.value || !slot || !libraryPlacementTileId.value) return
@@ -1383,8 +1431,7 @@ const consumeWidgetEditRouteRequest = () => {
   const requestedLibraryTileId = widgetEditLibraryTileId.value
   const requestedFocusTileId = widgetEditFocusTileId.value
   if (requestedLibraryTileId && availableHomeSlotCandidates.value.includes(requestedLibraryTileId)) {
-    libraryPlacementTileId.value = requestedLibraryTileId
-    selectedTileId.value = ''
+    openHomeContentLibrary(requestedLibraryTileId)
     triggerLayoutToast(t('选择兼容槽位放入', 'Choose a matching slot'))
   } else if (requestedFocusTileId && tilePageIndexMap.value.has(requestedFocusTileId)) {
     closeHomeContentLibrary()
@@ -1459,7 +1506,7 @@ onBeforeUnmount(() => {
           :class="{ 'is-active': isLibraryPlacementActive }"
           :aria-expanded="isLibraryPlacementActive"
           data-testid="home-library-toggle"
-          @click="isLibraryPlacementActive ? closeHomeContentLibrary() : selectHomeLibraryCandidate(availableHomeLibraryCandidates[0].tileId)"
+          @click="toggleHomeContentLibrary"
         >
           <i class="fas fa-layer-group"></i>
           <span>{{ availableHomeLibraryCandidates.length }}</span>
@@ -1485,6 +1532,9 @@ onBeforeUnmount(() => {
         </span>
         <strong>{{ selectedHomeLibraryCandidate?.label || t('未选择', 'None selected') }}</strong>
       </div>
+      <p v-if="!selectedHomeLibraryCandidate" class="home-content-library-hint">
+        {{ t('先选择内容，再点亮兼容槽位。', 'Choose an item, then matching slots light up.') }}
+      </p>
       <div class="home-content-library-row">
         <button
           v-for="candidate in availableHomeLibraryCandidates"
@@ -1533,14 +1583,15 @@ onBeforeUnmount(() => {
       </div>
       <div class="home-slot-content-filters" role="tablist" :aria-label="t('内容类型', 'Content types')">
         <button
-          v-for="filter in SLOT_CONTENT_FILTERS"
+          v-for="filter in availableSlotContentFilterIds"
           :key="filter"
           type="button"
           class="home-slot-content-filter"
           :class="{ 'is-active': slotContentFilter === filter }"
           role="tab"
           :aria-selected="slotContentFilter === filter"
-          @click="slotContentFilter = filter"
+          :data-testid="`home-slot-filter-${filter}`"
+          @click="setSlotContentFilter(filter)"
         >
           {{ slotContentFilterLabel(filter) }}
         </button>
@@ -1928,12 +1979,13 @@ onBeforeUnmount(() => {
                 {
                   'is-library-target': isLibraryPlacementActive,
                   'is-compatible': canPlaceLibraryCandidateInSlot(slot),
+                  'is-awaiting-selection': isLibraryPlacementActive && !hasSelectedLibraryPlacementCandidate,
                 },
               ]"
               :style="homeLayoutSlotToGridStyle(slot)"
               type="button"
               :data-testid="`home-empty-slot-${pageIndex}-${slot.id}`"
-              @click.stop="isLibraryPlacementActive ? placeSelectedLibraryCandidateInSlot(pageIndex, slot) : openSlotContentSheet(pageIndex, slot)"
+              @click.stop="hasSelectedLibraryPlacementCandidate ? placeSelectedLibraryCandidateInSlot(pageIndex, slot) : openSlotContentSheet(pageIndex, slot)"
             >
               <i class="fas fa-plus"></i>
             </button>
@@ -2198,6 +2250,14 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 750;
+}
+
+.home-content-library-hint {
+  margin: -2px 3px 1px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
 .home-content-library-row {
@@ -3374,9 +3434,18 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.36);
 }
 
+.home-empty-slot-action.is-library-target.is-awaiting-selection {
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .home-empty-slot-action.is-library-target i {
   background: rgba(18, 26, 36, 0.22);
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+.home-empty-slot-action.is-library-target.is-awaiting-selection i {
+  background: rgba(18, 26, 36, 0.36);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .home-empty-slot-action.is-library-target.is-compatible {

@@ -457,6 +457,78 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('opens the Home library without preselecting content', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-content-library').exists()).toBe(true)
+    expect(wrapper.find('.home-content-library-hint').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).not.toContain('is-active')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-awaiting-selection')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).not.toContain('is-compatible')
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('only shows viable content-type filters for the selected slot size', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+    const posterWidgetId = store.addCustomWidget({
+      name: 'Poster Widget',
+      size: '4x3',
+      code: '<div>Poster</div>',
+      placeOnHome: false,
+    })
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-large"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="home-slot-filter-all"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-filter-custom"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-filter-apps"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-slot-filter-folders"]').exists()).toBe(false)
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   test('changes and clears content from a filled template slot in edit mode', async () => {
     const router = createTestRouter()
     await router.push('/home?widgetEdit=1&homePage=4')
