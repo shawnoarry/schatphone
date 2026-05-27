@@ -182,6 +182,34 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
+  test('App Store search narrows the app-entry list without leaving stale detail', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.find('[data-testid="app-store-search"]').setValue('wallet')
+
+    expect(wrapper.find('[data-testid="app-store-item-app_wallet"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('钱包')
+
+    await wrapper.find('[data-testid="app-store-search"]').setValue('no-such-app')
+
+    expect(wrapper.find('[data-testid="app-store-empty"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-detail"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="app-store-search-clear"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   test('Home edit mode consumes App Store placement requests', async () => {
     const router = createTestRouter()
     await router.push('/home?homePage=2&widgetEdit=1&libraryTile=app_control_center')

@@ -218,6 +218,7 @@ const APP_STORE_ENTRIES = [
 
 const selectedFilter = ref('all')
 const selectedAppId = ref('app_chat')
+const searchQuery = ref('')
 const libraryNotice = ref('')
 let libraryNoticeTimerId = null
 
@@ -265,12 +266,34 @@ const visibleAppCount = computed(
 )
 const libraryAppCount = computed(() => Math.max(0, appStoreItems.value.length - visibleAppCount.value))
 const featuredApps = computed(() => appStoreItems.value.filter((item) => ['app_chat', 'app_shopping', 'app_widgets'].includes(item.id)))
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
 
 function appMatchesFilter(app, filterId) {
   if (filterId === 'all') return true
   if (filterId === 'home') return app.visible
   if (filterId === 'library') return !app.visible
   return app.categoryEn === filterId
+}
+
+function appMatchesSearch(app) {
+  const query = normalizedSearchQuery.value
+  if (!query) return true
+  return [
+    app.id,
+    app.label,
+    app.labelZh,
+    app.labelEn,
+    app.category,
+    app.categoryZh,
+    app.categoryEn,
+    app.desc,
+    app.descZh,
+    app.descEn,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(query)
 }
 
 function filterLabel(filterId) {
@@ -297,13 +320,15 @@ const appStoreFilters = computed(() =>
 )
 
 const filteredAppStoreItems = computed(() =>
-  appStoreItems.value.filter((item) => appMatchesFilter(item, selectedFilter.value)),
+  appStoreItems.value
+    .filter((item) => appMatchesFilter(item, selectedFilter.value))
+    .filter((item) => appMatchesSearch(item)),
 )
 
 const selectedApp = computed(() => {
   const selected = appStoreItems.value.find((item) => item.id === selectedAppId.value)
-  if (selected && appMatchesFilter(selected, selectedFilter.value)) return selected
-  return filteredAppStoreItems.value[0] || appStoreItems.value[0] || null
+  if (selected && appMatchesFilter(selected, selectedFilter.value) && appMatchesSearch(selected)) return selected
+  return filteredAppStoreItems.value[0] || null
 })
 
 const selectedAppPlacementLabel = computed(() => {
@@ -337,12 +362,18 @@ const openSelectedApp = () => {
 
 const selectFilter = (filterId) => {
   selectedFilter.value = filterId
-  const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, filterId))
+  const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, filterId) && appMatchesSearch(item))
   if (firstMatch) selectedAppId.value = firstMatch.id
 }
 
 const selectApp = (appId) => {
   selectedAppId.value = appId
+}
+
+const clearAppSearch = () => {
+  searchQuery.value = ''
+  const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, selectedFilter.value))
+  if (firstMatch) selectedAppId.value = firstMatch.id
 }
 
 const editSelectedAppOnHome = () => {
@@ -418,9 +449,10 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="app-store-featured" aria-label="Featured apps">
-        <article
+        <button
           v-for="app in featuredApps"
           :key="app.id"
+          type="button"
           class="app-store-featured-item"
           @click="selectApp(app.id)"
         >
@@ -431,10 +463,30 @@ onBeforeUnmount(() => {
             <strong>{{ app.label }}</strong>
             <small>{{ app.desc }}</small>
           </div>
-        </article>
+        </button>
       </section>
 
       <section class="app-store-panel">
+        <label class="app-store-search" data-testid="app-store-search-wrap">
+          <i class="fas fa-magnifying-glass"></i>
+          <input
+            v-model="searchQuery"
+            type="search"
+            :placeholder="t('搜索 APP', 'Search apps')"
+            data-testid="app-store-search"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="app-store-search-clear"
+            :aria-label="t('清除搜索', 'Clear search')"
+            data-testid="app-store-search-clear"
+            @click="clearAppSearch"
+          >
+            <i class="fas fa-xmark"></i>
+          </button>
+        </label>
+
         <div class="app-store-filter-row" role="tablist" :aria-label="t('应用分类', 'App categories')">
           <button
             v-for="filter in appStoreFilters"
@@ -473,6 +525,11 @@ onBeforeUnmount(() => {
                 {{ app.visible ? t('主屏', 'Home') : app.inDock ? 'Dock' : t('库内', 'Library') }}
               </span>
             </button>
+            <div v-if="filteredAppStoreItems.length === 0" class="app-store-empty" data-testid="app-store-empty">
+              <i class="fas fa-magnifying-glass"></i>
+              <strong>{{ t('没有找到应用', 'No apps found') }}</strong>
+              <span>{{ t('换个关键词或分类试试。', 'Try another search or category.') }}</span>
+            </div>
           </div>
 
           <article v-if="selectedApp" class="app-store-detail" data-testid="app-store-detail">
@@ -695,6 +752,14 @@ onBeforeUnmount(() => {
   padding: 11px;
   display: grid;
   gap: 9px;
+  color: var(--system-text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.app-store-featured-item:active {
+  transform: scale(0.98);
 }
 
 .app-store-featured-icon {
@@ -738,6 +803,48 @@ onBeforeUnmount(() => {
 .app-store-panel {
   border-radius: var(--system-radius-lg);
   padding: 14px;
+}
+
+.app-store-search {
+  min-height: 42px;
+  margin-bottom: 11px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px 0 12px;
+  color: var(--system-text-soft);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.app-store-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--system-text);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.app-store-search input::placeholder {
+  color: var(--system-text-soft);
+}
+
+.app-store-search-clear {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-text-soft);
+  background: var(--system-surface-muted);
 }
 
 .app-store-filter-row {
@@ -867,6 +974,35 @@ onBeforeUnmount(() => {
 .app-store-item.is-visible .app-store-item-state {
   color: var(--system-success);
   background: color-mix(in srgb, var(--system-success) 12%, var(--system-surface-muted));
+}
+
+.app-store-empty {
+  min-height: 138px;
+  border: 1px dashed var(--system-subtle-border);
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 18px;
+  color: var(--system-text-soft);
+  background: var(--system-surface-muted);
+  text-align: center;
+}
+
+.app-store-empty i {
+  font-size: 18px;
+}
+
+.app-store-empty strong {
+  color: var(--system-text);
+  font-size: 14px;
+}
+
+.app-store-empty span {
+  max-width: 22ch;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .app-store-detail {

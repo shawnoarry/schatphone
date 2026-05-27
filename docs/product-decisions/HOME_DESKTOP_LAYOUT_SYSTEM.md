@@ -184,6 +184,7 @@ Expected listing content:
 - category;
 - current Home-entry state;
 - actions such as open, add to Home, remove from Home, or choose slot.
+- search and empty states when the library grows beyond a short static list.
 
 Preferred language:
 
