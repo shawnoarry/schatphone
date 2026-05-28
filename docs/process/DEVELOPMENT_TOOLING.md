@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-05-19
+Updated: 2026-05-28
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -30,14 +30,15 @@ Before installing tools on another PC, ask the machine owner to confirm:
 Current machine values:
 
 ```text
-SchatPhone project root: D:\github\schatphone
-Node.js path: D:\rabbitpro\node.exe
-npm.cmd path: D:\rabbitpro\npm.cmd
-npx.cmd path: D:\rabbitpro\npx.cmd
-npm global prefix: C:\Users\Administrator\AppData\Roaming\npm
-OpenCLI command: C:\Users\Administrator\AppData\Roaming\npm\opencli.cmd
+SchatPhone project root: H:\SchatPhone\schatphone
+Node.js path: H:\Nodejs\node.exe
+npm.cmd path: H:\Nodejs\npm.cmd
+npx.cmd path: H:\Nodejs\npx.cmd
+npm global prefix: C:\Users\PC\AppData\Roaming\npm
+OpenCLI command: C:\Users\PC\AppData\Roaming\npm\opencli.cmd
 VSCode shell: PowerShell
-Visual reference asset library: D:\github\美化包
+Visual reference asset library: H:\SchatPhone\美化包
+awesome-design-md reference library: D:\github\_references\awesome-design-md
 ```
 
 Do not assume another PC has the same drive letters, user profile, npm prefix, or PowerShell policy.
@@ -49,8 +50,8 @@ Do not assume another PC has the same visual reference asset library path. If th
 Project runtime on the current machine:
 
 ```text
-Node.js: v22.13.0
-npm: 10.9.2
+Node.js: v24.13.0
+npm: 11.6.2
 ```
 
 Recommended checks:
@@ -225,6 +226,27 @@ Common pattern:
 npx.cmd skills add <source>
 ```
 
+Discover candidate skills before installing:
+
+```powershell
+npx.cmd skills find "<query>"
+```
+
+For visual-workflow additions, search narrowly by workflow gap instead of by broad words such as "design" alone. Example queries:
+
+```powershell
+npx.cmd skills find "mobile ui ux visual polish"
+npx.cmd skills find "accessibility ui review frontend"
+npx.cmd skills find "playwright visual regression screenshots"
+```
+
+Only promote a discovered skill into the SchatPhone visual workflow after checking:
+
+1. whether the current project-local stack already covers the gap;
+2. source reputation;
+3. install count and maintenance signal;
+4. whether the new skill must be project-local or can remain a machine-local helper.
+
 Run project-local skill installs from the confirmed SchatPhone project root so they land in:
 
 ```text
@@ -236,6 +258,10 @@ After installing or updating project-local skills:
 1. confirm `.agents\skills` contains the new skill;
 2. confirm `skills-lock.json` contains the new source entry;
 3. restart Codex or the agent host so the skill is loaded.
+4. update `docs/process/VISUAL_WORKFLOW.md` or the relevant workflow doc with:
+   - when to use the skill;
+   - why the existing stack was insufficient;
+   - the install command needed on another PC.
 
 ## 9. Cross-PC Setup Checklist
 

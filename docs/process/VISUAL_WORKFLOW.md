@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-25
+Updated: 2026-05-28
 
 This document defines the `视觉专项` workflow.
 
@@ -89,6 +89,7 @@ If a visual change needs functional code, keep the change minimal and explain wh
 18. New or changed navigation must preserve Home-page return context. Follow `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 19. Home edit mode should default to visible slots, not persistent picker panels. Template selection and the unplaced-content library should open only on explicit user request so the target slots remain visible.
 20. Opening the Home content library is not the same as selecting a content item. Keep the unselected state explicit, and light compatible slots only after the user chooses a specific app, folder, built-in widget, or custom widget.
+21. Use product-facing names in both discussion and rendered UI. Do not describe implementation-only layers as user-visible apps. For Home work, use terms such as Home desktop, app entries, entry groups, widgets, and screen slots; reserve "folder" for a real user-editable folder system.
 
 ## 4. Entry-Context Audit
 
@@ -188,6 +189,25 @@ These are expected in `.agents/skills` for repo-local visual work:
 - use `impeccable` when the UI is already close but still feels noisy, generic, or under-finished;
 - use `web-design-guidelines` for an external best-practice review before or after visual polish.
 
+### Adding or discovering visual skills
+
+Do not add a new visual skill only because one screen needs more polish. First use the current project-local visual stack:
+
+- `frontend-logic-design` for information structure;
+- `frontend-design` for stronger screen composition;
+- `impeccable` for the strict polish pass;
+- `web-design-guidelines` for accessibility and external UI review;
+- `playwright-testing` when browser screenshots or journeys are needed.
+
+Add a new project-local skill only when there is a repeated workflow gap that the current stack does not cover. Use `find-skills` and the Skills CLI from the confirmed SchatPhone project root:
+
+```powershell
+npx.cmd skills find "<query>"
+npx.cmd skills add <owner/repo@skill>
+```
+
+Before recommending or installing a skill, verify source reputation and install count. After installing, confirm `.agents\skills` and `skills-lock.json`, then document the new dependency in this file and in `docs/process/DEVELOPMENT_TOOLING.md`.
+
 ## 7. Reference Library
 
 The current machine keeps the `awesome-design-md` reference library here:
@@ -205,7 +225,7 @@ Usage:
 The current machine also keeps an external visual asset reference library here:
 
 ```text
-D:\github\美化包
+H:\SchatPhone\美化包
 ```
 
 Reference:
@@ -280,20 +300,22 @@ Use this sequence for visual work unless the user asks for a narrower path:
 2. Decide the target surface and scope: system shell, installed app, hybrid surface, or project documentation only.
 3. If external visual references are useful, confirm the local visual asset library path using `docs/references/VISUAL_ASSET_LIBRARY.md`.
 4. Run the entry-context audit.
-5. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
-6. Choose the design-supporting skills:
+5. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
+6. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
+7. Choose the design-supporting skills:
    - `frontend-design` for stronger creative direction;
    - `frontend-logic-design` for IA and interaction consistency;
    - `impeccable` for strict second-pass shaping;
    - `web-design-guidelines` for external review;
    - machine-local support skills when they are available and useful.
-7. Define the smallest useful change slice before editing.
-8. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
-9. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
-10. If themes are touched, verify both `default` and `zen`.
-11. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
-12. Verify with `git diff --check`, then lint/build/test when code changed.
-13. Summarize:
+8. For interactive or editor surfaces, define the key state matrix before styling: normal, edit idle, panel open with no selection, item selected, compatible targets, incompatible targets, picker/replace state, success, empty, and error states.
+9. Define the smallest useful change slice before editing.
+10. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
+11. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
+12. If themes are touched, verify both `default` and `zen`.
+13. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
+14. Verify with `git diff --check`, then lint/build/test when code changed.
+15. Summarize:
    - changed surfaces;
    - visual-owner decisions;
    - remaining risks;
@@ -336,6 +358,17 @@ npm run build
 ```
 
 For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports.
+
+For Home desktop and template-edit work, inspect at least these states:
+
+- normal Home screen with Dock visible;
+- edit mode with template slots visible;
+- content library open with no selected item;
+- content selected with compatible and incompatible slots distinguishable;
+- slot picker or replace state;
+- normal Home screen after placement.
+
+Confirm empty template slots are invisible in normal mode, the Dock remains outside the template grid, and system-controlled entry groups are not presented as user-editable folders.
 
 For theme changes, inspect both built-in themes and ensure there are no leftover raw-light panels in dark mode except where app-owned or content-owned surfaces intentionally differ.
 

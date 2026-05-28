@@ -153,9 +153,7 @@ const readLayoutEditLocalFlag = () => {
 
 const layoutEditFeatureEnabled = ref(LAYOUT_EDIT_ENV_ENABLED && readLayoutEditLocalFlag())
 
-const SLOT_CONTENT_FILTERS = ['all', 'apps', 'folders', 'widgets', 'custom']
-const DOCK_TILE_IDS = Object.freeze(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
-
+const SLOT_CONTENT_FILTERS = ['all', 'apps', 'widgets', 'custom']
 const widgetRegistry = {
   ...HOME_WIDGET_REGISTRY_ENTRIES,
   app_network: { kind: 'app', icon: 'fas fa-network-wired', label: 'Network', accent: 'cool', route: '/network' },
@@ -558,19 +556,25 @@ const slotCandidateIcon = (tileId) => {
 
 const slotCandidateFilter = (tileId) => {
   const kind = tileMeta(tileId)?.kind
-  if (kind === 'app') return 'apps'
-  if (kind === HOME_FOLDER_TILE_KIND) return 'folders'
+  if (kind === 'app' || kind === HOME_FOLDER_TILE_KIND) return 'apps'
   if (kind === 'widget') return 'widgets'
   if (kind === 'custom_widget') return 'custom'
   return 'all'
 }
 
 const slotContentFilterLabel = (filterId) => {
-  if (filterId === 'apps') return t('APP', 'Apps')
-  if (filterId === 'folders') return t('文件夹', 'Folders')
+  if (filterId === 'apps') return t('APP入口', 'App entries')
   if (filterId === 'widgets') return t('组件', 'Widgets')
   if (filterId === 'custom') return t('自定义', 'Custom')
   return t('全部', 'All')
+}
+
+const slotCandidateTypeLabel = (tileId) => {
+  const kind = tileMeta(tileId)?.kind
+  if (kind === 'app' || kind === HOME_FOLDER_TILE_KIND) return t('APP入口', 'App entry')
+  if (kind === 'widget') return t('官方组件', 'Widget')
+  if (kind === 'custom_widget') return t('自定义组件', 'Custom widget')
+  return t('内容', 'Item')
 }
 
 const setSlotContentFilter = (filterId) => {
@@ -603,22 +607,14 @@ const availableHomeSlotCandidates = computed(() => {
   return allHomeSlotCandidateIds.value.filter((tileId) => !placedIds.has(tileId))
 })
 
-const slotCandidateStatus = (tileId, target = null) => {
-  if (target?.tileId === tileId) return t('当前槽位', 'Current slot')
-  const pageIndex = tilePageIndexMap.value.get(tileId)
-  if (Number.isInteger(pageIndex)) return homePageLabel(pageIndex)
-  if (DOCK_TILE_IDS.includes(tileId)) return t('Dock 可用', 'Dock')
-  return t('应用库', 'Library')
-}
-
-const createHomeCandidate = (tileId, target = null) => {
+const createHomeCandidate = (tileId) => {
   const meta = tileMeta(tileId)
   return {
     tileId,
     label: slotCandidateLabel(tileId),
     icon: slotCandidateIcon(tileId),
     size: tileSizeKeyForId(tileId),
-    status: slotCandidateStatus(tileId, target),
+    typeLabel: slotCandidateTypeLabel(tileId),
     kind: meta?.kind || '',
     accent: meta?.accent || 'default',
     variant: meta?.variant || '',
@@ -642,7 +638,7 @@ const slotContentBaseCandidates = computed(() => {
   return allHomeSlotCandidateIds.value
     .filter((tileId) => tileId !== target.tileId)
     .filter((tileId) => canTileFitTemplateSlot(tileId, target.slot))
-    .map((tileId) => createHomeCandidate(tileId, target))
+    .map((tileId) => createHomeCandidate(tileId))
 })
 
 const availableSlotContentFilterIds = computed(() => {
@@ -1541,11 +1537,53 @@ onBeforeUnmount(() => {
           :key="candidate.tileId"
           type="button"
           class="home-content-library-item"
-          :class="{ 'is-active': isHomeLibraryCandidateSelected(candidate.tileId) }"
+          :class="[
+            `is-size-${candidate.size.replace('x', '-')}`,
+            {
+              'is-active': isHomeLibraryCandidateSelected(candidate.tileId),
+              'is-widget-like': candidate.kind === 'widget' || candidate.kind === 'custom_widget',
+            },
+          ]"
           :data-testid="`home-library-candidate-${candidate.tileId}`"
           @click="selectHomeLibraryCandidate(candidate.tileId)"
         >
+          <div v-if="candidate.kind === 'widget'" class="home-content-library-preview" :class="`is-${candidate.variant}`">
+            <div v-if="candidate.variant === 'weather'" class="home-slot-preview-widget is-weather">
+              <span><i class="fas fa-location-dot"></i>{{ t('东京', 'Tokyo') }}</span>
+              <strong>18°</strong>
+              <small>{{ t('晴朗', 'Clear') }}</small>
+            </div>
+            <div v-else-if="candidate.variant === 'calendar'" class="home-slot-preview-widget is-calendar">
+              <span>{{ today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' }) }}</span>
+              <strong>{{ today.getDate() }}</strong>
+            </div>
+            <div v-else-if="candidate.variant === 'music'" class="home-slot-preview-widget is-music">
+              <span></span>
+              <div>
+                <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
+                <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
+                <i></i>
+              </div>
+            </div>
+            <div v-else-if="candidate.variant === 'system'" class="home-slot-preview-widget is-system">
+              <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
+              <strong>{{ t('电量 86%', 'Battery 86%') }}</strong>
+              <i></i>
+            </div>
+            <div v-else class="home-slot-preview-widget is-quick">
+              <i :class="candidate.icon"></i>
+            </div>
+          </div>
+          <div v-else-if="candidate.kind === 'custom_widget'" class="home-content-library-preview is-custom-widget">
+            <iframe
+              :srcdoc="customWidgetSrcDoc(candidate.tileId)"
+              sandbox="allow-scripts"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            ></iframe>
+          </div>
           <span
+            v-else
             class="home-content-library-icon"
             :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
           >
@@ -1553,7 +1591,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="home-content-library-copy">
             <strong>{{ candidate.label }}</strong>
-            <small>{{ candidate.size }} · {{ candidate.status }}</small>
+            <small>{{ candidate.typeLabel }} · {{ candidate.size }}</small>
           </span>
         </button>
       </div>
@@ -1655,7 +1693,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="home-slot-content-copy">
             <strong>{{ candidate.label }}</strong>
-            <small>{{ candidate.size }} · {{ candidate.status }}</small>
+            <small>{{ candidate.typeLabel }} · {{ candidate.size }}</small>
           </span>
         </button>
       </div>
@@ -2079,10 +2117,10 @@ onBeforeUnmount(() => {
       <section class="home-folder-panel" :data-folder-presentation="openedFolderMeta.presentation.openAnimation">
         <div class="home-folder-panel-head">
           <div>
-            <p>{{ t('主屏文件夹', 'Home Folder') }}</p>
+            <p>{{ t('入口组', 'Entry Group') }}</p>
             <h2>{{ openedFolderMeta.label }}</h2>
           </div>
-          <button @click="closeHomeFolder" :aria-label="t('关闭文件夹', 'Close folder')">
+          <button @click="closeHomeFolder" :aria-label="t('关闭入口组', 'Close entry group')">
             <i class="fas fa-xmark"></i>
           </button>
         </div>
@@ -2210,16 +2248,18 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 12px;
   right: 12px;
-  top: 92px;
+  top: 106px;
   z-index: 66;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 8px;
-  border-radius: 22px;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(18, 24, 33, 0.58);
-  box-shadow: 0 18px 42px rgba(8, 13, 22, 0.18);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.13), transparent 36%),
+    rgba(18, 24, 33, 0.66);
+  box-shadow: 0 22px 48px rgba(8, 13, 22, 0.24);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
 }
@@ -2262,8 +2302,9 @@ onBeforeUnmount(() => {
 
 .home-content-library-row {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   overflow-x: auto;
+  padding: 1px 2px 2px;
   scrollbar-width: none;
 }
 
@@ -2272,42 +2313,103 @@ onBeforeUnmount(() => {
 }
 
 .home-content-library-item {
+  flex: 0 0 112px;
   min-width: 112px;
-  max-width: 132px;
-  height: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
+  height: 122px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
   padding: 7px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  text-align: left;
+  color: rgba(255, 255, 255, 0.95);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.055)),
+    rgba(255, 255, 255, 0.08);
+  text-align: center;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.home-content-library-item.is-size-4-1,
+.home-content-library-item.is-size-4-2,
+.home-content-library-item.is-size-4-3,
+.home-content-library-item.is-size-4-4 {
+  flex-basis: 150px;
+}
+
+.home-content-library-item:active {
+  transform: scale(0.98);
 }
 
 .home-content-library-item.is-active {
-  border-color: rgba(255, 255, 255, 0.58);
-  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.64);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.09)),
+    rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 22px rgba(8, 13, 22, 0.18);
 }
 
 .home-content-library-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 13px;
+  width: 62px;
+  height: 62px;
+  margin: 4px auto 0;
+  border-radius: 19px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.16);
-  font-size: 13px;
+  font-size: 22px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 22px rgba(8, 13, 22, 0.2);
+}
+
+.home-content-library-preview {
+  position: relative;
+  width: 100%;
+  height: 72px;
+  min-height: 0;
+  border-radius: 17px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.42), transparent 32%),
+    linear-gradient(145deg, rgba(205, 219, 224, 0.24), rgba(74, 88, 96, 0.2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.17),
+    0 9px 18px rgba(8, 13, 22, 0.14);
+}
+
+.home-content-library-item.is-size-1-1 .home-content-library-preview {
+  width: 62px;
+  margin: 4px auto 0;
+  border-radius: 19px;
+}
+
+.home-content-library-item.is-size-4-2 .home-content-library-preview,
+.home-content-library-item.is-size-4-3 .home-content-library-preview,
+.home-content-library-item.is-size-4-4 .home-content-library-preview {
+  height: 76px;
+}
+
+.home-content-library-preview iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+  pointer-events: none;
 }
 
 .home-content-library-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
 
@@ -2396,7 +2498,7 @@ onBeforeUnmount(() => {
 
 .home-slot-content-filters {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
   gap: 5px;
   margin-bottom: 10px;
 }
