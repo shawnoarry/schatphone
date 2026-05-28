@@ -510,6 +510,7 @@ describe('Home folder entries', () => {
     await router.push('/home?widgetEdit=1&homePage=4')
     await router.isReady()
     const store = useSystemStore()
+    store.settings.system.language = 'en-US'
     store.setHomeWidgetPages([[], [], [], [], []])
     store.setHomeLayoutTemplate(4, 'layout-b')
 
@@ -524,14 +525,29 @@ describe('Home folder entries', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    const recoveryCue = wrapper.find('[data-testid="home-recovery-cue"]')
+    expect(recoveryCue.exists()).toBe(true)
+    expect(recoveryCue.text()).toContain('Library')
+    expect(recoveryCue.text()).toContain('in library')
+
+    await wrapper.find('[data-testid="home-recovery-open"]').trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.home-content-library').exists()).toBe(true)
     expect(wrapper.find('.home-content-library-hint').exists()).toBe(true)
+    expect(wrapper.find('.home-content-library-hint').text()).toContain('Items are waiting in the library')
     expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).not.toContain('is-active')
     expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-awaiting-selection')
     expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).not.toContain('is-compatible')
+
+    await wrapper.find('[data-testid="home-library-candidate-app_gallery"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-content-library-hint').text()).toContain('Fits 1x1 slots')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-compatible')
+
+    await wrapper.find('[data-testid="home-library-candidate-app_gallery"]').trigger('click')
+    await wrapper.vm.$nextTick()
 
     await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
     await wrapper.vm.$nextTick()

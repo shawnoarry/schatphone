@@ -660,6 +660,17 @@ const selectedHomeLibraryCandidate = computed(
       (candidate) => candidate.tileId === libraryPlacementTileId.value,
     ) || null,
 )
+const homeLibraryCandidateCount = computed(() => availableHomeLibraryCandidates.value.length)
+const homeLibraryCueText = computed(() =>
+  t(`库内 ${homeLibraryCandidateCount.value} 项`, `${homeLibraryCandidateCount.value} in library`),
+)
+const selectedHomeLibrarySlotLabel = computed(() => {
+  if (!selectedHomeLibraryCandidate.value) return t('库内入口等待放回', 'Items are waiting in the library')
+  return t(
+    `匹配 ${selectedHomeLibraryCandidate.value.size} 槽位`,
+    `Fits ${selectedHomeLibraryCandidate.value.size} slots`,
+  )
+})
 
 const slotContentBaseCandidates = computed(() => {
   const target = slotContentTarget.value
@@ -735,6 +746,16 @@ const isHomeLibraryCandidateSelected = (tileId) => libraryPlacementTileId.value 
 
 const canPlaceLibraryCandidateInSlot = (slot) =>
   hasSelectedLibraryPlacementCandidate.value && canTileFitTemplateSlot(libraryPlacementTileId.value, slot)
+
+const emptySlotActionLabel = (pageIndex, slot) => {
+  if (canPlaceLibraryCandidateInSlot(slot)) {
+    return t(
+      `放入 ${selectedHomeLibraryCandidate.value?.label || ''}`,
+      `Place ${selectedHomeLibraryCandidate.value?.label || 'item'}`,
+    )
+  }
+  return t(`${homePageLabel(pageIndex)} ${slot.size} 槽位`, `${homePageLabel(pageIndex)} ${slot.size} slot`)
+}
 
 const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
   if (!layoutEditMode.value || !slot || !libraryPlacementTileId.value) return
@@ -1537,10 +1558,11 @@ onBeforeUnmount(() => {
           :class="{ 'is-active': isLibraryPlacementActive }"
           :aria-expanded="isLibraryPlacementActive"
           data-testid="home-library-toggle"
+          :aria-label="homeLibraryCueText"
           @click="toggleHomeContentLibrary"
         >
-          <i class="fas fa-layer-group"></i>
-          <span>{{ availableHomeLibraryCandidates.length }}</span>
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+          <span>{{ t('库', 'Library') }} {{ homeLibraryCandidateCount }}</span>
         </button>
         <button @click="exitLayoutMode" class="home-edit-btn is-primary">{{ t('完成', 'Done') }}</button>
       </div>
@@ -1552,19 +1574,35 @@ onBeforeUnmount(() => {
     </div>
 
     <div
+      v-if="layoutEditMode && !isLibraryPlacementActive && homeLibraryCandidateCount > 0"
+      class="home-recovery-cue"
+      data-testid="home-recovery-cue"
+      data-no-layout-longpress
+    >
+      <span>
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <strong>{{ t('内容库', 'Library') }}</strong>
+        <small>{{ homeLibraryCueText }}</small>
+      </span>
+      <button type="button" data-testid="home-recovery-open" @click="openHomeContentLibrary()">
+        {{ t('打开', 'Open') }}
+      </button>
+    </div>
+
+    <div
       v-if="layoutEditMode && isLibraryPlacementActive && availableHomeLibraryCandidates.length > 0"
       class="home-content-library"
       data-no-layout-longpress
     >
       <div class="home-content-library-head">
         <span>
-          <i class="fas fa-layer-group"></i>
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
           {{ t('内容库', 'Library') }}
         </span>
-        <strong>{{ selectedHomeLibraryCandidate?.label || t('未选择', 'None selected') }}</strong>
+        <strong>{{ selectedHomeLibraryCandidate?.label || homeLibraryCueText }}</strong>
       </div>
-      <p v-if="!selectedHomeLibraryCandidate" class="home-content-library-hint">
-        {{ t('先选择内容，再点亮兼容槽位。', 'Choose an item, then matching slots light up.') }}
+      <p class="home-content-library-hint" :class="{ 'is-selected': selectedHomeLibraryCandidate }">
+        {{ selectedHomeLibrarySlotLabel }}
       </p>
       <div class="home-content-library-row">
         <button
@@ -2088,8 +2126,9 @@ onBeforeUnmount(() => {
               type="button"
               :data-testid="`home-empty-slot-${pageIndex}-${slot.id}`"
               @click.stop="hasSelectedLibraryPlacementCandidate ? placeSelectedLibraryCandidateInSlot(pageIndex, slot) : openSlotContentSheet(pageIndex, slot)"
+              :aria-label="emptySlotActionLabel(pageIndex, slot)"
             >
-              <i class="fas fa-plus"></i>
+              <i class="fas fa-plus" aria-hidden="true"></i>
             </button>
           </div>
 
@@ -2308,6 +2347,90 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(var(--system-blur-md));
 }
 
+.home-recovery-cue {
+  position: absolute;
+  top: 104px;
+  left: 16px;
+  right: 16px;
+  z-index: 65;
+  min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 9px 8px 11px;
+  color: rgba(255, 255, 255, 0.9);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.055)),
+    rgba(18, 24, 33, 0.62);
+  box-shadow: 0 18px 36px rgba(8, 13, 22, 0.22);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+}
+
+.home-recovery-cue > span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, auto);
+  align-items: center;
+  column-gap: 7px;
+  row-gap: 1px;
+}
+
+.home-recovery-cue > span > i {
+  grid-row: 1 / span 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.17);
+}
+
+.home-recovery-cue strong,
+.home-recovery-cue small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-recovery-cue strong {
+  font-size: 11px;
+  font-weight: 840;
+  line-height: 1.15;
+}
+
+.home-recovery-cue small {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.home-recovery-cue button {
+  min-width: 50px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: #172033;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  font-weight: 860;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(8, 13, 22, 0.16);
+}
+
+.home-recovery-cue button:active {
+  transform: scale(0.98);
+}
+
 .home-content-library {
   position: absolute;
   left: 12px;
@@ -2362,6 +2485,10 @@ onBeforeUnmount(() => {
   font-size: 10px;
   line-height: 1.3;
   font-weight: 700;
+}
+
+.home-content-library-hint.is-selected {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .home-content-library-row {

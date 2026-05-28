@@ -115,6 +115,8 @@ describe('App Store entry management UI', () => {
     const router = createTestRouter()
     await router.push('/app-store')
     await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
 
     const wrapper = mount(AppStoreView, {
       global: {
@@ -123,9 +125,18 @@ describe('App Store entry management UI', () => {
     })
 
     expect(wrapper.find('.app-store-view').exists()).toBe(true)
-    expect(wrapper.text()).toContain('应用商城')
+    expect(wrapper.text()).toContain('App Store')
     expect(wrapper.findAll('.app-store-item').length).toBeGreaterThanOrEqual(15)
     expect(wrapper.find('[data-testid="app-store-detail"]').exists()).toBe(true)
+    const appStoreItem = wrapper.find('[data-testid="app-store-item-app_store"]')
+    expect(appStoreItem.exists()).toBe(true)
+    expect(appStoreItem.classes()).toContain('is-state-fixed')
+    expect(appStoreItem.text()).toContain('Fixed')
+    expect(appStoreItem.text()).toContain('Fixed in Today View')
+    expect(appStoreItem.attributes('aria-label')).toContain('Fixed')
+    await appStoreItem.trigger('click')
+    expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('Today View')
+    expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('Fixed')
     expect(wrapper.find('[data-testid="app-store-item-app_control_center"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-app_files"]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Experimental Toggles')
@@ -137,6 +148,8 @@ describe('App Store entry management UI', () => {
     const router = createTestRouter()
     await router.push('/app-store?homePage=2')
     await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
 
     const wrapper = mount(AppStoreView, {
       global: {
@@ -144,7 +157,9 @@ describe('App Store entry management UI', () => {
       },
     })
 
-    await wrapper.find('[data-testid="app-store-item-app_chat"]').trigger('click')
+    await wrapper.find('[data-testid="app-store-item-app_control_center"]').trigger('click')
+    expect(wrapper.find('[data-testid="app-store-item-app_control_center"]').classes()).toContain('is-state-library')
+    expect(wrapper.find('[data-testid="app-store-item-app_control_center"]').text()).toContain('Ready for slot')
     await wrapper.find('[data-testid="app-store-add-home"]').trigger('click')
     await flushPromises()
 
@@ -152,7 +167,7 @@ describe('App Store entry management UI', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       homePage: '2',
       widgetEdit: '1',
-      libraryTile: 'app_chat',
+      libraryTile: 'app_control_center',
     })
 
     wrapper.unmount()

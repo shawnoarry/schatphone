@@ -332,6 +332,7 @@ const selectedApp = computed(() => {
 })
 
 const selectedAppPlacementLabel = computed(() => {
+  if (selectedApp.value?.protectedHomeEntry) return t('今日视图', 'Today View')
   if (selectedApp.value?.visible && Number.isInteger(selectedApp.value.homePageIndex)) {
     return t(`第 ${selectedApp.value.homePageIndex + 1} 屏`, `Screen ${selectedApp.value.homePageIndex + 1}`)
   }
@@ -340,10 +341,35 @@ const selectedAppPlacementLabel = computed(() => {
 })
 
 const selectedAppStatusLabel = computed(() => {
+  if (selectedApp.value?.protectedHomeEntry) return t('固定入口', 'Fixed')
   if (selectedApp.value?.visible) return t('主屏可见', 'On Home')
   if (selectedApp.value?.inDock) return t('Dock 常驻', 'In Dock')
   return t('库内待放置', 'In Library')
 })
+
+const appStoreItemStateKey = (app) => {
+  if (app?.protectedHomeEntry) return 'fixed'
+  if (app?.visible) return 'home'
+  if (app?.inDock) return 'dock'
+  return 'library'
+}
+
+const appStoreItemStateLabel = (app) => {
+  const state = appStoreItemStateKey(app)
+  if (state === 'fixed') return t('固定', 'Fixed')
+  if (state === 'home') return t('主屏', 'Home')
+  if (state === 'dock') return 'Dock'
+  return t('库内', 'Library')
+}
+
+const appStoreItemPlacementNote = (app) => {
+  if (app?.protectedHomeEntry) return t('今日视图固定', 'Fixed in Today View')
+  if (app?.visible && Number.isInteger(app.homePageIndex)) {
+    return t(`第 ${app.homePageIndex + 1} 屏`, `Screen ${app.homePageIndex + 1}`)
+  }
+  if (app?.inDock) return t('Dock 常驻', 'Pinned in Dock')
+  return t('可选择槽位', 'Ready for slot')
+}
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -510,19 +536,31 @@ onBeforeUnmount(() => {
               :key="app.id"
               type="button"
               class="app-store-item"
-              :class="{ 'is-visible': app.visible, 'is-selected': selectedApp?.id === app.id }"
+              :class="[
+                `is-state-${appStoreItemStateKey(app)}`,
+                { 'is-visible': app.visible, 'is-selected': selectedApp?.id === app.id },
+              ]"
               :data-testid="`app-store-item-${app.id}`"
+              :aria-label="`${app.label} · ${appStoreItemStateLabel(app)}`"
               @click="selectApp(app.id)"
             >
               <span class="app-store-item-icon" :class="app.toneClass">
-                <i :class="app.icon"></i>
+                <i :class="app.icon" aria-hidden="true"></i>
               </span>
               <span class="app-store-item-copy">
-                <strong>{{ app.label }}</strong>
-                <small>{{ app.category }} · {{ app.desc }}</small>
+                <span class="app-store-item-title">
+                  <strong>{{ app.label }}</strong>
+                  <em>{{ app.category }}</em>
+                </span>
+                <small>{{ app.desc }}</small>
+                <span class="app-store-item-placement">
+                  <i class="fas fa-location-dot" aria-hidden="true"></i>
+                  {{ appStoreItemPlacementNote(app) }}
+                </span>
               </span>
               <span class="app-store-item-state">
-                {{ app.visible ? t('主屏', 'Home') : app.inDock ? 'Dock' : t('库内', 'Library') }}
+                <i aria-hidden="true"></i>
+                <span>{{ appStoreItemStateLabel(app) }}</span>
               </span>
             </button>
             <div v-if="filteredAppStoreItems.length === 0" class="app-store-empty" data-testid="app-store-empty">
@@ -535,7 +573,7 @@ onBeforeUnmount(() => {
           <article v-if="selectedApp" class="app-store-detail" data-testid="app-store-detail">
             <div class="app-store-detail-hero">
               <span class="app-store-detail-icon" :class="selectedApp.toneClass">
-                <i :class="selectedApp.icon"></i>
+                <i :class="selectedApp.icon" aria-hidden="true"></i>
               </span>
               <div>
                 <p>{{ selectedApp.category }}</p>
@@ -556,11 +594,11 @@ onBeforeUnmount(() => {
             </div>
             <div class="app-store-actions">
               <button type="button" class="app-store-action is-primary" @click="openSelectedApp" data-testid="app-store-open">
-                <i class="fas fa-arrow-up-right-from-square"></i>
+                <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
                 <span>{{ t('打开', 'Open') }}</span>
               </button>
               <button type="button" class="app-store-action" @click="editSelectedAppOnHome" data-testid="app-store-add-home">
-                <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'"></i>
+                <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
                 <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
               </button>
               <button
@@ -570,7 +608,7 @@ onBeforeUnmount(() => {
                 @click="removeSelectedAppFromHome"
                 data-testid="app-store-remove-home"
               >
-                <i class="fas fa-minus"></i>
+                <i class="fas fa-minus" aria-hidden="true"></i>
                 <span>{{ t('移出主屏', 'Remove') }}</span>
               </button>
             </div>
@@ -650,8 +688,10 @@ onBeforeUnmount(() => {
 
 .app-store-scroll {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   display: grid;
   gap: 14px;
@@ -660,6 +700,7 @@ onBeforeUnmount(() => {
 .app-store-hero,
 .app-store-panel,
 .app-store-featured-item {
+  min-width: 0;
   border: 1px solid var(--system-card-border);
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
@@ -741,6 +782,7 @@ onBeforeUnmount(() => {
 }
 
 .app-store-featured {
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -894,29 +936,47 @@ onBeforeUnmount(() => {
 }
 
 .app-store-layout {
+  min-width: 0;
   margin-top: 13px;
   display: grid;
   gap: 12px;
 }
 
 .app-store-list {
+  min-width: 0;
   display: grid;
   gap: 9px;
 }
 
 .app-store-item {
   width: 100%;
-  min-height: 66px;
+  min-height: 82px;
   border: 1px solid var(--system-subtle-border);
   border-radius: 18px;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 10px 9px 10px 10px;
   color: var(--system-text);
   text-align: left;
   background: var(--system-control-bg);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.app-store-item:hover {
+  border-color: var(--system-control-border);
+  background: var(--system-control-bg-strong);
+}
+
+.app-store-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--system-accent) 62%, transparent);
+  outline-offset: 2px;
+}
+
+.app-store-item:active {
+  transform: scale(0.985);
 }
 
 .app-store-item.is-selected {
@@ -935,8 +995,8 @@ onBeforeUnmount(() => {
 }
 
 .app-store-item-icon {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 16px;
   font-size: 18px;
 }
@@ -944,12 +1004,39 @@ onBeforeUnmount(() => {
 .app-store-item-copy {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
-.app-store-item-copy strong {
+.app-store-item-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.app-store-item-title strong,
+.app-store-item-title em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-store-item-title strong {
   color: var(--system-text);
   font-size: 14px;
+  font-weight: 820;
+}
+
+.app-store-item-title em {
+  flex: 0 1 auto;
+  max-width: 40%;
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: var(--system-text-soft);
+  background: var(--system-surface-muted);
+  font-size: 9px;
+  font-style: normal;
   font-weight: 820;
 }
 
@@ -957,6 +1044,20 @@ onBeforeUnmount(() => {
   color: var(--system-text-soft);
   font-size: 11px;
   line-height: 1.25;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.app-store-item-placement {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 780;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -964,16 +1065,38 @@ onBeforeUnmount(() => {
 
 .app-store-item-state {
   border-radius: 999px;
-  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
   color: var(--system-text-soft);
   background: var(--system-surface-muted);
   font-size: 10px;
   font-weight: 840;
+  white-space: nowrap;
 }
 
-.app-store-item.is-visible .app-store-item-state {
+.app-store-item-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.72;
+}
+
+.app-store-item.is-state-home .app-store-item-state {
   color: var(--system-success);
   background: color-mix(in srgb, var(--system-success) 12%, var(--system-surface-muted));
+}
+
+.app-store-item.is-state-fixed .app-store-item-state {
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.app-store-item.is-state-dock .app-store-item-state {
+  color: var(--system-info);
+  background: color-mix(in srgb, var(--system-info) 12%, var(--system-surface-muted));
 }
 
 .app-store-empty {
