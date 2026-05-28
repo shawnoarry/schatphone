@@ -83,6 +83,9 @@ Compatibility entry docs still exist:
   - local tooling assumptions
   - project-local skill inventory
   - cross-PC setup and install notes
+- `docs/process/CODEX_FAST_SERVICE_TIER_TROUBLESHOOTING.md`
+  - machine-local Codex Fast / service-tier billing troubleshooting
+  - VS Code persisted-state check and backup-edit procedure
 - `docs/process/EVENT_WORKFLOW.md`
   - event-specialist process
   - event/runtime skill invocation matrix
