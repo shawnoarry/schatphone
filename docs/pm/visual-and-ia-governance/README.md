@@ -13,6 +13,8 @@ Current Home customization baseline:
 - `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
 
+The left-side Today View is a fixed native-system entry layer, not a selectable Home layout page; App Store stays there as the recovery entry when formal Home pages return items to their libraries.
+
 Current visual pass:
 
 - `应用商城 / App Store` is now a standalone native-system app with search, category filters, selected app detail, and Home-entry actions.

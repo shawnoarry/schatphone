@@ -27,6 +27,7 @@ const createTestRouter = () =>
       { path: '/settings', component: DummyView },
       { path: '/gallery', component: DummyView },
       { path: '/widgets', component: DummyView },
+      { path: '/app-store', component: DummyView },
     ],
   })
 
@@ -60,6 +61,13 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_reminders"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain('is-weather')
+    expect(wrapper.find('[data-home-tile-id="calendar"] .home-widget-card').classes()).toContain('is-calendar')
+    expect(wrapper.find('[data-home-tile-id="music"] .home-widget-card').classes()).toContain('is-music')
+    expect(wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('type')).toBe('button')
+    expect(wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('aria-label')).toBeTruthy()
+    expect(wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('type')).toBe('button')
+    expect(wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('aria-label')).toBeTruthy()
     expect(wrapper.text()).toContain('购物')
     expect(wrapper.text()).toContain('提醒事项')
     expect(wrapper.text()).toContain('资产')
@@ -103,6 +111,7 @@ describe('Home folder entries', () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
+    useSystemStore().settings.system.language = 'en-US'
 
     const wrapper = mount(HomeView, {
       props: {
@@ -117,12 +126,51 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
     expect(wrapper.findAll('.home-dot')).toHaveLength(5)
     expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain('is-installed')
+    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain('is-fixed')
     expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain('is-locked')
     expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain('is-locked')
+    expect(wrapper.findAll('[data-testid^="home-left-slot-reserved-"]')).toHaveLength(3)
     expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('可选入口')
-    expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('待安装应用')
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('Fixed Entries')
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('1x1 Slots')
+    expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('Apps to Install')
     expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('More Labs')
+    wrapper.unmount()
+  })
+
+  test('keeps App Store reachable from the -1 fixed slots when Home pages are empty', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    store.setHomeWidgetPages([[], [], [], [], []])
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const shortcut = wrapper.find('[data-testid="home-left-shortcut-app-store"]')
+    expect(shortcut.exists()).toBe(true)
+    expect(shortcut.classes()).toContain('is-installed')
+    expect(shortcut.text()).toContain('App Store')
+    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
+
+    await shortcut.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/app-store')
+    expect(router.currentRoute.value.query).toMatchObject({
+      from: 'home',
+      homePage: '0',
+    })
     wrapper.unmount()
   })
 
@@ -581,7 +629,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('shows App not installed feedback for locked -1 shortcuts', async () => {
+  test('shows locked feedback for unavailable -1 shortcuts', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()

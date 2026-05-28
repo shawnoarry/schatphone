@@ -25,6 +25,7 @@ import {
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
+  CONTROL_CENTER_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import {
   buildHomeSourceQuery,
@@ -135,6 +136,7 @@ const LAYOUT_SLOT_ROWS = 6
 const LAYOUT_SLOT_GAP = 12
 const LAYOUT_SLOT_HEIGHT = 78
 const WIDGET_APP_TILE_ID = 'app_widgets'
+const LEFT_PAGE_RESERVED_SLOT_COUNT = 3
 const LAYOUT_EDIT_LOCAL_STORAGE_KEY = 'schatphone:layout_edit_enabled'
 const LAYOUT_EDIT_ENV_ENABLED =
   typeof import.meta.env.VITE_ENABLE_LAYOUT_EDIT === 'string' &&
@@ -199,7 +201,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_shopping') return t('购物', 'Shopping')
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')
-  if (tileId === 'app_control_center') return t('世界中枢', 'World Hub')
+  if (tileId === CONTROL_CENTER_HOME_APP_ID) return t('世界中枢', 'World Hub')
   if (tileId === APP_STORE_HOME_APP_ID) return t('应用商城', 'App Store')
   return fallback
 }
@@ -461,29 +463,57 @@ const openedFolderPreviewEntries = computed(() => {
 })
 
 const isWorldHubInstalled = computed(() =>
-  widgetPages.value.some((page) => Array.isArray(page) && page.includes('app_control_center')),
+  widgetPages.value.some((page) => Array.isArray(page) && page.includes(CONTROL_CENTER_HOME_APP_ID)),
+)
+const isWorldHubAvailable = computed(
+  () => isWorldHubInstalled.value || systemStore.isMoreFeatureToggleEnabled('control_center'),
 )
 const leftPageUtilityEntries = computed(() => [
   {
+    id: 'app-store',
+    title: t('应用商城', 'App Store'),
+    subtitle: t('固定入口库', 'Fixed entry library'),
+    status: t('固定', 'Fixed'),
+    icon: 'fas fa-store',
+    route: APP_STORE_ROUTE,
+    installed: true,
+    fixed: true,
+  },
+  {
     id: 'world-hub',
     title: t('世界中枢', 'World Hub'),
-    subtitle: isWorldHubInstalled.value
-      ? t('已显示在主屏入口库', 'Visible in the Home entry library')
-      : t('可在应用商城加入主屏', 'Available from App Store'),
-    status: isWorldHubInstalled.value ? t('已显示', 'Visible') : t('未显示', 'Hidden'),
+    subtitle: isWorldHubAvailable.value
+      ? t('固定在今日视图', 'Fixed in Today View')
+      : t('条件开启后可用', 'Available when unlocked'),
+    status: isWorldHubAvailable.value ? t('已开放', 'Open') : t('未开放', 'Locked'),
     icon: 'fas fa-wand-magic-sparkles',
-    route: widgetRegistry.app_control_center.route,
-    installed: isWorldHubInstalled.value,
+    route: widgetRegistry[CONTROL_CENTER_HOME_APP_ID].route,
+    installed: isWorldHubAvailable.value,
+    fixed: true,
+    lockedMessage: t('入口未开放', 'Entry locked'),
   },
   {
     id: 'cheats',
     title: t('金手指', 'Cheats'),
     subtitle: t('保留给特殊规则与事件调节', 'Reserved for special rules and event tuning'),
-    status: t('未显示', 'Hidden'),
+    status: t('待开放', 'Reserved'),
     icon: 'fas fa-key',
     route: '',
     installed: false,
+    fixed: true,
+    lockedMessage: t('入口未开放', 'Entry locked'),
   },
+])
+const leftPageUtilitySlots = computed(() => [
+  ...leftPageUtilityEntries.value,
+  ...Array.from({ length: LEFT_PAGE_RESERVED_SLOT_COUNT }, (_, index) => ({
+    id: `reserved-${index + 1}`,
+    title: t('预留位', 'Slot'),
+    subtitle: t('后续入口', 'Future entry'),
+    status: t('预留', 'Reserved'),
+    icon: 'fas fa-plus',
+    placeholder: true,
+  })),
 ])
 
 const isTileSelected = (tileId) => layoutEditMode.value && selectedTileId.value === tileId
@@ -856,8 +886,12 @@ const openCustomWidgetAction = (tileId) => {
   const action = customWidgetAction(tileId)
   if (action.type === CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP) {
     const tile = widgetRegistry[action.target]
-    if (!tile || (action.target === 'app_control_center' && !isWorldHubInstalled.value)) {
+    if (!tile) {
       triggerLayoutToast(t('应用未安装', 'App not installed'))
+      return
+    }
+    if (action.target === CONTROL_CENTER_HOME_APP_ID && !isWorldHubAvailable.value) {
+      triggerLayoutToast(t('入口未开放', 'Entry locked'))
       return
     }
     openAppById(action.target)
@@ -884,10 +918,11 @@ const openCustomWidgetAction = (tileId) => {
 
 const openLeftPageUtilityEntry = (entry) => {
   if (layoutEditMode.value) return
+  if (entry?.placeholder) return
 
   if (!entry?.installed || !entry.route) {
     maybeVibrate(6)
-    triggerLayoutToast(t('应用未安装', 'App not installed'))
+    triggerLayoutToast(entry?.lockedMessage || t('入口未开放', 'Entry locked'))
     return
   }
 
@@ -1784,29 +1819,48 @@ onBeforeUnmount(() => {
             <div class="home-left-section-head">
               <div>
                 <p>{{ t('系统入口', 'System Entries') }}</p>
-                <h2>{{ t('可选入口', 'Optional Entries') }}</h2>
+                <h2>{{ t('固定入口', 'Fixed Entries') }}</h2>
               </div>
-              <span>{{ t('可管理', 'Managed') }}</span>
+              <span>{{ t('1x1 槽位', '1x1 Slots') }}</span>
             </div>
             <div class="home-left-utility-grid">
-              <button
-                v-for="entry in leftPageUtilityEntries"
-                :key="entry.id"
-                type="button"
-                class="home-left-utility-card"
-                :class="{ 'is-installed': entry.installed, 'is-locked': !entry.installed }"
-                :data-testid="`home-left-shortcut-${entry.id}`"
-                @click="openLeftPageUtilityEntry(entry)"
-              >
-                <span class="home-left-utility-icon">
-                  <i :class="entry.icon"></i>
-                </span>
-                <span class="home-left-utility-copy">
-                  <strong>{{ entry.title }}</strong>
-                  <small>{{ entry.subtitle }}</small>
-                </span>
-                <span class="home-left-utility-status">{{ entry.status }}</span>
-              </button>
+              <template v-for="entry in leftPageUtilitySlots" :key="entry.id">
+                <div
+                  v-if="entry.placeholder"
+                  class="home-left-utility-placeholder"
+                  :data-testid="`home-left-slot-${entry.id}`"
+                  aria-hidden="true"
+                >
+                  <span class="home-left-utility-icon">
+                    <i :class="entry.icon" aria-hidden="true"></i>
+                  </span>
+                  <span class="home-left-utility-copy">
+                    <strong>{{ entry.title }}</strong>
+                    <small>{{ entry.status }}</small>
+                  </span>
+                </div>
+                <button
+                  v-else
+                  type="button"
+                  class="home-left-utility-card"
+                  :class="{
+                    'is-installed': entry.installed,
+                    'is-locked': !entry.installed,
+                    'is-fixed': entry.fixed,
+                  }"
+                  :data-testid="`home-left-shortcut-${entry.id}`"
+                  :aria-label="`${entry.title} · ${entry.status}`"
+                  @click="openLeftPageUtilityEntry(entry)"
+                >
+                  <span class="home-left-utility-icon">
+                    <i :class="entry.icon" aria-hidden="true"></i>
+                  </span>
+                  <span class="home-left-utility-copy">
+                    <strong>{{ entry.title }}</strong>
+                    <small>{{ entry.status }}</small>
+                  </span>
+                </button>
+              </template>
             </div>
           </section>
         </div>
@@ -1871,7 +1925,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <template v-if="tileMeta(placement.tileId)?.kind === 'widget'">
-                  <div class="home-widget-card" v-if="tileMeta(placement.tileId)?.variant === 'weather'">
+                  <div class="home-widget-card is-weather" v-if="tileMeta(placement.tileId)?.variant === 'weather'">
                     <div class="home-widget-topline">
                       <i class="fas fa-location-dot"></i>
                       <span>{{ t('东京', 'Tokyo') }}</span>
@@ -1883,14 +1937,14 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
 
-                  <div class="home-widget-card home-widget-center" v-else-if="tileMeta(placement.tileId)?.variant === 'calendar'">
+                  <div class="home-widget-card home-widget-center is-calendar" v-else-if="tileMeta(placement.tileId)?.variant === 'calendar'">
                     <span class="home-calendar-week">{{
                       today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })
                     }}</span>
                     <span class="home-calendar-day">{{ today.getDate() }}</span>
                   </div>
 
-                  <div class="home-widget-card home-widget-music" v-else-if="tileMeta(placement.tileId)?.variant === 'music'">
+                  <div class="home-widget-card home-widget-music is-music" v-else-if="tileMeta(placement.tileId)?.variant === 'music'">
                     <div class="home-music-cover"></div>
                     <div class="home-music-meta">
                       <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
@@ -1902,7 +1956,7 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
 
-                  <div class="home-widget-card" v-else-if="tileMeta(placement.tileId)?.variant === 'system'">
+                  <div class="home-widget-card is-system" v-else-if="tileMeta(placement.tileId)?.variant === 'system'">
                     <div class="home-widget-topline">
                       <i class="fas fa-microchip"></i>
                       <span>{{ t('系统', 'System') }}</span>
@@ -1915,12 +1969,22 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
 
-                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(placement.tileId)?.variant === 'heart'">
-                    <i class="fas fa-heart"></i>
+                  <button
+                    v-else-if="tileMeta(placement.tileId)?.variant === 'heart'"
+                    type="button"
+                    class="home-widget-card home-widget-quick is-heart"
+                    :aria-label="t('快捷爱心组件', 'Quick Heart widget')"
+                  >
+                    <i class="fas fa-heart" aria-hidden="true"></i>
                   </button>
 
-                  <button class="home-widget-card home-widget-quick" v-else-if="tileMeta(placement.tileId)?.variant === 'disc'">
-                    <i class="fas fa-compact-disc"></i>
+                  <button
+                    v-else-if="tileMeta(placement.tileId)?.variant === 'disc'"
+                    type="button"
+                    class="home-widget-card home-widget-quick is-disc"
+                    :aria-label="t('快捷唱片组件', 'Quick Disc widget')"
+                  >
+                    <i class="fas fa-compact-disc" aria-hidden="true"></i>
                   </button>
                 </template>
 
@@ -3221,28 +3285,46 @@ onBeforeUnmount(() => {
 
 .home-left-utility-grid {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 9px;
 }
 
-.home-left-utility-card {
+.home-left-utility-card,
+.home-left-utility-placeholder {
+  position: relative;
   width: 100%;
-  min-height: 68px;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 11px;
-  padding: 10px;
+  justify-content: center;
+  gap: 5px;
+  padding: 15px 6px 8px;
   color: var(--home-text-main);
   background: rgba(255, 255, 255, 0.12);
-  text-align: left;
+  text-align: center;
+}
+
+.home-left-utility-card {
   cursor: pointer;
   transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, filter 140ms ease;
 }
 
 .home-left-utility-card:active {
   transform: scale(0.985);
+}
+
+.home-left-utility-card:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.home-left-utility-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.72);
+  outline-offset: 2px;
 }
 
 .home-left-utility-card.is-installed {
@@ -3258,16 +3340,23 @@ onBeforeUnmount(() => {
   filter: saturate(0.28) brightness(0.72);
 }
 
+.home-left-utility-placeholder {
+  border-style: dashed;
+  color: var(--home-text-sub);
+  background: rgba(255, 255, 255, 0.07);
+  opacity: 0.62;
+}
+
 .home-left-utility-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: rgba(15, 23, 42, 0.44);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 18px;
+  font-size: 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 10px 20px rgba(8, 13, 22, 0.16);
@@ -3280,29 +3369,42 @@ onBeforeUnmount(() => {
 
 .home-left-utility-copy {
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 0;
 }
 
 .home-left-utility-copy strong,
 .home-left-utility-copy small {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .home-left-utility-copy strong {
+  display: -webkit-box;
   color: var(--home-text-main);
-  font-size: 13px;
-  line-height: 1.2;
+  font-size: 10px;
+  line-height: 1.18;
   font-weight: 760;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .home-left-utility-copy small {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  max-width: calc(100% - 10px);
+  border-radius: 999px;
+  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.12);
   color: var(--home-text-sub);
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 7px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .home-left-utility-status {

@@ -40,6 +40,8 @@ User-facing Home consists of:
 - persistent Dock.
 
 The Today View is a native-system surface and does not count as a formal layout page.
+It uses one fixed, non-selectable entry template rather than the formal Home page template picker.
+Its slots are `1x1` system-entry slots only: App Store stays reachable there by default, conditionally opened runtime-control entries such as World Hub and future Cheats stay fixed when available, and reserved slots can be filled by later fixed-entry rules.
 
 Formal Home pages should be template-based. A page template defines slots such as:
 
@@ -154,6 +156,8 @@ Current first-pass implementation:
 - `组件 / Widgets` presents official and custom widgets as visual preview cards, supports exact-size filtering, and keeps imported visual code in the widget library until the user chooses a matching Home slot;
 - `外观 / Appearance` shows neutral Home layout template previews and enters desktop editing for concrete placement;
 - `应用商城 / App Store` contains the first standalone App Library-like entry-management surface: category filters, app detail, open/add-to-Home/remove-from-Home actions, and a protected App Store entry rule, without acting as a real download store.
+
+- the left-side Today View now acts as a fixed recovery layer: App Store is reachable even when formal Home page template changes return app/widget entries to their libraries, while World Hub and future Cheats remain conditionally fixed system entries rather than user-removable desktop shortcuts.
 
 ## 5. App Entry Placement
 

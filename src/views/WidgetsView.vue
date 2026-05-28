@@ -354,14 +354,17 @@ const openHomeWidgetEdit = () => {
   )
 }
 
-const restoreBuiltInWidget = (tileId) => {
-  const ok = systemStore.restoreBuiltInWidgetTile(tileId)
-  if (!ok) {
-    setImportFeedback('error', t('无法加入这个组件。', 'This widget cannot be added.'))
-    return
-  }
-  setImportFeedback('success', t('组件已恢复到默认位置。', 'Widget restored to its default Home slot.'))
-  triggerSaved()
+const chooseBuiltInWidgetSlot = (tileId) => {
+  const normalizedTileId = typeof tileId === 'string' ? tileId.trim() : ''
+  if (!normalizedTileId) return
+
+  router.push(
+    buildRouteWithReturnSource('/home', 'home', {
+      widgetEdit: '1',
+      libraryTile: normalizedTileId,
+      ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
+    }),
+  )
 }
 
 const addOfficialStylePreset = (preset) => {
@@ -859,6 +862,7 @@ onBeforeUnmount(() => {
             :key="`built-in-${widget.id}`"
             class="widgets-market-card"
             :class="[`is-${widget.preview}`, `size-${widget.size.replace('x', '-')}`]"
+            :data-testid="`widgets-market-built-in-${widget.id}`"
           >
             <div class="widgets-preview-stage" :class="`preview-${widget.preview}`">
               <div v-if="widget.preview === 'weather'" class="widget-preview weather-preview">
@@ -898,8 +902,19 @@ onBeforeUnmount(() => {
                 <h3>{{ widget.label }}</h3>
                 <span>{{ widget.size }}</span>
               </div>
-              <button class="widgets-action-btn" type="button" @click="restoreBuiltInWidget(widget.id)">
-                {{ widget.visible ? t('恢复', 'Restore') : t('添加', 'Add') }}
+              <span v-if="widget.visible" class="widgets-home-state">
+                <i class="fas fa-check"></i>
+                <span>{{ t('已加入桌面库', 'In Home Library') }}</span>
+              </span>
+              <button
+                v-else
+                class="widgets-action-btn"
+                type="button"
+                :data-testid="`widgets-built-in-action-${widget.id}`"
+                @click="chooseBuiltInWidgetSlot(widget.id)"
+              >
+                <i class="fas fa-table-cells" aria-hidden="true"></i>
+                <span>{{ t('选择槽位', 'Choose Slot') }}</span>
               </button>
             </div>
           </article>
@@ -2962,6 +2977,28 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   padding: 0 10px;
   font-size: 11px;
+}
+
+.widgets-home-state {
+  min-height: 34px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-home-state i {
+  color: var(--system-success);
 }
 
 .widgets-created-item p {

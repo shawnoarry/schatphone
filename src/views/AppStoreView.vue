@@ -575,7 +575,7 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <p v-if="selectedApp.protectedHomeEntry" class="app-store-protected-note">
-              {{ t('这是系统入口，保留在主屏可确保应用商城始终可返回。', 'This system entry stays on Home so App Store remains reachable.') }}
+              {{ t('这是系统入口，会固定保留在今日视图，确保应用商城始终可返回。', 'This system entry stays fixed in Today View so App Store remains reachable.') }}
             </p>
           </article>
         </div>

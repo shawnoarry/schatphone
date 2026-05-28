@@ -91,6 +91,43 @@ describe('Widgets custom template starters', () => {
     expect(text).toContain('4x2')
     expect(text).toContain('Evening Radio')
     expect(text).toContain('Daily Mix')
+    expect(wrapper.find('[data-testid="widgets-market-built-in-weather"]').text()).toContain('In Home Library')
+    expect(wrapper.text()).not.toContain('Restore')
+
+    wrapper.unmount()
+  })
+
+  test('routes hidden built-in widgets into Home slot selection instead of restore', async () => {
+    const router = createTestRouter()
+    await router.push('/widgets?from=home&homePage=3')
+    await router.isReady()
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    store.setHomeWidgetPages([['calendar'], [], [], [], []])
+
+    const wrapper = mount(WidgetsView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+    await nextTick()
+
+    const weatherCard = wrapper.find('[data-testid="widgets-market-built-in-weather"]')
+    expect(weatherCard.text()).toContain('Choose Slot')
+    expect(weatherCard.text()).not.toContain('Restore')
+
+    await weatherCard.find('[data-testid="widgets-built-in-action-weather"]').trigger('click')
+    await flushPromises()
+
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('weather')
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query).toMatchObject({
+      from: 'home',
+      homePage: '3',
+      widgetEdit: '1',
+      libraryTile: 'weather',
+    })
 
     wrapper.unmount()
   })
