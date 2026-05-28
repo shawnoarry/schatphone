@@ -66,6 +66,13 @@ describe('Widgets custom template starters', () => {
     expect(sizeSelect.element.value).toBe('1x1')
     expect(codeTextarea.element.value).toContain('sp-charm')
     expect(wrapper.find('.widgets-draft-preview iframe').exists()).toBe(true)
+    expect(wrapper.find('.widgets-code-summary').text()).toContain('Preview ready')
+    expect(wrapper.find('.widgets-code-editor').attributes('style')).toContain('display: none')
+
+    await wrapper.find('.widgets-code-toggle').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.widgets-code-editor').attributes('style') || '').not.toContain('display: none')
     expect(store.settings.appearance.customWidgets).toHaveLength(0)
 
     wrapper.unmount()
@@ -218,9 +225,47 @@ describe('Widgets custom template starters', () => {
     const guide = wrapper.find('.widgets-import-guide')
     expect(guide.exists()).toBe(true)
     expect(guide.text()).toContain('Import visual code without placing it on Home automatically.')
+    expect(wrapper.findAll('.widgets-import-preview-card')).toHaveLength(2)
+    expect(wrapper.text()).toContain('Weather Card')
+    expect(wrapper.text()).toContain('Quick Card')
     expect(wrapper.findAll('.widgets-import-size-chips span').map((chip) => chip.text())).toEqual([
       ...VALID_WIDGET_SIZES,
     ])
+
+    wrapper.unmount()
+  })
+
+  test('previews pasted import content and disables invalid imports before submission', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.findAll('.widgets-tab')[2].trigger('click')
+    await nextTick()
+
+    const textarea = wrapper.find('.widgets-import-textarea')
+    await textarea.setValue(
+      JSON.stringify([
+        {
+          name: 'Desk Clock',
+          size: '4x1',
+          code: '<div style="height:100%;display:grid;place-items:center;">Desk</div>',
+        },
+      ]),
+    )
+    await nextTick()
+
+    const previewCards = wrapper.findAll('.widgets-import-preview-card')
+    expect(previewCards).toHaveLength(1)
+    expect(previewCards[0].text()).toContain('Desk Clock')
+    expect(previewCards[0].find('iframe').attributes('srcdoc')).toContain('Desk')
+    expect(wrapper.find('.widgets-import-actions .widgets-primary-btn').element.disabled).toBe(false)
+
+    await textarea.setValue('{')
+    await nextTick()
+
+    expect(wrapper.find('.widgets-import-preview-empty.is-error').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Import content format is invalid.')
+    expect(wrapper.find('.widgets-import-actions .widgets-primary-btn').element.disabled).toBe(true)
 
     wrapper.unmount()
   })
@@ -241,6 +286,8 @@ describe('Widgets custom template starters', () => {
 
     const createdItem = wrapper.find('.widgets-created-item')
     expect(createdItem.exists()).toBe(true)
+    expect(wrapper.find('.widgets-created-grid').exists()).toBe(true)
+    expect(createdItem.classes()).toContain('widgets-created-card')
     expect(createdItem.find('.widgets-created-preview iframe').exists()).toBe(true)
     expect(createdItem.find('.widgets-created-actions .fa-pen').exists()).toBe(true)
     expect(createdItem.find('.widgets-created-actions .fa-trash').exists()).toBe(true)

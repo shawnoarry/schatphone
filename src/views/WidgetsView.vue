@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -11,7 +11,7 @@ import {
   pushReturnTarget,
   resolveReturnLabel,
 } from '../lib/navigation-return'
-import { VALID_WIDGET_SIZES } from '../lib/widget-schema'
+import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../lib/widget-style-presets'
 import { BUILT_IN_HOME_WIDGETS } from '../lib/home-widgets'
 import {
@@ -59,6 +59,8 @@ const customWidgetActionType = ref(CUSTOM_WIDGET_ACTION_TYPE_NONE)
 const customWidgetActionTarget = ref('')
 const editingWidgetId = ref('')
 const customWidgetCodeTextarea = ref(null)
+const widgetsContent = ref(null)
+const showCustomCodeEditor = ref(false)
 const importJsonText = ref('')
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
@@ -160,6 +162,18 @@ const customWidgetDraftPreview = computed(() => ({
   code: customWidgetCode.value.trim(),
 }))
 const hasCustomWidgetDraftPreview = computed(() => customWidgetDraftPreview.value.code.length > 0)
+const customCodeSummary = computed(() => {
+  if (customWidgetCode.value.trim()) {
+    return {
+      title: t('预览已就绪', 'Preview ready'),
+      detail: t('外观代码已载入，可以先看效果再决定是否深改。', 'Visual code is loaded. Preview it before making deeper edits.'),
+    }
+  }
+  return {
+    title: t('等待样式', 'Waiting for a style'),
+    detail: t('选择上方样式后，这里会保留外观代码入口。', 'Choose a style above, then edit the visual code here when needed.'),
+  }
+})
 const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
 const returnButtonLabel = computed(() =>
   returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
@@ -191,7 +205,7 @@ const RECOGNIZED_IMPORT_TEMPLATE_JSON = computed(() =>
       {
         name: t('快捷卡', 'Quick Card'),
         size: '2x1',
-        code: "<div style='height:100%;display:flex;align-items:center;justify-content:center;border-radius:14px;background:rgba(16,24,40,.42);color:#fff;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;'>Quick Action</div>",
+        code: "<div style='height:100%;display:flex;align-items:center;justify-content:center;border-radius:14px;background:rgba(16,24,40,.42);color:#fff;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;'>Quick Card</div>",
       },
     ],
     null,
@@ -238,6 +252,9 @@ const visibleMarketItemCount = computed(
 )
 const previewedStylePreset = computed(
   () => officialStylePresetStates.value.find((preset) => preset.id === previewedStylePresetId.value) || null,
+)
+const featuredStylePreset = computed(
+  () => officialStylePresetStates.value.find((preset) => preset.id === 'theme_board') || officialStylePresetStates.value[0] || null,
 )
 
 const customWidgetPreviewSrcDoc = (widget = {}) => {
@@ -299,6 +316,9 @@ const openPanel = (panelId) => {
   activePanel.value = panelId
   closeStylePresetPreview()
   clearImportFeedback()
+  nextTick(() => {
+    widgetsContent.value?.scrollTo?.({ top: 0 })
+  })
 }
 
 const setWidgetSizeFilter = (size) => {
@@ -329,15 +349,6 @@ const openHomeWidgetEdit = () => {
   router.push(
     buildRouteWithReturnSource('/home', 'home', {
       widgetEdit: '1',
-      ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
-    }),
-  )
-}
-
-const openAppearance = () => {
-  const source = returnLabelKey.value === 'Settings' ? 'settings' : 'home'
-  router.push(
-    buildRouteWithReturnSource('/appearance', source, {
       ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
     }),
   )
@@ -399,6 +410,7 @@ const applyStylePresetToCustomForm = async (preset) => {
   customWidgetCode.value = preset.code
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
+  showCustomCodeEditor.value = false
   clearImportFeedback()
   setImportFeedback('success', t('模板已填入编辑器。', 'Template loaded into the editor.'))
   return true
@@ -412,6 +424,7 @@ const applyPreviewedStylePresetToCustomForm = async () => {
 
 const insertCodeSnippet = (snippet) => {
   if (!snippet) return
+  showCustomCodeEditor.value = true
   const textarea = customWidgetCodeTextarea.value
   const currentCode = customWidgetCode.value
   const start = Number.isInteger(textarea?.selectionStart) ? textarea.selectionStart : currentCode.length
@@ -437,6 +450,7 @@ const resetCustomWidgetForm = () => {
   customWidgetCode.value = ''
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
+  showCustomCodeEditor.value = false
 }
 
 const startEditCustomWidget = (widget) => {
@@ -448,6 +462,7 @@ const startEditCustomWidget = (widget) => {
   customWidgetCode.value = widget.code || ''
   customWidgetActionType.value = action.type
   customWidgetActionTarget.value = action.target
+  showCustomCodeEditor.value = true
   ensureCustomWidgetActionTarget()
 }
 
@@ -565,9 +580,9 @@ const formatImportError = (error) => {
   const itemPrefix = itemNumber > 0 ? `${t('第', 'Item ')}${itemNumber}${t('条', '')} ` : ''
 
   if (code === 'EMPTY_PAYLOAD') return t('导入内容为空。', 'Import content is empty.')
-  if (code === 'INVALID_JSON') return t('JSON 格式错误。', 'Invalid JSON format.')
-  if (code === 'TOP_LEVEL_NOT_ARRAY') return t('顶层必须是 JSON 数组。', 'Top-level must be a JSON array.')
-  if (code === 'EMPTY_ARRAY') return t('数组不能为空。', 'Array cannot be empty.')
+  if (code === 'INVALID_JSON') return t('导入内容格式不正确。', 'Import content format is invalid.')
+  if (code === 'TOP_LEVEL_NOT_ARRAY') return t('请使用组件数组格式。', 'Use a widget array format.')
+  if (code === 'EMPTY_ARRAY') return t('导入列表不能为空。', 'Import list cannot be empty.')
   if (code === 'PAYLOAD_TOO_LARGE') return t('导入内容过大。', 'Import content is too large.')
   if (code === 'BATCH_TOO_LARGE') return t('单次导入数量过多。', 'Too many widgets in one import.')
   if (code === 'ITEM_NOT_OBJECT') return `${itemPrefix}${t('格式不正确。', 'format is invalid.')}`
@@ -595,11 +610,64 @@ const formatImportWarning = (warning) => {
   return `${itemPrefix}${t('有提醒需要留意。', 'has a warning.')}`
 }
 
+const importPreviewHasInput = computed(() => importJsonText.value.trim().length > 0)
+const importPreviewSourceText = computed(() =>
+  importPreviewHasInput.value ? importJsonText.value : RECOGNIZED_IMPORT_TEMPLATE_JSON.value,
+)
+const importPreviewValidation = computed(() =>
+  validateWidgetImportPayload(importPreviewSourceText.value, {
+    fallbackName: t('自定义组件', 'Custom Widget'),
+  }),
+)
+const importPreviewWidgets = computed(() =>
+  importPreviewValidation.value.ok
+    ? importPreviewValidation.value.items.map((widget, index) => ({
+        ...widget,
+        id: `import-preview-${index}-${widget.name}-${widget.size}`,
+      }))
+    : [],
+)
+const importPreviewErrors = computed(() =>
+  importPreviewHasInput.value && !importPreviewValidation.value.ok
+    ? (importPreviewValidation.value.errors || []).map((item) => formatImportError(item))
+    : [],
+)
+const importPreviewWarnings = computed(() =>
+  importPreviewHasInput.value
+    ? (importPreviewValidation.value.warnings || []).map((item) => formatImportWarning(item))
+    : [],
+)
+const canImportWidgets = computed(() => importPreviewHasInput.value && importPreviewValidation.value.ok)
+const importPreviewLabel = computed(() => {
+  if (!importPreviewHasInput.value) return t('模板示例', 'Template sample')
+  if (importPreviewErrors.value.length > 0) return t('需要修正', 'Needs attention')
+  return t(`可导入 ${importPreviewWidgets.value.length} 个`, `${importPreviewWidgets.value.length} ready`)
+})
+const importPreviewHeadline = computed(() => {
+  if (!importPreviewHasInput.value) return t('先看导入后的样子', 'Preview the result first')
+  if (importPreviewErrors.value.length > 0) return t('导入内容还不能生成组件', 'This import cannot become widgets yet')
+  return t('这些组件会先加入库', 'These widgets will be saved to your library')
+})
+const importPreviewHelp = computed(() => {
+  if (!importPreviewHasInput.value) {
+    return t('填入模板或粘贴外观包后，这里会换成真实预览。', 'Use the template or paste a visual pack to see the real preview here.')
+  }
+  if (importPreviewErrors.value.length > 0) {
+    return t('修正提示后再导入，原有组件不会被改动。', 'Fix the notes before importing. Existing widgets stay unchanged.')
+  }
+  return t('预览确认后，再回主屏编辑匹配尺寸的槽位。', 'Preview them here, then place them later in matching Home slots.')
+})
+
 const importCustomWidgets = () => {
   const raw = importJsonText.value.trim()
   clearImportFeedback()
   if (!raw) {
     setImportFeedback('error', t('请先粘贴导入内容。', 'Please paste import content first.'))
+    return
+  }
+  if (!importPreviewValidation.value.ok) {
+    const details = importPreviewErrors.value
+    setImportFeedback('error', details[0] || t('导入失败。', 'Import failed.'), details)
     return
   }
 
@@ -640,18 +708,18 @@ onBeforeUnmount(() => {
         <i class="fas fa-chevron-left"></i>
       </button>
       <div class="widgets-heading">
-        <span>{{ t('主屏组件', 'Home Widgets') }}</span>
+        <span>{{ t('组件', 'Widgets') }}</span>
         <div class="widgets-title-row">
-          <h1>{{ t('Widget 中心', 'Widget Center') }}</h1>
+          <h1>{{ t('组件中心', 'Widget Center') }}</h1>
           <span v-if="saved" class="widgets-saved-inline" aria-live="polite">
             <i class="fas fa-check-circle"></i>
             <span>{{ t('已保存', 'Saved') }}</span>
           </span>
         </div>
       </div>
-      <button class="widgets-home-btn" type="button" @click="goHome">
-        <i :class="returnLabelKey === 'Settings' ? 'fas fa-gear' : 'fas fa-house'"></i>
-        <span>{{ returnButtonLabel }}</span>
+      <button class="widgets-home-btn" type="button" @click="openPanel('custom')">
+        <i class="fas fa-plus"></i>
+        <span>{{ t('创建', 'Create') }}</span>
       </button>
     </header>
 
@@ -669,39 +737,46 @@ onBeforeUnmount(() => {
       </button>
     </nav>
 
-    <main class="widgets-content no-scrollbar">
-      <section class="widgets-bridge-panel">
-        <button class="widgets-bridge-action is-primary" type="button" @click="openHomeWidgetEdit">
-          <span class="widgets-bridge-icon">
-            <i class="fas fa-mobile-screen"></i>
-          </span>
-          <span>
-            <strong>{{ t('编辑主屏', 'Edit Home') }}</strong>
-            <small>{{ t('桌面槽位', 'Home slots') }}</small>
-          </span>
-        </button>
-        <button class="widgets-bridge-action" type="button" @click="openAppearance">
-          <span class="widgets-bridge-icon">
-            <i class="fas fa-palette"></i>
-          </span>
-          <span>
-            <strong>{{ t('外观', 'Appearance') }}</strong>
-            <small>{{ t('主题与布局', 'Themes and layout') }}</small>
-          </span>
-        </button>
-      </section>
-
+    <main ref="widgetsContent" class="widgets-content no-scrollbar">
       <section v-if="activePanel === 'library'" class="widgets-section">
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('组件市场', 'Widget Market') }}</h2>
-            <p>{{ t('先看外观，再回到主屏模板槽位里选择使用。', 'Preview the look here, then choose it inside Home template slots.') }}</p>
+            <p>{{ t('先看效果缩略图，加入库后可在主屏编辑时放进匹配槽位。', 'Browse visual previews, then place saved widgets in matching Home slots.') }}</p>
           </div>
           <button class="widgets-secondary-btn" type="button" @click="openHomeWidgetEdit">
             <i class="fas fa-table-cells"></i>
-            <span>{{ t('编辑模板', 'Edit Layout') }}</span>
+            <span>{{ t('编辑主屏', 'Edit Home') }}</span>
           </button>
         </div>
+
+        <article v-if="featuredStylePreset" class="widgets-featured-market">
+          <button
+            class="widgets-featured-preview widgets-preview-open"
+            type="button"
+            :aria-label="t('查看组件预览', 'Preview widget') + ` ${featuredStylePreset.label}`"
+            @click="openStylePresetPreview(featuredStylePreset)"
+          >
+            <div class="widget-preview style-preview board-preview">
+              <div class="board-stage"><span></span><i></i><b></b></div>
+              <div><strong>Theme Board</strong><small>photos, colors, notes</small></div>
+            </div>
+          </button>
+          <div class="widgets-featured-copy">
+            <span>{{ t('精选外观', 'Featured Look') }}</span>
+            <h3>{{ featuredStylePreset.label }}</h3>
+            <p>{{ t('大尺寸主题组件适合展示照片、配色和短句，先收藏外观，再回主屏选择槽位。', 'A large visual widget for photos, colors, and short notes. Save the look, then choose a Home slot.') }}</p>
+            <div class="widgets-featured-actions">
+              <button class="widgets-secondary-btn" type="button" @click="openStylePresetPreview(featuredStylePreset)">
+                <i class="fas fa-up-right-and-down-left-from-center"></i>
+                <span>{{ t('预览', 'Preview') }}</span>
+              </button>
+              <button class="widgets-action-btn" type="button" @click="addOfficialStylePreset(featuredStylePreset)">
+                {{ featuredStylePreset.added ? t('再加一个', 'Add again') : t('加入库', 'Add') }}
+              </button>
+            </div>
+          </div>
+        </article>
 
         <div class="widgets-market-tools">
           <div class="widgets-size-filter" :aria-label="t('按尺寸筛选组件', 'Filter widgets by size')" role="group">
@@ -835,18 +910,23 @@ onBeforeUnmount(() => {
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('自定义组件', 'Custom widgets') }}</h2>
-            <p>{{ t('选择一个起步样式，再改成自己的主屏组件。', 'Start from a style, then make it your own Home widget.') }}</p>
+            <p>{{ t('先选缩略图样式，再编辑外观代码与点击动作。', 'Choose a visual starter, then tune the code and tap action.') }}</p>
           </div>
-          <div class="widgets-head-actions">
-            <button class="widgets-secondary-btn" type="button" @click="copyWidgetTemplate">
-              <i class="fas fa-copy"></i>
-              <span>{{ templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy template') }}</span>
-            </button>
-            <button class="widgets-secondary-btn" type="button" @click="exportWidgetTemplate">
-              <i class="fas fa-file-arrow-down"></i>
-              <span>{{ t('导出 TXT', 'Export TXT') }}</span>
-            </button>
-          </div>
+        </div>
+
+        <div class="widgets-workflow-steps" :aria-label="t('自定义组件步骤', 'Custom widget steps')">
+          <span>
+            <b>1</b>
+            <small>{{ t('样式', 'Style') }}</small>
+          </span>
+          <span>
+            <b>2</b>
+            <small>{{ t('外观', 'Look') }}</small>
+          </span>
+          <span>
+            <b>3</b>
+            <small>{{ t('动作', 'Action') }}</small>
+          </span>
         </div>
 
         <div class="widgets-starter-templates">
@@ -906,6 +986,56 @@ onBeforeUnmount(() => {
               </label>
             </div>
 
+            <div class="widgets-code-workbench">
+              <div class="widgets-code-workbench-head">
+                <span>
+                  <i class="fas fa-code"></i>
+                  {{ t('外观代码', 'Visual code') }}
+                </span>
+                <div class="widgets-head-actions">
+                  <button class="widgets-secondary-btn widgets-code-toggle" type="button" @click="showCustomCodeEditor = !showCustomCodeEditor">
+                    <i :class="showCustomCodeEditor ? 'fas fa-chevron-up' : 'fas fa-pen-to-square'"></i>
+                    <span>{{ showCustomCodeEditor ? t('收起代码', 'Collapse') : t('编辑代码', 'Edit code') }}</span>
+                  </button>
+                  <button class="widgets-secondary-btn" type="button" @click="copyWidgetTemplate">
+                    <i class="fas fa-copy"></i>
+                    <span>{{ templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy template') }}</span>
+                  </button>
+                  <button class="widgets-secondary-btn" type="button" @click="exportWidgetTemplate">
+                    <i class="fas fa-file-arrow-down"></i>
+                    <span>{{ t('导出 TXT', 'Export TXT') }}</span>
+                  </button>
+                </div>
+              </div>
+              <div v-if="!showCustomCodeEditor" class="widgets-code-summary">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <div>
+                  <strong>{{ customCodeSummary.title }}</strong>
+                  <span>{{ customCodeSummary.detail }}</span>
+                </div>
+              </div>
+              <label v-show="showCustomCodeEditor" class="widgets-field widgets-code-editor">
+                <span>{{ t('Widget 内容', 'Widget content') }}</span>
+                <div class="widgets-code-snippets" :aria-label="t('插入占位符', 'Insert placeholder')">
+                  <button
+                    v-for="snippet in CODE_SNIPPET_OPTIONS"
+                    :key="snippet.id"
+                    type="button"
+                    @click="insertCodeSnippet(snippet.snippet)"
+                  >
+                    <i :class="snippet.icon"></i>
+                    <span>{{ t(snippet.labelZh, snippet.labelEn) }}</span>
+                  </button>
+                </div>
+                <textarea
+                  ref="customWidgetCodeTextarea"
+                  v-model="customWidgetCode"
+                  spellcheck="false"
+                  placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
+                ></textarea>
+              </label>
+            </div>
+
             <div class="widgets-action-config">
               <div class="widgets-action-config-head">
                 <span>
@@ -945,27 +1075,6 @@ onBeforeUnmount(() => {
                 </label>
               </div>
             </div>
-
-            <label class="widgets-field">
-              <span>{{ t('Widget 内容', 'Widget content') }}</span>
-              <div class="widgets-code-snippets" :aria-label="t('插入占位符', 'Insert placeholder')">
-                <button
-                  v-for="snippet in CODE_SNIPPET_OPTIONS"
-                  :key="snippet.id"
-                  type="button"
-                  @click="insertCodeSnippet(snippet.snippet)"
-                >
-                  <i :class="snippet.icon"></i>
-                  <span>{{ t(snippet.labelZh, snippet.labelEn) }}</span>
-                </button>
-              </div>
-              <textarea
-                ref="customWidgetCodeTextarea"
-                v-model="customWidgetCode"
-                spellcheck="false"
-                placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
-              ></textarea>
-            </label>
 
             <div class="widgets-form-actions">
               <button class="widgets-primary-btn" type="button" @click="submitCustomWidget">
@@ -1018,38 +1127,48 @@ onBeforeUnmount(() => {
             <span>{{ customWidgets.length }}</span>
           </div>
 
-          <div v-if="!hasCustomWidgets" class="widgets-empty">
-            {{ t('还没有自定义组件。', 'No custom widgets yet.') }}
+          <div v-if="!hasCustomWidgets" class="widgets-empty widgets-created-empty">
+            <i class="fas fa-layer-group"></i>
+            <strong>{{ t('还没有收藏组件', 'No saved widgets yet') }}</strong>
+            <span>{{ t('从样式模板开始，或导入一个外观包。', 'Start from a style template, or import a visual pack.') }}</span>
+            <div>
+              <button class="widgets-secondary-btn" type="button" @click="openPanel('import')">
+                <i class="fas fa-file-import"></i>
+                <span>{{ t('导入', 'Import') }}</span>
+              </button>
+            </div>
           </div>
 
-          <article v-for="widget in customWidgets" :key="widget.id" class="widgets-created-item">
-            <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
-              <iframe
-                :srcdoc="customWidgetPreviewSrcDoc(widget)"
-                sandbox="allow-scripts"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                title="Widget preview"
-              ></iframe>
-            </div>
-            <div>
-              <h4>{{ widget.name }}</h4>
-              <div class="widgets-created-meta">
-                <span>{{ widget.size }}</span>
-                <span>{{ customWidgetActionLabel(widget.action) }}</span>
+          <div v-else class="widgets-created-grid">
+            <article v-for="widget in customWidgets" :key="widget.id" class="widgets-created-item widgets-created-card">
+              <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
+                <iframe
+                  :srcdoc="customWidgetPreviewSrcDoc(widget)"
+                  sandbox="allow-scripts"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  title="Widget preview"
+                ></iframe>
               </div>
-            </div>
-            <div class="widgets-created-actions">
-              <button type="button" @click="startEditCustomWidget(widget)">
-                <i class="fas fa-pen"></i>
-                <span>{{ t('编辑', 'Edit') }}</span>
-              </button>
-              <button type="button" class="is-danger" @click="removeCustomWidget(widget.id)">
-                <i class="fas fa-trash"></i>
-                <span>{{ t('删除', 'Delete') }}</span>
-              </button>
-            </div>
-          </article>
+              <div class="widgets-created-copy">
+                <h4>{{ widget.name }}</h4>
+                <div class="widgets-created-meta">
+                  <span>{{ widget.size }}</span>
+                  <span>{{ customWidgetActionLabel(widget.action) }}</span>
+                </div>
+              </div>
+              <div class="widgets-created-actions">
+                <button type="button" @click="startEditCustomWidget(widget)">
+                  <i class="fas fa-pen"></i>
+                  <span>{{ t('编辑', 'Edit') }}</span>
+                </button>
+                <button type="button" class="is-danger" @click="removeCustomWidget(widget.id)">
+                  <i class="fas fa-trash"></i>
+                  <span>{{ t('删除', 'Delete') }}</span>
+                </button>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -1057,12 +1176,54 @@ onBeforeUnmount(() => {
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('导入组件', 'Import widgets') }}</h2>
-            <p>{{ t('导入后进入组件库；回到主屏编辑槽位时再选择使用。', 'Imported widgets go into the library; choose them from Home widget edit mode.') }}</p>
+            <p>{{ t('导入外观代码后生成组件预览；点击动作稍后在 SchatPhone 里配置。', 'Imported visual code becomes widget previews; tap actions are configured in SchatPhone.') }}</p>
           </div>
           <button class="widgets-secondary-btn" type="button" @click="fillRecognizedImportTemplate">
             <i class="fas fa-wand-magic-sparkles"></i>
             <span>{{ t('填入模板', 'Use template') }}</span>
           </button>
+        </div>
+
+        <div class="widgets-import-showcase">
+          <div class="widgets-import-showcase-copy">
+            <span>{{ importPreviewLabel }}</span>
+            <strong>{{ importPreviewHeadline }}</strong>
+            <p>{{ importPreviewHelp }}</p>
+          </div>
+          <div v-if="importPreviewWidgets.length > 0" class="widgets-import-preview-grid">
+            <article
+              v-for="widget in importPreviewWidgets"
+              :key="widget.id"
+              class="widgets-import-preview-card"
+            >
+              <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
+                <iframe
+                  :srcdoc="customWidgetPreviewSrcDoc(widget)"
+                  sandbox="allow-scripts"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  :title="widget.name"
+                ></iframe>
+              </div>
+              <div>
+                <strong>{{ widget.name }}</strong>
+                <span>{{ widget.size }}</span>
+              </div>
+            </article>
+          </div>
+          <div v-else class="widgets-import-preview-empty" :class="{ 'is-error': importPreviewErrors.length > 0 }">
+            <i :class="importPreviewErrors.length > 0 ? 'fas fa-circle-exclamation' : 'fas fa-file-import'"></i>
+            <strong>{{ importPreviewHeadline }}</strong>
+            <span>{{ importPreviewErrors[0] || importPreviewHelp }}</span>
+          </div>
+          <div v-if="importPreviewErrors.length > 0 || importPreviewWarnings.length > 0" class="widgets-import-preview-notes">
+            <span v-for="(error, idx) in importPreviewErrors" :key="`import-preview-error-${idx}`" class="is-error">
+              {{ error }}
+            </span>
+            <span v-for="(warning, idx) in importPreviewWarnings" :key="`import-preview-warning-${idx}`" class="is-warning">
+              {{ warning }}
+            </span>
+          </div>
         </div>
 
         <div class="widgets-import-guide">
@@ -1076,7 +1237,7 @@ onBeforeUnmount(() => {
         </div>
 
         <label class="widgets-field">
-          <span>{{ t('导入内容', 'Import content') }}</span>
+          <span>{{ t('外观包内容', 'Visual pack content') }}</span>
           <textarea
             v-model="importJsonText"
             class="widgets-import-textarea"
@@ -1086,13 +1247,14 @@ onBeforeUnmount(() => {
         </label>
 
         <div class="widgets-import-actions">
-          <button class="widgets-primary-btn" type="button" @click="importCustomWidgets">
-            {{ t('导入', 'Import') }}
+          <button class="widgets-primary-btn" type="button" :disabled="!canImportWidgets" @click="importCustomWidgets">
+            <i class="fas fa-file-import"></i>
+            <span>{{ t('导入到组件库', 'Import to Library') }}</span>
           </button>
         </div>
 
         <div class="widgets-import-note">
-          <p>{{ t(`支持 name、size、code 三项；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Supports name, size, and code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
+          <p>{{ t(`每个组件需要名称、尺寸和外观代码；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Each widget needs a name, size, and visual code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
         </div>
       </section>
     </main>
@@ -1178,9 +1340,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: calc(42px + env(safe-area-inset-top)) 16px 12px;
+  padding: calc(38px + env(safe-area-inset-top)) 16px 12px;
   border-bottom: 1px solid var(--system-border);
-  background: var(--system-chrome-bg);
+  background:
+    radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--system-accent-soft) 46%, transparent), transparent 36%),
+    var(--system-chrome-bg);
   box-shadow: var(--system-shadow-chrome);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
@@ -1209,7 +1373,7 @@ onBeforeUnmount(() => {
 
 .widgets-heading h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0;
@@ -1273,14 +1437,21 @@ onBeforeUnmount(() => {
 }
 
 .widgets-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 6px;
-  padding: 10px 16px;
-  background: var(--system-surface-muted);
+  overflow-x: auto;
+  padding: 10px 16px 8px;
+  background: var(--system-chrome-bg);
+  scrollbar-width: none;
+}
+
+.widgets-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .widgets-tab {
+  flex: 1 0 auto;
+  min-width: max-content;
   min-height: 42px;
   border-radius: 999px;
   display: inline-flex;
@@ -1314,7 +1485,7 @@ onBeforeUnmount(() => {
 .widgets-content {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 16px 104px;
+  padding: 12px 16px 104px;
 }
 
 .widgets-bridge-panel {
@@ -1384,11 +1555,9 @@ onBeforeUnmount(() => {
 }
 
 .widgets-section {
-  border: 1px solid var(--system-border);
-  border-radius: 26px;
-  background: var(--system-panel-bg);
-  box-shadow: var(--system-shadow-card);
-  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .widgets-section-head {
@@ -1396,7 +1565,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  min-width: 0;
 }
 
 .widgets-head-actions {
@@ -1512,7 +1681,9 @@ onBeforeUnmount(() => {
 }
 
 .widgets-import-textarea {
-  min-height: 220px;
+  min-height: 168px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .widgets-market-grid,
@@ -1524,10 +1695,125 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.widgets-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.widgets-workflow-steps span {
+  min-width: 0;
+  min-height: 52px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-workflow-steps b {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--system-text-inverse);
+  background: var(--system-accent);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.widgets-workflow-steps small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.widgets-featured-market {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 28px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--system-accent-soft) 64%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--system-panel-bg) 92%, var(--system-accent-soft)), var(--system-surface-muted));
+  box-shadow: var(--system-shadow-card);
+}
+
+.widgets-featured-preview {
+  min-height: 214px;
+  border-radius: 22px;
+  display: flex;
+  align-items: stretch;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 22% 12%, rgba(255, 255, 255, 0.62), transparent 30%),
+    linear-gradient(145deg, rgba(124, 147, 156, 0.36), rgba(70, 84, 91, 0.2));
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-featured-preview .board-preview {
+  min-height: 190px;
+}
+
+.widgets-featured-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.widgets-featured-copy > span {
+  width: fit-content;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.widgets-featured-copy h3 {
+  margin: 0;
+  color: var(--system-text);
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.widgets-featured-copy p {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.widgets-featured-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
 .widgets-market-tools {
   display: grid;
   gap: 8px;
-  margin-bottom: 10px;
 }
 
 .widgets-market-tools > span {
@@ -1571,7 +1857,13 @@ onBeforeUnmount(() => {
 }
 
 .widgets-starter-templates {
-  margin-bottom: 12px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 24px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--system-accent-soft) 58%, transparent), transparent 34%),
+    var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
 }
 
 .widgets-template-strip {
@@ -1827,6 +2119,79 @@ onBeforeUnmount(() => {
   padding: 12px;
 }
 
+.widgets-code-workbench {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 20px;
+  display: grid;
+  gap: 10px;
+  background: var(--system-surface-muted);
+  padding: 11px;
+}
+
+.widgets-code-workbench-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widgets-code-workbench-head > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.widgets-code-workbench-head > span i {
+  color: var(--system-accent);
+}
+
+.widgets-code-summary {
+  min-height: 92px;
+  border: 1px dashed var(--system-control-border);
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: var(--system-text-muted);
+  background: color-mix(in srgb, var(--system-control-bg) 68%, transparent);
+}
+
+.widgets-code-summary > i {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-accent);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-code-summary strong,
+.widgets-code-summary span {
+  display: block;
+}
+
+.widgets-code-summary strong {
+  color: var(--system-text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.widgets-code-summary span {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1.4;
+}
+
 .widgets-draft-preview {
   background:
     radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.62), transparent 28%),
@@ -1869,10 +2234,15 @@ onBeforeUnmount(() => {
 .widgets-market-card {
   min-width: 0;
   border: 1px solid var(--system-subtle-border);
-  border-radius: 22px;
-  background: var(--system-control-bg);
-  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+  border-radius: 24px;
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
   overflow: hidden;
+  transition: transform var(--system-motion-fast), border-color var(--system-motion-fast), box-shadow var(--system-motion-fast);
+}
+
+.widgets-market-card:active {
+  transform: scale(0.985);
 }
 
 .widgets-market-card.is-style-preset {
@@ -1893,13 +2263,14 @@ onBeforeUnmount(() => {
 .widgets-preview-stage {
   position: relative;
   min-height: 142px;
-  padding: 10px;
+  padding: 11px;
   display: flex;
   align-items: stretch;
   justify-content: center;
   background:
     radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.58), transparent 28%),
     linear-gradient(145deg, rgba(124, 147, 156, 0.34), rgba(70, 84, 91, 0.2));
+  box-shadow: inset 0 -1px 0 var(--system-subtle-border);
 }
 
 .widgets-preview-open {
@@ -2563,13 +2934,13 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 11px 12px 12px;
 }
 
 .widgets-market-info h3 {
   margin: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 780;
   line-height: 1.2;
 }
 
@@ -2584,6 +2955,13 @@ onBeforeUnmount(() => {
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
+}
+
+.widgets-market-info .widgets-action-btn {
+  min-height: 34px;
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 11px;
 }
 
 .widgets-created-item p {
@@ -2608,11 +2986,29 @@ onBeforeUnmount(() => {
   transition: transform var(--system-motion-fast), filter var(--system-motion-fast);
 }
 
+.widgets-home-btn span,
+.widgets-tab span,
+.widgets-action-btn span,
+.widgets-primary-btn span,
+.widgets-secondary-btn span {
+  white-space: nowrap;
+}
+
 .widgets-action-btn,
 .widgets-primary-btn {
   color: var(--system-text-inverse);
   background: var(--system-accent);
   box-shadow: 0 10px 18px rgba(68, 111, 135, 0.18);
+}
+
+.widgets-action-btn:disabled,
+.widgets-primary-btn:disabled,
+.widgets-secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+  filter: grayscale(0.1);
+  box-shadow: none;
 }
 
 .widgets-secondary-btn {
@@ -2704,6 +3100,44 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
+.widgets-created-empty {
+  min-height: 186px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 9px;
+  border: 1px dashed var(--system-control-border);
+}
+
+.widgets-created-empty i {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-text-inverse);
+  background: var(--system-accent);
+  font-size: 15px;
+}
+
+.widgets-created-empty strong {
+  color: var(--system-text);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.widgets-created-empty span {
+  max-width: 28ch;
+  line-height: 1.4;
+}
+
+.widgets-created-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .widgets-created-item {
   position: relative;
   display: grid;
@@ -2713,6 +3147,11 @@ onBeforeUnmount(() => {
     radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--system-accent-soft) 64%, transparent), transparent 36%),
     var(--system-control-bg);
   box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-created-card {
+  min-width: 0;
+  align-content: start;
 }
 
 .widgets-created-preview {
@@ -2728,6 +3167,10 @@ onBeforeUnmount(() => {
 .widgets-created-preview.size-1-1 {
   width: 104px;
   min-height: 104px;
+}
+
+.widgets-created-card .widgets-created-preview.size-1-1 {
+  justify-self: center;
 }
 
 .widgets-created-preview.size-2-1 {
@@ -2759,6 +3202,10 @@ onBeforeUnmount(() => {
 .widgets-created-item h4 {
   font-size: 14px;
   font-weight: 700;
+}
+
+.widgets-created-copy {
+  min-width: 0;
 }
 
 .widgets-created-meta {
@@ -2816,6 +3263,171 @@ onBeforeUnmount(() => {
 .widgets-created-actions button.is-danger {
   color: var(--system-danger);
   border-color: rgba(184, 83, 83, 0.22);
+}
+
+.widgets-import-showcase {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 26px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--system-accent-soft) 66%, transparent), transparent 36%),
+    var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.widgets-import-showcase-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.widgets-import-showcase-copy span {
+  width: fit-content;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.widgets-import-showcase-copy strong {
+  color: var(--system-text);
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.widgets-import-showcase-copy p {
+  max-width: 36ch;
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.widgets-import-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.widgets-import-preview-card {
+  min-width: 0;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 20px;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-import-preview-card .widgets-created-preview.size-2-1 {
+  min-height: 72px;
+}
+
+.widgets-import-preview-card .widgets-created-preview.size-2-2 {
+  min-height: 116px;
+}
+
+.widgets-import-preview-card strong,
+.widgets-import-preview-card span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widgets-import-preview-card strong {
+  color: var(--system-text);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.widgets-import-preview-card span {
+  margin-top: 4px;
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.widgets-import-preview-empty {
+  min-height: 154px;
+  border: 1px dashed var(--system-control-border);
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 18px;
+  color: var(--system-text-muted);
+  background: color-mix(in srgb, var(--system-control-bg) 60%, transparent);
+  text-align: center;
+}
+
+.widgets-import-preview-empty i {
+  width: 40px;
+  height: 40px;
+  border-radius: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-accent);
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.widgets-import-preview-empty strong {
+  color: var(--system-text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.widgets-import-preview-empty span {
+  max-width: 34ch;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.widgets-import-preview-empty.is-error {
+  border-color: color-mix(in srgb, var(--system-danger) 34%, transparent);
+  background: color-mix(in srgb, var(--system-danger) 8%, var(--system-control-bg));
+}
+
+.widgets-import-preview-empty.is-error i {
+  color: var(--system-danger);
+}
+
+.widgets-import-preview-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.widgets-import-preview-notes span {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 14px;
+  padding: 8px 10px;
+  background: var(--system-control-bg);
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.widgets-import-preview-notes span.is-error {
+  border-color: color-mix(in srgb, var(--system-danger) 28%, transparent);
+  color: var(--system-danger);
+}
+
+.widgets-import-preview-notes span.is-warning {
+  border-color: color-mix(in srgb, var(--system-warning) 32%, transparent);
+  color: var(--system-warning);
 }
 
 .widgets-import-guide {
@@ -3071,6 +3683,54 @@ onBeforeUnmount(() => {
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.35;
+}
+
+@media (min-width: 720px) {
+  .widgets-content {
+    width: min(100%, 1040px);
+    margin: 0 auto;
+    padding-inline: 22px;
+  }
+
+  .widgets-featured-market {
+    grid-template-columns: minmax(0, 1.18fr) minmax(260px, 0.82fr);
+    align-items: center;
+  }
+
+  .widgets-market-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .widgets-market-card.size-4-1,
+  .widgets-market-card.size-4-2,
+  .widgets-market-card.size-4-3,
+  .widgets-market-card.size-4-4 {
+    grid-column: span 2;
+  }
+
+  .widgets-custom-composer {
+    grid-template-columns: minmax(0, 0.92fr) minmax(340px, 1.08fr);
+    align-items: start;
+  }
+
+  .widgets-live-preview {
+    position: sticky;
+    top: 12px;
+    order: 0;
+  }
+
+  .widgets-created-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .widgets-import-showcase {
+    grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+    align-items: start;
+  }
+
+  .widgets-import-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 380px) {
