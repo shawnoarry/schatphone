@@ -14,6 +14,9 @@ import {
   normalizeWorldBookUsageFilter,
 } from '../lib/worldbook-navigation'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
+import { resolveActiveWorldOverview } from '../lib/world-interface'
+import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
+import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,6 +41,11 @@ const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
 const profileTemplatePresets = computed(() => systemStore.listProfileTemplatePresets())
 const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplates('default_world'))
+const worldOverview = computed(() =>
+  resolveActiveWorldOverview({
+    systemStore,
+  }),
+)
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
@@ -103,11 +111,11 @@ const copyProfileTemplatePreset = (presetId) => {
     worldId: 'default_world',
   })
   if (!created) {
-    uiNotice.value = 'Template copy failed.'
+    uiNotice.value = t('模板复制失败。', 'Template copy failed.')
     return
   }
   systemStore.saveNow()
-  pulseSaved('Profile template copied into this worldview.')
+  pulseSaved(t('角色档案模板已复制到当前世界观。', 'Profile template copied into this worldview.'))
 }
 
 const parseTagDraft = (raw) =>
@@ -196,7 +204,7 @@ const submitKnowledgePoint = () => {
   const title = knowledgeDraft.title.trim()
   const content = knowledgeDraft.content.trim()
   if (!title && !content) {
-    uiNotice.value = t('璇峰厛杈撳叆鏍囬鎴栧唴瀹广€?', 'Please enter title or content first.')
+    uiNotice.value = t('请先输入标题或内容。', 'Please enter title or content first.')
     return
   }
 
@@ -591,7 +599,14 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="worldbook-scroll flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
-      <div class="rounded-2xl bg-white border border-gray-200 p-4">
+      <WorldBookOverview
+        :overview="worldOverview"
+        :saved="saved"
+      />
+
+      <CurrentWorldPackPanel :overview="worldOverview" />
+
+      <div class="rounded-2xl bg-white border border-gray-200 p-4" data-testid="worldbook-world-kernel">
         <p class="text-sm font-semibold">{{ t('全局世界观（必选）', 'Global worldview (required)') }}</p>
         <p class="text-xs text-gray-500 mt-1">
           {{
@@ -626,15 +641,15 @@ onBeforeUnmount(() => {
       <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-profile-templates">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {{ t('Role profile templates', 'Role profile templates') }}
+            {{ t('角色档案模板', 'Role profile templates') }}
           </p>
           <h2 class="text-lg font-semibold">
-            {{ t('WorldBook defines profile structure', 'WorldBook defines profile structure') }}
+            {{ t('世界书定义角色档案结构', 'WorldBook defines profile structure') }}
           </h2>
           <p class="text-sm text-gray-500">
             {{
               t(
-                'Copy a preset into the current worldview, then fill concrete values in Contacts.',
+                '先把预设复制到当前世界观，再到联系人中填写具体角色值。',
                 'Copy a preset into the current worldview, then fill concrete values in Contacts.',
               )
             }}
@@ -642,11 +657,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="space-y-2">
-          <p class="text-sm font-semibold">{{ t('Global preset templates', 'Global preset templates') }}</p>
+          <p class="text-sm font-semibold">{{ t('全局预设模板', 'Global preset templates') }}</p>
           <div v-for="preset in profileTemplatePresets" :key="preset.id" class="worldbook-template-row">
             <div class="min-w-0">
               <p class="font-medium truncate">{{ preset.title }}</p>
-              <p class="text-xs text-gray-500">{{ preset.fields.length }} {{ t('fields', 'fields') }}</p>
+              <p class="text-xs text-gray-500">{{ preset.fields.length }} {{ t('字段', 'fields') }}</p>
             </div>
             <button
               type="button"
@@ -654,21 +669,21 @@ onBeforeUnmount(() => {
               :data-testid="`worldbook-template-copy-${preset.id}`"
               @click="copyProfileTemplatePreset(preset.id)"
             >
-              {{ t('Copy to worldview', 'Copy to worldview') }}
+              {{ t('复制到当前世界观', 'Copy to worldview') }}
             </button>
           </div>
         </div>
 
         <div class="space-y-2">
-          <p class="text-sm font-semibold">{{ t('World-specific templates', 'World-specific templates') }}</p>
+          <p class="text-sm font-semibold">{{ t('当前世界模板', 'World-specific templates') }}</p>
           <p v-if="worldProfileTemplates.length === 0" class="text-sm text-gray-500">
-            {{ t('No world-specific templates yet.', 'No world-specific templates yet.') }}
+            {{ t('还没有当前世界专用模板。', 'No world-specific templates yet.') }}
           </p>
           <div v-for="template in worldProfileTemplates" :key="template.id" class="worldbook-template-row">
             <div class="min-w-0">
               <p class="font-medium truncate">{{ template.title }}</p>
               <p class="text-xs text-gray-500">
-                v{{ template.version }} · {{ template.fields.length }} {{ t('fields', 'fields') }}
+                v{{ template.version }} · {{ template.fields.length }} {{ t('字段', 'fields') }}
               </p>
             </div>
           </div>

@@ -8,6 +8,8 @@
 
 **Tech Stack:** Vue 3, Pinia, Vue Router, Vitest, Vue Test Utils, existing CSS variables and local component styles.
 
+**Implementation Status:** `IMPLEMENTED_V1_BASELINE` on 2026-05-29. The completed slice added `src/lib/world-interface.js`, Chat prompt/thread-panel integration, WorldBook active overview, a lightweight Current World Pack shell, focused tests, and documentation sync. Full World Pack storage and activation review remain future work.
+
 ---
 
 ## Required Reading
@@ -379,4 +381,3 @@ npm.cmd run build
 - The page still supports existing global worldview editing, knowledge creation/editing, filters, deep links, and profile template copying.
 - Touched user-facing zh-CN/English copy is readable and free of development notes.
 - Focused tests, lint, and build pass or failures are documented with exact command output.
-

@@ -213,6 +213,12 @@ Primary references:
 
 Status: `DECISION`
 
+V1 WorldBook baseline landed:
+
+- `Settings -> WorldBook` now leads with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell;
+- `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, and runtime worldview fallback;
+- full World Pack storage, activation review, app archetypes, and service-account template generation remain guarded future work.
+
 Current product direction:
 
 - use the older, lower-complexity entry model first;
@@ -227,14 +233,13 @@ Why this may become a main lane:
 - future modes such as black markets, auction houses, hospitals, flights, subscriptions, task boards, and publication accounts should not become one-off custom data chains;
 - the current service-notification boundary already proves the right direction: Chat owns communication history, while source modules own business truth.
 
-Task structure before implementation:
+Remaining task structure:
 
-1. define WorldBook vs World Pack ownership;
-2. design the lightweight `WorldBook -> Current World Pack` section for selection, review, and activation;
-3. add world pack storage and activation-review semantics;
-4. define the app archetype registry and world app binding model;
-5. define service-account and subscription-account templates for user-created accounts;
-6. select the first archetype implementation target.
+1. keep the V1 WorldBook IA and shared world-interface seam stable during user testing;
+2. add world pack storage and activation-review semantics;
+3. define the app archetype registry and world app binding model;
+4. define service-account and subscription-account templates for user-created accounts;
+5. select the first archetype implementation target.
 
 Current design reference:
 
@@ -244,7 +249,7 @@ Current design reference:
 Decision note:
 
 - this is intentionally not implemented directly from conversation notes;
-- the V1 entry shell is now decided: stay inside `Settings -> WorldBook`;
+- the V1 entry shell is now decided and implemented as a baseline: stay inside `Settings -> WorldBook`;
 - promote it from `DECISION` only after PM confirms the V1 world scope rule, first pack examples, and first archetype target.
 
 ## 5. Deferred Or Guarded Directions

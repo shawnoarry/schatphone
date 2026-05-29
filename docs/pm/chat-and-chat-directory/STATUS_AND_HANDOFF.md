@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -17,6 +17,7 @@ What is already landed:
 5. Chat role-binding contracts now carry Contacts entity type, WorldBook template links, profile values, and capability flags.
 6. Chat prompt context now orders primary worldview rules before current role profile values, visible user self-profile values, relationship runtime context, and supplemental role-bound knowledge points.
 7. service notifications store source module/id references, optional source event id, status, amount, service label, and route actions while avoiding copied business state.
+8. Chat prompt assembly and the thread WorldBook summary now consume the same `world-interface` context, so enabled/disabled/missing role-bound knowledge counts match what is sent to AI.
 
 Still incomplete or risky:
 

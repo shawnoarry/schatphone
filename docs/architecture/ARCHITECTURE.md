@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 ## 1. Architecture Goals
 
@@ -114,6 +114,8 @@ Important files:
   - fallback extraction
 - `src/lib/relationship-fact-adapters.js`
   - cross-module fact adapters into relationship runtime
+- `src/lib/world-interface.js`
+  - shared active-world and WorldBook context seam for Chat prompt context, WorldBook overview, and runtime worldview fallback
 
 Rule: UI components must not bypass these shared seams for core cross-module concerns.
 
@@ -146,6 +148,7 @@ This table matters as much as the code layout.
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
 | optional runtime review | World Hub | not the main data-entry surface |
+| world meaning and prompt-facing world context | WorldBook via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; World Pack storage is future work |
 
 ## 5. Lock And Notification Architecture
 

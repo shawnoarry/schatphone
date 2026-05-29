@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-05-27
+Updated: 2026-05-29
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -36,6 +36,7 @@ What is already landed:
 24. `应用商城 / App Store` now has a first standalone simulated-store management pass: search, category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected App Store entry handling, empty search state, and a route into Home slot edit mode with the selected hidden app ready for placement.
 25. Home edit mode now separates opening the recoverable content library from selecting a specific item. Library-open-but-unselected keeps slots tappable for size-specific replacement, while selecting an item lights only compatible slots; slot picker filters now hide content-type tabs that cannot fit the selected slot size.
 26. Home Today View now has a fixed `1x1` recovery-entry template: App Store is always reachable there, World Hub and future Cheats remain conditionally fixed system entries, and reserved slots are visible without making the `-1` screen a selectable formal Home layout.
+27. WorldBook now has a state-first IA baseline inside Settings: active world overview, lightweight Current World Pack shell, world-kernel editor, profile templates, and knowledge management appear in a clearer L0 -> L2 order.
 
 Still incomplete:
 

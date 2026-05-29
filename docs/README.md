@@ -64,6 +64,7 @@ Compatibility entry docs still exist:
 | Project overview | `docs/overview/` | whole-project guide plus engineering, event, and visual handoff references |
 | Process and workflow | `docs/process/` | AI workflow, validation flow, runtime-control planning, operation guide |
 | Architecture contracts | `docs/architecture/` | architecture boundaries and cross-module contracts |
+| QA and acceptance | `docs/qa/` | short user-facing acceptance checklists and runnable validation notes |
 | Product decisions | `docs/product-decisions/` | topic-level current decisions, not live task boards |
 | Strategy | `docs/strategy/` | long-range project and technical direction |
 | Design | `docs/design/` | visual ownership and style references |

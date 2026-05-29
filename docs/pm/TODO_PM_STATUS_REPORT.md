@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-27
+Updated: 2026-05-29
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -103,7 +103,9 @@ PM meaning:
 
 - WorldBook can store global worldview and knowledge points.
 - Knowledge points can be searched, filtered, tagged, edited, enabled/disabled, and linked to context.
-- Calendar, Chat, and Map can read WorldBook context.
+- WorldBook now opens with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell inside Settings.
+- Calendar, Chat, Map, and event runtime can read WorldBook context.
+- Chat prompt context and the Chat thread WorldBook summary now share the same `world-interface` result, so user-visible injection state matches the context sent to AI.
 - A new review-ready design proposes a reusable World Pack / App Archetype / Service Account Template system so world-specific apps and user-created service accounts can be assembled from templates instead of hand-coded one by one.
 - Current product direction is the older, lower-complexity entry model: WorldBook stays under Settings/contextual links, and World Pack selection/activation should appear inside the full WorldBook management page.
 
@@ -224,9 +226,10 @@ PM meaning:
 
 ### P2: Expand World-Aware Gameplay Carefully
 
-1. Add a lightweight `Current World Pack / 当前设定包` area inside WorldBook for selection, review, and activation.
-2. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
-3. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+1. User-test the V1 WorldBook active overview, current-pack shell, knowledge editing, and Chat context injection loop.
+2. Add real World Pack storage plus activation review after the V1 scope rule is confirmed.
+3. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
+4. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
 4. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
@@ -252,7 +255,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design exists, and the focused WorldBook B-plan now defines the near-term path: stabilize WorldBook functional IA, add a shared world-interface seam, then add `Settings -> WorldBook -> Current World Pack` rather than a standalone world-store app.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan now has a V1 baseline: `Settings -> WorldBook` shows active world state and the `Current World Pack` shell, while `world-interface` anchors Chat and runtime world-context reading. The remaining world-pack/app-archetype/service-template design should stay guarded until scope, examples, and activation review are confirmed.
 
 Why:
 

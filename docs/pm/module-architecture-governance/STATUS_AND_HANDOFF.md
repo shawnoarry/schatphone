@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
 
@@ -13,6 +13,7 @@ What is already landed:
 1. package-level ownership docs now exist for the major product lanes;
 2. relationship/runtime semantics have already gone through one important cleanup pass;
 3. some low-risk component extraction and cleanup work has already started in the UI layer.
+4. `src/lib/world-interface.js` now centralizes active WorldBook/world-context reading for Chat, WorldBook overview, and runtime worldview fallback, reducing duplicated consumer logic before full World Pack storage exists.
 
 Still incomplete:
 

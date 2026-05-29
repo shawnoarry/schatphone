@@ -1,3 +1,5 @@
+import { resolveWorldviewText } from '../world-interface'
+
 const WORLD_CONTEXT_VERSION = 1
 
 export const WORLD_CONTEXT_SOURCE = Object.freeze({
@@ -169,10 +171,7 @@ export const resolveWorldContextFromWorldBook = ({
 
 export const resolveWorldContextFromSystemStore = (systemStore, options = {}) => {
   const user = systemStore?.user || {}
-  const globalWorldview =
-    typeof user.globalWorldview === 'string' && user.globalWorldview.trim()
-      ? user.globalWorldview
-      : user.worldBook
+  const globalWorldview = resolveWorldviewText(systemStore)
   const knowledgePoints =
     typeof systemStore?.listKnowledgePoints === 'function'
       ? systemStore.listKnowledgePoints({ enabledOnly: true })

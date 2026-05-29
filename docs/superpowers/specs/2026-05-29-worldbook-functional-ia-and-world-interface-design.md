@@ -2,7 +2,14 @@
 
 Updated: 2026-05-29
 
-Status: `REVIEW_READY`
+Status: `IMPLEMENTED_V1_BASELINE`
+
+Implementation note:
+
+- V1 keeps the entry at `Settings -> WorldBook`.
+- `src/lib/world-interface.js` now provides the shared world-context seam for active world overview, Chat prompt context, and runtime worldview fallback.
+- WorldBook now leads with active-world overview and a lightweight `Current World Pack / 当前设定包` panel.
+- Full World Pack storage, activation review, app archetypes, service-account templates, and standalone shortcuts remain future work.
 
 ## 1. Goal
 
@@ -413,4 +420,3 @@ The B direction is ready for implementation planning when:
 4. World Hub and Cheats remain separate from WorldBook/World Pack activation;
 5. tests include at least one zh-CN visible-copy guard;
 6. consumers have a path toward reading active world data through one seam before full Pack behavior is built.
-

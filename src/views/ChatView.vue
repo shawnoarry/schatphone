@@ -37,6 +37,10 @@ import {
   validateMediaFileBySize,
 } from '../lib/media-policy'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
+import {
+  buildWorldPromptBlock,
+  resolveWorldContextForConsumer,
+} from '../lib/world-interface'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
   getAvatarImageGalleryAssetId,
@@ -1243,96 +1247,6 @@ const buildRelationshipRuntimePromptBlock = (contact) => {
   }) || (isRoleContact ? 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.' : '')
 }
 
-const getGlobalWorldviewText = () => {
-  const fromGlobal =
-    typeof user.value.globalWorldview === 'string' ? user.value.globalWorldview.trim() : ''
-  if (fromGlobal) return fromGlobal
-  return typeof user.value.worldBook === 'string' ? user.value.worldBook.trim() : ''
-}
-
-const resolveKnowledgePointBindingStateForContact = (contact) => {
-  if (!contact || (contact.kind || 'role') !== 'role') {
-    return {
-      roleBound: false,
-      profileName: '',
-      configuredCount: 0,
-      enabledPoints: [],
-      disabledCount: 0,
-      missingCount: 0,
-    }
-  }
-  const profileId = Number(contact.profileId)
-  if (!Number.isFinite(profileId) || profileId <= 0) {
-    return {
-      roleBound: false,
-      profileName: '',
-      configuredCount: 0,
-      enabledPoints: [],
-      disabledCount: 0,
-      missingCount: 0,
-    }
-  }
-  const profile = chatStore.getRoleProfileById(profileId)
-  if (!profile || !Array.isArray(profile.knowledgePointIds) || profile.knowledgePointIds.length === 0) {
-    return {
-      roleBound: Boolean(profile),
-      profileName: profile?.name || contact.name || '',
-      configuredCount: 0,
-      enabledPoints: [],
-      disabledCount: 0,
-      missingCount: 0,
-    }
-  }
-
-  const sourcePoints = Array.isArray(user.value.knowledgePoints) ? user.value.knowledgePoints : []
-  if (sourcePoints.length === 0) {
-    return {
-      roleBound: true,
-      profileName: profile.name || contact.name || '',
-      configuredCount: profile.knowledgePointIds.length,
-      enabledPoints: [],
-      disabledCount: 0,
-      missingCount: profile.knowledgePointIds.length,
-    }
-  }
-  const pointMap = new Map(
-    sourcePoints
-      .filter((item) => item && typeof item === 'object' && typeof item.id === 'string')
-      .map((item) => [item.id, item]),
-  )
-
-  const enabledPoints = []
-  let disabledCount = 0
-  let missingCount = 0
-
-  profile.knowledgePointIds.forEach((id) => {
-    const point = pointMap.get(id)
-    if (!point) {
-      missingCount += 1
-      return
-    }
-    if (point.enabled === false) {
-      disabledCount += 1
-      return
-    }
-    enabledPoints.push(point)
-  })
-
-  return {
-    roleBound: true,
-    profileName: profile.name || contact.name || '',
-    configuredCount: profile.knowledgePointIds.length,
-    enabledPoints,
-    disabledCount,
-    missingCount,
-  }
-}
-
-const resolveBoundKnowledgePointsForContact = (contact) => {
-  const bindingState = resolveKnowledgePointBindingStateForContact(contact)
-  return Array.isArray(bindingState.enabledPoints) ? bindingState.enabledPoints.slice(0, 8) : []
-}
-
 const formatProfileValuesForPrompt = (values = []) =>
   Array.isArray(values) && values.length > 0
     ? values
@@ -1349,28 +1263,20 @@ const visibleSelfProfileValuesForRole = (visibilityLimit = 'familiar') => {
 }
 
 const buildWorldKernelPromptBlock = (contact) => {
-  const worldview = getGlobalWorldviewText() || 'none'
+  const worldContext = resolveWorldContextForConsumer({
+    systemStore,
+    chatStore,
+    contact,
+    consumer: 'chat',
+  })
   const profile = contact?.profileId ? chatStore.getRoleProfileById(contact.profileId) : null
   const roleProfileValues = profile?.profileValues || []
   const visibleSelfValues = visibleSelfProfileValuesForRole('familiar')
-  const boundPoints = resolveBoundKnowledgePointsForContact(contact)
-  const boundSummary =
-    boundPoints.length > 0
-      ? boundPoints
-          .map((item) => {
-            const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : 'Knowledge'
-            const content = typeof item.content === 'string' ? item.content.trim() : ''
-            const tags = Array.isArray(item.tags) && item.tags.length > 0 ? ` [tags: ${item.tags.join(', ')}]` : ''
-            return `${title}: ${content || title}${tags}`
-          })
-          .join('; ')
-      : 'none'
 
   return [
-    `Primary worldview rules: ${worldview}`,
+    buildWorldPromptBlock(worldContext),
     `Current role profile values: ${formatProfileValuesForPrompt(roleProfileValues)}.`,
     `Visible user self-profile values: ${formatProfileValuesForPrompt(visibleSelfValues)}.`,
-    `Supplemental role-bound knowledge points: ${boundSummary}.`,
   ].join('\n')
 }
 
@@ -1549,25 +1455,12 @@ const truncateMessagePreview = (text, maxLength = 72) => {
 }
 
 const activeThreadWorldKernelState = computed(() => {
-  const worldview = getGlobalWorldviewText()
-  const bindingState = resolveKnowledgePointBindingStateForContact(activeChat.value)
-  const enabledPoints = Array.isArray(bindingState.enabledPoints) ? bindingState.enabledPoints : []
-  const injectedPoints = enabledPoints.slice(0, 8)
-
-  return {
-    worldview,
-    worldviewPreview: truncateMessagePreview(worldview, 120),
-    worldviewCharCount: worldview.length,
-    hasWorldview: Boolean(worldview),
-    roleBound: bindingState.roleBound === true,
-    profileName: bindingState.profileName || '',
-    configuredCount: Math.max(0, Number(bindingState.configuredCount || 0)),
-    injectedCount: injectedPoints.length,
-    disabledCount: Math.max(0, Number(bindingState.disabledCount || 0)),
-    missingCount: Math.max(0, Number(bindingState.missingCount || 0)),
-    overflowCount: Math.max(0, enabledPoints.length - injectedPoints.length),
-    injectedPoints,
-  }
+  return resolveWorldContextForConsumer({
+    systemStore,
+    chatStore,
+    contact: activeChat.value,
+    consumer: 'chat',
+  })
 })
 
 const openWorldBookFromThreadContext = (pointId = '') => {
