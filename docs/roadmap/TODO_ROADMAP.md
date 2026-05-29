@@ -239,6 +239,7 @@ Task structure before implementation:
 Current design reference:
 
 - `docs/superpowers/specs/2026-05-23-world-pack-app-archetype-service-template-design.md`
+- `docs/superpowers/specs/2026-05-29-worldbook-functional-ia-and-world-interface-design.md`
 
 Decision note:
 

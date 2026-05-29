@@ -252,7 +252,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design exists, and its V1 shell should now follow the old model: `Settings -> WorldBook -> Current World Pack` rather than a standalone world-store app.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. A review-ready world-pack/app-archetype/service-template design exists, and the focused WorldBook B-plan now defines the near-term path: stabilize WorldBook functional IA, add a shared world-interface seam, then add `Settings -> WorldBook -> Current World Pack` rather than a standalone world-store app.
 
 Why:
 
