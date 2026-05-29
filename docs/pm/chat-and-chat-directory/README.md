@@ -8,6 +8,8 @@ Current 4.4 note: Shopping, Logistics, and Food Delivery can now push reusable C
 
 Current WorldBook note: Chat prompt assembly and the thread WorldBook summary now consume the same `world-interface` result, so the user-visible active knowledge state matches the world context sent to AI.
 
+Current World Pack note: active World Pack service-account templates can now be generated into Chat Directory after user confirmation. Chat Directory owns the generated service/official account; World Pack only records the template origin.
+
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`

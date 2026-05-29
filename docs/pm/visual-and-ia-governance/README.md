@@ -22,7 +22,10 @@ Current visual pass:
 - Home Today View user-facing copy has been cleaned up for native-system language.
 - Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, larger slots only offer exact-size widget/custom-widget candidates, and opening the library no longer preselects a random item.
 - Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
-- `世界书 / WorldBook` now has a state-first Settings surface: active world overview, Current World Pack shell, world-kernel editor, profile templates, and knowledge management appear in a clearer order.
+- `世界书 / WorldBook` now has a state-first Settings surface: active world overview, Current World Pack activation, service-template confirmation, world-kernel editor, profile templates, source links, and knowledge management appear in a clearer order.
+- `文本库 / Book` now has a V1 installed-app-like source-library surface for read-first long text editing, export, and WorldBook source usage state.
+- WorldBook's Book-source panel now supports source picking, selected-section activation, changed-source warning, and refresh action for phone-sized trials.
+- WorldBook's Current World Pack panel now exposes active world-app entries, and Shopping shows the first world-app context banner for `补给站` with a user-triggered filter action.
 
 ## Read This Package In This Order
 

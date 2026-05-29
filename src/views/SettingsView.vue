@@ -9,6 +9,7 @@ import { useRemindersStore } from '../stores/reminders'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
 import { useFilesStore } from '../stores/files'
+import { useBookStore } from '../stores/book'
 import { usePhoneStore } from '../stores/phone'
 import { useAssetsStore } from '../stores/assets'
 import { useShoppingStore } from '../stores/shopping'
@@ -61,6 +62,7 @@ const remindersStore = useRemindersStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const filesStore = useFilesStore()
+const bookStore = useBookStore()
 const phoneStore = usePhoneStore()
 const assetsStore = useAssetsStore()
 const shoppingStore = useShoppingStore()
@@ -1451,6 +1453,7 @@ const buildBackupPayload = async () => {
     reminders: remindersStore.createBackupSnapshot(),
     gallery: gallerySnapshot,
     files: filesStore.createBackupSnapshot(),
+    book: bookStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
     foodDelivery: foodDeliveryStore.createBackupSnapshot(),
     simulation: simulationStore.createBackupSnapshot(),
@@ -1486,6 +1489,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.calendar && typeof payload.calendar === 'object') return true
   if (payload.gallery && typeof payload.gallery === 'object') return true
   if (payload.files && typeof payload.files === 'object') return true
+  if (payload.book && typeof payload.book === 'object') return true
   if (payload.shopping && typeof payload.shopping === 'object') return true
   if (payload.foodDelivery && typeof payload.foodDelivery === 'object') return true
   if (payload.simulation && typeof payload.simulation === 'object') return true
@@ -1703,6 +1707,7 @@ const createRollbackSnapshot = () => {
     reminders: remindersStore.createBackupSnapshot(),
     gallery: galleryStore.createBackupSnapshot(),
     files: filesStore.createBackupSnapshot(),
+    book: bookStore.createBackupSnapshot(),
     shopping: shoppingStore.createBackupSnapshot(),
     foodDelivery: foodDeliveryStore.createBackupSnapshot(),
     simulation: simulationStore.createBackupSnapshot(),
@@ -1772,6 +1777,7 @@ const importData = async (event) => {
       restoreAssetPackage: true,
     })
     const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
+    const bookOk = restoreOptionalBackupSection(bookStore, parsed.book)
     const shoppingOk = restoreOptionalBackupSection(shoppingStore, parsed.shopping)
     const foodDeliveryOk = restoreOptionalBackupSection(foodDeliveryStore, parsed.foodDelivery)
     const simulationOk = restoreOptionalBackupSection(simulationStore, parsed.simulation)
@@ -1791,6 +1797,7 @@ const importData = async (event) => {
       !remindersOk ||
       !galleryRestoreResult?.ok ||
       !filesOk ||
+      !bookOk ||
       !shoppingOk ||
       !foodDeliveryOk ||
       !simulationOk ||
@@ -1813,6 +1820,7 @@ const importData = async (event) => {
     remindersStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
+    bookStore.saveNow()
     shoppingStore.saveNow()
     foodDeliveryStore.saveNow()
     simulationStore.saveNow()
@@ -1854,6 +1862,7 @@ const importData = async (event) => {
     remindersStore.restoreFromBackup(rollback.reminders)
     galleryStore.restoreFromBackup(rollback.gallery)
     filesStore.restoreFromBackup(rollback.files)
+    bookStore.restoreFromBackup(rollback.book)
     shoppingStore.restoreFromBackup(rollback.shopping)
     foodDeliveryStore.restoreFromBackup(rollback.foodDelivery)
     simulationStore.restoreFromBackup(rollback.simulation)
@@ -1869,6 +1878,7 @@ const importData = async (event) => {
     remindersStore.saveNow()
     galleryStore.saveNow()
     filesStore.saveNow()
+    bookStore.saveNow()
     shoppingStore.saveNow()
     foodDeliveryStore.saveNow()
     simulationStore.saveNow()

@@ -59,7 +59,7 @@ Main stores:
   - settings
   - appearance
   - notifications
-  - user profile and worldview settings
+  - user profile, worldview settings, WorldBook source links, and World Pack activation state
 - `src/stores/chat.js`
   - role profiles
   - Chat Directory contacts
@@ -83,9 +83,9 @@ Main stores:
   - cross-module cue queues
 - `src/stores/map.js`
   - local trip and location simulation
-- planned `src/stores/book.js`
+- `src/stores/book.js`
   - reusable long-form text assets for worldbook documents, knowledge notes, rules, glossary text, and references
-  - should remain separate from `Files`, because Files is an internal metadata/index bridge
+  - remains separate from `Files`, because Files is an internal metadata/index bridge
 
 Important semantic notes:
 
@@ -118,7 +118,11 @@ Important files:
 - `src/lib/relationship-fact-adapters.js`
   - cross-module fact adapters into relationship runtime
 - `src/lib/world-interface.js`
-  - shared active-world and WorldBook context seam for Chat prompt context, WorldBook overview, and runtime worldview fallback
+  - shared active-world and WorldBook context seam for Chat prompt context, WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback
+- `src/lib/world-pack-service-accounts.js`
+  - maps active World Pack service-account templates into user-approved Chat Directory contact payloads without creating source-module business records
+- `src/lib/world-pack-app-bindings.js`
+  - maps active World Pack app bindings into launch rows and source-module context, with the V1 Shopping marketplace rule limited to route context and default filters
 
 Rule: UI components must not bypass these shared seams for core cross-module concerns.
 
@@ -151,8 +155,10 @@ This table matters as much as the code layout.
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
 | optional runtime review | World Hub | not the main data-entry surface |
-| reusable long-form text source assets | planned `Book` / `bookStore` | proposed visible text-library app; not Files, not a novel reader, not a world-store shell |
-| world meaning and prompt-facing world context | WorldBook activation via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; Book stores long source text, WorldBook activates selected sources; World Pack storage is future work |
+| reusable long-form text source assets | `Book` / `bookStore` | visible text-library app; not Files, not a novel reader, not a world-store shell |
+| world meaning and prompt-facing world context | WorldBook activation via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; Book stores long source text, WorldBook activates whole documents or selected sections; World Pack stores one active world configuration and activation review state |
+| Chat service-account entries generated from a world template | Chat Directory contacts in `chat.js` | World Pack suggests the template; Chat Directory owns the generated entry; source modules keep business records |
+| world app binding launch context | `src/lib/world-pack-app-bindings.js` plus the target source module view | World Pack provides app name, route, and safe defaults; the target module keeps business state. V1 only maps `marketplace -> Shopping` as `补给站` / Daily Fresh / Grocery context |
 
 ## 5. Lock And Notification Architecture
 
@@ -187,6 +193,9 @@ Chat-side contact entries can include:
 - `kind`
 - `profileId`
 - `serviceTemplate`
+- `worldPackId`
+- `worldServiceTemplateId`
+- `worldAppBindingId`
 - `relationshipLevel`
 - `relationshipNote`
 

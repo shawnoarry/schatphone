@@ -19,7 +19,7 @@ Updated: 2026-05-19
 - persistence shape
 - backup/restore implications
 - compatibility and migration safety
-- upcoming Book text-library storage must stay separate from WorldBook activation and hidden Files indexing
+- Book text-library storage must stay separate from WorldBook activation and hidden Files indexing
 
 ## 4. Workstream D: Cleanup Debt
 

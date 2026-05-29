@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -22,6 +22,7 @@ Updated: 2026-05-19
 - Logistics service accounts
 - Food Delivery service accounts
 - system notification identities
+- World Pack generated service/official accounts after user confirmation
 - reusable `service_notification` rich messages with source references and dedupe
 - source modules push only into existing Chat Directory service accounts
 
@@ -33,3 +34,4 @@ Treat these as bugs:
 2. Chat starts owning destructive role cleanup
 3. service accounts are mixed into role-profile logic without a clear contract
 4. Chat-side `relationshipLevel` or `relationshipNote` is shown as the main current relationship truth
+5. World Pack generated accounts start creating or owning source-module business records

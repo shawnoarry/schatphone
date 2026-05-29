@@ -12,12 +12,27 @@ const createSystemStore = ({
   worldBook = '',
   knowledgePoints = [],
   profileTemplates = [],
+  activePack = null,
 } = {}) => ({
   user: {
     globalWorldview,
     worldBook,
     knowledgePoints,
     profileTemplates,
+    activeWorldPackId: activePack?.id || 'default_world',
+    worldPackActivation: activePack
+      ? { activePackId: activePack.id, state: 'active' }
+      : { activePackId: 'default_world', state: 'active' },
+  },
+  getActiveWorldPack() {
+    return activePack || {
+      id: 'default_world',
+      name: 'Default world',
+      title: '默认世界',
+      state: 'active',
+      appBindings: [],
+      serviceAccountTemplates: [],
+    }
   },
   listKnowledgePoints(options = {}) {
     return options.enabledOnly
@@ -63,6 +78,9 @@ describe('world interface', () => {
 
     expect(resolveActiveWorldOverview({ systemStore })).toMatchObject({
       activePack: { id: 'default_world', state: 'active' },
+      worldPackActivationState: 'active',
+      worldPackAppBindingCount: 0,
+      worldPackServiceTemplateCount: 0,
       worldviewCharCount: 23,
       knowledgeCount: 2,
       enabledKnowledgeCount: 1,
@@ -70,6 +88,33 @@ describe('world interface', () => {
       profileTemplateCount: 1,
       promptConsumerCount: 4,
     })
+  })
+
+  test('exposes active world pack bindings to consumers', () => {
+    const systemStore = createSystemStore({
+      globalWorldview: 'Pack-aware baseline.',
+      activePack: {
+        id: 'survival_city',
+        name: 'Post-disaster survival city',
+        title: '灾后生存都市',
+        state: 'active',
+        appBindings: [{ id: 'supply', title: '补给站', archetype: 'marketplace' }],
+        serviceAccountTemplates: [{ id: 'dispatcher', title: '补给调度员' }],
+      },
+    })
+
+    const context = resolveWorldContextForConsumer({
+      systemStore,
+      consumer: 'runtime',
+    })
+
+    expect(context).toMatchObject({
+      consumer: 'runtime',
+      activePack: { id: 'survival_city', title: '灾后生存都市' },
+      worldPackAppBindingCount: 1,
+      worldPackServiceTemplateCount: 1,
+    })
+    expect(context.worldPackAppBindings[0].title).toBe('补给站')
   })
 
   test('resolves enabled, disabled, missing, and overflow role-bound knowledge', () => {
@@ -156,4 +201,3 @@ describe('world interface', () => {
     expect(promptBlock).not.toContain('Hidden note')
   })
 })
-

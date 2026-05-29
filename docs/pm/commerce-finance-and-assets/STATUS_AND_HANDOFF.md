@@ -16,6 +16,7 @@ What is already landed:
 4. gift and shared-meal relationship-memory flows are now wired through Wallet recording, with Wallet support facts treated as supporting-only lineage inside the upstream order memory;
 5. delivery route context can be shown as read-only context without moving order ownership into Map.
 6. Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events can push service-account notification messages into existing Chat Directory service accounts.
+7. The active World Pack can now provide a Shopping marketplace context for `survival_city`: WorldBook opens Shopping as `补给站`, and Shopping offers a safe Daily Fresh / Grocery filter without creating or mutating commerce records.
 
 Still incomplete:
 
@@ -28,6 +29,7 @@ Still incomplete:
 1. Continue tightening Wallet cleanup rules and downstream record explainability.
 2. Expand asset and stock loops only after ownership boundaries stay clear.
 3. Keep service-account push additions source-owned: do not auto-create Chat service identities from commerce stores.
+4. Treat the current `补给站` path as a trial app-binding example before broadening to auctions, reservations, subscriptions, or dispatch behavior.
 
 ## 3. Do Not Do
 
@@ -35,6 +37,7 @@ Still incomplete:
 2. Do not let Assets turn into a ledger.
 3. Do not let logistics become a storefront.
 4. Do not let Stock absorb other finance domains without a clear decision.
+5. Do not let World Pack app bindings create products, carts, orders, Wallet records, Assets records, Calendar cues, or Chat messages by themselves.
 
 ## 4. Must Sync When Working Here
 

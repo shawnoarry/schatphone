@@ -23,6 +23,7 @@ const createTestRouter = () =>
       { path: '/contacts', component: DummyView },
       { path: '/gallery', component: DummyView },
       { path: '/control-center', component: DummyView },
+      { path: '/book', component: DummyView },
     ],
   })
 
@@ -138,6 +139,9 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('Today View')
     expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('Fixed')
     expect(wrapper.find('[data-testid="app-store-item-app_control_center"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-app_book"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-app_book"]').text()).toContain('Book')
+    expect(wrapper.find('[data-testid="app-store-item-app_book"]').text()).toContain('Ready for slot')
     expect(wrapper.find('[data-testid="app-store-item-app_files"]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Experimental Toggles')
 

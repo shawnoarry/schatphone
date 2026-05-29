@@ -16,6 +16,13 @@ Status: `REVIEW_READY`
 - A separate `Book` text-library app is now review-ready for long-form source documents.
 - This does not contradict the no-world-store decision: Book stores and edits reusable text; WorldBook and World Pack still own activation and world configuration.
 
+2026-05-29 implementation addendum:
+
+- World Pack V1 now has persisted built-in packs, active-pack state, activation review, World Interface exposure, and user-approved service-account template generation into Chat Directory.
+- Built-in packs can carry app-binding metadata and service-account template metadata.
+- The first concrete app-binding behavior is now implemented for `marketplace -> Shopping`: `survival_city` can open Shopping as `补给站`, show active world context, and apply a safe Daily Fresh / Grocery filter without moving Shopping records into World Pack.
+- User-created pack editing, subscription generation beyond the current service-account V1, and all other concrete archetype behavior remain future work.
+
 ## 1. Goal
 
 Design a reusable world-driven template system that lets SchatPhone support built-in worldviews, world-specific app variants, user-created service accounts, and future domain patterns without writing a custom data chain for every new account or app name.

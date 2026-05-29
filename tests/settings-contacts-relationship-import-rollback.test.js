@@ -7,6 +7,7 @@ import SettingsView from '../src/views/SettingsView.vue'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { useAssetsStore } from '../src/stores/assets'
 import { useCalendarStore } from '../src/stores/calendar'
+import { useBookStore } from '../src/stores/book'
 import { useChatStore } from '../src/stores/chat'
 import { useFilesStore } from '../src/stores/files'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
@@ -64,6 +65,7 @@ const createValidModuleSnapshots = () => ({
   reminders: clone(useRemindersStore().createBackupSnapshot()),
   gallery: clone(useGalleryStore().createBackupSnapshot()),
   files: clone(useFilesStore().createBackupSnapshot()),
+  book: clone(useBookStore().createBackupSnapshot()),
   shopping: clone(useShoppingStore().createBackupSnapshot()),
   foodDelivery: clone(useFoodDeliveryStore().createBackupSnapshot()),
   simulation: clone(useSimulationStore().createBackupSnapshot()),
@@ -85,6 +87,7 @@ describe('Settings Contacts relationship import rollback', () => {
   test('rolls back Contacts changes when relationship runtime restore reports a failure', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
+    const bookStore = useBookStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
     systemStore.settings.system.language = 'en-US'
     relationshipRuntimeStore.resetForTesting()
@@ -117,6 +120,11 @@ describe('Settings Contacts relationship import rollback', () => {
       metricDeltas: {
         trust: 5,
       },
+    })
+    const originalBookAsset = bookStore.createAsset({
+      id: 'asset_original_book',
+      title: 'Original Book Source',
+      content: 'Must survive failed import.',
     })
 
     const realRelationshipRestore = relationshipRuntimeStore.restoreFromBackup.bind(relationshipRuntimeStore)
@@ -169,6 +177,16 @@ describe('Settings Contacts relationship import rollback', () => {
         ],
       },
       ...createValidModuleSnapshots(),
+      book: {
+        assets: [
+          {
+            id: 'asset_imported_book',
+            title: 'Imported Book Source',
+            content: 'Should roll back.',
+          },
+        ],
+        categories: [],
+      },
       relationshipRuntime: {
         forceFailureForTest: true,
       },
@@ -215,6 +233,10 @@ describe('Settings Contacts relationship import rollback', () => {
         displaySummary: 'Original relationship memory.',
       }),
     ])
+    expect(bookStore.findAssetById(originalBookAsset.id)).toMatchObject({
+      title: 'Original Book Source',
+    })
+    expect(bookStore.findAssetById('asset_imported_book')).toBeNull()
     expect(wrapper.text()).toContain('Import failed and rolled back automatically')
 
     wrapper.unmount()

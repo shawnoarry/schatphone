@@ -36,7 +36,10 @@ What is already landed:
 24. `应用商城 / App Store` now has a first standalone simulated-store management pass: search, category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected App Store entry handling, empty search state, and a route into Home slot edit mode with the selected hidden app ready for placement.
 25. Home edit mode now separates opening the recoverable content library from selecting a specific item. Library-open-but-unselected keeps slots tappable for size-specific replacement, while selecting an item lights only compatible slots; slot picker filters now hide content-type tabs that cannot fit the selected slot size.
 26. Home Today View now has a fixed `1x1` recovery-entry template: App Store is always reachable there, World Hub and future Cheats remain conditionally fixed system entries, and reserved slots are visible without making the `-1` screen a selectable formal Home layout.
-27. WorldBook now has a state-first IA baseline inside Settings: active world overview, lightweight Current World Pack shell, world-kernel editor, profile templates, and knowledge management appear in a clearer L0 -> L2 order.
+27. WorldBook now has a state-first IA baseline inside Settings: active world overview, Current World Pack activation, service-template confirmation, Book source links, world-kernel editor, profile templates, and knowledge management appear in a clearer L0 -> L3 order.
+28. Book now has a V1 app-like text-library surface with library list, read-first detail view, guarded editing, import/export controls, and WorldBook source usage state.
+29. WorldBook's Book-source panel now has a phone-testable source picker with whole-document/selected-section activation, changed-source warning, and refresh action.
+30. WorldBook's Current World Pack panel now shows active world-app entries, and Shopping has the first world-app banner/action pattern for `补给站` that explains ownership boundaries before normal Shopping controls.
 
 Still incomplete:
 
@@ -51,6 +54,7 @@ Still incomplete:
 2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
+5. User-test the WorldBook -> `补给站` -> Shopping path on mobile before broadening the same pattern to other archetypes.
 
 ## 3. Do Not Do
 

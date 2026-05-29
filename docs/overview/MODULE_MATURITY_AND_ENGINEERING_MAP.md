@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
 
@@ -44,7 +44,7 @@ The biggest engineering risk is no longer missing architecture. It is:
 The strongest current user-visible loops are:
 
 1. Lock -> Home -> Chat -> notification feedback
-2. WorldBook -> Chat prompt context
+2. WorldBook / Book -> Chat prompt context
 3. Map / Reminders / Calendar / push handoff
 4. Gallery asset references across multiple modules
 5. Shopping / Food Delivery / Wallet / relationship-memory continuity
@@ -61,7 +61,8 @@ These are active foundations, not placeholders:
 | Home | stable | protected app entries, page shell, edit gating, and folder model are in place |
 | Chat | stable but heavy | strongest gameplay loop, but still one of the biggest engineering hotspots |
 | Gallery | stable | real cross-module asset hub with meaningful ownership |
-| WorldBook | stable for current scope | shared world-context layer already consumed across modules |
+| WorldBook | stable integrated V1 | shared world-context layer, Book source activation, and World Pack activation are now consumed through one path |
+| Book | trial-ready V1 | reusable long-text source storage now exists, with export, section activation, and WorldBook activation links |
 | Map | stable baseline + active expansion | route/trip/reward/context loop is real and already integrated outward |
 | Calendar | stable MVP | confirmed schedule/date behavior is meaningful and connected to push |
 | Reminders | stable MVP | cross-module cue queue has its own visible product identity now |
@@ -108,9 +109,10 @@ Current approximate sizes:
 | `src/views/SettingsView.vue` | 2181 | dense system/config surface |
 | `src/views/ChatDirectoryView.vue` | 1872 | concept-heavy management surface |
 | `src/views/MapView.vue` | 1670 | still concentrated, though healthier than before |
+| `src/views/WorldBookView.vue` | 1718 | larger after Book source links, source diff review, and World Pack activation; extract panels before another major feature slice |
 | `src/views/GalleryView.vue` | 1159 | manageable, but still important because of shared asset contracts |
 | `src/views/ControlCenterView.vue` | 914 | review/control surface now large enough to deserve explicit engineering attention |
-| `src/views/WorldBookView.vue` | 928 | still understandable, but should not grow blindly |
+| `src/views/BookView.vue` | 759 | new V1 text-library app; keep future editor/source-picker growth modular |
 | `src/views/CalendarView.vue` | 622 | comparatively healthy |
 
 ### Largest stores
@@ -119,7 +121,7 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/stores/system.js` | 2790 | central infrastructure store; change carefully |
+| `src/stores/system.js` | 3593 | central infrastructure store; change carefully and avoid adding new domain ownership |
 | `src/stores/chat.js` | 2190 | rich domain logic with high coordination responsibility |
 | `src/stores/map.js` | 2137 | broad product logic; prefer improving seams before deep redesign |
 | `src/stores/gallery.js` | 1325 | important asset rules live here; avoid casual contract churn |
@@ -223,9 +225,15 @@ Engineering meaning:
 
 ### WorldBook
 
-- product state: real cross-module world kernel
-- engineering note: readability matters more than piling on more features
-- recommendation: protect clarity
+- product state: real cross-module world kernel with integrated World Pack V1 activation
+- engineering note: readability matters more than piling on more features, especially now that it links Book sources and active pack state
+- recommendation: extract WorldBook panels before the next major behavior slice; the next product step should turn active-pack app metadata into concrete archetype behavior, not copy business records into WorldBook
+
+### Book
+
+- product state: trial-ready V1 text-source library baseline
+- engineering note: owns reusable long-form source text, while WorldBook owns activation
+- recommendation: phone-test Book import/export, section activation, and changed-source diff review as part of the full WorldBook setup loop without turning Book into Files or a reader app
 
 ### Map
 

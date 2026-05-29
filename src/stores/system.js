@@ -14,6 +14,7 @@ import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import {
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
+  BOOK_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
@@ -35,6 +36,17 @@ import {
   DEFAULT_CUSTOM_WIDGET_ACTION,
   normalizeCustomWidgetAction,
 } from '../lib/custom-widget-actions'
+import {
+  normalizeWorldBookSourceLink,
+  normalizeWorldBookSourceLinks,
+} from '../lib/book-text-schema'
+import {
+  DEFAULT_WORLD_PACK_ID,
+  buildWorldPackActivationReview as buildWorldPackActivationReviewPayload,
+  normalizeWorldPack,
+  normalizeWorldPackActivation,
+  normalizeWorldPacks,
+} from '../lib/world-pack-schema'
 import {
   PROFILE_TEMPLATE_SCOPES,
   cloneProfileTemplate,
@@ -138,6 +150,7 @@ const CORE_HOME_TILE_IDS = [
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
+  BOOK_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
@@ -644,10 +657,21 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
   return {
     globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
     knowledgePoints: normalizeKnowledgePointList(source.knowledgePoints),
+    worldBookSourceLinks: normalizeWorldBookSourceLinks(source.worldBookSourceLinks),
     profileTemplates: normalizeProfileTemplates(
       Array.isArray(source.profileTemplates) && source.profileTemplates.length > 0
         ? source.profileTemplates
         : createDefaultProfileTemplatePresets(),
+    ),
+    worldPacks: normalizeWorldPacks(source.worldPacks),
+    activeWorldPackId: typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
+      ? source.activeWorldPackId.trim()
+      : DEFAULT_WORLD_PACK_ID,
+    worldPackActivation: normalizeWorldPackActivation(
+      source.worldPackActivation,
+      typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
+        ? source.activeWorldPackId.trim()
+        : DEFAULT_WORLD_PACK_ID,
     ),
   }
 }
@@ -1229,6 +1253,10 @@ export const useSystemStore = defineStore('system', () => {
     avatarImage: normalizeImageSource({ imageSourceType: 'none' }, { alt: 'V' }),
     worldBook: DEFAULT_GLOBAL_WORLDVIEW,
     globalWorldview: DEFAULT_GLOBAL_WORLDVIEW,
+    worldBookSourceLinks: [],
+    worldPacks: normalizeWorldPacks([]),
+    activeWorldPackId: DEFAULT_WORLD_PACK_ID,
+    worldPackActivation: normalizeWorldPackActivation({}, DEFAULT_WORLD_PACK_ID),
     knowledgePoints: [],
     profileTemplates: createDefaultProfileTemplatePresets(),
   })
@@ -2151,6 +2179,168 @@ export const useSystemStore = defineStore('system', () => {
     if (index < 0) return false
     user.knowledgePoints.splice(index, 1)
     return true
+  }
+
+  const normalizeCurrentWorldBookSourceLinks = () => {
+    user.worldBookSourceLinks = normalizeWorldBookSourceLinks(user.worldBookSourceLinks)
+    return user.worldBookSourceLinks
+  }
+
+  const listWorldBookSourceLinks = () =>
+    normalizeWorldBookSourceLinks(user.worldBookSourceLinks).map((link) => ({
+      ...link,
+      sectionIds: Array.isArray(link.sectionIds) ? [...link.sectionIds] : [],
+    }))
+
+  const addWorldBookSourceLink = (input = {}) => {
+    const normalized = normalizeWorldBookSourceLink({
+      ...input,
+      createdAt: input.createdAt || Date.now(),
+      updatedAt: input.updatedAt || Date.now(),
+    }, user.worldBookSourceLinks.length)
+    if (!normalized.assetId) return null
+    const current = normalizeCurrentWorldBookSourceLinks()
+    const existingIndex = current.findIndex(
+      (link) =>
+        link.assetId === normalized.assetId &&
+        link.usage === normalized.usage &&
+        JSON.stringify(link.sectionIds || []) === JSON.stringify(normalized.sectionIds || []),
+    )
+    if (existingIndex >= 0) {
+      const next = {
+        ...current[existingIndex],
+        ...normalized,
+        id: current[existingIndex].id,
+        createdAt: current[existingIndex].createdAt,
+        updatedAt: Date.now(),
+      }
+      user.worldBookSourceLinks.splice(existingIndex, 1, next)
+      normalizeCurrentWorldBookSourceLinks()
+      return { ...next, sectionIds: [...next.sectionIds] }
+    }
+    user.worldBookSourceLinks.push(normalized)
+    normalizeCurrentWorldBookSourceLinks()
+    return { ...normalized, sectionIds: [...normalized.sectionIds] }
+  }
+
+  const updateWorldBookSourceLink = (linkId, patch = {}) => {
+    const id = typeof linkId === 'string' ? linkId.trim() : ''
+    if (!id) return null
+    const current = normalizeCurrentWorldBookSourceLinks()
+    const index = current.findIndex((link) => link.id === id)
+    if (index < 0) return null
+    const next = normalizeWorldBookSourceLink({
+      ...current[index],
+      ...patch,
+      id,
+      createdAt: current[index].createdAt,
+      updatedAt: Date.now(),
+    }, index)
+    if (!next.assetId) return null
+    user.worldBookSourceLinks.splice(index, 1, next)
+    normalizeCurrentWorldBookSourceLinks()
+    return { ...next, sectionIds: [...next.sectionIds] }
+  }
+
+  const removeWorldBookSourceLink = (linkId) => {
+    const id = typeof linkId === 'string' ? linkId.trim() : ''
+    if (!id) return false
+    const before = user.worldBookSourceLinks.length
+    user.worldBookSourceLinks = normalizeCurrentWorldBookSourceLinks().filter((link) => link.id !== id)
+    return user.worldBookSourceLinks.length !== before
+  }
+
+  const normalizeCurrentWorldPacks = () => {
+    user.worldPacks = normalizeWorldPacks(user.worldPacks)
+    if (!user.worldPacks.some((pack) => pack.id === user.activeWorldPackId)) {
+      user.activeWorldPackId = DEFAULT_WORLD_PACK_ID
+    }
+    user.worldPackActivation = normalizeWorldPackActivation(user.worldPackActivation, user.activeWorldPackId)
+    return user.worldPacks
+  }
+
+  const listWorldPacks = () =>
+    normalizeWorldPacks(user.worldPacks).map((pack) => ({
+      ...pack,
+      knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
+      profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
+      bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
+      appBindings: Array.isArray(pack.appBindings) ? pack.appBindings.map((binding) => ({ ...binding })) : [],
+      serviceAccountTemplates: Array.isArray(pack.serviceAccountTemplates)
+        ? pack.serviceAccountTemplates.map((template) => ({ ...template }))
+        : [],
+      terminology: pack.terminology && typeof pack.terminology === 'object' ? { ...pack.terminology } : {},
+    }))
+
+  const getWorldPackById = (packId = '') => {
+    const id = typeof packId === 'string' && packId.trim() ? packId.trim() : DEFAULT_WORLD_PACK_ID
+    return listWorldPacks().find((pack) => pack.id === id) || listWorldPacks()[0] || null
+  }
+
+  const getActiveWorldPack = () => getWorldPackById(user.activeWorldPackId || DEFAULT_WORLD_PACK_ID)
+
+  const buildWorldPackActivationReview = (packId = '') => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return null
+    return buildWorldPackActivationReviewPayload({
+      pack,
+      knowledgePoints: listKnowledgePoints({ enabledOnly: false }),
+      profileTemplates: listProfileTemplates(),
+      bookSourceLinks: listWorldBookSourceLinks(),
+    })
+  }
+
+  const activateWorldPack = (packId = '') => {
+    const review = buildWorldPackActivationReview(packId)
+    if (!review || review.blocked) {
+      return { ok: false, reason: 'blocked', review }
+    }
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'not_found', review: null }
+    user.activeWorldPackId = pack.id
+    user.worldPackActivation = normalizeWorldPackActivation({
+      activePackId: pack.id,
+      state: 'active',
+      reviewedAt: Date.now(),
+      activatedAt: Date.now(),
+      reviewSnapshot: {
+        packId: review.packId,
+        summary: { ...review.summary },
+        effectRows: review.effectRows.map((row) => ({ ...row })),
+      },
+    }, pack.id)
+    user.worldPacks = normalizeWorldPacks(
+      user.worldPacks.map((item) => ({
+        ...item,
+        state: item.id === pack.id ? 'active' : 'available',
+      })),
+    )
+    return { ok: true, pack: getActiveWorldPack(), review }
+  }
+
+  const upsertWorldPack = (packInput = {}) => {
+    const normalized = normalizeWorldPack({
+      ...packInput,
+      updatedAt: Date.now(),
+    }, user.worldPacks.length)
+    const current = normalizeCurrentWorldPacks()
+    const index = current.findIndex((pack) => pack.id === normalized.id)
+    if (index >= 0) {
+      current.splice(index, 1, {
+        ...current[index],
+        ...normalized,
+        createdAt: current[index].createdAt,
+        updatedAt: Date.now(),
+      })
+    } else {
+      current.push({
+        ...normalized,
+        createdAt: normalized.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      })
+    }
+    user.worldPacks = normalizeWorldPacks(current)
+    return getWorldPackById(normalized.id)
   }
 
   const listProfileTemplates = () => normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate)
@@ -3150,6 +3340,10 @@ export const useSystemStore = defineStore('system', () => {
     )
     user.globalWorldview = normalizedWorldKernel.globalWorldview
     user.worldBook = normalizedWorldKernel.globalWorldview
+    user.worldBookSourceLinks = normalizedWorldKernel.worldBookSourceLinks
+    user.worldPacks = normalizedWorldKernel.worldPacks
+    user.activeWorldPackId = normalizedWorldKernel.activeWorldPackId
+    user.worldPackActivation = normalizedWorldKernel.worldPackActivation
     user.knowledgePoints = normalizedWorldKernel.knowledgePoints
     user.profileTemplates = normalizedWorldKernel.profileTemplates
     if (typeof user.chatStatus !== 'string') {
@@ -3360,6 +3554,25 @@ export const useSystemStore = defineStore('system', () => {
           ...user,
           worldBook: user.globalWorldview,
           globalWorldview: user.globalWorldview,
+          worldBookSourceLinks: normalizeWorldBookSourceLinks(user.worldBookSourceLinks).map((link) => ({
+            ...link,
+            sectionIds: Array.isArray(link.sectionIds) ? [...link.sectionIds] : [],
+          })),
+          worldPacks: normalizeWorldPacks(user.worldPacks).map((pack) => ({
+            ...pack,
+            knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
+            profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
+            bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
+            appBindings: Array.isArray(pack.appBindings)
+              ? pack.appBindings.map((binding) => ({ ...binding }))
+              : [],
+            serviceAccountTemplates: Array.isArray(pack.serviceAccountTemplates)
+              ? pack.serviceAccountTemplates.map((template) => ({ ...template }))
+              : [],
+            terminology: pack.terminology && typeof pack.terminology === 'object' ? { ...pack.terminology } : {},
+          })),
+          activeWorldPackId: user.activeWorldPackId || DEFAULT_WORLD_PACK_ID,
+          worldPackActivation: normalizeWorldPackActivation(user.worldPackActivation, user.activeWorldPackId),
           knowledgePoints: Array.isArray(user.knowledgePoints)
             ? user.knowledgePoints.map((item) => ({
                 ...item,
@@ -3467,6 +3680,16 @@ export const useSystemStore = defineStore('system', () => {
     upsertKnowledgePoint,
     setKnowledgePointEnabled,
     removeKnowledgePoint,
+    listWorldBookSourceLinks,
+    addWorldBookSourceLink,
+    updateWorldBookSourceLink,
+    removeWorldBookSourceLink,
+    listWorldPacks,
+    getWorldPackById,
+    getActiveWorldPack,
+    buildWorldPackActivationReview,
+    activateWorldPack,
+    upsertWorldPack,
     listProfileTemplates,
     listProfileTemplatePresets,
     listWorldProfileTemplates,

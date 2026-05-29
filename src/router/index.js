@@ -18,6 +18,7 @@ const CalendarView = () => import('../views/CalendarView.vue')
 const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
 const WorldBookView = () => import('../views/WorldBookView.vue')
+const BookView = () => import('../views/BookView.vue')
 const StockView = () => import('../views/StockView.vue')
 const ShoppingView = () => import('../views/ShoppingView.vue')
 const FoodDeliveryView = () => import('../views/FoodDeliveryView.vue')
@@ -49,6 +50,7 @@ const router = createRouter({
     { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },
     { path: '/worldbook', component: WorldBookView },
+    { path: '/book', component: BookView },
     { path: '/profile', component: UserProfileView },
     { path: '/stock', component: StockView },
     { path: '/shopping', component: ShoppingView },

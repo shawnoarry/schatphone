@@ -18,6 +18,7 @@ What is already landed:
 6. Chat prompt context now orders primary worldview rules before current role profile values, visible user self-profile values, relationship runtime context, and supplemental role-bound knowledge points.
 7. service notifications store source module/id references, optional source event id, status, amount, service label, and route actions while avoiding copied business state.
 8. Chat prompt assembly and the thread WorldBook summary now consume the same `world-interface` context, so enabled/disabled/missing role-bound knowledge counts match what is sent to AI.
+9. active World Pack service-account templates can now be generated into Chat Directory after user confirmation, with origin metadata (`worldPackId`, `worldServiceTemplateId`, `worldAppBindingId`) and duplicate prevention.
 
 Still incomplete or risky:
 
@@ -25,12 +26,14 @@ Still incomplete or risky:
 2. legacy Chat-side relationship compatibility fields can still cause semantic drift if displayed carelessly;
 3. service-account behavior is now coherent for Shopping/logistics/Food Delivery but still needs future visual polish and notification-style copy tuning.
 4. self-profile visibility remains a V1 familiar/public gate until relationship-stage visibility mapping is designed.
+5. World Pack generated accounts currently create Chat Directory entries only; concrete app-archetype behavior and automatic push schedules remain future work.
 
 ## 2. Recommended Next Slice
 
 1. Continue shrinking semantic drift in Chat Directory displays and binding flows.
 2. Keep extracting low-risk Chat or Chat Directory UI pieces only when behavior can stay stable.
 3. Later visual work can polish the service-notification card language and layout without changing ownership.
+4. If continuing World Pack work, connect generated accounts to the first concrete app-archetype behavior without making Chat own source-module records.
 
 ## 3. Do Not Do
 

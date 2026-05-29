@@ -8,6 +8,8 @@ Current 4.2 reminder: Wallet order-support facts may preserve Shopping/Food line
 
 Current 4.4 note: Shopping, Logistics, and Food Delivery can push Chat service-account notifications into existing Chat Directory service accounts. These messages carry source references and route actions; source modules still own orders, logistics state, Wallet records, and route context.
 
+Current World Pack note: `survival_city` can open Shopping as `补给站` through the first `marketplace -> Shopping` app-binding V1. This changes entry wording, world context, and the default Daily Fresh / Grocery filter only; Shopping still owns products, cart, checkout, orders, logistics review, Wallet suggestions, and Assets suggestions.
+
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`

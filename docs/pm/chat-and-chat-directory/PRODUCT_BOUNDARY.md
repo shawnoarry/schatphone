@@ -70,6 +70,8 @@ Service-account messages may store:
 
 Service-account messages must not store the authoritative order, logistics, Wallet, route, or fulfillment state. The owning module remains responsible for business records.
 
+World Pack service-account templates may create Chat Directory entries only after user confirmation. Those generated entries may store origin metadata such as `worldPackId`, `worldServiceTemplateId`, and `worldAppBindingId`, but the generated entry is still owned by Chat Directory and must not become a role profile or source-module record owner.
+
 ## 4. Product Boundaries To Protect
 
 1. deleting or unbinding in Chat Directory must not be confused with deleting the global role archive

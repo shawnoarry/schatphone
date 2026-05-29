@@ -103,17 +103,18 @@ PM meaning:
 
 - WorldBook can store global worldview and knowledge points.
 - Knowledge points can be searched, filtered, tagged, edited, enabled/disabled, and linked to context.
-- WorldBook now opens with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell inside Settings.
+- WorldBook now opens with an active-world overview and a usable `Current World Pack / 当前设定包` activation panel inside Settings.
 - Calendar, Chat, Map, and event runtime can read WorldBook context.
 - Chat prompt context and the Chat thread WorldBook summary now share the same `world-interface` result, so user-visible injection state matches the context sent to AI.
-- A review-ready Book text-library direction now separates long-form source text from activation: `Book` should store reusable worldbook documents, knowledge notes, rules, glossary text, and reference notes, while `Settings -> WorldBook` chooses which sources become active.
-- A new review-ready design proposes a reusable World Pack / App Archetype / Service Account Template system so world-specific apps and user-created service accounts can be assembled from templates instead of hand-coded one by one.
+- Book text-library V1 now separates long-form source text from activation: `Book` stores reusable worldbook documents, knowledge notes, rules, glossary text, and reference notes, while `Settings -> WorldBook` can choose whole documents or selected sections as active world context, preview changed-source diffs, and accept a newer source version after review.
+- World Pack V1 now persists built-in/user world packs, supports activation review, keeps one active pack per save, exposes active-pack app/service-template metadata through `world-interface`, and can generate active-pack service-account templates into Chat Directory after user confirmation.
+- The reusable World Pack / App Archetype / Service Account Template direction is now partially implemented for service-account entry generation and the first concrete app-binding behavior: `survival_city` can open Shopping as `补给站`, show active world context, and apply a safe Daily Fresh / Grocery filter.
 - Current product direction is the older, lower-complexity entry model: WorldBook stays under Settings/contextual links, and World Pack selection/activation should appear inside the full WorldBook management page.
 
 PM meaning:
 
 - WorldBook is becoming the shared world-context layer;
-- Book is the proposed long-text editing and storage workspace, not a novel reader, public file manager, or world-store shell;
+- Book is the long-text editing and storage workspace, not a novel reader, public file manager, or world-store shell;
 - World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source;
 - World Pack activation should feel like choosing the current world configuration, not like shopping in a separate storefront;
 - data entry should still stay distributed instead of forcing everything into one control console.
@@ -143,6 +144,7 @@ PM meaning:
 ### Shopping / Logistics
 
 - Shopping has its own Home entry planning and product/store/order concepts.
+- Shopping can now consume the active World Pack's marketplace app binding as context only: `补给站` changes the entry label, explanation, and default filter, while Shopping still owns catalog, cart, checkout, orders, logistics review, and downstream suggestions.
 - Orders can persist logistics/status events.
 - Shopping checkout can push order notifications into matching Shopping service accounts.
 - Logistics events can push tracking notifications into matching Logistics service accounts.
@@ -228,13 +230,12 @@ PM meaning:
 
 ### P2: Expand World-Aware Gameplay Carefully
 
-1. User-test the V1 WorldBook active overview, current-pack shell, knowledge editing, and Chat context injection loop.
-2. Implement the Book text-library V1 before making WorldBook heavier, so long worldbooks and reusable notes are stored and edited outside Settings.
-3. Link Book source assets into WorldBook activation through references, not copied raw long text.
-4. Add real World Pack storage plus activation review after the V1 scope rule is confirmed.
-5. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
-6. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
-7. Add more adapters through the shared event engine.
+1. User-test the Book import/export -> WorldBook source activation -> changed-source diff review -> World Pack activation -> Chat/runtime context loop on phone-sized devices.
+2. User-test the WorldBook -> `补给站` -> Shopping filter path on phone-sized devices.
+3. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
+4. Broaden user-approved service/subscription account generation beyond the current active-pack service-account V1.
+5. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+6. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
 
@@ -251,7 +252,7 @@ PM meaning:
 - Whether World Hub unlock conditions should be world-dependent from the beginning.
 - Which world packs should be prioritized first.
 - Whether the World Pack / App Archetype / Service Account Template system should use one active world per save in V1 or a narrower per-profile/per-thread world scope.
-- Which first app archetype should be promoted after service-account notifications: marketplace/auction, reservation, transit, subscription, or publication feed.
+- Which next app archetype should be promoted after the current `marketplace -> Shopping` V1: auction, reservation, transit, subscription, dispatch, or publication feed.
 - Whether true closed-page background events are worth backend complexity.
 - Whether Wallet should support editable fictional funds soon or remain downstream first.
 
@@ -259,7 +260,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan now has a V1 baseline: `Settings -> WorldBook` shows active world state and the `Current World Pack` shell, while `world-interface` anchors Chat and runtime world-context reading. The next world-aware slice should be `Book` as a text library for long worldbooks and reusable notes, then WorldBook source-link activation. The wider world-pack/app-archetype/service-template design should stay guarded until scope, examples, and activation review are confirmed.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan is now trial-ready: `Settings -> WorldBook` shows active world state and the `Current World Pack` activation panel, while `world-interface` anchors Chat, runtime world-context reading, active Book source links, and active World Pack metadata. Book V1 is now the text library for long worldbooks and reusable notes, with import/export, section activation, changed-source warning, diff review, and reviewed refresh flows ready for phone-sized user testing. Active-pack service-account templates can now be user-confirmed into Chat Directory. The first concrete app-archetype V1 is also trial-ready: `survival_city` opens Shopping as `补给站` and can apply a safe Daily Fresh / Grocery filter without moving Shopping records into World Pack.
 
 Why:
 
@@ -269,12 +270,13 @@ Why:
 - Calendar relationship review detail now exposes lineage and duplicate-growth status without forcing that audit language into default Contacts/World Hub summaries;
 - World Hub now supports filtered event-log and relationship-fact review with selected-detail explanations, while still deferring broad value, funds, unlock, and freeform override controls.
 - Shopping/logistics/Food Delivery now push Chat service-notification messages without transferring order, wallet, or route ownership.
+- World Pack Shopping context now changes entry semantics and filters without transferring catalog, cart, checkout, order, Wallet, Assets, Calendar, or Chat ownership.
 
 Fallback same-size task:
 
 - add another read-only World Hub explanation slice only if PM/QA finds a concrete review gap;
 - polish service-notification visual language only if product review asks for it; the functional 4.4 baseline is complete.
-- turn the world-pack design into an implementation plan only after confirming first pack examples and first archetype target, because it is a multi-slice architecture lane rather than a small polish task.
+- expand the world-pack design only after phone-sized testing confirms the current Book/WorldBook/World Pack/Shopping V1 path is clear, because the remaining archetypes are a multi-slice architecture lane rather than a small polish task.
 - use `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md` and `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md` when another machine takes over the Book/WorldBook source-library work.
 
 ## 7. Workflow And Skill Reading Path

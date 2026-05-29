@@ -829,6 +829,9 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
     shoppingServiceKey: normalizeShoppingServiceKey(rawContact?.shoppingServiceKey),
     logisticsServiceKey: normalizeLogisticsServiceKey(rawContact?.logisticsServiceKey),
     foodDeliveryServiceKey: normalizeFoodDeliveryServiceKey(rawContact?.foodDeliveryServiceKey),
+    worldPackId: normalizeSingleLineText(rawContact?.worldPackId, 120),
+    worldServiceTemplateId: normalizeSingleLineText(rawContact?.worldServiceTemplateId, 120),
+    worldAppBindingId: normalizeSingleLineText(rawContact?.worldAppBindingId, 120),
     preferredImageAssetId: sanitizeAssetId(rawContact?.preferredImageAssetId),
     relationshipLevel,
     relationshipNote: typeof rawContact?.relationshipNote === 'string' ? rawContact.relationshipNote : '',
@@ -2258,6 +2261,35 @@ export const useChatStore = defineStore('chat', () => {
     return nextContact
   }
 
+  const findWorldServiceTemplateContact = (worldPackId = '', worldServiceTemplateId = '') => {
+    const packId = normalizeSingleLineText(worldPackId, 120)
+    const templateId = normalizeSingleLineText(worldServiceTemplateId, 120)
+    if (!packId || !templateId) return null
+    return contacts.find((contact) => {
+      if (contact.kind !== 'service' && contact.kind !== 'official') return false
+      return contact.worldPackId === packId && contact.worldServiceTemplateId === templateId
+    }) || null
+  }
+
+  const createWorldServiceTemplateContact = (payload = {}) => {
+    const worldPackId = normalizeSingleLineText(payload?.worldPackId, 120)
+    const worldServiceTemplateId = normalizeSingleLineText(payload?.worldServiceTemplateId, 120)
+    if (!worldPackId || !worldServiceTemplateId) return null
+
+    const existing = findWorldServiceTemplateContact(worldPackId, worldServiceTemplateId)
+    if (existing) {
+      ensureConversationForContact(existing.id)
+      return existing
+    }
+
+    return addContact({
+      ...payload,
+      kind: payload.kind === 'official' ? 'official' : 'service',
+      worldPackId,
+      worldServiceTemplateId,
+    })
+  }
+
   const updateContact = (contactId, updates = {}) => {
     const target = getRawContactById(contactId)
     if (!target || !updates || typeof updates !== 'object') return false
@@ -2293,6 +2325,15 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'foodDeliveryServiceKey')) {
       target.foodDeliveryServiceKey = normalizeFoodDeliveryServiceKey(updates.foodDeliveryServiceKey)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'worldPackId')) {
+      target.worldPackId = normalizeSingleLineText(updates.worldPackId, 120)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'worldServiceTemplateId')) {
+      target.worldServiceTemplateId = normalizeSingleLineText(updates.worldServiceTemplateId, 120)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'worldAppBindingId')) {
+      target.worldAppBindingId = normalizeSingleLineText(updates.worldAppBindingId, 120)
     }
     if (typeof updates.isMain === 'boolean') {
       target.isMain = updates.isMain
@@ -2700,6 +2741,8 @@ export const useChatStore = defineStore('chat', () => {
     updateRoleBindingMeta,
     unbindRoleContact,
     addContact,
+    findWorldServiceTemplateContact,
+    createWorldServiceTemplateContact,
     updateContact,
     removeContact,
     saveNow,

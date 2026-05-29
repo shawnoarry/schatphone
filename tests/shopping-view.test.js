@@ -14,6 +14,7 @@ import {
   SHOPPING_ORDER_EVENT_TYPE,
   useShoppingStore,
 } from '../src/stores/shopping'
+import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
@@ -258,6 +259,48 @@ describe('ShoppingView', () => {
     expect(wrapper.find('[data-testid="shopping-category-digital"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-luxury"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-fashion"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('shows active World Pack Shopping context without mutating commerce state', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    const systemStore = useSystemStore()
+    store.resetForTesting()
+    systemStore.settings.system.language = 'zh-CN'
+    systemStore.activateWorldPack('survival_city')
+
+    await router.push('/shopping?worldPack=survival_city&worldApp=survival_supply_board')
+    await router.isReady()
+
+    const wrapper = mount(ShoppingView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('h1').text()).toBe('补给站')
+    const banner = wrapper.get('[data-testid="shopping-world-app-context"]')
+    expect(banner.text()).toContain('补给站')
+    expect(banner.text()).toContain('灾后生存都市')
+    expect(banner.get('[data-testid="shopping-world-app-boundary"]').text()).toContain('Shopping 仍拥有商品')
+    expect(store.cartQuantity).toBe(0)
+    expect(store.orderCount).toBe(0)
+
+    await wrapper.get('[data-testid="shopping-world-app-apply-filter"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'survival_city',
+      worldApp: 'survival_supply_board',
+      service: 'daily_fresh',
+      category: 'grocery',
+    })
+    expect(wrapper.get('[data-testid="shopping-service-daily_fresh"]').classes()).toContain('border-amber-300')
+    expect(wrapper.get('[data-testid="shopping-category-grocery"]').classes()).toContain('border-orange-300')
+    expect(store.cartQuantity).toBe(0)
+    expect(store.orderCount).toBe(0)
+
     wrapper.unmount()
   })
 

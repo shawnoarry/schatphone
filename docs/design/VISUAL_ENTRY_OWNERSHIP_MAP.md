@@ -1,6 +1,6 @@
 # Visual Entry Ownership Map
 
-Updated: 2026-05-14
+Updated: 2026-05-29
 
 This document maps SchatPhone surfaces by **where the user enters from**, not only by route, file name, or data source.
 
@@ -53,6 +53,7 @@ These routes should feel like apps when opened as full-screen destinations.
 | --- | --- | --- | --- |
 | Chat icon / Dock Chat | `/chat`, `/chat/:id` | Installed App: Chat | Main conversation app; Kakao-like direction is allowed. |
 | Contacts icon / Dock Contacts | `/contacts` | Installed App: Contacts / Role Archive | Contacts and role-profile archive. It may feel native-utility-like, but should not become Settings. |
+| Book icon / App Store open action | `/book` | Installed App: Book | Text-library workspace for reusable worldbook and knowledge-source documents. |
 | Gallery icon / Dock Gallery | `/gallery` | Installed App: Gallery | Photo/asset hub app. |
 | Map icon | `/map` | Installed App: Map | Simulation/travel/exploration app. |
 | Calendar icon | `/calendar` | Installed App: Calendar | Schedule/reminder app. |
@@ -153,6 +154,7 @@ Settings may provide shortcuts into app or system destinations. The entry button
 | --- | --- | --- | --- |
 | Profile row | `/profile` | Native System | System identity. |
 | WorldBook row | `/worldbook` | Native System | World kernel management. |
+| WorldBook source row -> Open in Book | `/book?from=settings&asset=...` | Installed App: Book | Destination is the text library; return affordance should preserve the WorldBook/Settings context. |
 | Network row / diagnostics | `/network` | Native System | Provider/network system utility. |
 | Appearance row | `/appearance` | Native System | System visual customization. |
 | Chat contacts/settings shortcut | `/chat-contacts` | Installed App: Chat | Destination should not look like Settings just because it was launched from Settings. |

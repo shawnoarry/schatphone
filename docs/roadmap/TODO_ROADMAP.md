@@ -211,14 +211,14 @@ Primary references:
 
 ### 4.6 World Pack / App Archetype / Service Template System
 
-Status: `DECISION`
+Status: `PARTIAL_DONE`
 
 V1 WorldBook baseline landed:
 
-- `Settings -> WorldBook` now leads with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell;
-- `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, and runtime worldview fallback;
-- full World Pack storage, activation review, app archetypes, and service-account template generation remain guarded future work.
-- a review-ready Book text-library direction now separates long-form reusable text storage from WorldBook activation: `Book` stores source documents, while `Settings -> WorldBook` links and activates selected sources.
+- `Settings -> WorldBook` now leads with an active-world overview and a usable `Current World Pack / 当前设定包` activation panel;
+- `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback;
+- World Pack V1 storage and activation review are in place with one active pack per save; active-pack service-account templates can now be generated into Chat Directory after user confirmation; the first concrete app-binding V1 is live for `marketplace -> Shopping`, where `survival_city` opens Shopping as `补给站` with active world context and a safe Daily Fresh / Grocery filter.
+- Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place.
 
 Current product direction:
 
@@ -226,7 +226,7 @@ Current product direction:
 - `WorldBook` remains reachable from `Settings` and contextual links, not as a new default Home app;
 - `World Pack` activation belongs inside the full `WorldBook` management page as a `Current World Pack / 当前设定包` area;
 - do not build a standalone world-store, Steam-like shell, DLC storefront, or token economy for V1;
-- `Book` may exist as a separate text-library app because it owns source text editing, not world activation or storefront behavior;
+- `Book` exists as a separate text-library app because it owns source text editing, not world activation or storefront behavior;
 - keep `World Hub` and future `Cheats` in the hidden runtime-control lane, separate from WorldBook/World Pack authoring and activation.
 
 Why this may become a main lane:
@@ -237,13 +237,10 @@ Why this may become a main lane:
 
 Remaining task structure:
 
-1. keep the V1 WorldBook IA and shared world-interface seam stable during user testing;
-2. implement the Book text-library V1 so long worldbooks, knowledge notes, and reusable rule text are edited outside Settings;
-3. link Book assets into `Settings -> WorldBook` through source references instead of copied raw text;
-4. add world pack storage and activation-review semantics;
-5. define the app archetype registry and world app binding model;
-6. define service-account and subscription-account templates for user-created accounts;
-7. select the first archetype implementation target.
+1. run phone-device user testing on the Book import/export -> WorldBook source activation -> changed-source diff review -> World Pack activation -> Chat/runtime context loop;
+2. user-test the WorldBook -> `补给站` -> Shopping filter path on phone-sized devices;
+3. broaden service/subscription template generation beyond the current active-pack service-account V1;
+4. define and land the next concrete archetype target beyond the current Shopping marketplace V1.
 
 Current design reference:
 
@@ -251,13 +248,15 @@ Current design reference:
 - `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md`
 - `docs/superpowers/specs/2026-05-23-world-pack-app-archetype-service-template-design.md`
 - `docs/superpowers/specs/2026-05-29-worldbook-functional-ia-and-world-interface-design.md`
+- `docs/superpowers/specs/2026-05-29-world-pack-shopping-archetype-v1-design.md`
+- `docs/superpowers/plans/2026-05-29-world-pack-shopping-archetype-v1-plan.md`
 
 Decision note:
 
 - this is intentionally not implemented directly from conversation notes;
 - the V1 entry shell is now decided and implemented as a baseline: stay inside `Settings -> WorldBook`;
 - `Book` is a text-source library, not a replacement for WorldBook, Files, World Hub, or a world-store shell;
-- promote the wider 4.6 lane from `DECISION` only after PM confirms the Book V1 slice, V1 world scope rule, first pack examples, and first archetype target.
+- the wider 4.6 lane is now partially implemented, but still guarded: broaden only after phone-sized user testing confirms the Book/WorldBook/World Pack/Shopping path is understandable.
 
 ## 5. Deferred Or Guarded Directions
 

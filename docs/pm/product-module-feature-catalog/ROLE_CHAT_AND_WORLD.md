@@ -14,7 +14,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Chat Directory | `/chat-contacts` | Chat/context entry | Chat-side binding and service-account entry management |
 | Contacts | `/contacts` | Home app | global role archive and role-centered management |
 | WorldBook | `/worldbook` | Settings/context entry | worldview and reusable knowledge points |
-| Book | `/book` | planned Home/App Store app | reusable text-source library for worldbook documents and knowledge/reference notes |
+| Book | `/book` | recoverable Home/App Store app | reusable text-source library for worldbook documents and knowledge/reference notes |
 | World Hub | `/control-center` | optional hidden app | runtime review and narrow control |
 | Cheats | not frozen yet | future hidden surface | future stronger override lane |
 
@@ -78,23 +78,26 @@ What users mainly do here:
 
 - manage reusable world-context entries;
 - bind or reference knowledge context from several modules.
+- activate a World Pack and confirm generated service/official account entries for Chat Directory.
 
 Important boundary:
 
 - WorldBook supports context and continuity; it is not the main place where ordinary app records should be authored.
 - after the Book text-library slice, WorldBook should activate selected Book sources instead of becoming a long-form text warehouse.
+- World Pack can suggest and generate Chat Directory service-account entries after user confirmation, but source modules still own business records.
 
 ### Book
 
 What it is:
 
-- the planned reusable text-source library for long worldbooks, knowledge notes, rules, glossary material, and references.
+- the reusable text-source library for long worldbooks, knowledge notes, rules, glossary material, and references.
 
 What users mainly do here:
 
 - import or create `.txt`, `.md`, and structured worldbook export files;
 - edit reusable source documents in a guarded workspace;
 - organize text by type, category, tag, lock state, and active-source usage.
+- export single text assets and let WorldBook activate whole documents or selected sections.
 
 Important boundary:
 

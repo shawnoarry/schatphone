@@ -54,6 +54,8 @@ BUILT_IN_APP_ICON_META.app_control_center = {
   icon: 'fas fa-wand-magic-sparkles',
   accent: 'dark',
 }
+APP_ICON_LABELS.app_book = { zh: '文本库', en: 'Book', ko: 'Book' }
+BUILT_IN_APP_ICON_META.app_book = { icon: 'fas fa-book-open', accent: 'cool' }
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -71,6 +73,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_food_delivery',
   'app_assets',
   'app_control_center',
+  'app_book',
   'app_settings',
   'app_contacts',
   'app_store',

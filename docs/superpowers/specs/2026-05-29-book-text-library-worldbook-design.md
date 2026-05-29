@@ -2,7 +2,18 @@
 
 Updated: 2026-05-29
 
-Status: `REVIEW_READY`
+Status: `TRIAL_READY_V1`
+
+Implementation note, 2026-05-29:
+
+- Scheme B was selected for the current round: revise the plan/spec before coding.
+- Book V1 has landed: `/book`, `src/stores/book.js`, `src/views/BookView.vue`, Book schema helpers, and Book-specific tests now exist.
+- `Settings -> WorldBook` can link active Book source assets, and `src/lib/world-interface.js` resolves active Book source text before falling back to legacy worldview text.
+- The trial-ready pass adds browser download for single-asset export, a WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed reference-version refresh.
+- Settings backup/export/import now includes Book state and rolls it back with the other domain stores.
+- Validation for this slice passed: `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd test`, and `npm.cmd run test:e2e`.
+- World Pack V1 activation and user-approved service-account template generation have now landed; remaining future work is summary/retrieval beyond deterministic sections, subscription generation, and concrete app-archetype behavior.
+- New visible Chinese copy must be written as valid UTF-8. Do not copy mojibake from terminal output into UI files.
 
 ## 1. Decision Summary
 
@@ -428,43 +439,51 @@ Decision:
 
 ## 10. Implementation Slices
 
+### Slice 0: Plan Readiness Audit
+
+- Completed before implementation: confirmed the current repo had no Book route, store, view, or tests yet.
+- Confirm the existing WorldBook V1 baseline remains the active-world and `world-interface` foundation.
+- Confirm current test anchors before coding: `tests/app-store-ui.test.js`, `tests/home-layout-templates.test.js`, `tests/world-interface.test.js`, and `tests/settings-contacts-relationship-import-rollback.test.js`.
+- Kept code unchanged in the audit slice.
+
 ### Slice 1: Documentation And Registry Decision
 
 - Record Book/WorldBook/Files ownership.
 - Add Book to naming and roadmap docs.
-- Keep code unchanged until the implementation plan is reviewed.
+- Completed before the V1 implementation pass.
 
 ### Slice 2: Book Schema And Store
 
-- Add pure schema helpers.
-- Add `bookStore`.
-- Support seed text assets, create/edit/delete, lock/unlock, import/export, backup/restore.
+- Implemented pure schema helpers in `src/lib/book-text-schema.js`.
+- Added `bookStore` in `src/stores/book.js`.
+- Supports create/edit/delete, lock/unlock, import/export payloads, backup/restore, active-source protection, and version/fingerprint tracking.
 
 ### Slice 3: Book App Shell
 
-- Add `/book`.
-- Add `BookView`.
-- Add library list, detail read mode, guarded edit mode, and import controls.
-- Add App Store entry and Home tile support.
+- Added `/book`.
+- Added `BookView`.
+- Added library list, detail read mode, guarded edit mode, import controls, and export feedback.
+- Added App Store entry and Home tile recovery support.
 
 ### Slice 4: WorldBook Source Links
 
-- Add source-link state to WorldBook.
-- Add "Choose from Book" and "Open in Book".
-- Show active linked sources before editing controls.
-- Keep current global worldview fallback compatible.
+- Added source-link state to WorldBook-compatible user state.
+- Added V1 source picker, section selection, link/open/remove/toggle controls, and changed-source refresh for Book sources.
+- Shows linked sources before world-kernel editing controls.
+- Keeps current global worldview fallback compatible.
 
 ### Slice 5: World Interface Compilation
 
-- Update `world-interface` to resolve Book-linked sources.
+- Updated `world-interface` to resolve Book-linked sources.
 - Keep Chat prompt and thread summary aligned.
-- Exclude disabled, missing, or over-budget material from prompts.
+- Excludes disabled, missing, or over-budget material from prompts.
 
 ### Slice 6: Pack And Template Refinement
 
-- Let World Pack refer to Book assets and WorldBook source links.
-- Keep profile-template values owned by Contacts.
-- Keep pack activation inside WorldBook.
+- Future work:
+  - Let World Pack refer to Book assets and WorldBook source links.
+  - Keep profile-template values owned by Contacts.
+  - Keep pack activation inside WorldBook.
 
 ## 11. Non-Goals For V1
 
@@ -498,6 +517,7 @@ On another PC, start with this order:
 ```powershell
 npm.cmd install
 npm.cmd test -- tests/world-interface.test.js tests/worldbook-functional-ia.test.js
+npm.cmd test -- tests/home-layout-templates.test.js tests/app-store-ui.test.js
 npm.cmd run lint
 npm.cmd run build
 ```

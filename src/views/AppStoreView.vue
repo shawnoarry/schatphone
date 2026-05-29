@@ -5,7 +5,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import { buildRouteWithReturnSource, pushReturnTarget } from '../lib/navigation-return'
-import { APP_STORE_HOME_APP_ID, APP_STORE_ROUTE } from '../lib/planned-module-registry'
+import {
+  APP_STORE_HOME_APP_ID,
+  APP_STORE_ROUTE,
+  BOOK_HOME_APP_ID,
+  BOOK_ROUTE,
+} from '../lib/planned-module-registry'
 import { useSystemStore } from '../stores/system'
 
 const router = useRouter()
@@ -71,6 +76,16 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'System',
     descZh: '查看事件运行时、关系记忆与世界状态。',
     descEn: 'Review event runtime, relationship memory, and world state.',
+  },
+  {
+    id: BOOK_HOME_APP_ID,
+    route: BOOK_ROUTE,
+    labelZh: '文本库',
+    labelEn: 'Book',
+    categoryZh: '资料',
+    categoryEn: 'Archive',
+    descZh: '保存世界书、知识点和规则文本，再由世界书设置选择启用。',
+    descEn: 'Store worldbooks, knowledge notes, and rule text, then activate them from WorldBook settings.',
   },
   {
     id: 'app_chat',

@@ -13,8 +13,9 @@ What is already landed:
 1. package-level ownership docs now exist for the major product lanes;
 2. relationship/runtime semantics have already gone through one important cleanup pass;
 3. some low-risk component extraction and cleanup work has already started in the UI layer.
-4. `src/lib/world-interface.js` now centralizes active WorldBook/world-context reading for Chat, WorldBook overview, and runtime worldview fallback, reducing duplicated consumer logic before full World Pack storage exists.
-5. A review-ready Book text-library design now defines the next ownership split: Book owns long reusable text sources, WorldBook owns activation/source links, and Files remains hidden/internal.
+4. `src/lib/world-interface.js` now centralizes active WorldBook/world-context reading for Chat, WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback.
+5. Book text-library V1 now implements the ownership split: Book owns long reusable text sources, WorldBook owns activation/source links, and Files remains hidden/internal.
+6. World Pack V1 now has persisted built-in packs, one active pack per save, activation review, World Interface exposure, and user-approved service-account template generation into Chat Directory.
 
 Still incomplete:
 
@@ -22,14 +23,14 @@ Still incomplete:
 2. some large files still need careful decomposition;
 3. historical docs and encoding debt still need targeted cleanup;
 4. stale code and compatibility layers still need periodic audit.
-5. Book text-library storage, route registration, backup integration, and WorldBook source-link implementation are not yet coded.
+5. The next WorldBook expansion should focus on concrete app-archetype behavior and broader subscription generation, not new ownership surfaces.
 
 ## 2. Recommended Next Slice
 
 1. Continue one-owner-per-concept cleanup where docs and code still drift.
 2. Keep extracting low-risk pieces from oversized files while preserving tests and migrations.
 3. Audit stale docs, unused code, and compatibility layers in small safe batches.
-4. If continuing WorldBook work, start from `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md` and `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md`.
+4. If continuing WorldBook/Book work, start from the implemented V1 baseline in `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md` and `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md`.
 
 ## 3. Do Not Do
 

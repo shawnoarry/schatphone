@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useBookStore } from '../stores/book'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
@@ -14,7 +15,16 @@ import {
   normalizeWorldBookUsageFilter,
 } from '../lib/worldbook-navigation'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
+import { BOOK_ROUTE } from '../lib/planned-module-registry'
+import {
+  WORLDBOOK_SOURCE_USAGES,
+  buildWorldBookSourceSnapshot,
+  diffWorldBookSourceText,
+  resolveWorldBookSourceText,
+} from '../lib/book-text-schema'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
+import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
+import { buildWorldServiceTemplateGenerationRows } from '../lib/world-pack-service-accounts'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 
@@ -22,6 +32,7 @@ const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const bookStore = useBookStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { user } = storeToRefs(systemStore)
@@ -44,7 +55,129 @@ const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplat
 const worldOverview = computed(() =>
   resolveActiveWorldOverview({
     systemStore,
+    bookStore,
   }),
+)
+const worldPackCandidates = computed(() => systemStore.listWorldPacks())
+const selectedWorldPackId = ref('')
+const selectedWorldPackReview = computed(() =>
+  systemStore.buildWorldPackActivationReview(
+    selectedWorldPackId.value || worldOverview.value.activePack?.id || 'default_world',
+  ),
+)
+const activeWorldPackServiceTemplateRows = computed(() =>
+  buildWorldServiceTemplateGenerationRows({
+    pack: worldOverview.value.activePack,
+    findExistingContact: (packId, templateId) =>
+      chatStore.findWorldServiceTemplateContact(packId, templateId),
+  }),
+)
+const activeWorldPackAppBindingRows = computed(() =>
+  buildWorldAppBindingRows({
+    pack: worldOverview.value.activePack,
+  }),
+)
+const linkedBookSources = computed(() =>
+  systemStore.listWorldBookSourceLinks().map((link) => {
+    const asset = bookStore.findAssetById(link.assetId)
+    const currentSourceText = resolveWorldBookSourceText(asset, link.sectionIds)
+    const snapshotText = typeof link.sourceSnapshotText === 'string' ? link.sourceSnapshotText : ''
+    const snapshotIsPartial = Number(link.sourceSnapshotCharCount || 0) > snapshotText.length
+    return {
+      ...link,
+      asset,
+      title: link.titleOverride || asset?.title || link.assetId,
+      missing: !asset,
+      currentSourceText,
+      snapshotIsPartial,
+      changed:
+        Boolean(asset) &&
+        Boolean(link.sourceFingerprint) &&
+        Boolean(asset.contentFingerprint) &&
+        link.sourceFingerprint !== asset.contentFingerprint &&
+        (snapshotIsPartial || snapshotText !== currentSourceText),
+      usageLabel: getSourceUsageLabel(link.usage),
+      sectionSummary: describeBookLinkSections(asset, link.sectionIds),
+    }
+  }),
+)
+const availableBookSourceAssets = computed(() => {
+  const linkedIds = new Set(linkedBookSources.value.map((link) => link.assetId))
+  return bookStore.worldbookSourceAssets.filter((asset) => !linkedIds.has(asset.id))
+})
+const sourcePickerAssets = computed(() => bookStore.worldbookSourceAssets)
+const sourcePicker = reactive({
+  open: false,
+  assetId: '',
+  usage: 'base_worldview',
+  mode: 'whole',
+  sectionIds: [],
+})
+const sourceReview = reactive({
+  linkId: '',
+})
+const sourceUsageLabels = {
+  base_worldview: { zh: '基础世界观', en: 'Base worldview' },
+  knowledge_source: { zh: '知识来源', en: 'Knowledge source' },
+  pack_source: { zh: '设定包来源', en: 'Pack source' },
+  profile_template_reference: { zh: '档案模板参考', en: 'Profile template reference' },
+}
+const getSourceUsageCopy = (usage = '') =>
+  sourceUsageLabels[usage] || { zh: usage || '来源', en: usage || 'Source' }
+
+const sourceUsageOptions = computed(() =>
+  WORLDBOOK_SOURCE_USAGES.map((usage) => ({
+    id: usage,
+    label: t(getSourceUsageCopy(usage).zh, getSourceUsageCopy(usage).en),
+  })),
+)
+
+function getSourceUsageLabel(usage = '') {
+  const copy = getSourceUsageCopy(usage)
+  return t(copy.zh, copy.en)
+}
+
+function describeBookLinkSections(asset, sectionIds = []) {
+  const ids = Array.isArray(sectionIds) ? sectionIds.filter(Boolean) : []
+  if (ids.length === 0) return t('全文', 'Whole document')
+  const sections = Array.isArray(asset?.sections) ? asset.sections : []
+  const selectedTitles = sections
+    .filter((section) => ids.includes(section.id))
+    .map((section) => section.title)
+    .filter(Boolean)
+  if (selectedTitles.length === 0) {
+    return t(`${ids.length} 个章节`, `${ids.length} sections`)
+  }
+  return selectedTitles.slice(0, 3).join(' / ')
+}
+
+const buildSourceSnapshotForLink = (asset, sectionIds = []) =>
+  buildWorldBookSourceSnapshot(resolveWorldBookSourceText(asset, sectionIds))
+
+const sourcePickerAsset = computed(() =>
+  bookStore.findAssetById(sourcePicker.assetId) || sourcePickerAssets.value[0] || null,
+)
+const sourcePickerSections = computed(() =>
+  Array.isArray(sourcePickerAsset.value?.sections) ? sourcePickerAsset.value.sections : [],
+)
+const sourcePickerSelectedSections = computed(() =>
+  sourcePicker.mode === 'sections'
+    ? sourcePickerSections.value.filter((section) => sourcePicker.sectionIds.includes(section.id))
+    : [],
+)
+const reviewingBookSource = computed(() =>
+  linkedBookSources.value.find((link) => link.id === sourceReview.linkId) || null,
+)
+const sourceReviewDiff = computed(() => {
+  const link = reviewingBookSource.value
+  if (!link) return diffWorldBookSourceText('', '')
+  return diffWorldBookSourceText(link.sourceSnapshotText || '', link.currentSourceText || '')
+})
+const sourceReviewSummary = computed(() =>
+  t(
+    `新增 ${sourceReviewDiff.value.addedCount} 段，移除 ${sourceReviewDiff.value.removedCount} 段，未变 ${sourceReviewDiff.value.unchangedCount} 段`,
+    `${sourceReviewDiff.value.addedCount} added, ${sourceReviewDiff.value.removedCount} removed, ${sourceReviewDiff.value.unchangedCount} unchanged`,
+  ),
 )
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
@@ -104,6 +237,252 @@ const pulseSaved = (message = '') => {
 const saveWorldBook = () => {
   systemStore.saveNow()
   pulseSaved(t('世界观已保存。', 'Worldview saved.'))
+}
+
+const selectWorldPack = (packId = '') => {
+  selectedWorldPackId.value = packId || worldOverview.value.activePack?.id || 'default_world'
+}
+
+const activateSelectedWorldPack = () => {
+  const result = systemStore.activateWorldPack(selectedWorldPackId.value)
+  if (!result?.ok) {
+    uiNotice.value = t('这个世界包还有缺失引用，处理后才能激活。', 'This pack has missing references. Fix them before activation.')
+    return
+  }
+  systemStore.saveNow()
+  pulseSaved(t('世界包已激活。', 'World pack activated.'))
+}
+
+const createWorldPackServiceTemplateContact = (templateId = '') => {
+  const row = activeWorldPackServiceTemplateRows.value.find((item) => item.id === templateId)
+  if (!row?.payload) {
+    uiNotice.value = t('这个服务号模板暂时不能生成，请先检查当前世界包。', 'This service template cannot be created yet. Check the active world pack first.')
+    return
+  }
+
+  const contact = chatStore.createWorldServiceTemplateContact(row.payload)
+  if (!contact) {
+    uiNotice.value = t('服务号生成失败，请稍后重试。', 'Service account creation failed. Please retry.')
+    return
+  }
+
+  chatStore.saveNow()
+  pulseSaved(
+    row.generated
+      ? t('这个服务号已经在 Chat Directory 中。', 'This service account already exists in Chat Directory.')
+      : t('服务号已生成到 Chat Directory。', 'Service account created in Chat Directory.'),
+  )
+}
+
+const openWorldPackServiceContact = (contactId = 0) => {
+  const numericId = Number(contactId)
+  if (!Number.isFinite(numericId) || numericId <= 0) return
+  router.push({
+    path: `/chat/${Math.floor(numericId)}`,
+    query: {
+      from: 'worldbook',
+      worldPack: worldOverview.value.activePack?.id || 'default_world',
+    },
+  })
+}
+
+const openWorldPackAppBinding = (bindingId = '') => {
+  const row = activeWorldPackAppBindingRows.value.find((item) => item.id === bindingId)
+  if (!row?.launchable) {
+    uiNotice.value = t('这个世界应用还没有可打开的模块路线。', 'This world app does not have a launch route yet.')
+    return
+  }
+  router.push({
+    path: row.route,
+    query: {
+      from: 'worldbook',
+      ...row.query,
+    },
+  })
+}
+
+const addFirstBookSource = () => {
+  if (availableBookSourceAssets.value.length > 0 || sourcePickerAssets.value.length > 0) {
+    openBookSourcePicker()
+    return
+  }
+  const asset = availableBookSourceAssets.value[0]
+  if (!asset) {
+    router.push({
+      path: BOOK_ROUTE,
+      query: {
+        from: 'settings',
+      },
+    })
+    return
+  }
+  const link = systemStore.addWorldBookSourceLink({
+    assetId: asset.id,
+    usage: 'base_worldview',
+    enabled: true,
+    priority: 80 + linkedBookSources.value.length,
+    sourceVersion: asset.version,
+    sourceFingerprint: asset.contentFingerprint,
+    ...buildSourceSnapshotForLink(asset),
+  })
+  if (link) {
+    bookStore.updateAsset(asset.id, { status: 'active_source' }, { force: true, preserveVersion: true })
+    systemStore.saveNow()
+    bookStore.saveNow()
+    pulseSaved(t('已连接文本库来源。', 'Book source linked.'))
+  }
+}
+
+const resetSourcePickerForAsset = (asset) => {
+  sourcePicker.assetId = asset?.id || ''
+  sourcePicker.usage = 'base_worldview'
+  sourcePicker.mode = 'whole'
+  sourcePicker.sectionIds = []
+}
+
+const openBookSourcePicker = () => {
+  const asset = availableBookSourceAssets.value[0] || sourcePickerAssets.value[0]
+  if (!asset) {
+    router.push({
+      path: BOOK_ROUTE,
+      query: {
+        from: 'settings',
+      },
+    })
+    return
+  }
+  resetSourcePickerForAsset(asset)
+  sourcePicker.open = true
+}
+
+const closeBookSourcePicker = () => {
+  sourcePicker.open = false
+}
+
+const toggleSourcePickerSection = (sectionId = '') => {
+  const id = String(sectionId || '').trim()
+  if (!id) return
+  if (sourcePicker.sectionIds.includes(id)) {
+    sourcePicker.sectionIds = sourcePicker.sectionIds.filter((item) => item !== id)
+    return
+  }
+  sourcePicker.sectionIds.push(id)
+}
+
+const selectAllSourcePickerSections = () => {
+  sourcePicker.mode = 'sections'
+  sourcePicker.sectionIds = sourcePickerSections.value.map((section) => section.id)
+}
+
+const clearSourcePickerSections = () => {
+  sourcePicker.sectionIds = []
+}
+
+const syncBookAssetSourceStatus = (assetId = '') => {
+  const asset = bookStore.findAssetById(assetId)
+  if (!asset || asset.status === 'archived') return
+  const hasActiveLink = systemStore
+    .listWorldBookSourceLinks()
+    .some((link) => link.assetId === asset.id && link.enabled !== false)
+  const nextStatus = hasActiveLink ? 'active_source' : 'draft'
+  if (asset.status !== nextStatus) {
+    bookStore.updateAsset(asset.id, { status: nextStatus }, { force: true, preserveVersion: true })
+  }
+}
+
+const linkPickedBookSource = () => {
+  const asset = sourcePickerAsset.value
+  if (!asset) return
+  const selectedSectionIds =
+    sourcePicker.mode === 'sections' ? sourcePickerSelectedSections.value.map((section) => section.id) : []
+  if (sourcePicker.mode === 'sections' && sourcePickerSections.value.length > 0 && selectedSectionIds.length === 0) {
+    uiNotice.value = t('请至少选择一个段落。', 'Select at least one section.')
+    return
+  }
+  const link = systemStore.addWorldBookSourceLink({
+    assetId: asset.id,
+    sectionIds: selectedSectionIds,
+    usage: sourcePicker.usage,
+    enabled: true,
+    priority: 80 + linkedBookSources.value.length,
+    sourceVersion: asset.version,
+    sourceFingerprint: asset.contentFingerprint,
+    ...buildSourceSnapshotForLink(asset, selectedSectionIds),
+  })
+  if (link) {
+    syncBookAssetSourceStatus(asset.id)
+    systemStore.saveNow()
+    bookStore.saveNow()
+    sourcePicker.open = false
+  }
+}
+
+const openBookSource = (assetId = '') => {
+  router.push({
+    path: BOOK_ROUTE,
+    query: {
+      from: 'settings',
+      asset: assetId,
+    },
+  })
+}
+
+const toggleBookSource = (link) => {
+  const next = systemStore.updateWorldBookSourceLink(link.id, {
+    enabled: link.enabled === false,
+  })
+  if (next) {
+    syncBookAssetSourceStatus(link.assetId)
+    bookStore.saveNow()
+    systemStore.saveNow()
+    pulseSaved(t('文本来源状态已更新。', 'Book source state updated.'))
+  }
+}
+
+const removeBookSource = (linkId) => {
+  const link = linkedBookSources.value.find((item) => item.id === linkId)
+  if (systemStore.removeWorldBookSourceLink(linkId)) {
+    if (sourceReview.linkId === linkId) sourceReview.linkId = ''
+    syncBookAssetSourceStatus(link?.assetId)
+    systemStore.saveNow()
+    bookStore.saveNow()
+    pulseSaved(t('已移除文本库来源。', 'Book source removed.'))
+  }
+}
+
+const openBookSourceReview = (link) => {
+  sourceReview.linkId = link?.id || ''
+}
+
+const closeBookSourceReview = () => {
+  sourceReview.linkId = ''
+}
+
+const refreshBookSourceLink = (link) => {
+  const asset = bookStore.findAssetById(link?.assetId)
+  if (!asset) {
+    uiNotice.value = t('找不到这个文本来源。', 'This text source is missing.')
+    return
+  }
+  const next = systemStore.updateWorldBookSourceLink(link.id, {
+    sourceVersion: asset.version,
+    sourceFingerprint: asset.contentFingerprint,
+    ...buildSourceSnapshotForLink(asset, link.sectionIds),
+    warning: '',
+  })
+  if (next) {
+    syncBookAssetSourceStatus(asset.id)
+    systemStore.saveNow()
+    bookStore.saveNow()
+    pulseSaved(t('已刷新文本来源版本。', 'Book source version refreshed.'))
+  }
+}
+
+const acceptReviewedBookSource = () => {
+  const link = reviewingBookSource.value
+  if (!link) return
+  refreshBookSourceLink(link)
+  closeBookSourceReview()
 }
 
 const copyProfileTemplatePreset = (presetId) => {
@@ -577,6 +956,28 @@ const removeKnowledgePoint = async (point) => {
 }
 
 watch(
+  () => worldOverview.value.activePack?.id,
+  (packId) => {
+    if (!selectedWorldPackId.value || selectedWorldPackId.value === packId) {
+      selectedWorldPackId.value = packId || 'default_world'
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => sourcePicker.assetId,
+  () => {
+    if (!sourcePicker.open) return
+    const validIds = new Set(sourcePickerSections.value.map((section) => section.id))
+    sourcePicker.sectionIds = sourcePicker.sectionIds.filter((id) => validIds.has(id))
+    if (sourcePickerSections.value.length === 0) {
+      sourcePicker.mode = 'whole'
+    }
+  },
+)
+
+watch(
   () => route.fullPath,
   () => {
     syncWorldBookDeepLink()
@@ -604,7 +1005,207 @@ onBeforeUnmount(() => {
         :saved="saved"
       />
 
-      <CurrentWorldPackPanel :overview="worldOverview" />
+      <CurrentWorldPackPanel
+        :overview="worldOverview"
+        :packs="worldPackCandidates"
+        :selected-pack-id="selectedWorldPackId || worldOverview.activePack?.id"
+        :activation-review="selectedWorldPackReview"
+        :app-binding-rows="activeWorldPackAppBindingRows"
+        :service-template-rows="activeWorldPackServiceTemplateRows"
+        @select-pack="selectWorldPack"
+        @activate-pack="activateSelectedWorldPack"
+        @open-app-binding="openWorldPackAppBinding"
+        @create-service-template="createWorldPackServiceTemplateContact"
+        @open-service-contact="openWorldPackServiceContact"
+      />
+
+      <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-book-sources">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {{ t('文本库来源', 'Book sources') }}
+            </p>
+            <h2 class="text-lg font-semibold">
+              {{ t('由世界书选择启用哪些长文本', 'WorldBook chooses active long text') }}
+            </h2>
+            <p class="text-sm text-gray-500">
+              {{
+                t(
+                  '文本库负责保存和编辑长文档；这里仅保存引用，控制哪些内容进入之后的世界上下文。',
+                  'Book stores and edits long documents; this panel only keeps references for future world context.',
+                )
+              }}
+            </p>
+          </div>
+          <button type="button" class="worldbook-secondary-action" data-testid="worldbook-book-source-add" @click="addFirstBookSource">
+            {{ sourcePickerAssets.length > 0 ? t('连接文本', 'Link source') : t('打开文本库', 'Open Book') }}
+          </button>
+        </div>
+
+        <div v-if="sourcePicker.open" class="worldbook-source-picker" data-testid="worldbook-source-picker">
+          <div class="worldbook-picker-grid">
+            <label>
+              <span>{{ t('文本来源', 'Text source') }}</span>
+              <select v-model="sourcePicker.assetId" data-testid="worldbook-source-picker-asset">
+                <option v-for="asset in sourcePickerAssets" :key="asset.id" :value="asset.id">
+                  {{ asset.title }}
+                </option>
+              </select>
+            </label>
+            <label>
+              <span>{{ t('启用用途', 'Usage') }}</span>
+              <select v-model="sourcePicker.usage" data-testid="worldbook-source-picker-usage">
+                <option v-for="option in sourceUsageOptions" :key="option.id" :value="option.id">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <div class="worldbook-picker-mode" data-testid="worldbook-source-picker-mode">
+            <label>
+              <input v-model="sourcePicker.mode" type="radio" value="whole" />
+              <span>{{ t('启用全文', 'Use whole document') }}</span>
+            </label>
+            <label :class="{ 'is-disabled': sourcePickerSections.length === 0 }">
+              <input v-model="sourcePicker.mode" type="radio" value="sections" :disabled="sourcePickerSections.length === 0" />
+              <span>{{ t('只启用选中段落', 'Use selected sections') }}</span>
+            </label>
+          </div>
+
+          <div v-if="sourcePicker.mode === 'sections'" class="worldbook-section-picker" data-testid="worldbook-source-picker-sections">
+            <div class="worldbook-section-toolbar">
+              <span>{{ sourcePickerSelectedSections.length }} / {{ sourcePickerSections.length }} {{ t('段落', 'sections') }}</span>
+              <div>
+                <button type="button" class="worldbook-inline-action" @click="selectAllSourcePickerSections" data-testid="worldbook-source-picker-select-all">
+                  {{ t('全选', 'All') }}
+                </button>
+                <button type="button" class="worldbook-inline-action" @click="clearSourcePickerSections" data-testid="worldbook-source-picker-clear">
+                  {{ t('清空', 'Clear') }}
+                </button>
+              </div>
+            </div>
+            <label
+              v-for="section in sourcePickerSections"
+              :key="section.id"
+              class="worldbook-section-choice"
+              :data-testid="`worldbook-source-picker-section-${section.id}`"
+            >
+              <input
+                type="checkbox"
+                :checked="sourcePicker.sectionIds.includes(section.id)"
+                @change="toggleSourcePickerSection(section.id)"
+              />
+              <span>
+                <strong>{{ section.title }}</strong>
+                <small>{{ section.charCount }} {{ t('字', 'chars') }}</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="worldbook-picker-actions">
+            <button type="button" class="worldbook-secondary-action" @click="closeBookSourcePicker" data-testid="worldbook-source-picker-cancel">
+              {{ t('取消', 'Cancel') }}
+            </button>
+            <button type="button" class="worldbook-primary-action" @click="linkPickedBookSource" data-testid="worldbook-source-picker-confirm">
+              {{ t('启用来源', 'Use source') }}
+            </button>
+          </div>
+        </div>
+
+        <p v-if="linkedBookSources.length === 0" class="text-sm text-gray-500" data-testid="worldbook-book-source-empty">
+          {{ t('还没有连接文本库来源，当前仍使用下方全局世界观文本。', 'No Book sources are linked yet. The global worldview below remains active.') }}
+        </p>
+
+        <div v-for="link in linkedBookSources" :key="link.id" class="worldbook-template-row" :data-testid="`worldbook-book-source-${link.id}`">
+          <div class="min-w-0">
+            <p class="font-medium truncate">{{ link.title }}</p>
+            <p class="text-xs text-gray-500">
+              {{ link.usageLabel }} · {{ link.sectionSummary }} · {{ link.enabled === false ? t('停用', 'Disabled') : t('启用', 'Enabled') }}
+              <span v-if="link.missing" class="text-red-600"> · {{ t('来源缺失', 'Missing source') }}</span>
+              <span v-else-if="link.changed" class="text-amber-700"> · {{ t('已修改待复核', 'Changed') }}</span>
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button v-if="link.changed && !link.missing" type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-review-${link.id}`" @click="openBookSourceReview(link)">
+              {{ t('查看变更', 'Review changes') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-toggle-${link.id}`" @click="toggleBookSource(link)">
+              {{ link.enabled === false ? t('启用', 'Enable') : t('停用', 'Disable') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-open-${link.id}`" @click="openBookSource(link.assetId)">
+              {{ t('打开', 'Open') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-remove-${link.id}`" @click="removeBookSource(link.id)">
+              {{ t('移除', 'Remove') }}
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="reviewingBookSource"
+          class="worldbook-source-review"
+          data-testid="worldbook-book-source-review-panel"
+        >
+          <div class="worldbook-source-review-head">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {{ t('来源变更预览', 'Source change preview') }}
+              </p>
+              <h3>{{ reviewingBookSource.title }}</h3>
+              <p>
+                {{
+                  sourceReviewDiff.hasPreviousSnapshot
+                    ? t('下面只展示这条来源会影响世界上下文的文本变化。', 'Only changes that affect this active source are shown below.')
+                    : t('这条旧引用没有可对比的旧版快照，可以把当前内容设为新的复核基线。', 'This older link has no previous snapshot. You can accept the current text as the new review baseline.')
+                }}
+              </p>
+            </div>
+            <button type="button" class="worldbook-inline-action" data-testid="worldbook-book-source-review-close" @click="closeBookSourceReview">
+              {{ t('关闭', 'Close') }}
+            </button>
+          </div>
+
+          <div class="worldbook-source-review-summary" data-testid="worldbook-book-source-review-summary">
+            <span>{{ sourceReviewSummary }}</span>
+            <span v-if="reviewingBookSource.snapshotIsPartial || sourceReviewDiff.truncated">
+              {{ t('长文本仅展示前段预览，接受新版会记录新的基线。', 'Long text is previewed partially; accepting stores the new baseline.') }}
+            </span>
+          </div>
+
+          <div class="worldbook-source-diff-list">
+            <p
+              v-for="(entry, index) in sourceReviewDiff.entries"
+              :key="`${entry.type}-${index}`"
+              class="worldbook-source-diff-row"
+              :class="`is-${entry.type}`"
+              :data-testid="`worldbook-source-diff-${entry.type}`"
+            >
+              <span class="worldbook-source-diff-mark">
+                {{ entry.type === 'added' ? '+' : entry.type === 'removed' ? '-' : '' }}
+              </span>
+              <span>{{ entry.text }}</span>
+            </p>
+            <p v-if="sourceReviewDiff.entries.length === 0" class="worldbook-source-diff-empty">
+              {{ t('当前启用内容没有文字变化。', 'The active text has no content changes.') }}
+            </p>
+          </div>
+
+          <div class="worldbook-picker-actions">
+            <button type="button" class="worldbook-secondary-action" @click="openBookSource(reviewingBookSource.assetId)">
+              {{ t('打开原文', 'Open source') }}
+            </button>
+            <button
+              type="button"
+              class="worldbook-primary-action"
+              data-testid="worldbook-book-source-review-accept"
+              @click="acceptReviewedBookSource"
+            >
+              {{ t('接受新版', 'Accept new version') }}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div class="rounded-2xl bg-white border border-gray-200 p-4" data-testid="worldbook-world-kernel">
         <p class="text-sm font-semibold">{{ t('全局世界观（必选）', 'Global worldview (required)') }}</p>
@@ -992,6 +1593,217 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.worldbook-source-picker {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-surface-muted);
+}
+
+.worldbook-picker-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.worldbook-picker-grid label,
+.worldbook-picker-mode label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.worldbook-picker-grid select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 10px;
+}
+
+.worldbook-picker-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.worldbook-picker-mode label {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 10px;
+  background: var(--system-control-bg);
+}
+
+.worldbook-picker-mode .is-disabled {
+  opacity: 0.55;
+}
+
+.worldbook-section-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.worldbook-section-toolbar,
+.worldbook-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.worldbook-section-toolbar {
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.worldbook-section-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 10px;
+  background: var(--system-control-bg);
+}
+
+.worldbook-section-choice span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.worldbook-section-choice strong {
+  color: var(--system-text);
+  font-size: 13px;
+}
+
+.worldbook-section-choice small {
+  color: var(--system-text-soft);
+  font-size: 11px;
+}
+
+.worldbook-source-review {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.78);
+}
+
+.worldbook-source-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worldbook-source-review-head h3 {
+  margin: 2px 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--system-text);
+}
+
+.worldbook-source-review-head p:not(.text-xs) {
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.worldbook-source-review-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.worldbook-source-diff-list {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.worldbook-source-diff-row,
+.worldbook-source-diff-empty {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  color: var(--system-text);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.worldbook-source-diff-row.is-added {
+  border-color: rgba(16, 185, 129, 0.22);
+  background: rgba(236, 253, 245, 0.86);
+}
+
+.worldbook-source-diff-row.is-removed {
+  border-color: rgba(248, 113, 113, 0.24);
+  background: rgba(254, 242, 242, 0.86);
+  color: #7f1d1d;
+}
+
+.worldbook-source-diff-row.is-unchanged {
+  color: var(--system-text-muted);
+}
+
+.worldbook-source-diff-mark {
+  color: inherit;
+  font-weight: 900;
+}
+
+.worldbook-source-diff-empty {
+  display: block;
+  color: var(--system-text-muted);
+}
+
+.worldbook-primary-action,
+.worldbook-inline-action {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.worldbook-primary-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--system-text-inverse);
+  background: var(--system-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.worldbook-inline-action {
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--system-accent);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .worldbook-secondary-action {
   flex-shrink: 0;
   border: 1px solid rgba(99, 102, 241, 0.28);
@@ -1121,5 +1933,24 @@ onBeforeUnmount(() => {
 
 .worldbook-scroll [data-testid='knowledge-point-card']:active {
   transform: scale(0.992);
+}
+
+@media (max-width: 640px) {
+  .worldbook-template-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .worldbook-source-review-head {
+    flex-direction: column;
+  }
+
+  .worldbook-source-review-head .worldbook-inline-action {
+    width: 100%;
+  }
+
+  .worldbook-picker-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

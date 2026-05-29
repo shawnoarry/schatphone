@@ -10,6 +10,8 @@ export const CONTROL_CENTER_HOME_APP_ID = 'app_control_center'
 export const CONTROL_CENTER_ROUTE = '/control-center'
 export const APP_STORE_HOME_APP_ID = 'app_store'
 export const APP_STORE_ROUTE = '/app-store'
+export const BOOK_HOME_APP_ID = 'app_book'
+export const BOOK_ROUTE = '/book'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 > **Candidate pool only / 仅候选池**
 >
@@ -32,7 +32,8 @@ Current product reality:
 3. Map / Reminders / Calendar / push is a meaningful cross-module loop;
 4. Gallery is a real asset center;
 5. runtime and World Hub exist as narrow, optional layers;
-6. several support modules are real MVPs rather than pure placeholders.
+6. several support modules are real MVPs rather than pure placeholders;
+7. Book now exists as a trial-ready V1 text-source library for WorldBook activation.
 
 Main product risk now:
 
@@ -68,7 +69,8 @@ Priority legend:
 | Contacts | real role archive and relationship-management lane | full role-detail IA still needs polish | destructive flows and relationship truth are semantically sensitive | finish Contacts V2 detail IA and memory presentation | P1 |
 | Gallery | real shared media center and cross-module asset source | still balancing album feel and asset-management feel | forcing it into high-friction relationship-memory authoring too early | keep it asset/atmosphere-first | P0.5 |
 | Appearance | strong MVP for wallpaper, theme, and icon presets | broader visual identity work is still parked | accidentally reopening the global visual rebuild | revisit only in explicit visual slices | P2 |
-| WorldBook | real shared world-context layer used by several modules | readability matters more than new feature count | turning it into a universal control console | pause feature sprawl and protect clarity | P1 |
+| WorldBook | real shared world-context layer with Book source links, World Pack activation, and user-approved service-template generation | readability matters more than new feature count | turning it into a universal control console | extract panels before the next major behavior slice | P1 |
+| Book | trial-ready text-source library with WorldBook source links | visual diff review is still basic | becoming Files, a reader app, or an activation console | phone-test source activation, then harden diff review | P1 |
 | Map | strong simulation-first baseline with trip, route, familiarity, and area-feedback loops | still product-rich and easy to overload | re-absorbing reminder or memory ownership | keep Map as travel/context owner, not reminder or relationship truth owner | P1 |
 | Calendar | real schedule/date app with confirmed events and push hooks | fuller event-management polish can still improve | slipping back into raw cue inbox behavior | keep it confirmed schedule/date-first | P1 |
 | Reminders | real cross-module cue and follow-up surface | longer-term task/objective presentation is still light | being collapsed back into Calendar or being mistaken for World Hub | keep raw cues and follow-up meaning here | P1 |

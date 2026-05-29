@@ -686,6 +686,45 @@ describe('chat store model', () => {
     expect(store.contacts.some((item) => item.id === created.id)).toBe(false)
   })
 
+  test('creates World Pack service template contacts idempotently', () => {
+    const store = useChatStore()
+
+    const first = store.createWorldServiceTemplateContact({
+      name: '补给调度员',
+      kind: 'service',
+      role: 'Service',
+      serviceTemplate: '补给调度员',
+      shoppingServiceKey: 'daily_fresh',
+      worldPackId: 'survival_city',
+      worldServiceTemplateId: 'survival_supply_dispatch',
+      worldAppBindingId: 'survival_supply_board',
+    })
+    const second = store.createWorldServiceTemplateContact({
+      name: '补给调度员 Duplicate',
+      kind: 'service',
+      role: 'Service',
+      serviceTemplate: '补给调度员',
+      shoppingServiceKey: 'daily_fresh',
+      worldPackId: 'survival_city',
+      worldServiceTemplateId: 'survival_supply_dispatch',
+      worldAppBindingId: 'survival_supply_board',
+    })
+
+    expect(first).toBeTruthy()
+    expect(second?.id).toBe(first?.id)
+    expect(store.findWorldServiceTemplateContact('survival_city', 'survival_supply_dispatch')).toMatchObject({
+      id: first.id,
+      kind: 'service',
+      shoppingServiceKey: 'daily_fresh',
+      worldPackId: 'survival_city',
+      worldServiceTemplateId: 'survival_supply_dispatch',
+      worldAppBindingId: 'survival_supply_board',
+    })
+    expect(
+      store.contacts.filter((contact) => contact.worldServiceTemplateId === 'survival_supply_dispatch'),
+    ).toHaveLength(1)
+  })
+
   test('appends deduped service notifications without role binding state', () => {
     const store = useChatStore()
     const service = store.addContact({

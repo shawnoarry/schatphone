@@ -8,8 +8,9 @@ Implementation note:
 
 - V1 keeps the entry at `Settings -> WorldBook`.
 - `src/lib/world-interface.js` now provides the shared world-context seam for active world overview, Chat prompt context, and runtime worldview fallback.
-- WorldBook now leads with active-world overview and a lightweight `Current World Pack / 当前设定包` panel.
-- Full World Pack storage, activation review, app archetypes, service-account templates, and standalone shortcuts remain future work.
+- World Pack V1 storage, activation review, built-in pack metadata, app-binding metadata, service-account template metadata, World Interface exposure, and user-approved Chat Directory service-account generation have landed.
+- Subscription generation beyond the current service-account V1, concrete app-archetype behavior, user-created pack editing, and standalone shortcuts remain future work.
+- WorldBook now leads with active-world overview and a usable `Current World Pack / 当前设定包` panel.
 - 2026-05-29 follow-up: `Book` is now proposed as a separate text-library app for long reusable source documents. This does not replace the B direction. WorldBook stays in Settings as the activation/governance surface; Book owns source-text storage and editing.
 
 ## 1. Goal
@@ -22,7 +23,7 @@ This design follows the selected B direction:
 - do not create a standalone world store, Steam-like shell, DLC storefront, token economy, or world-activation app for V1;
 - allow a separate `Book` text library if it remains a source-text workspace and does not become WorldBook activation, Files, World Hub, or a world storefront;
 - improve WorldBook information architecture and shared world-reading seams before large visual polish;
-- prepare a lightweight `Current World Pack / 当前设定包` area inside WorldBook without building the full World Pack system in one slice.
+- keep `Current World Pack / 当前设定包` inside WorldBook as the V1 activation surface.
 
 ## 2. Product Boundary
 
@@ -70,6 +71,7 @@ The current implementation already works as a V1 world source:
 - `systemStore.user.globalWorldview` is the base worldview text.
 - `systemStore.user.knowledgePoints` stores reusable knowledge points.
 - `systemStore.user.profileTemplates` stores global preset and world-specific role-profile templates.
+- `systemStore.user.worldPacks`, `activeWorldPackId`, and `worldPackActivation` store the current World Pack V1 activation state.
 - Chat reads global worldview and role-bound enabled knowledge points.
 - Chat thread settings expose a current WorldBook summary.
 - Map and Calendar find related knowledge points through `findRelevantKnowledgePoints`.
@@ -77,12 +79,11 @@ The current implementation already works as a V1 world source:
 
 The current gaps are functional, not only visual:
 
-- the WorldBook page mixes overview, authoring, filtering, deep-link scope, and template management in one long scroll;
-- no explicit active world state exists, so users cannot see what is currently in effect;
-- there is no World Pack storage or activation review seam;
-- consumers read world data through several different paths, which will be fragile once World Pack starts affecting defaults;
+- the WorldBook page mixes overview, source links, activation review, authoring, filtering, deep-link scope, and template management in one long scroll;
+- World Pack activation currently exposes metadata, review, and user-approved service-account entry generation, but does not yet apply concrete app-archetype behavior;
+- consumers should continue reading future world defaults through `world-interface` instead of new scattered raw-field access;
 - Chinese UI copy has visible corrupted text in several WorldBook-related surfaces and must be audited before visual polish is considered complete;
-- `WorldBookView.vue` is large enough that adding World Pack behavior directly would reduce locality.
+- `WorldBookView.vue` is large enough that the next major slice should improve locality before adding more interaction depth.
 
 ## 4. User Mental Model
 
@@ -271,7 +272,7 @@ Recommended fields:
 ```js
 user.worldPacks = []
 user.activeWorldPackId = ''
-user.worldPackActivationReviews = []
+user.worldPackActivation = {}
 ```
 
 World Pack record:
@@ -297,13 +298,14 @@ Activation review record:
 
 ```js
 {
-  id: 'review_pack_modern_default_1',
   packId: 'pack_modern_default',
+  state: 'active',
   reviewedAt: 0,
-  acceptedAt: 0,
+  activatedAt: 0,
   affectedKnowledgePointIds: [],
   affectedProfileTemplateIds: [],
   affectedAppBindings: [],
+  affectedServiceAccountTemplates: [],
   warnings: []
 }
 ```

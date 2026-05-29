@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vue 3, Pinia, Vue Router, Vitest, Vue Test Utils, existing CSS variables and local component styles.
 
-**Implementation Status:** `IMPLEMENTED_V1_BASELINE` on 2026-05-29. The completed slice added `src/lib/world-interface.js`, Chat prompt/thread-panel integration, WorldBook active overview, a lightweight Current World Pack shell, focused tests, and documentation sync. Full World Pack storage and activation review remain future work.
+**Implementation Status:** `IMPLEMENTED_V1_BASELINE` on 2026-05-29, followed by `WORLD_PACK_V1_ACTIVATION` and `WORLD_PACK_SERVICE_ACCOUNT_GENERATION_V1` on 2026-05-29. The completed slices added `src/lib/world-interface.js`, Chat prompt/thread-panel integration, WorldBook active overview, Book source activation, changed-source diff review, a usable Current World Pack selector/review/activation panel, user-approved service-account generation into Chat Directory, focused tests, e2e coverage, and documentation sync. User-created pack editing, subscription generation beyond the current service-account V1, and concrete app-archetype behavior remain future work.
 
 ---
 
@@ -35,7 +35,7 @@ Before editing code, read:
 - The user-facing entry stays inside `Settings`.
 - A future standalone shortcut/app may route to the same feature later, but this round must not create one.
 - WorldBook is the authoring surface for worldview, knowledge points, and world profile templates.
-- World Pack is only a lightweight "current/default world" shell in this round.
+- World Pack remains inside WorldBook for V1 and now supports one active pack, built-in pack selection, activation review, and active-pack metadata.
 - Chat, Map, Calendar, Contacts, and runtime should read world context through shared helpers rather than each creating separate ad hoc summaries.
 - Existing app records, chat history, role profile values, map records, and calendar records must not be rewritten when WorldBook is edited.
 - Visible Chinese copy must be readable; corrupted development-era mojibake must not remain in the touched WorldBook/Chat surfaces.
@@ -51,7 +51,7 @@ Create:
 - `src/components/worldbook/WorldBookOverview.vue`
   - Compact state-first overview for active world, worldview status, knowledge count, template count, and consumers.
 - `src/components/worldbook/CurrentWorldPackPanel.vue`
-  - Lightweight default-world shell; no full pack activation marketplace.
+  - Usable built-in pack selector, activation review, blockers, and confirm activation; no pack marketplace.
 - `tests/worldbook-functional-ia.test.js`
   - Focused UI tests for WorldBook overview, current pack shell, and readable zh-CN copy.
 
@@ -364,9 +364,10 @@ npm.cmd run build
 - [ ] Record that V1 keeps WorldBook in Settings.
 - [ ] Record that shared `world-interface` now anchors Chat context.
 - [ ] Record remaining future work:
-  - full World Pack storage;
   - optional standalone shortcut/app entry;
-  - pack activation review;
+  - subscription generation beyond the current service-account V1;
+  - concrete app-archetype behavior beyond metadata;
+  - user-created pack editing;
   - runtime-wide migration if Task 6 stays partial.
 
 ---

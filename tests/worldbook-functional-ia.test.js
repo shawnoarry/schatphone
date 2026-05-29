@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
+import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -14,6 +15,7 @@ const createTestRouter = () =>
     routes: [
       { path: '/worldbook', component: WorldBookView },
       { path: '/settings', component: DummyView },
+      { path: '/shopping', component: DummyView },
     ],
   })
 
@@ -104,6 +106,75 @@ describe('WorldBook functional IA', () => {
     expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(wrapper.get('[data-testid="worldbook-current-pack-name"]').text()).toContain('Default world')
+
+    wrapper.unmount()
+  })
+
+  test('reviews and activates a built-in world pack from WorldBook', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    systemStore.settings.system.language = 'zh-CN'
+
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-current-pack-select"]').setValue('survival_city')
+    await nextTick()
+
+    const review = wrapper.get('[data-testid="worldbook-current-pack-review"]')
+    expect(review.text()).toContain('灾后生存都市')
+    expect(review.text()).toContain('世界应用')
+    expect(review.text()).toContain('服务号模板')
+
+    await wrapper.get('[data-testid="worldbook-current-pack-activate"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.activeWorldPackId).toBe('survival_city')
+    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('灾后生存都市')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-state"]').text()).toContain('当前启用')
+
+    const appBindings = wrapper.get('[data-testid="worldbook-current-pack-app-bindings"]')
+    expect(appBindings.text()).toContain('补给站')
+    expect(appBindings.text()).toContain('Shopping')
+
+    await wrapper
+      .get('[data-testid="worldbook-current-pack-open-app-survival_supply_board"]')
+      .trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/shopping')
+    expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
+      from: 'worldbook',
+      worldPack: 'survival_city',
+      worldApp: 'survival_supply_board',
+    })
+
+    await wrapper.vm.$router.push('/worldbook')
+    await flushPromises()
+
+    const serviceTemplates = wrapper.get('[data-testid="worldbook-current-pack-service-templates"]')
+    expect(serviceTemplates.text()).toContain('补给调度员')
+    expect(serviceTemplates.text()).toContain('待确认')
+
+    await wrapper
+      .get('[data-testid="worldbook-current-pack-create-service-survival_supply_dispatch"]')
+      .trigger('click')
+    await nextTick()
+
+    const generated = chatStore.findWorldServiceTemplateContact(
+      'survival_city',
+      'survival_supply_dispatch',
+    )
+    expect(generated).toMatchObject({
+      kind: 'service',
+      name: '补给调度员',
+      shoppingServiceKey: 'daily_fresh',
+      worldPackId: 'survival_city',
+      worldServiceTemplateId: 'survival_supply_dispatch',
+      worldAppBindingId: 'survival_supply_board',
+    })
+    expect(
+      wrapper.get('[data-testid="worldbook-current-pack-open-service-survival_supply_dispatch"]').exists(),
+    ).toBe(true)
 
     wrapper.unmount()
   })

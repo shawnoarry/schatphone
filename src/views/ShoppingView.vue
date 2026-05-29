@@ -13,6 +13,10 @@ import {
   recordWalletOrderSupportRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import {
+  buildShoppingWorldAppFilterQuery,
+  resolveShoppingWorldAppContext,
+} from '../lib/world-pack-app-bindings'
+import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
   SHOPPING_PLATFORM_APP_ENTRIES,
@@ -29,12 +33,14 @@ import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { SHOPPING_ORDER_STATUS, useShoppingStore } from '../stores/shopping'
+import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
 
 const route = useRoute()
 const router = useRouter()
 const { t, languageBase } = useI18n()
 const shoppingStore = useShoppingStore()
+const systemStore = useSystemStore()
 const assetsStore = useAssetsStore()
 const calendarStore = useCalendarStore()
 const chatStore = useChatStore()
@@ -108,6 +114,26 @@ const openedFromChatShoppingOrder = computed(() =>
 const openedFromChatLogistics = computed(() =>
   sourceModule.value === 'chat' && sourceIntent.value === 'logistics',
 )
+const worldAppContext = computed(() =>
+  resolveShoppingWorldAppContext({
+    systemStore,
+    routeQuery: route.query,
+  }),
+)
+const worldAppFilterActive = computed(
+  () =>
+    Boolean(worldAppContext.value) &&
+    activeServiceKey.value === worldAppContext.value.serviceKey &&
+    activeCategoryKey.value === worldAppContext.value.categoryKey,
+)
+const worldAppDescription = computed(() => {
+  const context = worldAppContext.value
+  if (!context) return ''
+  if (languageBase.value === 'zh' && context.bindingId === 'survival_supply_board') {
+    return '把 Shopping 作为当前世界里的补给站入口使用，优先引导到生鲜与日用补给视角。'
+  }
+  return context.description || 'This entry brings the active World Pack app context into Shopping.'
+})
 const activeCategory = computed(() => findShoppingCategory(activeCategoryKey.value))
 const activeCategoryIsLogistics = computed(() => activeCategory.value?.key === 'logistics')
 const activeService = computed(() =>
@@ -117,11 +143,13 @@ const activePlatformApp = computed(() =>
   activeServiceKey.value ? findShoppingPlatformApp(activeServiceKey.value) : null,
 )
 const activeShoppingAppLabel = computed(() => {
+  if (worldAppContext.value?.bindingTitle) return worldAppContext.value.bindingTitle
   const platform = activePlatformApp.value
   if (!platform?.key) return t('Shopping', 'Shopping')
   return languageBase.value === 'zh' ? platform.zh : platform.en
 })
 const activeShoppingAppDesc = computed(() => {
+  if (worldAppContext.value) return worldAppDescription.value
   const platform = activePlatformApp.value
   if (!platform?.key) {
     return t(
@@ -360,6 +388,20 @@ const openService = (key = '') => {
       category: platform?.defaultCategory || activeCategory.value?.key || 'mall',
       ...(normalizedKey ? { service: normalizedKey } : {}),
     },
+  })
+}
+
+const applyWorldAppFilter = () => {
+  if (!worldAppContext.value) return
+  const stableQuery = { ...route.query }
+  delete stableQuery.productId
+  delete stableQuery.orderId
+  router.push({
+    path: '/shopping',
+    query: buildShoppingWorldAppFilterQuery({
+      context: worldAppContext.value,
+      currentQuery: stableQuery,
+    }),
   })
 }
 
@@ -752,6 +794,50 @@ onBeforeUnmount(() => {
             :class="openedFromChatGiftOrder ? 'border-rose-200 text-rose-600' : openedFromChatLogistics ? 'border-sky-200 text-sky-600' : openedFromChatShoppingOrder ? 'border-indigo-200 text-indigo-600' : 'border-orange-200 text-orange-600'"
           >
             {{ t('Back to Chat', 'Back to Chat') }}
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-if="worldAppContext"
+        class="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4"
+        data-testid="shopping-world-app-context"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase text-emerald-700">
+              {{ t('世界应用', 'World app') }}
+            </p>
+            <h2 class="mt-1 text-lg font-black text-gray-950" data-testid="shopping-world-app-title">
+              {{ worldAppContext.bindingTitle }}
+            </h2>
+            <p class="mt-1 text-[11px] font-semibold text-emerald-700">
+              {{ t('来自', 'From') }} {{ t(worldAppContext.packTitle, worldAppContext.packName) }}
+            </p>
+            <p class="mt-2 text-[11px] leading-5 text-gray-600">
+              {{ worldAppDescription }}
+            </p>
+            <p class="mt-2 text-[11px] leading-5 text-emerald-800" data-testid="shopping-world-app-boundary">
+              {{
+                t(
+                  'Shopping 仍拥有商品、购物车、结账、订单和下游建议；世界包只提供入口语义与筛选建议。',
+                  worldAppContext.boundaryCopy,
+                )
+              }}
+            </p>
+          </div>
+          <button
+            class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold"
+            :class="worldAppFilterActive ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-600 text-white'"
+            :disabled="worldAppFilterActive"
+            data-testid="shopping-world-app-apply-filter"
+            @click="applyWorldAppFilter"
+          >
+            {{
+              worldAppFilterActive
+                ? t('已在补给筛选', 'Supply filter active')
+                : t('应用补给筛选', 'Apply supply filter')
+            }}
           </button>
         </div>
       </section>

@@ -25,6 +25,8 @@ import {
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
+  BOOK_HOME_APP_ID,
+  BOOK_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import {
@@ -178,6 +180,7 @@ const widgetRegistry = {
   },
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
   app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
+  [BOOK_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-book-open', label: 'Book', accent: 'cool', route: BOOK_ROUTE },
   ...HOME_APP_REGISTRY_ADDITIONS,
   ...HOME_FOLDER_REGISTRY,
   [APP_STORE_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-store', label: 'App Store', accent: 'default', route: APP_STORE_ROUTE },
@@ -198,6 +201,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_contacts') return t('联系人', 'Contacts')
   if (tileId === 'app_settings') return t('设置', 'Settings')
   if (tileId === 'app_files') return t('文件', 'Files')
+  if (tileId === BOOK_HOME_APP_ID) return t('文本库', 'Book')
   if (tileId === 'app_shopping') return t('购物', 'Shopping')
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')

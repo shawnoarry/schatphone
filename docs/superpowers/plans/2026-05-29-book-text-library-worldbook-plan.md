@@ -8,7 +8,9 @@
 
 **Tech Stack:** Vue 3, Pinia, Vue Router, Vite, Vitest, Vue Test Utils, existing local persistence helpers.
 
-**Plan Status:** `REVIEW_READY`
+**Plan Status:** `TRIAL_READY_V1`
+
+**Implementation Note 2026-05-29:** Scheme B was selected first, then the V1 implementation landed in this round. `Book`, `/book`, `bookStore`, schema helpers, WorldBook source links, `world-interface` source resolution, and Settings backup/restore integration now exist. The trial-ready pass added single-asset export download, WorldBook source picking, section-level activation, changed-source warnings, visual diff review, and reviewed reference-version refresh. World Pack V1 activation and user-approved service-account template generation have also landed. Validation passed with `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd test`, and `npm.cmd run test:e2e`. Future work remains summary/retrieval beyond deterministic sections, subscription generation, and concrete app-archetype behavior.
 
 ---
 
@@ -28,6 +30,10 @@ Read these files before coding:
 10. `src/views/AppStoreView.vue`
 11. `src/views/SettingsView.vue`
 12. `src/router/index.js`
+13. `src/lib/planned-module-registry.js`
+14. `src/lib/app-icon-presentation.js`
+15. `tests/app-store-ui.test.js`
+16. `tests/settings-contacts-relationship-import-rollback.test.js`
 
 ## Product Decisions Locked For This Plan
 
@@ -39,6 +45,7 @@ Read these files before coding:
 - Full raw long documents must not be copied into Chat prompts, event logs, or app records.
 - WorldBook source links store references to Book assets and sections.
 - Existing `systemStore.user.globalWorldview`, `knowledgePoints`, and `profileTemplates` must remain compatible during migration.
+- All new visible Chinese copy must be valid UTF-8. If a terminal displays mojibake, reopen the file with explicit UTF-8 and use the human-readable copy in this plan/spec.
 
 ## File Map
 
@@ -84,8 +91,21 @@ Modify:
   - `docs/roadmap/TODO_ROADMAP.md`
   - `docs/pm/TODO_PM_STATUS_REPORT.md`
   - `docs/architecture/ARCHITECTURE.md`
+  - `docs/pm/MODULE_NAME_GLOSSARY.md`
+  - `docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md`
 
 ---
+
+## Current Repo Audit After V1 Implementation
+
+- `/book`, `src/stores/book.js`, `src/views/BookView.vue`, and the `tests/book-*` files now exist.
+- `src/lib/world-interface.js` resolves enabled Book source links when a `bookStore` is supplied, reports missing/changed/active source counts, and preserves the legacy `globalWorldview` / `worldBook` fallback when no active Book source exists.
+- `src/views/WorldBookView.vue` now provides a Book source picker with whole-document or selected-section activation and refreshes changed source references after review.
+- `tests/app-store-ui.test.js` remains the App Store test anchor; there is still no `tests/app-store-view.test.js`.
+- Book backup/rollback coverage was added through `tests/settings-contacts-relationship-import-rollback.test.js`.
+- `src/views/SettingsView.vue` includes Book in backup payloads, rollback snapshots, recognized backup sections, restore success, restore failure rollback, and `saveNow()` calls.
+- `src/lib/app-icon-presentation.js`, `src/lib/planned-module-registry.js`, Home, App Store, and router registration all include `app_book`.
+- Keep this plan as the implementation record. Do not implement future refinements from older conversation notes or archived TODO files.
 
 ## Task 1: Add Pure Book Text Schema Helpers
 
@@ -322,10 +342,10 @@ Copy:
 Run:
 
 ```powershell
-npm.cmd test -- tests/home-layout-templates.test.js tests/app-store-view.test.js
+npm.cmd test -- tests/home-layout-templates.test.js tests/app-store-ui.test.js
 ```
 
-If a listed test file does not exist, run the closest existing Home/App Store tests found with:
+If the App Store test is renamed later, find the closest existing Home/App Store tests with:
 
 ```powershell
 rg -n "AppStore|HomeView|home layout" tests
@@ -454,6 +474,7 @@ If active Book source links exist:
 
 - primary linked sections resolve first;
 - global worldview can still act as fallback or supplemental text depending on usage.
+- `resolveWorldContextForConsumer({ systemStore, chatStore, bookStore, ... })` and `resolveActiveWorldOverview({ systemStore, bookStore })` should accept an optional `bookStore` parameter. When omitted, existing callers must keep their current behavior.
 
 - [ ] **Step 5: Add tests**
 
@@ -477,7 +498,7 @@ Expected: PASS.
 **Files:**
 
 - Modify: `src/views/SettingsView.vue`
-- Update: `tests/settings-backup-restore.test.js` if present, otherwise add focused coverage in the closest backup test.
+- Update: `tests/settings-contacts-relationship-import-rollback.test.js`, or add a focused Book backup/restore test if extending that rollback test becomes too broad.
 
 - [ ] **Step 1: Import and instantiate `useBookStore`**
 
@@ -509,6 +530,8 @@ const bookOk = restoreOptionalBackupSection(bookStore, parsed.book)
 
 Include `bookOk` in the final restore success check.
 
+Also add `payload.book` to `hasRecognizableBackupSections`.
+
 - [ ] **Step 5: Save Book after restore**
 
 Call:
@@ -520,6 +543,8 @@ bookStore.saveNow()
 - [ ] **Step 6: Add/adjust tests**
 
 Backup export should contain `book`. Restore should restore Book assets and keep existing backups without `book` compatible.
+
+If extending `tests/settings-contacts-relationship-import-rollback.test.js`, add `useBookStore` to the imports, include `book: clone(useBookStore().createBackupSnapshot())` in `createValidModuleSnapshots`, and verify failed imports roll Book state back together with the existing module snapshots.
 
 ## Task 7: Validation
 
@@ -555,15 +580,14 @@ Expected:
 - Modify: `docs/pm/MODULE_NAME_GLOSSARY.md`
 - Modify: `docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md`
 
-- [ ] Update spec status to `IMPLEMENTED_V1_BASELINE` when the V1 slice lands.
-- [ ] Record Book as text-source owner.
-- [ ] Record WorldBook as activation owner.
-- [ ] Record `Files` remains hidden/internal.
-- [ ] Record remaining future work:
-  - section-level activation;
-  - source diff review;
+- [x] Update spec status to `TRIAL_READY_V1` when the V1 trial slice lands.
+- [x] Record Book as text-source owner.
+- [x] Record WorldBook as activation owner.
+- [x] Record `Files` remains hidden/internal.
+- [x] Record remaining future work:
+  - richer visual source diff review;
   - summary/retrieval beyond deterministic sections;
-  - deeper World Pack integration.
+  - subscription generation and concrete app-archetype behavior after World Pack V1 activation.
 
 ---
 
@@ -571,9 +595,10 @@ Expected:
 
 - `Book` exists as a preinstalled text-library app and is reachable through App Store/Home recovery or contextual links.
 - Users can create/import `.txt`, `.md`, and structured JSON text assets.
+- Users can export a single Book asset as `.worldbook.json`.
 - Long assets open in read mode by default.
 - Editing active or locked assets is explicit and guarded.
-- `Settings -> WorldBook` can link active Book sources.
+- `Settings -> WorldBook` can link active Book sources as whole documents or selected sections.
 - Chat/world context still resolves through `world-interface`.
 - Existing global worldview, knowledge points, and profile-template behavior remains compatible.
 - Backup/export/import includes Book data without breaking old backups.

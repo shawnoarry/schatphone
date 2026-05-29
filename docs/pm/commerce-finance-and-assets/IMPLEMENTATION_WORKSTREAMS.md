@@ -10,6 +10,7 @@ Updated: 2026-05-19
 - service-account messaging
 - Shopping order notifications into matching Shopping service accounts
 - logistics event notifications into matching Logistics service accounts
+- World Pack marketplace context for Shopping, currently limited to `补给站` entry semantics and Daily Fresh / Grocery filter routing
 
 ## 2. Workstream B: Food Delivery
 
@@ -40,3 +41,4 @@ Treat these as bugs:
 2. Assets starts acting like a ledger
 3. Logistics starts acting like a storefront
 4. Stock starts absorbing other financial domains without a clear decision
+5. World Pack app bindings mutate commerce records instead of staying at route/context/filter level
