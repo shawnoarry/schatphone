@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-05-27
+Updated: 2026-05-29
 
 This is the only live execution board for implementation order.
 
@@ -218,13 +218,15 @@ V1 WorldBook baseline landed:
 - `Settings -> WorldBook` now leads with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell;
 - `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, and runtime worldview fallback;
 - full World Pack storage, activation review, app archetypes, and service-account template generation remain guarded future work.
+- a review-ready Book text-library direction now separates long-form reusable text storage from WorldBook activation: `Book` stores source documents, while `Settings -> WorldBook` links and activates selected sources.
 
 Current product direction:
 
 - use the older, lower-complexity entry model first;
 - `WorldBook` remains reachable from `Settings` and contextual links, not as a new default Home app;
 - `World Pack` activation belongs inside the full `WorldBook` management page as a `Current World Pack / 当前设定包` area;
-- do not build a standalone world-store, Steam-like shell, DLC storefront, token economy, or separate World Library app for V1;
+- do not build a standalone world-store, Steam-like shell, DLC storefront, or token economy for V1;
+- `Book` may exist as a separate text-library app because it owns source text editing, not world activation or storefront behavior;
 - keep `World Hub` and future `Cheats` in the hidden runtime-control lane, separate from WorldBook/World Pack authoring and activation.
 
 Why this may become a main lane:
@@ -236,13 +238,17 @@ Why this may become a main lane:
 Remaining task structure:
 
 1. keep the V1 WorldBook IA and shared world-interface seam stable during user testing;
-2. add world pack storage and activation-review semantics;
-3. define the app archetype registry and world app binding model;
-4. define service-account and subscription-account templates for user-created accounts;
-5. select the first archetype implementation target.
+2. implement the Book text-library V1 so long worldbooks, knowledge notes, and reusable rule text are edited outside Settings;
+3. link Book assets into `Settings -> WorldBook` through source references instead of copied raw text;
+4. add world pack storage and activation-review semantics;
+5. define the app archetype registry and world app binding model;
+6. define service-account and subscription-account templates for user-created accounts;
+7. select the first archetype implementation target.
 
 Current design reference:
 
+- `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md`
+- `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md`
 - `docs/superpowers/specs/2026-05-23-world-pack-app-archetype-service-template-design.md`
 - `docs/superpowers/specs/2026-05-29-worldbook-functional-ia-and-world-interface-design.md`
 
@@ -250,7 +256,8 @@ Decision note:
 
 - this is intentionally not implemented directly from conversation notes;
 - the V1 entry shell is now decided and implemented as a baseline: stay inside `Settings -> WorldBook`;
-- promote it from `DECISION` only after PM confirms the V1 world scope rule, first pack examples, and first archetype target.
+- `Book` is a text-source library, not a replacement for WorldBook, Files, World Hub, or a world-store shell;
+- promote the wider 4.6 lane from `DECISION` only after PM confirms the Book V1 slice, V1 world scope rule, first pack examples, and first archetype target.
 
 ## 5. Deferred Or Guarded Directions
 

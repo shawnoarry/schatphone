@@ -10,6 +10,7 @@ Implementation note:
 - `src/lib/world-interface.js` now provides the shared world-context seam for active world overview, Chat prompt context, and runtime worldview fallback.
 - WorldBook now leads with active-world overview and a lightweight `Current World Pack / 当前设定包` panel.
 - Full World Pack storage, activation review, app archetypes, service-account templates, and standalone shortcuts remain future work.
+- 2026-05-29 follow-up: `Book` is now proposed as a separate text-library app for long reusable source documents. This does not replace the B direction. WorldBook stays in Settings as the activation/governance surface; Book owns source-text storage and editing.
 
 ## 1. Goal
 
@@ -18,7 +19,8 @@ Refine WorldBook from a long settings form into a functional world-kernel manage
 This design follows the selected B direction:
 
 - keep the old entry model: `Settings -> WorldBook`;
-- do not create a standalone world store, Steam-like shell, DLC storefront, token economy, or separate World Library app for V1;
+- do not create a standalone world store, Steam-like shell, DLC storefront, token economy, or world-activation app for V1;
+- allow a separate `Book` text library if it remains a source-text workspace and does not become WorldBook activation, Files, World Hub, or a world storefront;
 - improve WorldBook information architecture and shared world-reading seams before large visual polish;
 - prepare a lightweight `Current World Pack / 当前设定包` area inside WorldBook without building the full World Pack system in one slice.
 

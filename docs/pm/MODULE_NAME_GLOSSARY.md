@@ -1,6 +1,6 @@
 # SchatPhone Module Name Glossary
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 This file is the naming source for SchatPhone modules and runtime surfaces.
 
@@ -31,6 +31,7 @@ Use it when the team needs to confirm:
 | 会话通讯录 | Chat Directory | `/chat-contacts` | route only | Chat/context entry | Chat-side binding and service-account management |
 | 通讯录 | Contacts | `/contacts` | `app_contacts` | Home app | global role archive and role-centered management |
 | 世界书 | WorldBook | `/worldbook` | route only | Settings/context entry | worldview and reusable knowledge points |
+| 文本库 | Book | `/book` | `app_book` | planned Home/App Store app | reusable text library for worldbook documents, knowledge notes, rules, glossary, and references |
 | 个人资料 | Profile | `/profile` | route only | Settings entry | user profile and AI context preview |
 | 相册 | Photos | `/gallery` | `app_gallery` | Home app | shared media center |
 | 电话 | Phone | `/phone` | `app_phone` | Home app | calls and call history |
@@ -68,3 +69,4 @@ Use it when the team needs to confirm:
 - Use `相册 / Photos` as the user-facing gallery label even if some code still says `Gallery`.
 - Use `提醒事项 / Reminders` for cross-module cues rather than calling every cue queue `Calendar`.
 - Use `文件 / Files` only when discussing the hidden/internal storage component.
+- Use `文本库 / Book` for the proposed reusable text library. It is not the novel/fanfic reader, not Files, and not WorldBook activation itself.

@@ -106,12 +106,14 @@ PM meaning:
 - WorldBook now opens with an active-world overview and a lightweight `Current World Pack / 当前设定包` shell inside Settings.
 - Calendar, Chat, Map, and event runtime can read WorldBook context.
 - Chat prompt context and the Chat thread WorldBook summary now share the same `world-interface` result, so user-visible injection state matches the context sent to AI.
+- A review-ready Book text-library direction now separates long-form source text from activation: `Book` should store reusable worldbook documents, knowledge notes, rules, glossary text, and reference notes, while `Settings -> WorldBook` chooses which sources become active.
 - A new review-ready design proposes a reusable World Pack / App Archetype / Service Account Template system so world-specific apps and user-created service accounts can be assembled from templates instead of hand-coded one by one.
 - Current product direction is the older, lower-complexity entry model: WorldBook stays under Settings/contextual links, and World Pack selection/activation should appear inside the full WorldBook management page.
 
 PM meaning:
 
 - WorldBook is becoming the shared world-context layer;
+- Book is the proposed long-text editing and storage workspace, not a novel reader, public file manager, or world-store shell;
 - World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source;
 - World Pack activation should feel like choosing the current world configuration, not like shopping in a separate storefront;
 - data entry should still stay distributed instead of forcing everything into one control console.
@@ -227,10 +229,12 @@ PM meaning:
 ### P2: Expand World-Aware Gameplay Carefully
 
 1. User-test the V1 WorldBook active overview, current-pack shell, knowledge editing, and Chat context injection loop.
-2. Add real World Pack storage plus activation review after the V1 scope rule is confirmed.
-3. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
-4. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
-4. Add more adapters through the shared event engine.
+2. Implement the Book text-library V1 before making WorldBook heavier, so long worldbooks and reusable notes are stored and edited outside Settings.
+3. Link Book source assets into WorldBook activation through references, not copied raw long text.
+4. Add real World Pack storage plus activation review after the V1 scope rule is confirmed.
+5. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
+6. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+7. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
 
@@ -255,7 +259,7 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan now has a V1 baseline: `Settings -> WorldBook` shows active world state and the `Current World Pack` shell, while `world-interface` anchors Chat and runtime world-context reading. The remaining world-pack/app-archetype/service-template design should stay guarded until scope, examples, and activation review are confirmed.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan now has a V1 baseline: `Settings -> WorldBook` shows active world state and the `Current World Pack` shell, while `world-interface` anchors Chat and runtime world-context reading. The next world-aware slice should be `Book` as a text library for long worldbooks and reusable notes, then WorldBook source-link activation. The wider world-pack/app-archetype/service-template design should stay guarded until scope, examples, and activation review are confirmed.
 
 Why:
 
@@ -271,6 +275,7 @@ Fallback same-size task:
 - add another read-only World Hub explanation slice only if PM/QA finds a concrete review gap;
 - polish service-notification visual language only if product review asks for it; the functional 4.4 baseline is complete.
 - turn the world-pack design into an implementation plan only after confirming first pack examples and first archetype target, because it is a multi-slice architecture lane rather than a small polish task.
+- use `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md` and `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md` when another machine takes over the Book/WorldBook source-library work.
 
 ## 7. Workflow And Skill Reading Path
 

@@ -1,6 +1,6 @@
 # SchatPhone Product Module Feature Catalog
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 Purpose: this is the PM-facing module dictionary for SchatPhone.
 
@@ -35,7 +35,7 @@ Read the matching category doc below:
 1. `docs/pm/product-module-feature-catalog/SHELL_AND_SYSTEM.md`
    - Lock Screen, Home, Settings, Appearance, App Store, Network & API, Profile
 2. `docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md`
-   - Chat, Chat Directory, Contacts, WorldBook, World Hub, future Cheats lane
+   - Chat, Chat Directory, Contacts, WorldBook, Book, World Hub, future Cheats lane
 3. `docs/pm/product-module-feature-catalog/MAP_CALENDAR_AND_REMINDERS.md`
    - Map, Calendar, Reminders, Phone, location/date/callback handoff
 4. `docs/pm/product-module-feature-catalog/COMMERCE_ASSETS_AND_SUPPORT.md`
@@ -58,6 +58,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Chat Directory | `/chat-contacts` | Chat/context entry | `ROLE_CHAT_AND_WORLD.md` |
 | Contacts | `/contacts` | Home app | `ROLE_CHAT_AND_WORLD.md` |
 | WorldBook | `/worldbook` | Settings/context entry | `ROLE_CHAT_AND_WORLD.md` |
+| Book | `/book` | planned Home/App Store app | `ROLE_CHAT_AND_WORLD.md` |
 | World Hub | `/control-center` | optional hidden app | `ROLE_CHAT_AND_WORLD.md` |
 | Cheats | not frozen yet | future hidden surface | `ROLE_CHAT_AND_WORLD.md` |
 | Map | `/map` | Home app | `MAP_CALENDAR_AND_REMINDERS.md` |
@@ -82,8 +83,10 @@ Keep these distinctions clear while reading:
 3. `World Hub` is not `Cheats`.
 4. `Files` is not a normal public file-manager app.
 5. `Photos` is currently an asset center first, not the mainline relationship-memory intake surface.
+6. `Book` is the planned reusable text library; it is not WorldBook activation, not Files, and not a novel/fanfic reader.
 
 ## 5. Change Log
 
 1. 2026-05-18: long single-file module catalog continued accumulating current and historical notes.
 2. 2026-05-19: rewritten as a compact entry page and split into category docs for better PM, design, and QA handoff.
+3. 2026-05-29: added planned `Book` text-library module for WorldBook source documents and reusable knowledge/reference text.

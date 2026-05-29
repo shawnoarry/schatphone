@@ -19,6 +19,7 @@ Updated: 2026-05-19
 - persistence shape
 - backup/restore implications
 - compatibility and migration safety
+- upcoming Book text-library storage must stay separate from WorldBook activation and hidden Files indexing
 
 ## 4. Workstream D: Cleanup Debt
 
@@ -33,4 +34,3 @@ Treat these as bugs:
 1. one concept acquires several competing owners
 2. docs and code disagree on who owns a field
 3. refactors move fast but lose migration clarity
-

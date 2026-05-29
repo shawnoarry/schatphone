@@ -127,6 +127,7 @@ Current naming/runtime references:
 - `docs/pm/MODULE_NAME_GLOSSARY.md`
 - `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 - `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+- `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md`
 
 Execution reminder:
 

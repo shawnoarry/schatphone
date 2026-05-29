@@ -1,6 +1,6 @@
 # Role Chat And World Module Catalog
 
-Updated: 2026-05-19
+Updated: 2026-05-29
 
 Use this file for role-facing, chat-facing, worldview, and runtime-review surfaces.
 
@@ -14,6 +14,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Chat Directory | `/chat-contacts` | Chat/context entry | Chat-side binding and service-account entry management |
 | Contacts | `/contacts` | Home app | global role archive and role-centered management |
 | WorldBook | `/worldbook` | Settings/context entry | worldview and reusable knowledge points |
+| Book | `/book` | planned Home/App Store app | reusable text-source library for worldbook documents and knowledge/reference notes |
 | World Hub | `/control-center` | optional hidden app | runtime review and narrow control |
 | Cheats | not frozen yet | future hidden surface | future stronger override lane |
 
@@ -81,6 +82,25 @@ What users mainly do here:
 Important boundary:
 
 - WorldBook supports context and continuity; it is not the main place where ordinary app records should be authored.
+- after the Book text-library slice, WorldBook should activate selected Book sources instead of becoming a long-form text warehouse.
+
+### Book
+
+What it is:
+
+- the planned reusable text-source library for long worldbooks, knowledge notes, rules, glossary material, and references.
+
+What users mainly do here:
+
+- import or create `.txt`, `.md`, and structured worldbook export files;
+- edit reusable source documents in a guarded workspace;
+- organize text by type, category, tag, lock state, and active-source usage.
+
+Important boundary:
+
+- Book stores and edits source text; it does not decide what is active in Chat.
+- WorldBook remains responsible for activation, Pack expansion, and prompt/runtime governance.
+- Book is not Files and not the future novel/fanfic reader.
 
 ### World Hub
 

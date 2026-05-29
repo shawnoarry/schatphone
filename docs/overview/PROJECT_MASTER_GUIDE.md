@@ -91,6 +91,7 @@ Immediate active lane:
 - 4.3 World Hub review quality now has a complete review-pack baseline: event logs and relationship facts can be filtered, selected, and inspected with product-facing explanations before any stronger controls are considered.
 - 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
 - the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat and runtime worldview fallback. The larger World Pack / App Archetype / Service Account Template system remains a guarded decision-stage lane.
+- the next review-ready WorldBook architecture direction adds a separate `Book` text-library app for long worldbook documents, knowledge notes, rules, glossary text, and reusable references. `Settings -> WorldBook` remains the activation panel that links selected Book sources into active world context.
 - fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack
@@ -149,6 +150,8 @@ Major stores:
   - local trip and location simulation
 - `src/stores/simulation.js`
   - event runtime logs, cooldowns, caps, and runtime execution metadata
+- planned `src/stores/book.js`
+  - reusable text-source library for long worldbook material and knowledge/reference documents, separate from hidden Files indexing
 
 ### 6.3 Service And Utility Layer
 
@@ -239,6 +242,14 @@ This split is important. They are related, but they are not the same product sur
 - optional hidden-by-default runtime review/control app;
 - can inspect event runtime and relationship runtime;
 - currently remains narrow and safer than a full cheat console.
+
+### 7.12 Book / Text Library Direction
+
+- proposed visible app-like text workspace for long worldbooks, knowledge notes, rules, glossary material, and reusable references;
+- should be reachable as `Book`, while product copy can describe it as a text library;
+- does not replace `Settings -> WorldBook`, because WorldBook owns activation and injection governance;
+- does not replace `Files`, because Files remains a hidden/internal metadata and storage-index component;
+- future novel, fanfic, or reader-style features should use a different module name and not overload Book.
 
 ## 8. Data And Storage Model
 

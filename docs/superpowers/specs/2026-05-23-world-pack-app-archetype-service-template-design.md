@@ -11,6 +11,11 @@ Status: `REVIEW_READY`
 - Do not introduce a standalone world-store app, Steam-like shell, token economy, DLC storefront, or separate World Library app in V1.
 - `World Hub` and future `Cheats` stay in the hidden runtime-control lane and must not become the WorldBook/World Pack activation surface.
 
+2026-05-29 text-source addendum:
+
+- A separate `Book` text-library app is now review-ready for long-form source documents.
+- This does not contradict the no-world-store decision: Book stores and edits reusable text; WorldBook and World Pack still own activation and world configuration.
+
 ## 1. Goal
 
 Design a reusable world-driven template system that lets SchatPhone support built-in worldviews, world-specific app variants, user-created service accounts, and future domain patterns without writing a custom data chain for every new account or app name.

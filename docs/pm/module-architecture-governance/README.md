@@ -4,7 +4,7 @@ Updated: 2026-05-29
 
 Use this package for state ownership, storage direction, refactor planning, module maturity, and cleanup governance.
 
-Current note: `src/lib/world-interface.js` is the shared seam for active WorldBook/world-context reading before larger World Pack storage work begins.
+Current note: `src/lib/world-interface.js` is the shared seam for active WorldBook/world-context reading before larger World Pack storage work begins. The next review-ready split adds `Book` as long-form text-source storage while keeping WorldBook as the activation surface.
 
 ## Read This Package In This Order
 

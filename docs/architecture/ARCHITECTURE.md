@@ -83,6 +83,9 @@ Main stores:
   - cross-module cue queues
 - `src/stores/map.js`
   - local trip and location simulation
+- planned `src/stores/book.js`
+  - reusable long-form text assets for worldbook documents, knowledge notes, rules, glossary text, and references
+  - should remain separate from `Files`, because Files is an internal metadata/index bridge
 
 Important semantic notes:
 
@@ -148,7 +151,8 @@ This table matters as much as the code layout.
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
 | optional runtime review | World Hub | not the main data-entry surface |
-| world meaning and prompt-facing world context | WorldBook via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; World Pack storage is future work |
+| reusable long-form text source assets | planned `Book` / `bookStore` | proposed visible text-library app; not Files, not a novel reader, not a world-store shell |
+| world meaning and prompt-facing world context | WorldBook activation via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; Book stores long source text, WorldBook activates selected sources; World Pack storage is future work |
 
 ## 5. Lock And Notification Architecture
 
@@ -236,7 +240,8 @@ When adding or changing features:
 2. put business records in domain stores, not shell stores;
 3. route AI calls through `src/lib/ai.js`;
 4. update docs in the same round when route/schema/core semantics change;
-5. prefer adding shared seams when several modules need the same concept, rather than duplicating logic.
+5. prefer adding shared seams when several modules need the same concept, rather than duplicating logic;
+6. keep long text source storage (`Book`) separate from world activation (`WorldBook`) and hidden file indexing (`Files`).
 
 ## 10. Documents To Read With This One
 
