@@ -101,6 +101,18 @@ const linkedBookSources = computed(() =>
     }
   }),
 )
+const fallbackWorldviewPreview = computed(() => {
+  const text = String(globalWorldview.value || '').trim().replace(/\s+/g, ' ')
+  if (!text) {
+    return t(
+      '还没有写入系统 fallback 世界观。',
+      'No system fallback worldview has been written yet.',
+    )
+  }
+  return text.length > 140 ? `${text.slice(0, 140)}...` : text
+})
+const hasBookSourceLinks = computed(() => linkedBookSources.value.length > 0)
+const showWorldBookOnboarding = computed(() => !hasBookSourceLinks.value)
 const availableBookSourceAssets = computed(() => {
   const linkedIds = new Set(linkedBookSources.value.map((link) => link.assetId))
   return bookStore.worldbookSourceAssets.filter((asset) => !linkedIds.has(asset.id))
@@ -353,6 +365,56 @@ const openBookSourcePicker = () => {
   }
   resetSourcePickerForAsset(asset)
   sourcePicker.open = true
+}
+
+const copyFallbackWorldviewToBook = async () => {
+  const content = String(globalWorldview.value || '').trim()
+  if (!content) {
+    uiNotice.value = t(
+      '请先写入系统 fallback 世界观，再复制到文本库。',
+      'Write a system fallback worldview before copying it to Book.',
+    )
+    return
+  }
+
+  const confirmed = await confirmDialog({
+    title: t('复制到文本库', 'Copy to Book'),
+    message: t(
+      '这会创建一份可编辑的文本库副本，不会覆盖当前 Settings fallback，也不会自动启用。',
+      'This creates an editable Book copy. It will not overwrite the Settings fallback or become active automatically.',
+    ),
+    details: [
+      `${t('字数', 'Chars')}: ${content.length}`,
+      t(
+        '复制后可在 Book 中编辑，再回到 WorldBook 启用。',
+        'After copying, edit it in Book and return to WorldBook to enable it.',
+      ),
+    ],
+    confirmText: t('复制', 'Copy'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
+  if (!confirmed) return
+
+  const asset = bookStore.createAsset({
+    title: t('系统世界观副本', 'System worldview copy'),
+    assetType: 'worldbook_document',
+    format: content.startsWith('#') ? 'markdown' : 'plain',
+    content,
+    status: 'draft',
+    source: {
+      kind: 'worldbook_fallback_copy',
+      copiedAt: Date.now(),
+    },
+  })
+  bookStore.saveNow()
+  router.push({
+    path: BOOK_ROUTE,
+    query: {
+      from: 'settings',
+      asset: asset.id,
+    },
+  })
 }
 
 const closeBookSourcePicker = () => {
@@ -1019,6 +1081,38 @@ onBeforeUnmount(() => {
         @open-service-contact="openWorldPackServiceContact"
       />
 
+      <section
+        v-if="showWorldBookOnboarding"
+        class="worldbook-onboarding-card"
+        data-testid="worldbook-onboarding-card"
+      >
+        <div>
+          <p>{{ t('首次设置', 'First setup') }}</p>
+          <h2>{{ t('先选择一个会影响上下文的来源', 'Start with a source') }}</h2>
+          <span>
+            {{
+              t(
+                '文本库负责保存和编辑；WorldBook 负责决定是否启用到对话上下文。',
+                'Book stores and edits text; WorldBook decides whether it is active.',
+              )
+            }}
+          </span>
+        </div>
+        <div class="worldbook-onboarding-actions">
+          <button type="button" class="worldbook-primary-action" @click="addFirstBookSource">
+            {{ sourcePickerAssets.length > 0 ? t('从文本库选择', 'Choose from Book') : t('打开文本库', 'Open Book') }}
+          </button>
+          <button
+            type="button"
+            class="worldbook-secondary-action"
+            data-testid="worldbook-copy-fallback-to-book"
+            @click="copyFallbackWorldviewToBook"
+          >
+            {{ t('复制 fallback 到文本库', 'Copy fallback to Book') }}
+          </button>
+        </div>
+      </section>
+
       <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-book-sources">
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -1039,6 +1133,22 @@ onBeforeUnmount(() => {
           </div>
           <button type="button" class="worldbook-secondary-action" data-testid="worldbook-book-source-add" @click="addFirstBookSource">
             {{ sourcePickerAssets.length > 0 ? t('连接文本', 'Link source') : t('打开文本库', 'Open Book') }}
+          </button>
+        </div>
+
+        <div class="worldbook-system-fallback" data-testid="worldbook-system-fallback">
+          <div>
+            <p>{{ t('系统 fallback', 'System fallback') }}</p>
+            <strong>{{ worldBookCount }} {{ t('字', 'chars') }}</strong>
+            <span>{{ fallbackWorldviewPreview }}</span>
+          </div>
+          <button
+            type="button"
+            class="worldbook-secondary-action"
+            data-testid="worldbook-copy-fallback-to-book-inline"
+            @click="copyFallbackWorldviewToBook"
+          >
+            {{ t('复制到文本库', 'Copy to Book') }}
           </button>
         </div>
 
@@ -1582,6 +1692,68 @@ onBeforeUnmount(() => {
   box-shadow: var(--system-shadow-card);
 }
 
+.worldbook-onboarding-card,
+.worldbook-system-fallback {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-lg);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.worldbook-onboarding-card {
+  padding: 16px;
+}
+
+.worldbook-onboarding-card p,
+.worldbook-system-fallback p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.worldbook-onboarding-card h2 {
+  margin: 4px 0;
+  color: var(--system-text);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.worldbook-onboarding-card span,
+.worldbook-system-fallback span {
+  color: var(--system-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.worldbook-onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.worldbook-system-fallback {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 12px;
+  background: var(--system-surface-muted);
+}
+
+.worldbook-system-fallback div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.worldbook-system-fallback strong {
+  color: var(--system-text);
+  font-size: 14px;
+}
+
 .worldbook-template-row {
   display: flex;
   align-items: center;
@@ -1950,6 +2122,10 @@ onBeforeUnmount(() => {
   }
 
   .worldbook-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .worldbook-system-fallback {
     grid-template-columns: 1fr;
   }
 }

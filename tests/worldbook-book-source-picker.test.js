@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
+import { dialogState, resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { useBookStore } from '../src/stores/book'
 import { useSystemStore } from '../src/stores/system'
 import { buildWorldBookSourceSnapshot } from '../src/lib/book-text-schema'
@@ -41,7 +42,56 @@ describe('WorldBook Book source picker', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-29T12:00:00.000Z'))
     setActivePinia(createPinia())
+    resetDialogServiceForTest()
     useSystemStore().settings.system.language = 'en-US'
+  })
+
+  test('shows system fallback without creating a Book asset', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    systemStore.setGlobalWorldview('Fallback city rules.')
+
+    const { wrapper } = await mountWorldBook()
+
+    const fallback = wrapper.get('[data-testid="worldbook-system-fallback"]')
+    expect(fallback.text()).toContain('System fallback')
+    expect(fallback.text()).toContain('Fallback city rules')
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-onboarding-card"]').text()).toContain(
+      'Start with a source',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('copies system fallback into Book as a draft asset', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    systemStore.setGlobalWorldview('Fallback city rules.')
+
+    const { wrapper, router } = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-copy-fallback-to-book"]').trigger('click')
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Copy')
+
+    useDialog().submitDialog()
+    await flushPromises()
+    await nextTick()
+
+    expect(bookStore.assetCount).toBe(1)
+    const asset = bookStore.assets[0]
+    expect(asset).toMatchObject({
+      assetType: 'worldbook_document',
+      status: 'draft',
+    })
+    expect(asset.content).toContain('Fallback city rules.')
+    expect(asset.source.kind).toBe('worldbook_fallback_copy')
+    expect(systemStore.listWorldBookSourceLinks()).toHaveLength(0)
+    expect(router.currentRoute.value.path).toBe('/book')
+    expect(router.currentRoute.value.query.asset).toBe(asset.id)
+
+    wrapper.unmount()
   })
 
   test('links selected Book sections instead of the whole document', async () => {
