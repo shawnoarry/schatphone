@@ -23,6 +23,7 @@ server/data/*.json
 !.vscode/extensions.json
 .idea
 .codex/
+.superpowers/
 .DS_Store
 *.suo
 *.ntvs*
