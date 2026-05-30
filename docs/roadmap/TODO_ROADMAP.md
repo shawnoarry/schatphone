@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 This is the only live execution board for implementation order.
 
@@ -219,6 +219,7 @@ V1 WorldBook baseline landed:
 - `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback; active Book source injection is now covered through Chat and runtime tests;
 - World Pack V1 storage and activation review are in place with one active pack per save; active-pack service-account templates can now be generated into Chat Directory after user confirmation; the first concrete app-binding V1 is live for `marketplace -> Shopping`, where `survival_city` opens Shopping as `补给站` with active world context and a safe Daily Fresh / Grocery filter.
 - Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place.
+- Book / WorldBook IA is being tightened around a first-use source setup path: system fallback stays outside Book until copied, Book import/export uses confirmation surfaces, and active Book usage is shown from the text library detail view.
 
 Current product direction:
 
@@ -241,6 +242,7 @@ Remaining task structure:
 2. user-test the WorldBook -> `补给站` -> Shopping filter path on phone-sized devices;
 3. broaden service/subscription template generation beyond the current active-pack service-account V1;
 4. define and land the next concrete archetype target beyond the current Shopping marketplace V1.
+5. revisit App Store detail presentation if the app library grows beyond the V1 same-screen list/detail/action layout; long app lists should move detail into a drawer, modal detail, or route instead of stretching the main screen.
 
 Current design reference:
 
