@@ -256,4 +256,24 @@ describe('BookView', () => {
     expect(usage.text()).toContain('Used by WorldBook')
     expect(usage.text()).toContain('active')
   })
+
+  test('opens local Book AI drawer for the selected source', async () => {
+    const bookStore = useBookStore()
+    bookStore.createAsset({
+      id: 'asset_ai_tools',
+      title: 'AI Source',
+      content: '# Basics\n\nUse quiet rules.',
+      tags: ['rules'],
+    })
+
+    const { wrapper } = await mountBookView()
+
+    await wrapper.get('[data-testid="book-ai-trigger"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="book-ai-sheet"]').text()).toContain('AI Source')
+    expect(wrapper.get('[data-testid="book-ai-result"]').text()).toContain('Summary preview')
+
+    await wrapper.get('[data-testid="book-ai-tool-tags"]').trigger('click')
+    expect(wrapper.get('[data-testid="book-ai-result"]').text()).toContain('rules')
+  })
 })

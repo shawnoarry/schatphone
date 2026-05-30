@@ -25,6 +25,8 @@ const editGuardVisible = ref(false)
 const importFeedback = ref('')
 const importFeedbackTone = ref('info')
 const importInput = ref(null)
+const aiToolsOpen = ref(false)
+const aiToolMode = ref('summary')
 const draft = ref({
   title: '',
   assetType: 'worldbook_document',
@@ -104,6 +106,76 @@ const selectedStatusLabel = computed(() => {
   return t(statusLabels[status]?.zh || status, statusLabels[status]?.en || status)
 })
 
+const aiToolOptions = computed(() => [
+  {
+    id: 'summary',
+    icon: 'fas fa-feather',
+    label: t('摘要', 'Summary'),
+  },
+  {
+    id: 'sections',
+    icon: 'fas fa-list-ul',
+    label: t('分段', 'Sections'),
+  },
+  {
+    id: 'tags',
+    icon: 'fas fa-tags',
+    label: t('标签', 'Tags'),
+  },
+  {
+    id: 'worldbook',
+    icon: 'fas fa-link',
+    label: t('引用', 'WorldBook'),
+  },
+])
+
+const selectedContentText = computed(() => String(selectedAsset.value?.content || '').trim())
+
+const aiSummaryText = computed(() => {
+  const text = selectedContentText.value.replace(/\s+/g, ' ')
+  if (!text) return t('当前文本为空。', 'This text is empty.')
+  const preview = text.length > 220 ? `${text.slice(0, 220)}...` : text
+  return t(`摘要预览：${preview}`, `Summary preview: ${preview}`)
+})
+
+const aiSectionsText = computed(() => {
+  if (selectedSections.value.length === 0) {
+    return t('没有检测到标题分段。', 'No heading sections detected.')
+  }
+  return selectedSections.value
+    .slice(0, 6)
+    .map((section, index) => `${index + 1}. ${section.title}`)
+    .join('\n')
+})
+
+const aiTagsText = computed(() => {
+  if (selectedTags.value.length > 0) return selectedTags.value.join(', ')
+  const words = selectedContentText.value
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5\s]+/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
+  const candidates = [...new Set(words)].slice(0, 8)
+  return candidates.length > 0 ? candidates.join(', ') : t('没有可建议的标签。', 'No tag suggestions yet.')
+})
+
+const aiWorldBookText = computed(() => {
+  if (selectedWorldBookLinks.value.length === 0) {
+    return t(
+      '这份文本尚未被 WorldBook 引用。',
+      'This text is not linked by WorldBook yet.',
+    )
+  }
+  return selectedWorldBookUsageSummary.value
+})
+
+const aiToolResultText = computed(() => {
+  if (aiToolMode.value === 'sections') return aiSectionsText.value
+  if (aiToolMode.value === 'tags') return aiTagsText.value
+  if (aiToolMode.value === 'worldbook') return aiWorldBookText.value
+  return aiSummaryText.value
+})
+
 const draftIsDirty = computed(() => {
   const asset = selectedAsset.value
   if (!asset) return false
@@ -132,6 +204,7 @@ const selectAsset = (assetId) => {
   selectedAssetId.value = assetId
   editMode.value = false
   editGuardVisible.value = false
+  aiToolsOpen.value = false
 }
 
 const hydrateDraft = () => {
@@ -155,6 +228,16 @@ const createBlankAsset = () => {
   })
   selectAsset(asset.id)
   editMode.value = true
+  aiToolsOpen.value = false
+}
+
+const toggleAiTools = () => {
+  if (!selectedAsset.value) return
+  aiToolsOpen.value = !aiToolsOpen.value
+}
+
+const selectAiTool = (toolId) => {
+  aiToolMode.value = toolId
 }
 
 const beginEdit = () => {
@@ -325,22 +408,48 @@ const exportSelected = async () => {
 
 <template>
   <div class="book-shell">
+    <div class="book-ambient" aria-hidden="true">
+      <span class="book-ambient-leaf is-left"></span>
+      <span class="book-ambient-leaf is-right"></span>
+      <span class="book-ambient-grid"></span>
+    </div>
     <header class="book-topbar">
       <button type="button" class="book-back" @click="goBack">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
         <span>{{ t('返回', 'Back') }}</span>
       </button>
-      <div>
-        <p>{{ t('文本来源', 'Text Sources') }}</p>
-        <h1>{{ t('文本库', 'Book') }}</h1>
+      <div class="book-title-lockup">
+        <span class="book-brand-mark" aria-hidden="true">
+          <i class="fas fa-book-bookmark"></i>
+        </span>
+        <div>
+          <p>{{ t('文本来源', 'Text Sources') }}</p>
+          <h1>{{ t('文本库', 'Book') }}</h1>
+        </div>
       </div>
-      <button type="button" class="book-icon-button" :aria-label="t('新建', 'New')" @click="createBlankAsset" data-testid="book-create">
-        <i class="fas fa-plus" aria-hidden="true"></i>
-      </button>
+      <div class="book-topbar-actions">
+        <button
+          type="button"
+          class="book-icon-button is-quiet"
+          :aria-label="t('Book AI', 'Book AI')"
+          :disabled="!selectedAsset"
+          @click="toggleAiTools"
+          data-testid="book-ai-trigger"
+        >
+          <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="book-icon-button" :aria-label="t('新建', 'New')" @click="createBlankAsset" data-testid="book-create">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+        </button>
+      </div>
     </header>
 
     <main class="book-main">
       <aside class="book-library" data-testid="book-library">
+        <div class="book-library-head">
+          <span>{{ t('资料架', 'Shelf') }}</span>
+          <strong>{{ filteredAssets.length }}</strong>
+        </div>
         <div class="book-search-row">
           <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <input v-model="searchQuery" type="search" :placeholder="t('搜索文本', 'Search text')" data-testid="book-search" />
@@ -350,6 +459,18 @@ const exportSelected = async () => {
             {{ option.label }}
           </option>
         </select>
+
+        <div class="book-category-rail">
+          <button
+            v-for="option in typeOptions.slice(0, 6)"
+            :key="option.id"
+            type="button"
+            :class="['book-category-button', { 'is-active': typeFilter === option.id }]"
+            @click="typeFilter = option.id"
+          >
+            {{ option.label }}
+          </button>
+        </div>
 
         <button type="button" class="book-import-button" @click="triggerImport" data-testid="book-import-trigger">
           <i class="fas fa-file-import" aria-hidden="true"></i>
@@ -369,7 +490,11 @@ const exportSelected = async () => {
         </p>
 
         <div v-if="filteredAssets.length === 0" class="book-empty" data-testid="book-empty">
-          <i class="fas fa-book-open" aria-hidden="true"></i>
+          <div class="book-empty-visual" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
           <strong>{{ t('还没有文本来源', 'No text sources yet') }}</strong>
           <span>{{ t('创建或导入世界书、规则、术语和参考资料。', 'Create or import worldbooks, rules, glossary, and references.') }}</span>
         </div>
@@ -382,9 +507,12 @@ const exportSelected = async () => {
           :data-testid="`book-asset-${asset.id}`"
           @click="selectAsset(asset.id)"
         >
-          <span>
+          <span class="book-list-mark" aria-hidden="true">
+            <i class="fas fa-bookmark"></i>
+          </span>
+          <span class="book-list-copy">
             <strong>{{ asset.title }}</strong>
-            <small>{{ asset.content.length }} {{ t('字', 'chars') }}</small>
+            <small>{{ t(typeLabels[asset.assetType]?.zh || asset.assetType, typeLabels[asset.assetType]?.en || asset.assetType) }} · {{ asset.content.length }} {{ t('字', 'chars') }}</small>
           </span>
           <i v-if="asset.locked" class="fas fa-lock" aria-hidden="true"></i>
           <i v-else class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -393,6 +521,9 @@ const exportSelected = async () => {
 
       <section v-if="selectedAsset" class="book-detail" data-testid="book-detail">
         <div class="book-detail-header">
+          <span class="book-detail-seal" aria-hidden="true">
+            <i class="fas fa-seedling"></i>
+          </span>
           <div>
             <p>{{ selectedAssetTypeLabel }} · {{ selectedStatusLabel }}</p>
             <h2>{{ selectedAsset.title }}</h2>
@@ -480,6 +611,34 @@ const exportSelected = async () => {
         </div>
       </section>
     </main>
+
+    <div v-if="selectedAsset && aiToolsOpen" class="book-ai-backdrop" @click="aiToolsOpen = false"></div>
+    <section v-if="selectedAsset && aiToolsOpen" class="book-ai-sheet" data-testid="book-ai-sheet" aria-live="polite">
+      <div class="book-ai-handle"></div>
+      <div class="book-ai-head">
+        <div>
+          <p>{{ t('Book AI', 'Book AI') }}</p>
+          <h2>{{ selectedAsset.title }}</h2>
+        </div>
+        <button type="button" class="book-icon-button is-quiet" :aria-label="t('关闭', 'Close')" @click="aiToolsOpen = false">
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="book-ai-tools">
+        <button
+          v-for="tool in aiToolOptions"
+          :key="tool.id"
+          type="button"
+          :class="['book-ai-tool', { 'is-active': aiToolMode === tool.id }]"
+          :data-testid="`book-ai-tool-${tool.id}`"
+          @click="selectAiTool(tool.id)"
+        >
+          <i :class="tool.icon" aria-hidden="true"></i>
+          <span>{{ tool.label }}</span>
+        </button>
+      </div>
+      <pre class="book-ai-result" data-testid="book-ai-result">{{ aiToolResultText }}</pre>
+    </section>
   </div>
 </template>
 
@@ -894,6 +1053,1012 @@ const exportSelected = async () => {
 
   .book-detail-header {
     display: grid;
+  }
+}
+
+.book-shell {
+  --book-sage: #B0BC98;
+  --book-stone: #C7CCB9;
+  --book-leaf: #CAE2BC;
+  --book-ink: #46351D;
+  --book-ink-soft: rgba(70, 53, 29, 0.68);
+  --book-paper: #F7F8F1;
+  --book-paper-strong: #FBFCF6;
+  --book-line: rgba(70, 53, 29, 0.14);
+  --book-shadow: 0 20px 52px rgba(70, 53, 29, 0.12);
+  position: relative;
+  overflow: hidden;
+  color: var(--book-ink);
+  background:
+    radial-gradient(circle at 18% 6%, rgba(202, 226, 188, 0.48), transparent 34%),
+    linear-gradient(155deg, #f8faf2 0%, #eef2e8 45%, #dde3d0 100%);
+}
+
+.book-topbar {
+  border-bottom: 1px solid var(--book-line);
+  background: rgba(247, 248, 241, 0.82);
+  box-shadow: 0 10px 28px rgba(70, 53, 29, 0.08);
+}
+
+.book-topbar > div {
+  min-width: 0;
+}
+
+.book-topbar-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.book-topbar p {
+  color: var(--book-ink-soft);
+  letter-spacing: 0;
+}
+
+.book-topbar h1 {
+  color: var(--book-ink);
+  letter-spacing: 0;
+}
+
+.book-back {
+  color: var(--book-ink);
+}
+
+.book-icon-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(70, 53, 29, 0.18);
+  color: var(--book-leaf);
+  background: var(--book-ink);
+  box-shadow: 0 10px 20px rgba(70, 53, 29, 0.16);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.book-icon-button.is-quiet {
+  color: var(--book-ink);
+  background: rgba(251, 252, 246, 0.72);
+  box-shadow: none;
+}
+
+.book-icon-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.book-icon-button:not(:disabled):active,
+.book-primary-button:active,
+.book-secondary-button:active,
+.book-import-button:active,
+.book-list-item:active,
+.book-category-button:active,
+.book-ai-tool:active {
+  transform: scale(0.985);
+}
+
+.book-main {
+  grid-template-columns: minmax(188px, 32%) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.book-library,
+.book-detail {
+  border: 1px solid var(--book-line);
+  background: rgba(251, 252, 246, 0.78);
+  box-shadow: var(--book-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.book-library {
+  gap: 9px;
+  padding: 10px;
+  background: rgba(199, 204, 185, 0.46);
+}
+
+.book-search-row,
+.book-filter,
+.book-editor input,
+.book-editor select,
+.book-editor textarea {
+  border: 1px solid rgba(70, 53, 29, 0.11);
+  color: var(--book-ink);
+  background: rgba(251, 252, 246, 0.74);
+  box-shadow: inset 0 1px 0 rgba(251, 252, 246, 0.68);
+}
+
+.book-search-row {
+  min-height: 40px;
+  color: var(--book-ink-soft);
+}
+
+.book-filter {
+  flex-shrink: 0;
+  color: var(--book-ink-soft);
+}
+
+.book-category-rail {
+  display: flex;
+  gap: 7px;
+  padding: 2px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.book-category-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.book-category-button {
+  min-height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--book-ink-soft);
+  background: rgba(251, 252, 246, 0.58);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.book-category-button.is-active {
+  color: var(--book-leaf);
+  background: var(--book-ink);
+}
+
+.book-import-button {
+  border: 1px solid rgba(70, 53, 29, 0.14);
+  color: var(--book-ink);
+  background: linear-gradient(180deg, rgba(202, 226, 188, 0.92), rgba(176, 188, 152, 0.86));
+}
+
+.book-feedback {
+  border: 1px solid rgba(70, 53, 29, 0.12);
+}
+
+.book-feedback.is-success {
+  color: #37512a;
+  background: rgba(202, 226, 188, 0.7);
+}
+
+.book-feedback.is-error {
+  color: #7c2525;
+  background: rgba(253, 231, 225, 0.86);
+}
+
+.book-empty {
+  color: var(--book-ink-soft);
+}
+
+.book-empty i,
+.book-empty strong {
+  color: var(--book-ink);
+}
+
+.book-list-item {
+  border: 1px solid transparent;
+  color: var(--book-ink);
+  background: rgba(251, 252, 246, 0.62);
+  box-shadow: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.book-list-item:hover {
+  border-color: rgba(70, 53, 29, 0.16);
+  background: rgba(251, 252, 246, 0.86);
+}
+
+.book-list-item.is-active {
+  border-color: rgba(70, 53, 29, 0.24);
+  color: var(--book-ink);
+  background: linear-gradient(180deg, rgba(202, 226, 188, 0.9), rgba(176, 188, 152, 0.72));
+}
+
+.book-list-item small {
+  color: var(--book-ink-soft);
+}
+
+.book-detail {
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 246, 0.9), rgba(247, 248, 241, 0.82)),
+    linear-gradient(90deg, rgba(202, 226, 188, 0.18), transparent 34%);
+}
+
+.book-detail-header p {
+  color: var(--book-ink-soft);
+}
+
+.book-detail-header h2 {
+  max-width: 18ch;
+  color: var(--book-ink);
+}
+
+.book-primary-button,
+.book-secondary-button {
+  border: 1px solid rgba(70, 53, 29, 0.14);
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.book-primary-button {
+  color: var(--book-leaf);
+  background: var(--book-ink);
+  box-shadow: 0 12px 24px rgba(70, 53, 29, 0.14);
+}
+
+.book-secondary-button {
+  color: var(--book-ink);
+  background: rgba(199, 204, 185, 0.34);
+}
+
+.book-meta-row span,
+.book-tags span {
+  color: var(--book-ink);
+  background: rgba(199, 204, 185, 0.36);
+}
+
+.book-usage-card {
+  border-color: rgba(70, 53, 29, 0.14);
+  background: rgba(202, 226, 188, 0.42);
+}
+
+.book-usage-card strong {
+  color: var(--book-ink);
+}
+
+.book-usage-card span {
+  color: var(--book-ink-soft);
+}
+
+.book-guard {
+  border-color: rgba(70, 53, 29, 0.18);
+  color: var(--book-ink);
+  background: rgba(202, 226, 188, 0.42);
+}
+
+.book-guard p {
+  color: var(--book-ink-soft);
+}
+
+.book-editor {
+  padding: 12px;
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 16px;
+  background: rgba(251, 252, 246, 0.64);
+}
+
+.book-editor label {
+  color: var(--book-ink-soft);
+}
+
+.book-editor textarea {
+  min-height: 280px;
+}
+
+.book-read-mode {
+  gap: 12px;
+}
+
+.book-outline {
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  background: rgba(199, 204, 185, 0.26);
+}
+
+.book-outline strong,
+.book-outline span {
+  color: var(--book-ink);
+  background: rgba(251, 252, 246, 0.74);
+}
+
+.book-read-mode pre {
+  min-height: 360px;
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  color: var(--book-ink);
+  background:
+    linear-gradient(90deg, rgba(199, 204, 185, 0.18) 1px, transparent 1px) 0 0 / 28px 100%,
+    rgba(251, 252, 246, 0.86);
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  font-size: 14px;
+}
+
+.book-ai-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(70, 53, 29, 0.12);
+}
+
+.book-ai-sheet {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 21;
+  display: grid;
+  gap: 12px;
+  max-height: min(420px, 58%);
+  padding: 10px 14px 14px;
+  border: 1px solid rgba(70, 53, 29, 0.18);
+  border-radius: 24px;
+  color: var(--book-ink);
+  background: rgba(251, 252, 246, 0.96);
+  box-shadow: 0 -24px 58px rgba(70, 53, 29, 0.18);
+  backdrop-filter: blur(22px);
+}
+
+.book-ai-handle {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  justify-self: center;
+  background: rgba(70, 53, 29, 0.2);
+}
+
+.book-ai-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.book-ai-head p,
+.book-ai-head h2 {
+  margin: 0;
+}
+
+.book-ai-head p {
+  color: var(--book-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.book-ai-head h2 {
+  margin-top: 2px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.book-ai-tools {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.book-ai-tool {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  min-height: 62px;
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 15px;
+  color: var(--book-ink);
+  background: rgba(199, 204, 185, 0.26);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.book-ai-tool.is-active {
+  color: var(--book-leaf);
+  background: var(--book-ink);
+}
+
+.book-ai-result {
+  min-height: 86px;
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  border-radius: 16px;
+  padding: 12px;
+  color: var(--book-ink);
+  background: rgba(202, 226, 188, 0.24);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .book-shell {
+    overflow: auto;
+  }
+
+  .book-main {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+    overflow: auto;
+  }
+
+  .book-library {
+    max-height: 48vh;
+    overflow: auto;
+  }
+
+  .book-detail {
+    min-height: 58vh;
+    overflow: auto;
+  }
+
+  .book-category-rail {
+    display: none;
+  }
+
+  .book-read-mode pre {
+    min-height: 280px;
+  }
+
+  .book-ai-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .book-ai-sheet {
+    max-height: 64%;
+  }
+}
+
+/* Book A1 visual lift: botanical archive, stronger app identity. */
+.book-shell {
+  --book-paper: #F5F7EC;
+  --book-paper-strong: #FBFCF4;
+  --book-shadow-deep: 0 26px 70px rgba(70, 53, 29, 0.18);
+  --book-shadow-soft: 0 14px 34px rgba(70, 53, 29, 0.1);
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(70, 53, 29, 0.035) 0 1px, transparent 1px 100%) 0 0 / 26px 26px,
+    linear-gradient(180deg, #fbfcf4 0%, #edf3e4 46%, #dfe7d3 100%);
+}
+
+.book-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.book-ambient-grid {
+  position: absolute;
+  inset: 112px 22px 70px;
+  border: 1px solid rgba(70, 53, 29, 0.06);
+  border-radius: 36px;
+  background:
+    linear-gradient(90deg, rgba(70, 53, 29, 0.04) 0 1px, transparent 1px 100%) 0 0 / 38px 38px,
+    linear-gradient(180deg, rgba(70, 53, 29, 0.035) 0 1px, transparent 1px 100%) 0 0 / 38px 38px;
+  opacity: 0.42;
+}
+
+.book-ambient-leaf {
+  position: absolute;
+  width: 170px;
+  height: 250px;
+  border: 1px solid rgba(70, 53, 29, 0.08);
+  border-radius: 68% 0 68% 0;
+  background: linear-gradient(135deg, rgba(202, 226, 188, 0.34), rgba(176, 188, 152, 0.08));
+  opacity: 0.62;
+}
+
+.book-ambient-leaf::after {
+  content: "";
+  position: absolute;
+  inset: 22px 50% 22px auto;
+  width: 1px;
+  background: rgba(70, 53, 29, 0.1);
+  transform: rotate(18deg);
+}
+
+.book-ambient-leaf.is-left {
+  left: -86px;
+  top: 168px;
+  transform: rotate(-18deg);
+}
+
+.book-ambient-leaf.is-right {
+  right: -92px;
+  bottom: 108px;
+  transform: rotate(164deg);
+}
+
+.book-topbar,
+.book-main,
+.book-ai-backdrop,
+.book-ai-sheet {
+  position: relative;
+  z-index: 1;
+}
+
+.book-topbar {
+  padding-right: 20px;
+  background: linear-gradient(180deg, rgba(251, 252, 244, 0.92), rgba(245, 247, 236, 0.82));
+}
+
+.book-title-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.book-title-lockup > div {
+  min-width: 0;
+}
+
+.book-brand-mark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 48px;
+  height: 58px;
+  border: 1px solid rgba(70, 53, 29, 0.16);
+  border-radius: 18px 18px 10px 10px;
+  color: var(--book-leaf);
+  background:
+    linear-gradient(90deg, rgba(202, 226, 188, 0.22) 0 8px, transparent 8px),
+    linear-gradient(155deg, #5a4426, var(--book-ink));
+  box-shadow:
+    inset 0 1px 0 rgba(251, 252, 244, 0.18),
+    0 16px 28px rgba(70, 53, 29, 0.18);
+}
+
+.book-title-lockup h1 {
+  font-size: 34px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.book-back {
+  gap: 7px;
+  padding: 8px 0;
+}
+
+.book-icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 17px;
+}
+
+.book-main {
+  grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px;
+}
+
+.book-main:not(:has(.book-detail)) {
+  grid-template-columns: 1fr;
+}
+
+.book-main:not(:has(.book-detail)) .book-library {
+  width: min(100%, 680px);
+  margin: 0 auto;
+}
+
+.book-library,
+.book-detail {
+  border-color: rgba(70, 53, 29, 0.16);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.9), rgba(239, 244, 230, 0.78)),
+    var(--book-paper);
+  box-shadow: var(--book-shadow-soft);
+}
+
+.book-library {
+  position: relative;
+  gap: 12px;
+  padding: 18px;
+}
+
+.book-library::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  height: 24px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(70, 53, 29, 0.08), transparent);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.book-library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  color: var(--book-ink);
+}
+
+.book-library-head span {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.book-library-head strong {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 28px;
+  border: 1px solid rgba(70, 53, 29, 0.14);
+  border-radius: 999px;
+  color: var(--book-ink);
+  background: rgba(202, 226, 188, 0.45);
+  font-size: 13px;
+}
+
+.book-search-row,
+.book-filter {
+  min-height: 50px;
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 18px;
+  background: rgba(251, 252, 244, 0.78);
+  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.86);
+}
+
+.book-search-row i {
+  color: rgba(70, 53, 29, 0.62);
+  font-size: 18px;
+}
+
+.book-filter {
+  padding-inline: 14px;
+}
+
+.book-import-button {
+  min-height: 50px;
+  border: 1px solid rgba(70, 53, 29, 0.18);
+  border-radius: 18px;
+  color: var(--book-ink);
+  background: linear-gradient(180deg, rgba(202, 226, 188, 0.86), rgba(176, 188, 152, 0.72));
+  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.62);
+}
+
+.book-empty {
+  position: relative;
+  min-height: 320px;
+  padding: 30px 24px;
+  border: 1px dashed rgba(70, 53, 29, 0.2);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.68), rgba(199, 204, 185, 0.28)),
+    linear-gradient(90deg, rgba(70, 53, 29, 0.04) 0 1px, transparent 1px 100%) 0 0 / 22px 22px;
+}
+
+.book-empty-visual {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  width: 142px;
+  height: 104px;
+  margin-bottom: 4px;
+}
+
+.book-empty-visual::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(70, 53, 29, 0.16);
+}
+
+.book-empty-visual span {
+  position: relative;
+  z-index: 1;
+  width: 30px;
+  border: 1px solid rgba(70, 53, 29, 0.18);
+  border-radius: 9px 9px 5px 5px;
+  background: linear-gradient(180deg, #fbfcf4, var(--book-stone));
+  box-shadow: 0 12px 20px rgba(70, 53, 29, 0.12);
+}
+
+.book-empty-visual span:nth-child(1) {
+  height: 74px;
+  transform: rotate(-6deg);
+}
+
+.book-empty-visual span:nth-child(2) {
+  height: 94px;
+  background: linear-gradient(180deg, var(--book-leaf), var(--book-sage));
+}
+
+.book-empty-visual span:nth-child(3) {
+  height: 64px;
+  transform: rotate(5deg);
+}
+
+.book-list-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  border-radius: 22px;
+  background: rgba(251, 252, 244, 0.62);
+  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.72);
+}
+
+.book-list-item:hover {
+  border-color: rgba(70, 53, 29, 0.2);
+  background: rgba(251, 252, 244, 0.86);
+}
+
+.book-list-item.is-active {
+  border-color: rgba(70, 53, 29, 0.24);
+  color: var(--book-ink);
+  background: linear-gradient(180deg, rgba(202, 226, 188, 0.62), rgba(176, 188, 152, 0.36));
+}
+
+.book-list-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 48px;
+  border-radius: 11px 11px 7px 7px;
+  color: var(--book-ink);
+  background:
+    linear-gradient(90deg, rgba(251, 252, 244, 0.36) 0 7px, transparent 7px),
+    var(--book-stone);
+}
+
+.book-list-item.is-active .book-list-mark {
+  color: var(--book-leaf);
+  background:
+    linear-gradient(90deg, rgba(202, 226, 188, 0.22) 0 7px, transparent 7px),
+    var(--book-ink);
+}
+
+.book-list-copy {
+  align-self: center;
+}
+
+.book-list-copy strong {
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.book-list-copy small {
+  color: rgba(70, 53, 29, 0.62);
+  font-size: 11px;
+}
+
+.book-detail {
+  position: relative;
+  padding: 22px;
+  background:
+    linear-gradient(90deg, rgba(70, 53, 29, 0.08) 0 1px, transparent 1px) 54px 0 / 1px 100% no-repeat,
+    linear-gradient(180deg, rgba(251, 252, 244, 0.96), rgba(245, 247, 236, 0.88));
+  box-shadow: var(--book-shadow-deep);
+}
+
+.book-detail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 34px;
+  width: 46px;
+  height: 58px;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, var(--book-leaf), var(--book-sage));
+  box-shadow: 0 10px 18px rgba(70, 53, 29, 0.12);
+  opacity: 0.8;
+}
+
+.book-detail-header {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.book-detail-seal {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(70, 53, 29, 0.14);
+  border-radius: 16px;
+  color: var(--book-ink);
+  background: rgba(202, 226, 188, 0.56);
+}
+
+.book-detail-header h2 {
+  max-width: 13ch;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.book-detail-actions {
+  padding-right: 60px;
+}
+
+.book-primary-button,
+.book-secondary-button {
+  border-radius: 16px;
+}
+
+.book-primary-button {
+  color: var(--book-leaf);
+  background: linear-gradient(180deg, #574124, var(--book-ink));
+  box-shadow: 0 12px 22px rgba(70, 53, 29, 0.16);
+}
+
+.book-secondary-button {
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  color: var(--book-ink);
+  background: rgba(251, 252, 244, 0.7);
+}
+
+.book-meta-row span,
+.book-tags span {
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  color: rgba(70, 53, 29, 0.72);
+  background: rgba(199, 204, 185, 0.28);
+}
+
+.book-outline {
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  background: rgba(202, 226, 188, 0.24);
+}
+
+.book-outline strong,
+.book-outline span {
+  color: var(--book-ink);
+  background: rgba(251, 252, 244, 0.78);
+}
+
+.book-read-mode pre,
+.book-editor textarea {
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 24px;
+  color: var(--book-ink);
+  background:
+    linear-gradient(180deg, rgba(70, 53, 29, 0.045) 0 1px, transparent 1px) 0 31px / 100% 32px,
+    linear-gradient(180deg, #fbfcf4, #f6f8ef);
+  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.86);
+  line-height: 1.78;
+}
+
+.book-read-mode pre {
+  min-height: 360px;
+  padding: 24px 24px 24px 32px;
+  font-family: "Iowan Old Style", "Songti SC", "Noto Serif SC", Georgia, serif;
+  font-size: 14px;
+}
+
+.book-editor input,
+.book-editor select {
+  border-radius: 16px;
+  border-color: rgba(70, 53, 29, 0.12);
+  background: rgba(251, 252, 244, 0.78);
+}
+
+.book-ai-backdrop {
+  background: rgba(70, 53, 29, 0.26);
+}
+
+.book-ai-sheet {
+  border-color: rgba(70, 53, 29, 0.18);
+  border-radius: 30px 30px 0 0;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(232, 239, 221, 0.96)),
+    var(--book-paper);
+}
+
+.book-ai-handle {
+  background: rgba(70, 53, 29, 0.22);
+}
+
+.book-ai-tool {
+  border-radius: 18px;
+  background: rgba(251, 252, 244, 0.72);
+}
+
+.book-ai-tool.is-active {
+  color: var(--book-leaf);
+  background: var(--book-ink);
+}
+
+.book-ai-result {
+  border-color: rgba(70, 53, 29, 0.12);
+  background:
+    linear-gradient(180deg, rgba(202, 226, 188, 0.34), rgba(251, 252, 244, 0.72));
+}
+
+@media (max-width: 720px) {
+  .book-ambient-grid {
+    inset: 118px 10px 42px;
+    border-radius: 28px;
+  }
+
+  .book-topbar {
+    align-items: center;
+    padding: calc(34px + env(safe-area-inset-top)) 18px 16px;
+  }
+
+  .book-title-lockup {
+    gap: 10px;
+  }
+
+  .book-brand-mark {
+    width: 42px;
+    height: 50px;
+    border-radius: 16px 16px 9px 9px;
+  }
+
+  .book-title-lockup h1 {
+    font-size: 30px;
+  }
+
+  .book-main {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 12px;
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .book-main:not(:has(.book-detail)) .book-library,
+  .book-library {
+    width: auto;
+    max-height: none;
+    margin: 0;
+  }
+
+  .book-library,
+  .book-detail {
+    flex: 0 0 auto;
+    border-radius: 28px;
+    overflow: visible;
+  }
+
+  .book-empty {
+    min-height: 420px;
+  }
+
+  .book-detail {
+    padding: 18px;
+  }
+
+  .book-detail::before {
+    right: 26px;
+  }
+
+  .book-detail-header {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .book-detail-actions {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
+
+  .book-detail-header h2 {
+    max-width: 100%;
+    font-size: 26px;
+  }
+
+  .book-read-mode pre {
+    min-height: 340px;
   }
 }
 </style>
