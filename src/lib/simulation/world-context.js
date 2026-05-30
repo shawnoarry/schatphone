@@ -171,7 +171,8 @@ export const resolveWorldContextFromWorldBook = ({
 
 export const resolveWorldContextFromSystemStore = (systemStore, options = {}) => {
   const user = systemStore?.user || {}
-  const globalWorldview = resolveWorldviewText(systemStore)
+  const { bookStore, ...contextOptions } = options
+  const globalWorldview = resolveWorldviewText(systemStore, { bookStore })
   const knowledgePoints =
     typeof systemStore?.listKnowledgePoints === 'function'
       ? systemStore.listKnowledgePoints({ enabledOnly: true })
@@ -179,6 +180,6 @@ export const resolveWorldContextFromSystemStore = (systemStore, options = {}) =>
   return resolveWorldContextFromWorldBook({
     globalWorldview,
     knowledgePoints,
-    ...options,
+    ...contextOptions,
   })
 }

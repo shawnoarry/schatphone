@@ -1,6 +1,6 @@
 # WorldBook V1 Acceptance
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 This is the short acceptance checklist for the current WorldBook baseline. It is meant for user testing, not engineering planning.
 
@@ -15,9 +15,11 @@ This is the short acceptance checklist for the current WorldBook baseline. It is
    - modules that consume the world context.
 3. Confirm `Current World Pack / 当前设定包` appears before editing controls.
 4. Edit the global worldview and save.
-5. Add, disable, edit, and delete a knowledge point.
-6. Open a Chat thread with role-bound knowledge and check the thread WorldBook summary.
-7. Trigger a Chat reply and confirm enabled bound knowledge can enter the AI prompt chain.
+5. Open `Book`, create or import a worldbook text source, then return to `Settings -> WorldBook`.
+6. Link the Book source as a whole document or selected section, then confirm it appears in the active-world summary.
+7. Add, disable, edit, and delete a knowledge point.
+8. Open a Chat thread with role-bound knowledge and check the thread WorldBook summary.
+9. Trigger a Chat reply and confirm enabled Book source text plus enabled bound knowledge can enter the AI prompt chain.
 
 ## Pass Criteria
 
@@ -25,8 +27,9 @@ This is the short acceptance checklist for the current WorldBook baseline. It is
 - The first screen answers: what world is active, what defines it, and where it takes effect.
 - WorldBook remains under Settings and contextual links.
 - Chat visible WorldBook state matches what is sent into the AI prompt.
+- Active Book source text is included in Chat prompt context and runtime world-context resolution.
 - Disabled or missing knowledge does not enter prompt text.
-- No visible mojibake, developer notes, or route/query labels appear in touched WorldBook surfaces.
+- No visible mojibake, developer notes, or route/query labels appear in touched WorldBook surfaces. Check source files with UTF-8 readers; legacy PowerShell `Get-Content` can create false mojibake in terminal output.
 - Mobile layout has no horizontal overflow.
 
 ## Automated Checks
@@ -34,7 +37,7 @@ This is the short acceptance checklist for the current WorldBook baseline. It is
 Run focused unit tests:
 
 ```powershell
-npm.cmd test -- tests/world-interface.test.js tests/worldbook-functional-ia.test.js tests/worldbook-view-filters.test.js tests/worldbook-profile-template-view.test.js tests/chat-worldbook-binding-visibility.test.js tests/chat-role-knowledge-binding.test.js tests/simulation-world-context.test.js
+npm.cmd test -- tests/world-interface.test.js tests/worldbook-functional-ia.test.js tests/worldbook-view-filters.test.js tests/worldbook-profile-template-view.test.js tests/chat-worldbook-binding-visibility.test.js tests/chat-role-knowledge-binding.test.js tests/simulation-world-context.test.js tests/mojibake-guard.test.js
 ```
 
 Run browser acceptance:
@@ -97,8 +100,6 @@ npm.cmd run build
 
 ## Still Future Work
 
-- Real World Pack storage.
-- World Pack activation review.
-- World app archetypes.
-- Service-account templates.
+- Phone-device testing for Book import/export -> WorldBook activation -> changed-source review -> Chat/runtime context.
+- Broaden World Pack app archetypes and service-account templates after the V1 path is easy to understand.
 - Optional standalone shortcut after usage frequency is proven.

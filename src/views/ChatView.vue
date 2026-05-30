@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
@@ -59,6 +60,7 @@ const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const bookStore = useBookStore()
 const mapStore = useMapStore()
 const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
@@ -1266,6 +1268,7 @@ const buildWorldKernelPromptBlock = (contact) => {
   const worldContext = resolveWorldContextForConsumer({
     systemStore,
     chatStore,
+    bookStore,
     contact,
     consumer: 'chat',
   })
@@ -1458,6 +1461,7 @@ const activeThreadWorldKernelState = computed(() => {
   return resolveWorldContextForConsumer({
     systemStore,
     chatStore,
+    bookStore,
     contact: activeChat.value,
     consumer: 'chat',
   })

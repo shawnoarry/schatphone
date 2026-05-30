@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import { useChatStore } from '../src/stores/chat'
+import { useBookStore } from '../src/stores/book'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 
@@ -71,10 +72,12 @@ describe('chat worldbook binding visibility', () => {
   let wrapper = null
   let router = null
   let chatStore = null
+  let bookStore = null
   let relationshipRuntimeStore = null
   let systemStore = null
   let binding = null
   let injectedPoint = null
+  let bookAsset = null
 
   beforeEach(async () => {
     localStorage.clear()
@@ -82,6 +85,7 @@ describe('chat worldbook binding visibility', () => {
     setActivePinia(createPinia())
 
     chatStore = useChatStore()
+    bookStore = useBookStore()
     relationshipRuntimeStore = useRelationshipRuntimeStore()
     systemStore = useSystemStore()
 
@@ -90,6 +94,20 @@ describe('chat worldbook binding visibility', () => {
     systemStore.user.relationship = 'Trusted partner'
     systemStore.user.bio = 'Keeps promises and prefers direct answers.'
     systemStore.setGlobalWorldview('Night city baseline. Formal etiquette in public.')
+    bookAsset = bookStore.createAsset({
+      title: 'Night market protocol',
+      assetType: 'worldbook_document',
+      format: 'markdown',
+      content: '# Night market protocol\n\nLinked Book source governs lantern passwords.',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: bookAsset.id,
+      usage: 'base_worldview',
+      enabled: true,
+      priority: 1,
+      sourceVersion: bookAsset.version,
+      sourceFingerprint: bookAsset.contentFingerprint,
+    })
     injectedPoint = systemStore.upsertKnowledgePoint({
       id: 'kp_city_etiquette',
       title: 'City etiquette',
@@ -151,10 +169,12 @@ describe('chat worldbook binding visibility', () => {
     wrapper = null
     router = null
     chatStore = null
+    bookStore = null
     relationshipRuntimeStore = null
     systemStore = null
     binding = null
     injectedPoint = null
+    bookAsset = null
     aiMockState.calls.length = 0
   })
 
@@ -163,7 +183,10 @@ describe('chat worldbook binding visibility', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="thread-worldbook-summary"]').text()).toContain(
-      'Night city baseline. Formal etiquette in public.',
+      'Night market protocol: # Night market protocol',
+    )
+    expect(wrapper.get('[data-testid="thread-worldbook-summary"]').text()).toContain(
+      'Night city baseline. Formal',
     )
     expect(wrapper.get('[data-testid="thread-worldbook-active-count"]').text()).toContain('1 / 2')
     expect(wrapper.get(`[data-testid="thread-worldbook-point-${injectedPoint.id}"]`).text()).toContain(
@@ -177,7 +200,9 @@ describe('chat worldbook binding visibility', () => {
     expect(aiMockState.calls).toHaveLength(1)
     const systemPrompt = aiMockState.calls[0]?.systemPrompt || ''
 
-    expect(systemPrompt).toContain('Primary worldview rules: Night city baseline. Formal etiquette in public.')
+    expect(systemPrompt).toContain('Primary worldview rules: Night market protocol: # Night market protocol')
+    expect(systemPrompt).toContain('Linked Book source governs lantern passwords.')
+    expect(systemPrompt).toContain('Night city baseline. Formal etiquette in public.')
     expect(systemPrompt).toContain('User profile context:')
     expect(systemPrompt).toContain('Occupation: Courier')
     expect(systemPrompt).toContain('Relationship setting: Trusted partner')

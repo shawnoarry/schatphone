@@ -4,47 +4,43 @@ import { extname, join, relative } from 'node:path'
 
 const ROOT_DIR = process.cwd()
 const SRC_DIR = join(ROOT_DIR, 'src')
-const SCANNED_EXTENSIONS = new Set(['.vue', '.js', '.mjs'])
+const DOCS_DIR = join(ROOT_DIR, 'docs')
+const SCANNED_EXTENSIONS = new Set(['.vue', '.js', '.mjs', '.md'])
+const EXCLUDED_DIR_PARTS = new Set(['archive'])
 
 const MOJIBAKE_MARKERS = [
+  '锟?',
   '�',
-  '棣栭',
-  '鏃ュ',
-  '妯″潡',
-  '鍗犱',
-  '鐢佃瘽',
-  '鑲＄エ',
-  '閽卞寘',
-  '鏅鸿兘',
-  '闈㈡澘',
-  '鑱氬悎',
-  '涓撴敞',
-  '鍦烘櫙',
-  '缃戠粶',
-  '澶栬',
-  '瀛楃粍',
+  '銆',
+  '搴旂敤',
   '绯荤粺',
   '璁剧疆',
-  '渚跨',
-  '鏀惰棌',
-  '鍒犻櫎',
-  '濮撳悕',
-  '鎬у埆',
-  '鍑虹敓',
-  '鑱屼笟',
-  '璇︾粏',
-  '淇℃伅',
-  '浠婂ぉ',
-  '鏄ㄥぉ',
-  '鍒氬垰',
-  '瑙掕壊',
   '涓栫晫',
+  '鏂囨湰',
+  '鑱婂ぉ',
+  '鑱旂郴',
+  '鐢佃瘽',
+  '鍦板浘',
+  '濯掍綋',
+  '瑙掕壊',
+  '缂栬緫',
+  '淇濆瓨',
+  '瀵煎叆',
+  '鍏ㄥ眬',
+  '鍚敤',
+  '鎵撳紑',
+  '榛樿',
+  '鐜颁唬',
+  '琛ョ粰',
+  '鏁戞彺',
+  '棰戦亾',
 ]
 
 const walkSourceFiles = (dir, output = []) => {
   readdirSync(dir).forEach((name) => {
     const fullPath = join(dir, name)
     if (statSync(fullPath).isDirectory()) {
+      if (EXCLUDED_DIR_PARTS.has(name)) return
       walkSourceFiles(fullPath, output)
       return
     }
@@ -56,10 +52,10 @@ const walkSourceFiles = (dir, output = []) => {
 }
 
 describe('mojibake guard', () => {
-  test('keeps user-visible source text free of known Chinese mojibake fragments', () => {
+  test('keeps user-visible source and active docs free of known Chinese mojibake fragments', () => {
     const hits = []
 
-    walkSourceFiles(SRC_DIR).forEach((filePath) => {
+    ;[SRC_DIR, DOCS_DIR].flatMap((dir) => walkSourceFiles(dir)).forEach((filePath) => {
       const relativePath = relative(ROOT_DIR, filePath)
       readFileSync(filePath, 'utf8')
         .split(/\r?\n/)

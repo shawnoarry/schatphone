@@ -317,10 +317,10 @@ const worldOverview = computed(() =>
 - [ ] Run a targeted copy scan:
 
 ```powershell
-rg -n "涓|璁|妯|鍦|鏃|鑱|淇|锛|�" src/views/WorldBookView.vue src/components/chat/ChatThreadMenuPanel.vue src/components/worldbook
+npm test -- tests/mojibake-guard.test.js
 ```
 
-- [ ] Inspect every match manually. Matches inside intentional source comments or old untouched tests do not block this task; visible UI strings in touched files do.
+- [ ] Inspect every match manually. Use a UTF-8 reader for this scan; legacy PowerShell `Get-Content` can misread UTF-8 files as ANSI/GBK and create false mojibake in terminal output.
 
 ## Task 6: Align Runtime Context Naming Without Changing Semantics
 

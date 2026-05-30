@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest'
 import {
   WORLD_CONTEXT_FAMILY,
   resolveWorldContextFamily,
+  resolveWorldContextFromSystemStore,
   resolveWorldContextFromWorldBook,
 } from '../src/lib/simulation/world-context'
 
@@ -58,5 +59,49 @@ describe('simulation world context resolver', () => {
       activeWorldBookIds: ['kp_drone_city'],
     })
     expect(JSON.stringify(context)).not.toContain('Delivery drones queue')
+  })
+
+  test('includes active Book sources when resolving runtime context from system store', () => {
+    const systemStore = {
+      user: {
+        globalWorldview: 'Ordinary city baseline.',
+        worldBookSourceLinks: [
+          {
+            id: 'book_source_runtime',
+            assetId: 'asset_runtime_worldbook',
+            usage: 'base_worldview',
+            enabled: true,
+            priority: 1,
+          },
+        ],
+      },
+      listKnowledgePoints: () => [],
+    }
+    const bookStore = {
+      findAssetById: (assetId) =>
+        assetId === 'asset_runtime_worldbook'
+          ? {
+              id: 'asset_runtime_worldbook',
+              title: 'Runtime survival rules',
+              content: '末世补给站需要按封锁区等级配送。',
+              contentFingerprint: 'fp_runtime_survival',
+              version: 1,
+            }
+          : null,
+    }
+
+    const context = resolveWorldContextFromSystemStore(systemStore, {
+      bookStore,
+      sourceScope: 'module',
+      now: Date.now(),
+    })
+
+    expect(context).toMatchObject({
+      source: 'worldbook_binding',
+      sourceScope: 'module',
+      genreTags: [WORLD_CONTEXT_FAMILY.APOCALYPSE],
+      dangerLevel: 'high',
+      socialOrder: 'unstable',
+    })
   })
 })

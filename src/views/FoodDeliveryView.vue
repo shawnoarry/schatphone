@@ -19,6 +19,7 @@ import {
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
 import { useChatStore } from '../stores/chat'
+import { useBookStore } from '../stores/book'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
@@ -37,6 +38,7 @@ const router = useRouter()
 const { t, languageBase } = useI18n()
 const foodDeliveryStore = useFoodDeliveryStore()
 const chatStore = useChatStore()
+const bookStore = useBookStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
@@ -261,6 +263,7 @@ const triggerOrderSurpriseEvent = (order) => {
     randomValue: 0,
     seed: `${order?.id || 'food_order'}:${Date.now()}`,
     worldContext: resolveWorldContextFromSystemStore(systemStore, {
+      bookStore,
       sourceScope: 'module',
       now: Date.now(),
     }),

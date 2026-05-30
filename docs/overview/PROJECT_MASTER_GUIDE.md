@@ -92,6 +92,7 @@ Immediate active lane:
 - 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
 - the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat, runtime worldview fallback, active Book source links, and the active World Pack. World Pack V1 now has persisted packs, activation review, one-active-pack-per-save semantics, user-approved service-account template generation into Chat Directory, and the first concrete app-binding path: `survival_city` opens Shopping as `补给站` with a safe Daily Fresh / Grocery filter; other archetypes remain guarded.
 - Book text-library V1 now exists as a separate app for long worldbook documents, knowledge notes, rules, glossary text, and reusable references. `Settings -> WorldBook` remains the activation panel that links whole documents or selected Book sections into active world context.
+- the Book source chain is now tested through the consumer path: Chat prompt context, Chat thread summary, and runtime world-context resolution all receive active Book source text through explicit `bookStore` adapters.
 - fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack
@@ -251,6 +252,7 @@ This split is important. They are related, but they are not the same product sur
 - does not replace `Files`, because Files remains a hidden/internal metadata and storage-index component;
 - imports/creates/edits/exports text assets and exposes active-source state for WorldBook links;
 - supports trial-ready WorldBook activation through whole-document links, selected-section links, changed-source warning, and source-version refresh;
+- active Book sources are expected to affect Chat prompt context and runtime world-context resolution, not only the WorldBook settings page;
 - future novel, fanfic, or reader-style features should use a different module name and not overload Book.
 
 ## 8. Data And Storage Model

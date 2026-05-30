@@ -216,7 +216,7 @@ Status: `PARTIAL_DONE`
 V1 WorldBook baseline landed:
 
 - `Settings -> WorldBook` now leads with an active-world overview and a usable `Current World Pack / 当前设定包` activation panel;
-- `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback;
+- `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback; active Book source injection is now covered through Chat and runtime tests;
 - World Pack V1 storage and activation review are in place with one active pack per save; active-pack service-account templates can now be generated into Chat Directory after user confirmation; the first concrete app-binding V1 is live for `marketplace -> Shopping`, where `survival_city` opens Shopping as `补给站` with active world context and a safe Daily Fresh / Grocery filter.
 - Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place.
 
