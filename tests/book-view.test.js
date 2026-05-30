@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import BookView from '../src/views/BookView.vue'
+import { dialogState, resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { useBookStore } from '../src/stores/book'
 import { useSystemStore } from '../src/stores/system'
 
@@ -15,6 +16,7 @@ const createTestRouter = () =>
     routes: [
       { path: '/book', component: BookView },
       { path: '/home', component: DummyView },
+      { path: '/worldbook', component: DummyView },
     ],
   })
 
@@ -38,6 +40,7 @@ describe('BookView', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-29T10:00:00.000Z'))
     setActivePinia(createPinia())
+    resetDialogServiceForTest()
     useSystemStore().settings.system.language = 'en-US'
   })
 
@@ -114,6 +117,7 @@ describe('BookView', () => {
     const file = {
       name: 'source.md',
       type: 'text/markdown',
+      size: 128,
       text: vi.fn(async () => '# Source\n\nImported text.'),
     }
 
@@ -126,9 +130,45 @@ describe('BookView', () => {
     await flushPromises()
     await nextTick()
 
+    expect(store.assetCount).toBe(0)
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Import')
+
+    useDialog().submitDialog()
+    await flushPromises()
+    await nextTick()
+
     expect(store.assetCount).toBe(1)
     expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('imported')
     expect(wrapper.get('[data-testid="book-detail"]').text()).toContain('source')
+  })
+
+  test('canceling import confirmation leaves the library unchanged', async () => {
+    const store = useBookStore()
+    const { wrapper } = await mountBookView()
+    const file = {
+      name: 'source.md',
+      type: 'text/markdown',
+      size: 128,
+      text: vi.fn(async () => '# Source\n\nImported text.'),
+    }
+
+    const input = wrapper.get('[data-testid="book-import-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await flushPromises()
+    await nextTick()
+
+    expect(dialogState.visible).toBe(true)
+    useDialog().cancelDialog()
+    await flushPromises()
+    await nextTick()
+
+    expect(store.assetCount).toBe(0)
+    expect(file.text).not.toHaveBeenCalled()
   })
 
   test('invalid import shows feedback without creating assets', async () => {
@@ -146,6 +186,11 @@ describe('BookView', () => {
       configurable: true,
     })
     await input.trigger('change')
+    await flushPromises()
+    await nextTick()
+
+    expect(dialogState.visible).toBe(true)
+    useDialog().submitDialog()
     await flushPromises()
     await nextTick()
 
@@ -176,10 +221,39 @@ describe('BookView', () => {
 
     await wrapper.get('[data-testid="book-export"]').trigger('click')
 
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Export')
+    expect(createObjectURL).not.toHaveBeenCalled()
+
+    useDialog().submitDialog()
+    await flushPromises()
+
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(clickSpy).toHaveBeenCalledTimes(1)
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:book-export')
 
     clickSpy.mockRestore()
+  })
+
+  test('shows WorldBook usage for active source assets', async () => {
+    const bookStore = useBookStore()
+    const systemStore = useSystemStore()
+    const asset = bookStore.createAsset({
+      id: 'asset_worldbook_used',
+      title: 'Used Source',
+      content: 'Active world source.',
+      status: 'active_source',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: asset.id,
+      usage: 'base_worldview',
+      enabled: true,
+    })
+
+    const { wrapper } = await mountBookView()
+
+    const usage = wrapper.get('[data-testid="book-worldbook-usage"]')
+    expect(usage.text()).toContain('Used by WorldBook')
+    expect(usage.text()).toContain('active')
   })
 })

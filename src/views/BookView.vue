@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookStore } from '../stores/book'
+import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
@@ -11,6 +12,7 @@ import { BOOK_TEXT_ASSET_TYPES } from '../lib/book-text-schema'
 const router = useRouter()
 const route = useRoute()
 const bookStore = useBookStore()
+const systemStore = useSystemStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { assets } = storeToRefs(bookStore)
@@ -74,6 +76,24 @@ const selectedTags = computed(() =>
   Array.isArray(selectedAsset.value?.tags) ? selectedAsset.value.tags : [],
 )
 
+const selectedWorldBookLinks = computed(() => {
+  const asset = selectedAsset.value
+  if (!asset) return []
+  return systemStore
+    .listWorldBookSourceLinks()
+    .filter((link) => link.assetId === asset.id)
+})
+
+const selectedWorldBookUsageSummary = computed(() => {
+  const links = selectedWorldBookLinks.value
+  if (links.length === 0) return ''
+  const activeCount = links.filter((link) => link.enabled !== false).length
+  return t(
+    `${activeCount} 个启用引用，${links.length} 个总引用`,
+    `${activeCount} active links, ${links.length} total links`,
+  )
+})
+
 const selectedAssetTypeLabel = computed(() => {
   const type = selectedAsset.value?.assetType || 'reference_note'
   return t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type)
@@ -97,6 +117,15 @@ const draftIsDirty = computed(() => {
 
 const goBack = () => {
   pushReturnTarget(router, route, '/home')
+}
+
+const openWorldBookUsage = () => {
+  router.push({
+    path: '/worldbook',
+    query: {
+      from: 'settings',
+    },
+  })
 }
 
 const selectAsset = (assetId) => {
@@ -194,6 +223,24 @@ const importFile = async (event) => {
   const file = event?.target?.files?.[0]
   if (event?.target) event.target.value = ''
   if (!file || typeof file.text !== 'function') return
+
+  const confirmed = await confirmDialog({
+    title: t('导入文本来源', 'Import text source'),
+    message: t(
+      '确认把这个文件导入文本库吗？导入后仍需在 WorldBook 中启用才会影响上下文。',
+      'Import this file into Book? It will only affect context after you enable it in WorldBook.',
+    ),
+    details: [
+      `${t('文件', 'File')}: ${file.name || 'source'}`,
+      `${t('类型', 'Type')}: ${file.type || t('未知', 'Unknown')}`,
+      `${t('大小', 'Size')}: ${Number(file.size || 0)} B`,
+    ],
+    confirmText: t('导入', 'Import'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
+  if (!confirmed) return
+
   const content = await file.text()
   const result = bookStore.importTextAsset({
     fileName: file.name,
@@ -245,9 +292,26 @@ const downloadExportPayload = (asset, payload) => {
   return true
 }
 
-const exportSelected = () => {
+const exportSelected = async () => {
   const asset = selectedAsset.value
   if (!asset) return
+  const confirmed = await confirmDialog({
+    title: t('导出文本来源', 'Export text source'),
+    message: t(
+      '确认导出当前文本来源吗？导出的文件可在其他设备导入 Book。',
+      'Export this text source? The file can be imported into Book on another device.',
+    ),
+    details: [
+      `${t('标题', 'Title')}: ${asset.title}`,
+      `${t('字数', 'Chars')}: ${asset.content.length}`,
+      `${t('格式', 'Format')}: .worldbook.json`,
+    ],
+    confirmText: t('导出', 'Export'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
+  if (!confirmed) return
+
   const payload = bookStore.exportAsset(asset.id)
   if (!payload) return
   const downloaded = downloadExportPayload(asset, payload)
@@ -350,6 +414,16 @@ const exportSelected = () => {
           <span>{{ selectedSections.length }} {{ t('段落', 'sections') }}</span>
           <span v-if="selectedAsset.locked">{{ t('已锁定', 'Locked') }}</span>
           <span v-if="selectedAsset.status === 'active_source'">{{ t('正在影响世界书', 'Used by WorldBook') }}</span>
+        </div>
+
+        <div v-if="selectedWorldBookLinks.length > 0" class="book-usage-card" data-testid="book-worldbook-usage">
+          <div>
+            <strong>{{ t('正在被 WorldBook 使用', 'Used by WorldBook') }}</strong>
+            <span>{{ selectedWorldBookUsageSummary }}</span>
+          </div>
+          <button type="button" class="book-secondary-button" @click="openWorldBookUsage">
+            {{ t('查看启用设置', 'View activation') }}
+          </button>
         </div>
 
         <div v-if="selectedTags.length > 0" class="book-tags">
@@ -695,6 +769,34 @@ const exportSelected = () => {
   background: #eef2f6;
   font-size: 12px;
   font-weight: 800;
+}
+
+.book-usage-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-surface-muted);
+}
+
+.book-usage-card div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.book-usage-card strong {
+  color: var(--system-text);
+  font-size: 13px;
+}
+
+.book-usage-card span {
+  color: var(--system-text-muted);
+  font-size: 12px;
 }
 
 .book-guard {
