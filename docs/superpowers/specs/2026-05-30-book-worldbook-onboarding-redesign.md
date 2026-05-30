@@ -16,6 +16,7 @@ Approved direction:
 4. Long-term use should become `Book` as library plus `WorldBook` as control panel.
 5. Built-in or Settings-owned worldview text must not automatically appear as a Book library asset.
 6. A Settings-owned worldview may offer an explicit `Export / Copy to Book` action that creates a user-owned editable copy.
+7. Import, export, activation, and other high-impact flows should use dialogs, drawers, or explicit confirmation steps instead of piling all controls into the main screen.
 
 Short version:
 
@@ -32,6 +33,7 @@ Current symptoms:
 - Users cannot quickly tell the difference between storing a document and activating world context.
 - Users may not understand which material is affecting Chat or runtime.
 - Settings-owned built-in/default worldview text can be confused with user-owned Book assets if it is presented as ordinary library material.
+- Same-screen stacking makes pages feel worse as lists grow. Book, WorldBook, and App Store should not keep adding import forms, export controls, detail panels, and long lists into one endlessly lengthening screen.
 
 ## 3. Product Boundaries
 
@@ -158,7 +160,9 @@ Primary surfaces:
 4. Import/export
    - `.txt`, `.md`, `.markdown`, `.json`, `.worldbook.json`;
    - export one asset;
-   - unsupported format feedback.
+   - unsupported format feedback;
+   - use a dialog or drawer for import options, file confirmation, export format, overwrite warnings, and final confirmation;
+   - keep the main library screen focused on browsing and selecting assets, not permanent import/export forms.
 
 Book should not feel like a Settings sub-panel. It should feel like a native phone app dedicated to user-owned text material.
 
@@ -218,7 +222,51 @@ Behavior:
 
 This makes the action feel like duplication for customization, not migration.
 
-## 9. Interaction Consistency
+## 9. Progressive Disclosure Rules
+
+Book, WorldBook, and App Store should use progressive disclosure as their lists grow.
+
+Main screen responsibilities:
+
+- show overview state;
+- show searchable/filterable lists;
+- show the selected item summary;
+- expose primary entry points into deeper actions.
+
+Do not use the main screen for:
+
+- full import configuration;
+- full export configuration;
+- destructive confirmations;
+- long source pickers;
+- detailed change review;
+- every possible action for every item.
+
+Preferred containers:
+
+1. Dialog
+   - import confirmation;
+   - export confirmation;
+   - delete or remove confirmations;
+   - short activation confirmations.
+2. Drawer or bottom sheet
+   - source picker;
+   - section picker;
+   - item detail on phone-sized screens;
+   - source diff preview.
+3. Dedicated page
+   - long-form editing;
+   - full library management;
+   - advanced WorldBook management;
+   - large App Store category or app-detail surfaces if the list becomes too long.
+
+Cross-surface rule:
+
+- If a list can reasonably grow past one phone screen, its item details and execution controls should not all live inline.
+- App Store's current same-screen list/detail/action layout is acceptable only as a V1 baseline. If app entries, categories, screenshots, or descriptions grow, App Store should move app detail into a drawer, modal detail, or dedicated route instead of stretching the same page.
+- Book import/export should open a confirmation surface. The main Book screen should not become a stack of search, filters, import controls, export controls, editor, diff, and feedback all at once.
+
+## 10. Interaction Consistency
 
 Use a consistent depth model.
 
@@ -251,7 +299,7 @@ L3 execution:
 
 Do not mix L2 editing into L0 summary cards.
 
-## 10. Data Direction
+## 11. Data Direction
 
 No required data model rewrite is implied by this design, but the UI should treat sources as distinct categories:
 
@@ -267,7 +315,7 @@ No required data model rewrite is implied by this design, but the UI should trea
 
 If implementation needs a source descriptor, prefer an explicit type field over inferring from IDs.
 
-## 11. Non-Goals
+## 12. Non-Goals
 
 This redesign does not include:
 
@@ -280,7 +328,7 @@ This redesign does not include:
 - automatic syncing between fallback text and copied Book assets;
 - replacing World Hub or Cheats.
 
-## 12. Acceptance Criteria
+## 13. Acceptance Criteria
 
 The redesign is ready for implementation planning when:
 
@@ -293,8 +341,10 @@ The redesign is ready for implementation planning when:
 7. The copied Book asset is user-owned and does not auto-sync back to the fallback.
 8. WorldBook shows current active sources and consumer impact before advanced editing controls.
 9. Advanced World Pack, knowledge point, and role-template controls do not dominate the first-use path.
+10. Book import/export uses a dialog, drawer, or explicit confirmation flow instead of permanent same-screen stacking.
+11. Growing list surfaces, including Book and future App Store revisions, have a path to move item detail and execution controls out of the main list screen.
 
-## 13. Planning Notes
+## 14. Planning Notes
 
 The next implementation plan should start with IA and state visibility, not visual polish.
 
@@ -305,5 +355,6 @@ Recommended first implementation slice:
 3. Add `Copy to Book` behavior for fallback text.
 4. Reorder WorldBook so active sources and impact appear before advanced controls.
 5. Improve Book detail to show whether an asset is active and where it is used.
-6. Add tests for the distinction between fallback source and Book assets.
-
+6. Convert Book import/export into dialog or drawer confirmation flows.
+7. Add tests for the distinction between fallback source and Book assets.
+8. Record an App Store follow-up: avoid inline same-page growth if app entries and detail content expand.
