@@ -235,6 +235,7 @@ const selectedFilter = ref('all')
 const selectedAppId = ref('app_chat')
 const searchQuery = ref('')
 const libraryNotice = ref('')
+const detailSheetOpen = ref(false)
 let libraryNoticeTimerId = null
 
 const visibleHomeAppIds = computed(
@@ -403,18 +404,25 @@ const openSelectedApp = () => {
 
 const selectFilter = (filterId) => {
   selectedFilter.value = filterId
+  detailSheetOpen.value = false
   const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, filterId) && appMatchesSearch(item))
   if (firstMatch) selectedAppId.value = firstMatch.id
 }
 
 const selectApp = (appId) => {
   selectedAppId.value = appId
+  detailSheetOpen.value = true
 }
 
 const clearAppSearch = () => {
   searchQuery.value = ''
+  detailSheetOpen.value = false
   const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, selectedFilter.value))
   if (firstMatch) selectedAppId.value = firstMatch.id
+}
+
+const closeDetailSheet = () => {
+  detailSheetOpen.value = false
 }
 
 const editSelectedAppOnHome = () => {
@@ -585,7 +593,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <article v-if="selectedApp" class="app-store-detail" data-testid="app-store-detail">
+          <article v-if="selectedApp" class="app-store-detail app-store-detail-inline" data-testid="app-store-detail">
             <div class="app-store-detail-hero">
               <span class="app-store-detail-icon" :class="selectedApp.toneClass">
                 <i :class="selectedApp.icon" aria-hidden="true"></i>
@@ -595,6 +603,14 @@ onBeforeUnmount(() => {
                 <h2>{{ selectedApp.label }}</h2>
                 <span>{{ selectedAppPlacementLabel }}</span>
               </div>
+              <button
+                type="button"
+                class="app-store-detail-close"
+                :aria-label="t('关闭详情', 'Close detail')"
+                @click="closeDetailSheet"
+              >
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+              </button>
             </div>
             <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
             <div class="app-store-detail-stats">
@@ -639,6 +655,64 @@ onBeforeUnmount(() => {
         </div>
       </section>
     </main>
+    <div v-if="selectedApp && detailSheetOpen" class="app-store-detail-backdrop" @click="closeDetailSheet"></div>
+    <article
+      v-if="selectedApp && detailSheetOpen"
+      class="app-store-detail app-store-detail-sheet"
+      data-testid="app-store-detail-sheet"
+    >
+      <div class="app-store-detail-hero">
+        <span class="app-store-detail-icon" :class="selectedApp.toneClass">
+          <i :class="selectedApp.icon" aria-hidden="true"></i>
+        </span>
+        <div>
+          <p>{{ selectedApp.category }}</p>
+          <h2>{{ selectedApp.label }}</h2>
+          <span>{{ selectedAppPlacementLabel }}</span>
+        </div>
+        <button
+          type="button"
+          class="app-store-detail-close"
+          :aria-label="t('关闭详情', 'Close detail')"
+          @click="closeDetailSheet"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
+      <div class="app-store-detail-stats">
+        <span>
+          <small>{{ t('状态', 'Status') }}</small>
+          <strong>{{ selectedAppStatusLabel }}</strong>
+        </span>
+        <span>
+          <small>{{ t('入口', 'Entry') }}</small>
+          <strong>{{ selectedApp.entryKind === 'folder' ? t('文件夹', 'Folder') : 'APP' }}</strong>
+        </span>
+      </div>
+      <div class="app-store-actions">
+        <button type="button" class="app-store-action is-primary" @click="openSelectedApp">
+          <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          <span>{{ t('打开', 'Open') }}</span>
+        </button>
+        <button type="button" class="app-store-action" @click="editSelectedAppOnHome">
+          <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
+          <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
+        </button>
+        <button
+          v-if="selectedApp.visible && !selectedApp.protectedHomeEntry"
+          type="button"
+          class="app-store-action is-danger"
+          @click="removeSelectedAppFromHome"
+        >
+          <i class="fas fa-minus" aria-hidden="true"></i>
+          <span>{{ t('移出主屏', 'Remove') }}</span>
+        </button>
+      </div>
+      <p v-if="selectedApp.protectedHomeEntry" class="app-store-protected-note">
+        {{ t('这是系统入口，会固定保留在今日视图，确保应用商城始终可返回。', 'This system entry stays fixed in Today View so App Store remains reachable.') }}
+      </p>
+    </article>
   </div>
 </template>
 
@@ -1258,6 +1332,23 @@ onBeforeUnmount(() => {
   line-height: 1.4;
 }
 
+.app-store-detail-sheet,
+.app-store-detail-close,
+.app-store-detail-backdrop {
+  display: none;
+}
+
+.app-store-detail-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 15px;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+}
+
 .app-store-notice {
   margin-top: 12px;
   border: 1px solid color-mix(in srgb, var(--system-success) 26%, var(--system-subtle-border));
@@ -1305,6 +1396,53 @@ button {
   .app-store-layout {
     grid-template-columns: minmax(0, 1fr) minmax(200px, 0.78fr);
     align-items: start;
+  }
+}
+
+@media (max-width: 519px) {
+  .app-store-layout {
+    display: block;
+  }
+
+  .app-store-detail-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 34;
+    display: block;
+    background: rgba(12, 18, 26, 0.26);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .app-store-detail-inline {
+    display: none;
+  }
+
+  .app-store-detail-sheet {
+    position: fixed;
+    top: calc(92px + env(safe-area-inset-top));
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 35;
+    display: block;
+    margin: 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border-radius: 30px 30px 0 0;
+    box-shadow: 0 -28px 70px rgba(15, 23, 42, 0.24);
+  }
+
+  .app-store-detail-sheet .app-store-detail-hero {
+    grid-template-columns: 58px minmax(0, 1fr) 38px;
+  }
+
+  .app-store-detail-close {
+    display: inline-flex;
+  }
+
+  .app-store-actions {
+    grid-template-columns: 1fr;
   }
 }
 </style>

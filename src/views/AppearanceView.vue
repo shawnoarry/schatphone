@@ -64,6 +64,8 @@ const appearanceLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' :
 const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
 const selectedHomeLayoutPage = ref(0)
+const activeAppearanceSheet = ref('')
+const selectedIconAppId = ref('')
 
 let savedTimerId = null
 const customFontStackInput = ref('')
@@ -422,6 +424,10 @@ const goSettings = () => {
 }
 
 const handleBack = () => {
+  if (activeAppearanceSheet.value) {
+    closeAppearanceSheet()
+    return
+  }
   if (activeMenu.value !== ROOT_MENU) {
     activeMenu.value = ROOT_MENU
     return
@@ -431,6 +437,8 @@ const handleBack = () => {
 
 const openMenu = (menu) => {
   activeMenu.value = menu
+  activeAppearanceSheet.value = ''
+  selectedIconAppId.value = ''
   if (menu === 'font') {
     customFontStackInput.value = currentFontStack.value
   }
@@ -438,6 +446,25 @@ const openMenu = (menu) => {
     customWallpaperUrlInput.value =
       settings.value.appearance.wallpaperMode === 'url' ? settings.value.appearance.wallpaper || '' : ''
   }
+}
+
+const openAppearanceSheet = (sheetId) => {
+  activeAppearanceSheet.value = sheetId
+}
+
+const closeAppearanceSheet = () => {
+  activeAppearanceSheet.value = ''
+  selectedIconAppId.value = ''
+}
+
+const openFontEditor = () => {
+  customFontStackInput.value = currentFontStack.value
+  openAppearanceSheet('font')
+}
+
+const openIconEditor = (appId) => {
+  selectedIconAppId.value = appId
+  openAppearanceSheet('icon')
 }
 
 const setTheme = (themeId) => {
@@ -452,6 +479,7 @@ const openGallery = () => {
 const useThemeWallpaperSource = () => {
   wallpaperSourceTypeDraft.value = 'theme'
   systemStore.useThemeWallpaper()
+  closeAppearanceSheet()
   triggerSaved()
 }
 
@@ -461,6 +489,7 @@ const applyGalleryWallpaper = () => {
   if (!assetId) return
   wallpaperSourceTypeDraft.value = 'gallery'
   systemStore.setAppearanceWallpaperAsset(assetId)
+  closeAppearanceSheet()
   triggerSaved()
 }
 
@@ -478,12 +507,14 @@ const applyWallpaperUrl = () => {
     systemStore.useThemeWallpaper()
     customWallpaperUrlInput.value = ''
     wallpaperSourceTypeDraft.value = 'theme'
+    closeAppearanceSheet()
     triggerSaved()
     return
   }
 
   wallpaperSourceTypeDraft.value = 'url'
   systemStore.setAppearanceWallpaperUrl(normalizedUrl)
+  closeAppearanceSheet()
   triggerSaved()
 }
 
@@ -541,12 +572,14 @@ const setFontPreset = (value) => {
 const applyCustomFontStack = () => {
   const value = customFontStackInput.value.trim() || DEFAULT_FONT_STACK
   systemStore.setCustomVar(FONT_VAR_NAME, value)
+  closeAppearanceSheet()
   triggerSaved()
 }
 
 const resetFontStack = () => {
   customFontStackInput.value = DEFAULT_FONT_STACK
   systemStore.setCustomVar(FONT_VAR_NAME, DEFAULT_FONT_STACK)
+  closeAppearanceSheet()
   triggerSaved()
 }
 
@@ -561,7 +594,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="appearance-shell w-full h-full bg-gray-100 flex flex-col text-black">
+  <div class="appearance-shell w-full h-full bg-gray-100 flex flex-col text-black" :class="{ 'is-appearance-sheet-open': activeAppearanceSheet }">
     <div class="appearance-header pt-12 pb-3 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
       <button @click="handleBack" class="appearance-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
         <i class="fas fa-chevron-left"></i> {{ backLabel }}
@@ -898,7 +931,26 @@ onBeforeUnmount(() => {
             </AssetThumbnailOption>
           </div>
         </div>
-        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+        <div class="appearance-mobile-action-strip">
+          <button type="button" @click="openAppearanceSheet('wallpaper')">
+            <i class="fas fa-sliders"></i>
+            <span>{{ t('管理壁纸来源', 'Manage wallpaper source') }}</span>
+          </button>
+        </div>
+
+        <div
+          class="appearance-execute-panel appearance-wallpaper-editor rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3"
+          :class="{ 'is-open': activeAppearanceSheet === 'wallpaper' }"
+        >
+          <div class="appearance-sheet-head">
+            <div>
+              <span>{{ t('壁纸来源', 'Wallpaper Source') }}</span>
+              <strong>{{ currentWallpaperModeLabel }}</strong>
+            </div>
+            <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
           <div>
             <p class="text-xs font-semibold text-gray-700">
               {{ t('壁纸来源', 'Wallpaper Source') }}
@@ -1000,7 +1052,26 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="appearance-mobile-action-strip">
+        <button type="button" @click="openAppearanceSheet('css')">
+          <i class="fas fa-code"></i>
+          <span>{{ t('高级 CSS', 'Advanced CSS') }}</span>
+        </button>
+      </div>
+
+      <div
+        class="appearance-execute-panel appearance-css-editor bg-white rounded-xl p-4 shadow-sm"
+        :class="{ 'is-open': activeAppearanceSheet === 'css' }"
+      >
+        <div class="appearance-sheet-head">
+          <div>
+            <span>{{ t('高级', 'Advanced') }}</span>
+            <strong>{{ t('自定义 CSS', 'Custom CSS') }}</strong>
+          </div>
+          <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
         <div class="flex items-center justify-between mb-2">
           <label class="text-xs text-gray-500 block">{{ t('自定义 CSS（高级）', 'Custom CSS (Advanced)') }}</label>
           <button class="text-[11px] text-blue-500" @click="clearCustomCss">{{ t('清空', 'Clear') }}</button>
@@ -1010,6 +1081,12 @@ onBeforeUnmount(() => {
           class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
           placeholder=".app-shell { --home-widget-bg: rgba(255,255,255,0.5); }"
         ></textarea>
+        <div class="appearance-sheet-actions">
+          <button type="button" @click="saveAppearance(); closeAppearanceSheet()">
+            <i class="fas fa-check"></i>
+            <span>{{ t('保存 CSS', 'Save CSS') }}</span>
+          </button>
+        </div>
       </div>
 
       <button
@@ -1037,7 +1114,26 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="appearance-mobile-action-strip">
+        <button type="button" @click="openFontEditor">
+          <i class="fas fa-pen-to-square"></i>
+          <span>{{ t('编辑自定义字体', 'Edit custom font') }}</span>
+        </button>
+      </div>
+
+      <div
+        class="appearance-execute-panel appearance-font-editor bg-white rounded-xl p-4 shadow-sm"
+        :class="{ 'is-open': activeAppearanceSheet === 'font' }"
+      >
+        <div class="appearance-sheet-head">
+          <div>
+            <span>{{ t('字体', 'Font') }}</span>
+            <strong>{{ t('自定义字体栈', 'Custom font stack') }}</strong>
+          </div>
+          <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
         <label class="text-xs text-gray-500 block mb-1">{{ t('自定义字体栈（CSS font-family）', 'Custom font stack (CSS font-family)') }}</label>
         <input
           v-model="customFontStackInput"
@@ -1086,7 +1182,7 @@ onBeforeUnmount(() => {
       <div
         v-for="target in appIconCustomizationTargets"
         :key="target.appId"
-        class="bg-white rounded-xl p-4 shadow-sm space-y-3"
+        class="appearance-icon-card bg-white rounded-xl p-4 shadow-sm space-y-3"
       >
         <div class="flex items-center gap-3">
           <span
@@ -1108,33 +1204,63 @@ onBeforeUnmount(() => {
           >
             {{ t('恢复默认', 'Reset') }}
           </button>
+          <button
+            type="button"
+            class="appearance-icon-edit-trigger"
+            @click="openIconEditor(target.appId)"
+          >
+            <i class="fas fa-sliders"></i>
+            <span>{{ t('调整', 'Edit') }}</span>
+          </button>
         </div>
 
-        <label class="block space-y-1">
-          <span class="text-xs text-gray-500">{{ t('图标样式', 'Icon Glyph') }}</span>
-          <select
-            :value="target.icon"
-            class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
-            @change="setAppIconOverrideField(target.appId, 'icon', $event.target.value); triggerSaved()"
-          >
-            <option v-for="option in appIconPresetOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </label>
+        <div
+          class="appearance-execute-panel appearance-icon-editor"
+          :class="{ 'is-open': activeAppearanceSheet === 'icon' && selectedIconAppId === target.appId }"
+        >
+          <div class="appearance-sheet-head">
+            <div>
+              <span>{{ t('功能图标', 'App icon') }}</span>
+              <strong>{{ target.title }}</strong>
+            </div>
+            <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
 
-        <label class="block space-y-1">
-          <span class="text-xs text-gray-500">{{ t('色系', 'Accent') }}</span>
-          <select
-            :value="target.accent"
-            class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
-            @change="setAppIconOverrideField(target.appId, 'accent', $event.target.value); triggerSaved()"
-          >
-            <option v-for="option in appIconAccentOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </label>
+          <label class="block space-y-1">
+            <span class="text-xs text-gray-500">{{ t('图标样式', 'Icon Glyph') }}</span>
+            <select
+              :value="target.icon"
+              class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
+              @change="setAppIconOverrideField(target.appId, 'icon', $event.target.value); triggerSaved()"
+            >
+              <option v-for="option in appIconPresetOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="block space-y-1">
+            <span class="text-xs text-gray-500">{{ t('色系', 'Accent') }}</span>
+            <select
+              :value="target.accent"
+              class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
+              @change="setAppIconOverrideField(target.appId, 'accent', $event.target.value); triggerSaved()"
+            >
+              <option v-for="option in appIconAccentOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <div class="appearance-sheet-actions">
+            <button type="button" @click="saveAppearance(); closeAppearanceSheet()">
+              <i class="fas fa-check"></i>
+              <span>{{ t('完成', 'Done') }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <button
@@ -1145,6 +1271,14 @@ onBeforeUnmount(() => {
         {{ saved ? t('已保存', 'Saved') : t('保存图标设置', 'Save icon settings') }}
       </button>
     </div>
+
+    <button
+      v-if="activeAppearanceSheet"
+      type="button"
+      class="appearance-mobile-sheet-backdrop"
+      :aria-label="t('关闭面板', 'Close panel')"
+      @click="closeAppearanceSheet"
+    ></button>
 
   </div>
 </template>
@@ -1764,9 +1898,173 @@ onBeforeUnmount(() => {
   background-color: var(--system-pressed-bg);
 }
 
+.appearance-mobile-action-strip,
+.appearance-sheet-head,
+.appearance-mobile-sheet-backdrop {
+  display: none;
+}
+
+.appearance-execute-panel {
+  position: relative;
+}
+
+.appearance-icon-edit-trigger {
+  display: none;
+}
+
+.appearance-sheet-actions {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .appearance-menu-card {
     transition: none;
+  }
+}
+
+@media (max-width: 719px) {
+  .appearance-shell.is-appearance-sheet-open > div[class*="overflow-y-auto"] {
+    overflow: visible;
+  }
+
+  .appearance-mobile-action-strip {
+    display: grid;
+    margin: -2px 0 0;
+  }
+
+  .appearance-mobile-action-strip button,
+  .appearance-icon-edit-trigger,
+  .appearance-sheet-actions button {
+    min-height: 46px;
+    border: 1px solid var(--system-control-border);
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 13px;
+    color: var(--system-text);
+    background: var(--system-control-bg);
+    box-shadow: var(--system-shadow-control);
+    font-size: 13px;
+    font-weight: 800;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .appearance-mobile-action-strip button:active,
+  .appearance-icon-edit-trigger:active,
+  .appearance-sheet-actions button:active {
+    transform: scale(0.985);
+    background: var(--system-pressed-bg);
+  }
+
+  .appearance-icon-card {
+    position: static;
+  }
+
+  .appearance-icon-edit-trigger {
+    min-height: 32px;
+    border-radius: 12px;
+    flex: 0 0 auto;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .appearance-execute-panel {
+    display: none;
+  }
+
+  .appearance-execute-panel.is-open {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 75;
+    display: grid;
+    gap: 12px;
+    max-height: min(78%, calc(100% - 108px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--system-card-border);
+    border-radius: 28px 28px 24px 24px;
+    padding: 12px;
+    background: var(--system-elevated-bg);
+    box-shadow: var(--system-shadow-soft);
+  }
+
+  .appearance-mobile-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: block;
+    border: 0;
+    background: rgba(18, 25, 32, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .appearance-sheet-head {
+    position: sticky;
+    top: -12px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: -12px -12px 0;
+    padding: 12px;
+    border-bottom: 1px solid var(--system-subtle-border);
+    background: color-mix(in srgb, var(--system-elevated-bg) 88%, transparent);
+    backdrop-filter: blur(var(--system-blur-sm));
+    -webkit-backdrop-filter: blur(var(--system-blur-sm));
+  }
+
+  .appearance-sheet-head div {
+    min-width: 0;
+  }
+
+  .appearance-sheet-head span,
+  .appearance-sheet-head strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .appearance-sheet-head span {
+    color: var(--system-text-muted);
+    font-size: 11px;
+    font-weight: 760;
+  }
+
+  .appearance-sheet-head strong {
+    margin-top: 2px;
+    color: var(--system-text);
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .appearance-sheet-head button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--system-control-border);
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: var(--system-text);
+    background: var(--system-control-bg);
+    box-shadow: var(--system-shadow-control);
+  }
+
+  .appearance-css-editor textarea {
+    min-height: 220px;
+  }
+
+  .appearance-sheet-actions {
+    display: grid;
   }
 }
 

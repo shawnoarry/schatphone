@@ -219,7 +219,11 @@ V1 WorldBook baseline landed:
 - `src/lib/world-interface.js` is the shared world-context seam for Chat prompt context, Chat thread WorldBook summary, active WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback; active Book source injection is now covered through Chat and runtime tests;
 - World Pack V1 storage and activation review are in place with one active pack per save; active-pack service-account templates can now be generated into Chat Directory after user confirmation; the first concrete app-binding V1 is live for `marketplace -> Shopping`, where `survival_city` opens Shopping as `补给站` with active world context and a safe Daily Fresh / Grocery filter.
 - Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place.
-- Book / WorldBook IA is being tightened around a first-use source setup path: system fallback stays outside Book until copied, Book import/export uses confirmation surfaces, and active Book usage is shown from the text library detail view.
+- Book / WorldBook IA is being tightened around a first-use source setup path: system fallback stays outside Book until copied, Book import/export uses confirmation surfaces, active Book usage is shown from the text library detail view, and Book now uses a phone-native Shelf -> Detail -> Editor flow instead of stacking library, reading, and editing on one scroll.
+- `Settings -> WorldBook` now uses a single-focus control console after the active-world overview: Sources, Pack, Kernel, Templates, and Knowledge are task panels instead of one long stacked management page. Source linking and changed-source review open as layered sheets so activation work does not stretch the main screen.
+- The Sources task panel now reads as a source-control console with active/review/available/disabled stats, system fallback status, linked-source cards, and separated destructive removal actions.
+- WorldBook's Current World Pack and Knowledge task panels now have their first internal craft pass; knowledge creation/editing is a focused bottom sheet, keeping the panel itself for status, filters, and list review.
+- Kernel and Templates now share the same task-panel visual system, so the whole WorldBook console is closer to one coherent Settings-owned management surface instead of mixed legacy panels.
 
 Current product direction:
 
@@ -242,7 +246,7 @@ Remaining task structure:
 2. user-test the WorldBook -> `补给站` -> Shopping filter path on phone-sized devices;
 3. broaden service/subscription template generation beyond the current active-pack service-account V1;
 4. define and land the next concrete archetype target beyond the current Shopping marketplace V1.
-5. revisit App Store detail presentation if the app library grows beyond the V1 same-screen list/detail/action layout; long app lists should move detail into a drawer, modal detail, or route instead of stretching the main screen.
+5. keep reviewing App Store detail density as the app library grows; phone-sized screens now use a selected-app detail sheet, but future large catalogs may still need deeper category pages or richer search.
 
 Current design reference:
 

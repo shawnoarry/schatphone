@@ -117,6 +117,7 @@ const availableBookSourceAssets = computed(() => {
   const linkedIds = new Set(linkedBookSources.value.map((link) => link.assetId))
   return bookStore.worldbookSourceAssets.filter((asset) => !linkedIds.has(asset.id))
 })
+const availableBookSourceCount = computed(() => availableBookSourceAssets.value.length)
 const sourcePickerAssets = computed(() => bookStore.worldbookSourceAssets)
 const sourcePicker = reactive({
   open: false,
@@ -191,6 +192,15 @@ const sourceReviewSummary = computed(() =>
     `${sourceReviewDiff.value.addedCount} added, ${sourceReviewDiff.value.removedCount} removed, ${sourceReviewDiff.value.unchangedCount} unchanged`,
   ),
 )
+const activeBookSourceCount = computed(() =>
+  linkedBookSources.value.filter((link) => link.enabled !== false && !link.missing).length,
+)
+const bookSourceIssueCount = computed(() =>
+  linkedBookSources.value.filter((link) => link.missing || link.changed).length,
+)
+const disabledBookSourceCount = computed(() =>
+  linkedBookSources.value.filter((link) => link.enabled === false).length,
+)
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
@@ -218,6 +228,8 @@ const knowledgeDraft = reactive({
   tags: '',
 })
 const editingKnowledgePointId = ref('')
+const isKnowledgeComposerOpen = ref(false)
+const activeWorldbookPanel = ref('sources')
 let savedTimerId = null
 const returnLabelKey = computed(() => resolveReturnLabel(route, 'Settings'))
 const returnButtonLabel = computed(() =>
@@ -234,6 +246,59 @@ const returnButtonLabel = computed(() =>
 
 const goSettings = () => {
   pushReturnTarget(router, route, '/settings')
+}
+
+const worldbookPanelTabs = computed(() => [
+  {
+    id: 'sources',
+    icon: 'fas fa-link',
+    label: t('来源', 'Sources'),
+    summary:
+      bookSourceIssueCount.value > 0
+        ? t(`${bookSourceIssueCount.value} 个待处理`, `${bookSourceIssueCount.value} issues`)
+        : t(`${activeBookSourceCount.value} 个启用`, `${activeBookSourceCount.value} active`),
+  },
+  {
+    id: 'pack',
+    icon: 'fas fa-cube',
+    label: t('设定包', 'Pack'),
+    summary: t(
+      worldOverview.value.activePack?.title || '默认世界',
+      worldOverview.value.activePack?.name || 'Default world',
+    ),
+  },
+  {
+    id: 'kernel',
+    icon: 'fas fa-compass',
+    label: t('基础世界观', 'Kernel'),
+    summary: t(`${worldBookCount.value} 字`, `${worldBookCount.value} chars`),
+  },
+  {
+    id: 'templates',
+    icon: 'fas fa-id-card',
+    label: t('档案模板', 'Templates'),
+    summary: t(`${worldProfileTemplates.value.length} 个`, `${worldProfileTemplates.value.length} items`),
+  },
+  {
+    id: 'knowledge',
+    icon: 'fas fa-sitemap',
+    label: t('知识点', 'Knowledge'),
+    summary: t(
+      `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
+      `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
+    ),
+  },
+])
+
+const activeWorldbookPanelLabel = computed(
+  () =>
+    worldbookPanelTabs.value.find((panel) => panel.id === activeWorldbookPanel.value)?.label ||
+    t('来源', 'Sources'),
+)
+
+const setWorldbookPanel = (panelId = 'sources') => {
+  if (!worldbookPanelTabs.value.some((panel) => panel.id === panelId)) return
+  activeWorldbookPanel.value = panelId
 }
 
 const pulseSaved = (message = '') => {
@@ -600,6 +665,7 @@ const createKnowledgePoint = () => {
     return
   }
   resetKnowledgeDraft()
+  isKnowledgeComposerOpen.value = false
   systemStore.saveNow()
   pulseSaved(t('知识点已添加。', 'Knowledge point added.'))
 }
@@ -620,20 +686,29 @@ const editingKnowledgePoint = computed(() =>
 
 const isEditingKnowledgePoint = computed(() => Boolean(editingKnowledgePoint.value?.id))
 
+const openCreateKnowledgePoint = () => {
+  resetKnowledgeDraft()
+  isKnowledgeComposerOpen.value = true
+  saved.value = false
+  uiNotice.value = ''
+}
+
+const closeKnowledgeComposer = () => {
+  resetKnowledgeDraft()
+  isKnowledgeComposerOpen.value = false
+  uiNotice.value = ''
+  saved.value = false
+}
+
 const openEditKnowledgePoint = (point) => {
   if (!point?.id) return
   editingKnowledgePointId.value = point.id
   knowledgeDraft.title = point.title || ''
   knowledgeDraft.content = point.content || ''
   knowledgeDraft.tags = formatKnowledgePointTags(point)
+  isKnowledgeComposerOpen.value = true
   saved.value = false
   uiNotice.value = ''
-}
-
-const cancelKnowledgePointEdit = () => {
-  resetKnowledgeDraft()
-  uiNotice.value = ''
-  saved.value = false
 }
 
 const submitKnowledgePoint = () => {
@@ -651,6 +726,7 @@ const submitKnowledgePoint = () => {
 
   if (!editingKnowledgePoint.value?.id) {
     resetKnowledgeDraft()
+    isKnowledgeComposerOpen.value = false
     uiNotice.value = t('要编辑的知识点已不存在。', 'The knowledge point you were editing no longer exists.')
     return
   }
@@ -668,6 +744,7 @@ const submitKnowledgePoint = () => {
   }
 
   resetKnowledgeDraft()
+  isKnowledgeComposerOpen.value = false
   systemStore.saveNow()
   pulseSaved(t('知识点已更新。', 'Knowledge point updated.'))
 }
@@ -743,6 +820,18 @@ const getKnowledgePointUsageState = (point) => {
   if (usage.chatBindingCount <= 0) return 'profile_only'
   return 'chat_ready'
 }
+
+const enabledKnowledgePointCount = computed(() =>
+  knowledgePoints.value.filter((point) => point.enabled !== false).length,
+)
+
+const boundKnowledgePointCount = computed(() =>
+  knowledgePoints.value.filter((point) => getKnowledgePointUsage(point).profiles.length > 0).length,
+)
+
+const chatReadyKnowledgePointCount = computed(() =>
+  knowledgePoints.value.filter((point) => getKnowledgePointUsageState(point) === 'chat_ready').length,
+)
 
 const knowledgeUsageFilterOptions = computed(() => {
   const counts = scopedKnowledgePoints.value.reduce(
@@ -1012,6 +1101,7 @@ const removeKnowledgePoint = async (point) => {
   systemStore.removeKnowledgePoint(point.id)
   if (editingKnowledgePointId.value === point.id) {
     resetKnowledgeDraft()
+    isKnowledgeComposerOpen.value = false
   }
   systemStore.saveNow()
   pulseSaved(t('知识点已删除。', 'Knowledge point deleted.'))
@@ -1037,6 +1127,14 @@ watch(
       sourcePicker.mode = 'whole'
     }
   },
+)
+
+watch(
+  knowledgeDeepLinkActive,
+  (active) => {
+    if (active) activeWorldbookPanel.value = 'knowledge'
+  },
+  { immediate: true },
 )
 
 watch(
@@ -1067,25 +1165,69 @@ onBeforeUnmount(() => {
         :saved="saved"
       />
 
-      <CurrentWorldPackPanel
-        :overview="worldOverview"
-        :packs="worldPackCandidates"
-        :selected-pack-id="selectedWorldPackId || worldOverview.activePack?.id"
-        :activation-review="selectedWorldPackReview"
-        :app-binding-rows="activeWorldPackAppBindingRows"
-        :service-template-rows="activeWorldPackServiceTemplateRows"
-        @select-pack="selectWorldPack"
-        @activate-pack="activateSelectedWorldPack"
-        @open-app-binding="openWorldPackAppBinding"
-        @create-service-template="createWorldPackServiceTemplateContact"
-        @open-service-contact="openWorldPackServiceContact"
-      />
+      <section class="worldbook-control-deck" data-testid="worldbook-control-deck">
+        <div class="worldbook-control-deck__head">
+          <div>
+            <p>{{ t('世界上下文控制台', 'World context console') }}</p>
+            <h2>{{ activeWorldbookPanelLabel }}</h2>
+          </div>
+          <span>
+            {{
+              t(
+                `${activeBookSourceCount} 个文本来源正在生效`,
+                `${activeBookSourceCount} text sources active`,
+              )
+            }}
+          </span>
+        </div>
+        <div class="worldbook-panel-tabs" role="tablist" :aria-label="t('WorldBook 面板', 'WorldBook panels')">
+          <button
+            v-for="panel in worldbookPanelTabs"
+            :key="panel.id"
+            type="button"
+            role="tab"
+            :aria-selected="activeWorldbookPanel === panel.id"
+            :class="['worldbook-panel-tab', { 'is-active': activeWorldbookPanel === panel.id }]"
+            :data-testid="`worldbook-panel-tab-${panel.id}`"
+            @click="setWorldbookPanel(panel.id)"
+          >
+            <i :class="panel.icon" aria-hidden="true"></i>
+            <span>{{ panel.label }}</span>
+            <small>{{ panel.summary }}</small>
+          </button>
+        </div>
+      </section>
 
-      <section
-        v-if="showWorldBookOnboarding"
-        class="worldbook-onboarding-card"
-        data-testid="worldbook-onboarding-card"
+      <div
+        v-show="activeWorldbookPanel === 'pack'"
+        class="worldbook-panel"
+        data-testid="worldbook-panel-pack"
       >
+        <CurrentWorldPackPanel
+          :overview="worldOverview"
+          :packs="worldPackCandidates"
+          :selected-pack-id="selectedWorldPackId || worldOverview.activePack?.id"
+          :activation-review="selectedWorldPackReview"
+          :app-binding-rows="activeWorldPackAppBindingRows"
+          :service-template-rows="activeWorldPackServiceTemplateRows"
+          @select-pack="selectWorldPack"
+          @activate-pack="activateSelectedWorldPack"
+          @open-app-binding="openWorldPackAppBinding"
+          @create-service-template="createWorldPackServiceTemplateContact"
+          @open-service-contact="openWorldPackServiceContact"
+        />
+      </div>
+
+      <div
+        v-show="activeWorldbookPanel === 'sources'"
+        class="worldbook-panel"
+        data-testid="worldbook-panel-sources"
+      >
+        <section
+          v-if="showWorldBookOnboarding"
+          class="worldbook-onboarding-card"
+          data-testid="worldbook-onboarding-card"
+        >
         <div>
           <p>{{ t('首次设置', 'First setup') }}</p>
           <h2>{{ t('先选择一个会影响上下文的来源', 'Start with a source') }}</h2>
@@ -1113,8 +1255,8 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-book-sources">
-        <div class="flex items-start justify-between gap-3">
+      <section class="worldbook-source-console" data-testid="worldbook-book-sources">
+        <div class="worldbook-source-head">
           <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
               {{ t('文本库来源', 'Book sources') }}
@@ -1136,6 +1278,25 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <div class="worldbook-source-stats" data-testid="worldbook-source-stats">
+          <span>
+            <strong>{{ activeBookSourceCount }}</strong>
+            {{ t('正在生效', 'Active') }}
+          </span>
+          <span :class="{ 'is-warning': bookSourceIssueCount > 0 }">
+            <strong>{{ bookSourceIssueCount }}</strong>
+            {{ t('待处理', 'Needs review') }}
+          </span>
+          <span>
+            <strong>{{ availableBookSourceCount }}</strong>
+            {{ t('库内可选', 'Available') }}
+          </span>
+          <span>
+            <strong>{{ disabledBookSourceCount }}</strong>
+            {{ t('已停用', 'Disabled') }}
+          </span>
+        </div>
+
         <div class="worldbook-system-fallback" data-testid="worldbook-system-fallback">
           <div>
             <p>{{ t('系统 fallback', 'System fallback') }}</p>
@@ -1152,7 +1313,38 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div v-if="sourcePicker.open" class="worldbook-source-picker" data-testid="worldbook-source-picker">
+        <div
+          v-if="sourcePicker.open"
+          class="worldbook-sheet-backdrop"
+          data-testid="worldbook-source-picker-backdrop"
+          @click="closeBookSourcePicker"
+        ></div>
+        <div
+          v-if="sourcePicker.open"
+          class="worldbook-source-picker"
+          data-testid="worldbook-source-picker"
+          role="dialog"
+          :aria-label="t('选择文本库来源', 'Choose Book source')"
+        >
+          <div class="worldbook-sheet-head">
+            <div>
+              <p>{{ t('连接文本来源', 'Link text source') }}</p>
+              <h3>{{ sourcePickerAsset?.title || t('文本库来源', 'Book source') }}</h3>
+            </div>
+            <button type="button" class="worldbook-inline-action" @click="closeBookSourcePicker">
+              {{ t('关闭', 'Close') }}
+            </button>
+          </div>
+          <div v-if="sourcePickerAsset" class="worldbook-picker-asset-summary">
+            <span><i class="fas fa-book-open"></i></span>
+            <div>
+              <strong>{{ sourcePickerAsset.title }}</strong>
+              <small>
+                {{ sourcePickerAsset.content?.length || 0 }} {{ t('字', 'chars') }} /
+                {{ sourcePickerSections.length }} {{ t('段落', 'sections') }}
+              </small>
+            </div>
+          </div>
           <div class="worldbook-picker-grid">
             <label>
               <span>{{ t('文本来源', 'Text source') }}</span>
@@ -1223,20 +1415,41 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <p v-if="linkedBookSources.length === 0" class="text-sm text-gray-500" data-testid="worldbook-book-source-empty">
-          {{ t('还没有连接文本库来源，当前仍使用下方全局世界观文本。', 'No Book sources are linked yet. The global worldview below remains active.') }}
-        </p>
+        <div v-if="linkedBookSources.length === 0" class="worldbook-source-empty" data-testid="worldbook-book-source-empty">
+          <span><i class="fas fa-link-slash"></i></span>
+          <strong>{{ t('还没有连接文本来源', 'No text sources linked') }}</strong>
+          <p>{{ t('当前只会使用系统 fallback；连接 Book 文本后，Chat 与运行时会读取被启用的来源。', 'Only the system fallback is active until Book text is linked.') }}</p>
+        </div>
 
-        <div v-for="link in linkedBookSources" :key="link.id" class="worldbook-template-row" :data-testid="`worldbook-book-source-${link.id}`">
-          <div class="min-w-0">
-            <p class="font-medium truncate">{{ link.title }}</p>
-            <p class="text-xs text-gray-500">
-              {{ link.usageLabel }} · {{ link.sectionSummary }} · {{ link.enabled === false ? t('停用', 'Disabled') : t('启用', 'Enabled') }}
-              <span v-if="link.missing" class="text-red-600"> · {{ t('来源缺失', 'Missing source') }}</span>
-              <span v-else-if="link.changed" class="text-amber-700"> · {{ t('已修改待复核', 'Changed') }}</span>
-            </p>
+        <div v-else class="worldbook-source-list">
+        <article
+          v-for="link in linkedBookSources"
+          :key="link.id"
+          class="worldbook-source-card"
+          :class="{
+            'is-disabled': link.enabled === false,
+            'is-warning': link.changed && !link.missing,
+            'is-missing': link.missing,
+          }"
+          :data-testid="`worldbook-book-source-${link.id}`"
+        >
+          <div class="worldbook-source-card__main">
+            <span class="worldbook-source-card__icon">
+              <i :class="link.missing ? 'fas fa-triangle-exclamation' : link.changed ? 'fas fa-rotate' : 'fas fa-file-lines'"></i>
+            </span>
+            <div class="min-w-0">
+              <p>{{ link.title }}</p>
+              <small>{{ link.usageLabel }} / {{ link.sectionSummary }}</small>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2 justify-end">
+          <div class="worldbook-source-card__meta">
+            <span :class="link.enabled === false ? 'is-muted' : 'is-success'">
+              {{ link.enabled === false ? t('停用', 'Disabled') : t('启用', 'Enabled') }}
+            </span>
+            <span v-if="link.missing" class="is-danger">{{ t('来源缺失', 'Missing source') }}</span>
+            <span v-else-if="link.changed" class="is-warning">{{ t('待复核', 'Needs review') }}</span>
+          </div>
+          <div class="worldbook-source-card__actions">
             <button v-if="link.changed && !link.missing" type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-review-${link.id}`" @click="openBookSourceReview(link)">
               {{ t('查看变更', 'Review changes') }}
             </button>
@@ -1246,16 +1459,25 @@ onBeforeUnmount(() => {
             <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-open-${link.id}`" @click="openBookSource(link.assetId)">
               {{ t('打开', 'Open') }}
             </button>
-            <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-remove-${link.id}`" @click="removeBookSource(link.id)">
+            <button type="button" class="worldbook-secondary-action worldbook-danger-action" :data-testid="`worldbook-book-source-remove-${link.id}`" @click="removeBookSource(link.id)">
               {{ t('移除', 'Remove') }}
             </button>
           </div>
+        </article>
         </div>
 
         <div
           v-if="reviewingBookSource"
+          class="worldbook-sheet-backdrop"
+          data-testid="worldbook-source-review-backdrop"
+          @click="closeBookSourceReview"
+        ></div>
+        <div
+          v-if="reviewingBookSource"
           class="worldbook-source-review"
           data-testid="worldbook-book-source-review-panel"
+          role="dialog"
+          :aria-label="t('来源变更预览', 'Source change preview')"
         >
           <div class="worldbook-source-review-head">
             <div>
@@ -1316,20 +1538,34 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </section>
+      </div>
 
-      <div class="rounded-2xl bg-white border border-gray-200 p-4" data-testid="worldbook-world-kernel">
-        <p class="text-sm font-semibold">{{ t('全局世界观（必选）', 'Global worldview (required)') }}</p>
-        <p class="text-xs text-gray-500 mt-1">
-          {{
-            t(
-              '全局世界观会作为所有聊天和模块生成的基础背景。',
-              'Global worldview is used as the base context for all chats and modules.',
-            )
-          }}
-        </p>
+      <div
+        v-show="activeWorldbookPanel === 'kernel'"
+        class="worldbook-panel worldbook-kernel-panel"
+        data-testid="worldbook-world-kernel"
+      >
+        <div class="worldbook-kernel-hero">
+          <div>
+            <p>{{ t('基础规则', 'Core rules') }}</p>
+            <h2>{{ t('基础世界观', 'Global worldview') }}</h2>
+            <span>
+              {{
+                t(
+                  '这里保留一个轻量 fallback；长文本请放进 Book，再从来源面板启用。',
+                  'Keep this as a lightweight fallback; long text should live in Book and be activated from Sources.',
+                )
+              }}
+            </span>
+          </div>
+          <span>
+            <strong>{{ worldBookCount }}</strong>
+            {{ t('字', 'chars') }}
+          </span>
+        </div>
         <textarea
           v-model="globalWorldview"
-          class="w-full h-48 mt-3 border border-gray-200 rounded-lg p-3 text-sm outline-none resize-none"
+          class="worldbook-kernel-editor"
           :placeholder="
             t(
               '例如：世界规则、时代背景、组织结构、角色关系约束...',
@@ -1337,20 +1573,26 @@ onBeforeUnmount(() => {
             )
           "
         ></textarea>
-        <p class="text-[11px] text-gray-400 mt-2">
-          {{ t('当前字数：', 'Current count: ') }}{{ worldBookCount }}
-        </p>
-        <button
-          @click="saveWorldBook"
-          class="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold transition"
-          :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-        >
-          {{ saved ? t('已保存', 'Saved') : t('保存世界观', 'Save worldview') }}
-        </button>
+        <div class="worldbook-kernel-actions">
+          <p>{{ t('保存后会作为没有 Book 来源时的基础上下文。', 'Saved text is used when no Book source is active.') }}</p>
+          <button
+            type="button"
+            class="worldbook-primary-action"
+            :class="{ 'is-saved': saved }"
+            @click="saveWorldBook"
+          >
+            {{ saved ? t('已保存', 'Saved') : t('保存世界观', 'Save worldview') }}
+          </button>
+        </div>
       </div>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3" data-testid="worldbook-profile-templates">
-        <div>
+      <section
+        v-show="activeWorldbookPanel === 'templates'"
+        class="worldbook-panel worldbook-template-panel"
+        data-testid="worldbook-profile-templates"
+      >
+        <div class="worldbook-template-hero">
+          <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
             {{ t('角色档案模板', 'Role profile templates') }}
           </p>
@@ -1365,9 +1607,20 @@ onBeforeUnmount(() => {
               )
             }}
           </p>
+          </div>
+          <div class="worldbook-template-stats">
+            <span>
+              <strong>{{ profileTemplatePresets.length }}</strong>
+              {{ t('预设', 'Presets') }}
+            </span>
+            <span>
+              <strong>{{ worldProfileTemplates.length }}</strong>
+              {{ t('当前世界', 'World') }}
+            </span>
+          </div>
         </div>
 
-        <div class="space-y-2">
+        <div class="worldbook-template-section">
           <p class="text-sm font-semibold">{{ t('全局预设模板', 'Global preset templates') }}</p>
           <div v-for="preset in profileTemplatePresets" :key="preset.id" class="worldbook-template-row">
             <div class="min-w-0">
@@ -1385,7 +1638,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="space-y-2">
+        <div class="worldbook-template-section">
           <p class="text-sm font-semibold">{{ t('当前世界模板', 'World-specific templates') }}</p>
           <p v-if="worldProfileTemplates.length === 0" class="text-sm text-gray-500">
             {{ t('还没有当前世界专用模板。', 'No world-specific templates yet.') }}
@@ -1401,23 +1654,81 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <div class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold">{{ t('知识点（可绑定角色）', 'Knowledge points (bindable)') }}</p>
-          <span class="text-[11px] text-gray-400">
-            {{ t('总数', 'Count') }} {{ knowledgePoints.length }}
-          </span>
+      <div
+        v-show="activeWorldbookPanel === 'knowledge'"
+        class="worldbook-panel worldbook-knowledge-panel rounded-2xl bg-white border border-gray-200 p-4 space-y-3"
+        data-testid="worldbook-knowledge-manager"
+      >
+        <div class="worldbook-knowledge-hero">
+          <div>
+            <p>{{ t('角色级补丁', 'Role-level patches') }}</p>
+            <h2>{{ t('知识点', 'Knowledge points') }}</h2>
+            <span>
+              {{
+                t(
+                  '知识点用于语言规范、额外设定和模型偏好；绑定到角色后，才会进入对应 Chat 上下文。',
+                  'Knowledge points store language rules, extra lore, and model hints; they enter Chat context only after role binding.',
+                )
+              }}
+            </span>
+          </div>
+          <div class="worldbook-knowledge-stats">
+            <span>
+              <strong>{{ knowledgePoints.length }}</strong>
+              {{ t('总数', 'Total') }}
+            </span>
+            <span>
+              <strong>{{ enabledKnowledgePointCount }}</strong>
+              {{ t('启用', 'Enabled') }}
+            </span>
+            <span>
+              <strong>{{ boundKnowledgePointCount }}</strong>
+              {{ t('已绑定', 'Bound') }}
+            </span>
+            <span>
+              <strong>{{ chatReadyKnowledgePointCount }}</strong>
+              Chat
+            </span>
+          </div>
         </div>
-        <p class="text-xs text-gray-500">
-          {{
-            t(
-              '知识点用于角色级补丁（如语言规范、额外设定、模型偏好），可在通讯录绑定到指定角色。',
-              'Knowledge points are role-level patches (language rules, extra lore, model hints) and can be bound in Contacts.',
-            )
-          }}
-        </p>
 
-        <div class="space-y-2 rounded-xl border border-gray-200 p-3">
+        <div class="worldbook-knowledge-toolbar">
+          <div>
+            <p>{{ t('知识点管理', 'Knowledge management') }}</p>
+            <span>{{ t('保存可绑定到角色的语言规则、设定补丁和模型偏好。', 'Store role-bound language rules, lore patches, and model preferences.') }}</span>
+          </div>
+          <button
+            type="button"
+            class="worldbook-primary-action"
+            data-testid="knowledge-open-create"
+            @click="openCreateKnowledgePoint"
+          >
+            <i class="fas fa-plus"></i>
+            {{ t('新增知识点', 'Add knowledge point') }}
+          </button>
+        </div>
+
+        <div
+          v-if="isKnowledgeComposerOpen"
+          class="worldbook-sheet-backdrop"
+          data-testid="knowledge-composer-backdrop"
+          @click="closeKnowledgeComposer"
+        ></div>
+        <div
+          v-if="isKnowledgeComposerOpen"
+          class="worldbook-knowledge-compose space-y-2 rounded-xl border border-gray-200 p-3"
+          role="dialog"
+          :aria-label="isEditingKnowledgePoint ? t('编辑知识点', 'Edit knowledge point') : t('新增知识点', 'Add knowledge point')"
+        >
+          <div class="worldbook-sheet-head">
+            <div>
+              <p>{{ t('知识补丁', 'Knowledge patch') }}</p>
+              <h3>{{ isEditingKnowledgePoint ? t('编辑知识点', 'Edit knowledge point') : t('新增知识点', 'Add knowledge point') }}</h3>
+            </div>
+            <button type="button" class="worldbook-inline-action" @click="closeKnowledgeComposer">
+              {{ t('关闭', 'Close') }}
+            </button>
+          </div>
           <div v-if="isEditingKnowledgePoint" class="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
             <span data-testid="knowledge-editing-state">
               {{ t('正在编辑已有知识点', 'Editing existing knowledge point') }}
@@ -1426,7 +1737,7 @@ onBeforeUnmount(() => {
               type="button"
               data-testid="knowledge-edit-cancel"
               class="font-semibold text-amber-700"
-              @click="cancelKnowledgePointEdit"
+              @click="closeKnowledgeComposer"
             >
               {{ t('取消编辑', 'Cancel edit') }}
             </button>
@@ -1467,7 +1778,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div v-if="knowledgePoints.length > 0" class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+        <div v-if="knowledgePoints.length > 0" class="worldbook-knowledge-filter rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
           <div
             v-if="knowledgeDeepLinkActive"
             data-testid="knowledge-deeplink-banner"
@@ -1572,28 +1883,28 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="knowledgePoints.length === 0" class="text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center">
+        <div v-if="knowledgePoints.length === 0" class="worldbook-knowledge-empty text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center">
           {{ t('暂无知识点。', 'No knowledge points yet.') }}
         </div>
 
         <div
           v-else-if="visibleKnowledgePoints.length === 0"
-          class="text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center"
+          class="worldbook-knowledge-empty text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center"
         >
           {{ t('当前筛选下没有知识点。', 'No knowledge points match the current filter.') }}
         </div>
 
-        <div v-else class="space-y-2">
+        <div v-else class="worldbook-knowledge-list space-y-2">
           <div
             v-for="point in visibleKnowledgePoints"
             :key="point.id"
             data-testid="knowledge-point-card"
-            class="rounded-xl border p-3 space-y-1"
+            class="worldbook-knowledge-card rounded-xl border p-3 space-y-1"
             :class="isDeepLinkedKnowledgePoint(point) ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-white'"
           >
-            <div class="flex items-center justify-between gap-2">
+            <div class="worldbook-knowledge-card__head flex items-center justify-between gap-2">
               <p class="text-sm font-semibold truncate">{{ point.title }}</p>
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="worldbook-knowledge-card__actions flex items-center gap-2 shrink-0">
                 <AssetStatusBadge
                   :label="getKnowledgePointUsageBadge(point).label"
                   :tone="getKnowledgePointUsageBadge(point).tone"
@@ -1619,11 +1930,11 @@ onBeforeUnmount(() => {
                 </button>
               </div>
             </div>
-            <p class="text-xs text-gray-600 whitespace-pre-wrap">{{ point.content }}</p>
-            <p v-if="Array.isArray(point.tags) && point.tags.length > 0" class="text-[11px] text-gray-400">
+            <p class="worldbook-knowledge-card__content text-xs text-gray-600 whitespace-pre-wrap">{{ point.content }}</p>
+            <p v-if="Array.isArray(point.tags) && point.tags.length > 0" class="worldbook-knowledge-card__tags text-[11px] text-gray-400">
               #{{ point.tags.join(' #') }}
             </p>
-            <div class="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 space-y-1">
+            <div class="worldbook-knowledge-usage rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 space-y-1">
               <div class="flex flex-wrap items-center gap-1.5">
                 <AssetStatusBadge
                   :label="t(`角色 ${getKnowledgePointUsage(point).profiles.length} 个`, `${getKnowledgePointUsage(point).profiles.length} roles`)"
@@ -1685,11 +1996,118 @@ onBeforeUnmount(() => {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
-.worldbook-scroll > .rounded-2xl {
+.worldbook-control-deck,
+.worldbook-scroll > .rounded-2xl,
+.worldbook-panel > .rounded-2xl {
   border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-lg);
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
+}
+
+.worldbook-control-deck {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.worldbook-control-deck__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worldbook-control-deck__head p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-control-deck__head h2 {
+  margin: 2px 0 0;
+  color: var(--system-text);
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.worldbook-control-deck__head > span {
+  flex-shrink: 0;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--system-success);
+  background: var(--system-success-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-panel-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.worldbook-panel-tab {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  min-height: 76px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  text-align: left;
+  font: inherit;
+  transition:
+    transform var(--system-motion-fast),
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    color var(--system-motion-fast);
+}
+
+.worldbook-panel-tab i {
+  font-size: 14px;
+}
+
+.worldbook-panel-tab span {
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.worldbook-panel-tab small {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--system-text-soft);
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-panel-tab.is-active {
+  border-color: color-mix(in srgb, var(--system-accent) 42%, var(--system-control-border));
+  color: var(--system-accent);
+  background:
+    linear-gradient(180deg, var(--system-info-soft), transparent),
+    var(--system-control-bg-strong);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.worldbook-panel-tab:active {
+  transform: scale(0.985);
+}
+
+.worldbook-panel {
+  display: block;
+}
+
+.worldbook-panel > .rounded-2xl {
+  width: 100%;
 }
 
 .worldbook-onboarding-card,
@@ -1736,6 +2154,218 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.worldbook-source-console {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-lg);
+  padding: 14px;
+  background:
+    radial-gradient(circle at 92% 0%, var(--system-info-soft), transparent 34%),
+    var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.worldbook-source-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worldbook-source-head p,
+.worldbook-source-head h2 {
+  margin: 0;
+}
+
+.worldbook-source-head p {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.worldbook-source-head h2 {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 20px;
+  line-height: 1.18;
+  font-weight: 850;
+}
+
+.worldbook-source-head p.text-sm {
+  margin-top: 7px;
+  max-width: 52ch;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-transform: none;
+}
+
+.worldbook-source-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.worldbook-source-stats span {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+}
+
+.worldbook-source-stats strong {
+  color: var(--system-text);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.worldbook-source-stats .is-warning strong {
+  color: var(--system-warning);
+}
+
+.worldbook-source-empty {
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  min-height: 132px;
+  border: 1px dashed var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 18px;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  text-align: center;
+}
+
+.worldbook-source-empty span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--system-accent);
+  background: var(--system-info-soft);
+}
+
+.worldbook-source-empty strong {
+  color: var(--system-text);
+  font-size: 14px;
+}
+
+.worldbook-source-empty p {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.worldbook-source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.worldbook-source-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 12px;
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-control);
+}
+
+.worldbook-source-card.is-disabled {
+  opacity: 0.72;
+}
+
+.worldbook-source-card.is-warning {
+  border-color: color-mix(in srgb, var(--system-warning) 42%, var(--system-control-border));
+}
+
+.worldbook-source-card.is-missing {
+  border-color: color-mix(in srgb, var(--system-danger) 42%, var(--system-control-border));
+}
+
+.worldbook-source-card__main {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.worldbook-source-card__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--system-accent);
+  background: var(--system-info-soft);
+}
+
+.worldbook-source-card__main p,
+.worldbook-source-card__main small {
+  display: block;
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-source-card__main p {
+  color: var(--system-text);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.worldbook-source-card__main small {
+  margin-top: 3px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.worldbook-source-card__meta,
+.worldbook-source-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.worldbook-source-card__meta span {
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-source-card__meta .is-success {
+  color: var(--system-success);
+  background: var(--system-success-soft);
+}
+
+.worldbook-source-card__meta .is-warning {
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.worldbook-source-card__meta .is-danger {
+  color: var(--system-danger);
+  background: var(--system-danger-soft);
+}
+
+.worldbook-source-card__meta .is-muted {
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+}
+
 .worldbook-system-fallback {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -1754,6 +2384,153 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
+.worldbook-kernel-panel,
+.worldbook-template-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-lg);
+  padding: 14px;
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.worldbook-kernel-hero,
+.worldbook-template-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 12px;
+  background:
+    radial-gradient(circle at 90% 0%, var(--system-info-soft), transparent 32%),
+    var(--system-control-bg);
+}
+
+.worldbook-kernel-hero p,
+.worldbook-kernel-hero h2,
+.worldbook-kernel-hero span,
+.worldbook-template-hero p,
+.worldbook-template-hero h2 {
+  margin: 0;
+}
+
+.worldbook-kernel-hero p,
+.worldbook-template-hero > div:first-child > p {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.worldbook-kernel-hero h2,
+.worldbook-template-hero h2 {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 20px;
+  line-height: 1.18;
+  font-weight: 850;
+}
+
+.worldbook-kernel-hero > div > span,
+.worldbook-template-hero .text-sm {
+  display: block;
+  margin-top: 7px;
+  max-width: 48ch;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.worldbook-kernel-hero > span {
+  display: grid;
+  gap: 3px;
+  min-width: 82px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  color: var(--system-text-muted);
+  background: var(--system-panel-bg);
+  font-size: 11px;
+  text-align: center;
+}
+
+.worldbook-kernel-hero strong,
+.worldbook-template-stats strong {
+  color: var(--system-text);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.worldbook-kernel-editor {
+  width: 100%;
+  min-height: 210px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 12px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font-size: 13px;
+  line-height: 1.55;
+  outline: none;
+  resize: vertical;
+}
+
+.worldbook-kernel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worldbook-kernel-actions p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.worldbook-primary-action.is-saved {
+  background: var(--system-success);
+}
+
+.worldbook-template-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(74px, 1fr));
+  gap: 8px;
+  min-width: 168px;
+}
+
+.worldbook-template-stats span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  color: var(--system-text-muted);
+  background: var(--system-panel-bg);
+  font-size: 11px;
+}
+
+.worldbook-template-section {
+  display: grid;
+  gap: 9px;
+}
+
+.worldbook-template-section > p {
+  margin: 0;
+  color: var(--system-text);
+}
+
+.worldbook-template-panel .worldbook-template-row {
+  border-color: var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
+}
+
 .worldbook-template-row {
   display: flex;
   align-items: center;
@@ -1768,10 +2545,94 @@ onBeforeUnmount(() => {
 .worldbook-source-picker {
   display: grid;
   gap: 12px;
-  padding: 12px;
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 0;
+  z-index: 42;
+  max-height: min(76vh, 680px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
+  background:
+    linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted)),
+    var(--system-panel-bg);
+  box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.worldbook-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.worldbook-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worldbook-sheet-head p,
+.worldbook-source-review-head p.text-xs {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.worldbook-sheet-head h3 {
+  margin: 2px 0 0;
+  color: var(--system-text);
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.worldbook-picker-asset-summary {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
-  background: var(--system-surface-muted);
+  padding: 10px;
+  background: var(--system-control-bg);
+}
+
+.worldbook-picker-asset-summary > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--system-accent);
+  background: var(--system-info-soft);
+}
+
+.worldbook-picker-asset-summary strong,
+.worldbook-picker-asset-summary small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-picker-asset-summary strong {
+  color: var(--system-text);
+  font-size: 13px;
+}
+
+.worldbook-picker-asset-summary small {
+  margin-top: 2px;
+  color: var(--system-text-muted);
+  font-size: 11px;
 }
 
 .worldbook-picker-grid {
@@ -1866,10 +2727,20 @@ onBeforeUnmount(() => {
 .worldbook-source-review {
   display: grid;
   gap: 12px;
-  padding: 12px;
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 0;
+  z-index: 42;
+  max-height: min(78vh, 720px);
+  overflow: auto;
+  padding: 16px;
   border: 1px solid rgba(245, 158, 11, 0.34);
-  border-radius: 8px;
-  background: rgba(255, 251, 235, 0.78);
+  border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 235, 0.96), var(--system-panel-bg)),
+    var(--system-panel-bg);
+  box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
 }
 
 .worldbook-source-review-head {
@@ -1987,6 +2858,12 @@ onBeforeUnmount(() => {
   background: rgba(238, 242, 255, 0.9);
 }
 
+.worldbook-danger-action {
+  border-color: color-mix(in srgb, var(--system-danger) 32%, var(--system-control-border));
+  color: var(--system-danger);
+  background: var(--system-danger-soft);
+}
+
 .worldbook-scroll p {
   letter-spacing: 0;
 }
@@ -2077,6 +2954,190 @@ onBeforeUnmount(() => {
     border-color var(--system-motion-fast);
 }
 
+.worldbook-knowledge-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.worldbook-knowledge-hero {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-lg);
+  padding: 14px;
+  background:
+    radial-gradient(circle at 90% 4%, var(--system-success-soft), transparent 34%),
+    var(--system-panel-bg);
+}
+
+.worldbook-knowledge-hero p,
+.worldbook-knowledge-hero h2 {
+  margin: 0;
+}
+
+.worldbook-knowledge-hero p {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-knowledge-hero h2 {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.worldbook-knowledge-hero > div:first-child > span {
+  display: block;
+  margin-top: 6px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.worldbook-knowledge-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.worldbook-knowledge-stats span {
+  display: grid;
+  gap: 3px;
+  min-height: 62px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+}
+
+.worldbook-knowledge-stats strong {
+  color: var(--system-text);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.worldbook-knowledge-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 12px;
+  background: var(--system-panel-bg);
+}
+
+.worldbook-knowledge-toolbar p,
+.worldbook-knowledge-toolbar span {
+  margin: 0;
+}
+
+.worldbook-knowledge-toolbar p {
+  color: var(--system-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.worldbook-knowledge-toolbar span {
+  display: block;
+  margin-top: 3px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.worldbook-knowledge-toolbar .worldbook-primary-action {
+  min-width: max-content;
+}
+
+.worldbook-knowledge-compose,
+.worldbook-knowledge-filter {
+  border-color: var(--system-control-border);
+  background: var(--system-surface-muted);
+}
+
+.worldbook-knowledge-compose {
+  display: grid;
+  gap: 10px;
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 0;
+  z-index: 42;
+  max-height: min(76vh, 680px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
+  background:
+    linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted)),
+    var(--system-panel-bg);
+  box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.worldbook-knowledge-compose input,
+.worldbook-knowledge-compose textarea {
+  border-color: var(--system-control-border);
+  background: var(--system-control-bg);
+  color: var(--system-text);
+}
+
+.worldbook-knowledge-filter {
+  display: grid;
+  gap: 10px;
+}
+
+.worldbook-knowledge-empty {
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--system-radius-md);
+  background: var(--system-surface-muted);
+}
+
+.worldbook-knowledge-list {
+  display: grid;
+  gap: 10px;
+}
+
+.worldbook-knowledge-card {
+  display: grid;
+  gap: 9px;
+  border-color: var(--system-control-border);
+  background: var(--system-panel-bg);
+}
+
+.worldbook-knowledge-card__head {
+  align-items: flex-start;
+}
+
+.worldbook-knowledge-card__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.worldbook-knowledge-card__actions button {
+  min-height: 28px;
+  border-radius: 999px;
+}
+
+.worldbook-knowledge-card__content {
+  line-height: 1.55;
+}
+
+.worldbook-knowledge-card__tags {
+  line-height: 1.5;
+}
+
+.worldbook-knowledge-usage {
+  border-color: var(--system-control-border);
+  background: var(--system-surface-muted);
+}
+
 .worldbook-shell :deep(.text-blue-500),
 .worldbook-shell :deep(.text-blue-600),
 .worldbook-shell :deep(.text-blue-700),
@@ -2108,6 +3169,87 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .worldbook-control-deck {
+    padding: 12px;
+  }
+
+  .worldbook-control-deck__head {
+    display: grid;
+  }
+
+  .worldbook-control-deck__head > span {
+    justify-self: start;
+  }
+
+  .worldbook-panel-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 0 -2px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+    scroll-snap-type: x proximity;
+  }
+
+  .worldbook-panel-tab {
+    flex: 0 0 118px;
+    min-height: 72px;
+    scroll-snap-align: start;
+  }
+
+  .worldbook-panel-tab span {
+    white-space: nowrap;
+  }
+
+  .worldbook-source-head {
+    display: grid;
+  }
+
+  .worldbook-source-head .worldbook-secondary-action {
+    width: 100%;
+  }
+
+  .worldbook-source-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .worldbook-source-card__actions .worldbook-secondary-action {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .worldbook-kernel-hero,
+  .worldbook-template-hero,
+  .worldbook-kernel-actions {
+    display: grid;
+  }
+
+  .worldbook-kernel-hero > span,
+  .worldbook-kernel-actions .worldbook-primary-action,
+  .worldbook-template-stats {
+    width: 100%;
+  }
+
+  .worldbook-knowledge-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .worldbook-knowledge-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .worldbook-knowledge-toolbar .worldbook-primary-action {
+    width: 100%;
+  }
+
+  .worldbook-knowledge-card__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .worldbook-knowledge-card__actions {
+    justify-content: flex-start;
+  }
+
   .worldbook-template-row {
     align-items: stretch;
     flex-direction: column;

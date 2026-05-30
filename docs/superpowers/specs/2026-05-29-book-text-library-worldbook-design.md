@@ -14,6 +14,11 @@ Implementation note, 2026-05-29:
 - Validation for this slice passed: `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd test`, and `npm.cmd run test:e2e`.
 - World Pack V1 activation and user-approved service-account template generation have now landed; remaining future work is summary/retrieval beyond deterministic sections, subscription generation, and concrete app-archetype behavior.
 - New visible Chinese copy must be written as valid UTF-8. Do not copy mojibake from terminal output into UI files.
+- 2026-05-30 visual/IA follow-up: `Settings -> WorldBook` now keeps the active-world overview visible first, then uses a single-focus control console for Sources, Pack, Kernel, Templates, and Knowledge. Source selection and changed-source review are layered sheets, not inline page expansion.
+- 2026-05-30 Book follow-up: `Book` now treats the source shelf, read detail, and long-form editor as separate phone-depth states. The editor is a root-level sheet so long imported worldbooks are not edited inside the same scroll stack as the reader.
+- 2026-05-30 visual/IA follow-up: Sources now uses a stats-first source-control panel with linked-source cards, clearer fallback state, and separated destructive removal.
+- 2026-05-30 visual/IA follow-up: Current World Pack and Knowledge panels now have a first craft pass; knowledge create/edit work uses a bottom sheet rather than an always-visible inline authoring form.
+- 2026-05-30 visual/IA follow-up: Kernel and Templates now use the same task-panel treatment as Sources/Pack/Knowledge, with compact state headers and stronger mobile cards.
 
 ## 1. Decision Summary
 

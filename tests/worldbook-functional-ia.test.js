@@ -110,6 +110,39 @@ describe('WorldBook functional IA', () => {
     wrapper.unmount()
   })
 
+  test('focuses source activation first and lets users switch management panels', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'zh-CN'
+
+    const wrapper = await mountWorldBook()
+
+    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('世界上下文控制台')
+    expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
+      'none',
+    )
+    expect(wrapper.get('[data-testid="worldbook-source-stats"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="worldbook-panel-pack"]').element.style.display).toBe('none')
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-panel-pack"]').element.style.display).not.toBe(
+      'none',
+    )
+    expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).toBe(
+      'none',
+    )
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-knowledge"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-knowledge-manager"]').element.style.display).not.toBe(
+      'none',
+    )
+
+    wrapper.unmount()
+  })
+
   test('reviews and activates a built-in world pack from WorldBook', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()

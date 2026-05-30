@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -36,10 +36,19 @@ What is already landed:
 24. `应用商城 / App Store` now has a first standalone simulated-store management pass: search, category filters, selected app detail, open/add-to-Home/remove-from-Home actions, protected App Store entry handling, empty search state, and a route into Home slot edit mode with the selected hidden app ready for placement.
 25. Home edit mode now separates opening the recoverable content library from selecting a specific item. Library-open-but-unselected keeps slots tappable for size-specific replacement, while selecting an item lights only compatible slots; slot picker filters now hide content-type tabs that cannot fit the selected slot size.
 26. Home Today View now has a fixed `1x1` recovery-entry template: App Store is always reachable there, World Hub and future Cheats remain conditionally fixed system entries, and reserved slots are visible without making the `-1` screen a selectable formal Home layout.
-27. WorldBook now has a state-first IA baseline inside Settings: active world overview, Current World Pack activation, service-template confirmation, Book source links, world-kernel editor, profile templates, and knowledge management appear in a clearer L0 -> L3 order.
+27. WorldBook now has a state-first IA baseline inside Settings: active world overview, Current World Pack activation, service-template confirmation, Book source links, world-kernel editor, profile templates, and knowledge management appear in a clearer L0 -> L3 order. The page now uses a single-focus control console so Sources, Pack, Kernel, Templates, and Knowledge are task panels rather than one endlessly stacked Settings page.
 28. Book now has a V1 app-like text-library surface with library list, read-first detail view, guarded editing, import/export controls, and WorldBook source usage state.
-29. WorldBook's Book-source panel now has a phone-testable source picker with whole-document/selected-section activation, changed-source warning, and refresh action.
+29. WorldBook's Book-source panel now has a phone-testable source picker with whole-document/selected-section activation, changed-source warning, and refresh action. Source picking and changed-source review now open as layered sheets instead of expanding inline inside the Settings page.
 30. WorldBook's Current World Pack panel now shows active world-app entries, and Shopping has the first world-app banner/action pattern for `补给站` that explains ownership boundaries before normal Shopping controls.
+
+31. WorldBook's Current World Pack and Knowledge panels now have a first internal craft pass: pack effects use clearer icon cards, knowledge starts with status metrics, and knowledge create/edit work opens in a focused bottom sheet instead of stretching the Settings page inline.
+32. WorldBook's Sources panel now has a source-control surface: active/review/available/disabled stats, a clearer system fallback block, linked-source cards with status badges, and destructive source removal separated from ordinary open/toggle actions.
+33. WorldBook's Kernel and Templates panels now match the same task-panel system: Kernel is a fallback editor with a compact count/status header, and Templates uses preset/world stats plus stronger template cards.
+34. Book now follows a native-app IA split on phone-sized screens: open Book into the source shelf, tap a text asset to enter its read-first detail page, and open long-form editing as a root-level guarded sheet instead of an inline editor trapped inside the reading page.
+35. App Store now follows the same mobile progressive-disclosure rule: the catalog list is the main view, and app details open as a root-level sheet on phone-sized screens while desktop keeps the list/detail management layout.
+36. Widget Center now applies the same phone IA rule: library/starter/created widgets remain the scan-first page, while custom editing and import JSON entry open as focused mobile sheets. Widget code/import work should not be stretched inline across the whole phone page.
+37. Appearance Theme now starts applying the same native-system execution-panel rule: phone-sized screens keep theme/wallpaper status scan-first, while wallpaper-source selection and advanced CSS editing open as focused sheets instead of staying inline in the main scroll.
+38. Appearance Font and App Icons now follow the same rule: font presets and current app-icon states remain scan-first on phone-sized screens, while custom font-stack editing and per-app icon/accent edits open as focused sheets. Built-in app glyphs are also included in the icon preset list so default icons do not render as blank select values.
 
 Still incomplete:
 
@@ -51,7 +60,7 @@ Still incomplete:
 ## 2. Recommended Next Slice
 
 1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if user testing still shows friction.
-2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
+2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, deeper `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 5. User-test the WorldBook -> `补给站` -> Shopping path on mobile before broadening the same pattern to other archetypes.

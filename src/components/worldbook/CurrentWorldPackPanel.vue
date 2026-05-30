@@ -68,6 +68,7 @@ const activationStateLabel = computed(() =>
 const effectRows = computed(() => [
   {
     key: 'worldview',
+    icon: 'fas fa-scroll',
     label: t('世界观文本', 'Worldview text'),
     value: props.overview.hasWorldview
       ? t(`已写入 ${props.overview.worldviewCharCount} 字`, `${props.overview.worldviewCharCount} characters`)
@@ -75,6 +76,7 @@ const effectRows = computed(() => [
   },
   {
     key: 'knowledge',
+    icon: 'fas fa-sitemap',
     label: t('启用知识点', 'Enabled knowledge'),
     value: t(
       `${props.overview.enabledKnowledgeCount} 条启用，${props.overview.disabledKnowledgeCount} 条停用`,
@@ -83,6 +85,7 @@ const effectRows = computed(() => [
   },
   {
     key: 'templates',
+    icon: 'fas fa-id-card',
     label: t('世界角色模板', 'World role templates'),
     value: t(
       `${props.overview.profileTemplateCount} 个当前世界模板`,
@@ -91,6 +94,7 @@ const effectRows = computed(() => [
   },
   {
     key: 'app_bindings',
+    icon: 'fas fa-mobile-screen-button',
     label: t('世界应用绑定', 'World app bindings'),
     value: t(
       `${props.overview.worldPackAppBindingCount || 0} 个应用形态`,
@@ -99,6 +103,7 @@ const effectRows = computed(() => [
   },
   {
     key: 'service_templates',
+    icon: 'fas fa-comments',
     label: t('服务号模板', 'Service templates'),
     value: t(
       `${props.overview.worldPackServiceTemplateCount || 0} 个模板`,
@@ -116,8 +121,16 @@ const reviewRows = computed(() => {
     app_bindings: t('世界应用', 'World apps'),
     service_templates: t('服务号模板', 'Service templates'),
   }
+  const iconMap = {
+    book_sources: 'fas fa-link',
+    knowledge: 'fas fa-sitemap',
+    templates: 'fas fa-id-card',
+    app_bindings: 'fas fa-mobile-screen-button',
+    service_templates: 'fas fa-comments',
+  }
   return props.activationReview.effectRows.map((row) => ({
     ...row,
+    icon: iconMap[row.key] || 'fas fa-circle-dot',
     label: labelMap[row.key] || row.label,
     value: t(`${row.count} 项`, `${row.count} items`),
   }))
@@ -148,34 +161,41 @@ const appBindingKindLabel = (row) => {
     class="current-world-pack"
     data-testid="worldbook-current-pack"
   >
-    <div class="current-world-pack__header">
-      <div class="min-w-0">
-        <p class="current-world-pack__eyebrow">
-          {{ t('当前设定包', 'Current World Pack') }}
-        </p>
-        <h2
-          class="current-world-pack__title"
-          data-testid="worldbook-current-pack-name"
-        >
-          {{ packName }}
-        </h2>
-      </div>
-      <span
-        class="current-world-pack__state"
-        data-testid="worldbook-current-pack-state"
-      >
-        {{ activationStateLabel }}
+    <div class="current-world-pack__hero">
+      <span class="current-world-pack__glyph" aria-hidden="true">
+        <i class="fas fa-cube"></i>
       </span>
-    </div>
+      <div class="current-world-pack__hero-main">
+        <div class="current-world-pack__header">
+          <div class="min-w-0">
+            <p class="current-world-pack__eyebrow">
+              {{ t('当前设定包', 'Current World Pack') }}
+            </p>
+            <h2
+              class="current-world-pack__title"
+              data-testid="worldbook-current-pack-name"
+            >
+              {{ packName }}
+            </h2>
+          </div>
+          <span
+            class="current-world-pack__state"
+            data-testid="worldbook-current-pack-state"
+          >
+            {{ activationStateLabel }}
+          </span>
+        </div>
 
-    <p class="current-world-pack__copy">
-      {{
-        t(
-          '这一版先把世界书作为默认设定包使用：它不会模拟下载或解锁，只负责把当前世界材料稳定交给 Chat 与运行时。',
-          'This version uses WorldBook as the default pack: no simulated downloads or unlocks, just stable world material for Chat and runtime.',
-        )
-      }}
-    </p>
+        <p class="current-world-pack__copy">
+          {{
+            t(
+              '这一版先把世界书作为默认设定包使用：它不会模拟下载或解锁，只负责把当前世界材料稳定交给 Chat 与运行时。',
+              'This version uses WorldBook as the default pack: no simulated downloads or unlocks, just stable world material for Chat and runtime.',
+            )
+          }}
+        </p>
+      </div>
+    </div>
 
     <label class="current-world-pack__selector">
       <span>{{ t('选择要启用的世界包', 'Choose a world pack') }}</span>
@@ -203,6 +223,9 @@ const appBindingKindLabel = (row) => {
         :key="row.key"
         class="current-world-pack__effect"
       >
+        <span class="current-world-pack__effect-icon" aria-hidden="true">
+          <i :class="row.icon"></i>
+        </span>
         <span>{{ row.label }}</span>
         <strong>{{ row.value }}</strong>
       </div>
@@ -229,6 +252,9 @@ const appBindingKindLabel = (row) => {
           :key="row.key"
           class="current-world-pack__review-row"
         >
+          <span class="current-world-pack__review-icon" aria-hidden="true">
+            <i :class="row.icon"></i>
+          </span>
           <span>{{ row.label }}</span>
           <strong>{{ row.value }}</strong>
         </div>
@@ -267,6 +293,9 @@ const appBindingKindLabel = (row) => {
       data-testid="worldbook-current-pack-app-bindings"
     >
       <div class="current-world-pack__apps-head">
+        <span class="current-world-pack__section-mark" aria-hidden="true">
+          <i class="fas fa-mobile-screen-button"></i>
+        </span>
         <div>
           <p>{{ t('世界应用入口', 'World app entries') }}</p>
           <strong>
@@ -329,6 +358,9 @@ const appBindingKindLabel = (row) => {
       data-testid="worldbook-current-pack-service-templates"
     >
       <div class="current-world-pack__services-head">
+        <span class="current-world-pack__section-mark" aria-hidden="true">
+          <i class="fas fa-comments"></i>
+        </span>
         <div>
           <p>{{ t('服务号模板确认', 'Service template confirmation') }}</p>
           <strong>
@@ -404,10 +436,35 @@ const appBindingKindLabel = (row) => {
 .current-world-pack {
   border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-lg);
-  background: var(--system-panel-bg);
+  background:
+    radial-gradient(circle at 18% 0%, var(--system-info-soft), transparent 34%),
+    linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted));
   box-shadow: var(--system-shadow-card);
   padding: 16px;
   color: var(--system-text);
+}
+
+.current-world-pack__hero {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.current-world-pack__glyph {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 62px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 20px;
+  color: var(--system-info);
+  background: var(--system-control-bg-strong);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight), var(--system-shadow-control);
+}
+
+.current-world-pack__hero-main {
+  min-width: 0;
 }
 
 .current-world-pack__header {
@@ -426,7 +483,7 @@ const appBindingKindLabel = (row) => {
 
 .current-world-pack__title {
   margin-top: 3px;
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: 0;
@@ -444,7 +501,7 @@ const appBindingKindLabel = (row) => {
 }
 
 .current-world-pack__copy {
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 12px;
   line-height: 1.6;
   color: var(--system-text-muted);
@@ -453,46 +510,62 @@ const appBindingKindLabel = (row) => {
 .current-world-pack__selector {
   display: grid;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 14px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  padding: 10px;
+  background: var(--system-control-bg);
   color: var(--system-text-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
 .current-world-pack__selector select {
-  min-height: 40px;
+  min-height: 42px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
-  background: var(--system-control-bg);
+  background: var(--system-panel-bg);
   color: var(--system-text);
   padding: 0 10px;
 }
 
 .current-world-pack__effects {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
 
 .current-world-pack__effect {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 8px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
-  background: var(--system-control-bg);
-  padding: 10px 12px;
+  background: var(--system-panel-bg);
+  padding: 10px;
 }
 
-.current-world-pack__effect span {
+.current-world-pack__effect-icon,
+.current-world-pack__review-icon,
+.current-world-pack__section-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  color: var(--system-info);
+  background: var(--system-info-soft);
+}
+
+.current-world-pack__effect > span:not(.current-world-pack__effect-icon) {
+  min-width: 0;
   font-size: 12px;
   color: var(--system-text-muted);
 }
 
 .current-world-pack__effect strong {
-  text-align: right;
+  grid-column: 2;
   font-size: 12px;
   color: var(--system-text);
 }
@@ -551,6 +624,7 @@ const appBindingKindLabel = (row) => {
 
 .current-world-pack__review-row {
   display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
   gap: 2px;
   border: 1px solid var(--system-control-border);
   border-radius: 8px;
@@ -558,12 +632,14 @@ const appBindingKindLabel = (row) => {
   padding: 8px;
 }
 
-.current-world-pack__review-row span {
+.current-world-pack__review-row > span:not(.current-world-pack__review-icon) {
+  align-self: end;
   color: var(--system-text-muted);
   font-size: 11px;
 }
 
 .current-world-pack__review-row strong {
+  grid-column: 2;
   color: var(--system-text);
   font-size: 13px;
 }
@@ -604,9 +680,8 @@ const appBindingKindLabel = (row) => {
 
 .current-world-pack__apps-head,
 .current-world-pack__services-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -645,9 +720,10 @@ const appBindingKindLabel = (row) => {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   border: 1px solid var(--system-card-border);
-  border-radius: 8px;
+  border-radius: var(--system-radius-md);
   background: var(--system-panel-bg);
-  padding: 10px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
 }
 
 .current-world-pack__app-main,
@@ -725,6 +801,19 @@ const appBindingKindLabel = (row) => {
 }
 
 @media (max-width: 640px) {
+  .current-world-pack__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .current-world-pack__glyph {
+    display: none;
+  }
+
+  .current-world-pack__title {
+    font-size: 22px;
+  }
+
+  .current-world-pack__effects,
   .current-world-pack__review-grid {
     grid-template-columns: 1fr;
   }

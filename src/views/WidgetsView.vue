@@ -61,6 +61,8 @@ const editingWidgetId = ref('')
 const customWidgetCodeTextarea = ref(null)
 const widgetsContent = ref(null)
 const showCustomCodeEditor = ref(false)
+const customEditorOpen = ref(false)
+const importEditorOpen = ref(false)
 const importJsonText = ref('')
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
@@ -316,9 +318,40 @@ const openPanel = (panelId) => {
   activePanel.value = panelId
   closeStylePresetPreview()
   clearImportFeedback()
+  customEditorOpen.value = false
+  importEditorOpen.value = false
   nextTick(() => {
     widgetsContent.value?.scrollTo?.({ top: 0 })
   })
+}
+
+const openCustomEditor = () => {
+  activePanel.value = 'custom'
+  closeStylePresetPreview()
+  clearImportFeedback()
+  importEditorOpen.value = false
+  customEditorOpen.value = true
+  nextTick(() => {
+    widgetsContent.value?.scrollTo?.({ top: 0 })
+  })
+}
+
+const closeCustomEditor = () => {
+  customEditorOpen.value = false
+}
+
+const openImportEditor = () => {
+  activePanel.value = 'import'
+  closeStylePresetPreview()
+  customEditorOpen.value = false
+  importEditorOpen.value = true
+  nextTick(() => {
+    widgetsContent.value?.scrollTo?.({ top: 0 })
+  })
+}
+
+const closeImportEditor = () => {
+  importEditorOpen.value = false
 }
 
 const setWidgetSizeFilter = (size) => {
@@ -414,6 +447,7 @@ const applyStylePresetToCustomForm = async (preset) => {
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
   showCustomCodeEditor.value = false
+  customEditorOpen.value = true
   clearImportFeedback()
   setImportFeedback('success', t('模板已填入编辑器。', 'Template loaded into the editor.'))
   return true
@@ -454,6 +488,7 @@ const resetCustomWidgetForm = () => {
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
   showCustomCodeEditor.value = false
+  customEditorOpen.value = false
 }
 
 const startEditCustomWidget = (widget) => {
@@ -466,6 +501,7 @@ const startEditCustomWidget = (widget) => {
   customWidgetActionType.value = action.type
   customWidgetActionTarget.value = action.target
   showCustomCodeEditor.value = true
+  customEditorOpen.value = true
   ensureCustomWidgetActionTarget()
 }
 
@@ -563,6 +599,7 @@ const exportWidgetTemplate = () => {
 const fillRecognizedImportTemplate = () => {
   clearImportFeedback()
   importJsonText.value = RECOGNIZED_IMPORT_TEMPLATE_JSON.value
+  importEditorOpen.value = true
 }
 
 const clearImportFeedback = () => {
@@ -695,6 +732,7 @@ const importCustomWidgets = () => {
         )
   setImportFeedback(warningCount > 0 ? 'warning' : 'success', message, details)
   importJsonText.value = ''
+  importEditorOpen.value = false
   triggerSaved()
 }
 
@@ -705,7 +743,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="widgets-shell">
+  <div class="widgets-shell" :class="{ 'is-widget-sheet-open': customEditorOpen || importEditorOpen }">
     <header class="widgets-header">
       <button class="widgets-icon-btn" type="button" @click="goHome" :aria-label="returnButtonLabel">
         <i class="fas fa-chevron-left"></i>
@@ -720,7 +758,7 @@ onBeforeUnmount(() => {
           </span>
         </div>
       </div>
-      <button class="widgets-home-btn" type="button" @click="openPanel('custom')">
+      <button class="widgets-home-btn" type="button" @click="openCustomEditor">
         <i class="fas fa-plus"></i>
         <span>{{ t('创建', 'Create') }}</span>
       </button>
@@ -978,8 +1016,34 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="widgets-custom-composer">
+        <div class="widgets-mobile-action-strip">
+          <button class="widgets-primary-btn" type="button" @click="openCustomEditor">
+            <i class="fas fa-pen-to-square"></i>
+            <span>{{ editingWidgetId ? t('继续编辑', 'Continue editing') : t('打开编辑器', 'Open editor') }}</span>
+          </button>
+        </div>
+
+        <div class="widgets-custom-composer" :class="{ 'is-mobile-sheet-open': customEditorOpen }">
+          <div class="widgets-editor-sheet-head widgets-custom-root-sheet-head">
+            <div>
+              <span>{{ t('组件编辑器', 'Widget editor') }}</span>
+              <strong>{{ customWidgetName || t('未命名组件', 'Untitled widget') }}</strong>
+            </div>
+            <button class="widgets-icon-btn" type="button" @click="closeCustomEditor" :aria-label="t('关闭编辑器', 'Close editor')">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+
           <div class="widgets-form">
+            <div class="widgets-editor-sheet-head widgets-form-sheet-head">
+              <div>
+                <span>{{ t('组件编辑器', 'Widget editor') }}</span>
+                <strong>{{ customWidgetName || t('未命名组件', 'Untitled widget') }}</strong>
+              </div>
+              <button class="widgets-icon-btn" type="button" @click="closeCustomEditor" :aria-label="t('关闭编辑器', 'Close editor')">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
             <label class="widgets-field">
               <span>{{ t('名称', 'Name') }}</span>
               <input
@@ -1251,28 +1315,55 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <label class="widgets-field">
-          <span>{{ t('外观包内容', 'Visual pack content') }}</span>
-          <textarea
-            v-model="importJsonText"
-            class="widgets-import-textarea"
-            spellcheck="false"
-            :placeholder="importJsonPlaceholder"
-          ></textarea>
-        </label>
-
-        <div class="widgets-import-actions">
-          <button class="widgets-primary-btn" type="button" :disabled="!canImportWidgets" @click="importCustomWidgets">
-            <i class="fas fa-file-import"></i>
-            <span>{{ t('导入到组件库', 'Import to Library') }}</span>
+        <div class="widgets-mobile-action-strip">
+          <button class="widgets-primary-btn" type="button" @click="openImportEditor">
+            <i class="fas fa-file-code"></i>
+            <span>{{ t('粘贴外观包', 'Paste visual pack') }}</span>
           </button>
         </div>
 
-        <div class="widgets-import-note">
-          <p>{{ t(`每个组件需要名称、尺寸和外观代码；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Each widget needs a name, size, and visual code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
+        <div class="widgets-import-editor" :class="{ 'is-mobile-sheet-open': importEditorOpen }">
+          <div class="widgets-editor-sheet-head">
+            <div>
+              <span>{{ t('导入编辑器', 'Import editor') }}</span>
+              <strong>{{ importPreviewLabel }}</strong>
+            </div>
+            <button class="widgets-icon-btn" type="button" @click="closeImportEditor" :aria-label="t('关闭导入编辑器', 'Close import editor')">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+
+          <label class="widgets-field">
+            <span>{{ t('外观包内容', 'Visual pack content') }}</span>
+            <textarea
+              v-model="importJsonText"
+              class="widgets-import-textarea"
+              spellcheck="false"
+              :placeholder="importJsonPlaceholder"
+            ></textarea>
+          </label>
+
+          <div class="widgets-import-actions">
+            <button class="widgets-primary-btn" type="button" :disabled="!canImportWidgets" @click="importCustomWidgets">
+              <i class="fas fa-file-import"></i>
+              <span>{{ t('导入到组件库', 'Import to Library') }}</span>
+            </button>
+          </div>
+
+          <div class="widgets-import-note">
+            <p>{{ t(`每个组件需要名称、尺寸和外观代码；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Each widget needs a name, size, and visual code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
+          </div>
         </div>
       </section>
     </main>
+
+    <button
+      v-if="customEditorOpen || importEditorOpen"
+      class="widgets-mobile-sheet-backdrop"
+      type="button"
+      :aria-label="t('关闭面板', 'Close panel')"
+      @click="customEditorOpen ? closeCustomEditor() : closeImportEditor()"
+    ></button>
 
     <div
       v-if="previewedStylePreset"
@@ -3678,6 +3769,17 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+.widgets-mobile-action-strip,
+.widgets-editor-sheet-head,
+.widgets-mobile-sheet-backdrop {
+  display: none;
+}
+
+.widgets-import-editor {
+  display: grid;
+  gap: 10px;
+}
+
 .widgets-feedback {
   position: absolute;
   left: 16px;
@@ -3720,6 +3822,131 @@ onBeforeUnmount(() => {
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.35;
+}
+
+@media (max-width: 719px) {
+  .widgets-shell.is-widget-sheet-open .widgets-content {
+    overflow: visible;
+  }
+
+  .widgets-mobile-action-strip {
+    display: grid;
+    margin: 0 0 10px;
+  }
+
+  .widgets-mobile-action-strip .widgets-primary-btn {
+    width: 100%;
+  }
+
+  .widgets-custom-composer,
+  .widgets-import-editor {
+    display: none;
+  }
+
+  .widgets-mobile-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: block;
+    border: 0;
+    background: rgba(18, 25, 32, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open,
+  .widgets-import-editor.is-mobile-sheet-open {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 75;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    max-height: min(78%, calc(100% - 108px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--system-card-border);
+    border-radius: 28px 28px 24px 24px;
+    padding: 12px;
+    background: var(--system-elevated-bg);
+    box-shadow: var(--system-shadow-soft);
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open > .widgets-form {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open .widgets-live-preview {
+    order: -1;
+    border-radius: 22px;
+  }
+
+  .widgets-custom-root-sheet-head {
+    order: -2;
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open .widgets-form-sheet-head {
+    display: none;
+  }
+
+  .widgets-editor-sheet-head {
+    position: sticky;
+    top: -12px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: -12px -12px 2px;
+    padding: 12px;
+    border-bottom: 1px solid var(--system-subtle-border);
+    background: color-mix(in srgb, var(--system-elevated-bg) 88%, transparent);
+    backdrop-filter: blur(var(--system-blur-sm));
+    -webkit-backdrop-filter: blur(var(--system-blur-sm));
+  }
+
+  .widgets-editor-sheet-head div {
+    min-width: 0;
+  }
+
+  .widgets-editor-sheet-head span,
+  .widgets-editor-sheet-head strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .widgets-editor-sheet-head span {
+    color: var(--system-text-muted);
+    font-size: 11px;
+    font-weight: 760;
+  }
+
+  .widgets-editor-sheet-head strong {
+    margin-top: 2px;
+    color: var(--system-text);
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .widgets-editor-sheet-head .widgets-icon-btn {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 13px;
+  }
+
+  .widgets-import-editor.is-mobile-sheet-open .widgets-import-note {
+    margin-top: 0;
+  }
 }
 
 @media (min-width: 720px) {

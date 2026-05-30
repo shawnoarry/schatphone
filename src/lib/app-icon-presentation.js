@@ -80,6 +80,8 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
 ]
 
 export const APP_ICON_PRESET_OPTIONS = [
+  { value: 'fas fa-network-wired', zh: '网络节点', en: 'Network Nodes', ko: '네트워크 노드' },
+  { value: 'fas fa-wallet', zh: '钱包', en: 'Wallet', ko: '지갑' },
   { value: 'fas fa-comment', zh: '对话气泡', en: 'Chat Bubble', ko: '대화 말풍선' },
   { value: 'fas fa-comment-dots', zh: '消息气泡', en: 'Message Bubble', ko: '메시지 말풍선' },
   { value: 'fas fa-paper-plane', zh: '纸飞机', en: 'Paper Plane', ko: '종이비행기' },
@@ -87,15 +89,26 @@ export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-route', zh: '路线', en: 'Route', ko: '경로' },
   { value: 'fas fa-images', zh: '相册', en: 'Photos', ko: '사진' },
   { value: 'fas fa-camera', zh: '相机', en: 'Camera', ko: '카메라' },
+  { value: 'fas fa-palette', zh: '调色盘', en: 'Palette', ko: '팔레트' },
+  { value: 'fas fa-phone', zh: '电话', en: 'Phone', ko: '전화' },
+  { value: 'fas fa-calendar-days', zh: '日历', en: 'Calendar', ko: '캘린더' },
   { value: 'fas fa-address-book', zh: '地址簿', en: 'Address Book', ko: '주소록' },
   { value: 'fas fa-user-group', zh: '群组', en: 'People', ko: '사람들' },
+  { value: 'fas fa-chart-line', zh: '趋势线', en: 'Trend Line', ko: '추세선' },
   { value: 'fas fa-cog', zh: '齿轮', en: 'Gear', ko: '톱니바퀴' },
   { value: 'fas fa-sliders', zh: '滑杆', en: 'Sliders', ko: '슬라이더' },
   { value: 'fas fa-folder', zh: '文件夹', en: 'Folder', ko: '폴더' },
+  { value: 'fas fa-bag-shopping', zh: '购物袋', en: 'Shopping Bag', ko: '쇼핑백' },
+  { value: 'fas fa-bowl-food', zh: '餐食', en: 'Food Bowl', ko: '음식 그릇' },
+  { value: 'fas fa-vault', zh: '保险库', en: 'Vault', ko: '금고' },
+  { value: 'fas fa-store', zh: '商店', en: 'Store', ko: '상점' },
   { value: 'fas fa-table-cells-large', zh: '组件网格', en: 'Widget Grid', ko: '위젯 그리드' },
   { value: 'fas fa-puzzle-piece', zh: '组件拼块', en: 'Widget Piece', ko: '위젯 조각' },
   { value: 'fas fa-shapes', zh: '组合图形', en: 'Shapes', ko: '도형' },
   { value: 'fas fa-list-check', zh: '待办清单', en: 'Checklist', ko: 'Checklist' },
+  { value: 'fas fa-book-open', zh: '打开的书', en: 'Open Book', ko: '펼친 책' },
+  { value: 'fas fa-wand-magic-sparkles', zh: '魔法光点', en: 'Magic Wand', ko: '마법 지팡이' },
+  { value: 'fas fa-ellipsis-h', zh: '更多点', en: 'More Dots', ko: '더보기 점' },
 ]
 
 export const APP_ICON_ACCENT_OPTIONS = [

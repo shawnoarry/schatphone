@@ -20,6 +20,7 @@ const { assets } = storeToRefs(bookStore)
 const searchQuery = ref('')
 const typeFilter = ref('all')
 const selectedAssetId = ref(typeof route.query.asset === 'string' ? route.query.asset : '')
+const shelfOpen = ref(!selectedAssetId.value)
 const editMode = ref(false)
 const editGuardVisible = ref(false)
 const importFeedback = ref('')
@@ -131,6 +132,12 @@ const aiToolOptions = computed(() => [
 
 const selectedContentText = computed(() => String(selectedAsset.value?.content || '').trim())
 
+const selectedLineCount = computed(() => {
+  const text = String(selectedAsset.value?.content || '').trim()
+  if (!text) return 0
+  return text.split(/\r?\n/).filter((line) => line.trim()).length
+})
+
 const aiSummaryText = computed(() => {
   const text = selectedContentText.value.replace(/\s+/g, ' ')
   if (!text) return t('当前文本为空。', 'This text is empty.')
@@ -200,8 +207,15 @@ const openWorldBookUsage = () => {
   })
 }
 
+const openShelf = () => {
+  shelfOpen.value = true
+  aiToolsOpen.value = false
+  editGuardVisible.value = false
+}
+
 const selectAsset = (assetId) => {
   selectedAssetId.value = assetId
+  shelfOpen.value = false
   editMode.value = false
   editGuardVisible.value = false
   aiToolsOpen.value = false
@@ -228,6 +242,7 @@ const createBlankAsset = () => {
   })
   selectAsset(asset.id)
   editMode.value = true
+  shelfOpen.value = false
   aiToolsOpen.value = false
 }
 
@@ -293,6 +308,7 @@ const saveEdit = () => {
   if (result.ok) {
     selectedAssetId.value = result.asset.id
     editMode.value = false
+    shelfOpen.value = false
     importFeedbackTone.value = 'success'
     importFeedback.value = t('已保存文本来源。', 'Text source saved.')
   }
@@ -337,6 +353,7 @@ const importFile = async (event) => {
   }
   selectedAssetId.value = result.asset.id
   editMode.value = false
+  shelfOpen.value = false
   importFeedbackTone.value = 'success'
   importFeedback.value = t('已导入文本来源。', 'Text source imported.')
 }
@@ -430,6 +447,15 @@ const exportSelected = async () => {
       <div class="book-topbar-actions">
         <button
           type="button"
+          class="book-icon-button is-quiet book-shelf-trigger"
+          :aria-label="t('资料架', 'Shelf')"
+          @click="openShelf"
+          data-testid="book-open-shelf"
+        >
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
           class="book-icon-button is-quiet"
           :aria-label="t('Book AI', 'Book AI')"
           :disabled="!selectedAsset"
@@ -444,11 +470,20 @@ const exportSelected = async () => {
       </div>
     </header>
 
-    <main class="book-main">
+    <main :class="['book-main', { 'is-shelf-open': shelfOpen || !selectedAsset }]">
       <aside class="book-library" data-testid="book-library">
         <div class="book-library-head">
           <span>{{ t('资料架', 'Shelf') }}</span>
           <strong>{{ filteredAssets.length }}</strong>
+          <button
+            v-if="selectedAssetId"
+            type="button"
+            class="book-library-close"
+            :aria-label="t('关闭资料架', 'Close shelf')"
+            @click="shelfOpen = false"
+          >
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
         </div>
         <div class="book-search-row">
           <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
@@ -529,6 +564,10 @@ const exportSelected = async () => {
             <h2>{{ selectedAsset.title }}</h2>
           </div>
           <div class="book-detail-actions">
+            <button type="button" class="book-secondary-button book-detail-shelf-button" @click="openShelf" data-testid="book-detail-open-shelf">
+              <i class="fas fa-layer-group" aria-hidden="true"></i>
+              <span>{{ t('资料架', 'Shelf') }}</span>
+            </button>
             <button type="button" class="book-secondary-button" @click="exportSelected" data-testid="book-export">
               <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
               <span>{{ t('导出', 'Export') }}</span>
@@ -545,6 +584,25 @@ const exportSelected = async () => {
           <span>{{ selectedSections.length }} {{ t('段落', 'sections') }}</span>
           <span v-if="selectedAsset.locked">{{ t('已锁定', 'Locked') }}</span>
           <span v-if="selectedAsset.status === 'active_source'">{{ t('正在影响世界书', 'Used by WorldBook') }}</span>
+        </div>
+
+        <div class="book-stat-strip" aria-label="Book source overview">
+          <span>
+            <strong>{{ selectedAsset.content.length }}</strong>
+            <small>{{ t('字数', 'chars') }}</small>
+          </span>
+          <span>
+            <strong>{{ selectedSections.length }}</strong>
+            <small>{{ t('目录段', 'sections') }}</small>
+          </span>
+          <span>
+            <strong>{{ selectedLineCount }}</strong>
+            <small>{{ t('有效行', 'lines') }}</small>
+          </span>
+          <span>
+            <strong>{{ selectedWorldBookLinks.length }}</strong>
+            <small>{{ t('引用', 'links') }}</small>
+          </span>
         </div>
 
         <div v-if="selectedWorldBookLinks.length > 0" class="book-usage-card" data-testid="book-worldbook-usage">
@@ -569,38 +627,7 @@ const exportSelected = async () => {
           </button>
         </div>
 
-        <form v-if="editMode" class="book-editor" data-testid="book-editor" @submit.prevent="saveEdit">
-          <label>
-            <span>{{ t('标题', 'Title') }}</span>
-            <input v-model="draft.title" data-testid="book-edit-title" />
-          </label>
-          <label>
-            <span>{{ t('类型', 'Type') }}</span>
-            <select v-model="draft.assetType" data-testid="book-edit-type">
-              <option v-for="type in BOOK_TEXT_ASSET_TYPES" :key="type" :value="type">
-                {{ t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type) }}
-              </option>
-            </select>
-          </label>
-          <label>
-            <span>{{ t('标签', 'Tags') }}</span>
-            <input v-model="draft.tags" data-testid="book-edit-tags" />
-          </label>
-          <label class="book-editor-content">
-            <span>{{ t('内容', 'Content') }}</span>
-            <textarea v-model="draft.content" data-testid="book-edit-content"></textarea>
-          </label>
-          <div class="book-editor-actions">
-            <button type="button" class="book-secondary-button" @click="cancelEdit" data-testid="book-cancel">
-              {{ t('取消', 'Cancel') }}
-            </button>
-            <button type="submit" class="book-primary-button" data-testid="book-save">
-              {{ t('保存', 'Save') }}
-            </button>
-          </div>
-        </form>
-
-        <div v-else class="book-read-mode" data-testid="book-read-mode">
+        <div v-if="!editMode" class="book-read-mode" data-testid="book-read-mode">
           <div v-if="selectedSections.length > 0" class="book-outline">
             <strong>{{ t('目录', 'Outline') }}</strong>
             <span v-for="section in selectedSections" :key="section.id">
@@ -611,6 +638,54 @@ const exportSelected = async () => {
         </div>
       </section>
     </main>
+
+    <div v-if="editMode" class="book-editor-backdrop" @click="cancelEdit"></div>
+    <form
+      v-if="editMode"
+      class="book-editor book-editor-sheet"
+      data-testid="book-editor"
+      role="dialog"
+      aria-modal="true"
+      @submit.prevent="saveEdit"
+    >
+      <div class="book-editor-head">
+        <div>
+          <p>{{ t('文本编辑', 'Text editor') }}</p>
+          <h3>{{ draft.title || t('未命名来源', 'Untitled source') }}</h3>
+        </div>
+        <button type="button" class="book-icon-button is-quiet" :aria-label="t('关闭', 'Close')" @click="cancelEdit">
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <label>
+        <span>{{ t('标题', 'Title') }}</span>
+        <input v-model="draft.title" data-testid="book-edit-title" />
+      </label>
+      <label>
+        <span>{{ t('类型', 'Type') }}</span>
+        <select v-model="draft.assetType" data-testid="book-edit-type">
+          <option v-for="type in BOOK_TEXT_ASSET_TYPES" :key="type" :value="type">
+            {{ t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type) }}
+          </option>
+        </select>
+      </label>
+      <label>
+        <span>{{ t('标签', 'Tags') }}</span>
+        <input v-model="draft.tags" data-testid="book-edit-tags" />
+      </label>
+      <label class="book-editor-content">
+        <span>{{ t('内容', 'Content') }}</span>
+        <textarea v-model="draft.content" data-testid="book-edit-content"></textarea>
+      </label>
+      <div class="book-editor-actions">
+        <button type="button" class="book-secondary-button" @click="cancelEdit" data-testid="book-cancel">
+          {{ t('取消', 'Cancel') }}
+        </button>
+        <button type="submit" class="book-primary-button" data-testid="book-save">
+          {{ t('保存', 'Save') }}
+        </button>
+      </div>
+    </form>
 
     <div v-if="selectedAsset && aiToolsOpen" class="book-ai-backdrop" @click="aiToolsOpen = false"></div>
     <section v-if="selectedAsset && aiToolsOpen" class="book-ai-sheet" data-testid="book-ai-sheet" aria-live="polite">
@@ -2059,6 +2134,181 @@ const exportSelected = async () => {
 
   .book-read-mode pre {
     min-height: 340px;
+  }
+}
+
+.book-shelf-trigger,
+.book-detail-shelf-button,
+.book-library-close {
+  display: none;
+}
+
+.book-library-close {
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(70, 53, 29, 0.12);
+  border-radius: 12px;
+  color: var(--book-ink);
+  background: rgba(251, 252, 244, 0.72);
+}
+
+.book-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 2px;
+}
+
+.book-stat-strip span {
+  display: grid;
+  gap: 3px;
+  min-height: 72px;
+  padding: 13px 14px;
+  border: 1px solid rgba(70, 53, 29, 0.1);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.78), rgba(202, 226, 188, 0.22)),
+    rgba(251, 252, 244, 0.54);
+  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.82);
+}
+
+.book-stat-strip strong {
+  color: var(--book-ink);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.book-stat-strip small {
+  color: rgba(70, 53, 29, 0.58);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.book-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(70, 53, 29, 0.32);
+  backdrop-filter: blur(12px);
+}
+
+.book-editor-sheet {
+  position: fixed;
+  top: max(24px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 81;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(190px, 0.7fr) minmax(190px, 0.7fr);
+  gap: 14px;
+  max-width: 980px;
+  max-height: none;
+  margin: 0 auto;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid rgba(70, 53, 29, 0.16);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(236, 242, 226, 0.96)),
+    var(--book-paper);
+  box-shadow: 0 28px 80px rgba(70, 53, 29, 0.28);
+}
+
+.book-editor-head,
+.book-editor-content,
+.book-editor-actions {
+  grid-column: 1 / -1;
+}
+
+.book-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.book-editor-head p {
+  margin: 0;
+  color: rgba(70, 53, 29, 0.58);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.book-editor-head h3 {
+  margin: 2px 0 0;
+  color: var(--book-ink);
+  font-size: 22px;
+  line-height: 1.16;
+}
+
+.book-editor-sheet .book-editor-content textarea {
+  min-height: min(44dvh, 420px);
+  resize: vertical;
+}
+
+@media (max-width: 720px) {
+  .book-topbar-actions {
+    gap: 8px;
+  }
+
+  .book-shelf-trigger {
+    display: grid;
+  }
+
+  .book-detail-shelf-button {
+    display: flex;
+  }
+
+  .book-main {
+    min-height: calc(100dvh - 132px);
+  }
+
+  .book-main:not(.is-shelf-open) .book-library {
+    display: none;
+  }
+
+  .book-main.is-shelf-open .book-detail {
+    display: none;
+  }
+
+  .book-library-close {
+    display: grid;
+  }
+
+  .book-library-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+  }
+
+  .book-detail-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .book-detail-actions .book-secondary-button,
+  .book-detail-actions .book-primary-button {
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .book-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .book-editor-sheet {
+    top: calc(58px + env(safe-area-inset-top));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    grid-template-columns: 1fr;
+    max-height: none;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    border-radius: 28px 28px 0 0;
   }
 }
 </style>

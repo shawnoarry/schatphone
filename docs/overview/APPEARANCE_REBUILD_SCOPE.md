@@ -1,6 +1,6 @@
 # SchatPhone Appearance Rebuild Scope
 
-Updated: 2026-05-19
+Updated: 2026-05-30
 
 Purpose: this is the handoff reference for visual rebuild breadth.
 
@@ -102,6 +102,12 @@ Preserve:
 - wallpaper source compatibility
 - app-icon fallback rules
 - widget import validation and restore safety
+
+Current interaction baseline:
+
+- phone-sized Appearance subpages should stay scan-first;
+- wallpaper source, advanced CSS, custom font-stack, and per-app icon/accent editing should open in focused sheets/drawers/subpages instead of stretching one long Settings-style scroll;
+- icon preset options must include all built-in app glyphs so default states remain visible and editable.
 
 ### 4.3 Mature Content Modules
 
