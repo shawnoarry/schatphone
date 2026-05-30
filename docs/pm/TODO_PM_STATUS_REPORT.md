@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -55,13 +55,16 @@ PM meaning:
 ### Chat
 
 - Chat supports contact threads, AI replies, rich message behavior, WorldBook prompt context, message editing, and service-account style contexts.
+- Chat now has a messaging-app style first layer: Messages, Objects, Groups, Services, and More.
+- Chat More is scoped as a Chat identity/anonymity and diagnostics page, not a bulk-template or shortcut hub.
 - Shopping, logistics, and Food Delivery service contexts now connect into Chat through reusable service-notification messages with source references and route actions.
+- Group chats are now visible as Chat-native targets with member selection and reply-mode metadata; deeper multi-speaker orchestration remains a later behavior layer.
 - Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
 
 - Chat is one of the product cores;
-- future product work can make it feel closer to polished messaging apps, but current priority remains ownership clarity and functional stability.
+- the Chat home should feel closer to a polished messaging app while keeping object, group, service, identity/anonymity, and diagnostics controls explicit but not duplicated.
 
 ### Contacts / Relationship Runtime
 

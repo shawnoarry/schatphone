@@ -52,6 +52,7 @@ const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
 const VALID_PROACTIVE_STRATEGIES = new Set(['on_enter_once', 'on_every_enter_if_empty'])
 const VALID_IMAGE_REFERENCE_MODES = new Set(['auto', 'context_only', 'native_url'])
 const VALID_MODULE_ANONYMITY_SCOPES = new Set(['all', 'selected'])
+const VALID_GROUP_REPLY_MODES = new Set(['natural', 'mention', 'round_robin', 'manual'])
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
 const VALID_BLOCK_TYPES = new Set([
@@ -215,6 +216,21 @@ const normalizeFoodDeliveryServiceKey = (value) => {
 const normalizeShoppingServiceLabel = (value) => normalizeSingleLineText(value, 80)
 
 const sanitizeAssetId = (value) => sanitizeRoleBindingAssetId(value)
+
+const normalizeGroupMemberIds = (rawIds = []) => {
+  if (!Array.isArray(rawIds)) return []
+  const unique = []
+  rawIds.forEach((rawId) => {
+    const id = Number(rawId)
+    if (!Number.isFinite(id) || id <= 0) return
+    const normalized = Math.floor(id)
+    if (!unique.includes(normalized)) unique.push(normalized)
+  })
+  return unique.slice(0, 40)
+}
+
+const normalizeGroupReplyMode = (value) =>
+  typeof value === 'string' && VALID_GROUP_REPLY_MODES.has(value) ? value : 'natural'
 
 const normalizeSourceModule = (value) => normalizeSingleLineText(value, 80)
 
@@ -829,6 +845,8 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
     shoppingServiceKey: normalizeShoppingServiceKey(rawContact?.shoppingServiceKey),
     logisticsServiceKey: normalizeLogisticsServiceKey(rawContact?.logisticsServiceKey),
     foodDeliveryServiceKey: normalizeFoodDeliveryServiceKey(rawContact?.foodDeliveryServiceKey),
+    groupMemberIds: normalizeGroupMemberIds(rawContact?.groupMemberIds || rawContact?.memberIds),
+    groupReplyMode: normalizeGroupReplyMode(rawContact?.groupReplyMode || rawContact?.replyMode),
     worldPackId: normalizeSingleLineText(rawContact?.worldPackId, 120),
     worldServiceTemplateId: normalizeSingleLineText(rawContact?.worldServiceTemplateId, 120),
     worldAppBindingId: normalizeSingleLineText(rawContact?.worldAppBindingId, 120),
@@ -2325,6 +2343,12 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'foodDeliveryServiceKey')) {
       target.foodDeliveryServiceKey = normalizeFoodDeliveryServiceKey(updates.foodDeliveryServiceKey)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'groupMemberIds')) {
+      target.groupMemberIds = normalizeGroupMemberIds(updates.groupMemberIds)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'groupReplyMode')) {
+      target.groupReplyMode = normalizeGroupReplyMode(updates.groupReplyMode)
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'worldPackId')) {
       target.worldPackId = normalizeSingleLineText(updates.worldPackId, 120)

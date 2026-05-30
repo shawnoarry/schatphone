@@ -6,11 +6,7 @@ import { useChatStore } from '../stores/chat'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
-
-const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
-const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
-const VALID_REPLY_MODES = new Set(['manual', 'auto'])
-const VALID_RESPONSE_STYLES = new Set(['immersive', 'natural', 'concise'])
+import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,10 +22,10 @@ const featureMeta = computed(() => {
   if (id === 'preferences') {
     return {
       id,
-      title: t('批量会话模板', 'Batch Thread Templates'),
+      title: t('会话回复预设', 'Thread Reply Presets'),
       description: t(
-        '批量套用会话调校模板；单个会话的细调仍在对应聊天右上菜单完成。',
-        'Batch-apply thread tuning templates; single-thread fine tuning remains in the chat menu.',
+        '回复预设已移入具体对话的右上菜单；这里不再提供批量覆盖入口。',
+        'Reply presets now live in each thread menu; this page no longer offers bulk overrides.',
       ),
       icon: 'fas fa-sliders',
     }
@@ -48,12 +44,23 @@ const featureMeta = computed(() => {
   if (id === 'labs') {
     return {
       id,
-      title: t('聊天实验室', 'Chat Labs'),
+      title: t('维护与诊断', 'Maintenance & Diagnostics'),
       description: t(
-        '提供会话自动调度修复与头像/身份覆写清理等维护工具。',
-        'Provides maintenance utilities such as auto-schedule normalization and avatar/identity override cleanup.',
+        '修复会话自动调度，清理头像/身份覆写，并进入网络诊断。',
+        'Repair auto scheduling, clear avatar/identity overrides, and open network diagnostics.',
       ),
-      icon: 'fas fa-flask',
+      icon: 'fas fa-toolbox',
+    }
+  }
+  if (id === 'more') {
+    return {
+      id,
+      title: t('Chat 更多', 'Chat More'),
+      description: t(
+        '管理你在 Chat 中的身份、匿名状态，以及少量维护诊断工具。',
+        'Manage your Chat identity, anonymity state, and a few maintenance diagnostics.',
+      ),
+      icon: 'fas fa-ellipsis',
     }
   }
   return {
@@ -70,6 +77,7 @@ const featureMeta = computed(() => {
 const isPreferencesFeature = computed(() => featureMeta.value.id === 'preferences')
 const isIdentityFeature = computed(() => featureMeta.value.id === 'identity')
 const isLabsFeature = computed(() => featureMeta.value.id === 'labs')
+const isMoreFeature = computed(() => featureMeta.value.id === 'more')
 const contacts = computed(() => contactsForList.value || [])
 
 const actionFeedbackType = ref('')
@@ -88,20 +96,6 @@ const showActionFeedback = (type, message, durationMs = 2200) => {
   }, durationMs)
 }
 
-const toInt = (value, fallback = 0) => {
-  const num = Number(value)
-  return Number.isFinite(num) ? Math.floor(num) : fallback
-}
-
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
-
-const normalizeAutoInvokeInterval = (value) =>
-  clamp(
-    toInt(value, MIN_AUTO_INVOKE_INTERVAL_SEC),
-    MIN_AUTO_INVOKE_INTERVAL_SEC,
-    MAX_AUTO_INVOKE_INTERVAL_SEC,
-  )
-
 const contactKindTag = (contact) => {
   if (!contact) return ''
   if (contact.kind === 'service') return t('服务号', 'Service')
@@ -115,99 +109,46 @@ const goBack = () => {
   router.push('/chat')
 }
 
+const openFeature = (featureId) => {
+  router.push(`/chat-feature/${featureId}`)
+}
+
 const openNetworkCenter = () => {
   router.push('/network')
 }
 
-const prefScope = ref('all')
-const prefDraft = reactive({
-  suggestedRepliesEnabled: false,
-  allowQuoteReply: true,
-  allowSelfQuote: false,
-  virtualVoiceEnabled: true,
-  replyMode: 'manual',
-  responseStyle: 'immersive',
-  replyCount: 1,
-  autoInvokeEnabled: false,
-  autoInvokeIntervalSec: 360,
+const chatMoreStats = computed(() => {
+  const allContacts = contacts.value
+  return [
+    {
+      label: t('会话', 'Chats'),
+      value: allContacts.length,
+    },
+    {
+      label: t('群聊', 'Groups'),
+      value: allContacts.filter((contact) => contact.kind === 'group').length,
+    },
+    {
+      label: t('服务号', 'Services'),
+      value: allContacts.filter((contact) => contact.kind === 'service' || contact.kind === 'official').length,
+    },
+  ]
 })
 
-const prefScopeOptions = computed(() => [
-  { value: 'all', label: t('全部会话', 'All chats') },
-  { value: 'role', label: t('角色会话', 'Role chats') },
-  { value: 'service', label: t('服务号/官方号', 'Service/official') },
-])
-
-const replyModeOptions = computed(() => [
-  { value: 'manual', label: t('手动触发', 'Manual trigger') },
-  { value: 'auto', label: t('自动触发', 'Auto trigger') },
-])
-
-const responseStyleOptions = computed(() => [
-  { value: 'immersive', label: t('沉浸', 'Immersive') },
-  { value: 'natural', label: t('自然', 'Natural') },
-  { value: 'concise', label: t('简洁', 'Concise') },
-])
-
-const matchPreferenceScope = (contact) => {
-  if (prefScope.value === 'role') return (contact?.kind || 'role') === 'role'
-  if (prefScope.value === 'service') {
-    return contact?.kind === 'service' || contact?.kind === 'official'
+const moduleIdentityState = computed(() => chatStore.getModuleIdentity())
+const chatMoreDisplayName = computed(
+  () => moduleIdentityState.value.nickname || user.value.name || t('自己', 'Me'),
+)
+const chatMoreAvatar = computed(() => moduleIdentityState.value.avatar || '')
+const chatMoreInitial = computed(() => chatMoreDisplayName.value.trim().slice(0, 1).toUpperCase() || 'C')
+const chatMoreAnonymityText = computed(() => {
+  if (!moduleIdentityState.value.anonymityEnabled) return t('未开启匿名', 'Anonymity off')
+  if (moduleIdentityState.value.anonymityScope === 'selected') {
+    const count = moduleIdentityState.value.anonymityContactIds.length
+    return t(`对 ${count} 个对象匿名`, `Anonymous to ${count} contacts`)
   }
-  return true
-}
-
-const preferenceScopeContacts = computed(() => contacts.value.filter((contact) => matchPreferenceScope(contact)))
-const preferenceScopePreviewContacts = computed(() => preferenceScopeContacts.value.slice(0, 8))
-
-const syncPreferenceDraft = () => {
-  const defaults = chatStore.getDefaultConversationAiPrefs()
-  prefDraft.suggestedRepliesEnabled = Boolean(defaults.suggestedRepliesEnabled)
-  prefDraft.allowQuoteReply = Boolean(defaults.allowQuoteReply)
-  prefDraft.allowSelfQuote = Boolean(defaults.allowSelfQuote)
-  prefDraft.virtualVoiceEnabled = Boolean(defaults.virtualVoiceEnabled)
-  prefDraft.replyMode = defaults.replyMode || 'manual'
-  prefDraft.responseStyle = defaults.responseStyle || 'immersive'
-  prefDraft.replyCount = clamp(toInt(defaults.replyCount, 1), 1, 3)
-  prefDraft.autoInvokeEnabled = Boolean(defaults.autoInvokeEnabled)
-  prefDraft.autoInvokeIntervalSec = normalizeAutoInvokeInterval(defaults.autoInvokeIntervalSec)
-  prefScope.value = 'all'
-}
-
-const normalizedPreferenceTemplate = () => ({
-  suggestedRepliesEnabled: Boolean(prefDraft.suggestedRepliesEnabled),
-  allowQuoteReply: Boolean(prefDraft.allowQuoteReply),
-  allowSelfQuote: Boolean(prefDraft.allowSelfQuote),
-  virtualVoiceEnabled: Boolean(prefDraft.virtualVoiceEnabled),
-  replyMode: VALID_REPLY_MODES.has(prefDraft.replyMode) ? prefDraft.replyMode : 'manual',
-  responseStyle: VALID_RESPONSE_STYLES.has(prefDraft.responseStyle) ? prefDraft.responseStyle : 'immersive',
-  replyCount: clamp(toInt(prefDraft.replyCount, 1), 1, 3),
-  autoInvokeEnabled: Boolean(prefDraft.autoInvokeEnabled),
-  autoInvokeIntervalSec: normalizeAutoInvokeInterval(prefDraft.autoInvokeIntervalSec),
+  return t('对全部会话匿名', 'Anonymous to all chats')
 })
-
-const applyPreferencesToScope = () => {
-  const targets = preferenceScopeContacts.value
-  if (!targets.length) {
-    showActionFeedback('warning', t('当前范围没有可应用会话。', 'No conversations in selected scope.'))
-    return
-  }
-
-  const payload = normalizedPreferenceTemplate()
-  targets.forEach((contact) => {
-    chatStore.setConversationAiPrefs(contact.id, payload)
-  })
-  chatStore.saveNow()
-  showActionFeedback(
-    'success',
-    t(`已应用到 ${targets.length} 个会话。`, `Applied to ${targets.length} conversations.`),
-  )
-}
-
-const resetPreferenceTemplate = () => {
-  syncPreferenceDraft()
-  showActionFeedback('success', t('模板已恢复默认。', 'Template reset to defaults.'))
-}
 
 const moduleIdentityDraft = reactive({
   avatar: '',
@@ -371,7 +312,6 @@ watch(
     actionFeedbackType.value = ''
     actionFeedbackMessage.value = ''
     if (id === 'identity') syncIdentityDraft()
-    if (id === 'preferences') syncPreferenceDraft()
   },
   { immediate: true },
 )
@@ -387,7 +327,7 @@ watch(
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-      <div class="bg-white rounded-2xl border border-gray-200 p-4">
+      <div v-if="!isMoreFeature" class="bg-white rounded-2xl border border-gray-200 p-4">
         <p class="text-sm font-semibold flex items-center gap-2">
           <i :class="featureMeta.icon"></i>
           {{ featureMeta.title }}
@@ -409,8 +349,128 @@ watch(
         {{ actionFeedbackMessage }}
       </div>
 
-      <template v-if="isPreferencesFeature">
+      <template v-if="isMoreFeature">
+        <section class="rounded-[28px] border border-yellow-100 bg-yellow-50 px-5 py-5">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+              <div class="h-20 w-20 shrink-0 overflow-hidden rounded-[24px] bg-white shadow-sm">
+                <img
+                  v-if="chatMoreAvatar"
+                  :src="chatMoreAvatar"
+                  :alt="chatMoreDisplayName"
+                  class="h-full w-full object-cover"
+                />
+                <div v-else class="flex h-full w-full items-center justify-center text-2xl font-bold text-yellow-700">
+                  {{ chatMoreInitial }}
+                </div>
+              </div>
+              <div class="min-w-0">
+                <p class="truncate text-2xl font-bold leading-tight text-gray-950">{{ chatMoreDisplayName }}</p>
+                <p class="mt-1 text-sm text-gray-600">{{ chatMoreAnonymityText }}</p>
+                <button
+                  type="button"
+                  class="mt-3 rounded-full border border-yellow-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-800"
+                  @click="openFeature('identity')"
+                >
+                  <i class="fas fa-user-secret mr-1 text-yellow-700"></i>
+                  {{ t('编辑身份与匿名', 'Edit identity & anonymity') }}
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 text-2xl text-gray-800"
+              :aria-label="t('身份设置', 'Identity settings')"
+              @click="openFeature('identity')"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-3 gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-3">
+          <div
+            v-for="item in chatMoreStats"
+            :key="item.label"
+            class="text-center"
+          >
+            <p class="text-lg font-bold text-gray-950">{{ item.value }}</p>
+            <p class="mt-0.5 text-[11px] text-gray-500">{{ item.label }}</p>
+          </div>
+        </section>
         <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+          <button
+            type="button"
+            class="w-full rounded-xl border border-gray-100 px-3 py-3 text-left flex items-center gap-3 hover:bg-gray-50"
+            @click="openFeature('identity')"
+          >
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-50 text-yellow-700">
+              <i class="fas fa-user-secret"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-gray-900">{{ t('Chat 身份与匿名', 'Chat identity & anonymity') }}</span>
+              <span class="block truncate text-[11px] text-gray-500">{{ t('管理你在 Chat 里的头像、昵称和匿名范围。', 'Manage your Chat avatar, nickname, and anonymity scope.') }}</span>
+            </span>
+            <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+          </button>
+
+          <button
+            type="button"
+            class="w-full rounded-xl border border-gray-100 px-3 py-3 text-left flex items-center gap-3 hover:bg-gray-50"
+            @click="openFeature('labs')"
+          >
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <i class="fas fa-toolbox"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-gray-900">{{ t('维护与诊断', 'Maintenance & diagnostics') }}</span>
+              <span class="block truncate text-[11px] text-gray-500">{{ t('修复调度、清理覆写、查看网络诊断。', 'Repair schedules, clear overrides, and inspect network diagnostics.') }}</span>
+            </span>
+            <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+          </button>
+        </div>
+
+        <section class="rounded-2xl border border-gray-200 bg-white p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">{{ t('诊断', 'Diagnostics') }}</p>
+              <p class="mt-1 text-[11px] leading-4 text-gray-500">
+                {{ t('检查 API、存储报告和连接状态。', 'Check API, storage reports, and connection status.') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700"
+              @click="openNetworkCenter"
+            >
+              {{ t('打开', 'Open') }}
+            </button>
+          </div>
+        </section>
+
+      </template>
+
+      <template v-else-if="isPreferencesFeature">
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+          <p class="text-sm font-semibold text-gray-900">{{ t('已移入具体对话', 'Moved into each thread') }}</p>
+          <p class="text-xs leading-5 text-gray-500">
+            {{
+              t(
+                '回复预设不再作为独立批量工具展示。打开任意会话，进入右上菜单，即可在当前会话调校里套用默认回复预设。',
+                'Reply presets are no longer shown as a standalone bulk tool. Open any chat, then use the top-right menu to apply the default reply preset for that thread.',
+              )
+            }}
+          </p>
+          <button
+            type="button"
+            class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700"
+            @click="goBack"
+          >
+            {{ t('返回消息', 'Back to messages') }}
+          </button>
+        </div>
+
+        <div v-if="false" class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
           <div class="flex items-center justify-between gap-2">
             <p class="text-sm font-semibold text-gray-900">{{ t('批量套用会话模板', 'Batch apply thread template') }}</p>
             <p class="text-[11px] text-gray-500">
@@ -536,7 +596,7 @@ watch(
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+        <div v-if="false" class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
           <div class="flex items-center justify-between">
             <p class="text-sm font-semibold text-gray-900">{{ t('范围预览', 'Scope preview') }}</p>
             <p class="text-[11px] text-gray-400">
@@ -744,8 +804,7 @@ watch(
         </div>
       </template>
     </div>
+
+    <ChatAppTabBar active="more" />
   </div>
 </template>
-
-
-

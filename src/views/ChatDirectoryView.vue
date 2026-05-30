@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import {
@@ -24,8 +24,10 @@ import {
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
+import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 
+const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
@@ -33,7 +35,9 @@ const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { contacts, roleProfiles } = storeToRefs(chatStore)
 
-const activeSection = ref('roles')
+const normalizeDirectorySection = (value) => (value === 'service' ? 'service' : 'roles')
+
+const activeSection = ref(normalizeDirectorySection(route.query.section))
 const searchKeyword = ref('')
 const roleFilter = ref('all')
 const serviceFilter = ref('all')
@@ -652,10 +656,23 @@ const toggleSelectAllFiltered = () => {
 }
 
 const switchSection = (section) => {
-  activeSection.value = section === 'service' ? 'service' : 'roles'
+  const nextSection = normalizeDirectorySection(section)
+  activeSection.value = nextSection
   searchKeyword.value = ''
   setBatchMode(false)
+  router.replace({ path: '/chat-contacts', query: { section: nextSection } })
 }
+
+watch(
+  () => route.query.section,
+  (section) => {
+    const nextSection = normalizeDirectorySection(section)
+    if (activeSection.value === nextSection) return
+    activeSection.value = nextSection
+    searchKeyword.value = ''
+    setBatchMode(false)
+  },
+)
 
 const openChat = (contact) => {
   chatStore.ensureConversationForContact(contact.id)
@@ -876,10 +893,10 @@ const saveService = () => {
   }
 
   if (serviceModalMode.value === 'create') {
-    const created = chatStore.addContact(payload)
+    chatStore.addContact(payload)
     showUiNotice('success', t('服务对象已创建。', 'Service entry created.'))
     closeServiceModal()
-    openChat(created)
+    switchSection('service')
     return
   }
 
@@ -1769,6 +1786,8 @@ onBeforeUnmount(() => {
         </div>
       </section>
     </div>
+
+    <ChatAppTabBar :active="activeSection === 'service' ? 'services' : 'objects'" />
 
     <div
       v-if="showBindModal"

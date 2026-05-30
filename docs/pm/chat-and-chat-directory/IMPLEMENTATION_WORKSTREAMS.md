@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -8,10 +8,13 @@ Updated: 2026-05-29
 - message actions
 - rich message surfaces
 - thread-level preferences
+- per-thread reply preset application
+- messaging-app style first-level shell and thread-list controls
 
 ## 2. Workstream B: Chat Directory And Binding
 
 - role binding into Chat
+- group-chat target management
 - service-account management
 - chat-target lifecycle
 - unbind-only rules
@@ -35,3 +38,5 @@ Treat these as bugs:
 3. service accounts are mixed into role-profile logic without a clear contract
 4. Chat-side `relationshipLevel` or `relationshipNote` is shown as the main current relationship truth
 5. World Pack generated accounts start creating or owning source-module business records
+6. group-chat membership starts acting like a second Contacts archive
+7. Chat More becomes a duplicate management hub or bulk thread override page

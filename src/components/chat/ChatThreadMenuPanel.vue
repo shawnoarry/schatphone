@@ -76,6 +76,7 @@ const props = defineProps({
 const emit = defineEmits([
   'clear-thread-identity',
   'close',
+  'apply-default-thread-preset',
   'open-chat-directory',
   'open-worldbook',
   'save-thread-identity',
@@ -312,7 +313,21 @@ const updateNumberSetting = (key, value) => {
     </div>
 
     <div class="border-t border-gray-200 pt-3 space-y-2">
-      <p class="font-semibold text-sm text-gray-900">{{ t('当前会话调校', 'Current thread tuning') }}</p>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话调校', 'Current thread tuning') }}</p>
+          <p class="mt-0.5 text-[10px] text-gray-500">
+            {{ t('回复预设在具体会话里调用，保存后只影响当前会话。', 'Apply reply presets here; saving only affects this thread.') }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700"
+          @click="$emit('apply-default-thread-preset')"
+        >
+          {{ t('套用默认预设', 'Apply default preset') }}
+        </button>
+      </div>
 
       <label class="flex items-center justify-between gap-3">
         <span>{{ t('回复模式', 'Reply Mode') }}</span>

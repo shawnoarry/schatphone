@@ -29,10 +29,11 @@ Current state:
 
 1. the core phone shell is stable enough to support ongoing feature work;
 2. Chat, role profiles, Chat-side binding, and relationship runtime baseline are already online;
-3. Calendar and Reminders have a real product split baseline;
-4. low-impact cross-module relationship facts are already working across several modules;
-5. World Hub is online as an optional review/control surface;
-6. visual quality is still functional scaffolding in many areas rather than final immersion.
+3. Chat now has a clearer messaging-app shell with separate Messages, Objects, Groups, Services, and More control layers;
+4. Calendar and Reminders have a real product split baseline;
+5. low-impact cross-module relationship facts are already working across several modules;
+6. World Hub is online as an optional review/control surface;
+7. visual quality is still functional scaffolding in many areas rather than final immersion.
 
 Current project risk:
 
@@ -173,6 +174,7 @@ Acceptance:
 Current implementation note:
 
 - Chat now has a reusable `service_notification` rich message surface with source module, source record id, optional source event id, service label, status, amount, route actions, unread behavior, and source-level dedupe.
+- Chat App now separates immersive message entry from control surfaces through `Messages`, `Objects`, `Groups`, `Services`, and `More`; `More` is the Chat identity/anonymity and diagnostics surface, while group chats are first-class Chat targets with member ids and reply-mode metadata.
 - Shopping checkout can push order notifications into matching Shopping service-account threads, while Shopping remains the owner of products, cart, checkout, order status, and Calendar delivery cues.
 - Shopping logistics events can push tracking notifications into matching Logistics service-account threads, while logistics remains a tracking-facing communication lane and does not become a storefront.
 - Food Delivery checkout and order events can push order/update notifications into the Food Delivery Dispatch service-account thread, while restaurants, menus, order state, delivery fulfillment, Wallet expenses, and Map route context remain owned by their source modules.

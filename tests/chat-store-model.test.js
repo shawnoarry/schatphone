@@ -686,6 +686,36 @@ describe('chat store model', () => {
     expect(store.contacts.some((item) => item.id === created.id)).toBe(false)
   })
 
+  test('normalizes and updates group chat contact metadata', () => {
+    const store = useChatStore()
+    const roleContacts = store.contacts.filter((item) => item.kind === 'role')
+    const firstRoleId = roleContacts[0].id
+    const secondRoleId = roleContacts[1].id
+
+    const created = store.addContact({
+      name: 'Team Room',
+      kind: 'group',
+      role: 'Group chat',
+      memberIds: [firstRoleId, String(secondRoleId), firstRoleId, 0, 'bad'],
+      replyMode: 'round_robin',
+    })
+
+    expect(created.kind).toBe('group')
+    expect(created.groupMemberIds).toEqual([firstRoleId, secondRoleId])
+    expect(created.groupReplyMode).toBe('round_robin')
+    expect(store.getConversationByContactId(created.id)?.contactId).toBe(created.id)
+
+    const updatedOk = store.updateContact(created.id, {
+      groupMemberIds: [secondRoleId, secondRoleId, firstRoleId, -1],
+      groupReplyMode: 'unsupported',
+    })
+
+    const updated = store.contacts.find((item) => item.id === created.id)
+    expect(updatedOk).toBe(true)
+    expect(updated?.groupMemberIds).toEqual([secondRoleId, firstRoleId])
+    expect(updated?.groupReplyMode).toBe('natural')
+  })
+
   test('creates World Pack service template contacts idempotently', () => {
     const store = useChatStore()
 

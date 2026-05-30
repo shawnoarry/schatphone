@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 ## 1. Purpose
 
@@ -93,6 +93,7 @@ Immediate active lane:
 - the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat, runtime worldview fallback, active Book source links, and the active World Pack. World Pack V1 now has persisted packs, activation review, one-active-pack-per-save semantics, user-approved service-account template generation into Chat Directory, and the first concrete app-binding path: `survival_city` opens Shopping as `补给站` with a safe Daily Fresh / Grocery filter; other archetypes remain guarded.
 - Book text-library V1 now exists as a separate app for long worldbook documents, knowledge notes, rules, glossary text, and reusable references. `Settings -> WorldBook` remains the activation panel that links whole documents or selected Book sections into active world context.
 - the Book source chain is now tested through the consumer path: Chat prompt context, Chat thread summary, and runtime world-context resolution all receive active Book source text through explicit `bookStore` adapters.
+- Chat App now has a clearer messaging-app shell: `Messages`, `Objects`, `Groups`, `Services`, and `More`. The main message list stays immersive while binding, group management, and service accounts have explicit control layers; `More` is scoped to Chat identity, anonymity, and diagnostics.
 - fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack
@@ -204,6 +205,7 @@ Rule: views and components should not invent their own provider-calling logic or
 - rich message surfaces;
 - service-account style communication;
 - service-account notifications with source module/id references and route actions;
+- group-chat targets with Chat-side member ids and reply-mode metadata;
 - compact relationship context consumption.
 
 ### 7.6 Contacts and Chat Directory

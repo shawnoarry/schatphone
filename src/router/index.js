@@ -10,6 +10,7 @@ const NetworkView = () => import('../views/NetworkView.vue')
 const ChatView = () => import('../views/ChatView.vue')
 const ChatDirectoryView = () => import('../views/ChatDirectoryView.vue')
 const ChatFeaturePlaceholderView = () => import('../views/ChatFeaturePlaceholderView.vue')
+const ChatGroupsView = () => import('../views/ChatGroupsView.vue')
 const ContactsView = () => import('../views/ContactsView.vue')
 const GalleryView = () => import('../views/GalleryView.vue')
 const PhoneView = () => import('../views/PhoneView.vue')
@@ -41,6 +42,7 @@ const router = createRouter({
     { path: '/chat', component: ChatView },
     { path: '/chat-contacts', component: ChatDirectoryView },
     { path: '/chat-feature/:feature', component: ChatFeaturePlaceholderView },
+    { path: '/chat-groups', component: ChatGroupsView },
     { path: '/chat/:id', component: ChatView },
     { path: '/contacts', component: ContactsView },
     { path: '/gallery', component: GalleryView },

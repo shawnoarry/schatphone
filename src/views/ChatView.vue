@@ -55,6 +55,7 @@ import { useDialog } from '../composables/useDialog'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
 import ChatThreadMenuPanel from '../components/chat/ChatThreadMenuPanel.vue'
 import ChatUserActionPanel from '../components/chat/ChatUserActionPanel.vue'
+import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,12 +138,6 @@ const SEMANTIC_REVISION_TRACE_MODE = normalizeSemanticRevisionTraceMode(
   SEMANTIC_REVISION_TRACE_MODES.SILENT,
 )
 
-const STATUS_OPTIONS = computed(() => [
-  { id: 'idle', label: t('空闲', 'Idle'), hint: t('可联系', 'Available'), dotClass: 'chat-status-dot-idle' },
-  { id: 'busy', label: t('忙碌', 'Busy'), hint: t('勿扰', 'Do not disturb'), dotClass: 'chat-status-dot-busy' },
-  { id: 'away', label: t('离开', 'Away'), hint: t('暂时离线', 'Temporary offline'), dotClass: 'chat-status-dot-away' },
-])
-
 const SAFE_MODULE_ROUTES = new Set([
   '/home',
   '/settings',
@@ -198,6 +193,8 @@ const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
 const retryRerollMessageId = ref('')
 const showThreadMenu = ref(false)
+const chatSearchOpen = ref(false)
+const chatSearchKeyword = ref('')
 const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
@@ -702,16 +699,39 @@ const activeActionMessage = computed(() => {
 
 const hasActiveMessageActions = computed(() => Boolean(activeActionMessage.value))
 
-const currentStatus = computed(() => {
-  const statusId = typeof user.value.chatStatus === 'string' ? user.value.chatStatus : 'idle'
-  return STATUS_OPTIONS.value.find((item) => item.id === statusId) || STATUS_OPTIONS.value[0]
+const normalizedChatSearchKeyword = computed(() => chatSearchKeyword.value.trim().toLowerCase())
+
+const visibleChatContacts = computed(() => {
+  const keyword = normalizedChatSearchKeyword.value
+  if (!keyword) return contactsForList.value
+  return contactsForList.value.filter((contact) => {
+    const conversation = chatStore.getConversationByContactId(contact.id)
+    return [contact.name, contact.role, contact.bio, conversation?.lastMessage, conversation?.draft]
+      .some((field) => typeof field === 'string' && field.toLowerCase().includes(keyword))
+  })
 })
 
-const chatListDockItems = computed(() => [
-  { id: 'preferences', label: t('批量模板', 'Templates'), icon: 'fas fa-sliders-h' },
-  { id: 'identity', label: t('身份', 'Identity'), icon: 'fas fa-user-secret' },
-  { id: 'labs', label: t('实验室', 'Labs'), icon: 'fas fa-flask' },
-])
+const chatHomeUnreadTotal = computed(() =>
+  contactsForList.value.reduce((sum, contact) => {
+    const conversation = chatStore.getConversationByContactId(contact.id)
+    return sum + Math.max(0, Number(conversation?.unread) || 0)
+  }, 0),
+)
+
+const chatHomeHeroTitle = computed(() => {
+  if (contactsForList.value.length === 0) return t('先把对象带进 Chat', 'Bring someone into Chat')
+  if (chatHomeUnreadTotal.value > 0) {
+    return t(`有 ${chatHomeUnreadTotal.value} 条未读消息`, `${chatHomeUnreadTotal.value} unread messages`)
+  }
+  return t('消息、群聊和服务号都在这里', 'Messages, groups, and services live here')
+})
+
+const chatHomeHeroDetail = computed(() => {
+  if (contactsForList.value.length === 0) {
+    return t('从对象页绑定角色，或创建服务号与群聊。', 'Bind roles from Objects, or create services and groups.')
+  }
+  return t('聊天默认保持沉浸，控制项放在会话内和更多页。', 'Chats stay immersive by default; controls live in threads and More.')
+})
 
 const contactHasThreadOrModuleAvatarOverride = (contactId) => {
   const id = Number(contactId)
@@ -1137,11 +1157,23 @@ const leaveChat = () => {
   closeMessageEditModal()
   router.push('/chat')
 }
-const openChatDockFeature = (featureId) => {
-  const id = typeof featureId === 'string' ? featureId.trim() : ''
-  if (!id) return
-  router.push(`/chat-feature/${id}`)
+const toggleChatSearch = () => {
+  chatSearchOpen.value = !chatSearchOpen.value
+  if (!chatSearchOpen.value) chatSearchKeyword.value = ''
 }
+
+const openChatObjects = () => {
+  router.push({ path: '/chat-contacts', query: { section: 'roles' } })
+}
+
+const openChatGroups = () => {
+  router.push('/chat-groups')
+}
+
+const openChatMore = () => {
+  router.push('/chat-feature/more')
+}
+
 const contactById = (contactId) =>
   contactsForList.value.find((item) => item.id === Number(contactId)) || null
 
@@ -1151,8 +1183,7 @@ const enterChat = (contact) => {
   router.push(`/chat/${contact.id}`)
 }
 
-const applyThreadSettingsDraft = () => {
-  const prefs = activeAiPrefs.value
+const applyThreadPrefsToDraft = (prefs = {}) => {
   threadSettingsDraft.suggestedRepliesEnabled = Boolean(prefs.suggestedRepliesEnabled)
   threadSettingsDraft.contextTurns = clampContextTurns(prefs.contextTurns)
   threadSettingsDraft.bilingualEnabled = Boolean(prefs.bilingualEnabled)
@@ -1169,6 +1200,15 @@ const applyThreadSettingsDraft = () => {
   threadSettingsDraft.allowImageVirtualWithoutReference = Boolean(prefs.allowImageVirtualWithoutReference)
   threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
   threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
+}
+
+const applyThreadSettingsDraft = () => {
+  applyThreadPrefsToDraft(activeAiPrefs.value)
+}
+
+const applyDefaultThreadPresetToDraft = () => {
+  applyThreadPrefsToDraft(chatStore.getDefaultConversationAiPrefs())
+  showUiNotice('success', t('已套用默认回复预设，保存后生效。', 'Default reply preset applied. Save to keep it.'))
 }
 
 const applyThreadIdentityDraft = () => {
@@ -1308,6 +1348,21 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
     contactKind === 'service' || contactKind === 'official'
       ? `Service template: ${contact.serviceTemplate || 'default service helper style, concise guidance'}`
       : `Role persona: ${contact.bio || 'none'}`
+  const groupMembers =
+    contactKind === 'group' && Array.isArray(contact.groupMemberIds)
+      ? contact.groupMemberIds
+          .map((memberId) => chatStore.getContactById(memberId))
+          .filter(Boolean)
+          .map((member) => `${member.name}${member.role ? ` (${member.role})` : ''}`)
+      : []
+  const groupInstruction =
+    contactKind === 'group'
+      ? [
+          `Group reply mode: ${contact.groupReplyMode || 'natural'}.`,
+          `Group members: ${groupMembers.length > 0 ? groupMembers.join('; ') : 'none configured'}.`,
+          'When speaking for a group, make it clear which member is speaking in the message text.',
+        ].join('\n')
+      : ''
 
   const quoteRule = aiPrefs.allowQuoteReply
     ? aiPrefs.allowSelfQuote
@@ -1363,6 +1418,7 @@ ${userIdentityBlock}
 Conversation type: ${typeLabel}
 Your role: ${contact.name} (${contact.role})
 ${serviceInstruction}
+${groupInstruction}
 Response style: ${responseStyle}
 Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
@@ -4321,17 +4377,94 @@ onBeforeUnmount(() => {
 <template>
   <div class="w-full h-full flex flex-col chat-shell">
     <template v-if="!activeChat">
-      <div class="pt-12 px-4 pb-2 chat-ink">
-        <div class="flex items-center justify-between">
+      <div class="pt-12 px-4 pb-3 chat-ink">
+        <div class="flex items-center justify-between gap-3">
           <button @click="goHome" class="chat-ink w-10 h-10 rounded-full hover:bg-black/5">{{ t('主页', 'Home') }}</button>
-          <p class="font-bold text-sm">{{ t('聊天', 'Chats') }}</p>
-          <span class="text-xs text-gray-500">{{ currentStatus.label }}</span>
+          <p class="flex-1 text-2xl font-bold leading-tight">{{ t('消息', 'Messages') }}</p>
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              :aria-label="t('搜索', 'Search')"
+              @click="toggleChatSearch"
+            >
+              <i class="fas fa-search"></i>
+            </button>
+            <button
+              type="button"
+              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              :aria-label="t('新建会话', 'New chat')"
+              @click="openChatObjects"
+            >
+              <i class="fas fa-comment-medical"></i>
+            </button>
+            <button
+              type="button"
+              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              :aria-label="t('更多', 'More')"
+              @click="openChatMore"
+            >
+              <i class="fas fa-cog"></i>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="chatSearchOpen" class="mt-3 flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2">
+          <i class="fas fa-search text-xs text-gray-400"></i>
+          <input
+            v-model="chatSearchKeyword"
+            type="text"
+            class="flex-1 bg-transparent text-sm outline-none"
+            :placeholder="t('搜索会话、角色或草稿', 'Search chats, roles, or drafts')"
+          />
+          <button
+            v-if="chatSearchKeyword"
+            type="button"
+            class="text-[11px] text-gray-500"
+            @click="chatSearchKeyword = ''"
+          >
+            {{ t('清空', 'Clear') }}
+          </button>
         </div>
       </div>
 
       <div class="flex-1 overflow-y-auto no-scrollbar bg-white rounded-t-2xl mt-2">
+        <section class="mx-4 mt-4 mb-2 rounded-2xl border border-yellow-100 bg-yellow-50 px-4 py-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-gray-950">{{ chatHomeHeroTitle }}</p>
+              <p class="mt-1 text-[11px] leading-4 text-gray-600">{{ chatHomeHeroDetail }}</p>
+            </div>
+            <div class="flex shrink-0 gap-1.5">
+              <button
+                type="button"
+                class="h-8 w-8 rounded-full border border-yellow-200 bg-white text-gray-700"
+                :aria-label="t('对象', 'Objects')"
+                @click="openChatObjects"
+              >
+                <i class="fas fa-user text-xs"></i>
+              </button>
+              <button
+                type="button"
+                class="h-8 w-8 rounded-full border border-yellow-200 bg-white text-gray-700"
+                :aria-label="t('群聊', 'Groups')"
+                @click="openChatGroups"
+              >
+                <i class="fas fa-comments text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <p
+          v-if="visibleChatContacts.length === 0"
+          class="px-4 py-8 text-center text-xs text-gray-400"
+        >
+          {{ normalizedChatSearchKeyword ? t('没有匹配的会话。', 'No matching chats.') : t('暂无会话，先从对象页绑定角色或创建群聊。', 'No chats yet. Bind an object or create a group first.') }}
+        </p>
+
         <div
-          v-for="contact in contactsForList"
+          v-for="contact in visibleChatContacts"
           :key="contact.id"
           @click="enterChat(contact)"
           class="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer"
@@ -4364,17 +4497,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="border-t border-gray-200 bg-white px-3 py-2 grid grid-cols-3 gap-2">
-        <button
-          v-for="item in chatListDockItems"
-          :key="item.id"
-          @click="openChatDockFeature(item.id)"
-          class="rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-[11px] text-gray-700 flex items-center justify-center gap-1.5 hover:bg-gray-100"
-        >
-          <i :class="item.icon"></i>
-          <span>{{ item.label }}</span>
-        </button>
-      </div>
+      <ChatAppTabBar active="messages" />
     </template>
 
     <template v-else>
@@ -4414,6 +4537,7 @@ onBeforeUnmount(() => {
         :auto-last-triggered-hint-text="autoLastTriggeredHintText"
         :auto-restore-settlement-hint-text="autoRestoreSettlementHintText"
         :thread-settings-saved="threadSettingsSaved"
+        @apply-default-thread-preset="applyDefaultThreadPresetToDraft"
         @open-chat-directory="openChatDirectory"
         @open-worldbook="openWorldBookFromThreadContext"
         @clear-thread-identity="clearThreadIdentityDraft"
