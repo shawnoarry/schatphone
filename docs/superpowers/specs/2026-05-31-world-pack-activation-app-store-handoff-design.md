@@ -44,6 +44,7 @@ WorldBook should behave like the Book source-reference flow: it manages world ma
 8. WorldBook shows a success result:
    - the pack is now active
    - enabled world app entries can be found in `App Store -> World Apps`
+   - available service accounts can be added from Chat when the Chat-side UI is ready
    - optional CTA: `Open App Store`
 9. User goes to App Store to open or place world-specific app entries.
 
@@ -78,6 +79,10 @@ This area should not show active-pack app-entry lists until the pack is actually
 After activation, show a compact confirmation:
 
 `<Pack name> is now active. World-specific apps are available in App Store -> World Apps.`
+
+If the pack includes service account templates, also show a count-only notice:
+
+`<N> world service account(s) are available. Add them from Chat when you need them.`
 
 Primary action:
 
@@ -150,15 +155,21 @@ The implementation should not add or harden a `black_market -> Shopping` launch 
 
 ## Service Account Templates
 
-Service template generation should not dominate the Pack activation flow.
+Service account handling should follow the same handoff principle as app entries: WorldBook announces availability, but it should not be the primary place where users create or manage Chat service accounts.
 
 Preferred behavior:
 
-- Pack activation summary may say that service templates are available.
-- Direct creation can move to a secondary or collapsed section.
-- Future work can route service-template discovery through Chat Directory or an App Store world-services section.
+- After Pack activation, WorldBook shows how many service account templates are available for the current world.
+- The copy tells users that these can be added inside the Chat app.
+- Direct Chat creation UI is deferred until the parallel Chat feature shell is stable.
+- The current slice may add/prepare the WorldBook notice UI only; the service-account data chain and Chat-side add flow are explicitly later work.
+- Existing Chat Directory generation code should not be broadened from WorldBook during this redesign.
 
-This slice does not need to redesign Chat Directory service account management.
+This keeps the mental model clear:
+
+- WorldBook activates the world and reports what became available.
+- Chat owns adding, viewing, and using world service accounts.
+- World Pack stores the template origin and availability metadata.
 
 ## Out Of Scope
 
@@ -175,6 +186,7 @@ This slice does not need to redesign Chat Directory service account management.
 - Pack tab separates active pack state from selected preview state.
 - Activating a pack clearly tells users where enabled world apps can be found.
 - App Store exposes a clear world-app discovery route or section.
+- Pack activation shows service account availability as a count and points users to Chat, without creating the Chat-side data flow in this slice.
 - Nonstandard app proposal review is advanced/collapsed rather than part of the default activation path.
 - `black_market` is not silently confirmable as a Shopping entry.
 - Existing source ownership remains intact: Shopping, Food Delivery, Calendar, Map, Chat, Wallet, Assets, and relationship runtime keep their records and workflows.
