@@ -1,6 +1,6 @@
 # SchatPhone Event Workflow
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 This document defines the `事件专项` workflow.
 
@@ -95,6 +95,10 @@ If an event change needs visual work, first decide visual ownership through `doc
 13. World-aware events must follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
 14. Runtime event triggers should use local event variant packs by default; API calls are for generating or refreshing packs, not for every random event.
 15. World Hub review should keep event-log explanations read-only and inspectable by module, status, trigger source, reason, adapter boundary, target, and world variant context.
+16. Relationship event gating must consume saved role-profile classification fields (`primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata), not raw `relationshipLabelText` or `relationshipLabelNote`.
+17. Low-risk relationship facts may attach classification gate metadata as soft-reference audit context and still allow the fact. High-risk hard-gate behavior must remain explicit, testable, and review/confirmation-oriented before any high-impact automation is enabled.
+18. Future high-risk relationship event packs should consume named gate presets from `src/lib/relationship-event-gating.js` instead of duplicating hard-gate rule objects in module adapters.
+19. Future Chat social events such as role-initiated friend requests, blocks, and being-blocked outcomes must wait for the Chat social shell and use an explicit event-runtime review/audit seam before mutating Chat channel state.
 
 ## 4. Event Entry Audit
 
@@ -117,6 +121,9 @@ Side effects:
 Reversibility / dismissal:
 Persistence and backup impact:
 Tests:
+Relationship classification gate: none | soft-reference audit | hard block | hard confirm | hard allow
+High-risk gate preset: none | romance_confession | relationship_confirmation | jealous_boundary | world-pack-specific preset
+Social/channel state change: none | direct user action | generated pending review | confirmed applied
 ```
 
 Decision rules:

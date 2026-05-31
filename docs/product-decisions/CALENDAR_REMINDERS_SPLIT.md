@@ -1,6 +1,6 @@
 # Calendar And Reminders Split
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 Audience: product managers, designers, engineers, QA, and future AI assistants.
 
@@ -20,6 +20,7 @@ Short version:
 - `Calendar` answers: what is actually on my schedule?
 - `Reminders` answers: what still needs my attention or confirmation?
 - `World Hub` remains the optional runtime/control app, not the normal place for everyday reminders.
+- `World Pack` may change Calendar labels/context through a reservation app binding and Map labels/context through a transit app binding, but it does not own Calendar records, Map trip truth, or event judgment.
 
 ## 2. Why This Split Exists
 
@@ -44,6 +45,8 @@ Current project state:
 | --- | --- |
 | `src/stores/calendar.js` | owns confirmed events, event-time editing, and real push scheduling state |
 | `src/stores/reminders.js` | owns Phone/Shopping/Stock-style cue intake plus reminder persistence and confirmation flow |
+| `src/views/CalendarView.vue` world-app UX | may read `reservation -> Calendar` context for title/boundary presentation only |
+| `src/views/MapView.vue` world-app UX | may read `transit -> Map` context for title/boundary presentation only |
 | `src/views/CalendarView.vue` | schedule-first surface with reminder summary link |
 | `src/views/RemindersView.vue` | user-facing cue inbox |
 | `/calendar` | confirmed schedule, event editing, push status |

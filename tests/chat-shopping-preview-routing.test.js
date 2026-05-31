@@ -479,7 +479,8 @@ describe('ChatView Shopping product preview routing', () => {
     )
     expect(card.text()).toContain('Package shipped · Mira Lens')
     expect(card.text()).toContain('Standard courier picked up this parcel.')
-    expect(card.text()).toContain('shopping_logistics_tracking')
+    expect(card.text()).toContain('Standard Courier')
+    expect(card.text()).not.toContain('shopping_logistics_tracking')
 
     await wrapper.get('[data-testid="chat-service-notification-action-shopping_order_4_4-0"]').trigger('click')
     await flushPromises()

@@ -13,6 +13,7 @@ import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   recordMapSharedRouteRelationshipFact,
 } from '../lib/relationship-fact-adapters'
+import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
@@ -94,6 +95,21 @@ const MAP_CANVAS_PIN_POSITIONS = Object.freeze([
   { top: '60%', left: '42%' },
   { top: '25%', left: '58%' },
 ])
+
+const mapWorldAppContext = computed(() =>
+  resolveWorldAppUxContext({
+    systemStore,
+    moduleKey: 'map',
+    routeQuery: route.query,
+    expectedArchetypes: ['transit'],
+  }),
+)
+const mapAppTitle = computed(() => mapWorldAppContext.value?.bindingTitle || t('地图', 'Map'))
+const mapRouteEyebrow = computed(() =>
+  mapWorldAppContext.value
+    ? t(mapWorldAppContext.value.packTitle, mapWorldAppContext.value.packName)
+    : t('路线', 'Route'),
+)
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -1002,6 +1018,7 @@ const acknowledgeArrival = () => {
   }
   if (latestReward && sharedRouteTarget) {
     recordMapSharedRouteRelationshipFact({
+      chatStore,
       relationshipRuntimeStore,
       trip: latestReward,
       target: sharedRouteTarget,
@@ -1056,7 +1073,7 @@ onBeforeUnmount(() => {
       <button @click="goHome" class="text-cyan-100 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
-      <h1 class="font-bold tracking-[0.28em] text-xs uppercase">{{ t('地图', 'Map') }}</h1>
+      <h1 class="min-w-0 flex-1 truncate text-center font-bold tracking-[0.28em] text-xs uppercase">{{ mapAppTitle }}</h1>
       <span class="text-[10px] px-2 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-50">
         {{ tripStatusLabel }}
       </span>
@@ -1122,10 +1139,35 @@ onBeforeUnmount(() => {
 
         <div class="map-route-card" data-testid="map-primary-route-card">
           <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            {{ t('路线', 'Route') }}
+            {{ mapRouteEyebrow }}
           </p>
           <p class="mt-1 text-lg font-bold text-slate-950">{{ mapPrimarySheetTitle }}</p>
           <p class="mt-1 text-sm text-slate-600">{{ mapPrimarySheetDescription }}</p>
+          <div
+            v-if="mapWorldAppContext"
+            class="mt-3 rounded-2xl border border-cyan-100 bg-cyan-50/80 p-3 text-slate-700"
+            data-testid="map-world-app-context"
+            :data-world-pack="mapWorldAppContext.packId"
+            :data-world-app="mapWorldAppContext.bindingId"
+          >
+            <div class="flex items-start gap-3">
+              <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-600 text-white">
+                <i :class="mapWorldAppContext.icon"></i>
+              </span>
+              <div class="min-w-0">
+                <p class="truncate text-sm font-bold text-slate-950">{{ mapWorldAppContext.bindingTitle }}</p>
+                <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                  {{ mapWorldAppContext.targetLabel }} · {{ mapWorldAppContext.archetype }}
+                </p>
+                <p class="mt-1 text-xs leading-5 text-slate-600">
+                  {{ mapWorldAppContext.description || mapWorldAppContext.boundaryCopy }}
+                </p>
+                <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                  {{ mapWorldAppContext.boundaryCopy }}
+                </p>
+              </div>
+            </div>
+          </div>
           <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
             <span class="map-route-pill">{{ tripEstimate.distanceKm }} km</span>
             <span class="map-route-pill">{{ tripEstimate.minutes }} {{ t('分钟', 'min') }}</span>

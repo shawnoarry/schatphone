@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Implementation Workstreams / 消费金融资产实施工作流
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 ## 1. Workstream A: Shopping And Logistics
 
@@ -19,6 +19,7 @@ Updated: 2026-05-19
 - service-account pushes
 - route context consumption
 - order and order-event notifications into the Food Delivery Dispatch service account
+- World Pack dispatch context for Food Delivery, including built-in `救援调度` and confirmed nonstandard `dispatch_board` entries, currently limited to hero/banner, Nearby default view, and route context preservation
 
 ## 3. Workstream C: Wallet And Downstream Records
 
@@ -41,4 +42,4 @@ Treat these as bugs:
 2. Assets starts acting like a ledger
 3. Logistics starts acting like a storefront
 4. Stock starts absorbing other financial domains without a clear decision
-5. World Pack app bindings mutate commerce records instead of staying at route/context/filter level
+5. World Pack app bindings mutate commerce records instead of staying at route/context/filter/banner level

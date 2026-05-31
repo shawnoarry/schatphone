@@ -1,10 +1,10 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, and override-lane design.
 
-Current handoff: roadmap 4.3 World Hub review quality has a filtered review-pack baseline; continue to service-account continuity unless product review finds another concrete read-only World Hub explanation gap.
+Current handoff: relationship classification Round 4 has added saved-classification gate audit metadata for low-impact relationship facts, plus named high-risk gate presets for future event packs. World Hub may review gate metadata read-only; no high-impact romance/conflict automation is enabled by this package. Incoming Chat social events such as friend requests, blocks, and being-blocked states should wait for the Chat shell and then enter through explicit event-runtime review/audit, not ad hoc Chat or Contacts writes. World Pack nonstandard-app template extraction now has a WorldBook Current World Pack review UI, but remains a WorldBook/appBinding seam only; it must not generate event rules or runtime mutations.
 
 ## Read This Package In This Order
 

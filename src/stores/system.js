@@ -41,12 +41,18 @@ import {
   normalizeWorldBookSourceLinks,
 } from '../lib/book-text-schema'
 import {
+  BUILT_IN_WORLD_PACKS,
   DEFAULT_WORLD_PACK_ID,
   buildWorldPackActivationReview as buildWorldPackActivationReviewPayload,
   normalizeWorldPack,
   normalizeWorldPackActivation,
   normalizeWorldPacks,
+  normalizeWorldServiceAccountTemplate,
 } from '../lib/world-pack-schema'
+import {
+  buildWorldAppEntryRows,
+  isWorldAppHomeTileId,
+} from '../lib/world-pack-app-bindings'
 import {
   PROFILE_TEMPLATE_SCOPES,
   cloneProfileTemplate,
@@ -54,6 +60,21 @@ import {
   normalizeProfileTemplate,
   normalizeProfileTemplates,
 } from '../lib/profile-template-schema'
+import { normalizeChatAppearance } from '../lib/chat-appearance'
+import { normalizeScopedCustomCss } from '../lib/appearance-scoped-css'
+import {
+  buildAppearancePack,
+  mergeAppearancePackIntoAppearance,
+} from '../lib/appearance-pack'
+import {
+  buildWorldAppBindingFromTemplateProposal,
+  buildWorldAppTemplateExtractionReview as buildWorldAppTemplateExtractionReviewPayload,
+  listWorldAppTemplateRegistry,
+} from '../lib/world-app-template-registry'
+import {
+  buildWorldServiceAccountTemplateFromProposal,
+  buildWorldServiceTemplateProposalReview as buildWorldServiceTemplateProposalReviewPayload,
+} from '../lib/world-service-template-proposals'
 
 const AVAILABLE_THEMES = [
   {
@@ -857,7 +878,10 @@ const normalizeCustomWidgets = (widgetsInput) => {
 }
 
 const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => {
-  const allowedIds = new Set([...CORE_HOME_TILE_IDS, ...customWidgetIds])
+  const dynamicHomeTileIds = Array.isArray(options.dynamicHomeTileIds)
+    ? options.dynamicHomeTileIds.filter(isWorldAppHomeTileId)
+    : []
+  const allowedIds = new Set([...CORE_HOME_TILE_IDS, ...customWidgetIds, ...dynamicHomeTileIds])
   const shouldUseDefaultWhenEmpty = options.defaultWhenEmpty !== false
   const enabledOptionalTileIds = new Set(
     Array.isArray(options.enabledOptionalTileIds) ? options.enabledOptionalTileIds : [],
@@ -897,6 +921,7 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => 
 const builtInHomeTileSizeKey = (tileId) => {
   if (tileId === 'music') return '4x2'
   if (tileId === 'quick_heart' || tileId === 'quick_disc') return '1x1'
+  if (isWorldAppHomeTileId(tileId)) return '1x1'
   if (typeof tileId === 'string' && tileId.startsWith('app_')) return '1x1'
   return '2x2'
 }
@@ -1210,6 +1235,7 @@ export const useSystemStore = defineStore('system', () => {
       showStatusBar: true,
       hapticFeedbackEnabled: true,
       customCss: '',
+      scopedCustomCss: normalizeScopedCustomCss(),
       customVars: {},
       appIconOverrides: {},
       homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
@@ -1218,6 +1244,7 @@ export const useSystemStore = defineStore('system', () => {
       homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
       customWidgets: [],
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
+      chat: normalizeChatAppearance(),
     },
     system: {
       language: DEFAULT_SYSTEM_LANGUAGE,
@@ -1285,15 +1312,34 @@ export const useSystemStore = defineStore('system', () => {
   const currentEnabledOptionalHomeTileIds = () =>
     getEnabledOptionalHomeTileIdsFromMoreSettings(settings.more)
 
+  const worldAppHomeTileIdsFromUserSnapshot = (sourceUser = {}) => {
+    const source = sourceUser && typeof sourceUser === 'object' ? sourceUser : {}
+    const activePackId =
+      typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
+        ? source.activeWorldPackId.trim()
+        : DEFAULT_WORLD_PACK_ID
+    return buildWorldAppEntryRows({
+      pack: normalizeWorldPacks(source.worldPacks).find((pack) => pack.id === activePackId) || null,
+    }).map((entry) => entry.id)
+  }
+
+  const currentWorldAppHomeTileIds = () => worldAppHomeTileIdsFromUserSnapshot(user)
+
   const normalizeHomeWidgetPagesForCurrentSettings = (
     pages,
     customWidgetIds = currentCustomWidgetIds(),
     options = {},
-  ) =>
-    normalizeHomeWidgetPages(pages, customWidgetIds, {
+  ) => {
+    const dynamicHomeTileIds = new Set([
+      ...currentWorldAppHomeTileIds(),
+      ...(Array.isArray(options.dynamicHomeTileIds) ? options.dynamicHomeTileIds : []),
+    ])
+    return normalizeHomeWidgetPages(pages, customWidgetIds, {
       ...options,
       enabledOptionalTileIds: currentEnabledOptionalHomeTileIds(),
+      dynamicHomeTileIds: [...dynamicHomeTileIds],
     })
+  }
 
   const normalizeHomeLayoutTemplateIdsForCurrentPages = (templateIds) =>
     normalizeHomeLayoutTemplateIds(templateIds, settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES)
@@ -1412,10 +1458,11 @@ export const useSystemStore = defineStore('system', () => {
     return normalizedMore.featureToggles[normalizedId] === true
   }
 
-  const normalizeCurrentHomeWidgetPages = () => {
+  const normalizeCurrentHomeWidgetPages = (options = {}) => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
+      options,
     )
     normalizeCurrentHomeLayoutSlotPlacements()
     return settings.appearance.homeWidgetPages
@@ -1633,6 +1680,68 @@ export const useSystemStore = defineStore('system', () => {
 
   const setCustomCss = (cssText) => {
     settings.appearance.customCss = cssText || ''
+  }
+
+  const setScopedCustomCss = (scopeKey, updates = {}) => {
+    const current = normalizeScopedCustomCss(settings.appearance.scopedCustomCss)
+    if (!current[scopeKey]) return false
+    settings.appearance.scopedCustomCss = normalizeScopedCustomCss({
+      ...current,
+      [scopeKey]: {
+        ...current[scopeKey],
+        ...(updates && typeof updates === 'object' ? updates : {}),
+      },
+    })
+    return true
+  }
+
+  const exportAppearancePack = (options = {}) =>
+    buildAppearancePack(settings.appearance, {
+      name: options.name,
+      description: options.description,
+      exportedAt: options.exportedAt,
+    })
+
+  const importAppearancePack = (payload = {}) => {
+    const result = mergeAppearancePackIntoAppearance(settings.appearance, payload)
+    if (!result.ok) return result
+
+    const appearance = result.appearance
+    settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
+    settings.appearance.wallpaperMode = normalizeWallpaperMode(appearance.wallpaperMode)
+    settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(appearance.wallpaperAssetId)
+    settings.appearance.wallpaper =
+      typeof appearance.wallpaper === 'string' ? appearance.wallpaper : getThemeWallpaper(settings.appearance.currentTheme)
+    settings.appearance.showStatusBar = appearance.showStatusBar !== false
+    settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled !== false
+    settings.appearance.customCss = typeof appearance.customCss === 'string' ? appearance.customCss : ''
+    settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
+    settings.appearance.customVars =
+      appearance.customVars && typeof appearance.customVars === 'object' ? { ...appearance.customVars } : {}
+    settings.appearance.appIconOverrides = normalizeAppIconOverrides(appearance.appIconOverrides)
+    settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
+
+    return {
+      ok: true,
+      reason: 'imported',
+      pack: result.pack,
+      appearance: {
+        ...settings.appearance,
+        scopedCustomCss: normalizeScopedCustomCss(settings.appearance.scopedCustomCss),
+        appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
+      },
+    }
+  }
+
+  const setChatAppearance = (updates = {}) => {
+    const current = normalizeChatAppearance(settings.appearance.chat)
+    const next = normalizeChatAppearance({
+      ...current,
+      ...(updates && typeof updates === 'object' ? updates : {}),
+    })
+    const changed = JSON.stringify(current) !== JSON.stringify(next)
+    settings.appearance.chat = next
+    return changed
   }
 
   const setCustomVar = (variableName, variableValue) => {
@@ -2265,6 +2374,12 @@ export const useSystemStore = defineStore('system', () => {
       knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
       profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
       bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
+      relationshipCategories: Array.isArray(pack.relationshipCategories)
+        ? pack.relationshipCategories.map((item) => ({ ...item }))
+        : [],
+      relationshipModifiers: Array.isArray(pack.relationshipModifiers)
+        ? pack.relationshipModifiers.map((item) => ({ ...item }))
+        : [],
       appBindings: Array.isArray(pack.appBindings) ? pack.appBindings.map((binding) => ({ ...binding })) : [],
       serviceAccountTemplates: Array.isArray(pack.serviceAccountTemplates)
         ? pack.serviceAccountTemplates.map((template) => ({ ...template }))
@@ -2315,6 +2430,7 @@ export const useSystemStore = defineStore('system', () => {
         state: item.id === pack.id ? 'active' : 'available',
       })),
     )
+    normalizeCurrentHomeWidgetPages()
     return { ok: true, pack: getActiveWorldPack(), review }
   }
 
@@ -2341,6 +2457,154 @@ export const useSystemStore = defineStore('system', () => {
     }
     user.worldPacks = normalizeWorldPacks(current)
     return getWorldPackById(normalized.id)
+  }
+
+  const updateWorldServiceAccountTemplate = (packId = '', templateId = '', patch = {}) => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'pack_not_found', pack: null, template: null }
+    const id = typeof templateId === 'string' ? templateId.trim() : ''
+    if (!id) return { ok: false, reason: 'template_not_found', pack, template: null }
+    const templates = Array.isArray(pack.serviceAccountTemplates) ? pack.serviceAccountTemplates : []
+    const index = templates.findIndex((template) => template?.id === id)
+    if (index < 0) return { ok: false, reason: 'template_not_found', pack, template: null }
+
+    const currentTemplate = templates[index]
+    const nextTemplate = normalizeWorldServiceAccountTemplate({
+      ...currentTemplate,
+      ...patch,
+      id: currentTemplate.id,
+      userEditedAt: Date.now(),
+    }, index)
+    const nextTemplates = templates.map((template, templateIndex) =>
+      templateIndex === index ? nextTemplate : template,
+    )
+    const nextPack = upsertWorldPack({
+      ...pack,
+      serviceAccountTemplates: nextTemplates,
+    })
+    return { ok: true, reason: 'updated', pack: nextPack, template: nextTemplate }
+  }
+
+  const resetWorldServiceAccountTemplate = (packId = '', templateId = '') => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'pack_not_found', pack: null, template: null }
+    const id = typeof templateId === 'string' ? templateId.trim() : ''
+    if (!id) return { ok: false, reason: 'template_not_found', pack, template: null }
+    const templates = Array.isArray(pack.serviceAccountTemplates) ? pack.serviceAccountTemplates : []
+    const index = templates.findIndex((template) => template?.id === id)
+    if (index < 0) return { ok: false, reason: 'template_not_found', pack, template: null }
+
+    const builtInPack = BUILT_IN_WORLD_PACKS.find((item) => item?.id === pack.id)
+    const builtInTemplate = builtInPack?.serviceAccountTemplates?.find((template) => template?.id === id)
+    if (!builtInTemplate) return { ok: false, reason: 'built_in_template_not_found', pack, template: null }
+
+    const nextTemplate = normalizeWorldServiceAccountTemplate(builtInTemplate, index)
+    const nextTemplates = templates.map((template, templateIndex) =>
+      templateIndex === index ? nextTemplate : template,
+    )
+    const nextPack = upsertWorldPack({
+      ...pack,
+      serviceAccountTemplates: nextTemplates,
+    })
+    return { ok: true, reason: 'reset', pack: nextPack, template: nextTemplate }
+  }
+
+  const listWorldAppTemplates = () => listWorldAppTemplateRegistry()
+
+  const buildWorldAppTemplateExtractionReview = (input = [], packId = user.activeWorldPackId) => {
+    const pack = getWorldPackById(packId)
+    const reviewInput = Array.isArray(input)
+      ? { proposals: input }
+      : input && typeof input === 'object'
+        ? { payload: input }
+        : { proposals: [] }
+    return buildWorldAppTemplateExtractionReviewPayload({
+      ...reviewInput,
+      worldPackId: pack?.id || packId || '',
+      existingBindings: pack?.appBindings || [],
+    })
+  }
+
+  const confirmWorldAppTemplateProposal = (proposal = {}, packId = user.activeWorldPackId) => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'pack_not_found', binding: null, pack: null }
+    const review = buildWorldAppTemplateExtractionReview([proposal], pack.id)
+    const confirmable = review.confirmableProposals[0]
+    if (!confirmable) {
+      return {
+        ok: false,
+        reason: review.rejectedProposals[0]?.rejectionReason || 'not_confirmable',
+        binding: null,
+        pack,
+        review,
+      }
+    }
+    const binding = buildWorldAppBindingFromTemplateProposal(confirmable)
+    if (!binding) {
+      return { ok: false, reason: 'binding_failed', binding: null, pack, review }
+    }
+    const nextPack = upsertWorldPack({
+      ...pack,
+      appBindings: [...(Array.isArray(pack.appBindings) ? pack.appBindings : []), binding],
+    })
+    return {
+      ok: true,
+      reason: 'confirmed',
+      binding,
+      pack: nextPack,
+      review,
+    }
+  }
+
+  const buildWorldServiceTemplateProposalReview = (input = [], packId = user.activeWorldPackId) => {
+    const pack = getWorldPackById(packId)
+    const reviewInput = Array.isArray(input)
+      ? { proposals: input }
+      : input && typeof input === 'object'
+        ? { payload: input }
+        : { proposals: [] }
+    return buildWorldServiceTemplateProposalReviewPayload({
+      ...reviewInput,
+      worldPack: pack || {},
+      worldPackId: pack?.id || packId || '',
+    })
+  }
+
+  const confirmWorldServiceTemplateProposal = (proposal = {}, packId = user.activeWorldPackId) => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'pack_not_found', template: null, pack: null }
+    const review = buildWorldServiceTemplateProposalReview([proposal], pack.id)
+    const confirmable = review.confirmableProposals[0]
+    if (!confirmable) {
+      return {
+        ok: false,
+        reason: review.rejectedProposals[0]?.rejectionReason || 'not_confirmable',
+        template: null,
+        pack,
+        review,
+      }
+    }
+    const template = buildWorldServiceAccountTemplateFromProposal({
+      ...confirmable,
+      worldPackId: pack.id,
+    })
+    if (!template) {
+      return { ok: false, reason: 'template_failed', template: null, pack, review }
+    }
+    const nextPack = upsertWorldPack({
+      ...pack,
+      serviceAccountTemplates: [
+        ...(Array.isArray(pack.serviceAccountTemplates) ? pack.serviceAccountTemplates : []),
+        template,
+      ],
+    })
+    return {
+      ok: true,
+      reason: 'confirmed',
+      template,
+      pack: nextPack,
+      review,
+    }
   }
 
   const listProfileTemplates = () => normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate)
@@ -3184,6 +3448,7 @@ export const useSystemStore = defineStore('system', () => {
   const applyPersistedSnapshot = (persisted = {}) => {
     if (!persisted || typeof persisted !== 'object') return false
     let persistedHomeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
+    const persistedWorldAppHomeTileIds = worldAppHomeTileIdsFromUserSnapshot(persisted.user)
 
     if (persisted.settings?.api && typeof persisted.settings.api === 'object') {
       Object.assign(settings.api, persisted.settings.api)
@@ -3235,6 +3500,7 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof appearance.customCss === 'string') {
         settings.appearance.customCss = appearance.customCss
       }
+      settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
       if (appearance.customVars && typeof appearance.customVars === 'object') {
         settings.appearance.customVars = { ...appearance.customVars }
       }
@@ -3244,11 +3510,13 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof appearance.lockClockStyle === 'string') {
         settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
       }
+      settings.appearance.chat = normalizeChatAppearance(appearance.chat)
 
       settings.appearance.customWidgets = normalizeCustomWidgets(appearance.customWidgets)
       settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
         appearance.homeWidgetPages,
         currentCustomWidgetIds(),
+        { dynamicHomeTileIds: persistedWorldAppHomeTileIds },
       )
       settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIds(
         appearance.homeLayoutTemplateIds,
@@ -3320,7 +3588,7 @@ export const useSystemStore = defineStore('system', () => {
     } else {
       settings.more = normalizeMoreSettings(settings.more)
     }
-    normalizeCurrentHomeWidgetPages()
+    normalizeCurrentHomeWidgetPages({ dynamicHomeTileIds: persistedWorldAppHomeTileIds })
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
       settings.aiAutomation = normalizeAiAutomationSettings(persisted.settings.aiAutomation)
@@ -3436,6 +3704,8 @@ export const useSystemStore = defineStore('system', () => {
           )
     migrateHomeDesktopLayoutAfterHydration(persistedHomeDesktopSetupVersion)
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
+    settings.appearance.scopedCustomCss = normalizeScopedCustomCss(settings.appearance.scopedCustomCss)
+    settings.appearance.chat = normalizeChatAppearance(settings.appearance.chat)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true
     settings.system.pushDisplayMode = normalizePushDisplayMode(
@@ -3518,6 +3788,8 @@ export const useSystemStore = defineStore('system', () => {
           api: { ...settings.api },
           appearance: {
             ...settings.appearance,
+            chat: normalizeChatAppearance(settings.appearance.chat),
+            scopedCustomCss: normalizeScopedCustomCss(settings.appearance.scopedCustomCss),
             customVars: { ...settings.appearance.customVars },
             appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
@@ -3563,6 +3835,12 @@ export const useSystemStore = defineStore('system', () => {
             knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
             profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
             bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
+            relationshipCategories: Array.isArray(pack.relationshipCategories)
+              ? pack.relationshipCategories.map((item) => ({ ...item }))
+              : [],
+            relationshipModifiers: Array.isArray(pack.relationshipModifiers)
+              ? pack.relationshipModifiers.map((item) => ({ ...item }))
+              : [],
             appBindings: Array.isArray(pack.appBindings)
               ? pack.appBindings.map((binding) => ({ ...binding }))
               : [],
@@ -3648,6 +3926,10 @@ export const useSystemStore = defineStore('system', () => {
     clearAppearanceWallpaperAsset,
     cycleTheme,
     setCustomCss,
+    setScopedCustomCss,
+    exportAppearancePack,
+    importAppearancePack,
+    setChatAppearance,
     setCustomVar,
     removeCustomVar,
     setHomeWidgetPages,
@@ -3690,6 +3972,13 @@ export const useSystemStore = defineStore('system', () => {
     buildWorldPackActivationReview,
     activateWorldPack,
     upsertWorldPack,
+    updateWorldServiceAccountTemplate,
+    resetWorldServiceAccountTemplate,
+    listWorldAppTemplates,
+    buildWorldAppTemplateExtractionReview,
+    confirmWorldAppTemplateProposal,
+    buildWorldServiceTemplateProposalReview,
+    confirmWorldServiceTemplateProposal,
     listProfileTemplates,
     listProfileTemplatePresets,
     listWorldProfileTemplates,

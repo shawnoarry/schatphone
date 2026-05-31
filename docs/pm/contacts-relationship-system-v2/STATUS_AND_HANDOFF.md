@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-05-20
+Updated: 2026-05-31
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -39,18 +39,27 @@ What is already landed:
 27. Wallet order-support facts for Shopping gifts and Food Delivery shared meals are covered at the shared adapter layer as supporting-only facts inside the upstream order memory, so downstream ledger traceability does not double-count relationship growth.
 28. Relationship runtime now exposes primary-led `recallSummary` fields for prompt/source recall plus UI-facing review summaries for Contacts and World Hub, so supporting facts enrich the memory without stealing its headline or leaking source-audit labels into default user copy.
 29. Calendar confirmed-event cards now include relationship review detail for source lineage, selected target, memory role, and whether the Calendar fact applied growth or stayed supporting-only.
+30. Relationship classification Round 1 schema/store seam is landed: role profiles persist relationship premise text, initial seed values, stored primary category, modifiers, confidence/source/timestamp, and explanation; user-edited classifications are protected from silent AI overwrite through the store action.
+31. World Pack schema can carry explicit relationship category/modifier registry additions as data-only extensions, without adding an editor UI.
+32. Relationship classification Round 2 AI seam is landed: `src/lib/relationship-label-classifier.js` builds prompts, calls through `src/lib/ai.js`, parses provider JSON through shared response helpers, normalizes suggestions against the registry, treats high confidence as `ai_auto`, and returns medium/low confidence as confirmation-required `ai_confirmed` candidates.
+33. Relationship classification Round 3 Contacts UI is landed: Contacts detail now shows the current relationship runtime snapshot first, then provides an editable profile-side relationship premise form for label, note, seed values, primary category, modifier tags, classification audit, AI classify, confirmation, and manual save flows. Manual edits save as `user_edited`; protected `user_edited` classifications surface a non-invasive status instead of being silently overwritten.
+34. Relationship classification Round 4 event/runtime gating is landed: existing low-impact relationship facts attach `relationshipGate` audit metadata from saved category/modifier classification fields, relationship runtime persists and respects block/confirm decisions, and World Hub can show gate metadata read-only. Raw label/note prose remains profile-side premise text and is not used for event decisions.
+35. `summarizeEntityForTarget()` now keeps memory counts canonical even when a caller asks for zero or a small number of displayed memory summaries; `memorySummaries` is capped, while `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` describe the full target state.
 
 Still incomplete:
 
 1. legacy Chat-side relationship compatibility fields still need continued semantic containment.
 2. WorldBook template authoring remains a compact V1 baseline, not a full form-builder or onboarding flow.
 3. deeper World Hub review quality continues under roadmap 4.3.
+4. High-impact relationship automation is still deferred; Round 4 only adds helper-level hard-gating behavior and low-impact audit metadata.
+5. Incoming Chat social events such as role-initiated friend requests, user blocks, and being-blocked states are not implemented here. Contacts may later display the current social-channel snapshot for a role, while Chat/event-runtime/relationship-runtime keep their respective ownership.
 
 ## 2. Recommended Next Slice
 
 1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
 3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing and profile-value authoring ergonomics.
+4. After the parallel Chat shell lands, define a Contacts display-only social snapshot for friend/block states without making Contacts the social-event judge.
 
 4.2 closure baseline:
 
@@ -66,6 +75,7 @@ Still incomplete:
 10. Calendar event cards now expose review detail for the relationship memory link.
 11. Calendar keeps source-audit copy in its relationship review, while Contacts and World Hub use product-facing related-record copy by default.
 12. The current 4.2 dedupe baseline covers the explicit source-id chains already present in the product; fuzzy same-text merging remains out of scope until a product decision says otherwise.
+13. Runtime summary counts are independent of display caps, so Contacts/World Hub can request short memory lists without undercounting the target's real memory state.
 
 ## 3. Do Not Do
 
@@ -75,6 +85,8 @@ Still incomplete:
 4. Do not let `relationshipLevel` or `relationshipNote` become the live relationship truth again.
 5. Do not delete only the memory summary while leaving linked source records and runtime facts alive.
 6. Do not implement WorldBook-driven profile templates directly from the decision log; use the formal specs and the implementation plan after review.
+7. Do not let Contacts, Chat, or raw relationship premise prose become the event-decision owner.
+8. Do not let Contacts apply role-initiated friend/block outcomes directly; generated social events need the later Chat social seam plus event-runtime audit.
 
 ## 4. Validation
 
@@ -85,6 +97,10 @@ Still incomplete:
 - `npm.cmd test -- tests/relationship-fact-adapters.test.js tests/shopping-view.test.js tests/food-delivery-view.test.js tests/relationship-runtime-store.test.js`: pass
 - `npm.cmd test -- tests/relationship-runtime-store.test.js tests/relationship-fact-adapters.test.js tests/contacts-detail-danger-flows.test.js tests/control-center-view.test.js`: pass
 - `npm.cmd test -- tests/calendar-relationship-fact-view.test.js tests/relationship-runtime-store.test.js tests/relationship-fact-adapters.test.js tests/control-center-view.test.js tests/contacts-detail-danger-flows.test.js`: pass
+- `npm.cmd test -- tests/relationship-classification-schema.test.js tests/chat-store-model.test.js`: pass on 2026-05-30 for relationship classification Round 1.
+- `npm.cmd test -- tests/relationship-label-classifier.test.js tests/chat-store-model.test.js`: pass on 2026-05-30 for relationship classification Round 2.
+- `npm.cmd test -- tests/contacts-relationship-classification-view.test.js tests/contacts-profile-template-view.test.js tests/contacts-detail-danger-flows.test.js`: pass on 2026-05-30 for relationship classification Round 3 Contacts UI.
+- `npm.cmd test -- tests/relationship-event-gating.test.js tests/relationship-fact-adapters.test.js tests/relationship-runtime-store.test.js tests/control-center-view.test.js`: pass on 2026-05-30 for relationship classification Round 4 event/runtime gating.
 - `npm.cmd run lint`: pass
 - `npm.cmd run test`: pass
 - `npm.cmd run build`: pass

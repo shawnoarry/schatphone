@@ -101,4 +101,43 @@ describe('world pack service account generation helpers', () => {
       contactId: 42,
     })
   })
+
+  test('describes source notification plans before and after join', () => {
+    const pack = normalizeWorldPack({
+      id: 'survival_city',
+      appBindings: [
+        {
+          id: 'survival_dispatch',
+          archetype: 'dispatch',
+          title: 'Dispatch',
+          moduleKey: 'food_delivery',
+        },
+      ],
+      serviceAccountTemplates: [
+        {
+          id: 'shelter_bulletin',
+          title: 'Shelter Bulletin',
+          linkedAppBindingId: 'survival_dispatch',
+        },
+      ],
+    })
+
+    const availableRows = buildWorldServiceTemplateGenerationRows({ pack })
+    expect(availableRows[0].sourceNotificationPlan).toMatchObject({
+      status: 'available_after_join',
+      rows: [
+        expect.objectContaining({
+          sourceModule: 'food_delivery_chat_push',
+          serviceBindingKey: 'foodDeliveryServiceKey',
+        }),
+      ],
+    })
+
+    const joinedRows = buildWorldServiceTemplateGenerationRows({
+      pack,
+      findExistingContact: () => ({ id: 77 }),
+    })
+    expect(joinedRows[0].sourceNotificationPlan.status).toBe('ready')
+    expect(joinedRows[0].sourcePlanSummary).toContain('can push event-driven updates')
+  })
 })

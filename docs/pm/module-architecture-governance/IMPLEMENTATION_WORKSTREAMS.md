@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 ## 1. Workstream A: Ownership Closure
 
@@ -34,3 +34,5 @@ Treat these as bugs:
 1. one concept acquires several competing owners
 2. docs and code disagree on who owns a field
 3. refactors move fast but lose migration clarity
+4. AI-proposed world app entries write appBindings without passing through the shared template registry and WorldBook confirmation seam
+5. Settings -> WorldBook becomes the direct launcher or Chat Directory creator for world-pack outputs instead of handing off to App Store and Chat-owned flows

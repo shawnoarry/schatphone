@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-30
+Updated: 2026-05-31
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -55,16 +55,19 @@ PM meaning:
 ### Chat
 
 - Chat supports contact threads, AI replies, rich message behavior, WorldBook prompt context, message editing, and service-account style contexts.
-- Chat now has a messaging-app style first layer: Messages, Objects, Groups, Services, and More.
-- Chat More is scoped as a Chat identity/anonymity and diagnostics page, not a bulk-template or shortcut hub.
+- Chat now has a messaging-app style first layer: Messages, Objects, Groups, Services, and Me.
+- The top-right gear opens Chat Settings. Chat Settings owns Chat Appearance, default-behavior entry points, and maintenance diagnostics; Me owns Chat identity/anonymity, recent interaction data, and a lightweight derived feed.
+- Chat Appearance V1 stores its state under system appearance settings, defaults to the Kakao-like immersive preset, supports WeChat/Kakao/iMessage message-layout modes, and has a Chat-scoped custom CSS channel separate from global Appearance CSS.
 - Shopping, logistics, and Food Delivery service contexts now connect into Chat through reusable service-notification messages with source references and route actions.
+- Service accounts now expose descriptive source notification plans in Services, service threads, and the Chat linkage contract; plans identify supported Shopping/logistics/Food Delivery event streams without creating subscriptions or source records.
 - Group chats are now visible as Chat-native targets with member selection and reply-mode metadata; deeper multi-speaker orchestration remains a later behavior layer.
+- Incoming social events such as role-initiated friend requests, blocks, and being-blocked states should wait for the parallel Chat shell work. The intended later split is Chat owns confirmed channel state, Contacts displays role snapshots, event runtime reviews generated events, and relationship runtime records confirmed continuity only.
 - Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
 
 - Chat is one of the product cores;
-- the Chat home should feel closer to a polished messaging app while keeping object, group, service, identity/anonymity, and diagnostics controls explicit but not duplicated.
+- the Chat home should feel closer to a polished messaging app while keeping object, group, service, identity/anonymity, appearance, and diagnostics controls explicit but not duplicated.
 
 ### Contacts / Relationship Runtime
 
@@ -77,13 +80,19 @@ PM meaning:
   - World Hub can review relationship runtime entities and run reset/delete-memory cleanup without deleting the Contacts role profile;
   - module-owned source records can be deleted or anonymized through shared cleanup handlers for Calendar, Phone, Wallet, Shopping, Food Delivery, and Map.
 - Contacts now has a V1 designed/implemented path for Self Profile, Main Role, NPC, and WorldBook-driven profile templates. WorldBook owns template rules; Contacts owns concrete person values.
+- Contacts role profiles now persist profile-side relationship premise/classification fields: free-text label, label note, initial seed values, primary relationship category, modifier tags, confidence/source/timestamp, and explanation.
+- Relationship classification now has an AI seam: suggestions go through `src/lib/ai.js`, JSON is normalized through the shared response parser path, high-confidence suggestions can save as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, and existing `user_edited` classifications cannot be silently overwritten by later AI or world-template writes.
+- Contacts detail now includes the first role-control page surface for relationship classification: the current relationship runtime snapshot stays display-only at the top, while profile-side premise fields, seed values, primary category, modifiers, and classification audit can be edited below it.
+- Event/runtime now consumes saved relationship classification fields as stable semantic context. Current low-impact relationship facts attach `relationshipGate` audit metadata from saved category/modifier fields only; raw `relationshipLabelText` and `relationshipLabelNote` are not read for event decisions. Named high-risk gate presets exist for future event packs, but no high-impact automation is enabled.
+- Chat Directory now keeps legacy `relationshipLevel` and `relationshipNote` as Chat-local tuning/note compatibility fields only; visible copy no longer presents them as current affinity.
 - NPC profiles can be upgraded to Main Role without losing the existing profile, Chat binding, or chat history.
 - Chat context can consume primary worldview rules, current role profile values, visible user self-profile values, relationship runtime context, and supplemental WorldBook knowledge in a clearer order.
 
 PM meaning:
 
 - the product finally has a realistic path toward "delete one role", "reset one relationship", and "delete one memory group" without pretending everything lives in one module;
-- Contacts is clearly becoming the role-centered management hub.
+- Contacts is clearly becoming the role-centered management hub;
+- relationship premise/classification data belongs to the profile layer, while current metrics, stage, milestones, and memories remain owned by relationship runtime; Contacts remains profile editing/current snapshot only, while event/runtime owns gate decisions.
 
 ### Calendar / Reminders / Push
 
@@ -110,16 +119,23 @@ PM meaning:
 - Calendar, Chat, Map, and event runtime can read WorldBook context.
 - Chat prompt context and the Chat thread WorldBook summary now share the same `world-interface` result, so user-visible injection state matches the context sent to AI.
 - Book text-library V1 now separates long-form source text from activation: `Book` stores reusable worldbook documents, knowledge notes, rules, glossary text, and reference notes, while `Settings -> WorldBook` can choose whole documents or selected sections as active world context, preview changed-source diffs, and accept a newer source version after review.
-- World Pack V1 now persists built-in/user world packs, supports activation review, keeps one active pack per save, exposes active-pack app/service-template metadata through `world-interface`, and can generate active-pack service-account templates into Chat Directory after user confirmation.
+- World Pack V1 now persists built-in/user world packs, supports activation review, keeps one active pack per save, and exposes active-pack app/service-template metadata through `world-interface`. Current World Pack now shows enabled service-account template availability only; Chat Directory's `Services` management area now lets users edit/reset built-in current-world service/official account candidates before opting in through the Chat-owned idempotent create/reuse seam, shows descriptive source notification plans for supported event streams, and keeps WorldBook out of account creation.
+- World Pack schema can now carry relationship category/modifier registry additions as data-only extensions for later classification and event rules; there is no world-category editor UI in this slice.
 - The reusable World Pack / App Archetype / Service Account Template direction is now partially implemented for service-account entry generation and the first concrete app-binding behavior: `survival_city` can open Shopping as `补给站`, show active world context, and apply a safe Daily Fresh / Grocery filter.
+- The first global World Pack app-entry unlock seam is implemented: active app bindings become stable `world_app_*` entries in App Store and Home/App Library placement flows, and launch target modules with `worldPack`/`worldApp` route context instead of staying trapped in WorldBook.
+- Current World Pack now behaves like an activation/status surface rather than a launcher: it shows the active world-app snapshot and sends users to App Store's `World` section for world-app browsing, placement, and launch.
+- The first world UX package target-app seam is implemented through `src/lib/world-pack-app-bindings.js`: target modules can resolve active-pack labels, terminology, accent, route query, and boundary copy. Food Delivery consumes confirmed `dispatch -> Food Delivery` bindings as hero title, read-only context banner, route-context preservation, and safe Nearby default, Calendar consumes the `reservation -> Calendar` binding as title/context treatment, and Map consumes the `transit -> Map` binding as title/context treatment, without changing restaurants, menus, carts, orders, delivery events, schedules, push state, Wallet, Map trip/location truth, or Chat ownership.
 - Current product direction is the older, lower-complexity entry model: WorldBook stays under Settings/contextual links, and World Pack selection/activation should appear inside the full WorldBook management page.
+- The remaining World Pack global-effects work is to harden and broaden the world UX package for existing apps: labels, terminology, accents, context banners, and safe UX variants should appear in each actual target app without moving source-module ownership.
+- New product direction from PM discussion: later "nonstandard apps" should be generated as confirmed World Pack appBindings from a built-in archetype/template registry, not as new code modules. The registry/review seam is now in `src/lib/world-app-template-registry.js`, and the Current World Pack panel exposes AI extraction plus pasted-JSON review before confirmation with explicit loading, empty, parse/API error, and rejected-state treatment in an advanced review area. AI may read active WorldBook context to propose matching entries, but only against the guarded registry; mismatched, low-confidence, unsupported, or unconfirmed proposals should not appear in App Store and should not affect ordinary app behavior. `black_market` is currently blocked with `needs_dedicated_app` so it does not masquerade as Shopping. Confirmed entries now have regression coverage through App Store detail/open, Home placement/launch, Map target-app context for `transit_pass`, Calendar target-app context for `reservation_board`, and Food Delivery target-app context for `dispatch_board`.
 
 PM meaning:
 
 - WorldBook is becoming the shared world-context layer;
 - Book is the long-text editing and storage workspace, not a novel reader, public file manager, or world-store shell;
-- World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source;
-- World Pack activation should feel like choosing the current world configuration, not like shopping in a separate storefront;
+- World Pack should assemble defaults from WorldBook and existing app archetypes, not replace WorldBook as a second lore source; built-in service-account defaults can be user-edited/reset in Chat Services, and AI/pasted service candidates now use a reviewed proposal flow that confirms templates without auto-subscribing users;
+- World Pack activation should feel like choosing the current world configuration, not like shopping in a separate storefront; after activation, the changed UI/UX should appear in the actual app and global app-entry surfaces, not only inside Settings;
+- World Pack provides an immersive default layer, but user customization should remain first-class. Global Appearance CSS and Chat-scoped CSS already sit above World Pack defaults; the root app shell now exposes stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks; Appearance stores app/world-app scoped CSS in `settings.appearance.scopedCustomCss` with an active World Pack entry picker, manual fallback, exact target preview, pause/clear recovery controls, and predictable app-vs-world-app layer order; and Appearance packs now export/import portable visual settings without copying Home layout, widgets, or Chat-specific appearance;
 - data entry should still stay distributed instead of forcing everything into one control console.
 
 ### Gallery / Media Assets
@@ -163,6 +179,9 @@ PM meaning:
 - Food Delivery has folder-style app planning, restaurant categories, menu items, custom restaurant/menu creation, cart/order flow, and URL/Gallery image sources.
 - Food Delivery order events support rider delay, ETA update, restaurant cancellation, address change, and status update concepts.
 - Food Delivery checkout and order events can push service notifications into the Food Delivery Dispatch service account.
+- Food Delivery can now show active World Pack dispatch context for built-in `survival_city` / `survival_dispatch` and confirmed nonstandard `dispatch_board` entries as a visible UX package hero/banner and safe Nearby default while still owning all food-order truth.
+- Calendar can now show active World Pack reservation context for `fandom_parallel` / `fandom_schedule_board` as visible title/context/boundary treatment while still owning confirmed schedules, time edits, reminder promotion, and push scheduling.
+- Map can now show active World Pack transit context for `survival_city` / `survival_safe_route_pass` as visible title/context/boundary treatment while still owning route, trip, location, ETA, shared-route facts, and Map-derived Calendar handoff.
 - A guarded random pilot exists for active orders.
 - The automatic event safe-list currently allows only non-destructive ETA-update / rider-delay style outcomes.
 - Delivered orders can now mark a selected contact as a shared-meal target when recorded into Wallet, creating a low-impact relationship memory.
@@ -178,6 +197,7 @@ PM meaning:
 - A shared event engine handles condition checks, logs, cooldowns, caps, and adapter exceptions.
 - Food Delivery has the first safe automatic pilot.
 - World-aware event variants exist as a standard direction.
+- Future Chat social events such as friend/block changes should enter here as reviewed social/channel events after the Chat shell lands, not as direct Chat or Contacts writes.
 - Settings > Automation has an opt-in foreground event tick switch.
 - App lifecycle wiring exists for foreground ticking only when the user enables it.
 - World Hub reads simulation runtime state and relationship runtime review data.
@@ -204,6 +224,7 @@ PM meaning:
   - memory review state is now visible in both Contacts and World Hub, and Contacts memory source filtering no longer drops off-screen matches because of early list truncation;
   - relationship snapshots now sort recent events by timestamp rather than insertion order, reducing wrong “latest event” summaries after delayed imports or backfilled facts;
   - archived memories are now hidden from default live summaries across runtime, Contacts, and Chat unless a caller explicitly opts in;
+  - runtime memory-count fields now describe the full target state before display caps, so compact UI requests do not undercount total, visible, or archived memory groups;
   - runtime relationship snapshots now expose canonical primary-memory, memory-count, and source-summary fields that both Contacts and World Hub consume directly;
   - Contacts linked-activity source totals now dedupe runtime refs against event-attached detail refs, preventing one shared event from inflating source counts;
   - Assets, Stock, Phone, and several secondary modules still need deeper product loops;
@@ -218,7 +239,8 @@ PM meaning:
    - raw cue drafts remain owned by Reminders.
    - same-life-event schedule follow-ups merge into the existing memory when upstream lineage is explicit.
    - Calendar keeps source-audit review detail, while Contacts/World Hub use product-grade related-record copy instead of technical source labels.
-   - World Hub can now filter and inspect event logs and relationship facts with selected-detail explanations.
+- World Hub can now filter and inspect event logs and relationship facts with selected-detail explanations.
+- World Hub can now show read-only relationship gate audit details on relationship facts. This is review metadata, not a new editor or broad control layer. High-risk gate presets remain helper contracts until a later product slice promotes actual event packs.
 2. Continue the relationship-growth event system through safe adapters.
    - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
 3. Add clearer user-facing explanation for automatic foreground events.
@@ -234,11 +256,15 @@ PM meaning:
 ### P2: Expand World-Aware Gameplay Carefully
 
 1. User-test the Book import/export -> WorldBook source activation -> changed-source diff review -> World Pack activation -> Chat/runtime context loop on phone-sized devices.
-2. User-test the WorldBook -> `补给站` -> Shopping filter path on phone-sized devices.
-3. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
-4. Broaden user-approved service/subscription account generation beyond the current active-pack service-account V1.
-5. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
-6. Add more adapters through the shared event engine.
+2. User-test the WorldBook -> `补给站` -> Shopping filter path, `救援调度` -> Food Delivery hero/banner/default Nearby view, `fandom_schedule_board` -> Calendar reservation context, and `survival_safe_route_pass` -> Map transit context on phone-sized devices.
+3. User-test and harden global World Pack app-entry unlocking now that world-specific apps appear in App Store/App Library/Home placement rules.
+4. User-test Appearance pack import/export plus scoped CSS recovery, and add finer selectors only where needed.
+5. Harden and broaden the world UX package seam for app labels, terminology, accents, contextual banners, and safe UX variants.
+6. User-test and polish the guarded nonstandard-app review flow now that the UI exists: loading, empty, parse/API error, rejected proposals, confirmed `transit_pass`, confirmed `reservation_board`, and confirmed `dispatch_board` are covered by regression tests, but phone-sized copy/readability still needs product review.
+7. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
+8. Broaden user-approved service/subscription account opt-in beyond the current active-pack service-account V1, then exercise ready source notification plans from source modules without making Chat own source records.
+9. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+10. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
 
@@ -255,7 +281,11 @@ PM meaning:
 - Whether World Hub unlock conditions should be world-dependent from the beginning.
 - Which world packs should be prioritized first.
 - Whether the World Pack / App Archetype / Service Account Template system should use one active world per save in V1 or a narrower per-profile/per-thread world scope.
-- Which next app archetype should be promoted after the current `marketplace -> Shopping` V1: auction, reservation, transit, subscription, dispatch, or publication feed.
+- Which next app archetype should be promoted after the current Shopping marketplace, Food Delivery dispatch, Calendar reservation, and Map transit trials: auction, subscription, or publication feed.
+- Whether later world-specific app entries should ever auto-place on Home after activation; the current seam only makes them recoverable/placable through App Store/App Library.
+- Which existing apps should consume the next world UX package slice beyond Shopping, Food Delivery, Calendar, and Map.
+- Which built-in nonstandard-app templates should ship first, and what confidence/evidence threshold AI extraction needs before proposing them.
+- Whether the next scoped custom CSS step should prioritize finer component selectors, phone-sized authoring polish, or pack-sharing recovery QA.
 - Whether true closed-page background events are worth backend complexity.
 - Whether Wallet should support editable fictional funds soon or remain downstream first.
 
@@ -263,9 +293,11 @@ PM meaning:
 
 Recommended next:
 
-Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan is now trial-ready: `Settings -> WorldBook` shows active world state and the `Current World Pack` activation panel, while `world-interface` anchors Chat, runtime world-context reading, active Book source links, and active World Pack metadata. Book V1 is now the text library for long worldbooks and reusable notes, with import/export, section activation, changed-source warning, diff review, and reviewed refresh flows ready for phone-sized user testing. Active-pack service-account templates can now be user-confirmed into Chat Directory. The first concrete app-archetype V1 is also trial-ready: `survival_city` opens Shopping as `补给站` and can apply a safe Daily Fresh / Grocery filter without moving Shopping records into World Pack.
+Move from the completed 4.4 service-account continuity slice to the next roadmap lane: safe architecture cleanup and the next promoted product package, unless PM asks for a focused polish pass. The focused WorldBook B-plan is now trial-ready: `Settings -> WorldBook` shows active world state and the `Current World Pack` activation panel, while `world-interface` anchors Chat, runtime world-context reading, active Book source links, and active World Pack metadata. Book V1 is now the text library for long worldbooks and reusable notes, with import/export, section activation, changed-source warning, diff review, and reviewed refresh flows ready for phone-sized user testing. Active-pack service-account templates can now be edited/reset, AI-reviewed, and user-confirmed from Chat Directory's `Services` management area instead of being created from WorldBook. The first concrete app-archetype V1 is also trial-ready: `survival_city` opens Shopping as `补给站` and can apply a safe Daily Fresh / Grocery filter without moving Shopping records into World Pack. Active world app bindings now unlock globally into App Store/Home/App Library placement as `world_app_*` entries; the first world UX package target-app seam is live for Shopping, Food Delivery dispatch context, Calendar reservation context, and Map transit context; Appearance packs can import/export portable visual layers; and the nonstandard-app template registry now has a whitelist/review UI with loading/error/empty/rejected states plus confirmed `transit_pass`, `reservation_board`, and `dispatch_board` regression coverage. The next World Pack slice should broaden safe UX variants only where user testing proves the target-app experience is clear.
 
 Why:
+
+World Pack service-account status update: active-pack built-in service/official account candidates can now be edited/reset in Chat Directory `Services` before the user subscribes, and Chat Services can review AI/pasted candidates from active WorldBook/World Pack context. Confirmation only adds a World Pack template; users still subscribe manually, and WorldBook still does not create Chat accounts. Confirmed/joinable templates and joined service threads now show descriptive source notification plans for supported Shopping/logistics/Food Delivery event streams. The next service-account slice should exercise those ready plans from concrete source modules without moving source-module records into Chat.
 
 - role ID, relationship-runtime ownership, memory-group APIs, delete/reset orchestration, backup/restore, and Contacts 4.1 detail IA are now in place as a baseline;
 - fragmented memory summaries are controlled for current explicit source-id chains;

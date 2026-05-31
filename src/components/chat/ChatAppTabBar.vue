@@ -39,10 +39,10 @@ const items = computed(() => [
     route: { path: '/chat-contacts', query: { section: 'service' } },
   },
   {
-    id: 'more',
-    label: t('更多', 'More'),
-    icon: 'fas fa-ellipsis',
-    route: { path: '/chat-feature/more' },
+    id: 'me',
+    label: t('我', 'Me'),
+    icon: 'fas fa-user-circle',
+    route: { path: '/chat-me' },
   },
 ])
 

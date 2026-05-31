@@ -4,7 +4,12 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
-import { buildRouteWithReturnSource, pushReturnTarget } from '../lib/navigation-return'
+import {
+  buildHomeSourceQuery,
+  buildRouteWithReturnSource,
+  pushReturnTarget,
+} from '../lib/navigation-return'
+import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
@@ -34,6 +39,7 @@ const APP_STORE_FILTERS = [
   'Productivity',
   'Finance',
   'Archive',
+  'World',
 ]
 
 const APP_STORE_ENTRIES = [
@@ -231,7 +237,15 @@ const APP_STORE_ENTRIES = [
   },
 ]
 
-const selectedFilter = ref('all')
+const normalizeInitialFilter = (value = '') => {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  const normalized = String(rawValue || '').trim()
+  const lowered = normalized.toLowerCase()
+  if (lowered === 'world' || lowered === 'world_apps' || lowered === 'world-apps') return 'World'
+  return APP_STORE_FILTERS.includes(normalized) ? normalized : 'all'
+}
+
+const selectedFilter = ref(normalizeInitialFilter(route.query.section || route.query.filter))
 const selectedAppId = ref('app_chat')
 const searchQuery = ref('')
 const libraryNotice = ref('')
@@ -248,7 +262,7 @@ const homeAppPageMap = computed(() => {
   pages.forEach((page, pageIndex) => {
     const appIds = Array.isArray(page) ? page : []
     appIds.forEach((appId) => {
-      if (typeof appId === 'string' && appId.startsWith('app_')) {
+      if (typeof appId === 'string' && appId.trim()) {
         map.set(appId, pageIndex)
       }
     })
@@ -256,9 +270,28 @@ const homeAppPageMap = computed(() => {
   return map
 })
 
+const worldAppStoreEntries = computed(() =>
+  buildActiveWorldAppEntryRows({ systemStore }).map((entry) => ({
+    ...entry,
+    categoryZh: entry.categoryZh || 'World',
+    categoryEn: entry.categoryEn || 'World',
+  })),
+)
+
+const appStoreBaseEntries = computed(() => [
+  ...APP_STORE_ENTRIES,
+  ...worldAppStoreEntries.value,
+])
+
 const appStoreItems = computed(() =>
-  APP_STORE_ENTRIES.map((entry) => {
-    const iconMeta = resolveAppIconMeta(entry.id, settings.value.appearance?.appIconOverrides || {}, locale.value)
+  appStoreBaseEntries.value.map((entry) => {
+    const iconMeta = entry.worldAppEntry
+      ? {
+          icon: entry.icon || 'fas fa-globe',
+          accent: entry.accent || 'default',
+          toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
+        }
+      : resolveAppIconMeta(entry.id, settings.value.appearance?.appIconOverrides || {}, locale.value)
     const visible = visibleHomeAppIds.value.has(entry.id)
     const inDock = DOCK_APP_IDS.has(entry.id)
     return {
@@ -324,6 +357,7 @@ function filterLabel(filterId) {
   if (filterId === 'Productivity') return t('效率', 'Productivity')
   if (filterId === 'Finance') return t('财务', 'Finance')
   if (filterId === 'Archive') return t('资料', 'Archive')
+  if (filterId === 'World') return t('世界', 'World')
   return filterId
 }
 
@@ -363,6 +397,37 @@ const selectedAppStatusLabel = computed(() => {
   return t('库内待放置', 'In Library')
 })
 
+const selectedAppEntryKindLabel = computed(() => {
+  if (selectedApp.value?.entryKind === 'folder') return t('文件夹', 'Folder')
+  if (selectedApp.value?.entryKind === 'world_app') return t('世界入口', 'World App')
+  return 'APP'
+})
+
+const selectedWorldAppDetailRows = computed(() => {
+  const app = selectedApp.value
+  if (!app?.worldAppEntry) return []
+  return [
+    {
+      key: 'pack',
+      label: t('世界包', 'World Pack'),
+      value: t(
+        app.worldPackTitle || app.worldPackName || app.worldPackId,
+        app.worldPackName || app.worldPackTitle || app.worldPackId,
+      ),
+    },
+    {
+      key: 'target',
+      label: t('目标模块', 'Target module'),
+      value: app.targetLabel || app.moduleKey || t('模块', 'Module'),
+    },
+    {
+      key: 'binding',
+      label: t('入口绑定', 'Binding'),
+      value: app.worldAppBindingId || app.bindingId || '',
+    },
+  ].filter((row) => row.value)
+})
+
 const appStoreItemStateKey = (app) => {
   if (app?.protectedHomeEntry) return 'fixed'
   if (app?.visible) return 'home'
@@ -399,6 +464,13 @@ const currentHomePageQueryValue = () => {
 
 const openSelectedApp = () => {
   if (!selectedApp.value?.route) return
+  if (selectedApp.value.routeQuery) {
+    router.push({
+      path: selectedApp.value.route,
+      query: buildHomeSourceQuery(currentHomePageQueryValue(), selectedApp.value.routeQuery),
+    })
+    return
+  }
   router.push(buildRouteWithReturnSource(selectedApp.value.route, 'home', { homePage: route.query.homePage }))
 }
 
@@ -545,6 +617,7 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': selectedFilter === filter.id }"
             role="tab"
             :aria-selected="selectedFilter === filter.id"
+            :data-testid="`app-store-filter-${filter.id}`"
             @click="selectFilter(filter.id)"
           >
             <span>{{ filter.label }}</span>
@@ -620,7 +693,20 @@ onBeforeUnmount(() => {
               </span>
               <span>
                 <small>{{ t('入口', 'Entry') }}</small>
-                <strong>{{ selectedApp.entryKind === 'folder' ? t('文件夹', 'Folder') : 'APP' }}</strong>
+                <strong>{{ selectedAppEntryKindLabel }}</strong>
+              </span>
+            </div>
+            <div
+              v-if="selectedWorldAppDetailRows.length"
+              class="app-store-world-meta"
+              data-testid="app-store-world-app-meta"
+            >
+              <span
+                v-for="row in selectedWorldAppDetailRows"
+                :key="row.key"
+              >
+                <small>{{ row.label }}</small>
+                <strong>{{ row.value }}</strong>
               </span>
             </div>
             <div class="app-store-actions">
@@ -687,7 +773,20 @@ onBeforeUnmount(() => {
         </span>
         <span>
           <small>{{ t('入口', 'Entry') }}</small>
-          <strong>{{ selectedApp.entryKind === 'folder' ? t('文件夹', 'Folder') : 'APP' }}</strong>
+          <strong>{{ selectedAppEntryKindLabel }}</strong>
+        </span>
+      </div>
+      <div
+        v-if="selectedWorldAppDetailRows.length"
+        class="app-store-world-meta"
+        data-testid="app-store-world-app-meta-sheet"
+      >
+        <span
+          v-for="row in selectedWorldAppDetailRows"
+          :key="row.key"
+        >
+          <small>{{ row.label }}</small>
+          <strong>{{ row.value }}</strong>
         </span>
       </div>
       <div class="app-store-actions">
@@ -1287,6 +1386,39 @@ onBeforeUnmount(() => {
   min-width: 0;
   color: var(--system-text);
   font-size: 12px;
+  font-weight: 820;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-store-world-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.app-store-world-meta span {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--system-info) 18%, var(--system-subtle-border));
+  border-radius: 14px;
+  display: grid;
+  gap: 3px;
+  background: color-mix(in srgb, var(--system-info) 8%, var(--system-surface-muted));
+  padding: 8px;
+}
+
+.app-store-world-meta small {
+  color: var(--system-info);
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.app-store-world-meta strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 11px;
   font-weight: 820;
   overflow: hidden;
   text-overflow: ellipsis;

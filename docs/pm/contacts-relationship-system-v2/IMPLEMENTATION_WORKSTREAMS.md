@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-05-20
+Updated: 2026-05-31
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -20,11 +20,18 @@ Main tasks:
 6. explicitly classify `relationshipLevel` and `relationshipNote` as:
    - legacy compatibility fields; or
    - chat-side manual annotation fields only.
+7. keep profile-side relationship premise/classification fields on role profiles, separate from relationship runtime current values.
+8. keep the AI classification seam limited to `src/lib/ai.js`, shared JSON parsing, registry normalization, and confidence/save-policy output.
+9. keep Contacts relationship classification controls as profile-side editing only: runtime snapshot is read first, while event judgement remains outside Contacts.
+10. after the Chat social shell lands, allow Contacts to read/display social-channel snapshots only; do not let Contacts decide or apply friend/block social events.
 
 Semantic traps to avoid:
 
 - showing `profileId` or `entityKey` as if they were `roleId`;
 - reading Chat-side compatibility fields as the live relationship truth;
+- reading raw relationship premise prose as an event condition instead of stored classification fields;
+- allowing AI, confirmed AI, or world-template writes to silently overwrite a `user_edited` classification;
+- treating Chat social-channel state as relationship truth or as a Contacts-authored event outcome;
 - letting one event create several competing memories.
 
 ## 2. Workstream B: Delete / Reset / Memory Cleanup Orchestration
@@ -69,7 +76,9 @@ Current landed baseline:
 - Contacts memory filtering now evaluates the full sorted runtime list before applying the visible-item cap, so source-filtered audit work does not lose off-screen matches.
 - World Hub now mirrors primary memory lifecycle state and review note for the top shared memory summary instead of hiding that management signal inside Contacts only.
 - runtime summary snapshots now provide canonical `primaryMemory`, memory-count totals, archive-only state, and source summary fields so Contacts/World Hub no longer need to rebuild those semantics separately.
+- runtime memory-count totals are computed before applying the display-list cap, so summary callers can request a short list without losing full `totalMemoryCount`, `visibleMemoryCount`, or `archivedMemoryCount`.
 - linked-activity source totals now dedupe runtime source refs against event-attached detail refs before counting, preventing one shared event from appearing as several source records.
+- relationship classification Round 3 adds the role-control relationship surface: Contacts detail shows the current runtime snapshot first, then edits the profile-side relationship premise, seed values, category, modifier tags, classification audit, AI classify, confirmation, and manual save flows.
 
 Main tasks:
 
@@ -85,6 +94,8 @@ Semantic traps to avoid:
 - blending normal edit actions with destructive actions;
 - making event-attached items look like user-authored facts;
 - hiding the Contacts vs Chat Directory distinction.
+- making the editable relationship premise look like authoritative current runtime metrics or event eligibility.
+- making a future friend/block status display look like Contacts is judging the social event.
 
 ## 4. Workstream D: Documentation And Collaboration Guardrails
 
@@ -99,6 +110,7 @@ Main tasks:
 3. sync PM status and roadmap when priority/status changes;
 4. keep module naming aligned with `docs/pm/MODULE_NAME_GLOSSARY.md`;
 5. keep workflow instructions aligned with `docs/process/AI_WORK_MODE.md` and the local workflow skill.
+6. when relationship classification changes, sync the profile-owner vs runtime-owner boundary in README, status, product boundary, workstreams, roadmap, PM status, and relationship-growth architecture docs.
 
 ## 5. Semantic Drift Watchlist
 
@@ -146,7 +158,8 @@ Current 4.2 baseline:
 9. show Calendar relationship review detail for confirmed events so users can see lineage, target, memory role, and duplicate-growth status.
 10. Contacts and World Hub use product-facing related-record copy by default, while Calendar keeps source-audit review detail for confirmed-event relationship checks.
 11. 4.2 is `DONE` for current explicit-lineage acceptance; future fuzzy same-text merging should start from a separate product decision.
-11. fuzzy same-text merging remains out of scope until a separate product decision promotes it.
+12. runtime memory-count totals are full target-state counts, not capped by `memoryLimit`.
+13. fuzzy same-text merging remains out of scope until a separate product decision promotes it.
 
 Why this first:
 

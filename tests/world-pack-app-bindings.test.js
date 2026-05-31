@@ -1,14 +1,22 @@
 import { describe, expect, test } from 'vitest'
 import {
+  buildActiveWorldAppEntryRows,
   buildShoppingWorldAppFilterQuery,
+  buildWorldAppEntryRows,
+  buildWorldAppHomeTileId,
   buildWorldAppBindingRows,
   findWorldAppBindingForModule,
+  isWorldAppHomeTileId,
+  resolveWorldAppUxContext,
   resolveShoppingWorldAppContext,
 } from '../src/lib/world-pack-app-bindings'
 import { BUILT_IN_WORLD_PACKS, normalizeWorldPack } from '../src/lib/world-pack-schema'
 
 const survivalPack = normalizeWorldPack(
   BUILT_IN_WORLD_PACKS.find((pack) => pack.id === 'survival_city'),
+)
+const fandomPack = normalizeWorldPack(
+  BUILT_IN_WORLD_PACKS.find((pack) => pack.id === 'fandom_parallel'),
 )
 
 const createSystemStore = (activePack = survivalPack) => ({
@@ -39,6 +47,47 @@ describe('world pack app bindings', () => {
             worldPack: 'survival_city',
             worldApp: 'survival_supply_board',
           },
+        }),
+      ]),
+    )
+  })
+
+  test('builds stable global app entries for active world app bindings', () => {
+    const entries = buildWorldAppEntryRows({ pack: survivalPack })
+
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'world_app_survival_city_survival_supply_board',
+          bindingId: 'survival_supply_board',
+          entryKind: 'world_app',
+          worldAppEntry: true,
+          categoryEn: 'World',
+          route: '/shopping',
+          routeQuery: {
+            worldPack: 'survival_city',
+            worldApp: 'survival_supply_board',
+          },
+        }),
+      ]),
+    )
+    expect(buildWorldAppHomeTileId({ packId: 'survival_city', bindingId: 'survival_supply_board' })).toBe(
+      'world_app_survival_city_survival_supply_board',
+    )
+    expect(isWorldAppHomeTileId('world_app_survival_city_survival_supply_board')).toBe(true)
+    expect(isWorldAppHomeTileId('app_shopping')).toBe(false)
+  })
+
+  test('resolves active system-store world app entries without mutating modules', () => {
+    const entries = buildActiveWorldAppEntryRows({ systemStore: createSystemStore() })
+
+    expect(entries.map((entry) => entry.id)).toContain('world_app_survival_city_survival_supply_board')
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          worldPackId: 'survival_city',
+          moduleKey: 'shopping',
+          targetLabel: 'Shopping',
         }),
       ]),
     )
@@ -95,6 +144,119 @@ describe('world pack app bindings', () => {
     })
   })
 
+  test('resolves generic World UX context for dispatch target apps', () => {
+    const context = resolveWorldAppUxContext({
+      systemStore: createSystemStore(),
+      moduleKey: 'food_delivery',
+      routeQuery: {
+        worldPack: 'survival_city',
+        worldApp: 'survival_dispatch',
+      },
+      expectedArchetypes: ['dispatch'],
+    })
+
+    expect(context).toMatchObject({
+      packId: 'survival_city',
+      bindingId: 'survival_dispatch',
+      archetype: 'dispatch',
+      moduleKey: 'food_delivery',
+      route: '/food-delivery',
+      routeQuery: {
+        worldPack: 'survival_city',
+        worldApp: 'survival_dispatch',
+      },
+      targetLabel: 'Food Delivery',
+      uxPackage: {
+        labels: true,
+        terminology: true,
+        accent: true,
+        contextBanner: true,
+        safeDefaults: true,
+      },
+    })
+    expect(context.boundaryCopy).toContain('Food Delivery keeps its own records')
+  })
+
+  test('resolves generic World UX context for Calendar reservation target apps', () => {
+    const context = resolveWorldAppUxContext({
+      systemStore: createSystemStore(fandomPack),
+      moduleKey: 'calendar',
+      routeQuery: {
+        worldPack: 'fandom_parallel',
+        worldApp: 'fandom_schedule_board',
+      },
+      expectedArchetypes: ['reservation'],
+    })
+
+    expect(context).toMatchObject({
+      packId: 'fandom_parallel',
+      bindingId: 'fandom_schedule_board',
+      archetype: 'reservation',
+      moduleKey: 'calendar',
+      route: '/calendar',
+      routeQuery: {
+        worldPack: 'fandom_parallel',
+        worldApp: 'fandom_schedule_board',
+      },
+      targetLabel: 'Calendar',
+      uxPackage: {
+        labels: true,
+        terminology: true,
+        accent: true,
+        contextBanner: true,
+        safeDefaults: true,
+      },
+    })
+    expect(context.boundaryCopy).toContain('Calendar keeps its own records')
+  })
+
+  test('resolves generic World UX context for Map transit target apps', () => {
+    const context = resolveWorldAppUxContext({
+      systemStore: createSystemStore(),
+      moduleKey: 'map',
+      routeQuery: {
+        worldPack: 'survival_city',
+        worldApp: 'survival_safe_route_pass',
+      },
+      expectedArchetypes: ['transit'],
+    })
+
+    expect(context).toMatchObject({
+      packId: 'survival_city',
+      bindingId: 'survival_safe_route_pass',
+      archetype: 'transit',
+      moduleKey: 'map',
+      route: '/map',
+      routeQuery: {
+        worldPack: 'survival_city',
+        worldApp: 'survival_safe_route_pass',
+      },
+      targetLabel: 'Map',
+      uxPackage: {
+        labels: true,
+        terminology: true,
+        accent: true,
+        contextBanner: true,
+        safeDefaults: true,
+      },
+    })
+    expect(context.boundaryCopy).toContain('Map keeps its own records')
+  })
+
+  test('rejects non-transit bindings for Map-specific transit contexts', () => {
+    expect(
+      resolveWorldAppUxContext({
+        systemStore: createSystemStore(),
+        moduleKey: 'map',
+        routeQuery: {
+          worldPack: 'survival_city',
+          worldApp: 'survival_safe_route_pass',
+        },
+        expectedArchetypes: ['reservation'],
+      }),
+    ).toBeNull()
+  })
+
   test('builds a route-only filter query for Shopping world context', () => {
     const context = resolveShoppingWorldAppContext({
       systemStore: createSystemStore(),
@@ -145,4 +307,3 @@ describe('world pack app bindings', () => {
     ).toBeNull()
   })
 })
-

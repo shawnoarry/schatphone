@@ -33,7 +33,7 @@ describe('system world pack store', () => {
       packId: 'survival_city',
       blocked: false,
       summary: {
-        appBindingCount: 2,
+        appBindingCount: 3,
         serviceTemplateCount: 1,
       },
     })
@@ -52,6 +52,20 @@ describe('system world pack store', () => {
       reviewedAt: 1780066800000,
       activatedAt: 1780066800000,
     })
+  })
+
+  test('removes inactive world app Home entries when active pack changes', () => {
+    const store = useSystemStore()
+    const survivalWorldAppId = 'world_app_survival_city_survival_supply_board'
+
+    expect(store.activateWorldPack('survival_city').ok).toBe(true)
+    store.setHomeWidgetPages([[survivalWorldAppId], [], [], [], []])
+    expect(store.settings.appearance.homeWidgetPages.flat()).toContain(survivalWorldAppId)
+
+    expect(store.activateWorldPack('fandom_parallel').ok).toBe(true)
+
+    expect(store.user.activeWorldPackId).toBe('fandom_parallel')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain(survivalWorldAppId)
   })
 
   test('blocks activation when a pack references missing material', () => {
@@ -95,6 +109,202 @@ describe('system world pack store', () => {
     expect(store.user.worldPackActivation).toMatchObject({
       activePackId: 'modern_parallel',
       activatedAt: 456,
+    })
+  })
+
+  test('confirms reviewed nonstandard app templates into world app bindings', () => {
+    const store = useSystemStore()
+
+    expect(store.listWorldAppTemplates().map((template) => template.id)).toContain('transit_pass')
+
+    const result = store.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'transit_pass',
+        title: 'Metro Pass',
+        confidence: 'medium',
+      },
+      'modern_parallel',
+    )
+
+    expect(result).toMatchObject({
+      ok: true,
+      binding: {
+        id: 'modern_parallel_transit_pass',
+        archetype: 'transit',
+        moduleKey: 'map',
+        route: '/map',
+      },
+    })
+    expect(store.getWorldPackById('modern_parallel').appBindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'modern_parallel_transit_pass',
+          moduleKey: 'map',
+        }),
+      ]),
+    )
+  })
+
+  test('updates and resets built-in world service account templates as user overrides', () => {
+    const store = useSystemStore()
+
+    const updated = store.updateWorldServiceAccountTemplate(
+      'survival_city',
+      'survival_supply_dispatch',
+      {
+        title: '避难所广播',
+        name: '避难所广播',
+        description: 'Publishes shelter notices and supply windows.',
+        category: 'publication',
+        linkedAppBindingId: 'survival_dispatch',
+      },
+    )
+
+    expect(updated).toMatchObject({
+      ok: true,
+      template: {
+        id: 'survival_supply_dispatch',
+        title: '避难所广播',
+        name: '避难所广播',
+        description: 'Publishes shelter notices and supply windows.',
+        category: 'publication',
+        linkedAppBindingId: 'survival_dispatch',
+        userEditedAt: 1780066800000,
+      },
+    })
+    expect(store.getWorldPackById('survival_city').serviceAccountTemplates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'survival_supply_dispatch',
+          title: '避难所广播',
+          userEditedAt: 1780066800000,
+        }),
+      ]),
+    )
+
+    const reset = store.resetWorldServiceAccountTemplate('survival_city', 'survival_supply_dispatch')
+
+    expect(reset).toMatchObject({
+      ok: true,
+      template: {
+        id: 'survival_supply_dispatch',
+        title: '补给调度员',
+        category: 'service_notification',
+        linkedAppBindingId: 'survival_supply_board',
+        userEditedAt: 0,
+      },
+    })
+  })
+
+  test('confirms reviewed AI service candidates into world service templates', () => {
+    const store = useSystemStore()
+
+    const result = store.confirmWorldServiceTemplateProposal(
+      {
+        id: 'shelter_bulletin',
+        title: 'Shelter Bulletin',
+        category: 'publication',
+        description: 'Publishes shelter notices and supply windows.',
+        linkedAppBindingId: 'survival_dispatch',
+        confidence: 'high',
+        evidence: 'The active world describes shelter bulletins.',
+      },
+      'survival_city',
+    )
+
+    expect(result).toMatchObject({
+      ok: true,
+      template: {
+        id: 'shelter_bulletin',
+        title: 'Shelter Bulletin',
+        category: 'publication',
+        linkedAppBindingId: 'survival_dispatch',
+        source: 'ai_confirmed',
+        proposalConfidence: 'high',
+        proposalEvidence: 'The active world describes shelter bulletins.',
+        confirmedAt: 1780066800000,
+      },
+    })
+    expect(store.getWorldPackById('survival_city').serviceAccountTemplates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'shelter_bulletin',
+          source: 'ai_confirmed',
+        }),
+      ]),
+    )
+
+    const duplicate = store.confirmWorldServiceTemplateProposal(
+      {
+        id: 'shelter_bulletin',
+        title: 'Shelter Bulletin Again',
+        category: 'publication',
+        confidence: 'high',
+      },
+      'survival_city',
+    )
+
+    expect(duplicate).toMatchObject({
+      ok: false,
+      reason: 'duplicate_template',
+    })
+  })
+
+  test('does not confirm low-confidence nonstandard app templates', () => {
+    const store = useSystemStore()
+    const beforeCount = store.getWorldPackById('modern_parallel').appBindings.length
+
+    const result = store.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'transit_pass',
+        title: 'Maybe Metro',
+        confidence: 'low',
+      },
+      'modern_parallel',
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'low_confidence',
+    })
+    expect(store.getWorldPackById('modern_parallel').appBindings).toHaveLength(beforeCount)
+  })
+
+  test('reviews pasted object payloads through the world app template seam', () => {
+    const store = useSystemStore()
+
+    const review = store.buildWorldAppTemplateExtractionReview(
+      {
+        proposals: [
+          {
+            templateId: 'reservation_board',
+            title: 'Ritual Calendar',
+            confidence: 'high',
+          },
+          {
+            templateId: 'made_up_console',
+            title: 'Made Up Console',
+            confidence: 'high',
+          },
+        ],
+      },
+      'modern_parallel',
+    )
+
+    expect(review).toMatchObject({
+      worldPackId: 'modern_parallel',
+      confirmableProposals: [
+        expect.objectContaining({
+          templateId: 'reservation_board',
+          bindingId: 'modern_parallel_reservation_board',
+        }),
+      ],
+      rejectedProposals: [
+        expect.objectContaining({
+          templateId: 'made_up_console',
+          rejectionReason: 'unknown_template',
+        }),
+      ],
     })
   })
 })

@@ -27,14 +27,41 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  templateRegistryRows: {
+    type: Array,
+    default: () => [],
+  },
+  templateProposalReview: {
+    type: Object,
+    default: null,
+  },
+  templateProposalDraft: {
+    type: String,
+    default: '',
+  },
+  templateProposalLoading: {
+    type: Boolean,
+    default: false,
+  },
+  templateProposalNotice: {
+    type: String,
+    default: '',
+  },
+  templateProposalNoticeTone: {
+    type: String,
+    default: 'info',
+  },
 })
 
 const emit = defineEmits([
   'select-pack',
   'activate-pack',
-  'open-app-binding',
-  'create-service-template',
-  'open-service-contact',
+  'open-app-store-world-section',
+  'extract-template-proposals',
+  'review-template-proposal-draft',
+  'update-template-proposal-draft',
+  'confirm-template-proposal',
+  'clear-template-proposal-review',
 ])
 
 const { t } = useI18n()
@@ -64,6 +91,24 @@ const activationStateLabel = computed(() =>
     ? t('默认启用', 'Default active')
     : t('当前启用', 'Active'),
 )
+
+const activeAppCount = computed(() => props.appBindingRows.length)
+const activeServiceCount = computed(() => props.serviceTemplateRows.length)
+
+const activationReviewCount = (key) =>
+  Number(props.activationReview?.effectRows?.find((row) => row.key === key)?.count || 0)
+
+const candidateAppCount = computed(() => activationReviewCount('app_bindings'))
+const candidateServiceCount = computed(() => activationReviewCount('service_templates'))
+
+const activeAppSummary = computed(() => {
+  const titles = props.appBindingRows
+    .map((row) => row.title)
+    .filter(Boolean)
+    .slice(0, 3)
+  if (titles.length === 0) return t('App Store 暂无世界专属入口', 'No world entries in App Store yet')
+  return titles.join(' / ')
+})
 
 const effectRows = computed(() => [
   {
@@ -154,6 +199,47 @@ const appBindingKindLabel = (row) => {
   }
   return labelMap[row?.archetype] || t('世界应用', 'World app')
 }
+const templateRegistrySummary = computed(() =>
+  props.templateRegistryRows
+    .map((template) => `${template.label || template.id} -> ${template.moduleKey}`)
+    .join(' / '),
+)
+
+const confidenceLabel = (value) => {
+  const labelMap = {
+    high: t('高置信度', 'High confidence'),
+    medium: t('中置信度', 'Medium confidence'),
+    low: t('低置信度', 'Low confidence'),
+  }
+  return labelMap[value] || t('未标记', 'Unmarked')
+}
+
+const rejectionReasonLabel = (value) => {
+  const labelMap = {
+    low_confidence: t('低置信度，需要人工重新提交', 'Low confidence; revise manually before confirming'),
+    duplicate_binding: t('当前世界包已有同名入口', 'Already exists in the current world pack'),
+    unknown_template: t('不在内置模板白名单中', 'Not in the built-in template whitelist'),
+    needs_dedicated_app: t('需要专属 App 壳，不映射到 Shopping', 'Needs a dedicated app shell; not mapped onto Shopping'),
+  }
+  return labelMap[value] || t('未知拒绝原因', 'Unknown rejection reason')
+}
+
+const templateTargetLabel = (proposal = {}) => {
+  const template = proposal.template || {}
+  return `${template.moduleKey || 'unknown'}${template.route ? ` (${template.route})` : ''}`
+}
+
+const templateReviewRowCount = computed(
+  () =>
+    (props.templateProposalReview?.confirmableProposals?.length || 0) +
+    (props.templateProposalReview?.rejectedProposals?.length || 0),
+)
+
+const templateReviewIsEmpty = computed(
+  () => Boolean(props.templateProposalReview) && templateReviewRowCount.value === 0,
+)
+
+const templateNoticeToneClass = computed(() => `is-${props.templateProposalNoticeTone || 'info'}`)
 </script>
 
 <template>
@@ -195,6 +281,41 @@ const appBindingKindLabel = (row) => {
           }}
         </p>
       </div>
+    </div>
+
+    <div
+      class="current-world-pack__handoff-summary"
+      data-testid="worldbook-current-pack-active-summary"
+    >
+      <span>
+        <strong>{{ packName }}</strong>
+        {{ t('已启用', 'active') }}
+      </span>
+      <span>
+        {{ t('App Store 世界分区', 'App Store World section') }}:
+        <strong>{{ activeAppCount }}</strong>
+      </span>
+      <span>
+        {{ t('Chat 可添加服务号', 'Chat service accounts') }}:
+        <strong>{{ activeServiceCount }}</strong>
+      </span>
+      <small>{{ activeAppSummary }}</small>
+    </div>
+
+    <div
+      class="current-world-pack__candidate-preview"
+      data-testid="worldbook-current-pack-candidate-preview"
+    >
+      <span>{{ t('待激活预览', 'Activation preview') }}</span>
+      <strong>{{ selectedPackName }}</strong>
+      <small>
+        {{
+          t(
+            `${candidateAppCount} 个 App Store 世界入口，${candidateServiceCount} 个 Chat 服务号模板`,
+            `${candidateAppCount} App Store world entries, ${candidateServiceCount} Chat service templates`,
+          )
+        }}
+      </small>
     </div>
 
     <label class="current-world-pack__selector">
@@ -301,7 +422,7 @@ const appBindingKindLabel = (row) => {
           <strong>
             {{
               appBindingRows.length > 0
-                ? t(`${appBindingRows.length} 个可打开入口`, `${appBindingRows.length} launchable entries`)
+                ? t(`${appBindingRows.length} 个已启用世界入口`, `${appBindingRows.length} enabled world entries`)
                 : t('当前世界包没有应用绑定', 'No app bindings in the active pack')
             }}
           </strong>
@@ -311,11 +432,22 @@ const appBindingKindLabel = (row) => {
       <p class="current-world-pack__apps-copy">
         {{
           t(
-            '世界应用只改变入口语义、默认筛选和上下文提示；商品、订单、日程、钱包记录仍由各自模块保存。',
-            'World apps only change entry wording, default filters, and context; products, orders, schedules, and wallet records stay in their modules.',
+            '激活世界包后，这里只显示当前入口快照；真正的浏览、放置和打开动作统一去 App Store 的 World 分区完成。',
+            'After activation this is only a snapshot; browse, place, and open world entries from the App Store World section.',
           )
         }}
       </p>
+
+      <button
+        type="button"
+        class="current-world-pack__store-handoff"
+        :disabled="activeAppCount <= 0"
+        data-testid="worldbook-current-pack-open-app-store"
+        @click="emit('open-app-store-world-section')"
+      >
+        <i class="fas fa-store" aria-hidden="true"></i>
+        <span>{{ t('去 App Store 查看世界应用', 'Open App Store World section') }}</span>
+      </button>
 
       <div
         v-if="appBindingRows.length > 0"
@@ -337,21 +469,232 @@ const appBindingKindLabel = (row) => {
           </div>
 
           <div class="current-world-pack__app-action">
-            <span :class="{ 'is-ready': row.launchable }">
-              {{ row.launchable ? t('可打开', 'Ready') : t('未配置路线', 'No route') }}
+            <span class="is-ready">
+              {{ t('在 App Store 管理', 'Managed in App Store') }}
             </span>
-            <button
-              type="button"
-              :disabled="!row.launchable"
-              :data-testid="`worldbook-current-pack-open-app-${row.id}`"
-              @click="emit('open-app-binding', row.id)"
-            >
-              {{ t('打开世界应用', 'Open world app') }}
-            </button>
           </div>
         </div>
       </div>
     </div>
+
+    <details
+      class="current-world-pack__templates"
+      data-testid="worldbook-current-pack-template-review"
+      :aria-busy="templateProposalLoading ? 'true' : 'false'"
+    >
+      <summary class="current-world-pack__templates-head">
+        <span class="current-world-pack__section-mark" aria-hidden="true">
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </span>
+        <div>
+          <p>{{ t('非常规 App 提案审查', 'Nonstandard app proposal review') }}</p>
+          <strong>
+            {{
+              templateProposalReview
+                ? t(
+                    `${templateProposalReview.confirmableProposals?.length || 0} 个可确认，${templateProposalReview.rejectedProposals?.length || 0} 个已拒绝`,
+                    `${templateProposalReview.confirmableProposals?.length || 0} confirmable, ${templateProposalReview.rejectedProposals?.length || 0} rejected`,
+                  )
+                : t('等待 AI 提取或粘贴 JSON', 'Waiting for AI extraction or pasted JSON')
+            }}
+          </strong>
+        </div>
+      </summary>
+
+      <p class="current-world-pack__templates-copy">
+        {{
+          t(
+            '这里只审查世界观是否适合启用内置 App 外观入口；确认后只写入当前世界包 appBinding，不创建新模块、不写事件判定、不绕过 App Store 白名单。',
+            'This only reviews whether the world should expose a whitelisted app-style entry; confirmation writes an appBinding to the current pack without creating modules, event rules, or unlisted App Store entries.',
+          )
+        }}
+      </p>
+
+      <div
+        v-if="templateRegistryRows.length > 0"
+        class="current-world-pack__template-registry"
+        data-testid="worldbook-current-pack-template-registry"
+        :title="templateRegistrySummary"
+      >
+        <span
+          v-for="template in templateRegistryRows"
+          :key="template.id"
+          class="current-world-pack__template-chip"
+        >
+          {{ template.label || template.id }}
+          <small>
+            {{
+              template.unsupportedReason
+                ? t('需专属 App', 'Dedicated app')
+                : template.moduleKey
+            }}
+          </small>
+        </span>
+      </div>
+
+      <div class="current-world-pack__template-actions">
+        <button
+          type="button"
+          :disabled="templateProposalLoading"
+          data-testid="worldbook-current-pack-template-extract-ai"
+          @click="emit('extract-template-proposals')"
+        >
+          {{
+            templateProposalLoading
+              ? t('提取中', 'Extracting')
+              : t('AI 提取提案', 'Extract with AI')
+          }}
+        </button>
+        <button
+          type="button"
+          :disabled="templateProposalLoading"
+          data-testid="worldbook-current-pack-template-review-json"
+          @click="emit('review-template-proposal-draft')"
+        >
+          {{ t('审查粘贴 JSON', 'Review pasted JSON') }}
+        </button>
+        <button
+          type="button"
+          :disabled="templateProposalLoading"
+          data-testid="worldbook-current-pack-template-clear"
+          @click="emit('clear-template-proposal-review')"
+        >
+          {{ t('清空', 'Clear') }}
+        </button>
+      </div>
+
+      <div
+        v-if="templateProposalLoading"
+        class="current-world-pack__template-loading"
+        data-testid="worldbook-current-pack-template-loading"
+        role="status"
+      >
+        <span aria-hidden="true"><i class="fas fa-circle-notch fa-spin"></i></span>
+        <div>
+          <strong>{{ t('正在审查世界上下文', 'Reviewing world context') }}</strong>
+          <p>
+            {{
+              t(
+                'AI 只会在内置白名单里寻找可确认入口；结果仍需要你明确加入世界包。',
+                'AI can only match built-in whitelisted entries; you still choose what gets added to the world pack.',
+              )
+            }}
+          </p>
+        </div>
+      </div>
+
+      <textarea
+        class="current-world-pack__template-draft"
+        :value="templateProposalDraft"
+        rows="5"
+        data-testid="worldbook-current-pack-template-draft"
+        :placeholder="t('粘贴 proposals JSON，或直接运行 AI 提取。', 'Paste a proposals JSON payload, or run AI extraction.')"
+        @input="emit('update-template-proposal-draft', $event.target.value)"
+      ></textarea>
+
+      <p
+        v-if="templateProposalNotice"
+        class="current-world-pack__template-notice"
+        :class="templateNoticeToneClass"
+        data-testid="worldbook-current-pack-template-notice"
+        :data-notice-tone="templateProposalNoticeTone"
+        role="status"
+      >
+        {{ templateProposalNotice }}
+      </p>
+
+      <div
+        v-if="templateProposalReview"
+        class="current-world-pack__template-results"
+      >
+        <div
+          class="current-world-pack__template-summary"
+          data-testid="worldbook-current-pack-template-review-summary"
+        >
+          {{
+            t(
+              `${templateProposalReview.confirmableProposals?.length || 0} 个入口需要你确认；${templateProposalReview.rejectedProposals?.length || 0} 个已被白名单/置信度规则挡下。`,
+              `${templateProposalReview.confirmableProposals?.length || 0} entries need confirmation; ${templateProposalReview.rejectedProposals?.length || 0} were blocked by whitelist or confidence rules.`,
+            )
+          }}
+        </div>
+
+        <div
+          v-if="templateReviewIsEmpty"
+          class="current-world-pack__template-empty"
+          data-testid="worldbook-current-pack-template-empty"
+        >
+          <span aria-hidden="true"><i class="fas fa-filter-circle-xmark"></i></span>
+          <div>
+            <strong>{{ t('没有可加入的世界 App', 'No world app entries to add') }}</strong>
+            <p>
+              {{
+                t(
+                  '空结果不会影响 App Store 或主屏；请补充世界材料或粘贴更明确的 proposals JSON 再审查。',
+                  'An empty review does not change App Store or Home; add clearer world context or paste a more specific proposals JSON payload.',
+                )
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-for="proposal in templateProposalReview.confirmableProposals || []"
+          :key="`confirmable-${proposal.bindingId || proposal.templateId}`"
+          class="current-world-pack__template-row"
+          :data-testid="`worldbook-current-pack-template-confirmable-${proposal.bindingId || proposal.templateId}`"
+        >
+          <div class="current-world-pack__template-main">
+            <span>{{ confidenceLabel(proposal.confidence) }}</span>
+            <strong>{{ proposal.title }}</strong>
+            <p>{{ proposal.description || proposal.template?.description }}</p>
+            <small>
+              {{ t('目标模块', 'Target module') }}: {{ templateTargetLabel(proposal) }}
+            </small>
+            <small v-if="proposal.evidence">
+              {{ t('依据', 'Evidence') }}: {{ proposal.evidence }}
+            </small>
+          </div>
+          <div class="current-world-pack__template-action">
+            <span>{{ proposal.bindingId }}</span>
+            <button
+              type="button"
+              :disabled="templateProposalLoading"
+              :data-testid="`worldbook-current-pack-template-confirm-${proposal.bindingId || proposal.templateId}`"
+              @click="emit('confirm-template-proposal', proposal)"
+            >
+              {{ t('加入当前世界包', 'Add to current pack') }}
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-for="proposal in templateProposalReview.rejectedProposals || []"
+          :key="`rejected-${proposal.bindingId || proposal.templateId || proposal.title}`"
+          class="current-world-pack__template-row is-rejected"
+          :data-testid="`worldbook-current-pack-template-rejected-${proposal.bindingId || proposal.templateId || 'unknown'}`"
+        >
+          <div class="current-world-pack__template-main">
+            <span>{{ confidenceLabel(proposal.confidence) }}</span>
+            <strong>{{ proposal.title }}</strong>
+            <p
+              class="current-world-pack__template-rejection"
+              :data-testid="`worldbook-current-pack-template-rejection-reason-${proposal.bindingId || proposal.templateId || 'unknown'}`"
+              :data-rejection-reason="proposal.rejectionReason || 'unknown'"
+            >
+              <b>{{ t('已阻止', 'Blocked') }}</b>
+              {{ rejectionReasonLabel(proposal.rejectionReason) }}
+            </p>
+            <small v-if="proposal.evidence">
+              {{ t('依据', 'Evidence') }}: {{ proposal.evidence }}
+            </small>
+          </div>
+          <div class="current-world-pack__template-action">
+            <span>{{ proposal.templateId || t('未知模板', 'Unknown template') }}</span>
+          </div>
+        </div>
+      </div>
+    </details>
 
     <div
       class="current-world-pack__services"
@@ -366,7 +709,7 @@ const appBindingKindLabel = (row) => {
           <strong>
             {{
               serviceTemplateRows.length > 0
-                ? t(`${serviceTemplateRows.length} 个可生成入口`, `${serviceTemplateRows.length} entries available`)
+                ? t(`${serviceTemplateRows.length} 个可在 Chat 添加`, `${serviceTemplateRows.length} available in Chat`)
                 : t('当前世界包没有服务号模板', 'No service templates in the active pack')
             }}
           </strong>
@@ -376,11 +719,26 @@ const appBindingKindLabel = (row) => {
       <p class="current-world-pack__services-copy">
         {{
           t(
-            '这里生成的是 Chat Directory 里的服务号或公众号入口；它只承载沟通身份和跳转，不会创建订单、日程或钱包记录。',
-            'This creates Chat Directory service or official accounts only; it carries identity and routing, not orders, schedules, or wallet records.',
+            '本轮只提示可用服务号数量，不在 WorldBook 里生成联系人；Chat 壳落完后，用户可在 Chat app 内添加对应服务号。',
+            'WorldBook only shows service-account availability; Chat Services handles editing, AI review, and user opt-in.',
           )
         }}
       </p>
+
+      <div
+        class="current-world-pack__service-handoff"
+        data-testid="worldbook-current-pack-service-handoff"
+      >
+        <i class="fas fa-comments" aria-hidden="true"></i>
+        <span>
+          {{
+            t(
+              `${activeServiceCount} 个服务号模板已随当前世界包启用，可稍后在 Chat app 内添加。`,
+              `${activeServiceCount} service account templates are enabled for this world pack and can be managed in Chat Services.`,
+            )
+          }}
+        </span>
+      </div>
 
       <div
         v-if="serviceTemplateRows.length > 0"
@@ -406,25 +764,8 @@ const appBindingKindLabel = (row) => {
 
           <div class="current-world-pack__service-action">
             <span :class="{ 'is-generated': row.generated }">
-              {{ row.generated ? t('已生成', 'Generated') : t('待确认', 'Pending') }}
+              {{ row.generated ? t('已存在于 Chat', 'Already in Chat') : t('Chat 内添加', 'Add in Chat') }}
             </span>
-            <button
-              v-if="row.generated"
-              type="button"
-              :data-testid="`worldbook-current-pack-open-service-${row.id}`"
-              @click="emit('open-service-contact', row.contactId)"
-            >
-              {{ t('打开 Chat', 'Open Chat') }}
-            </button>
-            <button
-              v-else
-              type="button"
-              :disabled="!row.payload"
-              :data-testid="`worldbook-current-pack-create-service-${row.id}`"
-              @click="emit('create-service-template', row.id)"
-            >
-              {{ t('生成到 Chat Directory', 'Create in Chat Directory') }}
-            </button>
           </div>
         </div>
       </div>
@@ -505,6 +846,43 @@ const appBindingKindLabel = (row) => {
   font-size: 12px;
   line-height: 1.6;
   color: var(--system-text-muted);
+}
+
+.current-world-pack__handoff-summary,
+.current-world-pack__candidate-preview {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  padding: 10px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.current-world-pack__handoff-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.current-world-pack__handoff-summary span,
+.current-world-pack__candidate-preview span {
+  min-width: 0;
+}
+
+.current-world-pack__handoff-summary strong,
+.current-world-pack__candidate-preview strong {
+  color: var(--system-text);
+  font-weight: 800;
+}
+
+.current-world-pack__handoff-summary small,
+.current-world-pack__candidate-preview small {
+  grid-column: 1 / -1;
+  color: var(--system-text-soft);
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .current-world-pack__selector {
@@ -668,6 +1046,7 @@ const appBindingKindLabel = (row) => {
 }
 
 .current-world-pack__apps,
+.current-world-pack__templates,
 .current-world-pack__services {
   display: grid;
   gap: 10px;
@@ -679,13 +1058,24 @@ const appBindingKindLabel = (row) => {
 }
 
 .current-world-pack__apps-head,
+.current-world-pack__templates-head,
 .current-world-pack__services-head {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
 }
 
+.current-world-pack__templates-head {
+  cursor: pointer;
+  list-style: none;
+}
+
+.current-world-pack__templates-head::-webkit-details-marker {
+  display: none;
+}
+
 .current-world-pack__apps-head p,
+.current-world-pack__templates-head p,
 .current-world-pack__services-head p {
   color: var(--system-text-muted);
   font-size: 11px;
@@ -694,6 +1084,7 @@ const appBindingKindLabel = (row) => {
 }
 
 .current-world-pack__apps-head strong,
+.current-world-pack__templates-head strong,
 .current-world-pack__services-head strong {
   display: block;
   margin-top: 2px;
@@ -702,10 +1093,48 @@ const appBindingKindLabel = (row) => {
 }
 
 .current-world-pack__apps-copy,
+.current-world-pack__templates-copy,
 .current-world-pack__services-copy {
   color: var(--system-text-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.current-world-pack__store-handoff,
+.current-world-pack__service-handoff {
+  min-height: 38px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  background: var(--system-panel-bg);
+  color: var(--system-text);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.current-world-pack__store-handoff {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-world-pack__store-handoff:disabled {
+  cursor: not-allowed;
+  color: var(--system-text-soft);
+  background: var(--system-control-border);
+}
+
+.current-world-pack__service-handoff {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  line-height: 1.45;
+}
+
+.current-world-pack__service-handoff i {
+  color: var(--system-info);
 }
 
 .current-world-pack__app-list,
@@ -800,6 +1229,223 @@ const appBindingKindLabel = (row) => {
   background: var(--system-control-border);
 }
 
+.current-world-pack__template-registry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.current-world-pack__template-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  background: var(--system-panel-bg);
+  color: var(--system-text);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.current-world-pack__template-chip small {
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.current-world-pack__template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.current-world-pack__template-actions button,
+.current-world-pack__template-action button {
+  min-height: 32px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  background: var(--system-text);
+  color: var(--system-text-inverse);
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.current-world-pack__template-actions button:nth-child(2),
+.current-world-pack__template-actions button:nth-child(3) {
+  background: var(--system-panel-bg);
+  color: var(--system-text);
+}
+
+.current-world-pack__template-actions button:disabled,
+.current-world-pack__template-action button:disabled {
+  cursor: not-allowed;
+  color: var(--system-text-soft);
+  background: var(--system-control-border);
+}
+
+.current-world-pack__template-loading,
+.current-world-pack__template-empty {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--system-info-soft);
+  border-radius: var(--system-radius-md);
+  background: color-mix(in srgb, var(--system-info-soft) 72%, var(--system-panel-bg));
+  padding: 10px;
+}
+
+.current-world-pack__template-loading > span,
+.current-world-pack__template-empty > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  color: var(--system-info);
+  background: var(--system-panel-bg);
+}
+
+.current-world-pack__template-loading strong,
+.current-world-pack__template-empty strong {
+  display: block;
+  color: var(--system-text);
+  font-size: 12px;
+}
+
+.current-world-pack__template-loading p,
+.current-world-pack__template-empty p {
+  margin-top: 2px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.current-world-pack__template-draft {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  color: var(--system-text);
+  padding: 10px;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.current-world-pack__template-notice,
+.current-world-pack__template-summary {
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  background: var(--system-info-soft);
+  color: var(--system-info);
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.current-world-pack__template-notice.is-success {
+  border-color: var(--system-success-soft);
+  background: var(--system-success-soft);
+  color: var(--system-success);
+}
+
+.current-world-pack__template-notice.is-warning {
+  border-color: var(--system-warning-soft);
+  background: var(--system-warning-soft);
+  color: var(--system-warning);
+}
+
+.current-world-pack__template-notice.is-danger {
+  border-color: var(--system-danger-soft);
+  background: var(--system-danger-soft);
+  color: var(--system-danger);
+}
+
+.current-world-pack__template-results {
+  display: grid;
+  gap: 8px;
+}
+
+.current-world-pack__template-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(136px, auto);
+  gap: 12px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  padding: 12px;
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.current-world-pack__template-row.is-rejected {
+  background: var(--system-surface-muted);
+}
+
+.current-world-pack__template-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.current-world-pack__template-main span {
+  color: var(--system-info);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.current-world-pack__template-row.is-rejected .current-world-pack__template-main span {
+  color: var(--system-warning);
+}
+
+.current-world-pack__template-main strong {
+  color: var(--system-text);
+  font-size: 13px;
+}
+
+.current-world-pack__template-main p,
+.current-world-pack__template-main small {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.current-world-pack__template-main .current-world-pack__template-rejection {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--system-warning);
+}
+
+.current-world-pack__template-rejection b {
+  border-radius: 999px;
+  background: var(--system-warning-soft);
+  padding: 2px 6px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.current-world-pack__template-action {
+  display: flex;
+  min-width: 136px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+}
+
+.current-world-pack__template-action span {
+  max-width: 180px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 @media (max-width: 640px) {
   .current-world-pack__hero {
     grid-template-columns: 1fr;
@@ -814,19 +1460,32 @@ const appBindingKindLabel = (row) => {
   }
 
   .current-world-pack__effects,
+  .current-world-pack__handoff-summary,
   .current-world-pack__review-grid {
     grid-template-columns: 1fr;
   }
 
+  .current-world-pack__store-handoff {
+    width: 100%;
+    justify-content: center;
+  }
+
   .current-world-pack__app-row,
+  .current-world-pack__template-row,
   .current-world-pack__service-row {
     grid-template-columns: 1fr;
   }
 
   .current-world-pack__app-action,
+  .current-world-pack__template-action,
   .current-world-pack__service-action {
     min-width: 0;
     align-items: stretch;
+  }
+
+  .current-world-pack__template-action span {
+    max-width: none;
+    text-align: left;
   }
 }
 </style>

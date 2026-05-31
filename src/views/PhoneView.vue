@@ -134,6 +134,7 @@ const submitCallLog = () => {
   const call = created?.call || created
   if (relationshipTarget && call) {
     recordPhoneCallRelationshipFact({
+      chatStore,
       relationshipRuntimeStore,
       call,
       target: relationshipTarget,

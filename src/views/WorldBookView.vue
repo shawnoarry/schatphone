@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import { formatApiErrorForUi } from '../lib/ai'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import {
   normalizeWorldBookPointIds,
@@ -24,6 +25,7 @@ import {
 } from '../lib/book-text-schema'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
+import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
 import { buildWorldServiceTemplateGenerationRows } from '../lib/world-pack-service-accounts'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
@@ -35,7 +37,7 @@ const chatStore = useChatStore()
 const bookStore = useBookStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
-const { user } = storeToRefs(systemStore)
+const { user, settings } = storeToRefs(systemStore)
 const { roleProfiles, contacts } = storeToRefs(chatStore)
 
 const globalWorldview = computed({
@@ -77,6 +79,12 @@ const activeWorldPackAppBindingRows = computed(() =>
     pack: worldOverview.value.activePack,
   }),
 )
+const worldAppTemplateRegistryRows = computed(() => systemStore.listWorldAppTemplates())
+const worldAppTemplateProposalDraft = ref('')
+const worldAppTemplateProposalReview = ref(null)
+const worldAppTemplateProposalLoading = ref(false)
+const worldAppTemplateProposalNotice = ref('')
+const worldAppTemplateProposalNoticeTone = ref('info')
 const linkedBookSources = computed(() =>
   systemStore.listWorldBookSourceLinks().map((link) => {
     const asset = bookStore.findAssetById(link.assetId)
@@ -330,52 +338,159 @@ const activateSelectedWorldPack = () => {
   pulseSaved(t('世界包已激活。', 'World pack activated.'))
 }
 
-const createWorldPackServiceTemplateContact = (templateId = '') => {
-  const row = activeWorldPackServiceTemplateRows.value.find((item) => item.id === templateId)
-  if (!row?.payload) {
-    uiNotice.value = t('这个服务号模板暂时不能生成，请先检查当前世界包。', 'This service template cannot be created yet. Check the active world pack first.')
-    return
-  }
+const openWorldPackAppStoreSection = () => {
+  router.push({
+    path: '/app-store',
+    query: {
+      from: 'worldbook',
+      section: 'world',
+    },
+  })
+}
 
-  const contact = chatStore.createWorldServiceTemplateContact(row.payload)
-  if (!contact) {
-    uiNotice.value = t('服务号生成失败，请稍后重试。', 'Service account creation failed. Please retry.')
-    return
-  }
-
-  chatStore.saveNow()
-  pulseSaved(
-    row.generated
-      ? t('这个服务号已经在 Chat Directory 中。', 'This service account already exists in Chat Directory.')
-      : t('服务号已生成到 Chat Directory。', 'Service account created in Chat Directory.'),
+const buildWorldAppTemplateContextText = () => {
+  const activePack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
+  const worldview = String(globalWorldview.value || '').trim()
+  const sourceLines = linkedBookSources.value
+    .filter((link) => link.enabled !== false && !link.missing)
+    .slice(0, 4)
+    .map((link) => {
+      const text = String(link.currentSourceText || '').trim().replace(/\s+/g, ' ')
+      return `- ${link.title} (${link.usage || 'source'}): ${text.slice(0, 1200)}`
+    })
+  const knowledgeLines = knowledgePoints.value
+    .filter((point) => point.enabled !== false)
+    .slice(0, 8)
+    .map((point) => {
+      const tags = Array.isArray(point.tags) && point.tags.length ? ` [${point.tags.join(', ')}]` : ''
+      return `- ${point.title || point.id}${tags}: ${String(point.content || '').trim().slice(0, 500)}`
+    })
+  const bindingLines = activeWorldPackAppBindingRows.value.map(
+    (row) => `- ${row.id}: ${row.archetype} -> ${row.targetLabel} (${row.route || 'no route'})`,
   )
+
+  return [
+    `Active World Pack: ${activePack?.title || activePack?.name || activePack?.id || 'default_world'}`,
+    bindingLines.length ? ['Existing app bindings:', ...bindingLines].join('\n') : 'Existing app bindings: none',
+    worldview ? `Fallback worldview:\n${worldview.slice(0, 2200)}` : 'Fallback worldview: empty',
+    sourceLines.length ? ['Active Book sources:', ...sourceLines].join('\n') : 'Active Book sources: none',
+    knowledgeLines.length ? ['Enabled knowledge:', ...knowledgeLines].join('\n') : 'Enabled knowledge: none',
+  ].join('\n\n')
 }
 
-const openWorldPackServiceContact = (contactId = 0) => {
-  const numericId = Number(contactId)
-  if (!Number.isFinite(numericId) || numericId <= 0) return
-  router.push({
-    path: `/chat/${Math.floor(numericId)}`,
-    query: {
-      from: 'worldbook',
-      worldPack: worldOverview.value.activePack?.id || 'default_world',
-    },
-  })
+const summarizeWorldAppTemplateReview = (review) =>
+  t(
+    `${review.confirmableProposals.length} 个可确认，${review.rejectedProposals.length} 个已拒绝。`,
+    `${review.confirmableProposals.length} confirmable, ${review.rejectedProposals.length} rejected.`,
+  )
+
+const updateWorldAppTemplateProposalDraft = (value = '') => {
+  worldAppTemplateProposalDraft.value = value
 }
 
-const openWorldPackAppBinding = (bindingId = '') => {
-  const row = activeWorldPackAppBindingRows.value.find((item) => item.id === bindingId)
-  if (!row?.launchable) {
-    uiNotice.value = t('这个世界应用还没有可打开的模块路线。', 'This world app does not have a launch route yet.')
+const reviewWorldAppTemplateProposalDraft = () => {
+  const draft = String(worldAppTemplateProposalDraft.value || '').trim()
+  if (!draft) {
+    worldAppTemplateProposalReview.value = systemStore.buildWorldAppTemplateExtractionReview(
+      [],
+      worldOverview.value.activePack?.id || 'default_world',
+    )
+    worldAppTemplateProposalNotice.value = t(
+      '请先粘贴 AI 返回的 JSON，或直接运行 AI 提取。',
+      'Paste an AI JSON payload first, or run AI extraction.',
+    )
+    worldAppTemplateProposalNoticeTone.value = 'warning'
     return
   }
-  router.push({
-    path: row.route,
-    query: {
-      from: 'worldbook',
-      ...row.query,
-    },
-  })
+
+  let payload = null
+  try {
+    payload = JSON.parse(draft)
+  } catch {
+    worldAppTemplateProposalNotice.value = t(
+      'JSON 解析失败，请检查 proposals 数组格式。',
+      'JSON parse failed. Check the proposals array format.',
+    )
+    worldAppTemplateProposalNoticeTone.value = 'danger'
+    return
+  }
+
+  const review = systemStore.buildWorldAppTemplateExtractionReview(
+    payload,
+    worldOverview.value.activePack?.id || 'default_world',
+  )
+  worldAppTemplateProposalReview.value = review
+  worldAppTemplateProposalNotice.value = summarizeWorldAppTemplateReview(review)
+  worldAppTemplateProposalNoticeTone.value =
+    review.confirmableProposals.length > 0 ? 'success' : review.rejectedProposals.length > 0 ? 'warning' : 'info'
+}
+
+const extractWorldAppTemplateProposalsFromAI = async () => {
+  if (worldAppTemplateProposalLoading.value) return
+  worldAppTemplateProposalLoading.value = true
+  worldAppTemplateProposalNotice.value = ''
+  worldAppTemplateProposalNoticeTone.value = 'info'
+  try {
+    const result = await extractWorldAppTemplateProposals({
+      worldContextText: buildWorldAppTemplateContextText(),
+      worldPack: worldOverview.value.activePack || systemStore.getActiveWorldPack(),
+      settings: settings.value,
+    })
+    worldAppTemplateProposalReview.value = result.review
+    worldAppTemplateProposalDraft.value = result.rawPayload
+      ? JSON.stringify(result.rawPayload, null, 2)
+      : ''
+    worldAppTemplateProposalNotice.value = result.ok
+      ? summarizeWorldAppTemplateReview(result.review)
+      : t('AI 返回内容无法解析，未生成可确认入口。', 'AI response could not be parsed; no entries were generated.')
+    worldAppTemplateProposalNoticeTone.value = result.ok
+      ? result.review.confirmableProposals.length > 0
+        ? 'success'
+        : result.review.rejectedProposals.length > 0
+          ? 'warning'
+          : 'info'
+      : 'danger'
+  } catch (error) {
+    worldAppTemplateProposalNotice.value = formatApiErrorForUi(
+      error,
+      t('AI 提取失败，请检查 API 设置。', 'AI extraction failed. Check API settings.'),
+    )
+    worldAppTemplateProposalNoticeTone.value = 'danger'
+  } finally {
+    worldAppTemplateProposalLoading.value = false
+  }
+}
+
+const confirmWorldAppTemplateProposalEntry = (proposal) => {
+  const packId =
+    worldAppTemplateProposalReview.value?.worldPackId ||
+    worldOverview.value.activePack?.id ||
+    'default_world'
+  const result = systemStore.confirmWorldAppTemplateProposal(proposal, packId)
+  if (!result.ok) {
+    worldAppTemplateProposalNotice.value = t(
+      `无法确认：${result.reason}`,
+      `Could not confirm: ${result.reason}`,
+    )
+    worldAppTemplateProposalNoticeTone.value = 'danger'
+    return
+  }
+
+  systemStore.saveNow()
+  const reviewProposals = worldAppTemplateProposalReview.value?.proposals || [proposal]
+  worldAppTemplateProposalReview.value = systemStore.buildWorldAppTemplateExtractionReview(
+    reviewProposals,
+    result.pack?.id || packId,
+  )
+  worldAppTemplateProposalNoticeTone.value = 'success'
+  pulseSaved(t('世界 App 入口已加入当前世界包。', 'World app entry added to the current pack.'))
+}
+
+const clearWorldAppTemplateProposalReview = () => {
+  worldAppTemplateProposalDraft.value = ''
+  worldAppTemplateProposalReview.value = null
+  worldAppTemplateProposalNotice.value = ''
+  worldAppTemplateProposalNoticeTone.value = 'info'
 }
 
 const addFirstBookSource = () => {
@@ -1113,6 +1228,13 @@ watch(
     if (!selectedWorldPackId.value || selectedWorldPackId.value === packId) {
       selectedWorldPackId.value = packId || 'default_world'
     }
+    if (
+      worldAppTemplateProposalReview.value?.worldPackId &&
+      worldAppTemplateProposalReview.value.worldPackId !== (packId || 'default_world')
+    ) {
+      worldAppTemplateProposalReview.value = null
+      worldAppTemplateProposalNotice.value = ''
+    }
   },
   { immediate: true },
 )
@@ -1210,11 +1332,20 @@ onBeforeUnmount(() => {
           :activation-review="selectedWorldPackReview"
           :app-binding-rows="activeWorldPackAppBindingRows"
           :service-template-rows="activeWorldPackServiceTemplateRows"
+          :template-registry-rows="worldAppTemplateRegistryRows"
+          :template-proposal-review="worldAppTemplateProposalReview"
+          :template-proposal-draft="worldAppTemplateProposalDraft"
+          :template-proposal-loading="worldAppTemplateProposalLoading"
+          :template-proposal-notice="worldAppTemplateProposalNotice"
+          :template-proposal-notice-tone="worldAppTemplateProposalNoticeTone"
           @select-pack="selectWorldPack"
           @activate-pack="activateSelectedWorldPack"
-          @open-app-binding="openWorldPackAppBinding"
-          @create-service-template="createWorldPackServiceTemplateContact"
-          @open-service-contact="openWorldPackServiceContact"
+          @open-app-store-world-section="openWorldPackAppStoreSection"
+          @extract-template-proposals="extractWorldAppTemplateProposalsFromAI"
+          @review-template-proposal-draft="reviewWorldAppTemplateProposalDraft"
+          @update-template-proposal-draft="updateWorldAppTemplateProposalDraft"
+          @confirm-template-proposal="confirmWorldAppTemplateProposalEntry"
+          @clear-template-proposal-review="clearWorldAppTemplateProposalReview"
         />
       </div>
 

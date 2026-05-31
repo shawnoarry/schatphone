@@ -1,6 +1,6 @@
 # Map Calendar Reminders Product Boundary
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 This file defines ownership boundaries for Map, Calendar, Reminders, and Phone-like callback support.
 
@@ -28,6 +28,8 @@ Calendar owns:
 - confirmed events
 - real schedule/date meaning
 - confirmed schedule-like reminders after handoff
+- real push scheduling and event-time edits
+- relationship-fact review for confirmed schedule events
 
 Calendar does not own:
 
@@ -35,6 +37,7 @@ Calendar does not own:
 - logistics follow-ups
 - callback backlog
 - runtime-control semantics
+- World Pack reservation rules or event judgment
 
 ## 3. Reminders
 
@@ -70,3 +73,4 @@ Phone does not own:
 - Map can provide route/location context, but does not absorb schedule ownership.
 - Map-derived cues should pass explicit trip lineage into Calendar when available, while Calendar remains the owner of the confirmed event.
 - Phone can generate callback context, but callback scheduling belongs to Reminders until it becomes a real Calendar item.
+- World Pack can provide `reservation -> Calendar` labels/context for Calendar, including confirmed `reservation_board` appBindings, but it cannot move schedule records or push decisions out of Calendar.

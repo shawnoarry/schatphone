@@ -107,18 +107,21 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
   <div class="absolute bottom-[56px] left-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-sm">
     <div v-if="userActionFormType === USER_ACTION_FORM_NONE" class="grid grid-cols-3 gap-2">
       <button
+        data-testid="chat-user-action-open-image"
         @click="$emit('trigger-media-picker', USER_MEDIA_KIND_IMAGE)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
         {{ t('图片', 'Image') }}
       </button>
       <button
+        data-testid="chat-user-action-open-gif"
         @click="$emit('trigger-media-picker', USER_MEDIA_KIND_GIF)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
         GIF
       </button>
       <button
+        data-testid="chat-user-action-open-gallery"
         @click="$emit('open-form', USER_ACTION_FORM_GALLERY)"
         :disabled="!gallerySendState.enabled"
         class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
@@ -127,12 +130,14 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         {{ t('素材库', 'Asset library') }}
       </button>
       <button
+        data-testid="chat-user-action-open-link"
         @click="$emit('open-form', USER_ACTION_FORM_LINK)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
         {{ t('链接', 'Link') }}
       </button>
       <button
+        data-testid="chat-user-action-send-location"
         @click="$emit('send-current-location')"
         :disabled="!locationShareState.enabled"
         class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
@@ -141,12 +146,14 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         {{ t('位置', 'Location') }}
       </button>
       <button
+        data-testid="chat-user-action-open-transfer"
         @click="$emit('open-form', USER_ACTION_FORM_TRANSFER)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
         {{ t('转账', 'Transfer') }}
       </button>
       <button
+        data-testid="chat-user-action-open-voice"
         @click="$emit('open-form', USER_ACTION_FORM_VOICE)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
@@ -233,6 +240,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
     <div v-else-if="userActionFormType === USER_ACTION_FORM_LINK" class="space-y-2">
       <p class="text-[11px] font-medium text-gray-700">{{ t('发送链接', 'Send link') }}</p>
       <input
+        data-testid="chat-user-action-link-url"
         :value="userActionDraft.linkUrl"
         @input="$emit('update-user-action-draft', { key: 'linkUrl', value: $event.target.value })"
         @keydown.enter.prevent="$emit('submit-link-card-form')"
@@ -241,6 +249,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         :placeholder="t('链接地址（http/https）', 'URL (http/https)')"
       />
       <input
+        data-testid="chat-user-action-link-title"
         :value="userActionDraft.linkTitle"
         @input="$emit('update-user-action-draft', { key: 'linkTitle', value: $event.target.value })"
         type="text"
@@ -248,6 +257,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         :placeholder="t('链接标题（可选）', 'Link title (optional)')"
       />
       <input
+        data-testid="chat-user-action-link-note"
         :value="userActionDraft.linkNote"
         @input="$emit('update-user-action-draft', { key: 'linkNote', value: $event.target.value })"
         type="text"
@@ -262,12 +272,14 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       </p>
       <div class="flex items-center justify-end gap-2">
         <button
+          data-testid="chat-user-action-link-back"
           @click="$emit('back-to-grid')"
           class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
         >
           {{ t('返回', 'Back') }}
         </button>
         <button
+          data-testid="chat-user-action-submit-link"
           @click="$emit('submit-link-card-form')"
           :disabled="!linkFormState.valid"
           class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
@@ -282,6 +294,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       <p class="text-[11px] font-medium text-gray-700">{{ t('发送转账卡片', 'Send transfer card') }}</p>
       <div class="grid grid-cols-3 gap-2">
         <input
+          data-testid="chat-user-action-transfer-amount"
           :value="userActionDraft.transferAmount"
           @input="$emit('update-user-action-draft', { key: 'transferAmount', value: $event.target.value })"
           @keydown.enter.prevent="$emit('submit-transfer-card-form')"
@@ -291,6 +304,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           :placeholder="t('金额，如 88.00', 'Amount, e.g. 88.00')"
         />
         <input
+          data-testid="chat-user-action-transfer-currency"
           :value="userActionDraft.transferCurrency"
           @input="$emit('update-user-action-draft', { key: 'transferCurrency', value: $event.target.value })"
           type="text"
@@ -299,6 +313,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         />
       </div>
       <input
+        data-testid="chat-user-action-transfer-note"
         :value="userActionDraft.transferNote"
         @input="$emit('update-user-action-draft', { key: 'transferNote', value: $event.target.value })"
         type="text"
@@ -319,6 +334,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           {{ t('返回', 'Back') }}
         </button>
         <button
+          data-testid="chat-user-action-submit-transfer"
           @click="$emit('submit-transfer-card-form')"
           :disabled="!transferFormState.valid"
           class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
@@ -332,6 +348,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
     <div v-else-if="userActionFormType === USER_ACTION_FORM_VOICE" class="space-y-2">
       <p class="text-[11px] font-medium text-gray-700">{{ t('发送语音卡片', 'Send voice card') }}</p>
       <textarea
+        data-testid="chat-user-action-voice-transcript"
         :value="userActionDraft.voiceTranscript"
         @input="$emit('update-user-action-draft', { key: 'voiceTranscript', value: $event.target.value })"
         rows="2"
@@ -341,6 +358,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       <div class="flex items-center gap-2">
         <span class="text-[11px] text-gray-600">{{ t('时长（秒）', 'Duration (sec)') }}</span>
         <input
+          data-testid="chat-user-action-voice-duration"
           :value="userActionDraft.voiceDurationSec"
           @input="$emit('update-user-action-draft', { key: 'voiceDurationSec', value: Number($event.target.value) })"
           type="number"
@@ -363,6 +381,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           {{ t('返回', 'Back') }}
         </button>
         <button
+          data-testid="chat-user-action-submit-voice"
           @click="$emit('submit-voice-card-form')"
           :disabled="!voiceFormState.valid"
           class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
@@ -423,6 +442,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         <AssetThumbnailOption
           v-for="asset in galleryPickerAssets"
           :key="asset.id"
+          :data-testid="`chat-user-action-gallery-asset-${asset.id}`"
           :asset="asset"
           :preview-url="galleryPickerPreviewMap[asset.id]"
           @select="$emit('submit-gallery-asset', asset)"

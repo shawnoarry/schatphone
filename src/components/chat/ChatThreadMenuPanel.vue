@@ -11,6 +11,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  subscriptionMuted: {
+    type: Boolean,
+    default: false,
+  },
+  subscriptionFolded: {
+    type: Boolean,
+    default: false,
+  },
   worldKernelState: {
     type: Object,
     required: true,
@@ -81,6 +89,8 @@ const emit = defineEmits([
   'open-worldbook',
   'save-thread-identity',
   'save-thread-settings',
+  'toggle-subscription-muted',
+  'toggle-subscription-folded',
   'update-thread-identity',
   'update-thread-setting',
 ])
@@ -120,10 +130,10 @@ const updateNumberSetting = (key, value) => {
 <template>
   <div class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
     <template v-if="isActiveServiceChat">
-      <div class="space-y-2">
+      <div class="space-y-3" data-testid="thread-service-subscription-panel">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="font-semibold text-sm text-gray-900">{{ t('服务模板摘要', 'Service template summary') }}</p>
+            <p class="font-semibold text-sm text-gray-900">{{ t('订阅频道', 'Subscription channel') }}</p>
             <p class="mt-1 text-[11px] text-gray-500">
               {{ serviceTemplateSummary }}
             </p>
@@ -132,17 +142,31 @@ const updateNumberSetting = (key, value) => {
             @click="$emit('open-chat-directory')"
             class="shrink-0 px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
           >
-            {{ t('去管理', 'Manage') }}
+            {{ t('服务号', 'Services') }}
           </button>
         </div>
-        <p class="text-[10px] text-gray-400">
-          {{
-            t(
-              '服务号模板只保留一个正式编辑入口：Chat Directory。此处仅展示当前会话正在使用的模板。',
-              'Service templates have one formal edit entry: Chat Directory. This menu only shows the active template.',
-            )
-          }}
-        </p>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-left"
+            :class="subscriptionMuted ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-700'"
+            data-testid="thread-service-toggle-muted"
+            @click="$emit('toggle-subscription-muted')"
+          >
+            <span class="block text-[10px] font-semibold">{{ t('免打扰', 'Mute') }}</span>
+            <span class="mt-0.5 block text-[11px]">{{ subscriptionMuted ? t('已开启', 'On') : t('未开启', 'Off') }}</span>
+          </button>
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-left"
+            :class="subscriptionFolded ? 'border-slate-300 bg-slate-100 text-slate-700' : 'border-gray-200 bg-white text-gray-700'"
+            data-testid="thread-service-toggle-folded"
+            @click="$emit('toggle-subscription-folded')"
+          >
+            <span class="block text-[10px] font-semibold">{{ t('折叠', 'Fold') }}</span>
+            <span class="mt-0.5 block text-[11px]">{{ subscriptionFolded ? t('已折叠', 'Folded') : t('消息首页可见', 'Visible') }}</span>
+          </button>
+        </div>
       </div>
     </template>
 

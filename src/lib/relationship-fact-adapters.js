@@ -1,4 +1,5 @@
 import { SHOPPING_SOURCE_KEYS } from './planned-module-registry'
+import { buildRelationshipFactGate } from './relationship-event-gating'
 
 export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   SHOPPING_GIFT: 'relationship_shopping_gift',
@@ -9,6 +10,19 @@ export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   WALLET_SHARED_TRANSFER: 'relationship_wallet_shared_transfer',
   CALENDAR_CONFIRMED_EVENT: 'relationship_calendar_confirmed_event',
 })
+
+const LOW_RISK_RELATIONSHIP_GATE_CATEGORIES = Object.freeze([
+  'ordinary_acquaintance',
+  'family_bond',
+  'friendship_bond',
+  'romance_candidate',
+  'romantic_bond',
+  'mentor_bond',
+  'professional_bond',
+  'power_bond',
+  'fandom_bond',
+  'rival_bond',
+])
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -27,6 +41,17 @@ const normalizeAmount = (value) => {
   if (!Number.isFinite(num) || num <= 0) return ''
   return num.toFixed(2)
 }
+
+const lowRiskRelationshipGate = ({ chatStore, target, factType }) =>
+  buildRelationshipFactGate({
+    chatStore,
+    target,
+    factType,
+    risk: 'low',
+    rule: {
+      preferredPrimaryCategoryIds: LOW_RISK_RELATIONSHIP_GATE_CATEGORIES,
+    },
+  })
 
 const orderItemSummary = (items = [], fallback = 'order') => {
   if (!Array.isArray(items) || items.length === 0) return fallback
@@ -181,6 +206,7 @@ export const buildShoppingGiftRelationshipSuggestion = ({ relationshipRuntimeSto
 }
 
 export const recordShoppingGiftRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   order,
   transaction,
@@ -218,6 +244,11 @@ export const recordShoppingGiftRelationshipFact = ({
     milestone: 'Gift purchase recorded',
     growthTraits: ['gift-memory', 'shopping'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: 'gift_purchased',
+    }),
   })
 }
 
@@ -247,6 +278,7 @@ export const buildFoodDeliverySharedMealRelationshipSuggestion = ({
 }
 
 export const recordFoodDeliverySharedMealRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   order,
   target,
@@ -290,6 +322,11 @@ export const recordFoodDeliverySharedMealRelationshipFact = ({
     milestone: 'Shared meal recorded',
     growthTraits: ['shared-meal', 'food-delivery'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: 'shared_meal',
+    }),
   })
 }
 
@@ -318,6 +355,7 @@ export const buildPhoneCallRelationshipSuggestion = ({
 }
 
 export const recordPhoneCallRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   call,
   target,
@@ -359,6 +397,11 @@ export const recordPhoneCallRelationshipFact = ({
     milestone: isMissed ? '' : 'Call recorded',
     growthTraits: isMissed ? ['missed-call', 'phone'] : ['call-memory', 'phone'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: isMissed ? 'missed_call' : 'completed_call',
+    }),
   })
 }
 
@@ -387,6 +430,7 @@ export const buildMapSharedRouteRelationshipSuggestion = ({
 }
 
 export const recordMapSharedRouteRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   trip,
   target,
@@ -424,6 +468,11 @@ export const recordMapSharedRouteRelationshipFact = ({
     milestone: 'Shared route recorded',
     growthTraits: ['shared-route', 'map'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: 'shared_route',
+    }),
   })
 }
 
@@ -452,6 +501,7 @@ export const buildWalletSharedTransferRelationshipSuggestion = ({
 }
 
 export const recordWalletSharedTransferRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   transaction,
   target,
@@ -494,10 +544,16 @@ export const recordWalletSharedTransferRelationshipFact = ({
     milestone: 'Wallet interaction recorded',
     growthTraits: ['shared-expense', 'wallet'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType,
+    }),
   })
 }
 
 export const recordWalletOrderSupportRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   target,
   transaction,
@@ -538,6 +594,11 @@ export const recordWalletOrderSupportRelationshipFact = ({
     growthTraits: ['wallet-support'],
     worldContext,
     forceSupportingMemory: true,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: resolvedTarget,
+      factType: 'wallet_order_support',
+    }),
   })
 }
 
@@ -570,6 +631,7 @@ export const buildCalendarConfirmedEventRelationshipSuggestion = ({
 }
 
 export const recordCalendarConfirmedEventRelationshipFact = ({
+  chatStore,
   relationshipRuntimeStore,
   event,
   target,
@@ -612,5 +674,10 @@ export const recordCalendarConfirmedEventRelationshipFact = ({
     milestone: 'Calendar plan recorded',
     growthTraits: ['calendar-plan', 'schedule'],
     worldContext,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: 'scheduled_calendar_event',
+    }),
   })
 }

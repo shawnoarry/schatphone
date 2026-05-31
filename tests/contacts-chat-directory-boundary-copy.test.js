@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import ContactsView from '../src/views/ContactsView.vue'
 import ChatDirectoryView from '../src/views/ChatDirectoryView.vue'
+import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -72,6 +73,49 @@ describe('Contacts and Chat Directory boundary copy', () => {
     expect(copy).toContain('role profiles come from Contacts')
     expect(copy).toContain('remain only in Contacts')
     expect(copy).toContain('bound as a chat target')
+
+    wrapper.unmount()
+  })
+
+  test('labels Chat-side relationship fields as local annotations instead of current truth', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      name: 'Boundary Role',
+      role: 'Guide',
+      isMain: true,
+    })
+    const binding = chatStore.bindRoleProfile(profile.id, {
+      relationshipLevel: 88,
+      relationshipNote: 'Thread-local preference note',
+    })
+
+    const router = createTestRouter()
+    await router.push('/chat-contacts')
+    await router.isReady()
+
+    const wrapper = mount(ChatDirectoryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    expect(wrapper.get(`[data-testid="chat-directory-role-chat-tuning-${binding.id}"]`).text()).toBe(
+      'Chat tuning 88',
+    )
+    expect(wrapper.get(`[data-testid="chat-directory-role-chat-note-${binding.id}"]`).text()).toBe(
+      'Chat note: Thread-local preference note',
+    )
+    expect(wrapper.text()).not.toContain('Affinity 88')
+
+    await wrapper.get(`[data-testid="chat-directory-role-meta-${binding.id}"]`).trigger('click')
+    await flushUi()
+
+    expect(wrapper.text()).toContain('Chat-local tuning (0-100)')
+    expect(wrapper.get('[data-testid="chat-directory-relationship-compatibility-help"]').text()).toContain(
+      'not current relationship truth',
+    )
+    expect(wrapper.text()).not.toContain('Affinity (0-100)')
 
     wrapper.unmount()
   })

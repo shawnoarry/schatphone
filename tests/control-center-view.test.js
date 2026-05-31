@@ -336,6 +336,43 @@ describe('ControlCenterView', () => {
     wrapper.unmount()
   })
 
+  test('shows relationship classification gate details for relationship facts', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: { profileId: 30, name: 'Gate Review' },
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'gate_review_order:gift',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for gate review.',
+      metricDeltas: { affinity: 4 },
+      relationshipGate: {
+        decision: 'allow',
+        mode: 'soft_reference',
+        reason: 'soft_mismatch_allowed',
+        eventType: 'gift_purchased',
+        primaryRelationshipCategoryId: 'family_bond',
+        relationshipModifierIds: ['caretaking'],
+        matched: false,
+      },
+    })
+
+    const { wrapper } = await mountControlCenterView()
+    const detail = wrapper.get('[data-testid="control-center-relationship-detail"]').text()
+
+    expect(detail).toContain('soft_reference')
+    expect(detail).toContain('family_bond')
+    expect(detail).toContain('soft_mismatch_allowed')
+
+    wrapper.unmount()
+  })
+
   test('shows primary shared memory summaries instead of supporting wallet details', async () => {
     const systemStore = useSystemStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

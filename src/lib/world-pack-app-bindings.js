@@ -15,10 +15,35 @@ const SHOPPING_MARKETPLACE_RULE = Object.freeze({
   categoryLabel: 'Grocery',
 })
 
+export const WORLD_APP_HOME_TILE_ID_PREFIX = 'world_app_'
+
+const WORLD_APP_PRESENTATION_BY_ARCHETYPE = Object.freeze({
+  publication_feed: { icon: 'fas fa-tower-broadcast', accent: 'cool' },
+  marketplace: { icon: 'fas fa-store', accent: 'warm' },
+  reservation: { icon: 'fas fa-calendar-check', accent: 'light' },
+  transit: { icon: 'fas fa-route', accent: 'cool' },
+  subscription: { icon: 'fas fa-id-card', accent: 'dark' },
+  dispatch: { icon: 'fas fa-truck-medical', accent: 'cool' },
+})
+
+const WORLD_APP_PRESENTATION_BY_MODULE = Object.freeze({
+  chat: { icon: 'fas fa-message', accent: 'default' },
+  shopping: { icon: 'fas fa-bag-shopping', accent: 'warm' },
+  food_delivery: { icon: 'fas fa-bowl-food', accent: 'warm' },
+  calendar: { icon: 'fas fa-calendar-days', accent: 'light' },
+  map: { icon: 'fas fa-map-location-dot', accent: 'cool' },
+})
+
 const normalizeText = (value, fallback = '', maxLength = 500) => {
   const text = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
   if (!text) return fallback
   return text.length > maxLength ? text.slice(0, maxLength) : text
+}
+
+const normalizeTileIdPart = (value, fallback = 'item') => {
+  const text = normalizeText(value, fallback, 120).toLowerCase()
+  const normalized = text.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+  return normalized || fallback
 }
 
 const normalizeQueryValue = (value) => {
@@ -34,6 +59,20 @@ const resolveActiveWorldPack = (systemStore) => {
   const packs = Array.isArray(systemStore?.user?.worldPacks) ? systemStore.user.worldPacks : []
   return packs.find((pack) => pack?.id === activePackId) || null
 }
+
+const resolveWorldAppPresentation = (row = {}) =>
+  WORLD_APP_PRESENTATION_BY_ARCHETYPE[row.archetype] ||
+  WORLD_APP_PRESENTATION_BY_MODULE[row.moduleKey] ||
+  { icon: 'fas fa-globe', accent: 'default' }
+
+const buildWorldAppUxBoundaryCopy = (targetLabel = 'target app') =>
+  `${targetLabel} keeps its own records, workflows, and source-module truth. The World Pack only changes labels, terminology, accent, context banner, and safe default UX.`
+
+export const buildWorldAppHomeTileId = ({ packId = '', bindingId = '' } = {}) =>
+  `${WORLD_APP_HOME_TILE_ID_PREFIX}${normalizeTileIdPart(packId, 'pack')}_${normalizeTileIdPart(bindingId, 'app')}`
+
+export const isWorldAppHomeTileId = (tileId) =>
+  typeof tileId === 'string' && tileId.startsWith(WORLD_APP_HOME_TILE_ID_PREFIX)
 
 export const buildWorldAppBindingRows = ({ pack } = {}) => {
   const normalizedPack = normalizeWorldPack(pack || {})
@@ -63,6 +102,102 @@ export const buildWorldAppBindingRows = ({ pack } = {}) => {
     })
 }
 
+export const buildWorldAppEntryRows = ({ pack } = {}) =>
+  buildWorldAppBindingRows({ pack })
+    .filter((row) => row.launchable)
+    .map((row) => {
+      const presentation = resolveWorldAppPresentation(row)
+      const label = normalizeText(row.title, row.targetLabel || 'World App', 120)
+      const packLabel = normalizeText(row.packName, row.packTitle || row.packId, 120)
+      const description = normalizeText(
+        row.description,
+        `World Pack entry for ${row.targetLabel || row.moduleKey || 'module'}.`,
+        280,
+      )
+      return {
+        id: buildWorldAppHomeTileId({ packId: row.packId, bindingId: row.id }),
+        bindingId: row.id,
+        label,
+        labelZh: label,
+        labelEn: label,
+        categoryZh: 'World',
+        categoryEn: 'World',
+        desc: description,
+        descZh: description,
+        descEn: description,
+        icon: presentation.icon,
+        accent: presentation.accent,
+        toneClass: `accent-${presentation.accent}`,
+        route: row.route,
+        routeQuery: { ...row.query },
+        entryKind: 'world_app',
+        worldAppEntry: true,
+        worldPackId: row.packId,
+        worldPackTitle: row.packTitle,
+        worldPackName: row.packName,
+        worldPackLabel: packLabel,
+        worldAppBindingId: row.id,
+        archetype: row.archetype,
+        moduleKey: row.moduleKey,
+        targetLabel: row.targetLabel,
+        terminology: row.terminology,
+      }
+    })
+
+export const buildActiveWorldAppEntryRows = ({ systemStore } = {}) =>
+  buildWorldAppEntryRows({ pack: resolveActiveWorldPack(systemStore) })
+
+export const resolveWorldAppUxContext = ({
+  systemStore,
+  moduleKey = '',
+  routeQuery = {},
+  expectedArchetypes = [],
+} = {}) => {
+  const activePack = resolveActiveWorldPack(systemStore)
+  if (!activePack) return null
+  const normalizedPack = normalizeWorldPack(activePack)
+  const binding = findWorldAppBindingForModule({
+    pack: normalizedPack,
+    moduleKey,
+    routeQuery,
+  })
+  if (!binding) return null
+  const allowedArchetypes = Array.isArray(expectedArchetypes)
+    ? expectedArchetypes.filter((item) => typeof item === 'string' && item.trim())
+    : []
+  if (allowedArchetypes.length > 0 && !allowedArchetypes.includes(binding.archetype)) return null
+
+  const presentation = resolveWorldAppPresentation(binding)
+  const targetLabel = MODULE_TARGET_LABELS[binding.moduleKey] || binding.moduleKey || 'Module'
+  return {
+    packId: normalizedPack.id,
+    packTitle: normalizedPack.title,
+    packName: normalizedPack.name,
+    bindingId: binding.id,
+    bindingTitle: binding.title,
+    description: binding.description,
+    archetype: binding.archetype,
+    moduleKey: binding.moduleKey,
+    route: binding.route || '',
+    routeQuery: {
+      worldPack: normalizedPack.id,
+      worldApp: binding.id,
+    },
+    targetLabel,
+    icon: presentation.icon,
+    accent: presentation.accent,
+    terminology: binding.terminology || {},
+    uxPackage: {
+      labels: true,
+      terminology: true,
+      accent: true,
+      contextBanner: true,
+      safeDefaults: true,
+    },
+    boundaryCopy: buildWorldAppUxBoundaryCopy(targetLabel),
+  }
+}
+
 export const findWorldAppBindingForModule = ({ pack, moduleKey = '', routeQuery = {} } = {}) => {
   const normalizedPack = normalizeWorldPack(pack || {})
   const requestedPackId = normalizeQueryValue(routeQuery.worldPack)
@@ -82,26 +217,17 @@ export const findWorldAppBindingForModule = ({ pack, moduleKey = '', routeQuery 
 }
 
 export const resolveShoppingWorldAppContext = ({ systemStore, routeQuery = {} } = {}) => {
-  const activePack = resolveActiveWorldPack(systemStore)
-  if (!activePack) return null
-  const normalizedPack = normalizeWorldPack(activePack)
-  const binding = findWorldAppBindingForModule({
-    pack: normalizedPack,
+  const context = resolveWorldAppUxContext({
+    systemStore,
     moduleKey: 'shopping',
     routeQuery,
+    expectedArchetypes: ['marketplace'],
   })
-  if (!binding || binding.archetype !== 'marketplace') return null
+  if (!context) return null
 
   return {
-    packId: normalizedPack.id,
-    packTitle: normalizedPack.title,
-    packName: normalizedPack.name,
-    bindingId: binding.id,
-    bindingTitle: binding.title,
-    description: binding.description,
-    archetype: binding.archetype,
-    moduleKey: binding.moduleKey,
-    route: binding.route || '/shopping',
+    ...context,
+    route: context.route || '/shopping',
     serviceKey: SHOPPING_MARKETPLACE_RULE.serviceKey,
     serviceLabel: SHOPPING_MARKETPLACE_RULE.serviceLabel,
     categoryKey: SHOPPING_MARKETPLACE_RULE.categoryKey,
@@ -121,4 +247,3 @@ export const buildShoppingWorldAppFilterQuery = ({ context, currentQuery = {} } 
     category: context.categoryKey,
   }
 }
-

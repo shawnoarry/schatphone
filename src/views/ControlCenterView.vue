@@ -411,6 +411,15 @@ const relationshipEventSafetyNotes = (event = {}) => [
           'Metric effect follows the relationship runtime status shown here.',
           'Metric effect follows the relationship runtime status shown here.',
         ),
+  event.relationshipGate?.mode
+    ? t(
+        `Classification gate: ${event.relationshipGate.mode} / ${event.relationshipGate.primaryRelationshipCategoryId || 'ordinary_acquaintance'} / ${event.relationshipGate.reason || 'matched'}`,
+        `Classification gate: ${event.relationshipGate.mode} / ${event.relationshipGate.primaryRelationshipCategoryId || 'ordinary_acquaintance'} / ${event.relationshipGate.reason || 'matched'}`,
+      )
+    : t(
+        'No relationship classification gate was recorded for this fact.',
+        'No relationship classification gate was recorded for this fact.',
+      ),
   t(
     'Source cleanup remains delegated to the owning module handlers.',
     'Source cleanup remains delegated to the owning module handlers.',

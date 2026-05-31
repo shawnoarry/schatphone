@@ -135,6 +135,7 @@ const submitTransfer = () => {
 
   if (relationshipTarget) {
     recordWalletSharedTransferRelationshipFact({
+      chatStore,
       relationshipRuntimeStore,
       transaction: created,
       target: relationshipTarget,

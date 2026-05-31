@@ -16,6 +16,12 @@ import {
   useRelationshipRuntimeStore,
 } from '../stores/relationshipRuntime'
 import { callAI } from '../lib/ai'
+import {
+  RELATIONSHIP_CLASSIFICATION_SOURCE,
+  buildRelationshipClassificationRegistry,
+  normalizeInitialRelationshipSeed,
+} from '../lib/relationship-classification-schema'
+import { classifyRelationshipLabel } from '../lib/relationship-label-classifier'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import {
   CONTACTS_ENTITY_TYPES,
@@ -184,6 +190,15 @@ const detailEditDraft = reactive({
 const memorySourceFilter = ref('all')
 const memorySortMode = ref('recent')
 const memoryReviewDraft = ref('')
+const relationshipPremiseDraft = reactive({
+  relationshipLabelText: '',
+  relationshipLabelNote: '',
+  initialRelationshipSeed: normalizeInitialRelationshipSeed(),
+  primaryRelationshipCategoryId: '',
+  relationshipModifierIds: [],
+})
+const relationshipClassificationBusy = ref(false)
+const pendingClassificationSuggestion = ref(null)
 
 const showUiNoticeType = ref('')
 const showUiNoticeMessage = ref('')
@@ -401,6 +416,166 @@ const npcProfiles = npcRoleProfiles
 const selectedProfile = computed(
   () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
 )
+
+const activeWorldRelationshipRegistry = computed(() => {
+  const activePackId = user.value.activeWorldPackId || 'default_world'
+  const activePack = Array.isArray(user.value.worldPacks)
+    ? user.value.worldPacks.find((pack) => pack.id === activePackId)
+    : null
+  return buildRelationshipClassificationRegistry({
+    worldCategories: activePack?.relationshipCategories || [],
+    worldModifiers: activePack?.relationshipModifiers || [],
+  })
+})
+const relationshipCategoryOptions = computed(() => activeWorldRelationshipRegistry.value.categories)
+const relationshipModifierOptions = computed(() => activeWorldRelationshipRegistry.value.modifiers)
+
+const resetRelationshipPremiseDraft = (profile = selectedProfile.value) => {
+  relationshipPremiseDraft.relationshipLabelText = profile?.relationshipLabelText || ''
+  relationshipPremiseDraft.relationshipLabelNote = profile?.relationshipLabelNote || ''
+  relationshipPremiseDraft.initialRelationshipSeed = normalizeInitialRelationshipSeed(
+    profile?.initialRelationshipSeed,
+  )
+  relationshipPremiseDraft.primaryRelationshipCategoryId = profile?.primaryRelationshipCategoryId || ''
+  relationshipPremiseDraft.relationshipModifierIds = Array.isArray(profile?.relationshipModifierIds)
+    ? profile.relationshipModifierIds.filter((id) =>
+        activeWorldRelationshipRegistry.value.modifierById.has(id),
+      )
+    : []
+  pendingClassificationSuggestion.value = null
+}
+
+const toggleRelationshipModifierDraft = (modifierId) => {
+  const current = new Set(relationshipPremiseDraft.relationshipModifierIds)
+  if (current.has(modifierId)) current.delete(modifierId)
+  else current.add(modifierId)
+  relationshipPremiseDraft.relationshipModifierIds = [...current].filter((id) =>
+    activeWorldRelationshipRegistry.value.modifierById.has(id),
+  )
+}
+
+const saveRelationshipPremiseDraft = (
+  source = RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED,
+) => {
+  const profile = selectedProfile.value
+  if (!profile?.id) return
+  chatStore.updateRoleRelationshipPremise(profile.id, {
+    relationshipLabelText: relationshipPremiseDraft.relationshipLabelText,
+    relationshipLabelNote: relationshipPremiseDraft.relationshipLabelNote,
+    initialRelationshipSeed: relationshipPremiseDraft.initialRelationshipSeed,
+  })
+  const result = chatStore.saveRoleRelationshipClassification(
+    profile.id,
+    {
+      primaryRelationshipCategoryId: relationshipPremiseDraft.primaryRelationshipCategoryId,
+      relationshipModifierIds: relationshipPremiseDraft.relationshipModifierIds,
+      classificationConfidence:
+        source === RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED ? 'high' : '',
+      classificationExplanation:
+        source === RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED
+          ? 'User manually edited relationship classification in Contacts.'
+          : '',
+    },
+    {
+      source,
+      force: source === RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED,
+    },
+  )
+  if (!result.ok) {
+    setUiNotice(
+      'warning',
+      t('关系分类未保存。', 'Relationship classification was not saved.'),
+    )
+    return
+  }
+  resetRelationshipPremiseDraft(chatStore.getRoleProfileById(profile.id))
+  setUiNotice('success', t('关系前提已保存。', 'Relationship premise saved.'))
+}
+
+const runRelationshipClassification = async () => {
+  const profile = selectedProfile.value
+  if (!profile?.id || relationshipClassificationBusy.value) return
+  relationshipClassificationBusy.value = true
+  pendingClassificationSuggestion.value = null
+  try {
+    chatStore.updateRoleRelationshipPremise(profile.id, {
+      relationshipLabelText: relationshipPremiseDraft.relationshipLabelText,
+      relationshipLabelNote: relationshipPremiseDraft.relationshipLabelNote,
+      initialRelationshipSeed: relationshipPremiseDraft.initialRelationshipSeed,
+    })
+    const result = await classifyRelationshipLabel({
+      profile: chatStore.getRoleProfileById(profile.id),
+      settings: settings.value,
+      registry: activeWorldRelationshipRegistry.value,
+    })
+    if (!result.ok) {
+      setUiNotice(
+        'error',
+        t('关系分类解析失败。', 'Relationship classification parsing failed.'),
+      )
+      return
+    }
+    if (result.requiresConfirmation) {
+      pendingClassificationSuggestion.value = result
+      setUiNotice('warning', t('AI 分类需要确认。', 'AI classification needs confirmation.'))
+      return
+    }
+    const saved = chatStore.saveRoleRelationshipClassification(profile.id, result.classification, {
+      source: result.saveSource,
+    })
+    if (!saved.ok) {
+      setUiNotice(
+        'warning',
+        saved.reason === 'user_edited_protected'
+          ? t(
+              '已保留用户手动分类，AI 未覆盖。',
+              'User-edited classification was kept; AI did not overwrite it.',
+            )
+          : t('AI 分类未保存。', 'AI classification was not saved.'),
+      )
+      return
+    }
+    resetRelationshipPremiseDraft(chatStore.getRoleProfileById(profile.id))
+    setUiNotice('success', t('AI 关系分类已保存。', 'AI relationship classification saved.'))
+  } catch {
+    setUiNotice('error', t('AI 分类请求失败。', 'AI classification request failed.'))
+  } finally {
+    relationshipClassificationBusy.value = false
+  }
+}
+
+const confirmPendingRelationshipClassification = async () => {
+  const profile = selectedProfile.value
+  const suggestion = pendingClassificationSuggestion.value
+  if (!profile?.id || !suggestion?.classification) return
+  const ok = await confirmDialog({
+    title: t('确认关系分类', 'Confirm relationship classification'),
+    message:
+      suggestion.classification.classificationExplanation ||
+      suggestion.classification.primaryRelationshipCategoryId,
+    confirmText: t('保存分类', 'Save classification'),
+    cancelText: t('取消', 'Cancel'),
+  })
+  if (!ok) return
+  const saved = chatStore.saveRoleRelationshipClassification(profile.id, suggestion.classification, {
+    source: RELATIONSHIP_CLASSIFICATION_SOURCE.AI_CONFIRMED,
+  })
+  if (!saved.ok) {
+    setUiNotice(
+      'warning',
+      saved.reason === 'user_edited_protected'
+        ? t(
+            '已保留用户手动分类，AI 未覆盖。',
+            'User-edited classification was kept; AI did not overwrite it.',
+          )
+        : t('AI 分类未保存。', 'AI classification was not saved.'),
+    )
+    return
+  }
+  pendingClassificationSuggestion.value = null
+  resetRelationshipPremiseDraft(chatStore.getRoleProfileById(profile.id))
+  setUiNotice('success', t('AI 分类已确认保存。', 'AI classification confirmed and saved.'))
+}
 
 const relationshipMemoryReviewSummaryText = (memory = {}) => {
   const base =
@@ -1749,6 +1924,12 @@ watch(
 )
 
 watch(
+  () => selectedProfile.value?.id,
+  () => resetRelationshipPremiseDraft(),
+  { immediate: true },
+)
+
+watch(
   visibleMemoryGroups,
   (groups) => {
     if (groups.some((memory) => memory.memoryKey === selectedMemoryKey.value)) return
@@ -1785,6 +1966,7 @@ onBeforeUnmount(() => {
     <p
       v-if="showUiNoticeMessage"
       class="contacts-notice px-4 py-2 text-[11px]"
+      data-testid="contacts-relationship-classification-status"
       :class="
         showUiNoticeType === 'error'
           ? 'text-red-600'
@@ -2487,10 +2669,15 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <section class="contacts-detail-section contacts-relationship-panel">
+          <section
+            class="contacts-detail-section contacts-relationship-panel"
+            data-testid="contacts-relationship-runtime-snapshot"
+          >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('关系快照', 'Relationship Snapshot') }}</p>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">
+                  {{ t('当前关系', 'Current relationship') }}
+                </p>
                 <p class="text-sm font-semibold">
                   {{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}
                 </p>
@@ -2505,6 +2692,219 @@ onBeforeUnmount(() => {
                 <span>{{ t('张力', 'Tension') }} {{ selectedRelationshipSnapshot?.metrics?.tension ?? 10 }}</span>
               </div>
             </div>
+            <div class="contacts-runtime-audit-grid">
+              <div>
+                <p class="contacts-role-hub-label">{{ t('Milestones', 'Milestones') }}</p>
+                <p class="contacts-role-hub-detail">
+                  {{
+                    selectedRelationshipSnapshot?.milestones?.length
+                      ? selectedRelationshipSnapshot.milestones
+                          .map((item) => (typeof item === 'string' ? item : item.label || item.id))
+                          .filter(Boolean)
+                          .join(' · ')
+                      : t('暂无里程碑', 'No milestones yet')
+                  }}
+                </p>
+              </div>
+              <div>
+                <p class="contacts-role-hub-label">{{ t('Recent facts', 'Recent facts') }}</p>
+                <p class="contacts-role-hub-detail">
+                  {{
+                    selectedRelationshipSnapshot?.recentEvents?.length
+                      ? selectedRelationshipSnapshot.recentEvents
+                          .slice(0, 2)
+                          .map((event) => event.summary || relationshipFactTypeLabel(event.factType))
+                          .join(' · ')
+                      : t('暂无近期关系事件', 'No recent relationship facts')
+                  }}
+                </p>
+              </div>
+              <div>
+                <p class="contacts-role-hub-label">{{ t('Primary memory', 'Primary memory') }}</p>
+                <p class="contacts-role-hub-detail">
+                  {{
+                    relationshipMemoryReviewSummaryText(selectedRelationshipSnapshot?.primaryMemory) ||
+                    t('暂无关系记忆', 'No relationship memory yet')
+                  }}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="contacts-detail-section contacts-relationship-premise space-y-3"
+            data-testid="contacts-relationship-premise-form"
+          >
+            <div
+              class="flex items-start justify-between gap-3"
+              data-testid="contacts-relationship-premise"
+            >
+              <div>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">
+                  {{ t('关系前提', 'Relationship premise') }}
+                </p>
+                <h3 class="text-sm font-bold">
+                  {{
+                    relationshipPremiseDraft.primaryRelationshipCategoryId ||
+                    t('未分类', 'Unclassified')
+                  }}
+                </h3>
+                <p class="text-[11px] text-gray-500">
+                  {{
+                    selectedProfile?.classificationSource
+                      ? `${selectedProfile.classificationSource} / ${selectedProfile.classificationConfidence || 'unset'}`
+                      : t('尚未保存分类', 'No saved classification yet')
+                  }}
+                </p>
+                <p
+                  v-if="relationshipPremiseDraft.relationshipLabelText"
+                  class="text-[11px] text-gray-500"
+                >
+                  {{ relationshipPremiseDraft.relationshipLabelText }}
+                </p>
+                <p
+                  v-if="selectedProfile?.classificationUpdatedAt"
+                  class="text-[10px] text-gray-400"
+                >
+                  {{ formatRelationshipAuditTimestamp(selectedProfile.classificationUpdatedAt) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="contacts-small-action"
+                data-testid="contacts-relationship-ai-classify"
+                :disabled="relationshipClassificationBusy"
+                @click="runRelationshipClassification"
+              >
+                {{
+                  relationshipClassificationBusy
+                    ? t('分类中', 'Classifying')
+                    : t('AI 分类', 'AI classify')
+                }}
+              </button>
+            </div>
+
+            <label class="contacts-premise-field">
+              <span>{{ t('自由标签', 'Free label') }}</span>
+              <input
+                v-model="relationshipPremiseDraft.relationshipLabelText"
+                data-testid="contacts-relationship-label-input"
+                :placeholder="
+                  t(
+                    '例如：青梅竹马、白月光、狂热支持者',
+                    'Example: childhood friend, white moonlight, fanatic supporter',
+                  )
+                "
+              />
+            </label>
+
+            <label class="contacts-premise-field">
+              <span>{{ t('说明', 'Note') }}</span>
+              <textarea
+                v-model="relationshipPremiseDraft.relationshipLabelNote"
+                data-testid="contacts-relationship-note-input"
+                rows="3"
+                :placeholder="
+                  t(
+                    '解释这个关系前提；这不会直接编辑当前运行时数值。',
+                    'Explain the premise; this does not directly edit current runtime values.',
+                  )
+                "
+              />
+            </label>
+
+            <label class="contacts-premise-field">
+              <span>{{ t('主类别', 'Primary category') }}</span>
+              <select
+                v-model="relationshipPremiseDraft.primaryRelationshipCategoryId"
+                data-testid="contacts-relationship-category-select"
+              >
+                <option value="">{{ t('未分类', 'Unclassified') }}</option>
+                <option
+                  v-for="category in relationshipCategoryOptions"
+                  :key="category.id"
+                  :value="category.id"
+                >
+                  {{ category.label }} ({{ category.id }})
+                </option>
+              </select>
+            </label>
+
+            <div class="contacts-premise-modifiers">
+              <p>{{ t('修饰标签', 'Modifier tags') }}</p>
+              <label
+                v-for="modifier in relationshipModifierOptions"
+                :key="modifier.id"
+                class="contacts-premise-modifier"
+              >
+                <input
+                  type="checkbox"
+                  data-testid="contacts-relationship-modifier-checkbox"
+                  :data-modifier-id="modifier.id"
+                  :checked="relationshipPremiseDraft.relationshipModifierIds.includes(modifier.id)"
+                  @change="toggleRelationshipModifierDraft(modifier.id)"
+                />
+                <span>{{ modifier.label }}</span>
+              </label>
+            </div>
+
+            <div class="contacts-seed-grid">
+              <label
+                v-for="metricKey in ['affinity', 'trust', 'intimacy', 'tension', 'dependency']"
+                :key="metricKey"
+                class="contacts-premise-field"
+              >
+                <span>{{ metricKey }}</span>
+                <input
+                  v-model.number="relationshipPremiseDraft.initialRelationshipSeed[metricKey]"
+                  :data-testid="`contacts-relationship-seed-${metricKey}`"
+                  type="number"
+                  min="0"
+                  max="100"
+                />
+              </label>
+            </div>
+
+            <div
+              v-if="selectedProfile?.classificationExplanation"
+              class="contacts-classification-audit"
+              data-testid="contacts-relationship-classification-audit"
+            >
+              <p class="contacts-role-hub-label">{{ t('Classification audit', 'Classification audit') }}</p>
+              <p class="contacts-role-hub-detail">
+                {{ selectedProfile.classificationExplanation }}
+              </p>
+            </div>
+
+            <div
+              v-if="pendingClassificationSuggestion"
+              class="contacts-classification-confirm"
+              data-testid="contacts-relationship-confirm-ai"
+            >
+              <p class="text-[12px] font-semibold">
+                {{ pendingClassificationSuggestion.classification.primaryRelationshipCategoryId }}
+              </p>
+              <p class="text-[11px] text-gray-500">
+                {{ pendingClassificationSuggestion.classification.classificationExplanation }}
+              </p>
+              <button
+                type="button"
+                class="contacts-small-action"
+                data-testid="contacts-relationship-confirm-ai-save"
+                @click="confirmPendingRelationshipClassification"
+              >
+                {{ t('确认保存', 'Confirm save') }}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-relationship-manual-save"
+              @click="saveRelationshipPremiseDraft()"
+            >
+              {{ t('保存关系前提', 'Save relationship premise') }}
+            </button>
           </section>
 
           <section
@@ -3340,6 +3740,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 20px rgba(45, 63, 89, 0.06);
 }
 
+.contacts-runtime-audit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .contacts-metric-grid {
   display: grid;
   flex-shrink: 0;
@@ -3354,6 +3761,66 @@ onBeforeUnmount(() => {
   background: rgba(49, 64, 86, 0.07);
   padding: 4px 7px;
   white-space: nowrap;
+}
+
+.contacts-relationship-premise {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 255, 0.75)),
+    var(--contacts-surface-strong);
+}
+
+.contacts-premise-field {
+  display: grid;
+  gap: 5px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.contacts-premise-field input,
+.contacts-premise-field textarea,
+.contacts-premise-field select {
+  width: 100%;
+  border: 1px solid var(--contacts-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--contacts-text);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.contacts-premise-modifiers {
+  display: grid;
+  gap: 8px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.contacts-premise-modifier {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  border-radius: 10px;
+  background: rgba(49, 64, 86, 0.07);
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.contacts-seed-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.contacts-classification-audit,
+.contacts-classification-confirm {
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 251, 235, 0.85);
+  padding: 10px;
 }
 
 .contacts-linked-activity {
@@ -3770,5 +4237,15 @@ onBeforeUnmount(() => {
 
 .contacts-modal-scroll .grid button:active {
   transform: scale(0.985);
+}
+
+@media (max-width: 720px) {
+  .contacts-runtime-audit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contacts-seed-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

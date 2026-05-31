@@ -7,6 +7,7 @@ import AppearanceView from '../src/views/AppearanceView.vue'
 import HomeView from '../src/views/HomeView.vue'
 import LockScreen from '../src/views/LockScreen.vue'
 import SettingsView from '../src/views/SettingsView.vue'
+import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -24,6 +25,10 @@ const createTestRouter = () =>
       { path: '/gallery', component: DummyView },
       { path: '/control-center', component: DummyView },
       { path: '/book', component: DummyView },
+      { path: '/shopping', component: DummyView },
+      { path: '/food-delivery', component: DummyView },
+      { path: '/map', component: DummyView },
+      { path: '/calendar', component: DummyView },
     ],
   })
 
@@ -172,6 +177,266 @@ describe('App Store entry management UI', () => {
       homePage: '2',
       widgetEdit: '1',
       libraryTile: 'app_control_center',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store exposes active World Pack app entries for launch and Home placement', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?homePage=3')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const worldAppId = 'world_app_survival_city_survival_supply_board'
+    const worldAppItem = wrapper.find(`[data-testid="app-store-item-${worldAppId}"]`)
+    expect(worldAppItem.exists()).toBe(true)
+    expect(worldAppItem.text()).toContain('World')
+
+    await worldAppItem.trigger('click')
+    expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('World App')
+    const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
+    expect(worldMeta).toContain('Post-disaster survival city')
+    expect(worldMeta).toContain('Shopping')
+    expect(worldMeta).toContain('survival_supply_board')
+
+    await wrapper.find('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'survival_city',
+      worldApp: 'survival_supply_board',
+      from: 'home',
+      homePage: '3',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store opens directly to the World Apps section from WorldBook handoff', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=world&from=worldbook')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="app-store-filter-World"]').classes()).toContain('is-active')
+    expect(wrapper.find('[data-testid="app-store-item-world_app_survival_city_survival_supply_board"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('World App')
+
+    wrapper.unmount()
+  })
+
+  test('App Store routes active World Pack app entries into Home library placement', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?homePage=4')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const worldAppId = 'world_app_survival_city_survival_supply_board'
+    await wrapper.find(`[data-testid="app-store-item-${worldAppId}"]`).trigger('click')
+    await wrapper.find('[data-testid="app-store-add-home"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query).toMatchObject({
+      homePage: '4',
+      widgetEdit: '1',
+      libraryTile: worldAppId,
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store only exposes nonstandard template entries after confirmation', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?homePage=1')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const review = systemStore.buildWorldAppTemplateExtractionReview(
+      {
+        proposals: [
+          { templateId: 'transit_pass', title: 'Metro Pass', confidence: 'medium' },
+          { templateId: 'made_up_console', title: 'Made Up Console', confidence: 'high' },
+        ],
+      },
+      'default_world',
+    )
+
+    const worldAppId = buildWorldAppHomeTileId({
+      packId: 'default_world',
+      bindingId: review.confirmableProposals[0].bindingId,
+    })
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find(`[data-testid="app-store-item-${worldAppId}"]`).exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Made Up Console')
+
+    const confirmed = systemStore.confirmWorldAppTemplateProposal(
+      review.confirmableProposals[0],
+      'default_world',
+    )
+    expect(confirmed.ok).toBe(true)
+    await flushPromises()
+
+    const worldAppItem = wrapper.find(`[data-testid="app-store-item-${worldAppId}"]`)
+    expect(worldAppItem.exists()).toBe(true)
+    expect(worldAppItem.text()).toContain('Metro Pass')
+    expect(worldAppItem.text()).toContain('World')
+    expect(wrapper.text()).not.toContain('Made Up Console')
+
+    await worldAppItem.trigger('click')
+    expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('World App')
+    const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
+    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Map')
+    expect(worldMeta).toContain(confirmed.binding.id)
+
+    await wrapper.find('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/map')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'default_world',
+      worldApp: confirmed.binding.id,
+      from: 'home',
+      homePage: '1',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store opens confirmed reservation template entries into Calendar', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?homePage=1')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const confirmed = systemStore.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'reservation_board',
+        title: 'Ritual Calendar',
+        confidence: 'high',
+      },
+      'default_world',
+    )
+    expect(confirmed.ok).toBe(true)
+    const worldAppId = buildWorldAppHomeTileId({
+      packId: 'default_world',
+      bindingId: confirmed.binding.id,
+    })
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const worldAppItem = wrapper.get(`[data-testid="app-store-item-${worldAppId}"]`)
+    expect(worldAppItem.text()).toContain('Ritual Calendar')
+    expect(worldAppItem.text()).toContain('World')
+
+    await worldAppItem.trigger('click')
+    const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
+    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Calendar')
+    expect(worldMeta).toContain(confirmed.binding.id)
+
+    await wrapper.find('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/calendar')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'default_world',
+      worldApp: confirmed.binding.id,
+      from: 'home',
+      homePage: '1',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store opens confirmed dispatch template entries into Food Delivery', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?homePage=1')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const confirmed = systemStore.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'dispatch_board',
+        title: 'Rescue Desk',
+        confidence: 'high',
+      },
+      'default_world',
+    )
+    expect(confirmed.ok).toBe(true)
+    const worldAppId = buildWorldAppHomeTileId({
+      packId: 'default_world',
+      bindingId: confirmed.binding.id,
+    })
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const worldAppItem = wrapper.get(`[data-testid="app-store-item-${worldAppId}"]`)
+    expect(worldAppItem.text()).toContain('Rescue Desk')
+    expect(worldAppItem.text()).toContain('World')
+
+    await worldAppItem.trigger('click')
+    const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
+    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Food Delivery')
+    expect(worldMeta).toContain(confirmed.binding.id)
+
+    await wrapper.find('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'default_world',
+      worldApp: confirmed.binding.id,
+      from: 'home',
+      homePage: '1',
     })
 
     wrapper.unmount()

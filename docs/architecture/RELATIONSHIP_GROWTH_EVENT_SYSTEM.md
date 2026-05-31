@@ -1,6 +1,6 @@
 # Relationship Growth Event System / 好感度、关系进展与角色成长事件系统
 
-Updated: 2026-05-20
+Updated: 2026-05-31
 
 ## 1. Purpose
 
@@ -51,6 +51,10 @@ Recommended ownership:
 - Contacts owns the global role archive, visible role identity, role detail semantics, and destructive relationship management.
 - Chat Directory owns Chat-side role binding and service-account entry management.
 - Manually authored role-detail notes may live in Contacts or Chat-side compatibility fields, but current relationship progress must remain owned by `relationshipRuntimeStore`.
+- Contacts role profiles own profile-side relationship premise/classification fields such as `relationshipLabelText`, `relationshipLabelNote`, `initialRelationshipSeed`, `primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata.
+- Contacts detail may render the current relationship runtime snapshot first, but that display is read-only current truth from `relationshipRuntimeStore`; editable premise fields remain profile-side context.
+- Chat owns confirmed social/channel state such as pending friend, blocked, or blocked-by-role status after the Chat social shell lands.
+- Generated social events such as role-initiated friend requests or blocks must be reviewed/audited through event runtime before they mutate Chat channel state.
 - WorldBook owns worldview, lore, knowledge points, and world-specific rule inputs.
 - Map, Shopping, Food Delivery, Wallet, Phone, Calendar, Gallery, and Assets may submit structured facts through adapters.
 - World Hub reads, reviews, and later adjusts runtime state, but should not become the main data entry surface for role/world records.
@@ -61,6 +65,7 @@ Do not:
 - Let AI directly mutate affinity/stage values without a local rule or user confirmation.
 - Let module adapters bypass the shared event engine for random or condition-driven relationship changes.
 - Let every module create its own standalone long-term memory for the same life event when a shared memory summary would be enough.
+- Let Chat or Contacts directly apply generated friend/block social events without the future event-runtime review seam.
 
 ## 4. Core Data Concepts
 
@@ -79,6 +84,13 @@ Recommended concepts for the first implementation:
 - `relationshipEvents`: interpreted effects such as affinity increase, trust decrease, stage candidate, milestone candidate, growth trait update.
 - `memoryKey`: optional shared key that lets multiple low-impact facts point at one life event.
 - `memoryAggregate`: a compact runtime summary built from several applied facts that share the same `memoryKey`.
+- `relationshipLabelText` and `relationshipLabelNote`: profile-side premise prose saved on the role profile.
+- `primaryRelationshipCategoryId` and `relationshipModifierIds`: stored profile-side classification fields intended to give event/runtime rules stable semantic context without rereading raw prose.
+- `classificationSource` and `classificationConfidence`: audit fields that explain whether the stored classification came from AI, user confirmation, manual editing, or a world template.
+- Relationship-label AI classification goes through `src/lib/ai.js` and shared JSON parsing. High-confidence suggestions can be saved as `ai_auto`; medium/low-confidence suggestions must be confirmed before saving as `ai_confirmed`; `user_edited` classifications are protected from silent AI or world-template overwrite.
+- Contacts manual relationship-premise saves use `classificationSource = user_edited`; AI classify in Contacts may auto-save high-confidence suggestions, must confirm medium/low-confidence suggestions, and must surface protected user-edited results without overwriting them.
+- `relationshipGate`: optional runtime fact audit metadata produced from saved classification fields only. It records gate decision, mode, reason, category, modifiers, and classification audit fields; it must not copy or depend on raw `relationshipLabelText` or `relationshipLabelNote`.
+- high-risk gate preset: a named local helper contract such as `romance_confession`, `relationship_confirmation`, or `jealous_boundary` that future event packs may reference instead of copying category/modifier rules.
 
 Use numeric values for computation, but show user-facing summaries as plain language.
 
@@ -89,7 +101,7 @@ Standard flow:
 1. A module records a normal domain action.
 2. The module adapter submits a relationship-relevant fact to the shared event system.
 3. The event engine checks settings, module enablement, world context, conditions, cooldowns, and caps.
-4. A relationship adapter interprets the fact into a small proposed effect.
+4. A relationship adapter may attach saved-classification gate context, then interprets the fact into a small proposed effect.
 5. Safe low-impact effects may be written automatically if the user enabled the runtime.
 6. Major effects become pending confirmations or World Hub review items.
 7. Runtime can group compatible applied facts under one `memoryKey`.
@@ -117,6 +129,7 @@ Relationship events must be world-aware.
 Recommended model:
 
 - WorldBook remains distributed and immersive: users can still add world/person/role material from the most natural module.
+- World Pack schema may add explicit relationship category/modifier registry entries as data-only extensions; the base category set remains fixed.
 - A compact world context resolver converts active worldview, knowledge points, and role bindings into IDs/tags.
 - A relationship event pack is generated or selected for the active world context.
 - Runtime uses the local pack by default instead of calling the API for every event.
@@ -132,6 +145,7 @@ Examples:
 AI/API policy:
 
 - API may be used to generate or refresh a world-specific relationship event pack.
+- API may classify a saved relationship label only through the relationship-label classifier seam; this helper returns a normalized suggestion and save policy, not a runtime event decision.
 - Routine runtime triggering should use local rules, local packs, and local facts.
 - API should not be required for every affinity update.
 - Logs should store compact `worldContextId`, `eventPackId`, and `variantId`, not full raw WorldBook text.
@@ -156,6 +170,7 @@ Current product boundary:
 
 - Calendar can safely contribute confirmed shared events because the user has already acknowledged the event.
 - Gallery and other media-driven memory facts should stay optional and deferred until image sources are naturally produced and the save flow is low-friction.
+- Chat friend/block social events are also deferred until the Chat shell lands. When implemented, Chat should own confirmed channel state, Contacts should display snapshots only, and relationship runtime should receive confirmed facts or memories only after the social event is accepted.
 
 ## 8. Module Adapter Requirements
 
@@ -164,6 +179,7 @@ Each adapter should submit facts, not own relationship math.
 Candidate facts by module:
 
 - Chat: meaningful conversation turn, apology, praise, conflict, promise, confession, long silence, reply streak.
+- Chat social/channel events: role-initiated friend request, accepted friend request, user block, role blocks user, unblock. These are future events and need review/audit before applied state changes.
 - Contacts: profile binding, relationship note update, manual stage note.
 - Map: shared trip, location check-in, exploration discovery, route delay, visit frequency, unlocked place.
 - Shopping: gift bought, gift delivered, favorite category discovered, order returned.
@@ -259,6 +275,8 @@ Landed expanded adapter batch:
 - Map can record shared-route relationship facts when the user selects a companion and acknowledges an arrived trip.
 - Wallet can record transfer or shared-expense relationship facts when the user binds a manual virtual transfer to an existing Chat contact.
 - Calendar can record confirmed-event relationship facts when the user explicitly links an acknowledged event to an existing Chat contact.
+- Current low-impact adapter facts attach soft-reference `relationshipGate` metadata from saved profile category/modifier classification. The metadata is audit context and still allows the fact.
+- High-risk hard-gate helper behavior supports block/confirm/allow decisions through named presets, but no new high-impact romance/conflict automation is enabled by the current adapter batch.
 - All new adapters reuse `src/lib/relationship-fact-adapters.js` and source-level dedupe.
 - Phone, Map, Wallet, and Calendar still own their own call, trip, ledger, and schedule records; relationship runtime receives compact facts only.
 - Regression coverage exists in `tests/phone-view.test.js`, `tests/wallet-view.test.js`, `tests/map-view-information-architecture.test.js`, `tests/calendar-relationship-fact-view.test.js`, and `tests/relationship-fact-adapters.test.js`.
@@ -281,6 +299,7 @@ Landed:
 - `ControlCenterView.vue` now includes a Relationship Runtime review panel.
 - The panel shows relationship entity count, event count, pending effect count, runtime enabled state, top relationship snapshots, and recent relationship facts.
 - It can apply or dismiss `pending_confirmation` relationship events.
+- It can show relationship classification gate audit metadata read-only on relationship facts.
 - It still does not offer freeform affinity, funds, unlock editing, or forced hidden mutations.
 
 Remaining:
@@ -310,6 +329,7 @@ Avoid next:
 
 - Do not add high-impact automatic romance or conflict events before the store, logs, and user confirmation model exist.
 - Do not put relationship controls directly into Chat as the first implementation.
+- Do not implement role-initiated friend/block events until the Chat shell and social-event review seam are settled.
 - Do not make World Hub visible by default for all users.
 - Do not make Gallery or photo-memory intake part of the main relationship loop until the product can produce or capture image context with near-zero user effort.
 
@@ -318,6 +338,8 @@ Avoid next:
 Current reusable interface:
 
 - `recordRelationshipFact(input)`: module adapters submit facts with target, source module or id, fact type, summary, metric deltas, milestone, growth traits, world context, optional `memoryKey`, and optional confirmation requirement.
+- `relationshipGate`: `recordRelationshipFact(input)` persists normalized gate metadata and respects `block` by dismissing without applying effects, and `confirm` by keeping the fact pending until review.
+- `buildRelationshipFactGateFromPreset(input)`: future high-risk event packs can build hard-gate metadata from a preset id while still reading saved role-profile category/modifier fields only.
 - `findEventBySource(sourceModule, sourceId)`: module adapters can dedupe imported facts before applying relationship effects.
 - `listMemoryAggregatesForTarget(target)`: runtime can group multiple applied facts under one shared memory summary when they point to the same `memoryKey`.
 - UI consumers should filter from the full sorted aggregate list first and only then apply any visible-item cap; otherwise source-specific review flows can accidentally hide valid memory groups.
@@ -325,6 +347,7 @@ Current reusable interface:
 - Archived memories should behave like background history by default. They may remain inspectable and auditable, but callers must opt in before archived-only memories or their supporting events become headline summary content again.
 - `summarizeEntityForTarget(target)`: Contacts, World Hub, and future UI panels read a safe snapshot, including compact memory summaries for the target.
 - The runtime snapshot contract now includes `primaryMemory`, `totalMemoryCount`, `visibleMemoryCount`, `archivedMemoryCount`, `hasArchivedOnlyMemories`, `sourceRefs`, and `sourceModuleCounts`; UI consumers should prefer these canonical fields over rebuilding headline-memory or source-summary logic locally.
+- `memoryLimit` only caps the returned `memorySummaries` list. `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` are computed from the full target memory set, including targets with more than 50 memory groups or callers that request `memoryLimit: 0`.
 - Memory summaries now include primary-led `recallSummary` text for prompt/source recall and UI-facing review summaries for Contacts and World Hub. Downstream supporting facts enrich one life event without replacing the original memory headline or leaking source-audit labels into default user copy.
 - Consumer contract: use `recallSummary` only for Chat prompt context or explicit audit/review surfaces; ordinary Contacts and World Hub headline copy should use `reviewSummary` or a localized UI formatter, while Calendar relationship review may show source-audit labels because it is a focused confirmation surface.
 - `buildPromptContextForTarget(target)`: Chat reads compact context for role conversations without triggering an API call.

@@ -92,6 +92,7 @@ describe('chat avatar image source rendering', () => {
       sourceType: 'gallery',
       galleryAssetId: importedUserAvatar.assetId,
     }
+    systemStore.setChatAppearance({ messageLayout: 'wechat' })
 
     await router.push('/chat')
     await router.isReady()
@@ -109,6 +110,7 @@ describe('chat avatar image source rendering', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="chat-active-contact-avatar"]').attributes('src')).toBe(avatarUrl)
+    expect(wrapper.get('.chat-shell').classes()).toContain('chat-layout-wechat')
     expect(wrapper.get('[data-testid="chat-active-self-avatar"]').attributes('src')).toBe(
       'https://example.com/user-gallery-chat-avatar.png',
     )

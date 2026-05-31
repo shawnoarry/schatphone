@@ -57,6 +57,8 @@ These are already part of the current baseline and should not keep appearing as 
 - delivery route read-only UI handoff
 - completed-order Wallet downstream suggestion loop
 - many older Chat / Settings / Map display-only extraction slices
+- first World Pack app-binding and world UX package seams for Shopping, Food Delivery, Calendar, and Map
+- Appearance pack import/export and the guarded nonstandard-app template whitelist/review UI seam
 
 Those historical slices mattered, but they are no longer the best "what next?" answer.
 

@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
-import { useChatStore } from '../stores/chat'
+import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
@@ -48,6 +48,8 @@ import {
   resolveAvatarImageSourceUrl,
 } from '../lib/avatar-image-source-resolver'
 import {
+  findFoodDeliveryServicePreset,
+  findLogisticsServicePreset,
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
@@ -56,6 +58,7 @@ import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
 import ChatThreadMenuPanel from '../components/chat/ChatThreadMenuPanel.vue'
 import ChatUserActionPanel from '../components/chat/ChatUserActionPanel.vue'
 import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
+import ChatMessageRow from '../components/chat/ChatMessageRow.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,6 +172,9 @@ const MANUAL_PRIORITY_GUARD_MS = 1500
 const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
 const SAVE_FEEDBACK_DURATION_MS = 1200
 const MESSAGE_LONG_PRESS_MS = 380
+const SERVICE_ROUTE_FEEDBACK_SESSION_KEY = 'schatphone:chat-service-route-feedback'
+const SERVICE_ROUTE_FEEDBACK_MAX_AGE_MS = 10 * 60 * 1000
+const SERVICE_DIRECTORY_FILTERS = new Set(['all', 'unread', 'muted', 'folded', 'service', 'official'])
 const USER_MEDIA_KIND_IMAGE = 'image'
 const USER_MEDIA_KIND_GIF = 'gif'
 const USER_ACTION_FORM_NONE = ''
@@ -179,6 +185,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
 
 const inputMessage = ref('')
 const chatContainer = ref(null)
+const messageTextInputRef = ref(null)
 const userMediaInputRef = ref(null)
 const loadingSuggestions = ref(false)
 const suggestions = ref([])
@@ -202,11 +209,26 @@ const editingMessageId = ref('')
 const editingMessageRole = ref('user')
 const editingMessageOriginalText = ref('')
 const editingMessageDraftText = ref('')
+const editingMessageRichType = ref('')
+const editingMessageOriginalRichFields = ref({})
+const editingMessageRichFields = reactive({
+  label: '',
+  url: '',
+  note: '',
+  transcript: '',
+  durationSec: '',
+  amount: '',
+  currency: '',
+  alt: '',
+  caption: '',
+})
 const lastManualActionAt = ref(0)
 const threadSettingsSaved = ref(false)
 const threadIdentitySaved = ref(false)
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
+const serviceRouteFeedback = ref(null)
+const serviceNotificationActionFeedback = ref(null)
 let autoInvokeTimerId = null
 let threadSettingsSavedTimerId = null
 let threadIdentitySavedTimerId = null
@@ -282,6 +304,169 @@ const activeMessages = computed(() => {
   if (!activeChat.value) return []
   return chatStore.getMessagesByContactId(activeChat.value.id) || []
 })
+
+const activeChatSocialState = computed(() => chatStore.getContactChatSocialState(activeChat.value))
+
+const canActiveChatCommunicate = computed(() =>
+  activeChat.value ? chatStore.canContactSendMessages(activeChat.value) : false,
+)
+
+const activeChatAppearance = computed(() => settings.value.appearance?.chat || {})
+
+const activeChatMessageLayout = computed(() => activeChatAppearance.value.messageLayout || 'kakao')
+
+const chatShellClasses = computed(() => [
+  `chat-preset-${activeChatAppearance.value.presetId || 'kakao_immersive'}`,
+  `chat-layout-${activeChatMessageLayout.value}`,
+])
+
+const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
+
+const activeServiceStatusTags = computed(() => {
+  if (!isActiveServiceChat.value) return []
+  const tags = []
+  if (activeServiceIsMuted.value) {
+    tags.push({
+      key: 'muted',
+      label: t('免打扰', 'Muted'),
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    })
+  }
+  if (activeServiceIsFolded.value) {
+    tags.push({
+      key: 'folded',
+      label: t('已折叠', 'Folded'),
+      className: 'bg-slate-100 text-slate-700 border-slate-200',
+    })
+  }
+  return tags
+})
+
+const activeServiceHeaderStatus = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  const tagText = activeServiceStatusTags.value.map((tag) => tag.label).join(' · ')
+  if (tagText) return tagText
+  return activeChat.value?.kind === 'official'
+    ? t('官方订阅更新', 'Official updates')
+    : t('订阅更新', 'Subscription updates')
+})
+
+const activeServiceTemplateText = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  return activeChat.value?.serviceTemplate || t('未设置服务模板', 'Service template not set')
+})
+
+const activeServiceChannelPreview = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  const conversation = activeConversation.value
+  if (conversation?.lastMessage) return conversation.lastMessage
+  return activeChat.value?.bio || t('还没有订阅消息', 'No subscription messages yet')
+})
+
+const showActiveServiceEmptyState = computed(() =>
+  Boolean(isActiveServiceChat.value && activeMessages.value.length === 0),
+)
+
+const activeServiceEmptyStateTitle = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  return activeChat.value?.kind === 'official'
+    ? t('还没有公告', 'No notices yet')
+    : t('还没有订阅更新', 'No updates yet')
+})
+
+const activeServiceEmptyStateDetail = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  const name = activeChat.value?.name || t('服务号', 'Service account')
+  if (activeChat.value?.serviceTemplate) {
+    return t(
+      `${name} 的新更新会直接出现在这里。`,
+      `${name} updates will appear here.`,
+    )
+  }
+  return t('新的服务消息会直接出现在这条聊天里。', 'New service messages will appear in this chat.')
+})
+
+const activeServiceRouteFeedback = computed(() => {
+  if (!isActiveServiceChat.value || !serviceRouteFeedback.value) return null
+  return Number(serviceRouteFeedback.value.chatId) === Number(activeChat.value?.id)
+    ? serviceRouteFeedback.value
+    : null
+})
+
+const activeServiceRouteFeedbackDetail = computed(() => {
+  const feedback = activeServiceRouteFeedback.value
+  if (!feedback) return ''
+  const destination = feedback.destination || t('来源', 'source')
+  return t(
+    `刚刚已打开 ${destination}，回到 Chat 后可以继续围绕这条通知回复；Chat 不会改动来源记录。`,
+    `Opened ${destination}; you can keep replying around this notification in Chat. Chat did not change source records.`,
+  )
+})
+
+const activeServiceNotificationActionFeedback = computed(() =>
+  isActiveServiceChat.value ? serviceNotificationActionFeedback.value : null,
+)
+
+const activeServiceInteractionDock = computed(() => {
+  if (!isActiveServiceChat.value) return null
+  const routeFeedback = activeServiceRouteFeedback.value
+  if (routeFeedback) {
+    return {
+      type: 'source',
+      icon: 'fas fa-arrow-up-right-from-square',
+      title: t('已打开来源', 'Source opened'),
+      context: routeFeedback.title,
+      detail: activeServiceRouteFeedbackDetail.value,
+      primaryLabel: routeFeedback.route ? t('再次打开来源', 'Open again') : '',
+      dismissLabel: t('知道了', 'OK'),
+    }
+  }
+
+  const actionFeedback = activeServiceNotificationActionFeedback.value
+  if (!actionFeedback) return null
+  return {
+    type: actionFeedback.type || 'reply',
+    icon: actionFeedback.type === 'read' ? 'fas fa-check-double' : 'fas fa-reply',
+    title: actionFeedback.heading,
+    context: actionFeedback.title,
+    detail: actionFeedback.detail,
+    primaryLabel: '',
+    dismissLabel: t('知道了', 'OK'),
+  }
+})
+
+const activeServiceInteractionDockClasses = computed(() => {
+  if (activeServiceInteractionDock.value?.type === 'source') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-950'
+  }
+  if (activeServiceInteractionDock.value?.type === 'read') {
+    return 'border-slate-200 bg-white text-slate-800'
+  }
+  if (activeServiceInteractionDock.value?.type === 'sent') {
+    return 'border-emerald-200 bg-white text-emerald-950'
+  }
+  return 'border-sky-200 bg-sky-50 text-sky-950'
+})
+
+const pendingQuoteLabel = computed(() => {
+  if (pendingQuote.value?.sourceType === 'service_notification') {
+    return t('回复服务通知', 'Replying to notification')
+  }
+  return pendingQuote.value?.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user')
+})
+
+const messageInputPlaceholder = computed(() => {
+  if (!canActiveChatCommunicate.value) return t('当前状态只能查看历史', 'History only in this state')
+  if (isActiveServiceChat.value) {
+    const name = activeChat.value?.name || t('服务号', 'Service')
+    return t(`回复 ${name}...`, `Reply to ${name}...`)
+  }
+  return t('发送一条消息...', 'Send a message...')
+})
+
+const triggerReplyButtonLabel = computed(() =>
+  isActiveServiceChat.value ? t('服务号回复', 'Service Reply') : t('触发回复', 'Trigger Reply'),
+)
 
 const galleryCategoryLabel = (categoryKey) => {
   if (categoryKey === 'all') return t('全部', 'All')
@@ -429,6 +614,18 @@ const shoppingServiceLabel = (serviceKey) => {
   return t(preset.zh, preset.en)
 }
 
+const logisticsServiceLabel = (serviceKey) => {
+  const preset = findLogisticsServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
+const foodDeliveryServiceLabel = (serviceKey) => {
+  const preset = findFoodDeliveryServicePreset(serviceKey || '')
+  if (!preset?.key || preset.key !== serviceKey) return ''
+  return t(preset.zh, preset.en)
+}
+
 const normalizeShoppingCardPayload = (rawProduct = {}) => {
   const productId = typeof rawProduct.productId === 'string' ? rawProduct.productId.trim() : typeof rawProduct.id === 'string' ? rawProduct.id.trim() : ''
   const title = typeof rawProduct.title === 'string' ? rawProduct.title.trim() : ''
@@ -462,6 +659,149 @@ const normalizeShoppingCardPayload = (rawProduct = {}) => {
 const activeShoppingServiceKey = computed(() => activeChat.value?.shoppingServiceKey || '')
 const activeLogisticsServiceKey = computed(() => activeChat.value?.logisticsServiceKey || '')
 const activeFoodDeliveryServiceKey = computed(() => activeChat.value?.foodDeliveryServiceKey || '')
+
+const activeServiceSourceChips = computed(() => {
+  if (!isActiveServiceChat.value) return []
+  const chips = []
+  const shoppingLabel = shoppingServiceLabel(activeShoppingServiceKey.value)
+  const logisticsLabel = logisticsServiceLabel(activeLogisticsServiceKey.value)
+  const foodDeliveryLabel = foodDeliveryServiceLabel(activeFoodDeliveryServiceKey.value)
+
+  if (shoppingLabel) {
+    chips.push({
+      key: 'shopping',
+      label: t(`Shopping · ${shoppingLabel}`, `Shopping · ${shoppingLabel}`),
+      className: 'border-amber-100 bg-amber-50 text-amber-700',
+    })
+  }
+  if (logisticsLabel) {
+    chips.push({
+      key: 'logistics',
+      label: t(`Logistics · ${logisticsLabel}`, `Logistics · ${logisticsLabel}`),
+      className: 'border-sky-100 bg-sky-50 text-sky-700',
+    })
+  }
+  if (foodDeliveryLabel) {
+    chips.push({
+      key: 'food-delivery',
+      label: t(`Food Delivery · ${foodDeliveryLabel}`, `Food Delivery · ${foodDeliveryLabel}`),
+      className: 'border-orange-100 bg-orange-50 text-orange-700',
+    })
+  }
+
+  if (chips.length === 0) {
+    chips.push({
+      key: 'chat-only',
+      label: activeChat.value?.kind === 'official'
+        ? t('Chat 公众号', 'Chat official channel')
+        : t('Chat 服务号', 'Chat service channel'),
+      className: 'border-gray-100 bg-gray-50 text-gray-600',
+    })
+  }
+
+  return chips
+})
+
+const activeServiceLinkContract = computed(() =>
+  isActiveServiceChat.value && activeChat.value?.id
+    ? chatStore.getServiceAccountLinkContract(activeChat.value.id)
+    : null,
+)
+
+const activeServiceSourceNotificationPlan = computed(() =>
+  activeServiceLinkContract.value?.sourceNotificationPlan || null,
+)
+
+const activeServiceSourceScheduleRows = computed(() =>
+  Array.isArray(activeServiceSourceNotificationPlan.value?.rows)
+    ? activeServiceSourceNotificationPlan.value.rows
+    : [],
+)
+
+const serviceSourceScheduleRowLabel = (row = {}) => {
+  if (row.id === 'shopping_orders') return t('购物订单', 'Shopping orders')
+  if (row.id === 'shopping_logistics') return t('物流追踪', 'Logistics tracking')
+  if (row.id === 'food_delivery_orders') return t('外卖订单', 'Food Delivery orders')
+  return row?.label || t('服务更新', 'Service updates')
+}
+
+const serviceSourceScheduleRowScheduleLabel = (row = {}) => {
+  if (row.id === 'shopping_orders') return t('购物订单有进展时推送', 'Triggered by Shopping order events')
+  if (row.id === 'shopping_logistics') return t('物流节点变化时推送', 'Triggered by tracking milestones')
+  if (row.id === 'food_delivery_orders') return t('外卖订单变化时推送', 'Triggered by Food Delivery order events')
+  return row?.scheduleLabel || t('有新进展时推送', 'Event-driven updates')
+}
+
+const activeServiceSourceScheduleLabels = computed(() =>
+  activeServiceSourceScheduleRows.value.map((row) => serviceSourceScheduleRowLabel(row)).filter(Boolean),
+)
+
+const activeServiceSourceScheduleSummary = computed(() =>
+  activeServiceSourceScheduleLabels.value.length > 0
+    ? t(
+        `${activeServiceSourceScheduleLabels.value.join(' / ')} 有新进展时会推送到这里。`,
+        `${activeServiceSourceScheduleLabels.value.join(' / ')} can push event-driven updates into this Chat service thread.`,
+      )
+    : t(
+        '暂未连接来源 App，可作为普通订阅频道使用。',
+        'No source app is connected yet; this can still work as a regular subscription channel.',
+      ),
+)
+
+const activeServiceInboxPlacement = computed(() => {
+  if (!isActiveServiceChat.value) return ''
+  if (activeServiceIsFolded.value && activeServiceIsMuted.value) {
+    return t(
+      '已折叠且免打扰：不出现在消息首页，更新会安静留在服务号页和本会话。',
+      'Folded and muted: hidden from Messages, with updates kept quietly in Services and this thread.',
+    )
+  }
+  if (activeServiceIsFolded.value) {
+    return t(
+      '已折叠：不出现在 Messages 首页，历史和新通知仍保留在这里。',
+      'Folded: hidden from Messages while history and new notifications remain here.',
+    )
+  }
+  if (activeServiceIsMuted.value) {
+    return t(
+      '免打扰：更新会保留在 Chat，但不会抢占你的消息首页注意力。',
+      'Muted: updates stay in Chat without demanding attention in Messages.',
+    )
+  }
+  return t(
+    '显示在 Messages：新更新会像普通聊天一样进入消息首页。',
+    'Visible in Messages: new updates enter the message list like normal chats.',
+  )
+})
+
+const activeServiceThreadPromises = computed(() => {
+  if (!isActiveServiceChat.value) return []
+  return [
+    {
+      key: 'reply',
+      label: t('可直接回复', 'Reply in Chat'),
+      detail: canActiveChatCommunicate.value
+        ? t('回复会保留在这条会话里。', 'Replies stay in this thread.')
+        : t('当前状态只能查看历史。', 'This state is history-only.'),
+    },
+    {
+      key: 'source',
+      label: t('来源负责业务', 'Source owns records'),
+      detail: t(
+        '订单、物流和外卖状态仍由来源 App 处理。',
+        'Orders, delivery, and fulfillment stay in source apps.',
+      ),
+    },
+    {
+      key: 'history',
+      label: t('历史不会丢', 'History kept'),
+      detail: t(
+        '免打扰或折叠不会删除通知卡片。',
+        'Muting or folding never deletes notification cards.',
+      ),
+    },
+  ]
+})
 
 const shoppingPreviewProducts = computed(() =>
   (activeShoppingServiceKey.value
@@ -701,10 +1041,50 @@ const hasActiveMessageActions = computed(() => Boolean(activeActionMessage.value
 
 const normalizedChatSearchKeyword = computed(() => chatSearchKeyword.value.trim().toLowerCase())
 
+const chatMessageRequestContacts = computed(() =>
+  contactsForList.value.filter((contact) => chatStore.isChatMessageRequestContact(contact)),
+)
+
+const chatBlockedContacts = computed(() =>
+  contactsForList.value.filter((contact) => chatStore.isChatContactBlocked(contact)),
+)
+
+const chatFoldedSubscriptionContacts = computed(() =>
+  contactsForList.value.filter((contact) => chatStore.isChatSubscriptionFolded(contact)),
+)
+
+const chatFoldedSubscriptionUnreadTotal = computed(() =>
+  chatFoldedSubscriptionContacts.value.reduce((sum, contact) => {
+    const conversation = chatStore.getConversationByContactId(contact.id)
+    return sum + Math.max(0, Number(conversation?.unread) || 0)
+  }, 0),
+)
+
+const chatFoldedSubscriptionUnreadContactCount = computed(
+  () =>
+    chatFoldedSubscriptionContacts.value.filter((contact) => {
+      const conversation = chatStore.getConversationByContactId(contact.id)
+      return Math.max(0, Number(conversation?.unread) || 0) > 0
+    }).length,
+)
+
+const showFoldedSubscriptionsCard = computed(() =>
+  !normalizedChatSearchKeyword.value && chatFoldedSubscriptionContacts.value.length > 0,
+)
+
+const chatMainListContacts = computed(() =>
+  contactsForList.value.filter(
+    (contact) =>
+      !chatStore.isChatMessageRequestContact(contact) &&
+      !chatStore.isChatSubscriptionFolded(contact),
+  ),
+)
+
 const visibleChatContacts = computed(() => {
   const keyword = normalizedChatSearchKeyword.value
-  if (!keyword) return contactsForList.value
-  return contactsForList.value.filter((contact) => {
+  const source = keyword ? contactsForList.value : chatMainListContacts.value
+  if (!keyword) return source
+  return source.filter((contact) => {
     const conversation = chatStore.getConversationByContactId(contact.id)
     return [contact.name, contact.role, contact.bio, conversation?.lastMessage, conversation?.draft]
       .some((field) => typeof field === 'string' && field.toLowerCase().includes(keyword))
@@ -712,7 +1092,7 @@ const visibleChatContacts = computed(() => {
 })
 
 const chatHomeUnreadTotal = computed(() =>
-  contactsForList.value.reduce((sum, contact) => {
+  chatMainListContacts.value.reduce((sum, contact) => {
     const conversation = chatStore.getConversationByContactId(contact.id)
     return sum + Math.max(0, Number(conversation?.unread) || 0)
   }, 0),
@@ -720,6 +1100,12 @@ const chatHomeUnreadTotal = computed(() =>
 
 const chatHomeHeroTitle = computed(() => {
   if (contactsForList.value.length === 0) return t('先把对象带进 Chat', 'Bring someone into Chat')
+  if (chatMessageRequestContacts.value.length > 0) {
+    return t(
+      `${chatMessageRequestContacts.value.length} 条消息请求待处理`,
+      `${chatMessageRequestContacts.value.length} message requests pending`,
+    )
+  }
   if (chatHomeUnreadTotal.value > 0) {
     return t(`有 ${chatHomeUnreadTotal.value} 条未读消息`, `${chatHomeUnreadTotal.value} unread messages`)
   }
@@ -730,7 +1116,19 @@ const chatHomeHeroDetail = computed(() => {
   if (contactsForList.value.length === 0) {
     return t('从对象页绑定角色，或创建服务号与群聊。', 'Bind roles from Objects, or create services and groups.')
   }
-  return t('聊天默认保持沉浸，控制项放在会话内和更多页。', 'Chats stay immersive by default; controls live in threads and More.')
+  if (chatFoldedSubscriptionContacts.value.length > 0) {
+    return t(
+      '折叠的服务号收在服务号页里，消息页只保留正在看的会话。',
+      'Folded service subscriptions stay under Services, while Messages keeps active chats in view.',
+    )
+  }
+  if (chatBlockedContacts.value.length > 0) {
+    return t(
+      '已屏蔽会话会保留历史，解除后继续使用原记录。',
+      'Blocked chats keep history and continue from the same thread after unblock.',
+    )
+  }
+  return t('聊天默认保持沉浸，控制项放在会话内、我和设置里。', 'Chats stay immersive by default; controls live in threads, Me, and Settings.')
 })
 
 const contactHasThreadOrModuleAvatarOverride = (contactId) => {
@@ -825,8 +1223,16 @@ const canRetryAi = computed(() =>
       !activeAbortController.value,
   ),
 )
-const canRequestAiReply = computed(() => Boolean(activeChat.value && !loadingAI.value && !activeAbortController.value))
+const canRequestAiReply = computed(() =>
+  Boolean(activeChat.value && canActiveChatCommunicate.value && !loadingAI.value && !activeAbortController.value),
+)
 const isActiveServiceChat = computed(() => Boolean(activeChat.value && ['service', 'official'].includes(activeChat.value.kind || 'role')))
+const activeServiceIsMuted = computed(() =>
+  activeChat.value ? chatStore.isChatSubscriptionMuted(activeChat.value) : false,
+)
+const activeServiceIsFolded = computed(() =>
+  activeChat.value ? chatStore.isChatSubscriptionFolded(activeChat.value) : false,
+)
 const suggestionFeatureEnabled = computed(() => Boolean(activeAiPrefs.value.suggestedRepliesEnabled))
 const automationSettings = computed(() => settings.value.aiAutomation || null)
 const chatAutomationEnabled = computed(() =>
@@ -854,6 +1260,156 @@ const showUiNotice = (type, message, durationMs = 1800) => {
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
   }, durationMs)
+}
+
+const canUseSessionStorage = () =>
+  typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
+
+const normalizeServiceRouteFeedback = (raw = {}) => {
+  const chatId = Number(raw?.chatId)
+  const openedAt = Number(raw?.openedAt)
+  if (!Number.isFinite(chatId) || chatId <= 0) return null
+  if (!Number.isFinite(openedAt) || openedAt <= 0) return null
+  if (Date.now() - openedAt > SERVICE_ROUTE_FEEDBACK_MAX_AGE_MS) return null
+  return {
+    chatId,
+    openedAt,
+    title: typeof raw.title === 'string' ? raw.title.trim().slice(0, 120) : '',
+    destination: typeof raw.destination === 'string' ? raw.destination.trim().slice(0, 80) : '',
+    actionLabel: typeof raw.actionLabel === 'string' ? raw.actionLabel.trim().slice(0, 80) : '',
+    route: typeof raw.route === 'string' && raw.route.startsWith('/') ? raw.route : '',
+  }
+}
+
+const readServiceRouteFeedback = (chatId) => {
+  if (!canUseSessionStorage()) return null
+  try {
+    const raw = window.sessionStorage.getItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
+    if (!raw) return null
+    const feedback = normalizeServiceRouteFeedback(JSON.parse(raw))
+    if (!feedback || Number(feedback.chatId) !== Number(chatId)) return null
+    return feedback
+  } catch {
+    return null
+  }
+}
+
+const writeServiceRouteFeedback = (feedback) => {
+  const normalized = normalizeServiceRouteFeedback(feedback)
+  serviceRouteFeedback.value = normalized
+  if (!canUseSessionStorage()) return
+  try {
+    if (normalized) {
+      window.sessionStorage.setItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY, JSON.stringify(normalized))
+    } else {
+      window.sessionStorage.removeItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
+    }
+  } catch {
+    // Session feedback is best-effort UI state.
+  }
+}
+
+const clearServiceRouteFeedback = () => {
+  serviceRouteFeedback.value = null
+  if (!canUseSessionStorage()) return
+  try {
+    window.sessionStorage.removeItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
+  } catch {
+    // Session feedback is best-effort UI state.
+  }
+}
+
+const clearServiceNotificationActionFeedback = () => {
+  serviceNotificationActionFeedback.value = null
+}
+
+const dismissActiveServiceInteractionDock = () => {
+  if (activeServiceInteractionDock.value?.type === 'source') {
+    clearServiceRouteFeedback()
+    return
+  }
+  clearServiceNotificationActionFeedback()
+}
+
+const openActiveServiceInteractionDockPrimary = () => {
+  if (activeServiceInteractionDock.value?.type === 'source') {
+    reopenServiceRouteFeedbackSource()
+  }
+}
+
+const serviceNotificationDestinationLabel = (block = {}, path = '') => {
+  const sourceModule = typeof block.sourceModule === 'string' ? block.sourceModule : ''
+  if (path === '/food-delivery' || sourceModule.includes('food_delivery')) {
+    return t('Food Delivery', 'Food Delivery')
+  }
+  if (path === '/shopping' || sourceModule.includes('shopping') || sourceModule.includes('logistics')) {
+    return t('Shopping', 'Shopping')
+  }
+  if (path === '/calendar') return t('Calendar', 'Calendar')
+  if (path === '/wallet') return t('Wallet', 'Wallet')
+  return t('来源模块', 'Source')
+}
+
+const recordServiceNotificationReplyFeedback = (block = {}) => {
+  if (!activeChat.value || !isActiveServiceChat.value) return
+  serviceNotificationActionFeedback.value = {
+    type: 'reply',
+    title:
+      (typeof block.title === 'string' && block.title.trim()) ||
+      t('服务通知', 'Service notification'),
+    heading: t('已接上这条通知', 'Reply context ready'),
+    detail: t(
+      '输入框正在引用这条通知；发送后会留在当前聊天，不会改动来源记录。',
+      'The composer is quoting this notification; sending keeps it in this chat and does not change source records.',
+    ),
+  }
+}
+
+const recordServiceNotificationSentFeedback = (quotePayload = {}) => {
+  if (!activeChat.value || !isActiveServiceChat.value) return
+  serviceNotificationActionFeedback.value = {
+    type: 'sent',
+    title:
+      (typeof quotePayload.preview === 'string' && quotePayload.preview.trim()) ||
+      t('服务通知', 'Service notification'),
+    heading: t('已在 Chat 回复', 'Reply sent in Chat'),
+    detail: t(
+      '这条回复已留在当前服务号会话；来源订单、物流或外卖记录没有被 Chat 修改。',
+      'This reply stayed in the service chat; Chat did not change source order, tracking, or delivery records.',
+    ),
+  }
+}
+
+const recordServiceThreadReadFeedback = (contact = {}, unreadCount = 0) => {
+  if (!contact || !chatStore.isChatSubscriptionContact(contact)) return
+  const count = Math.max(0, Math.floor(Number(unreadCount) || 0))
+  if (count <= 0) return
+  serviceNotificationActionFeedback.value = {
+    type: 'read',
+    title: contact.name || t('服务号', 'Service account'),
+    heading: t('已清除 Chat 未读', 'Chat unread cleared'),
+    detail: t(
+      `已清除 ${count} 条 Chat 未读；通知卡仍保留在这条服务号会话里，来源记录不受影响。`,
+      `Cleared ${count} Chat unread update${count === 1 ? '' : 's'}; notification cards remain in this service thread and source records are unchanged.`,
+    ),
+  }
+}
+
+const recordServiceRouteFeedback = (block = {}, action = null, routePath = '') => {
+  if (!activeChat.value || !isActiveServiceChat.value) return
+  const [path] = typeof routePath === 'string' ? routePath.split('?') : ['']
+  writeServiceRouteFeedback({
+    chatId: activeChat.value.id,
+    openedAt: Date.now(),
+    title:
+      (typeof block.title === 'string' && block.title.trim()) ||
+      (typeof action?.label === 'string' && action.label.trim()) ||
+      t('服务通知', 'Service notification'),
+    destination: serviceNotificationDestinationLabel(block, path),
+    actionLabel: typeof action?.label === 'string' ? action.label : '',
+    route: typeof routePath === 'string' && routePath.startsWith('/') ? routePath : '',
+  })
+  clearServiceNotificationActionFeedback()
 }
 
 const formatAutoStatusTime = (timestamp) => {
@@ -1152,9 +1708,43 @@ const scrollToBottom = () => {
   })
 }
 
+const normalizeServiceDirectoryFilter = (value) =>
+  SERVICE_DIRECTORY_FILTERS.has(value) ? value : 'all'
+
+const activeServiceDirectoryFilter = computed(() =>
+  normalizeServiceDirectoryFilter(
+    typeof route.query.serviceFilter === 'string'
+      ? route.query.serviceFilter
+      : activeServiceIsFolded.value
+        ? 'folded'
+        : 'all',
+  ),
+)
+
+const buildActiveServiceDirectoryQuery = (extra = {}) => {
+  const filter = activeServiceDirectoryFilter.value
+  const query = {
+    section: 'service',
+    selectedService: String(activeChat.value?.id || ''),
+    ...extra,
+  }
+  if (filter && filter !== 'all') query.filter = filter
+  Object.keys(query).forEach((key) => {
+    if (query[key] === undefined || query[key] === null || query[key] === '') delete query[key]
+  })
+  return query
+}
+
 const goHome = () => pushReturnTarget(router, route, '/home')
 const leaveChat = () => {
   closeMessageEditModal()
+  if (isActiveServiceChat.value && route.query.chatReturn === 'services') {
+    router.push({
+      path: '/chat-contacts',
+      query: buildActiveServiceDirectoryQuery({ serviceReturn: 'thread' }),
+    })
+    return
+  }
   router.push('/chat')
 }
 const toggleChatSearch = () => {
@@ -1166,12 +1756,20 @@ const openChatObjects = () => {
   router.push({ path: '/chat-contacts', query: { section: 'roles' } })
 }
 
+const openMessageRequests = () => {
+  router.push({ path: '/chat-contacts', query: { section: 'roles', filter: 'requests' } })
+}
+
+const openFoldedSubscriptions = () => {
+  router.push({ path: '/chat-contacts', query: { section: 'service', filter: 'folded' } })
+}
+
 const openChatGroups = () => {
   router.push('/chat-groups')
 }
 
-const openChatMore = () => {
-  router.push('/chat-feature/more')
+const openChatSettings = () => {
+  router.push('/chat-settings')
 }
 
 const contactById = (contactId) =>
@@ -1179,7 +1777,6 @@ const contactById = (contactId) =>
 
 const enterChat = (contact) => {
   chatStore.ensureConversationForContact(contact.id)
-  chatStore.markConversationRead(contact.id)
   router.push(`/chat/${contact.id}`)
 }
 
@@ -1343,10 +1940,33 @@ const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
   const userAiContext = systemStore.getUserAiContextSummary({
     displayName: userDisplayName,
   })
+  const serviceSourcePlan =
+    contactKind === 'service' || contactKind === 'official'
+      ? chatStore.getServiceAccountLinkContract(contact.id)?.sourceNotificationPlan || null
+      : null
+  const serviceSourcePlanInstruction = serviceSourcePlan
+    ? [
+        `Source notification schedule: ${serviceSourcePlan.summary}`,
+        `Connected source modules: ${
+          Array.isArray(serviceSourcePlan.rows) && serviceSourcePlan.rows.length > 0
+            ? serviceSourcePlan.rows.map((row) => `${row.label} (${row.sourceModule})`).join('; ')
+            : 'none'
+        }.`,
+        'These schedules are descriptive; only source modules create business records and service_notification cards.',
+      ].join('\n')
+    : ''
 
   const serviceInstruction =
     contactKind === 'service' || contactKind === 'official'
-      ? `Service template: ${contact.serviceTemplate || 'default service helper style, concise guidance'}`
+      ? [
+          `Service template: ${contact.serviceTemplate || 'default service helper style, concise guidance'}.`,
+          serviceSourcePlanInstruction,
+          'Service account rule: behave as an interactive chat account, not a one-way announcement feed.',
+          'When the user replies to or quotes a service notification, answer conversationally using the notification title, status, amount, source label, and summary available in context.',
+          'Do not claim you changed, canceled, refunded, delivered, confirmed, or otherwise mutated any source-module business record from Chat.',
+          'For business-state changes, explain that the user should open the linked source app/action; Chat only keeps the conversation and notification history.',
+          'Do not create service_notification blocks in AI replies; use ordinary chat text unless a safe module link is useful.',
+        ].join('\n')
       : `Role persona: ${contact.bio || 'none'}`
   const groupMembers =
     contactKind === 'group' && Array.isArray(contact.groupMemberIds)
@@ -1454,41 +2074,171 @@ Rules:
 `
 }
 
+const serviceNotificationContextText = (block = {}) => {
+  if (!block || block.type !== 'service_notification') return ''
+  const sourceLabel = block.serviceLabel || block.serviceKey || 'Service account'
+  const details = [
+    `[service notification] ${sourceLabel}`,
+    block.title ? `title: ${block.title}` : '',
+    block.statusLabel ? `status: ${block.statusLabel}` : '',
+    block.amount ? `amount: ${block.amount}` : '',
+    block.summary ? `summary: ${block.summary}` : '',
+    block.route ? `source action: ${block.route}` : '',
+  ].filter(Boolean)
+  return details.join(' | ')
+}
+
+const isRecalledMessage = (message) => Boolean(Number(message?.recalledAt || 0) > 0)
+
+const recalledMessageDisplayText = (message) => {
+  if (message?.role === 'user') return t('你撤回了一条消息', 'You recalled a message')
+  const senderName = activeMessageSenderName()
+  return t(`${senderName} 撤回了一条消息`, `${senderName} recalled a message`)
+}
+
+const recalledMessageContextText = (message) => {
+  if (message?.role === 'user') {
+    return '[message recalled] The user recalled one of their messages. The original content is unavailable.'
+  }
+  const senderName = activeMessageSenderName()
+  return `[message recalled] ${senderName} recalled one of their own messages. The original content is unavailable.`
+}
+
+const hasRichMessageBlocks = (blocks = []) =>
+  Array.isArray(blocks) && blocks.some((block) => block?.type && block.type !== 'text')
+
+const messageBlockContextText = (block = {}) => {
+  if (!block || typeof block !== 'object') return ''
+  if (block.type === 'text') return block.text || ''
+  if (block.type === 'voice_virtual') {
+    return [
+      '[voice]',
+      block.label ? `label: ${block.label}` : '',
+      block.durationSec ? `duration: ${block.durationSec}s` : '',
+      block.transcript ? `transcript: ${block.transcript}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  }
+  if (block.type === 'module_link') {
+    return ['[link]', block.label || '', block.note || '', block.route ? `route: ${block.route}` : '']
+      .filter(Boolean)
+      .join(' | ')
+  }
+  if (block.type === 'link_external') {
+    return ['[external_link]', block.label || '', block.note || '', block.url || ''].filter(Boolean).join(' | ')
+  }
+  if (block.type === 'transfer_virtual') {
+    return [
+      '[transfer]',
+      block.label || '',
+      `${block.amount || ''} ${block.currency || ''}`.trim(),
+      block.to ? `to: ${block.to}` : '',
+      block.note ? `note: ${block.note}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  }
+  if (block.type === 'product_card') {
+    return [
+      '[product]',
+      block.title || '',
+      `${block.price || ''} ${block.currency || ''}`.trim(),
+      block.category ? `category: ${block.category}` : '',
+      block.desc || '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  }
+  if (block.type === 'service_notification') return serviceNotificationContextText(block)
+  if (block.type === 'image_virtual') {
+    return ['[image]', block.alt || '', block.caption ? `caption: ${block.caption}` : '']
+      .filter(Boolean)
+      .join(' | ')
+  }
+  if (block.type === 'mini_scene') {
+    return ['[scene]', block.title || '', block.description || ''].filter(Boolean).join(' | ')
+  }
+  return ''
+}
+
+const messageBlocksContextText = (blocks = []) =>
+  Array.isArray(blocks)
+    ? blocks.map(messageBlockContextText).filter(Boolean).join('\n').trim()
+    : ''
+
+const messageBlockPreviewText = (block = {}) => {
+  if (!block || typeof block !== 'object') return ''
+  if (block.type === 'voice_virtual') {
+    const text = block.transcript || block.label || ''
+    return text ? `${t('语音', 'Voice')} · ${text}` : t('语音消息', 'Voice message')
+  }
+  if (block.type === 'module_link') return `${t('链接', 'Link')} · ${block.label || block.route || ''}`.trim()
+  if (block.type === 'link_external') return `${t('外部链接', 'External link')} · ${block.label || block.url || ''}`.trim()
+  if (block.type === 'transfer_virtual') {
+    return `${t('转账', 'Transfer')} · ${block.amount || ''} ${block.currency || ''}`.trim()
+  }
+  if (block.type === 'product_card') return `${t('商品', 'Product')} · ${block.title || ''}`.trim()
+  if (block.type === 'service_notification') {
+    return [block.title, block.summary].filter(Boolean).join(' · ')
+  }
+  if (block.type === 'image_virtual') {
+    const text = block.caption || block.alt || ''
+    return text ? `${t('图片', 'Image')} · ${text}` : t('图片消息', 'Image message')
+  }
+  if (block.type === 'mini_scene') return `${t('互动卡片', 'Interactive card')} · ${block.title || ''}`.trim()
+  return ''
+}
+
+const messageBlocksPreviewText = (blocks = []) => {
+  if (!Array.isArray(blocks)) return ''
+  const firstRichBlock = blocks.find((block) => block?.type && block.type !== 'text')
+  return messageBlockPreviewText(firstRichBlock)
+}
+
 const extractMessageTextForContext = (message) => {
   if (!message) return ''
+  if (isRecalledMessage(message)) return recalledMessageContextText(message)
   const revisedText =
     typeof message?.semanticRevision?.revisedText === 'string'
       ? message.semanticRevision.revisedText.trim()
       : ''
   if (revisedText) return revisedText
-  if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
+  const serviceNotificationText = Array.isArray(message.blocks)
+    ? message.blocks.map(serviceNotificationContextText).find(Boolean) || ''
+    : ''
+  const quoteText = message.quote?.preview
+    ? `[quoted ${message.quote.role === 'assistant' ? 'assistant' : 'user'}] ${message.quote.preview}`
+    : ''
+  if (serviceNotificationText) return [quoteText, serviceNotificationText].filter(Boolean).join('\n')
+  const blockText = messageBlocksContextText(message.blocks)
+  if (hasRichMessageBlocks(message.blocks) && blockText) {
+    return [quoteText, blockText].filter(Boolean).join('\n').trim()
+  }
+  if (typeof message.content === 'string' && message.content.trim()) {
+    return [quoteText, message.content.trim()].filter(Boolean).join('\n')
+  }
   if (!Array.isArray(message.blocks)) return ''
 
-  return message.blocks
-    .map((block) => {
-      if (!block || typeof block !== 'object') return ''
-      if (block.type === 'text') return block.text || ''
-      if (block.type === 'voice_virtual') return `[voice] ${block.transcript || block.label || ''}`
-      if (block.type === 'module_link') return `[link] ${block.label || ''}`
-      if (block.type === 'link_external') return `[external_link] ${block.label || ''} ${block.url || ''}`
-      if (block.type === 'transfer_virtual') return `[transfer] ${block.amount || ''} ${block.currency || ''}`
-      if (block.type === 'service_notification') return `[service] ${block.title || ''} ${block.summary || ''}`
-      if (block.type === 'image_virtual') return `[image] ${block.alt || ''}`
-      if (block.type === 'mini_scene') return `[scene] ${block.title || ''} ${block.description || ''}`
-      return ''
-    })
-    .join('\n')
-    .trim()
+  return [quoteText, blockText].filter(Boolean).join('\n').trim()
 }
 
 const messagePrimaryText = (message) => {
   if (!message) return ''
+  if (isRecalledMessage(message)) return recalledMessageDisplayText(message)
   const revisedText =
     typeof message?.semanticRevision?.revisedText === 'string'
       ? message.semanticRevision.revisedText.trim()
       : ''
   if (revisedText) return revisedText
   if (Array.isArray(message.blocks)) {
+    const serviceNotificationBlock = message.blocks.find((block) => block?.type === 'service_notification')
+    if (serviceNotificationBlock) {
+      const preview = [serviceNotificationBlock.title, serviceNotificationBlock.summary]
+        .filter(Boolean)
+        .join(' · ')
+      if (preview) return preview
+    }
     const primary = message.blocks.find(
       (block) =>
         block?.type === 'text' &&
@@ -1501,6 +2251,8 @@ const messagePrimaryText = (message) => {
       (block) => block?.type === 'text' && typeof block.text === 'string' && block.text.trim(),
     )
     if (anyText) return anyText.text.trim()
+    const richPreview = messageBlocksPreviewText(message.blocks)
+    if (richPreview) return richPreview
   }
   if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
   return extractMessageTextForContext(message)
@@ -1512,6 +2264,141 @@ const truncateMessagePreview = (text, maxLength = 72) => {
   if (normalized.length <= maxLength) return normalized
   return `${normalized.slice(0, maxLength)}...`
 }
+
+const serviceNotificationBlockForMessage = (message = {}) =>
+  Array.isArray(message?.blocks)
+    ? message.blocks.find((block) => block?.type === 'service_notification') || null
+    : null
+
+const isServiceNotificationMessage = (message = {}) => Boolean(serviceNotificationBlockForMessage(message))
+
+const messageDayKey = (message = {}) => {
+  const date = new Date(Number(message?.createdAt) || 0)
+  if (Number.isNaN(date.getTime())) return 'unknown'
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+}
+
+const formatThreadDateDividerLabel = (timestamp) => {
+  const date = new Date(Number(timestamp) || 0)
+  if (Number.isNaN(date.getTime())) return t('时间待定', 'Time TBD')
+
+  const now = new Date()
+  const isSameDay =
+    now.getFullYear() === date.getFullYear() &&
+    now.getMonth() === date.getMonth() &&
+    now.getDate() === date.getDate()
+  if (isSameDay) return t('今天', 'Today')
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const isYesterday =
+    yesterday.getFullYear() === date.getFullYear() &&
+    yesterday.getMonth() === date.getMonth() &&
+    yesterday.getDate() === date.getDate()
+  if (isYesterday) return t('昨天', 'Yesterday')
+
+  const locale = languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value
+  return date.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const serviceNotificationBatchSummary = (messages = []) => {
+  const count = messages.length
+  const previews = messages
+    .map((message) => truncateMessagePreview(messagePrimaryText(message), 40))
+    .filter(Boolean)
+  return {
+    count,
+    title: t(`${count} 条连续订阅更新`, `${count} consecutive updates`),
+    detail: previews.slice(0, 2).join(' · '),
+  }
+}
+
+const serviceNotificationFlowKey = (message = {}) => {
+  const block = serviceNotificationBlockForMessage(message)
+  const kind = typeof block?.kind === 'string' ? block.kind : ''
+  const sourceModule = typeof block?.sourceModule === 'string' ? block.sourceModule : ''
+  const serviceKey = block?.serviceKey || block?.serviceLabel || ''
+  let channelType = 'service'
+  if (kind.startsWith('food_delivery') || sourceModule.includes('food_delivery')) channelType = 'food'
+  if (kind === 'logistics_update' || sourceModule.includes('logistics')) channelType = 'logistics'
+  if (kind === 'shopping_order' || sourceModule.includes('shopping')) channelType = 'shopping'
+  return `${channelType}:${sourceModule}:${serviceKey}`
+}
+
+const activeThreadTimelineItems = computed(() => {
+  const messages = activeMessages.value
+  if (!isActiveServiceChat.value) {
+    return messages.map((message) => ({
+      type: 'message',
+      key: `message-${message.id}`,
+      message,
+    }))
+  }
+
+  const items = []
+  let lastDayKey = ''
+
+  messages.forEach((message, index) => {
+    const dayKey = messageDayKey(message)
+    if (dayKey !== lastDayKey) {
+      items.push({
+        type: 'date-divider',
+        key: `date-${dayKey}-${message.id}`,
+        label: formatThreadDateDividerLabel(message.createdAt),
+        dayKey,
+      })
+      lastDayKey = dayKey
+    }
+
+    const isNotification = isServiceNotificationMessage(message)
+    const previous = messages[index - 1]
+    const flowKey = isNotification ? serviceNotificationFlowKey(message) : ''
+    const previousFlowKey = previous && isServiceNotificationMessage(previous) ? serviceNotificationFlowKey(previous) : ''
+    const isRunStart =
+      isNotification &&
+      (!previous ||
+        !isServiceNotificationMessage(previous) ||
+        messageDayKey(previous) !== dayKey ||
+        previousFlowKey !== flowKey)
+
+    if (isRunStart) {
+      const run = []
+      for (let cursor = index; cursor < messages.length; cursor += 1) {
+        const candidate = messages[cursor]
+        if (
+          !isServiceNotificationMessage(candidate) ||
+          messageDayKey(candidate) !== dayKey ||
+          serviceNotificationFlowKey(candidate) !== flowKey
+        ) {
+          break
+        }
+        run.push(candidate)
+      }
+      if (run.length >= 2) {
+        items.push({
+          type: 'service-notification-batch-summary',
+          key: `service-notification-batch-${message.id}`,
+          ...serviceNotificationBatchSummary(run),
+        })
+      }
+    }
+
+    items.push({
+      type: 'message',
+      key: `message-${message.id}`,
+      message,
+      serviceNotificationDensity:
+        isNotification && previous && messageDayKey(previous) === dayKey && previousFlowKey === flowKey
+          ? 'compact'
+          : 'full',
+    })
+  })
+
+  return items
+})
 
 const activeThreadWorldKernelState = computed(() => {
   return resolveWorldContextForConsumer({
@@ -1806,6 +2693,10 @@ const getAutoInvokeBaseFingerprint = (contactId) => {
 }
 
 const resetConversationAutoNextAt = (contactId, baseAt = Date.now()) => {
+  if (!chatStore.canContactSendMessages(contactById(contactId))) {
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return 0
+  }
   const prefs = chatStore.getConversationAiPrefs(contactId)
   if (!prefs.autoInvokeEnabled) {
     chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
@@ -2675,11 +3566,18 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
 const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
   if (!contactId) return false
   if (loadingAI.value || activeAbortController.value) return false
+  const truthContact = contactById(contactId)
+  if (!chatStore.canContactSendMessages(truthContact)) {
+    if (options.source !== 'auto') {
+      showUiNotice('warning', t('当前通讯状态不允许继续发起回复。', 'Current communication state does not allow replies.'))
+    }
+    chatStore.setConversationAutoState(contactId, { autoNextAt: 0 })
+    return false
+  }
 
   const triggerSource = typeof options.source === 'string' ? options.source : 'manual'
   const isAutoSource = triggerSource === 'auto'
   const shouldAutoSchedule = options.autoSchedule !== false
-  const truthContact = contactById(contactId)
   if (!isAutoSource) {
     markManualAction()
   }
@@ -2799,6 +3697,7 @@ const retryLastMessage = () => {
 
 const requestPendingAiReply = () => {
   if (!activeChat.value) return
+  if (!canRequestAiReply.value) return
   const triggerMessageId = pendingReplyTriggerMessageId.value || MANUAL_TRIGGER_ID
   const aiPrefs = chatStore.getConversationAiPrefs(activeChat.value.id)
   requestAiReply(activeChat.value.id, triggerMessageId, {
@@ -2871,8 +3770,15 @@ const copyText = async (text) => {
   }
 }
 
+const copyableMessageText = (message) => {
+  if (!message || isRecalledMessage(message)) return ''
+  if (hasRichMessageBlocks(message.blocks)) return extractMessageTextForContext(message)
+  return messagePrimaryText(message) || extractMessageTextForContext(message)
+}
+
 const copyMessage = async (message) => {
-  const text = messagePrimaryText(message) || extractMessageTextForContext(message)
+  if (!canCopyMessage(message)) return
+  const text = copyableMessageText(message)
   const ok = await copyText(text)
   if (!ok) {
     showUiNotice('error', t('复制失败，请稍后重试。', 'Copy failed. Please retry.'))
@@ -2882,18 +3788,268 @@ const copyMessage = async (message) => {
   closeMessageActions()
 }
 
-const canEditMessage = (message) => Boolean(message && (message.role === 'user' || message.role === 'assistant'))
-const canRerollMessage = (message) => Boolean(message && message.role === 'assistant')
+const canCopyMessage = (message) => Boolean(message && !isRecalledMessage(message))
+const canQuoteMessage = (message) => Boolean(message && !isRecalledMessage(message))
+const RICH_EDITABLE_MESSAGE_TYPES = new Set([
+  'voice_virtual',
+  'module_link',
+  'link_external',
+  'transfer_virtual',
+  'image_virtual',
+])
+
+const resetEditingRichFields = () => {
+  Object.keys(editingMessageRichFields).forEach((key) => {
+    editingMessageRichFields[key] = ''
+  })
+}
+
+const normalizeRichEditLine = (value = '', max = 120) =>
+  (typeof value === 'string' ? value : String(value ?? ''))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+
+const normalizeRichEditText = (value = '', max = 800) =>
+  (typeof value === 'string' ? value : String(value ?? '')).trim().slice(0, max)
+
+const getEditableRichMessageBlockEntry = (message) => {
+  if (!message || isRecalledMessage(message)) return null
+  if (!Array.isArray(message.blocks)) return null
+  const index = message.blocks.findIndex((block) => RICH_EDITABLE_MESSAGE_TYPES.has(block?.type))
+  if (index < 0) return null
+  return {
+    index,
+    block: message.blocks[index],
+  }
+}
+
+const createRichEditFieldsFromBlock = (block = {}) => {
+  if (block.type === 'link_external') {
+    return {
+      label: block.label || '',
+      url: block.url || '',
+      note: block.note || '',
+    }
+  }
+  if (block.type === 'module_link') {
+    return {
+      label: block.label || '',
+      note: block.note || '',
+    }
+  }
+  if (block.type === 'transfer_virtual') {
+    return {
+      amount: block.amount || '',
+      currency: block.currency || '',
+      note: block.note || '',
+    }
+  }
+  if (block.type === 'voice_virtual') {
+    return {
+      transcript: block.transcript || '',
+      durationSec: String(block.durationSec || 8),
+    }
+  }
+  if (block.type === 'image_virtual') {
+    return {
+      alt: block.alt || '',
+      caption: block.caption || '',
+    }
+  }
+  return {}
+}
+
+const applyRichEditFields = (fields = {}) => {
+  resetEditingRichFields()
+  Object.entries(fields).forEach(([key, value]) => {
+    if (Object.prototype.hasOwnProperty.call(editingMessageRichFields, key)) {
+      editingMessageRichFields[key] = typeof value === 'string' ? value : String(value ?? '')
+    }
+  })
+}
+
+const comparableRichEditFields = (fields = {}) =>
+  JSON.stringify(
+    Object.keys(fields)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = fields[key]
+        return acc
+      }, {}),
+  )
+
+const updateEditingMessageRichField = ({ key, value } = {}) => {
+  if (!Object.prototype.hasOwnProperty.call(editingMessageRichFields, key)) return
+  editingMessageRichFields[key] = typeof value === 'string' ? value : String(value ?? '')
+}
+
+const messageEditRichFieldDefinitions = computed(() => {
+  if (editingMessageRichType.value === 'link_external') {
+    return [
+      { key: 'label', label: t('标题', 'Title') },
+      { key: 'url', label: t('链接', 'URL') },
+      { key: 'note', label: t('说明', 'Note'), multiline: true },
+    ]
+  }
+  if (editingMessageRichType.value === 'module_link') {
+    return [
+      { key: 'label', label: t('标题', 'Title') },
+      { key: 'note', label: t('位置说明', 'Location note'), multiline: true },
+    ]
+  }
+  if (editingMessageRichType.value === 'transfer_virtual') {
+    return [
+      { key: 'amount', label: t('金额', 'Amount') },
+      { key: 'currency', label: t('币种', 'Currency') },
+      { key: 'note', label: t('备注', 'Note'), multiline: true },
+    ]
+  }
+  if (editingMessageRichType.value === 'voice_virtual') {
+    return [
+      { key: 'transcript', label: t('语音文本', 'Transcript'), multiline: true },
+      { key: 'durationSec', label: t('时长（秒）', 'Duration (sec)'), inputType: 'number' },
+    ]
+  }
+  if (editingMessageRichType.value === 'image_virtual') {
+    return [
+      { key: 'alt', label: t('图片名称', 'Image name') },
+      { key: 'caption', label: t('图片说明', 'Caption'), multiline: true },
+    ]
+  }
+  return []
+})
+
+const buildRichMessageEditState = () => {
+  const type = editingMessageRichType.value
+  const fields = editingMessageRichFields
+  let blockPatch = null
+  let content = ''
+
+  if (type === 'link_external') {
+    const url = normalizeExternalUrl(fields.url)
+    if (!url) {
+      return {
+        valid: false,
+        message: t('链接格式无效，仅支持 http/https。', 'Invalid URL. Only http/https is supported.'),
+      }
+    }
+    const label = normalizeRichEditLine(fields.label, 80) || t('外部链接', 'External link')
+    const note = normalizeRichEditText(fields.note, 800)
+    blockPatch = { label, url, note }
+    content = `${label}\n${url}`
+  } else if (type === 'module_link') {
+    const label = normalizeRichEditLine(fields.label, 80) || t('模块链接', 'Module link')
+    const note = normalizeRichEditText(fields.note, 800)
+    blockPatch = { label, note }
+    content = note ? `${label} · ${note}` : label
+  } else if (type === 'transfer_virtual') {
+    const amount = normalizeRichEditLine(fields.amount, 24)
+    if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+      return {
+        valid: false,
+        message: t('金额格式无效。', 'Invalid amount format.'),
+      }
+    }
+    const currency = normalizeRichEditLine(fields.currency, 8).toUpperCase() || 'CNY'
+    if (!/^[A-Z]{2,8}$/.test(currency)) {
+      return {
+        valid: false,
+        message: t('币种格式无效。', 'Invalid currency format.'),
+      }
+    }
+    const note = normalizeRichEditText(fields.note, 800)
+    blockPatch = { amount, currency, note }
+    content = `${t('转账', 'Transfer')} ${amount} ${currency}`
+  } else if (type === 'voice_virtual') {
+    const transcript = normalizeRichEditText(fields.transcript, 800)
+    if (!transcript) {
+      return {
+        valid: false,
+        message: t('语音内容不能为空。', 'Voice transcript cannot be empty.'),
+      }
+    }
+    const duration = Number(fields.durationSec)
+    if (!Number.isFinite(duration)) {
+      return {
+        valid: false,
+        message: t('时长格式无效。', 'Invalid duration format.'),
+      }
+    }
+    blockPatch = { transcript, durationSec: Math.min(600, Math.max(1, Math.floor(duration))) }
+    content = transcript
+  } else if (type === 'image_virtual') {
+    const alt = normalizeRichEditLine(fields.alt, 80) || t('图片消息', 'Image message')
+    const caption = normalizeRichEditText(fields.caption, 800)
+    blockPatch = { alt, caption }
+    content = `${t('图片', 'Image')}: ${alt}`
+  }
+
+  if (!blockPatch) {
+    return {
+      valid: false,
+      message: t('该卡片暂不支持字段编辑。', 'This card does not support field editing yet.'),
+    }
+  }
+
+  if (comparableRichEditFields(blockPatch) === comparableRichEditFields(editingMessageOriginalRichFields.value)) {
+    return {
+      valid: false,
+      message: t('卡片字段未变化。', 'Card fields unchanged.'),
+      blockPatch,
+      content,
+    }
+  }
+
+  return {
+    valid: true,
+    message: t('将更新卡片字段，并同步后续上下文。', 'Card fields will be updated for later context.'),
+    blockPatch,
+    content,
+  }
+}
+
+const canEditMessage = (message) =>
+  Boolean(
+    message &&
+      !isRecalledMessage(message) &&
+      (message.role === 'user' || message.role === 'assistant') &&
+      (!hasRichMessageBlocks(message.blocks) || getEditableRichMessageBlockEntry(message)),
+  )
+const canRerollMessage = (message) =>
+  Boolean(message && !isRecalledMessage(message) && message.role === 'assistant')
+const canToggleSavedMessage = (message) =>
+  Boolean(
+    message &&
+      !isRecalledMessage(message) &&
+      !isActiveServiceChat.value &&
+      (message.role === 'user' || message.role === 'assistant'),
+  )
+const canRecallMessage = (message) =>
+  Boolean(
+    message &&
+      !isRecalledMessage(message) &&
+      !isActiveServiceChat.value &&
+      (message.role === 'user' || message.role === 'assistant'),
+  )
 const canRestoreSemanticRevision = (message) =>
   Boolean(
     message &&
+      !isRecalledMessage(message) &&
       typeof message?.semanticRevision?.revisedText === 'string' &&
       message.semanticRevision.revisedText.trim() &&
       typeof message?.semanticRevision?.originalText === 'string' &&
       message.semanticRevision.originalText.trim(),
   )
 
+const recallMessageActionLabel = (message) =>
+  message?.role === 'assistant' ? t('让角色撤回', 'Make contact recall') : t('撤回', 'Recall')
+
 const messageEditState = computed(() => {
+  if (editingMessageRichType.value) {
+    return buildRichMessageEditState()
+  }
+
   const validation = buildMessageEditValidation({
     draftText: editingMessageDraftText.value,
     originalText: editingMessageOriginalText.value,
@@ -2924,8 +4080,23 @@ const messageEditState = computed(() => {
   }
 })
 
+const toggleSavedMessage = (message) => {
+  if (!activeChat.value || !canToggleSavedMessage(message)) return
+  const nextSaved = !message.savedAt
+  const changed = chatStore.setMessageSaved(activeChat.value.id, message.id, nextSaved)
+  if (!changed) {
+    closeMessageActions()
+    return
+  }
+  showUiNotice(
+    'success',
+    nextSaved ? t('已收藏消息。', 'Message saved.') : t('已取消收藏。', 'Message unsaved.'),
+  )
+  closeMessageActions()
+}
+
 const quoteMessage = (message) => {
-  if (!message) return
+  if (!canQuoteMessage(message)) return
   pendingQuote.value = {
     messageId: message.id,
     role: message.role === 'assistant' ? 'assistant' : 'user',
@@ -2934,9 +4105,48 @@ const quoteMessage = (message) => {
   closeMessageActions()
 }
 
+const focusMessageInput = () => {
+  nextTick(() => {
+    messageTextInputRef.value?.focus?.()
+  })
+}
+
+const quoteServiceNotification = ({ block, message } = {}) => {
+  if (!block || !canActiveChatCommunicate.value) return
+  const preview = [block.title, block.summary].filter(Boolean).join(' · ')
+  pendingQuote.value = {
+    messageId: message?.id || '',
+    role: 'assistant',
+    preview: truncateMessagePreview(preview, 80) || t('服务通知', 'Service notification'),
+    sourceType: 'service_notification',
+  }
+  recordServiceNotificationReplyFeedback(block)
+  closeMessageActions()
+  focusMessageInput()
+  scrollToBottom()
+}
+
 const clearPendingQuote = () => {
+  if (pendingQuote.value?.sourceType === 'service_notification') clearServiceNotificationActionFeedback()
   pendingQuote.value = null
 }
+
+const findActiveMessageById = (messageId) =>
+  activeMessages.value.find((item) => item?.id === messageId) || null
+
+const isPendingQuoteTargetValid = () => {
+  if (!pendingQuote.value?.messageId) return false
+  const target = findActiveMessageById(pendingQuote.value.messageId)
+  return Boolean(target && !isRecalledMessage(target))
+}
+
+const clearInvalidPendingQuote = () => {
+  if (!pendingQuote.value) return
+  if (isPendingQuoteTargetValid()) return
+  clearPendingQuote()
+}
+
+watch(activeMessages, clearInvalidPendingQuote, { deep: true })
 
 const closeMessageEditModal = () => {
   showEditMessageModal.value = false
@@ -2944,16 +4154,32 @@ const closeMessageEditModal = () => {
   editingMessageRole.value = 'user'
   editingMessageOriginalText.value = ''
   editingMessageDraftText.value = ''
+  editingMessageRichType.value = ''
+  editingMessageOriginalRichFields.value = {}
+  resetEditingRichFields()
 }
 
 const editMessage = (message) => {
   if (!activeChat.value || !canEditMessage(message)) return
 
-  const currentText = messagePrimaryText(message)
   editingMessageId.value = message.id || ''
   editingMessageRole.value = message.role === 'assistant' ? 'assistant' : 'user'
-  editingMessageOriginalText.value = currentText
-  editingMessageDraftText.value = currentText
+  const richEntry = getEditableRichMessageBlockEntry(message)
+  if (richEntry) {
+    const fields = createRichEditFieldsFromBlock(richEntry.block)
+    editingMessageRichType.value = richEntry.block.type
+    editingMessageOriginalText.value = ''
+    editingMessageDraftText.value = ''
+    editingMessageOriginalRichFields.value = { ...fields }
+    applyRichEditFields(fields)
+  } else {
+    const currentText = messagePrimaryText(message)
+    editingMessageRichType.value = ''
+    editingMessageOriginalRichFields.value = {}
+    resetEditingRichFields()
+    editingMessageOriginalText.value = currentText
+    editingMessageDraftText.value = currentText
+  }
   showEditMessageModal.value = true
   closeMessageActions()
 }
@@ -2973,24 +4199,51 @@ const submitMessageEdit = () => {
   }
 
   const nextText = messageEditState.value.text
-  const ok =
-    target.role === 'assistant'
-      ? chatStore.reviseMessageSemantic(activeChat.value.id, target.id, nextText, {
-          revisedAt: Date.now(),
-        })
-      : chatStore.updateMessageContent(activeChat.value.id, target.id, nextText, {
-          markEdited: true,
-          editedAt: Date.now(),
-        })
+  let ok = false
+  if (editingMessageRichType.value) {
+    const richEntry = getEditableRichMessageBlockEntry(target)
+    if (!richEntry || richEntry.block?.type !== editingMessageRichType.value) {
+      showUiNotice('error', t('目标卡片不存在或不可编辑。', 'Card is missing or not editable.'))
+      closeMessageEditModal()
+      return
+    }
+    const nextBlocks = Array.isArray(target.blocks)
+      ? target.blocks.map((block, index) =>
+          index === richEntry.index
+            ? {
+                ...block,
+                ...messageEditState.value.blockPatch,
+              }
+            : block,
+        )
+      : []
+    ok = chatStore.updateMessageBlocks(activeChat.value.id, target.id, nextBlocks, {
+      content: messageEditState.value.content,
+      markEdited: true,
+      editedAt: Date.now(),
+    })
+  } else {
+    ok =
+      target.role === 'assistant'
+        ? chatStore.reviseMessageSemantic(activeChat.value.id, target.id, nextText, {
+            revisedAt: Date.now(),
+          })
+        : chatStore.updateMessageContent(activeChat.value.id, target.id, nextText, {
+            markEdited: true,
+            editedAt: Date.now(),
+          })
+  }
   if (!ok) {
     showUiNotice('error', t('编辑失败，请重试。', 'Edit failed. Please retry.'))
     return
   }
   showUiNotice(
     'success',
-    target.role === 'assistant'
-      ? t('已保存语义修订。', 'Semantic revision saved.')
-      : t('消息已更新。', 'Message updated.'),
+    editingMessageRichType.value
+      ? t('卡片已更新。', 'Card updated.')
+      : target.role === 'assistant'
+        ? t('已保存语义修订。', 'Semantic revision saved.')
+        : t('消息已更新。', 'Message updated.'),
   )
   closeMessageEditModal()
 }
@@ -3003,6 +4256,41 @@ const restoreSemanticRevision = (message) => {
     return
   }
   showUiNotice('success', t('已恢复原文。', 'Original text restored.'))
+  closeMessageActions()
+}
+
+const recallMessage = async (message) => {
+  if (!activeChat.value || !canRecallMessage(message)) return
+
+  const isAssistantMessage = message.role === 'assistant'
+  const senderName = activeMessageSenderName()
+  const ok = await confirmDialog({
+    title: isAssistantMessage ? t('让角色撤回消息', 'Make contact recall message') : t('撤回消息', 'Recall message'),
+    message: isAssistantMessage
+      ? t(
+          `撤回后会显示“${senderName} 撤回了一条消息”。AI 只会知道角色撤回过自己的消息，不会读取原文。`,
+          `This will show "${senderName} recalled a message." AI will only know the contact recalled their own message, not the original text.`,
+        )
+      : t(
+          '撤回后会显示“你撤回了一条消息”。AI 只会知道你撤回过消息，不会读取原文。',
+          'This will show "You recalled a message." AI will only know you recalled a message, not the original text.',
+        ),
+    confirmText: t('撤回', 'Recall'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'warning',
+  })
+  if (!ok) return
+
+  const recalled = chatStore.recallMessage(activeChat.value.id, message.id, Date.now())
+  if (!recalled) {
+    showUiNotice('error', t('撤回失败，请重试。', 'Recall failed. Please retry.'))
+    return
+  }
+
+  if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
+  if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
+  if (pendingQuote.value?.messageId === message.id) pendingQuote.value = null
+  showUiNotice('success', t('已撤回消息。', 'Message recalled.'))
   closeMessageActions()
 }
 
@@ -3142,6 +4430,10 @@ const maybeTriggerProactiveOpener = async (contactId) => {
 
 const generateSmartReplies = async () => {
   if (!activeChat.value || loadingAI.value || activeAbortController.value) return
+  if (!canActiveChatCommunicate.value) {
+    showUiNotice('warning', t('当前通讯状态不允许生成快捷回复。', 'Current communication state does not allow smart replies.'))
+    return
+  }
   if (!suggestionFeatureEnabled.value) return
 
   loadingSuggestions.value = true
@@ -3200,6 +4492,10 @@ const closeUserActionPanel = () => {
 }
 
 const toggleUserActionPanel = () => {
+  if (!canActiveChatCommunicate.value) {
+    showUiNotice('warning', t('当前通讯状态不允许发送附件或卡片。', 'Current communication state does not allow attachments or cards.'))
+    return
+  }
   if (!showUserActionPanel.value) {
     closeMessageActions()
     showUserActionPanel.value = true
@@ -3314,17 +4610,28 @@ const resolveImageBlockUrl = (messageId, blockIndex, block) => {
   return messageImagePreviewMap[key] || block?.url || ''
 }
 
-const buildPendingQuotePayload = () =>
-  pendingQuote.value
-    ? {
-        messageId: pendingQuote.value.messageId,
-        role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
-        preview: pendingQuote.value.preview || '',
-      }
-    : null
+const buildPendingQuotePayload = () => {
+  if (!pendingQuote.value) return null
+  if (!isPendingQuoteTargetValid()) {
+    clearPendingQuote()
+    return null
+  }
+  return {
+    messageId: pendingQuote.value.messageId,
+    role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
+    preview: pendingQuote.value.preview || '',
+    ...(pendingQuote.value.sourceType === 'service_notification'
+      ? { sourceType: 'service_notification' }
+      : {}),
+  }
+}
 
 const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) => {
   if (!activeChat.value) return null
+  if (!canActiveChatCommunicate.value) {
+    showUiNotice('warning', t('当前通讯状态不允许发送消息。', 'Current communication state does not allow sending messages.'))
+    return null
+  }
   const chatId = activeChat.value.id
   const normalizedContent = typeof content === 'string' ? content.trim() : ''
   const quotePayload = buildPendingQuotePayload()
@@ -3348,6 +4655,9 @@ const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) 
   resetConversationAutoNextAt(chatId, Date.now())
 
   pendingQuote.value = null
+  if (quotePayload?.sourceType === 'service_notification') {
+    recordServiceNotificationSentFeedback(quotePayload)
+  }
   showSuggestions.value = false
   aiErrorMessage.value = ''
   retryTriggerMessageId.value = ''
@@ -3872,11 +5182,39 @@ const formatConversationTime = (timestamp) => {
 }
 
 const contactPreviewText = (contactId) => {
+  const contact = contactById(contactId)
+  if (chatStore.isChatSubscriptionFolded(contact)) {
+    return t('已折叠到服务号页的订阅消息', 'Folded into Services subscriptions')
+  }
+  const socialState = chatStore.getContactChatSocialState(contact)
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) {
+    return t('对方向你打了招呼，等待处理', 'This person greeted you; review the request')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) {
+    return t('好友申请等待回应', 'Friend request waiting for a reply')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.STRANGER) {
+    return t('陌生人消息，先打招呼再聊天', 'Stranger message; greet before chatting')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) {
+    return t('申请已拒绝，历史仍保留', 'Request declined; history is kept')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) {
+    return t('你已屏蔽此角色，历史仍保留', 'You blocked this role; history is kept')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) {
+    return t('对方暂时拒收你的消息', 'They are not accepting your messages')
+  }
+  if (socialState === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
+    return t('双方已互相屏蔽，历史仍保留', 'Both sides are blocked; history is kept')
+  }
   const conversation = getConversationPreview(contactId)
   if (conversation?.draft?.trim()) {
     return `${t('草稿', 'Draft')}: ${conversation.draft.trim()}`
   }
-  return conversation?.lastMessage || t('点击开始聊天', 'Tap to start chat')
+  const preview = conversation?.lastMessage || t('点击开始聊天', 'Tap to start chat')
+  if (chatStore.isChatSubscriptionMuted(contact)) return `${t('免打扰', 'Muted')} · ${preview}`
+  return preview
 }
 
 const contactKindTag = (contact) => {
@@ -3897,16 +5235,167 @@ const contactKindTagClass = (contact) => {
   return ''
 }
 
+const chatSocialStateTag = (contact) => {
+  const state = chatStore.getContactChatSocialState(contact)
+  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) return t('待处理', 'Request')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) return t('已申请', 'Requested')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) return t('陌生人', 'Stranger')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) return t('已拒绝', 'Declined')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) return t('已屏蔽', 'Blocked')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) return t('拒收中', 'Refusing')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) return t('互相屏蔽', 'Mutual block')
+  return ''
+}
+
+const chatSocialStateTagClass = (contact) => {
+  const state = chatStore.getContactChatSocialState(contact)
+  if (
+    state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST ||
+    state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST ||
+    state === CHAT_CONTACT_SOCIAL_STATES.STRANGER ||
+    state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED
+  ) {
+    return 'bg-amber-100 text-amber-700'
+  }
+  if (
+    state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED ||
+    state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED ||
+    state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
+  ) {
+    return 'bg-rose-100 text-rose-700'
+  }
+  return ''
+}
+
+const chatSubscriptionStateTag = (contact) => {
+  if (chatStore.isChatSubscriptionFolded(contact)) return t('已折叠', 'Folded')
+  if (chatStore.isChatSubscriptionMuted(contact)) return t('免打扰', 'Muted')
+  return ''
+}
+
+const chatSubscriptionStateTagClass = (contact) => {
+  if (chatStore.isChatSubscriptionFolded(contact)) return 'bg-slate-100 text-slate-700'
+  if (chatStore.isChatSubscriptionMuted(contact)) return 'bg-emerald-100 text-emerald-700'
+  return ''
+}
+
+const activeChatRestrictionTitle = computed(() => {
+  if (!activeChat.value || canActiveChatCommunicate.value) return ''
+  const state = activeChatSocialState.value
+  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) return t('新的打招呼消息', 'New greeting request')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) return t('申请等待回应', 'Request waiting')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) return t('陌生人会话', 'Stranger chat')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) return t('申请已拒绝', 'Request declined')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) return t('你已屏蔽此角色', 'You blocked this role')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) return t('对方暂时拒收', 'They are not accepting messages')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) return t('双方已互相屏蔽', 'Both sides are blocked')
+  return ''
+})
+
+const activeChatRestrictionDetail = computed(() => {
+  if (!activeChat.value || canActiveChatCommunicate.value) return ''
+  const state = activeChatSocialState.value
+  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) {
+    return t(
+      '通过后会进入正常聊天；忽略不会删除这个会话记录。',
+      'Accept to move into normal chat; ignoring keeps the thread history.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) {
+    return t(
+      '你已经发出打招呼申请，历史记录会保留。',
+      'Your greeting request is pending, and the history is kept.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) {
+    return t(
+      '这不是正式好友会话，先打招呼或处理请求后再聊天。',
+      'This is not a normal chat yet. Greet or handle the request first.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) {
+    return t(
+      '申请被拒绝后不会清空历史；可以稍后重新打招呼。',
+      'Declining does not clear history; you can greet again later.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) {
+    return t(
+      '拉黑只会限制通讯，不会删除聊天记录。解除后继续使用原会话。',
+      'Blocking only limits communication and does not delete history. Unblock to continue this thread.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) {
+    return t(
+      '对方拒收时你仍可查看历史；之后可通过剧情或设置恢复通讯。',
+      'You can still read history while they refuse messages; communication can be restored later.',
+    )
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
+    return t(
+      '双方互相屏蔽时只保留查看历史，解除各自限制后再继续。',
+      'When both sides are blocked, the thread is read-only until restrictions are lifted.',
+    )
+  }
+  return ''
+})
+
+const setActiveChatSocialState = (state, message) => {
+  if (!activeChat.value) return
+  const ok = chatStore.setContactChatSocialState(activeChat.value.id, state)
+  if (ok && message) showUiNotice('success', message)
+}
+
+const acceptActiveChatRequest = () =>
+  setActiveChatSocialState(
+    CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
+    t('已通过，当前会话可以继续聊天。', 'Accepted. This thread can continue normally.'),
+  )
+
+const declineActiveChatRequest = () =>
+  setActiveChatSocialState(
+    CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED,
+    t('已忽略请求，聊天记录仍保留。', 'Request ignored. Chat history is kept.'),
+  )
+
+const requestActiveChatGreeting = () =>
+  setActiveChatSocialState(
+    CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST,
+    t('已发送打招呼申请。', 'Greeting request sent.'),
+  )
+
+const cancelActiveChatGreeting = () =>
+  setActiveChatSocialState(
+    CHAT_CONTACT_SOCIAL_STATES.STRANGER,
+    t('已撤回打招呼申请。', 'Greeting request canceled.'),
+  )
+
+const unblockActiveChat = () => {
+  if (!activeChat.value) return
+  const ok = chatStore.unblockChatContact(activeChat.value.id)
+  if (ok) {
+    showUiNotice('success', t('已解除你的拉黑限制，历史记录未变。', 'Your block was removed; history is unchanged.'))
+  }
+}
+
 const headerSecondaryStatusText = computed(() => {
   if (loadingAI.value) return t('对方正在输入...', 'Typing...')
   if (threadSettingsSaved.value) return t('会话调校已保存', 'Thread tuning saved')
   if (threadIdentitySaved.value) return t('会话身份已保存', 'Thread identity saved')
+  if (activeChatRestrictionTitle.value) return activeChatRestrictionTitle.value
+  if (isActiveServiceChat.value) return activeServiceHeaderStatus.value
   return ''
 })
 
 const headerSecondaryStatusClass = computed(() =>
-  !loadingAI.value && (threadSettingsSaved.value || threadIdentitySaved.value)
+  !loadingAI.value && activeChatRestrictionTitle.value
+    ? 'text-amber-600 font-medium'
+    : !loadingAI.value && (threadSettingsSaved.value || threadIdentitySaved.value)
     ? 'text-emerald-600 font-medium'
+    : !loadingAI.value && isActiveServiceChat.value
+    ? activeServiceIsFolded.value
+      ? 'text-slate-600 font-medium'
+      : 'text-emerald-700 font-medium'
     : '',
 )
 
@@ -3927,6 +5416,7 @@ const triggerThreadIdentitySaved = () => {
 }
 
 const messageStatusText = (message) => {
+  if (isRecalledMessage(message)) return ''
   if (message.role !== 'user') return ''
   if (message.status === 'failed') return t('发送失败', 'Failed')
   if (message.status === 'sending') return t('发送中...', 'Sending...')
@@ -3938,6 +5428,7 @@ const messageStatusText = (message) => {
 
 const messageMetaHintText = (message) => {
   if (!message) return ''
+  if (isRecalledMessage(message)) return t('已撤回', 'Recalled')
   const hints = []
   if (message.role === 'assistant' && message.aiMeta?.rerollOf) {
     hints.push(t('重roll结果', 'Rerolled'))
@@ -3961,6 +5452,9 @@ const messageMetaHintText = (message) => {
 }
 
 const messageBlocks = (message) => {
+  if (isRecalledMessage(message)) {
+    return [{ type: 'text', text: recalledMessageDisplayText(message), variant: 'primary', lang: 'auto' }]
+  }
   if (Array.isArray(message?.blocks) && message.blocks.length > 0) return message.blocks
   return [{ type: 'text', text: message?.content || '', variant: 'primary', lang: 'auto' }]
 }
@@ -3988,25 +5482,37 @@ const openModuleRoute = (routePath) => {
   router.push(routePath)
 }
 
-const openServiceNotificationRoute = (block = {}, action = null) => {
-  const routePath = typeof action?.route === 'string' ? action.route : block.route
+const pushSafeServiceRoute = (routePath) => {
   if (typeof routePath !== 'string' || !routePath.startsWith('/')) {
     showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
-    return
+    return false
   }
   const [path, rawQuery = ''] = routePath.split('?')
   if (!SAFE_MODULE_ROUTES.has(path)) {
     showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
-    return
+    return false
   }
   if (!rawQuery) {
     router.push(path)
-    return
+    return true
   }
   router.push({
     path,
     query: Object.fromEntries(new URLSearchParams(rawQuery)),
   })
+  return true
+}
+
+const openServiceNotificationRoute = (block = {}, action = null) => {
+  const routePath = typeof action?.route === 'string' ? action.route : block.route
+  if (!pushSafeServiceRoute(routePath)) return
+  recordServiceRouteFeedback(block, action, routePath)
+}
+
+const reopenServiceRouteFeedbackSource = () => {
+  const routePath = activeServiceRouteFeedback.value?.route
+  if (!routePath) return
+  pushSafeServiceRoute(routePath)
 }
 
 const openShoppingFromChat = (payload = {}) => {
@@ -4074,6 +5580,13 @@ const openFoodDeliveryOrder = (row = {}) => {
 
 const openChatDirectory = () => {
   showThreadMenu.value = false
+  if (isActiveServiceChat.value) {
+    router.push({
+      path: '/chat-contacts',
+      query: buildActiveServiceDirectoryQuery({ serviceReturn: 'menu' }),
+    })
+    return
+  }
   router.push('/chat-contacts')
 }
 
@@ -4100,6 +5613,32 @@ const transferActionLabel = (block) => {
   if (!block?.actionRoute) return t('详情', 'Details')
   if (block.actionRoute === '/wallet') return t('打开钱包', 'Open Wallet')
   return t('打开', 'Open')
+}
+
+const toggleActiveServiceMuted = () => {
+  if (!activeChat.value || !isActiveServiceChat.value) return
+  const ok = chatStore.toggleChatSubscriptionMuted(activeChat.value.id)
+  if (!ok) return
+  const next = chatStore.getContactById(activeChat.value.id)
+  showUiNotice(
+    'success',
+    chatStore.isChatSubscriptionMuted(next)
+      ? t('已设为免打扰。', 'Muted.')
+      : t('已取消免打扰。', 'Unmuted.'),
+  )
+}
+
+const toggleActiveServiceFolded = () => {
+  if (!activeChat.value || !isActiveServiceChat.value) return
+  const ok = chatStore.toggleChatSubscriptionFolded(activeChat.value.id)
+  if (!ok) return
+  const next = chatStore.getContactById(activeChat.value.id)
+  showUiNotice(
+    'success',
+    chatStore.isChatSubscriptionFolded(next)
+      ? t('已折叠到服务号页。', 'Folded into Services.')
+      : t('已恢复到消息首页。', 'Restored to Messages.'),
+  )
 }
 
 const toggleThreadMenu = () => {
@@ -4287,11 +5826,17 @@ watch(
     threadIdentitySaved.value = false
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
+    serviceRouteFeedback.value = id ? readServiceRouteFeedback(id) : null
+    serviceNotificationActionFeedback.value = null
 
     if (id) {
       chatStore.ensureConversationForContact(id)
+      const contact = chatStore.getContactById(id)
+      const conversation = chatStore.getConversationByContactId(id)
+      const unreadBeforeRead = Math.max(0, Math.floor(Number(conversation?.unread) || 0))
       chatStore.markConversationRead(id)
       inputMessage.value = chatStore.getConversationByContactId(id).draft || ''
+      recordServiceThreadReadFeedback(contact, unreadBeforeRead)
       applyThreadSettingsDraft()
       applyThreadIdentityDraft()
       const prefs = chatStore.getConversationAiPrefs(id)
@@ -4375,7 +5920,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col chat-shell">
+  <div class="w-full h-full flex flex-col chat-shell" :class="chatShellClasses">
     <template v-if="!activeChat">
       <div class="pt-12 px-4 pb-3 chat-ink">
         <div class="flex items-center justify-between gap-3">
@@ -4401,8 +5946,9 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
-              :aria-label="t('更多', 'More')"
-              @click="openChatMore"
+              :aria-label="t('Chat 设置', 'Chat Settings')"
+              data-testid="chat-settings-button"
+              @click="openChatSettings"
             >
               <i class="fas fa-cog"></i>
             </button>
@@ -4456,8 +6002,100 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
+        <section
+          v-if="chatMessageRequestContacts.length > 0"
+          class="mx-4 mb-2 rounded-2xl border border-amber-100 bg-white px-4 py-3"
+          data-testid="chat-message-requests-card"
+          @click="openMessageRequests"
+        >
+          <div class="flex items-center gap-3">
+            <div class="flex -space-x-2">
+              <img
+                v-for="contact in chatMessageRequestContacts.slice(0, 3)"
+                :key="`request-avatar-${contact.id}`"
+                :src="contactAvatarForList(contact)"
+                class="h-8 w-8 rounded-full border-2 border-white object-cover"
+              />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-950">{{ t('消息请求', 'Message Requests') }}</p>
+              <p class="mt-0.5 text-[11px] leading-4 text-gray-500">
+                {{ t('陌生人打招呼、好友申请和已拒绝申请集中在这里。', 'Stranger greetings, friend requests, and declined requests live here.') }}
+              </p>
+            </div>
+            <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-500 px-2 text-[10px] font-semibold text-white">
+              {{ Math.min(chatMessageRequestContacts.length, 99) }}
+            </span>
+          </div>
+        </section>
+
+        <section
+          v-if="showFoldedSubscriptionsCard"
+          class="mx-4 mb-2 rounded-2xl border px-4 py-3 transition-colors"
+          :class="chatFoldedSubscriptionUnreadTotal > 0 ? 'border-red-100 bg-red-50/50' : 'border-slate-100 bg-white'"
+          data-testid="chat-folded-subscriptions-card"
+          @click="openFoldedSubscriptions"
+        >
+          <div class="flex items-center gap-3">
+            <div class="flex -space-x-2">
+              <img
+                v-for="contact in chatFoldedSubscriptionContacts.slice(0, 3)"
+                :key="`folded-subscription-avatar-${contact.id}`"
+                :src="contactAvatarForList(contact)"
+                class="h-8 w-8 rounded-2xl border-2 border-white object-cover"
+              />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-950">{{ t('已折叠订阅', 'Folded Subscriptions') }}</p>
+              <p class="mt-0.5 text-[11px] leading-4 text-gray-500">
+                {{
+                  chatFoldedSubscriptionUnreadTotal > 0
+                    ? t(
+                        `${chatFoldedSubscriptionUnreadTotal} 条未读收在服务号页，不打断消息首页。`,
+                        `${chatFoldedSubscriptionUnreadTotal} unread updates are tucked under Services.`,
+                      )
+                    : t('这些服务号不显示在消息首页，历史和新消息仍保留。', 'These services stay out of Messages while keeping history and new updates.')
+                }}
+              </p>
+              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                <span
+                  class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  :class="chatFoldedSubscriptionUnreadTotal > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'"
+                  data-testid="chat-folded-subscriptions-state"
+                >
+                  {{
+                    chatFoldedSubscriptionUnreadTotal > 0
+                      ? t(
+                          `${chatFoldedSubscriptionUnreadTotal} 条未读更新 · ${chatFoldedSubscriptionUnreadContactCount} 个服务号`,
+                          `${chatFoldedSubscriptionUnreadTotal} unread updates · ${chatFoldedSubscriptionUnreadContactCount} accounts`,
+                        )
+                      : t('全部已读', 'All read')
+                  }}
+                </span>
+                <span class="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                  {{ t(`${chatFoldedSubscriptionContacts.length} 个已折叠`, `${chatFoldedSubscriptionContacts.length} folded`) }}
+                </span>
+              </div>
+            </div>
+            <span
+              v-if="chatFoldedSubscriptionUnreadTotal > 0"
+              class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-2 text-[10px] font-semibold text-white"
+              data-testid="chat-folded-subscriptions-unread-badge"
+            >
+              {{ Math.min(chatFoldedSubscriptionUnreadTotal, 99) }}
+            </span>
+            <span
+              v-else
+              class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 text-[10px] font-semibold text-white"
+              data-testid="chat-folded-subscriptions-count-badge"
+            >
+              {{ Math.min(chatFoldedSubscriptionContacts.length, 99) }}
+            </span>
+          </div>
+        </section>
+
         <p
-          v-if="visibleChatContacts.length === 0"
+          v-if="visibleChatContacts.length === 0 && chatMessageRequestContacts.length === 0 && !showFoldedSubscriptionsCard"
           class="px-4 py-8 text-center text-xs text-gray-400"
         >
           {{ normalizedChatSearchKeyword ? t('没有匹配的会话。', 'No matching chats.') : t('暂无会话，先从对象页绑定角色或创建群聊。', 'No chats yet. Bind an object or create a group first.') }}
@@ -4485,6 +6123,22 @@ onBeforeUnmount(() => {
               <span v-if="contactKindTag(contact)" class="px-1 rounded text-[8px] font-medium" :class="contactKindTagClass(contact)">
                 {{ contactKindTag(contact) }}
               </span>
+              <span
+                v-if="chatSocialStateTag(contact)"
+                class="px-1 rounded text-[8px] font-medium"
+                :class="chatSocialStateTagClass(contact)"
+                :data-testid="`chat-contact-social-tag-${contact.id}`"
+              >
+                {{ chatSocialStateTag(contact) }}
+              </span>
+              <span
+                v-if="chatSubscriptionStateTag(contact)"
+                class="px-1 rounded text-[8px] font-medium"
+                :class="chatSubscriptionStateTagClass(contact)"
+                :data-testid="`chat-contact-subscription-tag-${contact.id}`"
+              >
+                {{ chatSubscriptionStateTag(contact) }}
+              </span>
               {{ contactPreviewText(contact.id) }}
             </div>
           </div>
@@ -4502,9 +6156,24 @@ onBeforeUnmount(() => {
 
     <template v-else>
       <div class="pt-12 pb-2 px-3 chat-thread-header backdrop-blur flex items-center justify-between z-10 shadow-sm">
-        <button @click="leaveChat" class="chat-ink px-2 flex items-center gap-1 w-16">{{ t('返回', 'Back') }}</button>
+        <button
+          @click="leaveChat"
+          class="chat-ink px-2 flex items-center gap-1 w-16"
+          data-testid="chat-thread-back"
+        >
+          {{ t('返回', 'Back') }}
+        </button>
         <div class="flex-1 text-center min-w-0">
-          <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
+          <div class="flex items-center justify-center gap-1.5 min-w-0">
+            <span
+              v-if="isActiveServiceChat"
+              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+              data-testid="chat-active-service-icon"
+            >
+              <i :class="activeChat.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-bullhorn'" class="text-[10px]"></i>
+            </span>
+            <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
+          </div>
           <p class="text-[10px] text-gray-500">
             <span v-if="contactKindTag(activeChat)">{{ contactKindTag(activeChat) }}</span>
             <span v-if="contactKindTag(activeChat) && headerSecondaryStatusText"> · </span>
@@ -4522,6 +6191,8 @@ onBeforeUnmount(() => {
         v-if="showThreadMenu"
         :active-chat="activeChat"
         :is-active-service-chat="isActiveServiceChat"
+        :subscription-muted="activeServiceIsMuted"
+        :subscription-folded="activeServiceIsFolded"
         :world-kernel-state="activeThreadWorldKernelState"
         :thread-identity-draft="threadIdentityDraft"
         :thread-settings-draft="threadSettingsDraft"
@@ -4540,6 +6211,8 @@ onBeforeUnmount(() => {
         @apply-default-thread-preset="applyDefaultThreadPresetToDraft"
         @open-chat-directory="openChatDirectory"
         @open-worldbook="openWorldBookFromThreadContext"
+        @toggle-subscription-muted="toggleActiveServiceMuted"
+        @toggle-subscription-folded="toggleActiveServiceFolded"
         @clear-thread-identity="clearThreadIdentityDraft"
         @save-thread-identity="saveThreadIdentityOverrides"
         @save-thread-settings="saveThreadSettings"
@@ -4548,7 +6221,309 @@ onBeforeUnmount(() => {
         @close="closeThreadMenu"
       />
 
-      <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" ref="chatContainer">
+      <div
+        class="chat-thread flex-1 overflow-y-auto px-4 pt-4 space-y-3 no-scrollbar"
+        :style="{ paddingBottom: '1rem' }"
+        ref="chatContainer"
+      >
+        <section
+          v-if="isActiveServiceChat"
+          class="rounded-3xl border border-emerald-100 bg-white/95 px-3 py-3 text-xs text-gray-700 shadow-sm"
+          data-testid="chat-service-channel-card"
+        >
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <i :class="activeChat.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-bullhorn'" class="text-sm"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                    {{ contactKindTag(activeChat) }}
+                  </p>
+                  <p class="mt-0.5 truncate text-sm font-semibold text-gray-950" data-testid="chat-service-channel-name">
+                    {{ activeChat.name }}
+                  </p>
+                  <p class="mt-0.5 line-clamp-1 text-[11px] text-gray-500">
+                    {{ activeServiceTemplateText }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-wrap justify-end gap-1">
+                  <span
+                    v-if="canActiveChatCommunicate"
+                    class="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700"
+                    data-testid="chat-active-service-replyable-tag"
+                  >
+                    {{ t('可回复', 'Replyable') }}
+                  </span>
+                  <span
+                    v-for="tag in activeServiceStatusTags"
+                    :key="tag.key"
+                    class="rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                    :class="tag.className"
+                    :data-testid="`chat-active-service-${tag.key}-tag`"
+                  >
+                    {{ tag.label }}
+                  </span>
+                </div>
+              </div>
+              <p class="mt-2 line-clamp-2 text-[11px] leading-4 text-gray-600" data-testid="chat-service-channel-preview">
+                {{ activeServiceChannelPreview }}
+              </p>
+              <div class="mt-2 flex flex-wrap gap-1.5" data-testid="chat-service-channel-sources">
+                <span
+                  v-for="chip in activeServiceSourceChips"
+                  :key="chip.key"
+                  class="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                  :class="chip.className"
+                  :data-testid="`chat-service-channel-source-${chip.key}`"
+                >
+                  {{ chip.label }}
+                </span>
+              </div>
+              <div
+                class="mt-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 px-2.5 py-2 text-[10px] leading-4 text-indigo-800"
+                data-testid="chat-service-channel-source-plan"
+                :data-source-plan-status="activeServiceSourceNotificationPlan?.status || 'not_connected'"
+              >
+                <p class="font-semibold">
+                  {{ t('接收计划', 'Receive plan') }}
+                </p>
+                <p class="mt-0.5">
+                  {{ activeServiceSourceScheduleSummary }}
+                </p>
+                <p v-if="activeServiceSourceScheduleRows.length > 0" class="mt-0.5 text-indigo-700">
+                  {{ activeServiceSourceScheduleRows.map((row) => serviceSourceScheduleRowScheduleLabel(row)).join(' / ') }}
+                </p>
+              </div>
+              <div class="mt-3 grid gap-2 sm:grid-cols-3" data-testid="chat-service-channel-promises">
+                <div
+                  v-for="item in activeServiceThreadPromises"
+                  :key="item.key"
+                  class="rounded-2xl border border-gray-100 bg-gray-50/70 px-2.5 py-2"
+                  :data-testid="`chat-service-channel-promise-${item.key}`"
+                >
+                  <p class="text-[10px] font-semibold text-gray-800">{{ item.label }}</p>
+                  <p class="mt-0.5 text-[10px] leading-3 text-gray-500">{{ item.detail }}</p>
+                </div>
+              </div>
+              <p class="mt-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-2.5 py-2 text-[10px] leading-4 text-emerald-800" data-testid="chat-service-channel-placement">
+                {{ activeServiceInboxPlacement }}
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                  data-testid="chat-active-service-toggle-muted"
+                  @click="toggleActiveServiceMuted"
+                >
+                  {{ activeServiceIsMuted ? t('取消免打扰', 'Unmute') : t('免打扰', 'Mute') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700"
+                  data-testid="chat-active-service-toggle-folded"
+                  @click="toggleActiveServiceFolded"
+                >
+                  {{ activeServiceIsFolded ? t('取消折叠', 'Unfold') : t('折叠', 'Fold') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600"
+                  @click="openChatDirectory"
+                >
+                  {{ t('服务号', 'Services') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          v-if="activeServiceRouteFeedback"
+          class="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-3 text-xs text-emerald-950"
+          data-testid="chat-service-route-feedback"
+        >
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700">
+              <i class="fas fa-arrow-up-right-from-square text-xs"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold">{{ t('已打开来源', 'Source opened') }}</p>
+                  <p v-if="activeServiceRouteFeedback.title" class="mt-0.5 truncate text-[11px] text-emerald-700">
+                    {{ activeServiceRouteFeedback.title }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-emerald-700"
+                  data-testid="chat-service-route-feedback-dismiss"
+                  @click="clearServiceRouteFeedback"
+                >
+                  {{ t('知道了', 'OK') }}
+                </button>
+              </div>
+              <p class="mt-2 leading-4 text-emerald-700">{{ activeServiceRouteFeedbackDetail }}</p>
+              <button
+                v-if="activeServiceRouteFeedback.route"
+                type="button"
+                class="mt-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[10px] font-semibold text-emerald-700"
+                data-testid="chat-service-route-feedback-open-again"
+                @click="reopenServiceRouteFeedbackSource"
+              >
+                {{ t('再次打开来源', 'Open again') }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          v-if="activeServiceNotificationActionFeedback"
+          class="rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-3 text-xs text-sky-950"
+          data-testid="chat-service-action-feedback"
+        >
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700">
+              <i class="fas fa-reply text-xs"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold" data-testid="chat-service-action-feedback-title">
+                    {{ activeServiceNotificationActionFeedback.heading }}
+                  </p>
+                  <p
+                    v-if="activeServiceNotificationActionFeedback.title"
+                    class="mt-0.5 truncate text-[11px] text-sky-700"
+                  >
+                    {{ activeServiceNotificationActionFeedback.title }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-sky-700"
+                  data-testid="chat-service-action-feedback-dismiss"
+                  @click="clearServiceNotificationActionFeedback"
+                >
+                  {{ t('知道了', 'OK') }}
+                </button>
+              </div>
+              <p class="mt-2 leading-4 text-sky-700">{{ activeServiceNotificationActionFeedback.detail }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          v-if="showActiveServiceEmptyState"
+          class="mx-auto my-4 w-full max-w-[92%] rounded-3xl border border-dashed border-emerald-200 bg-white/75 px-4 py-5 text-center text-xs text-gray-700"
+          data-testid="chat-service-empty-state"
+        >
+          <span class="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <i class="fas fa-bell text-sm"></i>
+          </span>
+          <p class="mt-3 text-sm font-semibold text-gray-950">{{ activeServiceEmptyStateTitle }}</p>
+          <p class="mx-auto mt-1 max-w-[260px] text-[11px] leading-4 text-gray-500">
+            {{ activeServiceEmptyStateDetail }}
+          </p>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <button
+              v-if="canActiveChatCommunicate"
+              type="button"
+              class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700"
+              data-testid="chat-service-empty-reply"
+              @click="focusMessageInput"
+            >
+              {{ t('发一条消息', 'Send message') }}
+            </button>
+            <button
+              type="button"
+              class="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-600"
+              data-testid="chat-service-empty-open-services"
+              @click="openChatDirectory"
+            >
+              {{ t('去服务号页', 'Open Services') }}
+            </button>
+          </div>
+        </section>
+
+        <section
+          v-if="activeChatRestrictionTitle"
+          class="rounded-2xl border border-amber-100 bg-white/90 px-3 py-3 text-xs text-gray-800 shadow-sm"
+          data-testid="chat-social-state-banner"
+        >
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <i class="fas fa-user-shield text-xs"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold text-gray-950">{{ activeChatRestrictionTitle }}</p>
+              <p class="mt-1 leading-4 text-gray-500">{{ activeChatRestrictionDetail }}</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button
+                  v-if="activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
+                  type="button"
+                  class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                  data-testid="chat-social-accept-request"
+                  @click="acceptActiveChatRequest"
+                >
+                  {{ t('通过', 'Accept') }}
+                </button>
+                <button
+                  v-if="activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
+                  type="button"
+                  class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600"
+                  data-testid="chat-social-decline-request"
+                  @click="declineActiveChatRequest"
+                >
+                  {{ t('忽略', 'Ignore') }}
+                </button>
+                <button
+                  v-if="
+                    activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.STRANGER ||
+                    activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED
+                  "
+                  type="button"
+                  class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700"
+                  data-testid="chat-social-send-greeting"
+                  @click="requestActiveChatGreeting"
+                >
+                  {{ t('打招呼', 'Greet') }}
+                </button>
+                <button
+                  v-if="activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST"
+                  type="button"
+                  class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600"
+                  data-testid="chat-social-cancel-greeting"
+                  @click="cancelActiveChatGreeting"
+                >
+                  {{ t('撤回申请', 'Cancel request') }}
+                </button>
+                <button
+                  v-if="
+                    activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED ||
+                    activeChatSocialState === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
+                  "
+                  type="button"
+                  class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                  data-testid="chat-social-unblock"
+                  @click="unblockActiveChat"
+                >
+                  {{ t('解除拉黑', 'Unblock') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600"
+                  @click="openChatDirectory"
+                >
+                  {{ t('管理状态', 'Manage state') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section
           v-if="activeGiftOrderSummaries.length > 0"
           class="rounded-2xl border border-rose-100 bg-rose-50/80 px-3 py-2 text-xs text-rose-900"
@@ -4729,198 +6704,55 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <div v-for="msg in activeMessages" :key="msg.id" class="flex w-full" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
-          <div v-if="msg.role !== 'user'" class="w-8 h-8 rounded-xl bg-gray-200 mr-2 overflow-hidden flex-shrink-0">
-            <img
-              :src="activeContactAvatar"
-              class="w-full h-full object-cover"
-              data-testid="chat-active-contact-avatar"
-            />
+        <template v-for="item in activeThreadTimelineItems" :key="item.key">
+          <div
+            v-if="item.type === 'date-divider'"
+            class="my-3 flex items-center justify-center"
+            data-testid="chat-service-date-divider"
+            :data-date-key="item.dayKey"
+          >
+            <span class="rounded-full bg-black/5 px-3 py-1 text-[10px] font-semibold text-gray-500">
+              {{ item.label }}
+            </span>
           </div>
 
-          <div class="max-w-[70%]">
-            <div
-              class="px-3 py-2 text-sm rounded-xl shadow-sm relative"
-              :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'"
-              @contextmenu.prevent="openMessageActions(msg.id)"
-              @mousedown.left="startMessageLongPress(msg.id, $event)"
-              @mouseup="cancelMessageLongPress"
-              @mouseleave="cancelMessageLongPress"
-              @touchstart="startMessageLongPress(msg.id, $event)"
-              @touchmove.passive="cancelMessageLongPress"
-              @touchend="cancelMessageLongPress"
-              @touchcancel="cancelMessageLongPress"
-            >
-              <div v-if="msg.quote" class="mb-2 rounded-lg border border-white/40 bg-black/5 px-2 py-1 text-[11px] leading-4">
-                <p class="font-semibold opacity-80">{{ msg.quote.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user') }}</p>
-                <p class="line-clamp-2">{{ msg.quote.preview }}</p>
-              </div>
-
-              <div v-for="(block, blockIndex) in messageBlocks(msg)" :key="`${msg.id}-block-${blockIndex}`" class="mt-1 first:mt-0">
-                <div
-                  v-if="block.type === 'text'"
-                  :class="
-                    block.variant === 'secondary'
-                      ? 'rounded-lg border border-black/10 bg-white/45 px-2.5 py-2'
-                      : ''
-                  "
-                >
-                  <p
-                    v-if="block.variant === 'secondary'"
-                    class="mb-1 text-[10px] uppercase tracking-wide text-gray-500"
-                  >
-                    {{ secondaryTextBadge(block) }}
-                  </p>
-                  <div
-                    class="markdown-body"
-                    :class="
-                      block.variant === 'secondary'
-                        ? 'text-[12px] opacity-90 leading-relaxed break-words'
-                        : 'leading-relaxed break-words'
-                    "
-                    v-html="renderMarkdown(block.text)"
-                  ></div>
-                </div>
-
-                <div v-else-if="block.type === 'voice_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2 flex items-center gap-2">
-                  <span class="w-6 h-6 rounded-full bg-black/10 inline-flex items-center justify-center"><i class="fas fa-play text-[10px]"></i></span>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-[12px] font-semibold truncate">{{ block.label }}</p>
-                    <p class="text-[11px] opacity-80 line-clamp-2" v-if="block.transcript">{{ block.transcript }}</p>
-                  </div>
-                  <span class="text-[10px] opacity-70">{{ formatVoiceDuration(block.durationSec) }}</span>
-                </div>
-
-                <div v-else-if="block.type === 'module_link'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
-                  <p class="text-[12px] font-semibold">{{ block.label }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.note">{{ block.note }}</p>
-                  <button @click="openModuleRoute(block.route)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">
-                    {{ t('打开', 'Open') }} {{ block.route }}
-                  </button>
-                </div>
-
-                <div v-else-if="block.type === 'link_external'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
-                  <p class="text-[12px] font-semibold">{{ block.label }}</p>
-                  <p class="text-[11px] opacity-75 break-all">{{ block.url }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.note">{{ block.note }}</p>
-                  <button @click="openExternalUrl(block.url)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">
-                    {{ t('打开链接', 'Open link') }}
-                  </button>
-                </div>
-
-                <div v-else-if="block.type === 'transfer_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
-                  <p class="text-[12px] font-semibold">{{ block.label }}</p>
-                  <p class="text-base font-bold">{{ block.amount }} {{ block.currency }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.to">{{ t('收款方', 'To') }}: {{ block.to }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.note">{{ t('备注', 'Note') }}: {{ block.note }}</p>
-                  <button @click="openModuleRoute(block.actionRoute)" class="mt-2 px-2 py-1 rounded-md border border-black/15 text-[11px]">{{ transferActionLabel(block) }}</button>
-                </div>
-
-                <div v-else-if="block.type === 'product_card'" class="rounded-lg border border-orange-200 bg-orange-50/80 px-2.5 py-2">
-                  <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-500">{{ t('Shopping 商品卡', 'Shopping product card') }}</p>
-                  <p v-if="block.serviceLabel || block.serviceKey" class="mt-1 text-[10px] font-semibold text-amber-700">
-                    {{ t('来自店铺', 'From shop') }} · {{ block.serviceLabel || block.serviceKey }}
-                  </p>
-                  <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
-                  <p v-if="block.desc" class="mt-1 text-[11px] opacity-75 line-clamp-2">{{ block.desc }}</p>
-                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-orange-600">{{ block.price }}</span>
-                    <span v-if="block.category" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">{{ block.category }}</span>
-                    <span v-if="block.serviceLabel || block.serviceKey" class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{{ block.serviceLabel || block.serviceKey }}</span>
-                    <span v-if="block.assetEligible" class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600">{{ t('可转资产', 'Asset-ready') }}</span>
-                    <span v-if="block.giftable" class="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] text-rose-600">{{ t('可赠礼', 'Giftable') }}</span>
-                  </div>
-                  <button
-                    :data-testid="`chat-product-card-open-${block.productId}`"
-                    @click="openShoppingProductCard(block)"
-                    class="mt-2 rounded-md border border-orange-200 bg-white px-2 py-1 text-[11px] text-orange-700"
-                  >
-                    {{ t('去 Shopping 确认', 'Confirm in Shopping') }}
-                  </button>
-                </div>
-
-                <div
-                  v-else-if="block.type === 'service_notification'"
-                  class="rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-2"
-                  :data-testid="`chat-service-notification-${block.sourceModule}-${block.sourceId}${block.sourceEventId ? `-${block.sourceEventId}` : ''}`"
-                >
-                  <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
-                    {{ t('服务号通知', 'Service notification') }}
-                  </p>
-                  <p v-if="block.serviceLabel || block.serviceKey" class="mt-1 text-[10px] font-semibold text-indigo-700">
-                    {{ block.serviceLabel || block.serviceKey }}
-                  </p>
-                  <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
-                  <p v-if="block.summary" class="mt-1 text-[11px] leading-4 text-indigo-900/75">{{ block.summary }}</p>
-                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span v-if="block.statusLabel" class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
-                      {{ block.statusLabel }}
-                    </span>
-                    <span v-if="block.amount" class="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-gray-700">
-                      {{ block.amount }}
-                    </span>
-                    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700">
-                      {{ block.sourceModule }}
-                    </span>
-                  </div>
-                  <div class="mt-2 flex flex-wrap gap-1.5">
-                    <button
-                      v-for="(action, actionIndex) in block.actions"
-                      :key="`${action.route}-${actionIndex}`"
-                      class="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[11px] text-indigo-700"
-                      :data-testid="`chat-service-notification-action-${block.sourceId}-${actionIndex}`"
-                      @click="openServiceNotificationRoute(block, action)"
-                    >
-                      {{ action.label }}
-                    </button>
-                    <button
-                      v-if="!block.actions?.length"
-                      class="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[11px] text-indigo-700"
-                      :data-testid="`chat-service-notification-open-${block.sourceId}`"
-                      @click="openServiceNotificationRoute(block)"
-                    >
-                      {{ t('查看详情', 'View details') }}
-                    </button>
-                  </div>
-                </div>
-
-                <div v-else-if="block.type === 'image_virtual'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
-                  <div class="w-full h-24 rounded-md bg-black/5 overflow-hidden mb-1.5">
-                    <img
-                      v-if="resolveImageBlockUrl(msg.id, blockIndex, block)"
-                      :src="resolveImageBlockUrl(msg.id, blockIndex, block)"
-                      class="w-full h-full object-cover"
-                    />
-                    <div v-else class="w-full h-full flex items-center justify-center text-[11px] opacity-70">{{ t('图片预览', 'Image preview') }}</div>
-                  </div>
-                  <p class="text-[12px] font-semibold">{{ block.alt }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.caption">{{ block.caption }}</p>
-                </div>
-
-                <div v-else-if="block.type === 'mini_scene'" class="rounded-lg border border-black/10 bg-white/60 px-2.5 py-2">
-                  <p class="text-[12px] font-semibold">{{ block.title }}</p>
-                  <p class="text-[11px] opacity-75" v-if="block.description">{{ block.description }}</p>
-                  <pre v-if="block.htmlSnippet" class="mt-1 rounded-md bg-black/5 p-2 text-[10px] whitespace-pre-wrap break-all">{{ block.htmlSnippet }}</pre>
-                </div>
-              </div>
-            </div>
-
-            <p v-if="messageMetaHintText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? 'text-right text-gray-400' : 'text-left text-gray-400'">
-              {{ messageMetaHintText(msg) }}
-            </p>
-            <p v-if="messageStatusText(msg)" class="text-[10px] mt-1" :class="msg.role === 'user' ? (msg.status === 'failed' ? 'text-right text-red-500' : 'text-right text-gray-400') : (msg.status === 'failed' ? 'text-left text-red-500' : 'text-left text-gray-400')">
-              {{ messageStatusText(msg) }}
-            </p>
+          <div
+            v-else-if="item.type === 'service-notification-batch-summary'"
+            class="mx-auto mb-1 max-w-[88%] rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 text-center shadow-sm"
+            data-testid="chat-service-notification-batch-summary"
+          >
+            <p class="text-[11px] font-semibold text-emerald-700">{{ item.title }}</p>
+            <p v-if="item.detail" class="mt-0.5 line-clamp-1 text-[10px] text-gray-500">{{ item.detail }}</p>
           </div>
 
-          <div v-if="msg.role === 'user'" class="w-8 h-8 rounded-xl bg-gray-200 ml-2 overflow-hidden flex-shrink-0">
-            <img
-              :src="activeSelfAvatar"
-              class="w-full h-full object-cover"
-              data-testid="chat-active-self-avatar"
-            />
-          </div>
-        </div>
+          <ChatMessageRow
+            v-else
+            :message="item.message"
+            :layout-mode="activeChatMessageLayout"
+            :active-self-avatar="activeSelfAvatar"
+            :active-contact-avatar="activeContactAvatar"
+            :is-group="activeChat?.kind === 'group'"
+            :sender-name="activeMessageSenderName(item.message)"
+            :message-blocks="messageBlocks"
+            :render-markdown="renderMarkdown"
+            :secondary-text-badge="secondaryTextBadge"
+            :resolve-image-block-url="resolveImageBlockUrl"
+            :format-voice-duration="formatVoiceDuration"
+            :message-meta-hint-text="messageMetaHintText"
+            :message-status-text="messageStatusText"
+            :transfer-action-label="transferActionLabel"
+            :can-reply-to-service-notification="canActiveChatCommunicate"
+            :service-notification-density="item.serviceNotificationDensity"
+            @open-message-actions="openMessageActions"
+            @start-message-long-press="startMessageLongPress"
+            @cancel-message-long-press="cancelMessageLongPress"
+            @open-module-route="openModuleRoute"
+            @open-external-url="openExternalUrl"
+            @open-shopping-product-card="openShoppingProductCard"
+            @open-service-notification-route="openServiceNotificationRoute"
+            @quote-service-notification="quoteServiceNotification"
+          />
+        </template>
 
         <div v-if="suggestionFeatureEnabled && showSuggestions && suggestions.length > 0" class="flex flex-wrap gap-2 justify-end mb-2">
           <div
@@ -4934,121 +6766,192 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="p-3 chat-input flex items-center gap-2 border-t relative">
-        <div
-          v-if="pendingQuote"
-          class="absolute -top-24 left-3 right-3 text-[11px] rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 flex items-start justify-between gap-2"
-        >
-          <div class="min-w-0">
-            <p class="font-semibold text-gray-700">
-              {{ pendingQuote.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user') }}
-            </p>
-            <p class="line-clamp-2 text-gray-600">{{ pendingQuote.preview }}</p>
+      <div class="p-3 chat-input border-t">
+        <div class="space-y-2">
+          <div
+            v-if="activeServiceInteractionDock"
+            class="rounded-2xl border px-3 py-2 text-[11px] shadow-sm"
+            :class="activeServiceInteractionDockClasses"
+            data-testid="chat-service-interaction-dock"
+            :data-service-interaction-type="activeServiceInteractionDock.type"
+          >
+            <div class="flex items-start gap-2">
+              <span class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80">
+                <i class="text-[11px]" :class="activeServiceInteractionDock.icon"></i>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold" data-testid="chat-service-interaction-dock-title">
+                      {{ activeServiceInteractionDock.title }}
+                    </p>
+                    <p
+                      v-if="activeServiceInteractionDock.context"
+                      class="mt-0.5 truncate text-[10px] opacity-75"
+                    >
+                      {{ activeServiceInteractionDock.context }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-full border border-black/10 bg-white/70 px-2 py-0.5 text-[10px] font-semibold"
+                    data-testid="chat-service-interaction-dock-dismiss"
+                    @click="dismissActiveServiceInteractionDock"
+                  >
+                    {{ activeServiceInteractionDock.dismissLabel }}
+                  </button>
+                </div>
+                <p class="mt-1 line-clamp-2 leading-4 opacity-80">
+                  {{ activeServiceInteractionDock.detail }}
+                </p>
+                <button
+                  v-if="activeServiceInteractionDock.primaryLabel"
+                  type="button"
+                  class="mt-1.5 rounded-full border border-black/10 bg-white px-3 py-1 text-[10px] font-semibold"
+                  data-testid="chat-service-interaction-dock-primary"
+                  @click="openActiveServiceInteractionDockPrimary"
+                >
+                  {{ activeServiceInteractionDock.primaryLabel }}
+                </button>
+              </div>
+            </div>
           </div>
-          <button @click="clearPendingQuote" class="shrink-0 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">
-            {{ t('取消', 'Cancel') }}
-          </button>
-        </div>
 
-        <div
-          v-if="aiErrorMessage"
-          class="absolute -top-14 left-3 right-3 text-[11px] rounded-lg border border-red-200 bg-red-50 text-red-700 px-2.5 py-1.5 flex items-center justify-between gap-2"
-        >
-          <span class="line-clamp-1">{{ aiErrorMessage }}</span>
-          <div class="shrink-0 flex items-center gap-1">
-            <button v-if="canRetryAi" @click="retryLastMessage" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('重试', 'Retry') }}</button>
-            <button v-if="canCancelAi" @click="cancelActiveRequest" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('取消', 'Cancel') }}</button>
+          <div
+            v-if="pendingQuote"
+            class="rounded-2xl border border-gray-200 bg-white px-2.5 py-2 text-[11px] shadow-sm"
+            data-testid="chat-pending-quote-bar"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-semibold text-gray-700">
+                  {{ pendingQuoteLabel }}
+                </p>
+                <p class="mt-0.5 line-clamp-2 text-gray-600">{{ pendingQuote.preview }}</p>
+              </div>
+              <button @click="clearPendingQuote" class="shrink-0 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">
+                {{ t('取消', 'Cancel') }}
+              </button>
+            </div>
+          </div>
+
+          <div
+            v-if="aiErrorMessage"
+            class="flex items-center justify-between gap-2 rounded-2xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700"
+          >
+            <span class="line-clamp-1">{{ aiErrorMessage }}</span>
+            <div class="shrink-0 flex items-center gap-1">
+              <button v-if="canRetryAi" @click="retryLastMessage" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('重试', 'Retry') }}</button>
+              <button v-if="canCancelAi" @click="cancelActiveRequest" class="px-2 py-1 rounded border border-red-300 hover:bg-red-100">{{ t('取消', 'Cancel') }}</button>
+            </div>
+          </div>
+
+          <div
+            v-else-if="uiNoticeMessage"
+            class="rounded-2xl border px-2.5 py-1.5 text-[11px]"
+            :class="
+              uiNoticeType === 'error'
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : uiNoticeType === 'warning'
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            "
+          >
+            <p class="line-clamp-2">{{ uiNoticeMessage }}</p>
+          </div>
+
+          <ChatUserActionPanel
+            v-if="showUserActionPanel && canActiveChatCommunicate"
+            :user-action-form-type="userActionFormType"
+            :user-action-draft="userActionDraft"
+            :gallery-send-state="gallerySendState"
+            :location-share-state="locationShareState"
+            :user-action-grid-hint="userActionGridHint"
+            :link-form-state="linkFormState"
+            :transfer-form-state="transferFormState"
+            :voice-form-state="voiceFormState"
+            :gallery-picker-category="galleryPickerCategory"
+            :gallery-picker-category-options="galleryPickerCategoryOptions"
+            :active-role-asset-context="activeRoleAssetContext"
+            :gallery-picker-assets="galleryPickerAssets"
+            :gallery-picker-preview-map="galleryPickerPreviewMap"
+            :shopping-preview-products="shoppingPreviewProducts"
+            :suggestion-feature-enabled="suggestionFeatureEnabled"
+            :loading-suggestions="loadingSuggestions"
+            :loading-a-i="loadingAI"
+            @trigger-media-picker="triggerUserMediaPicker"
+            @open-form="openUserActionForm"
+            @send-current-location="sendCurrentLocation"
+            @back-to-grid="backToUserActionGrid"
+            @submit-link-card-form="submitLinkCardForm"
+            @submit-transfer-card-form="submitTransferCardForm"
+            @submit-voice-card-form="submitVoiceCardForm"
+            @send-product-card="submitShoppingProductCard"
+            @update-user-action-draft="updateUserActionDraft"
+            @update-gallery-picker-category="galleryPickerCategory = $event"
+            @submit-gallery-asset="submitGalleryAsset"
+            @open-gallery="openModuleRoute('/gallery')"
+            @open-shopping="openShoppingFromChat"
+            @generate-smart-replies="generateSmartReplies"
+            @close="closeUserActionPanel"
+          />
+
+          <input
+            ref="userMediaInputRef"
+            data-testid="chat-user-media-input"
+            type="file"
+            class="hidden"
+            accept="image/*"
+            @change="handleUserMediaPicked"
+          />
+
+          <div class="flex items-center gap-2">
+            <button
+              data-testid="chat-user-action-toggle"
+              @click="toggleUserActionPanel"
+              class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition border"
+              :class="
+                !canActiveChatCommunicate
+                  ? 'bg-gray-100 border-gray-200 text-gray-300'
+                  : showUserActionPanel
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-600'
+              "
+              :disabled="!canActiveChatCommunicate"
+            >
+              <i class="fas fa-plus text-xs"></i>
+            </button>
+
+            <input
+              ref="messageTextInputRef"
+              v-model="inputMessage"
+              @keyup.enter="sendTextMessage"
+              type="text"
+              class="min-w-0 flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
+              data-testid="chat-message-input"
+              :disabled="!canActiveChatCommunicate"
+              :placeholder="messageInputPlaceholder"
+            />
+
+            <button
+              @click="requestPendingAiReply"
+              data-testid="chat-trigger-reply"
+              class="h-8 shrink-0 rounded-full border px-3 text-xs transition"
+              :class="canRequestAiReply ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-100 text-gray-400'"
+              :disabled="!canRequestAiReply"
+            >
+              {{ triggerReplyButtonLabel }}
+            </button>
+
+            <button
+              @click="sendTextMessage"
+              class="w-8 h-8 shrink-0 chat-send rounded-full flex items-center justify-center disabled:opacity-40"
+              :disabled="!canActiveChatCommunicate"
+            >
+              <i class="fas fa-paper-plane text-xs"></i>
+            </button>
           </div>
         </div>
-
-        <div
-          v-else-if="uiNoticeMessage"
-          class="absolute -top-10 left-3 right-3 text-[11px] rounded-lg border px-2.5 py-1.5 line-clamp-1"
-          :class="
-            uiNoticeType === 'error'
-              ? 'border-red-200 bg-red-50 text-red-700'
-              : uiNoticeType === 'warning'
-                ? 'border-amber-200 bg-amber-50 text-amber-700'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          "
-        >
-          {{ uiNoticeMessage }}
-        </div>
-
-        <ChatUserActionPanel
-          v-if="showUserActionPanel"
-          :user-action-form-type="userActionFormType"
-          :user-action-draft="userActionDraft"
-          :gallery-send-state="gallerySendState"
-          :location-share-state="locationShareState"
-          :user-action-grid-hint="userActionGridHint"
-          :link-form-state="linkFormState"
-          :transfer-form-state="transferFormState"
-          :voice-form-state="voiceFormState"
-          :gallery-picker-category="galleryPickerCategory"
-          :gallery-picker-category-options="galleryPickerCategoryOptions"
-          :active-role-asset-context="activeRoleAssetContext"
-          :gallery-picker-assets="galleryPickerAssets"
-          :gallery-picker-preview-map="galleryPickerPreviewMap"
-          :shopping-preview-products="shoppingPreviewProducts"
-          :suggestion-feature-enabled="suggestionFeatureEnabled"
-          :loading-suggestions="loadingSuggestions"
-          :loading-a-i="loadingAI"
-          @trigger-media-picker="triggerUserMediaPicker"
-          @open-form="openUserActionForm"
-          @send-current-location="sendCurrentLocation"
-          @back-to-grid="backToUserActionGrid"
-          @submit-link-card-form="submitLinkCardForm"
-          @submit-transfer-card-form="submitTransferCardForm"
-          @submit-voice-card-form="submitVoiceCardForm"
-          @send-product-card="submitShoppingProductCard"
-          @update-user-action-draft="updateUserActionDraft"
-          @update-gallery-picker-category="galleryPickerCategory = $event"
-          @submit-gallery-asset="submitGalleryAsset"
-          @open-gallery="openModuleRoute('/gallery')"
-          @open-shopping="openShoppingFromChat"
-          @generate-smart-replies="generateSmartReplies"
-          @close="closeUserActionPanel"
-        />
-
-        <input
-          ref="userMediaInputRef"
-          type="file"
-          class="hidden"
-          accept="image/*"
-          @change="handleUserMediaPicked"
-        />
-
-        <button
-          data-testid="chat-user-action-toggle"
-          @click="toggleUserActionPanel"
-          class="w-8 h-8 rounded-full flex items-center justify-center transition border"
-          :class="showUserActionPanel ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600'"
-        >
-          <i class="fas fa-plus text-xs"></i>
-        </button>
-
-        <input
-          v-model="inputMessage"
-          @keyup.enter="sendTextMessage"
-          type="text"
-          class="flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
-          :placeholder="t('发送一条消息...', 'Send a message...')"
-        />
-
-        <button
-          @click="requestPendingAiReply"
-          data-testid="chat-trigger-reply"
-          class="h-8 px-3 rounded-full text-xs border transition"
-          :class="canRequestAiReply ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-100 text-gray-400'"
-          :disabled="!canRequestAiReply"
-        >
-          {{ t('触发回复', 'Trigger Reply') }}
-        </button>
-
-        <button @click="sendTextMessage" class="w-8 h-8 chat-send rounded-full flex items-center justify-center">
-          <i class="fas fa-paper-plane text-xs"></i>
-        </button>
       </div>
 
       <div
@@ -5069,20 +6972,33 @@ onBeforeUnmount(() => {
 
           <div class="space-y-2">
             <button
+              v-if="canQuoteMessage(activeActionMessage)"
               class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              data-testid="chat-message-action-quote"
               @click="quoteMessage(activeActionMessage)"
             >
               {{ t('引用', 'Quote') }}
             </button>
             <button
+              v-if="canCopyMessage(activeActionMessage)"
               class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              data-testid="chat-message-action-copy"
               @click="copyMessage(activeActionMessage)"
             >
               {{ t('复制', 'Copy') }}
             </button>
             <button
+              v-if="canToggleSavedMessage(activeActionMessage)"
+              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              data-testid="chat-message-action-save"
+              @click="toggleSavedMessage(activeActionMessage)"
+            >
+              {{ activeActionMessage.savedAt ? t('取消收藏', 'Unsave') : t('收藏', 'Save') }}
+            </button>
+            <button
               v-if="canEditMessage(activeActionMessage)"
               class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              data-testid="chat-message-action-edit"
               @click="editMessage(activeActionMessage)"
             >
               {{ t('编辑', 'Edit') }}
@@ -5090,6 +7006,7 @@ onBeforeUnmount(() => {
             <button
               v-if="canRestoreSemanticRevision(activeActionMessage)"
               class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              data-testid="chat-message-action-restore"
               @click="restoreSemanticRevision(activeActionMessage)"
             >
               {{ t('恢复原文', 'Restore original') }}
@@ -5097,12 +7014,22 @@ onBeforeUnmount(() => {
             <button
               v-if="canRerollMessage(activeActionMessage)"
               class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-100"
+              data-testid="chat-message-action-reroll"
               @click="rerollMessage(activeActionMessage)"
             >
               {{ t('重roll', 'Reroll') }}
             </button>
             <button
+              v-if="canRecallMessage(activeActionMessage)"
+              class="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-100"
+              data-testid="chat-message-action-recall"
+              @click="recallMessage(activeActionMessage)"
+            >
+              {{ recallMessageActionLabel(activeActionMessage) }}
+            </button>
+            <button
               class="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-100"
+              data-testid="chat-message-action-delete"
               @click="deleteMessage(activeActionMessage)"
             >
               {{ t('删除', 'Delete') }}
@@ -5122,8 +7049,12 @@ onBeforeUnmount(() => {
         v-if="showEditMessageModal"
         :editing-message-role="editingMessageRole"
         :editing-message-draft-text="editingMessageDraftText"
+        :editing-message-rich-type="editingMessageRichType"
+        :editing-message-rich-fields="editingMessageRichFields"
+        :editing-message-rich-field-definitions="messageEditRichFieldDefinitions"
         :message-edit-state="messageEditState"
         @update:editing-message-draft-text="editingMessageDraftText = $event"
+        @update:editing-message-rich-field="updateEditingMessageRichField"
         @close="closeMessageEditModal"
         @submit="submitMessageEdit"
       />

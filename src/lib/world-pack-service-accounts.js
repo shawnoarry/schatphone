@@ -1,4 +1,5 @@
 import { normalizeWorldPack } from './world-pack-schema'
+import { buildServiceAccountSourceNotificationPlan } from './service-account-source-plan'
 
 const SERVICE_CATEGORY_KIND = Object.freeze({
   publication: 'official',
@@ -124,6 +125,9 @@ export const buildWorldServiceTemplateGenerationRows = ({ pack, findExistingCont
         typeof findExistingContact === 'function'
           ? findExistingContact(normalizedPack.id, template.id)
           : null
+      const sourceNotificationPlan = buildServiceAccountSourceNotificationPlan(payload || {}, {
+        subscriptionState: existingContact ? 'joined' : 'available',
+      })
 
       return {
         id: template.id,
@@ -135,6 +139,17 @@ export const buildWorldServiceTemplateGenerationRows = ({ pack, findExistingCont
         linkedAppBindingId: template.linkedAppBindingId,
         linkedAppLabel: appBinding?.title || '',
         chatBindingLabel: chatBinding.label || '',
+        source: template.source || '',
+        proposalConfidence: template.proposalConfidence || '',
+        proposalEvidence: template.proposalEvidence || '',
+        confirmedAt: Number.isFinite(Number(template.confirmedAt))
+          ? Math.max(0, Math.floor(Number(template.confirmedAt)))
+          : 0,
+        userEditedAt: Number.isFinite(Number(template.userEditedAt))
+          ? Math.max(0, Math.floor(Number(template.userEditedAt)))
+          : 0,
+        sourceNotificationPlan,
+        sourcePlanSummary: sourceNotificationPlan.summary,
         generated: Boolean(existingContact),
         contactId: existingContact?.id || 0,
         payload,

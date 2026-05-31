@@ -56,6 +56,26 @@ const normalizeStringList = (value, maxLength = 120) => {
   return items
 }
 
+const normalizeRelationshipRegistryEntries = (value, type = 'category') => {
+  if (!Array.isArray(value)) return []
+  const seen = new Set()
+  return value
+    .map((item, index) => {
+      const source = item && typeof item === 'object' ? item : { id: item }
+      const id = normalizeId(source.id, `world_${type}_${index + 1}`)
+      if (!id || seen.has(id)) return null
+      seen.add(id)
+      return {
+        id,
+        label: normalizeInlineText(source.label || source.name, id, 100),
+        description: normalizeInlineText(source.description, '', 300),
+        fallbackCategoryId: normalizeId(source.fallbackCategoryId || source.fallbackId, ''),
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 20)
+}
+
 const normalizeActivationState = (value) => {
   const normalized = normalizeInlineText(value, '').toLowerCase()
   return WORLD_PACK_ACTIVATION_STATE_SET.has(normalized) ? normalized : 'available'
@@ -99,6 +119,8 @@ export const normalizeWorldAppBinding = (raw, index = 0) => {
 export const normalizeWorldServiceAccountTemplate = (raw, index = 0) => {
   const source = raw && typeof raw === 'object' ? raw : {}
   const title = normalizeInlineText(source.title || source.name, `Service template ${index + 1}`, 120)
+  const userEditedAt = toInt(source.userEditedAt, 0)
+  const confirmedAt = toInt(source.confirmedAt, 0)
 
   return {
     id: normalizeId(source.id, `service_template_${index + 1}`),
@@ -110,6 +132,11 @@ export const normalizeWorldServiceAccountTemplate = (raw, index = 0) => {
     linkedAppBindingId: normalizeId(source.linkedAppBindingId || source.appBindingId, ''),
     pushPolicy: normalizeInlineText(source.pushPolicy, 'reviewed', 80),
     enabled: source.enabled !== false,
+    userEditedAt,
+    source: normalizeId(source.source, ''),
+    proposalConfidence: normalizeId(source.proposalConfidence, ''),
+    proposalEvidence: normalizeInlineText(source.proposalEvidence, '', 500),
+    confirmedAt,
   }
 }
 
@@ -182,6 +209,14 @@ export const BUILT_IN_WORLD_PACKS = Object.freeze([
         moduleKey: 'food_delivery',
         route: '/food-delivery',
         description: 'Maps delivery and dispatch alerts to survival support.',
+      },
+      {
+        id: 'survival_safe_route_pass',
+        archetype: 'transit',
+        title: 'Safe Route Pass',
+        moduleKey: 'map',
+        route: '/map',
+        description: 'Maps travel access to survival safe-route context while Map keeps route and trip truth.',
       },
     ],
     serviceAccountTemplates: [
@@ -260,6 +295,8 @@ export const normalizeWorldPack = (raw, index = 0) => {
     knowledgePointIds: normalizeStringList(source.knowledgePointIds),
     profileTemplateIds: normalizeStringList(source.profileTemplateIds),
     bookSourceLinkIds: normalizeStringList(source.bookSourceLinkIds),
+    relationshipCategories: normalizeRelationshipRegistryEntries(source.relationshipCategories, 'category'),
+    relationshipModifiers: normalizeRelationshipRegistryEntries(source.relationshipModifiers, 'modifier'),
     appBindings,
     serviceAccountTemplates,
     terminology: normalizeTermMap(source.terminology),

@@ -8,6 +8,7 @@ import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 import AssetsView from '../src/views/AssetsView.vue'
 import ControlCenterView from '../src/views/ControlCenterView.vue'
 import { CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP } from '../src/lib/custom-widget-actions'
+import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -19,6 +20,7 @@ const createTestRouter = () =>
       { path: '/home', component: HomeView },
       { path: '/shopping', component: ShoppingView },
       { path: '/food-delivery', component: FoodDeliveryView },
+      { path: '/map', component: DummyView },
       { path: '/assets', component: AssetsView },
       { path: '/reminders', component: DummyView },
       { path: '/control-center', component: ControlCenterView },
@@ -171,6 +173,79 @@ describe('Home folder entries', () => {
       from: 'home',
       homePage: '0',
     })
+    wrapper.unmount()
+  })
+
+  test('Home library can place and launch a confirmed nonstandard world app entry', async () => {
+    const router = createTestRouter()
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(2, 'layout-b')
+
+    const confirmed = store.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'transit_pass',
+        title: 'Metro Pass',
+        confidence: 'medium',
+      },
+      'default_world',
+    )
+    expect(confirmed.ok).toBe(true)
+    const worldAppId = buildWorldAppHomeTileId({
+      packId: 'default_world',
+      bindingId: confirmed.binding.id,
+    })
+
+    await router.push({
+      path: '/home',
+      query: {
+        homePage: '2',
+        widgetEdit: '1',
+        libraryTile: worldAppId,
+      },
+    })
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const candidate = wrapper.get(`[data-testid="home-library-candidate-${worldAppId}"]`)
+    expect(candidate.classes()).toContain('is-active')
+    expect(candidate.text()).toContain('Metro Pass')
+
+    await wrapper.get('[data-testid="home-empty-slot-2-b-small-1"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain(worldAppId)
+    expect(wrapper.get(`[data-home-tile-id="${worldAppId}"]`).text()).toContain('Metro Pass')
+
+    await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find(`[data-testid="home-library-candidate-${worldAppId}"]`).exists()).toBe(false)
+
+    await wrapper.get('[data-testid="home-edit-done"]').trigger('click')
+    vi.advanceTimersByTime(450)
+    await wrapper.vm.$nextTick()
+    await wrapper.get(`[data-home-tile-id="${worldAppId}"] .home-app-tile`).trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/map')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'default_world',
+      worldApp: confirmed.binding.id,
+      from: 'home',
+      homePage: '2',
+    })
+
     wrapper.unmount()
   })
 
@@ -798,6 +873,59 @@ describe('Home folder entries', () => {
     expect(router.currentRoute.value.query.category).toBe('fashion')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('Home library places and opens active World Pack app entries', async () => {
+    const router = createTestRouter()
+    const worldAppId = 'world_app_survival_city_survival_supply_board'
+    await router.push(`/home?widgetEdit=1&homePage=4&libraryTile=${worldAppId}`)
+    await router.isReady()
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    expect(store.activateWorldPack('survival_city').ok).toBe(true)
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const libraryCandidate = wrapper.find(`[data-testid="home-library-candidate-${worldAppId}"]`)
+    expect(libraryCandidate.exists()).toBe(true)
+    expect(libraryCandidate.classes()).toContain('is-active')
+
+    await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[4]).toContain(worldAppId)
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-small-1',
+      tileId: worldAppId,
+    })
+    expect(wrapper.find(`[data-home-tile-id="${worldAppId}"]`).exists()).toBe(true)
+
+    await wrapper.find('.home-edit-btn.is-primary').trigger('click')
+    vi.advanceTimersByTime(250)
+    await wrapper.vm.$nextTick()
+    await wrapper.find(`[data-home-tile-id="${worldAppId}"] .home-app-tile`).trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'survival_city',
+      worldApp: 'survival_supply_board',
+      from: 'home',
+      homePage: '4',
+    })
+
     wrapper.unmount()
   })
 

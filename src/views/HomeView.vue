@@ -34,6 +34,7 @@ import {
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
 } from '../lib/navigation-return'
+import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
 import {
   CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP,
   CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
@@ -232,6 +233,29 @@ const customWidgetMap = computed(() => {
   return map
 })
 
+const worldAppEntries = computed(() => buildActiveWorldAppEntryRows({ systemStore }))
+const worldAppHomeTileIds = computed(() => worldAppEntries.value.map((entry) => entry.id))
+const worldAppTileMap = computed(() => {
+  const map = new Map()
+  worldAppEntries.value.forEach((entry) => {
+    map.set(entry.id, {
+      kind: 'app',
+      icon: entry.icon,
+      label: entry.label,
+      accent: entry.accent || 'default',
+      route: entry.route,
+      routeQuery: entry.routeQuery,
+      span: HOME_WIDGET_SIZE_CLASS_MAP['1x1'],
+      worldAppEntry: true,
+      worldPackName: entry.worldPackName,
+      worldPackTitle: entry.worldPackTitle,
+      moduleKey: entry.moduleKey,
+      archetype: entry.archetype,
+    })
+  })
+  return map
+})
+
 const customWidgetSrcDocMap = computed(() => {
   const map = new Map()
   customWidgets.value.forEach((widget) => {
@@ -335,6 +359,9 @@ const syncHomePageFromRoute = () => {
 watch(() => route.query.homePage, syncHomePageFromRoute, { immediate: true })
 
 const tileMeta = (tileId) => {
+  const worldApp = worldAppTileMap.value.get(tileId)
+  if (worldApp) return worldApp
+
   const builtIn = widgetRegistry[tileId]
   if (builtIn) {
     if (builtIn.kind === 'app') {
@@ -632,6 +659,7 @@ const visibleHomePlacedIds = computed(() => {
 const allHomeSlotCandidateIds = computed(() =>
   Object.keys(widgetRegistry)
     .filter((tileId) => tileId !== 'app_files')
+    .concat(worldAppHomeTileIds.value)
     .concat(customWidgets.value.map((widget) => widget.id))
     .filter((tileId) => !!tileMeta(tileId))
 )
@@ -884,7 +912,7 @@ const openAppById = (tileId) => {
   if (layoutEditMode.value) return
   if (Date.now() < ignoreAppOpenUntil.value) return
 
-  const tile = widgetRegistry[tileId]
+  const tile = tileMeta(tileId)
   if (!tile) return
 
   if (tile.kind === HOME_FOLDER_TILE_KIND) {
@@ -897,6 +925,13 @@ const openAppById = (tileId) => {
 
   if (tile.route) {
     maybeVibrate(8)
+    if (tile.routeQuery) {
+      router.push({
+        path: tile.route,
+        query: buildHomeSourceQuery(homeReturnPageForCurrentView.value, tile.routeQuery),
+      })
+      return
+    }
     router.push(buildRouteWithReturnSource(tile.route, 'home', { homePage: homeReturnPageForCurrentView.value }))
     return
   }
@@ -1568,7 +1603,14 @@ onBeforeUnmount(() => {
           <i class="fas fa-layer-group" aria-hidden="true"></i>
           <span>{{ t('库', 'Library') }} {{ homeLibraryCandidateCount }}</span>
         </button>
-        <button @click="exitLayoutMode" class="home-edit-btn is-primary">{{ t('完成', 'Done') }}</button>
+        <button
+          type="button"
+          class="home-edit-btn is-primary"
+          data-testid="home-edit-done"
+          @click="exitLayoutMode"
+        >
+          {{ t('完成', 'Done') }}
+        </button>
       </div>
     </div>
 

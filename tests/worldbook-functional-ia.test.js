@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+﻿import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
+import CurrentWorldPackPanel from '../src/components/worldbook/CurrentWorldPackPanel.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
 
@@ -15,6 +16,8 @@ const createTestRouter = () =>
     routes: [
       { path: '/worldbook', component: WorldBookView },
       { path: '/settings', component: DummyView },
+      { path: '/app-store', component: DummyView },
+      { path: '/chat-contacts', component: DummyView },
       { path: '/shopping', component: DummyView },
     ],
   })
@@ -41,19 +44,19 @@ describe('WorldBook functional IA', () => {
 
   test('leads with active world overview and current pack before editing controls', async () => {
     const systemStore = useSystemStore()
-    systemStore.settings.system.language = 'zh-CN'
-    const worldview = '这座城市以夜间礼仪和稳定关系网为基础。'
+    systemStore.settings.system.language = 'en-US'
+    const worldview = 'This city is built on night etiquette and stable relationship networks.'
     systemStore.setGlobalWorldview(worldview)
     systemStore.upsertKnowledgePoint({
       id: 'kp_city',
-      title: '城市礼仪',
-      content: '公开场合先正式问候。',
+      title: 'City etiquette',
+      content: 'Formal greetings come first in public.',
       enabled: true,
     })
     systemStore.upsertKnowledgePoint({
       id: 'kp_disabled',
-      title: '停用条目',
-      content: '不应该注入。',
+      title: 'Disabled item',
+      content: 'This should not be injected.',
       enabled: false,
     })
     systemStore.createWorldProfileTemplateFromPreset('preset_abo', {
@@ -66,24 +69,24 @@ describe('WorldBook functional IA', () => {
     const currentPack = wrapper.get('[data-testid="worldbook-current-pack"]')
     const worldKernel = wrapper.get('[data-testid="worldbook-world-kernel"]')
 
-    expect(overview.text()).toContain('当前生效世界')
-    expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('默认世界')
+    expect(overview.text()).toContain('Active world')
+    expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
     expect(overview.get('[data-testid="worldbook-overview-worldview"]').text()).toContain(
       String(worldview.length),
     )
     expect(overview.get('[data-testid="worldbook-overview-knowledge"]').text()).toContain('1 / 2')
     expect(overview.get('[data-testid="worldbook-overview-templates"]').text()).toContain('1')
-    expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('聊天')
+    expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(overview.get('[data-testid="worldbook-overview-consumer-runtime"]').text()).toContain(
-      '事件运行时',
+      'Event Runtime',
     )
 
-    expect(currentPack.text()).toContain('当前设定包')
+    expect(currentPack.text()).toContain('Current World Pack')
     expect(currentPack.get('[data-testid="worldbook-current-pack-state"]').text()).toContain(
-      '默认启用',
+      'Default active',
     )
     expect(currentPack.get('[data-testid="worldbook-current-pack-effects"]').text()).toContain(
-      '1 条启用，1 条停用',
+      '1 enabled, 1 disabled',
     )
     expect(overview.element.compareDocumentPosition(currentPack.element)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -112,11 +115,11 @@ describe('WorldBook functional IA', () => {
 
   test('focuses source activation first and lets users switch management panels', async () => {
     const systemStore = useSystemStore()
-    systemStore.settings.system.language = 'zh-CN'
+    systemStore.settings.system.language = 'en-US'
 
     const wrapper = await mountWorldBook()
 
-    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('世界上下文控制台')
+    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('World context console')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
       'none',
     )
@@ -146,68 +149,216 @@ describe('WorldBook functional IA', () => {
   test('reviews and activates a built-in world pack from WorldBook', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
-    systemStore.settings.system.language = 'zh-CN'
+    systemStore.settings.system.language = 'en-US'
 
     const wrapper = await mountWorldBook()
 
     await wrapper.get('[data-testid="worldbook-current-pack-select"]').setValue('survival_city')
     await nextTick()
 
+    expect(wrapper.get('[data-testid="worldbook-current-pack-active-summary"]').text()).toContain('Default world')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-candidate-preview"]').text()).toContain(
+      'Post-disaster survival city',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-candidate-preview"]').text()).toContain('3')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-candidate-preview"]').text()).toContain('1')
+
     const review = wrapper.get('[data-testid="worldbook-current-pack-review"]')
-    expect(review.text()).toContain('灾后生存都市')
-    expect(review.text()).toContain('世界应用')
-    expect(review.text()).toContain('服务号模板')
+    expect(review.text()).toContain('Post-disaster survival city')
+    expect(review.text()).toContain('World apps')
+    expect(review.text()).toContain('Service templates')
 
     await wrapper.get('[data-testid="worldbook-current-pack-activate"]').trigger('click')
     await nextTick()
 
     expect(systemStore.user.activeWorldPackId).toBe('survival_city')
-    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('灾后生存都市')
-    expect(wrapper.get('[data-testid="worldbook-current-pack-state"]').text()).toContain('当前启用')
+    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Post-disaster survival city')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-state"]').text()).toContain('Active')
 
-    const appBindings = wrapper.get('[data-testid="worldbook-current-pack-app-bindings"]')
-    expect(appBindings.text()).toContain('补给站')
-    expect(appBindings.text()).toContain('Shopping')
+    const activeSummary = wrapper.get('[data-testid="worldbook-current-pack-active-summary"]')
+    expect(activeSummary.text()).toContain('Post-disaster survival city')
+    expect(activeSummary.text()).toContain('3')
+    expect(activeSummary.text()).toContain('App Store')
+    expect(wrapper.find('[data-testid="worldbook-current-pack-open-app-survival_supply_board"]').exists()).toBe(false)
 
-    await wrapper
-      .get('[data-testid="worldbook-current-pack-open-app-survival_supply_board"]')
-      .trigger('click')
+    const serviceHandoff = wrapper.get('[data-testid="worldbook-current-pack-service-handoff"]')
+    expect(serviceHandoff.text()).toContain('1')
+    expect(serviceHandoff.text()).toContain('Chat')
+    expect(wrapper.find('[data-testid="worldbook-current-pack-create-service-survival_supply_dispatch"]').exists()).toBe(
+      false,
+    )
+    expect(chatStore.findWorldServiceTemplateContact('survival_city', 'survival_supply_dispatch')).toBeNull()
+
+    await wrapper.get('[data-testid="worldbook-current-pack-open-app-store"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/shopping')
+    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/app-store')
     expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
       from: 'worldbook',
-      worldPack: 'survival_city',
-      worldApp: 'survival_supply_board',
+      section: 'world',
     })
 
-    await wrapper.vm.$router.push('/worldbook')
-    await flushPromises()
+    wrapper.unmount()
+  })
 
-    const serviceTemplates = wrapper.get('[data-testid="worldbook-current-pack-service-templates"]')
-    expect(serviceTemplates.text()).toContain('补给调度员')
-    expect(serviceTemplates.text()).toContain('待确认')
+  test('reviews pasted nonstandard app proposals before adding a world app binding', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-registry"]').text()).toContain(
+      'Transit pass',
+    )
+
+    await wrapper.get('[data-testid="worldbook-current-pack-template-draft"]').setValue(
+      JSON.stringify({
+        proposals: [
+          {
+            templateId: 'transit_pass',
+            title: 'Metro Pass',
+            confidence: 'medium',
+            evidence: 'The world mentions route permits and safe transit access.',
+          },
+          {
+            templateId: 'made_up_console',
+            title: 'Made Up Console',
+            confidence: 'high',
+          },
+          {
+            templateId: 'clinic_dispatch',
+            title: 'Unclear Clinic',
+            confidence: 'low',
+          },
+        ],
+      }),
+    )
+    await wrapper.get('[data-testid="worldbook-current-pack-template-review-json"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-review-summary"]').text()).toContain(
+      '1 entries need confirmation',
+    )
+    expect(
+      wrapper.get('[data-testid="worldbook-current-pack-template-confirmable-default_world_transit_pass"]').text(),
+    ).toContain('Metro Pass')
+    expect(
+      wrapper.get('[data-testid="worldbook-current-pack-template-rejected-made_up_console"]').text(),
+    ).toContain('Not in the built-in template whitelist')
+    expect(
+      wrapper
+        .get('[data-testid="worldbook-current-pack-template-rejection-reason-made_up_console"]')
+        .attributes('data-rejection-reason'),
+    ).toBe('unknown_template')
+    expect(
+      wrapper.get('[data-testid="worldbook-current-pack-template-rejected-default_world_clinic_dispatch"]').text(),
+    ).toContain('Low confidence')
 
     await wrapper
-      .get('[data-testid="worldbook-current-pack-create-service-survival_supply_dispatch"]')
+      .get('[data-testid="worldbook-current-pack-template-confirm-default_world_transit_pass"]')
       .trigger('click')
     await nextTick()
 
-    const generated = chatStore.findWorldServiceTemplateContact(
-      'survival_city',
-      'survival_supply_dispatch',
+    expect(systemStore.getWorldPackById('default_world').appBindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'default_world_transit_pass',
+          title: 'Metro Pass',
+          moduleKey: 'map',
+          route: '/map',
+        }),
+      ]),
     )
-    expect(generated).toMatchObject({
-      kind: 'service',
-      name: '补给调度员',
-      shoppingServiceKey: 'daily_fresh',
-      worldPackId: 'survival_city',
-      worldServiceTemplateId: 'survival_supply_dispatch',
-      worldAppBindingId: 'survival_supply_board',
+    expect(wrapper.get('[data-testid="worldbook-current-pack-app-binding-default_world_transit_pass"]').text()).toContain(
+      'Metro Pass',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('shows empty and error states for nonstandard app proposal review', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
+    await nextTick()
+
+    await wrapper.get('[data-testid="worldbook-current-pack-template-review-json"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-notice"]').attributes('data-notice-tone')).toBe(
+      'warning',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-empty"]').text()).toContain(
+      'No world app entries to add',
+    )
+
+    await wrapper.get('[data-testid="worldbook-current-pack-template-clear"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-current-pack-template-draft"]').setValue('{bad json')
+    await wrapper.get('[data-testid="worldbook-current-pack-template-review-json"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-notice"]').attributes('data-notice-tone')).toBe(
+      'danger',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-notice"]').text()).toContain(
+      'JSON parse failed',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('keeps nonstandard app proposal loading state explicit and non-editing', () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(CurrentWorldPackPanel, {
+      props: {
+        overview: {
+          activePack: { id: 'default_world', title: 'Default world', name: 'Default world' },
+          hasWorldview: false,
+          worldviewCharCount: 0,
+          enabledKnowledgeCount: 0,
+          disabledKnowledgeCount: 0,
+          profileTemplateCount: 0,
+          worldPackAppBindingCount: 0,
+          worldPackServiceTemplateCount: 0,
+        },
+        packs: [{ id: 'default_world', title: 'Default world', name: 'Default world' }],
+        selectedPackId: 'default_world',
+        activationReview: null,
+        serviceTemplateRows: [],
+        appBindingRows: [],
+        templateRegistryRows: [],
+        templateProposalReview: {
+          worldPackId: 'default_world',
+          confirmableProposals: [],
+          rejectedProposals: [],
+          proposals: [],
+        },
+        templateProposalLoading: true,
+        templateProposalNotice: 'AI extraction failed. Check API settings.',
+        templateProposalNoticeTone: 'danger',
+      },
     })
-    expect(
-      wrapper.get('[data-testid="worldbook-current-pack-open-service-survival_supply_dispatch"]').exists(),
-    ).toBe(true)
+
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-review"]').attributes('aria-busy')).toBe(
+      'true',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-loading"]').text()).toContain(
+      'Reviewing world context',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-review-json"]').attributes('disabled')).toBe('')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-notice"]').attributes('data-notice-tone')).toBe(
+      'danger',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-template-empty"]').exists()).toBe(true)
 
     wrapper.unmount()
   })

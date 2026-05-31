@@ -73,6 +73,43 @@ describe('relationship fact adapters', () => {
     expect(firstEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
   })
 
+  test('attaches saved relationship classification gate metadata to low-risk facts', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const chatStore = {
+      getRoleProfileById: () => ({
+        id: 1,
+        primaryRelationshipCategoryId: 'friendship_bond',
+        relationshipModifierIds: ['long_term_companion'],
+        classificationConfidence: 'high',
+        classificationSource: 'user_edited',
+        relationshipLabelText: 'best friend',
+        relationshipLabelNote: 'prose should not be copied into gate metadata',
+      }),
+    }
+    const event = recordShoppingGiftRelationshipFact({
+      chatStore,
+      relationshipRuntimeStore,
+      order: {
+        id: 'shopping_order_gate_1',
+        giftRecipient: { name: 'Eva', profileId: 1, contactId: 1, kind: 'role' },
+        items: [{ title: 'Tea' }],
+      },
+      transaction: { amount: '12.00', currency: 'CNY' },
+    })
+
+    expect(event.relationshipGate).toMatchObject({
+      decision: 'allow',
+      mode: 'soft_reference',
+      primaryRelationshipCategoryId: 'friendship_bond',
+      relationshipModifierIds: ['long_term_companion'],
+      classificationConfidence: 'high',
+      classificationSource: 'user_edited',
+    })
+    expect(event.relationshipGate.relationshipLabelText).toBeUndefined()
+    expect(event.relationshipGate.relationshipLabelNote).toBeUndefined()
+  })
+
   test('records optional food delivery shared-meal facts for the selected target', () => {
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
     relationshipRuntimeStore.resetForTesting()

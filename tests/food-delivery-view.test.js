@@ -11,6 +11,7 @@ import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useMapStore } from '../src/stores/map'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 
@@ -57,6 +58,96 @@ describe('FoodDeliveryView', () => {
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query.category).toBe('cafe')
+    wrapper.unmount()
+  })
+
+  test('renders World Pack UX context without taking over food-order truth', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+    await router.push('/food-delivery?worldPack=survival_city&worldApp=survival_dispatch')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('救援调度')
+    const banner = wrapper.get('[data-testid="food-delivery-world-app-context"]')
+    expect(banner.text()).toContain('World UX package')
+    expect(wrapper.get('[data-testid="food-delivery-world-app-title"]').text()).toContain('救援调度')
+    expect(wrapper.get('[data-testid="food-delivery-world-app-boundary"]').text()).toContain(
+      'Food Delivery keeps its own records',
+    )
+    expect(store.orderCount).toBe(0)
+    expect(store.cartQuantity).toBe(0)
+    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
+
+    await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'survival_city',
+      worldApp: 'survival_dispatch',
+      category: 'cafe',
+    })
+    wrapper.unmount()
+  })
+
+  test('renders a confirmed nonstandard dispatch app binding as Food Delivery context', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const confirmed = systemStore.confirmWorldAppTemplateProposal(
+      {
+        templateId: 'dispatch_board',
+        title: 'Rescue Desk',
+        confidence: 'high',
+      },
+      'default_world',
+    )
+    expect(confirmed.ok).toBe(true)
+
+    await router.push({
+      path: '/food-delivery',
+      query: {
+        worldPack: 'default_world',
+        worldApp: confirmed.binding.id,
+      },
+    })
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    const banner = wrapper.get('[data-testid="food-delivery-world-app-context"]')
+    expect(banner.attributes('data-world-pack')).toBe('default_world')
+    expect(banner.attributes('data-world-app')).toBe(confirmed.binding.id)
+    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('Rescue Desk')
+    expect(wrapper.get('[data-testid="food-delivery-world-app-title"]').text()).toContain('Rescue Desk')
+    expect(wrapper.get('[data-testid="food-delivery-world-app-boundary"]').text()).toContain(
+      'Food Delivery keeps its own records',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
+    expect(store.orderCount).toBe(0)
+    expect(store.cartQuantity).toBe(0)
+
+    await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'default_world',
+      worldApp: confirmed.binding.id,
+      category: 'cafe',
+    })
     wrapper.unmount()
   })
 

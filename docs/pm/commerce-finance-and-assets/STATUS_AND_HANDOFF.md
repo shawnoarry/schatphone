@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -17,6 +17,7 @@ What is already landed:
 5. delivery route context can be shown as read-only context without moving order ownership into Map.
 6. Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events can push service-account notification messages into existing Chat Directory service accounts.
 7. The active World Pack can now provide a Shopping marketplace context for `survival_city`: WorldBook opens Shopping as `补给站`, and Shopping offers a safe Daily Fresh / Grocery filter without creating or mutating commerce records.
+8. The active World Pack can now provide a Food Delivery dispatch context for `survival_city` and confirmed nonstandard `dispatch_board` entries: Food Delivery shows the world-app hero/banner, defaults to the Nearby category when no explicit category is present, and preserves `worldPack`/`worldApp` route context while Food Delivery keeps restaurants, menus, carts, food orders, and delivery events.
 
 Still incomplete:
 
@@ -29,7 +30,7 @@ Still incomplete:
 1. Continue tightening Wallet cleanup rules and downstream record explainability.
 2. Expand asset and stock loops only after ownership boundaries stay clear.
 3. Keep service-account push additions source-owned: do not auto-create Chat service identities from commerce stores.
-4. Treat the current `补给站` path as a trial app-binding example before broadening to auctions, reservations, subscriptions, or dispatch behavior.
+4. Treat the current `补给站` and `救援调度` paths as trial app-binding examples before broadening to auctions, reservations, subscriptions, or more dispatch behavior.
 
 ## 3. Do Not Do
 

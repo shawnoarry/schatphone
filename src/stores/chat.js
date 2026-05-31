@@ -8,6 +8,12 @@ import {
   LOGISTICS_SERVICE_PRESETS,
   SHOPPING_SERVICE_PRESETS,
 } from '../lib/planned-module-registry'
+import { buildServiceAccountSourceNotificationPlan } from '../lib/service-account-source-plan'
+import {
+  RELATIONSHIP_CLASSIFICATION_SOURCE,
+  cloneRelationshipProfileFields,
+  normalizeRelationshipProfileFields,
+} from '../lib/relationship-classification-schema'
 import {
   ROLE_ASSET_FOLDER_SLOT_KEYS,
   cloneRoleAssetFolderBindings as cloneRoleProfileAssetFolderBindingsShared,
@@ -44,6 +50,29 @@ const CHAT_STORAGE_VERSION = 2
 const VALID_MESSAGE_ROLES = new Set(['user', 'assistant', 'system'])
 const VALID_MESSAGE_STATUS = new Set(['sending', 'sent', 'failed', 'delivered', 'read'])
 const VALID_CONTACT_KINDS = new Set(['role', 'group', 'service', 'official'])
+const isSubscriptionContactKind = (kind) => kind === 'service' || kind === 'official'
+export const CHAT_CONTACT_SOCIAL_STATES = Object.freeze({
+  CONNECTED: 'connected',
+  STRANGER: 'stranger',
+  INCOMING_REQUEST: 'incoming_request',
+  OUTGOING_REQUEST: 'outgoing_request',
+  REQUEST_DECLINED: 'request_declined',
+  USER_BLOCKED: 'user_blocked',
+  CONTACT_BLOCKED: 'contact_blocked',
+  MUTUAL_BLOCKED: 'mutual_blocked',
+})
+const VALID_CHAT_CONTACT_SOCIAL_STATES = new Set(Object.values(CHAT_CONTACT_SOCIAL_STATES))
+const CHAT_CONTACT_REQUEST_STATES = new Set([
+  CHAT_CONTACT_SOCIAL_STATES.STRANGER,
+  CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
+  CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST,
+  CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED,
+])
+const CHAT_CONTACT_BLOCKED_STATES = new Set([
+  CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED,
+  CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED,
+  CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED,
+])
 const VALID_SHOPPING_SERVICE_KEYS = new Set(SHOPPING_SERVICE_PRESETS.map((item) => item.key))
 const VALID_LOGISTICS_SERVICE_KEYS = new Set(LOGISTICS_SERVICE_PRESETS.map((item) => item.key))
 const VALID_FOOD_DELIVERY_SERVICE_KEYS = new Set(FOOD_DELIVERY_SERVICE_PRESETS.map((item) => item.key))
@@ -72,6 +101,26 @@ export const CHAT_SERVICE_NOTIFICATION_KIND = Object.freeze({
   FOOD_DELIVERY_ORDER: 'food_delivery_order',
   FOOD_DELIVERY_UPDATE: 'food_delivery_update',
 })
+export const CHAT_SERVICE_LINK_CONTRACT_VERSION = 1
+
+const SERVICE_NOTIFICATION_REQUIRED_FIELDS = Object.freeze(['sourceModule', 'sourceId', 'title'])
+const SERVICE_NOTIFICATION_OPTIONAL_FIELDS = Object.freeze([
+  'kind',
+  'summary',
+  'statusLabel',
+  'amount',
+  'sourceEventId',
+  'serviceKey',
+  'serviceLabel',
+  'route',
+  'actions',
+])
+const SERVICE_NOTIFICATION_DEDUPE_FIELDS = Object.freeze([
+  'contactId',
+  'sourceModule',
+  'sourceId',
+  'sourceEventId',
+])
 
 const SERVICE_NOTIFICATION_KINDS = new Set([
   CHAT_SERVICE_NOTIFICATION_KIND.SHOPPING_ORDER,
@@ -500,11 +549,13 @@ const normalizeMessageQuote = (rawQuote) => {
 
   const role = rawQuote.role === 'assistant' ? 'assistant' : 'user'
   const messageIdValue = trimTo(rawQuote.messageId, MAX_QUOTE_MESSAGE_ID_LENGTH)
+  const sourceType = rawQuote.sourceType === 'service_notification' ? 'service_notification' : ''
 
   return {
     messageId: messageIdValue,
     role,
     preview,
+    ...(sourceType ? { sourceType } : {}),
   }
 }
 
@@ -779,6 +830,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
         ? CONTACTS_ENTITY_TYPES.NPC
         : CONTACTS_ENTITY_TYPES.MAIN_ROLE,
   )
+  const relationshipFields = normalizeRelationshipProfileFields(rawProfile)
   return {
     id,
     roleId: normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex)),
@@ -792,6 +844,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     avatar: avatarImageToLegacyAvatar(avatarImage) || legacyAvatar,
     avatarImage,
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
+    ...relationshipFields,
     knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
     templateLink: normalizeProfileTemplateLink(rawProfile?.templateLink),
     profileValues: normalizeProfileValues(rawProfile?.profileValues),
@@ -822,6 +875,27 @@ const normalizeRoleProfileList = (rawProfiles = []) =>
       : [],
   )
 
+const RELATIONSHIP_PROFILE_FIELD_KEYS = [
+  'relationshipLabelText',
+  'relationshipLabelNote',
+  'initialRelationshipSeed',
+  'primaryRelationshipCategoryId',
+  'relationshipModifierIds',
+  'classificationConfidence',
+  'classificationSource',
+  'classificationUpdatedAt',
+  'classificationExplanation',
+]
+
+const normalizeChatContactSocialState = (value, kind = 'role') => {
+  if (kind !== 'role') return CHAT_CONTACT_SOCIAL_STATES.CONNECTED
+  const state = typeof value === 'string' ? value.trim() : ''
+  if (state === 'blocked') return CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED
+  return VALID_CHAT_CONTACT_SOCIAL_STATES.has(state)
+    ? state
+    : CHAT_CONTACT_SOCIAL_STATES.CONNECTED
+}
+
 const normalizeContact = (rawContact, fallbackIndex = 0) => {
   const parsedId = Number(rawContact?.id)
   const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
@@ -845,6 +919,14 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
     shoppingServiceKey: normalizeShoppingServiceKey(rawContact?.shoppingServiceKey),
     logisticsServiceKey: normalizeLogisticsServiceKey(rawContact?.logisticsServiceKey),
     foodDeliveryServiceKey: normalizeFoodDeliveryServiceKey(rawContact?.foodDeliveryServiceKey),
+    subscriptionMuted: isSubscriptionContactKind(kind) && Boolean(rawContact?.subscriptionMuted),
+    subscriptionFolded: isSubscriptionContactKind(kind) && Boolean(rawContact?.subscriptionFolded),
+    subscriptionUpdatedAt:
+      isSubscriptionContactKind(kind) &&
+      typeof rawContact?.subscriptionUpdatedAt === 'number' &&
+      Number.isFinite(rawContact.subscriptionUpdatedAt)
+        ? Math.max(0, Math.floor(rawContact.subscriptionUpdatedAt))
+        : 0,
     groupMemberIds: normalizeGroupMemberIds(rawContact?.groupMemberIds || rawContact?.memberIds),
     groupReplyMode: normalizeGroupReplyMode(rawContact?.groupReplyMode || rawContact?.replyMode),
     worldPackId: normalizeSingleLineText(rawContact?.worldPackId, 120),
@@ -853,43 +935,66 @@ const normalizeContact = (rawContact, fallbackIndex = 0) => {
     preferredImageAssetId: sanitizeAssetId(rawContact?.preferredImageAssetId),
     relationshipLevel,
     relationshipNote: typeof rawContact?.relationshipNote === 'string' ? rawContact.relationshipNote : '',
+    chatSocialState: normalizeChatContactSocialState(rawContact?.chatSocialState, kind),
+    chatSocialNote: normalizeSingleLineText(rawContact?.chatSocialNote, 160),
+    chatSocialUpdatedAt:
+      typeof rawContact?.chatSocialUpdatedAt === 'number' &&
+      Number.isFinite(rawContact.chatSocialUpdatedAt)
+        ? Math.max(0, Math.floor(rawContact.chatSocialUpdatedAt))
+        : 0,
     lastMessage: typeof rawContact?.lastMessage === 'string' ? rawContact.lastMessage : '',
   }
 }
 
 const normalizeMessage = (rawMessage, fallbackRole = 'assistant') => {
   const role = VALID_MESSAGE_ROLES.has(rawMessage?.role) ? rawMessage.role : fallbackRole
-  const content = trimTo(rawMessage?.content, MAX_TEXT_BLOCK_LENGTH)
-  const blocks = normalizeMessageBlocks(rawMessage?.blocks, content, role)
+  const recalledAt =
+    typeof rawMessage?.recalledAt === 'number' &&
+    Number.isFinite(rawMessage.recalledAt) &&
+    rawMessage.recalledAt > 0
+      ? Math.floor(rawMessage.recalledAt)
+      : 0
+  const content = recalledAt ? '' : trimTo(rawMessage?.content, MAX_TEXT_BLOCK_LENGTH)
+  const blocks = recalledAt ? [] : normalizeMessageBlocks(rawMessage?.blocks, content, role)
   const summaryText = summarizeBlocks(blocks)
   const defaultContextText = content || summaryText || (role === 'assistant' ? '...' : '')
-  const semanticRevision = normalizeMessageSemanticRevision(
-    rawMessage?.semanticRevision,
-    defaultContextText,
-  )
-  const normalizedContent = semanticRevision?.revisedText || defaultContextText
+  const semanticRevision = recalledAt
+    ? null
+    : normalizeMessageSemanticRevision(rawMessage?.semanticRevision, defaultContextText)
+  const normalizedContent = recalledAt ? '' : semanticRevision?.revisedText || defaultContextText
   const defaultStatus = role === 'user' ? 'delivered' : 'sent'
   const status = VALID_MESSAGE_STATUS.has(rawMessage?.status) ? rawMessage.status : defaultStatus
+  const savedAt =
+    !recalledAt &&
+    typeof rawMessage?.savedAt === 'number' &&
+    Number.isFinite(rawMessage.savedAt) &&
+    rawMessage.savedAt > 0
+      ? Math.floor(rawMessage.savedAt)
+      : 0
 
   return {
     id: typeof rawMessage?.id === 'string' && rawMessage.id ? rawMessage.id : messageId(),
     role,
     content: normalizedContent,
     blocks,
-    quote: normalizeMessageQuote(rawMessage?.quote),
-    aiMeta: normalizeMessageMeta(rawMessage?.aiMeta),
+    quote: recalledAt ? null : normalizeMessageQuote(rawMessage?.quote),
+    aiMeta: recalledAt ? null : normalizeMessageMeta(rawMessage?.aiMeta),
     semanticRevision,
     createdAt:
       typeof rawMessage?.createdAt === 'number' && Number.isFinite(rawMessage.createdAt)
         ? rawMessage.createdAt
         : nowTs(),
     editedAt:
-      typeof rawMessage?.editedAt === 'number' &&
-      Number.isFinite(rawMessage.editedAt) &&
-      rawMessage.editedAt > 0
-        ? rawMessage.editedAt
-        : 0,
+      recalledAt
+        ? 0
+        : typeof rawMessage?.editedAt === 'number' &&
+            Number.isFinite(rawMessage.editedAt) &&
+            rawMessage.editedAt > 0
+          ? rawMessage.editedAt
+          : 0,
     status,
+    savedAt,
+    recalledAt,
   }
 }
 
@@ -967,11 +1072,17 @@ const normalizeConversation = (rawConversation, contactId) => {
 
 const summarizeMessage = (message) => {
   if (!message) return ''
+  if (message.recalledAt) {
+    return message.role === 'user' ? '你撤回了一条消息' : '对方撤回了一条消息'
+  }
   const revisedText = trimTo(message?.semanticRevision?.revisedText, MAX_TEXT_BLOCK_LENGTH)
   if (revisedText) return revisedText
   if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
   return summarizeBlocks(message.blocks)
 }
+
+const recalledQuotePreviewForRole = (role) =>
+  role === 'user' ? '你撤回了一条消息' : '对方撤回了一条消息'
 
 export const useChatStore = defineStore('chat', () => {
   const roleProfiles = reactive([])
@@ -1247,6 +1358,149 @@ export const useChatStore = defineStore('chat', () => {
 
   const getRawContactById = (contactId) => {
     return contacts.find((item) => Number(item.id) === Number(contactId)) || null
+  }
+
+  const getContactChatSocialState = (contact) =>
+    normalizeChatContactSocialState(contact?.chatSocialState, contact?.kind || 'role')
+
+  const isChatRoleContact = (contact) => (contact?.kind || 'role') === 'role'
+
+  const isChatMessageRequestContact = (contact) =>
+    isChatRoleContact(contact) && CHAT_CONTACT_REQUEST_STATES.has(getContactChatSocialState(contact))
+
+  const isChatContactBlocked = (contact) =>
+    isChatRoleContact(contact) && CHAT_CONTACT_BLOCKED_STATES.has(getContactChatSocialState(contact))
+
+  const canContactSendMessages = (contact) => {
+    if (!contact) return false
+    if (!isChatRoleContact(contact)) return true
+    return getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.CONNECTED
+  }
+
+  const isChatSubscriptionContact = (contact) => isSubscriptionContactKind(contact?.kind)
+
+  const isChatSubscriptionMuted = (contact) =>
+    isChatSubscriptionContact(contact) && Boolean(contact?.subscriptionMuted)
+
+  const isChatSubscriptionFolded = (contact) =>
+    isChatSubscriptionContact(contact) && Boolean(contact?.subscriptionFolded)
+
+  const setChatSubscriptionState = (contactId, updates = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || !isSubscriptionContactKind(target.kind)) return false
+    if (!updates || typeof updates !== 'object') return false
+
+    let changed = false
+    if (Object.prototype.hasOwnProperty.call(updates, 'subscriptionMuted')) {
+      target.subscriptionMuted = Boolean(updates.subscriptionMuted)
+      changed = true
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'muted')) {
+      target.subscriptionMuted = Boolean(updates.muted)
+      changed = true
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'subscriptionFolded')) {
+      target.subscriptionFolded = Boolean(updates.subscriptionFolded)
+      changed = true
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'folded')) {
+      target.subscriptionFolded = Boolean(updates.folded)
+      changed = true
+    }
+
+    if (!changed) return false
+    target.subscriptionUpdatedAt = Number.isFinite(Number(updates.at))
+      ? Math.max(0, Math.floor(Number(updates.at)))
+      : nowTs()
+    ensureConversationForContact(target.id)
+    return true
+  }
+
+  const toggleChatSubscriptionMuted = (contactId) => {
+    const target = getRawContactById(contactId)
+    if (!target || !isSubscriptionContactKind(target.kind)) return false
+    return setChatSubscriptionState(contactId, {
+      subscriptionMuted: !target.subscriptionMuted,
+    })
+  }
+
+  const toggleChatSubscriptionFolded = (contactId) => {
+    const target = getRawContactById(contactId)
+    if (!target || !isSubscriptionContactKind(target.kind)) return false
+    return setChatSubscriptionState(contactId, {
+      subscriptionFolded: !target.subscriptionFolded,
+    })
+  }
+
+  const setContactChatSocialState = (contactId, nextState, options = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    const normalizedState = normalizeChatContactSocialState(nextState, target.kind)
+    target.chatSocialState = normalizedState
+    if (Object.prototype.hasOwnProperty.call(options, 'note')) {
+      target.chatSocialNote = normalizeSingleLineText(options.note, 160)
+    }
+    target.chatSocialUpdatedAt = Number.isFinite(Number(options.at))
+      ? Math.max(0, Math.floor(Number(options.at)))
+      : nowTs()
+    ensureConversationForContact(target.id)
+    return true
+  }
+
+  const requestChatContact = (contactId, options = {}) =>
+    setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST, options)
+
+  const receiveChatContactRequest = (contactId, options = {}) =>
+    setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST, options)
+
+  const acceptChatContactRequest = (contactId, options = {}) =>
+    setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, options)
+
+  const declineChatContactRequest = (contactId, options = {}) =>
+    setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED, options)
+
+  const blockChatContact = (contactId, options = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    const current = getContactChatSocialState(target)
+    const nextState =
+      current === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED
+        ? CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
+        : CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED
+    return setContactChatSocialState(contactId, nextState, options)
+  }
+
+  const unblockChatContact = (contactId, options = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    const current = getContactChatSocialState(target)
+    if (current === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
+      return setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED, options)
+    }
+    if (current !== CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) return false
+    return setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, options)
+  }
+
+  const markContactBlockedUser = (contactId, options = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    const current = getContactChatSocialState(target)
+    const nextState =
+      current === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED
+        ? CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
+        : CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED
+    return setContactChatSocialState(contactId, nextState, options)
+  }
+
+  const clearContactBlockedUser = (contactId, options = {}) => {
+    const target = getRawContactById(contactId)
+    if (!target || target.kind !== 'role') return false
+    const current = getContactChatSocialState(target)
+    if (current === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
+      return setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED, options)
+    }
+    if (current !== CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) return false
+    return setContactChatSocialState(contactId, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, options)
   }
 
   const resolveContactWithProfile = (contact) => {
@@ -1786,6 +2040,76 @@ export const useChatStore = defineStore('chat', () => {
   const findFoodDeliveryServiceContact = (serviceKey) =>
     findServiceContact('foodDeliveryServiceKey', normalizeFoodDeliveryServiceKey(serviceKey))
 
+  const getServiceAccountLinkContract = (contactOrId) => {
+    const contact =
+      contactOrId && typeof contactOrId === 'object'
+        ? contactOrId
+        : getRawContactById(contactOrId)
+    if (!contact || !isSubscriptionContactKind(contact.kind)) return null
+
+    const sourceBindings = {
+      shoppingServiceKey: normalizeShoppingServiceKey(contact.shoppingServiceKey),
+      logisticsServiceKey: normalizeLogisticsServiceKey(contact.logisticsServiceKey),
+      foodDeliveryServiceKey: normalizeFoodDeliveryServiceKey(contact.foodDeliveryServiceKey),
+    }
+    const activeSourceBindingKeys = Object.entries(sourceBindings)
+      .filter(([, value]) => Boolean(value))
+      .map(([key]) => key)
+    const sourceNotificationPlan = buildServiceAccountSourceNotificationPlan({
+      sourceBindings,
+      origin: {
+        worldPackId: contact.worldPackId || '',
+        worldServiceTemplateId: contact.worldServiceTemplateId || '',
+        worldAppBindingId: contact.worldAppBindingId || '',
+      },
+    })
+
+    return {
+      version: CHAT_SERVICE_LINK_CONTRACT_VERSION,
+      contactId: contact.id,
+      kind: contact.kind,
+      displayName: contact.name || '',
+      serviceTemplate: contact.serviceTemplate || '',
+      threadRoute: `/chat/${contact.id}`,
+      servicesRoute: '/chat-contacts?section=service',
+      origin: {
+        worldPackId: contact.worldPackId || '',
+        worldServiceTemplateId: contact.worldServiceTemplateId || '',
+        worldAppBindingId: contact.worldAppBindingId || '',
+      },
+      sourceBindings,
+      activeSourceBindingKeys,
+      sourceNotificationPlan,
+      chatCapabilities: {
+        canReceiveSourceNotifications: true,
+        canReplyInChat: true,
+        canQuoteServiceNotifications: true,
+        canUseOrdinaryMessageActions: true,
+        retainsNotificationHistory: true,
+        ownsUnreadState: true,
+        supportsMuteAndFold: true,
+      },
+      sourceRecordBoundary: {
+        owner: 'source_module',
+        chatStoresSourceReferencesOnly: true,
+        chatMayMutateSourceRecords: false,
+        sourceActionsOpenOwnerModule: true,
+      },
+      serviceNotificationContract: {
+        blockType: 'service_notification',
+        requiredFields: [...SERVICE_NOTIFICATION_REQUIRED_FIELDS],
+        optionalFields: [...SERVICE_NOTIFICATION_OPTIONAL_FIELDS],
+        dedupeFields: [...SERVICE_NOTIFICATION_DEDUPE_FIELDS],
+        routeFields: ['route', 'actions[].route'],
+      },
+      userReplyContract: {
+        replyRole: 'user',
+        quoteSourceType: 'service_notification',
+        replyDoesNotMutateSourceRecords: true,
+      },
+    }
+  }
+
   const findServiceNotificationBySource = (contactId, sourceModule, sourceId, sourceEventId = '') => {
     const moduleKey = normalizeSourceModule(sourceModule)
     const recordId = normalizeSourceId(sourceId)
@@ -1860,9 +2184,34 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  const setMessageSaved = (contactId, targetMessageId, saved = true, savedAt = nowTs()) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+    if (list[index].recalledAt) return false
+    const nextSavedAt =
+      saved === true
+        ? Number.isFinite(Number(savedAt)) && Number(savedAt) > 0
+          ? Math.floor(Number(savedAt))
+          : nowTs()
+        : 0
+    if ((list[index].savedAt || 0) === nextSavedAt) return false
+    list[index] = {
+      ...list[index],
+      savedAt: nextSavedAt,
+    }
+    return true
+  }
+
+  const toggleMessageSaved = (contactId, targetMessageId, savedAt = nowTs()) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+    return setMessageSaved(contactId, targetMessageId, !list[index].savedAt, savedAt)
+  }
+
   const updateMessageContent = (contactId, targetMessageId, nextContent, options = {}) => {
     const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return false
+    if (list[index].recalledAt) return false
 
     const updatedContent = typeof nextContent === 'string' ? nextContent : list[index].content
     const existingBlocks = Array.isArray(list[index].blocks) ? list[index].blocks : []
@@ -1894,7 +2243,52 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  const updateMessageBlocks = (contactId, targetMessageId, nextBlocks, options = {}) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+    if (list[index].recalledAt) return false
+
+    const target = list[index]
+    const role = target?.role === 'user' ? 'user' : 'assistant'
+    const normalizedBlocks = normalizeMessageBlocks(
+      Array.isArray(nextBlocks) ? nextBlocks : target.blocks,
+      target.content,
+      role,
+    )
+    if (!normalizedBlocks.length) return false
+
+    const fallbackContent = summarizeBlocks(normalizedBlocks) || target.content
+    const nextContent = trimTo(
+      typeof options?.content === 'string' ? options.content : fallbackContent,
+      MAX_TEXT_BLOCK_LENGTH,
+    )
+    if (!nextContent) return false
+
+    const markEdited = options?.markEdited !== false
+    const editedAt =
+      markEdited
+        ? typeof options?.editedAt === 'number' && Number.isFinite(options.editedAt)
+          ? Math.max(0, Math.floor(options.editedAt))
+          : nowTs()
+        : target.editedAt || 0
+
+    list[index] = {
+      ...target,
+      content: nextContent,
+      blocks: normalizedBlocks,
+      editedAt,
+      semanticRevision: null,
+    }
+    syncConversationSummary(contactId)
+    return true
+  }
+
   const getMessageContextText = (message) => {
+    if (message?.recalledAt) {
+      return message.role === 'user'
+        ? '[message recalled] The user recalled one of their messages. Original content unavailable.'
+        : '[message recalled] The assistant recalled one of their own messages. Original content unavailable.'
+    }
     const revisedText = trimTo(message?.semanticRevision?.revisedText, MAX_TEXT_BLOCK_LENGTH)
     if (revisedText) return revisedText
     const content = trimTo(message?.content, MAX_TEXT_BLOCK_LENGTH)
@@ -1949,6 +2343,7 @@ export const useChatStore = defineStore('chat', () => {
     if (index < 0) return false
 
     const target = list[index]
+    if (target.recalledAt) return false
     const revisedText = trimTo(nextText, MAX_TEXT_BLOCK_LENGTH)
     if (!revisedText) return false
 
@@ -1991,6 +2386,7 @@ export const useChatStore = defineStore('chat', () => {
     if (index < 0) return false
 
     const target = list[index]
+    if (target.recalledAt) return false
     const revision = normalizeMessageSemanticRevision(
       target?.semanticRevision,
       getMessageContextText(target),
@@ -2010,10 +2406,56 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  const scrubQuoteReferences = (list, targetMessageId, mode = 'delete', targetRole = 'assistant') => {
+    if (!Array.isArray(list) || !targetMessageId) return
+    list.forEach((message, index) => {
+      if (message?.quote?.messageId !== targetMessageId) return
+      list[index] = {
+        ...message,
+        quote:
+          mode === 'recall'
+            ? {
+                ...message.quote,
+                preview: recalledQuotePreviewForRole(targetRole),
+              }
+            : null,
+      }
+    })
+  }
+
+  const recallMessage = (contactId, targetMessageId, recalledAt = nowTs()) => {
+    const { list, index } = getMessageIndex(contactId, targetMessageId)
+    if (index < 0) return false
+
+    const target = list[index]
+    if (target.recalledAt) return false
+
+    const timestamp =
+      Number.isFinite(Number(recalledAt)) && Number(recalledAt) > 0
+        ? Math.floor(Number(recalledAt))
+        : nowTs()
+
+    list[index] = {
+      ...target,
+      content: '',
+      blocks: [],
+      quote: null,
+      aiMeta: null,
+      semanticRevision: null,
+      editedAt: 0,
+      savedAt: 0,
+      recalledAt: timestamp,
+    }
+    scrubQuoteReferences(list, targetMessageId, 'recall', target.role)
+    syncConversationSummary(contactId)
+    return true
+  }
+
   const removeMessage = (contactId, targetMessageId) => {
     const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return null
     const [removed] = list.splice(index, 1)
+    scrubQuoteReferences(list, targetMessageId, 'delete', removed?.role)
     const key = conversationKeyForContact(contactId)
     if (removed?.role === 'assistant' && conversations[key]) {
       conversations[key].unread = Math.max(0, conversations[key].unread - 1)
@@ -2056,6 +2498,7 @@ export const useChatStore = defineStore('chat', () => {
   const replaceMessage = (contactId, targetMessageId, rawMessage, options = {}) => {
     const { list, index } = getMessageIndex(contactId, targetMessageId)
     if (index < 0) return null
+    if (list[index].recalledAt) return null
 
     const fallbackRole = list[index]?.role === 'user' ? 'user' : 'assistant'
     const normalized = normalizeMessage(rawMessage, fallbackRole)
@@ -2157,8 +2600,60 @@ export const useChatStore = defineStore('chat', () => {
         updates.assetFolderBindings,
       )
     }
+    if (RELATIONSHIP_PROFILE_FIELD_KEYS.some((key) => Object.prototype.hasOwnProperty.call(updates, key))) {
+      Object.assign(
+        target,
+        normalizeRelationshipProfileFields({
+          ...target,
+          ...updates,
+        }),
+      )
+    }
     target.updatedAt = nowTs()
     return true
+  }
+
+  const updateRoleRelationshipPremise = (profileId, updates = {}) => {
+    if (!updates || typeof updates !== 'object') return false
+    const premiseUpdates = {}
+    const premiseFieldKeys = ['relationshipLabelText', 'relationshipLabelNote', 'initialRelationshipSeed']
+    premiseFieldKeys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(updates, key) && updates[key] !== undefined) {
+        premiseUpdates[key] = updates[key]
+      }
+    })
+    if (Object.keys(premiseUpdates).length === 0) return false
+    return updateRoleProfile(profileId, premiseUpdates)
+  }
+
+  const saveRoleRelationshipClassification = (profileId, classification = {}, options = {}) => {
+    const target = getRoleProfileById(profileId)
+    if (!target) return { ok: false, reason: 'profile_not_found' }
+
+    const input = classification && typeof classification === 'object' ? classification : {}
+    const requestedSource = options.source || input.classificationSource || ''
+    const protectedUserEdit =
+      target.classificationSource === RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED &&
+      requestedSource !== RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED &&
+      options.force !== true
+    if (protectedUserEdit) return { ok: false, reason: 'user_edited_protected' }
+
+    const normalized = normalizeRelationshipProfileFields({
+      ...target,
+      ...input,
+      classificationSource: requestedSource || input.classificationSource,
+      classificationUpdatedAt: Object.prototype.hasOwnProperty.call(input, 'classificationUpdatedAt')
+        ? input.classificationUpdatedAt
+        : nowTs(),
+    })
+    Object.assign(target, normalized, { updatedAt: nowTs() })
+    return {
+      ok: true,
+      profile: {
+        ...target,
+        ...cloneRelationshipProfileFields(target),
+      },
+    }
   }
 
   const upgradeNpcToMainRole = (profileId, options = {}) => {
@@ -2230,6 +2725,12 @@ export const useChatStore = defineStore('chat', () => {
       relationshipLevel: clamp(toInt(options.relationshipLevel, 50), 0, 100),
       relationshipNote:
         typeof options.relationshipNote === 'string' ? options.relationshipNote : '',
+      chatSocialState: normalizeChatContactSocialState(options.chatSocialState, 'role'),
+      chatSocialNote: normalizeSingleLineText(options.chatSocialNote, 160),
+      chatSocialUpdatedAt:
+        typeof options.chatSocialUpdatedAt === 'number' && Number.isFinite(options.chatSocialUpdatedAt)
+          ? Math.max(0, Math.floor(options.chatSocialUpdatedAt))
+          : 0,
       lastMessage: '',
     })
     return created
@@ -2252,6 +2753,13 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'preferredImageAssetId')) {
       target.preferredImageAssetId = sanitizeAssetId(updates.preferredImageAssetId)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'chatSocialState')) {
+      target.chatSocialState = normalizeChatContactSocialState(updates.chatSocialState, target.kind)
+      target.chatSocialUpdatedAt = nowTs()
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'chatSocialNote')) {
+      target.chatSocialNote = normalizeSingleLineText(updates.chatSocialNote, 160)
     }
     syncConversationSummary(contactId)
     return true
@@ -2303,6 +2811,9 @@ export const useChatStore = defineStore('chat', () => {
     return addContact({
       ...payload,
       kind: payload.kind === 'official' ? 'official' : 'service',
+      profileId: 0,
+      isMain: false,
+      relationshipNote: '',
       worldPackId,
       worldServiceTemplateId,
     })
@@ -2344,6 +2855,20 @@ export const useChatStore = defineStore('chat', () => {
     if (Object.prototype.hasOwnProperty.call(updates, 'foodDeliveryServiceKey')) {
       target.foodDeliveryServiceKey = normalizeFoodDeliveryServiceKey(updates.foodDeliveryServiceKey)
     }
+    if (
+      isSubscriptionContactKind(target.kind) &&
+      Object.prototype.hasOwnProperty.call(updates, 'subscriptionMuted')
+    ) {
+      target.subscriptionMuted = Boolean(updates.subscriptionMuted)
+      target.subscriptionUpdatedAt = nowTs()
+    }
+    if (
+      isSubscriptionContactKind(target.kind) &&
+      Object.prototype.hasOwnProperty.call(updates, 'subscriptionFolded')
+    ) {
+      target.subscriptionFolded = Boolean(updates.subscriptionFolded)
+      target.subscriptionUpdatedAt = nowTs()
+    }
     if (Object.prototype.hasOwnProperty.call(updates, 'groupMemberIds')) {
       target.groupMemberIds = normalizeGroupMemberIds(updates.groupMemberIds)
     }
@@ -2374,6 +2899,13 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'preferredImageAssetId')) {
       target.preferredImageAssetId = sanitizeAssetId(updates.preferredImageAssetId)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'chatSocialState')) {
+      target.chatSocialState = normalizeChatContactSocialState(updates.chatSocialState, target.kind)
+      target.chatSocialUpdatedAt = nowTs()
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'chatSocialNote')) {
+      target.chatSocialNote = normalizeSingleLineText(updates.chatSocialNote, 160)
     }
 
     syncConversationSummary(contactId)
@@ -2604,13 +3136,26 @@ export const useChatStore = defineStore('chat', () => {
         key,
         list.map((message) => ({
           ...message,
-          blocks: normalizeMessageBlocks(message.blocks, message.content, message.role),
-          quote: normalizeMessageQuote(message.quote),
-          aiMeta: normalizeMessageMeta(message.aiMeta),
-          semanticRevision: normalizeMessageSemanticRevision(
-            message.semanticRevision,
-            message.content,
-          ),
+          content: message.recalledAt ? '' : message.content,
+          blocks: message.recalledAt ? [] : normalizeMessageBlocks(message.blocks, message.content, message.role),
+          quote: message.recalledAt ? null : normalizeMessageQuote(message.quote),
+          aiMeta: message.recalledAt ? null : normalizeMessageMeta(message.aiMeta),
+          semanticRevision: message.recalledAt
+            ? null
+            : normalizeMessageSemanticRevision(message.semanticRevision, message.content),
+          savedAt:
+            !message.recalledAt &&
+            typeof message.savedAt === 'number' &&
+            Number.isFinite(message.savedAt) &&
+            message.savedAt > 0
+              ? Math.floor(message.savedAt)
+              : 0,
+          recalledAt:
+            typeof message.recalledAt === 'number' &&
+            Number.isFinite(message.recalledAt) &&
+            message.recalledAt > 0
+              ? Math.floor(message.recalledAt)
+              : 0,
         })),
       ]),
     )
@@ -2622,6 +3167,7 @@ export const useChatStore = defineStore('chat', () => {
         moduleIdentity: normalizeModuleIdentity(moduleIdentity),
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
+          ...cloneRelationshipProfileFields(profile),
           templateLink: { ...profile.templateLink },
           profileValues: Array.isArray(profile.profileValues)
             ? profile.profileValues.map((item) => ({ ...item }))
@@ -2717,20 +3263,45 @@ export const useChatStore = defineStore('chat', () => {
     markConversationRead,
     incrementConversationUnread,
     appendMessage,
-    appendServiceNotification,
-    findShoppingServiceContact,
-    findLogisticsServiceContact,
-    findFoodDeliveryServiceContact,
-    findServiceNotificationBySource,
-    updateMessageStatus,
-    updateMessageContent,
+      appendServiceNotification,
+      findShoppingServiceContact,
+      findLogisticsServiceContact,
+      findFoodDeliveryServiceContact,
+      getServiceAccountLinkContract,
+      findServiceNotificationBySource,
+      updateMessageStatus,
+      setMessageSaved,
+      toggleMessageSaved,
+      updateMessageContent,
+      updateMessageBlocks,
     reviseMessageSemantic,
     restoreMessageSemanticRevision,
+    recallMessage,
     removeMessage,
     replaceMessage,
     clearContactConversationHistory,
     clearRoleProfileChatHistory,
     getContactById,
+    getContactChatSocialState,
+    isChatRoleContact,
+    isChatMessageRequestContact,
+    isChatContactBlocked,
+    canContactSendMessages,
+    isChatSubscriptionContact,
+    isChatSubscriptionMuted,
+    isChatSubscriptionFolded,
+    setChatSubscriptionState,
+    toggleChatSubscriptionMuted,
+    toggleChatSubscriptionFolded,
+    setContactChatSocialState,
+    requestChatContact,
+    receiveChatContactRequest,
+    acceptChatContactRequest,
+    declineChatContactRequest,
+    blockChatContact,
+    unblockChatContact,
+    markContactBlockedUser,
+    clearContactBlockedUser,
     resolveContactAvatar,
     getModuleAvatarOverrides,
     getModuleIdentity,
@@ -2758,6 +3329,8 @@ export const useChatStore = defineStore('chat', () => {
     clearRoleEventAttachedDetailItems,
     addRoleProfile,
     updateRoleProfile,
+    updateRoleRelationshipPremise,
+    saveRoleRelationshipClassification,
     upgradeNpcToMainRole,
     removeRoleProfile,
     isRoleProfileBound,

@@ -18,6 +18,7 @@ import {
 } from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
 import { useRemindersStore } from './reminders'
+import { useChatStore } from './chat'
 import { useRelationshipRuntimeStore } from './relationshipRuntime'
 import { useSystemStore } from './system'
 
@@ -952,6 +953,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     })
     event.updatedAt = Date.now()
     return recordCalendarConfirmedEventRelationshipFact({
+      chatStore: useChatStore(),
       relationshipRuntimeStore: getRelationshipRuntimeStore(),
       event,
       target,

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from '../src/stores/chat'
+import {
+  CHAT_SERVICE_LINK_CONTRACT_VERSION,
+  CHAT_SERVICE_NOTIFICATION_KIND,
+  useChatStore,
+} from '../src/stores/chat'
 
 describe('chat store model', () => {
   beforeEach(() => {
@@ -377,12 +381,42 @@ describe('chat store model', () => {
       content: 'Original assistant line',
       status: 'sent',
     })
+    const richUserMessage = store.appendMessage(contactId, {
+      role: 'user',
+      content: 'Link\nhttps://example.com/old',
+      blocks: [
+        {
+          type: 'link_external',
+          label: 'Old Link',
+          url: 'https://example.com/old',
+          note: 'old note',
+        },
+      ],
+      status: 'delivered',
+    })
 
     const editOk = store.updateMessageContent(contactId, userMessage.id, 'Edited user line', {
       markEdited: true,
       editedAt: 1234567890,
     })
     expect(editOk).toBe(true)
+    const richEditOk = store.updateMessageBlocks(
+      contactId,
+      richUserMessage.id,
+      [
+        {
+          type: 'link_external',
+          label: 'New Link',
+          url: 'https://example.com/new',
+          note: 'new note',
+        },
+      ],
+      {
+        content: 'New Link\nhttps://example.com/new',
+        editedAt: 1234567891,
+      },
+    )
+    expect(richEditOk).toBe(true)
 
     const replaced = store.replaceMessage(
       contactId,
@@ -405,12 +439,92 @@ describe('chat store model', () => {
 
     const messages = store.getMessagesByContactId(contactId)
     const editedUser = messages.find((item) => item.id === userMessage.id)
+    const editedRichUser = messages.find((item) => item.id === richUserMessage.id)
     expect(editedUser?.content).toBe('Edited user line')
     expect(editedUser?.editedAt).toBe(1234567890)
+    expect(editedRichUser?.content).toContain('New Link')
+    expect(editedRichUser?.editedAt).toBe(1234567891)
+    expect(editedRichUser?.blocks?.[0]).toMatchObject({
+      type: 'link_external',
+      label: 'New Link',
+      url: 'https://example.com/new',
+      note: 'new note',
+    })
 
     const conversation = store.getConversationByContactId(contactId)
-    expect(conversation.lastMessage).toContain('Edited user line')
+    expect(conversation.lastMessage).toContain('New Link')
     expect(conversation.unread).toBe(1)
+  })
+
+  test('keeps recall as a contentless event while delete removes the message', () => {
+    const store = useChatStore()
+    const contactId = store.contacts[0].id
+
+    const userMessage = store.appendMessage(contactId, {
+      role: 'user',
+      content: 'Private user wording',
+      quote: { messageId: 'quoted-user', role: 'assistant', preview: 'Quoted context' },
+      status: 'delivered',
+    })
+    const assistantMessage = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: 'Private assistant wording',
+      semanticRevision: {
+        originalText: 'Private assistant wording',
+        revisedText: 'Visible assistant wording',
+        revisedAt: 1000,
+      },
+      aiMeta: { replyType: 'plain', bilingual: false },
+      status: 'sent',
+    })
+    const replyQuotingUser = store.appendMessage(contactId, {
+      role: 'assistant',
+      content: 'Reply that quoted user',
+      quote: { messageId: userMessage.id, role: 'user', preview: 'Private user wording' },
+      status: 'sent',
+    })
+    const replyQuotingAssistant = store.appendMessage(contactId, {
+      role: 'user',
+      content: 'Reply that quoted assistant',
+      quote: { messageId: assistantMessage.id, role: 'assistant', preview: 'Private assistant wording' },
+      status: 'delivered',
+    })
+
+    expect(store.setMessageSaved(contactId, userMessage.id, true, 1500)).toBe(true)
+    expect(store.recallMessage(contactId, userMessage.id, 2000)).toBe(true)
+    expect(store.recallMessage(contactId, assistantMessage.id, 3000)).toBe(true)
+
+    const messages = store.getMessagesByContactId(contactId)
+    const recalledUser = messages.find((item) => item.id === userMessage.id)
+    const recalledAssistant = messages.find((item) => item.id === assistantMessage.id)
+
+    expect(recalledUser).toMatchObject({
+      role: 'user',
+      content: '',
+      blocks: [],
+      quote: null,
+      semanticRevision: null,
+      savedAt: 0,
+      recalledAt: 2000,
+    })
+    expect(recalledAssistant).toMatchObject({
+      role: 'assistant',
+      content: '',
+      blocks: [],
+      aiMeta: null,
+      semanticRevision: null,
+      recalledAt: 3000,
+    })
+    expect(messages.find((item) => item.id === replyQuotingUser.id)?.quote?.preview).toBe('你撤回了一条消息')
+    expect(messages.find((item) => item.id === replyQuotingAssistant.id)?.quote?.preview).toBe('对方撤回了一条消息')
+    expect(store.updateMessageContent(contactId, userMessage.id, 'Edited after recall')).toBe(false)
+    expect(store.reviseMessageSemantic(contactId, assistantMessage.id, 'Edited after recall')).toBe(false)
+    expect(store.setMessageSaved(contactId, assistantMessage.id, true, 4000)).toBe(false)
+
+    const removed = store.removeMessage(contactId, assistantMessage.id)
+    expect(removed?.id).toBe(assistantMessage.id)
+    expect(store.getMessagesByContactId(contactId).find((item) => item.id === assistantMessage.id)).toBeUndefined()
+    expect(store.getMessagesByContactId(contactId).find((item) => item.id === replyQuotingAssistant.id)?.quote).toBeNull()
   })
 
   test('supports semantic revision and restore for assistant rich message', () => {
@@ -753,6 +867,106 @@ describe('chat store model', () => {
     expect(
       store.contacts.filter((contact) => contact.worldServiceTemplateId === 'survival_supply_dispatch'),
     ).toHaveLength(1)
+  })
+
+  test('exposes a Chat-side subscription linkage contract without role ownership', () => {
+    const store = useChatStore()
+
+    const service = store.createWorldServiceTemplateContact({
+      name: 'World Bulletin',
+      kind: 'official',
+      role: 'Official',
+      serviceTemplate: 'World Bulletin',
+      shoppingServiceKey: 'daily_fresh',
+      worldPackId: 'fandom_parallel',
+      worldServiceTemplateId: 'fandom_bulletin',
+      worldAppBindingId: 'fandom_publication_feed',
+      profileId: 999,
+      isMain: true,
+      relationshipNote: 'should not become role state',
+    })
+    const role = store.addContact({
+      kind: 'role',
+      name: 'Role Contact',
+      role: 'Friend',
+    })
+
+    expect(service?.kind).toBe('official')
+    expect(service?.profileId).toBe(0)
+    expect(service?.isMain).toBe(false)
+    expect(service?.relationshipNote).toBe('')
+    expect(store.getRoleBindingContract(service.id).roleBound).toBe(false)
+    expect(store.getServiceAccountLinkContract(role.id)).toBeNull()
+
+    const contract = store.getServiceAccountLinkContract(service.id)
+    expect(contract).toMatchObject({
+      version: CHAT_SERVICE_LINK_CONTRACT_VERSION,
+      contactId: service.id,
+      kind: 'official',
+      displayName: 'World Bulletin',
+      threadRoute: `/chat/${service.id}`,
+      servicesRoute: '/chat-contacts?section=service',
+      origin: {
+        worldPackId: 'fandom_parallel',
+        worldServiceTemplateId: 'fandom_bulletin',
+        worldAppBindingId: 'fandom_publication_feed',
+      },
+      sourceBindings: {
+        shoppingServiceKey: 'daily_fresh',
+        logisticsServiceKey: '',
+        foodDeliveryServiceKey: '',
+      },
+      sourceNotificationPlan: {
+        status: 'ready',
+        summary: 'Shopping orders can push event-driven updates into this Chat service thread.',
+        rows: [
+          expect.objectContaining({
+            id: 'shopping_orders',
+            sourceModule: 'shopping_order_update',
+            serviceBindingKey: 'shoppingServiceKey',
+            serviceKey: 'daily_fresh',
+          }),
+        ],
+        boundary: {
+          owner: 'source_module',
+          chatReceivesNotificationsOnly: true,
+          chatMayMutateSourceRecords: false,
+          autoCreatesSubscription: false,
+          autoCreatesSourceRecords: false,
+        },
+      },
+      chatCapabilities: {
+        canReceiveSourceNotifications: true,
+        canReplyInChat: true,
+        canQuoteServiceNotifications: true,
+        retainsNotificationHistory: true,
+        ownsUnreadState: true,
+        supportsMuteAndFold: true,
+      },
+      sourceRecordBoundary: {
+        owner: 'source_module',
+        chatStoresSourceReferencesOnly: true,
+        chatMayMutateSourceRecords: false,
+        sourceActionsOpenOwnerModule: true,
+      },
+      userReplyContract: {
+        replyRole: 'user',
+        quoteSourceType: 'service_notification',
+        replyDoesNotMutateSourceRecords: true,
+      },
+    })
+    expect(contract.activeSourceBindingKeys).toEqual(['shoppingServiceKey'])
+    expect(contract.serviceNotificationContract.requiredFields).toEqual([
+      'sourceModule',
+      'sourceId',
+      'title',
+    ])
+    expect(contract.serviceNotificationContract.dedupeFields).toEqual([
+      'contactId',
+      'sourceModule',
+      'sourceId',
+      'sourceEventId',
+    ])
   })
 
   test('appends deduped service notifications without role binding state', () => {
@@ -1150,5 +1364,129 @@ describe('chat store model', () => {
     expect(restored).toBe(true)
     expect(store.getContactById(301)?.profileId).toBeGreaterThan(0)
     expect(store.getRoleProfileById(store.getContactById(301)?.profileId)?.name).toBe('Legacy Contact')
+  })
+
+  test('persists relationship premise and classification fields on role profiles', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '2401',
+      name: 'Classified Role',
+      relationshipLabelText: 'childhood friend',
+      relationshipLabelNote: 'Grew up together.',
+      initialRelationshipSeed: {
+        affinity: 78,
+        trust: 82,
+        intimacy: 45,
+        tension: 8,
+        dependency: 30,
+      },
+      primaryRelationshipCategoryId: 'friendship_bond',
+      relationshipModifierIds: ['childhood_connection', 'mutual'],
+      classificationConfidence: 'high',
+      classificationSource: 'ai_auto',
+      classificationExplanation: 'The label points to a stable friendship.',
+    })
+
+    store.saveNow()
+
+    const restored = useChatStore()
+    restored.restoreFromBackup({
+      roleProfiles: store.roleProfiles.map((item) => ({ ...item })),
+      contacts: store.contacts.map((item) => ({ ...item })),
+      conversations: {},
+      messagesByConversation: {},
+    })
+
+    const restoredProfile = restored.getRoleProfileById(profile.id)
+    expect(restoredProfile).toMatchObject({
+      relationshipLabelText: 'childhood friend',
+      relationshipLabelNote: 'Grew up together.',
+      primaryRelationshipCategoryId: 'friendship_bond',
+      relationshipModifierIds: ['childhood_connection', 'mutual'],
+      classificationConfidence: 'high',
+      classificationSource: 'ai_auto',
+    })
+    expect(restoredProfile.initialRelationshipSeed).toMatchObject({
+      affinity: 78,
+      trust: 82,
+      intimacy: 45,
+      tension: 8,
+      dependency: 30,
+    })
+  })
+
+  test('does not silently overwrite user-edited relationship classification with AI output', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '2402',
+      name: 'Protected Role',
+      primaryRelationshipCategoryId: 'family_bond',
+      relationshipModifierIds: ['caretaking'],
+      classificationConfidence: 'high',
+      classificationSource: 'user_edited',
+    })
+
+    const blocked = store.saveRoleRelationshipClassification(
+      profile.id,
+      {
+        primaryRelationshipCategoryId: 'romantic_bond',
+        relationshipModifierIds: ['secret'],
+        classificationConfidence: 'high',
+        classificationExplanation: 'AI guess.',
+      },
+      {
+        source: 'ai_auto',
+      },
+    )
+
+    expect(blocked).toEqual({ ok: false, reason: 'user_edited_protected' })
+    expect(store.getRoleProfileById(profile.id).primaryRelationshipCategoryId).toBe('family_bond')
+    expect(store.getRoleProfileById(profile.id).relationshipModifierIds).toEqual(['caretaking'])
+  })
+
+  test('saves high-confidence AI classification while preserving user-edited protection', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '2403',
+      name: 'AI Classified',
+      relationshipLabelText: 'fanatic supporter',
+    })
+
+    const saved = store.saveRoleRelationshipClassification(
+      profile.id,
+      {
+        primaryRelationshipCategoryId: 'fandom_bond',
+        relationshipModifierIds: ['admiring', 'obsessive'],
+        classificationConfidence: 'high',
+        classificationExplanation: 'Supporter wording maps to fandom intensity.',
+      },
+      {
+        source: 'ai_auto',
+      },
+    )
+
+    expect(saved.ok).toBe(true)
+    expect(store.getRoleProfileById(profile.id)).toMatchObject({
+      primaryRelationshipCategoryId: 'fandom_bond',
+      relationshipModifierIds: ['admiring', 'obsessive'],
+      classificationConfidence: 'high',
+      classificationSource: 'ai_auto',
+    })
+
+    const manual = store.saveRoleRelationshipClassification(
+      profile.id,
+      {
+        primaryRelationshipCategoryId: 'friendship_bond',
+        relationshipModifierIds: ['long_term_companion'],
+        classificationConfidence: 'high',
+        classificationExplanation: 'User corrected the classification.',
+      },
+      {
+        source: 'user_edited',
+      },
+    )
+
+    expect(manual.ok).toBe(true)
+    expect(store.getRoleProfileById(profile.id).classificationSource).toBe('user_edited')
   })
 })

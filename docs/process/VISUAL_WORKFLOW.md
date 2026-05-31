@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-28
+Updated: 2026-05-31
 
 This document defines the `视觉专项` workflow.
 
@@ -93,6 +93,8 @@ If a visual change needs functional code, keep the change minimal and explain wh
 22. Settings-owned WorldBook management should use state-first progressive disclosure: overview first, then focused panels for sources, pack, kernel, templates, and knowledge. Source picking, version review, knowledge creation/editing, import/export confirmation, and other execution steps should use dialogs, sheets, drawers, or dedicated subpages instead of indefinitely extending the same Settings screen.
 23. Widget Center should stay scan-first on phone-sized screens. Keep library, starter templates, and saved widgets visible as the main page; open custom code editing and import JSON entry as focused sheets or equivalent execution panels.
 24. Appearance-owned controls should keep state and preview visible first. Inputs that feel like execution work, such as wallpaper-source picking, advanced CSS editing, custom font-stack editing, or per-app icon/accent edits, should use sheets/drawers/subpages on phone-sized screens instead of extending the main settings scroll.
+25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries now have a first App Store/Home/App Library unlock seam, and Shopping/Food Delivery/Calendar/Map have the first target-app world UX context treatment; broaden that world UX package through target app seams rather than Settings-only copy.
+26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Appearance Advanced CSS now has app/world-app scoped authoring with active World Pack entry selection, target selector preview, pause/clear recovery, and portable Appearance pack import/export; future visual work should user-test those packs before adding finer component hooks.
 
 ## 4. Entry-Context Audit
 
@@ -136,6 +138,7 @@ Examples:
 - Lock-screen Chat notification: Native System container, Chat accent/icon.
 - Shopping Home-folder overlay: Native System container, Shopping child entries.
 - Shopping child route: Installed App identity for the selected Shopping platform.
+- World Pack app binding in App Store: Native System/App Store container, with world-pack origin and target-app identity visible. Opening the entry moves into the target installed app's visual owner with world context applied.
 
 ## 5. Visible Copy Audit
 

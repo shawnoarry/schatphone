@@ -11,6 +11,7 @@ import {
   recordFoodDeliverySharedMealRelationshipFact,
   recordWalletOrderSupportRelationshipFact,
 } from '../lib/relationship-fact-adapters'
+import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
@@ -74,10 +75,51 @@ const menuDraft = reactive({
 })
 const sharedMealTargets = reactive({})
 
+const worldAppUxContext = computed(() =>
+  resolveWorldAppUxContext({
+    systemStore,
+    moduleKey: 'food_delivery',
+    routeQuery: route.query,
+    expectedArchetypes: ['dispatch'],
+  }),
+)
+const worldAppRouteQuery = computed(() => worldAppUxContext.value?.routeQuery || {})
+const defaultFoodDeliveryCategoryKey = computed(() =>
+  worldAppUxContext.value ? 'nearby' : 'restaurants',
+)
 const activeCategoryKey = computed(() =>
-  typeof route.query.category === 'string' ? route.query.category : 'restaurants',
+  typeof route.query.category === 'string' ? route.query.category : defaultFoodDeliveryCategoryKey.value,
 )
 const activeCategory = computed(() => findFoodDeliveryCategory(activeCategoryKey.value))
+const foodDeliveryTitle = computed(() =>
+  worldAppUxContext.value?.bindingTitle || t('外卖', 'Food Delivery'),
+)
+const foodDeliveryDescription = computed(() => {
+  const context = worldAppUxContext.value
+  if (!context) {
+    return t(
+      '外卖模块使用主屏文件夹式入口，后续可在内部建立不同餐厅分类；订单归外卖，位置与路线由 Map 提供上下文。',
+      'Food Delivery uses the Home folder pattern. It can later host restaurant categories while orders stay here and Map provides location/route context.',
+    )
+  }
+  if (languageBase.value === 'zh' && context.bindingId === 'survival_dispatch') {
+    return '当前世界包把 Food Delivery 作为救援调度入口使用，会强化配送、支援与异常提醒；订单事实仍由 Food Delivery 自己持有。'
+  }
+  return context.description || 'This entry brings the active World Pack UX package into Food Delivery.'
+})
+const foodDeliveryHeroClass = computed(() =>
+  worldAppUxContext.value
+    ? 'bg-gradient-to-br from-sky-800 via-cyan-600 to-lime-300'
+    : 'bg-gradient-to-br from-orange-400 via-amber-300 to-lime-200',
+)
+const foodDeliveryShellClass = computed(() =>
+  worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#fff8ed]',
+)
+const foodDeliveryHeroEyebrow = computed(() =>
+  worldAppUxContext.value
+    ? t('Food Delivery / 世界包', 'Food Delivery / World Pack')
+    : 'Food Delivery',
+)
 
 const categoryCards = computed(() =>
   FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
@@ -352,7 +394,7 @@ const createCustomRestaurant = () => {
   resetMenuDraft(restaurant.id)
   router.push({
     path: '/food-delivery',
-    query: { category: restaurant.category },
+    query: { ...worldAppRouteQuery.value, category: restaurant.category },
   })
 }
 
@@ -383,7 +425,7 @@ const createCustomMenuItem = () => {
 const openCategory = (key) => {
   router.push({
     path: '/food-delivery',
-    query: { category: key },
+    query: { ...worldAppRouteQuery.value, category: key },
   })
 }
 
@@ -447,6 +489,7 @@ const transferFoodSuggestionToWallet = (suggestion) => {
     sourceId: suggestion.sourceId,
   })
   recordFoodDeliverySharedMealRelationshipFact({
+    chatStore,
     relationshipRuntimeStore,
     order: suggestion.order,
     target: selectedSharedMealContact(suggestion.orderId),
@@ -454,6 +497,7 @@ const transferFoodSuggestionToWallet = (suggestion) => {
   })
   if (selectedSharedMealContact(suggestion.orderId)) {
     recordWalletOrderSupportRelationshipFact({
+      chatStore,
       relationshipRuntimeStore,
       target: selectedSharedMealContact(suggestion.orderId),
       transaction,
@@ -538,9 +582,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#fff8ed] p-4 text-gray-950">
+  <div class="min-h-screen p-4 text-gray-950" :class="foodDeliveryShellClass">
     <div class="mx-auto max-w-md space-y-4">
-      <section class="rounded-[2rem] bg-gradient-to-br from-orange-400 via-amber-300 to-lime-200 p-5 text-white shadow-xl">
+      <section class="rounded-[2rem] p-5 text-white shadow-xl" :class="foodDeliveryHeroClass">
         <button
           class="mb-4 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white"
           data-testid="food-delivery-go-home"
@@ -549,17 +593,48 @@ onBeforeUnmount(() => {
           ← {{ t('Home', 'Home') }}
         </button>
         <p class="text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
-          Food Delivery
+          {{ foodDeliveryHeroEyebrow }}
         </p>
-        <h1 class="mt-2 text-3xl font-black">{{ t('外卖', 'Food Delivery') }}</h1>
+        <h1 class="mt-2 text-3xl font-black" data-testid="food-delivery-hero-title">{{ foodDeliveryTitle }}</h1>
         <p class="mt-2 text-sm leading-6 text-white/85">
-          {{
-            t(
-              '外卖模块使用主屏文件夹式入口，后续可在内部建立不同餐厅分类；订单归外卖，位置与路线由 Map 提供上下文。',
-              'Food Delivery uses the Home folder pattern. It can later host restaurant categories while orders stay here and Map provides location/route context.',
-            )
-          }}
+          {{ foodDeliveryDescription }}
         </p>
+      </section>
+
+      <section
+        v-if="worldAppUxContext"
+        class="rounded-3xl border border-sky-100 bg-sky-50 p-4"
+        data-testid="food-delivery-world-app-context"
+        :data-world-pack="worldAppUxContext.packId"
+        :data-world-app="worldAppUxContext.bindingId"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase text-sky-700">
+              {{ t('世界 UX 包', 'World UX package') }}
+            </p>
+            <h2 class="mt-1 text-lg font-black text-gray-950" data-testid="food-delivery-world-app-title">
+              {{ foodDeliveryTitle }}
+            </h2>
+            <p class="mt-1 text-[11px] font-semibold text-sky-700">
+              {{ t('来自', 'From') }} {{ t(worldAppUxContext.packTitle, worldAppUxContext.packName) }}
+            </p>
+            <p class="mt-2 text-[11px] leading-5 text-gray-600">
+              {{ foodDeliveryDescription }}
+            </p>
+            <p class="mt-2 text-[11px] leading-5 text-sky-800" data-testid="food-delivery-world-app-boundary">
+              {{
+                t(
+                  'Food Delivery 仍拥有餐厅、菜单、订单、状态和配送事件；世界包只改变入口语义、词汇、强调与安全默认视图。',
+                  worldAppUxContext.boundaryCopy,
+                )
+              }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-sky-600 px-3 py-1.5 text-[11px] font-semibold text-white">
+            {{ worldAppUxContext.archetype }}
+          </span>
+        </div>
       </section>
 
       <section

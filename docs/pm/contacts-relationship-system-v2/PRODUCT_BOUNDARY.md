@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -36,7 +36,10 @@ Owns:
 
 - visible `roleId`
 - role profile basics
+- profile-side relationship premise text, initial relationship seed, and stored classification metadata
+- role-control display of the current relationship runtime snapshot before profile-side premise editing
 - manually authored preferences/life-pattern/social-graph entries
+- display-only social-channel snapshots after the Chat social shell lands, such as pending friend, blocked, or blocked-by-role status
 - event-attached detail entries attached into role detail sections
 - memory review and memory deletion entry
 - role delete and relationship reset entry
@@ -46,6 +49,7 @@ Must not own:
 - raw chat message deletion workflow
 - chat-thread-only settings
 - runtime-only internal identifiers as user-facing labels
+- eligibility or application of generated friend/block social events
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -112,6 +116,7 @@ Owns:
 - relationship metrics and stage
 - memory groups and memory summaries
 - fact adapters and source-record references
+- current relationship truth, even when it later consumes saved profile classification as context
 
 Must not own:
 
@@ -154,6 +159,31 @@ Important rule:
 | `relationshipLevel` | 旧聊天绑定层关系字段 | Chat-side compatibility only unless redefined |
 | `relationshipNote` | 旧聊天绑定层备注字段 | Chat-side compatibility/manual annotation only unless redefined |
 
+Additional relationship-classification profile fields:
+
+| Field | Product meaning | Safe owner |
+| --- | --- | --- |
+| `relationshipLabelText` / `relationshipLabelNote` | profile-side relationship premise prose; not an event gate by itself | Contacts role profile |
+| `initialRelationshipSeed` | profile-side starting suggestion for relationship metrics | Contacts role profile |
+| `primaryRelationshipCategoryId` / `relationshipModifierIds` | stored relationship classification used as stable semantic context | Contacts role profile |
+| `classificationConfidence` / `classificationSource` / `classificationUpdatedAt` / `classificationExplanation` | audit metadata for the stored classification result | Contacts role profile |
+
+Round 2 classification policy:
+
+- AI classification must go through `src/lib/ai.js` and shared JSON parsing.
+- High-confidence AI suggestions may save as `ai_auto`.
+- Medium/low-confidence suggestions require confirmation before saving as `ai_confirmed`.
+- Existing `user_edited` classifications must not be silently overwritten by AI, confirmed AI, or world-template writes.
+
+Round 3 Contacts UI policy:
+
+- Contacts may display the current runtime snapshot first, but that block is display-only current truth owned by relationship runtime.
+- Contacts may edit profile-side relationship premise fields, seed values, category, modifiers, and classification audit through role profile actions.
+- Manual Contacts saves must use `classificationSource = user_edited`.
+- Contacts must surface protected `user_edited` classifications as a status message instead of silently overwriting them.
+- Contacts must not judge event eligibility or mutate current runtime metrics as part of classification editing.
+- Future friend/block social-event display in Contacts must stay snapshot-only. Chat owns applied channel state, event runtime owns generated-event review/audit, and relationship runtime owns confirmed relationship facts/memories.
+
 ## 9. Semantic Drift Watchlist
 
 If any of these happens, treat it as a product-semantic bug:
@@ -164,3 +194,8 @@ If any of these happens, treat it as a product-semantic bug:
 4. A single life event becomes multiple unrelated memories instead of one memory group.
 5. A user cannot tell whether a role-detail item was manually entered or event-attached.
 6. A downstream follow-up with explicit source lineage stacks relationship growth instead of attaching as supporting context to the existing memory group.
+7. Event/runtime logic reads raw `relationshipLabelText` or `relationshipLabelNote` instead of the saved classification fields.
+8. Chat or Chat Directory treats saved profile classification as current affinity/stage truth instead of profile-side context.
+9. A later AI or world-template classification silently overwrites an existing `user_edited` classification.
+10. Contacts lets the relationship premise form directly change current runtime metrics, stage, milestones, or memories.
+11. Contacts turns friend/block social snapshots into event decisions or relationship metrics.

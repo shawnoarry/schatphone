@@ -11,6 +11,7 @@ import { useSystemStore } from '../stores/system'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { RELATIONSHIP_FACT_SOURCE_KEYS } from '../lib/relationship-fact-adapters'
+import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
@@ -32,6 +33,41 @@ const relationshipFeedbackByEventId = ref({})
 
 const visibleCalendarEvents = computed(() => upcomingEvents.value.slice(0, 4))
 const calendarEventCount = computed(() => upcomingEvents.value.length)
+const calendarWorldAppContext = computed(() =>
+  resolveWorldAppUxContext({
+    systemStore,
+    moduleKey: 'calendar',
+    routeQuery: route.query,
+    expectedArchetypes: ['reservation'],
+  }),
+)
+const calendarTitle = computed(() => calendarWorldAppContext.value?.bindingTitle || t('日历', 'Calendar'))
+const calendarOverviewEyebrow = computed(
+  () =>
+    calendarWorldAppContext.value?.packName ||
+    calendarWorldAppContext.value?.packTitle ||
+    t('日程中心', 'Schedule center'),
+)
+const calendarOverviewTitle = computed(
+  () =>
+    calendarWorldAppContext.value?.bindingTitle ||
+    t('已确认的事项在这里排程。', 'Confirmed items are scheduled here.'),
+)
+const calendarOverviewDescription = computed(() => {
+  if (calendarWorldAppContext.value) return calendarWorldAppContext.value.boundaryCopy
+  return t(
+    '未确认线索先进入提醒事项；进入日历后才会显示时间、调整排程并安排真实推送。',
+    'Unconfirmed cues go to Reminders first; Calendar shows timed events, edits, and real push scheduling.',
+  )
+})
+const calendarOverviewClass = computed(() =>
+  calendarWorldAppContext.value
+    ? 'bg-cyan-50/70 border-cyan-100 shadow-sm'
+    : 'bg-white border-gray-200 shadow-sm',
+)
+const calendarOverviewEyebrowClass = computed(() =>
+  calendarWorldAppContext.value ? 'text-cyan-600' : 'text-blue-500',
+)
 const pendingReminderItems = computed(() =>
   activeReminderItems.value.filter((item) => item.status !== 'confirmed' && item.pinned !== true),
 )
@@ -577,25 +613,52 @@ watch(
       <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
-      <h1 class="font-bold">{{ t('日历', 'Calendar') }}</h1>
+      <h1 class="font-bold">{{ calendarTitle }}</h1>
     </div>
 
     <div class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-schedule-overview">
-        <p class="text-xs font-semibold uppercase tracking-wide text-blue-500">
-          {{ t('日程中心', 'Schedule center') }}
+      <section
+        class="rounded-lg border p-4"
+        :class="calendarOverviewClass"
+        data-testid="calendar-schedule-overview"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wide" :class="calendarOverviewEyebrowClass">
+          {{ calendarOverviewEyebrow }}
         </p>
         <h2 class="mt-2 text-lg font-bold text-gray-950">
-          {{ t('已确认的事项在这里排程。', 'Confirmed items are scheduled here.') }}
+          {{ calendarOverviewTitle }}
         </h2>
         <p class="mt-2 text-xs leading-5 text-gray-500">
-          {{
-            t(
-              '未确认线索先进入提醒事项；进入日历后才会显示时间、调整排程并安排真实推送。',
-              'Unconfirmed cues go to Reminders first; Calendar shows timed events, edits, and real push scheduling.',
-            )
-          }}
+          {{ calendarOverviewDescription }}
         </p>
+
+        <div
+          v-if="calendarWorldAppContext"
+          class="mt-3 rounded-lg border border-cyan-100 bg-white/80 p-3"
+          data-testid="calendar-world-app-context"
+          :data-world-pack="calendarWorldAppContext.packId"
+          :data-world-app="calendarWorldAppContext.bindingId"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-50 text-cyan-600">
+                <i :class="calendarWorldAppContext.icon"></i>
+              </span>
+              <div class="min-w-0">
+                <p class="truncate text-xs font-semibold text-gray-900">
+                  {{ calendarWorldAppContext.bindingTitle }}
+                </p>
+                <p class="text-[11px] text-gray-500">{{ calendarWorldAppContext.targetLabel }}</p>
+              </div>
+            </div>
+            <span class="shrink-0 rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+              {{ calendarWorldAppContext.archetype }}
+            </span>
+          </div>
+          <p class="mt-2 text-[11px] leading-5 text-gray-500">
+            {{ calendarWorldAppContext.description || calendarWorldAppContext.boundaryCopy }}
+          </p>
+        </div>
 
         <div class="mt-4 grid grid-cols-3 gap-2">
           <div class="rounded-lg bg-blue-50 px-3 py-2">

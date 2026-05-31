@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-05-29
+Updated: 2026-05-31
 
 This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
 
@@ -15,7 +15,9 @@ What is already landed:
 3. some low-risk component extraction and cleanup work has already started in the UI layer.
 4. `src/lib/world-interface.js` now centralizes active WorldBook/world-context reading for Chat, WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback.
 5. Book text-library V1 now implements the ownership split: Book owns long reusable text sources, WorldBook owns activation/source links, and Files remains hidden/internal.
-6. World Pack V1 now has persisted built-in packs, one active pack per save, activation review, World Interface exposure, and user-approved service-account template generation into Chat Directory.
+6. World Pack V1 now has persisted built-in packs, one active pack per save, activation review, World Interface exposure, and service-account template availability. Current World Pack now hands service-account creation off to the future Chat-side add flow instead of directly generating Chat Directory entries from Settings.
+7. World app bindings now centralize global launch rows and target-app UX context through `src/lib/world-pack-app-bindings.js`; current consumers are Shopping, Food Delivery, Calendar, and Map.
+8. Nonstandard-app proposals now have a guarded whitelist/review seam in `src/lib/world-app-template-registry.js` plus a WorldBook Current World Pack review UI with explicit loading, empty, parse/API error, and rejected-state treatment; confirmed proposals become appBindings only after user action and then reuse the existing App Store/Home/target-app context seams, while unknown, low-confidence, or unsupported proposals cannot create modules, stores, event rules, or App Store entries. `black_market` is currently unsupported as `needs_dedicated_app`, so it is not mapped onto Shopping. Dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths are covered by regression tests.
 
 Still incomplete:
 
@@ -23,7 +25,7 @@ Still incomplete:
 2. some large files still need careful decomposition;
 3. historical docs and encoding debt still need targeted cleanup;
 4. stale code and compatibility layers still need periodic audit.
-5. The next WorldBook expansion should focus on concrete app-archetype behavior and broader subscription generation, not new ownership surfaces.
+5. The next WorldBook expansion should focus on user-testing the landed nonstandard-app review UI, concrete app-archetype behavior, and broader subscription generation, not new ownership surfaces.
 
 ## 2. Recommended Next Slice
 

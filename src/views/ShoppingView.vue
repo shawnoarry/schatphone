@@ -633,12 +633,14 @@ const transferSuggestionToWallet = (suggestion) => {
     sourceId: suggestion.sourceId,
   })
   recordShoppingGiftRelationshipFact({
+    chatStore,
     relationshipRuntimeStore,
     order: suggestion.order,
     transaction,
   })
   if (suggestion.relationshipSuggestion?.available) {
     recordWalletOrderSupportRelationshipFact({
+      chatStore,
       relationshipRuntimeStore,
       target: suggestion.relationshipSuggestion.target,
       transaction,

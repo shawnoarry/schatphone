@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-05-19
+Updated: 2026-05-30
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -361,3 +361,4 @@ Already landed:
 Recommended next step:
 
 - preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added
+- preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.

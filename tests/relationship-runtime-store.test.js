@@ -89,6 +89,91 @@ describe('relationship runtime store', () => {
     expect(summary.milestones[0]?.label).toBe('Confession candidate')
   })
 
+  test('persists gate audit metadata and blocks hard-gated relationship facts', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    const event = store.recordRelationshipFact({
+      target: {
+        profileId: 91,
+        name: 'Gate Block',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'gate_block_1',
+      factType: 'confession_candidate',
+      summary: 'This high-risk effect should be blocked by classification.',
+      metricDeltas: {
+        affinity: 20,
+      },
+      relationshipGate: {
+        decision: 'block',
+        mode: 'hard_gate',
+        reason: 'primary_category_not_allowed',
+        eventType: 'confession_candidate',
+        primaryRelationshipCategoryId: 'family_bond',
+        relationshipModifierIds: ['caretaking'],
+        matched: false,
+      },
+    })
+
+    expect(event).toMatchObject({
+      status: 'dismissed',
+      effectApplied: false,
+      relationshipGate: expect.objectContaining({
+        decision: 'block',
+        mode: 'hard_gate',
+        reason: 'primary_category_not_allowed',
+        primaryRelationshipCategoryId: 'family_bond',
+        relationshipModifierIds: ['caretaking'],
+      }),
+    })
+    expect(store.summarizeEntityForTarget({ profileId: 91, name: 'Gate Block' }).exists).toBe(false)
+
+    const backup = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restored = useRelationshipRuntimeStore()
+    restored.resetForTesting()
+    expect(restored.restoreFromBackup({ relationshipRuntime: backup })).toBe(true)
+    expect(restored.events[0].relationshipGate).toMatchObject({
+      decision: 'block',
+      mode: 'hard_gate',
+      primaryRelationshipCategoryId: 'family_bond',
+      relationshipModifierIds: ['caretaking'],
+    })
+  })
+
+  test('keeps confirmation-gated relationship facts pending without applying metrics', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+
+    const event = store.recordRelationshipFact({
+      target: {
+        profileId: 92,
+        name: 'Gate Confirm',
+      },
+      sourceModule: 'relationship_runtime',
+      sourceId: 'gate_confirm_1',
+      factType: 'confession_candidate',
+      summary: 'This high-risk effect should wait for confirmation.',
+      metricDeltas: {
+        affinity: 10,
+      },
+      relationshipGate: {
+        decision: 'confirm',
+        mode: 'hard_gate',
+        reason: 'required_modifier_missing',
+        eventType: 'confession_candidate',
+        primaryRelationshipCategoryId: 'romance_candidate',
+        relationshipModifierIds: ['secret'],
+        matched: false,
+      },
+    })
+
+    expect(event.status).toBe('pending_confirmation')
+    expect(event.effectApplied).toBe(false)
+    expect(store.summarizeEntityForTarget({ profileId: 92, name: 'Gate Confirm' }).exists).toBe(false)
+  })
+
   test('backs up, restores, and builds compact prompt context without API calls', () => {
     const store = useRelationshipRuntimeStore()
     store.resetForTesting()
@@ -683,5 +768,64 @@ describe('relationship runtime store', () => {
     expect(fullSummary.sourceModuleCounts).toEqual({
       relationship_calendar_confirmed_event: 1,
     })
+  })
+
+  test('keeps memory counts canonical when summary display is capped or disabled', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const target = { profileId: 63, name: 'Count Contract' }
+
+    for (let index = 0; index < 55; index += 1) {
+      store.recordRelationshipFact({
+        target,
+        sourceModule: 'relationship_calendar_confirmed_event',
+        sourceId: `count_contract_${index}:calendar_event:role_63`,
+        memoryKey: `count_contract_memory_${index}`,
+        factType: 'scheduled_calendar_event',
+        summary: `Count contract memory ${index}.`,
+        metricDeltas: {
+          trust: 1,
+        },
+        createdAt: Date.parse('2026-05-17T10:00:00.000Z') + index,
+      })
+    }
+
+    store.updateMemoryReviewForTarget(target, 'count_contract_memory_0', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    })
+    store.updateMemoryReviewForTarget(target, 'count_contract_memory_1', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    })
+
+    const cappedSummary = store.summarizeEntityForTarget(target, {
+      eventLimit: 0,
+      memoryLimit: 3,
+    })
+    const noDisplaySummary = store.summarizeEntityForTarget(target, {
+      eventLimit: 0,
+      memoryLimit: 0,
+    })
+    const fullSummary = store.summarizeEntityForTarget(target, {
+      eventLimit: 0,
+      memoryLimit: 3,
+      includeArchivedMemories: true,
+    })
+
+    expect(cappedSummary.memorySummaries).toHaveLength(3)
+    expect(cappedSummary.totalMemoryCount).toBe(55)
+    expect(cappedSummary.visibleMemoryCount).toBe(53)
+    expect(cappedSummary.archivedMemoryCount).toBe(2)
+    expect(cappedSummary.hasArchivedOnlyMemories).toBe(false)
+    expect(cappedSummary.memorySummaries.every((memory) => memory.reviewStatus !== 'archived')).toBe(true)
+
+    expect(noDisplaySummary.memorySummaries).toEqual([])
+    expect(noDisplaySummary.totalMemoryCount).toBe(55)
+    expect(noDisplaySummary.visibleMemoryCount).toBe(53)
+    expect(noDisplaySummary.archivedMemoryCount).toBe(2)
+
+    expect(fullSummary.memorySummaries).toHaveLength(3)
+    expect(fullSummary.totalMemoryCount).toBe(55)
+    expect(fullSummary.visibleMemoryCount).toBe(55)
+    expect(fullSummary.archivedMemoryCount).toBe(2)
   })
 })

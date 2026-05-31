@@ -122,4 +122,163 @@ describe('AppearanceView wallpaper source picker', () => {
 
     wrapper.unmount()
   })
+
+  test('edits app and world-app scoped custom CSS from the advanced CSS sheet', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('.appearance-menu-card')[0].trigger('click')
+    await wrapper.get('[data-testid="appearance-open-css-editor"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="appearance-app-scoped-css-toggle"]').trigger('click')
+    await wrapper.get('[data-testid="appearance-app-scoped-css-target"]').setValue('shopping')
+    await wrapper
+      .get('[data-testid="appearance-app-scoped-css-input"]')
+      .setValue('.screen { color: red; }')
+
+    await wrapper.get('[data-testid="appearance-world-app-scoped-css-toggle"]').trigger('click')
+    await wrapper
+      .get('[data-testid="appearance-world-app-scoped-css-entry"]')
+      .setValue('survival_city::survival_dispatch')
+    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-pack"]').element.value).toBe(
+      'survival_city',
+    )
+    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-app"]').element.value).toBe(
+      'survival_dispatch',
+    )
+    await wrapper.get('[data-testid="appearance-world-app-scoped-css-pack"]').setValue('survival_city')
+    await wrapper
+      .get('[data-testid="appearance-world-app-scoped-css-app"]')
+      .setValue('survival_dispatch')
+    await wrapper
+      .get('[data-testid="appearance-world-app-scoped-css-input"]')
+      .setValue('.hero { color: orange; }')
+
+    expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
+      enabled: true,
+      target: 'shopping',
+      css: '.screen { color: red; }',
+    })
+    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
+      enabled: true,
+      worldPack: 'survival_city',
+      worldApp: 'survival_dispatch',
+      css: '.hero { color: orange; }',
+    })
+    expect(wrapper.get('[data-testid="appearance-app-scoped-css-selector"]').text()).toBe(
+      '[data-app="shopping"]',
+    )
+    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-selector"]').text()).toBe(
+      '[data-world-pack="survival_city"][data-world-app="survival_dispatch"]',
+    )
+    expect(wrapper.get('[data-testid="appearance-scoped-css-active-count"]').text()).toContain('2')
+
+    await wrapper.get('[data-testid="appearance-scoped-css-disable-all"]').trigger('click')
+    expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
+      enabled: false,
+      css: '.screen { color: red; }',
+    })
+    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
+      enabled: false,
+      css: '.hero { color: orange; }',
+    })
+
+    await wrapper.get('[data-testid="appearance-scoped-css-clear-all"]').trigger('click')
+    expect(systemStore.settings.appearance.scopedCustomCss.app.css).toBe('')
+    expect(systemStore.settings.appearance.scopedCustomCss.worldApp.css).toBe('')
+
+    wrapper.unmount()
+  })
+
+  test('exports and imports portable appearance packs from the CSS sheet', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+    const systemStore = useSystemStore()
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('.appearance-menu-card')[0].trigger('click')
+    await wrapper.get('[data-testid="appearance-open-css-editor"]').trigger('click')
+    await flushPromises()
+
+    systemStore.settings.appearance.customWidgets = [{ id: 'local_widget', name: 'Local' }]
+    systemStore.settings.appearance.homeWidgetPages = [['local_widget'], [], [], [], []]
+    systemStore.settings.appearance.chat = { bubbleStyle: 'compact' }
+    systemStore.settings.appearance.customCss = '.shell { color: teal; }'
+    await wrapper.get('[data-testid="appearance-app-scoped-css-toggle"]').trigger('click')
+    await wrapper.get('[data-testid="appearance-app-scoped-css-target"]').setValue('contacts')
+    await wrapper
+      .get('[data-testid="appearance-app-scoped-css-input"]')
+      .setValue('.screen { background: black; }')
+
+    await wrapper.get('[data-testid="appearance-pack-export"]').trigger('click')
+    const exported = JSON.parse(wrapper.get('[data-testid="appearance-pack-export-output"]').element.value)
+
+    expect(exported).toMatchObject({
+      kind: 'schatphone.appearance-pack',
+      appearance: {
+        customCss: '.shell { color: teal; }',
+        scopedCustomCss: {
+          app: {
+            enabled: true,
+            target: 'contacts',
+            css: '.screen { background: black; }',
+          },
+        },
+      },
+    })
+    expect(exported.appearance.customWidgets).toBeUndefined()
+    expect(exported.appearance.homeWidgetPages).toBeUndefined()
+    expect(exported.appearance.chat).toBeUndefined()
+
+    await wrapper.get('[data-testid="appearance-pack-import-input"]').setValue(
+      JSON.stringify({
+        appearance: {
+          currentTheme: 'zen',
+          customCss: '.imported { color: green; }',
+          scopedCustomCss: {
+            worldApp: {
+              enabled: true,
+              worldPack: 'survival_city',
+              worldApp: 'survival_safe_route_pass',
+              css: '.map-route-card { border-color: cyan; }',
+            },
+          },
+        },
+      }),
+    )
+    await wrapper.get('[data-testid="appearance-pack-import"]').trigger('click')
+
+    expect(systemStore.settings.appearance.currentTheme).toBe('zen')
+    expect(systemStore.settings.appearance.customCss).toBe('.imported { color: green; }')
+    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
+      enabled: true,
+      worldPack: 'survival_city',
+      worldApp: 'survival_safe_route_pass',
+      css: '.map-route-card { border-color: cyan; }',
+    })
+    expect(systemStore.settings.appearance.customWidgets).toEqual([{ id: 'local_widget', name: 'Local' }])
+    expect(systemStore.settings.appearance.homeWidgetPages[0]).toEqual(['local_widget'])
+    expect(systemStore.settings.appearance.chat).toEqual({ bubbleStyle: 'compact' })
+    expect(wrapper.get('[data-testid="appearance-pack-status"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
 })

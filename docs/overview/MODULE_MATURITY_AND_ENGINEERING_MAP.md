@@ -220,14 +220,14 @@ Engineering meaning:
 ### Appearance
 
 - product state: strong MVP
-- engineering note: visual lane is separate; do not mix it with ownership work
-- recommendation: revisit only in explicit visual slices
+- engineering note: visual lane is separate; Appearance packs and scoped CSS are user override layers, not source-record owners
+- recommendation: user-test portable Appearance pack import/export and scoped CSS recovery before adding finer hooks
 
 ### WorldBook
 
 - product state: real cross-module world kernel with integrated World Pack V1 activation
-- engineering note: readability matters more than piling on more features, especially now that it links Book sources and active pack state
-- recommendation: extract WorldBook panels before the next major behavior slice; the next product step should turn active-pack app metadata into concrete archetype behavior, not copy business records into WorldBook
+- engineering note: readability matters more than piling on more features, especially now that it links Book sources, active pack state, appBindings, and reviewed template proposals
+- recommendation: extract WorldBook panels before the next major behavior slice; the next product step should user-test and harden the landed template review UI, not copy business records into WorldBook
 
 ### Book
 
@@ -238,8 +238,8 @@ Engineering meaning:
 ### Map
 
 - product state: active expansion core
-- engineering note: product depth is rising quickly, so boundaries matter
-- recommendation: keep Map as context/progression/trip owner; do not let it re-absorb reminders or other modules' records
+- engineering note: product depth is rising quickly, so boundaries matter; `transit -> Map` World Pack context is presentation only
+- recommendation: keep Map as context/progression/trip owner; do not let it re-absorb reminders, event judgment, or other modules' records
 
 ### Calendar
 

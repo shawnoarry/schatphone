@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-31
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
@@ -17,19 +17,26 @@ What is already landed:
 5. World Hub now distinguishes visible role IDs from runtime entity keys; missing role profiles are labeled as missing/runtime-only contexts rather than fabricating a role ID.
 6. relationship memory 4.2 has reached current acceptance for explicit-lineage dedupe and recall/review copy: Chat keeps source-aware recall text, Calendar shows source-audit review detail, and Contacts/World Hub show product-facing related-record summaries.
 7. World Hub review quality 4.3 now has a filtered review-pack baseline: event logs can be filtered by module/status and inspected with trigger, reason, adapter, target, and world-variant explanations; relationship facts can be filtered by status/source and inspected with metric-delta, source-record, pending-effect, and supporting-only explanations.
-8. Cheats exists as a hidden-system product concept and placeholder, but not as a finished feature lane.
+8. Relationship classification Round 4 is landed at the event/runtime seam: low-impact relationship facts now persist `relationshipGate` audit metadata from saved profile category/modifier classification fields only. The pure helper supports high-risk block/confirm/allow decisions for future event packs and tests, but no new high-impact automation is enabled.
+9. World Hub can review gate audit metadata read-only in relationship fact detail.
+10. Cheats exists as a hidden-system product concept and placeholder, but not as a finished feature lane.
+11. Named high-risk relationship gate presets are available in `src/lib/relationship-event-gating.js` for future event packs, so callers can reference preset ids instead of copying hard-gate category/modifier rules.
+12. World Pack nonstandard-app template extraction is explicitly not an event/runtime lane in the current slice: the whitelist/review seam and WorldBook Current World Pack UI can propose/confirm appBindings only, confirmed entries reuse App Store/Home/target-app context seams, and the flow cannot create event rules, runtime mutations, or World Hub editor responsibilities.
 
 Still incomplete:
 
 1. broad affinity/funds/unlock/freeform override controls remain deferred;
 2. Cheats still has no frozen unlock source, route shape, or editing surface;
 3. high-impact romance/conflict automation remains intentionally deferred.
+4. the named gate presets are pure helper contracts only; no runtime trigger consumes them yet.
+5. role-initiated friend requests, blocks, and being-blocked social events are a future integration lane after the Chat shell lands. They should be modeled as social/channel events with pending review/audit where needed, not as direct relationship-runtime writes.
 
 ## 2. Recommended Next Slice
 
 1. Move to service-account continuity unless product review identifies another concrete read-only World Hub explanation gap.
 2. Keep runtime-trigger explanation readable in product language as new event adapters are added.
 3. Freeze Cheats only after World Hub review surfaces are trusted enough.
+4. When the Chat social shell is ready, define mixed gating for social events: low-risk soft references for feed/copy, hard review gates for role-initiated friend/block state changes.
 
 ## 3. Do Not Do
 
@@ -37,6 +44,9 @@ Still incomplete:
 2. Do not make World Hub the normal data-entry surface.
 3. Do not expose Cheats as a default user path.
 4. Do not enable high-impact automatic relationship events before review surfaces are stable.
+5. Do not gate event decisions on raw `relationshipLabelText` or `relationshipLabelNote`; use saved category/modifier classification fields.
+6. Do not copy high-risk romance/conflict gate rules into module adapters; use the named preset seam.
+7. Do not let generated friend/block social events mutate Chat channel state, Contacts display state, or relationship runtime facts without the social-event review seam.
 
 ## 4. Must Sync When Working Here
 

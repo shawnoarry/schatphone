@@ -25,6 +25,8 @@ import {
   syncExistingWebPushSubscription,
 } from './lib/push'
 import { pushReturnTarget } from './lib/navigation-return'
+import { resolveAppShellScopeAttrs } from './lib/app-shell-scope'
+import { buildScopedCustomCss } from './lib/appearance-scoped-css'
 
 const router = useRouter()
 const route = useRoute()
@@ -47,6 +49,7 @@ const screenBackgroundImage = computed(() => {
   if (!wallpaper) return 'var(--system-wallpaper-fallback)'
   return `url(${JSON.stringify(wallpaper)}), var(--system-wallpaper-fallback)`
 })
+const appShellScopeAttrs = computed(() => resolveAppShellScopeAttrs(route))
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
@@ -76,6 +79,8 @@ let automationVisibilityHandler = null
 let simulationForegroundTickLifecycle = null
 let simulationForegroundVisibilityHandler = null
 let customCssStyleEl = null
+let scopedCustomCssStyleEl = null
+let chatCustomCssStyleEl = null
 let mapAutoNextAt = 0
 let chatAutoPushSyncPromise = null
 let chatAutoPushVisibilityHandler = null
@@ -254,12 +259,54 @@ const syncCustomCss = (cssText) => {
   styleEl.textContent = cssText || ''
 }
 
+const ensureScopedCustomCssStyleEl = () => {
+  if (scopedCustomCssStyleEl) return scopedCustomCssStyleEl
+  scopedCustomCssStyleEl = document.createElement('style')
+  scopedCustomCssStyleEl.setAttribute('data-schatphone-scoped-css', 'true')
+  document.head.appendChild(scopedCustomCssStyleEl)
+  return scopedCustomCssStyleEl
+}
+
+const syncScopedCustomCss = (scopedCss) => {
+  const styleEl = ensureScopedCustomCssStyleEl()
+  styleEl.textContent = buildScopedCustomCss(scopedCss)
+}
+
+const ensureChatCustomCssStyleEl = () => {
+  if (chatCustomCssStyleEl) return chatCustomCssStyleEl
+  chatCustomCssStyleEl = document.createElement('style')
+  chatCustomCssStyleEl.setAttribute('data-schatphone-chat-css', 'true')
+  document.head.appendChild(chatCustomCssStyleEl)
+  return chatCustomCssStyleEl
+}
+
+const syncChatCustomCss = (chatAppearance = {}) => {
+  const styleEl = ensureChatCustomCssStyleEl()
+  styleEl.textContent = chatAppearance?.customCssEnabled ? chatAppearance.customCss || '' : ''
+}
+
 watch(
   () => settings.value.appearance.customCss,
   (value) => {
     syncCustomCss(value)
   },
   { immediate: true },
+)
+
+watch(
+  () => settings.value.appearance.scopedCustomCss,
+  (value) => {
+    syncScopedCustomCss(value)
+  },
+  { deep: true, immediate: true },
+)
+
+watch(
+  () => settings.value.appearance.chat,
+  (value) => {
+    syncChatCustomCss(value)
+  },
+  { deep: true, immediate: true },
 )
 
 watch(
@@ -872,6 +919,14 @@ onBeforeUnmount(() => {
     customCssStyleEl.remove()
     customCssStyleEl = null
   }
+  if (scopedCustomCssStyleEl) {
+    scopedCustomCssStyleEl.remove()
+    scopedCustomCssStyleEl = null
+  }
+  if (chatCustomCssStyleEl) {
+    chatCustomCssStyleEl.remove()
+    chatCustomCssStyleEl = null
+  }
   galleryStore.releaseAssetPreviewScope(SHELL_WALLPAPER_PREVIEW_SCOPE)
 })
 
@@ -894,6 +949,7 @@ const lockPhone = () => {
     :data-theme="settings.appearance.currentTheme"
     :data-statusbar="showStatusBar ? 'on' : 'off'"
     :style="customVarStyle"
+    v-bind="appShellScopeAttrs"
   >
     <div class="screen" :style="{ backgroundImage: screenBackgroundImage }">
       <div

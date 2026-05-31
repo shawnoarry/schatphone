@@ -805,6 +805,6 @@ watch(
       </template>
     </div>
 
-    <ChatAppTabBar active="more" />
+    <ChatAppTabBar active="me" />
   </div>
 </template>

@@ -1,6 +1,6 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated: 2026-05-19
+Updated: 2026-05-30
 
 ## 1. Purpose
 
@@ -66,9 +66,9 @@ Treat fields this way:
 - `profileId`
   - internal role-profile key for binding and lookup
 - `relationship.level`
-  - Chat-side compatibility or lightweight annotation field
+  - Chat-side compatibility or lightweight annotation field; UI should label this as Chat-local tuning, not current affinity
 - `relationship.note`
-  - Chat-side compatibility or lightweight annotation field
+  - Chat-side compatibility or lightweight annotation field; UI should label this as a Chat-local note
 - `entityType`
   - describes Contacts profile type, not Chat Directory membership
 - `profileValues`
@@ -82,7 +82,7 @@ Current relationship truth must stay owned by `relationshipRuntimeStore`, includ
 - growth traits
 - shared memory groups
 
-Do not use this contract alone to decide the authoritative current relationship-progress state in product-facing UI.
+Do not use this contract alone to decide the authoritative current relationship-progress state in product-facing UI. If a surface displays the live relationship, read `relationshipRuntimeStore`; if it displays these fields, make the Chat-local annotation semantics explicit.
 
 Chat Directory is a chat target list, not a Main Role filter.
 
@@ -129,5 +129,6 @@ Current tests covering this contract:
 
 1. `tests/role-binding-contract.test.js`
 2. `tests/chat-store-model.test.js`
+3. `tests/contacts-chat-directory-boundary-copy.test.js`
 
 Any contract field or semantic change must update tests and this document in the same commit batch.

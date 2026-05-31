@@ -29,6 +29,12 @@ import {
   getHomeLayoutTemplate,
   homeLayoutSlotToGridStyle,
 } from '../lib/home-layout-templates'
+import {
+  APP_SCOPED_CSS_TARGETS,
+  SCOPED_CUSTOM_CSS_KEYS,
+  normalizeScopedCustomCss,
+} from '../lib/appearance-scoped-css'
+import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
 
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
@@ -72,6 +78,9 @@ const customFontStackInput = ref('')
 const customWallpaperUrlInput = ref('')
 const selectedWallpaperAssetId = ref('')
 const wallpaperSourceTypeDraft = ref('')
+const appearancePackExportText = ref('')
+const appearancePackImportText = ref('')
+const appearancePackStatus = ref({ tone: '', message: '' })
 const wallpaperQuickPreviewMap = reactive({})
 
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
@@ -149,6 +158,54 @@ const appIconCustomizationTargets = computed(() =>
   ),
 )
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
+const scopedCustomCss = computed(() =>
+  normalizeScopedCustomCss(settings.value.appearance.scopedCustomCss),
+)
+const appScopedCss = computed(() => scopedCustomCss.value[SCOPED_CUSTOM_CSS_KEYS.APP])
+const worldAppScopedCss = computed(() => scopedCustomCss.value[SCOPED_CUSTOM_CSS_KEYS.WORLD_APP])
+const appScopedCssTargetOptions = computed(() =>
+  APP_SCOPED_CSS_TARGETS.map((item) => ({
+    value: item.id,
+    label: t(item.labelZh, item.labelEn),
+  })),
+)
+const activeWorldAppScopedTargetOptions = computed(() =>
+  buildActiveWorldAppEntryRows({ systemStore }).map((entry) => ({
+    value: `${entry.worldPackId}::${entry.worldAppBindingId}`,
+    worldPack: entry.worldPackId,
+    worldApp: entry.worldAppBindingId,
+    label: `${entry.label} · ${entry.worldPackLabel} · ${entry.targetLabel}`,
+  })),
+)
+const selectedWorldAppScopedTargetValue = computed(
+  () => `${worldAppScopedCss.value.worldPack}::${worldAppScopedCss.value.worldApp}`,
+)
+const selectedWorldAppScopedTarget = computed(
+  () =>
+    activeWorldAppScopedTargetOptions.value.find(
+      (item) => item.value === selectedWorldAppScopedTargetValue.value,
+    ) || null,
+)
+const appScopedCssSelector = computed(() => `[data-app="${appScopedCss.value.target}"]`)
+const worldAppScopedCssSelector = computed(
+  () =>
+    `[data-world-pack="${worldAppScopedCss.value.worldPack}"][data-world-app="${worldAppScopedCss.value.worldApp}"]`,
+)
+const activeScopedCssLayerCount = computed(
+  () =>
+    [appScopedCss.value, worldAppScopedCss.value].filter(
+      (item) => item.enabled && typeof item.css === 'string' && item.css.trim(),
+    ).length,
+)
+const worldAppScopedCssTargetLabel = computed(
+  () => selectedWorldAppScopedTarget.value?.label || t('手动目标', 'Manual target'),
+)
+const appearancePackStatusClass = computed(() => {
+  if (appearancePackStatus.value.tone === 'success') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+  if (appearancePackStatus.value.tone === 'warning') return 'bg-amber-50 text-amber-700 border-amber-100'
+  if (appearancePackStatus.value.tone === 'error') return 'bg-rose-50 text-rose-700 border-rose-100'
+  return 'bg-slate-50 text-slate-500 border-slate-100'
+})
 
 const pageTitle = computed(() => {
   if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
@@ -521,6 +578,95 @@ const applyWallpaperUrl = () => {
 const clearCustomCss = () => {
   settings.value.appearance.customCss = ''
   triggerSaved()
+}
+
+const updateScopedCustomCss = (scopeKey, updates = {}) => {
+  systemStore.setScopedCustomCss(scopeKey, updates)
+}
+
+const selectWorldAppScopedTarget = (targetValue = '') => {
+  const option = activeWorldAppScopedTargetOptions.value.find((item) => item.value === targetValue)
+  if (!option) return
+  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, {
+    worldPack: option.worldPack,
+    worldApp: option.worldApp,
+  })
+}
+
+const clearScopedCustomCss = (scopeKey) => {
+  updateScopedCustomCss(scopeKey, { enabled: false, css: '' })
+  triggerSaved()
+}
+
+const disableAllScopedCustomCss = () => {
+  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: false })
+  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: false })
+  triggerSaved()
+}
+
+const clearAllScopedCustomCss = () => {
+  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: false, css: '' })
+  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: false, css: '' })
+  triggerSaved()
+}
+
+const exportAppearancePack = () => {
+  const pack = systemStore.exportAppearancePack({
+    name: t('SchatPhone 外观包', 'SchatPhone appearance pack'),
+    description: t(
+      '仅包含主题、壁纸、图标、全局 CSS 与范围 CSS。',
+      'Includes theme, wallpaper, icons, global CSS, and scoped CSS only.',
+    ),
+  })
+  appearancePackExportText.value = JSON.stringify(pack, null, 2)
+  appearancePackStatus.value = {
+    tone: 'success',
+    message: t('已生成外观包 JSON。', 'Appearance pack JSON generated.'),
+  }
+}
+
+const importAppearancePack = () => {
+  let payload = null
+  try {
+    payload = JSON.parse(appearancePackImportText.value || '')
+  } catch {
+    appearancePackStatus.value = {
+      tone: 'error',
+      message: t('无法解析外观包 JSON。', 'Could not parse appearance pack JSON.'),
+    }
+    return
+  }
+
+  const result = systemStore.importAppearancePack(payload)
+  if (!result.ok) {
+    appearancePackStatus.value = {
+      tone: 'warning',
+      message: t('外观包缺少可导入的 appearance 内容。', 'Appearance pack has no importable appearance content.'),
+    }
+    return
+  }
+
+  appearancePackImportText.value = ''
+  appearancePackExportText.value = JSON.stringify(
+    systemStore.exportAppearancePack({
+      name: result.pack?.name || t('已导入外观包', 'Imported appearance pack'),
+      description: result.pack?.description || '',
+      exportedAt: result.pack?.exportedAt || undefined,
+    }),
+    null,
+    2,
+  )
+  appearancePackStatus.value = {
+    tone: 'success',
+    message: t('外观包已导入。', 'Appearance pack imported.'),
+  }
+  triggerSaved()
+}
+
+const clearAppearancePackBuffers = () => {
+  appearancePackExportText.value = ''
+  appearancePackImportText.value = ''
+  appearancePackStatus.value = { tone: '', message: '' }
 }
 
 const saveAppearance = () => {
@@ -1053,7 +1199,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="appearance-mobile-action-strip">
-        <button type="button" @click="openAppearanceSheet('css')">
+        <button type="button" data-testid="appearance-open-css-editor" @click="openAppearanceSheet('css')">
           <i class="fas fa-code"></i>
           <span>{{ t('高级 CSS', 'Advanced CSS') }}</span>
         </button>
@@ -1081,6 +1227,285 @@ onBeforeUnmount(() => {
           class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
           placeholder=".app-shell { --home-widget-bg: rgba(255,255,255,0.5); }"
         ></textarea>
+        <div class="mt-4 space-y-3">
+          <div
+            class="rounded-xl border border-slate-200 bg-slate-50 p-3"
+            data-testid="appearance-scoped-css-recovery"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-slate-800">{{ t('范围 CSS 恢复', 'Scoped CSS recovery') }}</p>
+                <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                  {{
+                    t(
+                      'App 与 World App 范围层会覆盖设定包默认外观；排查时可先暂停，不会删除内容。',
+                      'App and World App layers override World Pack defaults; pause them first when checking a visual issue.',
+                    )
+                  }}
+                </p>
+              </div>
+              <span
+                class="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600"
+                data-testid="appearance-scoped-css-active-count"
+              >
+                {{ activeScopedCssLayerCount }} {{ t('层生效', 'active') }}
+              </span>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                class="rounded-md border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700"
+                data-testid="appearance-scoped-css-disable-all"
+                @click="disableAllScopedCustomCss"
+              >
+                {{ t('暂停范围层', 'Pause scoped layers') }}
+              </button>
+              <button
+                type="button"
+                class="rounded-md border border-rose-100 bg-white px-3 py-2 text-[11px] font-semibold text-rose-600"
+                data-testid="appearance-scoped-css-clear-all"
+                @click="clearAllScopedCustomCss"
+              >
+                {{ t('清空并关闭', 'Clear and off') }}
+              </button>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ t('App 范围 CSS', 'App Scoped CSS') }}</p>
+                <p class="text-[11px] text-gray-500">{{ t('当前 App 壳层', 'Current app shell') }}</p>
+              </div>
+              <button
+                type="button"
+                class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                :class="appScopedCss.enabled ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'"
+                data-testid="appearance-app-scoped-css-toggle"
+                @click="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: !appScopedCss.enabled })"
+              >
+                {{ appScopedCss.enabled ? t('开启', 'On') : t('关闭', 'Off') }}
+              </button>
+            </div>
+            <select
+              :value="appScopedCss.target"
+              class="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
+              data-testid="appearance-app-scoped-css-target"
+              @change="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { target: $event.target.value })"
+            >
+              <option
+                v-for="option in appScopedCssTargetOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <div
+              class="rounded-md border border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-600"
+              data-testid="appearance-app-scoped-css-preview"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold text-gray-700">{{ t('目标', 'Target') }}</span>
+                <span
+                  class="rounded-full px-2 py-0.5 font-semibold"
+                  :class="appScopedCss.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'"
+                >
+                  {{ appScopedCss.enabled ? t('生效', 'Active') : t('暂停', 'Paused') }}
+                </span>
+              </div>
+              <code
+                class="mt-1 block break-all rounded bg-gray-50 px-2 py-1 font-mono text-[10px] text-gray-500"
+                data-testid="appearance-app-scoped-css-selector"
+              >
+                {{ appScopedCssSelector }}
+              </code>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-gray-500">{{ appScopedCssSelector }}</span>
+              <button
+                type="button"
+                class="text-[11px] text-blue-500"
+                @click="clearScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP)"
+              >
+                {{ t('清空', 'Clear') }}
+              </button>
+            </div>
+            <textarea
+              :value="appScopedCss.css"
+              class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+              data-testid="appearance-app-scoped-css-input"
+              placeholder=".screen { background: #0f172a; }"
+              @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { css: $event.target.value })"
+            ></textarea>
+          </div>
+
+          <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ t('World App 范围 CSS', 'World App Scoped CSS') }}</p>
+                <p class="text-[11px] text-gray-500">{{ t('设定包入口', 'World pack entry') }}</p>
+              </div>
+              <button
+                type="button"
+                class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                :class="worldAppScopedCss.enabled ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'"
+                data-testid="appearance-world-app-scoped-css-toggle"
+                @click="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: !worldAppScopedCss.enabled })"
+              >
+                {{ worldAppScopedCss.enabled ? t('开启', 'On') : t('关闭', 'Off') }}
+              </button>
+            </div>
+            <div
+              v-if="activeWorldAppScopedTargetOptions.length"
+              class="space-y-1"
+            >
+              <label class="text-[11px] text-gray-500 block">{{ t('当前设定包入口', 'Active world app entry') }}</label>
+              <select
+                :value="selectedWorldAppScopedTargetValue"
+                class="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
+                data-testid="appearance-world-app-scoped-css-entry"
+                @change="selectWorldAppScopedTarget($event.target.value)"
+              >
+                <option
+                  v-for="option in activeWorldAppScopedTargetOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <p
+              v-else
+              class="rounded-md border border-dashed border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-500"
+              data-testid="appearance-world-app-scoped-css-empty"
+            >
+              {{ t('当前设定包没有可选的世界 App 入口，可手动填写目标。', 'The active World Pack has no world-app entries yet. Manual targets are still available.') }}
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <input
+                :value="worldAppScopedCss.worldPack"
+                class="min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
+                data-testid="appearance-world-app-scoped-css-pack"
+                placeholder="survival_city"
+                @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { worldPack: $event.target.value })"
+              />
+              <input
+                :value="worldAppScopedCss.worldApp"
+                class="min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
+                data-testid="appearance-world-app-scoped-css-app"
+                placeholder="survival_dispatch"
+                @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { worldApp: $event.target.value })"
+              />
+            </div>
+            <div
+              class="rounded-md border border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-600"
+              data-testid="appearance-world-app-scoped-css-preview"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold text-gray-700">{{ worldAppScopedCssTargetLabel }}</span>
+                <span
+                  class="rounded-full px-2 py-0.5 font-semibold"
+                  :class="worldAppScopedCss.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'"
+                >
+                  {{ worldAppScopedCss.enabled ? t('生效', 'Active') : t('暂停', 'Paused') }}
+                </span>
+              </div>
+              <code
+                class="mt-1 block break-all rounded bg-gray-50 px-2 py-1 font-mono text-[10px] text-gray-500"
+                data-testid="appearance-world-app-scoped-css-selector"
+              >
+                {{ worldAppScopedCssSelector }}
+              </code>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-gray-500">
+                {{ worldAppScopedCssSelector }}
+              </span>
+              <button
+                type="button"
+                class="text-[11px] text-blue-500"
+                @click="clearScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP)"
+              >
+                {{ t('清空', 'Clear') }}
+              </button>
+            </div>
+            <textarea
+              :value="worldAppScopedCss.css"
+              class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+              data-testid="appearance-world-app-scoped-css-input"
+              placeholder=".screen { --accent-color: #f59e0b; }"
+              @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { css: $event.target.value })"
+            ></textarea>
+          </div>
+
+          <div
+            class="rounded-xl border border-slate-200 bg-white p-3 space-y-3"
+            data-testid="appearance-pack-panel"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-slate-800">{{ t('外观包', 'Appearance Pack') }}</p>
+                <p class="text-[11px] leading-5 text-slate-500">
+                  {{
+                    t(
+                      '导出主题、壁纸、图标与 CSS；不包含桌面布局、小组件或 Chat 外观。',
+                      'Exports theme, wallpaper, icons, and CSS; excludes Home layout, widgets, and Chat appearance.',
+                    )
+                  }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="rounded-md border border-slate-200 px-3 py-2 text-[11px] font-semibold text-slate-700"
+                data-testid="appearance-pack-clear"
+                @click="clearAppearancePackBuffers"
+              >
+                {{ t('清空', 'Clear') }}
+              </button>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                class="rounded-md bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white"
+                data-testid="appearance-pack-export"
+                @click="exportAppearancePack"
+              >
+                {{ t('导出 JSON', 'Export JSON') }}
+              </button>
+              <button
+                type="button"
+                class="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700"
+                data-testid="appearance-pack-import"
+                @click="importAppearancePack"
+              >
+                {{ t('导入 JSON', 'Import JSON') }}
+              </button>
+            </div>
+            <textarea
+              v-model="appearancePackExportText"
+              class="w-full border border-slate-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+              data-testid="appearance-pack-export-output"
+              readonly
+              placeholder="{ &quot;kind&quot;: &quot;schatphone.appearance-pack&quot; }"
+            ></textarea>
+            <textarea
+              v-model="appearancePackImportText"
+              class="w-full border border-slate-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+              data-testid="appearance-pack-import-input"
+              placeholder="{ &quot;appearance&quot;: { &quot;customCss&quot;: &quot;...&quot; } }"
+            ></textarea>
+            <p
+              v-if="appearancePackStatus.message"
+              class="rounded-md border px-2 py-2 text-[11px] font-medium"
+              :class="appearancePackStatusClass"
+              data-testid="appearance-pack-status"
+            >
+              {{ appearancePackStatus.message }}
+            </p>
+          </div>
+        </div>
         <div class="appearance-sheet-actions">
           <button type="button" @click="saveAppearance(); closeAppearanceSheet()">
             <i class="fas fa-check"></i>

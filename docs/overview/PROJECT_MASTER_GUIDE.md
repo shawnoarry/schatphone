@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-05-30
+Updated: 2026-05-31
 
 ## 1. Purpose
 
@@ -46,6 +46,7 @@ These boundaries are now frozen at the product level unless a later decision exp
 - `Chat` owns message history, thread behavior, and manual chat-message deletion.
 - `Relationship Runtime` owns relationship progress, memory groups, milestones, and compact continuity summaries.
 - Legacy Chat-side fields such as `relationshipLevel` or `relationshipNote` are compatibility or light-annotation fields only.
+- Chat Directory now labels those legacy fields as Chat-local tuning/note, not `Affinity` or current relationship progress.
 
 ### 3.3 Calendar vs Reminders
 
@@ -68,7 +69,7 @@ Already stable enough to build on:
 1. `Lock -> Home -> Chat / Settings` main path;
 2. local-first persistence, backup/restore, and storage diagnostics baseline;
 3. Chat manual trigger flow plus optional richer prompt context;
-4. global role profiles, Chat-side role binding, and relationship-runtime baseline;
+4. global role profiles, profile-side relationship premise/classification storage, Chat-side role binding, and relationship-runtime baseline;
 5. Gallery as shared media center for cross-module asset references;
 6. Map simulation baseline with trip/location context;
 7. Calendar and Reminders split baseline;
@@ -87,13 +88,22 @@ Immediate active lane:
 
 - 4.2 memory dedupe has reached current acceptance for explicit-lineage chains across Phone callback, Shopping gift plus Calendar delivery follow-up, Food Delivery shared meal plus Wallet support, Shopping gift plus Wallet support, and Map shared-route plus Map-derived Calendar follow-up.
 - relationship runtime now separates prompt-facing `recallSummary` from UI-facing review summaries, so Chat can keep source context while Contacts and World Hub show product-facing related-record copy.
+- relationship runtime summary counts are now full target-state counts independent of display caps, so short UI memory lists no longer undercount total, visible, or archived memories.
 - Calendar now exposes relationship review detail on confirmed events, including lineage, target, memory role, and duplicate-growth status.
 - 4.3 World Hub review quality now has a complete review-pack baseline: event logs and relationship facts can be filtered, selected, and inspected with product-facing explanations before any stronger controls are considered.
 - 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
-- the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat, runtime worldview fallback, active Book source links, and the active World Pack. World Pack V1 now has persisted packs, activation review, one-active-pack-per-save semantics, user-approved service-account template generation into Chat Directory, and the first concrete app-binding path: `survival_city` opens Shopping as `补给站` with a safe Daily Fresh / Grocery filter; other archetypes remain guarded.
+- the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat, runtime worldview fallback, active Book source links, and the active World Pack. World Pack V1 now has persisted packs, activation review, one-active-pack-per-save semantics, and service-account template availability. WorldBook no longer creates Chat Directory entries directly; it shows the enabled service-account count, while Chat Directory's `Services` management area lets the user opt into current-world service/official account candidates through the Chat-owned idempotent create/reuse seam. The first concrete app-binding path remains `survival_city` opening Shopping as `补给站` with a safe Daily Fresh / Grocery filter; other archetypes remain guarded. The first global app-entry seam is now landed: active World Pack app bindings become stable `world_app_*` entries in App Store and Home/App Library placement flows, then launch target apps with `worldPack`/`worldApp` route context. Current World Pack now hands users to the App Store `World` section instead of exposing per-app launch links inside Settings. The world UX package now has a first target-app seam through shared `world-pack-app-bindings` context: Shopping, Food Delivery, Calendar, and Map can show active-pack title/context/boundary copy and safe default views without moving source-module ownership.
+- World Pack service-account candidates are now user-adjustable before subscription: Chat Directory's `Services` management area can edit and reset built-in active-pack service/official account candidates, storing user overrides on the World Pack template metadata. Chat Services also has the reviewed AI/pasted candidate lane for service/official accounts: proposals read active WorldBook/World Pack context, low-confidence/duplicate/unknown-binding suggestions are blocked, and confirmation only adds a World Pack template. Joining still creates/reuses a Chat-owned subscription entry, later candidate edits do not silently overwrite already joined accounts, and source notification plans now show which Shopping/logistics/Food Delivery event streams become ready after join without auto-subscribing or creating source records.
+- the current World Pack UX slice adds `transit -> Map` as a concrete target-app context: `survival_city` now includes `survival_safe_route_pass`, and Map can show the active-pack transit title/context/boundary banner while keeping route, trip, location, ETA, and shared-route facts owned by Map.
+- the guarded World Pack direction is not "AI creates new apps". It is a built-in nonstandard-app archetype/template registry plus AI extraction from active WorldBook context. The Current World Pack panel now exposes the review UI as an advanced/collapsible review area: AI or pasted JSON can propose matching entries, loading/empty/error/rejected states are explicit, the whitelist/normalizer separates confirmable vs rejected items, and user confirmation writes an appBinding to the active pack only. The confirmed-entry path is now covered through App Store detail/open, Home library placement/launch, and Map target-app context for a generated `transit_pass`; `reservation_board` is covered from confirmation through App Store open into Calendar context; and `dispatch_board` is covered from confirmation through App Store open into Food Delivery context with a safe Nearby default. `black_market` is deliberately blocked with `needs_dedicated_app` and does not map onto Shopping. Rejected or unconfirmed proposals stay out of App Store and normal apps continue unchanged.
+- Appearance customization remains a core freedom layer. Global CSS and Chat-scoped CSS already exist; `src/lib/app-shell-scope.js` now gives the root app shell stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks, and `src/lib/appearance-scoped-css.js` plus the Appearance Advanced CSS sheet now provide app/world-app scoped CSS authoring through `settings.appearance.scopedCustomCss`. The World App scoped editor can choose from the active World Pack's current app entries while keeping manual targets as fallback, and it exposes target selectors plus pause/clear recovery controls; when app-scoped and world-app-scoped CSS both target the same element, the world-app layer is narrower and emitted later. Appearance packs can now export/import portable visual settings, including theme, wallpaper, icon overrides, global CSS, and scoped CSS, without copying Home layout, widgets, or Chat-specific appearance.
 - Book text-library V1 now exists as a separate app for long worldbook documents, knowledge notes, rules, glossary text, and reusable references. `Settings -> WorldBook` remains the activation panel that links whole documents or selected Book sections into active world context.
 - the Book source chain is now tested through the consumer path: Chat prompt context, Chat thread summary, and runtime world-context resolution all receive active Book source text through explicit `bookStore` adapters.
-- Chat App now has a clearer messaging-app shell: `Messages`, `Objects`, `Groups`, `Services`, and `More`. The main message list stays immersive while binding, group management, and service accounts have explicit control layers; `More` is scoped to Chat identity, anonymity, and diagnostics.
+- Chat App now has a clearer messaging-app shell: `Messages`, `Objects`, `Groups`, `Services`, and `Me`. The main message list stays immersive while binding, group management, and service accounts have explicit control layers; the top-right gear opens dedicated Chat Settings, `Me` owns Chat identity/anonymity and recent social data, and Chat Settings owns appearance plus maintenance diagnostics.
+- incoming Chat social/channel states such as greetings, accepted/declined requests, blocks, and being-blocked markers now have a direct Chat-side V1 shell. Generated role-initiated social events are still on hold until the event-runtime eligibility/review/audit seam is defined: Chat owns confirmed channel state, Contacts displays role-level snapshots, event runtime reviews generated proposals, and relationship runtime records only confirmed relationship facts or memories.
+- Chat Directory relationship compatibility containment is landed: legacy `relationshipLevel` and `relationshipNote` are still persisted for binding compatibility, but visible copy now calls them Chat-local tuning/note and states that current relationship truth is owned by relationship runtime.
+- relationship classification Rounds 1 through 4 are landed for the profile/store/AI/Contacts/event surface: Contacts role profiles can persist free-text relationship premise fields, initial seed values, and stored category/modifier classification metadata; `src/lib/relationship-label-classifier.js` classifies labels through `src/lib/ai.js` plus shared JSON parsing; the Contacts detail page shows the read-only current relationship runtime snapshot first, then edits the profile-side relationship premise, seed, category, modifiers, and classification audit. High-confidence AI results save as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, manual edits save as `user_edited`, existing `user_edited` classifications remain protected from silent AI overwrite, and event/runtime reads saved classification fields rather than raw premise prose. Relationship runtime still owns current metrics, stage, milestones, and memories.
+- relationship classification Round 4 is landed for the event/runtime seam: low-impact module facts attach read-only `relationshipGate` audit metadata derived from saved `primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit fields only. Event gating does not read `relationshipLabelText` or `relationshipLabelNote`; named high-risk hard-gate presets now exist for tests/future event packs, but no new high-impact automation or event classes are enabled.
 - fuzzy same-text memory merging remains out of scope until a later product decision.
 
 ## 5. Technical Stack
@@ -131,12 +141,13 @@ Major stores:
 
 - `src/stores/system.js`
   - system settings
-  - appearance
+  - appearance, including Chat-scoped appearance preferences and custom CSS
   - notifications
   - backup/restore hooks
   - general user profile and worldview settings
 - `src/stores/chat.js`
   - role profiles
+  - profile-side relationship premise and stored classification metadata
   - Chat Directory contacts and service accounts
   - conversations and messages
   - service notification messages with source references, not copied order state
@@ -207,6 +218,7 @@ Rule: views and components should not invent their own provider-calling logic or
 - service-account notifications with source module/id references and route actions;
 - group-chat targets with Chat-side member ids and reply-mode metadata;
 - compact relationship context consumption.
+- Chat-local settings routes for Chat appearance, default behavior entry points, maintenance diagnostics, and the user/social `Me` surface.
 
 ### 7.6 Contacts and Chat Directory
 
@@ -238,7 +250,9 @@ This split is important. They are related, but they are not the same product sur
 - Logistics is a delivery/tracking-facing surface, not a storefront;
 - Wallet is the downstream ledger, not the owner of orders;
 - Assets and Stock are separate future-deepening lanes.
-- world-specific variants should register these modules through app archetypes and world app bindings instead of copying their business records into WorldBook. The first landed example is `marketplace -> Shopping`, where World Pack provides the `补给站` entry context and Shopping still owns catalog, cart, checkout, orders, and downstream suggestions.
+- world-specific variants should register these modules through app archetypes and world app bindings instead of copying their business records into WorldBook. The first landed examples are `marketplace -> Shopping`, `dispatch -> Food Delivery`, `reservation -> Calendar`, and `transit -> Map`, where World Pack provides entry/context/UX language while the target apps still own catalog, carts, orders, delivery events, schedules, push state, route/trip truth, and downstream suggestions.
+- when a World Pack changes an app's UI/UX, that change should be visible in the actual target app and global entry surfaces, not only described inside Settings or WorldBook.
+- user customization is allowed to sit above World Pack defaults. The app shell now exposes stable scoped hooks for app id, route scope, world pack id, and world app id, and Appearance can store scoped custom CSS for app/world-app targets plus import/export portable Appearance packs; future CSS work should continue targeting those hooks instead of implementation-only utility classes.
 
 ### 7.11 World Hub
 
@@ -274,6 +288,7 @@ Current storage direction:
 3. system language controls UI text, not the meaning of AI-generated content;
 4. prompt assembly can use worldview, role, memory, and thread context, but should preserve clear ownership boundaries;
 5. modules should degrade gracefully when an AI feature is disabled or unavailable.
+6. relationship-label classification uses the shared AI seam and only expresses the confidence/save policy; event/runtime gating reads saved classification fields, not raw premise prose, and current Round 4 only adds low-risk audit metadata plus named helper-level high-risk hard-gating presets.
 
 ## 10. Documentation Reading Order
 

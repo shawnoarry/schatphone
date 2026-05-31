@@ -7,6 +7,7 @@ export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 1
 
 const RELATIONSHIP_ENTITY_LIMIT = 300
 const RELATIONSHIP_EVENT_LIMIT = 500
+const RELATIONSHIP_MEMORY_AGGREGATE_LIMIT = RELATIONSHIP_EVENT_LIMIT
 const METRIC_KEYS = ['affinity', 'trust', 'intimacy', 'tension', 'dependency']
 export const RELATIONSHIP_EVENT_STATUS = Object.freeze({
   APPLIED: 'applied',
@@ -82,6 +83,33 @@ const normalizeWorldContext = (rawContext = {}) => {
     eventPackId: normalizeText(source.eventPackId, '', 80),
     variantId: normalizeText(source.variantId, '', 80),
     tags,
+  }
+}
+
+const normalizeRelationshipGate = (rawGate = {}) => {
+  const source = rawGate && typeof rawGate === 'object' ? rawGate : {}
+  const decision = normalizeText(source.decision, '', 40)
+  return {
+    decision: ['allow', 'block', 'confirm'].includes(decision) ? decision : '',
+    mode: normalizeText(source.mode, '', 40),
+    reason: normalizeText(source.reason, '', 120),
+    eventType: normalizeText(source.eventType, '', 100),
+    primaryRelationshipCategoryId: normalizeText(source.primaryRelationshipCategoryId, '', 120),
+    relationshipModifierIds: Array.isArray(source.relationshipModifierIds)
+      ? [...new Set(source.relationshipModifierIds.map(normalizeTag).filter(Boolean))].slice(0, 12)
+      : [],
+    classificationConfidence: normalizeText(source.classificationConfidence, '', 40),
+    classificationSource: normalizeText(source.classificationSource, '', 40),
+    classificationUpdatedAt: Math.max(0, toInt(source.classificationUpdatedAt, 0)),
+    matched: source.matched === true,
+  }
+}
+
+const cloneRelationshipGate = (gate = {}) => {
+  const normalized = normalizeRelationshipGate(gate)
+  return {
+    ...normalized,
+    relationshipModifierIds: [...normalized.relationshipModifierIds],
   }
 }
 
@@ -250,6 +278,7 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
     status: normalizedStatus,
     effectApplied: source.effectApplied !== false,
     worldContext: normalizeWorldContext(source.worldContext),
+    relationshipGate: normalizeRelationshipGate(source.relationshipGate),
     createdAt,
     appliedAt: Math.max(0, toInt(source.appliedAt, 0)),
     dismissedAt: Math.max(0, toInt(source.dismissedAt, 0)),
@@ -452,6 +481,7 @@ const cloneRelationshipEvent = (event) => ({
     ...event.worldContext,
     tags: Array.isArray(event.worldContext?.tags) ? [...event.worldContext.tags] : [],
   },
+  relationshipGate: cloneRelationshipGate(event.relationshipGate),
 })
 
 const buildSourceRefsFromEvents = (items = []) => {
@@ -621,7 +651,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         }
       })
       .sort((left, right) => compareMemorySummaryEntries(left, right, options))
-      .slice(0, clamp(toInt(limit, 5), 0, 50))
+      .slice(0, clamp(toInt(limit, 5), 0, RELATIONSHIP_MEMORY_AGGREGATE_LIMIT))
   }
 
   const listMemoryGroupsForTarget = (target = {}, limit = 50, options = {}) =>
@@ -834,7 +864,14 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!event) return null
 
     const major = settings.value.requireConfirmationForMajorEffects && isMajorRelationshipEvent(event)
-    if (!settings.value.enabled && input.force !== true) {
+    if (event.relationshipGate?.decision === 'block') {
+      event.status = RELATIONSHIP_EVENT_STATUS.DISMISSED
+      event.effectApplied = false
+      event.dismissedAt = Date.now()
+    } else if (event.relationshipGate?.decision === 'confirm') {
+      event.status = RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION
+      event.effectApplied = false
+    } else if (!settings.value.enabled && input.force !== true) {
       event.status = RELATIONSHIP_EVENT_STATUS.SKIPPED_DISABLED
       event.effectApplied = false
     } else if (major) {
@@ -864,7 +901,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (events.value.length > RELATIONSHIP_EVENT_LIMIT) {
       events.value.splice(RELATIONSHIP_EVENT_LIMIT)
     }
-    return { ...event, metricDeltas: { ...event.metricDeltas } }
+    return cloneRelationshipEvent(event)
   }
 
   const applyPendingRelationshipEvent = (eventId) => {
@@ -900,7 +937,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       .filter((event) => event.entityKey === key)
       .sort(compareRelationshipEventsByCreatedAtDesc)
       .slice(0, clamp(toInt(limit, 5), 0, 50))
-      .map((event) => ({ ...event, metricDeltas: { ...event.metricDeltas } }))
+      .map(cloneRelationshipEvent)
   }
 
   const listRelationshipFactsForSourceRecord = (sourceModule, recordId, limit = 10) => {
@@ -1055,10 +1092,9 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const fallback = entity || createDefaultEntity(meta)
     const memoryLimit = clamp(toInt(options.memoryLimit, 3), 0, 20)
     const memorySortMode = normalizeText(options.memorySortMode, 'recent', 20)
-    const rawMemorySummaries =
-      memoryLimit > 0
-        ? listMemoryAggregatesForTarget(meta, 50, { sortMode: memorySortMode })
-        : []
+    const rawMemorySummaries = listMemoryAggregatesForTarget(meta, RELATIONSHIP_MEMORY_AGGREGATE_LIMIT, {
+      sortMode: memorySortMode,
+    })
     const hiddenArchivedMemoryKeys = shouldIncludeArchivedMemories(options)
       ? new Set()
       : new Set(
@@ -1067,16 +1103,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
             .map((item) => item.memoryKey)
             .filter(Boolean),
         )
-    const memorySummaries =
-      memoryLimit > 0
-        ? rawMemorySummaries
-            .filter((item) =>
-              shouldIncludeArchivedMemories(options)
-                ? true
-                : item.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
-            )
-            .slice(0, memoryLimit)
-        : []
+    const visibleMemoryCandidates = rawMemorySummaries.filter((item) =>
+      shouldIncludeArchivedMemories(options)
+        ? true
+        : item.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    )
+    const memorySummaries = memoryLimit > 0 ? visibleMemoryCandidates.slice(0, memoryLimit) : []
     const allEntityEvents = events.value.filter((event) => event.entityKey === meta.entityKey)
     const visibleEntityEvents = shouldIncludeArchivedMemories(options)
       ? allEntityEvents
@@ -1125,12 +1157,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       memorySummaries,
       primaryMemory,
       totalMemoryCount: rawMemorySummaries.length,
-      visibleMemoryCount: memorySummaries.length,
+      visibleMemoryCount: visibleMemoryCandidates.length,
       archivedMemoryCount,
       hasArchivedOnlyMemories:
         rawMemorySummaries.length > 0 &&
         archivedMemoryCount > 0 &&
-        memorySummaries.length === 0,
+        visibleMemoryCandidates.length === 0,
       sourceRefs: buildSourceRefsFromEvents(visibleAppliedEntityEvents),
       sourceModuleCounts: summarizeSourceModules(visibleAppliedEntityEvents),
       latestEventSummary: latestEvent?.summary || latestEvent?.factType || '',
@@ -1280,6 +1312,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         ...event.worldContext,
         tags: [...event.worldContext.tags],
       },
+      relationshipGate: cloneRelationshipGate(event.relationshipGate),
     })),
     memoryReviews: normalizeMemoryReviewEntries(memoryReviews.value).filter((entry) =>
       memoryAggregateMap.value.has(buildMemoryAggregateMapKey(entry.entityKey, entry.memoryKey)),

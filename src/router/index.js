@@ -11,6 +11,9 @@ const ChatView = () => import('../views/ChatView.vue')
 const ChatDirectoryView = () => import('../views/ChatDirectoryView.vue')
 const ChatFeaturePlaceholderView = () => import('../views/ChatFeaturePlaceholderView.vue')
 const ChatGroupsView = () => import('../views/ChatGroupsView.vue')
+const ChatSettingsView = () => import('../views/ChatSettingsView.vue')
+const ChatMeView = () => import('../views/ChatMeView.vue')
+const ChatAppearanceView = () => import('../views/ChatAppearanceView.vue')
 const ContactsView = () => import('../views/ContactsView.vue')
 const GalleryView = () => import('../views/GalleryView.vue')
 const PhoneView = () => import('../views/PhoneView.vue')
@@ -41,6 +44,13 @@ const router = createRouter({
     { path: '/network', component: NetworkView },
     { path: '/chat', component: ChatView },
     { path: '/chat-contacts', component: ChatDirectoryView },
+    { path: '/chat-settings', component: ChatSettingsView },
+    { path: '/chat-settings/appearance', component: ChatAppearanceView },
+    { path: '/chat-appearance', redirect: '/chat-settings/appearance' },
+    { path: '/chat-me', component: ChatMeView },
+    { path: '/chat-feature/more', redirect: '/chat-me' },
+    { path: '/chat-feature/identity', redirect: { path: '/chat-me', query: { section: 'identity' } } },
+    { path: '/chat-feature/labs', redirect: { path: '/chat-settings', query: { section: 'diagnostics' } } },
     { path: '/chat-feature/:feature', component: ChatFeaturePlaceholderView },
     { path: '/chat-groups', component: ChatGroupsView },
     { path: '/chat/:id', component: ChatView },
