@@ -151,6 +151,40 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('opens a restaurant as an individual store surface from the platform', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const restaurant = store.listRestaurantsByCategory('restaurants')[0]
+
+    expect(wrapper.get('[data-testid="food-delivery-platform"]').text()).toContain('Restaurants')
+    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      category: 'restaurants',
+      restaurantId: restaurant.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain(restaurant.name)
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-id')).toBe(restaurant.id)
+
+    await wrapper.get('[data-testid="food-delivery-store-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-platform"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   test('returns to the originating Home page when opened from a Home folder', async () => {
     const router = createTestRouter()
     await router.push('/food-delivery?category=nearby&from=home&homePage=1')
@@ -193,6 +227,8 @@ describe('FoodDeliveryView', () => {
 
     expect(wrapper.get('[data-testid="food-delivery-map-handoff-address"]').text()).toContain('Studio Street 9')
 
+    await wrapper.get(`[data-testid="food-delivery-open-store-${activeRestaurant.id}"]`).trigger('click')
+    await flushPromises()
     await wrapper.get(`[data-testid="food-delivery-add-${menuItem.id}"]`).trigger('click')
     await flushPromises()
 
@@ -254,6 +290,8 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-chat-source-banner"]').text()).toContain(
       activeRestaurant.name,
     )
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain(activeRestaurant.name)
     expect(wrapper.get(`[data-testid="food-delivery-order-${order.id}"]`).classes()).toContain(
       'border-orange-300',
     )
