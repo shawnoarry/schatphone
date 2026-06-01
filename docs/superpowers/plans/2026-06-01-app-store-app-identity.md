@@ -45,7 +45,7 @@
 - Modify: `tests/app-icon-presentation.test.js`
 - Modify: `tests/app-store-ui.test.js`
 
-- [ ] **Step 1: Add helper tests for image icon overrides**
+- [x] **Step 1: Add helper tests for image icon overrides**
 
 Add a test that keeps old icon overrides valid and adds Gallery image fields:
 
@@ -90,7 +90,7 @@ test('normalizes gallery image icon overrides while preserving legacy built-in o
 })
 ```
 
-- [ ] **Step 2: Add resolver tests for image metadata**
+- [x] **Step 2: Add resolver tests for image metadata**
 
 Add a test that `resolveAppIconMeta` exposes image state for renderers:
 
@@ -116,7 +116,7 @@ test('resolves gallery image app icons with a built-in fallback glyph', () => {
 })
 ```
 
-- [ ] **Step 3: Add App Store UI tests**
+- [x] **Step 3: Add App Store UI tests**
 
 Add tests in `tests/app-store-ui.test.js`:
 
@@ -255,7 +255,7 @@ test('App Store restores the selected app default icon', async () => {
 })
 ```
 
-- [ ] **Step 4: Run tests to confirm failure**
+- [x] **Step 4: Run tests to confirm failure**
 
 Run:
 
@@ -265,7 +265,7 @@ npm.cmd run test -- tests/app-icon-presentation.test.js tests/app-store-ui.test.
 
 Expected: FAIL because image icon fields, store actions, App Store identity controls, and Home image icon test IDs do not exist yet.
 
-- [ ] **Step 5: Commit failing tests**
+- [x] **Step 5: Commit failing tests**
 
 ```bash
 git add tests/app-icon-presentation.test.js tests/app-store-ui.test.js
@@ -281,7 +281,7 @@ git commit -m "test: cover app store icon identity editing"
 - Modify: `src/stores/system.js`
 - Test: `tests/app-icon-presentation.test.js`
 
-- [ ] **Step 1: Extend icon override normalization**
+- [x] **Step 1: Extend icon override normalization**
 
 In `src/lib/app-icon-presentation.js`, make normalized overrides include these fields:
 
@@ -302,7 +302,7 @@ Rules:
 - invalid app ids are ignored;
 - invalid Gallery payload falls back to a valid preset payload when possible.
 
-- [ ] **Step 2: Extend `resolveAppIconMeta`**
+- [x] **Step 2: Extend `resolveAppIconMeta`**
 
 Return these additional fields:
 
@@ -314,7 +314,7 @@ hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAsse
 
 Keep existing `icon`, `accent`, `toneClass`, and `label` behavior compatible with current tests.
 
-- [ ] **Step 3: Add system store actions**
+- [x] **Step 3: Add system store actions**
 
 In `src/stores/system.js`, add:
 
@@ -345,7 +345,7 @@ const clearAppIconOverride = (appId) => {
 
 Return both actions from the Pinia store.
 
-- [ ] **Step 4: Run helper tests**
+- [x] **Step 4: Run helper tests**
 
 Run:
 
@@ -355,7 +355,7 @@ npm.cmd run test -- tests/app-icon-presentation.test.js
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit data contract**
+- [x] **Step 5: Commit data contract**
 
 ```bash
 git add src/lib/app-icon-presentation.js src/stores/system.js
@@ -372,7 +372,7 @@ git commit -m "feat: support image app icon identity data"
 - Modify: `src/App.vue`
 - Modify: `src/views/LockScreen.vue`
 
-- [ ] **Step 1: Create `AppIconVisual.vue`**
+- [x] **Step 1: Create `AppIconVisual.vue`**
 
 Use this structure:
 
@@ -430,7 +430,7 @@ const hasImage = computed(() => typeof props.imageUrl === 'string' && props.imag
 </style>
 ```
 
-- [ ] **Step 2: Load icon image previews in Home**
+- [x] **Step 2: Load icon image previews in Home**
 
 In `src/views/HomeView.vue`:
 
@@ -441,7 +441,7 @@ In `src/views/HomeView.vue`:
 - expose `appIconImageUrl(appId)` that returns the resolved preview URL or an empty string;
 - release the preview scope in `onBeforeUnmount`.
 
-- [ ] **Step 3: Render Home and Dock through the shared component**
+- [x] **Step 3: Render Home and Dock through the shared component**
 
 Replace direct app icon spans with `AppIconVisual`, preserving existing classes:
 
@@ -483,7 +483,7 @@ For Dock buttons, add stable test IDs:
 />
 ```
 
-- [ ] **Step 4: Render notification icons through the shared component**
+- [x] **Step 4: Render notification icons through the shared component**
 
 In `src/App.vue` and `src/views/LockScreen.vue`:
 
@@ -492,7 +492,7 @@ In `src/App.vue` and `src/views/LockScreen.vue`:
 - reuse the same preview resolution rule for `settings.appearance.appIconOverrides`;
 - replace direct `<i :class="...icon">` notification icon markup with `AppIconVisual`.
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -502,7 +502,7 @@ npm.cmd run test -- tests/app-icon-presentation.test.js tests/app-store-ui.test.
 
 Expected: App Store UI tests may still fail until Task 4, but Home existing tests should not regress.
 
-- [ ] **Step 6: Commit renderer**
+- [x] **Step 6: Commit renderer**
 
 ```bash
 git add src/components/shared/AppIconVisual.vue src/views/HomeView.vue src/App.vue src/views/LockScreen.vue
@@ -517,7 +517,7 @@ git commit -m "feat: render shared image app icons"
 - Modify: `src/views/AppStoreView.vue`
 - Test: `tests/app-store-ui.test.js`
 
-- [ ] **Step 1: Import dependencies**
+- [x] **Step 1: Import dependencies**
 
 Add:
 
@@ -536,7 +536,7 @@ import {
 
 Keep the existing `resolveAppIconMeta` import merged, not duplicated.
 
-- [ ] **Step 2: Add identity editor state**
+- [x] **Step 2: Add identity editor state**
 
 Add:
 
@@ -555,7 +555,7 @@ const identityDraft = reactive({
 
 Add `galleryIconAssets = computed(() => galleryStore.assets.slice(0, 120))`.
 
-- [ ] **Step 3: Add draft sync helpers**
+- [x] **Step 3: Add draft sync helpers**
 
 Add helpers:
 
@@ -611,7 +611,7 @@ const restoreIdentityDefault = () => {
 }
 ```
 
-- [ ] **Step 4: Add local upload handler**
+- [x] **Step 4: Add local upload handler**
 
 Add:
 
@@ -641,7 +641,7 @@ const handleIdentityUpload = async (event) => {
 }
 ```
 
-- [ ] **Step 5: Add detail action button**
+- [x] **Step 5: Add detail action button**
 
 In both inline and sheet app details, add:
 
@@ -657,7 +657,7 @@ In both inline and sheet app details, add:
 </button>
 ```
 
-- [ ] **Step 6: Add identity editor sheet**
+- [x] **Step 6: Add identity editor sheet**
 
 Add one root-level sheet after the existing app detail sheet:
 
@@ -679,7 +679,7 @@ The sheet must include:
 - restore button `data-testid="app-store-identity-restore"`;
 - save button `data-testid="app-store-identity-save"`.
 
-- [ ] **Step 7: Add styles**
+- [x] **Step 7: Add styles**
 
 Keep the sheet product-like and compact:
 
@@ -689,7 +689,7 @@ Keep the sheet product-like and compact:
 - segmented controls for source type;
 - no nested cards inside cards.
 
-- [ ] **Step 8: Run App Store tests**
+- [x] **Step 8: Run App Store tests**
 
 Run:
 
@@ -699,7 +699,7 @@ npm.cmd run test -- tests/app-store-ui.test.js tests/app-icon-presentation.test.
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit App Store editor**
+- [x] **Step 9: Commit App Store editor**
 
 ```bash
 git add src/views/AppStoreView.vue tests/app-store-ui.test.js
@@ -714,7 +714,7 @@ git commit -m "feat: edit app icons from app store"
 - Modify: `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
 - Modify: `docs/superpowers/plans/2026-06-01-app-store-app-identity.md`
 
-- [ ] **Step 1: Update visual handoff**
+- [x] **Step 1: Update visual handoff**
 
 Add a landed item:
 
@@ -722,11 +722,11 @@ Add a landed item:
 48. App Store now owns app identity/icon editing: each app detail can open a focused Icon & Appearance sheet, choose a built-in glyph/accent, choose a Gallery image, upload a local image into Gallery for icon use, preview before saving, and restore default. Home, Dock, App Store, and supported notification surfaces resolve the same app identity.
 ```
 
-- [ ] **Step 2: Mark this plan complete**
+- [x] **Step 2: Mark this plan complete**
 
 Update every checkbox in this plan as work lands.
 
-- [ ] **Step 3: Run final checks**
+- [x] **Step 3: Run final checks**
 
 Run:
 
@@ -747,10 +747,9 @@ Expected:
 - full test suite passes;
 - only intentional files are changed before final commit.
 
-- [ ] **Step 4: Commit docs**
+- [x] **Step 4: Commit docs**
 
 ```bash
 git add docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md docs/superpowers/plans/2026-06-01-app-store-app-identity.md
 git commit -m "docs: record app store icon identity ownership"
 ```
-
