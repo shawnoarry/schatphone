@@ -23,6 +23,13 @@ describe('appearance pack schema', () => {
       customVars: {
         '--app-font-family': '"Noto Sans SC", sans-serif',
       },
+      appSkins: {
+        food_delivery: {
+          presetId: 'market_fresh',
+          customCssEnabled: true,
+          customCss: '.store-card { color: red; }',
+        },
+      },
       appIconOverrides: {
         chat: { preset: 'glass', accent: 'blue' },
       },
@@ -41,6 +48,7 @@ describe('appearance pack schema', () => {
       },
     })
     expect(pack.appearance.scopedCustomCss).toBeUndefined()
+    expect(pack.appearance.appSkins).toBeUndefined()
     expect(pack.appearance.appIconOverrides).toBeUndefined()
     expect(pack.appearance.customWidgets).toBeUndefined()
     expect(pack.appearance.homeWidgetPages).toBeUndefined()
@@ -93,6 +101,13 @@ describe('appearance pack schema', () => {
             css: '.shopping { color: gold; }',
           },
         },
+        appSkins: {
+          food_delivery: {
+            presetId: 'market_fresh',
+            customCssEnabled: true,
+            customCss: '.store-card { color: red; }',
+          },
+        },
         appIconOverrides: {
           app_chat: {
             icon: 'fas fa-comment',
@@ -108,10 +123,17 @@ describe('appearance pack schema', () => {
           currentTheme: 'zen',
           customCss: '.imported { color: green; }',
           scopedCustomCss: {
-            app: {
-              enabled: true,
-              target: 'map',
-              css: '.map { color: cyan; }',
+          app: {
+            enabled: true,
+            target: 'map',
+            css: '.map { color: cyan; }',
+          },
+        },
+          appSkins: {
+            food_delivery: {
+              presetId: 'night_service',
+              customCssEnabled: true,
+              customCss: '.store-card { color: cyan; }',
             },
           },
           appIconOverrides: {
@@ -137,6 +159,12 @@ describe('appearance pack schema', () => {
         enabled: true,
         target: 'shopping',
         css: '.shopping { color: gold; }',
+      },
+    })
+    expect(result.appearance.appSkins).toMatchObject({
+      food_delivery: {
+        presetId: 'market_fresh',
+        customCssEnabled: true,
       },
     })
     expect(result.appearance.appIconOverrides).toMatchObject({

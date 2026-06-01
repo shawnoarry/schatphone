@@ -5,6 +5,11 @@ import {
   normalizeScopedCustomCss,
   scopeCssToSelector,
 } from '../src/lib/appearance-scoped-css'
+import {
+  buildAppSkinCss,
+  normalizeAppSkinSettings,
+  resolveAppSkinTargetForAppId,
+} from '../src/lib/app-skin-customization'
 
 describe('appearance scoped CSS helpers', () => {
   test('normalizes scoped custom CSS state with stable scope tokens', () => {
@@ -95,5 +100,55 @@ describe('appearance scoped CSS helpers', () => {
     expect(css).toContain(appSelector)
     expect(css).toContain(worldAppSelector)
     expect(css.indexOf(worldAppSelector)).toBeGreaterThan(css.indexOf(appSelector))
+  })
+
+  test('builds independent app skin CSS layers per route scope', () => {
+    const css = buildAppSkinCss({
+      food_delivery: {
+        presetId: 'market_fresh',
+        customCssEnabled: true,
+        customCss: '.store-card { border-radius: 18px; }',
+      },
+      shopping: {
+        presetId: 'catalog_clean',
+        customCssEnabled: true,
+        customCss: '.shop-card { border-color: teal; }',
+      },
+    })
+
+    expect(css).toContain('[data-app="food_delivery"]')
+    expect(css).toContain('[data-app="food_delivery"] .store-card')
+    expect(css).toContain('[data-app="shopping"]')
+    expect(css).toContain('[data-app="shopping"] .shop-card')
+    expect(css).not.toContain('[data-app="food_delivery"] .shop-card')
+  })
+
+  test('normalizes app skin settings and maps App Store entries to route scopes', () => {
+    expect(resolveAppSkinTargetForAppId('app_food_delivery')).toMatchObject({
+      appId: 'app_food_delivery',
+      scope: 'food_delivery',
+    })
+    expect(resolveAppSkinTargetForAppId('app_chat')).toBeNull()
+
+    expect(
+      normalizeAppSkinSettings({
+        food_delivery: {
+          presetId: 'market_fresh',
+          customCssEnabled: 'yes',
+          customCss: '.food { color: tomato; }',
+        },
+        unsupported_app: {
+          presetId: 'market_fresh',
+          customCssEnabled: true,
+          customCss: '.x { color: red; }',
+        },
+      }),
+    ).toEqual({
+      food_delivery: {
+        presetId: 'market_fresh',
+        customCssEnabled: false,
+        customCss: '.food { color: tomato; }',
+      },
+    })
   })
 })

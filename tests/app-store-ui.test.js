@@ -304,6 +304,50 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
+  test('App Store saves an app skin for one app without affecting another app', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+
+    await wrapper.get('[data-testid="app-store-item-app_food_delivery"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-skin"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-skin-preset"]').setValue('market_fresh')
+    await wrapper.get('[data-testid="app-store-skin-css-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="app-store-skin-css-input"]').setValue('.store-card { border-radius: 18px; }')
+    await wrapper.get('[data-testid="app-store-skin-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appSkins.food_delivery).toMatchObject({
+      presetId: 'market_fresh',
+      customCssEnabled: true,
+      customCss: '.store-card { border-radius: 18px; }',
+    })
+    expect(systemStore.settings.appearance.appSkins.shopping).toBeUndefined()
+
+    wrapper.unmount()
+  })
+
+  test('App Store keeps Chat deep appearance owned by Chat settings', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+
+    await wrapper.get('[data-testid="app-store-item-app_chat"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="app-store-open-skin"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="app-store-open-identity"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('App Store exposes active World Pack app entries for launch and Home placement', async () => {
     const router = createTestRouter()
     await router.push('/app-store?homePage=3')
