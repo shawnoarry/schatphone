@@ -65,6 +65,7 @@ What is already landed:
 51. App Store World entries now have a product-facing handoff card in both desktop detail and the mobile detail sheet: the card tells users which World Pack created the entry, which target app will open, and that App Store only manages placement/launch while WorldBook keeps activation, review, and source ownership. The handoff is covered by App Store unit tests and Home entry E2E before the route opens with `worldPack`/`worldApp` context.
 
 52. Food Delivery has its first platform-to-store IA baseline: the platform lists categories/restaurants, each restaurant can open as a route-query store mini-app, and store surfaces can vary visually by restaurant category while shared business logic stays untouched.
+53. The App Store / pseudo-folder entry taxonomy is documented in `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`: App Store should manage independent apps, World Pack app entries, shop apps, and system entries as user-visible launch entries while preserving backend ownership boundaries.
 
 Still incomplete:
 
@@ -83,6 +84,7 @@ Still incomplete:
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
 5. User-test the WorldBook -> `补给站` -> Shopping path, `救援调度` -> Food Delivery hero/banner/default Nearby path, `fandom_schedule_board` -> Calendar context, and `survival_safe_route_pass` -> Map context on mobile before broadening the same pattern to other archetypes.
 6. When World Pack resumes, continue from the landed scoped CSS authoring/recovery/import, App Store handoff, service-account handoff, and nonstandard-app review slices: user-test Appearance packs, harden the world UX package seam, verify rejected/unsupported AI proposals stay invisible outside WorldBook, and only then add another archetype so an app's changed UI/UX appears in the actual app and user CSS can intentionally override it.
+7. The active App Store redesign thread should use `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md` as the product source for entry-type categories and future Food Delivery shop-app management.
 
 ## 3. Do Not Do
 
