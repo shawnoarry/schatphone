@@ -57,6 +57,7 @@ What is already landed:
 
 44. WorldBook's Current World Pack panel now exposes the nonstandard-app proposal review UI: AI extraction or pasted JSON can be reviewed against the built-in whitelist, loading/empty/error states are explicit, rejected suggestions show why they were blocked, and confirmable suggestions require an explicit add-to-pack action before they become appBindings. Confirmed entries now carry world-pack/target-module metadata in App Store detail, can be placed from Home's library, and open their target app with world context; dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths have regression coverage.
 45. Current World Pack now separates activation/status from global entry management: it shows the active world-app snapshot, routes users to App Store's `World` section for browse/place/open flows, shows service-account template availability as a Chat handoff, and keeps nonstandard proposal review as an advanced/collapsible area. `black_market` is blocked as `needs_dedicated_app` and does not masquerade as a Shopping world app.
+46. Home edit mode now preserves screen navigation: page dots stay usable during editing, empty-area swipes can switch screens, and Widget Center placement flows no longer trap users on the entry screen.
 
 Still incomplete:
 
@@ -69,7 +70,7 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if user testing still shows friction.
+1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if user testing still shows friction. Home cross-screen drag placement remains a separate polish item; the shipped baseline is explicit screen switching before slot placement.
 2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, deeper `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
 3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
 4. Continue isolating destructive actions visually and structurally from normal edit flows.
