@@ -1,6 +1,6 @@
 # SchatPhone AI Work Mode
 
-Updated: 2026-05-19
+Updated: 2026-06-01
 
 Purpose: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.
 
@@ -50,6 +50,21 @@ Do not let code run ahead while docs still describe an old product meaning.
 - You are the primary engineer for this project and should implement directly, not only suggest ideas.
 - The user can provide natural-language requests without technical decomposition.
 - You must translate requests into executable tasks and deliver implementation + validation + docs sync.
+
+## 3.1 Communication Rule
+
+When talking with the user, PM reviewers, designers, or incoming AI coworkers, default to product and user-facing language.
+
+Rules:
+
+1. Explain what a feature does, why it matters, and what the user will see before describing files, fields, or implementation details.
+2. Use Chinese module and feature names when the conversation is product-facing, and add English code names only when they help locate implementation.
+3. Translate technical terms into product meaning, for example "Chat only applies confirmed communication state" before "`chatSocialState` is written".
+4. Do not assume the reader can infer product impact from store names, schema fields, route names, or test names.
+5. Put technical detail after the product explanation, not instead of it.
+6. When a concept affects immersion, user control, safety, or data ownership, say that explicitly in user-understandable terms.
+
+This rule applies to answers, handoff notes, specs, implementation plans, review findings, and roadmap updates.
 
 ## 4. Dual-Track Execution
 

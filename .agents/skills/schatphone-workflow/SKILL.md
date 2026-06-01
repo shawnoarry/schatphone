@@ -119,6 +119,16 @@ For each meaningful work round:
    - `npm run test` when behavior changed
 5. sync docs before finishing the round
 
+## 3.1 Communication Rule
+
+When explaining SchatPhone work to the user, PM reviewers, designers, or incoming AI coworkers, use product and user-facing language first.
+
+- Explain what the feature means, what the user can do, and what changes in the product experience before naming files, stores, fields, or tests.
+- Use Chinese module and feature names in product-facing explanations; add English code names only as implementation references.
+- Translate technical statements into user meaning, for example: "Chat only applies confirmed communication state" before "`chatSocialState` changes".
+- Do not rely on route names, schema names, or store names to explain product behavior.
+- Keep technical detail as support after the product explanation.
+
 ## 4. End-Of-Round Doc Sync Matrix
 
 Always check whether the change requires syncing:
