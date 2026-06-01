@@ -82,4 +82,61 @@ describe('world pack schema', () => {
     expect(review.blocked).toBe(true)
     expect(review.blockers).toEqual([{ type: 'missing_knowledge', id: 'kp_missing' }])
   })
+
+  test('normalizes world pack compatibility metadata', () => {
+    const pack = normalizeWorldPack({
+      id: 'school_life',
+      title: 'School Life',
+      supportState: 'supported',
+      compatibility: {
+        recommended: {
+          era: ['modern'],
+          settingTraits: ['school'],
+          socialRoles: ['student'],
+        },
+        conflicts: {
+          economyTraits: ['resource_scarce'],
+        },
+      },
+    })
+
+    expect(pack).toMatchObject({
+      id: 'school_life',
+      supportState: 'supported',
+      unsupportedReason: '',
+      compatibility: {
+        recommended: {
+          era: ['modern'],
+          settingTraits: ['school'],
+          socialRoles: ['student'],
+        },
+        conflicts: {
+          economyTraits: ['resource_scarce'],
+        },
+      },
+    })
+  })
+
+  test('includes trial compatible expansion packs', () => {
+    const packs = normalizeWorldPacks([])
+    expect(packs.map((pack) => pack.id)).toEqual(
+      expect.arrayContaining(['school_life', 'business_family', 'urban_mystery']),
+    )
+    expect(packs.find((pack) => pack.id === 'school_life')).toMatchObject({
+      supportState: 'supported',
+      appBindings: expect.arrayContaining([
+        expect.objectContaining({
+          archetype: 'reservation',
+          moduleKey: 'calendar',
+        }),
+      ]),
+    })
+    expect(packs.find((pack) => pack.id === 'urban_mystery')).toMatchObject({
+      compatibility: {
+        requiresConfirmation: {
+          realism: ['supernatural'],
+        },
+      },
+    })
+  })
 })

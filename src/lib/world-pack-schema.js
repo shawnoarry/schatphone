@@ -1,3 +1,5 @@
+import { normalizeWorldPackCompatibility } from './world-pack-compatibility'
+
 export const DEFAULT_WORLD_PACK_ID = 'default_world'
 
 export const WORLD_PACK_ACTIVATION_STATES = Object.freeze([
@@ -18,6 +20,7 @@ export const WORLD_APP_ARCHETYPES = Object.freeze([
 
 const WORLD_PACK_ACTIVATION_STATE_SET = new Set(WORLD_PACK_ACTIVATION_STATES)
 const WORLD_APP_ARCHETYPE_SET = new Set(WORLD_APP_ARCHETYPES)
+const WORLD_PACK_SUPPORT_STATE_SET = new Set(['supported', 'unsupported'])
 
 const toInt = (value, fallback = 0) => {
   const numeric = Number(value)
@@ -79,6 +82,11 @@ const normalizeRelationshipRegistryEntries = (value, type = 'category') => {
 const normalizeActivationState = (value) => {
   const normalized = normalizeInlineText(value, '').toLowerCase()
   return WORLD_PACK_ACTIVATION_STATE_SET.has(normalized) ? normalized : 'available'
+}
+
+const normalizeSupportState = (value) => {
+  const normalized = normalizeInlineText(value, 'supported', 80).toLowerCase()
+  return WORLD_PACK_SUPPORT_STATE_SET.has(normalized) ? normalized : 'supported'
 }
 
 const normalizeArchetype = (value) => {
@@ -158,6 +166,17 @@ export const BUILT_IN_WORLD_PACKS = Object.freeze([
     description: 'A realistic contemporary world with media feeds, delivery services, and familiar social systems.',
     source: 'built_in',
     state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern'],
+        realism: ['realistic'],
+        technologyLevel: ['real_world'],
+      },
+      adaptable: {
+        settingTraits: ['school', 'entertainment', 'urban', 'business_family'],
+      },
+    },
     terminology: {
       publication: '频道',
       serviceAccount: '服务号',
@@ -183,12 +202,179 @@ export const BUILT_IN_WORLD_PACKS = Object.freeze([
     ],
   },
   {
+    id: 'school_life',
+    title: '校园生活拓展',
+    name: 'School life expansion',
+    description: 'Adds campus schedules, class notices, and school-service context to a modern or near-future main worldview.',
+    source: 'built_in',
+    state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern'],
+        settingTraits: ['school'],
+        socialRoles: ['student'],
+        technologyLevel: ['real_world'],
+      },
+      adaptable: {
+        settingTraits: ['urban', 'entertainment'],
+      },
+      conflicts: {
+        economyTraits: ['resource_scarce'],
+      },
+    },
+    terminology: {
+      reservation: '课表',
+      publication: '校内公告',
+    },
+    appBindings: [
+      {
+        id: 'school_schedule_board',
+        archetype: 'reservation',
+        title: '课表看板',
+        moduleKey: 'calendar',
+        route: '/calendar',
+        description: 'Connects campus schedules to Calendar while Calendar keeps confirmed events.',
+      },
+      {
+        id: 'school_bulletin_feed',
+        archetype: 'publication_feed',
+        title: '校内公告',
+        moduleKey: 'chat',
+        route: '/chat-contacts',
+        description: 'A school bulletin entry for reviewed service candidates and notices.',
+      },
+    ],
+    serviceAccountTemplates: [
+      {
+        id: 'school_affairs_office',
+        title: '学生事务处',
+        category: 'publication',
+        description: 'Publishes campus notices after the user joins it in Chat Services.',
+        linkedAppBindingId: 'school_bulletin_feed',
+      },
+    ],
+  },
+  {
+    id: 'business_family',
+    title: '商业财阀拓展',
+    name: 'Business family expansion',
+    description: 'Adds family-office, board-calendar, and resource hierarchy context to modern or future social worlds.',
+    source: 'built_in',
+    state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern', 'future'],
+        settingTraits: ['business_family', 'corporate', 'urban'],
+        economyTraits: ['luxury', 'corporate_controlled'],
+      },
+      adaptable: {
+        settingTraits: ['school', 'entertainment'],
+      },
+    },
+    terminology: {
+      reservation: '会议日程',
+      publication: '家族办公室',
+    },
+    appBindings: [
+      {
+        id: 'business_board_calendar',
+        archetype: 'reservation',
+        title: '董事日程',
+        moduleKey: 'calendar',
+        route: '/calendar',
+        description: 'Adds board and family-office schedule framing while Calendar keeps event truth.',
+      },
+      {
+        id: 'business_office_feed',
+        archetype: 'publication_feed',
+        title: '家族办公室',
+        moduleKey: 'chat',
+        route: '/chat-contacts',
+        description: 'A family-office style feed for service-account candidates.',
+      },
+    ],
+    serviceAccountTemplates: [
+      {
+        id: 'family_office_channel',
+        title: '家族办公室',
+        category: 'publication',
+        description: 'Publishes office notices and resource reminders after the user joins it in Chat Services.',
+        linkedAppBindingId: 'business_office_feed',
+      },
+    ],
+  },
+  {
+    id: 'urban_mystery',
+    title: '都市怪谈拓展',
+    name: 'Urban mystery expansion',
+    description: 'Adds supernatural rumor and investigation context to an urban main worldview after user confirmation.',
+    source: 'built_in',
+    state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern'],
+        settingTraits: ['urban', 'investigation'],
+      },
+      requiresConfirmation: {
+        realism: ['supernatural'],
+      },
+      adaptable: {
+        settingTraits: ['school', 'business_family', 'entertainment'],
+      },
+    },
+    terminology: {
+      publication: '怪谈线索',
+      transit: '异常地点',
+    },
+    appBindings: [
+      {
+        id: 'urban_rumor_feed',
+        archetype: 'publication_feed',
+        title: '怪谈线索',
+        moduleKey: 'chat',
+        route: '/chat-contacts',
+        description: 'A rumor-feed style entry for reviewed service candidates.',
+      },
+      {
+        id: 'urban_incident_map',
+        archetype: 'transit',
+        title: '异常地点',
+        moduleKey: 'map',
+        route: '/map',
+        description: 'Adds incident-location framing while Map keeps route and trip truth.',
+      },
+    ],
+    serviceAccountTemplates: [
+      {
+        id: 'urban_rumor_channel',
+        title: '匿名怪谈投稿箱',
+        category: 'publication',
+        description: 'Publishes reviewed rumor prompts after the user joins it in Chat Services.',
+        linkedAppBindingId: 'urban_rumor_feed',
+      },
+    ],
+  },
+  {
     id: 'survival_city',
     title: '灾后生存都市',
     name: 'Post-disaster survival city',
     description: 'A resource-constrained city where supply, dispatch, territory, and alerts matter.',
     source: 'built_in',
     state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern', 'future', 'post_apocalyptic'],
+        settingTraits: ['survival'],
+        economyTraits: ['resource_scarce'],
+      },
+      conflicts: {
+        economyTraits: ['ordinary', 'luxury'],
+      },
+    },
     terminology: {
       marketplace: '补给站',
       dispatch: '救援调度',
@@ -236,6 +422,17 @@ export const BUILT_IN_WORLD_PACKS = Object.freeze([
     description: 'A fandom-centered world with publication feeds, schedules, events, and subscription notices.',
     source: 'built_in',
     state: 'available',
+    supportState: 'supported',
+    compatibility: {
+      recommended: {
+        era: ['modern'],
+        settingTraits: ['entertainment'],
+        socialRoles: ['celebrity', 'fan', 'manager'],
+      },
+      adaptable: {
+        settingTraits: ['school', 'business_family', 'urban'],
+      },
+    },
     terminology: {
       publication: '粉丝站',
       subscription: '会员频道',
@@ -291,10 +488,13 @@ export const normalizeWorldPack = (raw, index = 0) => {
     description: normalizeInlineText(source.description, '', 500),
     source: normalizeId(source.source, 'user'),
     state: normalizeActivationState(source.state),
+    supportState: normalizeSupportState(source.supportState),
+    unsupportedReason: normalizeId(source.unsupportedReason, ''),
     version: Math.max(1, toInt(source.version, 1)),
     knowledgePointIds: normalizeStringList(source.knowledgePointIds),
     profileTemplateIds: normalizeStringList(source.profileTemplateIds),
     bookSourceLinkIds: normalizeStringList(source.bookSourceLinkIds),
+    compatibility: normalizeWorldPackCompatibility(source.compatibility),
     relationshipCategories: normalizeRelationshipRegistryEntries(source.relationshipCategories, 'category'),
     relationshipModifiers: normalizeRelationshipRegistryEntries(source.relationshipModifiers, 'modifier'),
     appBindings,
