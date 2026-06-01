@@ -371,6 +371,7 @@ Already landed:
 - `src/lib/simulation/event-engine.js` handles eligibility, random gates, cooldowns, daily caps, adapter execution, and event logging
 - `src/lib/simulation/event-tick-runner.js` can now run both the Food Delivery random pilot and the Chat runtime greeting pilot, with tick-level cooldown/daily caps
 - `src/lib/simulation/adapters/food-delivery-events.js` is the first real module adapter
+- World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
 
 Recommended next step:

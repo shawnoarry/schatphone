@@ -70,7 +70,7 @@ Current World Hub capabilities:
 5. consumes primary-led relationship-memory recall summaries while preserving source-audit detail;
 6. can filter event logs by module/status and inspect selected logs with trigger, reason, adapter, target, and world-variant explanations;
 7. can filter relationship facts by status/source and inspect selected facts with metric-delta, source-record, pending-effect, and supporting-only explanations;
-8. can review pending generated Chat social proposals before high-risk communication state changes are applied in Chat;
+8. can review pending generated Chat social proposals before high-risk communication state changes are applied in Chat, and can explain proposal source, trigger policy, and ownership boundaries for AI-sourced and foreground/session runtime proposals;
 9. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
 
 ## Relationship To Cheats

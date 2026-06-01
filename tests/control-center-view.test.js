@@ -12,7 +12,7 @@ import {
   useSimulationStore,
 } from '../src/stores/simulation'
 import { CHAT_SOCIAL_EVENT_TYPES } from '../src/lib/chat-social-event-review'
-import { useChatStore } from '../src/stores/chat'
+import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../src/stores/chat'
 import {
   RELATIONSHIP_MEMORY_REVIEW_STATES,
   useRelationshipRuntimeStore,
@@ -313,7 +313,12 @@ describe('ControlCenterView', () => {
     expect(panel.text()).toContain('World Hub Social Role')
     expect(panel.text()).toContain('Role blocks user')
     expect(panel.text()).toContain('Pending review')
+    expect(panel.text()).toContain('Chat AI response')
+    expect(panel.text()).toContain('High-risk communication change waits here')
     expect(panel.text()).toContain('Chat changes only after this proposal is applied.')
+    expect(panel.text()).toContain('Chat module events: on')
+    expect(panel.text()).toContain('Cooldown: clear')
+    expect(panel.text()).toContain('Relationship Runtime is not changed by this proposal alone.')
     expect(wrapper.findAll('[data-testid="control-center-chat-social-event"]')).toHaveLength(1)
     expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe('connected')
 
@@ -327,6 +332,50 @@ describe('ControlCenterView', () => {
     )
     expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
       'contact_blocked',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('explains foreground runtime Chat social greetings without making them high-risk controls', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const simulationStore = useSimulationStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const profile = chatStore.addRoleProfile({
+      roleId: '8802',
+      name: 'Runtime Greeting Role',
+      role: 'Contact',
+    })
+    const contact = chatStore.bindRoleProfile(profile.id, {
+      chatSocialState: CHAT_CONTACT_SOCIAL_STATES.STRANGER,
+    })
+
+    const result = simulationStore.runChatSocialRuntimeProposal({
+      chatStore,
+      at: Date.now(),
+    })
+    expect(result.ok).toBe(true)
+
+    const { wrapper } = await mountControlCenterView()
+
+    const panel = wrapper.get('[data-testid="control-center-chat-social-panel"]')
+    expect(panel.text()).toContain('Runtime Greeting Role')
+    expect(panel.text()).toContain('Role greeting request')
+    expect(panel.text()).toContain('Applied')
+    expect(panel.text()).toContain('Foreground event tick')
+    expect(panel.text()).toContain('conservative greeting')
+    expect(panel.text()).toContain('audited incoming message request')
+    expect(panel.text()).toContain('Runtime greeting V1 only proposes conservative contact openings')
+    expect(panel.text()).toContain('Surprise Mode: low')
+    expect(panel.text()).toContain('Daily cap: available')
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
     )
 
     wrapper.unmount()

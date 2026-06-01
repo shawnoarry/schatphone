@@ -40,6 +40,7 @@ import {
   CHAT_SOCIAL_EVENT_STATUS,
   CHAT_SOCIAL_EVENT_TYPES,
 } from '../lib/chat-social-event-review'
+import { CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID } from '../lib/chat-social-runtime-source'
 import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
 
 const router = useRouter()
@@ -372,6 +373,121 @@ const chatSocialEventStatusClass = (status = '') => {
     return 'bg-rose-300/15 text-rose-100'
   }
   return 'bg-white/10 text-slate-300'
+}
+
+const chatSocialEventSourceLabel = (proposal = {}) => {
+  if (proposal.source?.runtimeLogId === CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID) {
+    return t('Foreground event tick', 'Foreground event tick')
+  }
+  if (proposal.triggerSource === 'ai_assisted' || proposal.source?.messageId) {
+    return t('Chat AI response', 'Chat AI response')
+  }
+  if (proposal.triggerSource === 'random' || proposal.triggerSource === 'condition') {
+    return t('Event runtime source', 'Event runtime source')
+  }
+  return simulationTriggerSourceLabel(proposal.triggerSource)
+}
+
+const chatSocialEventReviewExplanation = (proposal = {}) => {
+  const isRuntimeGreeting =
+    proposal.source?.runtimeLogId === CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID &&
+    proposal.eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST
+  if (isRuntimeGreeting && proposal.status === CHAT_SOCIAL_EVENT_STATUS.APPLIED) {
+    return t(
+      'The foreground tick proposed a conservative greeting for a role who was not connected yet. It became an audited incoming message request.',
+      'The foreground tick proposed a conservative greeting for a role who was not connected yet. It became an audited incoming message request.',
+    )
+  }
+  if (proposal.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) {
+    return t(
+      'High-risk communication change waits here; Chat state stays unchanged until Apply to Chat.',
+      'High-risk communication change waits here; Chat state stays unchanged until Apply to Chat.',
+    )
+  }
+  if (proposal.status === CHAT_SOCIAL_EVENT_STATUS.BLOCKED) {
+    return t(
+      'The runtime blocked this proposal before Chat changed messaging reachability.',
+      'The runtime blocked this proposal before Chat changed messaging reachability.',
+    )
+  }
+  if (proposal.status === CHAT_SOCIAL_EVENT_STATUS.DISMISSED) {
+    return t(
+      'World Hub dismissed this proposal, so Chat kept its existing communication state.',
+      'World Hub dismissed this proposal, so Chat kept its existing communication state.',
+    )
+  }
+  if (proposal.status === CHAT_SOCIAL_EVENT_STATUS.APPLIED) {
+    return t(
+      'This proposal has already been applied through Chat-owned communication-state actions.',
+      'This proposal has already been applied through Chat-owned communication-state actions.',
+    )
+  }
+  return t(
+    'World Hub can inspect this generated Chat social proposal before any high-risk communication change is applied.',
+    'World Hub can inspect this generated Chat social proposal before any high-risk communication change is applied.',
+  )
+}
+
+const chatSocialEventPolicySummary = (proposal = {}) => {
+  const policy = proposal.policySnapshot || {}
+  return [
+    t(
+      `Surprise Mode: ${policy.surpriseMode || '-'}`,
+      `Surprise Mode: ${policy.surpriseMode || '-'}`,
+    ),
+    t(
+      `Chat module events: ${policy.moduleEventsEnabled === false ? 'off' : 'on'}`,
+      `Chat module events: ${policy.moduleEventsEnabled === false ? 'off' : 'on'}`,
+    ),
+    t(
+      `Cooldown: ${policy.cooldownActive ? 'active' : 'clear'}`,
+      `Cooldown: ${policy.cooldownActive ? 'active' : 'clear'}`,
+    ),
+    t(
+      `Daily cap: ${policy.dailyLimitReached ? 'reached' : 'available'}`,
+      `Daily cap: ${policy.dailyLimitReached ? 'reached' : 'available'}`,
+    ),
+  ]
+}
+
+const chatSocialEventSafetyNotes = (proposal = {}) => {
+  const notes = []
+  if (proposal.source?.runtimeLogId === CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID) {
+    notes.push(
+      t(
+        'Runtime greeting V1 only proposes conservative contact openings for stranger or declined role contacts.',
+        'Runtime greeting V1 only proposes conservative contact openings for stranger or declined role contacts.',
+      ),
+    )
+  } else if (proposal.triggerSource === 'ai_assisted' || proposal.source?.messageId) {
+    notes.push(
+      t(
+        'AI-sourced proposals are normalized before Event Runtime reviews them.',
+        'AI-sourced proposals are normalized before Event Runtime reviews them.',
+      ),
+    )
+  }
+  if (proposal.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) {
+    notes.push(
+      t(
+        'Review first: high-risk role-side changes cannot bypass World Hub.',
+        'Review first: high-risk role-side changes cannot bypass World Hub.',
+      ),
+    )
+  }
+  notes.push(
+    t(
+      'Chat owns final communication reachability; Contacts only shows the resulting snapshot.',
+      'Chat owns final communication reachability; Contacts only shows the resulting snapshot.',
+    ),
+  )
+  notes.push(
+    t(
+      'Relationship Runtime is not changed by this proposal alone.',
+      'Relationship Runtime is not changed by this proposal alone.',
+    ),
+  )
+  return notes
 }
 
 const relationshipEventStatusLabel = (status = '') => {
@@ -728,6 +844,10 @@ const chatSocialEventRows = computed(() =>
       statusLabel: chatSocialEventStatusLabel(proposal.status),
       statusClass: chatSocialEventStatusClass(proposal.status),
       triggerSourceLabel: simulationTriggerSourceLabel(proposal.triggerSource),
+      sourceLabel: chatSocialEventSourceLabel(proposal),
+      reviewExplanation: chatSocialEventReviewExplanation(proposal),
+      policySummary: chatSocialEventPolicySummary(proposal),
+      safetyNotes: chatSocialEventSafetyNotes(proposal),
       canReview: proposal.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
       createdAtLabel: formatRuntimeTime(proposal.createdAt),
     }
@@ -1119,7 +1239,7 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
           </span>
         </div>
         <p class="mt-2 text-xs leading-5 text-slate-300">
-          {{ t('AI may propose greetings or blocking changes, but World Hub reviews high-risk communication changes before Chat applies them.', 'AI may propose greetings or blocking changes, but World Hub reviews high-risk communication changes before Chat applies them.') }}
+          {{ t('AI or the foreground event tick may propose role-side contact changes. World Hub explains the source and keeps high-risk communication changes review-first before Chat applies them.', 'AI or the foreground event tick may propose role-side contact changes. World Hub explains the source and keeps high-risk communication changes review-first before Chat applies them.') }}
         </p>
 
         <div v-if="chatSocialEventRows.length" class="mt-3 space-y-2">
@@ -1135,7 +1255,7 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
               <div>
                 <p class="text-xs font-semibold text-white">{{ event.typeLabel }}</p>
                 <p class="mt-1 text-[11px] text-slate-500">
-                  {{ event.targetLabel }} / {{ event.triggerSourceLabel }} / {{ event.createdAtLabel }}
+                  {{ event.targetLabel }} / {{ event.sourceLabel }} / {{ event.createdAtLabel }}
                 </p>
               </div>
               <span
@@ -1146,7 +1266,10 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
               </span>
             </div>
             <p class="mt-2 text-[11px] leading-4 text-slate-400">
-              {{ event.explanation || event.reason }}
+              {{ event.reviewExplanation }}
+            </p>
+            <p v-if="event.explanation" class="mt-1 text-[10px] leading-4 text-slate-500">
+              {{ event.explanation }}
             </p>
             <p class="mt-1 text-[10px] leading-4 text-slate-600">
               {{ t('State change', 'State change') }}:
@@ -1184,6 +1307,10 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
           <p class="text-xs font-semibold text-white">{{ t('Review detail', 'Review detail') }}</p>
           <div class="mt-3 grid gap-2 text-[11px]">
             <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Source', 'Source') }}:
+              {{ selectedChatSocialEvent.sourceLabel }}
+            </span>
+            <span class="rounded-xl bg-white/8 px-3 py-2">
               {{ t('Requested Chat state', 'Requested Chat state') }}:
               {{ selectedChatSocialEvent.requestedChatSocialState || '-' }}
             </span>
@@ -1197,6 +1324,29 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
               {{ t('Chat changes only after this proposal is applied.', 'Chat changes only after this proposal is applied.') }}
             </span>
           </div>
+          <div class="mt-3 rounded-2xl bg-white/8 px-3 py-2">
+            <p class="text-[11px] font-semibold text-amber-100">
+              {{ t('Trigger policy', 'Trigger policy') }}
+            </p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span
+                v-for="item in selectedChatSocialEvent.policySummary"
+                :key="item"
+                class="rounded-full bg-white/10 px-2 py-1 text-[10px] text-slate-300"
+              >
+                {{ item }}
+              </span>
+            </div>
+          </div>
+          <ul class="mt-3 space-y-1 text-[11px] leading-4 text-slate-300">
+            <li
+              v-for="note in selectedChatSocialEvent.safetyNotes"
+              :key="note"
+              data-testid="control-center-chat-social-safety-note"
+            >
+              {{ note }}
+            </li>
+          </ul>
         </article>
       </section>
 

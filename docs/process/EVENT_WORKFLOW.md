@@ -98,7 +98,7 @@ If an event change needs visual work, first decide visual ownership through `doc
 16. Relationship event gating must consume saved role-profile classification fields (`primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata), not raw `relationshipLabelText` or `relationshipLabelNote`.
 17. Low-risk relationship facts may attach classification gate metadata as soft-reference audit context and still allow the fact. High-risk hard-gate behavior must remain explicit, testable, and review/confirmation-oriented before any high-impact automation is enabled.
 18. Future high-risk relationship event packs should consume named gate presets from `src/lib/relationship-event-gating.js` instead of duplicating hard-gate rule objects in module adapters.
-19. Generated Chat social events such as role-initiated greetings, refusal, blocks, restores, and unblocks must use the explicit event-runtime review/audit seam before mutating Chat channel state. Low-risk greetings may auto-apply with audit; high-risk communication changes must stay review-first in World Hub.
+19. Generated Chat social events such as role-initiated greetings, refusal, blocks, restores, and unblocks must use the explicit event-runtime review/audit seam before mutating Chat channel state. Low-risk greetings may auto-apply with audit; high-risk communication changes must stay review-first in World Hub. World Hub should explain proposal source, trigger policy, and the rule that Chat owns final communication reachability while Contacts and Relationship Runtime stay separate.
 
 ## 4. Event Entry Audit
 

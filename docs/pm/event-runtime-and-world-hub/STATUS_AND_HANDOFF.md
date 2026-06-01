@@ -23,6 +23,7 @@ What is already landed:
 11. Named high-risk relationship gate presets are available in `src/lib/relationship-event-gating.js` for future event packs, so callers can reference preset ids instead of copying hard-gate category/modifier rules.
 12. World Pack nonstandard-app template extraction is explicitly not an event/runtime lane in the current slice: the whitelist/review seam and WorldBook Current World Pack UI can propose/confirm appBindings only, confirmed entries reuse App Store/Home/target-app context seams, and the flow cannot create event rules, runtime mutations, or World Hub editor responsibilities.
 13. Chat social-event review V1 is landed at the event/runtime seam: generated role greetings can become audited pending message requests, while role-initiated refusal, block, restore, and unblock proposals are stored as reviewable runtime proposals and require World Hub approval before Chat changes the communication state. Chat AI responses can now submit normalized `socialEvents`, and the foreground/session event tick can submit a conservative runtime greeting candidate for stranger or declined role contacts through the same review seam.
+14. World Hub now explains generated Chat social proposal source and boundaries: reviewers can see whether a proposal came from Chat AI output or the foreground/session tick, inspect trigger policy, and read why Chat, Contacts, and Relationship Runtime stay separated.
 
 Still incomplete:
 
@@ -37,7 +38,7 @@ Still incomplete:
 1. Move to service-account continuity unless product review identifies another concrete read-only World Hub explanation gap.
 2. Keep runtime-trigger explanation readable in product language as new event adapters are added.
 3. Freeze Cheats only after World Hub review surfaces are trusted enough.
-4. Deepen the landed Chat social-event review seam: tune runtime greeting cooldown/cap policy, add richer scheduling only when explainable, and keep high-risk role-initiated friend/block/refusal changes review-first in World Hub.
+4. Deepen the landed Chat social-event review seam: tune runtime greeting cooldown/cap policy, add richer scheduling only when the World Hub explanation remains clear, and keep high-risk role-initiated friend/block/refusal changes review-first.
 
 ## 3. Do Not Do
 

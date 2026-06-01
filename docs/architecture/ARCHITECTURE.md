@@ -164,7 +164,7 @@ This table matters as much as the code layout.
 | ordinary message history | `Chat` | includes manual chat-message deletion |
 | current relationship progress | `relationshipRuntimeStore` | the truth layer for relationship state |
 | confirmed Chat social/channel state | Chat / Chat Directory | who can message, pending friend state, blocked, or blocked-by-role status after a direct user action or confirmed event |
-| generated social-event review | `simulationStore` / event runtime | Chat AI and foreground/session runtime greeting proposals require audit/review before mutating Chat channel state; refusal/block/restore/unblock stay high-risk review-first |
+| generated social-event review | `simulationStore` / event runtime | Chat AI and foreground/session runtime greeting proposals require audit/review before mutating Chat channel state; World Hub explains source/policy/ownership; refusal/block/restore/unblock stay high-risk review-first |
 | cross-module cue queues | `reminders.js` / Reminders | not Calendar |
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
