@@ -19,6 +19,7 @@ What is already landed:
 7. The active World Pack can now provide a Shopping marketplace context for `survival_city`: WorldBook opens Shopping as `补给站`, and Shopping offers a safe Daily Fresh / Grocery filter without creating or mutating commerce records.
 8. The active World Pack can now provide a Food Delivery dispatch context for `survival_city` and confirmed nonstandard `dispatch_board` entries: Food Delivery shows the world-app hero/banner, defaults to the Nearby category when no explicit category is present, and preserves `worldPack`/`worldApp` route context while Food Delivery keeps restaurants, menus, carts, food orders, and delivery events.
 9. Food Delivery now has a platform/store split: the Food entry opens a platform browser, restaurant cards open route-query store mini-app surfaces, and cart/order/event/Wallet/Map/Chat ownership remains centralized in Food Delivery and the related source modules.
+10. Food Delivery platform mode now opens as a pseudo-folder style surface: a fixed Food platform entry plus shop-app restaurant entries. Category keys continue to filter shops and do not own order/cart behavior.
 
 Still incomplete:
 
