@@ -30,6 +30,45 @@ describe('app icon presentation helpers', () => {
     expect(normalized.random_key).toBeUndefined()
   })
 
+  test('normalizes gallery image icon overrides while preserving legacy built-in overrides', () => {
+    const normalized = normalizeAppIconOverrides({
+      app_chat: {
+        icon: 'fas fa-comment-dots',
+        accent: 'cool',
+      },
+      app_gallery: {
+        sourceType: 'gallery',
+        galleryAssetId: 'asset_gallery_icon',
+        accent: 'warm',
+      },
+      app_map: {
+        sourceType: 'gallery',
+        galleryAssetId: '',
+        icon: 'fas fa-route',
+        accent: 'cool',
+      },
+    })
+
+    expect(normalized.app_chat).toEqual({
+      sourceType: 'preset',
+      icon: 'fas fa-comment-dots',
+      accent: 'cool',
+      galleryAssetId: '',
+    })
+    expect(normalized.app_gallery).toEqual({
+      sourceType: 'gallery',
+      icon: 'fas fa-images',
+      accent: 'warm',
+      galleryAssetId: 'asset_gallery_icon',
+    })
+    expect(normalized.app_map).toEqual({
+      sourceType: 'preset',
+      icon: 'fas fa-route',
+      accent: 'cool',
+      galleryAssetId: '',
+    })
+  })
+
   test('resolves home app icon metadata with overrides', () => {
     const meta = resolveAppIconMeta(
       'app_gallery',
@@ -45,6 +84,26 @@ describe('app icon presentation helpers', () => {
     expect(meta.label).toBe('相册')
     expect(meta.icon).toBe('fas fa-camera')
     expect(meta.accent).toBe('warm')
+    expect(meta.toneClass).toBe('accent-warm')
+  })
+
+  test('resolves gallery image app icons with a built-in fallback glyph', () => {
+    const meta = resolveAppIconMeta(
+      'app_gallery',
+      {
+        app_gallery: {
+          sourceType: 'gallery',
+          galleryAssetId: 'asset_gallery_icon',
+          accent: 'warm',
+        },
+      },
+      'en-US',
+    )
+
+    expect(meta.sourceType).toBe('gallery')
+    expect(meta.galleryAssetId).toBe('asset_gallery_icon')
+    expect(meta.hasImageIcon).toBe(true)
+    expect(meta.icon).toBe('fas fa-images')
     expect(meta.toneClass).toBe('accent-warm')
   })
 

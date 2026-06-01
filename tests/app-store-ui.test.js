@@ -8,6 +8,7 @@ import HomeView from '../src/views/HomeView.vue'
 import LockScreen from '../src/views/LockScreen.vue'
 import SettingsView from '../src/views/SettingsView.vue'
 import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
+import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -179,6 +180,127 @@ describe('App Store entry management UI', () => {
       libraryTile: 'app_control_center',
     })
 
+    wrapper.unmount()
+  })
+
+  test('App Store saves a built-in icon preset from the app detail identity sheet', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+
+    await wrapper.get('[data-testid="app-store-item-app_chat"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-icon-preset"]').setValue('fas fa-paper-plane')
+    await wrapper.get('[data-testid="app-store-identity-accent"]').setValue('dark')
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_chat).toMatchObject({
+      sourceType: 'preset',
+      icon: 'fas fa-paper-plane',
+      accent: 'dark',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store saves a Gallery image icon and Home renders the same image icon', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    const galleryStore = useGalleryStore()
+    galleryStore.resetForTesting()
+    const imported = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/icon-gallery.png',
+      name: 'Gallery Icon',
+      category: 'reference',
+    })
+    expect(imported.ok).toBe(true)
+
+    await router.push('/app-store')
+    await router.isReady()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+    await wrapper.get('[data-testid="app-store-item-app_gallery"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-source-gallery"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-gallery-asset"]').setValue(imported.assetId)
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_gallery).toMatchObject({
+      sourceType: 'gallery',
+      galleryAssetId: imported.assetId,
+    })
+
+    wrapper.unmount()
+
+    await router.push('/home')
+    await router.isReady()
+    const homeWrapper = mount(HomeView, {
+      props: { currentDate: 'Jan 1', currentTime: '09:00' },
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+
+    expect(homeWrapper.get('[data-testid="home-app-icon-app_gallery"] img').attributes('src')).toBe(
+      'https://example.com/icon-gallery.png',
+    )
+    homeWrapper.unmount()
+  })
+
+  test('App Store uploads a local image into Gallery and uses it as the selected app icon', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    const galleryStore = useGalleryStore()
+    galleryStore.resetForTesting()
+    await router.push('/app-store')
+    await router.isReady()
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+    await wrapper.get('[data-testid="app-store-item-app_map"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+
+    const file = new File(['icon'], 'map-icon.png', { type: 'image/png' })
+    const input = wrapper.get('[data-testid="app-store-identity-upload-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await flushPromises()
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    const saved = systemStore.settings.appearance.appIconOverrides.app_map
+    expect(saved.sourceType).toBe('gallery')
+    expect(saved.galleryAssetId).toBeTruthy()
+    expect(galleryStore.findAssetById(saved.galleryAssetId)?.name).toBe('map-icon.png')
+
+    wrapper.unmount()
+  })
+
+  test('App Store restores the selected app default icon', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.setAppIconOverride('app_chat', {
+      icon: 'fas fa-paper-plane',
+      accent: 'dark',
+    })
+    await router.push('/app-store')
+    await router.isReady()
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+    await wrapper.get('[data-testid="app-store-item-app_chat"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-restore"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_chat).toBeUndefined()
     wrapper.unmount()
   })
 
