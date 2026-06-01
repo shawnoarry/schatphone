@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { useChatStore } from '../stores/chat'
+import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
@@ -1001,6 +1001,60 @@ const selectedChatStateDetail = computed(() => {
     '需要聊天时到 Chat Directory 绑定；Contacts 仍可先维护完整档案。',
     'Bind in Chat Directory when this role should enter Chat; Contacts can maintain the profile first.',
   )
+})
+
+const chatSocialSnapshotLabel = (state = '') => {
+  if (state === CHAT_CONTACT_SOCIAL_STATES.CONNECTED) return t('可正常聊天', 'Can chat normally')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) {
+    return t('还不是常规 Chat 联系人', 'Not a normal Chat contact yet')
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) {
+    return t('打招呼请求待处理', 'Greeting request pending')
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) {
+    return t('用户已发送打招呼请求', 'User greeting request sent')
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) {
+    return t('请求已被忽略或拒绝', 'Request declined or ignored')
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) return t('已被用户拉黑', 'Blocked by user')
+  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) {
+    return t('对方暂不接收消息', 'They are not receiving messages')
+  }
+  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
+    return t('双方互相拉黑', 'Both sides are blocked')
+  }
+  return t('没有 Chat 绑定', 'No Chat binding')
+}
+
+const selectedChatSocialSnapshot = computed(() => {
+  const contact = selectedRoleChatContact.value
+  if (!contact) {
+    return {
+      exists: false,
+      label: t('没有 Chat 绑定', 'No Chat binding'),
+      detail: t(
+        'Contacts 保留角色档案；Chat Directory 决定这个角色是否能进入聊天。',
+        'Contacts keeps the role profile. Chat Directory decides whether this role can chat.',
+      ),
+      note: '',
+      updatedAtLabel: '',
+    }
+  }
+  const state = chatStore.getContactChatSocialState(contact)
+  return {
+    exists: true,
+    state,
+    label: chatSocialSnapshotLabel(state),
+    detail: t(
+      '来自 Chat 的只读快照。Contacts 只展示这个状态，不应用通讯变更。',
+      'Read-only from Chat. Contacts displays this state but does not apply communication changes.',
+    ),
+    note: contact.chatSocialNote || '',
+    updatedAtLabel: contact.chatSocialUpdatedAt
+      ? formatRelationshipAuditTimestamp(contact.chatSocialUpdatedAt)
+      : '',
+  }
 })
 
 const selectedRoleHubCards = computed(() => [
@@ -2666,6 +2720,35 @@ onBeforeUnmount(() => {
                 <p class="contacts-role-hub-value">{{ card.value }}</p>
                 <p class="contacts-role-hub-detail">{{ card.detail }}</p>
               </div>
+            </div>
+            <div
+              class="rounded-lg border border-blue-100 bg-blue-50/70 p-3"
+              data-testid="contacts-chat-social-snapshot"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="contacts-role-hub-label">{{ t('Chat 通讯', 'Chat communication') }}</p>
+                  <p class="text-sm font-semibold text-gray-950">{{ selectedChatSocialSnapshot.label }}</p>
+                  <p class="mt-1 text-[11px] leading-4 text-gray-500">
+                    {{ selectedChatSocialSnapshot.detail }}
+                  </p>
+                  <p
+                    v-if="selectedChatSocialSnapshot.note"
+                    class="mt-1 text-[11px] leading-4 text-blue-700"
+                  >
+                    {{ selectedChatSocialSnapshot.note }}
+                  </p>
+                </div>
+                <span class="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-blue-700">
+                  {{ t('来自 Chat，只读', 'Read-only from Chat') }}
+                </span>
+              </div>
+              <p
+                v-if="selectedChatSocialSnapshot.updatedAtLabel"
+                class="mt-2 text-[10px] text-gray-400"
+              >
+                {{ t('更新时间', 'Updated') }}: {{ selectedChatSocialSnapshot.updatedAtLabel }}
+              </p>
             </div>
           </section>
 
