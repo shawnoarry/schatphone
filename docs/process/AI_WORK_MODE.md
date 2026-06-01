@@ -59,6 +59,7 @@ Rules:
 
 1. Explain what a feature does, why it matters, and what the user will see before describing files, fields, or implementation details.
 2. Use Chinese module and feature names when the conversation is product-facing, and add English code names only when they help locate implementation.
+   For UX labels, onboarding copy, settings entries, and handoff text, prefer bilingual product naming when the feature is cross-team or newly introduced, for example `事件前台 Tick / Foreground event tick` and `角色主动联系候选 / Role proactive contact candidate`.
 3. Translate technical terms into product meaning, for example "Chat only applies confirmed communication state" before "`chatSocialState` is written".
 4. Do not assume the reader can infer product impact from store names, schema fields, route names, or test names.
 5. Put technical detail after the product explanation, not instead of it.

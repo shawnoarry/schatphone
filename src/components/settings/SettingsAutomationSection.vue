@@ -63,9 +63,16 @@ const { t } = useI18n()
   <div class="bg-white rounded-2xl p-4 space-y-3">
     <div class="flex items-start justify-between gap-3">
       <div>
-        <p class="text-sm font-semibold">{{ t('事件前台 Tick', 'Foreground event tick') }}</p>
+        <p class="text-sm font-semibold">
+          {{ t('事件前台 Tick / Foreground event tick', 'Foreground event tick / 事件前台 Tick') }}
+        </p>
         <p class="text-[10px] leading-4 text-gray-400">
-          {{ t('用于后续在用户使用 App 时低频检查安全事件。当前只保存显式控制状态，不会在此页直接触发事件。', 'For future low-frequency safe event checks while the app is in use. This page only saves the explicit control state and does not trigger events directly.') }}
+          {{
+            t(
+              '用户使用 App 且手机未锁定时，低频检查安全事件，包括外卖安全事件和角色主动联系候选 / Role proactive contact candidate；此页只开启自动检查，不会立刻触发事件。',
+              'While the app is open and unlocked, low-frequency safe checks can include Food Delivery safety events and Role proactive contact candidate / 角色主动联系候选; this page enables automatic checks but does not trigger an event immediately.',
+            )
+          }}
         </p>
       </div>
       <input

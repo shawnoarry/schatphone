@@ -146,10 +146,15 @@ describe('SettingsView general section', () => {
   })
 
   test('edits foreground simulation tick controls from the automation subpage without running events', async () => {
+    const systemStore = useSystemStore()
     const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
     simulationStore.resetForTesting()
 
     const { wrapper } = await mountSettingsView('/settings?menu=automation')
+
+    expect(wrapper.text()).toContain('Foreground event tick / 事件前台 Tick')
+    expect(wrapper.text()).toContain('Role proactive contact candidate')
 
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(true)
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('15')
@@ -166,6 +171,9 @@ describe('SettingsView general section', () => {
     expect(simulationStore.eventLogCount).toBe(0)
     expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
       '15',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
+      'Role proactive contact candidates',
     )
 
     wrapper.unmount()

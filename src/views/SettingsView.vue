@@ -1277,13 +1277,13 @@ const simulationForegroundTickRuntimeLabel = computed(() => {
   const minutes = simulationForegroundTickIntervalMinutes.value
   if (!enabled) {
     return t(
-      '当前事件前台 Tick 关闭。不会自动检查随机事件。',
-      'Foreground event tick is currently off. Random events are not checked automatically.',
+      '事件前台 Tick / Foreground event tick 当前关闭。不会自动检查外卖安全事件或角色主动联系候选。',
+      'Foreground event tick / 事件前台 Tick is currently off. Food Delivery safety events and Role proactive contact candidates are not checked automatically.',
     )
   }
   return t(
-    `当前仅保存为待接入状态：开启后计划每 ${minutes} 分钟检查一次安全事件。`,
-    `Saved as pending lifecycle wiring: when active, it is planned to check safe events every ${minutes} minute(s).`,
+    `事件前台 Tick / Foreground event tick 已开启：当前每 ${minutes} 分钟检查一次外卖安全事件和角色主动联系候选。`,
+    `Foreground event tick / 事件前台 Tick is on: safe Food Delivery events and Role proactive contact candidates are checked every ${minutes} minute(s).`,
   )
 })
 
