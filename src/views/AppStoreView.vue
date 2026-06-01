@@ -13,6 +13,11 @@ import {
   resolveAppIconPresetLabel,
 } from '../lib/app-icon-presentation'
 import {
+  APP_SKIN_PRESETS,
+  normalizeAppSkinSetting,
+  resolveAppSkinTargetForAppId,
+} from '../lib/app-skin-customization'
+import {
   buildHomeSourceQuery,
   buildRouteWithReturnSource,
   pushReturnTarget,
@@ -450,6 +455,10 @@ const selectedWorldAppDetailRows = computed(() => {
 })
 
 const selectedAppCanCustomizeIdentity = computed(() => Boolean(selectedApp.value && !selectedApp.value.worldAppEntry))
+const selectedAppSkinTarget = computed(() =>
+  selectedApp.value?.worldAppEntry ? null : resolveAppSkinTargetForAppId(selectedApp.value?.id),
+)
+const selectedAppCanCustomizeSkin = computed(() => Boolean(selectedAppSkinTarget.value))
 const galleryIconAssets = computed(() => galleryStore.assets.slice(0, 120))
 const identityEditorOpen = ref(false)
 const identityFeedback = ref('')
@@ -462,6 +471,13 @@ const identityDraft = reactive({
   galleryAssetId: '',
 })
 let identityDraftPreviewVersion = 0
+const skinEditorOpen = ref(false)
+const skinFeedback = ref('')
+const skinDraft = reactive({
+  presetId: 'system_default',
+  customCssEnabled: false,
+  customCss: '',
+})
 
 const syncIdentityDraftFromSelectedApp = () => {
   const app = selectedApp.value
@@ -518,13 +534,6 @@ watch(
   { immediate: true },
 )
 
-watch(
-  () => selectedApp.value?.id,
-  () => {
-    if (identityEditorOpen.value) syncIdentityDraftFromSelectedApp()
-  },
-)
-
 const openIdentityEditor = () => {
   if (!selectedAppCanCustomizeIdentity.value) return
   syncIdentityDraftFromSelectedApp()
@@ -535,6 +544,58 @@ const openIdentityEditor = () => {
 const closeIdentityEditor = () => {
   identityEditorOpen.value = false
 }
+
+const syncSkinDraftFromSelectedApp = () => {
+  const target = selectedAppSkinTarget.value
+  if (!target) return
+  const current = normalizeAppSkinSetting(settings.value.appearance?.appSkins?.[target.scope])
+  skinDraft.presetId = current.presetId
+  skinDraft.customCssEnabled = current.customCssEnabled
+  skinDraft.customCss = current.customCss
+  skinFeedback.value = ''
+}
+
+const openSkinEditor = () => {
+  if (!selectedAppCanCustomizeSkin.value) return
+  syncSkinDraftFromSelectedApp()
+  detailSheetOpen.value = false
+  skinEditorOpen.value = true
+}
+
+const closeSkinEditor = () => {
+  skinEditorOpen.value = false
+}
+
+const saveSkinEditor = () => {
+  const target = selectedAppSkinTarget.value
+  if (!target) return
+  systemStore.setAppSkin(target.scope, {
+    presetId: skinDraft.presetId,
+    customCssEnabled: skinDraft.customCssEnabled,
+    customCss: skinDraft.customCss,
+  })
+  systemStore.saveNow()
+  skinFeedback.value = t('这个 APP 的外观已更新。', 'This app skin has been updated.')
+  closeSkinEditor()
+}
+
+const restoreSkinDefault = () => {
+  const target = selectedAppSkinTarget.value
+  if (!target) return
+  systemStore.resetAppSkin(target.scope)
+  systemStore.saveNow()
+  syncSkinDraftFromSelectedApp()
+  skinFeedback.value = t('已恢复默认 APP 外观。', 'Default app skin restored.')
+  closeSkinEditor()
+}
+
+watch(
+  () => selectedApp.value?.id,
+  () => {
+    if (identityEditorOpen.value) syncIdentityDraftFromSelectedApp()
+    if (skinEditorOpen.value) syncSkinDraftFromSelectedApp()
+  },
+)
 
 const setIdentitySource = (sourceType) => {
   identityDraft.sourceType = sourceType === 'gallery' ? 'gallery' : 'preset'
@@ -901,6 +962,16 @@ onBeforeUnmount(() => {
                 <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
                 <span>{{ t('图标与外观', 'Icon & Appearance') }}</span>
               </button>
+              <button
+                v-if="selectedAppCanCustomizeSkin"
+                type="button"
+                class="app-store-action"
+                data-testid="app-store-open-skin"
+                @click="openSkinEditor"
+              >
+                <i class="fas fa-palette" aria-hidden="true"></i>
+                <span>{{ t('APP 皮肤', 'App Skin') }}</span>
+              </button>
               <button type="button" class="app-store-action" @click="editSelectedAppOnHome" data-testid="app-store-add-home">
                 <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
                 <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
@@ -980,7 +1051,12 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <div class="app-store-actions">
-        <button type="button" class="app-store-action is-primary" @click="openSelectedApp">
+        <button
+          type="button"
+          class="app-store-action is-primary"
+          data-testid="app-store-open-sheet"
+          @click="openSelectedApp"
+        >
           <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
           <span>{{ t('打开', 'Open') }}</span>
         </button>
@@ -988,10 +1064,21 @@ onBeforeUnmount(() => {
           v-if="selectedAppCanCustomizeIdentity"
           type="button"
           class="app-store-action"
+          data-testid="app-store-open-identity-sheet"
           @click="openIdentityEditor"
         >
           <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
           <span>{{ t('图标与外观', 'Icon & Appearance') }}</span>
+        </button>
+        <button
+          v-if="selectedAppCanCustomizeSkin"
+          type="button"
+          class="app-store-action"
+          data-testid="app-store-open-skin-sheet"
+          @click="openSkinEditor"
+        >
+          <i class="fas fa-palette" aria-hidden="true"></i>
+          <span>{{ t('APP 皮肤', 'App Skin') }}</span>
         </button>
         <button type="button" class="app-store-action" @click="editSelectedAppOnHome">
           <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
@@ -1141,6 +1228,96 @@ onBeforeUnmount(() => {
           class="app-store-action is-primary"
           data-testid="app-store-identity-save"
           @click="saveIdentityEditor"
+        >
+          <i class="fas fa-check" aria-hidden="true"></i>
+          <span>{{ t('保存', 'Save') }}</span>
+        </button>
+      </div>
+    </section>
+    <div
+      v-if="skinEditorOpen"
+      class="app-store-identity-backdrop"
+      @click="closeSkinEditor"
+    ></div>
+    <section
+      v-if="skinEditorOpen && selectedApp && selectedAppSkinTarget"
+      class="app-store-identity-sheet app-store-skin-sheet"
+      data-testid="app-store-skin-sheet"
+    >
+      <div class="app-store-identity-head">
+        <AppIconVisual
+          class="app-store-identity-preview-icon"
+          :meta="selectedApp"
+          :image-url="selectedApp.iconImageUrl"
+          :alt="selectedApp.label"
+        />
+        <div class="app-store-identity-title">
+          <p>{{ selectedApp.label }}</p>
+          <h2>{{ t('APP 皮肤', 'App Skin') }}</h2>
+          <span>{{ t('只改变这个 APP 打开后的界面氛围。', 'Changes only this app once it opens.') }}</span>
+        </div>
+        <button
+          type="button"
+          class="app-store-identity-close"
+          :aria-label="t('关闭', 'Close')"
+          @click="closeSkinEditor"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="app-store-identity-fields app-store-skin-fields">
+        <label class="app-store-identity-field">
+          <span>{{ t('内置皮肤', 'Built-in skin') }}</span>
+          <select v-model="skinDraft.presetId" data-testid="app-store-skin-preset">
+            <option
+              v-for="preset in APP_SKIN_PRESETS"
+              :key="preset.id"
+              :value="preset.id"
+            >
+              {{ t(preset.labelZh, preset.labelEn) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="app-store-skin-toggle">
+          <input
+            v-model="skinDraft.customCssEnabled"
+            type="checkbox"
+            data-testid="app-store-skin-css-enabled"
+          />
+          <span>{{ t('启用这个 APP 的自定义 CSS', 'Enable custom CSS for this app') }}</span>
+        </label>
+
+        <label class="app-store-identity-field app-store-skin-css-field">
+          <span>{{ t('这个 APP 的 CSS', 'CSS for this app') }}</span>
+          <textarea
+            v-model="skinDraft.customCss"
+            data-testid="app-store-skin-css-input"
+            spellcheck="false"
+          ></textarea>
+        </label>
+      </div>
+
+      <p v-if="skinFeedback" class="app-store-identity-feedback" aria-live="polite">
+        {{ skinFeedback }}
+      </p>
+
+      <div class="app-store-identity-footer">
+        <button
+          type="button"
+          class="app-store-action"
+          data-testid="app-store-skin-restore"
+          @click="restoreSkinDefault"
+        >
+          <i class="fas fa-rotate-left" aria-hidden="true"></i>
+          <span>{{ t('恢复默认', 'Restore default') }}</span>
+        </button>
+        <button
+          type="button"
+          class="app-store-action is-primary"
+          data-testid="app-store-skin-save"
+          @click="saveSkinEditor"
         >
           <i class="fas fa-check" aria-hidden="true"></i>
           <span>{{ t('保存', 'Save') }}</span>
@@ -1956,17 +2133,25 @@ onBeforeUnmount(() => {
   font-weight: 820;
 }
 
-.app-store-identity-field select {
+.app-store-identity-field select,
+.app-store-identity-field textarea {
   min-width: 0;
   min-height: 40px;
   border: 1px solid var(--system-control-border);
   border-radius: 15px;
-  padding: 0 11px;
   color: var(--system-text);
   background: var(--system-control-bg);
   font-size: 13px;
   font-weight: 760;
   outline: none;
+}
+
+.app-store-identity-field select {
+  padding: 0 11px;
+}
+
+.app-store-identity-field textarea {
+  padding: 10px 11px;
 }
 
 .app-store-identity-upload {
@@ -1994,6 +2179,41 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+}
+
+.app-store-skin-fields {
+  gap: 12px;
+}
+
+.app-store-skin-toggle {
+  min-height: 42px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.app-store-skin-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--system-accent);
+}
+
+.app-store-skin-toggle span {
+  min-width: 0;
+}
+
+.app-store-skin-css-field textarea {
+  min-height: 140px;
+  resize: vertical;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  line-height: 1.45;
 }
 
 .app-store-notice {

@@ -1,120 +1,169 @@
 import { normalizeScopeToken } from './app-shell-scope'
 import { scopeCssToSelector } from './appearance-scoped-css'
 
-const MAX_APP_SKIN_CSS_LENGTH = 50_000
-const DEFAULT_APP_SKIN_PRESET_ID = 'default'
+const MAX_APP_SKIN_CSS_CHARS = 20000
 
-export const APP_SKIN_PRESETS = Object.freeze([
-  {
-    id: DEFAULT_APP_SKIN_PRESET_ID,
-    labelZh: '默认',
-    labelEn: 'Default',
-    descriptionZh: '跟随当前全局主题。',
-    descriptionEn: 'Follow the current global theme.',
-    css: '',
-  },
-  {
-    id: 'market_fresh',
-    labelZh: '清新店铺',
-    labelEn: 'Market fresh',
-    descriptionZh: '更明亮的卡片、柔和的绿色强调，适合外卖和生活类 app。',
-    descriptionEn: 'Brighter cards with a soft green accent for food and lifestyle apps.',
-    css: ':scope { --system-accent: #0f9f6e; --system-accent-soft: rgba(15, 159, 110, 0.15); --system-panel-bg: rgba(255, 255, 255, 0.9); }',
-  },
-  {
-    id: 'catalog_clean',
-    labelZh: '清爽目录',
-    labelEn: 'Catalog clean',
-    descriptionZh: '减少装饰感，让列表和商品信息更容易扫读。',
-    descriptionEn: 'Quieter surfaces for scanning lists and product details.',
-    css: ':scope { --system-accent: #2563eb; --system-panel-bg: rgba(248, 250, 252, 0.92); --system-card-border: rgba(37, 99, 235, 0.18); }',
-  },
-  {
-    id: 'night_service',
-    labelZh: '夜间服务',
-    labelEn: 'Night service',
-    descriptionZh: '偏深色的沉浸界面，适合地图、夜间订单或工具类 app。',
-    descriptionEn: 'A darker immersive surface for maps, evening orders, or utilities.',
-    css: ':scope { --system-page-bg: #0f172a; --system-panel-bg: rgba(15, 23, 42, 0.86); --system-text: #f8fafc; --system-text-muted: rgba(226, 232, 240, 0.72); --system-accent: #38bdf8; --system-accent-soft: rgba(56, 189, 248, 0.16); }',
-  },
-])
+export const DEFAULT_APP_SKIN_PRESET_ID = 'system_default'
 
 export const APP_SKIN_TARGETS = Object.freeze([
-  { appId: 'app_store', scope: 'app_store', labelZh: '应用商城', labelEn: 'App Store' },
-  { appId: 'app_contacts', scope: 'contacts', labelZh: '联系人', labelEn: 'Contacts' },
-  { appId: 'app_gallery', scope: 'gallery', labelZh: '相册', labelEn: 'Photos' },
-  { appId: 'app_map', scope: 'map', labelZh: '地图', labelEn: 'Map' },
-  { appId: 'app_calendar', scope: 'calendar', labelZh: '日历', labelEn: 'Calendar' },
-  { appId: 'app_shopping', scope: 'shopping', labelZh: '购物', labelEn: 'Shopping' },
-  { appId: 'app_food_delivery', scope: 'food_delivery', labelZh: '外卖', labelEn: 'Food Delivery' },
-  { appId: 'app_themes', scope: 'appearance', labelZh: '外观', labelEn: 'Appearance' },
+  Object.freeze({ appId: 'app_store', scope: 'app_store', labelZh: '应用商城', labelEn: 'App Store' }),
+  Object.freeze({ appId: 'app_network', scope: 'network', labelZh: '网络', labelEn: 'Network' }),
+  Object.freeze({ appId: 'app_settings', scope: 'settings', labelZh: '设置', labelEn: 'Settings' }),
+  Object.freeze({ appId: 'app_control_center', scope: 'control_center', labelZh: '世界中枢', labelEn: 'World Hub' }),
+  Object.freeze({ appId: 'app_book', scope: 'book', labelZh: '文本库', labelEn: 'Book' }),
+  Object.freeze({ appId: 'app_contacts', scope: 'contacts', labelZh: '联系人', labelEn: 'Contacts' }),
+  Object.freeze({ appId: 'app_phone', scope: 'phone', labelZh: '电话', labelEn: 'Phone' }),
+  Object.freeze({ appId: 'app_gallery', scope: 'gallery', labelZh: '相册', labelEn: 'Photos' }),
+  Object.freeze({ appId: 'app_map', scope: 'map', labelZh: '地图', labelEn: 'Map' }),
+  Object.freeze({ appId: 'app_calendar', scope: 'calendar', labelZh: '日历', labelEn: 'Calendar' }),
+  Object.freeze({ appId: 'app_reminders', scope: 'reminders', labelZh: '提醒事项', labelEn: 'Reminders' }),
+  Object.freeze({ appId: 'app_wallet', scope: 'wallet', labelZh: '钱包', labelEn: 'Wallet' }),
+  Object.freeze({ appId: 'app_stock', scope: 'stock', labelZh: '股票', labelEn: 'Stock' }),
+  Object.freeze({ appId: 'app_shopping', scope: 'shopping', labelZh: '购物', labelEn: 'Shopping' }),
+  Object.freeze({ appId: 'app_food_delivery', scope: 'food_delivery', labelZh: '外卖', labelEn: 'Food Delivery' }),
+  Object.freeze({ appId: 'app_assets', scope: 'assets', labelZh: '资产', labelEn: 'Assets' }),
+  Object.freeze({ appId: 'app_themes', scope: 'appearance', labelZh: '外观', labelEn: 'Appearance' }),
+  Object.freeze({ appId: 'app_widgets', scope: 'widgets', labelZh: '组件', labelEn: 'Widgets' }),
 ])
 
-const PRESET_IDS = new Set(APP_SKIN_PRESETS.map((preset) => preset.id))
-const TARGETS_BY_APP_ID = new Map(APP_SKIN_TARGETS.map((target) => [target.appId, target]))
-const TARGETS_BY_SCOPE = new Map(APP_SKIN_TARGETS.map((target) => [target.scope, target]))
+export const APP_SKIN_PRESETS = Object.freeze([
+  Object.freeze({
+    id: DEFAULT_APP_SKIN_PRESET_ID,
+    labelZh: '跟随系统',
+    labelEn: 'Follow System',
+    css: '',
+  }),
+  Object.freeze({
+    id: 'market_fresh',
+    labelZh: '鲜活市集',
+    labelEn: 'Market Fresh',
+    css: `
+:scope {
+  --app-skin-accent: #16a34a;
+  --app-skin-accent-soft: color-mix(in srgb, #16a34a 18%, transparent);
+}
+.store-card,
+.restaurant-card,
+.order-card {
+  border-color: color-mix(in srgb, var(--app-skin-accent) 22%, var(--system-subtle-border));
+}
+`,
+  }),
+  Object.freeze({
+    id: 'catalog_clean',
+    labelZh: '清爽目录',
+    labelEn: 'Catalog Clean',
+    css: `
+:scope {
+  --app-skin-accent: #2563eb;
+  --app-skin-accent-soft: color-mix(in srgb, #2563eb 14%, transparent);
+}
+.shop-card,
+.product-card,
+.commerce-card {
+  border-color: color-mix(in srgb, var(--app-skin-accent) 18%, var(--system-subtle-border));
+}
+`,
+  }),
+  Object.freeze({
+    id: 'night_service',
+    labelZh: '夜间服务',
+    labelEn: 'Night Service',
+    css: `
+:scope {
+  --app-skin-accent: #8b5cf6;
+  --app-skin-accent-soft: color-mix(in srgb, #8b5cf6 18%, transparent);
+}
+.store-card,
+.shop-card,
+.restaurant-card,
+.order-card {
+  border-color: color-mix(in srgb, var(--app-skin-accent) 24%, var(--system-subtle-border));
+}
+`,
+  }),
+])
 
-const normalizeCssText = (value = '') =>
-  typeof value === 'string' ? value.slice(0, MAX_APP_SKIN_CSS_LENGTH) : ''
+export const DEFAULT_APP_SKIN_SETTING = Object.freeze({
+  presetId: DEFAULT_APP_SKIN_PRESET_ID,
+  customCssEnabled: false,
+  customCss: '',
+})
 
-const normalizeEnabled = (value) => (typeof value === 'boolean' ? value : false)
+const APP_SKIN_TARGETS_BY_APP_ID = new Map(APP_SKIN_TARGETS.map((target) => [target.appId, target]))
+const APP_SKIN_TARGETS_BY_SCOPE = new Map(APP_SKIN_TARGETS.map((target) => [target.scope, target]))
+const APP_SKIN_PRESETS_BY_ID = new Map(APP_SKIN_PRESETS.map((preset) => [preset.id, preset]))
+
+const normalizeText = (value, fallback = '', maxLength = 120) => {
+  const text = typeof value === 'string' ? value.trim() : ''
+  return (text || fallback).slice(0, maxLength)
+}
+
+const normalizeCssText = (value) =>
+  typeof value === 'string' ? value.slice(0, MAX_APP_SKIN_CSS_CHARS) : ''
 
 export const resolveAppSkinTargetForAppId = (appId = '') => {
-  const normalizedId = typeof appId === 'string' ? appId.trim() : ''
-  return TARGETS_BY_APP_ID.get(normalizedId) || null
+  const normalizedId = normalizeText(appId, '', 120)
+  return APP_SKIN_TARGETS_BY_APP_ID.get(normalizedId) || null
 }
 
 export const resolveAppSkinTargetForScope = (scope = '') => {
   const normalizedScope = normalizeScopeToken(scope, '')
-  return TARGETS_BY_SCOPE.get(normalizedScope) || null
+  return APP_SKIN_TARGETS_BY_SCOPE.get(normalizedScope) || null
 }
 
 export const resolveAppSkinPreset = (presetId = '') => {
-  const normalizedId = typeof presetId === 'string' ? presetId.trim() : ''
-  return APP_SKIN_PRESETS.find((preset) => preset.id === normalizedId) || APP_SKIN_PRESETS[0]
+  const normalizedId = normalizeText(presetId, DEFAULT_APP_SKIN_PRESET_ID, 120)
+  return APP_SKIN_PRESETS_BY_ID.get(normalizedId) || APP_SKIN_PRESETS_BY_ID.get(DEFAULT_APP_SKIN_PRESET_ID)
 }
 
-export const normalizeAppSkin = (input = {}) => {
-  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
-  const presetId =
-    typeof source.presetId === 'string' && PRESET_IDS.has(source.presetId)
-      ? source.presetId
-      : DEFAULT_APP_SKIN_PRESET_ID
+export const resolveAppSkinPresetLabel = (presetId = '', locale = 'en-US') => {
+  const preset = resolveAppSkinPreset(presetId)
+  const language = typeof locale === 'string' ? locale.toLowerCase() : ''
+  return language.startsWith('zh') ? preset.labelZh : preset.labelEn
+}
+
+export const normalizeAppSkinSetting = (input = {}) => {
+  const source = input && typeof input === 'object' ? input : {}
+  const preset = resolveAppSkinPreset(source.presetId)
   return {
-    presetId,
-    customCssEnabled: normalizeEnabled(source.customCssEnabled),
+    presetId: preset.id,
+    customCssEnabled: source.customCssEnabled === true,
     customCss: normalizeCssText(source.customCss),
   }
 }
 
 export const normalizeAppSkinSettings = (input = {}) => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return {}
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
   return Object.fromEntries(
-    Object.entries(input)
-      .map(([rawScope, rawSkin]) => {
+    Object.entries(source)
+      .map(([rawScope, rawSetting]) => {
         const target = resolveAppSkinTargetForScope(rawScope)
         if (!target) return null
-        const skin = normalizeAppSkin(rawSkin)
+        const setting = normalizeAppSkinSetting(rawSetting)
         const isDefault =
-          skin.presetId === DEFAULT_APP_SKIN_PRESET_ID &&
-          skin.customCssEnabled === false &&
-          skin.customCss.trim() === ''
-        return isDefault ? null : [target.scope, skin]
+          setting.presetId === DEFAULT_APP_SKIN_PRESET_ID &&
+          setting.customCssEnabled === false &&
+          setting.customCss.trim() === ''
+        return isDefault ? null : [target.scope, setting]
       })
       .filter(Boolean),
   )
 }
 
-export const buildAppSkinCss = (appSkins = {}) => {
-  const normalized = normalizeAppSkinSettings(appSkins)
-  return Object.entries(normalized)
-    .map(([scope, skin]) => {
-      const preset = resolveAppSkinPreset(skin.presetId)
-      const customCss = skin.customCssEnabled ? skin.customCss : ''
-      const css = [preset.css, customCss]
-        .filter((chunk) => chunk && chunk.trim())
-        .join('\n\n')
-      return css ? scopeCssToSelector(css, `[data-app="${scope}"]`) : ''
+export const buildAppSkinCss = (input = {}) => {
+  const settings = normalizeAppSkinSettings(input)
+  return Object.entries(settings)
+    .map(([scope, setting]) => {
+      const preset = resolveAppSkinPreset(setting.presetId)
+      const chunks = []
+      if (preset.css.trim()) {
+        chunks.push(scopeCssToSelector(preset.css, `[data-app="${scope}"]`))
+      }
+      if (setting.customCssEnabled && setting.customCss.trim()) {
+        chunks.push(scopeCssToSelector(setting.customCss, `[data-app="${scope}"]`))
+      }
+      return chunks.filter(Boolean).join('\n\n')
     })
     .filter(Boolean)
     .join('\n\n')
