@@ -3961,6 +3961,15 @@ onBeforeUnmount(() => {
 }
 
 .home-bottom-area.is-editing {
+  opacity: 0.78;
+  pointer-events: auto;
+}
+
+.home-bottom-area.is-editing .home-page-dots {
+  pointer-events: auto;
+}
+
+.home-bottom-area.is-editing .home-dock {
   opacity: 0.54;
   pointer-events: none;
 }
