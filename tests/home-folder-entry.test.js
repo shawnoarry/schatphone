@@ -301,6 +301,109 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('switches Home pages from page dots while staying in edit mode', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=1')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.home-edit-topbar').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="home-page-dot-1"]').classes()).toContain('is-active')
+
+    await wrapper.get('[data-testid="home-page-dot-3"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-edit-topbar').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="home-page-dot-3"]').classes()).toContain('is-active')
+    expect(wrapper.get('[data-testid="home-page-dot-1"]').classes()).not.toContain('is-active')
+
+    wrapper.unmount()
+  })
+
+  test('swipes between Home pages while staying in edit mode', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=1')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const shell = wrapper.get('.home-shell')
+    await shell.trigger('touchstart', {
+      changedTouches: [{ clientX: 300, clientY: 520 }],
+      target: shell.element,
+    })
+    await shell.trigger('touchmove', {
+      changedTouches: [{ clientX: 220, clientY: 520 }],
+      target: shell.element,
+    })
+    await shell.trigger('touchend')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.home-edit-topbar').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="home-page-dot-2"]').classes()).toContain('is-active')
+
+    wrapper.unmount()
+  })
+
+  test('places a library item after switching pages in Home edit mode', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=1&libraryTile=app_gallery')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).toContain('is-active')
+
+    await wrapper.get('[data-testid="home-page-dot-4"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.get('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(store.settings.appearance.homeWidgetPages[4]).toContain('app_gallery')
+    expect(store.settings.appearance.homeLayoutSlotPlacements[4]).toContainEqual({
+      slotId: 'b-small-1',
+      tileId: 'app_gallery',
+    })
+    expect(wrapper.find('[data-home-tile-id="app_gallery"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('adds available content from an empty template slot in edit mode', async () => {
     const router = createTestRouter()
     await router.push('/home?widgetEdit=1&homePage=4')
