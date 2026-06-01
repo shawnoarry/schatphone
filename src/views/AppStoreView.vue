@@ -7,7 +7,10 @@ import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import {
   APP_ENTRY_TYPE,
+  SHOP_ENTRY_BINDING_TARGET,
+  SHOP_ENTRY_BINDING_TARGET_OPTIONS,
   SHOP_ENTRY_TEMPLATE_OPTIONS,
+  resolveShopEntryBindingTargetOption,
   resolveAppEntryBoundaryCopy,
   resolveAppEntryType,
   resolveAppEntryTypeCopy,
@@ -22,6 +25,10 @@ import {
   resolveAppIconMeta,
   resolveAppIconPresetLabel,
 } from '../lib/app-icon-presentation'
+import {
+  isMiniAppEntryInstalled,
+  normalizeAppStoreMiniAppPlacements,
+} from '../lib/app-store-mini-app-placement'
 import {
   APP_SKIN_PRESETS,
   normalizeAppSkinSetting,
@@ -39,6 +46,8 @@ import {
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
+  SHOPPING_PLATFORM_APP_ENTRIES,
+  SHOPPING_ROUTE,
 } from '../lib/planned-module-registry'
 import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
@@ -55,6 +64,9 @@ const { settings } = storeToRefs(systemStore)
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
 const entryPresentationOverrides = computed(() => settings.value.appearance?.entryPresentationOverrides || {})
+const appStoreMiniAppPlacements = computed(() =>
+  normalizeAppStoreMiniAppPlacements(settings.value.appearance?.appStoreMiniAppPlacements),
+)
 const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
@@ -72,6 +84,10 @@ const APP_STORE_FILTERS = [
   APP_ENTRY_TYPE.SHOP,
   APP_ENTRY_TYPE.SYSTEM,
 ]
+
+const buildShoppingShopEntryId = (serviceKey = '') => `shop_app_shopping_${serviceKey}`
+const resolveShopEntryDefaultTemplateId = (entry = {}) =>
+  entry.defaultTemplateId || resolveFoodShopDefaultTemplateId(entry.restaurantId)
 
 const APP_STORE_ENTRIES = [
   {
@@ -284,6 +300,10 @@ const selectedAppId = ref('app_chat')
 const searchQuery = ref('')
 const libraryNotice = ref('')
 const detailSheetOpen = ref(false)
+const shopCreateSheetOpen = ref(false)
+const shopCreateDraft = reactive({
+  bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+})
 let libraryNoticeTimerId = null
 
 const visibleHomeAppIds = computed(
@@ -313,29 +333,76 @@ const worldAppStoreEntries = computed(() =>
   })),
 )
 
-const shopAppStoreEntries = computed(() =>
+const foodDeliveryShopAppStoreEntries = computed(() =>
   foodDeliveryStore.restaurants.slice(0, 24).map((restaurant) => ({
     id: `shop_app_${restaurant.id}`,
     route: '/food-delivery',
     routeQuery: {
       restaurantId: restaurant.id,
       category: restaurant.category || 'restaurants',
+      entry: 'shop',
+      shopEntryId: `shop_app_${restaurant.id}`,
     },
     labelZh: restaurant.name,
     labelEn: restaurant.name,
     categoryZh: '店铺',
     categoryEn: 'Shops',
-    descZh: restaurant.cuisine || restaurant.address || '外卖店铺入口',
-    descEn: restaurant.cuisine || restaurant.address || 'Food Delivery shop entry',
+    descZh: restaurant.cuisine || restaurant.address || 'Food Delivery 文件夹内小应用',
+    descEn: restaurant.cuisine || restaurant.address || 'Mini app inside Food Delivery folder',
     icon: 'fas fa-store',
     accent: 'warm',
     entryKind: 'shop_app',
     entryType: APP_ENTRY_TYPE.SHOP,
     shopAppEntry: true,
+    sourceOwnedShopEntry: true,
+    sourceModule: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+    bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+    runtimeIdentity: restaurant.id,
+    defaultTemplateId: resolveFoodShopDefaultTemplateId(restaurant.id),
     restaurantId: restaurant.id,
     restaurant,
   })),
 )
+
+const shoppingShopAppStoreEntries = computed(() =>
+  SHOPPING_PLATFORM_APP_ENTRIES.map((service) => {
+    const entryId = buildShoppingShopEntryId(service.key)
+    const defaultCategory = service.defaultCategory || service.categoryKeys?.[0] || 'mall'
+    return {
+      id: entryId,
+      route: SHOPPING_ROUTE,
+      routeQuery: {
+        service: service.key,
+        category: defaultCategory,
+        entry: 'shop',
+        shopEntryId: entryId,
+      },
+      labelZh: service.zh,
+      labelEn: service.en,
+      categoryZh: '店铺',
+      categoryEn: 'Shops',
+      descZh: service.descZh || 'Shopping 文件夹内小应用',
+      descEn: service.descEn || 'Mini app inside Shopping folder',
+      icon: service.icon || 'fas fa-store',
+      accent: service.accent || 'warm',
+      entryKind: 'shop_app',
+      entryType: APP_ENTRY_TYPE.SHOP,
+      shopAppEntry: true,
+      sourceOwnedShopEntry: true,
+      sourceModule: SHOP_ENTRY_BINDING_TARGET.SHOPPING,
+      bindingTarget: SHOP_ENTRY_BINDING_TARGET.SHOPPING,
+      runtimeIdentity: service.key,
+      shoppingServiceKey: service.key,
+      shoppingService: service,
+      defaultTemplateId: service.key === 'daily_fresh' ? 'convenience_shelf' : 'standard',
+    }
+  }),
+)
+
+const shopAppStoreEntries = computed(() => [
+  ...foodDeliveryShopAppStoreEntries.value,
+  ...shoppingShopAppStoreEntries.value,
+])
 
 const appStoreBaseEntries = computed(() => [
   ...APP_STORE_ENTRIES,
@@ -358,28 +425,55 @@ const appStoreItems = computed(() =>
             toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
           }
         : resolveAppIconMeta(entry.id, appIconOverrides.value, locale.value)
+    const bindingTarget = entry.shopAppEntry
+      ? iconMeta.bindingTarget || entry.bindingTarget || entry.sourceModule || SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
+      : ''
+    const bindingTargetOption = entry.shopAppEntry ? resolveShopEntryBindingTargetOption(bindingTarget) : null
+    const bindingTargetLabel = bindingTargetOption ? t(bindingTargetOption.labelZh, bindingTargetOption.labelEn) : ''
+    const bindingTargetOwnerCopy = bindingTargetOption
+      ? t(bindingTargetOption.ownerZh, bindingTargetOption.ownerEn)
+      : ''
     const visible = visibleHomeAppIds.value.has(entry.id)
     const inDock = DOCK_APP_IDS.has(entry.id)
     const baseLabel = t(entry.labelZh, entry.labelEn)
     const baseDesc = t(entry.descZh, entry.descEn)
     const entryTypeCopy = resolveAppEntryTypeCopy(entryType, t)
-    const templateId = iconMeta.hasTemplateOverride
-      ? iconMeta.templateId
-      : resolveFoodShopDefaultTemplateId(entry.restaurantId)
-    const template = resolveShopEntryTemplateOption(templateId)
+    const templateId = entry.shopAppEntry
+      ? iconMeta.hasTemplateOverride
+        ? iconMeta.templateId
+        : resolveShopEntryDefaultTemplateId(entry)
+      : ''
+    const template = entry.shopAppEntry ? resolveShopEntryTemplateOption(templateId) : null
+    const coverGalleryAssetId = entry.shopAppEntry ? iconMeta.coverGalleryAssetId || '' : ''
+    const folderInstalled = entry.shopAppEntry
+      ? isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, entry.id)
+      : false
     return {
       ...entry,
       entryType,
       entryTypeLabel: entryTypeCopy.label,
       entryTypeTitle: entryTypeCopy.title,
-      entryTypeDescription: entryTypeCopy.description,
-      boundaryCopy: resolveAppEntryBoundaryCopy({ ...entry, entryType }, t),
+      entryTypeDescription:
+        entryType === APP_ENTRY_TYPE.SHOP
+          ? t(
+              '看起来像店铺小 App；菜单或商品、购物车、订单和服务通知仍由绑定目标 App 持有。',
+              'Looks like a shop mini-app; menus or products, cart, orders, and service notifications stay with the bound target app.',
+            )
+          : entryTypeCopy.description,
+      boundaryCopy: resolveAppEntryBoundaryCopy({ ...entry, entryType, bindingTarget }, t),
+      bindingTarget,
+      bindingTargetLabel,
+      bindingTargetOwnerCopy,
+      folderInstalled,
       icon: iconMeta.icon,
       accent: iconMeta.accent,
       toneClass: iconMeta.toneClass,
       sourceType: iconMeta.sourceType || 'preset',
       galleryAssetId: iconMeta.galleryAssetId || '',
+      coverGalleryAssetId,
       hasImageIcon: iconMeta.hasImageIcon === true,
+      hasCoverImage: entry.shopAppEntry && Boolean(coverGalleryAssetId),
+      coverImageUrl: entry.shopAppEntry && coverGalleryAssetId ? entryCoverPreviewUrls[entry.id] || '' : '',
       iconImageUrl:
         entry.shopAppEntry && iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
           ? entryImagePreviewUrls[entry.id] || ''
@@ -397,7 +491,7 @@ const appStoreItems = computed(() =>
       shortDescriptionOverride: iconMeta.shortDescription || '',
       entryTags: [...(iconMeta.tags || [])],
       templateId,
-      templateLabel: t(template.labelZh, template.labelEn),
+      templateLabel: template ? t(template.labelZh, template.labelEn) : '',
       visible,
       inDock,
       homePageIndex: homeAppPageMap.value.get(entry.id),
@@ -442,6 +536,10 @@ function appMatchesSearch(app) {
     ...(app.entryTags || []),
     app.templateLabel,
     app.templateId,
+    app.bindingTarget,
+    app.bindingTargetLabel,
+    app.bindingTargetOwnerCopy,
+    app.coverGalleryAssetId,
   ]
     .filter(Boolean)
     .join(' ')
@@ -455,7 +553,7 @@ function filterLabel(filterId) {
   if (filterId === 'library') return t('库内', 'Library')
   if (filterId === APP_ENTRY_TYPE.APP) return t('Apps', 'Apps')
   if (filterId === APP_ENTRY_TYPE.WORLD) return t('世界', 'World')
-  if (filterId === APP_ENTRY_TYPE.SHOP) return t('店铺', 'Shops')
+  if (filterId === APP_ENTRY_TYPE.SHOP) return t('文件夹小应用', 'Mini apps')
   if (filterId === APP_ENTRY_TYPE.SYSTEM) return t('系统', 'System')
   return filterId
 }
@@ -468,6 +566,54 @@ const appStoreFilters = computed(() =>
   })).filter((filter) => filter.id === 'all' || filter.count > 0),
 )
 
+const shopBindingTargetOptions = computed(() =>
+  SHOP_ENTRY_BINDING_TARGET_OPTIONS.map((option) => ({
+    ...option,
+    label: t(option.labelZh, option.labelEn),
+    ownerCopy: t(option.ownerZh, option.ownerEn),
+  })),
+)
+
+const selectedFilterIsShops = computed(() => selectedFilter.value === APP_ENTRY_TYPE.SHOP)
+const shopMiniAppSummaryLabel = computed(() => {
+  const entries = appStoreItems.value.filter((app) => app.shopAppEntry)
+  const foodDeliveryCount = entries.filter((app) => app.bindingTarget === SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY).length
+  const shoppingCount = entries.filter((app) => app.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING).length
+  const installedCount = entries.filter((app) => app.folderInstalled).length
+  return t(
+    `${installedCount}/${entries.length} installed mini app entries · ${foodDeliveryCount} Food Delivery · ${shoppingCount} Shopping`,
+    `${installedCount}/${entries.length} installed mini app entries · ${foodDeliveryCount} Food Delivery · ${shoppingCount} Shopping`,
+  )
+})
+const shopInstallHandoffCopy = computed(() =>
+  t(
+    'These are not peer apps beside Chat. They are next-layer mini apps inside folders like Shopping and Food Delivery. App Store manages facade, install state, and launch context.',
+    'These are not peer apps beside Chat. They are next-layer mini apps inside folders like Shopping and Food Delivery. App Store manages facade, install state, and launch context.',
+  ),
+)
+
+const selectedShopCreateTargetOption = computed(
+  () =>
+    shopBindingTargetOptions.value.find((option) => option.id === shopCreateDraft.bindingTarget) ||
+    shopBindingTargetOptions.value[0],
+)
+const selectedShopCreateHandoffCopy = computed(() =>
+  shopCreateDraft.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING
+    ? t(
+        'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. App Store only hands off the mini app entry to the Shopping folder.',
+        'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. App Store only hands off the mini app entry to the Shopping folder.',
+      )
+    : t(
+        'Food Delivery owns restaurants, menus, food cart, checkout, delivery orders, and service notifications. App Store only hands off the mini app entry to the Food Delivery folder.',
+        'Food Delivery owns restaurants, menus, food cart, checkout, delivery orders, and service notifications. App Store only hands off the mini app entry to the Food Delivery folder.',
+      ),
+)
+const selectedShopCreateOpenLabel = computed(() =>
+  shopCreateDraft.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING
+    ? t('加入 Shopping 文件夹', 'Add inside Shopping folder')
+    : t('加入 Food Delivery 文件夹', 'Add inside Food Delivery folder'),
+)
+
 const filteredAppStoreItems = computed(() =>
   appStoreItems.value
     .filter((item) => appMatchesFilter(item, selectedFilter.value))
@@ -476,13 +622,26 @@ const filteredAppStoreItems = computed(() =>
 
 const selectedApp = computed(() => {
   const selected = appStoreItems.value.find((item) => item.id === selectedAppId.value)
-  if (selected && appMatchesFilter(selected, selectedFilter.value) && appMatchesSearch(selected)) return selected
+  if (
+    selected &&
+    appMatchesFilter(selected, selectedFilter.value) &&
+    appMatchesSearch(selected)
+  ) {
+    return selected
+  }
   return filteredAppStoreItems.value[0] || null
 })
 
 const selectedAppPlacementLabel = computed(() => {
+  if (selectedApp.value?.shopAppEntry) {
+    const placement = selectedApp.value.folderInstalled
+      ? t('Installed in folder', 'Installed in folder')
+      : t('Not in folder', 'Not in folder')
+    return selectedApp.value.bindingTargetLabel
+      ? `${selectedApp.value.bindingTargetLabel} · ${placement}`
+      : placement
+  }
   if (selectedApp.value?.protectedHomeEntry) return t('今日视图', 'Today View')
-  if (selectedApp.value?.shopAppEntry) return t('外卖店铺区', 'Food shops')
   if (selectedApp.value?.visible && Number.isInteger(selectedApp.value.homePageIndex)) {
     return t(`第 ${selectedApp.value.homePageIndex + 1} 屏`, `Screen ${selectedApp.value.homePageIndex + 1}`)
   }
@@ -492,14 +651,16 @@ const selectedAppPlacementLabel = computed(() => {
 
 const selectedAppStatusLabel = computed(() => {
   if (selectedApp.value?.protectedHomeEntry) return t('固定入口', 'Fixed')
-  if (selectedApp.value?.shopAppEntry) return t('店铺入口', 'Shop entry')
+  if (selectedApp.value?.shopAppEntry) {
+    return selectedApp.value.folderInstalled ? t('Installed', 'Installed') : t('Not installed', 'Not installed')
+  }
   if (selectedApp.value?.visible) return t('主屏可见', 'On Home')
   if (selectedApp.value?.inDock) return t('Dock 常驻', 'In Dock')
   return t('库内待放置', 'In Library')
 })
 
 const selectedAppEntryKindLabel = computed(() => {
-  if (selectedApp.value?.shopAppEntry) return t('店铺入口', 'Shop App')
+  if (selectedApp.value?.shopAppEntry) return t('文件夹小应用', 'Folder mini app')
   if (selectedApp.value?.worldAppEntry) return t('世界入口', 'World App')
   if (selectedApp.value?.entryKind === 'folder') return t('文件夹', 'Folder')
   if (selectedApp.value?.entryType === APP_ENTRY_TYPE.SYSTEM) return t('系统入口', 'System')
@@ -509,6 +670,15 @@ const selectedAppEntryKindLabel = computed(() => {
 const selectedAppInfoRows = computed(() => {
   const app = selectedApp.value
   if (!app) return []
+  if (app.shopAppEntry) {
+    return [
+      { key: 'target-folder', label: t('目标文件夹', 'Target folder'), value: app.bindingTargetLabel },
+      { key: 'type', label: t('入口类型', 'Entry type'), value: app.entryTypeLabel },
+      { key: 'category', label: t('原分类', 'Original category'), value: app.category },
+      { key: 'route', label: t('打开位置', 'Open target'), value: app.route },
+      { key: 'id', label: t('入口身份', 'Entry identity'), value: app.id },
+    ].filter((row) => row.value)
+  }
   return [
     { key: 'type', label: t('入口类型', 'Entry type'), value: app.entryTypeLabel },
     { key: 'category', label: t('原分类', 'Original category'), value: app.category },
@@ -543,6 +713,15 @@ const selectedAppDisplayRows = computed(() => {
       value: app.shopAppEntry ? app.templateLabel : '',
     },
     {
+      key: 'cover',
+      label: t('店铺封面', 'Shop cover'),
+      value: app.shopAppEntry
+        ? app.coverGalleryAssetId
+          ? t('已设置', 'Set')
+          : t('未设置', 'Not set')
+        : '',
+    },
+    {
       key: 'custom',
       label: t('自定义名称', 'Custom name'),
       value: app.displayNameOverride || t('未设置', 'Not set'),
@@ -551,6 +730,60 @@ const selectedAppDisplayRows = computed(() => {
 })
 
 const selectedShopAppDetailRows = computed(() => {
+  const app = selectedApp.value
+  if (app?.shopAppEntry) {
+    const rows = [
+      { key: 'target-folder', label: t('目标文件夹', 'Target folder'), value: app.bindingTargetLabel },
+      {
+        key: 'folder-placement',
+        label: t('Folder placement', 'Folder placement'),
+        value: app.folderInstalled ? t('Installed', 'Installed') : t('Not installed', 'Not installed'),
+      },
+      { key: 'entry-layer', label: t('入口层级', 'Entry layer'), value: t('文件夹内小应用', 'Folder mini app') },
+      { key: 'runtime-owner', label: t('运行所有者', 'Runtime owner'), value: app.bindingTargetLabel },
+      { key: 'owner-copy', label: t('业务归属', 'Business owner'), value: app.bindingTargetOwnerCopy },
+      { key: 'runtime-identity', label: t('绑定记录', 'Bound record'), value: app.runtimeIdentity },
+    ]
+
+    if (app.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING) {
+      const service = app.shoppingService
+      rows.push(
+        {
+          key: 'shopping-service',
+          label: t('购物服务', 'Shopping service'),
+          value: service ? t(service.zh, service.en) : app.shoppingServiceKey,
+        },
+        {
+          key: 'shopping-categories',
+          label: t('默认货架', 'Default shelves'),
+          value: Array.isArray(service?.categoryKeys) ? service.categoryKeys.join(' · ') : '',
+        },
+      )
+      return rows.filter((row) => row.value)
+    }
+
+    const boundRestaurant = app.restaurant
+    if (boundRestaurant) {
+      rows.push(
+        { key: 'cuisine', label: t('店铺类型', 'Cuisine'), value: boundRestaurant.cuisine || boundRestaurant.category },
+        { key: 'address', label: t('地址', 'Address'), value: boundRestaurant.address },
+        {
+          key: 'eta',
+          label: t('预计送达', 'ETA'),
+          value: boundRestaurant.deliveryEtaMinutes ? `${boundRestaurant.deliveryEtaMinutes} min` : '',
+        },
+        {
+          key: 'fee',
+          label: t('配送费', 'Delivery fee'),
+          value: boundRestaurant.deliveryFee
+            ? `${boundRestaurant.deliveryFee} ${boundRestaurant.currency || ''}`.trim()
+            : '',
+        },
+      )
+    }
+
+    return rows.filter((row) => row.value)
+  }
   const restaurant = selectedApp.value?.restaurant
   if (!restaurant) return []
   return [
@@ -624,6 +857,9 @@ const selectedWorldAppHandoff = computed(() => {
 const selectedAppCanCustomizeIdentity = computed(() =>
   Boolean(selectedApp.value && !selectedApp.value.worldAppEntry),
 )
+const selectedAppCanEditShopBindingTarget = computed(() =>
+  Boolean(selectedApp.value?.shopAppEntry && !selectedApp.value.sourceOwnedShopEntry),
+)
 const selectedAppSkinTarget = computed(() =>
   selectedApp.value?.worldAppEntry || selectedApp.value?.shopAppEntry
     ? null
@@ -633,22 +869,32 @@ const selectedAppCanCustomizeSkin = computed(() => Boolean(selectedAppSkinTarget
 const selectedAppCanManageHomePlacement = computed(() =>
   Boolean(selectedApp.value && !selectedApp.value.shopAppEntry),
 )
+const selectedAppCanManageFolderPlacement = computed(() => Boolean(selectedApp.value?.shopAppEntry))
+const selectedFolderPlacementActionLabel = computed(() =>
+  selectedApp.value?.folderInstalled ? t('Remove from folder', 'Remove from folder') : t('Add to folder', 'Add to folder'),
+)
 const galleryIconAssets = computed(() => galleryStore.assets.slice(0, 120))
 const identityEditorOpen = ref(false)
 const identityFeedback = ref('')
 const identityFileInput = ref(null)
 const identityDraftPreviewUrl = ref('')
+const identityDraftCoverPreviewUrl = ref('')
 const entryImagePreviewUrls = reactive({})
+const entryCoverPreviewUrls = reactive({})
 let entryImagePreviewVersion = 0
+let entryCoverPreviewVersion = 0
+const identityUploadTarget = ref('icon')
 const identityDraft = reactive({
   displayName: '',
   sourceType: 'preset',
   icon: '',
   accent: 'default',
   galleryAssetId: '',
+  coverGalleryAssetId: '',
   shortDescription: '',
   tagsText: '',
   templateId: 'standard',
+  bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
 })
 let identityDraftPreviewVersion = 0
 const skinEditorOpen = ref(false)
@@ -670,10 +916,15 @@ const syncIdentityDraftFromSelectedApp = () => {
   identityDraft.icon = meta.icon
   identityDraft.accent = meta.accent
   identityDraft.galleryAssetId = meta.galleryAssetId || ''
+  identityDraft.coverGalleryAssetId = app.shopAppEntry ? meta.coverGalleryAssetId || '' : ''
   identityDraft.shortDescription = meta.shortDescription || ''
   identityDraft.tagsText = (meta.tags || []).join(', ')
   identityDraft.templateId =
     meta.hasTemplateOverride && app.shopAppEntry ? meta.templateId : app.templateId || meta.templateId || 'standard'
+  identityDraft.bindingTarget =
+    app.shopAppEntry
+      ? meta.bindingTarget || app.bindingTarget || SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
+      : SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
   identityFeedback.value = ''
 }
 
@@ -690,9 +941,11 @@ const identityPreviewMeta = computed(() => {
           icon: identityDraft.icon,
           accent: identityDraft.accent,
           galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
+          coverGalleryAssetId: identityDraft.coverGalleryAssetId,
           shortDescription: identityDraft.shortDescription,
           tags: identityDraft.tagsText,
           templateId: identityDraft.templateId,
+          bindingTarget: identityDraft.bindingTarget,
           hasOverride: true,
         },
       },
@@ -737,6 +990,24 @@ const refreshIdentityDraftPreview = async () => {
   identityDraftPreviewUrl.value = typeof url === 'string' ? url : ''
 }
 
+const refreshIdentityDraftCoverPreview = async () => {
+  if (!identityDraft.coverGalleryAssetId) {
+    identityDraftCoverPreviewUrl.value = ''
+    return
+  }
+
+  const asset = galleryStore.findAssetById(identityDraft.coverGalleryAssetId)
+  if (!asset) {
+    identityDraftCoverPreviewUrl.value = ''
+    return
+  }
+
+  const url = await galleryStore.getAssetPreviewUrl(identityDraft.coverGalleryAssetId, {
+    scopeId: 'app-store-identity-cover-draft',
+  })
+  identityDraftCoverPreviewUrl.value = typeof url === 'string' ? url : ''
+}
+
 const refreshEntryImagePreviews = async () => {
   const currentVersion = entryImagePreviewVersion + 1
   entryImagePreviewVersion = currentVersion
@@ -766,6 +1037,35 @@ const refreshEntryImagePreviews = async () => {
   })
 }
 
+const refreshEntryCoverPreviews = async () => {
+  const currentVersion = entryCoverPreviewVersion + 1
+  entryCoverPreviewVersion = currentVersion
+  const activeIds = new Set()
+  const overrides = entryPresentationOverrides.value
+
+  await Promise.all(
+    Object.entries(overrides).map(async ([entryId, override]) => {
+      if (!override?.coverGalleryAssetId) return
+      activeIds.add(entryId)
+      const asset = galleryStore.findAssetById(override.coverGalleryAssetId)
+      if (!asset) {
+        entryCoverPreviewUrls[entryId] = ''
+        return
+      }
+      const url = await galleryStore.getAssetPreviewUrl(override.coverGalleryAssetId, {
+        scopeId: 'app-store-entry-covers',
+      })
+      if (currentVersion !== entryCoverPreviewVersion) return
+      entryCoverPreviewUrls[entryId] = typeof url === 'string' ? url : ''
+    }),
+  )
+
+  if (currentVersion !== entryCoverPreviewVersion) return
+  Object.keys(entryCoverPreviewUrls).forEach((entryId) => {
+    if (!activeIds.has(entryId)) delete entryCoverPreviewUrls[entryId]
+  })
+}
+
 watch(
   () => [identityDraft.sourceType, identityDraft.galleryAssetId, galleryStore.hasFinishedStorageHydration],
   refreshIdentityDraftPreview,
@@ -773,8 +1073,17 @@ watch(
 )
 
 watch(
+  () => [identityDraft.coverGalleryAssetId, galleryStore.hasFinishedStorageHydration],
+  refreshIdentityDraftCoverPreview,
+  { immediate: true },
+)
+
+watch(
   () => [JSON.stringify(entryPresentationOverrides.value), galleryStore.hasFinishedStorageHydration],
-  refreshEntryImagePreviews,
+  () => {
+    void refreshEntryImagePreviews()
+    void refreshEntryCoverPreviews()
+  },
   { immediate: true },
 )
 
@@ -857,6 +1166,10 @@ const saveIdentityEditor = () => {
     tags: identityDraft.tagsText,
     templateId: identityDraft.templateId,
   }
+  if (selectedApp.value.shopAppEntry) {
+    payload.bindingTarget = identityDraft.bindingTarget
+    payload.coverGalleryAssetId = identityDraft.coverGalleryAssetId
+  }
   const saved = selectedApp.value.shopAppEntry
     ? systemStore.setEntryPresentationOverride(selectedApp.value.id, payload)
     : systemStore.setAppIconOverride(selectedApp.value.id, payload)
@@ -867,6 +1180,7 @@ const saveIdentityEditor = () => {
   systemStore.saveNow()
   void refreshAppStoreIconPreviews()
   void refreshEntryImagePreviews()
+  void refreshEntryCoverPreviews()
   identityFeedback.value = t('图标与显示名已更新。', 'Icon and display name updated.')
   closeIdentityEditor()
 }
@@ -881,12 +1195,14 @@ const restoreIdentityDefault = () => {
   systemStore.saveNow()
   void refreshAppStoreIconPreviews()
   void refreshEntryImagePreviews()
+  void refreshEntryCoverPreviews()
   syncIdentityDraftFromSelectedApp()
   identityFeedback.value = t('已恢复默认图标。', 'Default icon restored.')
   closeIdentityEditor()
 }
 
-const openIdentityUpload = () => {
+const openIdentityUpload = (target = 'icon') => {
+  identityUploadTarget.value = target === 'cover' ? 'cover' : 'icon'
   identityFileInput.value?.click()
 }
 
@@ -907,6 +1223,13 @@ const handleIdentityUpload = async (event) => {
     return
   }
 
+  if (identityUploadTarget.value === 'cover') {
+    identityDraft.coverGalleryAssetId = assetId
+    identityFeedback.value = t('封面图片已加入相册并设为待保存封面。', 'Image added to Gallery and selected for this cover.')
+    await nextTick()
+    return
+  }
+
   identityDraft.sourceType = 'gallery'
   identityDraft.galleryAssetId = assetId
   identityFeedback.value = t('图片已加入相册并设为待保存图标。', 'Image added to Gallery and selected for this icon.')
@@ -914,6 +1237,7 @@ const handleIdentityUpload = async (event) => {
 }
 
 const appStoreItemStateKey = (app) => {
+  if (app?.shopAppEntry) return app.folderInstalled ? 'folder' : 'library'
   if (app?.protectedHomeEntry) return 'fixed'
   if (app?.visible) return 'home'
   if (app?.inDock) return 'dock'
@@ -921,7 +1245,7 @@ const appStoreItemStateKey = (app) => {
 }
 
 const appStoreItemStateLabel = (app) => {
-  if (app?.shopAppEntry) return t('店铺', 'Shop')
+  if (app?.shopAppEntry) return app.folderInstalled ? t('Installed', 'Installed') : t('Not installed', 'Not installed')
   const state = appStoreItemStateKey(app)
   if (state === 'fixed') return t('固定', 'Fixed')
   if (state === 'home') return t('主屏', 'Home')
@@ -930,8 +1254,13 @@ const appStoreItemStateLabel = (app) => {
 }
 
 const appStoreItemPlacementNote = (app) => {
+  if (app?.shopAppEntry) {
+    const placement = app.folderInstalled ? t('Installed', 'Installed') : t('Not installed', 'Not installed')
+    return app.bindingTargetLabel
+      ? `${app.bindingTargetLabel} · ${placement}`
+      : placement
+  }
   if (app?.protectedHomeEntry) return t('今日视图固定', 'Fixed in Today View')
-  if (app?.shopAppEntry) return t('外卖店铺区', 'Food shops')
   if (app?.visible && Number.isInteger(app.homePageIndex)) {
     return t(`第 ${app.homePageIndex + 1} 屏`, `Screen ${app.homePageIndex + 1}`)
   }
@@ -961,9 +1290,51 @@ const openSelectedApp = () => {
   router.push(buildRouteWithReturnSource(selectedApp.value.route, 'home', { homePage: route.query.homePage }))
 }
 
+const toggleSelectedMiniAppFolderPlacement = () => {
+  if (!selectedApp.value?.shopAppEntry) return
+  const nextInstalled = !selectedApp.value.folderInstalled
+  systemStore.setAppStoreMiniAppInstalled(selectedApp.value.id, nextInstalled)
+  systemStore.saveNow()
+  showNotice(
+    nextInstalled
+      ? t('Mini app added to folder', 'Mini app added to folder')
+      : t('Mini app removed from folder', 'Mini app removed from folder'),
+  )
+}
+
+const openShopCreateSheet = () => {
+  shopCreateDraft.bindingTarget = SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
+  detailSheetOpen.value = false
+  shopCreateSheetOpen.value = true
+}
+
+const closeShopCreateSheet = () => {
+  shopCreateSheetOpen.value = false
+}
+
+const openShopCreateTarget = () => {
+  const bindingTarget =
+    shopCreateDraft.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING
+      ? SHOP_ENTRY_BINDING_TARGET.SHOPPING
+      : SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
+  const query = buildHomeSourceQuery(currentHomePageQueryValue(), {
+    entry: 'shop',
+    createShop: '1',
+    bindingTarget,
+    source: 'app_store',
+    category: bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING ? 'mall' : 'restaurants',
+  })
+  shopCreateSheetOpen.value = false
+  router.push({
+    path: bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING ? SHOPPING_ROUTE : '/food-delivery',
+    query,
+  })
+}
+
 const selectFilter = (filterId) => {
   selectedFilter.value = filterId
   detailSheetOpen.value = false
+  shopCreateSheetOpen.value = false
   const firstMatch = appStoreItems.value.find((item) => appMatchesFilter(item, filterId) && appMatchesSearch(item))
   if (firstMatch) selectedAppId.value = firstMatch.id
 }
@@ -1022,7 +1393,9 @@ const removeSelectedAppFromHome = () => {
 onBeforeUnmount(() => {
   if (libraryNoticeTimerId) clearTimeout(libraryNoticeTimerId)
   galleryStore.releaseAssetPreviewScope('app-store-identity-draft')
+  galleryStore.releaseAssetPreviewScope('app-store-identity-cover-draft')
   galleryStore.releaseAssetPreviewScope('app-store-entry-icons')
+  galleryStore.releaseAssetPreviewScope('app-store-entry-covers')
 })
 </script>
 
@@ -1117,6 +1490,28 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <div
+          v-if="selectedFilterIsShops"
+          class="app-store-shop-controls"
+          data-testid="app-store-shop-controls"
+        >
+          <div class="app-store-shop-controls-head">
+            <div class="app-store-shop-controls-copy">
+              <p>{{ shopMiniAppSummaryLabel }}</p>
+              <small>{{ shopInstallHandoffCopy }}</small>
+            </div>
+            <button
+              type="button"
+              class="app-store-shop-create-button"
+              data-testid="app-store-shop-create"
+              @click="openShopCreateSheet"
+            >
+              <i class="fas fa-plus" aria-hidden="true"></i>
+              <span>{{ t('添加小应用', 'Add mini app') }}</span>
+            </button>
+          </div>
+        </div>
+
         <div class="app-store-layout">
           <div class="app-store-list" aria-label="App Store list">
             <button
@@ -1126,7 +1521,10 @@ onBeforeUnmount(() => {
               class="app-store-item"
               :class="[
                 `is-state-${appStoreItemStateKey(app)}`,
-                { 'is-visible': app.visible, 'is-selected': selectedApp?.id === app.id },
+                {
+                  'is-visible': app.visible,
+                  'is-selected': selectedApp?.id === app.id,
+                },
               ]"
               :data-testid="`app-store-item-${app.id}`"
               :aria-label="`${app.label} · ${appStoreItemStateLabel(app)}`"
@@ -1182,6 +1580,13 @@ onBeforeUnmount(() => {
               >
                 <i class="fas fa-xmark" aria-hidden="true"></i>
               </button>
+            </div>
+            <div
+              v-if="selectedApp.shopAppEntry && selectedApp.coverImageUrl"
+              class="app-store-shop-cover"
+              data-testid="app-store-shop-cover"
+            >
+              <img :src="selectedApp.coverImageUrl" :alt="`${selectedApp.label} cover`" />
             </div>
             <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
             <section class="app-store-entry-panel" data-testid="app-store-entry-info">
@@ -1265,6 +1670,17 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <div class="app-store-actions">
+              <button
+                v-if="selectedAppCanManageFolderPlacement"
+                type="button"
+                class="app-store-action"
+                :class="{ 'is-danger': selectedApp.folderInstalled }"
+                data-testid="app-store-shop-folder-toggle"
+                @click="toggleSelectedMiniAppFolderPlacement"
+              >
+                <i :class="selectedApp.folderInstalled ? 'fas fa-folder-minus' : 'fas fa-folder-plus'" aria-hidden="true"></i>
+                <span>{{ selectedFolderPlacementActionLabel }}</span>
+              </button>
               <button type="button" class="app-store-action is-primary" @click="openSelectedApp" data-testid="app-store-open">
                 <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
                 <span>{{ t('打开', 'Open') }}</span>
@@ -1349,6 +1765,13 @@ onBeforeUnmount(() => {
           <i class="fas fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
+      <div
+        v-if="selectedApp.shopAppEntry && selectedApp.coverImageUrl"
+        class="app-store-shop-cover"
+        data-testid="app-store-shop-cover-sheet"
+      >
+        <img :src="selectedApp.coverImageUrl" :alt="`${selectedApp.label} cover`" />
+      </div>
       <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
       <section class="app-store-entry-panel" data-testid="app-store-entry-info-sheet">
         <div class="app-store-entry-panel-head">
@@ -1432,6 +1855,17 @@ onBeforeUnmount(() => {
       </div>
       <div class="app-store-actions">
         <button
+          v-if="selectedAppCanManageFolderPlacement"
+          type="button"
+          class="app-store-action"
+          :class="{ 'is-danger': selectedApp.folderInstalled }"
+          data-testid="app-store-shop-folder-toggle-sheet"
+          @click="toggleSelectedMiniAppFolderPlacement"
+        >
+          <i :class="selectedApp.folderInstalled ? 'fas fa-folder-minus' : 'fas fa-folder-plus'" aria-hidden="true"></i>
+          <span>{{ selectedFolderPlacementActionLabel }}</span>
+        </button>
+        <button
           type="button"
           class="app-store-action is-primary"
           data-testid="app-store-open-sheet"
@@ -1483,6 +1917,91 @@ onBeforeUnmount(() => {
         {{ t('这是系统入口，会固定保留在今日视图，确保应用商城始终可返回。', 'This system entry stays fixed in Today View so App Store remains reachable.') }}
       </p>
     </article>
+    <div
+      v-if="shopCreateSheetOpen"
+      class="app-store-identity-backdrop"
+      @click="closeShopCreateSheet"
+    ></div>
+    <section
+      v-if="shopCreateSheetOpen"
+      class="app-store-identity-sheet app-store-shop-create-sheet"
+      data-testid="app-store-shop-create-sheet"
+    >
+      <div class="app-store-identity-head">
+        <div class="app-store-shop-create-icon">
+          <i class="fas fa-store" aria-hidden="true"></i>
+        </div>
+        <div class="app-store-identity-title">
+          <p>{{ t('目标文件夹绑定', 'Target folder binding') }}</p>
+          <h2>{{ t('添加文件夹小应用', 'Add folder mini app') }}</h2>
+          <span>
+            {{
+              t(
+                '先选择它要进入哪个主屏文件夹。App Store 只管理手机上看到的门面和打开上下文。',
+                'Choose the Home folder first. App Store only manages the phone-facing facade and launch context.',
+              )
+            }}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="app-store-identity-close"
+          :aria-label="t('Close', 'Close')"
+          @click="closeShopCreateSheet"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="app-store-identity-fields">
+        <label class="app-store-identity-field app-store-identity-wide-field">
+          <span>{{ t('目标文件夹', 'Target folder') }}</span>
+          <select v-model="shopCreateDraft.bindingTarget" data-testid="app-store-shop-create-target">
+            <option
+              v-for="option in shopBindingTargetOptions"
+              :key="option.id"
+              :value="option.id"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <section
+        class="app-store-shop-create-boundary"
+        data-testid="app-store-shop-create-boundary"
+        :data-binding-target="shopCreateDraft.bindingTarget"
+      >
+        <div>
+          <i class="fas fa-diagram-project" aria-hidden="true"></i>
+          <strong>{{ selectedShopCreateTargetOption?.label }}</strong>
+        </div>
+        <p>{{ selectedShopCreateTargetOption?.ownerCopy }}</p>
+        <small>{{ selectedShopCreateHandoffCopy }}</small>
+      </section>
+
+      <div class="app-store-identity-footer">
+        <button
+          type="button"
+          class="app-store-action"
+          data-testid="app-store-shop-create-cancel"
+          @click="closeShopCreateSheet"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+          <span>{{ t('Cancel', 'Cancel') }}</span>
+        </button>
+        <button
+          type="button"
+          class="app-store-action is-primary"
+          data-testid="app-store-shop-create-open-target"
+          @click="openShopCreateTarget"
+        >
+          <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          <span>{{ selectedShopCreateOpenLabel }}</span>
+        </button>
+      </div>
+    </section>
     <div
       v-if="identityEditorOpen"
       class="app-store-identity-backdrop"
@@ -1591,6 +2110,51 @@ onBeforeUnmount(() => {
         </label>
 
         <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field app-store-identity-wide-field">
+          <span>{{ t('目标文件夹', 'Target folder') }}</span>
+          <select
+            v-model="identityDraft.bindingTarget"
+            data-testid="app-store-identity-shop-binding-target"
+            :disabled="!selectedAppCanEditShopBindingTarget"
+          >
+            <option
+              v-for="option in shopBindingTargetOptions"
+              :key="option.id"
+              :value="option.id"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <small class="app-store-identity-help">
+            {{
+              selectedAppCanEditShopBindingTarget
+                ? t('选择这个小应用安装进哪个文件夹；该文件夹继续持有菜单或商品、购物车和订单。', 'Choose which folder this mini app installs into. That folder still owns menus or products, cart, and orders.')
+                : t('已有来源记录的小应用跟随目标文件夹；App Store 只改名称、图标和门面展示。', 'Existing source-backed mini apps follow their target folder. App Store only changes name, icon, and facade.')
+            }}
+          </small>
+        </label>
+
+        <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field app-store-identity-wide-field">
+          <span>{{ t('店铺封面', 'Shop cover') }}</span>
+          <select v-model="identityDraft.coverGalleryAssetId" data-testid="app-store-identity-shop-cover">
+            <option value="">{{ t('不设置封面', 'No cover') }}</option>
+            <option
+              v-for="asset in galleryIconAssets"
+              :key="asset.id"
+              :value="asset.id"
+            >
+              {{ asset.name }}
+            </option>
+          </select>
+          <div
+            v-if="identityDraftCoverPreviewUrl"
+            class="app-store-identity-cover-preview"
+            data-testid="app-store-identity-shop-cover-preview"
+          >
+            <img :src="identityDraftCoverPreviewUrl" :alt="`${selectedApp.label} cover preview`" />
+          </div>
+        </label>
+
+        <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field app-store-identity-wide-field">
           <span>{{ t('入口短描述', 'Entry description') }}</span>
           <textarea
             v-model="identityDraft.shortDescription"
@@ -1627,9 +2191,19 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="app-store-identity-upload">
-        <button type="button" class="app-store-action" @click="openIdentityUpload">
+        <button type="button" class="app-store-action" @click="openIdentityUpload('icon')">
           <i class="fas fa-upload" aria-hidden="true"></i>
           <span>{{ t('上传图片', 'Upload image') }}</span>
+        </button>
+        <button
+          v-if="selectedApp.shopAppEntry"
+          type="button"
+          class="app-store-action"
+          data-testid="app-store-identity-upload-cover"
+          @click="openIdentityUpload('cover')"
+        >
+          <i class="fas fa-image" aria-hidden="true"></i>
+          <span>{{ t('Upload shop cover', 'Upload shop cover') }}</span>
         </button>
         <input
           ref="identityFileInput"
@@ -2066,6 +2640,61 @@ onBeforeUnmount(() => {
   background: var(--system-accent);
 }
 
+.app-store-shop-controls {
+  margin-top: 10px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  background: var(--system-surface-muted);
+}
+
+.app-store-shop-controls-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-store-shop-controls-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.app-store-shop-controls-copy p {
+  margin: 0;
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 840;
+}
+
+.app-store-shop-controls-copy small {
+  max-width: 52ch;
+  color: var(--system-text-soft);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 740;
+}
+
+.app-store-shop-create-button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  border: 1px solid color-mix(in srgb, var(--system-accent) 34%, var(--system-control-border));
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--system-accent);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  font-weight: 840;
+}
+
 .app-store-layout {
   min-width: 0;
   margin-top: 13px;
@@ -2230,6 +2859,11 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--system-info) 12%, var(--system-surface-muted));
 }
 
+.app-store-item.is-state-folder .app-store-item-state {
+  color: var(--system-success);
+  background: color-mix(in srgb, var(--system-success) 12%, var(--system-surface-muted));
+}
+
 .app-store-empty {
   min-height: 138px;
   border: 1px dashed var(--system-subtle-border);
@@ -2274,6 +2908,23 @@ onBeforeUnmount(() => {
   grid-template-columns: 58px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
+}
+
+.app-store-shop-cover {
+  min-width: 0;
+  height: 116px;
+  margin-top: 12px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--system-surface-muted);
+}
+
+.app-store-shop-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .app-store-detail-icon {
@@ -2525,6 +3176,12 @@ onBeforeUnmount(() => {
   background: var(--system-accent);
 }
 
+.app-store-action.is-selected {
+  border-color: color-mix(in srgb, #f59e0b 54%, var(--system-control-border));
+  color: #9a5b00;
+  background: color-mix(in srgb, #f59e0b 14%, var(--system-control-bg));
+}
+
 .app-store-action.is-danger {
   color: var(--system-danger);
   background: color-mix(in srgb, var(--system-danger) 10%, var(--system-control-bg));
@@ -2646,6 +3303,62 @@ onBeforeUnmount(() => {
   background: var(--system-control-bg);
 }
 
+.app-store-shop-create-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+  font-size: 28px;
+  box-shadow: var(--system-shadow-card);
+}
+
+.app-store-shop-create-boundary {
+  border: 1px solid color-mix(in srgb, var(--system-warning) 26%, var(--system-subtle-border));
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  background: color-mix(in srgb, var(--system-warning) 9%, var(--system-control-bg));
+}
+
+.app-store-shop-create-boundary div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--system-warning);
+}
+
+.app-store-shop-create-boundary strong,
+.app-store-shop-create-boundary p,
+.app-store-shop-create-boundary small {
+  min-width: 0;
+}
+
+.app-store-shop-create-boundary strong {
+  color: var(--system-text);
+  font-size: 13px;
+  font-weight: 860;
+}
+
+.app-store-shop-create-boundary p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 740;
+}
+
+.app-store-shop-create-boundary small {
+  color: var(--system-text-soft);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 760;
+}
+
 .app-store-identity-source {
   min-height: 40px;
   border: 1px solid var(--system-control-border);
@@ -2718,6 +3431,34 @@ onBeforeUnmount(() => {
 
 .app-store-identity-field textarea {
   padding: 10px 11px;
+}
+
+.app-store-identity-field select:disabled {
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  opacity: 1;
+}
+
+.app-store-identity-help {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.app-store-identity-cover-preview {
+  height: 104px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--system-surface-muted);
+}
+
+.app-store-identity-cover-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .app-store-identity-wide-field {

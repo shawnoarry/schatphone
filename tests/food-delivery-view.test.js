@@ -64,6 +64,33 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('hides uninstalled Food Delivery mini apps from the folder list only', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setAppStoreMiniAppInstalled('shop_app_food_seed_moon_bistro', false)
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    expect(wrapper.find('[data-testid="food-delivery-shop-app-food_seed_moon_bistro"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-empty"]').text()).toContain('No installed')
+    expect(store.findRestaurantById('food_seed_moon_bistro')).toBeTruthy()
+
+    await router.push('/food-delivery?restaurantId=food_seed_moon_bistro&entry=shop')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').text()).toContain('Moon Bistro')
+
+    wrapper.unmount()
+  })
+
   test('renders World Pack UX context without taking over food-order truth', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -206,6 +233,14 @@ describe('FoodDeliveryView', () => {
     await router.isReady()
 
     const store = useFoodDeliveryStore()
+    const galleryStore = useGalleryStore()
+    galleryStore.resetForTesting()
+    const importedCover = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/moon-bistro-cover.png',
+      name: 'Moon Bistro Cover',
+      category: 'reference',
+    })
+    expect(importedCover.ok).toBe(true)
     const restaurant = store.listRestaurantsByCategory('restaurants')[0]
     expect(
       systemStore.setEntryPresentationOverride(`shop_app_${restaurant.id}`, {
@@ -213,6 +248,7 @@ describe('FoodDeliveryView', () => {
         shortDescription: 'Late night comfort menu',
         tags: 'late night, comfort',
         templateId: 'standard',
+        coverGalleryAssetId: importedCover.assetId,
       }),
     ).toBe(true)
 
@@ -236,6 +272,9 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('Moon Kitchen')
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('late night · comfort')
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe('standard')
+    expect(wrapper.get('[data-testid="food-delivery-store-cover"] img').attributes('src')).toBe(
+      'https://example.com/moon-bistro-cover.png',
+    )
     expect(store.findRestaurantById(restaurant.id).name).toBe(restaurant.name)
 
     wrapper.unmount()
@@ -719,6 +758,30 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get(`[data-testid="food-delivery-menu-${menuItem.id}"] img`).attributes('src')).toBe(
       'https://example.com/food-gallery.png',
     )
+    wrapper.unmount()
+  })
+
+  test('shows App Store shop creation handoff without moving restaurant ownership', async () => {
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?category=restaurants&entry=shop&createShop=1&bindingTarget=food_delivery&source=app_store',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="food-delivery-app-store-create-banner"]').text()).toContain(
+      'Food Delivery creates the real restaurant',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-app-store-create-banner"]').attributes('data-binding-target')).toBe(
+      'food_delivery',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-custom-restaurant-name"]').exists()).toBe(true)
+
     wrapper.unmount()
   })
 })

@@ -33,7 +33,11 @@ import {
 import { pushReturnTarget } from '../lib/navigation-return'
 import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
-import { resolveEntryPresentationMeta } from '../lib/app-entry-presentation'
+import { SHOP_ENTRY_BINDING_TARGET, resolveEntryPresentationMeta } from '../lib/app-entry-presentation'
+import {
+  isMiniAppEntryInstalled,
+  normalizeAppStoreMiniAppPlacements,
+} from '../lib/app-store-mini-app-placement'
 import { resolveFoodShopDefaultTemplateId } from '../lib/food-shop-presentation'
 
 const route = useRoute()
@@ -52,6 +56,11 @@ const FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID = 'food-delivery-view'
 const foodImagePreviewMap = reactive({})
 
 const shopEntryIdForRestaurant = (restaurantId) => (restaurantId ? `shop_app_${restaurantId}` : '')
+const appStoreMiniAppPlacements = computed(() =>
+  normalizeAppStoreMiniAppPlacements(systemStore.settings.appearance?.appStoreMiniAppPlacements),
+)
+const restaurantMiniAppInstalled = (restaurant = {}) =>
+  isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, shopEntryIdForRestaurant(restaurant.id))
 const resolveShopEntryPresentation = (restaurant = {}) => {
   const entryId = shopEntryIdForRestaurant(restaurant.id)
   return resolveEntryPresentationMeta(
@@ -61,6 +70,9 @@ const resolveShopEntryPresentation = (restaurant = {}) => {
       accent: 'warm',
       entryKind: 'shop_app',
       shopAppEntry: true,
+      sourceModule: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+      bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+      runtimeIdentity: restaurant.id,
     },
     systemStore.settings.appearance?.entryPresentationOverrides || {},
   )
@@ -239,8 +251,9 @@ const FOOD_STORE_VISUALS = {
 }
 const activeRestaurants = computed(() => {
   const restaurants = foodDeliveryStore.listRestaurantsByCategory(activeCategory.value?.key)
-  if (restaurants.length > 0) return restaurants
-  return foodDeliveryStore.restaurants.slice(0, 4)
+  const installedRestaurants = restaurants.filter((restaurant) => restaurantMiniAppInstalled(restaurant))
+  if (restaurants.length > 0) return installedRestaurants
+  return foodDeliveryStore.restaurants.filter((restaurant) => restaurantMiniAppInstalled(restaurant)).slice(0, 4)
 })
 const platformRestaurantCount = computed(() => foodDeliveryStore.restaurantCount)
 const platformMenuItemCount = computed(() => foodDeliveryStore.menuItemCount)
@@ -264,7 +277,7 @@ const selectedRestaurant = computed(() =>
 )
 const isStoreMode = computed(() => Boolean(selectedRestaurant.value))
 const activeRestaurant = computed(() =>
-  selectedRestaurant.value || activeRestaurants.value[0] || foodDeliveryStore.restaurants[0] || null,
+  selectedRestaurant.value || activeRestaurants.value[0] || null,
 )
 const activeMenuItems = computed(() =>
   activeRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(activeRestaurant.value.id) : [],
@@ -279,6 +292,10 @@ const activeStoreVisual = computed(() => {
 const activeStorePresentation = computed(() =>
   activeRestaurant.value ? resolveShopEntryPresentation(activeRestaurant.value) : null,
 )
+const activeStoreCoverImageUrl = computed(() => {
+  const assetId = activeStorePresentation.value?.coverGalleryAssetId || ''
+  return assetId ? foodImagePreviewMap[assetId] || '' : ''
+})
 const activeStoreDisplayName = computed(
   () => activeStorePresentation.value?.displayName || activeRestaurant.value?.name || '',
 )
@@ -362,6 +379,13 @@ const chatSourceOrderId = computed(() =>
 )
 const isChatFoodDeliverySource = computed(() =>
   route.query.source === 'chat' && route.query.intent === 'food_delivery_order' && Boolean(chatSourceOrderId.value),
+)
+const openedFromAppStoreShopCreate = computed(
+  () =>
+    route.query.entry === 'shop' &&
+    route.query.createShop === '1' &&
+    (route.query.bindingTarget === SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY ||
+      route.query.source === 'app_store'),
 )
 const chatSourceOrder = computed(() => {
   if (!chatSourceOrderId.value) return null
@@ -773,6 +797,7 @@ watch(
 
 watch(
   () => [
+    activeStorePresentation.value?.coverGalleryAssetId || '',
     ...activeRestaurants.value.map((restaurant) => restaurant.image?.galleryAssetId || ''),
     ...activeMenuItems.value.map((item) => item.image?.galleryAssetId || ''),
   ].filter(Boolean),
@@ -886,6 +911,32 @@ onBeforeUnmount(() => {
             }}
           </span>
         </p>
+      </section>
+
+      <section
+        v-if="openedFromAppStoreShopCreate"
+        class="rounded-3xl border border-orange-200 bg-white p-4"
+        data-testid="food-delivery-app-store-create-banner"
+        data-binding-target="food_delivery"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-orange-900">
+              {{ t('From App Store folder mini app', 'From App Store folder mini app') }}
+            </p>
+            <p class="mt-2 text-xs leading-5 text-orange-700">
+              {{
+                t(
+                  'Food Delivery creates the real restaurant, menu, cart, checkout, delivery order, and service notifications. The App Store mini app facade will follow this Food Delivery record.',
+                  'Food Delivery creates the real restaurant, menu, cart, checkout, delivery order, and service notifications. The App Store mini app facade will follow this Food Delivery record.',
+                )
+              }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-700">
+            food_delivery
+          </span>
+        </div>
       </section>
 
       <div v-if="!isStoreMode" class="space-y-4" data-testid="food-delivery-platform">
@@ -1010,6 +1061,18 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </article>
+          <div
+            v-if="shopAppEntries.length === 0"
+            class="col-span-2 rounded-3xl border border-dashed border-orange-200 bg-orange-50/70 p-4 text-center text-xs leading-5 text-orange-700"
+            data-testid="food-delivery-shop-app-empty"
+          >
+            {{
+              t(
+                'No installed shop mini apps in this folder view. Add them from App Store.',
+                'No installed shop mini apps in this folder view. Add them from App Store.',
+              )
+            }}
+          </div>
         </div>
 
         <div v-if="activeRestaurant" class="mt-4 rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-menu-panel">
@@ -1233,6 +1296,17 @@ onBeforeUnmount(() => {
               <i class="fas fa-chevron-left"></i>
               {{ t('返回平台', 'Back') }}
             </button>
+            <div
+              v-if="activeStoreCoverImageUrl"
+              class="mt-4 h-28 overflow-hidden rounded-3xl border border-white/20 bg-white/10"
+              data-testid="food-delivery-store-cover"
+            >
+              <img
+                :src="activeStoreCoverImageUrl"
+                :alt="`${activeStoreDisplayName} cover`"
+                class="h-full w-full object-cover"
+              />
+            </div>
             <div class="mt-5 flex items-end justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/90">

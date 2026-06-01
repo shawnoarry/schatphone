@@ -16,6 +16,10 @@ import {
   normalizeEntryPresentationOverrides,
 } from '../lib/app-entry-presentation'
 import {
+  normalizeAppStoreMiniAppPlacements,
+  setMiniAppEntryInstalled,
+} from '../lib/app-store-mini-app-placement'
+import {
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   BOOK_HOME_APP_ID,
@@ -1248,6 +1252,7 @@ export const useSystemStore = defineStore('system', () => {
       customVars: {},
       appIconOverrides: {},
       entryPresentationOverrides: {},
+      appStoreMiniAppPlacements: normalizeAppStoreMiniAppPlacements(),
       homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
       homeWidgetPages: cloneDefaultWidgetPages(),
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
@@ -1777,6 +1782,13 @@ export const useSystemStore = defineStore('system', () => {
     return existed
   }
 
+  const setAppStoreMiniAppInstalled = (entryId, installed = true) => {
+    const current = normalizeAppStoreMiniAppPlacements(settings.appearance.appStoreMiniAppPlacements)
+    const next = setMiniAppEntryInstalled(current, entryId, installed)
+    settings.appearance.appStoreMiniAppPlacements = next
+    return next
+  }
+
   const exportAppearancePack = (options = {}) =>
     buildAppearancePack(settings.appearance, {
       name: options.name,
@@ -1805,6 +1817,9 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
       appearance.entryPresentationOverrides,
     )
+    settings.appearance.appStoreMiniAppPlacements = normalizeAppStoreMiniAppPlacements(
+      appearance.appStoreMiniAppPlacements || settings.appearance.appStoreMiniAppPlacements,
+    )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
 
     return {
@@ -1818,6 +1833,9 @@ export const useSystemStore = defineStore('system', () => {
         appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
         entryPresentationOverrides: normalizeEntryPresentationOverrides(
           settings.appearance.entryPresentationOverrides,
+        ),
+        appStoreMiniAppPlacements: normalizeAppStoreMiniAppPlacements(
+          settings.appearance.appStoreMiniAppPlacements,
         ),
       },
     }
@@ -3601,6 +3619,9 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
         appearance.entryPresentationOverrides,
       )
+      settings.appearance.appStoreMiniAppPlacements = normalizeAppStoreMiniAppPlacements(
+        appearance.appStoreMiniAppPlacements,
+      )
       if (typeof appearance.lockClockStyle === 'string') {
         settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
       }
@@ -3778,6 +3799,9 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
       settings.appearance.entryPresentationOverrides,
     )
+    settings.appearance.appStoreMiniAppPlacements = normalizeAppStoreMiniAppPlacements(
+      settings.appearance.appStoreMiniAppPlacements,
+    )
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
@@ -3893,6 +3917,9 @@ export const useSystemStore = defineStore('system', () => {
             appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
             entryPresentationOverrides: normalizeEntryPresentationOverrides(
               settings.appearance.entryPresentationOverrides,
+            ),
+            appStoreMiniAppPlacements: normalizeAppStoreMiniAppPlacements(
+              settings.appearance.appStoreMiniAppPlacements,
             ),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
             homeLayoutTemplateIds: settings.appearance.homeLayoutTemplateIds.map(
@@ -4035,6 +4062,7 @@ export const useSystemStore = defineStore('system', () => {
     clearAppIconOverride,
     setEntryPresentationOverride,
     clearEntryPresentationOverride,
+    setAppStoreMiniAppInstalled,
     exportAppearancePack,
     importAppearancePack,
     setChatAppearance,

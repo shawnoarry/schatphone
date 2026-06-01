@@ -463,16 +463,40 @@ describe('App Store entry management UI', () => {
     })
 
     expect(wrapper.get('[data-testid="app-store-filter-shop"]').classes()).toContain('is-active')
+    expect(wrapper.find('[data-testid="app-store-shop-controls"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="app-store-shop-controls"]').text()).toContain('mini app entries')
     expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').trigger('click')
+    expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('Folder mini app')
+    expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Shopping owns products')
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Shopping')
+    expect(wrapper.find('[data-testid="app-store-add-home"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').trigger('click')
 
-    expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('Shop entry')
+    expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('Folder mini app')
     expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Food Delivery owns restaurants')
+    expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('Food Delivery')
     expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Fusion dinner')
     expect(wrapper.find('[data-testid="app-store-add-home"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Installed')
+    expect(wrapper.get('[data-testid="app-store-shop-folder-toggle"]').text()).toContain('Remove from folder')
     expect(wrapper.find('[data-testid="app-store-open-identity"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="app-store-shop-folder-toggle"]').trigger('click')
+    await flushPromises()
+    expect(systemStore.settings.appearance.appStoreMiniAppPlacements.hiddenEntryIds).toEqual([
+      'shop_app_food_seed_moon_bistro',
+    ])
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Not installed')
+    expect(wrapper.get('[data-testid="app-store-shop-folder-toggle"]').text()).toContain('Add to folder')
+
+    await wrapper.get('[data-testid="app-store-shop-folder-toggle"]').trigger('click')
+    await flushPromises()
+    expect(systemStore.settings.appearance.appStoreMiniAppPlacements.hiddenEntryIds).toEqual([])
 
     await wrapper.get('[data-testid="app-store-open"]').trigger('click')
     await flushPromises()
@@ -488,7 +512,7 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
-  test('App Store saves shop entry identity without changing Food Delivery ownership', async () => {
+  test('App Store opens Shopping-bound shop entries into Shopping without owning commerce state', async () => {
     const router = createTestRouter()
     await router.push('/app-store?section=shops&homePage=2')
     await router.isReady()
@@ -501,14 +525,124 @@ describe('App Store entry management UI', () => {
       },
     })
 
+    await wrapper.get('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Shopping owns products')
+    expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('Shopping')
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('daily_fresh')
+
+    await wrapper.get('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      service: 'daily_fresh',
+      category: 'grocery',
+      entry: 'shop',
+      shopEntryId: 'shop_app_shopping_daily_fresh',
+      from: 'home',
+      homePage: '2',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store hands off new shop entry creation to the selected business owner', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=shops&homePage=2')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="app-store-shop-create"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="app-store-shop-create-sheet"]').text()).toContain('Add folder mini app')
+    expect(wrapper.get('[data-testid="app-store-shop-create-target"]').element.value).toBe('food_delivery')
+    expect(wrapper.get('[data-testid="app-store-shop-create-boundary"]').text()).toContain('Food Delivery owns')
+
+    await wrapper.get('[data-testid="app-store-shop-create-open-target"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query).toMatchObject({
+      createShop: '1',
+      entry: 'shop',
+      bindingTarget: 'food_delivery',
+      source: 'app_store',
+      category: 'restaurants',
+      from: 'home',
+      homePage: '2',
+    })
+
+    await router.push('/app-store?section=shops&homePage=2')
+    await flushPromises()
+    await wrapper.get('[data-testid="app-store-shop-create"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-shop-create-target"]').setValue('shopping')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="app-store-shop-create-boundary"]').text()).toContain('Shopping owns')
+
+    await wrapper.get('[data-testid="app-store-shop-create-open-target"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      createShop: '1',
+      entry: 'shop',
+      bindingTarget: 'shopping',
+      source: 'app_store',
+      category: 'mall',
+      from: 'home',
+      homePage: '2',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store saves shop entry identity without changing Food Delivery ownership', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=shops&homePage=2')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    const galleryStore = useGalleryStore()
+    systemStore.settings.system.language = 'en-US'
+    galleryStore.resetForTesting()
+    const importedCover = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/moon-shop-cover.png',
+      name: 'Moon Shop Cover',
+      category: 'reference',
+    })
+    expect(importedCover.ok).toBe(true)
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
     await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').trigger('click')
     await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    const bindingTargetSelect = wrapper.get('[data-testid="app-store-identity-shop-binding-target"]')
+    expect(bindingTargetSelect.element.value).toBe('food_delivery')
+    expect(bindingTargetSelect.element.disabled).toBe(true)
     await wrapper.get('[data-testid="app-store-identity-display-name"]').setValue('Moon Kitchen')
     await wrapper.get('[data-testid="app-store-identity-icon-preset"]').setValue('fas fa-bowl-food')
     await wrapper.get('[data-testid="app-store-identity-accent"]').setValue('dark')
     await wrapper.get('[data-testid="app-store-identity-shop-description"]').setValue('Late night comfort menu')
     await wrapper.get('[data-testid="app-store-identity-shop-tags"]').setValue('late night, comfort, date')
     await wrapper.get('[data-testid="app-store-identity-shop-template"]').setValue('dessert_window')
+    await wrapper.get('[data-testid="app-store-identity-shop-cover"]').setValue(importedCover.assetId)
+    await flushPromises()
+    expect(wrapper.get('[data-testid="app-store-identity-shop-cover-preview"] img').attributes('src')).toBe(
+      'https://example.com/moon-shop-cover.png',
+    )
     await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
     await flushPromises()
 
@@ -520,14 +654,20 @@ describe('App Store entry management UI', () => {
       shortDescription: 'Late night comfort menu',
       tags: ['late night', 'comfort', 'date'],
       templateId: 'dessert_window',
+      bindingTarget: 'food_delivery',
+      coverGalleryAssetId: importedCover.assetId,
     })
     expect(systemStore.settings.appearance.appIconOverrides.shop_app_food_seed_moon_bistro).toBeUndefined()
     expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Moon Kitchen')
     expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Late night comfort menu')
     expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Dessert window')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Set')
     expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('late night · comfort · date')
     expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('shop_app_food_seed_moon_bistro')
     expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Food Delivery owns restaurants')
+    expect(wrapper.get('[data-testid="app-store-shop-cover"] img').attributes('src')).toBe(
+      'https://example.com/moon-shop-cover.png',
+    )
 
     await wrapper.get('[data-testid="app-store-open"]').trigger('click')
     await flushPromises()

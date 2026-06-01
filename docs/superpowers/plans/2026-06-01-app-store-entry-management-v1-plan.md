@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Implemented through App Store entry taxonomy, standard app display-name overrides, shop-entry read/open surfaces, shop display/icon/description/tag/template presentation overrides, Food Delivery shop-surface consumption, and focused tests. Product correction is now documented: `Shops` must become a reusable storefront binding model rather than a Food Delivery-only lane. Full shop binding generalization, Shopping-bound shops, shop creation, cover editing, and pseudo-folder placement remain follow-ups.
+**Status:** Implemented through App Store entry taxonomy, standard app display-name overrides, folder mini-app read/open surfaces, shop display/icon/description/tag/template presentation overrides, installed/not-installed target-folder placement, Food Delivery/Shopping surface consumption, and focused tests. Product correction is now documented: App Store is an install/facade/launch-context manager for folder mini apps, not a daily shop-browsing or commerce-organization surface.
 
 **Goal:** Upgrade App Store from a simple app list into a user-visible entry management surface for Apps, World entries, Shops, and System entries.
 
@@ -93,7 +93,7 @@
 ## Follow-Up Backlog
 
 - Generalize `Shops` before adding more Food Delivery-only polish: add explicit binding targets, migrate current entries to `food_delivery`, add `shopping` as the next allowed target, and keep arbitrary routes blocked.
-- Add persistent App Store editing for shop covers, richer grouping/favorite/recent placement, and bound pseudo-folder placement. Current V1/V2 shows, opens, and presentation-edits Food Delivery-bound shop entries while keeping runtime ownership in Food Delivery.
+- Keep App Store out of shop favorites, recent lists, sorting, and consumer category filters; those belong inside Food Delivery and Shopping.
 - Add shop creation/template editing from App Store or the bound module pseudo-folder, using the selected source module as owner of records, carts, orders, downstream handoffs, and Chat service pushes.
-- Allow future World Pack generated shops to appear as `Shops` entries with `source: world_pack` plus a supported binding target. Do not force world storefronts into Food Delivery by default.
+- Allow future World Pack generated shops to appear as folder mini apps with `source: world_pack` plus a supported binding target. Do not force world storefronts into Food Delivery by default.
 - Decide whether World Pack app entries can receive user-facing aliases later. Current V1 preserves world-entry names from WorldBook/pack bindings.

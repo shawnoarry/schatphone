@@ -16,6 +16,11 @@ import {
   buildShoppingWorldAppFilterQuery,
   resolveShoppingWorldAppContext,
 } from '../lib/world-pack-app-bindings'
+import { SHOP_ENTRY_BINDING_TARGET, resolveEntryPresentationMeta } from '../lib/app-entry-presentation'
+import {
+  isMiniAppEntryInstalled,
+  normalizeAppStoreMiniAppPlacements,
+} from '../lib/app-store-mini-app-placement'
 import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
@@ -59,7 +64,15 @@ const {
 } = storeToRefs(shoppingStore)
 
 const SHOPPING_IMAGE_PREVIEW_SCOPE_ID = 'shopping-products-view'
+const SHOPPING_SHOP_ENTRY_COVER_SCOPE_ID = 'shopping-shop-entry-cover'
 const productImagePreviewMap = reactive({})
+const shopEntryCoverPreviewMap = reactive({})
+const appStoreMiniAppPlacements = computed(() =>
+  normalizeAppStoreMiniAppPlacements(systemStore.settings.appearance?.appStoreMiniAppPlacements),
+)
+const shoppingMiniAppEntryId = (serviceKey = '') => (serviceKey ? `shop_app_shopping_${serviceKey}` : '')
+const shoppingMiniAppInstalled = (serviceKey = '') =>
+  isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, shoppingMiniAppEntryId(serviceKey))
 const productDraft = reactive({
   title: '',
   category: 'mall',
@@ -114,6 +127,13 @@ const openedFromChatShoppingOrder = computed(() =>
 const openedFromChatLogistics = computed(() =>
   sourceModule.value === 'chat' && sourceIntent.value === 'logistics',
 )
+const openedFromAppStoreShopCreate = computed(
+  () =>
+    route.query.entry === 'shop' &&
+    route.query.createShop === '1' &&
+    (route.query.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING ||
+      route.query.source === 'app_store'),
+)
 const worldAppContext = computed(() =>
   resolveShoppingWorldAppContext({
     systemStore,
@@ -142,14 +162,44 @@ const activeService = computed(() =>
 const activePlatformApp = computed(() =>
   activeServiceKey.value ? findShoppingPlatformApp(activeServiceKey.value) : null,
 )
+const activeShopEntryId = computed(() => {
+  const rawEntryId = typeof route.query.shopEntryId === 'string' ? route.query.shopEntryId.trim() : ''
+  if (rawEntryId.startsWith('shop_app_shopping_')) return rawEntryId
+  if (route.query.entry === 'shop' && activeServiceKey.value) return shoppingMiniAppEntryId(activeServiceKey.value)
+  return ''
+})
+const activeShopEntryPresentation = computed(() => {
+  if (!activeShopEntryId.value || !activePlatformApp.value?.key) return null
+  return resolveEntryPresentationMeta(
+    {
+      id: activeShopEntryId.value,
+      icon: activePlatformApp.value.icon || 'fas fa-store',
+      accent: activePlatformApp.value.accent || 'warm',
+      entryKind: 'shop_app',
+      shopAppEntry: true,
+      sourceModule: SHOP_ENTRY_BINDING_TARGET.SHOPPING,
+      bindingTarget: SHOP_ENTRY_BINDING_TARGET.SHOPPING,
+      runtimeIdentity: activePlatformApp.value.key,
+    },
+    systemStore.settings.appearance?.entryPresentationOverrides || {},
+  )
+})
+const activeShopEntryCoverAssetId = computed(() => activeShopEntryPresentation.value?.coverGalleryAssetId || '')
+const activeShopEntryCoverImageUrl = computed(() =>
+  activeShopEntryCoverAssetId.value ? shopEntryCoverPreviewMap[activeShopEntryCoverAssetId.value] || '' : '',
+)
 const activeShoppingAppLabel = computed(() => {
   if (worldAppContext.value?.bindingTitle) return worldAppContext.value.bindingTitle
+  if (activeShopEntryPresentation.value?.displayName) return activeShopEntryPresentation.value.displayName
   const platform = activePlatformApp.value
   if (!platform?.key) return t('Shopping', 'Shopping')
   return languageBase.value === 'zh' ? platform.zh : platform.en
 })
 const activeShoppingAppDesc = computed(() => {
   if (worldAppContext.value) return worldAppDescription.value
+  if (activeShopEntryPresentation.value?.shortDescription) {
+    return activeShopEntryPresentation.value.shortDescription
+  }
   const platform = activePlatformApp.value
   if (!platform?.key) {
     return t(
@@ -323,13 +373,15 @@ const platformCategoryCards = computed(() => {
 })
 
 const serviceCards = computed(() =>
-  SHOPPING_PLATFORM_APP_ENTRIES.map((entry) => ({
-    ...entry,
-    label: languageBase.value === 'zh' ? entry.zh : entry.en,
-    desc: languageBase.value === 'zh' ? entry.descZh : entry.descEn,
-    active: entry.key === activeService.value?.key,
-    count: shoppingStore.listProductsByService(entry.key).length,
-  })),
+  SHOPPING_PLATFORM_APP_ENTRIES
+    .filter((entry) => shoppingMiniAppInstalled(entry.key))
+    .map((entry) => ({
+      ...entry,
+      label: languageBase.value === 'zh' ? entry.zh : entry.en,
+      desc: languageBase.value === 'zh' ? entry.descZh : entry.descEn,
+      active: entry.key === activeService.value?.key,
+      count: shoppingStore.listProductsByService(entry.key).length,
+    })),
 )
 
 const sourcePlan = computed(() => [
@@ -674,6 +726,25 @@ watch(
 )
 
 watch(
+  activeShopEntryCoverAssetId,
+  (assetId, oldAssetId) => {
+    if (oldAssetId && oldAssetId !== assetId) {
+      galleryStore.releaseAssetPreview(oldAssetId, SHOPPING_SHOP_ENTRY_COVER_SCOPE_ID)
+      delete shopEntryCoverPreviewMap[oldAssetId]
+    }
+    if (!assetId || shopEntryCoverPreviewMap[assetId]) return
+    void galleryStore.getAssetPreviewUrl(assetId, {
+      scopeId: SHOPPING_SHOP_ENTRY_COVER_SCOPE_ID,
+    }).then((previewUrl) => {
+      if (previewUrl && activeShopEntryCoverAssetId.value === assetId) {
+        shopEntryCoverPreviewMap[assetId] = previewUrl
+      }
+    })
+  },
+  { immediate: true },
+)
+
+watch(
   () => sourceChatId.value,
   (chatId) => {
     if (giftDraft.contactId || !chatId) return
@@ -710,8 +781,12 @@ watch(
 
 onBeforeUnmount(() => {
   galleryStore.releaseAssetPreviewScope(SHOPPING_IMAGE_PREVIEW_SCOPE_ID)
+  galleryStore.releaseAssetPreviewScope(SHOPPING_SHOP_ENTRY_COVER_SCOPE_ID)
   Object.keys(productImagePreviewMap).forEach((assetId) => {
     delete productImagePreviewMap[assetId]
+  })
+  Object.keys(shopEntryCoverPreviewMap).forEach((assetId) => {
+    delete shopEntryCoverPreviewMap[assetId]
   })
 })
 </script>
@@ -727,13 +802,30 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 overflow-y-auto no-scrollbar bg-gray-50 px-5 py-6 space-y-4">
       <section class="rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-orange-100 p-5">
-        <p class="text-xs font-semibold text-orange-600">{{ t('Shopping folder app', 'Shopping folder app') }}</p>
+        <p class="text-xs font-semibold text-orange-600">
+          {{
+            activeShopEntryId
+              ? t('文件夹小应用 · Shopping 持有业务', 'Folder mini app · Shopping owned')
+              : t('Shopping folder app', 'Shopping folder app')
+          }}
+        </p>
         <h2 class="mt-2 text-2xl font-black text-gray-950">
           {{ activeShoppingAppLabel }}
         </h2>
         <p class="mt-3 text-xs leading-5 text-gray-600">
           {{ activeShoppingAppDesc }}
         </p>
+        <div
+          v-if="activeShopEntryCoverImageUrl"
+          class="mt-4 h-32 overflow-hidden rounded-2xl border border-white/70 bg-white/70"
+          data-testid="shopping-shop-cover"
+        >
+          <img
+            :src="activeShopEntryCoverImageUrl"
+            :alt="`${activeShoppingAppLabel} cover`"
+            class="h-full w-full object-cover"
+          />
+        </div>
         <div class="mt-4 grid grid-cols-4 gap-2">
           <div class="rounded-2xl bg-white/70 p-3">
             <p class="text-[10px] text-gray-500">{{ t('Products', 'Products') }}</p>
@@ -797,6 +889,32 @@ onBeforeUnmount(() => {
           >
             {{ t('Back to Chat', 'Back to Chat') }}
           </button>
+        </div>
+      </section>
+
+      <section
+        v-if="openedFromAppStoreShopCreate"
+        class="rounded-2xl border border-amber-200 bg-amber-50 p-4"
+        data-testid="shopping-app-store-create-banner"
+        data-binding-target="shopping"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-amber-900">
+              {{ t('From App Store folder mini app', 'From App Store folder mini app') }}
+            </p>
+            <p class="mt-2 text-xs leading-5 text-amber-700">
+              {{
+                t(
+                  'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. Use the service shelf and custom product form below; App Store only keeps the mini app facade and launch context.',
+                  'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. Use the service shelf and custom product form below; App Store only keeps the mini app facade and launch context.',
+                )
+              }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-700">
+            shopping
+          </span>
         </div>
       </section>
 
@@ -1017,6 +1135,18 @@ onBeforeUnmount(() => {
               {{ service.count }} {{ t('items', 'items') }}
             </p>
           </button>
+          <div
+            v-if="serviceCards.length === 0"
+            class="col-span-2 rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-4 text-center text-xs leading-5 text-amber-700"
+            data-testid="shopping-service-empty"
+          >
+            {{
+              t(
+                'No installed Shopping mini apps. Add them from App Store.',
+                'No installed Shopping mini apps. Add them from App Store.',
+              )
+            }}
+          </div>
         </div>
       </section>
 

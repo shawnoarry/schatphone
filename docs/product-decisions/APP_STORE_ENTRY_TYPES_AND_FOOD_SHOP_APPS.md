@@ -1,6 +1,6 @@
 # App Store Entry Types And Food Shop Apps
 
-Updated: 2026-06-01
+Updated: 2026-06-02
 
 This note defines how App Store, Home pseudo-folders, World Pack app entries, and reusable shop mini-app entries should relate to each other.
 
@@ -16,7 +16,7 @@ In SchatPhone, an entry can look like an app to the user even when it opens an e
 | --- | --- | --- | --- |
 | Independent function app | A real app such as Chat, Map, Wallet, Food Delivery | Stable app/module id such as `app_chat`, `map`, `food_delivery` | Home, Dock, App Store, App Library |
 | World Pack app | A world-specific app-like entry such as Rescue Dispatch or Supply Station | Opens an existing target app with `worldPack` / `worldApp` context, UX copy, accent, and safe behavior changes | App Store World section, Home, App Library |
-| Shop app | A reusable store-front entry such as Moon Bistro, a user-created noodle shop, or a world-pack potion shop | A bound source module plus source record/context. Current allowed bindings are `Food Delivery` and `Shopping`; each source module owns its own catalog/menu/cart/order truth | Bound module pseudo-folder, App Store shop-management section |
+| Folder mini app / shop app | A reusable next-layer mini app such as Moon Bistro, a user-created noodle shop, or a world-pack potion shop | A bound source module plus source record/context. Current allowed bindings are `Food Delivery` and `Shopping`; each source module owns its own catalog/menu/cart/order truth | Inside the bound module pseudo-folder; App Store only manages install/facade/launch context |
 | System entry | Protected system capability such as App Store, Settings, World Hub | Stable system entry | Fixed or protected Home/App Store surfaces |
 
 ## Naming Rule
@@ -32,24 +32,25 @@ Examples:
 
 This keeps immersion flexible without breaking routes, stores, event ownership, tests, CSS scopes, or cross-module records.
 
-## Shop Binding Rule
+## Target Folder Binding Rule
 
-`Shops` is a user-facing entry shape, not a synonym for Food Delivery.
+`Shops` is the code/type name for shop-shaped folder mini apps, not a synonym for Food Delivery and not a consumer browsing category inside App Store.
 
-A shop entry must declare a bounded runtime owner:
+A folder mini app with commerce behavior must declare a bounded runtime owner:
 
 | Binding target | User meaning | Runtime owner | Current status |
 | --- | --- | --- | --- |
 | `Food Delivery` | restaurant, cafe, food stall, delivery shop | Food Delivery owns restaurants, menus, food cart, checkout, delivery orders, order events, Wallet suggestions, Map handoff, and Chat service pushes | First working implementation exists |
-| `Shopping` | store, marketplace shop, item seller, supply desk | Shopping owns products, shopping cart, checkout, shopping orders, logistics links, Calendar cues, Wallet/Assets handoffs, and Chat service pushes | Next binding target to add |
+| `Shopping` | store, marketplace shop, item seller, supply desk | Shopping owns products, shopping cart, checkout, shopping orders, logistics links, Calendar cues, Wallet/Assets handoffs, and Chat service pushes | Supported binding target exposed in App Store |
 
 Do not let App Store accept arbitrary routes as shop bindings. New binding targets require a product decision and a source module that can own the real records.
 
 Product meaning:
 
-- App Store manages the storefront facade: name, icon, cover, short description, tags, template, listing, and open context.
+- App Store manages install availability and the mini app facade: target folder, name, icon, cover, short description, tags, template, listing, and open context.
 - The bound module manages the business truth: catalog/menu, cart, checkout, order lifecycle, downstream records, and service notifications.
 - A shop can come from a built-in seed, user creation, or a World Pack, but it still needs a supported binding target.
+- App Store must not become the user's daily shop-browsing surface. Food Delivery and Shopping own category filters, favorites, recent shops, carts, orders, and service notifications inside their own folder apps.
 
 ## World And Shops Intersection
 
@@ -57,7 +58,7 @@ Product meaning:
 
 `World` means "this entry is unlocked by the active World Pack." Current World entries are built from active world-pack app bindings. They appear only while the corresponding world pack is active, and they open existing target apps with `worldPack` / `worldApp` context. When the world pack is not active, those entries should not appear in the App Store World section.
 
-`Shops` means "this entry behaves like a storefront." A World Pack can generate a shop entry, but that entry should usually live in `Shops` with `source: world_pack` and a supported binding target such as Shopping or Food Delivery.
+`Shops` means "this entry is a folder mini app with storefront behavior." A World Pack can generate a shop entry, but that entry should usually live in App Store's installable mini-app set with `source: world_pack` and a supported binding target such as Shopping or Food Delivery. WorldBook still owns pack activation/review; App Store only shows entries made available by active or approved sources.
 
 Examples:
 
@@ -81,7 +82,7 @@ The Food Delivery Home entry can behave like a pseudo-folder that contains a sma
 3. User-created shop apps
    - Created from templates.
    - Can be named, given an icon/cover, assigned a skin, and configured with menu items.
-4. Add shop entry
+4. Add mini app entry
    - Opens the shop-template creation flow.
 
 Food categories such as fast food, cafe, dessert, grocery, and nearby should become filters or tags, not the first-level pseudo-folder objects.
@@ -92,17 +93,17 @@ App Store should offer a clear taxonomy for entry management:
 
 - `Apps`: independent function apps.
 - `World`: World Pack app entries.
-- `Shops`: reusable shop entries and shop templates, with limited binding targets such as Food Delivery and Shopping.
+- `Mini apps / Shops`: reusable folder mini apps and shop templates, with limited target folders such as Food Delivery and Shopping.
 - `System`: protected or fixed system entries.
 
 For shop apps, App Store should support:
 
-1. Create a shop from a template.
-2. Choose a binding target from an allowed list:
+1. Start a folder mini app from a template or available source.
+2. Choose the target folder from an allowed list:
    - Food Delivery
    - Shopping
    - future targets only after a source-owner decision
-3. Edit shop identity:
+3. Edit mini app facade:
    - display name
    - icon
    - cover image
@@ -111,12 +112,12 @@ For shop apps, App Store should support:
 4. Edit shop skin:
    - built-in template style
    - optional shop-scoped CSS
-5. Hand off source-owned editing to the bound module:
+5. Hand off source-owned editing to the target folder:
    - Food Delivery owns menu basics.
    - Shopping owns product basics.
-6. Add/remove the shop from the bound module pseudo-folder.
+6. Add/remove the mini app from the bound module pseudo-folder.
 
-App Store should manage the entry identity and placement. The bound module still owns records, carts, orders, fulfillment events, Wallet/Assets/Map/Calendar handoffs, and Chat service notifications.
+App Store should manage entry availability, facade, target-folder placement, and launch context. The bound module still owns records, carts, orders, fulfillment events, Wallet/Assets/Map/Calendar handoffs, Chat service notifications, and any user-facing shop browsing filters inside the folder.
 
 ## Food Delivery Responsibilities
 
@@ -200,23 +201,24 @@ Templates are visual and UX presets. They must not create separate order systems
 
 Current implementation status:
 
-- App Store now classifies entries as `Apps`, `World`, `Shops`, and `System`, while preserving `All`, `Home`, and `Library` filters.
+- App Store now classifies entries as `Apps`, `World`, `Mini apps` (code type: `Shops`), and `System`, while preserving `All`, `Home`, and `Library` filters.
 - Standard app display names can be edited from App Store's identity sheet. This changes the phone-facing name only; routes, stable ids, CSS scopes, events, and stores still use the backend identity.
 - Home tiles and Dock metadata read the same display-name override for standard apps.
-- Food Delivery restaurant records are exposed in App Store as shop entries. Opening one routes to Food Delivery with `restaurantId` context.
-- Shop entries can now save App Store-side display/icon presentation overrides. This changes how the shop entry appears in App Store; it does not rename the restaurant record or alter Food Delivery runtime state.
-- Shop entries can now also save App Store-side short descriptions, display tags, and a selected shop template. Food Delivery reads these presentation overrides when showing the shop launcher card and opened shop surface, while the actual restaurant/menu/order records stay unchanged.
+- Food Delivery restaurant records are exposed in App Store as `bindingTarget: food_delivery` folder mini apps. Opening one routes to Food Delivery with `restaurantId` and shop-entry context.
+- Shopping platform services are exposed in App Store as `bindingTarget: shopping` shop entries. Opening one routes to Shopping with `service`, `category`, `entry=shop`, and `shopEntryId` context while Shopping keeps product/cart/order ownership.
+- Folder mini apps can now save App Store-side display/icon presentation overrides. This changes how the mini app appears in App Store; it does not rename the source record or alter Food Delivery/Shopping runtime state.
+- Folder mini apps can now also save App Store-side cover images, short descriptions, display tags, and a selected shop template. App Store detail renders the cover as facade media; Food Delivery and Shopping read the cover/description/tags/template presentation when showing opened shop surfaces, while actual restaurant/menu/product/order records stay unchanged.
+- App Store's mini-app section now has an add-handoff sheet. The user chooses `food_delivery` or `shopping`, then App Store routes to the selected owner with `entry=shop`, `createShop=1`, and `bindingTarget` context. Food Delivery shows a restaurant-creation handoff and creates the real restaurant record inside Food Delivery. Shopping shows a Shopping-owned creation workspace handoff for service shelves/custom products while a dedicated custom Shopping store-record model remains a later product decision.
+- App Store now manages installed/not-installed placement for folder mini apps. Removing a mini app from its target folder hides it from the Food Delivery or Shopping folder list, but does not delete the restaurant, service preset, menu/product data, cart/order truth, or direct source-owned route.
 - Template selection is a visual/UX preset only. It can change the shop surface treatment, but it must not create a separate cart, checkout, order lifecycle, Wallet handoff, Map route, or Chat service channel.
 - Shop entries are not treated as independent apps in V1/V2: App Store does not place them on Home and does not edit their runtime state, menus, carts, orders, or service notifications.
 - App Store detail panels show entry type, original category, open target, runtime identity, phone-facing display name, default name, and ownership boundary copy.
-- Product correction after V2: `Shops` must become a reusable shop-entry binding system. The next implementation should add an explicit binding target field and UI, migrate current Food Delivery shop entries into `bindingTarget: food_delivery`, and add Shopping as the next allowed binding target before broadening shop creation.
+- Product correction after V2 is now implemented for the App Store boundary: shop entries carry an explicit binding target, existing Food Delivery shops resolve as `food_delivery`, Shopping is the second supported target, App Store-side cover facade media is supported, create-shop V0 is an owner-handoff flow instead of App Store creating business records, and installed/not-installed placement now controls whether entries appear inside target pseudo-folder lists. App Store no longer owns shop favorites, recent-opened lists, sorting, or consumer category filters; those belong inside the target pseudo-folder apps. The next implementation should continue from any future Shopping-owned custom store/service record model.
 - World entries currently come from the active World Pack's app bindings. They are hidden when the related world pack is not active. A World Pack may also generate shop entries, but those should be `Shops` entries with `source: world_pack` plus a supported binding target, not Food Delivery-only records by default.
 
 Still pending after the current slice:
 
-- Generalize shop-entry bindings beyond Food Delivery: allowed binding targets should start with Food Delivery and Shopping.
-- Add App Store-side shop cover image editing and richer category/favorite/recent placement management.
-- Create-shop flow and add/remove shop from the selected bound module pseudo-folder.
+- Broaden create-shop beyond the V0 owner handoff only after the selected target owns a real source record model. Food Delivery already has user-created restaurant records; Shopping still needs a product decision for custom store/service records beyond preset platform services.
 - Menu basics editing from App Store, if product decides App Store should expose a light editor rather than deep-linking to Food Delivery.
 
 Any future worker should keep this boundary: App Store manages how entries look and where users find/open them; the selected binding target owns the actual catalog/menu, cart, order, fulfillment, downstream handoffs, and Chat push records.

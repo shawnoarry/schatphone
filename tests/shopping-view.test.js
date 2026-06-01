@@ -240,6 +240,31 @@ describe('ShoppingView', () => {
     wrapper.unmount()
   })
 
+  test('shows App Store shop creation handoff without moving commerce ownership', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    store.resetForTesting()
+    await router.push('/shopping?category=mall&entry=shop&createShop=1&bindingTarget=shopping&source=app_store')
+    await router.isReady()
+
+    const wrapper = mount(ShoppingView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').text()).toContain(
+      'Shopping owns products',
+    )
+    expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').attributes('data-binding-target')).toBe(
+      'shopping',
+    )
+    expect(wrapper.find('[data-testid="shopping-custom-product-form"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('presents a selected folder platform as the active shopping app', async () => {
     const router = createTestRouter()
     const store = useShoppingStore()
@@ -259,6 +284,81 @@ describe('ShoppingView', () => {
     expect(wrapper.find('[data-testid="shopping-category-digital"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-luxury"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-fashion"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('hides uninstalled Shopping mini apps from the folder list only', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    const systemStore = useSystemStore()
+    store.resetForTesting()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setAppStoreMiniAppInstalled('shop_app_shopping_daily_fresh', false)
+    await router.push('/shopping')
+    await router.isReady()
+
+    const wrapper = mount(ShoppingView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shopping-service-schat_mall"]').exists()).toBe(true)
+
+    await router.push('/shopping?service=daily_fresh&category=grocery&entry=shop')
+    await flushPromises()
+
+    expect(wrapper.find('h1').text()).toBe('Daily Fresh')
+    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('uses App Store shop-entry facade while Shopping keeps product and order ownership', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    const systemStore = useSystemStore()
+    const galleryStore = useGalleryStore()
+    store.resetForTesting()
+    galleryStore.resetForTesting()
+    systemStore.settings.system.language = 'en-US'
+    const importedCover = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/daily-fresh-cover.png',
+      name: 'Daily Fresh Cover',
+      category: 'reference',
+    })
+    expect(importedCover.ok).toBe(true)
+    expect(
+      systemStore.setEntryPresentationOverride('shop_app_shopping_daily_fresh', {
+        displayName: 'Neighborhood Fresh',
+        shortDescription: 'Daily groceries with local delivery.',
+        bindingTarget: 'shopping',
+        coverGalleryAssetId: importedCover.assetId,
+      }),
+    ).toBe(true)
+    await router.push(
+      '/shopping?service=daily_fresh&category=grocery&entry=shop&shopEntryId=shop_app_shopping_daily_fresh',
+    )
+    await router.isReady()
+
+    const wrapper = mount(ShoppingView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.find('h1').text()).toBe('Neighborhood Fresh')
+    expect(wrapper.text()).toContain('Folder mini app · Shopping owned')
+    expect(wrapper.text()).toContain('Daily groceries with local delivery.')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="shopping-shop-cover"] img').attributes('src')).toBe(
+      'https://example.com/daily-fresh-cover.png',
+    )
+    expect(wrapper.get('[data-testid="shopping-service-daily_fresh"]').classes()).toContain('border-amber-300')
+    expect(store.cartQuantity).toBe(0)
+    expect(store.orderCount).toBe(0)
+
     wrapper.unmount()
   })
 

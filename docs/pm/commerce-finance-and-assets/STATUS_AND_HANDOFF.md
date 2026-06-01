@@ -21,7 +21,7 @@ What is already landed:
 9. Food Delivery now has a platform/store split: the Food entry opens a platform browser, restaurant cards open route-query store mini-app surfaces, and cart/order/event/Wallet/Map/Chat ownership remains centralized in Food Delivery and the related source modules.
 10. Food Delivery platform mode now opens as a pseudo-folder style surface: a fixed Food platform entry plus shop-app restaurant entries. Category keys continue to filter shops and do not own order/cart behavior.
 11. Moon Bistro now has the first Food Delivery shop template treatment, `dark_tray_menu`, while checkout and order ownership remain in Food Delivery.
-12. App Store can now surface Food Delivery restaurants as `Shops` entries, save App Store-side display/icon/short-description/tag/template presentation for those entries, and open them with `restaurantId` route context. Food Delivery reads those presentation fields for launcher/store display. This is launch-entry presentation management only: App Store does not own restaurant records, menus, carts, checkout, orders, Wallet handoffs, Map handoffs, or Chat service pushes. Product correction: `Shops` must now generalize into a reusable storefront binding model where Food Delivery is the first allowed target and Shopping is the next allowed target.
+12. App Store can now surface Food Delivery restaurants as `food_delivery`-bound folder mini apps, save App Store-side display/icon/cover/short-description/tag/template facade presentation for those entries, show their target-folder ownership boundary, and add/remove them from the target folder without deleting source records. Food Delivery reads presentation and install-state fields for launcher/store display. App Store also surfaces Shopping platform services as `shopping`-bound folder mini apps, opens Shopping with service/shop-entry context, lets Shopping render the same App Store-side cover facade, and lets Shopping hide uninstalled service mini apps from its folder list. `Add mini app` in App Store is a target-folder handoff: Food Delivery receives a restaurant-creation context and Shopping receives a Shopping-owned creation workspace context. This is install-entry presentation, target-folder placement, and owner handoff only: App Store does not own restaurant records, menus, products, carts, checkout, orders, shop favorites/recent lists, consumer category filters, Wallet/Assets handoffs, Map/Calendar/logistics handoffs, or Chat service pushes.
 13. Food Delivery menu items now have a focused item-detail sheet: tapping a dish opens description, base ingredients, image source, and add-to-cart; a small edit icon updates only that item copy/image through Food Delivery-owned menu records.
 
 Still incomplete:
@@ -30,7 +30,7 @@ Still incomplete:
 2. future ownership links from Shopping to Assets and from Stock to cue systems still need clearer rollout order.
 3. service-account pushes are functional and boundary-safe, but later visual/copy polish can make them feel more brand-specific.
 4. Food Delivery store surfaces have the first route and IA baseline, but still need the next visual/UX polish pass for richer real-delivery-app ergonomics.
-5. App Store shop-entry editing is still missing the generalized binding-target model, Shopping-bound shop support, cover image management, create-shop flow, richer category/favorite/recent placement, and bound pseudo-folder placement. Food Delivery and Shopping must remain the runtime owners of their own records.
+5. App Store mini-app editing now has the generalized binding-target baseline, Shopping-bound generated entry support, cover facade management, installed/not-installed target-folder placement, and create-shop V0 owner handoff. A true custom Shopping store/service record model remains a Shopping-owned product decision if user-created Shopping shops need more than preset platform services.
 
 ## 2. Recommended Next Slice
 
@@ -40,7 +40,7 @@ Still incomplete:
 4. Treat the current `补给站` and `救援调度` paths as trial app-binding examples before broadening to auctions, reservations, subscriptions, or more dispatch behavior.
 
 5. Continue Food Delivery from store-surface polish, sticky cart ergonomics, and per-store visual differentiation without splitting the shared order system.
-6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; generalize `Shops` to explicit binding targets before adding more Food Delivery-only polish.
+6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; continue from the explicit binding-target/create-handoff baseline before adding more Food Delivery-only polish.
 
 ## 3. Do Not Do
 
