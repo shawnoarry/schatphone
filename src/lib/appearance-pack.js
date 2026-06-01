@@ -1,6 +1,3 @@
-import { normalizeAppIconOverrides } from './app-icon-presentation'
-import { normalizeScopedCustomCss } from './appearance-scoped-css'
-
 export const APPEARANCE_PACK_KIND = 'schatphone.appearance-pack'
 export const APPEARANCE_PACK_VERSION = 1
 
@@ -12,9 +9,7 @@ const APPEARANCE_PACK_FIELD_KEYS = Object.freeze([
   'showStatusBar',
   'hapticFeedbackEnabled',
   'customCss',
-  'scopedCustomCss',
   'customVars',
-  'appIconOverrides',
   'lockClockStyle',
 ])
 
@@ -54,9 +49,7 @@ export const normalizeAppearancePackAppearance = (appearance = {}) => {
     showStatusBar: normalizeBoolean(source.showStatusBar, true),
     hapticFeedbackEnabled: normalizeBoolean(source.hapticFeedbackEnabled, true),
     customCss: normalizeLooseText(source.customCss, '', 50_000),
-    scopedCustomCss: normalizeScopedCustomCss(source.scopedCustomCss),
     customVars: normalizeStringRecord(source.customVars),
-    appIconOverrides: normalizeAppIconOverrides(source.appIconOverrides),
     lockClockStyle: normalizeText(source.lockClockStyle, 'classic', 40),
   }
 }
@@ -113,9 +106,7 @@ export const mergeAppearancePackIntoAppearance = (currentAppearance = {}, packPa
     appearance: {
       ...(currentAppearance && typeof currentAppearance === 'object' ? currentAppearance : {}),
       ...normalized.pack.appearance,
-      scopedCustomCss: normalizeScopedCustomCss(normalized.pack.appearance.scopedCustomCss),
       customVars: { ...normalized.pack.appearance.customVars },
-      appIconOverrides: normalizeAppIconOverrides(normalized.pack.appearance.appIconOverrides),
     },
   }
 }
