@@ -27,6 +27,7 @@ describe('app icon presentation helpers', () => {
       icon: 'fas fa-comment-dots',
       accent: 'cool',
       galleryAssetId: '',
+      displayName: '',
     })
     expect(normalized.app_map).toBeUndefined()
     expect(normalized.random_key).toBeUndefined()
@@ -56,19 +57,45 @@ describe('app icon presentation helpers', () => {
       icon: 'fas fa-comment-dots',
       accent: 'cool',
       galleryAssetId: '',
+      displayName: '',
     })
     expect(normalized.app_gallery).toEqual({
       sourceType: 'gallery',
       icon: 'fas fa-images',
       accent: 'warm',
       galleryAssetId: 'asset_gallery_icon',
+      displayName: '',
     })
     expect(normalized.app_map).toEqual({
       sourceType: 'preset',
       icon: 'fas fa-route',
       accent: 'cool',
       galleryAssetId: '',
+      displayName: '',
     })
+  })
+
+  test('normalizes display-name-only app identity overrides', () => {
+    const normalized = normalizeAppIconOverrides({
+      app_chat: {
+        displayName: '  My   Messages  ',
+      },
+      random_key: {
+        displayName: 'Should not persist',
+      },
+    })
+
+    expect(normalized.app_chat).toEqual({
+      sourceType: 'preset',
+      icon: 'fas fa-comment',
+      accent: 'default',
+      galleryAssetId: '',
+      displayName: 'My Messages',
+    })
+    expect(normalized.random_key).toBeUndefined()
+
+    const meta = resolveAppIconMeta('app_chat', normalized, 'en-US')
+    expect(meta.displayName).toBe('My Messages')
   })
 
   test('resolves home app icon metadata with overrides', () => {

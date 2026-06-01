@@ -198,6 +198,49 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('uses App Store shop-entry presentation without changing restaurant records', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const store = useFoodDeliveryStore()
+    const restaurant = store.listRestaurantsByCategory('restaurants')[0]
+    expect(
+      systemStore.setEntryPresentationOverride(`shop_app_${restaurant.id}`, {
+        displayName: 'Moon Kitchen',
+        shortDescription: 'Late night comfort menu',
+        tags: 'late night, comfort',
+        templateId: 'standard',
+      }),
+    ).toBe(true)
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain('Moon Kitchen')
+    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(
+      'Late night comfort menu',
+    )
+    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(
+      'late night · comfort',
+    )
+
+    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('Moon Kitchen')
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('late night · comfort')
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe('standard')
+    expect(store.findRestaurantById(restaurant.id).name).toBe(restaurant.name)
+
+    wrapper.unmount()
+  })
+
   test('returns to the originating Home page when opened from a Home folder', async () => {
     const router = createTestRouter()
     await router.push('/food-delivery?category=nearby&from=home&homePage=1')
@@ -261,6 +304,67 @@ describe('FoodDeliveryView', () => {
       sourceId: `map_food_delivery_${activeRestaurant.id}`,
     })
     expect(wrapper.get('[data-testid="food-delivery-orders-panel"]').text()).toContain(activeRestaurant.name)
+    wrapper.unmount()
+  })
+
+  test('opens menu item details and edits only that item copy and image', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    const galleryStore = useGalleryStore()
+    systemStore.settings.system.language = 'en-US'
+    galleryStore.resetForTesting()
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const restaurant = store.listRestaurantsByCategory('restaurants')[0]
+    const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
+
+    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await flushPromises()
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${menuItem.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(menuItem.title)
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-desc"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+    expect(store.cartQuantity).toBe(1)
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-edit"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-title"]').setValue('Edited Lunar Rice')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-desc"]').setValue('A warmer bowl for the current scene.')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-ingredients"]').setValue('rice, egg, greens')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-image-source"]').setValue('url')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-image-url"]').setValue('https://example.com/lunar-rice.png')
+    await wrapper.get('[data-testid="food-delivery-menu-edit-save"]').trigger('click')
+    await flushPromises()
+
+    const editedMenuItem = store.findMenuItemById(menuItem.id)
+    expect(editedMenuItem).toMatchObject({
+      id: menuItem.id,
+      restaurantId: restaurant.id,
+      title: 'Edited Lunar Rice',
+      desc: 'A warmer bowl for the current scene.',
+      ingredients: 'rice, egg, greens',
+      image: {
+        sourceType: 'url',
+        url: 'https://example.com/lunar-rice.png',
+      },
+    })
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain('Edited Lunar Rice')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-ingredients"]').text()).toContain('rice, egg, greens')
+    expect(wrapper.get(`[data-testid="food-delivery-menu-tray-${menuItem.id}"]`).text()).toContain(
+      'Edited Lunar Rice',
+    )
+    expect(wrapper.get(`[data-testid="food-delivery-menu-dish-${menuItem.id}"] img`).attributes('src')).toBe(
+      'https://example.com/lunar-rice.png',
+    )
     wrapper.unmount()
   })
 

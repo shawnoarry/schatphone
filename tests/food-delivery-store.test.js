@@ -57,6 +57,8 @@ describe('food delivery store', () => {
       restaurantId: restaurant.id,
       title: 'Test Noodles',
       price: '28.80',
+      desc: 'Original noodles',
+      ingredients: 'noodles, broth',
       imageSourceType: 'gallery',
       imageGalleryAssetId: 'gallery_food_cover',
     })
@@ -67,6 +69,28 @@ describe('food delivery store', () => {
       image: {
         sourceType: 'gallery',
         galleryAssetId: 'gallery_food_cover',
+      },
+    })
+
+    const editedMenuItem = store.upsertMenuItem({
+      id: menuItem.id,
+      restaurantId: restaurant.id,
+      title: 'Edited Noodles',
+      price: menuItem.price,
+      desc: 'Richer broth and softer noodles.',
+      ingredients: 'noodles, beef, scallion',
+      imageSourceType: 'url',
+      imageUrl: 'https://example.com/edited-noodles.png',
+    })
+    expect(editedMenuItem).toMatchObject({
+      id: menuItem.id,
+      restaurantId: restaurant.id,
+      title: 'Edited Noodles',
+      desc: 'Richer broth and softer noodles.',
+      ingredients: 'noodles, beef, scallion',
+      image: {
+        sourceType: 'url',
+        url: 'https://example.com/edited-noodles.png',
       },
     })
   })

@@ -12,6 +12,10 @@ import {
 } from '../lib/push'
 import { normalizeAppIconOverrides } from '../lib/app-icon-presentation'
 import {
+  normalizeEntryOverrideId,
+  normalizeEntryPresentationOverrides,
+} from '../lib/app-entry-presentation'
+import {
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   BOOK_HOME_APP_ID,
@@ -1243,6 +1247,7 @@ export const useSystemStore = defineStore('system', () => {
       appSkins: normalizeAppSkinSettings(),
       customVars: {},
       appIconOverrides: {},
+      entryPresentationOverrides: {},
       homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
       homeWidgetPages: cloneDefaultWidgetPages(),
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
@@ -1749,6 +1754,29 @@ export const useSystemStore = defineStore('system', () => {
     return existed
   }
 
+  const setEntryPresentationOverride = (entryId, override = {}) => {
+    const normalizedId = normalizeEntryOverrideId(entryId)
+    if (!normalizedId) return false
+    const nextOverrides = {
+      ...(settings.appearance.entryPresentationOverrides || {}),
+      [normalizedId]: override,
+    }
+    const normalized = normalizeEntryPresentationOverrides(nextOverrides)
+    if (!normalized[normalizedId]) return false
+    settings.appearance.entryPresentationOverrides = normalized
+    return true
+  }
+
+  const clearEntryPresentationOverride = (entryId) => {
+    const normalizedId = normalizeEntryOverrideId(entryId)
+    if (!normalizedId) return false
+    const nextOverrides = { ...(settings.appearance.entryPresentationOverrides || {}) }
+    const existed = Boolean(nextOverrides[normalizedId])
+    delete nextOverrides[normalizedId]
+    settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(nextOverrides)
+    return existed
+  }
+
   const exportAppearancePack = (options = {}) =>
     buildAppearancePack(settings.appearance, {
       name: options.name,
@@ -1774,6 +1802,9 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.customVars =
       appearance.customVars && typeof appearance.customVars === 'object' ? { ...appearance.customVars } : {}
     settings.appearance.appIconOverrides = normalizeAppIconOverrides(appearance.appIconOverrides)
+    settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
+      appearance.entryPresentationOverrides,
+    )
     settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
 
     return {
@@ -1785,6 +1816,9 @@ export const useSystemStore = defineStore('system', () => {
         scopedCustomCss: normalizeScopedCustomCss(settings.appearance.scopedCustomCss),
         appSkins: normalizeAppSkinSettings(settings.appearance.appSkins),
         appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
+        entryPresentationOverrides: normalizeEntryPresentationOverrides(
+          settings.appearance.entryPresentationOverrides,
+        ),
       },
     }
   }
@@ -3564,6 +3598,9 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.appIconOverrides = normalizeAppIconOverrides(
         appearance.appIconOverrides,
       )
+      settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
+        appearance.entryPresentationOverrides,
+      )
       if (typeof appearance.lockClockStyle === 'string') {
         settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
       }
@@ -3738,6 +3775,9 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.appIconOverrides = normalizeAppIconOverrides(
       settings.appearance.appIconOverrides,
     )
+    settings.appearance.entryPresentationOverrides = normalizeEntryPresentationOverrides(
+      settings.appearance.entryPresentationOverrides,
+    )
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       settings.appearance.homeWidgetPages,
       currentCustomWidgetIds(),
@@ -3851,6 +3891,9 @@ export const useSystemStore = defineStore('system', () => {
             appSkins: normalizeAppSkinSettings(settings.appearance.appSkins),
             customVars: { ...settings.appearance.customVars },
             appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
+            entryPresentationOverrides: normalizeEntryPresentationOverrides(
+              settings.appearance.entryPresentationOverrides,
+            ),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
             homeLayoutTemplateIds: settings.appearance.homeLayoutTemplateIds.map(
               (templateId) => templateId,
@@ -3990,6 +4033,8 @@ export const useSystemStore = defineStore('system', () => {
     resetAppSkin,
     setAppIconOverride,
     clearAppIconOverride,
+    setEntryPresentationOverride,
+    clearEntryPresentationOverride,
     exportAppearancePack,
     importAppearancePack,
     setChatAppearance,

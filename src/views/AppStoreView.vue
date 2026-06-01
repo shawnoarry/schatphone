@@ -6,6 +6,16 @@ import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import {
+  APP_ENTRY_TYPE,
+  SHOP_ENTRY_TEMPLATE_OPTIONS,
+  resolveAppEntryBoundaryCopy,
+  resolveAppEntryType,
+  resolveAppEntryTypeCopy,
+  resolveDisplayName,
+  resolveEntryPresentationMeta,
+  resolveShopEntryTemplateOption,
+} from '../lib/app-entry-presentation'
+import {
   APP_ICON_ACCENT_OPTIONS,
   APP_ICON_PRESET_OPTIONS,
   resolveAppAccentLabel,
@@ -23,6 +33,7 @@ import {
   pushReturnTarget,
 } from '../lib/navigation-return'
 import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
+import { resolveFoodShopDefaultTemplateId } from '../lib/food-shop-presentation'
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
@@ -31,16 +42,19 @@ import {
 } from '../lib/planned-module-registry'
 import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
 
 const router = useRouter()
 const route = useRoute()
 const { t, systemLanguage, languageBase } = useI18n()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const { settings } = storeToRefs(systemStore)
 
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const entryPresentationOverrides = computed(() => settings.value.appearance?.entryPresentationOverrides || {})
 const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
@@ -53,15 +67,10 @@ const APP_STORE_FILTERS = [
   'all',
   'home',
   'library',
-  'System',
-  'Social',
-  'Life',
-  'Style',
-  'Media',
-  'Productivity',
-  'Finance',
-  'Archive',
-  'World',
+  APP_ENTRY_TYPE.APP,
+  APP_ENTRY_TYPE.WORLD,
+  APP_ENTRY_TYPE.SHOP,
+  APP_ENTRY_TYPE.SYSTEM,
 ]
 
 const APP_STORE_ENTRIES = [
@@ -263,7 +272,10 @@ const normalizeInitialFilter = (value = '') => {
   const rawValue = Array.isArray(value) ? value[0] : value
   const normalized = String(rawValue || '').trim()
   const lowered = normalized.toLowerCase()
-  if (lowered === 'world' || lowered === 'world_apps' || lowered === 'world-apps') return 'World'
+  if (lowered === 'apps' || lowered === 'app') return APP_ENTRY_TYPE.APP
+  if (lowered === 'world' || lowered === 'world_apps' || lowered === 'world-apps') return APP_ENTRY_TYPE.WORLD
+  if (lowered === 'shops' || lowered === 'shop' || lowered === 'food_shops') return APP_ENTRY_TYPE.SHOP
+  if (lowered === 'system') return APP_ENTRY_TYPE.SYSTEM
   return APP_STORE_FILTERS.includes(normalized) ? normalized : 'all'
 }
 
@@ -295,39 +307,97 @@ const homeAppPageMap = computed(() => {
 const worldAppStoreEntries = computed(() =>
   buildActiveWorldAppEntryRows({ systemStore }).map((entry) => ({
     ...entry,
+    entryType: APP_ENTRY_TYPE.WORLD,
     categoryZh: entry.categoryZh || 'World',
     categoryEn: entry.categoryEn || 'World',
+  })),
+)
+
+const shopAppStoreEntries = computed(() =>
+  foodDeliveryStore.restaurants.slice(0, 24).map((restaurant) => ({
+    id: `shop_app_${restaurant.id}`,
+    route: '/food-delivery',
+    routeQuery: {
+      restaurantId: restaurant.id,
+      category: restaurant.category || 'restaurants',
+    },
+    labelZh: restaurant.name,
+    labelEn: restaurant.name,
+    categoryZh: '店铺',
+    categoryEn: 'Shops',
+    descZh: restaurant.cuisine || restaurant.address || '外卖店铺入口',
+    descEn: restaurant.cuisine || restaurant.address || 'Food Delivery shop entry',
+    icon: 'fas fa-store',
+    accent: 'warm',
+    entryKind: 'shop_app',
+    entryType: APP_ENTRY_TYPE.SHOP,
+    shopAppEntry: true,
+    restaurantId: restaurant.id,
+    restaurant,
   })),
 )
 
 const appStoreBaseEntries = computed(() => [
   ...APP_STORE_ENTRIES,
   ...worldAppStoreEntries.value,
+  ...shopAppStoreEntries.value,
 ])
 
 const appStoreItems = computed(() =>
   appStoreBaseEntries.value.map((entry) => {
-    const iconMeta = entry.worldAppEntry
-      ? {
-          icon: entry.icon || 'fas fa-globe',
-          accent: entry.accent || 'default',
-          toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
-        }
-      : resolveAppIconMeta(entry.id, appIconOverrides.value, locale.value)
+    const entryType = resolveAppEntryType(entry)
+    const entryPresentationMeta = entry.shopAppEntry
+      ? resolveEntryPresentationMeta(entry, entryPresentationOverrides.value)
+      : null
+    const iconMeta = entryPresentationMeta
+      ? entryPresentationMeta
+      : entry.worldAppEntry
+        ? {
+            icon: entry.icon || 'fas fa-globe',
+            accent: entry.accent || 'default',
+            toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
+          }
+        : resolveAppIconMeta(entry.id, appIconOverrides.value, locale.value)
     const visible = visibleHomeAppIds.value.has(entry.id)
     const inDock = DOCK_APP_IDS.has(entry.id)
+    const baseLabel = t(entry.labelZh, entry.labelEn)
+    const baseDesc = t(entry.descZh, entry.descEn)
+    const entryTypeCopy = resolveAppEntryTypeCopy(entryType, t)
+    const templateId = iconMeta.hasTemplateOverride
+      ? iconMeta.templateId
+      : resolveFoodShopDefaultTemplateId(entry.restaurantId)
+    const template = resolveShopEntryTemplateOption(templateId)
     return {
       ...entry,
+      entryType,
+      entryTypeLabel: entryTypeCopy.label,
+      entryTypeTitle: entryTypeCopy.title,
+      entryTypeDescription: entryTypeCopy.description,
+      boundaryCopy: resolveAppEntryBoundaryCopy({ ...entry, entryType }, t),
       icon: iconMeta.icon,
       accent: iconMeta.accent,
       toneClass: iconMeta.toneClass,
       sourceType: iconMeta.sourceType || 'preset',
       galleryAssetId: iconMeta.galleryAssetId || '',
       hasImageIcon: iconMeta.hasImageIcon === true,
-      iconImageUrl: entry.worldAppEntry ? '' : appIconImageUrl(entry.id),
-      label: t(entry.labelZh, entry.labelEn),
+      iconImageUrl:
+        entry.shopAppEntry && iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
+          ? entryImagePreviewUrls[entry.id] || ''
+          : iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
+            ? appIconImageUrl(entry.id)
+          : entry.worldAppEntry || entry.shopAppEntry
+            ? ''
+            : appIconImageUrl(entry.id),
+      displayNameOverride: iconMeta.displayName || '',
+      label: resolveDisplayName(baseLabel, iconMeta),
+      baseLabel,
       category: t(entry.categoryZh, entry.categoryEn),
-      desc: t(entry.descZh, entry.descEn),
+      desc: iconMeta.shortDescription || baseDesc,
+      baseDesc,
+      shortDescriptionOverride: iconMeta.shortDescription || '',
+      entryTags: [...(iconMeta.tags || [])],
+      templateId,
+      templateLabel: t(template.labelZh, template.labelEn),
       visible,
       inDock,
       homePageIndex: homeAppPageMap.value.get(entry.id),
@@ -347,7 +417,7 @@ function appMatchesFilter(app, filterId) {
   if (filterId === 'all') return true
   if (filterId === 'home') return app.visible
   if (filterId === 'library') return !app.visible
-  return app.categoryEn === filterId
+  return app.entryType === filterId
 }
 
 function appMatchesSearch(app) {
@@ -356,6 +426,10 @@ function appMatchesSearch(app) {
   return [
     app.id,
     app.label,
+    app.baseLabel,
+    app.displayNameOverride,
+    app.entryTypeLabel,
+    app.entryTypeTitle,
     app.labelZh,
     app.labelEn,
     app.category,
@@ -364,6 +438,10 @@ function appMatchesSearch(app) {
     app.desc,
     app.descZh,
     app.descEn,
+    app.shortDescriptionOverride,
+    ...(app.entryTags || []),
+    app.templateLabel,
+    app.templateId,
   ]
     .filter(Boolean)
     .join(' ')
@@ -375,15 +453,10 @@ function filterLabel(filterId) {
   if (filterId === 'all') return t('全部', 'All')
   if (filterId === 'home') return t('主屏', 'Home')
   if (filterId === 'library') return t('库内', 'Library')
-  if (filterId === 'System') return t('系统', 'System')
-  if (filterId === 'Social') return t('社交', 'Social')
-  if (filterId === 'Life') return t('生活', 'Life')
-  if (filterId === 'Style') return t('美化', 'Style')
-  if (filterId === 'Media') return t('媒体', 'Media')
-  if (filterId === 'Productivity') return t('效率', 'Productivity')
-  if (filterId === 'Finance') return t('财务', 'Finance')
-  if (filterId === 'Archive') return t('资料', 'Archive')
-  if (filterId === 'World') return t('世界', 'World')
+  if (filterId === APP_ENTRY_TYPE.APP) return t('Apps', 'Apps')
+  if (filterId === APP_ENTRY_TYPE.WORLD) return t('世界', 'World')
+  if (filterId === APP_ENTRY_TYPE.SHOP) return t('店铺', 'Shops')
+  if (filterId === APP_ENTRY_TYPE.SYSTEM) return t('系统', 'System')
   return filterId
 }
 
@@ -409,6 +482,7 @@ const selectedApp = computed(() => {
 
 const selectedAppPlacementLabel = computed(() => {
   if (selectedApp.value?.protectedHomeEntry) return t('今日视图', 'Today View')
+  if (selectedApp.value?.shopAppEntry) return t('外卖店铺区', 'Food shops')
   if (selectedApp.value?.visible && Number.isInteger(selectedApp.value.homePageIndex)) {
     return t(`第 ${selectedApp.value.homePageIndex + 1} 屏`, `Screen ${selectedApp.value.homePageIndex + 1}`)
   }
@@ -418,15 +492,81 @@ const selectedAppPlacementLabel = computed(() => {
 
 const selectedAppStatusLabel = computed(() => {
   if (selectedApp.value?.protectedHomeEntry) return t('固定入口', 'Fixed')
+  if (selectedApp.value?.shopAppEntry) return t('店铺入口', 'Shop entry')
   if (selectedApp.value?.visible) return t('主屏可见', 'On Home')
   if (selectedApp.value?.inDock) return t('Dock 常驻', 'In Dock')
   return t('库内待放置', 'In Library')
 })
 
 const selectedAppEntryKindLabel = computed(() => {
+  if (selectedApp.value?.shopAppEntry) return t('店铺入口', 'Shop App')
+  if (selectedApp.value?.worldAppEntry) return t('世界入口', 'World App')
   if (selectedApp.value?.entryKind === 'folder') return t('文件夹', 'Folder')
-  if (selectedApp.value?.entryKind === 'world_app') return t('世界入口', 'World App')
-  return 'APP'
+  if (selectedApp.value?.entryType === APP_ENTRY_TYPE.SYSTEM) return t('系统入口', 'System')
+  return t('独立 App', 'App')
+})
+
+const selectedAppInfoRows = computed(() => {
+  const app = selectedApp.value
+  if (!app) return []
+  return [
+    { key: 'type', label: t('入口类型', 'Entry type'), value: app.entryTypeLabel },
+    { key: 'category', label: t('原分类', 'Original category'), value: app.category },
+    { key: 'route', label: t('打开位置', 'Open target'), value: app.route },
+    { key: 'id', label: t('运行身份', 'Runtime identity'), value: app.id },
+  ].filter((row) => row.value)
+})
+
+const selectedAppDisplayRows = computed(() => {
+  const app = selectedApp.value
+  if (!app) return []
+  return [
+    { key: 'visible', label: t('手机显示名', 'Phone display name'), value: app.label },
+    { key: 'default', label: t('默认名称', 'Default name'), value: app.baseLabel },
+    {
+      key: 'short-description',
+      label: t('入口短描述', 'Entry description'),
+      value: app.shopAppEntry ? app.shortDescriptionOverride || t('未设置', 'Not set') : '',
+    },
+    {
+      key: 'tags',
+      label: t('展示标签', 'Display tags'),
+      value: app.shopAppEntry
+        ? app.entryTags?.length
+          ? app.entryTags.join(' · ')
+          : t('未设置', 'Not set')
+        : '',
+    },
+    {
+      key: 'template',
+      label: t('店铺模板', 'Shop template'),
+      value: app.shopAppEntry ? app.templateLabel : '',
+    },
+    {
+      key: 'custom',
+      label: t('自定义名称', 'Custom name'),
+      value: app.displayNameOverride || t('未设置', 'Not set'),
+    },
+  ].filter((row) => row.value)
+})
+
+const selectedShopAppDetailRows = computed(() => {
+  const restaurant = selectedApp.value?.restaurant
+  if (!restaurant) return []
+  return [
+    { key: 'cuisine', label: t('店铺类型', 'Cuisine'), value: restaurant.cuisine || restaurant.category },
+    { key: 'address', label: t('地址', 'Address'), value: restaurant.address },
+    {
+      key: 'eta',
+      label: t('预计送达', 'ETA'),
+      value: restaurant.deliveryEtaMinutes ? `${restaurant.deliveryEtaMinutes} min` : '',
+    },
+    {
+      key: 'fee',
+      label: t('配送费', 'Delivery fee'),
+      value: restaurant.deliveryFee ? `${restaurant.deliveryFee} ${restaurant.currency || ''}`.trim() : '',
+    },
+  ].filter((row) => row.value)
 })
 
 const selectedWorldAppDetailRows = computed(() => {
@@ -481,21 +621,34 @@ const selectedWorldAppHandoff = computed(() => {
   }
 })
 
-const selectedAppCanCustomizeIdentity = computed(() => Boolean(selectedApp.value && !selectedApp.value.worldAppEntry))
+const selectedAppCanCustomizeIdentity = computed(() =>
+  Boolean(selectedApp.value && !selectedApp.value.worldAppEntry),
+)
 const selectedAppSkinTarget = computed(() =>
-  selectedApp.value?.worldAppEntry ? null : resolveAppSkinTargetForAppId(selectedApp.value?.id),
+  selectedApp.value?.worldAppEntry || selectedApp.value?.shopAppEntry
+    ? null
+    : resolveAppSkinTargetForAppId(selectedApp.value?.id),
 )
 const selectedAppCanCustomizeSkin = computed(() => Boolean(selectedAppSkinTarget.value))
+const selectedAppCanManageHomePlacement = computed(() =>
+  Boolean(selectedApp.value && !selectedApp.value.shopAppEntry),
+)
 const galleryIconAssets = computed(() => galleryStore.assets.slice(0, 120))
 const identityEditorOpen = ref(false)
 const identityFeedback = ref('')
 const identityFileInput = ref(null)
 const identityDraftPreviewUrl = ref('')
+const entryImagePreviewUrls = reactive({})
+let entryImagePreviewVersion = 0
 const identityDraft = reactive({
+  displayName: '',
   sourceType: 'preset',
   icon: '',
   accent: 'default',
   galleryAssetId: '',
+  shortDescription: '',
+  tagsText: '',
+  templateId: 'standard',
 })
 let identityDraftPreviewVersion = 0
 const skinEditorOpen = ref(false)
@@ -509,25 +662,54 @@ const skinDraft = reactive({
 const syncIdentityDraftFromSelectedApp = () => {
   const app = selectedApp.value
   if (!app) return
-  const meta = resolveAppIconMeta(app.id, appIconOverrides.value, locale.value)
+  const meta = app.shopAppEntry
+    ? resolveEntryPresentationMeta(app, entryPresentationOverrides.value)
+    : resolveAppIconMeta(app.id, appIconOverrides.value, locale.value)
+  identityDraft.displayName = meta.displayName || ''
   identityDraft.sourceType = meta.hasImageIcon ? 'gallery' : 'preset'
   identityDraft.icon = meta.icon
   identityDraft.accent = meta.accent
   identityDraft.galleryAssetId = meta.galleryAssetId || ''
+  identityDraft.shortDescription = meta.shortDescription || ''
+  identityDraft.tagsText = (meta.tags || []).join(', ')
+  identityDraft.templateId =
+    meta.hasTemplateOverride && app.shopAppEntry ? meta.templateId : app.templateId || meta.templateId || 'standard'
   identityFeedback.value = ''
 }
 
 const identityPreviewMeta = computed(() => {
   const app = selectedApp.value
   if (!app) return {}
+  if (app.shopAppEntry) {
+    return resolveEntryPresentationMeta(
+      app,
+      {
+        [app.id]: {
+          sourceType: identityDraft.sourceType,
+          displayName: identityDraft.displayName,
+          icon: identityDraft.icon,
+          accent: identityDraft.accent,
+          galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
+          shortDescription: identityDraft.shortDescription,
+          tags: identityDraft.tagsText,
+          templateId: identityDraft.templateId,
+          hasOverride: true,
+        },
+      },
+    )
+  }
   return resolveAppIconMeta(
     app.id,
     {
       [app.id]: {
         sourceType: identityDraft.sourceType,
+        displayName: identityDraft.displayName,
         icon: identityDraft.icon,
         accent: identityDraft.accent,
         galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
+        shortDescription: identityDraft.shortDescription,
+        tags: identityDraft.tagsText,
+        templateId: identityDraft.templateId,
       },
     },
     locale.value,
@@ -555,9 +737,44 @@ const refreshIdentityDraftPreview = async () => {
   identityDraftPreviewUrl.value = typeof url === 'string' ? url : ''
 }
 
+const refreshEntryImagePreviews = async () => {
+  const currentVersion = entryImagePreviewVersion + 1
+  entryImagePreviewVersion = currentVersion
+  const activeIds = new Set()
+  const overrides = entryPresentationOverrides.value
+
+  await Promise.all(
+    Object.entries(overrides).map(async ([entryId, override]) => {
+      if (override?.sourceType !== 'gallery' || !override.galleryAssetId) return
+      activeIds.add(entryId)
+      const asset = galleryStore.findAssetById(override.galleryAssetId)
+      if (!asset) {
+        entryImagePreviewUrls[entryId] = ''
+        return
+      }
+      const url = await galleryStore.getAssetPreviewUrl(override.galleryAssetId, {
+        scopeId: 'app-store-entry-icons',
+      })
+      if (currentVersion !== entryImagePreviewVersion) return
+      entryImagePreviewUrls[entryId] = typeof url === 'string' ? url : ''
+    }),
+  )
+
+  if (currentVersion !== entryImagePreviewVersion) return
+  Object.keys(entryImagePreviewUrls).forEach((entryId) => {
+    if (!activeIds.has(entryId)) delete entryImagePreviewUrls[entryId]
+  })
+}
+
 watch(
   () => [identityDraft.sourceType, identityDraft.galleryAssetId, galleryStore.hasFinishedStorageHydration],
   refreshIdentityDraftPreview,
+  { immediate: true },
+)
+
+watch(
+  () => [JSON.stringify(entryPresentationOverrides.value), galleryStore.hasFinishedStorageHydration],
+  refreshEntryImagePreviews,
   { immediate: true },
 )
 
@@ -630,27 +847,40 @@ const setIdentitySource = (sourceType) => {
 
 const saveIdentityEditor = () => {
   if (!selectedApp.value) return
-  const saved = systemStore.setAppIconOverride(selectedApp.value.id, {
+  const payload = {
     sourceType: identityDraft.sourceType,
+    displayName: identityDraft.displayName,
     icon: identityDraft.icon,
     accent: identityDraft.accent,
     galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
-  })
+    shortDescription: identityDraft.shortDescription,
+    tags: identityDraft.tagsText,
+    templateId: identityDraft.templateId,
+  }
+  const saved = selectedApp.value.shopAppEntry
+    ? systemStore.setEntryPresentationOverride(selectedApp.value.id, payload)
+    : systemStore.setAppIconOverride(selectedApp.value.id, payload)
   if (!saved) {
     identityFeedback.value = t('请选择可用的图标样式或图片。', 'Choose an available icon style or image.')
     return
   }
   systemStore.saveNow()
   void refreshAppStoreIconPreviews()
-  identityFeedback.value = t('图标已更新。', 'Icon updated.')
+  void refreshEntryImagePreviews()
+  identityFeedback.value = t('图标与显示名已更新。', 'Icon and display name updated.')
   closeIdentityEditor()
 }
 
 const restoreIdentityDefault = () => {
   if (!selectedApp.value) return
-  systemStore.clearAppIconOverride(selectedApp.value.id)
+  if (selectedApp.value.shopAppEntry) {
+    systemStore.clearEntryPresentationOverride(selectedApp.value.id)
+  } else {
+    systemStore.clearAppIconOverride(selectedApp.value.id)
+  }
   systemStore.saveNow()
   void refreshAppStoreIconPreviews()
+  void refreshEntryImagePreviews()
   syncIdentityDraftFromSelectedApp()
   identityFeedback.value = t('已恢复默认图标。', 'Default icon restored.')
   closeIdentityEditor()
@@ -691,6 +921,7 @@ const appStoreItemStateKey = (app) => {
 }
 
 const appStoreItemStateLabel = (app) => {
+  if (app?.shopAppEntry) return t('店铺', 'Shop')
   const state = appStoreItemStateKey(app)
   if (state === 'fixed') return t('固定', 'Fixed')
   if (state === 'home') return t('主屏', 'Home')
@@ -700,6 +931,7 @@ const appStoreItemStateLabel = (app) => {
 
 const appStoreItemPlacementNote = (app) => {
   if (app?.protectedHomeEntry) return t('今日视图固定', 'Fixed in Today View')
+  if (app?.shopAppEntry) return t('外卖店铺区', 'Food shops')
   if (app?.visible && Number.isInteger(app.homePageIndex)) {
     return t(`第 ${app.homePageIndex + 1} 屏`, `Screen ${app.homePageIndex + 1}`)
   }
@@ -753,7 +985,7 @@ const closeDetailSheet = () => {
 }
 
 const editSelectedAppOnHome = () => {
-  if (!selectedApp.value) return
+  if (!selectedApp.value || !selectedAppCanManageHomePlacement.value) return
   const query = {
     homePage: Number.isInteger(selectedApp.value.homePageIndex)
       ? String(selectedApp.value.homePageIndex)
@@ -790,6 +1022,7 @@ const removeSelectedAppFromHome = () => {
 onBeforeUnmount(() => {
   if (libraryNoticeTimerId) clearTimeout(libraryNoticeTimerId)
   galleryStore.releaseAssetPreviewScope('app-store-identity-draft')
+  galleryStore.releaseAssetPreviewScope('app-store-entry-icons')
 })
 </script>
 
@@ -908,7 +1141,7 @@ onBeforeUnmount(() => {
               <span class="app-store-item-copy">
                 <span class="app-store-item-title">
                   <strong>{{ app.label }}</strong>
-                  <em>{{ app.category }}</em>
+                  <em>{{ app.entryTypeLabel }}</em>
                 </span>
                 <small>{{ app.desc }}</small>
                 <span class="app-store-item-placement">
@@ -937,7 +1170,7 @@ onBeforeUnmount(() => {
                 :alt="selectedApp.label"
               />
               <div>
-                <p>{{ selectedApp.category }}</p>
+                <p>{{ selectedApp.entryTypeTitle }}</p>
                 <h2>{{ selectedApp.label }}</h2>
                 <span>{{ selectedAppPlacementLabel }}</span>
               </div>
@@ -951,6 +1184,38 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
+            <section class="app-store-entry-panel" data-testid="app-store-entry-info">
+              <div class="app-store-entry-panel-head">
+                <i class="fas fa-layer-group" aria-hidden="true"></i>
+                <strong>{{ selectedApp.entryTypeTitle }}</strong>
+              </div>
+              <p>{{ selectedApp.entryTypeDescription }}</p>
+              <div class="app-store-entry-grid">
+                <span v-for="row in selectedAppInfoRows" :key="row.key">
+                  <small>{{ row.label }}</small>
+                  <strong>{{ row.value }}</strong>
+                </span>
+              </div>
+            </section>
+            <section class="app-store-entry-panel" data-testid="app-store-entry-display">
+              <div class="app-store-entry-panel-head">
+                <i class="fas fa-mobile-screen" aria-hidden="true"></i>
+                <strong>{{ t('手机外观', 'Phone appearance') }}</strong>
+              </div>
+              <div class="app-store-entry-grid">
+                <span v-for="row in selectedAppDisplayRows" :key="row.key">
+                  <small>{{ row.label }}</small>
+                  <strong>{{ row.value }}</strong>
+                </span>
+              </div>
+            </section>
+            <section class="app-store-entry-panel" data-testid="app-store-entry-boundary">
+              <div class="app-store-entry-panel-head">
+                <i class="fas fa-diagram-project" aria-hidden="true"></i>
+                <strong>{{ t('运行边界', 'Runtime boundary') }}</strong>
+              </div>
+              <p>{{ selectedApp.boundaryCopy }}</p>
+            </section>
             <div class="app-store-detail-stats">
               <span>
                 <small>{{ t('状态', 'Status') }}</small>
@@ -986,6 +1251,19 @@ onBeforeUnmount(() => {
                 <strong>{{ row.value }}</strong>
               </span>
             </div>
+            <div
+              v-if="selectedShopAppDetailRows.length"
+              class="app-store-world-meta app-store-shop-meta"
+              data-testid="app-store-shop-app-meta"
+            >
+              <span
+                v-for="row in selectedShopAppDetailRows"
+                :key="row.key"
+              >
+                <small>{{ row.label }}</small>
+                <strong>{{ row.value }}</strong>
+              </span>
+            </div>
             <div class="app-store-actions">
               <button type="button" class="app-store-action is-primary" @click="openSelectedApp" data-testid="app-store-open">
                 <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
@@ -1011,12 +1289,18 @@ onBeforeUnmount(() => {
                 <i class="fas fa-palette" aria-hidden="true"></i>
                 <span>{{ t('APP 皮肤', 'App Skin') }}</span>
               </button>
-              <button type="button" class="app-store-action" @click="editSelectedAppOnHome" data-testid="app-store-add-home">
+              <button
+                v-if="selectedAppCanManageHomePlacement"
+                type="button"
+                class="app-store-action"
+                @click="editSelectedAppOnHome"
+                data-testid="app-store-add-home"
+              >
                 <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
                 <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
               </button>
               <button
-                v-if="selectedApp.visible && !selectedApp.protectedHomeEntry"
+                v-if="selectedAppCanManageHomePlacement && selectedApp.visible && !selectedApp.protectedHomeEntry"
                 type="button"
                 class="app-store-action is-danger"
                 @click="removeSelectedAppFromHome"
@@ -1052,7 +1336,7 @@ onBeforeUnmount(() => {
           :alt="selectedApp.label"
         />
         <div>
-          <p>{{ selectedApp.category }}</p>
+          <p>{{ selectedApp.entryTypeTitle }}</p>
           <h2>{{ selectedApp.label }}</h2>
           <span>{{ selectedAppPlacementLabel }}</span>
         </div>
@@ -1066,6 +1350,38 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <p class="app-store-detail-desc">{{ selectedApp.desc }}</p>
+      <section class="app-store-entry-panel" data-testid="app-store-entry-info-sheet">
+        <div class="app-store-entry-panel-head">
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+          <strong>{{ selectedApp.entryTypeTitle }}</strong>
+        </div>
+        <p>{{ selectedApp.entryTypeDescription }}</p>
+        <div class="app-store-entry-grid">
+          <span v-for="row in selectedAppInfoRows" :key="row.key">
+            <small>{{ row.label }}</small>
+            <strong>{{ row.value }}</strong>
+          </span>
+        </div>
+      </section>
+      <section class="app-store-entry-panel" data-testid="app-store-entry-display-sheet">
+        <div class="app-store-entry-panel-head">
+          <i class="fas fa-mobile-screen" aria-hidden="true"></i>
+          <strong>{{ t('手机外观', 'Phone appearance') }}</strong>
+        </div>
+        <div class="app-store-entry-grid">
+          <span v-for="row in selectedAppDisplayRows" :key="row.key">
+            <small>{{ row.label }}</small>
+            <strong>{{ row.value }}</strong>
+          </span>
+        </div>
+      </section>
+      <section class="app-store-entry-panel" data-testid="app-store-entry-boundary-sheet">
+        <div class="app-store-entry-panel-head">
+          <i class="fas fa-diagram-project" aria-hidden="true"></i>
+          <strong>{{ t('运行边界', 'Runtime boundary') }}</strong>
+        </div>
+        <p>{{ selectedApp.boundaryCopy }}</p>
+      </section>
       <div class="app-store-detail-stats">
         <span>
           <small>{{ t('状态', 'Status') }}</small>
@@ -1095,6 +1411,19 @@ onBeforeUnmount(() => {
       >
         <span
           v-for="row in selectedWorldAppDetailRows"
+          :key="row.key"
+        >
+          <small>{{ row.label }}</small>
+          <strong>{{ row.value }}</strong>
+        </span>
+      </div>
+      <div
+        v-if="selectedShopAppDetailRows.length"
+        class="app-store-world-meta app-store-shop-meta"
+        data-testid="app-store-shop-app-meta-sheet"
+      >
+        <span
+          v-for="row in selectedShopAppDetailRows"
           :key="row.key"
         >
           <small>{{ row.label }}</small>
@@ -1131,12 +1460,17 @@ onBeforeUnmount(() => {
           <i class="fas fa-palette" aria-hidden="true"></i>
           <span>{{ t('APP 皮肤', 'App Skin') }}</span>
         </button>
-        <button type="button" class="app-store-action" @click="editSelectedAppOnHome">
+        <button
+          v-if="selectedAppCanManageHomePlacement"
+          type="button"
+          class="app-store-action"
+          @click="editSelectedAppOnHome"
+        >
           <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
           <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
         </button>
         <button
-          v-if="selectedApp.visible && !selectedApp.protectedHomeEntry"
+          v-if="selectedAppCanManageHomePlacement && selectedApp.visible && !selectedApp.protectedHomeEntry"
           type="button"
           class="app-store-action is-danger"
           @click="removeSelectedAppFromHome"
@@ -1205,6 +1539,17 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="app-store-identity-fields">
+        <label class="app-store-identity-field">
+          <span>{{ t('显示名', 'Display name') }}</span>
+          <input
+            v-model="identityDraft.displayName"
+            type="text"
+            maxlength="40"
+            :placeholder="selectedApp.baseLabel"
+            data-testid="app-store-identity-display-name"
+          />
+        </label>
+
         <label v-if="identityDraft.sourceType === 'preset'" class="app-store-identity-field">
           <span>{{ t('图标', 'Icon') }}</span>
           <select v-model="identityDraft.icon" data-testid="app-store-identity-icon-preset">
@@ -1241,6 +1586,41 @@ onBeforeUnmount(() => {
               :value="option.value"
             >
               {{ resolveAppAccentLabel(option.value, locale) }}
+            </option>
+          </select>
+        </label>
+
+        <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field app-store-identity-wide-field">
+          <span>{{ t('入口短描述', 'Entry description') }}</span>
+          <textarea
+            v-model="identityDraft.shortDescription"
+            maxlength="110"
+            rows="2"
+            :placeholder="selectedApp.baseDesc"
+            data-testid="app-store-identity-shop-description"
+          ></textarea>
+        </label>
+
+        <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field">
+          <span>{{ t('展示标签', 'Display tags') }}</span>
+          <input
+            v-model="identityDraft.tagsText"
+            type="text"
+            maxlength="180"
+            :placeholder="t('夜宵, 约会, 甜品', 'late night, date, dessert')"
+            data-testid="app-store-identity-shop-tags"
+          />
+        </label>
+
+        <label v-if="selectedApp.shopAppEntry" class="app-store-identity-field">
+          <span>{{ t('店铺模板', 'Shop template') }}</span>
+          <select v-model="identityDraft.templateId" data-testid="app-store-identity-shop-template">
+            <option
+              v-for="option in SHOP_ENTRY_TEMPLATE_OPTIONS"
+              :key="option.id"
+              :value="option.id"
+            >
+              {{ t(option.labelZh, option.labelEn) }}
             </option>
           </select>
         </label>
@@ -1988,6 +2368,84 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.app-store-shop-meta span {
+  border-color: color-mix(in srgb, var(--system-warning) 24%, var(--system-subtle-border));
+  background: color-mix(in srgb, var(--system-warning) 10%, var(--system-surface-muted));
+}
+
+.app-store-shop-meta small {
+  color: var(--system-warning);
+}
+
+.app-store-entry-panel {
+  min-width: 0;
+  margin-top: 12px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  background: var(--system-surface-muted);
+}
+
+.app-store-entry-panel-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--system-accent);
+}
+
+.app-store-entry-panel-head strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 860;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-store-entry-panel p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 720;
+}
+
+.app-store-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.app-store-entry-grid span {
+  min-width: 0;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 14px;
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  background: var(--system-control-bg);
+}
+
+.app-store-entry-grid small {
+  color: var(--system-text-soft);
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.app-store-entry-grid strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 11px;
+  font-weight: 820;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-store-world-handoff {
   margin-top: 12px;
   border: 1px solid color-mix(in srgb, var(--system-info) 24%, var(--system-subtle-border));
@@ -2236,6 +2694,7 @@ onBeforeUnmount(() => {
   font-weight: 820;
 }
 
+.app-store-identity-field input,
 .app-store-identity-field select,
 .app-store-identity-field textarea {
   min-width: 0;
@@ -2249,12 +2708,20 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
+.app-store-identity-field input {
+  padding: 0 11px;
+}
+
 .app-store-identity-field select {
   padding: 0 11px;
 }
 
 .app-store-identity-field textarea {
   padding: 10px 11px;
+}
+
+.app-store-identity-wide-field {
+  grid-column: 1 / -1;
 }
 
 .app-store-identity-upload {

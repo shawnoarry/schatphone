@@ -139,11 +139,17 @@ const normalizeGalleryAssetId = (value) => {
   return value.trim().slice(0, 140)
 }
 
+const normalizeDisplayName = (value) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().replace(/\s+/g, ' ').slice(0, 40)
+}
+
 const normalizeSingleOverride = (value, fallback = {}) => {
   if (!value || typeof value !== 'object') return null
 
   const sourceType = normalizeIconSourceType(value.sourceType || value.imageSourceType)
   const galleryAssetId = normalizeGalleryAssetId(value.galleryAssetId || value.imageGalleryAssetId)
+  const displayName = normalizeDisplayName(value.displayName)
   const icon =
     typeof value.icon === 'string' && APP_ICON_PRESET_SET.has(value.icon.trim())
       ? value.icon.trim()
@@ -159,16 +165,18 @@ const normalizeSingleOverride = (value, fallback = {}) => {
       icon: icon || fallback.icon || 'fas fa-circle',
       accent: accent || fallback.accent || 'default',
       galleryAssetId,
+      displayName,
     }
   }
 
-  if (!icon && !accent) return null
+  if (!icon && !accent && !displayName) return null
 
   return {
     sourceType: 'preset',
     icon: icon || fallback.icon || 'fas fa-circle',
     accent: accent || fallback.accent || 'default',
     galleryAssetId: '',
+    displayName,
   }
 }
 
@@ -200,6 +208,7 @@ export const resolveAppIconMeta = (appId, overrides = {}, locale = 'en-US') => {
     accent: override?.accent || fallback.accent,
     toneClass: `accent-${override?.accent || fallback.accent}`,
     label: readLocalizedCopy(APP_ICON_LABELS[appId], locale, appId),
+    displayName: override?.displayName || '',
     sourceType: override?.sourceType || 'preset',
     galleryAssetId: override?.sourceType === 'gallery' ? override.galleryAssetId : '',
     hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),

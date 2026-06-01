@@ -25,6 +25,7 @@ import {
   resolveHomeFolderChildRoute,
   resolveHomeFolderPresentation,
 } from '../lib/home-entry-registry'
+import { resolveDisplayName } from '../lib/app-entry-presentation'
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
@@ -382,7 +383,7 @@ const tileMeta = (tileId) => {
         ...builtIn,
         icon: resolvedIconMeta.icon,
         accent: resolvedIconMeta.accent,
-        label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
+        label: resolveDisplayName(resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label), resolvedIconMeta),
       }
     }
     if (builtIn.kind === HOME_FOLDER_TILE_KIND) {
@@ -392,7 +393,7 @@ const tileMeta = (tileId) => {
         ...builtIn,
         icon: resolvedIconMeta.icon,
         accent: resolvedIconMeta.accent,
-        label: resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label),
+        label: resolveDisplayName(resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label), resolvedIconMeta),
         childEntries: childEntries.map((entry) => ({
           ...entry,
           label: localizeEntryText(entry),
@@ -1183,7 +1184,13 @@ const iconStyle = (accent = 'default') => {
   }
 }
 
-const dockAppMeta = (appId) => resolveAppIconMeta(appId, appIconOverrides.value, homeLocale.value)
+const dockAppMeta = (appId) => {
+  const meta = resolveAppIconMeta(appId, appIconOverrides.value, homeLocale.value)
+  return {
+    ...meta,
+    label: resolveDisplayName(resolveAppTileLabel(appId, meta.label || appId), meta),
+  }
+}
 
 const moveTileToSlot = (tileId, targetPageIndex, slotIndex) => {
   if (!tileId || !Number.isInteger(targetPageIndex) || !Number.isInteger(slotIndex)) return false

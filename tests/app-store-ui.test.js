@@ -208,6 +208,38 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
+  test('App Store saves a custom display name without changing the runtime route', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+
+    await wrapper.get('[data-testid="app-store-item-app_chat"]').trigger('click')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Not set')
+
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-display-name"]').setValue('Pocket Messages')
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_chat).toMatchObject({
+      sourceType: 'preset',
+      displayName: 'Pocket Messages',
+    })
+    expect(wrapper.get('[data-testid="app-store-item-app_chat"]').text()).toContain('Pocket Messages')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Chat')
+    expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('/chat')
+
+    await wrapper.get('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/chat')
+
+    wrapper.unmount()
+  })
+
   test('App Store saves a Gallery image icon and Home renders the same image icon', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -407,12 +439,106 @@ describe('App Store entry management UI', () => {
       },
     })
 
-    expect(wrapper.get('[data-testid="app-store-filter-World"]').classes()).toContain('is-active')
+    expect(wrapper.get('[data-testid="app-store-filter-world"]').classes()).toContain('is-active')
     expect(wrapper.find('[data-testid="app-store-item-world_app_survival_city_survival_supply_board"]').exists()).toBe(
       true,
     )
     expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('World App')
+
+    wrapper.unmount()
+  })
+
+  test('App Store classifies Food Delivery restaurants as shop entries without Home placement', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=shops&homePage=2')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="app-store-filter-shop"]').classes()).toContain('is-active')
+    expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('Shop entry')
+    expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Food Delivery owns restaurants')
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Fusion dinner')
+    expect(wrapper.find('[data-testid="app-store-add-home"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="app-store-open-identity"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query).toMatchObject({
+      restaurantId: 'food_seed_moon_bistro',
+      category: 'restaurants',
+      from: 'home',
+      homePage: '2',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store saves shop entry identity without changing Food Delivery ownership', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=shops&homePage=2')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-display-name"]').setValue('Moon Kitchen')
+    await wrapper.get('[data-testid="app-store-identity-icon-preset"]').setValue('fas fa-bowl-food')
+    await wrapper.get('[data-testid="app-store-identity-accent"]').setValue('dark')
+    await wrapper.get('[data-testid="app-store-identity-shop-description"]').setValue('Late night comfort menu')
+    await wrapper.get('[data-testid="app-store-identity-shop-tags"]').setValue('late night, comfort, date')
+    await wrapper.get('[data-testid="app-store-identity-shop-template"]').setValue('dessert_window')
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.entryPresentationOverrides.shop_app_food_seed_moon_bistro).toMatchObject({
+      sourceType: 'preset',
+      displayName: 'Moon Kitchen',
+      icon: 'fas fa-bowl-food',
+      accent: 'dark',
+      shortDescription: 'Late night comfort menu',
+      tags: ['late night', 'comfort', 'date'],
+      templateId: 'dessert_window',
+    })
+    expect(systemStore.settings.appearance.appIconOverrides.shop_app_food_seed_moon_bistro).toBeUndefined()
+    expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Moon Kitchen')
+    expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Late night comfort menu')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Dessert window')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('late night · comfort · date')
+    expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('shop_app_food_seed_moon_bistro')
+    expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Food Delivery owns restaurants')
+
+    await wrapper.get('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query).toMatchObject({
+      restaurantId: 'food_seed_moon_bistro',
+      category: 'restaurants',
+      from: 'home',
+      homePage: '2',
+    })
 
     wrapper.unmount()
   })
