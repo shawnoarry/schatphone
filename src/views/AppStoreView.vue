@@ -1,9 +1,17 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
-import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
+import AppIconVisual from '../components/shared/AppIconVisual.vue'
+import {
+  APP_ICON_ACCENT_OPTIONS,
+  APP_ICON_PRESET_OPTIONS,
+  resolveAppAccentLabel,
+  resolveAppIconMeta,
+  resolveAppIconPresetLabel,
+} from '../lib/app-icon-presentation'
 import {
   buildHomeSourceQuery,
   buildRouteWithReturnSource,
@@ -16,15 +24,24 @@ import {
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
 } from '../lib/planned-module-registry'
+import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
 
 const router = useRouter()
 const route = useRoute()
 const { t, systemLanguage, languageBase } = useI18n()
 const systemStore = useSystemStore()
+const galleryStore = useGalleryStore()
 const { settings } = storeToRefs(systemStore)
 
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
+const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useAppIconImagePreviews({
+  galleryStore,
+  appIconOverrides,
+  locale,
+  scopeId: 'app-store-app-icons',
+})
 const DOCK_APP_IDS = new Set(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
 const APP_STORE_PROTECTED_HOME_IDS = new Set([APP_STORE_HOME_APP_ID])
 const APP_STORE_FILTERS = [
@@ -291,7 +308,7 @@ const appStoreItems = computed(() =>
           accent: entry.accent || 'default',
           toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
         }
-      : resolveAppIconMeta(entry.id, settings.value.appearance?.appIconOverrides || {}, locale.value)
+      : resolveAppIconMeta(entry.id, appIconOverrides.value, locale.value)
     const visible = visibleHomeAppIds.value.has(entry.id)
     const inDock = DOCK_APP_IDS.has(entry.id)
     return {
@@ -299,6 +316,10 @@ const appStoreItems = computed(() =>
       icon: iconMeta.icon,
       accent: iconMeta.accent,
       toneClass: iconMeta.toneClass,
+      sourceType: iconMeta.sourceType || 'preset',
+      galleryAssetId: iconMeta.galleryAssetId || '',
+      hasImageIcon: iconMeta.hasImageIcon === true,
+      iconImageUrl: entry.worldAppEntry ? '' : appIconImageUrl(entry.id),
       label: t(entry.labelZh, entry.labelEn),
       category: t(entry.categoryZh, entry.categoryEn),
       desc: t(entry.descZh, entry.descEn),
@@ -428,6 +449,152 @@ const selectedWorldAppDetailRows = computed(() => {
   ].filter((row) => row.value)
 })
 
+const selectedAppCanCustomizeIdentity = computed(() => Boolean(selectedApp.value && !selectedApp.value.worldAppEntry))
+const galleryIconAssets = computed(() => galleryStore.assets.slice(0, 120))
+const identityEditorOpen = ref(false)
+const identityFeedback = ref('')
+const identityFileInput = ref(null)
+const identityDraftPreviewUrl = ref('')
+const identityDraft = reactive({
+  sourceType: 'preset',
+  icon: '',
+  accent: 'default',
+  galleryAssetId: '',
+})
+let identityDraftPreviewVersion = 0
+
+const syncIdentityDraftFromSelectedApp = () => {
+  const app = selectedApp.value
+  if (!app) return
+  const meta = resolveAppIconMeta(app.id, appIconOverrides.value, locale.value)
+  identityDraft.sourceType = meta.hasImageIcon ? 'gallery' : 'preset'
+  identityDraft.icon = meta.icon
+  identityDraft.accent = meta.accent
+  identityDraft.galleryAssetId = meta.galleryAssetId || ''
+  identityFeedback.value = ''
+}
+
+const identityPreviewMeta = computed(() => {
+  const app = selectedApp.value
+  if (!app) return {}
+  return resolveAppIconMeta(
+    app.id,
+    {
+      [app.id]: {
+        sourceType: identityDraft.sourceType,
+        icon: identityDraft.icon,
+        accent: identityDraft.accent,
+        galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
+      },
+    },
+    locale.value,
+  )
+})
+
+const refreshIdentityDraftPreview = async () => {
+  const currentVersion = identityDraftPreviewVersion + 1
+  identityDraftPreviewVersion = currentVersion
+  if (identityDraft.sourceType !== 'gallery' || !identityDraft.galleryAssetId) {
+    identityDraftPreviewUrl.value = ''
+    return
+  }
+
+  const asset = galleryStore.findAssetById(identityDraft.galleryAssetId)
+  if (!asset) {
+    identityDraftPreviewUrl.value = ''
+    return
+  }
+
+  const url = await galleryStore.getAssetPreviewUrl(identityDraft.galleryAssetId, {
+    scopeId: 'app-store-identity-draft',
+  })
+  if (currentVersion !== identityDraftPreviewVersion) return
+  identityDraftPreviewUrl.value = typeof url === 'string' ? url : ''
+}
+
+watch(
+  () => [identityDraft.sourceType, identityDraft.galleryAssetId, galleryStore.hasFinishedStorageHydration],
+  refreshIdentityDraftPreview,
+  { immediate: true },
+)
+
+watch(
+  () => selectedApp.value?.id,
+  () => {
+    if (identityEditorOpen.value) syncIdentityDraftFromSelectedApp()
+  },
+)
+
+const openIdentityEditor = () => {
+  if (!selectedAppCanCustomizeIdentity.value) return
+  syncIdentityDraftFromSelectedApp()
+  detailSheetOpen.value = false
+  identityEditorOpen.value = true
+}
+
+const closeIdentityEditor = () => {
+  identityEditorOpen.value = false
+}
+
+const setIdentitySource = (sourceType) => {
+  identityDraft.sourceType = sourceType === 'gallery' ? 'gallery' : 'preset'
+}
+
+const saveIdentityEditor = () => {
+  if (!selectedApp.value) return
+  const saved = systemStore.setAppIconOverride(selectedApp.value.id, {
+    sourceType: identityDraft.sourceType,
+    icon: identityDraft.icon,
+    accent: identityDraft.accent,
+    galleryAssetId: identityDraft.sourceType === 'gallery' ? identityDraft.galleryAssetId : '',
+  })
+  if (!saved) {
+    identityFeedback.value = t('请选择可用的图标样式或图片。', 'Choose an available icon style or image.')
+    return
+  }
+  systemStore.saveNow()
+  void refreshAppStoreIconPreviews()
+  identityFeedback.value = t('图标已更新。', 'Icon updated.')
+  closeIdentityEditor()
+}
+
+const restoreIdentityDefault = () => {
+  if (!selectedApp.value) return
+  systemStore.clearAppIconOverride(selectedApp.value.id)
+  systemStore.saveNow()
+  void refreshAppStoreIconPreviews()
+  syncIdentityDraftFromSelectedApp()
+  identityFeedback.value = t('已恢复默认图标。', 'Default icon restored.')
+  closeIdentityEditor()
+}
+
+const openIdentityUpload = () => {
+  identityFileInput.value?.click()
+}
+
+const handleIdentityUpload = async (event) => {
+  const files = event?.target?.files
+  if (!files || files.length === 0) return
+  const result = await galleryStore.importAssetsFromFiles(files, { category: 'reference' })
+  if (event?.target) event.target.value = ''
+
+  if (!result.ok && (!Array.isArray(result.duplicateAssetIds) || result.duplicateAssetIds.length === 0)) {
+    identityFeedback.value = t('没有可用的图片文件。', 'No usable image file was imported.')
+    return
+  }
+
+  const assetId = result.importedIds?.[0] || result.duplicateAssetIds?.[0] || ''
+  if (!assetId) {
+    identityFeedback.value = t('图片已跳过，请换一张。', 'Image was skipped. Try another one.')
+    return
+  }
+
+  identityDraft.sourceType = 'gallery'
+  identityDraft.galleryAssetId = assetId
+  identityFeedback.value = t('图片已加入相册并设为待保存图标。', 'Image added to Gallery and selected for this icon.')
+  await nextTick()
+}
+
 const appStoreItemStateKey = (app) => {
   if (app?.protectedHomeEntry) return 'fixed'
   if (app?.visible) return 'home'
@@ -534,6 +701,7 @@ const removeSelectedAppFromHome = () => {
 
 onBeforeUnmount(() => {
   if (libraryNoticeTimerId) clearTimeout(libraryNoticeTimerId)
+  galleryStore.releaseAssetPreviewScope('app-store-identity-draft')
 })
 </script>
 
@@ -577,9 +745,12 @@ onBeforeUnmount(() => {
           class="app-store-featured-item"
           @click="selectApp(app.id)"
         >
-          <span class="app-store-featured-icon" :class="app.toneClass">
-            <i :class="app.icon"></i>
-          </span>
+          <AppIconVisual
+            class="app-store-featured-icon"
+            :meta="app"
+            :image-url="app.iconImageUrl"
+            :alt="app.label"
+          />
           <div>
             <strong>{{ app.label }}</strong>
             <small>{{ app.desc }}</small>
@@ -640,9 +811,12 @@ onBeforeUnmount(() => {
               :aria-label="`${app.label} · ${appStoreItemStateLabel(app)}`"
               @click="selectApp(app.id)"
             >
-              <span class="app-store-item-icon" :class="app.toneClass">
-                <i :class="app.icon" aria-hidden="true"></i>
-              </span>
+              <AppIconVisual
+                class="app-store-item-icon"
+                :meta="app"
+                :image-url="app.iconImageUrl"
+                :alt="app.label"
+              />
               <span class="app-store-item-copy">
                 <span class="app-store-item-title">
                   <strong>{{ app.label }}</strong>
@@ -668,9 +842,12 @@ onBeforeUnmount(() => {
 
           <article v-if="selectedApp" class="app-store-detail app-store-detail-inline" data-testid="app-store-detail">
             <div class="app-store-detail-hero">
-              <span class="app-store-detail-icon" :class="selectedApp.toneClass">
-                <i :class="selectedApp.icon" aria-hidden="true"></i>
-              </span>
+              <AppIconVisual
+                class="app-store-detail-icon"
+                :meta="selectedApp"
+                :image-url="selectedApp.iconImageUrl"
+                :alt="selectedApp.label"
+              />
               <div>
                 <p>{{ selectedApp.category }}</p>
                 <h2>{{ selectedApp.label }}</h2>
@@ -714,6 +891,16 @@ onBeforeUnmount(() => {
                 <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
                 <span>{{ t('打开', 'Open') }}</span>
               </button>
+              <button
+                v-if="selectedAppCanCustomizeIdentity"
+                type="button"
+                class="app-store-action"
+                data-testid="app-store-open-identity"
+                @click="openIdentityEditor"
+              >
+                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <span>{{ t('图标与外观', 'Icon & Appearance') }}</span>
+              </button>
               <button type="button" class="app-store-action" @click="editSelectedAppOnHome" data-testid="app-store-add-home">
                 <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
                 <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
@@ -748,9 +935,12 @@ onBeforeUnmount(() => {
       data-testid="app-store-detail-sheet"
     >
       <div class="app-store-detail-hero">
-        <span class="app-store-detail-icon" :class="selectedApp.toneClass">
-          <i :class="selectedApp.icon" aria-hidden="true"></i>
-        </span>
+        <AppIconVisual
+          class="app-store-detail-icon"
+          :meta="selectedApp"
+          :image-url="selectedApp.iconImageUrl"
+          :alt="selectedApp.label"
+        />
         <div>
           <p>{{ selectedApp.category }}</p>
           <h2>{{ selectedApp.label }}</h2>
@@ -794,6 +984,15 @@ onBeforeUnmount(() => {
           <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
           <span>{{ t('打开', 'Open') }}</span>
         </button>
+        <button
+          v-if="selectedAppCanCustomizeIdentity"
+          type="button"
+          class="app-store-action"
+          @click="openIdentityEditor"
+        >
+          <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+          <span>{{ t('图标与外观', 'Icon & Appearance') }}</span>
+        </button>
         <button type="button" class="app-store-action" @click="editSelectedAppOnHome">
           <i :class="selectedApp.visible ? 'fas fa-table-cells' : 'fas fa-plus'" aria-hidden="true"></i>
           <span>{{ selectedApp.visible ? t('调整位置', 'Edit on Home') : t('加入主屏', 'Add to Home') }}</span>
@@ -812,6 +1011,142 @@ onBeforeUnmount(() => {
         {{ t('这是系统入口，会固定保留在今日视图，确保应用商城始终可返回。', 'This system entry stays fixed in Today View so App Store remains reachable.') }}
       </p>
     </article>
+    <div
+      v-if="identityEditorOpen"
+      class="app-store-identity-backdrop"
+      @click="closeIdentityEditor"
+    ></div>
+    <section
+      v-if="identityEditorOpen && selectedApp"
+      class="app-store-identity-sheet"
+      data-testid="app-store-identity-sheet"
+    >
+      <div class="app-store-identity-head">
+        <div class="app-store-identity-preview">
+          <AppIconVisual
+            class="app-store-identity-preview-icon"
+            :meta="identityPreviewMeta"
+            :image-url="identityDraft.sourceType === 'gallery' ? identityDraftPreviewUrl : ''"
+            :alt="selectedApp.label"
+          />
+        </div>
+        <div class="app-store-identity-title">
+          <p>{{ selectedApp.label }}</p>
+          <h2>{{ t('图标与外观', 'Icon & Appearance') }}</h2>
+          <span>{{ t('只改变这个 APP 在手机里的样子', 'Changes only this app identity on your phone') }}</span>
+        </div>
+        <button
+          type="button"
+          class="app-store-identity-close"
+          :aria-label="t('关闭', 'Close')"
+          @click="closeIdentityEditor"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="app-store-identity-source" role="tablist" :aria-label="t('图标来源', 'Icon source')">
+        <button
+          type="button"
+          :class="{ 'is-active': identityDraft.sourceType === 'preset' }"
+          data-testid="app-store-identity-source-preset"
+          @click="setIdentitySource('preset')"
+        >
+          <i class="fas fa-icons" aria-hidden="true"></i>
+          <span>{{ t('内置样式', 'Built-in') }}</span>
+        </button>
+        <button
+          type="button"
+          :class="{ 'is-active': identityDraft.sourceType === 'gallery' }"
+          data-testid="app-store-identity-source-gallery"
+          @click="setIdentitySource('gallery')"
+        >
+          <i class="fas fa-image" aria-hidden="true"></i>
+          <span>{{ t('图片图标', 'Image') }}</span>
+        </button>
+      </div>
+
+      <div class="app-store-identity-fields">
+        <label v-if="identityDraft.sourceType === 'preset'" class="app-store-identity-field">
+          <span>{{ t('图标', 'Icon') }}</span>
+          <select v-model="identityDraft.icon" data-testid="app-store-identity-icon-preset">
+            <option
+              v-for="option in APP_ICON_PRESET_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ resolveAppIconPresetLabel(option.value, locale) }}
+            </option>
+          </select>
+        </label>
+
+        <label v-else class="app-store-identity-field">
+          <span>{{ t('相册图片', 'Gallery image') }}</span>
+          <select v-model="identityDraft.galleryAssetId" data-testid="app-store-identity-gallery-asset">
+            <option value="">{{ t('选择一张图片', 'Choose an image') }}</option>
+            <option
+              v-for="asset in galleryIconAssets"
+              :key="asset.id"
+              :value="asset.id"
+            >
+              {{ asset.name }}
+            </option>
+          </select>
+        </label>
+
+        <label class="app-store-identity-field">
+          <span>{{ t('色调', 'Accent') }}</span>
+          <select v-model="identityDraft.accent" data-testid="app-store-identity-accent">
+            <option
+              v-for="option in APP_ICON_ACCENT_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ resolveAppAccentLabel(option.value, locale) }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="app-store-identity-upload">
+        <button type="button" class="app-store-action" @click="openIdentityUpload">
+          <i class="fas fa-upload" aria-hidden="true"></i>
+          <span>{{ t('上传图片', 'Upload image') }}</span>
+        </button>
+        <input
+          ref="identityFileInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          data-testid="app-store-identity-upload-input"
+          @change="handleIdentityUpload"
+        />
+      </div>
+
+      <p v-if="identityFeedback" class="app-store-identity-feedback" aria-live="polite">
+        {{ identityFeedback }}
+      </p>
+
+      <div class="app-store-identity-footer">
+        <button
+          type="button"
+          class="app-store-action"
+          data-testid="app-store-identity-restore"
+          @click="restoreIdentityDefault"
+        >
+          <i class="fas fa-rotate-left" aria-hidden="true"></i>
+          <span>{{ t('恢复默认', 'Restore default') }}</span>
+        </button>
+        <button
+          type="button"
+          class="app-store-action is-primary"
+          data-testid="app-store-identity-save"
+          @click="saveIdentityEditor"
+        >
+          <i class="fas fa-check" aria-hidden="true"></i>
+          <span>{{ t('保存', 'Save') }}</span>
+        </button>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -1481,6 +1816,186 @@ onBeforeUnmount(() => {
   background: var(--system-control-bg);
 }
 
+.app-store-identity-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  background: rgba(12, 18, 26, 0.32);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app-store-identity-sheet {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 49;
+  max-height: min(78vh, 620px);
+  border: 1px solid color-mix(in srgb, var(--system-accent) 28%, var(--system-subtle-border));
+  border-radius: 26px;
+  padding: 14px;
+  display: grid;
+  gap: 13px;
+  overflow-y: auto;
+  color: var(--system-text);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--system-accent-soft) 56%, transparent), transparent 58%),
+    var(--system-panel-bg);
+  box-shadow: 0 24px 70px rgba(12, 18, 26, 0.28);
+}
+
+.app-store-identity-head {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-store-identity-preview-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  box-shadow: var(--system-shadow-card);
+}
+
+.app-store-identity-title {
+  min-width: 0;
+}
+
+.app-store-identity-title p,
+.app-store-identity-title h2,
+.app-store-identity-title span,
+.app-store-identity-feedback {
+  margin: 0;
+}
+
+.app-store-identity-title p {
+  color: var(--system-accent);
+  font-size: 11px;
+  font-weight: 840;
+}
+
+.app-store-identity-title h2 {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: 880;
+}
+
+.app-store-identity-title span {
+  display: block;
+  margin-top: 6px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.app-store-identity-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+}
+
+.app-store-identity-source {
+  min-height: 40px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+  background: var(--system-control-bg);
+}
+
+.app-store-identity-source button {
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--system-text-muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.app-store-identity-source button.is-active {
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+  box-shadow: var(--system-shadow-control);
+}
+
+.app-store-identity-fields {
+  display: grid;
+  gap: 9px;
+}
+
+.app-store-identity-field {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.app-store-identity-field span {
+  color: var(--system-text-soft);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.app-store-identity-field select {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 15px;
+  padding: 0 11px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font-size: 13px;
+  font-weight: 760;
+  outline: none;
+}
+
+.app-store-identity-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-store-identity-upload input {
+  display: none;
+}
+
+.app-store-identity-feedback {
+  border: 1px solid color-mix(in srgb, var(--system-info) 22%, var(--system-subtle-border));
+  border-radius: 14px;
+  padding: 9px 10px;
+  color: var(--system-info);
+  background: color-mix(in srgb, var(--system-info) 9%, var(--system-control-bg));
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 760;
+}
+
+.app-store-identity-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
 .app-store-notice {
   margin-top: 12px;
   border: 1px solid color-mix(in srgb, var(--system-success) 26%, var(--system-subtle-border));
@@ -1528,6 +2043,15 @@ button {
   .app-store-layout {
     grid-template-columns: minmax(0, 1fr) minmax(200px, 0.78fr);
     align-items: start;
+  }
+
+  .app-store-identity-sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    width: min(440px, calc(100% - 32px));
+    transform: translate(-50%, -50%);
   }
 }
 
