@@ -1,11 +1,20 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import {
+  CHAT_SOCIAL_EVENT_REVIEW_MODE,
+  CHAT_SOCIAL_EVENT_STATUS,
+  CHAT_SOCIAL_EVENT_TYPES,
+  applyChatSocialEventToChatStore,
+  buildChatSocialEventLogInput,
+  evaluateChatSocialEventReview,
+} from '../lib/chat-social-event-review'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
 const SIMULATION_STORAGE_VERSION = 1
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
+const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
 export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
 export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
 
@@ -271,10 +280,97 @@ const normalizeDailyCounters = (rawCounters) => {
   )
 }
 
+const normalizeChatSocialProposalSource = (rawSource = {}) => {
+  const source = rawSource && typeof rawSource === 'object' ? rawSource : {}
+  return {
+    moduleKey: normalizeText(source.moduleKey, 'chat', 80),
+    conversationId: Math.max(0, toInt(source.conversationId, 0)),
+    messageId: normalizeText(source.messageId, '', 160),
+    runtimeLogId: normalizeText(source.runtimeLogId, '', 180),
+  }
+}
+
+const normalizeChatSocialRelationshipGate = (rawGate = null) => {
+  if (!rawGate || typeof rawGate !== 'object') return null
+  return {
+    mode: normalizeText(rawGate.mode, '', 80),
+    decision: normalizeText(rawGate.decision, '', 80),
+    reason: normalizeText(rawGate.reason, '', 160),
+    eventType: normalizeText(rawGate.eventType, '', 120),
+    primaryRelationshipCategoryId: normalizeText(
+      rawGate.primaryRelationshipCategoryId,
+      'ordinary_acquaintance',
+      120,
+    ),
+    relationshipModifierIds: normalizeTextList(rawGate.relationshipModifierIds, 12, 120),
+    classificationConfidence: normalizeText(rawGate.classificationConfidence, '', 80),
+    classificationSource: normalizeText(rawGate.classificationSource, '', 80),
+    classificationUpdatedAt: normalizeTimestamp(rawGate.classificationUpdatedAt, 0),
+    matched: Boolean(rawGate.matched),
+  }
+}
+
+const normalizeChatSocialEventProposal = (rawProposal, index = 0) => {
+  if (!rawProposal || typeof rawProposal !== 'object') return null
+  const eventType = normalizeText(rawProposal.eventType, '', 120)
+  if (!eventType) return null
+  const createdAt = normalizeTimestamp(rawProposal.createdAt, Date.now() - index)
+  const id =
+    normalizeText(rawProposal.id, '', 180) ||
+    `chat_social_event_${createdAt}_${index}_${eventType.replace(/[^a-zA-Z0-9_.-]/g, '_')}`
+
+  return {
+    id,
+    eventType,
+    eventId: normalizeText(rawProposal.eventId, `chat.social.${eventType}.v1`, 160),
+    targetContactId: Math.max(0, toInt(rawProposal.targetContactId, 0)),
+    targetProfileId: Math.max(0, toInt(rawProposal.targetProfileId, 0)),
+    targetName: normalizeText(rawProposal.targetName, '', 120),
+    currentChatSocialState: normalizeText(rawProposal.currentChatSocialState, '', 80),
+    requestedChatSocialState: normalizeText(rawProposal.requestedChatSocialState, '', 80),
+    triggerSource: normalizeTriggerSource(
+      rawProposal.triggerSource,
+      SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+    ),
+    risk: normalizeText(rawProposal.risk, 'low', 40),
+    reviewMode: normalizeText(rawProposal.reviewMode, CHAT_SOCIAL_EVENT_REVIEW_MODE.BLOCK, 80),
+    status: normalizeText(rawProposal.status, CHAT_SOCIAL_EVENT_STATUS.BLOCKED, 80),
+    reason: normalizeText(rawProposal.reason, '', 220),
+    explanation: normalizeText(rawProposal.explanation, '', 300),
+    relationshipGate: normalizeChatSocialRelationshipGate(rawProposal.relationshipGate),
+    policySnapshot: {
+      surpriseMode: normalizeSurpriseMode(rawProposal.policySnapshot?.surpriseMode),
+      userAllowsGeneratedSocialEvents: rawProposal.policySnapshot?.userAllowsGeneratedSocialEvents !== false,
+      moduleEventsEnabled: rawProposal.policySnapshot?.moduleEventsEnabled !== false,
+      cooldownActive: rawProposal.policySnapshot?.cooldownActive === true,
+      dailyLimitReached: rawProposal.policySnapshot?.dailyLimitReached === true,
+    },
+    source: normalizeChatSocialProposalSource(rawProposal.source),
+    createdAt,
+    reviewedAt: normalizeTimestamp(rawProposal.reviewedAt, 0),
+    appliedAt: normalizeTimestamp(rawProposal.appliedAt, 0),
+  }
+}
+
+const normalizeChatSocialEventProposals = (rawProposals) => {
+  if (!Array.isArray(rawProposals)) return []
+  const seen = new Set()
+  return rawProposals
+    .map((item, index) => normalizeChatSocialEventProposal(item, index))
+    .filter((item) => {
+      if (!item || seen.has(item.id)) return false
+      seen.add(item.id)
+      return true
+    })
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT)
+}
+
 export const useSimulationStore = defineStore('simulation', () => {
   const eventLogs = ref([])
   const cooldownsByEvent = ref({})
   const dailyCounters = ref({})
+  const chatSocialEventProposals = ref([])
   const settings = ref(normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS))
   const hasFinishedStorageHydration = ref(false)
 
@@ -285,6 +381,14 @@ export const useSimulationStore = defineStore('simulation', () => {
     return Object.values(cooldownsByEvent.value).filter((item) => item.expiresAt > now).length
   })
   const surpriseMode = computed(() => settings.value.surpriseMode)
+  const pendingChatSocialEventProposals = computed(() =>
+    chatSocialEventProposals.value.filter(
+      (item) => item.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+    ),
+  )
+  const pendingChatSocialEventProposalCount = computed(
+    () => pendingChatSocialEventProposals.value.length,
+  )
 
   const isModuleEventsEnabled = (moduleKey) => {
     const normalizedModuleKey = normalizeModuleKey(moduleKey, '')
@@ -473,6 +577,106 @@ export const useSimulationStore = defineStore('simulation', () => {
     return log
   }
 
+  const upsertChatSocialEventProposal = (proposal = {}) => {
+    const normalized = normalizeChatSocialEventProposal(proposal, 0)
+    if (!normalized) return null
+    chatSocialEventProposals.value = [
+      normalized,
+      ...chatSocialEventProposals.value.filter((item) => item.id !== normalized.id),
+    ].slice(0, SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT)
+    return normalized
+  }
+
+  const submitChatSocialEventProposal = (
+    input = {},
+    { chatStore, registry = null, at = Date.now() } = {},
+  ) => {
+    const inputPolicy =
+      input.policy && typeof input.policy === 'object' && !Array.isArray(input.policy)
+        ? input.policy
+        : {}
+    const proposal = evaluateChatSocialEventReview({
+      chatStore,
+      contactId: input.contactId || input.targetContactId,
+      eventType: input.eventType,
+      triggerSource: input.triggerSource || SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+      policy: {
+        ...inputPolicy,
+        surpriseMode: settings.value.surpriseMode,
+        userAllowsGeneratedSocialEvents: inputPolicy.userAllowsGeneratedSocialEvents !== false,
+        moduleEventsEnabled: isModuleEventsEnabled('chat'),
+      },
+      registry,
+      source: input.source,
+      at,
+      explanation: input.explanation,
+    })
+    const normalizedAt = normalizeTimestamp(at)
+    const withId = {
+      ...proposal,
+      id:
+        proposal.id ||
+        `chat_social_event_${normalizedAt}_${chatSocialEventProposals.value.length + 1}_${proposal.eventType || 'unknown'}`,
+    }
+
+    let nextProposal = withId
+    if (
+      withId.eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST &&
+      withId.status === CHAT_SOCIAL_EVENT_STATUS.READY_TO_APPLY &&
+      withId.reviewMode === CHAT_SOCIAL_EVENT_REVIEW_MODE.AUTO_APPLY_WITH_AUDIT
+    ) {
+      const applied = applyChatSocialEventToChatStore({ chatStore, proposal: withId, at })
+      nextProposal = {
+        ...withId,
+        status: applied ? CHAT_SOCIAL_EVENT_STATUS.APPLIED : CHAT_SOCIAL_EVENT_STATUS.FAILED,
+        reason: applied ? withId.reason : 'chat_social_state_apply_failed',
+        appliedAt: applied ? normalizedAt : 0,
+      }
+    }
+
+    const stored = upsertChatSocialEventProposal(nextProposal)
+    recordEventLog(buildChatSocialEventLogInput(stored || nextProposal))
+    return stored
+  }
+
+  const approveChatSocialEventProposal = (
+    proposalId,
+    { chatStore, at = Date.now() } = {},
+  ) => {
+    const id = normalizeText(proposalId, '', 180)
+    const existing = chatSocialEventProposals.value.find((item) => item.id === id)
+    if (!existing || existing.status !== CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return null
+
+    const normalizedAt = normalizeTimestamp(at)
+    const applied = applyChatSocialEventToChatStore({ chatStore, proposal: existing, at })
+    const nextProposal = {
+      ...existing,
+      status: applied ? CHAT_SOCIAL_EVENT_STATUS.APPLIED : CHAT_SOCIAL_EVENT_STATUS.FAILED,
+      reason: applied ? 'approved_by_world_hub' : 'chat_social_state_apply_failed',
+      reviewedAt: normalizedAt,
+      appliedAt: applied ? normalizedAt : 0,
+    }
+    const stored = upsertChatSocialEventProposal(nextProposal)
+    recordEventLog(buildChatSocialEventLogInput(stored || nextProposal))
+    return stored
+  }
+
+  const dismissChatSocialEventProposal = (proposalId, { at = Date.now() } = {}) => {
+    const id = normalizeText(proposalId, '', 180)
+    const existing = chatSocialEventProposals.value.find((item) => item.id === id)
+    if (!existing || existing.status !== CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return null
+
+    const nextProposal = {
+      ...existing,
+      status: CHAT_SOCIAL_EVENT_STATUS.DISMISSED,
+      reason: 'dismissed_by_world_hub',
+      reviewedAt: normalizeTimestamp(at),
+    }
+    const stored = upsertChatSocialEventProposal(nextProposal)
+    recordEventLog(buildChatSocialEventLogInput(stored || nextProposal))
+    return stored
+  }
+
   const clearEventLogs = () => {
     eventLogs.value = []
   }
@@ -487,6 +691,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs.value = normalizeEventLogs(rawSource.eventLogs)
     cooldownsByEvent.value = normalizeCooldowns(rawSource.cooldownsByEvent || rawSource.cooldowns)
     dailyCounters.value = normalizeDailyCounters(rawSource.dailyCounters)
+    chatSocialEventProposals.value = normalizeChatSocialEventProposals(
+      rawSource.chatSocialEventProposals,
+    )
     settings.value = normalizeSimulationSettings(rawSource.settings)
     return true
   }
@@ -513,6 +720,12 @@ export const useSimulationStore = defineStore('simulation', () => {
     dailyCounters: Object.fromEntries(
       Object.entries(dailyCounters.value).map(([key, item]) => [key, { ...item }]),
     ),
+    chatSocialEventProposals: chatSocialEventProposals.value.map((item) => ({
+      ...item,
+      relationshipGate: item.relationshipGate ? { ...item.relationshipGate } : null,
+      policySnapshot: { ...item.policySnapshot },
+      source: { ...item.source },
+    })),
     settings: {
       surpriseMode: settings.value.surpriseMode,
       enabledModules: { ...settings.value.enabledModules },
@@ -539,6 +752,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs.value = []
     cooldownsByEvent.value = {}
     dailyCounters.value = {}
+    chatSocialEventProposals.value = []
     settings.value = normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS)
   }
 
@@ -553,7 +767,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   })()
 
   watch(
-    [eventLogs, cooldownsByEvent, dailyCounters, settings],
+    [eventLogs, cooldownsByEvent, dailyCounters, chatSocialEventProposals, settings],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -565,11 +779,14 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs,
     cooldownsByEvent,
     dailyCounters,
+    chatSocialEventProposals,
     settings,
     eventLogCount,
     recentEventLogs,
     activeCooldownCount,
     surpriseMode,
+    pendingChatSocialEventProposals,
+    pendingChatSocialEventProposalCount,
     hasFinishedStorageHydration,
     isModuleEventsEnabled,
     setModuleEventsEnabled,
@@ -584,6 +801,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     incrementDailyCounter,
     getDailyCounterState,
     canUseDailyQuota,
+    submitChatSocialEventProposal,
+    approveChatSocialEventProposal,
+    dismissChatSocialEventProposal,
     clearEventLogs,
     createBackupSnapshot,
     createBackupSnapshotAsync,

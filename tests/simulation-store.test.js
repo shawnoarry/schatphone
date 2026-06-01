@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
+  CHAT_SOCIAL_EVENT_STATUS,
+  CHAT_SOCIAL_EVENT_TYPES,
+} from '../src/lib/chat-social-event-review'
+import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../src/stores/chat'
+import {
   SIMULATION_EVENT_STATUS,
   SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
@@ -182,6 +187,101 @@ describe('simulation store', () => {
     expect(restored.settings.foregroundSessionTickEnabled).toBe(true)
     expect(restored.settings.foregroundSessionTickIntervalMs).toBe(
       SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
+    )
+  })
+
+  test('stores generated Chat social proposals and applies only approved communication changes', () => {
+    const chatStore = useChatStore()
+    const store = useSimulationStore()
+    store.resetForTesting()
+    store.setSurpriseMode(SIMULATION_SURPRISE_MODE.BALANCED)
+
+    const profile = chatStore.addRoleProfile({
+      name: 'Runtime Social Role',
+      role: 'Contact',
+    })
+    const contact = chatStore.bindRoleProfile(profile.id, {
+      chatSocialState: CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
+    })
+
+    const greeting = store.submitChatSocialEventProposal(
+      {
+        contactId: contact.id,
+        eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+      },
+      { chatStore, at: Date.now() },
+    )
+
+    expect(greeting).toMatchObject({
+      eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST,
+      status: CHAT_SOCIAL_EVENT_STATUS.APPLIED,
+      requestedChatSocialState: CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
+    })
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
+    )
+    expect(store.recentEventLogs[0]).toMatchObject({
+      eventId: 'chat.social.role_greeting_request.v1',
+      moduleKey: 'chat',
+      targetId: String(contact.id),
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'eligible_low_risk_greeting',
+    })
+
+    chatStore.acceptChatContactRequest(contact.id, { at: Date.now() + 1 })
+
+    const block = store.submitChatSocialEventProposal(
+      {
+        contactId: contact.id,
+        eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_BLOCK_USER,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+      },
+      { chatStore, at: Date.now() + 2 },
+    )
+
+    expect(block).toMatchObject({
+      status: CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+      requestedChatSocialState: CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED,
+    })
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
+    )
+    expect(store.pendingChatSocialEventProposalCount).toBe(1)
+
+    const approved = store.approveChatSocialEventProposal(block.id, { chatStore, at: Date.now() + 3 })
+    expect(approved?.status).toBe(CHAT_SOCIAL_EVENT_STATUS.APPLIED)
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED,
+    )
+
+    const unblock = store.submitChatSocialEventProposal(
+      {
+        contactId: contact.id,
+        eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_UNBLOCK_USER,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+      },
+      { chatStore, at: Date.now() + 4 },
+    )
+
+    expect(unblock).toMatchObject({
+      status: CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+      requestedChatSocialState: CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
+    })
+    const dismissed = store.dismissChatSocialEventProposal(unblock.id, { at: Date.now() + 5 })
+    expect(dismissed?.status).toBe(CHAT_SOCIAL_EVENT_STATUS.DISMISSED)
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED,
+    )
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.chatSocialEventProposals).toHaveLength(3)
+    store.resetForTesting()
+    expect(store.chatSocialEventProposals).toHaveLength(0)
+
+    expect(store.restoreFromBackup({ simulation: snapshot })).toBe(true)
+    expect(store.chatSocialEventProposals.find((item) => item.id === unblock.id)?.status).toBe(
+      CHAT_SOCIAL_EVENT_STATUS.DISMISSED,
     )
   })
 })
