@@ -239,6 +239,13 @@ const activeStoreVisual = computed(() => {
   const key = activeRestaurant.value?.category || activeCategory.value?.key || 'restaurants'
   return FOOD_STORE_VISUALS[key] || FOOD_STORE_VISUALS.restaurants
 })
+const FOOD_STORE_TEMPLATE_BY_RESTAURANT_ID = {
+  food_seed_moon_bistro: 'dark_tray_menu',
+}
+const activeStoreTemplate = computed(
+  () => FOOD_STORE_TEMPLATE_BY_RESTAURANT_ID[activeRestaurant.value?.id] || 'standard',
+)
+const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_menu')
 const galleryImageOptions = computed(() =>
   galleryStore.assets
     .filter((asset) => ['reference', 'scenario', 'wallpaper'].includes(asset.category))
@@ -1075,15 +1082,25 @@ onBeforeUnmount(() => {
 
       </div>
 
-      <section v-else class="space-y-4" data-testid="food-delivery-store-app">
+      <section
+        v-else
+        class="space-y-4"
+        :class="{ 'food-delivery-store-dark-tray': isDarkTrayStore }"
+        data-testid="food-delivery-store-app"
+      >
         <article
           v-if="activeRestaurant"
-          class="overflow-hidden rounded-3xl border border-white/70 bg-white shadow-sm"
+          class="overflow-hidden rounded-3xl shadow-sm"
+          :class="isDarkTrayStore ? 'border border-slate-800 bg-[#171a27]' : 'border border-white/70 bg-white'"
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
           :data-store-tone="activeStoreVisual.tone"
+          :data-store-template="activeStoreTemplate"
         >
-          <div class="bg-gradient-to-br p-4 text-gray-950" :class="activeStoreVisual.heroClass">
+          <div
+            class="bg-gradient-to-br p-4 text-gray-950"
+            :class="isDarkTrayStore ? 'from-[#24283a] via-[#171a27] to-[#0f111a]' : activeStoreVisual.heroClass"
+          >
             <button
               class="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-gray-900 shadow-sm"
               data-testid="food-delivery-store-back"
@@ -1118,65 +1135,127 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2 p-3">
-            <div class="rounded-2xl bg-gray-50 p-3 text-center">
-              <p class="text-[10px] font-semibold text-gray-500">{{ t('配送费', 'Fee') }}</p>
+          <div
+            class="grid grid-cols-3 gap-2 p-3"
+            :class="isDarkTrayStore ? 'text-slate-100' : 'text-gray-950'"
+          >
+            <div class="rounded-2xl p-3 text-center" :class="isDarkTrayStore ? 'bg-white/5' : 'bg-gray-50'">
+              <p
+                class="text-[10px] font-semibold"
+                :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'"
+              >
+                {{ t('配送费', 'Fee') }}
+              </p>
               <p class="mt-1 text-xs font-black">{{ activeRestaurant.deliveryFee }} {{ activeRestaurant.currency }}</p>
             </div>
-            <div class="rounded-2xl bg-gray-50 p-3 text-center">
-              <p class="text-[10px] font-semibold text-gray-500">{{ t('来源', 'Source') }}</p>
+            <div class="rounded-2xl p-3 text-center" :class="isDarkTrayStore ? 'bg-white/5' : 'bg-gray-50'">
+              <p
+                class="text-[10px] font-semibold"
+                :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'"
+              >
+                {{ t('来源', 'Source') }}
+              </p>
               <p class="mt-1 truncate text-xs font-black">{{ foodImageSourceLabel(activeRestaurant) }}</p>
             </div>
-            <div class="rounded-2xl p-3 text-center" :class="activeStoreVisual.badgeClass">
+            <div
+              class="rounded-2xl p-3 text-center"
+              :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
+            >
               <p class="text-[10px] font-semibold opacity-70">{{ t('店铺', 'Store') }}</p>
               <p class="mt-1 truncate text-xs font-black">{{ activeStoreVisual.tone }}</p>
             </div>
           </div>
         </article>
 
-        <section v-if="activeRestaurant" class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-menu-panel">
+        <section
+          v-if="activeRestaurant"
+          class="rounded-3xl p-4"
+          :class="isDarkTrayStore ? 'border border-slate-800 bg-[#151826] text-white' : 'border border-orange-100 bg-white'"
+          data-testid="food-delivery-menu-panel"
+        >
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-sm font-bold">{{ t('本店菜单', 'Store menu') }}</p>
-              <p class="mt-1 text-xs text-gray-500">{{ activeRestaurant.name }}</p>
+              <p class="mt-1 text-xs" :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'">
+                {{ activeRestaurant.name }}
+              </p>
             </div>
-            <span class="rounded-full px-3 py-1 text-[11px] font-semibold" :class="activeStoreVisual.badgeClass">
+            <span
+              class="rounded-full px-3 py-1 text-[11px] font-semibold"
+              :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
+            >
               {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
             </span>
           </div>
-          <div class="mt-3 space-y-2">
+          <div class="mt-3" :class="isDarkTrayStore ? 'grid grid-cols-2 gap-3 pt-6' : 'space-y-2'">
             <article
               v-for="item in activeMenuItems"
               :key="item.id"
-              class="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2"
+              class="relative overflow-hidden"
+              :class="
+                isDarkTrayStore
+                  ? 'min-h-[9.5rem] rounded-[1.75rem] bg-[#202436] p-3 pt-10 text-center shadow-[0_18px_40px_rgba(0,0,0,0.22)]'
+                  : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
+              "
               :data-testid="`food-delivery-menu-${item.id}`"
+              :data-template="activeStoreTemplate"
             >
-              <div class="flex min-w-0 items-center gap-3">
-                <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-orange-50">
+              <template v-if="isDarkTrayStore">
+                <div
+                  class="absolute left-1/2 top-0 h-20 w-20 -translate-x-1/2 -translate-y-1/3 overflow-hidden rounded-full border-4 border-[#2b3045] bg-[#111421] shadow-[0_14px_30px_rgba(0,0,0,0.35)]"
+                  :data-testid="`food-delivery-menu-dish-${item.id}`"
+                >
                   <img
                     v-if="foodImageUrl(item)"
                     :src="foodImageUrl(item)"
                     :alt="item.image?.alt || item.title"
                     class="h-full w-full object-cover"
                   />
-                  <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
+                  <div v-else class="flex h-full w-full items-center justify-center text-xl text-orange-300">
                     <i class="fas fa-bowl-food"></i>
                   </div>
                 </div>
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-bold">{{ item.title }}</p>
-                  <p class="mt-1 text-[11px] text-gray-500">{{ item.price }} {{ item.currency }}</p>
-                  <p class="mt-0.5 text-[10px] font-semibold text-orange-500">{{ foodImageSourceLabel(item) }}</p>
+                <div class="pt-8" :data-testid="`food-delivery-menu-tray-${item.id}`">
+                  <p class="line-clamp-2 text-xs font-bold text-white">{{ item.title }}</p>
+                  <p class="mt-2 text-[11px] font-semibold text-orange-200">{{ item.price }} {{ item.currency }}</p>
+                  <p class="mt-1 text-[10px] text-slate-400">{{ foodImageSourceLabel(item) }}</p>
+                  <button
+                    class="mt-3 rounded-full bg-orange-400 px-3 py-1.5 text-[11px] font-bold text-[#151826]"
+                    :data-testid="`food-delivery-add-${item.id}`"
+                    @click="addMenuItemToCart(item.id)"
+                  >
+                    {{ t('加入', 'Add') }}
+                  </button>
                 </div>
-              </div>
-              <button
-                class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
-                :class="activeStoreVisual.buttonClass"
-                :data-testid="`food-delivery-add-${item.id}`"
-                @click="addMenuItemToCart(item.id)"
-              >
-                {{ t('加入', 'Add') }}
-              </button>
+              </template>
+              <template v-else>
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-orange-50">
+                    <img
+                      v-if="foodImageUrl(item)"
+                      :src="foodImageUrl(item)"
+                      :alt="item.image?.alt || item.title"
+                      class="h-full w-full object-cover"
+                    />
+                    <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
+                      <i class="fas fa-bowl-food"></i>
+                    </div>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-bold">{{ item.title }}</p>
+                    <p class="mt-1 text-[11px] text-gray-500">{{ item.price }} {{ item.currency }}</p>
+                    <p class="mt-0.5 text-[10px] font-semibold text-orange-500">{{ foodImageSourceLabel(item) }}</p>
+                  </div>
+                </div>
+                <button
+                  class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
+                  :class="activeStoreVisual.buttonClass"
+                  :data-testid="`food-delivery-add-${item.id}`"
+                  @click="addMenuItemToCart(item.id)"
+                >
+                  {{ t('加入', 'Add') }}
+                </button>
+              </template>
             </article>
           </div>
         </section>
