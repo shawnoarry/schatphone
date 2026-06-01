@@ -58,6 +58,7 @@ What is already landed:
 44. WorldBook's Current World Pack panel now exposes the nonstandard-app proposal review UI: AI extraction or pasted JSON can be reviewed against the built-in whitelist, loading/empty/error states are explicit, rejected suggestions show why they were blocked, and confirmable suggestions require an explicit add-to-pack action before they become appBindings. Confirmed entries now carry world-pack/target-module metadata in App Store detail, can be placed from Home's library, and open their target app with world context; dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths have regression coverage.
 45. Current World Pack now separates activation/status from global entry management: it shows the active world-app snapshot, routes users to App Store's `World` section for browse/place/open flows, shows service-account template availability as a Chat handoff, and keeps nonstandard proposal review as an advanced/collapsible area. `black_market` is blocked as `needs_dedicated_app` and does not masquerade as a Shopping world app.
 46. Home edit mode now preserves screen navigation: page dots stay usable during editing, empty-area swipes can switch screens, and Widget Center placement flows no longer trap users on the entry screen.
+47. Appearance now has a global-only ownership baseline: the root no longer promotes App Icons or Widget Center, Advanced CSS is global-only, and appearance packs exclude app icons, app/world-app scoped CSS, widgets, Home placement, and Chat appearance. App identity and app-specific skins are reserved for App Store/app-owned follow-up slices.
 
 Still incomplete:
 
@@ -66,7 +67,7 @@ Still incomplete:
 3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 5. World Pack app-entry unlocking now has a first implementation; the world UX package has first target-app context treatment in Shopping, Food Delivery, Calendar, and Map, Current World Pack hands off to App Store's `World` section instead of launching entries from Settings, and the nonstandard-app review UI is landed with loading/empty/error/rejection handling, but these paths still need phone-sized user testing and broader hardening for labels, accents, safe UX variants, and copy readability.
-6. Custom CSS currently exists as global Appearance CSS, Chat-scoped CSS, and app/world-app scoped CSS from Appearance Advanced CSS. World-app target selection reads active World Pack entries, manual target fields remain as fallback, exact selector previews and pause/clear recovery are in place, and Appearance packs can now move the portable visual layer between saves. Finer component hooks should be added only when actual packs prove the current scopes too broad.
+6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, and app/world-app scoped CSS state remains available for the upcoming App Store/app-owned skin slices instead of being exposed from global Appearance.
 
 ## 2. Recommended Next Slice
 
