@@ -369,6 +369,11 @@ describe('App Store entry management UI', () => {
 
     await worldAppItem.trigger('click')
     expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('World App')
+    const handoff = wrapper.get('[data-testid="app-store-world-handoff"]').text()
+    expect(handoff).toContain('World entry from Post-disaster survival city')
+    expect(handoff).toContain('Opens Shopping with this World Pack context')
+    expect(handoff).toContain('App Store manages placement and launch')
+    expect(handoff).toContain('WorldBook still owns pack activation')
     const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
     expect(worldMeta).toContain('Post-disaster survival city')
     expect(worldMeta).toContain('Shopping')

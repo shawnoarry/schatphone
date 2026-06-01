@@ -454,6 +454,33 @@ const selectedWorldAppDetailRows = computed(() => {
   ].filter((row) => row.value)
 })
 
+const selectedWorldAppHandoff = computed(() => {
+  const app = selectedApp.value
+  if (!app?.worldAppEntry) return null
+  const packLabel = t(
+    app.worldPackTitle || app.worldPackName || app.worldPackId,
+    app.worldPackName || app.worldPackTitle || app.worldPackId,
+  )
+  const targetLabel = app.targetLabel || app.moduleKey || t('目标应用', 'Target app')
+  const title =
+    languageBase.value === 'zh'
+      ? `${packLabel} 的世界入口`
+      : `World entry from ${packLabel}`
+  const launchCopy =
+    languageBase.value === 'zh'
+      ? `打开后进入 ${targetLabel}，并带入这个世界设定包的上下文。`
+      : `Opens ${targetLabel} with this World Pack context.`
+
+  return {
+    title,
+    launchCopy,
+    ownerCopy: t(
+      '应用商城负责放置和打开这个入口；世界书仍负责设定包启用、审核和来源管理。',
+      'App Store manages placement and launch. WorldBook still owns pack activation, review, and source management.',
+    ),
+  }
+})
+
 const selectedAppCanCustomizeIdentity = computed(() => Boolean(selectedApp.value && !selectedApp.value.worldAppEntry))
 const selectedAppSkinTarget = computed(() =>
   selectedApp.value?.worldAppEntry ? null : resolveAppSkinTargetForAppId(selectedApp.value?.id),
@@ -934,6 +961,18 @@ onBeforeUnmount(() => {
                 <strong>{{ selectedAppEntryKindLabel }}</strong>
               </span>
             </div>
+            <section
+              v-if="selectedWorldAppHandoff"
+              class="app-store-world-handoff"
+              data-testid="app-store-world-handoff"
+            >
+              <div>
+                <i class="fas fa-globe" aria-hidden="true"></i>
+                <strong>{{ selectedWorldAppHandoff.title }}</strong>
+              </div>
+              <p>{{ selectedWorldAppHandoff.launchCopy }}</p>
+              <small>{{ selectedWorldAppHandoff.ownerCopy }}</small>
+            </section>
             <div
               v-if="selectedWorldAppDetailRows.length"
               class="app-store-world-meta"
@@ -1037,6 +1076,18 @@ onBeforeUnmount(() => {
           <strong>{{ selectedAppEntryKindLabel }}</strong>
         </span>
       </div>
+      <section
+        v-if="selectedWorldAppHandoff"
+        class="app-store-world-handoff"
+        data-testid="app-store-world-handoff-sheet"
+      >
+        <div>
+          <i class="fas fa-globe" aria-hidden="true"></i>
+          <strong>{{ selectedWorldAppHandoff.title }}</strong>
+        </div>
+        <p>{{ selectedWorldAppHandoff.launchCopy }}</p>
+        <small>{{ selectedWorldAppHandoff.ownerCopy }}</small>
+      </section>
       <div
         v-if="selectedWorldAppDetailRows.length"
         class="app-store-world-meta"
@@ -1935,6 +1986,58 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.app-store-world-handoff {
+  margin-top: 12px;
+  border: 1px solid color-mix(in srgb, var(--system-info) 24%, var(--system-subtle-border));
+  border-radius: 18px;
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--system-info) 12%, transparent), transparent 70%),
+    var(--system-surface-muted);
+}
+
+.app-store-world-handoff div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--system-info);
+}
+
+.app-store-world-handoff i {
+  flex: 0 0 auto;
+}
+
+.app-store-world-handoff strong,
+.app-store-world-handoff p,
+.app-store-world-handoff small {
+  min-width: 0;
+}
+
+.app-store-world-handoff strong {
+  color: var(--system-text);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 860;
+}
+
+.app-store-world-handoff p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 720;
+}
+
+.app-store-world-handoff small {
+  color: var(--system-text-soft);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 760;
 }
 
 .app-store-actions {

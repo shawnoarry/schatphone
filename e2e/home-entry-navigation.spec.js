@@ -82,6 +82,12 @@ const openVisibleAppStoreAction = async (page) => {
   await page.getByTestId('app-store-open-sheet').click()
 }
 
+const visibleWorldHandoff = async (page) => {
+  const inlineHandoff = page.getByTestId('app-store-world-handoff')
+  if (await inlineHandoff.isVisible()) return inlineHandoff
+  return page.getByTestId('app-store-world-handoff-sheet')
+}
+
 test.describe('Home entry navigation', () => {
   test('opens dock apps and a Home app tile from the shell', async ({ page }) => {
     const pageErrors = []
@@ -138,6 +144,71 @@ test.describe('Home entry navigation', () => {
     await openVisibleAppStoreAction(page)
     await expect(page).toHaveURL(/#\/widgets(?:\?|$)/)
 
+    expect(pageErrors).toEqual([])
+  })
+
+  test('explains a World Pack app entry before opening it', async ({ page }) => {
+    const pageErrors = []
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message)
+    })
+
+    await page.addInitScript(() => {
+      const now = Date.now()
+      window.localStorage.setItem(
+        'schatphone:store:system',
+        JSON.stringify({
+          version: 1,
+          savedAt: now,
+          data: {
+            settings: {
+              system: {
+                language: 'en-US',
+              },
+            },
+            user: {
+              activeWorldPackId: 'survival_city',
+              worldPacks: [
+                {
+                  id: 'survival_city',
+                  name: 'Post-disaster survival city',
+                  title: '末日生存城',
+                  enabled: true,
+                  appBindings: [
+                    {
+                      id: 'survival_supply_board',
+                      title: 'Supply Station',
+                      description: 'World-pack supply marketplace.',
+                      archetype: 'marketplace',
+                      moduleKey: 'shopping',
+                      route: '/shopping',
+                      enabled: true,
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        }),
+      )
+    })
+
+    await unlockToHome(page)
+    await page.evaluate(() => {
+      window.location.hash = '/app-store?section=world'
+    })
+    await expect(page).toHaveURL(/#\/app-store/)
+
+    await page.getByTestId('app-store-item-world_app_survival_city_survival_supply_board').click()
+    const handoff = await visibleWorldHandoff(page)
+    await expect(handoff).toContainText('World entry from Post-disaster survival city')
+    await expect(handoff).toContainText('Opens Shopping with this World Pack context')
+    await expect(handoff).toContainText('WorldBook still owns pack activation')
+
+    await openVisibleAppStoreAction(page)
+    await expect(page).toHaveURL(/#\/shopping\?/)
+    await expect(page).toHaveURL(/worldPack=survival_city/)
+    await expect(page).toHaveURL(/worldApp=survival_supply_board/)
     expect(pageErrors).toEqual([])
   })
 
