@@ -45,6 +45,9 @@ describe('FoodDeliveryView', () => {
       },
     })
 
+    expect(wrapper.get('[data-testid="food-delivery-pseudo-folder-home"]').text()).toMatch(/Platform|平台/)
+    expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').text()).toMatch(/Platform|平台/)
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('Moon Bistro')
     expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
     expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toMatch(/本地数据|Local data/)
     expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain('0')
@@ -167,6 +170,7 @@ describe('FoodDeliveryView', () => {
     const restaurant = store.listRestaurantsByCategory('restaurants')[0]
 
     expect(wrapper.get('[data-testid="food-delivery-platform"]').text()).toContain('Restaurants')
+    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(restaurant.name)
     await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
     await flushPromises()
 
