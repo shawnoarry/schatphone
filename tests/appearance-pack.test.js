@@ -36,14 +36,12 @@ describe('appearance pack schema', () => {
       currentTheme: 'zen',
       wallpaperMode: 'url',
       customCss: '.app-shell { color: red; }',
-      scopedCustomCss: {
-        app: {
-          enabled: true,
-          target: 'contacts',
-          css: '.screen { color: blue; }',
-        },
+      customVars: {
+        '--app-font-family': '"Noto Sans SC", sans-serif',
       },
     })
+    expect(pack.appearance.scopedCustomCss).toBeUndefined()
+    expect(pack.appearance.appIconOverrides).toBeUndefined()
     expect(pack.appearance.customWidgets).toBeUndefined()
     expect(pack.appearance.homeWidgetPages).toBeUndefined()
     expect(pack.appearance.chat).toBeUndefined()
@@ -88,6 +86,19 @@ describe('appearance pack schema', () => {
   test('merges an imported pack without replacing non-pack appearance data', () => {
     const result = mergeAppearancePackIntoAppearance(
       {
+        scopedCustomCss: {
+          app: {
+            enabled: true,
+            target: 'shopping',
+            css: '.shopping { color: gold; }',
+          },
+        },
+        appIconOverrides: {
+          app_chat: {
+            icon: 'fas fa-comment',
+            accent: 'warm',
+          },
+        },
         customWidgets: [{ id: 'keep_widget' }],
         homeWidgetPages: [['app_contacts']],
         chat: { bubbleStyle: 'compact' },
@@ -96,6 +107,19 @@ describe('appearance pack schema', () => {
         appearance: {
           currentTheme: 'zen',
           customCss: '.imported { color: green; }',
+          scopedCustomCss: {
+            app: {
+              enabled: true,
+              target: 'map',
+              css: '.map { color: cyan; }',
+            },
+          },
+          appIconOverrides: {
+            app_chat: {
+              icon: 'fas fa-star',
+              accent: 'dark',
+            },
+          },
         },
       },
     )
@@ -107,6 +131,19 @@ describe('appearance pack schema', () => {
       customWidgets: [{ id: 'keep_widget' }],
       homeWidgetPages: [['app_contacts']],
       chat: { bubbleStyle: 'compact' },
+    })
+    expect(result.appearance.scopedCustomCss).toMatchObject({
+      app: {
+        enabled: true,
+        target: 'shopping',
+        css: '.shopping { color: gold; }',
+      },
+    })
+    expect(result.appearance.appIconOverrides).toMatchObject({
+      app_chat: {
+        icon: 'fas fa-comment',
+        accent: 'warm',
+      },
     })
   })
 })

@@ -84,10 +84,34 @@ describe('AppearanceView wallpaper source picker', () => {
 
     expect(wrapper.find('.appearance-overview-card').exists()).toBe(true)
     expect(wrapper.find('.appearance-layout-card').exists()).toBe(true)
-    expect(wrapper.findAll('.appearance-menu-card')).toHaveLength(4)
+    expect(wrapper.findAll('.appearance-menu-card')).toHaveLength(2)
+    expect(wrapper.find('.appearance-menu-icon.is-theme').exists()).toBe(true)
+    expect(wrapper.find('.appearance-menu-icon.is-font').exists()).toBe(true)
+    expect(wrapper.find('.appearance-menu-icon.is-icons').exists()).toBe(false)
+    expect(wrapper.find('.appearance-menu-icon.is-widget').exists()).toBe(false)
     expect(wrapper.text()).toContain('当前外观')
     expect(wrapper.text()).toContain('桌面模板')
-    expect(wrapper.text()).toContain('Widget 中心')
+
+    wrapper.unmount()
+  })
+
+  test('describes custom fonts as a CSS font-family stack', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('.appearance-menu-card')[1].trigger('click')
+    await wrapper.findAll('button').find((button) => button.text().includes('编辑自定义字体')).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('CSS font-family')
 
     wrapper.unmount()
   })
@@ -123,12 +147,10 @@ describe('AppearanceView wallpaper source picker', () => {
     wrapper.unmount()
   })
 
-  test('edits app and world-app scoped custom CSS from the advanced CSS sheet', async () => {
+  test('keeps the advanced CSS sheet global-only', async () => {
     const router = createTestRouter()
     await router.push('/appearance')
     await router.isReady()
-    const systemStore = useSystemStore()
-    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
 
     const wrapper = mount(AppearanceView, {
       global: {
@@ -141,62 +163,10 @@ describe('AppearanceView wallpaper source picker', () => {
     await wrapper.get('[data-testid="appearance-open-css-editor"]').trigger('click')
     await flushPromises()
 
-    await wrapper.get('[data-testid="appearance-app-scoped-css-toggle"]').trigger('click')
-    await wrapper.get('[data-testid="appearance-app-scoped-css-target"]').setValue('shopping')
-    await wrapper
-      .get('[data-testid="appearance-app-scoped-css-input"]')
-      .setValue('.screen { color: red; }')
-
-    await wrapper.get('[data-testid="appearance-world-app-scoped-css-toggle"]').trigger('click')
-    await wrapper
-      .get('[data-testid="appearance-world-app-scoped-css-entry"]')
-      .setValue('survival_city::survival_dispatch')
-    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-pack"]').element.value).toBe(
-      'survival_city',
-    )
-    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-app"]').element.value).toBe(
-      'survival_dispatch',
-    )
-    await wrapper.get('[data-testid="appearance-world-app-scoped-css-pack"]').setValue('survival_city')
-    await wrapper
-      .get('[data-testid="appearance-world-app-scoped-css-app"]')
-      .setValue('survival_dispatch')
-    await wrapper
-      .get('[data-testid="appearance-world-app-scoped-css-input"]')
-      .setValue('.hero { color: orange; }')
-
-    expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
-      enabled: true,
-      target: 'shopping',
-      css: '.screen { color: red; }',
-    })
-    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
-      enabled: true,
-      worldPack: 'survival_city',
-      worldApp: 'survival_dispatch',
-      css: '.hero { color: orange; }',
-    })
-    expect(wrapper.get('[data-testid="appearance-app-scoped-css-selector"]').text()).toBe(
-      '[data-app="shopping"]',
-    )
-    expect(wrapper.get('[data-testid="appearance-world-app-scoped-css-selector"]').text()).toBe(
-      '[data-world-pack="survival_city"][data-world-app="survival_dispatch"]',
-    )
-    expect(wrapper.get('[data-testid="appearance-scoped-css-active-count"]').text()).toContain('2')
-
-    await wrapper.get('[data-testid="appearance-scoped-css-disable-all"]').trigger('click')
-    expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
-      enabled: false,
-      css: '.screen { color: red; }',
-    })
-    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
-      enabled: false,
-      css: '.hero { color: orange; }',
-    })
-
-    await wrapper.get('[data-testid="appearance-scoped-css-clear-all"]').trigger('click')
-    expect(systemStore.settings.appearance.scopedCustomCss.app.css).toBe('')
-    expect(systemStore.settings.appearance.scopedCustomCss.worldApp.css).toBe('')
+    expect(wrapper.get('[data-testid="appearance-global-css-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="appearance-app-scoped-css-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="appearance-world-app-scoped-css-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="appearance-scoped-css-recovery"]').exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -222,11 +192,17 @@ describe('AppearanceView wallpaper source picker', () => {
     systemStore.settings.appearance.homeWidgetPages = [['local_widget'], [], [], [], []]
     systemStore.settings.appearance.chat = { bubbleStyle: 'compact' }
     systemStore.settings.appearance.customCss = '.shell { color: teal; }'
-    await wrapper.get('[data-testid="appearance-app-scoped-css-toggle"]').trigger('click')
-    await wrapper.get('[data-testid="appearance-app-scoped-css-target"]').setValue('contacts')
-    await wrapper
-      .get('[data-testid="appearance-app-scoped-css-input"]')
-      .setValue('.screen { background: black; }')
+    systemStore.settings.appearance.scopedCustomCss.app = {
+      enabled: true,
+      target: 'contacts',
+      css: '.screen { background: black; }',
+    }
+    systemStore.settings.appearance.appIconOverrides = {
+      app_chat: {
+        icon: 'fas fa-comment',
+        accent: 'warm',
+      },
+    }
 
     await wrapper.get('[data-testid="appearance-pack-export"]').trigger('click')
     const exported = JSON.parse(wrapper.get('[data-testid="appearance-pack-export-output"]').element.value)
@@ -235,15 +211,10 @@ describe('AppearanceView wallpaper source picker', () => {
       kind: 'schatphone.appearance-pack',
       appearance: {
         customCss: '.shell { color: teal; }',
-        scopedCustomCss: {
-          app: {
-            enabled: true,
-            target: 'contacts',
-            css: '.screen { background: black; }',
-          },
-        },
       },
     })
+    expect(exported.appearance.scopedCustomCss).toBeUndefined()
+    expect(exported.appearance.appIconOverrides).toBeUndefined()
     expect(exported.appearance.customWidgets).toBeUndefined()
     expect(exported.appearance.homeWidgetPages).toBeUndefined()
     expect(exported.appearance.chat).toBeUndefined()
@@ -261,6 +232,12 @@ describe('AppearanceView wallpaper source picker', () => {
               css: '.map-route-card { border-color: cyan; }',
             },
           },
+          appIconOverrides: {
+            app_chat: {
+              icon: 'fas fa-star',
+              accent: 'dark',
+            },
+          },
         },
       }),
     )
@@ -268,11 +245,16 @@ describe('AppearanceView wallpaper source picker', () => {
 
     expect(systemStore.settings.appearance.currentTheme).toBe('zen')
     expect(systemStore.settings.appearance.customCss).toBe('.imported { color: green; }')
-    expect(systemStore.settings.appearance.scopedCustomCss.worldApp).toMatchObject({
+    expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
       enabled: true,
-      worldPack: 'survival_city',
-      worldApp: 'survival_safe_route_pass',
-      css: '.map-route-card { border-color: cyan; }',
+      target: 'contacts',
+      css: '.screen { background: black; }',
+    })
+    expect(systemStore.settings.appearance.appIconOverrides).toMatchObject({
+      app_chat: {
+        icon: 'fas fa-comment',
+        accent: 'warm',
+      },
     })
     expect(systemStore.settings.appearance.customWidgets).toEqual([{ id: 'local_widget', name: 'Local' }])
     expect(systemStore.settings.appearance.homeWidgetPages[0]).toEqual(['local_widget'])
