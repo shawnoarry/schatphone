@@ -1,6 +1,6 @@
 # Relationship Growth Event System / 好感度、关系进展与角色成长事件系统
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## 1. Purpose
 
@@ -53,8 +53,8 @@ Recommended ownership:
 - Manually authored role-detail notes may live in Contacts or Chat-side compatibility fields, but current relationship progress must remain owned by `relationshipRuntimeStore`.
 - Contacts role profiles own profile-side relationship premise/classification fields such as `relationshipLabelText`, `relationshipLabelNote`, `initialRelationshipSeed`, `primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata.
 - Contacts detail may render the current relationship runtime snapshot first, but that display is read-only current truth from `relationshipRuntimeStore`; editable premise fields remain profile-side context.
-- Chat owns confirmed social/channel state such as pending friend, blocked, or blocked-by-role status after the Chat social shell lands.
-- Generated social events such as role-initiated friend requests or blocks must be reviewed/audited through event runtime before they mutate Chat channel state.
+- Chat owns confirmed social/channel state such as pending friend, blocked, or blocked-by-role status.
+- Generated social events such as role-initiated greetings, refusal, blocks, restore, or unblock must be reviewed/audited through event runtime before they mutate Chat channel state.
 - WorldBook owns worldview, lore, knowledge points, and world-specific rule inputs.
 - Map, Shopping, Food Delivery, Wallet, Phone, Calendar, Gallery, and Assets may submit structured facts through adapters.
 - World Hub reads, reviews, and later adjusts runtime state, but should not become the main data entry surface for role/world records.
@@ -65,7 +65,7 @@ Do not:
 - Let AI directly mutate affinity/stage values without a local rule or user confirmation.
 - Let module adapters bypass the shared event engine for random or condition-driven relationship changes.
 - Let every module create its own standalone long-term memory for the same life event when a shared memory summary would be enough.
-- Let Chat or Contacts directly apply generated friend/block social events without the future event-runtime review seam.
+- Let Chat or Contacts directly apply generated friend/block/refusal social events without the event-runtime review seam.
 
 ## 4. Core Data Concepts
 
@@ -170,7 +170,7 @@ Current product boundary:
 
 - Calendar can safely contribute confirmed shared events because the user has already acknowledged the event.
 - Gallery and other media-driven memory facts should stay optional and deferred until image sources are naturally produced and the save flow is low-friction.
-- Chat friend/block social events are also deferred until the Chat shell lands. When implemented, Chat should own confirmed channel state, Contacts should display snapshots only, and relationship runtime should receive confirmed facts or memories only after the social event is accepted.
+- Chat friend/block/refusal social events have a first reviewed seam. Chat owns confirmed channel state, Contacts displays snapshots only, Event Runtime/World Hub reviews generated proposals, and relationship runtime should receive confirmed facts or memories only after the social event is accepted.
 
 ## 8. Module Adapter Requirements
 
@@ -179,7 +179,7 @@ Each adapter should submit facts, not own relationship math.
 Candidate facts by module:
 
 - Chat: meaningful conversation turn, apology, praise, conflict, promise, confession, long silence, reply streak.
-- Chat social/channel events: role-initiated friend request, accepted friend request, user block, role blocks user, unblock. These are future events and need review/audit before applied state changes.
+- Chat social/channel events: role-initiated greeting/message request, refusal, restore, role blocks user, unblock, and direct user block/unblock actions. Generated role-side changes need review/audit before applied state changes.
 - Contacts: profile binding, relationship note update, manual stage note.
 - Map: shared trip, location check-in, exploration discovery, route delay, visit frequency, unlocked place.
 - Shopping: gift bought, gift delivered, favorite category discovered, order returned.
@@ -329,7 +329,7 @@ Avoid next:
 
 - Do not add high-impact automatic romance or conflict events before the store, logs, and user confirmation model exist.
 - Do not put relationship controls directly into Chat as the first implementation.
-- Do not implement role-initiated friend/block events until the Chat shell and social-event review seam are settled.
+- Do not expand role-initiated friend/block/refusal events outside the landed Chat social-event review seam.
 - Do not make World Hub visible by default for all users.
 - Do not make Gallery or photo-memory intake part of the main relationship loop until the product can produce or capture image context with near-zero user effort.
 
@@ -340,6 +340,7 @@ Current reusable interface:
 - `recordRelationshipFact(input)`: module adapters submit facts with target, source module or id, fact type, summary, metric deltas, milestone, growth traits, world context, optional `memoryKey`, and optional confirmation requirement.
 - `relationshipGate`: `recordRelationshipFact(input)` persists normalized gate metadata and respects `block` by dismissing without applying effects, and `confirm` by keeping the fact pending until review.
 - `buildRelationshipFactGateFromPreset(input)`: future high-risk event packs can build hard-gate metadata from a preset id while still reading saved role-profile category/modifier fields only.
+- `submitChatSocialEventProposal(input)`: event runtime can store generated role-side social proposals, auto-apply low-risk greetings with audit, and keep high-risk communication changes pending for World Hub review before Chat applies them.
 - `findEventBySource(sourceModule, sourceId)`: module adapters can dedupe imported facts before applying relationship effects.
 - `listMemoryAggregatesForTarget(target)`: runtime can group multiple applied facts under one shared memory summary when they point to the same `memoryKey`.
 - UI consumers should filter from the full sorted aggregate list first and only then apply any visible-item cap; otherwise source-specific review flows can accidentally hide valid memory groups.

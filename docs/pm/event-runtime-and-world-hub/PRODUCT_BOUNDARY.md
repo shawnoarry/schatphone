@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## 1. Core Rule
 
@@ -17,7 +17,7 @@ Owns:
 - caps
 - trigger policy
 - adapter orchestration
-- generated social-event eligibility/review/audit for future role-initiated friend requests, blocks, and being-blocked outcomes
+- generated social-event eligibility/review/audit for role-initiated greetings, refusal, block, restore, and unblock proposals
 
 Does not own:
 
@@ -58,7 +58,7 @@ Does not own:
 
 Current high-risk gate presets are contracts only. They do not trigger events, mutate module records, or turn World Hub into an editor.
 
-Future friend/block social events should use the same boundary: event runtime may record and review generated proposals; Chat applies confirmed channel state; Contacts displays snapshots; relationship runtime records confirmed relationship continuity only after the event is accepted.
+Friend/block/refusal social events use the same boundary: event runtime records and reviews generated proposals; World Hub approves or dismisses high-risk proposals; Chat applies confirmed channel state; Contacts displays snapshots; relationship runtime records confirmed relationship continuity only after the event is accepted.
 
 World Pack nonstandard-app template extraction is outside runtime ownership in the current baseline. Its WorldBook Current World Pack UI can propose and confirm reviewed appBindings only; it must not create event rules, mutate module records, or turn World Hub into the editing surface.
 

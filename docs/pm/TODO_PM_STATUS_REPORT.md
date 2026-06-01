@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -61,7 +61,7 @@ PM meaning:
 - Shopping, logistics, and Food Delivery service contexts now connect into Chat through reusable service-notification messages with source references and route actions.
 - Service accounts now expose descriptive source notification plans in Services, service threads, and the Chat linkage contract; plans identify supported Shopping/logistics/Food Delivery event streams without creating subscriptions or source records.
 - Group chats are now visible as Chat-native targets with member selection and reply-mode metadata; deeper multi-speaker orchestration remains a later behavior layer.
-- Incoming social events such as role-initiated friend requests, blocks, and being-blocked states should wait for the parallel Chat shell work. The intended later split is Chat owns confirmed channel state, Contacts displays role snapshots, event runtime reviews generated events, and relationship runtime records confirmed continuity only.
+- Incoming generated social events now have the first review path: low-risk role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait for World Hub approval before Chat changes the communication state. Chat owns the applied channel state, Contacts displays role snapshots, Event Runtime reviews generated events, and relationship runtime records confirmed continuity only.
 - Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
@@ -83,6 +83,7 @@ PM meaning:
 - Contacts role profiles now persist profile-side relationship premise/classification fields: free-text label, label note, initial seed values, primary relationship category, modifier tags, confidence/source/timestamp, and explanation.
 - Relationship classification now has an AI seam: suggestions go through `src/lib/ai.js`, JSON is normalized through the shared response parser path, high-confidence suggestions can save as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, and existing `user_edited` classifications cannot be silently overwritten by later AI or world-template writes.
 - Contacts detail now includes the first role-control page surface for relationship classification: the current relationship runtime snapshot stays display-only at the top, while profile-side premise fields, seed values, primary category, modifiers, and classification audit can be edited below it.
+- Contacts now shows the role's current Chat communication snapshot as read-only status; it does not apply generated friend/block/refusal outcomes.
 - Event/runtime now consumes saved relationship classification fields as stable semantic context. Current low-impact relationship facts attach `relationshipGate` audit metadata from saved category/modifier fields only; raw `relationshipLabelText` and `relationshipLabelNote` are not read for event decisions. Named high-risk gate presets exist for future event packs, but no high-impact automation is enabled.
 - Chat Directory now keeps legacy `relationshipLevel` and `relationshipNote` as Chat-local tuning/note compatibility fields only; visible copy no longer presents them as current affinity.
 - NPC profiles can be upgraded to Main Role without losing the existing profile, Chat binding, or chat history.
@@ -197,11 +198,12 @@ PM meaning:
 - A shared event engine handles condition checks, logs, cooldowns, caps, and adapter exceptions.
 - Food Delivery has the first safe automatic pilot.
 - World-aware event variants exist as a standard direction.
-- Future Chat social events such as friend/block changes should enter here as reviewed social/channel events after the Chat shell lands, not as direct Chat or Contacts writes.
+- Generated Chat social events such as greetings, refusal, block, restore, and unblock now enter here as reviewed social/channel events, not as direct Chat or Contacts writes.
 - Settings > Automation has an opt-in foreground event tick switch.
 - App lifecycle wiring exists for foreground ticking only when the user enables it.
 - World Hub reads simulation runtime state and relationship runtime review data.
 - Relationship pending-confirmation effects can be approved or dismissed from World Hub.
+- World Hub can also approve or dismiss high-risk generated Chat social proposals before Chat applies the communication state.
 
 PM meaning:
 
@@ -212,7 +214,7 @@ PM meaning:
 
 - visual rebuild is not finished;
 - World Hub still does not offer broad user-facing sliders, freeform overrides, funds editing, affinity editing, or unlock editing;
-- event runtime has only one automatic safe-list path: the Food Delivery ETA/rider-delay pilot;
+- event runtime has one module-side automatic safe-list path, the Food Delivery ETA/rider-delay pilot, plus the reviewed Chat social-event proposal path;
 - Shopping/logistics random events are not enabled automatically;
 - Map route context is still read-only and does not transfer ownership away from Shopping/Food Delivery;
 - Contacts Relationship System V2 is not fully complete:
@@ -240,7 +242,7 @@ PM meaning:
    - same-life-event schedule follow-ups merge into the existing memory when upstream lineage is explicit.
    - Calendar keeps source-audit review detail, while Contacts/World Hub use product-grade related-record copy instead of technical source labels.
 - World Hub can now filter and inspect event logs and relationship facts with selected-detail explanations.
-- World Hub can now show read-only relationship gate audit details on relationship facts. This is review metadata, not a new editor or broad control layer. High-risk gate presets remain helper contracts until a later product slice promotes actual event packs.
+- World Hub can now show read-only relationship gate audit details on relationship facts and review high-risk generated Chat social proposals. This is review metadata and confirmation flow, not a new broad editor or Cheats surface.
 2. Continue the relationship-growth event system through safe adapters.
    - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
 3. Add clearer user-facing explanation for automatic foreground events.
@@ -263,8 +265,9 @@ PM meaning:
 6. User-test and polish the guarded nonstandard-app review flow now that the UI exists: loading, empty, parse/API error, rejected proposals, confirmed `transit_pass`, confirmed `reservation_board`, and confirmed `dispatch_board` are covered by regression tests, but phone-sized copy/readability still needs product review.
 7. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
 8. Broaden user-approved service/subscription account opt-in beyond the current active-pack service-account V1, then exercise ready source notification plans from source modules without making Chat own source records.
-9. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
-10. Add more adapters through the shared event engine.
+9. Deepen generated Chat social-event sources only through Event Runtime review, keeping Chat as the applied communication owner.
+10. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
+11. Add more adapters through the shared event engine.
 
 ### P3: Visual Rebuild Return
 
@@ -303,7 +306,7 @@ World Pack service-account status update: active-pack built-in service/official 
 - fragmented memory summaries are controlled for current explicit source-id chains;
 - primary-led recall summaries are now available for Chat prompt context, and UI-facing review summaries are used by Contacts and World Hub;
 - Calendar relationship review detail now exposes lineage and duplicate-growth status without forcing that audit language into default Contacts/World Hub summaries;
-- World Hub now supports filtered event-log and relationship-fact review with selected-detail explanations, while still deferring broad value, funds, unlock, and freeform override controls.
+- World Hub now supports filtered event-log and relationship-fact review with selected-detail explanations, and can review high-risk generated Chat social proposals while still deferring broad value, funds, unlock, and freeform override controls.
 - Shopping/logistics/Food Delivery now push Chat service-notification messages without transferring order, wallet, or route ownership.
 - World Pack Shopping context now changes entry semantics and filters without transferring catalog, cart, checkout, order, Wallet, Assets, Calendar, or Chat ownership.
 

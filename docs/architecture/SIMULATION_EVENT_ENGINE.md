@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-05-30
+Updated: 2026-06-01
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -103,6 +103,12 @@ A persistent execution record useful for:
 - debugging
 - backup/restore
 - later AI assistant handoff
+
+### Generated Chat Social Proposal
+
+A runtime proposal that asks whether a role-initiated communication-state change should happen in Chat.
+
+V1 covers role greetings, refusal, block, restore, and unblock. Low-risk greetings may become audited pending message requests. Refusal/block/restore/unblock proposals stay pending until World Hub approves or dismisses them.
 
 ### Surprise Mode
 
@@ -352,6 +358,7 @@ The shared event foundation now exists in code.
 Already landed:
 
 - `src/stores/simulation.js` persists event logs, cooldowns, daily counters, module enable flags, and Surprise Mode
+- `src/stores/simulation.js` also persists generated Chat social proposals and applies them only through Chat-owned actions after audit or approval
 - `src/lib/simulation/random.js` provides injected/seeded helpers
 - `src/lib/simulation/condition-evaluator.js` evaluates basic conditions
 - `src/lib/simulation/event-engine.js` handles eligibility, random gates, cooldowns, daily caps, adapter execution, and event logging
@@ -362,3 +369,4 @@ Recommended next step:
 
 - preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
+- deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes

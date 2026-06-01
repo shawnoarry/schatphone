@@ -70,7 +70,8 @@ Current World Hub capabilities:
 5. consumes primary-led relationship-memory recall summaries while preserving source-audit detail;
 6. can filter event logs by module/status and inspect selected logs with trigger, reason, adapter, target, and world-variant explanations;
 7. can filter relationship facts by status/source and inspect selected facts with metric-delta, source-record, pending-effect, and supporting-only explanations;
-8. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
+8. can review pending generated Chat social proposals before high-risk communication state changes are applied in Chat;
+9. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
 
 ## Relationship To Cheats
 
@@ -89,6 +90,6 @@ Important rule:
 
 ## Next Recommended Slice
 
-1. preserve the filtered review-pack baseline while adding future event adapters;
+1. preserve the filtered review-pack baseline while adding future event adapters and generated Chat social-event sources;
 2. add another read-only explanation slice only when product review finds a concrete gap;
 3. freeze Cheats only after the World Hub review surface is strong enough to support a clearer control hierarchy.

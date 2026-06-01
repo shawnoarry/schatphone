@@ -1,6 +1,6 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
 
@@ -20,7 +20,7 @@ Current group-chat note: group chats are first-class Chat targets backed by Chat
 
 Current relationship-compatibility note: Chat Directory still preserves legacy `relationshipLevel` and `relationshipNote` fields for binding compatibility, but the UI labels them as Chat-local tuning/note only. Current relationship truth stays in relationship runtime.
 
-Incoming social-event note: Chat social/channel state now has a V1 applied shell for direct user actions such as greetings, request acceptance/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events still need an explicit seam: Chat owns messaging accessibility and visible social-channel state, Contacts may display the role-level snapshot, event runtime owns eligibility/review/audit, and relationship runtime receives only confirmed relationship facts or memories.
+Incoming social-event note: Chat social/channel state has a V1 applied shell for direct user actions such as greetings, request acceptance/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events now enter the explicit review seam: Chat owns messaging accessibility and visible social-channel state, Contacts displays the role-level snapshot only, Event Runtime owns eligibility/review/audit, World Hub reviews high-risk proposals, and relationship runtime receives only confirmed relationship facts or memories.
 
 ## Read This Package In This Order
 

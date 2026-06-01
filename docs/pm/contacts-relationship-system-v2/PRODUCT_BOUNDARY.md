@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -39,7 +39,7 @@ Owns:
 - profile-side relationship premise text, initial relationship seed, and stored classification metadata
 - role-control display of the current relationship runtime snapshot before profile-side premise editing
 - manually authored preferences/life-pattern/social-graph entries
-- display-only social-channel snapshots after the Chat social shell lands, such as pending friend, blocked, or blocked-by-role status
+- display-only social-channel snapshots from Chat, such as pending message request, blocked, or blocked-by-role status
 - event-attached detail entries attached into role detail sections
 - memory review and memory deletion entry
 - role delete and relationship reset entry
@@ -49,7 +49,7 @@ Must not own:
 - raw chat message deletion workflow
 - chat-thread-only settings
 - runtime-only internal identifiers as user-facing labels
-- eligibility or application of generated friend/block social events
+- eligibility or application of generated friend/block/refusal social events
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -182,7 +182,7 @@ Round 3 Contacts UI policy:
 - Manual Contacts saves must use `classificationSource = user_edited`.
 - Contacts must surface protected `user_edited` classifications as a status message instead of silently overwriting them.
 - Contacts must not judge event eligibility or mutate current runtime metrics as part of classification editing.
-- Future friend/block social-event display in Contacts must stay snapshot-only. Chat owns applied channel state, event runtime owns generated-event review/audit, and relationship runtime owns confirmed relationship facts/memories.
+- Friend/block/refusal social-event display in Contacts must stay snapshot-only. Chat owns applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts/memories.
 
 ## 9. Semantic Drift Watchlist
 
@@ -198,4 +198,4 @@ If any of these happens, treat it as a product-semantic bug:
 8. Chat or Chat Directory treats saved profile classification as current affinity/stage truth instead of profile-side context.
 9. A later AI or world-template classification silently overwrites an existing `user_edited` classification.
 10. Contacts lets the relationship premise form directly change current runtime metrics, stage, milestones, or memories.
-11. Contacts turns friend/block social snapshots into event decisions or relationship metrics.
+11. Contacts turns friend/block/refusal social snapshots into event decisions or relationship metrics.

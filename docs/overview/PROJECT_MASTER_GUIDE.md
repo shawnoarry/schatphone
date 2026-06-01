@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## 1. Purpose
 
@@ -100,7 +100,7 @@ Immediate active lane:
 - Book text-library V1 now exists as a separate app for long worldbook documents, knowledge notes, rules, glossary text, and reusable references. `Settings -> WorldBook` remains the activation panel that links whole documents or selected Book sections into active world context.
 - the Book source chain is now tested through the consumer path: Chat prompt context, Chat thread summary, and runtime world-context resolution all receive active Book source text through explicit `bookStore` adapters.
 - Chat App now has a clearer messaging-app shell: `Messages`, `Objects`, `Groups`, `Services`, and `Me`. The main message list stays immersive while binding, group management, and service accounts have explicit control layers; the top-right gear opens dedicated Chat Settings, `Me` owns Chat identity/anonymity and recent social data, and Chat Settings owns appearance plus maintenance diagnostics.
-- incoming Chat social/channel states such as greetings, accepted/declined requests, blocks, and being-blocked markers now have a direct Chat-side V1 shell. Generated role-initiated social events are still on hold until the event-runtime eligibility/review/audit seam is defined: Chat owns confirmed channel state, Contacts displays role-level snapshots, event runtime reviews generated proposals, and relationship runtime records only confirmed relationship facts or memories.
+- incoming Chat social/channel states such as greetings, accepted/declined requests, blocks, and being-blocked markers now have both a direct Chat-side V1 shell and a generated-event review seam. User actions still happen inside Chat; AI/runtime-generated role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait for World Hub review before Chat applies the communication state. Contacts displays role-level snapshots only, and relationship runtime records only confirmed relationship facts or memories.
 - Chat Directory relationship compatibility containment is landed: legacy `relationshipLevel` and `relationshipNote` are still persisted for binding compatibility, but visible copy now calls them Chat-local tuning/note and states that current relationship truth is owned by relationship runtime.
 - relationship classification Rounds 1 through 4 are landed for the profile/store/AI/Contacts/event surface: Contacts role profiles can persist free-text relationship premise fields, initial seed values, and stored category/modifier classification metadata; `src/lib/relationship-label-classifier.js` classifies labels through `src/lib/ai.js` plus shared JSON parsing; the Contacts detail page shows the read-only current relationship runtime snapshot first, then edits the profile-side relationship premise, seed, category, modifiers, and classification audit. High-confidence AI results save as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, manual edits save as `user_edited`, existing `user_edited` classifications remain protected from silent AI overwrite, and event/runtime reads saved classification fields rather than raw premise prose. Relationship runtime still owns current metrics, stage, milestones, and memories.
 - relationship classification Round 4 is landed for the event/runtime seam: low-impact module facts attach read-only `relationshipGate` audit metadata derived from saved `primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit fields only. Event gating does not read `relationshipLabelText` or `relationshipLabelNote`; named high-risk hard-gate presets now exist for tests/future event packs, but no new high-impact automation or event classes are enabled.
@@ -108,14 +108,14 @@ Immediate active lane:
 
 ## 5. Technical Stack
 
-Current stack from the codebase:
+Current stack from `package.json` and `package-lock.json`:
 
-1. Vue `3.5.24`
-2. Vue Router `5.0.2`
-3. Pinia `3.0.4`
-4. Vite `7.2.4`
-5. Tailwind CSS `4.1.18`
-6. Vitest `1.6.1` with jsdom
+1. Vue `^3.5.24` (locked `3.5.27`)
+2. Vue Router `^5.0.2` (locked `5.0.2`)
+3. Pinia `^3.0.4` (locked `3.0.4`)
+4. Vite `^7.2.4` (locked `7.3.1`)
+5. Tailwind CSS `^4.1.18` (locked `4.1.18`)
+6. Vitest `^1.6.0` with jsdom (locked `1.6.1`)
 7. ESLint 9 plus Prettier 3
 
 ## 6. Core Architecture

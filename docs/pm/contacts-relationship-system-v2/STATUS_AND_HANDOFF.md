@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -45,6 +45,7 @@ What is already landed:
 33. Relationship classification Round 3 Contacts UI is landed: Contacts detail now shows the current relationship runtime snapshot first, then provides an editable profile-side relationship premise form for label, note, seed values, primary category, modifier tags, classification audit, AI classify, confirmation, and manual save flows. Manual edits save as `user_edited`; protected `user_edited` classifications surface a non-invasive status instead of being silently overwritten.
 34. Relationship classification Round 4 event/runtime gating is landed: existing low-impact relationship facts attach `relationshipGate` audit metadata from saved category/modifier classification fields, relationship runtime persists and respects block/confirm decisions, and World Hub can show gate metadata read-only. Raw label/note prose remains profile-side premise text and is not used for event decisions.
 35. `summarizeEntityForTarget()` now keeps memory counts canonical even when a caller asks for zero or a small number of displayed memory summaries; `memorySummaries` is capped, while `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` describe the full target state.
+36. Contacts now shows a read-only Chat social-channel snapshot in the Role Hub summary so the user can see the role's current communication reachability without making Contacts the event judge.
 
 Still incomplete:
 
@@ -52,14 +53,14 @@ Still incomplete:
 2. WorldBook template authoring remains a compact V1 baseline, not a full form-builder or onboarding flow.
 3. deeper World Hub review quality continues under roadmap 4.3.
 4. High-impact relationship automation is still deferred; Round 4 only adds helper-level hard-gating behavior and low-impact audit metadata.
-5. Incoming Chat social events such as role-initiated friend requests, user blocks, and being-blocked states are not implemented here. Contacts may later display the current social-channel snapshot for a role, while Chat/event-runtime/relationship-runtime keep their respective ownership.
+5. Incoming generated Chat social events are not authored here. Contacts displays the current social-channel snapshot for a role, while Chat owns the applied communication state, Event Runtime/World Hub own generated-event review, and relationship runtime owns confirmed relationship continuity.
 
 ## 2. Recommended Next Slice
 
 1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
 3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing and profile-value authoring ergonomics.
-4. After the parallel Chat shell lands, define a Contacts display-only social snapshot for friend/block states without making Contacts the social-event judge.
+4. Continue polishing the Contacts display-only social snapshot so it remains clear, read-only, and separate from relationship metrics or memory truth.
 
 4.2 closure baseline:
 
@@ -86,7 +87,7 @@ Still incomplete:
 5. Do not delete only the memory summary while leaving linked source records and runtime facts alive.
 6. Do not implement WorldBook-driven profile templates directly from the decision log; use the formal specs and the implementation plan after review.
 7. Do not let Contacts, Chat, or raw relationship premise prose become the event-decision owner.
-8. Do not let Contacts apply role-initiated friend/block outcomes directly; generated social events need the later Chat social seam plus event-runtime audit.
+8. Do not let Contacts apply role-initiated friend/block/refusal outcomes directly; generated social events must use the landed Chat social-event seam plus event-runtime audit.
 
 ## 4. Validation
 

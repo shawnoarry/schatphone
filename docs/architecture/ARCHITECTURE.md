@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## 1. Architecture Goals
 
@@ -20,12 +20,12 @@ Primary goals:
 
 ## 2. Tech Stack
 
-- Vue `3.5.24`
-- Vue Router `5.0.2`
-- Pinia `3.0.4`
-- Vite `7.2.4`
-- Tailwind CSS `4.1.18`
-- Vitest `1.6.0`
+- Vue `^3.5.24` (locked `3.5.27`)
+- Vue Router `^5.0.2` (locked `5.0.2`)
+- Pinia `^3.0.4` (locked `3.0.4`)
+- Vite `^7.2.4` (locked `7.3.1`)
+- Tailwind CSS `^4.1.18` (locked `4.1.18`)
+- Vitest `^1.6.0` (locked `1.6.1`)
 - ESLint 9 and Prettier 3
 
 ## 3. Layered Design
@@ -129,6 +129,8 @@ Important files:
   - maps active World Pack app bindings into launch rows, stable global `world_app_*` app-entry records for App Store/Home/App Library placement, source-module route context, and target-app UX context; current concrete consumers are Shopping marketplace filters, Food Delivery dispatch hero/banner/default-view context, Calendar reservation title/context presentation, and Map transit title/context presentation
 - `src/lib/world-app-template-registry.js`
   - defines the guarded nonstandard-app template whitelist and AI extraction/review normalization; WorldBook's Current World Pack panel presents AI/pasted proposals with loading, empty, parse/API error, and rejected-state treatment for user review, and confirmed proposals become World Pack appBindings that then flow through the existing App Store/Home/target-app context seams while low-confidence, unsupported, or unknown proposals cannot create routes, stores, business records, event rules, or App Store entries
+- `src/lib/chat-social-event-review.js`
+  - evaluates generated Chat social proposals before communication state changes; low-risk role greetings may auto-apply with audit, while role refusal/block/restore/unblock proposals wait for World Hub review and then apply through Chat-owned actions
 
 Rule: UI components must not bypass these shared seams for core cross-module concerns.
 
@@ -158,7 +160,7 @@ This table matters as much as the code layout.
 | ordinary message history | `Chat` | includes manual chat-message deletion |
 | current relationship progress | `relationshipRuntimeStore` | the truth layer for relationship state |
 | confirmed Chat social/channel state | Chat / Chat Directory | who can message, pending friend state, blocked, or blocked-by-role status after a direct user action or confirmed event |
-| generated social-event review | `simulationStore` / event runtime | future role-initiated friend requests, blocks, or being-blocked proposals require audit/review before mutating Chat channel state |
+| generated social-event review | `simulationStore` / event runtime | role-initiated greeting, refusal, block, restore, or unblock proposals require audit/review before mutating Chat channel state |
 | cross-module cue queues | `reminders.js` / Reminders | not Calendar |
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
@@ -224,7 +226,7 @@ Important rule:
 - Chat prompt assembly can read role, worldview, and relationship-runtime summaries, but Chat does not own the relationship truth itself.
 - Chat-local appearance preferences live under `systemStore.settings.appearance.chat`, because they are UI presentation preferences rather than conversation content.
 - Chat Settings owns Chat appearance, default-behavior entry points, and maintenance diagnostics; Chat Me owns user identity/anonymity and recent social-presence data.
-- Future friend/block social events should separate channel state from relationship truth: Chat applies confirmed social/channel state, Contacts may display snapshots, event runtime reviews generated proposals, and relationship runtime records only confirmed continuity facts.
+- Friend/block/refusal social events separate channel state from relationship truth: Chat applies confirmed social/channel state, Contacts may display snapshots, event runtime reviews generated proposals, World Hub reviews high-risk proposals, and relationship runtime records only confirmed continuity facts.
 
 ### 6.3 Role Binding Contract
 

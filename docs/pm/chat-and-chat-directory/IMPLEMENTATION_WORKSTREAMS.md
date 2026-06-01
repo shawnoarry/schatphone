@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -22,7 +22,7 @@ Updated: 2026-05-31
 - service-account management
 - chat-target lifecycle
 - direct Chat social-channel state for greeting requests, blocked, and blocked-by-role outcomes
-- future generated social events only after event-runtime review/audit is defined
+- generated social events only through the landed event-runtime review/audit seam
 - unbind-only rules
 - Chat-local relationship compatibility annotations, labeled as tuning/note rather than current relationship truth
 

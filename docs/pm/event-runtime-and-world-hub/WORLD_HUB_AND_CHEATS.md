@@ -1,6 +1,6 @@
 # World Hub And Cheats
 
-Updated: 2026-05-19
+Updated: 2026-06-01
 
 This file defines the distinction between the current World Hub lane and the future Cheats lane.
 
@@ -28,6 +28,7 @@ Current implemented direction:
 - review-first and narrow-control-first
 - shows visible role IDs only for real Contacts profiles; runtime-only or missing-profile targets stay labeled as runtime keys
 - filters and inspects event logs and relationship facts with product-facing explanations
+- reviews pending generated Chat social proposals such as role refusal, block, restore, and unblock before Chat applies the communication state
 - uses UI-facing relationship memory summaries by default, reserving source-audit detail for focused review surfaces
 - does not take ownership of relationship truth, event execution, or source records
 

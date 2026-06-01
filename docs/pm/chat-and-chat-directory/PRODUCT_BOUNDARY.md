@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -72,7 +72,7 @@ Safe ownership:
 - Event runtime owns generated event eligibility, review, audit logs, and pending confirmation for high-risk social changes.
 - Relationship runtime may receive a confirmed fact or memory after the social event is applied, but it remains the owner of current relationship metrics and memories.
 
-Current V1 Chat social state is directly user-authored or test-fixture-applied. Generated role-initiated events remain future work and must pass through the event-runtime review/audit seam before they mutate Chat channel state.
+Current V1 generated social-event seam is landed. User-authored Chat actions still happen inside Chat / Chat Directory. AI-generated or runtime-generated role social changes enter Event Runtime first: low-risk role greetings may auto-apply as audited message requests, while role-initiated refusal, block, restore, and unblock proposals wait for World Hub review before Chat applies the communication state.
 
 ## 4. Service Accounts
 

@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This is the only live execution board for implementation order.
 
@@ -32,7 +32,7 @@ Current state:
 3. Chat now has a clearer messaging-app shell with separate Messages, Objects, Groups, Services, and Me control layers, plus a dedicated top-right Chat Settings entry;
 4. Calendar and Reminders have a real product split baseline;
 5. low-impact cross-module relationship facts are already working across several modules;
-6. World Hub is online as an optional review/control surface;
+6. World Hub is online as an optional review/control surface, including high-risk generated Chat social-event review;
 7. visual quality is still functional scaffolding in many areas rather than final immersion.
 
 Current project risk:
@@ -147,7 +147,8 @@ Current implementation note:
 - World Hub event logs now support module/status filters, selected-log detail, trigger-source/reason/target review, adapter-boundary notes, and world-variant context where present.
 - World Hub relationship facts now support status/source filters, selected-fact detail, metric-delta review, source-record visibility, pending-effect explanations, and supporting-only duplicate-growth explanations.
 - World Hub relationship fact detail now also shows read-only relationship-classification gate audit metadata when a fact includes it, without becoming the main relationship editor or a broad control surface.
-- High-risk relationship gate presets are available for future event packs at the helper seam, but remain non-triggering contracts while high-impact romance/conflict automation stays on hold.
+- High-risk relationship gate presets are available at the helper seam; Chat social-event review now consumes that seam for generated communication-state proposals, while high-impact romance/conflict automation stays on hold.
+- Chat social-event review V1 is landed: generated role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait in World Hub before Chat applies the communication state. Contacts shows the Chat snapshot only.
 - Review actions remain narrow: pending relationship facts can still be approved or dismissed, and relationship cleanup remains guarded; broad affinity, funds, unlock, or freeform override editing stays deferred.
 
 Primary references:
@@ -310,7 +311,7 @@ Reason:
 
 - low-impact explicit facts are already the right current lane;
 - high-impact romance/conflict automation still needs safer review and control surfaces.
-- Chat social events such as role-initiated friend requests, blocks, and being-blocked states should also wait for the Chat shell and event-runtime review seam before implementation.
+- Broader high-impact social/relationship automation should still build on the landed Chat social-event review seam instead of writing directly to Chat, Contacts, or relationship runtime. The V1 seam covers role greeting/refusal/block/restore/unblock review, but richer AI scheduling, relationship-stage effects, romance/conflict event packs, and Cheats-style overrides remain on hold.
 
 ### 5.3 Cheats As A Finished Product Surface
 
@@ -330,9 +331,10 @@ These are already usable and should be treated as current foundation, not active
 3. Contacts role delete, relationship reset, and single-memory delete baseline.
 4. Shopping, Food Delivery, Phone, Map, Wallet, and Calendar low-impact relationship fact adapters.
 5. World Hub read-only runtime review plus pending-relationship review path.
-6. Delivery route context visible in Food Delivery and Shopping surfaces.
-7. Task-package system, workflow docs, and package handoff pages.
-8. Core overview and architecture docs have been refreshed to current semantics.
+6. Chat social-event review V1: Event Runtime stores/audits generated role social proposals, World Hub reviews high-risk proposals, Chat applies confirmed communication state, and Contacts displays snapshots only.
+7. Delivery route context visible in Food Delivery and Shopping surfaces.
+8. Task-package system, workflow docs, and package handoff pages.
+9. Core overview and architecture docs have been refreshed to current semantics.
 
 ## 7. Validation Rule
 

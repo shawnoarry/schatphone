@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -23,7 +23,7 @@ Main tasks:
 7. keep profile-side relationship premise/classification fields on role profiles, separate from relationship runtime current values.
 8. keep the AI classification seam limited to `src/lib/ai.js`, shared JSON parsing, registry normalization, and confidence/save-policy output.
 9. keep Contacts relationship classification controls as profile-side editing only: runtime snapshot is read first, while event judgement remains outside Contacts.
-10. after the Chat social shell lands, allow Contacts to read/display social-channel snapshots only; do not let Contacts decide or apply friend/block social events.
+10. allow Contacts to read/display Chat social-channel snapshots only; do not let Contacts decide or apply friend/block/refusal social events.
 
 Semantic traps to avoid:
 
@@ -79,6 +79,7 @@ Current landed baseline:
 - runtime memory-count totals are computed before applying the display-list cap, so summary callers can request a short list without losing full `totalMemoryCount`, `visibleMemoryCount`, or `archivedMemoryCount`.
 - linked-activity source totals now dedupe runtime source refs against event-attached detail refs before counting, preventing one shared event from appearing as several source records.
 - relationship classification Round 3 adds the role-control relationship surface: Contacts detail shows the current runtime snapshot first, then edits the profile-side relationship premise, seed values, category, modifier tags, classification audit, AI classify, confirmation, and manual save flows.
+- Contacts Role Hub summary now includes a read-only Chat social-channel snapshot so users can understand communication reachability without editing Chat state from Contacts.
 
 Main tasks:
 
@@ -95,7 +96,7 @@ Semantic traps to avoid:
 - making event-attached items look like user-authored facts;
 - hiding the Contacts vs Chat Directory distinction.
 - making the editable relationship premise look like authoritative current runtime metrics or event eligibility.
-- making a future friend/block status display look like Contacts is judging the social event.
+- making a friend/block/refusal status display look like Contacts is judging the social event.
 
 ## 4. Workstream D: Documentation And Collaboration Guardrails
 
