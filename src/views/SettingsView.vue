@@ -14,7 +14,7 @@ import { usePhoneStore } from '../stores/phone'
 import { useAssetsStore } from '../stores/assets'
 import { useShoppingStore } from '../stores/shopping'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
-import { useSimulationStore } from '../stores/simulation'
+import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
@@ -1354,6 +1354,107 @@ const simulationForegroundTickLatestLabel = computed(() => {
   )
 })
 
+const simulationSurpriseModeOptions = computed(() => [
+  {
+    value: SIMULATION_SURPRISE_MODE.OFF,
+    label: t('关闭 / Off', 'Off / 关闭'),
+    detail: t(
+      '关闭随机和会话 Tick 事件检查，手动操作不受影响。',
+      'Random and session tick event checks are off; manual actions are not affected.',
+    ),
+  },
+  {
+    value: SIMULATION_SURPRISE_MODE.LOW,
+    label: t('低 / Low', 'Low / 低'),
+    detail: t(
+      '保守默认档，只允许低频、低风险的生活化事件。',
+      'Conservative default: only low-frequency, low-risk life events are allowed.',
+    ),
+  },
+  {
+    value: SIMULATION_SURPRISE_MODE.BALANCED,
+    label: t('平衡 / Balanced', 'Balanced / 平衡'),
+    detail: t(
+      '允许更活跃的随机生活感，但仍受冷却、上限和审查限制。',
+      'Allows livelier random simulation while still respecting cooldowns, caps, and review.',
+    ),
+  },
+  {
+    value: SIMULATION_SURPRISE_MODE.HIGH,
+    label: t('高 / High', 'High / 高'),
+    detail: t(
+      '预留给更强的世界活跃度；当前仍不会绕过安全审查。',
+      'Reserved for stronger world activity; current safety review is still not bypassed.',
+    ),
+  },
+])
+
+const simulationSurpriseModeCurrentOption = computed(() => {
+  const mode = simulationStore.settings?.surpriseMode || SIMULATION_SURPRISE_MODE.LOW
+  return (
+    simulationSurpriseModeOptions.value.find((option) => option.value === mode)
+    || simulationSurpriseModeOptions.value.find((option) => option.value === SIMULATION_SURPRISE_MODE.LOW)
+  )
+})
+
+const simulationSurpriseModeRuntimeLabel = computed(() => {
+  const option = simulationSurpriseModeCurrentOption.value
+  const label = option?.label || t('低 / Low', 'Low / 低')
+  if (simulationStore.settings?.surpriseMode === SIMULATION_SURPRISE_MODE.OFF) {
+    return t(
+      `惊喜模式 / Surprise Mode：${label}。前台 Tick 会跳过随机和会话事件检查。`,
+      `Surprise Mode / 惊喜模式: ${label}. Foreground Tick skips random and session event checks.`,
+    )
+  }
+  return t(
+    `惊喜模式 / Surprise Mode：${label}。事件仍受冷却、每日上限、模块权限和世界中枢审查限制。`,
+    `Surprise Mode / 惊喜模式: ${label}. Events still respect cooldowns, daily caps, module permissions, and World Hub review.`,
+  )
+})
+
+const simulationModuleEventControls = computed(() => [
+  {
+    id: 'chat',
+    moduleKey: 'chat',
+    label: t(
+      'Chat 角色主动联系 / Chat role contact events',
+      'Chat role contact events / Chat 角色主动联系',
+    ),
+    enabled: simulationStore.isModuleEventsEnabled('chat'),
+    status: simulationStore.isModuleEventsEnabled('chat')
+      ? t('允许 / Allowed', 'Allowed / 允许')
+      : t('关闭 / Off', 'Off / 关闭'),
+    detail: t(
+      '允许 Chat AI 输出或前台 Tick 提议角色主动联系；高风险状态变化仍需世界中枢审查。',
+      'Allows Chat AI output or foreground Tick to propose role contact events; high-risk state changes still require World Hub review.',
+    ),
+  },
+  {
+    id: 'food_delivery',
+    moduleKey: 'food_delivery',
+    label: t(
+      '外卖安全事件 / Food Delivery safety events',
+      'Food Delivery safety events / 外卖安全事件',
+    ),
+    enabled: simulationStore.isModuleEventsEnabled('food_delivery'),
+    status: simulationStore.isModuleEventsEnabled('food_delivery')
+      ? t('允许 / Allowed', 'Allowed / 允许')
+      : t('关闭 / Off', 'Off / 关闭'),
+    detail: t(
+      '允许外卖订单产生低风险进度变化，例如 ETA 更新或骑手延迟。',
+      'Allows low-risk delivery order updates, such as ETA changes or rider delays.',
+    ),
+  },
+])
+
+const updateSimulationSurpriseMode = (mode) => {
+  simulationStore.setSurpriseMode(mode)
+}
+
+const updateSimulationModuleEventsEnabled = (moduleKey, enabled) => {
+  simulationStore.setModuleEventsEnabled(moduleKey, enabled)
+}
+
 const updateSimulationForegroundTickEnabled = (enabled) => {
   simulationStore.setForegroundSessionTickEnabled(enabled)
 }
@@ -2089,12 +2190,17 @@ if (initialMenu) {
             :simulation-foreground-tick-runtime-label="simulationForegroundTickRuntimeLabel"
             :simulation-foreground-tick-coverage-items="simulationForegroundTickCoverageItems"
             :simulation-foreground-tick-latest-label="simulationForegroundTickLatestLabel"
+            :simulation-surprise-mode-options="simulationSurpriseModeOptions"
+            :simulation-surprise-mode-runtime-label="simulationSurpriseModeRuntimeLabel"
+            :simulation-module-event-controls="simulationModuleEventControls"
             :automation-saved="automationSaved"
             @update-automation-field="updateAutomationField"
             @update-module-enabled="updateAutomationModuleEnabled"
             @update-module-priority="updateAutomationModulePriority"
             @update-simulation-foreground-tick-enabled="updateSimulationForegroundTickEnabled"
             @update-simulation-foreground-tick-interval-minutes="updateSimulationForegroundTickIntervalMinutes"
+            @update-simulation-surprise-mode="updateSimulationSurpriseMode"
+            @update-simulation-module-events-enabled="updateSimulationModuleEventsEnabled"
             @open-chat-automation="openChatAutomation"
             @open-world-hub="openWorldHub"
             @open-network-reports="openNetworkReports"

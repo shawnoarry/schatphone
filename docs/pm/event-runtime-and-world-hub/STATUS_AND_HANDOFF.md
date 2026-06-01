@@ -25,6 +25,7 @@ What is already landed:
 13. Chat social-event review V1 is landed at the event/runtime seam: generated role greetings can become audited pending message requests, while role-initiated refusal, block, restore, and unblock proposals are stored as reviewable runtime proposals and require World Hub approval before Chat changes the communication state. Chat AI responses can now submit normalized `socialEvents`, and the foreground/session event tick can submit a conservative runtime greeting candidate for stranger or declined role contacts through the same review seam.
 14. World Hub now explains generated Chat social proposal source and boundaries: reviewers can see whether a proposal came from Chat AI output or the foreground/session tick, inspect trigger policy, and read why Chat, Contacts, and Relationship Runtime stay separated.
 15. Settings > AI Automation / 设置 > AI 自动响应 now explains `事件前台 Tick / Foreground event tick` in user-facing terms: users can see whether it is on, which safe checks are currently included, the latest related runtime result, and a direct review path to `世界中枢 / World Hub`.
+16. Settings > AI Automation / 设置 > AI 自动响应 now also exposes `惊喜模式 / Surprise Mode` and `模块事件权限 / Module event permissions` for the current runtime pilot lanes: Chat role-contact events and Food Delivery safety events.
 
 Still incomplete:
 
@@ -37,7 +38,7 @@ Still incomplete:
 ## 2. Recommended Next Slice
 
 1. Move to service-account continuity unless product review identifies another concrete read-only World Hub or Settings explanation gap.
-2. Keep runtime-trigger explanation readable in product language as new event adapters are added; do not add invisible safe checks without updating the Settings range copy.
+2. Keep runtime-trigger explanation readable in product language as new event adapters are added; do not add invisible safe checks or new event-enabled modules without updating the Settings range and module-permission copy.
 3. Freeze Cheats only after World Hub review surfaces are trusted enough.
 4. Deepen the landed Chat social-event review seam: tune runtime greeting cooldown/cap policy, add richer scheduling only when the World Hub explanation remains clear, and keep high-risk role-initiated friend/block/refusal changes review-first.
 

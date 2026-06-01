@@ -200,6 +200,7 @@ PM meaning:
 - World-aware event variants exist as a standard direction.
 - Generated Chat social events such as greetings, refusal, block, restore, and unblock now enter here as reviewed social/channel events from Chat AI proposal output or the foreground/session runtime greeting source, not as direct Chat or Contacts writes.
 - Settings > AI Automation / 设置 > AI 自动响应 has an opt-in `事件前台 Tick / Foreground event tick` control. It now explains the current safe-check range, including `外卖安全事件 / Food Delivery safety events` and `角色主动联系候选 / Role proactive contact candidate`, shows the latest related runtime result, and links users to `世界中枢 / World Hub` for detailed review.
+- Settings > AI Automation / 设置 > AI 自动响应 also exposes `惊喜模式 / Surprise Mode` and current `模块事件权限 / Module event permissions` for Chat role-contact events and Food Delivery safety events, so users can tell whether randomness is off, conservative, balanced, or high, and whether each app lane may receive runtime events.
 - App lifecycle wiring exists for foreground ticking only when the user enables it.
 - World Hub reads simulation runtime state and relationship runtime review data.
 - Relationship pending-confirmation effects can be approved or dismissed from World Hub.

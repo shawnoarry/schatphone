@@ -117,7 +117,7 @@ Concrete V1 proposal sources:
 
 ### Surprise Mode
 
-A future user-level control for random event intensity.
+A user-level control for random event intensity. It is visible in `设置 / Settings -> AI 自动响应 / AI Automation`.
 
 Minimum reserved levels:
 
@@ -125,6 +125,23 @@ Minimum reserved levels:
 - Low
 - Balanced
 - High
+
+Current product meaning:
+
+- Off disables random/session event checks, while manual user actions are not affected;
+- Low is the conservative default for low-frequency, low-risk life events;
+- Balanced and High are stronger activity levels, but they still do not bypass cooldowns, daily caps, module event permissions, or World Hub review.
+
+### Module Event Permissions
+
+Module event permissions decide which app lanes may receive runtime events. They are separate from AI auto-reply settings.
+
+Current visible pilot lanes in Settings:
+
+- `Chat 角色主动联系 / Chat role contact events`;
+- `外卖安全事件 / Food Delivery safety events`.
+
+Adding a new event-enabled module must update both the runtime registry and the Settings copy so users are not surprised by an invisible event lane.
 
 ## 4. Proposed File Layout
 
@@ -364,6 +381,7 @@ The shared event foundation now exists in code.
 Already landed:
 
 - `src/stores/simulation.js` persists event logs, cooldowns, daily counters, module enable flags, and Surprise Mode
+- `Settings -> AI Automation` exposes Foreground Tick, Surprise Mode, and current module event permissions without becoming a broad World Hub or Cheats editor
 - `src/stores/simulation.js` also persists generated Chat social proposals and applies them only through Chat-owned actions after audit or approval
 - `src/lib/chat-social-runtime-source.js` selects conservative role greeting candidates for the foreground/session tick without direct Chat writes
 - `src/lib/simulation/random.js` provides injected/seeded helpers

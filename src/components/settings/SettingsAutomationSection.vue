@@ -30,6 +30,18 @@ defineProps({
     type: String,
     required: true,
   },
+  simulationSurpriseModeOptions: {
+    type: Array,
+    default: () => [],
+  },
+  simulationSurpriseModeRuntimeLabel: {
+    type: String,
+    required: true,
+  },
+  simulationModuleEventControls: {
+    type: Array,
+    default: () => [],
+  },
   automationSaved: {
     type: Boolean,
     default: false,
@@ -43,6 +55,8 @@ defineEmits([
   'save-automation-settings',
   'update-simulation-foreground-tick-enabled',
   'update-simulation-foreground-tick-interval-minutes',
+  'update-simulation-surprise-mode',
+  'update-simulation-module-events-enabled',
   'update-automation-field',
   'update-module-enabled',
   'update-module-priority',
@@ -141,6 +155,70 @@ const { t } = useI18n()
       >
         {{ t('查看世界中枢 / Open World Hub', 'Open World Hub / 查看世界中枢') }}
       </button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 space-y-3" data-testid="settings-simulation-runtime-controls">
+    <div>
+      <p class="text-sm font-semibold">
+        {{ t('惊喜模式与模块事件权限 / Surprise Mode and module event permissions', 'Surprise Mode and module event permissions / 惊喜模式与模块事件权限') }}
+      </p>
+      <p class="text-[10px] leading-4 text-gray-400">
+        {{
+          t(
+            '这里控制运行时事件可以有多主动，以及哪些 App 线可以接收事件；它不等同于 Chat 自动回复开关。',
+            'This controls how active runtime events may be and which app lanes may receive events; it is not the same as Chat auto-reply.',
+          )
+        }}
+      </p>
+    </div>
+
+    <label class="flex flex-col gap-1">
+      <span class="text-xs font-semibold text-gray-600">
+        {{ t('惊喜模式 / Surprise Mode', 'Surprise Mode / 惊喜模式') }}
+      </span>
+      <select
+        :value="simulationSettings.surpriseMode"
+        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+        data-testid="settings-simulation-surprise-mode"
+        @change="$emit('update-simulation-surprise-mode', $event.target.value)"
+      >
+        <option
+          v-for="option in simulationSurpriseModeOptions"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+    </label>
+    <p class="text-[11px] leading-4 text-gray-500" data-testid="settings-simulation-surprise-mode-runtime">
+      {{ simulationSurpriseModeRuntimeLabel }}
+    </p>
+
+    <div class="space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
+      <p class="text-[11px] font-semibold text-gray-600">
+        {{ t('模块事件权限 / Module event permissions', 'Module event permissions / 模块事件权限') }}
+      </p>
+      <label
+        v-for="item in simulationModuleEventControls"
+        :key="item.id"
+        class="grid grid-cols-[1fr,auto] gap-3 rounded-lg bg-white px-3 py-2"
+        :data-testid="`settings-simulation-module-event-row-${item.id}`"
+      >
+        <span class="min-w-0">
+          <span class="block break-words text-xs font-semibold leading-4 text-gray-700">{{ item.label }}</span>
+          <span class="mt-1 block text-[10px] leading-4 text-gray-400">{{ item.detail }}</span>
+          <span class="mt-1 block text-[10px] font-semibold text-gray-500">{{ item.status }}</span>
+        </span>
+        <input
+          :checked="item.enabled"
+          type="checkbox"
+          class="mt-0.5 h-4 w-4"
+          :data-testid="`settings-simulation-module-events-${item.id}`"
+          @change="$emit('update-simulation-module-events-enabled', item.moduleKey, $event.target.checked)"
+        />
+      </label>
     </div>
   </div>
 

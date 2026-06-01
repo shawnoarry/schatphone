@@ -13,10 +13,10 @@
 **Files:**
 - Modify: `src/views/SettingsView.vue`
 
-- [ ] Import `SIMULATION_SURPRISE_MODE`.
-- [ ] Add Surprise Mode option labels and current runtime summary.
-- [ ] Add module-event control rows for Chat and Food Delivery.
-- [ ] Add update handlers for surprise mode and module event permissions.
+- [x] Import `SIMULATION_SURPRISE_MODE`.
+- [x] Add Surprise Mode option labels and current runtime summary.
+- [x] Add module-event control rows for Chat and Food Delivery.
+- [x] Add update handlers for surprise mode and module event permissions.
 
 ### Task 2: Settings UI And Tests
 
@@ -24,9 +24,9 @@
 - Modify: `src/components/settings/SettingsAutomationSection.vue`
 - Modify: `tests/settings-general-section.test.js`
 
-- [ ] Add props and emits for surprise mode and module event controls.
-- [ ] Render bilingual controls without changing event behavior.
-- [ ] Test that changing controls updates `simulationStore` and does not run events.
+- [x] Add props and emits for surprise mode and module event controls.
+- [x] Render bilingual controls without changing event behavior.
+- [x] Test that changing controls updates `simulationStore` and does not run events.
 
 ### Task 3: Docs And Validation
 
@@ -36,7 +36,8 @@
 - Modify: `docs/roadmap/TODO_ROADMAP.md`
 - Modify: `docs/architecture/SIMULATION_EVENT_ENGINE.md`
 
-- [ ] Record the user-facing meaning of the new controls.
-- [ ] Run focused Settings tests.
-- [ ] Run `git diff --check`, `npm.cmd run lint`, `npm.cmd run build`, and `npm.cmd run test`.
-- [ ] Commit the completed slice.
+- [x] Record the user-facing meaning of the new controls.
+- [x] Run focused Settings tests.
+- [x] Run focused Settings tests, `git diff --check`, `npm.cmd run lint`, and `npm.cmd run build`.
+- [ ] Re-run full `npm.cmd run test` to green. Attempted once after this slice, but current repo now has unrelated App Store identity TDD failures from `tests/app-store-ui.test.js`.
+- [x] Commit the completed slice.

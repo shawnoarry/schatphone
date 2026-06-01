@@ -5,7 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import SettingsView from '../src/views/SettingsView.vue'
 import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
-import { useSimulationStore } from '../src/stores/simulation'
+import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -175,6 +175,42 @@ describe('SettingsView general section', () => {
     )
     expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
       'Role proactive contact candidates',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('edits surprise mode and runtime module event permissions without running events', async () => {
+    const systemStore = useSystemStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    simulationStore.resetForTesting()
+
+    const { wrapper } = await mountSettingsView('/settings?menu=automation')
+
+    expect(wrapper.get('[data-testid="settings-simulation-runtime-controls"]').text()).toContain(
+      'Surprise Mode',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-runtime-controls"]').text()).toContain(
+      'Chat role contact events',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-runtime-controls"]').text()).toContain(
+      'Food Delivery safety events',
+    )
+
+    await wrapper.get('[data-testid="settings-simulation-surprise-mode"]').setValue(SIMULATION_SURPRISE_MODE.OFF)
+    await wrapper.get('[data-testid="settings-simulation-module-events-chat"]').setValue(false)
+    await wrapper.get('[data-testid="settings-simulation-module-events-food_delivery"]').setValue(false)
+    await wrapper.get('[data-testid="settings-simulation-module-events-chat"]').setValue(true)
+    await wrapper.get('button.w-full').trigger('click')
+    await flushUi()
+
+    expect(simulationStore.settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
+    expect(simulationStore.isModuleEventsEnabled('chat')).toBe(true)
+    expect(simulationStore.isModuleEventsEnabled('food_delivery')).toBe(false)
+    expect(simulationStore.eventLogCount).toBe(0)
+    expect(wrapper.get('[data-testid="settings-simulation-surprise-mode-runtime"]').text()).toContain(
+      'Foreground Tick skips random and session event checks',
     )
 
     wrapper.unmount()
