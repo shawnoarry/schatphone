@@ -96,6 +96,7 @@ const DEFAULT_HOME_RETURN_PAGE = 0
 const currentPage = ref(DEFAULT_HOME_RETURN_PAGE)
 const touchStartX = ref(0)
 const touchDeltaX = ref(0)
+const touchPageSwipeEnabled = ref(false)
 
 const layoutEditMode = ref(false)
 const templatePickerOpen = ref(false)
@@ -132,6 +133,7 @@ let widgetEntryLongPressTimerId = null
 
 const LONG_PRESS_MS = 600
 const LONG_PRESS_MOVE_THRESHOLD = 12
+const PAGE_SWIPE_THRESHOLD = 48
 const DRAG_EDGE_ZONE_PX = 36
 const DRAG_PAGE_SWITCH_COOLDOWN_MS = 260
 const LAYOUT_SLOT_COLUMNS = 4
@@ -1064,6 +1066,26 @@ const canStartLayoutLongPress = (event) => {
   )
 }
 
+const canStartHomePageSwipe = (event) => {
+  if (!layoutEditMode.value) return true
+  const target = event?.target
+  if (!(target instanceof HTMLElement)) return true
+
+  return !target.closest(
+    '.home-edit-topbar, .home-content-library, .home-slot-content-sheet, .home-template-picker, .home-bottom-area, [data-no-layout-longpress]',
+  )
+}
+
+const completeHomePageSwipe = () => {
+  if (touchDeltaX.value <= -PAGE_SWIPE_THRESHOLD) {
+    setPage(currentPage.value + 1)
+  } else if (touchDeltaX.value >= PAGE_SWIPE_THRESHOLD) {
+    setPage(currentPage.value - 1)
+  }
+  touchDeltaX.value = 0
+  touchPageSwipeEnabled.value = false
+}
+
 const scheduleLongPress = (event, x, y) => {
   if (!canStartLayoutLongPress(event)) return
 
@@ -1091,41 +1113,44 @@ const maybeCancelLongPressByMove = (x, y) => {
 }
 
 const onTouchStart = (event) => {
+  const touch = event.changedTouches?.[0]
+  if (!touch) return
+
+  touchStartX.value = touch.clientX
+  touchDeltaX.value = 0
+  touchPageSwipeEnabled.value = canStartHomePageSwipe(event)
+
   if (layoutEditMode.value) return
 
-  touchStartX.value = event.changedTouches[0].clientX
-  touchDeltaX.value = 0
-  scheduleLongPress(event, event.changedTouches[0].clientX, event.changedTouches[0].clientY)
+  scheduleLongPress(event, touch.clientX, touch.clientY)
 }
 
 const onTouchMove = (event) => {
-  maybeCancelLongPressByMove(event.changedTouches[0].clientX, event.changedTouches[0].clientY)
-  if (layoutEditMode.value) return
+  const touch = event.changedTouches?.[0]
+  if (!touch) return
 
-  touchDeltaX.value = event.changedTouches[0].clientX - touchStartX.value
+  maybeCancelLongPressByMove(touch.clientX, touch.clientY)
+  if (!touchPageSwipeEnabled.value || hasActiveDrag.value) return
+
+  touchDeltaX.value = touch.clientX - touchStartX.value
 }
 
 const onTouchEnd = () => {
   clearLongPressTimer()
 
-  if (layoutEditMode.value) {
+  if (!touchPageSwipeEnabled.value || hasActiveDrag.value) {
     touchDeltaX.value = 0
+    touchPageSwipeEnabled.value = false
     return
   }
 
-  const threshold = 48
-  if (touchDeltaX.value <= -threshold) {
-    setPage(currentPage.value + 1)
-  } else if (touchDeltaX.value >= threshold) {
-    setPage(currentPage.value - 1)
-  }
-
-  touchDeltaX.value = 0
+  completeHomePageSwipe()
 }
 
 const onTouchCancel = () => {
   clearLongPressTimer()
   touchDeltaX.value = 0
+  touchPageSwipeEnabled.value = false
 }
 
 const onMouseDown = (event) => {
@@ -2217,6 +2242,7 @@ onBeforeUnmount(() => {
         <button
           class="home-left-dot"
           :class="{ 'is-active': currentPage === LEFT_HOME_PAGE_INDEX }"
+          data-testid="home-page-dot-left"
           @click="setPage(LEFT_HOME_PAGE_INDEX)"
           :aria-label="t('前往今日视图', 'Go to Today View')"
         ></button>
@@ -2226,6 +2252,7 @@ onBeforeUnmount(() => {
           :key="index"
           class="home-dot"
           :class="{ 'is-active': currentPage === index - 1 }"
+          :data-testid="`home-page-dot-${index - 1}`"
           @click="setPage(index - 1)"
           :aria-label="`${t('前往第', 'Go to page ')}${index}${t('页', '')}`"
         ></button>
