@@ -67,6 +67,7 @@ What is already landed:
 52. Food Delivery has its first platform-to-store IA baseline: the platform lists categories/restaurants, each restaurant can open as a route-query store mini-app, and store surfaces can vary visually by restaurant category while shared business logic stays untouched.
 53. The App Store / pseudo-folder entry taxonomy is documented in `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`: App Store should manage independent apps, World Pack app entries, shop apps, and system entries as user-visible launch entries while preserving backend ownership boundaries.
 54. Food Delivery now reflects the shop-entry taxonomy in-app: the default Food surface is entry-first, with categories demoted to filters and restaurants presented as shop mini-app launch cards.
+55. Moon Bistro now proves the Food Delivery shop mini-app direction with a dark tray menu: raised circular dish areas embedded in dark menu cards.
 
 Still incomplete:
 
