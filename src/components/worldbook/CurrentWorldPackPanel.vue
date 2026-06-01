@@ -56,7 +56,6 @@ const props = defineProps({
 const emit = defineEmits([
   'select-pack',
   'activate-pack',
-  'open-app-store-world-section',
   'extract-template-proposals',
   'review-template-proposal-draft',
   'update-template-proposal-draft',
@@ -432,22 +431,11 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
       <p class="current-world-pack__apps-copy">
         {{
           t(
-            '激活世界包后，这里只显示当前入口快照；真正的浏览、放置和打开动作统一去 App Store 的 World 分区完成。',
-            'After activation this is only a snapshot; browse, place, and open world entries from the App Store World section.',
+            '激活世界包后，这里只显示当前入口快照。要浏览、放置或打开世界入口，请到应用商城的 World 分区。',
+            'After activation this is only a snapshot. Browse, place, or open world entries from the App Store World section.',
           )
         }}
       </p>
-
-      <button
-        type="button"
-        class="current-world-pack__store-handoff"
-        :disabled="activeAppCount <= 0"
-        data-testid="worldbook-current-pack-open-app-store"
-        @click="emit('open-app-store-world-section')"
-      >
-        <i class="fas fa-store" aria-hidden="true"></i>
-        <span>{{ t('去 App Store 查看世界应用', 'Open App Store World section') }}</span>
-      </button>
 
       <div
         v-if="appBindingRows.length > 0"
@@ -1100,7 +1088,6 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   line-height: 1.5;
 }
 
-.current-world-pack__store-handoff,
 .current-world-pack__service-handoff {
   min-height: 38px;
   border: 1px solid var(--system-control-border);
@@ -1110,19 +1097,6 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   padding: 0 10px;
   font-size: 12px;
   font-weight: 800;
-}
-
-.current-world-pack__store-handoff {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 8px;
-}
-
-.current-world-pack__store-handoff:disabled {
-  cursor: not-allowed;
-  color: var(--system-text-soft);
-  background: var(--system-control-border);
 }
 
 .current-world-pack__service-handoff {
@@ -1463,11 +1437,6 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   .current-world-pack__handoff-summary,
   .current-world-pack__review-grid {
     grid-template-columns: 1fr;
-  }
-
-  .current-world-pack__store-handoff {
-    width: 100%;
-    justify-content: center;
   }
 
   .current-world-pack__app-row,

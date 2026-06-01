@@ -1,6 +1,6 @@
 ﻿import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { flushPromises, mount } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
@@ -180,6 +180,8 @@ describe('WorldBook functional IA', () => {
     expect(activeSummary.text()).toContain('3')
     expect(activeSummary.text()).toContain('App Store')
     expect(wrapper.find('[data-testid="worldbook-current-pack-open-app-survival_supply_board"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Browse, place, or open world entries from the App Store World section')
+    expect(wrapper.find('[data-testid="worldbook-current-pack-open-app-store"]').exists()).toBe(false)
 
     const serviceHandoff = wrapper.get('[data-testid="worldbook-current-pack-service-handoff"]')
     expect(serviceHandoff.text()).toContain('1')
@@ -188,15 +190,7 @@ describe('WorldBook functional IA', () => {
       false,
     )
     expect(chatStore.findWorldServiceTemplateContact('survival_city', 'survival_supply_dispatch')).toBeNull()
-
-    await wrapper.get('[data-testid="worldbook-current-pack-open-app-store"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/app-store')
-    expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
-      from: 'worldbook',
-      section: 'world',
-    })
+    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/worldbook')
 
     wrapper.unmount()
   })

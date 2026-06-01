@@ -338,16 +338,6 @@ const activateSelectedWorldPack = () => {
   pulseSaved(t('世界包已激活。', 'World pack activated.'))
 }
 
-const openWorldPackAppStoreSection = () => {
-  router.push({
-    path: '/app-store',
-    query: {
-      from: 'worldbook',
-      section: 'world',
-    },
-  })
-}
-
 const buildWorldAppTemplateContextText = () => {
   const activePack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
   const worldview = String(globalWorldview.value || '').trim()
@@ -1340,7 +1330,6 @@ onBeforeUnmount(() => {
           :template-proposal-notice-tone="worldAppTemplateProposalNoticeTone"
           @select-pack="selectWorldPack"
           @activate-pack="activateSelectedWorldPack"
-          @open-app-store-world-section="openWorldPackAppStoreSection"
           @extract-template-proposals="extractWorldAppTemplateProposalsFromAI"
           @review-template-proposal-draft="reviewWorldAppTemplateProposalDraft"
           @update-template-proposal-draft="updateWorldAppTemplateProposalDraft"

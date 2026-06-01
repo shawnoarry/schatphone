@@ -2,6 +2,8 @@
 
 Date: 2026-05-31
 
+Update 2026-06-01: the earlier optional `Open App Store` CTA has been superseded. Current product direction is lighter: WorldBook should only state where world entries can be found after activation. It should not provide an App Store jump button or a direct world-app launcher inside Settings.
+
 ## Goal
 
 Make the World Pack flow easier to understand from a user point of view.
@@ -45,7 +47,7 @@ WorldBook should behave like the Book source-reference flow: it manages world ma
    - the pack is now active
    - enabled world app entries can be found in `App Store -> World Apps`
    - available service accounts can be added from Chat when the Chat-side UI is ready
-   - optional CTA: `Open App Store`
+   - no Settings-side App Store jump button
 9. User goes to App Store to open or place world-specific app entries.
 
 ## WorldBook Pack Tab IA
@@ -58,7 +60,7 @@ Shows only the active pack:
 - activation state
 - short description of global effects
 - counts for active world app entries and service templates
-- CTA to open App Store world-app section
+- a plain text note that world entries are available from App Store's World section
 
 This area should not include per-app launch buttons.
 
@@ -84,13 +86,7 @@ If the pack includes service account templates, also show a count-only notice:
 
 `<N> world service account(s) are available. Add them from Chat when you need them.`
 
-Primary action:
-
-- `Open App Store`
-
-Secondary action:
-
-- `Stay in WorldBook`
+Do not add a primary action that jumps to App Store. The activation surface should stay calm and informational.
 
 ## App Store Handoff
 
@@ -112,11 +108,7 @@ The route should preserve context with query values such as:
 - `worldPack=<active pack id>`
 - `worldApp=<binding id>`
 
-WorldBook's `Open App Store` CTA should route to App Store with a section/filter query, for example:
-
-- `/app-store?section=world`
-
-The exact query name may follow existing App Store conventions if a better local pattern exists.
+WorldBook should not provide an `Open App Store` CTA. Users can go to App Store themselves; App Store owns the actual browse/place/open actions.
 
 ## Nonstandard App Proposal Review
 

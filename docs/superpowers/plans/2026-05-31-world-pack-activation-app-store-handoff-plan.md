@@ -4,7 +4,9 @@
 
 **Goal:** Make WorldBook activate World Packs and hand users to App Store/Chat surfaces instead of acting as a launcher or service-account generator.
 
-**Architecture:** Keep WorldBook as the activation/readiness surface, route world-app discovery through App Store's existing world-entry source, and keep service-account creation deferred to Chat. Guard ambiguous templates in the registry so AI review cannot silently confirm black market as Shopping.
+**Architecture:** Keep WorldBook as the activation/readiness surface, tell users that world-app discovery lives in App Store's existing world-entry source, and keep service-account creation deferred to Chat. Guard ambiguous templates in the registry so AI review cannot silently confirm black market as Shopping.
+
+> Superseded note, 2026-06-01: this historical plan originally included a Settings-side `Open App Store` CTA. That direction has been replaced. Current World Pack should only show status/snapshot text and tell users where to find entries; it must not render an App Store jump button.
 
 **Tech Stack:** Vue 3, Pinia, Vue Router, Vitest, Vue Test Utils, existing SchatPhone stores and world-pack helpers.
 
@@ -19,7 +21,7 @@
   - Collapse nonstandard app proposal review behind an advanced disclosure.
 - Modify `src/views/WorldBookView.vue`
   - Replace `open-app-binding`, `create-service-template`, and `open-service-contact` usage with App Store/Chat handoff events.
-  - Push `/app-store?section=world&from=worldbook` when users choose App Store handoff.
+  - Do not push `/app-store?section=world&from=worldbook` from Settings; Current World Pack only displays where entries can be found.
   - Preserve existing activation, review, and proposal-confirm behavior.
 - Modify `src/views/AppStoreView.vue`
   - Initialize the filter from `route.query.section=world`.
@@ -57,14 +59,9 @@ expect(wrapper.find('[data-testid="worldbook-current-pack-create-service-surviva
 expect(wrapper.get('[data-testid="worldbook-current-pack-service-handoff"]').text()).toContain('1')
 expect(wrapper.get('[data-testid="worldbook-current-pack-service-handoff"]').text()).toContain('Chat')
 
-await wrapper.get('[data-testid="worldbook-current-pack-open-app-store"]').trigger('click')
-await flushPromises()
-
-expect(wrapper.vm.$router.currentRoute.value.path).toBe('/app-store')
-expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
-  from: 'worldbook',
-  section: 'world',
-})
+expect(wrapper.text()).toContain('App Store World section')
+expect(wrapper.find('[data-testid="worldbook-current-pack-open-app-store"]').exists()).toBe(false)
+expect(wrapper.vm.$router.currentRoute.value.path).toBe('/worldbook')
 expect(chatStore.findWorldServiceTemplateContact('survival_city', 'survival_supply_dispatch')).toBeNull()
 ```
 
@@ -240,16 +237,16 @@ Expected: PASS.
 
 - [ ] **Step 1: Change component events**
 
-Replace launcher/service events with handoff events:
+Replace launcher/service events with status-only handoff text:
 
 ```js
-'open-app-store-world-section',
 'open-chat-service-handoff',
 ```
 
 Remove use of:
 
 ```js
+'open-app-store-world-section',
 'open-app-binding',
 'create-service-template',
 'open-service-contact',
@@ -279,18 +276,13 @@ Replace per-app launch buttons with:
 ```vue
 <div class="current-world-pack__active-summary" data-testid="worldbook-current-pack-active-summary">
   ...
-  <button
-    type="button"
-    data-testid="worldbook-current-pack-open-app-store"
-    :disabled="activeAppCount <= 0"
-    @click="emit('open-app-store-world-section')"
-  >
-    {{ t('前往 App Store', 'Open App Store') }}
-  </button>
+  <p>
+    {{ t('世界入口可在应用商城的 World 分区浏览、放置和打开。', 'World entries are available in the App Store World section.') }}
+  </p>
 </div>
 ```
 
-The summary may list app titles as text, but must not include per-app open buttons.
+The summary may list app titles as text, but must not include per-app open buttons or an App Store jump button.
 
 - [ ] **Step 4: Add candidate preview**
 
@@ -354,7 +346,7 @@ const openChatServiceHandoff = () => {
 }
 ```
 
-Wire `@open-app-store-world-section="openWorldAppStoreSection"`.
+Do not wire `@open-app-store-world-section`; WorldBook should not push users to App Store from Settings.
 
 - [ ] **Step 8: Run WorldBook focused test**
 
@@ -461,5 +453,5 @@ With the dev server on `http://127.0.0.1:5173/schatphone`, smoke:
 3. Switch to Pack.
 4. Activate `survival_city`.
 5. Confirm no per-app open buttons appear in WorldBook.
-6. Click `Open App Store`.
-7. Confirm App Store has World filter active and shows world app entries.
+6. Confirm no `Open App Store` button appears in WorldBook.
+7. Open App Store manually and confirm the World filter can show world app entries.

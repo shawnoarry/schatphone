@@ -13,7 +13,7 @@ Updated: 2026-05-31
 - `外观 / Appearance` as broader visual customization and possible template-management surface
 - `应用商城 / App Store` as the standalone App Library-like entry-management host
 - App Library / App Store-like surface as app-entry visibility management only
-- World Pack global app-entry unlocks now have a first seam through the same Home/App Store/App Library ownership rules; Current World Pack must hand off to App Store's `World` section and must not regress into Settings -> WorldBook-only launch links
+- World Pack global app-entry unlocks now have a first seam through the same Home/App Store/App Library ownership rules; Current World Pack may tell users that entries live in App Store's `World` section, but must not regress into Settings -> WorldBook-only launch links or App Store jump buttons
 
 ## 2. Workstream B: Module IA
 
@@ -47,4 +47,4 @@ Treat these as bugs:
 6. World app entries bypass App Store/Home placement rules or mutate target-app business state when launched
 7. Custom CSS for one app or world-app relies on brittle generated class names instead of stable scope hooks
 8. AI-proposed nonstandard app entries bypass Current World Pack review or appear in App Store before explicit confirmation
-9. Current World Pack starts creating Chat service accounts or launching world apps directly from Settings instead of handing off to Chat/App Store owners
+9. Current World Pack starts creating Chat service accounts, launching world apps, or jumping to App Store directly from Settings instead of staying a lightweight activation/status surface
