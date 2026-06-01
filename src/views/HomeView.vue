@@ -3,8 +3,11 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useGalleryStore } from '../stores/gallery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
+import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import {
   HOME_LAYOUT_TEMPLATES,
@@ -62,12 +65,19 @@ const props = defineProps({
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
+const { appIconImageUrl } = useAppIconImagePreviews({
+  galleryStore,
+  appIconOverrides,
+  locale: homeLocale,
+  scopeId: 'home-app-icons',
+})
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
 const smartPanelItems = computed(() => [
   {
@@ -1726,13 +1736,15 @@ onBeforeUnmount(() => {
               referrerpolicy="no-referrer"
             ></iframe>
           </div>
-          <span
+          <AppIconVisual
             v-else
             class="home-content-library-icon"
-            :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
-          >
-            <i :class="candidate.icon"></i>
-          </span>
+            :data-testid="`home-library-icon-${candidate.tileId}`"
+            :meta="candidate"
+            :image-url="appIconImageUrl(candidate.tileId)"
+            :accent-style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
+            :alt="candidate.label"
+          />
           <span class="home-content-library-copy">
             <strong>{{ candidate.label }}</strong>
             <small>{{ candidate.typeLabel }} · {{ candidate.size }}</small>
@@ -1828,13 +1840,15 @@ onBeforeUnmount(() => {
               referrerpolicy="no-referrer"
             ></iframe>
           </div>
-          <span
+          <AppIconVisual
             v-else
             class="home-slot-content-icon"
-            :style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
-          >
-            <i :class="candidate.icon"></i>
-          </span>
+            :data-testid="`home-slot-icon-${candidate.tileId}`"
+            :meta="candidate"
+            :image-url="appIconImageUrl(candidate.tileId)"
+            :accent-style="candidate.kind === 'app' || candidate.kind === HOME_FOLDER_TILE_KIND ? iconStyle(candidate.accent) : undefined"
+            :alt="candidate.label"
+          />
           <span class="home-slot-content-copy">
             <strong>{{ candidate.label }}</strong>
             <small>{{ candidate.typeLabel }} · {{ candidate.size }}</small>
@@ -2098,9 +2112,14 @@ onBeforeUnmount(() => {
                 </template>
 
                 <button class="home-app-tile" v-else-if="tileMeta(placement.tileId)?.kind === 'app'" @click="openAppById(placement.tileId)">
-                  <span class="home-app-icon" :style="iconStyle(tileMeta(placement.tileId).accent)">
-                    <i :class="tileMeta(placement.tileId).icon"></i>
-                  </span>
+                  <AppIconVisual
+                    class="home-app-icon"
+                    :data-testid="`home-app-icon-${placement.tileId}`"
+                    :meta="tileMeta(placement.tileId)"
+                    :image-url="appIconImageUrl(placement.tileId)"
+                    :accent-style="iconStyle(tileMeta(placement.tileId).accent)"
+                    :alt="tileMeta(placement.tileId).label"
+                  />
                   <span class="home-app-label">{{ tileMeta(placement.tileId).label }}</span>
                 </button>
 
@@ -2110,7 +2129,21 @@ onBeforeUnmount(() => {
                   @click="openAppById(placement.tileId)"
                   :data-testid="`home-folder-${placement.tileId}`"
                 >
-                  <span class="home-app-icon home-folder-icon" :style="iconStyle(tileMeta(placement.tileId).accent)">
+                  <AppIconVisual
+                    v-if="appIconImageUrl(placement.tileId)"
+                    class="home-app-icon home-folder-icon"
+                    :data-testid="`home-app-icon-${placement.tileId}`"
+                    :meta="tileMeta(placement.tileId)"
+                    :image-url="appIconImageUrl(placement.tileId)"
+                    :accent-style="iconStyle(tileMeta(placement.tileId).accent)"
+                    :alt="tileMeta(placement.tileId).label"
+                  />
+                  <span
+                    v-else
+                    class="home-app-icon home-folder-icon"
+                    :data-testid="`home-app-icon-${placement.tileId}`"
+                    :style="iconStyle(tileMeta(placement.tileId).accent)"
+                  >
                     <span class="home-folder-preview-grid" aria-hidden="true">
                       <span
                         v-for="entry in tileMeta(placement.tileId).childEntries.slice(0, 4)"
@@ -2259,13 +2292,34 @@ onBeforeUnmount(() => {
       </div>
       <div class="home-dock">
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_chat').accent)" @click="openAppById('app_chat')">
-          <i :class="dockAppMeta('app_chat').icon"></i>
+          <AppIconVisual
+            class="home-dock-icon-visual"
+            data-testid="home-dock-icon-app_chat"
+            :meta="dockAppMeta('app_chat')"
+            :image-url="appIconImageUrl('app_chat')"
+            :accent-style="iconStyle(dockAppMeta('app_chat').accent)"
+            :alt="dockAppMeta('app_chat').label"
+          />
         </button>
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_contacts').accent)" @click="openAppById('app_contacts')">
-          <i :class="dockAppMeta('app_contacts').icon"></i>
+          <AppIconVisual
+            class="home-dock-icon-visual"
+            data-testid="home-dock-icon-app_contacts"
+            :meta="dockAppMeta('app_contacts')"
+            :image-url="appIconImageUrl('app_contacts')"
+            :accent-style="iconStyle(dockAppMeta('app_contacts').accent)"
+            :alt="dockAppMeta('app_contacts').label"
+          />
         </button>
         <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_settings').accent)" @click="openAppById('app_settings')">
-          <i :class="dockAppMeta('app_settings').icon"></i>
+          <AppIconVisual
+            class="home-dock-icon-visual"
+            data-testid="home-dock-icon-app_settings"
+            :meta="dockAppMeta('app_settings')"
+            :image-url="appIconImageUrl('app_settings')"
+            :accent-style="iconStyle(dockAppMeta('app_settings').accent)"
+            :alt="dockAppMeta('app_settings').label"
+          />
         </button>
         <button
           class="home-dock-icon"
@@ -2277,7 +2331,14 @@ onBeforeUnmount(() => {
           @pointerup="clearWidgetEntryLongPressTimer"
           @pointercancel="clearWidgetEntryLongPressTimer"
         >
-          <i :class="dockAppMeta('app_widgets').icon"></i>
+          <AppIconVisual
+            class="home-dock-icon-visual"
+            data-testid="home-dock-icon-app_widgets"
+            :meta="dockAppMeta('app_widgets')"
+            :image-url="appIconImageUrl('app_widgets')"
+            :accent-style="iconStyle(dockAppMeta('app_widgets').accent)"
+            :alt="dockAppMeta('app_widgets').label"
+          />
         </button>
       </div>
       <p class="home-theme-hint" v-if="activeTheme">{{ t('主题', 'Theme') }}: {{ activeThemeName }}</p>
@@ -3953,6 +4014,15 @@ onBeforeUnmount(() => {
 
 .home-dock-icon {
   transition: transform 120ms ease, filter 120ms ease;
+}
+
+.home-dock-icon-visual {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .home-dock-icon:active {

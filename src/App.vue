@@ -10,6 +10,8 @@ import { useMapStore } from './stores/map'
 import { useSimulationStore } from './stores/simulation'
 import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
+import { useAppIconImagePreviews } from './composables/useAppIconImagePreviews'
+import AppIconVisual from './components/shared/AppIconVisual.vue'
 import {
   appendForegroundBannerQueue,
   collectForegroundBannerNotes,
@@ -58,12 +60,20 @@ const dateLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : syste
 const notificationLocale = computed(() =>
   languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
 )
+const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const { appIconImageUrl } = useAppIconImagePreviews({
+  galleryStore,
+  appIconOverrides,
+  locale: notificationLocale,
+  scopeId: 'app-shell-app-icons',
+})
 const resolveNotificationModuleMeta = (note) =>
   resolveNotificationModuleMetaBase(
     note,
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
   )
+const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationModuleMeta(note).appId)
 const shellBannerVisible = ref(false)
 const shellBannerNote = ref(null)
 const shellBannerQueue = ref([])
@@ -979,12 +989,12 @@ const lockPhone = () => {
           class="app-shell-banner glass"
           @click="openShellBannerNotification"
         >
-          <div
+          <AppIconVisual
             class="app-shell-banner-icon"
-            :class="resolveNotificationModuleMeta(shellBannerNote).toneClass"
-          >
-            <i :class="resolveNotificationModuleMeta(shellBannerNote).icon"></i>
-          </div>
+            :meta="resolveNotificationModuleMeta(shellBannerNote)"
+            :image-url="notificationIconImageUrl(shellBannerNote)"
+            :alt="resolveNotificationModuleMeta(shellBannerNote).label"
+          />
           <div class="min-w-0 flex-1 text-left">
             <div class="app-shell-banner-head">
               <span

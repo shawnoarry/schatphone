@@ -3,7 +3,10 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
+import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
+import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from '../lib/notification-presentation'
 
 defineProps({
@@ -19,6 +22,7 @@ defineProps({
 
 const router = useRouter()
 const systemStore = useSystemStore()
+const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { notifications, settings } = storeToRefs(systemStore)
 const LOCK_BANNER_HIDE_MS = 2600
@@ -26,6 +30,13 @@ const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : syste
 const notificationLocale = computed(() =>
   languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
 )
+const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const { appIconImageUrl } = useAppIconImagePreviews({
+  galleryStore,
+  appIconOverrides,
+  locale: notificationLocale,
+  scopeId: 'lock-screen-app-icons',
+})
 
 const lockClockStyle = computed(() => settings.value.appearance.lockClockStyle || 'classic')
 const focusModeEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('focus_mode'))
@@ -96,6 +107,7 @@ const resolveNotificationModuleMeta = (note) =>
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
   )
+const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationModuleMeta(note).appId)
 
 const unlockPhone = () => {
   lockBannerVisible.value = false
@@ -175,9 +187,12 @@ onBeforeUnmount(() => {
         class="lock-banner glass"
         @click="openBannerNotification"
       >
-        <div class="lock-banner-icon" :class="resolveNotificationModuleMeta(lockBannerNote).toneClass">
-          <i :class="resolveNotificationModuleMeta(lockBannerNote).icon"></i>
-        </div>
+        <AppIconVisual
+          class="lock-banner-icon"
+          :meta="resolveNotificationModuleMeta(lockBannerNote)"
+          :image-url="notificationIconImageUrl(lockBannerNote)"
+          :alt="resolveNotificationModuleMeta(lockBannerNote).label"
+        />
         <div class="min-w-0 flex-1 text-left">
           <div class="lock-app-row">
             <span class="lock-app-chip" :class="resolveNotificationModuleMeta(lockBannerNote).toneClass">
@@ -249,9 +264,12 @@ onBeforeUnmount(() => {
               :class="{ 'is-read': note.read }"
               @click="openNotification(note)"
             >
-              <div class="lock-notification-icon" :class="group.meta.toneClass">
-                <i :class="resolveNotificationModuleMeta(note).icon"></i>
-              </div>
+              <AppIconVisual
+                class="lock-notification-icon"
+                :meta="resolveNotificationModuleMeta(note)"
+                :image-url="notificationIconImageUrl(note)"
+                :alt="resolveNotificationModuleMeta(note).label"
+              />
               <div class="min-w-0 flex-1">
                 <div class="lock-notification-row">
                   <span class="lock-notification-group-tag">
