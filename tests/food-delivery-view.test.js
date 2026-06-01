@@ -168,6 +168,7 @@ describe('FoodDeliveryView', () => {
     })
     const store = useFoodDeliveryStore()
     const restaurant = store.listRestaurantsByCategory('restaurants')[0]
+    const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
 
     expect(wrapper.get('[data-testid="food-delivery-platform"]').text()).toContain('Restaurants')
     expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(restaurant.name)
@@ -180,6 +181,14 @@ describe('FoodDeliveryView', () => {
     })
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain(restaurant.name)
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-id')).toBe(restaurant.id)
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'dark_tray_menu',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
+      'food-delivery-store-dark-tray',
+    )
+    expect(wrapper.get(`[data-testid="food-delivery-menu-tray-${menuItem.id}"]`).text()).toContain(menuItem.title)
+    expect(wrapper.get(`[data-testid="food-delivery-menu-dish-${menuItem.id}"]`).exists()).toBe(true)
 
     await wrapper.get('[data-testid="food-delivery-store-back"]').trigger('click')
     await flushPromises()
