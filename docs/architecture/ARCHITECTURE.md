@@ -131,6 +131,8 @@ Important files:
   - defines the guarded nonstandard-app template whitelist and AI extraction/review normalization; WorldBook's Current World Pack panel presents AI/pasted proposals with loading, empty, parse/API error, and rejected-state treatment for user review, and confirmed proposals become World Pack appBindings that then flow through the existing App Store/Home/target-app context seams while low-confidence, unsupported, or unknown proposals cannot create routes, stores, business records, event rules, or App Store entries
 - `src/lib/chat-social-event-review.js`
   - evaluates generated Chat social proposals before communication state changes; low-risk role greetings may auto-apply with audit, while role refusal/block/restore/unblock proposals wait for World Hub review and then apply through Chat-owned actions
+- `src/lib/chat-ai-social-proposals.js`
+  - normalizes optional `socialEvents` returned by Chat AI responses so malformed or unsupported role social proposals are ignored before reaching Event Runtime
 
 Rule: UI components must not bypass these shared seams for core cross-module concerns.
 

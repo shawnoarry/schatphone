@@ -41,7 +41,7 @@ Still incomplete or risky:
 5. World Pack service-account templates now have a Chat-side contract, idempotent create/reuse path, user-facing opt-in UI, editable/resettable built-in candidate overrides, reviewed AI/pasted candidate confirmation inside Services management, and descriptive source notification plans for Shopping, logistics, and Food Delivery event streams. Actual source-module schedule execution, broader app-archetype behavior, and deeper per-world service semantics remain future work.
 6. group chat V1 does not yet run a true multi-speaker scheduler; current AI prompting can reference group members and reply mode, but speaker orchestration is a later slice.
 7. reply presets should be invoked from a concrete thread menu, not exposed as a top-level bulk override in `Me` or Chat Settings.
-8. direct Chat social/channel state has a V1 shell for greetings, request accept/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events now have a reviewed V1 seam: low-risk role greetings can become pending message requests through event-runtime audit, while role-initiated refusal, block, restore, and unblock proposals wait for World Hub review before Chat applies the communication state.
+8. direct Chat social/channel state has a V1 shell for greetings, request accept/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events now have a reviewed V1 seam, and Chat AI is the first concrete proposal source: assistant JSON may include optional `socialEvents`, Chat normalizes them, and Event Runtime decides whether a low-risk greeting becomes an audited pending message request or a high-risk refusal/block/restore/unblock proposal waits for World Hub review before Chat applies the communication state.
 
 ## 2. Recommended Next Slice
 
@@ -51,7 +51,7 @@ Still incomplete or risky:
 4. Postpone service-account polish that depends on World Pack app archetypes until the World Pack contract settles.
 5. If continuing World Pack service-account work, use `SERVICE_ACCOUNT_LINK_CONTRACT.md` and `getServiceAccountLinkContract(contactId)` as the Chat-side handshake, then exercise the confirmed source notification plans from concrete source modules without making Chat own source-module records or auto-subscribing users.
 6. If continuing group chat work, build the next layer as explicit speaker orchestration rather than overloading ordinary one-contact reply behavior.
-7. Continue the next generated social-event layer from the landed review seam: add concrete AI/runtime trigger sources, cooldown tuning, and additional social-event types without letting generated proposals bypass Event Runtime review or Chat-owned application.
+7. Continue the next generated social-event layer from the landed review seam: add background/runtime trigger sources, cooldown tuning, and additional social-event types without letting generated proposals bypass Event Runtime review or Chat-owned application.
 
 ## 3. Do Not Do
 

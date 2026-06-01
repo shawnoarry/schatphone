@@ -12,6 +12,7 @@ import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
 import { useCalendarStore } from '../stores/calendar'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
+import { useSimulationStore } from '../stores/simulation'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
@@ -19,6 +20,7 @@ import {
 } from '../stores/foodDelivery'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
+import { normalizeChatAiSocialEvents } from '../lib/chat-ai-social-proposals'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import {
@@ -72,6 +74,7 @@ const shoppingStore = useShoppingStore()
 const calendarStore = useCalendarStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
+const simulationStore = useSimulationStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -2059,6 +2062,9 @@ JSON schema:
         {"type":"text","variant":"primary","lang":"zh","text":"..."}
       ]
     }
+  ],
+  "socialEvents": [
+    {"type":"role_greeting_request | role_refuse_messages | role_restore_messages | role_block_user | role_unblock_user","explanation":"short reason"}
   ]
 }
 
@@ -2071,6 +2077,8 @@ Rules:
 - ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
 - Each message must include at least one text block.
+- socialEvents is optional. Use it only in role conversations when the character is proposing a communication-state change.
+- socialEvents is a proposal only: never claim the state already changed, never include it for services, groups, or the user themself, and never use it for ordinary mood or relationship flavor.
 `
 }
 
@@ -3355,7 +3363,7 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
     })
 
   if (!parsedPayload || typeof parsedPayload !== 'object') {
-    return { messages: [normalizedFallback()] }
+    return { messages: [normalizedFallback()], socialEvents: [] }
   }
 
   const rawMessages = Array.isArray(parsedPayload.messages) ? parsedPayload.messages : [parsedPayload]
@@ -3370,10 +3378,13 @@ const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
     .filter(Boolean)
 
   if (!normalizedMessages.length) {
-    return { messages: [normalizedFallback()] }
+    return { messages: [normalizedFallback()], socialEvents: [] }
   }
 
-  return { messages: normalizedMessages }
+  return {
+    messages: normalizedMessages,
+    socialEvents: normalizeChatAiSocialEvents(parsedPayload),
+  }
 }
 
 const clampNotificationPreview = (text, max = 72) => {
@@ -3404,6 +3415,39 @@ const summarizeAssistantMessagesForNotification = (messages = []) => {
   }
 
   return t('你收到了一条新回复', 'You received a new reply')
+}
+
+const submitAssistantSocialEvents = ({
+  contactId,
+  socialEvents = [],
+  assistantMessages = [],
+  triggerMessageId = '',
+} = {}) => {
+  if (!Array.isArray(socialEvents) || socialEvents.length === 0) return []
+  const firstAssistantMessage = assistantMessages.find((message) => message?.id) || null
+  const sourceMessageId = firstAssistantMessage?.id || ''
+  const sourceTriggerId =
+    triggerMessageId && triggerMessageId !== MANUAL_TRIGGER_ID ? triggerMessageId : ''
+
+  return socialEvents
+    .map((event) =>
+      simulationStore.submitChatSocialEventProposal(
+        {
+          contactId,
+          eventType: event.eventType,
+          explanation: event.explanation,
+          triggerSource: 'ai_assisted',
+          source: {
+            moduleKey: 'chat',
+            conversationId: contactId,
+            messageId: sourceMessageId,
+            runtimeLogId: sourceTriggerId,
+          },
+        },
+        { chatStore, at: Date.now() },
+      ),
+    )
+    .filter(Boolean)
 }
 
 const generateAIResponse = async (contactId, triggerMessageId, options = {}) => {
@@ -3460,9 +3504,10 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     },
   })
   const parsedMessages = parsed.messages.slice(0, replyCount)
+  const appendedMessages = []
 
   parsedMessages.forEach((item) => {
-    chatStore.appendMessage(contactId, {
+    const appended = chatStore.appendMessage(contactId, {
       role: 'assistant',
       content: item.content,
       blocks: item.blocks,
@@ -3474,6 +3519,13 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
       },
       status: 'sent',
     })
+    appendedMessages.push(appended)
+  })
+  const submittedSocialEvents = submitAssistantSocialEvents({
+    contactId,
+    socialEvents: parsed.socialEvents,
+    assistantMessages: appendedMessages,
+    triggerMessageId,
   })
 
   if (activeChatId.value === contactId) {
@@ -3489,6 +3541,7 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
   return {
     count: parsedMessages.length,
     messages: parsedMessages,
+    socialEventCount: submittedSocialEvents.length,
     contactName: contact.name || t('新消息', 'New Message'),
   }
 }

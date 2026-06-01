@@ -148,7 +148,7 @@ Current implementation note:
 - World Hub relationship facts now support status/source filters, selected-fact detail, metric-delta review, source-record visibility, pending-effect explanations, and supporting-only duplicate-growth explanations.
 - World Hub relationship fact detail now also shows read-only relationship-classification gate audit metadata when a fact includes it, without becoming the main relationship editor or a broad control surface.
 - High-risk relationship gate presets are available at the helper seam; Chat social-event review now consumes that seam for generated communication-state proposals, while high-impact romance/conflict automation stays on hold.
-- Chat social-event review V1 is landed: generated role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait in World Hub before Chat applies the communication state. Contacts shows the Chat snapshot only.
+- Chat social-event review V1 is landed: generated role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait in World Hub before Chat applies the communication state. Chat AI responses are now the first concrete proposal source through optional normalized `socialEvents`; Contacts shows the Chat snapshot only.
 - Review actions remain narrow: pending relationship facts can still be approved or dismissed, and relationship cleanup remains guarded; broad affinity, funds, unlock, or freeform override editing stays deferred.
 
 Primary references:
@@ -311,7 +311,7 @@ Reason:
 
 - low-impact explicit facts are already the right current lane;
 - high-impact romance/conflict automation still needs safer review and control surfaces.
-- Broader high-impact social/relationship automation should still build on the landed Chat social-event review seam instead of writing directly to Chat, Contacts, or relationship runtime. The V1 seam covers role greeting/refusal/block/restore/unblock review, but richer AI scheduling, relationship-stage effects, romance/conflict event packs, and Cheats-style overrides remain on hold.
+- Broader high-impact social/relationship automation should still build on the landed Chat social-event review seam instead of writing directly to Chat, Contacts, or relationship runtime. The V1 seam covers Chat AI-sourced role greeting/refusal/block/restore/unblock review, but background scheduling, relationship-stage effects, romance/conflict event packs, and Cheats-style overrides remain on hold.
 
 ### 5.3 Cheats As A Finished Product Surface
 
@@ -331,7 +331,7 @@ These are already usable and should be treated as current foundation, not active
 3. Contacts role delete, relationship reset, and single-memory delete baseline.
 4. Shopping, Food Delivery, Phone, Map, Wallet, and Calendar low-impact relationship fact adapters.
 5. World Hub read-only runtime review plus pending-relationship review path.
-6. Chat social-event review V1: Event Runtime stores/audits generated role social proposals, World Hub reviews high-risk proposals, Chat applies confirmed communication state, and Contacts displays snapshots only.
+6. Chat social-event review V1: Chat AI can submit normalized role social proposals, Event Runtime stores/audits them, World Hub reviews high-risk proposals, Chat applies confirmed communication state, and Contacts displays snapshots only.
 7. Delivery route context visible in Food Delivery and Shopping surfaces.
 8. Task-package system, workflow docs, and package handoff pages.
 9. Core overview and architecture docs have been refreshed to current semantics.

@@ -61,7 +61,7 @@ PM meaning:
 - Shopping, logistics, and Food Delivery service contexts now connect into Chat through reusable service-notification messages with source references and route actions.
 - Service accounts now expose descriptive source notification plans in Services, service threads, and the Chat linkage contract; plans identify supported Shopping/logistics/Food Delivery event streams without creating subscriptions or source records.
 - Group chats are now visible as Chat-native targets with member selection and reply-mode metadata; deeper multi-speaker orchestration remains a later behavior layer.
-- Incoming generated social events now have the first review path: low-risk role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait for World Hub approval before Chat changes the communication state. Chat owns the applied channel state, Contacts displays role snapshots, Event Runtime reviews generated events, and relationship runtime records confirmed continuity only.
+- Incoming generated social events now have the first review path and first real source: Chat AI responses may include optional normalized social proposals. Low-risk role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait for World Hub approval before Chat changes the communication state. Chat owns the applied channel state, Contacts displays role snapshots, Event Runtime reviews generated events, and relationship runtime records confirmed continuity only.
 - Role chats can now receive compact relationship runtime context, including relationship stage, metrics, milestones, growth traits, and recent relationship facts.
 
 PM meaning:
@@ -198,7 +198,7 @@ PM meaning:
 - A shared event engine handles condition checks, logs, cooldowns, caps, and adapter exceptions.
 - Food Delivery has the first safe automatic pilot.
 - World-aware event variants exist as a standard direction.
-- Generated Chat social events such as greetings, refusal, block, restore, and unblock now enter here as reviewed social/channel events, not as direct Chat or Contacts writes.
+- Generated Chat social events such as greetings, refusal, block, restore, and unblock now enter here as reviewed social/channel events from Chat AI proposal output, not as direct Chat or Contacts writes.
 - Settings > Automation has an opt-in foreground event tick switch.
 - App lifecycle wiring exists for foreground ticking only when the user enables it.
 - World Hub reads simulation runtime state and relationship runtime review data.
@@ -265,7 +265,7 @@ PM meaning:
 6. User-test and polish the guarded nonstandard-app review flow now that the UI exists: loading, empty, parse/API error, rejected proposals, confirmed `transit_pass`, confirmed `reservation_board`, and confirmed `dispatch_board` are covered by regression tests, but phone-sized copy/readability still needs product review.
 7. Generate or confirm world-specific event packs from WorldBook and the active World Pack.
 8. Broaden user-approved service/subscription account opt-in beyond the current active-pack service-account V1, then exercise ready source notification plans from source modules without making Chat own source records.
-9. Deepen generated Chat social-event sources only through Event Runtime review, keeping Chat as the applied communication owner.
+9. Deepen background/runtime generated Chat social-event sources only through Event Runtime review, keeping Chat as the applied communication owner.
 10. Add task/unlock systems behind World Hub, keeping World Hub and Cheats separate from WorldBook authoring.
 11. Add more adapters through the shared event engine.
 

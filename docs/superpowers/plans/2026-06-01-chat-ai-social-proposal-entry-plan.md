@@ -8,6 +8,8 @@
 
 **Tech Stack:** Vue 3, Pinia, Vitest, existing Chat / Simulation stores.
 
+**Execution Status:** Implemented in the Chat AI social proposal entry slice. This file is retained as execution history, not as the active TODO source.
+
 ---
 
 ## File Structure
@@ -24,7 +26,7 @@
 - Create: `src/lib/chat-ai-social-proposals.js`
 - Test: `tests/chat-ai-social-proposals.test.js`
 
-- [ ] **Step 1: Write parser tests**
+- [x] **Step 1: Write parser tests**
 
 Test accepted `socialEvents`, ignored malformed items, and max length trimming:
 
@@ -62,17 +64,17 @@ describe('chat AI social proposal normalization', () => {
 })
 ```
 
-- [ ] **Step 2: Run failing parser test**
+- [x] **Step 2: Run failing parser test**
 
 Run: `npm.cmd test -- tests/chat-ai-social-proposals.test.js`
 
 Expected: fail because `src/lib/chat-ai-social-proposals.js` does not exist.
 
-- [ ] **Step 3: Implement parser helper**
+- [x] **Step 3: Implement parser helper**
 
 Create a small helper that accepts `socialEvents` or `social_events`, maps `type` or `eventType` to supported V1 generated event types, and returns `{ eventType, explanation }`.
 
-- [ ] **Step 4: Run parser test**
+- [x] **Step 4: Run parser test**
 
 Run: `npm.cmd test -- tests/chat-ai-social-proposals.test.js`
 
@@ -84,7 +86,7 @@ Expected: pass.
 - Modify: `src/views/ChatView.vue`
 - Test: `tests/chat-ai-social-proposal-entry.test.js`
 
-- [ ] **Step 1: Add ChatView integration test**
+- [x] **Step 1: Add ChatView integration test**
 
 Mock `callAI()` to return a normal assistant message plus `socialEvents: [{ type: 'role_block_user', explanation: 'conflict escalated' }]`. Mount `ChatView`, trigger an AI reply, and assert:
 
@@ -92,13 +94,13 @@ Mock `callAI()` to return a normal assistant message plus `socialEvents: [{ type
 - `simulationStore.pendingChatSocialEventProposalCount` becomes `1`;
 - Chat contact state remains unchanged until World Hub approval.
 
-- [ ] **Step 2: Run failing integration test**
+- [x] **Step 2: Run failing integration test**
 
 Run: `npm.cmd test -- tests/chat-ai-social-proposal-entry.test.js`
 
 Expected: fail because ChatView ignores `socialEvents`.
 
-- [ ] **Step 3: Wire prompt and parser**
+- [x] **Step 3: Wire prompt and parser**
 
 In `buildSystemPrompt()`, extend the JSON schema with optional `socialEvents` and clear rules that the model may propose but not claim state changed.
 
@@ -111,11 +113,11 @@ return {
 }
 ```
 
-- [ ] **Step 4: Submit proposals after messages append**
+- [x] **Step 4: Submit proposals after messages append**
 
 After appending assistant messages in `generateAIResponse()`, submit parsed proposals to `simulationStore.submitChatSocialEventProposal()` with `chatStore`, `contactId`, `eventType`, `explanation`, trigger/source metadata, and `assistantMessageId`.
 
-- [ ] **Step 5: Run integration test**
+- [x] **Step 5: Run integration test**
 
 Run: `npm.cmd test -- tests/chat-ai-social-proposal-entry.test.js tests/chat-social-event-review.test.js tests/simulation-store.test.js`
 
@@ -129,11 +131,11 @@ Expected: pass.
 - Modify: `docs/roadmap/TODO_ROADMAP.md`
 - Modify: `docs/pm/TODO_PM_STATUS_REPORT.md`
 
-- [ ] **Step 1: Update landed notes**
+- [x] **Step 1: Update landed notes**
 
 State that Chat AI proposal entry is landed: AI may return social proposals, Chat submits them through Event Runtime, World Hub reviews high-risk proposals, and random/background triggers remain future work.
 
-- [ ] **Step 2: Scan stale wording**
+- [x] **Step 2: Scan stale wording**
 
 Run:
 
@@ -148,7 +150,7 @@ Expected: no current doc says Chat AI proposal entry is future.
 **Files:**
 - All changed files.
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -158,7 +160,7 @@ npm.cmd test -- tests/chat-ai-social-proposals.test.js tests/chat-ai-social-prop
 
 Expected: pass.
 
-- [ ] **Step 2: Run full validation**
+- [x] **Step 2: Run full validation**
 
 Run:
 
@@ -171,7 +173,7 @@ npm.cmd run test
 
 Expected: all pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Run:
 
