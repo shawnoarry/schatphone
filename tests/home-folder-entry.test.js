@@ -353,11 +353,9 @@ describe('Home folder entries', () => {
     const shell = wrapper.get('.home-shell')
     await shell.trigger('touchstart', {
       changedTouches: [{ clientX: 300, clientY: 520 }],
-      target: shell.element,
     })
     await shell.trigger('touchmove', {
       changedTouches: [{ clientX: 220, clientY: 520 }],
-      target: shell.element,
     })
     await shell.trigger('touchend')
     await wrapper.vm.$nextTick()
