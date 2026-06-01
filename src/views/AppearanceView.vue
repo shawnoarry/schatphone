@@ -9,16 +9,6 @@ import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import {
-  APP_ICON_ACCENT_OPTIONS,
-  APP_ICON_CUSTOMIZATION_TARGET_IDS,
-  APP_ICON_PRESET_OPTIONS,
-  normalizeAppIconOverrides,
-  resolveAppAccentLabel,
-  resolveAppCustomizationTargetMeta,
-  resolveAppIconPresetLabel,
-} from '../lib/app-icon-presentation'
-import {
-  buildReturnSourceQuery,
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
   pushReturnTarget,
@@ -29,12 +19,6 @@ import {
   getHomeLayoutTemplate,
   homeLayoutSlotToGridStyle,
 } from '../lib/home-layout-templates'
-import {
-  APP_SCOPED_CSS_TARGETS,
-  SCOPED_CUSTOM_CSS_KEYS,
-  normalizeScopedCustomCss,
-} from '../lib/appearance-scoped-css'
-import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
 
 const ROOT_MENU = ''
 const FONT_VAR_NAME = '--app-font-family'
@@ -62,16 +46,14 @@ const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
-const { t, systemLanguage, languageBase } = useI18n()
+const { t } = useI18n()
 
 const { settings, availableThemes } = storeToRefs(systemStore)
-const appearanceLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 
 const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
 const selectedHomeLayoutPage = ref(0)
 const activeAppearanceSheet = ref('')
-const selectedIconAppId = ref('')
 
 let savedTimerId = null
 const customFontStackInput = ref('')
@@ -137,69 +119,7 @@ const themeDisplayName = (theme) => {
   return theme?.name || ''
 }
 
-const appIconOverrides = computed(() =>
-  normalizeAppIconOverrides(settings.value.appearance.appIconOverrides),
-)
-const appIconPresetOptions = computed(() =>
-  APP_ICON_PRESET_OPTIONS.map((item) => ({
-    value: item.value,
-    label: resolveAppIconPresetLabel(item.value, appearanceLocale.value),
-  })),
-)
-const appIconAccentOptions = computed(() =>
-  APP_ICON_ACCENT_OPTIONS.map((item) => ({
-    value: item.value,
-    label: resolveAppAccentLabel(item.value, appearanceLocale.value),
-  })),
-)
-const appIconCustomizationTargets = computed(() =>
-  APP_ICON_CUSTOMIZATION_TARGET_IDS.map((appId) =>
-    resolveAppCustomizationTargetMeta(appId, appearanceLocale.value, appIconOverrides.value),
-  ),
-)
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
-const scopedCustomCss = computed(() =>
-  normalizeScopedCustomCss(settings.value.appearance.scopedCustomCss),
-)
-const appScopedCss = computed(() => scopedCustomCss.value[SCOPED_CUSTOM_CSS_KEYS.APP])
-const worldAppScopedCss = computed(() => scopedCustomCss.value[SCOPED_CUSTOM_CSS_KEYS.WORLD_APP])
-const appScopedCssTargetOptions = computed(() =>
-  APP_SCOPED_CSS_TARGETS.map((item) => ({
-    value: item.id,
-    label: t(item.labelZh, item.labelEn),
-  })),
-)
-const activeWorldAppScopedTargetOptions = computed(() =>
-  buildActiveWorldAppEntryRows({ systemStore }).map((entry) => ({
-    value: `${entry.worldPackId}::${entry.worldAppBindingId}`,
-    worldPack: entry.worldPackId,
-    worldApp: entry.worldAppBindingId,
-    label: `${entry.label} · ${entry.worldPackLabel} · ${entry.targetLabel}`,
-  })),
-)
-const selectedWorldAppScopedTargetValue = computed(
-  () => `${worldAppScopedCss.value.worldPack}::${worldAppScopedCss.value.worldApp}`,
-)
-const selectedWorldAppScopedTarget = computed(
-  () =>
-    activeWorldAppScopedTargetOptions.value.find(
-      (item) => item.value === selectedWorldAppScopedTargetValue.value,
-    ) || null,
-)
-const appScopedCssSelector = computed(() => `[data-app="${appScopedCss.value.target}"]`)
-const worldAppScopedCssSelector = computed(
-  () =>
-    `[data-world-pack="${worldAppScopedCss.value.worldPack}"][data-world-app="${worldAppScopedCss.value.worldApp}"]`,
-)
-const activeScopedCssLayerCount = computed(
-  () =>
-    [appScopedCss.value, worldAppScopedCss.value].filter(
-      (item) => item.enabled && typeof item.css === 'string' && item.css.trim(),
-    ).length,
-)
-const worldAppScopedCssTargetLabel = computed(
-  () => selectedWorldAppScopedTarget.value?.label || t('手动目标', 'Manual target'),
-)
 const appearancePackStatusClass = computed(() => {
   if (appearancePackStatus.value.tone === 'success') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
   if (appearancePackStatus.value.tone === 'warning') return 'bg-amber-50 text-amber-700 border-amber-100'
@@ -210,7 +130,6 @@ const appearancePackStatusClass = computed(() => {
 const pageTitle = computed(() => {
   if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
   if (activeMenu.value === 'font') return t('字体设置', 'Font')
-  if (activeMenu.value === 'icons') return t('功能图标', 'App Icons')
   return t('外观工坊', 'Appearance Studio')
 })
 
@@ -448,14 +367,6 @@ const goHome = () => {
   pushReturnTarget(router, route, '/home')
 }
 
-const openWidgetCenter = () => {
-  const source = returnLabelKey.value === 'Settings' ? 'settings' : 'home'
-  router.push({
-    path: '/widgets',
-    query: buildReturnSourceQuery(source, route),
-  })
-}
-
 const openHomeLayoutEditor = () => {
   const pageIndex = selectedHomeLayoutPageIndex.value
   router.push(
@@ -495,7 +406,6 @@ const handleBack = () => {
 const openMenu = (menu) => {
   activeMenu.value = menu
   activeAppearanceSheet.value = ''
-  selectedIconAppId.value = ''
   if (menu === 'font') {
     customFontStackInput.value = currentFontStack.value
   }
@@ -511,17 +421,11 @@ const openAppearanceSheet = (sheetId) => {
 
 const closeAppearanceSheet = () => {
   activeAppearanceSheet.value = ''
-  selectedIconAppId.value = ''
 }
 
 const openFontEditor = () => {
   customFontStackInput.value = currentFontStack.value
   openAppearanceSheet('font')
-}
-
-const openIconEditor = (appId) => {
-  selectedIconAppId.value = appId
-  openAppearanceSheet('icon')
 }
 
 const setTheme = (themeId) => {
@@ -580,42 +484,12 @@ const clearCustomCss = () => {
   triggerSaved()
 }
 
-const updateScopedCustomCss = (scopeKey, updates = {}) => {
-  systemStore.setScopedCustomCss(scopeKey, updates)
-}
-
-const selectWorldAppScopedTarget = (targetValue = '') => {
-  const option = activeWorldAppScopedTargetOptions.value.find((item) => item.value === targetValue)
-  if (!option) return
-  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, {
-    worldPack: option.worldPack,
-    worldApp: option.worldApp,
-  })
-}
-
-const clearScopedCustomCss = (scopeKey) => {
-  updateScopedCustomCss(scopeKey, { enabled: false, css: '' })
-  triggerSaved()
-}
-
-const disableAllScopedCustomCss = () => {
-  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: false })
-  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: false })
-  triggerSaved()
-}
-
-const clearAllScopedCustomCss = () => {
-  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: false, css: '' })
-  updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: false, css: '' })
-  triggerSaved()
-}
-
 const exportAppearancePack = () => {
   const pack = systemStore.exportAppearancePack({
     name: t('SchatPhone 外观包', 'SchatPhone appearance pack'),
     description: t(
-      '仅包含主题、壁纸、图标、全局 CSS 与范围 CSS。',
-      'Includes theme, wallpaper, icons, global CSS, and scoped CSS only.',
+      '仅包含全局主题、壁纸、字体变量与全局 CSS。',
+      'Includes global theme, wallpaper, font variables, and global CSS only.',
     ),
   })
   appearancePackExportText.value = JSON.stringify(pack, null, 2)
@@ -670,26 +544,6 @@ const clearAppearancePackBuffers = () => {
 }
 
 const saveAppearance = () => {
-  triggerSaved()
-}
-
-const setAppIconOverrideField = (appId, field, value) => {
-  const currentOverrides = normalizeAppIconOverrides(settings.value.appearance.appIconOverrides)
-  const current = currentOverrides[appId] || {}
-  settings.value.appearance.appIconOverrides = normalizeAppIconOverrides({
-    ...currentOverrides,
-    [appId]: {
-      ...current,
-      [field]: value,
-    },
-  })
-}
-
-const resetAppIconOverride = (appId) => {
-  const currentOverrides = normalizeAppIconOverrides(settings.value.appearance.appIconOverrides)
-  const nextOverrides = { ...currentOverrides }
-  delete nextOverrides[appId]
-  settings.value.appearance.appIconOverrides = normalizeAppIconOverrides(nextOverrides)
   triggerSaved()
 }
 
@@ -760,10 +614,6 @@ onBeforeUnmount(() => {
           <button type="button" @click="openMenu('theme')">
             <i class="fas fa-palette"></i>
             <span>{{ t('整体主题美化', 'Theme Styling') }}</span>
-          </button>
-          <button type="button" @click="openWidgetCenter">
-            <i class="fas fa-puzzle-piece"></i>
-            <span>{{ t('组件', 'Widgets') }}</span>
           </button>
         </div>
       </section>
@@ -863,7 +713,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="appearance-menu-copy">
             <p>{{ t('整体主题美化', 'Theme Styling') }}</p>
-            <span>{{ t('主题、壁纸与自定义 CSS', 'Theme, wallpaper and custom CSS') }}</span>
+            <span>{{ t('主题、壁纸与全局 CSS', 'Theme, wallpaper and global CSS') }}</span>
           </div>
           <i class="fas fa-chevron-right appearance-menu-chevron"></i>
         </button>
@@ -882,33 +732,6 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-right appearance-menu-chevron"></i>
         </button>
 
-        <button
-          class="appearance-menu-card"
-          @click="openMenu('icons')"
-        >
-          <div class="appearance-menu-icon is-icons">
-            <i class="fas fa-icons"></i>
-          </div>
-          <div class="appearance-menu-copy">
-            <p>{{ t('功能图标', 'App Icons') }}</p>
-            <span>{{ t('调整核心功能入口的图标与色系', 'Adjust icon glyphs and accent colors for core app entries') }}</span>
-          </div>
-          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
-        </button>
-
-        <button
-          class="appearance-menu-card"
-          @click="openWidgetCenter"
-        >
-          <div class="appearance-menu-icon is-widget">
-            <i class="fas fa-puzzle-piece"></i>
-          </div>
-          <div class="appearance-menu-copy">
-            <p>{{ t('Widget 中心', 'Widget Center') }}</p>
-            <span>{{ t('创建、导入与管理主屏组件', 'Create, import, and manage Home widgets') }}</span>
-          </div>
-          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
-        </button>
       </div>
     </div>
 
@@ -1201,7 +1024,7 @@ onBeforeUnmount(() => {
       <div class="appearance-mobile-action-strip">
         <button type="button" data-testid="appearance-open-css-editor" @click="openAppearanceSheet('css')">
           <i class="fas fa-code"></i>
-          <span>{{ t('高级 CSS', 'Advanced CSS') }}</span>
+          <span>{{ t('全局 CSS', 'Global CSS') }}</span>
         </button>
       </div>
 
@@ -1212,234 +1035,23 @@ onBeforeUnmount(() => {
         <div class="appearance-sheet-head">
           <div>
             <span>{{ t('高级', 'Advanced') }}</span>
-            <strong>{{ t('自定义 CSS', 'Custom CSS') }}</strong>
+            <strong>{{ t('全局 CSS', 'Global CSS') }}</strong>
           </div>
           <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
             <i class="fas fa-xmark"></i>
           </button>
         </div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-xs text-gray-500 block">{{ t('自定义 CSS（高级）', 'Custom CSS (Advanced)') }}</label>
+          <label class="text-xs text-gray-500 block">{{ t('全局 CSS（高级）', 'Global CSS (Advanced)') }}</label>
           <button class="text-[11px] text-blue-500" @click="clearCustomCss">{{ t('清空', 'Clear') }}</button>
         </div>
         <textarea
           v-model="settings.appearance.customCss"
           class="w-full h-36 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
+          data-testid="appearance-global-css-input"
           placeholder=".app-shell { --home-widget-bg: rgba(255,255,255,0.5); }"
         ></textarea>
         <div class="mt-4 space-y-3">
-          <div
-            class="rounded-xl border border-slate-200 bg-slate-50 p-3"
-            data-testid="appearance-scoped-css-recovery"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold text-slate-800">{{ t('范围 CSS 恢复', 'Scoped CSS recovery') }}</p>
-                <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                  {{
-                    t(
-                      'App 与 World App 范围层会覆盖设定包默认外观；排查时可先暂停，不会删除内容。',
-                      'App and World App layers override World Pack defaults; pause them first when checking a visual issue.',
-                    )
-                  }}
-                </p>
-              </div>
-              <span
-                class="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600"
-                data-testid="appearance-scoped-css-active-count"
-              >
-                {{ activeScopedCssLayerCount }} {{ t('层生效', 'active') }}
-              </span>
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                class="rounded-md border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700"
-                data-testid="appearance-scoped-css-disable-all"
-                @click="disableAllScopedCustomCss"
-              >
-                {{ t('暂停范围层', 'Pause scoped layers') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-md border border-rose-100 bg-white px-3 py-2 text-[11px] font-semibold text-rose-600"
-                data-testid="appearance-scoped-css-clear-all"
-                @click="clearAllScopedCustomCss"
-              >
-                {{ t('清空并关闭', 'Clear and off') }}
-              </button>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold text-gray-800">{{ t('App 范围 CSS', 'App Scoped CSS') }}</p>
-                <p class="text-[11px] text-gray-500">{{ t('当前 App 壳层', 'Current app shell') }}</p>
-              </div>
-              <button
-                type="button"
-                class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                :class="appScopedCss.enabled ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'"
-                data-testid="appearance-app-scoped-css-toggle"
-                @click="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { enabled: !appScopedCss.enabled })"
-              >
-                {{ appScopedCss.enabled ? t('开启', 'On') : t('关闭', 'Off') }}
-              </button>
-            </div>
-            <select
-              :value="appScopedCss.target"
-              class="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
-              data-testid="appearance-app-scoped-css-target"
-              @change="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { target: $event.target.value })"
-            >
-              <option
-                v-for="option in appScopedCssTargetOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-            <div
-              class="rounded-md border border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-600"
-              data-testid="appearance-app-scoped-css-preview"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-semibold text-gray-700">{{ t('目标', 'Target') }}</span>
-                <span
-                  class="rounded-full px-2 py-0.5 font-semibold"
-                  :class="appScopedCss.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'"
-                >
-                  {{ appScopedCss.enabled ? t('生效', 'Active') : t('暂停', 'Paused') }}
-                </span>
-              </div>
-              <code
-                class="mt-1 block break-all rounded bg-gray-50 px-2 py-1 font-mono text-[10px] text-gray-500"
-                data-testid="appearance-app-scoped-css-selector"
-              >
-                {{ appScopedCssSelector }}
-              </code>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] text-gray-500">{{ appScopedCssSelector }}</span>
-              <button
-                type="button"
-                class="text-[11px] text-blue-500"
-                @click="clearScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP)"
-              >
-                {{ t('清空', 'Clear') }}
-              </button>
-            </div>
-            <textarea
-              :value="appScopedCss.css"
-              class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
-              data-testid="appearance-app-scoped-css-input"
-              placeholder=".screen { background: #0f172a; }"
-              @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.APP, { css: $event.target.value })"
-            ></textarea>
-          </div>
-
-          <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold text-gray-800">{{ t('World App 范围 CSS', 'World App Scoped CSS') }}</p>
-                <p class="text-[11px] text-gray-500">{{ t('设定包入口', 'World pack entry') }}</p>
-              </div>
-              <button
-                type="button"
-                class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                :class="worldAppScopedCss.enabled ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'"
-                data-testid="appearance-world-app-scoped-css-toggle"
-                @click="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { enabled: !worldAppScopedCss.enabled })"
-              >
-                {{ worldAppScopedCss.enabled ? t('开启', 'On') : t('关闭', 'Off') }}
-              </button>
-            </div>
-            <div
-              v-if="activeWorldAppScopedTargetOptions.length"
-              class="space-y-1"
-            >
-              <label class="text-[11px] text-gray-500 block">{{ t('当前设定包入口', 'Active world app entry') }}</label>
-              <select
-                :value="selectedWorldAppScopedTargetValue"
-                class="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
-                data-testid="appearance-world-app-scoped-css-entry"
-                @change="selectWorldAppScopedTarget($event.target.value)"
-              >
-                <option
-                  v-for="option in activeWorldAppScopedTargetOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </div>
-            <p
-              v-else
-              class="rounded-md border border-dashed border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-500"
-              data-testid="appearance-world-app-scoped-css-empty"
-            >
-              {{ t('当前设定包没有可选的世界 App 入口，可手动填写目标。', 'The active World Pack has no world-app entries yet. Manual targets are still available.') }}
-            </p>
-            <div class="grid grid-cols-2 gap-2">
-              <input
-                :value="worldAppScopedCss.worldPack"
-                class="min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
-                data-testid="appearance-world-app-scoped-css-pack"
-                placeholder="survival_city"
-                @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { worldPack: $event.target.value })"
-              />
-              <input
-                :value="worldAppScopedCss.worldApp"
-                class="min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-xs outline-none"
-                data-testid="appearance-world-app-scoped-css-app"
-                placeholder="survival_dispatch"
-                @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { worldApp: $event.target.value })"
-              />
-            </div>
-            <div
-              class="rounded-md border border-gray-200 bg-white px-2 py-2 text-[11px] text-gray-600"
-              data-testid="appearance-world-app-scoped-css-preview"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-semibold text-gray-700">{{ worldAppScopedCssTargetLabel }}</span>
-                <span
-                  class="rounded-full px-2 py-0.5 font-semibold"
-                  :class="worldAppScopedCss.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'"
-                >
-                  {{ worldAppScopedCss.enabled ? t('生效', 'Active') : t('暂停', 'Paused') }}
-                </span>
-              </div>
-              <code
-                class="mt-1 block break-all rounded bg-gray-50 px-2 py-1 font-mono text-[10px] text-gray-500"
-                data-testid="appearance-world-app-scoped-css-selector"
-              >
-                {{ worldAppScopedCssSelector }}
-              </code>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] text-gray-500">
-                {{ worldAppScopedCssSelector }}
-              </span>
-              <button
-                type="button"
-                class="text-[11px] text-blue-500"
-                @click="clearScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP)"
-              >
-                {{ t('清空', 'Clear') }}
-              </button>
-            </div>
-            <textarea
-              :value="worldAppScopedCss.css"
-              class="w-full h-24 border border-gray-200 rounded-md p-2 text-xs font-mono outline-none resize-none"
-              data-testid="appearance-world-app-scoped-css-input"
-              placeholder=".screen { --accent-color: #f59e0b; }"
-              @input="updateScopedCustomCss(SCOPED_CUSTOM_CSS_KEYS.WORLD_APP, { css: $event.target.value })"
-            ></textarea>
-          </div>
-
           <div
             class="rounded-xl border border-slate-200 bg-white p-3 space-y-3"
             data-testid="appearance-pack-panel"
@@ -1450,8 +1062,8 @@ onBeforeUnmount(() => {
                 <p class="text-[11px] leading-5 text-slate-500">
                   {{
                     t(
-                      '导出主题、壁纸、图标与 CSS；不包含桌面布局、小组件或 Chat 外观。',
-                      'Exports theme, wallpaper, icons, and CSS; excludes Home layout, widgets, and Chat appearance.',
+                      '导出全局主题、壁纸、字体变量与全局 CSS；不包含 App 图标、单 App 皮肤、桌面布局、小组件或 Chat 外观。',
+                      'Exports global theme, wallpaper, font variables, and global CSS; excludes app icons, app skins, Home layout, widgets, and Chat appearance.',
                     )
                   }}
                 </p>
@@ -1596,107 +1208,6 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div v-else-if="activeMenu === 'icons'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-sm font-bold mb-2">{{ t('核心功能图标', 'Core App Icons') }}</p>
-        <p class="text-[11px] text-gray-500">
-          {{ t('可调整主屏核心入口的预设图标与色系。', 'Adjust preset glyphs and accent colors for core Home entries.') }}
-        </p>
-      </div>
-
-      <div
-        v-for="target in appIconCustomizationTargets"
-        :key="target.appId"
-        class="appearance-icon-card bg-white rounded-xl p-4 shadow-sm space-y-3"
-      >
-        <div class="flex items-center gap-3">
-          <span
-            class="w-11 h-11 rounded-2xl inline-flex items-center justify-center text-lg"
-            :style="{
-              background: `var(--home-icon-${target.accent}-bg)`,
-              color: `var(--home-icon-${target.accent}-fg)`,
-            }"
-          >
-            <i :class="target.icon"></i>
-          </span>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold">{{ target.title }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('主屏入口', 'Home entry') }}</p>
-          </div>
-          <button
-            @click="resetAppIconOverride(target.appId)"
-            class="px-2.5 py-1 rounded-lg border border-gray-200 text-[11px] text-gray-600 hover:bg-gray-50"
-          >
-            {{ t('恢复默认', 'Reset') }}
-          </button>
-          <button
-            type="button"
-            class="appearance-icon-edit-trigger"
-            @click="openIconEditor(target.appId)"
-          >
-            <i class="fas fa-sliders"></i>
-            <span>{{ t('调整', 'Edit') }}</span>
-          </button>
-        </div>
-
-        <div
-          class="appearance-execute-panel appearance-icon-editor"
-          :class="{ 'is-open': activeAppearanceSheet === 'icon' && selectedIconAppId === target.appId }"
-        >
-          <div class="appearance-sheet-head">
-            <div>
-              <span>{{ t('功能图标', 'App icon') }}</span>
-              <strong>{{ target.title }}</strong>
-            </div>
-            <button type="button" @click="closeAppearanceSheet" :aria-label="t('关闭面板', 'Close panel')">
-              <i class="fas fa-xmark"></i>
-            </button>
-          </div>
-
-          <label class="block space-y-1">
-            <span class="text-xs text-gray-500">{{ t('图标样式', 'Icon Glyph') }}</span>
-            <select
-              :value="target.icon"
-              class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
-              @change="setAppIconOverrideField(target.appId, 'icon', $event.target.value); triggerSaved()"
-            >
-              <option v-for="option in appIconPresetOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
-
-          <label class="block space-y-1">
-            <span class="text-xs text-gray-500">{{ t('色系', 'Accent') }}</span>
-            <select
-              :value="target.accent"
-              class="w-full border rounded-md px-2 py-2 text-sm outline-none bg-white"
-              @change="setAppIconOverrideField(target.appId, 'accent', $event.target.value); triggerSaved()"
-            >
-              <option v-for="option in appIconAccentOptions" :key="`${target.appId}-${option.value}`" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
-
-          <div class="appearance-sheet-actions">
-            <button type="button" @click="saveAppearance(); closeAppearanceSheet()">
-              <i class="fas fa-check"></i>
-              <span>{{ t('完成', 'Done') }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <button
-        @click="saveAppearance"
-        class="w-full py-3 rounded-xl text-sm font-semibold transition"
-        :class="saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'"
-      >
-        {{ saved ? t('已保存', 'Saved') : t('保存图标设置', 'Save icon settings') }}
-      </button>
-    </div>
-
     <button
       v-if="activeAppearanceSheet"
       type="button"
@@ -1818,14 +1329,6 @@ onBeforeUnmount(() => {
 
 .appearance-menu-icon.is-font {
   background: linear-gradient(135deg, #334155 0%, #111827 100%);
-}
-
-.appearance-menu-icon.is-icons {
-  background: linear-gradient(135deg, #6f949a 0%, #3d6974 100%);
-}
-
-.appearance-menu-icon.is-widget {
-  background: linear-gradient(135deg, #6b7f8a 0%, #465a66 100%);
 }
 
 .appearance-layout-card {
@@ -1976,7 +1479,7 @@ onBeforeUnmount(() => {
 
 .appearance-overview-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 9px;
 }
 
@@ -2333,10 +1836,6 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-.appearance-icon-edit-trigger {
-  display: none;
-}
-
 .appearance-sheet-actions {
   display: none;
 }
@@ -2358,7 +1857,6 @@ onBeforeUnmount(() => {
   }
 
   .appearance-mobile-action-strip button,
-  .appearance-icon-edit-trigger,
   .appearance-sheet-actions button {
     min-height: 46px;
     border: 1px solid var(--system-control-border);
@@ -2377,22 +1875,9 @@ onBeforeUnmount(() => {
   }
 
   .appearance-mobile-action-strip button:active,
-  .appearance-icon-edit-trigger:active,
   .appearance-sheet-actions button:active {
     transform: scale(0.985);
     background: var(--system-pressed-bg);
-  }
-
-  .appearance-icon-card {
-    position: static;
-  }
-
-  .appearance-icon-edit-trigger {
-    min-height: 32px;
-    border-radius: 12px;
-    flex: 0 0 auto;
-    padding: 0 10px;
-    font-size: 11px;
   }
 
   .appearance-execute-panel {
