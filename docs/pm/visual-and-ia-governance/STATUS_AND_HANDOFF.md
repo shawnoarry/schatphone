@@ -60,6 +60,8 @@ What is already landed:
 46. Home edit mode now preserves screen navigation: page dots stay usable during editing, empty-area swipes can switch screens, and Widget Center placement flows no longer trap users on the entry screen.
 47. Appearance now has a global-only ownership baseline: the root no longer promotes App Icons or Widget Center, Advanced CSS is global-only, and appearance packs exclude app icons, app/world-app scoped CSS, widgets, Home placement, and Chat appearance. App identity and app-specific skins are reserved for App Store/app-owned follow-up slices.
 48. App Store now owns app identity/icon editing: each app detail can open a focused `图标与外观 / Icon & Appearance` sheet, choose a built-in glyph/accent, choose a Gallery image, upload a local image into Gallery for icon use, preview before saving, and restore default. Home, Dock, App Store, and supported notification surfaces resolve the same app identity.
+49. App Store now owns app skin editing for standard route-backed apps: supported app details can open an `APP 皮肤 / App Skin` sheet, choose a built-in skin preset, save CSS scoped only to that app's shell route, or restore default. Chat remains excluded from this generic editor because Chat Appearance is still the deep owner for chat layout and Chat-scoped CSS. Global appearance packs continue to exclude and preserve `appSkins`.
+50. The App Store icon flow now has desktop and mobile E2E coverage proving a Gallery image icon can be selected, saved, and rendered back on Home.
 
 Still incomplete:
 
@@ -68,7 +70,7 @@ Still incomplete:
 3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 5. World Pack app-entry unlocking now has a first implementation; the world UX package has first target-app context treatment in Shopping, Food Delivery, Calendar, and Map, Current World Pack hands off to App Store's `World` section instead of launching entries from Settings, and the nonstandard-app review UI is landed with loading/empty/error/rejection handling, but these paths still need phone-sized user testing and broader hardening for labels, accents, safe UX variants, and copy readability.
-6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store now owns app icon identity, and app/world-app scoped CSS remains available for later app-owned skin slices instead of being exposed from global Appearance.
+6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and world-app-specific CSS remains a later World Pack/app-owned slice instead of returning to global Appearance.
 
 ## 2. Recommended Next Slice
 
