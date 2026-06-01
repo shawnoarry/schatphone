@@ -36,6 +36,10 @@ import {
   SIMULATION_SURPRISE_MODE,
   useSimulationStore,
 } from '../stores/simulation'
+import {
+  CHAT_SOCIAL_EVENT_STATUS,
+  CHAT_SOCIAL_EVENT_TYPES,
+} from '../lib/chat-social-event-review'
 import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
 
 const router = useRouter()
@@ -59,6 +63,7 @@ const selectedEventLogId = ref('')
 const relationshipEventStatusFilter = ref('all')
 const relationshipEventSourceFilter = ref('all')
 const selectedRelationshipEventId = ref('')
+const selectedChatSocialEventId = ref('')
 
 const { settings } = storeToRefs(systemStore)
 const {
@@ -70,6 +75,7 @@ const {
   recentEventLogs,
   activeCooldownCount,
   surpriseMode,
+  pendingChatSocialEventProposalCount,
 } = storeToRefs(simulationStore)
 
 const WORLD_HUB_RUNTIME_MODULES = Object.freeze([
@@ -156,6 +162,12 @@ const runtimeStats = computed(() => [
     label: t('Active cooldowns', 'Active cooldowns'),
     value: String(activeCooldownCount.value),
     hint: t('Prevents similar events from repeating too quickly.', 'Prevents similar events from repeating too quickly.'),
+  },
+  {
+    id: 'pending-chat-social',
+    label: t('Pending Chat social', 'Pending Chat social'),
+    value: String(pendingChatSocialEventProposalCount.value),
+    hint: t('Role-initiated block/refusal changes wait here before Chat changes.', 'Role-initiated block/refusal changes wait here before Chat changes.'),
   },
 ])
 
@@ -329,6 +341,37 @@ const simulationEventSafetyNotes = (log = {}) => {
     )
   }
   return notes
+}
+
+const chatSocialEventTypeLabel = (eventType = '') => {
+  if (eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST) return t('Role greeting request', 'Role greeting request')
+  if (eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_REFUSE_MESSAGES) return t('Role refuses messages', 'Role refuses messages')
+  if (eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_RESTORE_MESSAGES) return t('Role restores messages', 'Role restores messages')
+  if (eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_BLOCK_USER) return t('Role blocks user', 'Role blocks user')
+  if (eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_UNBLOCK_USER) return t('Role unblocks user', 'Role unblocks user')
+  return eventType || t('Chat social event', 'Chat social event')
+}
+
+const chatSocialEventStatusLabel = (status = '') => {
+  if (status === CHAT_SOCIAL_EVENT_STATUS.APPLIED) return t('Applied', 'Applied')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return t('Pending review', 'Pending review')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.BLOCKED) return t('Blocked', 'Blocked')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.DISMISSED) return t('Dismissed', 'Dismissed')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.FAILED) return t('Failed', 'Failed')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.READY_TO_APPLY) return t('Ready to apply', 'Ready to apply')
+  return status || t('Unknown', 'Unknown')
+}
+
+const chatSocialEventStatusClass = (status = '') => {
+  if (status === CHAT_SOCIAL_EVENT_STATUS.APPLIED) return 'bg-emerald-300/15 text-emerald-100'
+  if (status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return 'bg-amber-300/15 text-amber-100'
+  if (
+    status === CHAT_SOCIAL_EVENT_STATUS.FAILED ||
+    status === CHAT_SOCIAL_EVENT_STATUS.BLOCKED
+  ) {
+    return 'bg-rose-300/15 text-rose-100'
+  }
+  return 'bg-white/10 text-slate-300'
 }
 
 const relationshipEventStatusLabel = (status = '') => {
@@ -668,6 +711,29 @@ const relationshipEventSourceOptions = computed(() => [
     })),
 ])
 
+const chatSocialEventRows = computed(() =>
+  simulationStore.chatSocialEventProposals.slice(0, 8).map((proposal) => {
+    const contact = chatStore.getContactById(proposal.targetContactId)
+    const profile = proposal.targetProfileId
+      ? chatStore.getRoleProfileById(proposal.targetProfileId)
+      : null
+    return {
+      ...proposal,
+      targetLabel:
+        profile?.name ||
+        contact?.name ||
+        proposal.targetName ||
+        t('Unknown role', 'Unknown role'),
+      typeLabel: chatSocialEventTypeLabel(proposal.eventType),
+      statusLabel: chatSocialEventStatusLabel(proposal.status),
+      statusClass: chatSocialEventStatusClass(proposal.status),
+      triggerSourceLabel: simulationTriggerSourceLabel(proposal.triggerSource),
+      canReview: proposal.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+      createdAtLabel: formatRuntimeTime(proposal.createdAt),
+    }
+  }),
+)
+
 const relationshipSourceCleanupHandlers = computed(() =>
   createRelationshipSourceCleanupHandlers({
     phoneStore,
@@ -747,6 +813,13 @@ const selectedRelationshipEvent = computed(
     null,
 )
 
+const selectedChatSocialEvent = computed(
+  () =>
+    chatSocialEventRows.value.find((event) => event.id === selectedChatSocialEventId.value) ||
+    chatSocialEventRows.value[0] ||
+    null,
+)
+
 watch(recentRuntimeLogs, (logs) => {
   if (!logs.some((log) => log.id === selectedEventLogId.value)) {
     selectedEventLogId.value = logs[0]?.id || ''
@@ -756,6 +829,12 @@ watch(recentRuntimeLogs, (logs) => {
 watch(relationshipRuntimeEventRows, (events) => {
   if (!events.some((event) => event.id === selectedRelationshipEventId.value)) {
     selectedRelationshipEventId.value = events[0]?.id || ''
+  }
+}, { immediate: true })
+
+watch(chatSocialEventRows, (events) => {
+  if (!events.some((event) => event.id === selectedChatSocialEventId.value)) {
+    selectedChatSocialEventId.value = events[0]?.id || ''
   }
 }, { immediate: true })
 
@@ -773,6 +852,14 @@ const applyRelationshipEvent = (eventId) => {
 
 const dismissRelationshipEvent = (eventId) => {
   relationshipRuntimeStore.dismissRelationshipEvent(eventId)
+}
+
+const approveChatSocialEvent = (proposalId) => {
+  simulationStore.approveChatSocialEventProposal(proposalId, { chatStore, at: Date.now() })
+}
+
+const dismissChatSocialEvent = (proposalId) => {
+  simulationStore.dismissChatSocialEventProposal(proposalId, { at: Date.now() })
 }
 
 const resetRuntimeEntityFromWorldHub = async (entity) => {
@@ -1012,6 +1099,105 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
             {{ t('Failed', 'Failed') }} {{ recentRuntimeStatusCounts.failed }}
           </span>
         </div>
+      </section>
+
+      <section
+        class="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4"
+        data-testid="control-center-chat-social-panel"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.18em] text-amber-100">
+              {{ t('Chat social events', 'Chat social events') }}
+            </p>
+            <h2 class="mt-1 text-base font-semibold">
+              {{ t('Role-initiated communication review', 'Role-initiated communication review') }}
+            </h2>
+          </div>
+          <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200">
+            {{ t('Review first', 'Review first') }}
+          </span>
+        </div>
+        <p class="mt-2 text-xs leading-5 text-slate-300">
+          {{ t('AI may propose greetings or blocking changes, but World Hub reviews high-risk communication changes before Chat applies them.', 'AI may propose greetings or blocking changes, but World Hub reviews high-risk communication changes before Chat applies them.') }}
+        </p>
+
+        <div v-if="chatSocialEventRows.length" class="mt-3 space-y-2">
+          <article
+            v-for="event in chatSocialEventRows"
+            :key="event.id"
+            class="rounded-2xl border p-3"
+            :class="selectedChatSocialEvent?.id === event.id ? 'border-amber-200/70 bg-amber-200/10' : 'border-white/10 bg-white/8'"
+            data-testid="control-center-chat-social-event"
+            @click="selectedChatSocialEventId = event.id"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-white">{{ event.typeLabel }}</p>
+                <p class="mt-1 text-[11px] text-slate-500">
+                  {{ event.targetLabel }} / {{ event.triggerSourceLabel }} / {{ event.createdAtLabel }}
+                </p>
+              </div>
+              <span
+                class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
+                :class="event.statusClass"
+              >
+                {{ event.statusLabel }}
+              </span>
+            </div>
+            <p class="mt-2 text-[11px] leading-4 text-slate-400">
+              {{ event.explanation || event.reason }}
+            </p>
+            <p class="mt-1 text-[10px] leading-4 text-slate-600">
+              {{ t('State change', 'State change') }}:
+              {{ event.currentChatSocialState || '-' }} -> {{ event.requestedChatSocialState || '-' }}
+            </p>
+            <div v-if="event.canReview" class="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="rounded-full bg-emerald-300 px-3 py-1.5 text-[11px] font-semibold text-slate-950"
+                :data-testid="`control-center-chat-social-approve-${event.id}`"
+                @click.stop="approveChatSocialEvent(event.id)"
+              >
+                {{ t('Apply to Chat', 'Apply to Chat') }}
+              </button>
+              <button
+                type="button"
+                class="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-slate-200"
+                :data-testid="`control-center-chat-social-dismiss-${event.id}`"
+                @click.stop="dismissChatSocialEvent(event.id)"
+              >
+                {{ t('Dismiss', 'Dismiss') }}
+              </button>
+            </div>
+          </article>
+        </div>
+        <p v-else class="mt-3 rounded-2xl bg-white/8 px-3 py-3 text-xs leading-5 text-slate-400">
+          {{ t('No generated Chat social events yet. User-authored Chat actions still stay inside Chat.', 'No generated Chat social events yet. User-authored Chat actions still stay inside Chat.') }}
+        </p>
+
+        <article
+          v-if="selectedChatSocialEvent"
+          class="mt-3 rounded-2xl border border-amber-200/20 bg-amber-200/8 p-3"
+          data-testid="control-center-chat-social-detail"
+        >
+          <p class="text-xs font-semibold text-white">{{ t('Review detail', 'Review detail') }}</p>
+          <div class="mt-3 grid gap-2 text-[11px]">
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Requested Chat state', 'Requested Chat state') }}:
+              {{ selectedChatSocialEvent.requestedChatSocialState || '-' }}
+            </span>
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Relationship gate', 'Relationship gate') }}:
+              {{ selectedChatSocialEvent.relationshipGate?.mode || '-' }} /
+              {{ selectedChatSocialEvent.relationshipGate?.primaryRelationshipCategoryId || '-' }}
+            </span>
+            <span class="rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Rule', 'Rule') }}:
+              {{ t('Chat changes only after this proposal is applied.', 'Chat changes only after this proposal is applied.') }}
+            </span>
+          </div>
+        </article>
       </section>
 
       <section

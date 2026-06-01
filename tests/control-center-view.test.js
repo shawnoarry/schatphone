@@ -11,6 +11,7 @@ import {
   SIMULATION_TRIGGER_SOURCE,
   useSimulationStore,
 } from '../src/stores/simulation'
+import { CHAT_SOCIAL_EVENT_TYPES } from '../src/lib/chat-social-event-review'
 import { useChatStore } from '../src/stores/chat'
 import {
   RELATIONSHIP_MEMORY_REVIEW_STATES,
@@ -271,6 +272,62 @@ describe('ControlCenterView', () => {
 
     expect(relationshipRuntimeStore.events.find((event) => event.id === dismissCandidate.id)?.status).toBe('dismissed')
     expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 5, name: 'Mika' }).exists).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('reviews pending generated Chat social events before applying communication state', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const simulationStore = useSimulationStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const profile = chatStore.addRoleProfile({
+      roleId: '8801',
+      name: 'World Hub Social Role',
+      role: 'Contact',
+    })
+    const contact = chatStore.bindRoleProfile(profile.id, {
+      chatSocialState: 'connected',
+    })
+    const pending = simulationStore.submitChatSocialEventProposal(
+      {
+        contactId: contact.id,
+        eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_BLOCK_USER,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+        explanation: 'The role wants to stop receiving messages after a conflict.',
+      },
+      { chatStore, at: Date.now() },
+    )
+
+    const { wrapper } = await mountControlCenterView()
+
+    const panel = wrapper.get('[data-testid="control-center-chat-social-panel"]')
+    expect(panel.text()).toContain('Chat social events')
+    expect(panel.text()).toContain('Role-initiated communication review')
+    expect(panel.text()).toContain('Review first')
+    expect(panel.text()).toContain('World Hub Social Role')
+    expect(panel.text()).toContain('Role blocks user')
+    expect(panel.text()).toContain('Pending review')
+    expect(panel.text()).toContain('Chat changes only after this proposal is applied.')
+    expect(wrapper.findAll('[data-testid="control-center-chat-social-event"]')).toHaveLength(1)
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe('connected')
+
+    await wrapper
+      .get(`[data-testid="control-center-chat-social-approve-${pending.id}"]`)
+      .trigger('click')
+    await flushUi()
+
+    expect(simulationStore.chatSocialEventProposals.find((item) => item.id === pending.id)?.status).toBe(
+      'applied',
+    )
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      'contact_blocked',
+    )
 
     wrapper.unmount()
   })
