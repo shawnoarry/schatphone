@@ -9,7 +9,7 @@ Updated: 2026-06-01
 - condition evaluator
 - simulation store
 - adapter seams
-- landed Chat social-event review seam for role-initiated greeting, refusal, block, restore, and unblock proposals
+- landed Chat social-event review seam for role-initiated greeting, refusal, block, restore, and unblock proposals, including Chat AI output and the narrow foreground/session runtime greeting source
 
 ## 2. Workstream B: Relationship Runtime
 
@@ -23,7 +23,7 @@ Current landed guardrail:
 - 4.2 relationship-memory cleanup has reached current explicit-lineage acceptance. Chat should consume source-aware `recallSummary` text for prompt context, while World Hub should use UI-facing related-record summaries and reserve source-audit detail for focused review surfaces.
 - Relationship classification Round 4 adds `relationshipGate` audit metadata to current low-impact facts. The metadata is built from saved role-profile category/modifier classification fields only, not raw relationship label/note prose. High-risk hard-gate helper behavior exists for future event packs and tests, but no new high-impact automation is enabled in this workstream.
 - High-risk gate presets now live at the relationship-event gating seam, so future event packs should reference preset ids instead of copying category/modifier rule objects into module adapters.
-- Generated social/channel events must not bypass relationship classification and review policy: low-risk greetings may auto-apply with audit, while friend/block/refusal state changes need explicit review or hard gates before Chat applies them.
+- Generated social/channel events must not bypass relationship classification and review policy: low-risk greetings may auto-apply with audit from Chat AI or the foreground/session runtime source, while friend/block/refusal state changes need explicit review or hard gates before Chat applies them.
 
 ## 3. Workstream C: World Hub
 

@@ -5,6 +5,7 @@ import {
   FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID,
   runFoodDeliveryRandomOrderEventPilot,
 } from './adapters/food-delivery-events'
+import { CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID } from '../chat-social-runtime-source'
 
 export const SIMULATION_EVENT_TICK_ID = 'simulation.session_tick.v1'
 
@@ -191,7 +192,8 @@ export const runSimulationEventTick = ({
   variantPack,
   cooldownMs = DEFAULT_TICK_COOLDOWN_MS,
   dailyLimit = DEFAULT_TICK_DAILY_LIMIT,
-  enabledPilots = ['food_delivery.random_order_pilot'],
+  enabledPilots = ['food_delivery.random_order_pilot', CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID],
+  chatStore,
 } = {}) => {
   const eligibility = canRunSimulationEventTick({
     simulationStore,
@@ -213,7 +215,9 @@ export const runSimulationEventTick = ({
   }
 
   const pilots = Array.isArray(enabledPilots) ? enabledPilots : []
-  if (!pilots.includes('food_delivery.random_order_pilot')) {
+  const foodDeliveryPilotEnabled = pilots.includes('food_delivery.random_order_pilot')
+  const chatSocialPilotEnabled = pilots.includes(CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID)
+  if (!foodDeliveryPilotEnabled && !chatSocialPilotEnabled) {
     return buildSkippedTickResult({
       reason: SIMULATION_TICK_REASON.NO_PILOTS,
       log: createTickLog({
@@ -225,51 +229,89 @@ export const runSimulationEventTick = ({
     })
   }
 
-  const pilotRandomValue = resolveTickRandomValue({
-    randomValue,
-    seed,
-    now,
-  })
-  const pilotResult = runFoodDeliveryRandomOrderEventPilot({
-    foodDeliveryStore,
-    simulationStore,
-    triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
-    randomValue: pilotRandomValue,
-    seed,
-    now,
-    worldContext,
-    variantPack,
-  })
+  const pilotResults = []
 
-  if (pilotResult?.ok) {
-    const log = recordTickTrigger({
-      simulationStore,
-      moduleKey: FOOD_DELIVERY_EVENT_MODULE_KEY,
-      reason: FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID,
+  if (foodDeliveryPilotEnabled) {
+    const pilotRandomValue = resolveTickRandomValue({
+      randomValue,
+      seed,
       now,
-      cooldownMs: eligibility.cooldownMs,
-      dailyLimit: eligibility.dailyLimit,
     })
-    return {
-      ok: true,
-      status: 'triggered',
-      reason: FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID,
-      log,
-      pilotResults: [pilotResult],
-      triggeredPilot: pilotResult,
+    const pilotResult = runFoodDeliveryRandomOrderEventPilot({
+      foodDeliveryStore,
+      simulationStore,
+      triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
+      randomValue: pilotRandomValue,
+      seed,
+      now,
+      worldContext,
+      variantPack,
+    })
+    pilotResults.push(pilotResult)
+
+    if (pilotResult?.ok) {
+      const log = recordTickTrigger({
+        simulationStore,
+        moduleKey: FOOD_DELIVERY_EVENT_MODULE_KEY,
+        reason: FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID,
+        now,
+        cooldownMs: eligibility.cooldownMs,
+        dailyLimit: eligibility.dailyLimit,
+      })
+      return {
+        ok: true,
+        status: 'triggered',
+        reason: FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID,
+        log,
+        pilotResults,
+        triggeredPilot: pilotResult,
+      }
     }
   }
 
-  const reason = pilotResult?.reason || pilotResult?.log?.reason || SIMULATION_TICK_REASON.NO_EVENT_TRIGGERED
+  if (chatSocialPilotEnabled) {
+    const pilotResult =
+      typeof simulationStore?.runChatSocialRuntimeProposal === 'function'
+        ? simulationStore.runChatSocialRuntimeProposal({ chatStore, at: now })
+        : {
+            ok: false,
+            status: 'skipped',
+            reason: 'chat_social_runtime_unavailable',
+            pilotEventId: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+          }
+    pilotResults.push(pilotResult)
+
+    if (pilotResult?.ok) {
+      const log = recordTickTrigger({
+        simulationStore,
+        moduleKey: 'chat',
+        reason: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+        now,
+        cooldownMs: eligibility.cooldownMs,
+        dailyLimit: eligibility.dailyLimit,
+      })
+      return {
+        ok: true,
+        status: 'triggered',
+        reason: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+        log,
+        pilotResults,
+        triggeredPilot: pilotResult,
+      }
+    }
+  }
+
+  const firstResult = pilotResults.find((item) => item?.reason || item?.log?.reason)
+  const reason = firstResult?.reason || firstResult?.log?.reason || SIMULATION_TICK_REASON.NO_EVENT_TRIGGERED
   return buildSkippedTickResult({
     reason,
     log: createTickLog({
       simulationStore,
-      moduleKey: FOOD_DELIVERY_EVENT_MODULE_KEY,
+      moduleKey: foodDeliveryPilotEnabled ? FOOD_DELIVERY_EVENT_MODULE_KEY : 'chat',
       status: 'skipped',
       reason,
       now,
     }),
-    pilots: [pilotResult],
+    pilots: pilotResults,
   })
 }

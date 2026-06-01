@@ -157,8 +157,8 @@ const simulationEventStatusClass = (status) => {
       <p class="text-[10px] text-orange-600 mt-1">
         {{
           t(
-            '当前仅允许安全的外卖 ETA / 骑手延迟 pilot；Shopping/物流随机事件仍保持关闭。',
-            'Currently only safe Food Delivery ETA / rider-delay pilots are allowed; Shopping/logistics random events remain disabled.',
+            '当前允许安全的外卖 ETA / 骑手延迟 pilot，以及 Chat 角色主动联系候选；Shopping/物流随机事件仍保持关闭。',
+            'Currently allows safe Food Delivery ETA / rider-delay pilots and Chat role greeting candidates; Shopping/logistics random events remain disabled.',
           )
         }}
       </p>

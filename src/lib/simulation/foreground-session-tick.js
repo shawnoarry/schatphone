@@ -23,6 +23,7 @@ const normalizeSeed = (value, fallback = 'foreground-session') => {
 export const createForegroundSessionTickController = ({
   simulationStore,
   foodDeliveryStore,
+  chatStore,
   intervalMs = SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   seed = 'foreground-session',
   setTimer = globalThis.setInterval?.bind(globalThis),
@@ -47,6 +48,7 @@ export const createForegroundSessionTickController = ({
     const result = runTick({
       simulationStore,
       foodDeliveryStore,
+      chatStore,
       now: safeRunAt,
       seed: `${resolvedSeed}:${safeRunAt}`,
     })

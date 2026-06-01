@@ -8,6 +8,11 @@ import {
   buildChatSocialEventLogInput,
   evaluateChatSocialEventReview,
 } from '../lib/chat-social-event-review'
+import {
+  CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+  CHAT_SOCIAL_RUNTIME_REASON,
+  buildChatSocialRuntimeGreetingProposal,
+} from '../lib/chat-social-runtime-source'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
@@ -49,6 +54,11 @@ const DEFAULT_SIMULATION_SETTINGS = Object.freeze({
   foregroundSessionTickEnabled: false,
   foregroundSessionTickIntervalMs: SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
 })
+const CHAT_SOCIAL_RUNTIME_SUCCESS_STATUSES = new Set([
+  CHAT_SOCIAL_EVENT_STATUS.APPLIED,
+  CHAT_SOCIAL_EVENT_STATUS.READY_TO_APPLY,
+  CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+])
 
 let eventLogSequence = 0
 
@@ -639,6 +649,69 @@ export const useSimulationStore = defineStore('simulation', () => {
     return stored
   }
 
+  const runChatSocialRuntimeProposal = ({ chatStore, at = Date.now() } = {}) => {
+    const candidate = buildChatSocialRuntimeGreetingProposal({ chatStore, at })
+    if (!candidate) {
+      return {
+        ok: false,
+        status: SIMULATION_EVENT_STATUS.SKIPPED,
+        reason: CHAT_SOCIAL_RUNTIME_REASON.NO_CANDIDATE,
+        pilotEventId: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+        proposal: null,
+      }
+    }
+
+    const cooldownActive = isCoolingDown(candidate.eventId, {
+      targetId: candidate.targetId,
+      at,
+    })
+    const dailyLimitReached = !canUseDailyQuota(candidate.eventId, {
+      targetId: candidate.targetId,
+      dayKey: createDayKey(at),
+      limit: candidate.dailyLimit,
+    })
+    const proposal = submitChatSocialEventProposal(
+      {
+        contactId: candidate.contactId,
+        eventType: candidate.eventType,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
+        explanation: candidate.explanation,
+        source: candidate.source,
+        policy: {
+          cooldownActive,
+          dailyLimitReached,
+          runtimeLogId: candidate.pilotId,
+        },
+      },
+      { chatStore, at },
+    )
+    const ok = CHAT_SOCIAL_RUNTIME_SUCCESS_STATUSES.has(proposal?.status)
+
+    if (ok) {
+      markCooldown({
+        eventId: candidate.eventId,
+        targetId: candidate.targetId,
+        cooldownMs: candidate.cooldownMs,
+        at,
+      })
+      incrementDailyCounter({
+        eventId: candidate.eventId,
+        targetId: candidate.targetId,
+        dayKey: createDayKey(at),
+        limit: candidate.dailyLimit,
+        at,
+      })
+    }
+
+    return {
+      ok,
+      status: ok ? SIMULATION_EVENT_STATUS.TRIGGERED : SIMULATION_EVENT_STATUS.SKIPPED,
+      reason: proposal?.reason || (ok ? candidate.pilotId : 'chat_social_runtime_proposal_blocked'),
+      pilotEventId: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+      proposal,
+    }
+  }
+
   const approveChatSocialEventProposal = (
     proposalId,
     { chatStore, at = Date.now() } = {},
@@ -802,6 +875,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     getDailyCounterState,
     canUseDailyQuota,
     submitChatSocialEventProposal,
+    runChatSocialRuntimeProposal,
     approveChatSocialEventProposal,
     dismissChatSocialEventProposal,
     clearEventLogs,

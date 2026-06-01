@@ -569,6 +569,7 @@ const ensureSimulationForegroundTickLifecycle = () => {
   simulationForegroundTickLifecycle = createForegroundSessionTickLifecycle({
     simulationStore,
     foodDeliveryStore,
+    chatStore,
     systemStore,
     route,
     documentRef: typeof document !== 'undefined' ? document : null,

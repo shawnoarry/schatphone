@@ -4,6 +4,7 @@ import {
   SIMULATION_SURPRISE_MODE,
   useSimulationStore,
 } from '../src/stores/simulation'
+import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../src/stores/chat'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   useFoodDeliveryStore,
@@ -18,6 +19,9 @@ import {
   resolveTickRandomValue,
   runSimulationEventTick,
 } from '../src/lib/simulation/event-tick-runner'
+import {
+  CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+} from '../src/lib/chat-social-runtime-source'
 
 const createFoodDeliveryOrder = (store) => {
   const restaurant = store.upsertRestaurant({
@@ -161,6 +165,48 @@ describe('simulation event tick runner', () => {
     })
     expect(simulationStore.isCoolingDown(SIMULATION_EVENT_TICK_ID, { targetId: 'global' })).toBe(false)
     expect(foodDeliveryStore.orders[0]?.events).toHaveLength(0)
+  })
+
+  test('can trigger a Chat runtime greeting pilot through the session tick', () => {
+    const simulationStore = useSimulationStore()
+    const foodDeliveryStore = useFoodDeliveryStore()
+    const chatStore = useChatStore()
+    simulationStore.resetForTesting()
+    foodDeliveryStore.resetForTesting()
+    const profile = chatStore.addRoleProfile({
+      name: 'Tick Chat Role',
+      role: 'Runtime contact',
+    })
+    const contact = chatStore.bindRoleProfile(profile.id, {
+      chatSocialState: CHAT_CONTACT_SOCIAL_STATES.STRANGER,
+    })
+
+    const result = runSimulationEventTick({
+      simulationStore,
+      foodDeliveryStore,
+      chatStore,
+      enabledPilots: [CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID],
+      now: Date.now(),
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      status: 'triggered',
+      reason: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+      triggeredPilot: {
+        ok: true,
+        pilotEventId: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+      },
+    })
+    expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
+      CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
+    )
+    expect(simulationStore.isCoolingDown(SIMULATION_EVENT_TICK_ID, { targetId: 'global' })).toBe(true)
+    expect(simulationStore.eventLogs[0]).toMatchObject({
+      eventId: SIMULATION_EVENT_TICK_ID,
+      moduleKey: 'chat',
+      reason: CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID,
+    })
   })
 
   test('exposes an eligibility helper for future app lifecycle callers', () => {

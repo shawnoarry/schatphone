@@ -110,6 +110,11 @@ A runtime proposal that asks whether a role-initiated communication-state change
 
 V1 covers role greetings, refusal, block, restore, and unblock. Low-risk greetings may become audited pending message requests. Refusal/block/restore/unblock proposals stay pending until World Hub approves or dismisses them.
 
+Concrete V1 proposal sources:
+
+- Chat AI response output through normalized optional `socialEvents`;
+- foreground/session event tick runtime greetings for stranger or declined role contacts.
+
 ### Surprise Mode
 
 A future user-level control for random event intensity.
@@ -130,6 +135,7 @@ src/lib/simulation/event-registry.js
 src/lib/simulation/event-engine.js
 src/lib/simulation/condition-evaluator.js
 src/lib/simulation/random.js
+src/lib/chat-social-runtime-source.js
 src/stores/simulation.js
 ```
 
@@ -359,9 +365,11 @@ Already landed:
 
 - `src/stores/simulation.js` persists event logs, cooldowns, daily counters, module enable flags, and Surprise Mode
 - `src/stores/simulation.js` also persists generated Chat social proposals and applies them only through Chat-owned actions after audit or approval
+- `src/lib/chat-social-runtime-source.js` selects conservative role greeting candidates for the foreground/session tick without direct Chat writes
 - `src/lib/simulation/random.js` provides injected/seeded helpers
 - `src/lib/simulation/condition-evaluator.js` evaluates basic conditions
 - `src/lib/simulation/event-engine.js` handles eligibility, random gates, cooldowns, daily caps, adapter execution, and event logging
+- `src/lib/simulation/event-tick-runner.js` can now run both the Food Delivery random pilot and the Chat runtime greeting pilot, with tick-level cooldown/daily caps
 - `src/lib/simulation/adapters/food-delivery-events.js` is the first real module adapter
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
 
@@ -369,4 +377,4 @@ Recommended next step:
 
 - preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
-- deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes
+- deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics

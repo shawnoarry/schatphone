@@ -87,6 +87,7 @@ export const createForegroundSessionTickReport = (result = {}, { createdAt } = {
 export const createForegroundSessionTickLifecycle = ({
   simulationStore,
   foodDeliveryStore,
+  chatStore,
   systemStore,
   route,
   documentRef,
@@ -131,6 +132,7 @@ export const createForegroundSessionTickLifecycle = ({
     controller = createController({
       simulationStore,
       foodDeliveryStore,
+      chatStore,
       intervalMs: normalizeForegroundSessionTickIntervalMs(
         simulationStore?.settings?.foregroundSessionTickIntervalMs,
       ),

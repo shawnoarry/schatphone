@@ -720,6 +720,7 @@ const runSimulationTickDiagnostic = async () => {
     const result = runSimulationEventTick({
       simulationStore,
       foodDeliveryStore,
+      chatStore,
       now: Date.now(),
       randomValue: 0,
     })

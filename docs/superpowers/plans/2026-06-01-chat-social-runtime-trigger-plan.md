@@ -8,10 +8,10 @@ Connect the foreground/session event runtime to the landed Chat social-event rev
 
 ## Steps
 
-- [ ] Add a focused runtime-source helper that selects safe role greeting candidates.
-- [ ] Add a Simulation store action that submits the runtime candidate through `submitChatSocialEventProposal`.
-- [ ] Register the Chat social runtime source as an event tick pilot beside the existing Food Delivery pilot.
-- [ ] Pass `chatStore` through foreground tick lifecycle wiring.
-- [ ] Cover helper, store action, and tick runner behavior with focused tests.
-- [ ] Sync Chat/Event Runtime docs and roadmap handoff notes.
-- [ ] Run lint/build/tests and commit.
+- [x] Add a focused runtime-source helper that selects safe role greeting candidates.
+- [x] Add a Simulation store action that submits the runtime candidate through `submitChatSocialEventProposal`.
+- [x] Register the Chat social runtime source as an event tick pilot beside the existing Food Delivery pilot.
+- [x] Pass `chatStore` through foreground tick lifecycle wiring.
+- [x] Cover helper, store action, and tick runner behavior with focused tests.
+- [x] Sync Chat/Event Runtime docs and roadmap handoff notes.
+- [x] Run lint/build/tests and commit.

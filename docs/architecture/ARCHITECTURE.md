@@ -131,6 +131,8 @@ Important files:
   - defines the guarded nonstandard-app template whitelist and AI extraction/review normalization; WorldBook's Current World Pack panel presents AI/pasted proposals with loading, empty, parse/API error, and rejected-state treatment for user review, and confirmed proposals become World Pack appBindings that then flow through the existing App Store/Home/target-app context seams while low-confidence, unsupported, or unknown proposals cannot create routes, stores, business records, event rules, or App Store entries
 - `src/lib/chat-social-event-review.js`
   - evaluates generated Chat social proposals before communication state changes; low-risk role greetings may auto-apply with audit, while role refusal/block/restore/unblock proposals wait for World Hub review and then apply through Chat-owned actions
+- `src/lib/chat-social-runtime-source.js`
+  - selects conservative foreground/session tick role greeting candidates for stranger or declined role contacts, then hands them to Event Runtime review instead of mutating Chat directly
 - `src/lib/chat-ai-social-proposals.js`
   - normalizes optional `socialEvents` returned by Chat AI responses so malformed or unsupported role social proposals are ignored before reaching Event Runtime
 
@@ -162,7 +164,7 @@ This table matters as much as the code layout.
 | ordinary message history | `Chat` | includes manual chat-message deletion |
 | current relationship progress | `relationshipRuntimeStore` | the truth layer for relationship state |
 | confirmed Chat social/channel state | Chat / Chat Directory | who can message, pending friend state, blocked, or blocked-by-role status after a direct user action or confirmed event |
-| generated social-event review | `simulationStore` / event runtime | role-initiated greeting, refusal, block, restore, or unblock proposals require audit/review before mutating Chat channel state |
+| generated social-event review | `simulationStore` / event runtime | Chat AI and foreground/session runtime greeting proposals require audit/review before mutating Chat channel state; refusal/block/restore/unblock stay high-risk review-first |
 | cross-module cue queues | `reminders.js` / Reminders | not Calendar |
 | confirmed schedule/date meaning | Calendar | not Reminders |
 | event logs and runtime metadata | `simulationStore` | not module business records |
