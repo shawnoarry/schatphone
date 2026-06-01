@@ -1,6 +1,6 @@
 # SchatPhone
 
-Updated / 更新时间: 2026-05-29
+Updated / 更新时间: 2026-06-01
 
 SchatPhone is a local-first virtual phone and AI life-simulation shell built with Vue 3. It combines phone-like apps, AI role/world context, relationship continuity, shared media/storage, real push delivery, and optional game-like runtime controls.
 
@@ -27,7 +27,7 @@ SchatPhone 是一个本地优先的虚拟手机与 AI 生活模拟壳层。它�
 - Shell: lock screen, Home, fixed `-1` Today View, widgets, Settings, Appearance, Network, and system notifications.
 - Communication: Chat, Chat Directory, Contacts, Phone, AI prompt context, rich messages, role/service accounts, and scheduled push hints.
 - World and relationship layer: WorldBook, Book text library, relationship runtime, safe relationship facts, event runtime, and optional World Hub review.
-- Media and ownership apps: Gallery, Assets, Wallet, Stock, Map, Calendar, Reminders, Shopping, Food Delivery, More.
+- Media, commerce, and ownership apps: Gallery, Assets, Wallet, Stock, Map, Calendar, Reminders, Shopping, Food Delivery, and App Store-managed folder mini-app facades.
 - Push: real web-push delivery is available through the lightweight relay server. Fully closed-page event generation is still future backend orchestration work.
 - Storage: local persistence, IndexedDB mirror checks, backup/export/import, and diagnostics are available through Settings.
 
@@ -113,6 +113,7 @@ Main user-facing routes:
 - `/home`
 - `/settings`
 - `/appearance`
+- `/app-store`
 - `/widgets`
 - `/network`
 - `/profile`
