@@ -287,7 +287,7 @@ Add this test after the root Appearance test:
     await flushPromises()
 
     await wrapper.findAll('.appearance-menu-card')[1].trigger('click')
-    await wrapper.findAll('button').find((button) => button.text().includes('缂栬緫鑷畾涔夊瓧浣')).trigger('click')
+    await wrapper.findAll('button').find((button) => button.text().includes('Apply Font')).trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('CSS font-family')
