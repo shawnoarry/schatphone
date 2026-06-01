@@ -23,8 +23,10 @@ describe('app icon presentation helpers', () => {
     })
 
     expect(normalized.app_chat).toEqual({
+      sourceType: 'preset',
       icon: 'fas fa-comment-dots',
       accent: 'cool',
+      galleryAssetId: '',
     })
     expect(normalized.app_map).toBeUndefined()
     expect(normalized.random_key).toBeUndefined()

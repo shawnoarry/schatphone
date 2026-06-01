@@ -1695,6 +1695,29 @@ export const useSystemStore = defineStore('system', () => {
     return true
   }
 
+  const setAppIconOverride = (appId, override = {}) => {
+    const normalizedId = typeof appId === 'string' ? appId.trim() : ''
+    if (!normalizedId) return false
+    const nextOverrides = {
+      ...(settings.appearance.appIconOverrides || {}),
+      [normalizedId]: override,
+    }
+    const normalized = normalizeAppIconOverrides(nextOverrides)
+    if (!normalized[normalizedId]) return false
+    settings.appearance.appIconOverrides = normalized
+    return true
+  }
+
+  const clearAppIconOverride = (appId) => {
+    const normalizedId = typeof appId === 'string' ? appId.trim() : ''
+    if (!normalizedId) return false
+    const nextOverrides = { ...(settings.appearance.appIconOverrides || {}) }
+    const existed = Boolean(nextOverrides[normalizedId])
+    delete nextOverrides[normalizedId]
+    settings.appearance.appIconOverrides = normalizeAppIconOverrides(nextOverrides)
+    return existed
+  }
+
   const exportAppearancePack = (options = {}) =>
     buildAppearancePack(settings.appearance, {
       name: options.name,
@@ -3927,6 +3950,8 @@ export const useSystemStore = defineStore('system', () => {
     cycleTheme,
     setCustomCss,
     setScopedCustomCss,
+    setAppIconOverride,
+    clearAppIconOverride,
     exportAppearancePack,
     importAppearancePack,
     setChatAppearance,

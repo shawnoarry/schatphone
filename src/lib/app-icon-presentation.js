@@ -121,6 +121,7 @@ export const APP_ICON_ACCENT_OPTIONS = [
 
 const APP_ICON_PRESET_SET = new Set(APP_ICON_PRESET_OPTIONS.map((item) => item.value))
 const APP_ICON_ACCENT_SET = new Set(APP_ICON_ACCENT_OPTIONS.map((item) => item.value))
+const APP_ICON_SOURCE_TYPES = new Set(['preset', 'gallery'])
 
 const readLocalizedCopy = (copyMap, locale = 'en-US', fallback = '') => {
   const bucket = normalizeLocaleBucket(locale)
@@ -128,9 +129,21 @@ const readLocalizedCopy = (copyMap, locale = 'en-US', fallback = '') => {
   return copyMap[bucket] || copyMap.en || fallback
 }
 
+const normalizeIconSourceType = (value) => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return APP_ICON_SOURCE_TYPES.has(normalized) ? normalized : 'preset'
+}
+
+const normalizeGalleryAssetId = (value) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().slice(0, 140)
+}
+
 const normalizeSingleOverride = (value, fallback = {}) => {
   if (!value || typeof value !== 'object') return null
 
+  const sourceType = normalizeIconSourceType(value.sourceType || value.imageSourceType)
+  const galleryAssetId = normalizeGalleryAssetId(value.galleryAssetId || value.imageGalleryAssetId)
   const icon =
     typeof value.icon === 'string' && APP_ICON_PRESET_SET.has(value.icon.trim())
       ? value.icon.trim()
@@ -140,11 +153,22 @@ const normalizeSingleOverride = (value, fallback = {}) => {
       ? value.accent.trim()
       : ''
 
+  if (sourceType === 'gallery' && galleryAssetId) {
+    return {
+      sourceType: 'gallery',
+      icon: icon || fallback.icon || 'fas fa-circle',
+      accent: accent || fallback.accent || 'default',
+      galleryAssetId,
+    }
+  }
+
   if (!icon && !accent) return null
 
   return {
-    icon: icon || fallback.icon || '',
+    sourceType: 'preset',
+    icon: icon || fallback.icon || 'fas fa-circle',
     accent: accent || fallback.accent || 'default',
+    galleryAssetId: '',
   }
 }
 
@@ -176,6 +200,9 @@ export const resolveAppIconMeta = (appId, overrides = {}, locale = 'en-US') => {
     accent: override?.accent || fallback.accent,
     toneClass: `accent-${override?.accent || fallback.accent}`,
     label: readLocalizedCopy(APP_ICON_LABELS[appId], locale, appId),
+    sourceType: override?.sourceType || 'preset',
+    galleryAssetId: override?.sourceType === 'gallery' ? override.galleryAssetId : '',
+    hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),
   }
 }
 
