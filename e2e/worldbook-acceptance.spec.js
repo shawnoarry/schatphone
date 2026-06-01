@@ -83,6 +83,16 @@ const navigateInsideUnlockedApp = async (page, hashPath) => {
   }, hashPath)
 }
 
+const openVisibleAppStoreAction = async (page) => {
+  const inlineAction = page.getByTestId('app-store-open')
+  if (await inlineAction.isVisible()) {
+    await inlineAction.click()
+    return
+  }
+
+  await page.getByTestId('app-store-open-sheet').click()
+}
+
 test.beforeEach(async ({ page }) => {
   await seedWorldBookSnapshot(page)
 })
@@ -102,6 +112,7 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
   await expect(page.getByTestId('worldbook-overview-templates')).toContainText('1')
   await expect(page.getByTestId('worldbook-overview-consumer-chat')).toContainText('聊天')
 
+  await page.getByTestId('worldbook-panel-tab-pack').click()
   await expect(page.getByTestId('worldbook-current-pack')).toBeVisible()
   await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('默认启用')
   await page.getByTestId('worldbook-current-pack-select').selectOption('survival_city')
@@ -111,18 +122,34 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
   await page.getByTestId('worldbook-current-pack-activate').click()
   await expect(page.getByTestId('worldbook-overview-pack')).toContainText('灾后生存都市')
   await expect(page.getByTestId('worldbook-current-pack-app-bindings')).toContainText('补给站')
-  await page.getByTestId('worldbook-current-pack-open-app-survival_supply_board').click()
-  await expect(page).toHaveURL(/#\/shopping\?from=worldbook&worldPack=survival_city&worldApp=survival_supply_board/)
+  await expect(page.getByTestId('worldbook-current-pack')).toContainText('App Store')
+  await navigateInsideUnlockedApp(page, '/app-store?section=world&from=worldbook')
+  await page.getByTestId('app-store-item-world_app_survival_city_survival_supply_board').click()
+  await expect(page.getByTestId('app-store-world-handoff')).toContainText('灾后生存都市')
+  await openVisibleAppStoreAction(page)
+  await expect(page).toHaveURL(/#\/shopping\?/)
+  await expect(page).toHaveURL(/worldPack=survival_city/)
+  await expect(page).toHaveURL(/worldApp=survival_supply_board/)
   await expect(page.getByTestId('shopping-world-app-context')).toContainText('补给站')
   await expect(page.getByTestId('shopping-world-app-boundary')).toContainText('Shopping 仍拥有商品')
   await page.getByTestId('shopping-world-app-apply-filter').click()
-  await expect(page).toHaveURL(/#\/shopping\?from=worldbook&worldPack=survival_city&worldApp=survival_supply_board&service=daily_fresh&category=grocery/)
+  await expect(page).toHaveURL(/worldPack=survival_city/)
+  await expect(page).toHaveURL(/worldApp=survival_supply_board/)
+  await expect(page).toHaveURL(/service=daily_fresh/)
+  await expect(page).toHaveURL(/category=grocery/)
 
   await navigateInsideUnlockedApp(page, '/worldbook')
+  await page.getByTestId('worldbook-panel-tab-pack').click()
   await expect(page.getByTestId('worldbook-current-pack-service-templates')).toContainText('补给调度员')
-  await page.getByTestId('worldbook-current-pack-create-service-survival_supply_dispatch').click()
-  await expect(page.getByTestId('worldbook-current-pack-open-service-survival_supply_dispatch')).toBeVisible()
+  await expect(page.getByTestId('worldbook-current-pack-service-handoff')).toContainText('Chat')
+  await navigateInsideUnlockedApp(page, '/chat-contacts?section=service')
+  await expect(page.getByTestId('chat-directory-world-service-template-survival_supply_dispatch')).toBeVisible()
+  await page.getByTestId('chat-directory-join-world-service-survival_supply_dispatch').click()
+  await expect(page.getByTestId('chat-directory-open-world-service-survival_supply_dispatch')).toBeVisible()
+  await navigateInsideUnlockedApp(page, '/worldbook')
+  await page.getByTestId('worldbook-panel-tab-kernel').click()
   await expect(page.getByTestId('worldbook-world-kernel')).toBeVisible()
+  await page.getByTestId('worldbook-panel-tab-knowledge').click()
   await expect(page.getByTestId('knowledge-point-card')).toHaveCount(2)
 
   await expectNoMojibake(page)
@@ -137,7 +164,9 @@ test('WorldBook overview stays readable on mobile viewport', async ({ page }) =>
   await navigateInsideUnlockedApp(page, '/worldbook')
 
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
+  await page.getByTestId('worldbook-panel-tab-pack').click()
   await expect(page.getByTestId('worldbook-current-pack')).toBeVisible()
+  await page.getByTestId('worldbook-panel-tab-kernel').click()
   await expect(page.getByTestId('worldbook-world-kernel')).toBeVisible()
 
   await expectNoMojibake(page)

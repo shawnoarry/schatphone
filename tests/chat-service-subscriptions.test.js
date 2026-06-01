@@ -328,6 +328,56 @@ describe('Chat service subscriptions', () => {
     wrapper.unmount()
   })
 
+  test('lists service candidates from multiple enabled compatible expansion packs', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+    expect(systemStore.enableWorldPack('school_life').ok).toBe(true)
+    expect(systemStore.enableWorldPack('business_family').ok).toBe(true)
+
+    await router.push('/chat-contacts?section=service')
+    await router.isReady()
+
+    const wrapper = mount(ChatDirectoryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="chat-directory-world-service-summary"]').text()).toContain(
+      '2 enabled world packs offers 2 service candidates',
+    )
+    expect(wrapper.get('[data-testid="chat-directory-world-service-template-school_affairs_office"]').text()).toContain(
+      'School life expansion',
+    )
+    expect(wrapper.get('[data-testid="chat-directory-world-service-template-family_office_channel"]').text()).toContain(
+      'Business family expansion',
+    )
+
+    await wrapper.get('[data-testid="chat-directory-join-world-service-school_affairs_office"]').trigger('click')
+    await flushUi()
+
+    const created = chatStore.findWorldServiceTemplateContact('school_life', 'school_affairs_office')
+    expect(created).toMatchObject({
+      kind: 'official',
+      worldPackId: 'school_life',
+      worldServiceTemplateId: 'school_affairs_office',
+      worldAppBindingId: 'school_bulletin_feed',
+    })
+    expect(wrapper.get('[data-testid="chat-directory-world-service-summary"]').text()).toContain(
+      '1 joined and 1 available',
+    )
+    expect(
+      wrapper.get('[data-testid="chat-directory-world-service-template-state-school_affairs_office"]').text(),
+    ).toContain('Joined')
+    expect(wrapper.find('[data-testid="chat-directory-join-world-service-family_office_channel"]').exists()).toBe(
+      true,
+    )
+
+    wrapper.unmount()
+  })
+
   test('uses product-facing source-plan copy in Chinese subscription UI', async () => {
     const router = createTestRouter()
     const chatStore = useChatStore()

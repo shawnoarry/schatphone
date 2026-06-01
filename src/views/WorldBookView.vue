@@ -26,7 +26,8 @@ import {
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
-import { buildWorldServiceTemplateGenerationRows } from '../lib/world-pack-service-accounts'
+import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
+import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 
@@ -67,17 +68,20 @@ const selectedWorldPackReview = computed(() =>
     selectedWorldPackId.value || worldOverview.value.activePack?.id || 'default_world',
   ),
 )
+const enabledWorldPacks = computed(() => systemStore.listEnabledWorldPacks())
 const activeWorldPackServiceTemplateRows = computed(() =>
-  buildWorldServiceTemplateGenerationRows({
-    pack: worldOverview.value.activePack,
+  buildWorldServiceTemplateGenerationRowsForPacks({
+    packs: enabledWorldPacks.value,
     findExistingContact: (packId, templateId) =>
       chatStore.findWorldServiceTemplateContact(packId, templateId),
   }),
 )
 const activeWorldPackAppBindingRows = computed(() =>
-  buildWorldAppBindingRows({
-    pack: worldOverview.value.activePack,
-  }),
+  enabledWorldPacks.value.flatMap((pack) =>
+    buildWorldAppBindingRows({
+      pack,
+    }),
+  ),
 )
 const worldAppTemplateRegistryRows = computed(() => systemStore.listWorldAppTemplates())
 const worldAppTemplateProposalDraft = ref('')
@@ -85,6 +89,9 @@ const worldAppTemplateProposalReview = ref(null)
 const worldAppTemplateProposalLoading = ref(false)
 const worldAppTemplateProposalNotice = ref('')
 const worldAppTemplateProposalNoticeTone = ref('info')
+const worldPackRecommendationReview = computed(() => systemStore.buildWorldPackRecommendationReview())
+const worldProfileAnalysisLoading = ref(false)
+const worldProfileAnalysisNotice = ref('')
 const linkedBookSources = computed(() =>
   systemStore.listWorldBookSourceLinks().map((link) => {
     const asset = bookStore.findAssetById(link.assetId)
@@ -336,6 +343,47 @@ const activateSelectedWorldPack = () => {
   }
   systemStore.saveNow()
   pulseSaved(t('世界包已激活。', 'World pack activated.'))
+}
+
+const analyzeWorldForExpansions = async () => {
+  if (worldProfileAnalysisLoading.value) return
+  worldProfileAnalysisLoading.value = true
+  worldProfileAnalysisNotice.value = ''
+  try {
+    const result = await analyzeWorldProfileWithAI({
+      worldContextText: buildWorldAppTemplateContextText(),
+      settings: settings.value,
+    })
+    systemStore.setWorldProfileAnalysis(result.profile)
+    systemStore.saveNow()
+    pulseSaved(t('世界画像已更新。', 'World profile updated.'))
+  } catch (error) {
+    worldProfileAnalysisNotice.value = formatApiErrorForUi(
+      error,
+      t('AI 分析失败，请检查 API 设置。', 'AI analysis failed. Check API settings.'),
+    )
+  } finally {
+    worldProfileAnalysisLoading.value = false
+  }
+}
+
+const enableWorldPackExpansion = (packId = '') => {
+  const result = systemStore.enableWorldPack(packId)
+  if (!result?.ok) {
+    uiNotice.value = result?.reason === 'unsupported'
+      ? t('这个包需要专门 App，当前版本不能启用。', 'This pack needs a dedicated app and cannot be enabled yet.')
+      : t('这个包还有缺失引用，处理后才能启用。', 'This pack has missing references. Fix them before enabling.')
+    return
+  }
+  systemStore.saveNow()
+  pulseSaved(t('拓展包已启用。', 'Expansion pack enabled.'))
+}
+
+const disableWorldPackExpansion = (packId = '') => {
+  const result = systemStore.disableWorldPack(packId)
+  if (!result?.ok) return
+  systemStore.saveNow()
+  pulseSaved(t('拓展包已停用。', 'Expansion pack disabled.'))
 }
 
 const buildWorldAppTemplateContextText = () => {
@@ -1320,6 +1368,11 @@ onBeforeUnmount(() => {
           :packs="worldPackCandidates"
           :selected-pack-id="selectedWorldPackId || worldOverview.activePack?.id"
           :activation-review="selectedWorldPackReview"
+          :enabled-packs="enabledWorldPacks"
+          :world-profile="user.worldProfileAnalysis"
+          :recommendation-review="worldPackRecommendationReview"
+          :world-profile-loading="worldProfileAnalysisLoading"
+          :world-profile-notice="worldProfileAnalysisNotice"
           :app-binding-rows="activeWorldPackAppBindingRows"
           :service-template-rows="activeWorldPackServiceTemplateRows"
           :template-registry-rows="worldAppTemplateRegistryRows"
@@ -1330,6 +1383,9 @@ onBeforeUnmount(() => {
           :template-proposal-notice-tone="worldAppTemplateProposalNoticeTone"
           @select-pack="selectWorldPack"
           @activate-pack="activateSelectedWorldPack"
+          @analyze-world-profile="analyzeWorldForExpansions"
+          @enable-pack="enableWorldPackExpansion"
+          @disable-pack="disableWorldPackExpansion"
           @extract-template-proposals="extractWorldAppTemplateProposalsFromAI"
           @review-template-proposal-draft="reviewWorldAppTemplateProposalDraft"
           @update-template-proposal-draft="updateWorldAppTemplateProposalDraft"

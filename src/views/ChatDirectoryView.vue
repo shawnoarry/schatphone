@@ -23,7 +23,7 @@ import {
   findLogisticsServicePreset,
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
-import { buildWorldServiceTemplateGenerationRows } from '../lib/world-pack-service-accounts'
+import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import { extractWorldServiceTemplateProposals } from '../lib/world-service-template-proposals'
 import { formatApiErrorForUi } from '../lib/ai'
 import { resolveWorldviewText } from '../lib/world-interface'
@@ -88,6 +88,7 @@ const serviceDraft = reactive({
 
 const showWorldServiceTemplateModal = ref(false)
 const worldServiceTemplateDraft = reactive({
+  packId: '',
   id: '',
   title: '',
   category: 'service_notification',
@@ -228,20 +229,29 @@ const serviceContacts = computed(() =>
 
 const activeWorldPack = computed(() => systemStore.getActiveWorldPack?.() || null)
 
-const activeWorldPackDisplayName = computed(() => {
-  const pack = activeWorldPack.value || {}
-  return t(pack.title || pack.name || '当前世界观', pack.name || pack.title || 'Current world')
+const enabledWorldPacks = computed(() => {
+  if (typeof systemStore.listEnabledWorldPacks === 'function') {
+    const packs = systemStore.listEnabledWorldPacks()
+    if (packs.length > 0) return packs
+  }
+  return activeWorldPack.value?.id ? [activeWorldPack.value] : []
 })
 
 const worldPackServiceTemplateRows = computed(() => {
-  const pack = activeWorldPack.value
-  if (!pack?.id) return []
-
-  return buildWorldServiceTemplateGenerationRows({
-    pack,
+  return buildWorldServiceTemplateGenerationRowsForPacks({
+    packs: enabledWorldPacks.value,
     findExistingContact: (packId, templateId) =>
       chatStore.findWorldServiceTemplateContact(packId, templateId),
   }).filter((row) => row?.payload)
+})
+
+const worldPackServiceSummaryDisplayName = computed(() => {
+  const packs = enabledWorldPacks.value
+  if (packs.length > 1) {
+    return `${packs.length} enabled world packs`
+  }
+  const pack = packs[0] || activeWorldPack.value || {}
+  return t(pack.title || pack.name || 'Current world', pack.name || pack.title || 'Current world')
 })
 
 const hasWorldPackServiceTemplateRows = computed(() => worldPackServiceTemplateRows.value.length > 0)
@@ -252,14 +262,23 @@ const worldPackServiceAvailableCount = computed(() =>
   worldPackServiceTemplateRows.value.filter((row) => !row.generated).length,
 )
 
-const activeWorldPackAppBindingOptions = computed(() =>
-  (Array.isArray(activeWorldPack.value?.appBindings) ? activeWorldPack.value.appBindings : [])
-    .filter((binding) => binding?.id && binding.enabled !== false)
-    .map((binding) => ({
-      id: binding.id,
-      label: binding.title || binding.id,
-    })),
-)
+const activeWorldPackAppBindingOptions = computed(() => {
+  const targetPackId = worldServiceTemplateDraft.packId || activeWorldPack.value?.id || ''
+  const packs = targetPackId
+    ? enabledWorldPacks.value.filter((pack) => pack?.id === targetPackId)
+    : enabledWorldPacks.value
+
+  return packs.flatMap((pack) => {
+    const packLabel = t(pack?.title || pack?.name || pack?.id, pack?.name || pack?.title || pack?.id)
+    return (Array.isArray(pack?.appBindings) ? pack.appBindings : [])
+      .filter((binding) => binding?.id && binding.enabled !== false)
+      .map((binding) => ({
+        id: binding.id,
+        packId: pack?.id || '',
+        label: packs.length > 1 ? `${binding.title || binding.id} · ${packLabel}` : binding.title || binding.id,
+      }))
+  })
+})
 
 const worldServiceProposalRowCount = computed(
   () =>
@@ -1574,6 +1593,12 @@ const worldPackServiceKindTag = (row) =>
 const worldPackServiceBindingLabel = (row) =>
   row?.chatBindingLabel || row?.linkedAppLabel || t('独立订阅频道', 'Standalone subscription channel')
 
+const worldPackServicePackLabel = (row) =>
+  t(
+    row?.packTitle || row?.packName || row?.packId || 'World Pack',
+    row?.packName || row?.packTitle || row?.packId || 'World Pack',
+  )
+
 const sourceNotificationPlanRows = (plan = {}) =>
   Array.isArray(plan?.rows) ? plan.rows.filter((row) => row?.id) : []
 
@@ -1808,6 +1833,7 @@ const joinWorldPackServiceTemplate = (row) => {
 
 const openEditWorldServiceTemplate = (row) => {
   if (!row?.id) return
+  worldServiceTemplateDraft.packId = row.packId || activeWorldPack.value?.id || ''
   worldServiceTemplateDraft.id = row.id
   worldServiceTemplateDraft.title = row.title || row.name || ''
   worldServiceTemplateDraft.category = row.category || 'service_notification'
@@ -1818,6 +1844,7 @@ const openEditWorldServiceTemplate = (row) => {
 
 const closeWorldServiceTemplateModal = () => {
   showWorldServiceTemplateModal.value = false
+  worldServiceTemplateDraft.packId = ''
   worldServiceTemplateDraft.id = ''
 }
 
@@ -1829,7 +1856,7 @@ const saveWorldServiceTemplate = () => {
   }
 
   const result = systemStore.updateWorldServiceAccountTemplate?.(
-    activeWorldPack.value?.id || '',
+    worldServiceTemplateDraft.packId || activeWorldPack.value?.id || '',
     worldServiceTemplateDraft.id,
     {
       title,
@@ -1852,7 +1879,7 @@ const saveWorldServiceTemplate = () => {
 
 const resetWorldServiceTemplate = (row) => {
   if (!row?.id) return
-  const result = systemStore.resetWorldServiceAccountTemplate?.(activeWorldPack.value?.id || '', row.id)
+  const result = systemStore.resetWorldServiceAccountTemplate?.(row.packId || activeWorldPack.value?.id || '', row.id)
   if (!result?.ok) {
     showUiNotice('warning', t('这个模板没有可恢复的内置版本。', 'This template has no built-in version to restore.'))
     return
@@ -3357,8 +3384,8 @@ onBeforeUnmount(() => {
               <p class="mt-1 text-[11px] leading-4 text-gray-500" data-testid="chat-directory-world-service-summary">
                 {{
                   t(
-                    `${activeWorldPackDisplayName} 提供 ${worldPackServiceTemplateRows.length} 个服务号候选；已加入 ${worldPackServiceJoinedCount} 个，待加入 ${worldPackServiceAvailableCount} 个。`,
-                    `${activeWorldPackDisplayName} offers ${worldPackServiceTemplateRows.length} service candidates; ${worldPackServiceJoinedCount} joined and ${worldPackServiceAvailableCount} available.`,
+                    `${worldPackServiceSummaryDisplayName} 提供 ${worldPackServiceTemplateRows.length} 个服务号候选；已加入 ${worldPackServiceJoinedCount} 个，待加入 ${worldPackServiceAvailableCount} 个。`,
+                    `${worldPackServiceSummaryDisplayName} offers ${worldPackServiceTemplateRows.length} service candidates; ${worldPackServiceJoinedCount} joined and ${worldPackServiceAvailableCount} available.`,
                   )
                 }}
               </p>
@@ -3393,7 +3420,7 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <p class="mt-1 text-[11px] text-indigo-700 truncate">
-                  {{ worldPackServiceKindTag(row) }} · {{ worldPackServiceBindingLabel(row) }}
+                  {{ worldPackServicePackLabel(row) }} · {{ worldPackServiceKindTag(row) }} · {{ worldPackServiceBindingLabel(row) }}
                 </p>
                 <p class="mt-0.5 text-[11px] text-gray-500 line-clamp-1">
                   {{

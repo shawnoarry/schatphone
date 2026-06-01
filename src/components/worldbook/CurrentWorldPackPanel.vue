@@ -19,6 +19,26 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  enabledPacks: {
+    type: Array,
+    default: () => [],
+  },
+  worldProfile: {
+    type: Object,
+    default: null,
+  },
+  recommendationReview: {
+    type: Object,
+    default: null,
+  },
+  worldProfileLoading: {
+    type: Boolean,
+    default: false,
+  },
+  worldProfileNotice: {
+    type: String,
+    default: '',
+  },
   serviceTemplateRows: {
     type: Array,
     default: () => [],
@@ -56,6 +76,9 @@ const props = defineProps({
 const emit = defineEmits([
   'select-pack',
   'activate-pack',
+  'analyze-world-profile',
+  'enable-pack',
+  'disable-pack',
   'extract-template-proposals',
   'review-template-proposal-draft',
   'update-template-proposal-draft',
@@ -93,6 +116,20 @@ const activationStateLabel = computed(() =>
 
 const activeAppCount = computed(() => props.appBindingRows.length)
 const activeServiceCount = computed(() => props.serviceTemplateRows.length)
+const enabledPackIds = computed(() => new Set(props.enabledPacks.map((pack) => pack.id)))
+const recommendedRows = computed(() => props.recommendationReview?.grouped?.recommended || [])
+const browseableRows = computed(() => props.recommendationReview?.grouped?.browseable || [])
+const unsupportedRows = computed(() => props.recommendationReview?.grouped?.unsupported || [])
+const worldProfileSummary = computed(() => {
+  const profile = props.worldProfile || {}
+  const traits = [
+    profile.era,
+    ...(Array.isArray(profile.settingTraits) ? profile.settingTraits : []),
+    profile.realism,
+    ...(Array.isArray(profile.socialRoles) ? profile.socialRoles : []),
+  ].filter(Boolean)
+  return traits.length ? traits.slice(0, 8).join(' / ') : t('尚未分析', 'Not analyzed yet')
+})
 
 const activationReviewCount = (key) =>
   Number(props.activationReview?.effectRows?.find((row) => row.key === key)?.count || 0)
@@ -300,6 +337,113 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
       </span>
       <small>{{ activeAppSummary }}</small>
     </div>
+
+    <div class="current-world-pack__profile" data-testid="worldbook-world-profile">
+      <div>
+        <p>{{ t('AI 世界画像', 'AI World Profile') }}</p>
+        <strong>{{ worldProfileSummary }}</strong>
+        <small v-if="worldProfile?.confidence">
+          {{ t('置信度', 'Confidence') }}: {{ worldProfile.confidence }}
+        </small>
+      </div>
+      <button
+        type="button"
+        :disabled="worldProfileLoading"
+        data-testid="worldbook-analyze-world-profile"
+        @click="emit('analyze-world-profile')"
+      >
+        {{ worldProfileLoading ? t('分析中', 'Analyzing') : t('分析并推荐拓展包', 'Analyze for expansions') }}
+      </button>
+      <small v-if="worldProfileNotice">{{ worldProfileNotice }}</small>
+    </div>
+
+    <div class="current-world-pack__enabled" data-testid="worldbook-enabled-expansions">
+      <div class="current-world-pack__expansion-head">
+        <div>
+          <p>{{ t('已启用拓展包', 'Enabled Expansions') }}</p>
+          <strong>{{ enabledPacks.length }}</strong>
+        </div>
+      </div>
+      <div v-if="enabledPacks.length > 0" class="current-world-pack__pack-list">
+        <div
+          v-for="pack in enabledPacks"
+          :key="pack.id"
+          class="current-world-pack__pack-row"
+          :data-testid="`worldbook-enabled-pack-${pack.id}`"
+        >
+          <strong>{{ t(pack.title, pack.name) }}</strong>
+          <span>{{ pack.description }}</span>
+          <button
+            type="button"
+            :data-testid="`worldbook-disable-pack-${pack.id}`"
+            @click="emit('disable-pack', pack.id)"
+          >
+            {{ t('停用', 'Disable') }}
+          </button>
+        </div>
+      </div>
+      <p v-else>{{ t('还没有启用拓展包。', 'No expansion packs are enabled yet.') }}</p>
+    </div>
+
+    <div class="current-world-pack__recommendations" data-testid="worldbook-pack-recommendations">
+      <div class="current-world-pack__expansion-head">
+        <div>
+          <p>{{ t('推荐拓展包', 'Recommended Expansions') }}</p>
+          <strong>{{ recommendedRows.length }}</strong>
+        </div>
+      </div>
+      <div class="current-world-pack__pack-list">
+        <div
+          v-for="row in recommendedRows"
+          :key="row.packId"
+          class="current-world-pack__pack-row"
+          :data-testid="`worldbook-recommended-pack-${row.packId}`"
+        >
+          <strong>{{ row.packName }}</strong>
+          <span>{{ row.reasons.join(' / ') || row.fitStatus }}</span>
+          <button
+            type="button"
+            :disabled="enabledPackIds.has(row.packId)"
+            :data-testid="`worldbook-enable-pack-${row.packId}`"
+            @click="emit('enable-pack', row.packId)"
+          >
+            {{ enabledPackIds.has(row.packId) ? t('已启用', 'Enabled') : t('启用', 'Enable') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <details class="current-world-pack__all-packs" data-testid="worldbook-pack-all" open>
+      <summary>{{ t('全部拓展包', 'All Packs') }}</summary>
+      <div class="current-world-pack__pack-list">
+        <div
+          v-for="row in browseableRows"
+          :key="row.packId"
+          class="current-world-pack__pack-row"
+          :data-testid="`worldbook-all-pack-${row.packId}`"
+        >
+          <strong>{{ row.packName }}</strong>
+          <span>{{ row.fitStatus }}</span>
+          <button
+            type="button"
+            :disabled="enabledPackIds.has(row.packId)"
+            :data-testid="`worldbook-enable-all-pack-${row.packId}`"
+            @click="emit('enable-pack', row.packId)"
+          >
+            {{ enabledPackIds.has(row.packId) ? t('已启用', 'Enabled') : t('启用', 'Enable') }}
+          </button>
+        </div>
+        <div
+          v-for="row in unsupportedRows"
+          :key="row.packId"
+          class="current-world-pack__pack-row is-disabled"
+          :data-testid="`worldbook-unsupported-pack-${row.packId}`"
+        >
+          <strong>{{ row.packName }}</strong>
+          <span>{{ t('当前程序不支持，需要专门 App。', 'Unsupported: needs a dedicated app or product support.') }}</span>
+        </div>
+      </div>
+    </details>
 
     <div
       class="current-world-pack__candidate-preview"
@@ -871,6 +1015,100 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   color: var(--system-text-soft);
   font-size: 11px;
   overflow-wrap: anywhere;
+}
+
+.current-world-pack__profile,
+.current-world-pack__enabled,
+.current-world-pack__recommendations,
+.current-world-pack__all-packs {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  padding: 12px;
+}
+
+.current-world-pack__profile {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.current-world-pack__profile p,
+.current-world-pack__expansion-head p,
+.current-world-pack__all-packs summary {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.current-world-pack__profile strong,
+.current-world-pack__expansion-head strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.current-world-pack__profile small {
+  grid-column: 1 / -1;
+  color: var(--system-text-soft);
+  font-size: 11px;
+}
+
+.current-world-pack__profile button,
+.current-world-pack__pack-row button {
+  min-height: 34px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-control-bg-strong);
+  color: var(--system-info);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.current-world-pack__profile button:disabled,
+.current-world-pack__pack-row button:disabled {
+  opacity: 0.55;
+}
+
+.current-world-pack__pack-list {
+  display: grid;
+  gap: 8px;
+}
+
+.current-world-pack__pack-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-surface-muted);
+  padding: 10px;
+}
+
+.current-world-pack__pack-row strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.current-world-pack__pack-row span {
+  grid-column: 1 / -1;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.current-world-pack__pack-row.is-disabled {
+  opacity: 0.68;
 }
 
 .current-world-pack__selector {

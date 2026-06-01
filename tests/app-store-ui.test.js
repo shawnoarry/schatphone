@@ -425,6 +425,43 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
+  test('App Store exposes app entries from multiple enabled compatible expansion packs', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store?section=world')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.enableWorldPack('school_life').ok).toBe(true)
+    expect(systemStore.enableWorldPack('business_family').ok).toBe(true)
+
+    const wrapper = mount(AppStoreView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const schoolAppId = 'world_app_school_life_school_schedule_board'
+    const businessAppId = 'world_app_business_family_business_board_calendar'
+
+    expect(wrapper.find(`[data-testid="app-store-item-${schoolAppId}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="app-store-item-${businessAppId}"]`).exists()).toBe(true)
+
+    await wrapper.get(`[data-testid="app-store-item-${schoolAppId}"]`).trigger('click')
+    expect(wrapper.get('[data-testid="app-store-world-app-meta"]').text()).toContain('School life expansion')
+    expect(wrapper.get('[data-testid="app-store-world-app-meta"]').text()).toContain('Calendar')
+
+    await wrapper.find('[data-testid="app-store-open"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/calendar')
+    expect(router.currentRoute.value.query).toMatchObject({
+      worldPack: 'school_life',
+      worldApp: 'school_schedule_board',
+    })
+
+    wrapper.unmount()
+  })
+
   test('App Store opens directly to the World Apps section from WorldBook handoff', async () => {
     const router = createTestRouter()
     await router.push('/app-store?section=world&from=worldbook')

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   buildWorldServiceTemplateChatContactPayload,
   buildWorldServiceTemplateGenerationRows,
+  buildWorldServiceTemplateGenerationRowsForPacks,
 } from '../src/lib/world-pack-service-accounts'
 import { normalizeWorldPack } from '../src/lib/world-pack-schema'
 
@@ -97,9 +98,41 @@ describe('world pack service account generation helpers', () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
+      packId: 'modern_parallel',
+      packName: 'World pack 1',
       generated: true,
       contactId: 42,
     })
+  })
+
+  test('keeps pack identity when listing service rows from multiple enabled packs', () => {
+    const rows = buildWorldServiceTemplateGenerationRowsForPacks({
+      packs: [
+        normalizeWorldPack({
+          id: 'school_life',
+          name: 'School life expansion',
+          serviceAccountTemplates: [{ id: 'school_affairs_office', title: 'School Affairs' }],
+        }),
+        normalizeWorldPack({
+          id: 'business_family',
+          name: 'Business family expansion',
+          serviceAccountTemplates: [{ id: 'family_office_channel', title: 'Family Office' }],
+        }),
+      ],
+    })
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        id: 'school_affairs_office',
+        packId: 'school_life',
+        packName: 'School life expansion',
+      }),
+      expect.objectContaining({
+        id: 'family_office_channel',
+        packId: 'business_family',
+        packName: 'Business family expansion',
+      }),
+    ])
   })
 
   test('describes source notification plans before and after join', () => {

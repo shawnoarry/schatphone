@@ -195,6 +195,63 @@ describe('WorldBook functional IA', () => {
     wrapper.unmount()
   })
 
+  test('lets users review AI-fit recommendations and enable multiple compatible expansion packs', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setWorldProfileAnalysis({
+      era: 'modern',
+      settingTraits: ['school'],
+      realism: 'realistic',
+      socialRoles: ['student'],
+      economyTraits: ['ordinary'],
+      technologyLevel: 'real_world',
+      confidence: 'high',
+      evidence: ['campus setting'],
+    })
+
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('modern')
+    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('high')
+    expect(wrapper.get('[data-testid="worldbook-pack-recommendations"]').text()).toContain(
+      'School life expansion',
+    )
+    expect(wrapper.get('[data-testid="worldbook-pack-all"]').text()).toContain('Business family expansion')
+
+    await wrapper.get('[data-testid="worldbook-enable-pack-school_life"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.enabledWorldPackIds).toEqual(['school_life'])
+    expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
+      'School life expansion',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-active-summary"]').text()).toContain(
+      'App Store',
+    )
+    expect(wrapper.get('[data-testid="worldbook-current-pack-service-handoff"]').text()).toContain(
+      'Chat',
+    )
+
+    await wrapper.get('[data-testid="worldbook-enable-all-pack-business_family"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.enabledWorldPackIds).toEqual(['school_life', 'business_family'])
+    expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
+      'Business family expansion',
+    )
+
+    await wrapper.get('[data-testid="worldbook-disable-pack-school_life"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.enabledWorldPackIds).toEqual(['business_family'])
+    expect(wrapper.find('[data-testid="worldbook-enabled-pack-school_life"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
   test('reviews pasted nonstandard app proposals before adding a world app binding', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'

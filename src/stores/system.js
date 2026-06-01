@@ -58,6 +58,11 @@ import {
   normalizeWorldServiceAccountTemplate,
 } from '../lib/world-pack-schema'
 import {
+  buildWorldPackCompatibilityReview,
+  groupWorldPackRecommendations,
+  normalizeWorldProfile,
+} from '../lib/world-pack-compatibility'
+import {
   buildWorldAppEntryRows,
   isWorldAppHomeTileId,
 } from '../lib/world-pack-app-bindings'
@@ -678,6 +683,43 @@ const buildKnowledgePointMatchContext = (options = {}) => {
   }
 }
 
+const normalizeWorldPackIdList = (value = []) => {
+  const seen = new Set()
+  const result = []
+  ;(Array.isArray(value) ? value : []).forEach((item) => {
+    const id = typeof item === 'string' ? item.trim() : ''
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    result.push(id)
+  })
+  return result.slice(0, 24)
+}
+
+const normalizeWorldPackEnablements = (value = {}) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  return Object.fromEntries(
+    Object.entries(source)
+      .map(([packId, raw]) => {
+        const id = typeof packId === 'string' ? packId.trim() : ''
+        const enablement = raw && typeof raw === 'object' ? raw : {}
+        if (!id) return null
+        return [
+          id,
+          {
+            packId: id,
+            enabledAt: toInt(enablement.enabledAt, 0),
+            fitStatus: typeof enablement.fitStatus === 'string' ? enablement.fitStatus : '',
+            reviewSnapshot:
+              enablement.reviewSnapshot && typeof enablement.reviewSnapshot === 'object'
+                ? { ...enablement.reviewSnapshot }
+                : {},
+          },
+        ]
+      })
+      .filter(Boolean),
+  )
+}
+
 const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAULT_GLOBAL_WORLDVIEW) => {
   const source = rawUser && typeof rawUser === 'object' ? rawUser : {}
   const rawGlobalWorldview =
@@ -697,6 +739,9 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
         : createDefaultProfileTemplatePresets(),
     ),
     worldPacks: normalizeWorldPacks(source.worldPacks),
+    worldProfileAnalysis: normalizeWorldProfile(source.worldProfileAnalysis),
+    enabledWorldPackIds: normalizeWorldPackIdList(source.enabledWorldPackIds),
+    worldPackEnablements: normalizeWorldPackEnablements(source.worldPackEnablements),
     activeWorldPackId: typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
       ? source.activeWorldPackId.trim()
       : DEFAULT_WORLD_PACK_ID,
@@ -1297,6 +1342,9 @@ export const useSystemStore = defineStore('system', () => {
     globalWorldview: DEFAULT_GLOBAL_WORLDVIEW,
     worldBookSourceLinks: [],
     worldPacks: normalizeWorldPacks([]),
+    worldProfileAnalysis: normalizeWorldProfile({}),
+    enabledWorldPackIds: [],
+    worldPackEnablements: {},
     activeWorldPackId: DEFAULT_WORLD_PACK_ID,
     worldPackActivation: normalizeWorldPackActivation({}, DEFAULT_WORLD_PACK_ID),
     knowledgePoints: [],
@@ -2502,6 +2550,34 @@ export const useSystemStore = defineStore('system', () => {
 
   const getActiveWorldPack = () => getWorldPackById(user.activeWorldPackId || DEFAULT_WORLD_PACK_ID)
 
+  const setWorldProfileAnalysis = (profile = {}) => {
+    user.worldProfileAnalysis = normalizeWorldProfile({
+      ...profile,
+      analyzedAt: Date.now(),
+    })
+    return { ...user.worldProfileAnalysis }
+  }
+
+  const listEnabledWorldPacks = () => {
+    const ids = normalizeWorldPackIdList(user.enabledWorldPackIds)
+    if (ids.length === 0 && user.activeWorldPackId) {
+      return [getWorldPackById(user.activeWorldPackId)].filter(Boolean)
+    }
+    return ids.map((id) => getWorldPackById(id)).filter(Boolean)
+  }
+
+  const buildWorldPackRecommendationReview = () => {
+    const worldProfile = normalizeWorldProfile(user.worldProfileAnalysis)
+    const reviews = listWorldPacks()
+      .filter((pack) => pack.id !== DEFAULT_WORLD_PACK_ID)
+      .map((pack) => buildWorldPackCompatibilityReview({ pack, worldProfile }))
+    return {
+      worldProfile,
+      reviews,
+      grouped: groupWorldPackRecommendations(reviews),
+    }
+  }
+
   const buildWorldPackActivationReview = (packId = '') => {
     const pack = getWorldPackById(packId)
     if (!pack) return null
@@ -2513,6 +2589,70 @@ export const useSystemStore = defineStore('system', () => {
     })
   }
 
+  const buildWorldPackEnablementReview = (packId = '') => {
+    const activationReview = buildWorldPackActivationReview(packId)
+    const pack = getWorldPackById(packId)
+    const recommendation = buildWorldPackCompatibilityReview({
+      pack: pack || {},
+      worldProfile: user.worldProfileAnalysis,
+    })
+    return {
+      packId: pack?.id || packId,
+      blocked: Boolean(activationReview?.blocked) || !recommendation.enableable,
+      activationReview,
+      recommendation,
+    }
+  }
+
+  const enableWorldPack = (packId = '') => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'not_found', pack: null, review: null }
+    const review = buildWorldPackEnablementReview(pack.id)
+    if (review.blocked) {
+      return {
+        ok: false,
+        reason: review.recommendation?.enableable === false ? 'unsupported' : 'blocked',
+        pack,
+        review,
+      }
+    }
+    const ids = normalizeWorldPackIdList(user.enabledWorldPackIds)
+    if (!ids.includes(pack.id)) ids.push(pack.id)
+    user.enabledWorldPackIds = ids
+    user.worldPackEnablements = normalizeWorldPackEnablements({
+      ...user.worldPackEnablements,
+      [pack.id]: {
+        packId: pack.id,
+        enabledAt: Date.now(),
+        fitStatus: review.recommendation.fitStatus,
+        reviewSnapshot: {
+          summary: { ...(review.activationReview?.summary || {}) },
+          effectRows: Array.isArray(review.activationReview?.effectRows)
+            ? review.activationReview.effectRows.map((row) => ({ ...row }))
+            : [],
+          recommendation: {
+            fitStatus: review.recommendation.fitStatus,
+            reasons: [...(review.recommendation.reasons || [])],
+          },
+        },
+      },
+    })
+    normalizeCurrentHomeWidgetPages()
+    return { ok: true, reason: 'enabled', pack, review }
+  }
+
+  const disableWorldPack = (packId = '') => {
+    const id = typeof packId === 'string' ? packId.trim() : ''
+    if (!id) return { ok: false, reason: 'not_found' }
+    const before = normalizeWorldPackIdList(user.enabledWorldPackIds)
+    user.enabledWorldPackIds = before.filter((item) => item !== id)
+    const nextEnablements = { ...normalizeWorldPackEnablements(user.worldPackEnablements) }
+    delete nextEnablements[id]
+    user.worldPackEnablements = nextEnablements
+    normalizeCurrentHomeWidgetPages()
+    return { ok: before.includes(id), reason: before.includes(id) ? 'disabled' : 'not_enabled' }
+  }
+
   const activateWorldPack = (packId = '') => {
     const review = buildWorldPackActivationReview(packId)
     if (!review || review.blocked) {
@@ -2521,6 +2661,20 @@ export const useSystemStore = defineStore('system', () => {
     const pack = getWorldPackById(packId)
     if (!pack) return { ok: false, reason: 'not_found', review: null }
     user.activeWorldPackId = pack.id
+    user.enabledWorldPackIds = pack.id === DEFAULT_WORLD_PACK_ID ? [] : [pack.id]
+    user.worldPackEnablements = pack.id === DEFAULT_WORLD_PACK_ID
+      ? {}
+      : normalizeWorldPackEnablements({
+          [pack.id]: {
+            packId: pack.id,
+            enabledAt: Date.now(),
+            fitStatus: 'recommended',
+            reviewSnapshot: {
+              summary: { ...review.summary },
+              effectRows: review.effectRows.map((row) => ({ ...row })),
+            },
+          },
+        })
     user.worldPackActivation = normalizeWorldPackActivation({
       activePackId: pack.id,
       state: 'active',
@@ -3725,6 +3879,9 @@ export const useSystemStore = defineStore('system', () => {
     user.worldBook = normalizedWorldKernel.globalWorldview
     user.worldBookSourceLinks = normalizedWorldKernel.worldBookSourceLinks
     user.worldPacks = normalizedWorldKernel.worldPacks
+    user.worldProfileAnalysis = normalizedWorldKernel.worldProfileAnalysis
+    user.enabledWorldPackIds = normalizedWorldKernel.enabledWorldPackIds
+    user.worldPackEnablements = normalizedWorldKernel.worldPackEnablements
     user.activeWorldPackId = normalizedWorldKernel.activeWorldPackId
     user.worldPackActivation = normalizedWorldKernel.worldPackActivation
     user.knowledgePoints = normalizedWorldKernel.knowledgePoints
@@ -3980,6 +4137,9 @@ export const useSystemStore = defineStore('system', () => {
           })),
           activeWorldPackId: user.activeWorldPackId || DEFAULT_WORLD_PACK_ID,
           worldPackActivation: normalizeWorldPackActivation(user.worldPackActivation, user.activeWorldPackId),
+          worldProfileAnalysis: { ...normalizeWorldProfile(user.worldProfileAnalysis) },
+          enabledWorldPackIds: normalizeWorldPackIdList(user.enabledWorldPackIds),
+          worldPackEnablements: normalizeWorldPackEnablements(user.worldPackEnablements),
           knowledgePoints: Array.isArray(user.knowledgePoints)
             ? user.knowledgePoints.map((item) => ({
                 ...item,
@@ -4105,6 +4265,12 @@ export const useSystemStore = defineStore('system', () => {
     listWorldPacks,
     getWorldPackById,
     getActiveWorldPack,
+    setWorldProfileAnalysis,
+    listEnabledWorldPacks,
+    buildWorldPackRecommendationReview,
+    buildWorldPackEnablementReview,
+    enableWorldPack,
+    disableWorldPack,
     buildWorldPackActivationReview,
     activateWorldPack,
     upsertWorldPack,
