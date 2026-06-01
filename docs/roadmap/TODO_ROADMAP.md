@@ -149,6 +149,7 @@ Current implementation note:
 - World Hub relationship fact detail now also shows read-only relationship-classification gate audit metadata when a fact includes it, without becoming the main relationship editor or a broad control surface.
 - High-risk relationship gate presets are available at the helper seam; Chat social-event review now consumes that seam for generated communication-state proposals, while high-impact romance/conflict automation stays on hold.
 - Chat social-event review V1 is landed: generated role greetings can become audited pending message requests, while role refusal/block/restore/unblock proposals wait in World Hub before Chat applies the communication state. Chat AI responses can submit optional normalized `socialEvents`, foreground/session runtime can submit a conservative role greeting candidate for stranger or declined role contacts, and World Hub now explains source, trigger policy, and ownership boundaries; Contacts shows the Chat snapshot only.
+- Settings > AI Automation / 设置 > AI 自动响应 now exposes the foreground event tick in product terms: opt-in state, current safe-check range, latest related result, and a direct World Hub review path.
 - Review actions remain narrow: pending relationship facts can still be approved or dismissed, and relationship cleanup remains guarded; broad affinity, funds, unlock, or freeform override editing stays deferred.
 
 Primary references:

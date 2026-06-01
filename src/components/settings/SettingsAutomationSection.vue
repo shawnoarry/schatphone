@@ -22,6 +22,14 @@ defineProps({
     type: String,
     required: true,
   },
+  simulationForegroundTickCoverageItems: {
+    type: Array,
+    default: () => [],
+  },
+  simulationForegroundTickLatestLabel: {
+    type: String,
+    required: true,
+  },
   automationSaved: {
     type: Boolean,
     default: false,
@@ -30,6 +38,7 @@ defineProps({
 
 defineEmits([
   'open-chat-automation',
+  'open-world-hub',
   'open-network-reports',
   'save-automation-settings',
   'update-simulation-foreground-tick-enabled',
@@ -98,6 +107,41 @@ const { t } = useI18n()
     <p class="text-[11px] text-gray-500" data-testid="settings-simulation-foreground-tick-runtime">
       {{ simulationForegroundTickRuntimeLabel }}
     </p>
+    <div
+      class="space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3"
+      data-testid="settings-simulation-foreground-tick-coverage"
+    >
+      <p class="text-[11px] font-semibold text-gray-600">
+        {{ t('当前检查范围 / Current checks', 'Current checks / 当前检查范围') }}
+      </p>
+      <div
+        v-for="item in simulationForegroundTickCoverageItems"
+        :key="item.id"
+        class="grid grid-cols-[1fr,auto] gap-2 rounded-lg bg-white px-3 py-2"
+        :data-testid="`settings-simulation-foreground-tick-coverage-${item.id}`"
+      >
+        <div class="min-w-0">
+          <p class="break-words text-xs font-semibold leading-4 text-gray-700">{{ item.label }}</p>
+          <p class="mt-1 text-[10px] leading-4 text-gray-400">{{ item.detail }}</p>
+        </div>
+        <span class="self-start rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+          {{ item.status }}
+        </span>
+      </div>
+    </div>
+    <div class="flex flex-col gap-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-[11px] leading-4 text-gray-500" data-testid="settings-simulation-foreground-tick-latest">
+        {{ simulationForegroundTickLatestLabel }}
+      </p>
+      <button
+        type="button"
+        class="shrink-0 rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+        data-testid="settings-open-world-hub"
+        @click="$emit('open-world-hub')"
+      >
+        {{ t('查看世界中枢 / Open World Hub', 'Open World Hub / 查看世界中枢') }}
+      </button>
+    </div>
   </div>
 
   <div class="bg-white rounded-2xl p-4 space-y-3">

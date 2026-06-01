@@ -449,6 +449,7 @@ const simulationTickResultLabel = computed(() => {
 })
 
 const simulationModuleLabel = (moduleKey = '') => {
+  if (moduleKey === 'chat') return t('聊天', 'Chat')
   if (moduleKey === 'food_delivery') return t('外卖', 'Food Delivery')
   if (moduleKey === 'shopping') return t('购物', 'Shopping')
   if (moduleKey === 'logistics') return t('物流', 'Logistics')
@@ -497,6 +498,18 @@ const simulationEventReasonLabel = (reason = '') => {
 
 const simulationEventLabel = (eventId = '') => {
   if (eventId === 'simulation.session_tick.v1') return t('会话事件 Tick', 'Session event tick')
+  if (eventId === 'chat.social.runtime_greeting_pilot.v1')
+    return t('Chat 角色主动联系 Pilot', 'Chat role proactive contact pilot')
+  if (eventId === 'chat.social.role_greeting_request.v1')
+    return t('Chat 角色问候请求', 'Chat role greeting request')
+  if (eventId === 'chat.social.role_refuse_messages.v1')
+    return t('Chat 角色拒收消息', 'Chat role refused messages')
+  if (eventId === 'chat.social.role_restore_messages.v1')
+    return t('Chat 角色恢复消息', 'Chat role restored messages')
+  if (eventId === 'chat.social.role_block_user.v1')
+    return t('Chat 角色拉黑用户', 'Chat role blocked user')
+  if (eventId === 'chat.social.role_unblock_user.v1')
+    return t('Chat 角色取消拉黑', 'Chat role unblocked user')
   if (eventId === 'food_delivery.random_order_pilot.v1')
     return t('外卖随机订单 Pilot', 'Food Delivery random order pilot')
   if (eventId === 'food_delivery.eta_update.v1') return t('外卖 ETA 更新', 'Food Delivery ETA update')
@@ -1287,6 +1300,60 @@ const simulationForegroundTickRuntimeLabel = computed(() => {
   )
 })
 
+const simulationForegroundTickCoverageItems = computed(() => [
+  {
+    id: 'food_delivery_safety',
+    label: t(
+      '外卖安全事件 / Food Delivery safety events',
+      'Food Delivery safety events / 外卖安全事件',
+    ),
+    status: t('已接入 / Active', 'Active / 已接入'),
+    detail: t(
+      '低风险外卖进度变化，例如 ETA 更新、骑手延迟、商家状态变化。',
+      'Low-risk delivery updates, such as ETA changes, rider delays, and restaurant status changes.',
+    ),
+  },
+  {
+    id: 'role_proactive_contact',
+    label: t(
+      '角色主动联系候选 / Role proactive contact candidate',
+      'Role proactive contact candidate / 角色主动联系候选',
+    ),
+    status: t('已接入 / Active', 'Active / 已接入'),
+    detail: t(
+      '陌生、曾拒绝或已解除限制的角色，可以被提议为主动联系你；后续仍进入 Chat 和世界中枢审查链。',
+      'Stranger, declined, or restored roles can be proposed as incoming contacts; results still go through Chat and World Hub review.',
+    ),
+  },
+])
+
+const isSimulationForegroundTickLog = (log = {}) => {
+  const eventId = typeof log.eventId === 'string' ? log.eventId : ''
+  return (
+    eventId === 'simulation.session_tick.v1'
+    || eventId.startsWith('food_delivery.')
+    || eventId.startsWith('chat.social.')
+  )
+}
+
+const simulationForegroundTickLatestLabel = computed(() => {
+  const latestLog = simulationStore.recentEventLogs.find(isSimulationForegroundTickLog)
+  if (!latestLog) {
+    return t(
+      '最近结果 / Latest result：暂无前台 Tick 相关记录。',
+      'Latest result / 最近结果: no foreground tick related record yet.',
+    )
+  }
+
+  const eventLabel = simulationEventLabel(latestLog.eventId)
+  const statusLabel = simulationEventStatusLabel(latestLog.status)
+  const reasonLabel = simulationEventReasonLabel(latestLog.reason)
+  return t(
+    `最近结果 / Latest result：${eventLabel} · ${statusLabel} · ${reasonLabel}`,
+    `Latest result / 最近结果: ${eventLabel} · ${statusLabel} · ${reasonLabel}`,
+  )
+})
+
 const updateSimulationForegroundTickEnabled = (enabled) => {
   simulationStore.setForegroundSessionTickEnabled(enabled)
 }
@@ -1372,6 +1439,13 @@ const saveAutomationSettings = async () => {
 
 const openChatAutomation = () => {
   router.push('/chat-contacts')
+}
+
+const openWorldHub = () => {
+  router.push({
+    path: '/control-center',
+    query: buildReturnSourceQuery('settings', route),
+  })
 }
 
 const openNetworkReports = (moduleKey = 'all', levelKey = 'all') => {
@@ -2013,6 +2087,8 @@ if (initialMenu) {
             :simulation-settings="simulationStore.settings"
             :simulation-foreground-tick-interval-minutes="simulationForegroundTickIntervalMinutes"
             :simulation-foreground-tick-runtime-label="simulationForegroundTickRuntimeLabel"
+            :simulation-foreground-tick-coverage-items="simulationForegroundTickCoverageItems"
+            :simulation-foreground-tick-latest-label="simulationForegroundTickLatestLabel"
             :automation-saved="automationSaved"
             @update-automation-field="updateAutomationField"
             @update-module-enabled="updateAutomationModuleEnabled"
@@ -2020,6 +2096,7 @@ if (initialMenu) {
             @update-simulation-foreground-tick-enabled="updateSimulationForegroundTickEnabled"
             @update-simulation-foreground-tick-interval-minutes="updateSimulationForegroundTickIntervalMinutes"
             @open-chat-automation="openChatAutomation"
+            @open-world-hub="openWorldHub"
             @open-network-reports="openNetworkReports"
             @save-automation-settings="saveAutomationSettings"
           />

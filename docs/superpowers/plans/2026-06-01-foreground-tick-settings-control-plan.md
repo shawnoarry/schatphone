@@ -15,9 +15,9 @@
 **Files:**
 - Modify: `src/views/SettingsView.vue`
 
-- [ ] Add a computed latest foreground/runtime event label from `simulationStore.recentEventLogs`.
-- [ ] Add a coverage list for Food Delivery safety events and role proactive contact candidates.
-- [ ] Add an `openWorldHub` action that routes to `/control-center`.
+- [x] Add a computed latest foreground/runtime event label from `simulationStore.recentEventLogs`.
+- [x] Add a coverage list for Food Delivery safety events and role proactive contact candidates.
+- [x] Add an `openWorldHub` action that routes to `/control-center`.
 
 ### Task 2: Settings Panel UI
 
@@ -25,9 +25,9 @@
 - Modify: `src/components/settings/SettingsAutomationSection.vue`
 - Test: `tests/settings-general-section.test.js`
 
-- [ ] Add props for coverage rows and latest-result label.
-- [ ] Add bilingual row labels and a `查看世界中枢 / Open World Hub` button.
-- [ ] Test that the automation subpage shows coverage, latest result, and routes to World Hub.
+- [x] Add props for coverage rows and latest-result label.
+- [x] Add bilingual row labels and a `查看世界中枢 / Open World Hub` button.
+- [x] Test that the automation subpage shows coverage, latest result, and routes to World Hub.
 
 ### Task 3: Docs And Validation
 
@@ -35,7 +35,7 @@
 - Modify: `docs/pm/TODO_PM_STATUS_REPORT.md`
 - Modify: `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`
 
-- [ ] Record that Settings now exposes the foreground tick meaning and World Hub review path.
-- [ ] Run focused settings tests.
-- [ ] Run `git diff --check`, `npm.cmd run lint`, `npm.cmd run build`, and `npm.cmd run test`.
-- [ ] Commit the completed slice.
+- [x] Record that Settings now exposes the foreground tick meaning and World Hub review path.
+- [x] Run focused settings tests.
+- [x] Run `git diff --check`, `npm.cmd run lint`, `npm.cmd run build`, and `npm.cmd run test`.
+- [x] Commit the completed slice.

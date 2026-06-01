@@ -18,6 +18,7 @@ const createTestRouter = () =>
       { path: '/home', component: DummyView },
       { path: '/profile', component: DummyView },
       { path: '/worldbook', component: DummyView },
+      { path: '/control-center', component: DummyView },
       { path: '/network', component: DummyView },
       { path: '/chat-contacts', component: DummyView },
       { path: '/appearance', component: DummyView },
@@ -175,6 +176,41 @@ describe('SettingsView general section', () => {
     expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
       'Role proactive contact candidates',
     )
+
+    wrapper.unmount()
+  })
+
+  test('shows foreground tick coverage, latest result, and World Hub review path', async () => {
+    const systemStore = useSystemStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    simulationStore.resetForTesting()
+    simulationStore.recordEventLog({
+      eventId: 'chat.social.role_greeting_request.v1',
+      moduleKey: 'chat',
+      targetId: 'role_main_001',
+      adapterKey: 'chat.apply_social_channel_state',
+      triggerSource: 'random',
+      status: 'triggered',
+      reason: 'eligible_non_random',
+    })
+
+    const { wrapper, router } = await mountSettingsView('/settings?menu=automation')
+
+    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text()).toContain(
+      'Food Delivery safety events',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text()).toContain(
+      'Role proactive contact candidate',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-latest"]').text()).toContain(
+      'Chat role greeting request',
+    )
+
+    await wrapper.get('[data-testid="settings-open-world-hub"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/control-center')
 
     wrapper.unmount()
   })

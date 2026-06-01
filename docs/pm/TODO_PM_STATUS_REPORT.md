@@ -199,7 +199,7 @@ PM meaning:
 - Food Delivery has the first safe automatic pilot.
 - World-aware event variants exist as a standard direction.
 - Generated Chat social events such as greetings, refusal, block, restore, and unblock now enter here as reviewed social/channel events from Chat AI proposal output or the foreground/session runtime greeting source, not as direct Chat or Contacts writes.
-- Settings > Automation has an opt-in foreground event tick switch.
+- Settings > AI Automation / 设置 > AI 自动响应 has an opt-in `事件前台 Tick / Foreground event tick` control. It now explains the current safe-check range, including `外卖安全事件 / Food Delivery safety events` and `角色主动联系候选 / Role proactive contact candidate`, shows the latest related runtime result, and links users to `世界中枢 / World Hub` for detailed review.
 - App lifecycle wiring exists for foreground ticking only when the user enables it.
 - World Hub reads simulation runtime state and relationship runtime review data.
 - Relationship pending-confirmation effects can be approved or dismissed from World Hub.
@@ -245,7 +245,7 @@ PM meaning:
 - World Hub can now show read-only relationship gate audit details on relationship facts and review high-risk generated Chat social proposals. This is review metadata and confirmation flow, not a new broad editor or Cheats surface.
 2. Continue the relationship-growth event system through safe adapters.
    - relationship progress and character growth should use one shared truth layer instead of scattered module-local fields.
-3. Add clearer user-facing explanation for automatic foreground events.
+3. Keep user-facing explanation for automatic foreground events readable as new safe checks are added; the current Settings control already exposes the switch, check range, latest result, and World Hub review path.
 4. Keep World Hub controls narrow until event logs and Settings controls are trusted.
 
 ### P1: Build Useful Cross-Module Loops
