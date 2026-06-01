@@ -171,15 +171,66 @@ const activeCategoryLabel = computed(() =>
 const activeCategoryDesc = computed(() =>
   languageBase.value === 'zh' ? activeCategory.value.descZh : activeCategory.value.descEn,
 )
+const FOOD_STORE_VISUALS = {
+  restaurants: {
+    tone: 'bistro',
+    heroClass: 'from-orange-500 via-amber-300 to-lime-200',
+    badgeClass: 'bg-orange-50 text-orange-700',
+    buttonClass: 'bg-orange-500 text-white',
+  },
+  fast_food: {
+    tone: 'speed',
+    heroClass: 'from-red-500 via-yellow-300 to-orange-200',
+    badgeClass: 'bg-red-50 text-red-700',
+    buttonClass: 'bg-red-500 text-white',
+  },
+  cafe: {
+    tone: 'cafe',
+    heroClass: 'from-emerald-500 via-teal-300 to-yellow-100',
+    badgeClass: 'bg-emerald-50 text-emerald-700',
+    buttonClass: 'bg-emerald-600 text-white',
+  },
+  dessert: {
+    tone: 'sweet',
+    heroClass: 'from-pink-500 via-rose-300 to-amber-100',
+    badgeClass: 'bg-pink-50 text-pink-700',
+    buttonClass: 'bg-pink-500 text-white',
+  },
+  grocery_delivery: {
+    tone: 'market',
+    heroClass: 'from-lime-600 via-green-300 to-sky-100',
+    badgeClass: 'bg-lime-50 text-lime-700',
+    buttonClass: 'bg-lime-600 text-white',
+  },
+  nearby: {
+    tone: 'nearby',
+    heroClass: 'from-sky-600 via-cyan-300 to-amber-100',
+    badgeClass: 'bg-sky-50 text-sky-700',
+    buttonClass: 'bg-sky-600 text-white',
+  },
+}
 const activeRestaurants = computed(() => {
   const restaurants = foodDeliveryStore.listRestaurantsByCategory(activeCategory.value?.key)
   if (restaurants.length > 0) return restaurants
   return foodDeliveryStore.restaurants.slice(0, 4)
 })
-const activeRestaurant = computed(() => activeRestaurants.value[0] || foodDeliveryStore.restaurants[0] || null)
+const selectedRestaurantId = computed(() =>
+  typeof route.query.restaurantId === 'string' ? route.query.restaurantId.trim() : '',
+)
+const selectedRestaurant = computed(() =>
+  selectedRestaurantId.value ? foodDeliveryStore.findRestaurantById(selectedRestaurantId.value) : null,
+)
+const isStoreMode = computed(() => Boolean(selectedRestaurant.value))
+const activeRestaurant = computed(() =>
+  selectedRestaurant.value || activeRestaurants.value[0] || foodDeliveryStore.restaurants[0] || null,
+)
 const activeMenuItems = computed(() =>
   activeRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(activeRestaurant.value.id) : [],
 )
+const activeStoreVisual = computed(() => {
+  const key = activeRestaurant.value?.category || activeCategory.value?.key || 'restaurants'
+  return FOOD_STORE_VISUALS[key] || FOOD_STORE_VISUALS.restaurants
+})
 const galleryImageOptions = computed(() =>
   galleryStore.assets
     .filter((asset) => ['reference', 'scenario', 'wallpaper'].includes(asset.category))
@@ -251,6 +302,23 @@ const chatSourceOrder = computed(() => {
   if (!chatSourceOrderId.value) return null
   return foodDeliveryStore.orders.find((order) => order.id === chatSourceOrderId.value) || null
 })
+
+watch(
+  chatSourceOrder,
+  (order) => {
+    if (!order?.restaurantId || selectedRestaurantId.value === order.restaurantId) return
+    const restaurant = foodDeliveryStore.findRestaurantById(order.restaurantId)
+    router.replace({
+      path: '/food-delivery',
+      query: {
+        ...route.query,
+        category: restaurant?.category || order.items?.[0]?.category || activeCategory.value?.key || 'restaurants',
+        restaurantId: order.restaurantId,
+      },
+    })
+  },
+  { immediate: true },
+)
 
 const isHighlightedOrder = (orderId) => isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
 
@@ -420,6 +488,28 @@ const createCustomMenuItem = () => {
   }
   customFeedback.value = t('自定义菜单项已加入当前餐厅。', 'Custom menu item added to the restaurant.')
   resetMenuDraft(item.restaurantId)
+}
+
+const openRestaurantStore = (restaurant) => {
+  if (!restaurant?.id) return
+  router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: restaurant.category || activeCategory.value?.key || 'restaurants',
+      restaurantId: restaurant.id,
+    },
+  })
+}
+
+const closeRestaurantStore = () => {
+  router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants',
+    },
+  })
 }
 
 const openCategory = (key) => {
@@ -665,6 +755,7 @@ onBeforeUnmount(() => {
         </p>
       </section>
 
+      <div v-if="!isStoreMode" class="space-y-4" data-testid="food-delivery-platform">
       <section class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-category-panel">
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -743,9 +834,18 @@ onBeforeUnmount(() => {
                   {{ foodImageSourceLabel(restaurant) }}
                 </p>
               </div>
-              <span class="ml-auto rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600">
-                {{ restaurant.deliveryFee }} {{ restaurant.currency }}
-              </span>
+              <div class="ml-auto flex shrink-0 flex-col items-end gap-2">
+                <span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600">
+                  {{ restaurant.deliveryFee }} {{ restaurant.currency }}
+                </span>
+                <button
+                  class="rounded-full bg-gray-950 px-3 py-1.5 text-[10px] font-bold text-white"
+                  :data-testid="`food-delivery-open-store-${restaurant.id}`"
+                  @click="openRestaurantStore(restaurant)"
+                >
+                  {{ t('进店', 'Open') }}
+                </button>
+              </div>
             </div>
           </article>
         </div>
@@ -939,6 +1039,115 @@ onBeforeUnmount(() => {
         <p v-if="customFeedback" class="mt-2 text-[11px] font-semibold text-orange-600">
           {{ customFeedback }}
         </p>
+      </section>
+
+      </div>
+
+      <section v-else class="space-y-4" data-testid="food-delivery-store-app">
+        <article
+          v-if="activeRestaurant"
+          class="overflow-hidden rounded-3xl border border-white/70 bg-white shadow-sm"
+          data-testid="food-delivery-store-shell"
+          :data-store-id="activeRestaurant.id"
+          :data-store-tone="activeStoreVisual.tone"
+        >
+          <div class="bg-gradient-to-br p-4 text-gray-950" :class="activeStoreVisual.heroClass">
+            <button
+              class="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-gray-900 shadow-sm"
+              data-testid="food-delivery-store-back"
+              @click="closeRestaurantStore"
+            >
+              <i class="fas fa-chevron-left"></i>
+              {{ t('返回平台', 'Back') }}
+            </button>
+            <div class="mt-5 flex items-end justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/90">
+                  {{ activeRestaurant.cuisine || activeRestaurant.category }}
+                </p>
+                <h2 class="mt-1 truncate text-2xl font-black text-white">
+                  {{ activeRestaurant.name }}
+                </h2>
+                <p class="mt-2 text-xs font-semibold text-white/90">
+                  {{ activeRestaurant.rating.toFixed(1) }} ★ · {{ activeRestaurant.deliveryEtaMinutes }} min ·
+                  {{ activeRestaurant.distanceKm }} km
+                </p>
+              </div>
+              <div class="h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-white/90 shadow-sm">
+                <img
+                  v-if="foodImageUrl(activeRestaurant)"
+                  :src="foodImageUrl(activeRestaurant)"
+                  :alt="activeRestaurant.image?.alt || activeRestaurant.name"
+                  class="h-full w-full object-cover"
+                />
+                <div v-else class="flex h-full w-full items-center justify-center text-2xl text-orange-500">
+                  <i class="fas fa-store"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 p-3">
+            <div class="rounded-2xl bg-gray-50 p-3 text-center">
+              <p class="text-[10px] font-semibold text-gray-500">{{ t('配送费', 'Fee') }}</p>
+              <p class="mt-1 text-xs font-black">{{ activeRestaurant.deliveryFee }} {{ activeRestaurant.currency }}</p>
+            </div>
+            <div class="rounded-2xl bg-gray-50 p-3 text-center">
+              <p class="text-[10px] font-semibold text-gray-500">{{ t('来源', 'Source') }}</p>
+              <p class="mt-1 truncate text-xs font-black">{{ foodImageSourceLabel(activeRestaurant) }}</p>
+            </div>
+            <div class="rounded-2xl p-3 text-center" :class="activeStoreVisual.badgeClass">
+              <p class="text-[10px] font-semibold opacity-70">{{ t('店铺', 'Store') }}</p>
+              <p class="mt-1 truncate text-xs font-black">{{ activeStoreVisual.tone }}</p>
+            </div>
+          </div>
+        </article>
+
+        <section v-if="activeRestaurant" class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-menu-panel">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-bold">{{ t('本店菜单', 'Store menu') }}</p>
+              <p class="mt-1 text-xs text-gray-500">{{ activeRestaurant.name }}</p>
+            </div>
+            <span class="rounded-full px-3 py-1 text-[11px] font-semibold" :class="activeStoreVisual.badgeClass">
+              {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
+            </span>
+          </div>
+          <div class="mt-3 space-y-2">
+            <article
+              v-for="item in activeMenuItems"
+              :key="item.id"
+              class="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2"
+              :data-testid="`food-delivery-menu-${item.id}`"
+            >
+              <div class="flex min-w-0 items-center gap-3">
+                <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-orange-50">
+                  <img
+                    v-if="foodImageUrl(item)"
+                    :src="foodImageUrl(item)"
+                    :alt="item.image?.alt || item.title"
+                    class="h-full w-full object-cover"
+                  />
+                  <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
+                    <i class="fas fa-bowl-food"></i>
+                  </div>
+                </div>
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-bold">{{ item.title }}</p>
+                  <p class="mt-1 text-[11px] text-gray-500">{{ item.price }} {{ item.currency }}</p>
+                  <p class="mt-0.5 text-[10px] font-semibold text-orange-500">{{ foodImageSourceLabel(item) }}</p>
+                </div>
+              </div>
+              <button
+                class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
+                :class="activeStoreVisual.buttonClass"
+                :data-testid="`food-delivery-add-${item.id}`"
+                @click="addMenuItemToCart(item.id)"
+              >
+                {{ t('加入', 'Add') }}
+              </button>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section class="rounded-3xl border border-amber-100 bg-white p-4" data-testid="food-delivery-cart-panel">
