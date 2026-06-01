@@ -90,6 +90,17 @@ const resolveActiveWorldPack = (systemStore) => {
   return packs.find((pack) => pack?.id === activePackId) || DEFAULT_WORLD_PACK
 }
 
+const listEnabledWorldPacksFromStore = (systemStore) => {
+  if (typeof systemStore?.listEnabledWorldPacks === 'function') {
+    return systemStore.listEnabledWorldPacks()
+  }
+  const active = resolveActiveWorldPack(systemStore)
+  return active && active.id !== DEFAULT_WORLD_PACK_ID ? [active] : []
+}
+
+const countPackItems = (packs = [], field = '') =>
+  packs.reduce((total, pack) => total + (Array.isArray(pack?.[field]) ? pack[field].length : 0), 0)
+
 const resolveWorldPackActivationState = (systemStore, activePack = DEFAULT_WORLD_PACK) => {
   const activation = systemStore?.user?.worldPackActivation
   if (activation && typeof activation === 'object' && activation.activePackId === activePack.id) {
@@ -294,6 +305,7 @@ export const resolveWorldContextForConsumer = ({
 } = {}) => {
   const bookSources = resolveActiveBookSources({ systemStore, bookStore })
   const activePack = resolveActiveWorldPack(systemStore)
+  const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
   const roleKnowledge = resolveRoleKnowledgeState({
     systemStore,
@@ -310,15 +322,17 @@ export const resolveWorldContextForConsumer = ({
     consumerLabel: consumerConfig.label,
     consumerTitle: consumerConfig.title,
     activePack,
+    enabledWorldPacks,
+    enabledWorldPackCount: enabledWorldPacks.length,
     worldPackActivationState: resolveWorldPackActivationState(systemStore, activePack),
-    worldPackAppBindingCount: Array.isArray(activePack.appBindings) ? activePack.appBindings.length : 0,
-    worldPackServiceTemplateCount: Array.isArray(activePack.serviceAccountTemplates)
-      ? activePack.serviceAccountTemplates.length
-      : 0,
-    worldPackAppBindings: Array.isArray(activePack.appBindings) ? activePack.appBindings : [],
-    worldPackServiceAccountTemplates: Array.isArray(activePack.serviceAccountTemplates)
-      ? activePack.serviceAccountTemplates
-      : [],
+    worldPackAppBindingCount: countPackItems(enabledWorldPacks, 'appBindings'),
+    worldPackServiceTemplateCount: countPackItems(enabledWorldPacks, 'serviceAccountTemplates'),
+    worldPackAppBindings: enabledWorldPacks.flatMap((pack) =>
+      Array.isArray(pack?.appBindings) ? pack.appBindings : [],
+    ),
+    worldPackServiceAccountTemplates: enabledWorldPacks.flatMap((pack) =>
+      Array.isArray(pack?.serviceAccountTemplates) ? pack.serviceAccountTemplates : [],
+    ),
     worldview,
     worldviewPreview: normalizePreview(worldview, 120),
     worldviewCharCount: worldview.length,
@@ -352,6 +366,7 @@ export const buildWorldPromptBlock = (worldContext = {}) => {
 export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
   const bookSources = resolveActiveBookSources({ systemStore, bookStore })
   const activePack = resolveActiveWorldPack(systemStore)
+  const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
   const points = listKnowledgePointsFromStore(systemStore)
   const enabledKnowledgeCount = points.filter((point) => point?.enabled !== false).length
@@ -360,15 +375,17 @@ export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
 
   return {
     activePack,
+    enabledWorldPacks,
+    enabledWorldPackCount: enabledWorldPacks.length,
     worldPackActivationState: resolveWorldPackActivationState(systemStore, activePack),
-    worldPackAppBindingCount: Array.isArray(activePack.appBindings) ? activePack.appBindings.length : 0,
-    worldPackServiceTemplateCount: Array.isArray(activePack.serviceAccountTemplates)
-      ? activePack.serviceAccountTemplates.length
-      : 0,
-    worldPackAppBindings: Array.isArray(activePack.appBindings) ? activePack.appBindings : [],
-    worldPackServiceAccountTemplates: Array.isArray(activePack.serviceAccountTemplates)
-      ? activePack.serviceAccountTemplates
-      : [],
+    worldPackAppBindingCount: countPackItems(enabledWorldPacks, 'appBindings'),
+    worldPackServiceTemplateCount: countPackItems(enabledWorldPacks, 'serviceAccountTemplates'),
+    worldPackAppBindings: enabledWorldPacks.flatMap((pack) =>
+      Array.isArray(pack?.appBindings) ? pack.appBindings : [],
+    ),
+    worldPackServiceAccountTemplates: enabledWorldPacks.flatMap((pack) =>
+      Array.isArray(pack?.serviceAccountTemplates) ? pack.serviceAccountTemplates : [],
+    ),
     worldview,
     worldviewPreview: normalizePreview(worldview, 120),
     worldviewCharCount: worldview.length,

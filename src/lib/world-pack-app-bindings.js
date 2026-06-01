@@ -60,6 +60,14 @@ const resolveActiveWorldPack = (systemStore) => {
   return packs.find((pack) => pack?.id === activePackId) || null
 }
 
+const resolveEnabledWorldPacks = (systemStore) => {
+  if (typeof systemStore?.listEnabledWorldPacks === 'function') {
+    return systemStore.listEnabledWorldPacks()
+  }
+  const activePack = resolveActiveWorldPack(systemStore)
+  return activePack ? [activePack] : []
+}
+
 const resolveWorldAppPresentation = (row = {}) =>
   WORLD_APP_PRESENTATION_BY_ARCHETYPE[row.archetype] ||
   WORLD_APP_PRESENTATION_BY_MODULE[row.moduleKey] ||
@@ -144,8 +152,11 @@ export const buildWorldAppEntryRows = ({ pack } = {}) =>
       }
     })
 
+export const buildWorldAppEntryRowsForPacks = ({ packs = [] } = {}) =>
+  (Array.isArray(packs) ? packs : []).flatMap((pack) => buildWorldAppEntryRows({ pack }))
+
 export const buildActiveWorldAppEntryRows = ({ systemStore } = {}) =>
-  buildWorldAppEntryRows({ pack: resolveActiveWorldPack(systemStore) })
+  buildWorldAppEntryRowsForPacks({ packs: resolveEnabledWorldPacks(systemStore) })
 
 export const resolveWorldAppUxContext = ({
   systemStore,
@@ -153,49 +164,57 @@ export const resolveWorldAppUxContext = ({
   routeQuery = {},
   expectedArchetypes = [],
 } = {}) => {
-  const activePack = resolveActiveWorldPack(systemStore)
-  if (!activePack) return null
-  const normalizedPack = normalizeWorldPack(activePack)
-  const binding = findWorldAppBindingForModule({
-    pack: normalizedPack,
-    moduleKey,
-    routeQuery,
-  })
-  if (!binding) return null
+  const enabledPacks = resolveEnabledWorldPacks(systemStore)
+  const requestedPackId = normalizeQueryValue(routeQuery.worldPack)
+  const candidatePacks = requestedPackId
+    ? enabledPacks.filter((pack) => normalizeWorldPack(pack).id === requestedPackId)
+    : enabledPacks
   const allowedArchetypes = Array.isArray(expectedArchetypes)
     ? expectedArchetypes.filter((item) => typeof item === 'string' && item.trim())
     : []
-  if (allowedArchetypes.length > 0 && !allowedArchetypes.includes(binding.archetype)) return null
 
-  const presentation = resolveWorldAppPresentation(binding)
-  const targetLabel = MODULE_TARGET_LABELS[binding.moduleKey] || binding.moduleKey || 'Module'
-  return {
-    packId: normalizedPack.id,
-    packTitle: normalizedPack.title,
-    packName: normalizedPack.name,
-    bindingId: binding.id,
-    bindingTitle: binding.title,
-    description: binding.description,
-    archetype: binding.archetype,
-    moduleKey: binding.moduleKey,
-    route: binding.route || '',
-    routeQuery: {
-      worldPack: normalizedPack.id,
-      worldApp: binding.id,
-    },
-    targetLabel,
-    icon: presentation.icon,
-    accent: presentation.accent,
-    terminology: binding.terminology || {},
-    uxPackage: {
-      labels: true,
-      terminology: true,
-      accent: true,
-      contextBanner: true,
-      safeDefaults: true,
-    },
-    boundaryCopy: buildWorldAppUxBoundaryCopy(targetLabel),
+  for (const pack of candidatePacks) {
+    const normalizedPack = normalizeWorldPack(pack)
+    const binding = findWorldAppBindingForModule({
+      pack: normalizedPack,
+      moduleKey,
+      routeQuery,
+    })
+    if (!binding) continue
+    if (allowedArchetypes.length > 0 && !allowedArchetypes.includes(binding.archetype)) continue
+
+    const presentation = resolveWorldAppPresentation(binding)
+    const targetLabel = MODULE_TARGET_LABELS[binding.moduleKey] || binding.moduleKey || 'Module'
+    return {
+      packId: normalizedPack.id,
+      packTitle: normalizedPack.title,
+      packName: normalizedPack.name,
+      bindingId: binding.id,
+      bindingTitle: binding.title,
+      description: binding.description,
+      archetype: binding.archetype,
+      moduleKey: binding.moduleKey,
+      route: binding.route || '',
+      routeQuery: {
+        worldPack: normalizedPack.id,
+        worldApp: binding.id,
+      },
+      targetLabel,
+      icon: presentation.icon,
+      accent: presentation.accent,
+      terminology: binding.terminology || {},
+      uxPackage: {
+        labels: true,
+        terminology: true,
+        accent: true,
+        contextBanner: true,
+        safeDefaults: true,
+      },
+      boundaryCopy: buildWorldAppUxBoundaryCopy(targetLabel),
+    }
   }
+
+  return null
 }
 
 export const findWorldAppBindingForModule = ({ pack, moduleKey = '', routeQuery = {} } = {}) => {

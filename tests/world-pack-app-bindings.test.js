@@ -93,6 +93,79 @@ describe('world pack app bindings', () => {
     )
   })
 
+  test('builds active world app entries from multiple enabled packs', () => {
+    const schoolPack = normalizeWorldPack({
+      id: 'school_life',
+      name: 'School life expansion',
+      appBindings: [
+        {
+          id: 'school_schedule_board',
+          archetype: 'reservation',
+          title: 'Campus Schedule',
+          moduleKey: 'calendar',
+          route: '/calendar',
+        },
+      ],
+    })
+    const businessPack = normalizeWorldPack({
+      id: 'business_family',
+      name: 'Business family expansion',
+      appBindings: [
+        {
+          id: 'business_office_feed',
+          archetype: 'publication_feed',
+          title: 'Family Office',
+          moduleKey: 'chat',
+          route: '/chat-contacts',
+        },
+      ],
+    })
+
+    const entries = buildActiveWorldAppEntryRows({
+      systemStore: {
+        listEnabledWorldPacks: () => [schoolPack, businessPack],
+      },
+    })
+
+    expect(entries.map((entry) => entry.id)).toEqual([
+      'world_app_school_life_school_schedule_board',
+      'world_app_business_family_business_office_feed',
+    ])
+  })
+
+  test('resolves target app context across enabled packs by route query', () => {
+    const schoolPack = normalizeWorldPack({
+      id: 'school_life',
+      appBindings: [
+        {
+          id: 'school_schedule_board',
+          archetype: 'reservation',
+          title: 'Campus Schedule',
+          moduleKey: 'calendar',
+          route: '/calendar',
+        },
+      ],
+    })
+
+    const context = resolveWorldAppUxContext({
+      systemStore: {
+        listEnabledWorldPacks: () => [schoolPack],
+      },
+      moduleKey: 'calendar',
+      expectedArchetypes: ['reservation'],
+      routeQuery: {
+        worldPack: 'school_life',
+        worldApp: 'school_schedule_board',
+      },
+    })
+
+    expect(context).toMatchObject({
+      packId: 'school_life',
+      bindingId: 'school_schedule_board',
+      moduleKey: 'calendar',
+    })
+  })
+
   test('resolves the requested active Shopping marketplace binding', () => {
     const binding = findWorldAppBindingForModule({
       pack: survivalPack,

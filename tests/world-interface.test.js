@@ -13,6 +13,7 @@ const createSystemStore = ({
   knowledgePoints = [],
   profileTemplates = [],
   activePack = null,
+  enabledPacks = [],
 } = {}) => ({
   user: {
     globalWorldview,
@@ -33,6 +34,10 @@ const createSystemStore = ({
       appBindings: [],
       serviceAccountTemplates: [],
     }
+  },
+  listEnabledWorldPacks() {
+    if (enabledPacks.length > 0) return enabledPacks
+    return activePack && activePack.id !== 'default_world' ? [activePack] : []
   },
   listKnowledgePoints(options = {}) {
     return options.enabledOnly
@@ -115,6 +120,44 @@ describe('world interface', () => {
       worldPackServiceTemplateCount: 1,
     })
     expect(context.worldPackAppBindings[0].title).toBe('补给站')
+  })
+
+  test('exposes enabled expansion packs without replacing the main active pack', () => {
+    const systemStore = createSystemStore({
+      globalWorldview: 'Modern campus baseline.',
+      activePack: {
+        id: 'default_world',
+        name: 'Default world',
+        title: '默认世界',
+        state: 'active',
+        appBindings: [],
+        serviceAccountTemplates: [],
+      },
+      enabledPacks: [
+        {
+          id: 'school_life',
+          name: 'School life expansion',
+          title: '校园生活拓展',
+          appBindings: [{ id: 'school_schedule_board' }],
+          serviceAccountTemplates: [{ id: 'school_affairs_office' }],
+        },
+        {
+          id: 'business_family',
+          name: 'Business family expansion',
+          title: '商业财阀拓展',
+          appBindings: [{ id: 'business_board_calendar' }],
+          serviceAccountTemplates: [],
+        },
+      ],
+    })
+
+    const overview = resolveActiveWorldOverview({ systemStore })
+
+    expect(overview.activePack.id).toBe('default_world')
+    expect(overview.enabledWorldPackCount).toBe(2)
+    expect(overview.enabledWorldPacks.map((pack) => pack.id)).toEqual(['school_life', 'business_family'])
+    expect(overview.worldPackAppBindingCount).toBe(2)
+    expect(overview.worldPackServiceTemplateCount).toBe(1)
   })
 
   test('resolves enabled, disabled, missing, and overflow role-bound knowledge', () => {

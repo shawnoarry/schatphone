@@ -156,3 +156,11 @@ export const buildWorldServiceTemplateGenerationRows = ({ pack, findExistingCont
       }
     })
 }
+
+export const buildWorldServiceTemplateGenerationRowsForPacks = ({
+  packs = [],
+  findExistingContact,
+} = {}) =>
+  (Array.isArray(packs) ? packs : []).flatMap((pack) =>
+    buildWorldServiceTemplateGenerationRows({ pack, findExistingContact }),
+  )
