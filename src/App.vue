@@ -29,6 +29,7 @@ import {
 import { pushReturnTarget } from './lib/navigation-return'
 import { resolveAppShellScopeAttrs } from './lib/app-shell-scope'
 import { buildScopedCustomCss } from './lib/appearance-scoped-css'
+import { buildAppSkinCss } from './lib/app-skin-customization'
 
 const router = useRouter()
 const route = useRoute()
@@ -277,9 +278,14 @@ const ensureScopedCustomCssStyleEl = () => {
   return scopedCustomCssStyleEl
 }
 
-const syncScopedCustomCss = (scopedCss) => {
+const syncScopedCustomCss = (appearance = {}) => {
   const styleEl = ensureScopedCustomCssStyleEl()
-  styleEl.textContent = buildScopedCustomCss(scopedCss)
+  styleEl.textContent = [
+    buildScopedCustomCss(appearance.scopedCustomCss),
+    buildAppSkinCss(appearance.appSkins),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 const ensureChatCustomCssStyleEl = () => {
@@ -304,9 +310,9 @@ watch(
 )
 
 watch(
-  () => settings.value.appearance.scopedCustomCss,
-  (value) => {
-    syncScopedCustomCss(value)
+  () => [settings.value.appearance.scopedCustomCss, settings.value.appearance.appSkins],
+  () => {
+    syncScopedCustomCss(settings.value.appearance)
   },
   { deep: true, immediate: true },
 )

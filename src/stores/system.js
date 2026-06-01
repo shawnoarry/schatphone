@@ -63,6 +63,10 @@ import {
 import { normalizeChatAppearance } from '../lib/chat-appearance'
 import { normalizeScopedCustomCss } from '../lib/appearance-scoped-css'
 import {
+  normalizeAppSkinSettings,
+  resolveAppSkinTargetForScope,
+} from '../lib/app-skin-customization'
+import {
   buildAppearancePack,
   mergeAppearancePackIntoAppearance,
 } from '../lib/appearance-pack'
@@ -1236,6 +1240,7 @@ export const useSystemStore = defineStore('system', () => {
       hapticFeedbackEnabled: true,
       customCss: '',
       scopedCustomCss: normalizeScopedCustomCss(),
+      appSkins: normalizeAppSkinSettings(),
       customVars: {},
       appIconOverrides: {},
       homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
@@ -1695,6 +1700,32 @@ export const useSystemStore = defineStore('system', () => {
     return true
   }
 
+  const setAppSkin = (scope, updates = {}) => {
+    const target = resolveAppSkinTargetForScope(scope)
+    if (!target) return false
+    const current = normalizeAppSkinSettings(settings.appearance.appSkins)
+    const next = normalizeAppSkinSettings({
+      ...current,
+      [target.scope]: {
+        ...(current[target.scope] || {}),
+        ...(updates && typeof updates === 'object' ? updates : {}),
+      },
+    })
+    settings.appearance.appSkins = next
+    return true
+  }
+
+  const resetAppSkin = (scope) => {
+    const target = resolveAppSkinTargetForScope(scope)
+    if (!target) return false
+    const current = normalizeAppSkinSettings(settings.appearance.appSkins)
+    const existed = Boolean(current[target.scope])
+    const next = { ...current }
+    delete next[target.scope]
+    settings.appearance.appSkins = normalizeAppSkinSettings(next)
+    return existed
+  }
+
   const setAppIconOverride = (appId, override = {}) => {
     const normalizedId = typeof appId === 'string' ? appId.trim() : ''
     if (!normalizedId) return false
@@ -1739,6 +1770,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled !== false
     settings.appearance.customCss = typeof appearance.customCss === 'string' ? appearance.customCss : ''
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
+    settings.appearance.appSkins = normalizeAppSkinSettings(appearance.appSkins)
     settings.appearance.customVars =
       appearance.customVars && typeof appearance.customVars === 'object' ? { ...appearance.customVars } : {}
     settings.appearance.appIconOverrides = normalizeAppIconOverrides(appearance.appIconOverrides)
@@ -1751,6 +1783,7 @@ export const useSystemStore = defineStore('system', () => {
       appearance: {
         ...settings.appearance,
         scopedCustomCss: normalizeScopedCustomCss(settings.appearance.scopedCustomCss),
+        appSkins: normalizeAppSkinSettings(settings.appearance.appSkins),
         appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
       },
     }
@@ -3524,6 +3557,7 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.customCss = appearance.customCss
       }
       settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
+      settings.appearance.appSkins = normalizeAppSkinSettings(appearance.appSkins)
       if (appearance.customVars && typeof appearance.customVars === 'object') {
         settings.appearance.customVars = { ...appearance.customVars }
       }
@@ -3728,6 +3762,7 @@ export const useSystemStore = defineStore('system', () => {
     migrateHomeDesktopLayoutAfterHydration(persistedHomeDesktopSetupVersion)
     settings.appearance.lockClockStyle = normalizeLockClockStyle(settings.appearance.lockClockStyle)
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(settings.appearance.scopedCustomCss)
+    settings.appearance.appSkins = normalizeAppSkinSettings(settings.appearance.appSkins)
     settings.appearance.chat = normalizeChatAppearance(settings.appearance.chat)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true
@@ -3813,6 +3848,7 @@ export const useSystemStore = defineStore('system', () => {
             ...settings.appearance,
             chat: normalizeChatAppearance(settings.appearance.chat),
             scopedCustomCss: normalizeScopedCustomCss(settings.appearance.scopedCustomCss),
+            appSkins: normalizeAppSkinSettings(settings.appearance.appSkins),
             customVars: { ...settings.appearance.customVars },
             appIconOverrides: normalizeAppIconOverrides(settings.appearance.appIconOverrides),
             homeWidgetPages: settings.appearance.homeWidgetPages.map((page) => [...page]),
@@ -3950,6 +3986,8 @@ export const useSystemStore = defineStore('system', () => {
     cycleTheme,
     setCustomCss,
     setScopedCustomCss,
+    setAppSkin,
+    resetAppSkin,
     setAppIconOverride,
     clearAppIconOverride,
     exportAppearancePack,

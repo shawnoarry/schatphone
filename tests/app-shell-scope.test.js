@@ -110,4 +110,36 @@ describe('app shell scope attributes', () => {
     )
     wrapper.unmount()
   })
+
+  test('injects app skin CSS through the selected app shell selector', async () => {
+    const store = useSystemStore()
+    store.settings.appearance.appSkins = {
+      food_delivery: {
+        presetId: 'market_fresh',
+        customCssEnabled: true,
+        customCss: '.store-card { border-radius: 18px; }',
+      },
+      shopping: {
+        presetId: 'catalog_clean',
+        customCssEnabled: true,
+        customCss: '.shop-card { border-color: teal; }',
+      },
+    }
+
+    const router = createTestRouter()
+    await router.push('/food-delivery')
+    await router.isReady()
+
+    const wrapper = mount(App, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const styleEl = document.head.querySelector('[data-schatphone-scoped-css]')
+    expect(styleEl?.textContent).toContain('[data-app="food_delivery"] .store-card')
+    expect(styleEl?.textContent).toContain('[data-app="shopping"] .shop-card')
+    expect(styleEl?.textContent).not.toContain('[data-app="food_delivery"] .shop-card')
+    wrapper.unmount()
+  })
 })
