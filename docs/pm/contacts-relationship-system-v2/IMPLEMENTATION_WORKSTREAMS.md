@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-06-01
+Updated: 2026-06-02
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -80,6 +80,7 @@ Current landed baseline:
 - linked-activity source totals now dedupe runtime source refs against event-attached detail refs before counting, preventing one shared event from appearing as several source records.
 - relationship classification Round 3 adds the role-control relationship surface: Contacts detail shows the current runtime snapshot first, then edits the profile-side relationship premise, seed values, category, modifier tags, classification audit, AI classify, confirmation, and manual save flows.
 - Contacts Role Hub summary now includes a read-only Chat social-channel snapshot so users can understand communication reachability without editing Chat state from Contacts.
+- Contacts World profile fields now support V1 concrete value authoring from WorldBook templates: choose a current-world template, fill role/self/NPC values, set visibility levels, and save `templateLink/profileValues` on the role profile.
 
 Main tasks:
 
@@ -88,7 +89,8 @@ Main tasks:
 3. richer memory list and memory detail behavior;
 4. after this completed baseline, move deeper memory dedupe/merge and recall rules into Workstream 4.2 instead of extending 4.1 further;
 5. richer Chat-bound state and navigation hints;
-6. danger-zone isolation and confirmation copy.
+6. danger-zone isolation and confirmation copy;
+7. richer WorldBook template field widgets, template-change review, and AI-assisted value completion after the V1 editor baseline.
 
 Semantic traps to avoid:
 

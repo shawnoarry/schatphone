@@ -54,6 +54,7 @@ const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
 const selectedHomeLayoutPage = ref(0)
 const activeAppearanceSheet = ref('')
+const homeLayoutRefreshFeedback = ref('')
 
 let savedTimerId = null
 const customFontStackInput = ref('')
@@ -99,6 +100,7 @@ const homeLayoutPageSummaries = computed(() =>
 const selectedHomeLayoutTemplate = computed(() =>
   getHomeLayoutTemplate(settings.value.appearance.homeLayoutTemplateIds?.[selectedHomeLayoutPageIndex.value]),
 )
+const homeDesktopRefreshRecommended = computed(() => systemStore.recommendHomeDesktopRefresh)
 
 const fontPresetLabel = (preset) => {
   if (preset.id === 'system') return t('系统默认', 'System default')
@@ -377,6 +379,17 @@ const openHomeLayoutEditor = () => {
   )
 }
 
+const applyCurrentHomeDesktopDefaults = () => {
+  const result = systemStore.applyCurrentHomeDesktopDefaults()
+  if (!result?.ok) return
+  selectedHomeLayoutPage.value = 0
+  homeLayoutRefreshFeedback.value = t(
+    '已应用新版桌面布局：组件固定在 Dock，旧默认图标会回到可恢复的应用库。',
+    'Current Home layout applied: Widgets stays in the Dock and old default icons return to the recoverable library.',
+  )
+  triggerSaved()
+}
+
 const selectAppearanceHomePage = (pageIndex) => {
   selectedHomeLayoutPage.value = clampHomeLayoutPage(pageIndex)
 }
@@ -629,6 +642,44 @@ onBeforeUnmount(() => {
             <span>{{ t('编辑主屏', 'Edit Home') }}</span>
           </button>
         </div>
+        <div
+          class="appearance-layout-refresh"
+          :class="{ 'is-recommended': homeDesktopRefreshRecommended }"
+          data-testid="appearance-home-layout-refresh"
+        >
+          <div>
+            <p>
+              {{
+                homeDesktopRefreshRecommended
+                  ? t('检测到旧桌面布局', 'Older Home layout detected')
+                  : t('新版桌面布局', 'Current Home layout')
+              }}
+            </p>
+            <span>
+              {{
+                t(
+                  '让组件固定在 Dock，并把旧默认图标整理回新版桌面。不会删除自定义组件。',
+                  'Keep Widgets in the Dock and organize old default icons into the current Home setup. Custom widgets are not deleted.',
+                )
+              }}
+            </span>
+          </div>
+          <button
+            type="button"
+            data-testid="appearance-apply-current-home-layout"
+            @click="applyCurrentHomeDesktopDefaults"
+          >
+            <i class="fas fa-rotate"></i>
+            <span>{{ t('应用新版布局', 'Apply Current Layout') }}</span>
+          </button>
+        </div>
+        <p
+          v-if="homeLayoutRefreshFeedback"
+          class="appearance-layout-feedback"
+          data-testid="appearance-home-layout-refresh-feedback"
+        >
+          {{ homeLayoutRefreshFeedback }}
+        </p>
         <div class="appearance-layout-pages" role="tablist" :aria-label="t('主屏页面', 'Home screens')">
           <button
             v-for="page in homeLayoutPageSummaries"
@@ -1547,6 +1598,72 @@ onBeforeUnmount(() => {
   font-size: 12px;
   font-weight: 750;
   -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-layout-refresh {
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: var(--system-control-bg);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.appearance-layout-refresh.is-recommended {
+  border-color: color-mix(in srgb, var(--system-accent) 35%, var(--system-subtle-border));
+  background: color-mix(in srgb, var(--system-accent-soft) 60%, var(--system-control-bg));
+}
+
+.appearance-layout-refresh p,
+.appearance-layout-refresh span {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.appearance-layout-refresh p {
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.appearance-layout-refresh span {
+  display: block;
+  margin-top: 3px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.appearance-layout-refresh button {
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, var(--system-accent) 55%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--system-accent-strong);
+  background: color-mix(in srgb, var(--system-accent-soft) 88%, transparent);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-layout-feedback {
+  margin: -4px 2px 0;
+  border-radius: 14px;
+  padding: 8px 10px;
+  color: var(--system-success);
+  background: var(--system-success-soft);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 750;
 }
 
 .appearance-layout-pages,

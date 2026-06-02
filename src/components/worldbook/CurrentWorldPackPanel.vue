@@ -196,7 +196,7 @@ const effectRows = computed(() => [
 const reviewRows = computed(() => {
   if (!props.activationReview || !Array.isArray(props.activationReview.effectRows)) return []
   const labelMap = {
-    book_sources: t('文本来源', 'Book sources'),
+    book_sources: t('设定文本', 'Setting text'),
     knowledge: t('知识点', 'Knowledge'),
     templates: t('角色模板', 'Role templates'),
     app_bindings: t('世界应用', 'World apps'),

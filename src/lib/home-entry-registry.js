@@ -3,11 +3,9 @@ import {
   ASSETS_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
   CONTROL_CENTER_ROUTE,
-  FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_HOME_APP_ID,
   FOOD_DELIVERY_ROUTE,
   SHOPPING_HOME_APP_ID,
-  SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_ROUTE,
 } from './planned-module-registry'
 
@@ -29,7 +27,7 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
     icon: 'fas fa-bag-shopping',
     accent: 'warm',
     route: SHOPPING_ROUTE,
-    childEntries: SHOPPING_PLATFORM_APP_ENTRIES,
+    childEntries: [],
     presentation: HOME_FOLDER_PRESENTATION_DEFAULTS,
   }),
   [FOOD_DELIVERY_HOME_APP_ID]: Object.freeze({
@@ -38,7 +36,7 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
     icon: 'fas fa-bowl-food',
     accent: 'warm',
     route: FOOD_DELIVERY_ROUTE,
-    childEntries: FOOD_DELIVERY_CATEGORY_ENTRIES,
+    childEntries: [],
     presentation: {
       ...HOME_FOLDER_PRESENTATION_DEFAULTS,
       tint: 'glass-light',

@@ -13,8 +13,9 @@ Current World Pack note: `survival_city` can open Shopping as `补给站` throug
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`
-2. `PRODUCT_BOUNDARY.md`
-3. `IMPLEMENTATION_WORKSTREAMS.md`
+2. `FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md` when continuing Food Delivery pseudo-folder or shop mini app work
+3. `PRODUCT_BOUNDARY.md`
+4. `IMPLEMENTATION_WORKSTREAMS.md`
 
 Also read when needed:
 

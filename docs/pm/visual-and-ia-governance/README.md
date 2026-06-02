@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-05-31
+Updated: 2026-06-02
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -22,13 +22,15 @@ Current visual pass:
 - Home Today View user-facing copy has been cleaned up for native-system language.
 - Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, larger slots only offer exact-size widget/custom-widget candidates, and opening the library no longer preselects a random item.
 - Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
-- `世界书 / WorldBook` now has a state-first Settings surface: active world overview, then a single-focus control console for source links, Current World Pack activation, world-kernel fallback, profile templates, and knowledge management.
-- WorldBook source selection and changed-source review use layered sheets instead of stretching the Settings page inline.
-- WorldBook's Sources panel now uses stats plus linked-source cards instead of a generic Settings list; source removal is visually separated from normal open/toggle actions.
+- `世界书 / WorldBook` now has a state-first Settings surface: active world overview, then a single-focus control deck for Setting Text, Current World Pack activation, base worldview, profile templates, and knowledge management.
+- WorldBook Setting Text selection and changed-text review use layered sheets instead of stretching the Settings page inline.
+- WorldBook's Setting Text panel answers which text AI reads now. Unused or missing text references live in Advanced management, while active changed text stays in the active list with a confirm-new-version action.
+- WorldBook's control deck includes a `世界建立路径 / World setup path` rail: Base worldview, Setting Text, World Pack, Profile Templates, and Knowledge are shown as a readable progression with state labels and direct panel switching.
+- WorldBook's Profile Templates panel now has a clear Contacts handoff: WorldBook defines the fields a world needs, while `通讯录 / Contacts` owns filling concrete role, user, and NPC profile values; Contacts recognizes the handoff route, shows a focused entry note, and role detail has a V1 inline editor for those concrete values.
 - WorldBook's Current World Pack and Knowledge panels have a first craft pass; knowledge creation and editing now use a bottom sheet so the Settings page stays scan-first.
 - WorldBook's Kernel and Templates panels now share the same task-panel treatment: compact state headers, controlled editing/list areas, and stronger mobile card rhythm.
 - `文本库 / Book` now has a V1 installed-app-like source-library surface for read-first long text editing, export, and WorldBook source usage state; on phone-sized screens it separates Shelf -> Detail -> Editor so long text editing is a focused sheet rather than inline page expansion.
-- WorldBook's Book-source panel now supports source picking, selected-section activation, changed-source warning, and refresh action for phone-sized trials.
+- WorldBook's Setting Text panel now supports Book text picking, selected-section activation, changed-text warning, and refresh action for phone-sized trials.
 - WorldBook's Current World Pack panel now exposes active world-app entries as a snapshot and tells users to use App Store's `World` section for browsing, placement, and launch. It does not provide an App Store jump button or behave as a Settings-local launcher.
 - World Pack's global app-entry unlock seam now has a first implementation: enabled compatible expansion-pack app bindings appear together as World entries in App Store and Home/App Library placement, while the target app still owns the launched workflow.
 - WorldBook's Current World Pack panel now has a compatible-expansion IA: AI world-profile analysis recommends matching packs, users can still browse and enable other supported packs, and the enabled-pack list stays separate from the legacy single-pack activation preview.

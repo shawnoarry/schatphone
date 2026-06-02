@@ -36,7 +36,7 @@ const mountWorldBook = async () => {
   return { wrapper, router }
 }
 
-describe('WorldBook Book source picker', () => {
+describe('WorldBook setting text picker', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useFakeTimers()
@@ -46,7 +46,7 @@ describe('WorldBook Book source picker', () => {
     useSystemStore().settings.system.language = 'en-US'
   })
 
-  test('shows system fallback without creating a Book asset', async () => {
+  test('shows base worldview without creating a Book asset', async () => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()
     systemStore.setGlobalWorldview('Fallback city rules.')
@@ -54,11 +54,11 @@ describe('WorldBook Book source picker', () => {
     const { wrapper } = await mountWorldBook()
 
     const fallback = wrapper.get('[data-testid="worldbook-system-fallback"]')
-    expect(fallback.text()).toContain('System fallback')
+    expect(fallback.text()).toContain('Base worldview')
     expect(fallback.text()).toContain('Fallback city rules')
     expect(bookStore.assetCount).toBe(0)
     expect(wrapper.get('[data-testid="worldbook-onboarding-card"]').text()).toContain(
-      'Start with a source',
+      'Tell AI what this world is',
     )
 
     wrapper.unmount()
@@ -131,6 +131,45 @@ describe('WorldBook Book source picker', () => {
     expect(bookStore.findAssetById(asset.id)?.status).toBe('active_source')
     expect(wrapper.get(`[data-testid="worldbook-book-source-${link.id}"]`).text()).toContain(
       'Basics',
+    )
+  })
+
+  test('separates in-use setting text from advanced maintenance items', async () => {
+    const bookStore = useBookStore()
+    const systemStore = useSystemStore()
+    const activeAsset = bookStore.createAsset({
+      id: 'asset_active_context',
+      title: 'Active Setting Text',
+      content: 'Current world rules.',
+    })
+    const disabledAsset = bookStore.createAsset({
+      id: 'asset_disabled_context',
+      title: 'Unused Setting Text',
+      content: 'Optional world rules.',
+    })
+    const activeLink = systemStore.addWorldBookSourceLink({
+      assetId: activeAsset.id,
+      enabled: true,
+      sourceVersion: activeAsset.version,
+      sourceFingerprint: activeAsset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(activeAsset.content),
+    })
+    const disabledLink = systemStore.addWorldBookSourceLink({
+      assetId: disabledAsset.id,
+      enabled: false,
+      sourceVersion: disabledAsset.version,
+      sourceFingerprint: disabledAsset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(disabledAsset.content),
+    })
+
+    const { wrapper } = await mountWorldBook()
+
+    expect(wrapper.get('[data-testid="worldbook-source-stats"]').text()).toContain('1 text(s) in use')
+    expect(wrapper.get('[data-testid="worldbook-active-source-list"]').text()).toContain('Active Setting Text')
+    expect(wrapper.find(`[data-testid="worldbook-book-source-maintenance-${activeLink.id}"]`).exists()).toBe(false)
+    expect(wrapper.get('[data-testid="worldbook-source-maintenance"]').text()).toContain('1 unused')
+    expect(wrapper.get(`[data-testid="worldbook-book-source-maintenance-${disabledLink.id}"]`).text()).toContain(
+      'Unused Setting Text',
     )
   })
 

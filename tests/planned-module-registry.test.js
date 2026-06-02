@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import {
   ASSET_CATEGORY_ENTRIES,
   ASSET_SOURCE_KEYS,
-  FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SERVICE_PRESETS,
   FOOD_DELIVERY_SOURCE_KEYS,
   LOGISTICS_SERVICE_PRESETS,
@@ -12,12 +11,18 @@ import {
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
   findAssetCategory,
-  findFoodDeliveryCategory,
   findFoodDeliveryServicePreset,
   findLogisticsServicePreset,
   findShoppingPlatformApp,
   findShoppingServicePreset,
 } from '../src/lib/planned-module-registry'
+import {
+  FOOD_DELIVERY_PLATFORM_ENTRY_KEY,
+  buildFoodDeliveryFolderEntries,
+  buildFoodDeliveryShopEntryId,
+  buildShoppingFolderEntries,
+  buildShoppingShopEntryId,
+} from '../src/lib/home-folder-mini-app-entries'
 import {
   HOME_FOLDER_REGISTRY,
   HOME_FOLDER_TILE_KIND,
@@ -31,19 +36,25 @@ describe('planned module registry', () => {
     const shoppingFolder = HOME_FOLDER_REGISTRY.app_shopping
 
     expect(shoppingFolder.kind).toBe(HOME_FOLDER_TILE_KIND)
-    expect(shoppingFolder.childEntries).toHaveLength(SHOPPING_PLATFORM_APP_ENTRIES.length)
-    expect(resolveHomeFolderChildRoute(findShoppingPlatformApp('nova_digital'))).toEqual({
+    expect(shoppingFolder.childEntries).toHaveLength(0)
+    const childEntries = buildShoppingFolderEntries()
+    expect(childEntries).toHaveLength(SHOPPING_PLATFORM_APP_ENTRIES.length)
+    expect(resolveHomeFolderChildRoute(childEntries.find((entry) => entry.key === buildShoppingShopEntryId('nova_digital')))).toEqual({
       path: '/shopping',
       query: {
         service: 'nova_digital',
         category: 'digital',
+        entry: 'shop',
+        shopEntryId: 'shop_app_shopping_nova_digital',
       },
     })
-    expect(resolveHomeFolderChildRoute(findShoppingPlatformApp('style_cloud'))).toEqual({
+    expect(resolveHomeFolderChildRoute(childEntries.find((entry) => entry.key === buildShoppingShopEntryId('style_cloud')))).toEqual({
       path: '/shopping',
       query: {
         service: 'style_cloud',
         category: 'fashion',
+        entry: 'shop',
+        shopEntryId: 'shop_app_shopping_style_cloud',
       },
     })
   })
@@ -52,11 +63,41 @@ describe('planned module registry', () => {
     const foodFolder = HOME_FOLDER_REGISTRY.app_food_delivery
 
     expect(foodFolder.kind).toBe(HOME_FOLDER_TILE_KIND)
-    expect(foodFolder.childEntries).toHaveLength(FOOD_DELIVERY_CATEGORY_ENTRIES.length)
-    expect(resolveHomeFolderChildRoute(findFoodDeliveryCategory('nearby'))).toEqual({
+    const childEntries = buildFoodDeliveryFolderEntries({
+      restaurants: [
+        {
+          id: 'food_seed_moon_bistro',
+          name: 'Moon Bistro',
+          cuisine: 'Fusion dinner',
+          rating: 4.8,
+          deliveryEtaMinutes: 32,
+        },
+        {
+          id: 'food_seed_hidden_shop',
+          name: 'Hidden Shop',
+          cuisine: 'Hidden',
+        },
+      ],
+      placements: {
+        hiddenEntryIds: [buildFoodDeliveryShopEntryId('food_seed_hidden_shop')],
+      },
+    })
+    expect(childEntries.map((entry) => entry.key)).toEqual([
+      FOOD_DELIVERY_PLATFORM_ENTRY_KEY,
+      buildFoodDeliveryShopEntryId('food_seed_moon_bistro'),
+    ])
+    expect(resolveHomeFolderChildRoute(childEntries[0])).toEqual({
       path: '/food-delivery',
       query: {
-        category: 'nearby',
+        entry: 'platform',
+      },
+    })
+    expect(resolveHomeFolderChildRoute(childEntries[1])).toEqual({
+      path: '/food-delivery',
+      query: {
+        restaurantId: 'food_seed_moon_bistro',
+        entry: 'shop',
+        shopEntryId: 'shop_app_food_seed_moon_bistro',
       },
     })
     expect(FOOD_DELIVERY_SOURCE_KEYS.MAP_RESTAURANT_LOCATION).toBe('food_delivery_map_restaurant_location')
@@ -112,6 +153,17 @@ describe('planned module registry', () => {
       service: 'daily_fresh',
       category: 'grocery',
     })
+    expect(
+      buildShoppingFolderEntries({
+        placements: {
+          hiddenEntryIds: [buildShoppingShopEntryId('daily_fresh')],
+        },
+      }).map((entry) => entry.key),
+    ).toEqual([
+      buildShoppingShopEntryId('schat_mall'),
+      buildShoppingShopEntryId('style_cloud'),
+      buildShoppingShopEntryId('nova_digital'),
+    ])
     expect(findShoppingServicePreset('nova_digital')?.key).toBe('nova_digital')
     expect('route' in findShoppingServicePreset('nova_digital')).toBe(false)
     expect(findShoppingServicePreset('unknown')?.key).toBe('schat_mall')

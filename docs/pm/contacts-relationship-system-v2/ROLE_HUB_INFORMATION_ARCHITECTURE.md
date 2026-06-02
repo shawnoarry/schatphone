@@ -1,6 +1,6 @@
 # Contacts Role Hub Information Architecture / 通讯录角色中枢信息架构
 
-Updated: 2026-05-19
+Updated: 2026-06-02
 
 This document defines the product-facing information architecture for `Contacts / 通讯录` as a role-centered hub.
 
@@ -180,6 +180,8 @@ V1 rules:
 - a profile has one primary world/template context;
 - template changes do not silently overwrite user-entered profile values;
 - Contacts can show template-applied values as extensible profile fields;
+- Contacts role detail can now edit V1 concrete profile values inline: choose a current-world template, fill values, set visibility, and save into `templateLink/profileValues`;
+- saving values should only replace fields covered by the selected template and preserve older/custom out-of-template values unless a later explicit cleanup flow is added;
 - manual profile values remain higher priority than event-attached clues.
 
 ## 6. Visible Role ID Rule

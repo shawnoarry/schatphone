@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-06-01
+Updated: 2026-06-02
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -28,6 +28,10 @@ Executable plan for that design:
 
 - `docs/superpowers/plans/2026-05-19-worldbook-contacts-profile-template-plan.md`
 
+Current cross-device handoff and next plan:
+
+- `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`
+
 ## Fast Product Meaning
 
 - `Contacts` owns the global role archive, visible role ID, and role-centered destructive actions.
@@ -44,5 +48,7 @@ Executable plan for that design:
 - Chat social events such as message requests, blocks, and being-blocked states may be displayed in Contacts as role-level reachability/status snapshots, but Contacts must not judge eligibility or apply generated outcomes. Chat owns the applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts or memories.
 - `World Hub` is an optional review and cleanup surface, not the main role-authoring page.
 - `WorldBook` should define profile-template rules; `Contacts` should store concrete profile values.
+- WorldBook's Profile Templates panel may link users into Contacts, and Contacts shows a focused handoff note for that entry path; concrete role, self-profile, and NPC values remain Contacts-owned.
+- Contacts role detail now has a V1 `世界字段 / World profile fields` editor: users can choose a current-world template, fill concrete values, set visibility levels, and save those values back to the role profile without editing the WorldBook template itself.
 - Contacts entity types now include Self Profile, Main Role, and NPC. Chat Directory is a chat target list, not a Main Role filter; Self Profile must not be bound as a Chat target, and NPC can be bound before upgrade.
 - Relationship memory 4.2 currently treats explicit source-id lineage as the safe merge boundary: Phone callbacks, Shopping/Food order support, Map route follow-ups, and confirmed Calendar follow-ups should enrich one shared memory instead of creating competing top-level memories.

@@ -28,9 +28,9 @@ const flushUi = async () => {
   await flushPromises()
 }
 
-const mountContactsView = async () => {
+const mountContactsView = async (initialRoute = '/contacts') => {
   const router = createTestRouter()
-  await router.push('/contacts')
+  await router.push(initialRoute)
   await router.isReady()
   const wrapper = mount(ContactsView, {
     global: {
@@ -94,7 +94,72 @@ describe('Contacts profile template entity UI', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('White tea')
-    expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('familiar')
+    expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('Familiar')
+
+    wrapper.unmount()
+  })
+
+  test('edits concrete profile values from a WorldBook template in Contacts', async () => {
+    const systemStore = useSystemStore()
+    const template = systemStore.createWorldProfileTemplateFromPreset('preset_abo', {
+      worldId: 'default_world',
+      title: 'ABO contact template',
+    })
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1207',
+      name: 'Template editable role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+
+    const wrapper = await mountContactsView('/contacts?from=worldbook&focus=profile_templates')
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+
+    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
+
+    await wrapper.get('[data-testid="contacts-profile-template-value-pheromone"]').setValue('Cedar rain')
+    await wrapper.get('[data-testid="contacts-profile-template-visibility-pheromone"]').setValue('intimate')
+    await wrapper.get('[data-testid="contacts-save-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    const updated = chatStore.getRoleProfileById(profile.id)
+    expect(updated.templateLink).toMatchObject({
+      primaryWorldId: 'default_world',
+      profileTemplateId: template.id,
+      profileTemplateVersion: template.version,
+    })
+    expect(updated.profileValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fieldId: 'pheromone',
+          value: 'Cedar rain',
+          visibilityLevel: 'intimate',
+          sourceKind: 'manual',
+        }),
+      ]),
+    )
+    expect(wrapper.get('[data-testid="contacts-world-field-pheromone"]').text()).toContain('Cedar rain')
+    expect(wrapper.get('[data-testid="contacts-world-field-pheromone"]').text()).toContain('Intimate')
+
+    wrapper.unmount()
+  })
+
+  test('shows a WorldBook handoff when profile templates route into Contacts', async () => {
+    const wrapper = await mountContactsView('/contacts?from=worldbook&focus=profile_templates')
+
+    const handoff = wrapper.get('[data-testid="contacts-worldbook-template-handoff"]')
+    expect(handoff.text()).toContain('From WorldBook')
+    expect(handoff.text()).toContain('Select or create a profile')
+    expect(handoff.text()).toContain('WorldBook prepares the fields this world needs')
+
+    await wrapper.get('[data-testid="contacts-worldbook-template-create-profile"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-profile-modal"]').text()).toContain('Create Role Profile')
 
     wrapper.unmount()
   })

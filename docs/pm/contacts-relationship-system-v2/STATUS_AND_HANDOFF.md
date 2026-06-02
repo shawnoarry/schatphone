@@ -46,6 +46,8 @@ What is already landed:
 34. Relationship classification Round 4 event/runtime gating is landed: existing low-impact relationship facts attach `relationshipGate` audit metadata from saved category/modifier classification fields, relationship runtime persists and respects block/confirm decisions, and World Hub can show gate metadata read-only. Raw label/note prose remains profile-side premise text and is not used for event decisions.
 35. `summarizeEntityForTarget()` now keeps memory counts canonical even when a caller asks for zero or a small number of displayed memory summaries; `memorySummaries` is capped, while `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` describe the full target state.
 36. Contacts now shows a read-only Chat social-channel snapshot in the Role Hub summary so the user can see the role's current communication reachability without making Contacts the event judge.
+37. WorldBook Profile Templates now has an explicit Contacts handoff. WorldBook defines reusable world-specific fields; Contacts remains the owner of concrete role, self-profile, and NPC values. The handoff opens Contacts with `from=worldbook&focus=profile_templates`, and Contacts shows a focused entry note plus a new-profile action.
+38. Contacts role detail now has V1 profile-value authoring for `世界字段 / World profile fields`: users can open an inline editor, choose a current-world WorldBook template, fill concrete values, set visibility levels, and save `templateLink/profileValues` back to the selected Self Profile/Main Role/NPC. Saving overwrites only fields in the chosen template and preserves out-of-template values so older/custom data is not silently erased.
 
 Still incomplete:
 
@@ -59,8 +61,10 @@ Still incomplete:
 
 1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
-3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing and profile-value authoring ergonomics.
+3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing, richer field widgets, template-change review, and AI-assisted profile-value completion.
 4. Continue polishing the Contacts display-only social snapshot so it remains clear, read-only, and separate from relationship metrics or memory truth.
+
+For cross-device continuation of the WorldBook -> Contacts profile-field line, start from `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`.
 
 4.2 closure baseline:
 
@@ -102,9 +106,13 @@ Still incomplete:
 - `npm.cmd test -- tests/relationship-label-classifier.test.js tests/chat-store-model.test.js`: pass on 2026-05-30 for relationship classification Round 2.
 - `npm.cmd test -- tests/contacts-relationship-classification-view.test.js tests/contacts-profile-template-view.test.js tests/contacts-detail-danger-flows.test.js`: pass on 2026-05-30 for relationship classification Round 3 Contacts UI.
 - `npm.cmd test -- tests/relationship-event-gating.test.js tests/relationship-fact-adapters.test.js tests/relationship-runtime-store.test.js tests/control-center-view.test.js`: pass on 2026-05-30 for relationship classification Round 4 event/runtime gating.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js`: pass on 2026-06-02 for the WorldBook Profile Templates -> Contacts handoff.
+- `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-02 for Contacts World profile fields authoring V1.
 - `npm.cmd run lint`: pass
 - `npm.cmd run test`: pass
 - `npm.cmd run build`: pass
+- Manual Playwright phone-viewport check on 2026-06-02: pass for WorldBook Profile Templates -> Contacts focused handoff -> create role profile -> edit `世界字段 / World profile fields` -> save and display. Checked no page errors, no horizontal overflow, and no page-level mojibake in the simulated 390px phone viewport.
+- `npm.cmd run test:e2e`: 14 passed on 2026-06-02 after the WorldBook Profile Templates -> Contacts handoff and Contacts World profile fields authoring V1.
 
 ## 5. Must Sync When Working Here
 

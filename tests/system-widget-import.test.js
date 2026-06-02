@@ -282,10 +282,39 @@ describe('system widget import safety', () => {
       slotId: 'b-small-7',
       tileId: 'app_food_delivery',
     })
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(1)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
   })
 
-  test('keeps versioned Home slot setup during hydration', () => {
+  test('migrates versioned legacy crowded Home into the cleaned setup layout', () => {
+    writePersistedState(
+      'store:system',
+      {
+        settings: {
+          appearance: {
+            homeDesktopSetupVersion: 1,
+            homeWidgetPages: [
+              ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
+              ['system', 'quick_heart', 'quick_disc', 'app_phone', 'app_map'],
+              [],
+              [],
+              [],
+            ],
+            homeLayoutTemplateIds: ['layout-c', 'layout-f', 'layout-b', 'layout-d', 'layout-e'],
+          },
+        },
+      },
+      { version: 1 },
+    )
+
+    const store = useSystemStore()
+
+    expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_phone')
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
+  })
+
+  test('keeps customized Home slot setup during setup-version hydration', () => {
     writePersistedState(
       'store:system',
       {
@@ -316,10 +345,38 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages[0]).toEqual(['weather'])
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_phone')
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
       slotId: 'c-top-left',
       tileId: 'weather',
     })
+  })
+
+  test('can apply current Home desktop defaults without deleting custom widgets', () => {
+    const store = useSystemStore()
+    const widgetId = store.addCustomWidget({
+      name: 'Saved Poster',
+      size: '4x4',
+      code: '<div>Poster</div>',
+      placeOnHome: false,
+    })
+    store.setHomeWidgetPages([
+      ['weather', 'app_chat', widgetId],
+      ['app_gallery'],
+      [],
+      [],
+      [],
+    ])
+
+    const result = store.applyCurrentHomeDesktopDefaults()
+
+    expect(result.ok).toBe(true)
+    expect(store.settings.appearance.customWidgets.some((widget) => widget.id === widgetId)).toBe(true)
+    expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain(widgetId)
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
+    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
   })
 
   test('World Hub Home entry is user-managed instead of controlled by legacy toggles', () => {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import {
@@ -331,7 +331,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 1
+const HOME_DESKTOP_SETUP_VERSION = 2
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -404,6 +404,31 @@ const areHomeTilePagesEqual = (pages, expectedPages) => {
     if (comparablePage.length !== expectedPage.length) return false
     return expectedPage.every((tileId, index) => comparablePage[index] === (HOME_TILE_ALIASES[tileId] || tileId))
   })
+}
+
+const isLegacyCrowdedHomeDesktopSetup = (pages) => {
+  if (!Array.isArray(pages)) return false
+  const normalizedPages = normalizeHomeWidgetPages(pages, [], {
+    defaultWhenEmpty: false,
+  })
+  const firstPage = new Set(normalizedPages[0] || [])
+  const secondPage = new Set(normalizedPages[1] || [])
+  const legacyFirstPageCore = [
+    'weather',
+    'calendar',
+    'music',
+    'app_network',
+    'app_chat',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+  ]
+  const legacySecondPageCore = ['system', 'quick_heart', 'quick_disc', 'app_phone', 'app_map']
+
+  return (
+    legacyFirstPageCore.every((tileId) => firstPage.has(tileId)) &&
+    legacySecondPageCore.every((tileId) => secondPage.has(tileId))
+  )
 }
 
 const hasAnyHomeLayoutSlotPlacement = (slotPlacements) =>
@@ -1933,9 +1958,11 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const migrateHomeDesktopLayoutAfterHydration = (persistedSetupVersion = HOME_DESKTOP_SETUP_VERSION) => {
+    const hasOutdatedSetupVersion =
+      normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
-      normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION ||
-      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES)
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
 
     if (shouldResetToCleanSetup) {
       resetHomeWidgetPages()
@@ -1943,7 +1970,23 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     keepOnlyExplicitlyPlacedHomeTilesOnPages()
-    settings.appearance.homeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
+    if (hasOutdatedSetupVersion) {
+      settings.appearance.homeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
+    }
+  }
+
+  const recommendHomeDesktopRefresh = computed(() => {
+    if (isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)) return true
+    return normalizeHomeDesktopSetupVersion(settings.appearance.homeDesktopSetupVersion) < HOME_DESKTOP_SETUP_VERSION
+  })
+
+  const applyCurrentHomeDesktopDefaults = () => {
+    resetHomeWidgetPages()
+    return {
+      ok: true,
+      homeDesktopSetupVersion: settings.appearance.homeDesktopSetupVersion,
+      pageCount: settings.appearance.homeWidgetPages.length,
+    }
   }
 
   const setHomeLayoutTemplate = (pageIndex, templateId) => {
@@ -4228,6 +4271,8 @@ export const useSystemStore = defineStore('system', () => {
     setChatAppearance,
     setCustomVar,
     removeCustomVar,
+    recommendHomeDesktopRefresh,
+    applyCurrentHomeDesktopDefaults,
     setHomeWidgetPages,
     resetHomeWidgetPages,
     setHomeLayoutTemplate,

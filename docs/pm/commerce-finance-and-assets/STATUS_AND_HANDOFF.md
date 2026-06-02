@@ -23,6 +23,7 @@ What is already landed:
 11. Moon Bistro now has the first Food Delivery shop template treatment, `dark_tray_menu`, while checkout and order ownership remain in Food Delivery.
 12. App Store can now surface Food Delivery restaurants as `food_delivery`-bound folder mini apps, save App Store-side display/icon/cover/short-description/tag/template facade presentation for those entries, show their target-folder ownership boundary, and add/remove them from the target folder without deleting source records. Food Delivery reads presentation and install-state fields for launcher/store display. App Store also surfaces Shopping platform services as `shopping`-bound folder mini apps, opens Shopping with service/shop-entry context, lets Shopping render the same App Store-side cover facade, and lets Shopping hide uninstalled service mini apps from its folder list. `Add mini app` in App Store is a target-folder handoff: Food Delivery receives a restaurant-creation context and Shopping receives a Shopping-owned creation workspace context. This is install-entry presentation, target-folder placement, and owner handoff only: App Store does not own restaurant records, menus, products, carts, checkout, orders, shop favorites/recent lists, consumer category filters, Wallet/Assets handoffs, Map/Calendar/logistics handoffs, or Chat service pushes.
 13. Food Delivery menu items now have a focused item-detail sheet: tapping a dish opens description, base ingredients, image source, and add-to-cart; a small edit icon updates only that item copy/image through Food Delivery-owned menu records.
+14. Moon Bistro now opens as a shop-first surface: the Food platform hero/list chrome is hidden, the store owns the first screen, cart becomes the ordering anchor, and Map/order/Wallet support panels are folded behind Order & delivery.
 
 Still incomplete:
 
@@ -41,6 +42,7 @@ Still incomplete:
 
 5. Continue Food Delivery from store-surface polish, sticky cart ergonomics, and per-store visual differentiation without splitting the shared order system.
 6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; continue from the explicit binding-target/create-handoff baseline before adding more Food Delivery-only polish.
+7. When Food Delivery visual polish resumes, start from `FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md` and keep the first slice focused on Moon Bistro before broadening to more shop templates.
 
 ## 3. Do Not Do
 

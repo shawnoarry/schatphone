@@ -119,12 +119,30 @@ describe('WorldBook functional IA', () => {
 
     const wrapper = await mountWorldBook()
 
-    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('World context console')
+    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('World settings')
+    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('Setting text')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World setup path')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Base worldview')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Profile templates')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
       'none',
     )
     expect(wrapper.get('[data-testid="worldbook-source-stats"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="worldbook-panel-pack"]').element.style.display).toBe('none')
+
+    await wrapper.get('[data-testid="worldbook-setup-step-kernel"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-world-kernel"]').element.style.display).not.toBe(
+      'none',
+    )
+
+    await wrapper.get('[data-testid="worldbook-setup-step-sources"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
+      'none',
+    )
 
     await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
     await nextTick()

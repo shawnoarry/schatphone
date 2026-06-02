@@ -147,6 +147,41 @@ describe('AppearanceView wallpaper source picker', () => {
     wrapper.unmount()
   })
 
+  test('applies current Home layout defaults from the Appearance root screen', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.appearance.homeDesktopSetupVersion = 1
+    systemStore.setHomeWidgetPages([
+      ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
+      ['system', 'quick_heart', 'quick_disc', 'app_phone', 'app_map'],
+      [],
+      [],
+      [],
+    ])
+
+    const wrapper = mount(AppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="appearance-home-layout-refresh"]').classes()).toContain('is-recommended')
+
+    await wrapper.get('[data-testid="appearance-apply-current-home-layout"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
+    expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
+    expect(systemStore.settings.appearance.homeWidgetPages[2]).toContain('app_store')
+    expect(systemStore.settings.appearance.homeDesktopSetupVersion).toBe(2)
+    expect(wrapper.get('[data-testid="appearance-home-layout-refresh-feedback"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('keeps the advanced CSS sheet global-only', async () => {
     const router = createTestRouter()
     await router.push('/appearance')

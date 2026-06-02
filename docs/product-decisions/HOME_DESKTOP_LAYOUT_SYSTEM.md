@@ -145,6 +145,8 @@ Current first-pass implementation:
 - edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; opening that library does not preselect an item, and selecting an item highlights compatible empty slots for recovery;
 - default Home content is distributed across multiple formal pages so visible entries fit their selected template slots without relying on a normal-mode overflow row;
 - persisted Home desktop layouts carry a setup version; unversioned local layouts are treated as legacy setup data and migrate once to the cleaned default so old browser state cannot keep the crowded pre-slot Home arrangement alive;
+- the desktop setup version now also distinguishes old-default layouts from user-managed layouts: recognizable old crowded defaults are migrated to the current setup automatically, while customized layouts keep their placement and only advance the internal setup version;
+- Appearance exposes an explicit `Apply Current Layout` recovery action for users who still see an old Home arrangement after browser storage, cache, or cross-version drift; it restores the current default Home layout, keeps `Widgets` as the Dock customization entry, and does not delete saved custom widget definitions;
 - default app entries are initial placement only, so removing a Home shortcut must not remove the underlying app capability;
 - empty template slots remain invisible outside edit mode;
 - edit mode is now slot-first: tapping a filled or empty slot opens the same-size content picker, while the old free-move / grid-absorption path is disabled in the visible editing loop;

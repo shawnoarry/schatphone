@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
@@ -27,11 +28,17 @@ import {
 } from '../lib/home-entry-registry'
 import { resolveDisplayName } from '../lib/app-entry-presentation'
 import {
+  buildFoodDeliveryFolderEntries,
+  buildShoppingFolderEntries,
+} from '../lib/home-folder-mini-app-entries'
+import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
+  FOOD_DELIVERY_HOME_APP_ID,
+  SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import {
   buildHomeSourceQuery,
@@ -67,6 +74,7 @@ const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -238,6 +246,12 @@ const resolveWidgetVariantLabel = (variant) => {
 }
 
 const customWidgets = computed(() => settings.value.appearance.customWidgets || [])
+const appStoreMiniAppPlacements = computed(
+  () => settings.value.appearance?.appStoreMiniAppPlacements || {},
+)
+const entryPresentationOverrides = computed(
+  () => settings.value.appearance?.entryPresentationOverrides || {},
+)
 const customWidgetMap = computed(() => {
   const map = new Map()
   customWidgets.value.forEach((widget) => {
@@ -248,6 +262,19 @@ const customWidgetMap = computed(() => {
 
 const worldAppEntries = computed(() => buildActiveWorldAppEntryRows({ systemStore }))
 const worldAppHomeTileIds = computed(() => worldAppEntries.value.map((entry) => entry.id))
+const shoppingFolderChildEntries = computed(() =>
+  buildShoppingFolderEntries({
+    placements: appStoreMiniAppPlacements.value,
+    presentationOverrides: entryPresentationOverrides.value,
+  }),
+)
+const foodDeliveryFolderChildEntries = computed(() =>
+  buildFoodDeliveryFolderEntries({
+    restaurants: foodDeliveryStore.restaurants,
+    placements: appStoreMiniAppPlacements.value,
+    presentationOverrides: entryPresentationOverrides.value,
+  }),
+)
 const worldAppTileMap = computed(() => {
   const map = new Map()
   worldAppEntries.value.forEach((entry) => {
@@ -388,7 +415,14 @@ const tileMeta = (tileId) => {
     }
     if (builtIn.kind === HOME_FOLDER_TILE_KIND) {
       const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
-      const childEntries = Array.isArray(builtIn.childEntries) ? builtIn.childEntries : []
+      const childEntries =
+        tileId === SHOPPING_HOME_APP_ID
+          ? shoppingFolderChildEntries.value
+          : tileId === FOOD_DELIVERY_HOME_APP_ID
+            ? foodDeliveryFolderChildEntries.value
+            : Array.isArray(builtIn.childEntries)
+              ? builtIn.childEntries
+              : []
       return {
         ...builtIn,
         icon: resolvedIconMeta.icon,
@@ -503,7 +537,7 @@ const openedFolderPreviewEntries = computed(() => {
   const entries = Array.isArray(openedFolderMeta.value?.childEntries)
     ? openedFolderMeta.value.childEntries
     : []
-  return entries.slice(0, 8)
+  return entries
 })
 
 const isWorldHubInstalled = computed(() =>
@@ -4208,8 +4242,10 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 8px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   max-height: 414px;
-  padding-right: 2px;
+  padding: 0 2px 4px 0;
+  scrollbar-width: thin;
 }
 
 .home-folder-entry {

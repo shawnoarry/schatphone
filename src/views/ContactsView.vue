@@ -31,6 +31,11 @@ import {
   normalizeRoleId,
 } from '../lib/role-profile-schema'
 import {
+  PROFILE_TEMPLATE_FIELD_TYPES,
+  PROFILE_VALUE_SOURCE_KINDS,
+  PROFILE_VISIBILITY_LEVELS,
+} from '../lib/profile-template-schema'
+import {
   buildRoleDeleteImpact,
   deleteRoleMemoryGroup,
   deleteRoleProfileCascade,
@@ -68,14 +73,26 @@ const { confirmDialog, promptDialog } = useDialog()
 const { user, settings } = storeToRefs(systemStore)
 const { roleProfiles, loadingAI } = storeToRefs(chatStore)
 
+const isWorldBookProfileTemplateHandoff = computed(() => {
+  const from = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from
+  const focus = Array.isArray(route.query.focus) ? route.query.focus[0] : route.query.focus
+  return from === 'worldbook' && focus === 'profile_templates'
+})
+
 const showProfileModal = ref(false)
 const profileModalMode = ref('create')
 const editingProfileId = ref(0)
 const selectedProfileId = ref(0)
+const isProfileTemplateEditorOpen = ref(false)
 const dangerIncludeLinkedRecords = ref(false)
 const selectedMemoryKey = ref('')
 const assetPackCategory = ref('reference')
 const draftPreviewMap = reactive({})
+const profileTemplateDraft = reactive({
+  templateId: '',
+  values: {},
+  visibility: {},
+})
 const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
 
 const createEmptyAssetPack = () => ({
@@ -604,6 +621,76 @@ const selectedProfileIsNpc = computed(() => selectedProfileEntityType.value === 
 const selectedProfileChatBound = computed(() =>
   selectedProfile.value?.id ? chatStore.isRoleProfileBound(selectedProfile.value.id) : false,
 )
+const contactsProfileTemplateOptions = computed(() => {
+  const templates = systemStore.listWorldProfileTemplates('default_world')
+  const selectedTemplateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
+  const selectedTemplate = selectedTemplateId
+    ? systemStore.getProfileTemplateById(selectedTemplateId)
+    : null
+  if (selectedTemplate && !templates.some((template) => template.id === selectedTemplate.id)) {
+    return [...templates, selectedTemplate]
+  }
+  return templates
+})
+const selectedProfileTemplate = computed(() => {
+  const templateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
+  return templateId ? systemStore.getProfileTemplateById(templateId) : null
+})
+const fieldMatchesSelectedProfileEntity = (field = {}) => {
+  const entityTypes = Array.isArray(field.entityTypes) ? field.entityTypes : []
+  return entityTypes.length === 0 || entityTypes.includes(selectedProfileEntityType.value)
+}
+const selectedProfileTemplateFields = computed(() =>
+  Array.isArray(selectedProfileTemplate.value?.fields)
+    ? selectedProfileTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
+    : [],
+)
+const selectedProfileValueMap = computed(() => {
+  const map = new Map()
+  selectedProfileValues.value.forEach((value) => {
+    if (value?.fieldId) map.set(value.fieldId, value)
+  })
+  return map
+})
+const selectedProfileWorldFieldRows = computed(() => {
+  const templateFieldIds = new Set(selectedProfileTemplateFields.value.map((field) => field.id))
+  const templateRows = selectedProfileTemplateFields.value.map((field) => ({
+    key: field.id,
+    field,
+    value: selectedProfileValueMap.value.get(field.id) || null,
+    title: field.label || field.id,
+    description: field.description || '',
+    isTemplateField: true,
+  }))
+  const extraRows = selectedProfileValues.value
+    .filter((value) => value?.fieldId && !templateFieldIds.has(value.fieldId))
+    .map((value) => ({
+      key: value.fieldId,
+      field: null,
+      value,
+      title: profileValueLabel(value),
+      description: '',
+      isTemplateField: false,
+    }))
+  return [...templateRows, ...extraRows]
+})
+const profileTemplateDraftTemplate = computed(() =>
+  profileTemplateDraft.templateId
+    ? systemStore.getProfileTemplateById(profileTemplateDraft.templateId)
+    : null,
+)
+const profileTemplateDraftFields = computed(() =>
+  Array.isArray(profileTemplateDraftTemplate.value?.fields)
+    ? profileTemplateDraftTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
+    : [],
+)
+const profileTemplateVisibilityOptions = computed(() => [
+  { value: PROFILE_VISIBILITY_LEVELS.PUBLIC, label: t('公开资料', 'Public') },
+  { value: PROFILE_VISIBILITY_LEVELS.FAMILIAR, label: t('熟悉后知道', 'Familiar') },
+  { value: PROFILE_VISIBILITY_LEVELS.INTIMATE, label: t('亲密后知道', 'Intimate') },
+  { value: PROFILE_VISIBILITY_LEVELS.HIDDEN, label: t('隐藏设定', 'Hidden') },
+  { value: PROFILE_VISIBILITY_LEVELS.WORLD_SPECIFIC, label: t('世界专属', 'World-specific') },
+])
 
 const selectedRoleChatContact = computed(() => {
   const profileId = selectedProfile.value?.id
@@ -1275,15 +1362,134 @@ const saveManualDetailItemEdit = (item) => {
 }
 
 const profileValueLabel = (value) => {
-  if (!value?.fieldId) return t('Custom field', 'Custom field')
-  if (value.fieldId === 'pheromone') return t('Pheromone', 'Pheromone')
-  if (value.fieldId === 'relationship_setting') return t('Relationship setting', 'Relationship setting')
+  if (!value?.fieldId) return t('自定义字段', 'Custom field')
+  const matchedField = selectedProfileTemplateFields.value.find((field) => field.id === value.fieldId)
+  if (matchedField?.label) return matchedField.label
+  if (value.fieldId === 'pheromone') return t('信息素', 'Pheromone')
+  if (value.fieldId === 'relationship_setting') return t('关系设定', 'Relationship setting')
   return value.fieldId
 }
 
 const formatProfileValue = (value) => {
   if (Array.isArray(value?.value)) return value.value.join(', ')
   return typeof value?.value === 'string' ? value.value : ''
+}
+
+const profileVisibilityLevelLabel = (level = '') =>
+  profileTemplateVisibilityOptions.value.find((option) => option.value === level)?.label ||
+  t('熟悉后知道', 'Familiar')
+
+const profileTemplateFieldPlaceholder = (field = {}) => {
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
+    return t('用逗号分隔多个标签', 'Separate tags with commas')
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
+    return t('填写相关人物或角色 ID', 'Enter related person or role ID')
+  }
+  return t('填写这个角色的具体值', 'Enter this profile value')
+}
+
+const clearProfileTemplateDraftRecord = (record) => {
+  Object.keys(record).forEach((key) => {
+    delete record[key]
+  })
+}
+
+const resetProfileTemplateDraftValues = (templateId = profileTemplateDraft.templateId) => {
+  clearProfileTemplateDraftRecord(profileTemplateDraft.values)
+  clearProfileTemplateDraftRecord(profileTemplateDraft.visibility)
+  const template = templateId ? systemStore.getProfileTemplateById(templateId) : null
+  const fields = Array.isArray(template?.fields)
+    ? template.fields.filter(fieldMatchesSelectedProfileEntity)
+    : []
+  fields.forEach((field) => {
+    const existing = selectedProfileValueMap.value.get(field.id)
+    profileTemplateDraft.values[field.id] = formatProfileValue(existing)
+    profileTemplateDraft.visibility[field.id] =
+      existing?.visibilityLevel || field.defaultVisibilityLevel || PROFILE_VISIBILITY_LEVELS.FAMILIAR
+  })
+}
+
+const setProfileTemplateDraftTemplate = (templateId = '') => {
+  profileTemplateDraft.templateId = templateId
+  resetProfileTemplateDraftValues(templateId)
+}
+
+const openProfileTemplateEditor = () => {
+  if (!selectedProfile.value?.id) return
+  const currentTemplateId = selectedProfile.value.templateLink?.profileTemplateId || ''
+  const fallbackTemplateId = contactsProfileTemplateOptions.value[0]?.id || ''
+  setProfileTemplateDraftTemplate(currentTemplateId || fallbackTemplateId)
+  isProfileTemplateEditorOpen.value = true
+}
+
+const cancelProfileTemplateEditor = () => {
+  isProfileTemplateEditorOpen.value = false
+  profileTemplateDraft.templateId = ''
+  clearProfileTemplateDraftRecord(profileTemplateDraft.values)
+  clearProfileTemplateDraftRecord(profileTemplateDraft.visibility)
+}
+
+const serializeProfileTemplateDraftValue = (field = {}) => {
+  const raw = profileTemplateDraft.values[field.id]
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
+    return String(raw || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  return String(raw || '').trim()
+}
+
+const isEmptyProfileTemplateValue = (value) =>
+  Array.isArray(value) ? value.length === 0 : !String(value || '').trim()
+
+const saveProfileTemplateValues = () => {
+  const profile = selectedProfile.value
+  const template = profileTemplateDraftTemplate.value
+  if (!profile?.id || !template?.id) {
+    setUiNotice('warning', t('请先选择一个世界档案模板。', 'Choose a world profile template first.'))
+    return
+  }
+  const fields = profileTemplateDraftFields.value
+  const editableFieldIds = new Set(fields.map((field) => field.id))
+  const preservedValues = selectedProfileValues.value.filter(
+    (value) => value?.fieldId && !editableFieldIds.has(value.fieldId),
+  )
+  const nextValues = fields
+    .map((field) => {
+      const value = serializeProfileTemplateDraftValue(field)
+      if (isEmptyProfileTemplateValue(value)) return null
+      return {
+        fieldId: field.id,
+        value,
+        visibilityLevel:
+          profileTemplateDraft.visibility[field.id] ||
+          field.defaultVisibilityLevel ||
+          PROFILE_VISIBILITY_LEVELS.FAMILIAR,
+        sourceKind: PROFILE_VALUE_SOURCE_KINDS.MANUAL,
+      }
+    })
+    .filter(Boolean)
+  const ok = chatStore.updateRoleProfile(profile.id, {
+    templateLink: {
+      primaryWorldId: template.worldId || 'default_world',
+      profileTemplateId: template.id,
+      profileTemplateVersion: template.version || 1,
+      supplementalKnowledgePointIds: profile.templateLink?.supplementalKnowledgePointIds || [],
+    },
+    profileValues: [...preservedValues, ...nextValues],
+  })
+  if (!ok) {
+    setUiNotice('error', t('世界字段保存失败。', 'World fields failed to save.'))
+    return
+  }
+  isProfileTemplateEditorOpen.value = false
+  setUiNotice('success', t('世界字段已保存到角色档案。', 'World fields saved to the role profile.'))
+}
+
+const openWorldBookProfileTemplates = () => {
+  router.push('/worldbook')
 }
 
 const upgradeSelectedNpcToMainRole = async () => {
@@ -1979,7 +2185,10 @@ watch(
 
 watch(
   () => selectedProfile.value?.id,
-  () => resetRelationshipPremiseDraft(),
+  () => {
+    resetRelationshipPremiseDraft()
+    cancelProfileTemplateEditor()
+  },
   { immediate: true },
 )
 
@@ -2032,7 +2241,11 @@ onBeforeUnmount(() => {
       {{ showUiNoticeMessage }}
     </p>
 
-    <div v-if="showProfileModal" class="contacts-modal absolute inset-0 bg-white z-20 pt-12 px-4 flex flex-col animate-slide-in">
+    <div
+      v-if="showProfileModal"
+      class="contacts-modal absolute inset-0 bg-white z-20 pt-12 px-4 flex flex-col animate-slide-in"
+      data-testid="contacts-profile-modal"
+    >
       <div class="contacts-modal-header flex justify-between mb-4">
         <button @click="closeProfileModal" class="text-blue-500">{{ t('取消', 'Cancel') }}</button>
         <span class="font-bold">
@@ -2519,6 +2732,34 @@ onBeforeUnmount(() => {
           )
         }}
       </p>
+
+      <section
+        v-if="isWorldBookProfileTemplateHandoff"
+        class="contacts-worldbook-handoff mx-4 mb-3"
+        data-testid="contacts-worldbook-template-handoff"
+      >
+        <div class="contacts-worldbook-handoff__copy">
+          <p>{{ t('来自世界书', 'From WorldBook') }}</p>
+          <h2>{{ t('选择或新建角色档案', 'Select or create a profile') }}</h2>
+          <span>
+            {{
+              t(
+                '世界书已经准备这个世界需要的资料栏位；具体某个角色、用户档案或 NPC 的值，在通讯录的人物档案里维护。',
+                'WorldBook prepares the fields this world needs; maintain concrete values for each role, self profile, or NPC in Contacts.',
+              )
+            }}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="contacts-worldbook-handoff__action"
+          data-testid="contacts-worldbook-template-create-profile"
+          @click="openCreateProfile"
+        >
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          {{ t('新建角色档案', 'New profile') }}
+        </button>
+      </section>
 
       <div class="contacts-my-card px-4 py-3 flex items-center gap-3 border-b border-gray-100">
         <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
@@ -3065,19 +3306,179 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <section v-if="selectedProfileValues.length > 0" class="contacts-detail-section space-y-2">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {{ t('World profile fields', 'World profile fields') }}
-              </p>
-              <h3 class="font-semibold">{{ t('Extended settings', 'Extended settings') }}</h3>
-            </div>
-            <div v-for="value in selectedProfileValues" :key="value.fieldId" class="contacts-detail-item">
+          <section
+            v-if="selectedProfile"
+            class="contacts-detail-section contacts-world-profile-fields space-y-3"
+            data-testid="contacts-world-profile-fields-section"
+          >
+            <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="font-medium">{{ profileValueLabel(value) }}</p>
-                <p class="text-sm text-gray-600">{{ formatProfileValue(value) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {{ t('世界字段', 'World profile fields') }}
+                </p>
+                <h3 class="font-semibold">{{ t('扩展设定', 'Extended settings') }}</h3>
+                <p class="mt-1 text-[11px] leading-4 text-gray-500">
+                  {{
+                    selectedProfileTemplate
+                      ? t(
+                          `来自模板：${selectedProfileTemplate.title}`,
+                          `From template: ${selectedProfileTemplate.title}`,
+                        )
+                      : t(
+                          '这里填写由世界书模板定义的角色、用户档案或 NPC 专属资料。',
+                          'Fill concrete role, self-profile, or NPC values defined by WorldBook templates.',
+                        )
+                  }}
+                </p>
               </div>
-              <span class="contacts-source-chip">{{ value.visibilityLevel }}</span>
+              <button
+                type="button"
+                class="contacts-small-action"
+                data-testid="contacts-edit-world-profile-fields"
+                @click="openProfileTemplateEditor"
+              >
+                {{ t('编辑世界字段', 'Edit fields') }}
+              </button>
+            </div>
+
+            <div v-if="selectedProfileWorldFieldRows.length > 0" class="contacts-world-field-list">
+              <div
+                v-for="row in selectedProfileWorldFieldRows"
+                :key="row.key"
+                class="contacts-detail-item"
+                :data-testid="`contacts-world-field-${row.key}`"
+              >
+                <div>
+                  <p class="font-medium">{{ row.title }}</p>
+                  <p v-if="row.value" class="text-sm text-gray-600">{{ formatProfileValue(row.value) }}</p>
+                  <p v-else class="text-sm text-gray-400">{{ t('未填写', 'Not filled') }}</p>
+                  <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
+                    {{ row.description }}
+                  </p>
+                </div>
+                <span class="contacts-source-chip">
+                  {{
+                    row.value
+                      ? profileVisibilityLevelLabel(row.value.visibilityLevel)
+                      : profileVisibilityLevelLabel(row.field?.defaultVisibilityLevel)
+                  }}
+                </span>
+              </div>
+            </div>
+            <p v-else class="contacts-empty-detail">
+              {{ t('还没有填写世界字段。', 'No world profile fields filled yet.') }}
+            </p>
+
+            <div
+              v-if="isProfileTemplateEditorOpen"
+              class="contacts-world-field-editor"
+              data-testid="contacts-world-profile-fields-editor"
+            >
+              <div class="contacts-world-field-editor__head">
+                <div>
+                  <p>{{ t('选择世界模板', 'Choose world template') }}</p>
+                  <span>
+                    {{
+                      t(
+                        '模板来自世界书；这里保存的是当前人物自己的具体值。',
+                        'Templates come from WorldBook; this saves this person’s concrete values.',
+                      )
+                    }}
+                  </span>
+                </div>
+                <button type="button" class="contacts-small-action" @click="cancelProfileTemplateEditor">
+                  {{ t('取消', 'Cancel') }}
+                </button>
+              </div>
+
+              <select
+                v-model="profileTemplateDraft.templateId"
+                class="contacts-world-field-select"
+                data-testid="contacts-profile-template-select"
+                @change="setProfileTemplateDraftTemplate(profileTemplateDraft.templateId)"
+              >
+                <option value="">{{ t('选择模板', 'Choose template') }}</option>
+                <option
+                  v-for="template in contactsProfileTemplateOptions"
+                  :key="template.id"
+                  :value="template.id"
+                >
+                  {{ template.title }} · v{{ template.version }}
+                </option>
+              </select>
+
+              <div v-if="contactsProfileTemplateOptions.length === 0" class="contacts-empty-detail">
+                <p>
+                  {{
+                    t(
+                      '当前世界还没有角色档案模板。先到世界书复制或建立模板，再回来填写角色值。',
+                      'This world has no role profile template yet. Create or copy one in WorldBook first.',
+                    )
+                  }}
+                </p>
+                <button type="button" class="contacts-small-action mt-2" @click="openWorldBookProfileTemplates">
+                  {{ t('打开世界书', 'Open WorldBook') }}
+                </button>
+              </div>
+
+              <div v-else-if="profileTemplateDraftFields.length > 0" class="contacts-world-field-form">
+                <label
+                  v-for="field in profileTemplateDraftFields"
+                  :key="field.id"
+                  class="contacts-world-field-control"
+                  :data-testid="`contacts-profile-template-field-${field.id}`"
+                >
+                  <span>
+                    {{ field.label }}
+                    <small v-if="field.required">{{ t('必填', 'Required') }}</small>
+                  </span>
+                  <select
+                    v-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT && field.options.length > 0"
+                    v-model="profileTemplateDraft.values[field.id]"
+                    :data-testid="`contacts-profile-template-value-${field.id}`"
+                  >
+                    <option value="">{{ t('未填写', 'Not filled') }}</option>
+                    <option v-for="option in field.options" :key="option" :value="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                  <textarea
+                    v-else-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT"
+                    v-model="profileTemplateDraft.values[field.id]"
+                    :data-testid="`contacts-profile-template-value-${field.id}`"
+                    :placeholder="profileTemplateFieldPlaceholder(field)"
+                    rows="3"
+                  ></textarea>
+                  <input
+                    v-else
+                    v-model="profileTemplateDraft.values[field.id]"
+                    :data-testid="`contacts-profile-template-value-${field.id}`"
+                    :placeholder="profileTemplateFieldPlaceholder(field)"
+                  />
+                  <select
+                    v-model="profileTemplateDraft.visibility[field.id]"
+                    :data-testid="`contacts-profile-template-visibility-${field.id}`"
+                  >
+                    <option
+                      v-for="option in profileTemplateVisibilityOptions"
+                      :key="`${field.id}-${option.value}`"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <em v-if="field.description">{{ field.description }}</em>
+                </label>
+              </div>
+              <p v-else-if="profileTemplateDraft.templateId" class="contacts-empty-detail">
+                {{ t('这个模板没有适用于当前人物类型的字段。', 'This template has no fields for this profile type.') }}
+              </p>
+
+              <div class="contacts-world-field-editor__actions">
+                <button type="button" class="contacts-primary-action" data-testid="contacts-save-world-profile-fields" @click="saveProfileTemplateValues">
+                  {{ t('保存世界字段', 'Save world fields') }}
+                </button>
+              </div>
             </div>
           </section>
 
@@ -3648,6 +4049,72 @@ onBeforeUnmount(() => {
   line-height: 1.45;
 }
 
+.contacts-worldbook-handoff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(66, 111, 143, 0.18);
+  border-radius: 16px;
+  padding: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(229, 240, 245, 0.88)),
+    var(--contacts-surface-strong);
+  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+}
+
+.contacts-worldbook-handoff__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contacts-worldbook-handoff__copy p,
+.contacts-worldbook-handoff__copy h2,
+.contacts-worldbook-handoff__copy span {
+  margin: 0;
+}
+
+.contacts-worldbook-handoff__copy p {
+  color: var(--contacts-accent-strong);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.contacts-worldbook-handoff__copy h2 {
+  color: var(--contacts-text);
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.contacts-worldbook-handoff__copy span {
+  color: var(--contacts-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.contacts-worldbook-handoff__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: #fff;
+  background: var(--contacts-accent);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(66, 111, 143, 0.2);
+}
+
+.contacts-worldbook-handoff__action:active {
+  transform: scale(0.98);
+}
+
 .contacts-my-card {
   position: relative;
   overflow: hidden;
@@ -3910,6 +4377,101 @@ onBeforeUnmount(() => {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 239, 233, 0.72)),
     var(--contacts-surface-strong);
+}
+
+.contacts-world-profile-fields {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 242, 245, 0.82)),
+    var(--contacts-surface-strong);
+}
+
+.contacts-world-field-list,
+.contacts-world-field-form,
+.contacts-world-field-editor {
+  display: grid;
+  gap: 9px;
+}
+
+.contacts-world-field-editor {
+  border: 1px solid rgba(66, 111, 143, 0.16);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.contacts-world-field-editor__head,
+.contacts-world-field-editor__actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contacts-world-field-editor__head p,
+.contacts-world-field-editor__head span {
+  margin: 0;
+}
+
+.contacts-world-field-editor__head p {
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.contacts-world-field-editor__head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-world-field-select,
+.contacts-world-field-control input,
+.contacts-world-field-control textarea,
+.contacts-world-field-control select {
+  width: 100%;
+  border: 1px solid var(--contacts-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--contacts-text);
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.contacts-world-field-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contacts-world-field-control > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contacts-world-field-control small {
+  color: var(--contacts-warm);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.contacts-world-field-control textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.contacts-world-field-control em {
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.4;
 }
 
 .contacts-small-action,
@@ -4297,6 +4859,7 @@ onBeforeUnmount(() => {
 
 .contacts-nav-button:focus-visible,
 .contacts-add-button:focus-visible,
+.contacts-worldbook-handoff__action:focus-visible,
 .contacts-modal-header button:focus-visible,
 .contacts-small-action:focus-visible,
 .contacts-primary-action:focus-visible,
@@ -4306,7 +4869,11 @@ onBeforeUnmount(() => {
 .contacts-modal-scroll button:focus-visible,
 .contacts-modal-scroll input:focus-visible,
 .contacts-modal-scroll textarea:focus-visible,
-.contacts-modal-scroll select:focus-visible {
+.contacts-modal-scroll select:focus-visible,
+.contacts-world-field-select:focus-visible,
+.contacts-world-field-control input:focus-visible,
+.contacts-world-field-control textarea:focus-visible,
+.contacts-world-field-control select:focus-visible {
   outline: 2px solid rgba(66, 111, 143, 0.35);
   outline-offset: 2px;
 }
@@ -4323,6 +4890,27 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 720px) {
+  .contacts-worldbook-handoff {
+    grid-template-columns: 1fr;
+  }
+
+  .contacts-worldbook-handoff__action {
+    width: 100%;
+  }
+
+  .contacts-world-profile-fields > .flex,
+  .contacts-world-field-editor__head,
+  .contacts-world-field-editor__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contacts-world-profile-fields > .flex .contacts-small-action,
+  .contacts-world-field-editor__head .contacts-small-action,
+  .contacts-world-field-editor__actions .contacts-primary-action {
+    width: 100%;
+  }
+
   .contacts-runtime-audit-grid {
     grid-template-columns: 1fr;
   }

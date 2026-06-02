@@ -87,6 +87,14 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').text()).toContain('Moon Bistro')
+    expect(wrapper.find('[data-testid="food-delivery-hero-title"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-platform"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'dark_tray_menu',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-home"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-store-back"]').text()).toContain('Food platform')
+    expect(wrapper.get('[data-testid="food-delivery-store-support-drawer"]').element.open).toBe(false)
 
     wrapper.unmount()
   })
@@ -404,6 +412,46 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get(`[data-testid="food-delivery-menu-dish-${menuItem.id}"] img`).attributes('src')).toBe(
       'https://example.com/lunar-rice.png',
     )
+    wrapper.unmount()
+  })
+
+  test('uses the dark tray detail sheet with embedded dish image and quantity add', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const restaurant = store.findRestaurantById('food_seed_moon_bistro')
+    const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
+
+    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'dark_tray_menu',
+    )
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${menuItem.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-round-image"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-edit"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-quantity"]').text()).toContain('1')
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-quantity-increase"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-quantity"]').text()).toContain('2')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-total"]').text()).toContain(
+      ((menuItem.priceCents * 2) / 100).toFixed(2),
+    )
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+    expect(store.cartQuantity).toBe(2)
     wrapper.unmount()
   })
 

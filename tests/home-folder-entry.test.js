@@ -9,6 +9,7 @@ import AssetsView from '../src/views/AssetsView.vue'
 import ControlCenterView from '../src/views/ControlCenterView.vue'
 import { CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP } from '../src/lib/custom-widget-actions'
 import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
+import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -916,7 +917,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('opens Food Delivery folder and routes child entries with category query', async () => {
+  test('opens Food Delivery folder as platform plus shop mini apps', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -934,15 +935,46 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-nearby"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-nearby"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
 
-    await wrapper.find('[data-testid="home-folder-entry-nearby"]').trigger('click')
+    await wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
-    expect(router.currentRoute.value.query.category).toBe('nearby')
+    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_moon_bistro')
+    expect(router.currentRoute.value.query.entry).toBe('shop')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_moon_bistro')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('uses App Store mini app install state inside Home pseudo folders', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    const foodDeliveryStore = useFoodDeliveryStore()
+    systemStore.setAppStoreMiniAppInstalled('shop_app_food_seed_moon_bistro', false)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.findAll('.home-dot')[1].trigger('click')
+    await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists()).toBe(false)
+    expect(foodDeliveryStore.findRestaurantById('food_seed_moon_bistro')).toBeTruthy()
     wrapper.unmount()
   })
 
@@ -964,14 +996,16 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_shopping"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-style_cloud"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').exists()).toBe(true)
 
-    await wrapper.find('[data-testid="home-folder-entry-style_cloud"]').trigger('click')
+    await wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/shopping')
     expect(router.currentRoute.value.query.service).toBe('style_cloud')
     expect(router.currentRoute.value.query.category).toBe('fashion')
+    expect(router.currentRoute.value.query.entry).toBe('shop')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_shopping_style_cloud')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
     wrapper.unmount()
