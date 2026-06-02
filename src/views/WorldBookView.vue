@@ -18,12 +18,11 @@ import {
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { BOOK_ROUTE } from '../lib/planned-module-registry'
 import {
-  WORLDBOOK_SOURCE_USAGES,
   buildWorldBookSourceSnapshot,
   diffWorldBookSourceText,
   resolveWorldBookSourceText,
 } from '../lib/book-text-schema'
-import { getWorldBookSourceRoleLabel } from '../lib/world-taxonomy'
+import { WORLDBOOK_SOURCE_ROLES, getWorldBookSourceRoleLabel } from '../lib/world-taxonomy'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
@@ -147,7 +146,7 @@ const sourceReview = reactive({
 const getSourceRoleCopy = (role = '') => getWorldBookSourceRoleLabel(role)
 
 const sourceRoleOptions = computed(() =>
-  WORLDBOOK_SOURCE_USAGES.map((role) => ({
+  WORLDBOOK_SOURCE_ROLES.map((role) => ({
     id: role,
     label: t(getSourceRoleCopy(role).zh, getSourceRoleCopy(role).en),
   })),
