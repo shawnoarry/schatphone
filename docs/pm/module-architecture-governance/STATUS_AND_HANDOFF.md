@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-05-31
+Updated: 2026-06-03
 
 This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
 
@@ -18,6 +18,7 @@ What is already landed:
 6. World Pack V1 now has persisted built-in packs, one active pack per save, activation review, World Interface exposure, and service-account template availability. Current World Pack now hands service-account creation off to the future Chat-side add flow instead of directly generating Chat Directory entries from Settings.
 7. World app bindings now centralize global launch rows and target-app UX context through `src/lib/world-pack-app-bindings.js`; current consumers are Shopping, Food Delivery, Calendar, and Map.
 8. Nonstandard-app proposals now have a guarded whitelist/review seam in `src/lib/world-app-template-registry.js` plus a WorldBook Current World Pack review UI with explicit loading, empty, parse/API error, and rejected-state treatment; confirmed proposals become appBindings only after user action and then reuse the existing App Store/Home/target-app context seams, while unknown, low-confidence, or unsupported proposals cannot create modules, stores, event rules, or App Store entries. `black_market` is currently unsupported as `needs_dedicated_app`, so it is not mapped onto Shopping. Dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths are covered by regression tests.
+9. Book / WorldBook naming has been unified around canonical worldview, encyclopedia, world-rule, profile-template, source-role, and reference concepts. Legacy Book `assetType`, source-link `usage`, `knowledgePoints`, and `knowledgePointIds` remain readable through compatibility aliases.
 
 Still incomplete:
 

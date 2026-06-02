@@ -2,7 +2,15 @@
 
 Updated: 2026-06-03
 
-Status: `DESIGN_REVIEW`
+Status: `IMPLEMENTED_COMPATIBILITY_BASELINE`
+
+Implementation note, 2026-06-03:
+
+- The canonical taxonomy is now implemented in `src/lib/world-taxonomy.js`.
+- Book writes canonical `category` while still accepting old `assetType`.
+- WorldBook source links write canonical `role` while still accepting old `usage`.
+- Structured reusable world facts now have canonical encyclopedia helpers while old knowledge-point helpers remain wrappers for compatibility.
+- Role bindings and World Packs accept canonical encyclopedia ids and old knowledge ids during the migration window.
 
 ## 1. Goal
 
