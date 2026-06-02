@@ -29,9 +29,13 @@ describe('Book and WorldBook source linking', () => {
     systemStore.addWorldBookSourceLink({
       assetId: asset.id,
       sectionIds: ['section_basics_1'],
-      usage: 'base_worldview',
+      role: 'main_worldview',
       sourceVersion: asset.version,
       sourceFingerprint: asset.contentFingerprint,
+    })
+    expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
+      role: 'main_worldview',
+      usage: 'main_worldview',
     })
 
     const context = resolveWorldContextForConsumer({
@@ -60,7 +64,7 @@ describe('Book and WorldBook source linking', () => {
     systemStore.addWorldBookSourceLink({
       assetId: asset.id,
       enabled: false,
-      usage: 'base_worldview',
+      role: 'main_worldview',
     })
 
     const context = resolveWorldContextForConsumer({
@@ -80,7 +84,7 @@ describe('Book and WorldBook source linking', () => {
     systemStore.setGlobalWorldview('Fallback survives.')
     systemStore.addWorldBookSourceLink({
       assetId: 'asset_missing',
-      usage: 'base_worldview',
+      role: 'main_worldview',
     })
 
     const overview = resolveActiveWorldOverview({ systemStore, bookStore })
@@ -109,7 +113,7 @@ describe('Book and WorldBook source linking', () => {
     })
     systemStore.addWorldBookSourceLink({
       assetId: asset.id,
-      usage: 'base_worldview',
+      role: 'main_worldview',
       sourceFingerprint: asset.contentFingerprint,
     })
     bookStore.updateAsset(asset.id, { content: 'Changed text.' })
@@ -136,7 +140,7 @@ describe('Book and WorldBook source linking', () => {
     systemStore.addWorldBookSourceLink({
       assetId: asset.id,
       sectionIds: ['section_public_1'],
-      usage: 'base_worldview',
+      role: 'main_worldview',
       sourceFingerprint: asset.contentFingerprint,
       ...buildWorldBookSourceSnapshot('Visible text.'),
     })

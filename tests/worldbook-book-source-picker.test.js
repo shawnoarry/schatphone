@@ -82,7 +82,7 @@ describe('WorldBook setting text picker', () => {
     expect(bookStore.assetCount).toBe(1)
     const asset = bookStore.assets[0]
     expect(asset).toMatchObject({
-      assetType: 'worldbook_document',
+      assetType: 'worldview',
       status: 'draft',
     })
     expect(asset.content).toContain('Fallback city rules.')
@@ -124,13 +124,40 @@ describe('WorldBook setting text picker', () => {
     expect(link).toMatchObject({
       assetId: asset.id,
       sectionIds: ['section_basics_1'],
-      usage: 'base_worldview',
+      role: 'main_worldview',
+      usage: 'main_worldview',
       enabled: true,
       sourceSnapshotText: 'Visible rules.',
     })
     expect(bookStore.findAssetById(asset.id)?.status).toBe('active_source')
     expect(wrapper.get(`[data-testid="worldbook-book-source-${link.id}"]`).text()).toContain(
       'Basics',
+    )
+  })
+
+  test('loads old source-link usage values as canonical roles', async () => {
+    const bookStore = useBookStore()
+    const systemStore = useSystemStore()
+    const asset = bookStore.createAsset({
+      id: 'asset_legacy_usage',
+      title: 'Legacy Usage',
+      content: 'Legacy source text.',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: asset.id,
+      usage: 'base_worldview',
+      enabled: true,
+    })
+
+    const { wrapper } = await mountWorldBook()
+    const link = systemStore.listWorldBookSourceLinks()[0]
+
+    expect(link).toMatchObject({
+      role: 'main_worldview',
+      usage: 'main_worldview',
+    })
+    expect(wrapper.get(`[data-testid="worldbook-book-source-${link.id}"]`).text()).toContain(
+      'Main worldview',
     )
   })
 

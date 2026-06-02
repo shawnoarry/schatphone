@@ -23,6 +23,7 @@ import {
   diffWorldBookSourceText,
   resolveWorldBookSourceText,
 } from '../lib/book-text-schema'
+import { getWorldBookSourceRoleLabel } from '../lib/world-taxonomy'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
@@ -111,7 +112,7 @@ const linkedBookSources = computed(() =>
         Boolean(asset.contentFingerprint) &&
         link.sourceFingerprint !== asset.contentFingerprint &&
         (snapshotIsPartial || snapshotText !== currentSourceText),
-      usageLabel: getSourceUsageLabel(link.usage),
+      usageLabel: getSourceRoleLabel(link.role || link.usage),
       sectionSummary: describeBookLinkSections(asset, link.sectionIds),
     }
   }),
@@ -136,31 +137,24 @@ const sourcePickerAssets = computed(() => bookStore.worldbookSourceAssets)
 const sourcePicker = reactive({
   open: false,
   assetId: '',
-  usage: 'base_worldview',
+  role: 'main_worldview',
   mode: 'whole',
   sectionIds: [],
 })
 const sourceReview = reactive({
   linkId: '',
 })
-const sourceUsageLabels = {
-  base_worldview: { zh: '基础世界观', en: 'Base worldview' },
-  knowledge_source: { zh: '知识补充', en: 'Knowledge supplement' },
-  pack_source: { zh: '设定包参考', en: 'Pack reference' },
-  profile_template_reference: { zh: '档案模板参考', en: 'Profile template reference' },
-}
-const getSourceUsageCopy = (usage = '') =>
-  sourceUsageLabels[usage] || { zh: usage || '设定文本', en: usage || 'Setting text' }
+const getSourceRoleCopy = (role = '') => getWorldBookSourceRoleLabel(role)
 
-const sourceUsageOptions = computed(() =>
-  WORLDBOOK_SOURCE_USAGES.map((usage) => ({
-    id: usage,
-    label: t(getSourceUsageCopy(usage).zh, getSourceUsageCopy(usage).en),
+const sourceRoleOptions = computed(() =>
+  WORLDBOOK_SOURCE_USAGES.map((role) => ({
+    id: role,
+    label: t(getSourceRoleCopy(role).zh, getSourceRoleCopy(role).en),
   })),
 )
 
-function getSourceUsageLabel(usage = '') {
-  const copy = getSourceUsageCopy(usage)
+function getSourceRoleLabel(role = '') {
+  const copy = getSourceRoleCopy(role)
   return t(copy.zh, copy.en)
 }
 
@@ -495,7 +489,7 @@ const buildWorldAppTemplateContextText = () => {
     .slice(0, 4)
     .map((link) => {
       const text = String(link.currentSourceText || '').trim().replace(/\s+/g, ' ')
-      return `- ${link.title} (${link.usage || 'source'}): ${text.slice(0, 1200)}`
+      return `- ${link.title} (${link.role || link.usage || 'source'}): ${text.slice(0, 1200)}`
     })
   const knowledgeLines = knowledgePoints.value
     .filter((point) => point.enabled !== false)
@@ -649,7 +643,7 @@ const addFirstBookSource = () => {
   }
   const link = systemStore.addWorldBookSourceLink({
     assetId: asset.id,
-    usage: 'base_worldview',
+    role: 'main_worldview',
     enabled: true,
     priority: 80 + linkedBookSources.value.length,
     sourceVersion: asset.version,
@@ -666,7 +660,7 @@ const addFirstBookSource = () => {
 
 const resetSourcePickerForAsset = (asset) => {
   sourcePicker.assetId = asset?.id || ''
-  sourcePicker.usage = 'base_worldview'
+  sourcePicker.role = 'main_worldview'
   sourcePicker.mode = 'whole'
   sourcePicker.sectionIds = []
 }
@@ -783,7 +777,7 @@ const linkPickedBookSource = () => {
   const link = systemStore.addWorldBookSourceLink({
     assetId: asset.id,
     sectionIds: selectedSectionIds,
-    usage: sourcePicker.usage,
+    role: sourcePicker.role,
     enabled: true,
     priority: 80 + linkedBookSources.value.length,
     sourceVersion: asset.version,
@@ -1668,9 +1662,9 @@ onBeforeUnmount(() => {
             </label>
             <label>
               <span>{{ t('作为哪类设定', 'Use as') }}</span>
-              <select v-model="sourcePicker.usage" data-testid="worldbook-source-picker-usage">
-                <option v-for="option in sourceUsageOptions" :key="option.id" :value="option.id">
-                  {{ option.label }}
+              <select v-model="sourcePicker.role" data-testid="worldbook-source-picker-usage">
+                <option v-for="role in sourceRoleOptions" :key="role.id" :value="role.id">
+                  {{ role.label }}
                 </option>
               </select>
             </label>

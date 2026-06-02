@@ -2511,7 +2511,7 @@ export const useSystemStore = defineStore('system', () => {
     const existingIndex = current.findIndex(
       (link) =>
         link.assetId === normalized.assetId &&
-        link.usage === normalized.usage &&
+        (link.role || link.usage) === (normalized.role || normalized.usage) &&
         JSON.stringify(link.sectionIds || []) === JSON.stringify(normalized.sectionIds || []),
     )
     if (existingIndex >= 0) {
