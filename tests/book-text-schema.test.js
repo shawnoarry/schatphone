@@ -50,6 +50,30 @@ describe('book text schema helpers', () => {
     expect(result.asset.source.fileName).toBe('quiet-city.txt')
   })
 
+  test('keeps canonical category separate from category id', () => {
+    const asset = normalizeBookTextAsset({
+      title: 'A',
+      category: 'worldview',
+      content: 'x',
+    })
+
+    expect(asset.category).toBe('worldview')
+    expect(asset.assetType).toBe('worldview')
+    expect(asset.categoryId).toBe('')
+  })
+
+  test('preserves old freeform category values as category ids', () => {
+    const asset = normalizeBookTextAsset({
+      title: 'A',
+      category: 'custom shelf',
+      content: 'x',
+    })
+
+    expect(asset.category).toBe('reference_material')
+    expect(asset.assetType).toBe('reference_material')
+    expect(asset.categoryId).toBe('custom_shelf')
+  })
+
   test('extracts markdown sections in document order', () => {
     const sections = extractMarkdownSections([
       'Loose preface.',

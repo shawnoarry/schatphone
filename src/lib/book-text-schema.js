@@ -1,5 +1,6 @@
 import {
   BOOK_TEXT_CATEGORIES,
+  LEGACY_BOOK_TEXT_CATEGORY_ALIASES,
   WORLDBOOK_SOURCE_ROLES,
   normalizeBookTextCategory,
   normalizeWorldBookSourceRole,
@@ -85,6 +86,23 @@ const normalizeFormat = (value, fallback = 'plain') => {
 const normalizeStatus = (value) => {
   const normalized = normalizeInlineText(value, '').toLowerCase()
   return BOOK_TEXT_STATUS_SET.has(normalized) ? normalized : 'draft'
+}
+
+const hasOwn = (source, key) => Object.prototype.hasOwnProperty.call(source, key)
+
+const normalizeBookTextCategoryId = (source = {}) => {
+  const explicitCategoryId = normalizeStringId(source.categoryId, '')
+  if (explicitCategoryId) return explicitCategoryId
+
+  const rawCategory = typeof source.category === 'string' ? source.category.trim() : ''
+  if (!rawCategory) return ''
+
+  const normalizedCategory = rawCategory.toLowerCase()
+  const isClassifier =
+    BOOK_TEXT_CATEGORIES.includes(normalizedCategory) ||
+    hasOwn(LEGACY_BOOK_TEXT_CATEGORY_ALIASES, normalizedCategory)
+
+  return isClassifier ? '' : normalizeStringId(rawCategory, '')
 }
 
 const readExtension = (fileName = '') => {
@@ -250,7 +268,7 @@ export const normalizeBookTextAsset = (raw, index = 0) => {
     category,
     assetType: category,
     format,
-    categoryId: normalizeStringId(source.categoryId || source.category, ''),
+    categoryId: normalizeBookTextCategoryId(source),
     tags: normalizeArrayOfText(source.tags, 80),
     content,
     sections: sections.map((section, sectionIndex) => ({
