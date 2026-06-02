@@ -1318,12 +1318,12 @@ const describeKnowledgePointUsage = (point) => {
   if (usage.chatBindingCount <= 0) {
     return t(
       `已被 ${profileCount} 个角色绑定；这些角色尚未绑定到 Chat 会话，因此暂未进入 Chat 提示词链路。`,
-      `${profileCount} role profiles are bound; none are bound to Chat contacts yet, so this point is not in the Chat prompt chain.`,
+      `${profileCount} role profiles are bound; none are bound to Chat contacts yet, so this entry is not in the Chat prompt chain.`,
     )
   }
   return t(
     `已被 ${profileCount} 个角色绑定，其中 ${usage.chatProfileCount} 个角色已连接 ${usage.chatBindingCount} 个 Chat 会话；启用时会进入这些会话的提示词链路。`,
-    `${profileCount} role profiles are bound; ${usage.chatProfileCount} profiles connect to ${usage.chatBindingCount} Chat contacts, so this enabled point enters those Chat prompt chains.`,
+    `${profileCount} role profiles are bound; ${usage.chatProfileCount} profiles connect to ${usage.chatBindingCount} Chat contacts, so this enabled entry enters those Chat prompt chains.`,
   )
 }
 
