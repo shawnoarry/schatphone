@@ -27,14 +27,17 @@ describe('book store', () => {
     const asset = store.createAsset({
       id: 'asset_city_rules',
       title: 'City Rules',
-      assetType: 'rule_set',
+      category: 'world_rule',
       tags: ['city'],
       content: 'No loud magic on trains.',
     })
 
     expect(store.assetCount).toBe(1)
+    expect(asset.category).toBe('world_rule')
+    expect(asset.assetType).toBe('world_rule')
     expect(store.findAssetById('asset_city_rules')?.title).toBe('City Rules')
     expect(store.listAssets({ search: 'magic' })).toHaveLength(1)
+    expect(store.listAssets({ category: 'world_rule' })).toHaveLength(1)
     expect(store.listAssets({ assetType: 'rule_set' })).toHaveLength(1)
     expect(store.listAssets({ tag: 'city' })).toHaveLength(1)
 
@@ -110,7 +113,7 @@ describe('book store', () => {
     store.createAsset({
       id: 'asset_backup',
       title: 'Backup Source',
-      assetType: 'worldbook_document',
+      category: 'worldview',
       content: 'Backup text.',
     })
     const snapshot = store.createBackupSnapshot()

@@ -57,7 +57,7 @@ describe('BookView', () => {
     const asset = store.createAsset({
       id: 'asset_city',
       title: 'Quiet City',
-      assetType: 'worldbook_document',
+      category: 'worldview',
       format: 'markdown',
       content: '# Basics\n\nNight etiquette matters.',
       tags: ['city'],
@@ -66,6 +66,7 @@ describe('BookView', () => {
     const { wrapper } = await mountBookView()
 
     expect(wrapper.get('[data-testid="book-detail"]').text()).toContain('Quiet City')
+    expect(wrapper.get('[data-testid="book-detail"]').text()).toContain('Worldview')
     expect(wrapper.get('[data-testid="book-read-mode"]').text()).toContain('Night etiquette matters.')
     expect(wrapper.get(`[data-testid="book-asset-${asset.id}"]`).classes()).toContain('is-active')
     expect(wrapper.find('[data-testid="book-editor"]').exists()).toBe(false)
@@ -246,7 +247,7 @@ describe('BookView', () => {
     })
     systemStore.addWorldBookSourceLink({
       assetId: asset.id,
-      usage: 'base_worldview',
+      role: 'main_worldview',
       enabled: true,
     })
 

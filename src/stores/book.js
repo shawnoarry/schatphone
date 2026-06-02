@@ -7,6 +7,7 @@ import {
   normalizeBookTextAsset,
   normalizeBookTextAssets,
 } from '../lib/book-text-schema'
+import { normalizeBookTextCategory } from '../lib/world-taxonomy'
 
 const BOOK_STORAGE_KEY = 'store:book'
 const BOOK_STORAGE_VERSION = 1
@@ -70,13 +71,16 @@ export const useBookStore = defineStore('book', () => {
 
   const assetCount = computed(() => assets.value.length)
   const worldbookSourceAssets = computed(() =>
-    assets.value.filter(
-      (asset) =>
+    assets.value.filter((asset) => {
+      const category = normalizeBookTextCategory(asset.category || asset.assetType)
+      return (
         asset.status === 'active_source' ||
-        asset.assetType === 'worldbook_document' ||
-        asset.assetType === 'knowledge_note' ||
-        asset.assetType === 'rule_set',
-    ),
+        category === 'worldview' ||
+        category === 'encyclopedia' ||
+        category === 'world_rule' ||
+        category === 'reference_material'
+      )
+    }),
   )
 
   const findAssetById = (assetId) => {
@@ -87,7 +91,13 @@ export const useBookStore = defineStore('book', () => {
 
   const listAssets = (filters = {}) => {
     const query = typeof filters.search === 'string' ? filters.search.trim().toLowerCase() : ''
-    const type = typeof filters.assetType === 'string' ? filters.assetType.trim() : ''
+    const rawCategory =
+      typeof filters.category === 'string' && filters.category.trim()
+        ? filters.category.trim()
+        : typeof filters.assetType === 'string'
+          ? filters.assetType.trim()
+          : ''
+    const category = rawCategory ? normalizeBookTextCategory(rawCategory) : ''
     const status = typeof filters.status === 'string' ? filters.status.trim() : ''
     const tag = typeof filters.tag === 'string' ? filters.tag.trim().toLowerCase() : ''
     return assets.value.filter((asset) => {
@@ -97,7 +107,7 @@ export const useBookStore = defineStore('book', () => {
           .toLowerCase()
         if (!haystack.includes(query)) return false
       }
-      if (type && asset.assetType !== type) return false
+      if (category && asset.category !== category && asset.assetType !== category) return false
       if (status && asset.status !== status) return false
       if (tag && !(asset.tags || []).some((item) => item.toLowerCase() === tag)) return false
       return true

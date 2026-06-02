@@ -8,6 +8,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { BOOK_TEXT_ASSET_TYPES } from '../lib/book-text-schema'
+import { getBookTextCategoryLabel } from '../lib/world-taxonomy'
 
 const router = useRouter()
 const route = useRoute()
@@ -30,19 +31,14 @@ const aiToolsOpen = ref(false)
 const aiToolMode = ref('summary')
 const draft = ref({
   title: '',
-  assetType: 'worldbook_document',
+  category: 'worldview',
   tags: '',
   content: '',
 })
 
-const typeLabels = {
-  worldbook_document: { zh: '世界书文档', en: 'Worldbook' },
-  knowledge_note: { zh: '知识笔记', en: 'Knowledge' },
-  glossary: { zh: '术语表', en: 'Glossary' },
-  rule_set: { zh: '规则集', en: 'Rules' },
-  profile_template_note: { zh: '档案模板', en: 'Profile note' },
-  reference_note: { zh: '参考资料', en: 'Reference' },
-}
+const typeLabels = Object.fromEntries(
+  BOOK_TEXT_ASSET_TYPES.map((category) => [category, getBookTextCategoryLabel(category)]),
+)
 
 const statusLabels = {
   draft: { zh: '草稿', en: 'Draft' },
@@ -51,7 +47,7 @@ const statusLabels = {
 }
 
 const typeOptions = computed(() => [
-  { id: 'all', label: t('全部类型', 'All types') },
+  { id: 'all', label: t('全部分类', 'All categories') },
   ...BOOK_TEXT_ASSET_TYPES.map((type) => ({
     id: type,
     label: t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type),
@@ -62,7 +58,7 @@ const filteredAssets = computed(() => {
   const query = searchQuery.value.trim()
   const filters = {
     search: query,
-    assetType: typeFilter.value === 'all' ? '' : typeFilter.value,
+    category: typeFilter.value === 'all' ? '' : typeFilter.value,
   }
   return bookStore.listAssets(filters)
 })
@@ -98,7 +94,7 @@ const selectedWorldBookUsageSummary = computed(() => {
 })
 
 const selectedAssetTypeLabel = computed(() => {
-  const type = selectedAsset.value?.assetType || 'reference_note'
+  const type = selectedAsset.value?.category || selectedAsset.value?.assetType || 'reference_material'
   return t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type)
 })
 
@@ -188,7 +184,7 @@ const draftIsDirty = computed(() => {
   if (!asset) return false
   return (
     draft.value.title !== asset.title ||
-    draft.value.assetType !== asset.assetType ||
+    draft.value.category !== (asset.category || asset.assetType) ||
     draft.value.tags !== (asset.tags || []).join(', ') ||
     draft.value.content !== asset.content
   )
@@ -225,7 +221,7 @@ const hydrateDraft = () => {
   const asset = selectedAsset.value
   draft.value = {
     title: asset?.title || '',
-    assetType: asset?.assetType || 'worldbook_document',
+    category: asset?.category || asset?.assetType || 'worldview',
     tags: Array.isArray(asset?.tags) ? asset.tags.join(', ') : '',
     content: asset?.content || '',
   }
@@ -236,7 +232,7 @@ watch(selectedAsset, hydrateDraft, { immediate: true })
 const createBlankAsset = () => {
   const asset = bookStore.createAsset({
     title: t('新的文本来源', 'New text source'),
-    assetType: 'worldbook_document',
+    category: 'worldview',
     format: 'markdown',
     content: '# New Source\n\n',
   })
@@ -298,7 +294,7 @@ const saveEdit = () => {
     asset.id,
     {
       title: draft.value.title,
-      assetType: draft.value.assetType,
+      category: draft.value.category,
       tags,
       content: draft.value.content,
       format: draft.value.content.trim().startsWith('#') ? 'markdown' : asset.format,
@@ -547,7 +543,7 @@ const exportSelected = async () => {
           </span>
           <span class="book-list-copy">
             <strong>{{ asset.title }}</strong>
-            <small>{{ t(typeLabels[asset.assetType]?.zh || asset.assetType, typeLabels[asset.assetType]?.en || asset.assetType) }} · {{ asset.content.length }} {{ t('字', 'chars') }}</small>
+            <small>{{ t(typeLabels[asset.category || asset.assetType]?.zh || asset.category || asset.assetType, typeLabels[asset.category || asset.assetType]?.en || asset.category || asset.assetType) }} · {{ asset.content.length }} {{ t('字', 'chars') }}</small>
           </span>
           <i v-if="asset.locked" class="fas fa-lock" aria-hidden="true"></i>
           <i v-else class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -662,8 +658,8 @@ const exportSelected = async () => {
         <input v-model="draft.title" data-testid="book-edit-title" />
       </label>
       <label>
-        <span>{{ t('类型', 'Type') }}</span>
-        <select v-model="draft.assetType" data-testid="book-edit-type">
+        <span>{{ t('分类', 'Category') }}</span>
+        <select v-model="draft.category" data-testid="book-edit-type">
           <option v-for="type in BOOK_TEXT_ASSET_TYPES" :key="type" :value="type">
             {{ t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type) }}
           </option>
