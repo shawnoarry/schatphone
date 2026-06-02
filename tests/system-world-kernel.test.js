@@ -21,12 +21,13 @@ describe('system world kernel', () => {
     expect(ok).toBe(true)
     expect(store.user.globalWorldview).toBe('Legacy worldview')
     expect(store.user.worldBook).toBe('Legacy worldview')
-    expect(Array.isArray(store.user.knowledgePoints)).toBe(true)
+    expect(Array.isArray(store.user.encyclopediaEntries)).toBe(true)
+    expect(store.user.knowledgePoints).toBe(store.user.encyclopediaEntries)
   })
 
-  test('supports knowledge point add/toggle/remove lifecycle', () => {
+  test('supports encyclopedia entry add/toggle/remove lifecycle', () => {
     const store = useSystemStore()
-    const created = store.upsertKnowledgePoint({
+    const created = store.upsertEncyclopediaEntry({
       title: '语言规范',
       content: '角色A始终使用敬语。',
       tags: ['chat', 'style', 'chat'],
@@ -34,16 +35,33 @@ describe('system world kernel', () => {
 
     expect(created).toBeTruthy()
     expect(created.tags).toEqual(['chat', 'style'])
-    expect(store.listKnowledgePoints().length).toBe(1)
+    expect(store.listEncyclopediaEntries().length).toBe(1)
 
-    const toggled = store.setKnowledgePointEnabled(created.id, false)
+    const toggled = store.setEncyclopediaEntryEnabled(created.id, false)
     expect(toggled).toBe(true)
-    expect(store.getKnowledgePointById(created.id)?.enabled).toBe(false)
-    expect(store.listKnowledgePoints({ enabledOnly: true })).toHaveLength(0)
+    expect(store.getEncyclopediaEntryById(created.id)?.enabled).toBe(false)
+    expect(store.listEncyclopediaEntries({ enabledOnly: true })).toHaveLength(0)
 
-    const removed = store.removeKnowledgePoint(created.id)
+    const removed = store.removeEncyclopediaEntry(created.id)
     expect(removed).toBe(true)
-    expect(store.getKnowledgePointById(created.id)).toBe(null)
+    expect(store.getEncyclopediaEntryById(created.id)).toBe(null)
+  })
+
+  test('keeps old knowledge point helpers as encyclopedia wrappers', () => {
+    const store = useSystemStore()
+    const created = store.upsertKnowledgePoint({
+      title: 'Legacy helper entry',
+      content: 'Created through old helper.',
+      tags: ['legacy'],
+    })
+
+    expect(created).toBeTruthy()
+    expect(store.getKnowledgePointById(created.id)).toEqual(store.getEncyclopediaEntryById(created.id))
+    expect(store.listKnowledgePoints()).toEqual(store.listEncyclopediaEntries())
+    expect(store.findRelevantKnowledgePoints({
+      texts: ['Created through old helper.'],
+      tags: ['legacy'],
+    }).map((item) => item.id)).toEqual([created.id])
   })
 
   test('updates an existing knowledge point without changing its identity', () => {

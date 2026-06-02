@@ -708,6 +708,13 @@ const buildKnowledgePointMatchContext = (options = {}) => {
   }
 }
 
+const sanitizeEncyclopediaEntryId = sanitizeKnowledgePointId
+const createEncyclopediaEntryId = createKnowledgePointId
+const normalizeEncyclopediaEntryTags = normalizeKnowledgePointTags
+const normalizeEncyclopediaEntry = normalizeKnowledgePoint
+const normalizeEncyclopediaEntryList = normalizeKnowledgePointList
+const buildEncyclopediaEntryMatchContext = buildKnowledgePointMatchContext
+
 const normalizeWorldPackIdList = (value = []) => {
   const seen = new Set()
   const result = []
@@ -756,7 +763,9 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
 
   return {
     globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
-    knowledgePoints: normalizeKnowledgePointList(source.knowledgePoints),
+    encyclopediaEntries: normalizeEncyclopediaEntryList(
+      Array.isArray(source.encyclopediaEntries) ? source.encyclopediaEntries : source.knowledgePoints,
+    ),
     worldBookSourceLinks: normalizeWorldBookSourceLinks(source.worldBookSourceLinks),
     profileTemplates: normalizeProfileTemplates(
       Array.isArray(source.profileTemplates) && source.profileTemplates.length > 0
@@ -1373,8 +1382,10 @@ export const useSystemStore = defineStore('system', () => {
     activeWorldPackId: DEFAULT_WORLD_PACK_ID,
     worldPackActivation: normalizeWorldPackActivation({}, DEFAULT_WORLD_PACK_ID),
     knowledgePoints: [],
+    encyclopediaEntries: [],
     profileTemplates: createDefaultProfileTemplatePresets(),
   })
+  user.knowledgePoints = user.encyclopediaEntries
 
   const notifications = ref([])
   const apiReports = ref([])
@@ -2355,16 +2366,16 @@ export const useSystemStore = defineStore('system', () => {
     return normalized
   }
 
-  const getKnowledgePointById = (knowledgePointId) => {
-    const id = sanitizeKnowledgePointId(knowledgePointId)
+  const getEncyclopediaEntryById = (entryId) => {
+    const id = sanitizeEncyclopediaEntryId(entryId)
     if (!id) return null
-    return user.knowledgePoints.find((item) => item.id === id) || null
+    return user.encyclopediaEntries.find((item) => item.id === id) || null
   }
 
-  const listKnowledgePoints = (options = {}) => {
+  const listEncyclopediaEntries = (options = {}) => {
     const enabledOnly = Boolean(options.enabledOnly)
     const keywordRaw = typeof options.keyword === 'string' ? options.keyword.trim().toLowerCase() : ''
-    return user.knowledgePoints.filter((item) => {
+    return user.encyclopediaEntries.filter((item) => {
       if (enabledOnly && item.enabled === false) return false
       if (!keywordRaw) return true
       const haystack = `${item.title || ''}\n${item.content || ''}\n${Array.isArray(item.tags) ? item.tags.join(' ') : ''}`.toLowerCase()
@@ -2372,10 +2383,10 @@ export const useSystemStore = defineStore('system', () => {
     })
   }
 
-  const findRelevantKnowledgePoints = (options = {}) => {
+  const findRelevantEncyclopediaEntries = (options = {}) => {
     const enabledOnly = options.enabledOnly !== false
     const limit = clamp(toInt(options.limit, 3), 1, 8)
-    const matchContext = buildKnowledgePointMatchContext(options)
+    const matchContext = buildEncyclopediaEntryMatchContext(options)
     if (
       matchContext.tokens.length === 0 &&
       matchContext.phrases.length === 0 &&
@@ -2384,14 +2395,14 @@ export const useSystemStore = defineStore('system', () => {
       return []
     }
 
-    return listKnowledgePoints({ enabledOnly })
+    return listEncyclopediaEntries({ enabledOnly })
       .map((item) => {
         const title = normalizeKnowledgePointMatchValue(item.title, MAX_KNOWLEDGE_POINT_TITLE_CHARS)
         const content = normalizeKnowledgePointMatchValue(
           item.content,
           MAX_KNOWLEDGE_POINT_CONTENT_CHARS,
         )
-        const tags = normalizeKnowledgePointTags(item.tags).map((tag) => tag.toLowerCase())
+        const tags = normalizeEncyclopediaEntryTags(item.tags).map((tag) => tag.toLowerCase())
         let score = 0
         let tagHits = 0
         let titleHits = 0
@@ -2439,16 +2450,16 @@ export const useSystemStore = defineStore('system', () => {
       .map(({ item }) => item)
   }
 
-  const upsertKnowledgePoint = (payload = {}) => {
+  const upsertEncyclopediaEntry = (payload = {}) => {
     const input = payload && typeof payload === 'object' ? payload : {}
-    const requestedId = sanitizeKnowledgePointId(input.id)
-    const normalized = normalizeKnowledgePoint(input, user.knowledgePoints.length)
+    const requestedId = sanitizeEncyclopediaEntryId(input.id)
+    const normalized = normalizeEncyclopediaEntry(input, user.encyclopediaEntries.length)
     if (!normalized) return null
 
     if (requestedId) {
-      const index = user.knowledgePoints.findIndex((item) => item.id === requestedId)
+      const index = user.encyclopediaEntries.findIndex((item) => item.id === requestedId)
       if (index >= 0) {
-        const existing = user.knowledgePoints[index]
+        const existing = user.encyclopediaEntries[index]
         const next = {
           ...existing,
           ...normalized,
@@ -2456,38 +2467,48 @@ export const useSystemStore = defineStore('system', () => {
           createdAt: existing.createdAt,
           updatedAt: Date.now(),
         }
-        user.knowledgePoints.splice(index, 1, next)
+        user.encyclopediaEntries.splice(index, 1, next)
+        user.knowledgePoints = user.encyclopediaEntries
         return next
       }
     }
 
-    if (user.knowledgePoints.length >= MAX_KNOWLEDGE_POINTS) return null
+    if (user.encyclopediaEntries.length >= MAX_KNOWLEDGE_POINTS) return null
     const created = {
       ...normalized,
-      id: requestedId || normalized.id || createKnowledgePointId(),
+      id: requestedId || normalized.id || createEncyclopediaEntryId(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    user.knowledgePoints.push(created)
+    user.encyclopediaEntries.push(created)
+    user.knowledgePoints = user.encyclopediaEntries
     return created
   }
 
-  const setKnowledgePointEnabled = (knowledgePointId, enabled) => {
-    const item = getKnowledgePointById(knowledgePointId)
+  const setEncyclopediaEntryEnabled = (entryId, enabled) => {
+    const item = getEncyclopediaEntryById(entryId)
     if (!item) return false
     item.enabled = enabled !== false
     item.updatedAt = Date.now()
     return true
   }
 
-  const removeKnowledgePoint = (knowledgePointId) => {
-    const id = sanitizeKnowledgePointId(knowledgePointId)
+  const removeEncyclopediaEntry = (entryId) => {
+    const id = sanitizeEncyclopediaEntryId(entryId)
     if (!id) return false
-    const index = user.knowledgePoints.findIndex((item) => item.id === id)
+    const index = user.encyclopediaEntries.findIndex((item) => item.id === id)
     if (index < 0) return false
-    user.knowledgePoints.splice(index, 1)
+    user.encyclopediaEntries.splice(index, 1)
+    user.knowledgePoints = user.encyclopediaEntries
     return true
   }
+
+  const getKnowledgePointById = getEncyclopediaEntryById
+  const listKnowledgePoints = listEncyclopediaEntries
+  const findRelevantKnowledgePoints = findRelevantEncyclopediaEntries
+  const upsertKnowledgePoint = upsertEncyclopediaEntry
+  const setKnowledgePointEnabled = setEncyclopediaEntryEnabled
+  const removeKnowledgePoint = removeEncyclopediaEntry
 
   const normalizeCurrentWorldBookSourceLinks = () => {
     user.worldBookSourceLinks = normalizeWorldBookSourceLinks(user.worldBookSourceLinks)
@@ -3927,7 +3948,8 @@ export const useSystemStore = defineStore('system', () => {
     user.worldPackEnablements = normalizedWorldKernel.worldPackEnablements
     user.activeWorldPackId = normalizedWorldKernel.activeWorldPackId
     user.worldPackActivation = normalizedWorldKernel.worldPackActivation
-    user.knowledgePoints = normalizedWorldKernel.knowledgePoints
+    user.encyclopediaEntries = normalizedWorldKernel.encyclopediaEntries
+    user.knowledgePoints = user.encyclopediaEntries
     user.profileTemplates = normalizedWorldKernel.profileTemplates
     if (typeof user.chatStatus !== 'string') {
       user.chatStatus = 'idle'
@@ -4183,8 +4205,14 @@ export const useSystemStore = defineStore('system', () => {
           worldProfileAnalysis: { ...normalizeWorldProfile(user.worldProfileAnalysis) },
           enabledWorldPackIds: normalizeWorldPackIdList(user.enabledWorldPackIds),
           worldPackEnablements: normalizeWorldPackEnablements(user.worldPackEnablements),
-          knowledgePoints: Array.isArray(user.knowledgePoints)
-            ? user.knowledgePoints.map((item) => ({
+          encyclopediaEntries: Array.isArray(user.encyclopediaEntries)
+            ? user.encyclopediaEntries.map((item) => ({
+                ...item,
+                tags: Array.isArray(item.tags) ? [...item.tags] : [],
+              }))
+            : [],
+          knowledgePoints: Array.isArray(user.encyclopediaEntries)
+            ? user.encyclopediaEntries.map((item) => ({
                 ...item,
                 tags: Array.isArray(item.tags) ? [...item.tags] : [],
               }))
@@ -4297,6 +4325,12 @@ export const useSystemStore = defineStore('system', () => {
     syncPushPermissionFromBrowser,
     setPushState,
     setGlobalWorldview,
+    getEncyclopediaEntryById,
+    listEncyclopediaEntries,
+    findRelevantEncyclopediaEntries,
+    upsertEncyclopediaEntry,
+    setEncyclopediaEntryEnabled,
+    removeEncyclopediaEntry,
     getKnowledgePointById,
     listKnowledgePoints,
     findRelevantKnowledgePoints,
