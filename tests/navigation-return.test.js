@@ -32,6 +32,7 @@ describe('navigation return helpers', () => {
     ).toEqual({
       source: 'map',
       homePage: '2',
+      entry: 'route-memory',
       point: 'route-memory',
     })
   })

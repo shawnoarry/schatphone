@@ -140,7 +140,9 @@ describe('system world pack store', () => {
 
     expect(result.ok).toBe(false)
     expect(result.reason).toBe('blocked')
-    expect(result.review.blockers).toEqual([{ type: 'missing_knowledge', id: 'kp_missing' }])
+    expect(result.review.blockers).toEqual([
+      { type: 'missing_encyclopedia_entry', id: 'kp_missing' },
+    ])
     expect(store.user.activeWorldPackId).toBe('default_world')
   })
 
