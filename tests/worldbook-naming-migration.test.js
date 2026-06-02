@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useBookStore } from '../src/stores/book'
+import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
 
 describe('Book and WorldBook naming migration', () => {
@@ -73,6 +74,65 @@ describe('Book and WorldBook naming migration', () => {
       id: 'kp_old',
       title: 'Old point',
       content: 'Old entry body.',
+    })
+  })
+
+  test('restores old role and pack knowledge ids as canonical encyclopedia ids', () => {
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+
+    expect(
+      chatStore.restoreFromBackup({
+        roleProfiles: [
+          {
+            id: 42,
+            name: 'Legacy role',
+            role: 'Archivist',
+            knowledgePointIds: ['kp_pack', 'kp_pack', 'kp_role'],
+          },
+        ],
+        contacts: [
+          {
+            id: 'contact_legacy',
+            kind: 'role',
+            name: 'Legacy role',
+            profileId: 42,
+          },
+        ],
+        conversations: {},
+        messagesByConversation: {},
+      }),
+    ).toBe(true)
+
+    const restored = systemStore.restoreFromBackup({
+      system: {
+        user: {
+          knowledgePoints: [{ id: 'kp_pack', title: 'Pack entry', content: 'Pack body.' }],
+          worldPacks: [
+            {
+              id: 'legacy_pack',
+              title: 'Legacy Pack',
+              knowledgePointIds: ['kp_pack'],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(restored).toBe(true)
+    expect(chatStore.getRoleProfileById(42)).toMatchObject({
+      encyclopediaEntryIds: ['kp_pack', 'kp_role'],
+      knowledgePointIds: ['kp_pack', 'kp_role'],
+    })
+    const pack = systemStore.listWorldPacks().find((item) => item.id === 'legacy_pack')
+    expect(pack).toMatchObject({
+      encyclopediaEntryIds: ['kp_pack'],
+      knowledgePointIds: ['kp_pack'],
+    })
+    expect(systemStore.buildWorldPackActivationReview('legacy_pack').blocked).toBe(false)
+    expect(systemStore.buildWorldPackActivationReview('legacy_pack').blockers).not.toContainEqual({
+      type: 'missing_encyclopedia_entry',
+      id: 'kp_pack',
     })
   })
 })

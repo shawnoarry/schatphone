@@ -491,7 +491,8 @@ export const normalizeWorldPack = (raw, index = 0) => {
     supportState: normalizeSupportState(source.supportState),
     unsupportedReason: normalizeId(source.unsupportedReason, ''),
     version: Math.max(1, toInt(source.version, 1)),
-    knowledgePointIds: normalizeStringList(source.knowledgePointIds),
+    encyclopediaEntryIds: normalizeStringList(source.encyclopediaEntryIds || source.knowledgePointIds),
+    knowledgePointIds: normalizeStringList(source.encyclopediaEntryIds || source.knowledgePointIds),
     profileTemplateIds: normalizeStringList(source.profileTemplateIds),
     bookSourceLinkIds: normalizeStringList(source.bookSourceLinkIds),
     compatibility: normalizeWorldPackCompatibility(source.compatibility),
@@ -548,18 +549,23 @@ const buildReferenceMap = (items = []) =>
 
 export const buildWorldPackActivationReview = ({
   pack,
+  encyclopediaEntries = [],
   knowledgePoints = [],
   profileTemplates = [],
   bookSourceLinks = [],
 } = {}) => {
   const normalizedPack = normalizeWorldPack(pack || BUILT_IN_WORLD_PACKS[0])
-  const knowledgeMap = buildReferenceMap(knowledgePoints)
+  const encyclopediaMap = buildReferenceMap(
+    Array.isArray(encyclopediaEntries) && encyclopediaEntries.length > 0
+      ? encyclopediaEntries
+      : knowledgePoints,
+  )
   const templateMap = buildReferenceMap(profileTemplates)
   const sourceLinkMap = buildReferenceMap(bookSourceLinks)
   const blockers = []
 
-  normalizedPack.knowledgePointIds.forEach((id) => {
-    if (!knowledgeMap.has(id)) blockers.push({ type: 'missing_knowledge', id })
+  normalizedPack.encyclopediaEntryIds.forEach((id) => {
+    if (!encyclopediaMap.has(id)) blockers.push({ type: 'missing_encyclopedia_entry', id })
   })
   normalizedPack.profileTemplateIds.forEach((id) => {
     if (!templateMap.has(id)) blockers.push({ type: 'missing_profile_template', id })
@@ -575,9 +581,9 @@ export const buildWorldPackActivationReview = ({
       count: normalizedPack.bookSourceLinkIds.length || (Array.isArray(bookSourceLinks) ? bookSourceLinks.length : 0),
     },
     {
-      key: 'knowledge',
-      label: 'Knowledge',
-      count: normalizedPack.knowledgePointIds.length,
+      key: 'encyclopedia',
+      label: 'Encyclopedia',
+      count: normalizedPack.encyclopediaEntryIds.length,
     },
     {
       key: 'templates',
@@ -608,7 +614,8 @@ export const buildWorldPackActivationReview = ({
     terminology: normalizedPack.terminology,
     summary: {
       bookSourceCount: effectRows.find((row) => row.key === 'book_sources')?.count || 0,
-      knowledgeCount: normalizedPack.knowledgePointIds.length,
+      encyclopediaEntryCount: normalizedPack.encyclopediaEntryIds.length,
+      knowledgeCount: normalizedPack.encyclopediaEntryIds.length,
       profileTemplateCount: normalizedPack.profileTemplateIds.length,
       appBindingCount: normalizedPack.appBindings.length,
       serviceTemplateCount: normalizedPack.serviceAccountTemplates.length,

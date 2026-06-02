@@ -845,7 +845,12 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     avatarImage,
     bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
     ...relationshipFields,
-    knowledgePointIds: normalizeKnowledgePointIds(rawProfile?.knowledgePointIds),
+    encyclopediaEntryIds: normalizeKnowledgePointIds(
+      rawProfile?.encyclopediaEntryIds || rawProfile?.knowledgePointIds,
+    ),
+    knowledgePointIds: normalizeKnowledgePointIds(
+      rawProfile?.encyclopediaEntryIds || rawProfile?.knowledgePointIds,
+    ),
     templateLink: normalizeProfileTemplateLink(rawProfile?.templateLink),
     profileValues: normalizeProfileValues(rawProfile?.profileValues),
     capabilities: normalizeProfileCapabilities(rawProfile?.capabilities, entityType),
@@ -2582,8 +2587,10 @@ export const useChatStore = defineStore('chat', () => {
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter(Boolean)
     }
-    if (Array.isArray(updates.knowledgePointIds)) {
-      target.knowledgePointIds = normalizeKnowledgePointIds(updates.knowledgePointIds)
+    if (Array.isArray(updates.encyclopediaEntryIds) || Array.isArray(updates.knowledgePointIds)) {
+      const nextIds = normalizeKnowledgePointIds(updates.encyclopediaEntryIds || updates.knowledgePointIds)
+      target.encyclopediaEntryIds = nextIds
+      target.knowledgePointIds = nextIds
     }
     if (Array.isArray(updates.detailItems)) {
       target.detailItems = normalizeRoleDetailItems(updates.detailItems)
@@ -3168,6 +3175,12 @@ export const useChatStore = defineStore('chat', () => {
         roleProfiles: roleProfiles.map((profile) => ({
           ...profile,
           ...cloneRelationshipProfileFields(profile),
+          encyclopediaEntryIds: Array.isArray(profile.encyclopediaEntryIds)
+            ? [...profile.encyclopediaEntryIds]
+            : [],
+          knowledgePointIds: Array.isArray(profile.knowledgePointIds)
+            ? [...profile.knowledgePointIds]
+            : [],
           templateLink: { ...profile.templateLink },
           profileValues: Array.isArray(profile.profileValues)
             ? profile.profileValues.map((item) => ({ ...item }))

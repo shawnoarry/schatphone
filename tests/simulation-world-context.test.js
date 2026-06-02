@@ -16,7 +16,7 @@ describe('simulation world context resolver', () => {
     )
     expect(
       resolveWorldContextFamily({
-        knowledgePoints: [
+        encyclopediaEntries: [
           {
             title: 'Supply rules',
             content: '封锁区和补给队决定交通。',
@@ -31,7 +31,7 @@ describe('simulation world context resolver', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
     const context = resolveWorldContextFromWorldBook({
       globalWorldview: 'Sci-fi city baseline.',
-      knowledgePoints: [
+      encyclopediaEntries: [
         {
           id: 'kp_drone_city',
           title: 'Drone city',
@@ -75,7 +75,7 @@ describe('simulation world context resolver', () => {
           },
         ],
       },
-      listKnowledgePoints: () => [],
+      listEncyclopediaEntries: () => [],
     }
     const bookStore = {
       findAssetById: (assetId) =>

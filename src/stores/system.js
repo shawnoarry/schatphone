@@ -2591,7 +2591,16 @@ export const useSystemStore = defineStore('system', () => {
   const listWorldPacks = () =>
     normalizeWorldPacks(user.worldPacks).map((pack) => ({
       ...pack,
-      knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
+      encyclopediaEntryIds: Array.isArray(pack.encyclopediaEntryIds)
+        ? [...pack.encyclopediaEntryIds]
+        : Array.isArray(pack.knowledgePointIds)
+          ? [...pack.knowledgePointIds]
+          : [],
+      knowledgePointIds: Array.isArray(pack.encyclopediaEntryIds)
+        ? [...pack.encyclopediaEntryIds]
+        : Array.isArray(pack.knowledgePointIds)
+          ? [...pack.knowledgePointIds]
+          : [],
       profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
       bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
       relationshipCategories: Array.isArray(pack.relationshipCategories)
@@ -2647,6 +2656,7 @@ export const useSystemStore = defineStore('system', () => {
     if (!pack) return null
     return buildWorldPackActivationReviewPayload({
       pack,
+      encyclopediaEntries: listEncyclopediaEntries({ enabledOnly: false }),
       knowledgePoints: listKnowledgePoints({ enabledOnly: false }),
       profileTemplates: listProfileTemplates(),
       bookSourceLinks: listWorldBookSourceLinks(),
@@ -4183,7 +4193,16 @@ export const useSystemStore = defineStore('system', () => {
           })),
           worldPacks: normalizeWorldPacks(user.worldPacks).map((pack) => ({
             ...pack,
-            knowledgePointIds: Array.isArray(pack.knowledgePointIds) ? [...pack.knowledgePointIds] : [],
+            encyclopediaEntryIds: Array.isArray(pack.encyclopediaEntryIds)
+              ? [...pack.encyclopediaEntryIds]
+              : Array.isArray(pack.knowledgePointIds)
+                ? [...pack.knowledgePointIds]
+                : [],
+            knowledgePointIds: Array.isArray(pack.encyclopediaEntryIds)
+              ? [...pack.encyclopediaEntryIds]
+              : Array.isArray(pack.knowledgePointIds)
+                ? [...pack.knowledgePointIds]
+                : [],
             profileTemplateIds: Array.isArray(pack.profileTemplateIds) ? [...pack.profileTemplateIds] : [],
             bookSourceLinkIds: Array.isArray(pack.bookSourceLinkIds) ? [...pack.bookSourceLinkIds] : [],
             relationshipCategories: Array.isArray(pack.relationshipCategories)

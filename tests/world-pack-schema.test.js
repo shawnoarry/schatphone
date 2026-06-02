@@ -58,7 +58,7 @@ describe('world pack schema', () => {
     const pack = normalizeWorldPack({
       id: 'review_pack',
       title: 'Review Pack',
-      knowledgePointIds: ['kp_live', 'kp_missing'],
+      encyclopediaEntryIds: ['kp_live', 'kp_missing'],
       profileTemplateIds: ['tpl_live'],
       bookSourceLinkIds: ['source_live'],
       appBindings: [{ id: 'feed', title: 'Feed', archetype: 'publication_feed' }],
@@ -67,20 +67,22 @@ describe('world pack schema', () => {
 
     const review = buildWorldPackActivationReview({
       pack,
-      knowledgePoints: [{ id: 'kp_live' }],
+      encyclopediaEntries: [{ id: 'kp_live' }],
       profileTemplates: [{ id: 'tpl_live' }],
       bookSourceLinks: [{ id: 'source_live' }],
     })
 
     expect(review.summary).toMatchObject({
       bookSourceCount: 1,
+      encyclopediaEntryCount: 2,
       knowledgeCount: 2,
       profileTemplateCount: 1,
       appBindingCount: 1,
       serviceTemplateCount: 1,
     })
+    expect(review.summary.knowledgeCount).toBe(2)
     expect(review.blocked).toBe(true)
-    expect(review.blockers).toEqual([{ type: 'missing_knowledge', id: 'kp_missing' }])
+    expect(review.blockers).toEqual([{ type: 'missing_encyclopedia_entry', id: 'kp_missing' }])
   })
 
   test('normalizes world pack compatibility metadata', () => {

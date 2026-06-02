@@ -109,14 +109,25 @@ const normalizeKnowledgePointIdList = (input) => {
   return uniqueIds.slice(0, MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE)
 }
 
+const normalizeEncyclopediaEntryIdList = normalizeKnowledgePointIdList
+
 const normalizeProfileTemplateLinkForContract = (input = {}) => {
   const source = input && typeof input === 'object' ? input : {}
   return {
     primaryWorldId: sanitizeKnowledgePointId(source.primaryWorldId),
     profileTemplateId: sanitizeKnowledgePointId(source.profileTemplateId),
     profileTemplateVersion: Math.max(0, toInt(source.profileTemplateVersion, 0)),
+    supplementalEncyclopediaEntryIds: normalizeEncyclopediaEntryIdList(
+      source.supplementalEncyclopediaEntryIds ||
+        source.encyclopediaEntryIds ||
+        source.supplementalKnowledgePointIds ||
+        source.knowledgePointIds,
+    ),
     supplementalKnowledgePointIds: normalizeKnowledgePointIdList(
-      source.supplementalKnowledgePointIds || source.knowledgePointIds,
+      source.supplementalEncyclopediaEntryIds ||
+        source.encyclopediaEntryIds ||
+        source.supplementalKnowledgePointIds ||
+        source.knowledgePointIds,
     ),
   }
 }
@@ -293,7 +304,12 @@ export const createRoleBindingContract = (input = {}) => {
       templateLink: normalizeProfileTemplateLinkForContract(profileInput.templateLink),
       profileValues: normalizeProfileValuesForContract(profileInput.profileValues),
       capabilities: normalizeProfileCapabilitiesForContract(profileInput.capabilities),
-      knowledgePointIds: normalizeKnowledgePointIdList(profileInput.knowledgePointIds),
+      encyclopediaEntryIds: normalizeEncyclopediaEntryIdList(
+        profileInput.encyclopediaEntryIds || profileInput.knowledgePointIds,
+      ),
+      knowledgePointIds: normalizeKnowledgePointIdList(
+        profileInput.encyclopediaEntryIds || profileInput.knowledgePointIds,
+      ),
       tags: Array.isArray(profileInput.tags)
         ? profileInput.tags
             .map((item) => trimTo(item, 80))

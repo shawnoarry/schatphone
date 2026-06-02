@@ -38,9 +38,12 @@ const uniqueTags = (items = [], maxItems = 12) => {
   return output.slice(0, maxItems)
 }
 
-const collectText = ({ globalWorldview = '', knowledgePoints = [] } = {}) => {
-  const pointText = Array.isArray(knowledgePoints)
-    ? knowledgePoints
+const collectText = ({ globalWorldview = '', encyclopediaEntries = [], knowledgePoints = [] } = {}) => {
+  const entries = Array.isArray(encyclopediaEntries) && encyclopediaEntries.length > 0
+    ? encyclopediaEntries
+    : knowledgePoints
+  const pointText = Array.isArray(entries)
+    ? entries
         .map((point) => `${point?.title || ''} ${point?.content || ''} ${(point?.tags || []).join(' ')}`)
         .join(' ')
     : ''
@@ -49,10 +52,17 @@ const collectText = ({ globalWorldview = '', knowledgePoints = [] } = {}) => {
 
 const containsAny = (text, patterns = []) => patterns.some((pattern) => pattern.test(text))
 
-export const resolveWorldContextFamily = ({ globalWorldview = '', knowledgePoints = [] } = {}) => {
-  const text = collectText({ globalWorldview, knowledgePoints })
-  const tagText = Array.isArray(knowledgePoints)
-    ? knowledgePoints.flatMap((point) => (Array.isArray(point?.tags) ? point.tags : [])).join(' ').toLowerCase()
+export const resolveWorldContextFamily = ({
+  globalWorldview = '',
+  encyclopediaEntries = [],
+  knowledgePoints = [],
+} = {}) => {
+  const entries = Array.isArray(encyclopediaEntries) && encyclopediaEntries.length > 0
+    ? encyclopediaEntries
+    : knowledgePoints
+  const text = collectText({ globalWorldview, encyclopediaEntries, knowledgePoints })
+  const tagText = Array.isArray(entries)
+    ? entries.flatMap((point) => (Array.isArray(point?.tags) ? point.tags : [])).join(' ').toLowerCase()
     : ''
 
   if (
@@ -102,6 +112,7 @@ export const normalizeWorldContext = (rawContext = {}) => {
     ? genreTags[0]
     : resolveWorldContextFamily({
         globalWorldview: rawContext.summary || rawContext.globalWorldview,
+        encyclopediaEntries: rawContext.encyclopediaEntries,
         knowledgePoints: rawContext.knowledgePoints,
       })
   const activeWorldBookIds = uniqueTags(rawContext.activeWorldBookIds, 24)
@@ -138,16 +149,21 @@ export const normalizeWorldContext = (rawContext = {}) => {
 
 export const resolveWorldContextFromWorldBook = ({
   globalWorldview = '',
+  encyclopediaEntries = [],
   knowledgePoints = [],
   sourceScope = 'global',
   locale = 'zh-CN',
   now = Date.now(),
 } = {}) => {
-  const enabledPoints = Array.isArray(knowledgePoints)
-    ? knowledgePoints.filter((point) => point && point.enabled !== false)
+  const entries = Array.isArray(encyclopediaEntries) && encyclopediaEntries.length > 0
+    ? encyclopediaEntries
+    : knowledgePoints
+  const enabledPoints = Array.isArray(entries)
+    ? entries.filter((point) => point && point.enabled !== false)
     : []
   const family = resolveWorldContextFamily({
     globalWorldview,
+    encyclopediaEntries: enabledPoints,
     knowledgePoints: enabledPoints,
   })
   const activeWorldBookIds = enabledPoints.map((point) => point.id).filter(Boolean)
@@ -173,13 +189,16 @@ export const resolveWorldContextFromSystemStore = (systemStore, options = {}) =>
   const user = systemStore?.user || {}
   const { bookStore, ...contextOptions } = options
   const globalWorldview = resolveWorldviewText(systemStore, { bookStore })
-  const knowledgePoints =
-    typeof systemStore?.listKnowledgePoints === 'function'
-      ? systemStore.listKnowledgePoints({ enabledOnly: true })
-      : user.knowledgePoints
+  const encyclopediaEntries =
+    typeof systemStore?.listEncyclopediaEntries === 'function'
+      ? systemStore.listEncyclopediaEntries({ enabledOnly: true })
+      : typeof systemStore?.listKnowledgePoints === 'function'
+        ? systemStore.listKnowledgePoints({ enabledOnly: true })
+        : user.encyclopediaEntries || user.knowledgePoints
   return resolveWorldContextFromWorldBook({
     globalWorldview,
-    knowledgePoints,
+    encyclopediaEntries,
+    knowledgePoints: encyclopediaEntries,
     ...contextOptions,
   })
 }

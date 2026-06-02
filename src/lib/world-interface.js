@@ -45,21 +45,29 @@ const clampText = (value, maxLength = WORLD_CONTEXT_BOOK_SOURCE_ITEM_CHAR_LIMIT)
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength).trim()}...` : normalized
 }
 
-const normalizeKnowledgePoint = (point = {}) => ({
-  ...point,
-  id: normalizeText(point?.id),
-  title: normalizeText(point?.title, 'Knowledge'),
-  content: normalizeText(point?.content),
-  tags: Array.isArray(point?.tags) ? point.tags.filter((tag) => normalizeText(tag)) : [],
-  enabled: point?.enabled !== false,
+const normalizeEncyclopediaEntry = (entry = {}) => ({
+  ...entry,
+  id: normalizeText(entry?.id),
+  title: normalizeText(entry?.title, 'Encyclopedia entry'),
+  content: normalizeText(entry?.content),
+  tags: Array.isArray(entry?.tags) ? entry.tags.filter((tag) => normalizeText(tag)) : [],
+  enabled: entry?.enabled !== false,
 })
 
-const listKnowledgePointsFromStore = (systemStore) => {
+const normalizeKnowledgePoint = normalizeEncyclopediaEntry
+
+const listEncyclopediaEntriesFromStore = (systemStore) => {
+  if (typeof systemStore?.listEncyclopediaEntries === 'function') {
+    return systemStore.listEncyclopediaEntries()
+  }
   if (typeof systemStore?.listKnowledgePoints === 'function') {
     return systemStore.listKnowledgePoints()
   }
+  if (Array.isArray(systemStore?.user?.encyclopediaEntries)) return systemStore.user.encyclopediaEntries
   return Array.isArray(systemStore?.user?.knowledgePoints) ? systemStore.user.knowledgePoints : []
 }
+
+const listKnowledgePointsFromStore = listEncyclopediaEntriesFromStore
 
 const listWorldProfileTemplatesFromStore = (systemStore, worldId = DEFAULT_WORLD_PACK.id) => {
   if (typeof systemStore?.listWorldProfileTemplates === 'function') {
@@ -228,8 +236,11 @@ export const resolveRoleKnowledgeState = ({
     roleBound: false,
     profileName: '',
     configuredCount: 0,
+    enabledEntries: [],
     enabledPoints: [],
+    injectedEntries: [],
     injectedPoints: [],
+    injectedEntryCount: 0,
     injectedCount: 0,
     disabledCount: 0,
     missingCount: 0,
@@ -246,9 +257,11 @@ export const resolveRoleKnowledgeState = ({
     }
   }
 
-  const configuredIds = Array.isArray(profile.knowledgePointIds)
-    ? profile.knowledgePointIds.filter((id) => normalizeText(id))
-    : []
+  const configuredIds = Array.isArray(profile.encyclopediaEntryIds)
+    ? profile.encyclopediaEntryIds.filter((id) => normalizeText(id))
+    : Array.isArray(profile.knowledgePointIds)
+      ? profile.knowledgePointIds.filter((id) => normalizeText(id))
+      : []
   if (configuredIds.length === 0) {
     return {
       ...empty,
@@ -258,7 +271,7 @@ export const resolveRoleKnowledgeState = ({
   }
 
   const pointMap = new Map(
-    listKnowledgePointsFromStore(systemStore)
+    listEncyclopediaEntriesFromStore(systemStore)
       .filter((point) => point && typeof point === 'object' && normalizeText(point.id))
       .map((point) => [normalizeText(point.id), point]),
   )
@@ -286,8 +299,11 @@ export const resolveRoleKnowledgeState = ({
     roleBound: true,
     profileName: normalizeText(profile.name, normalizeText(contact.name)),
     configuredCount: configuredIds.length,
+    enabledEntries: enabledPoints,
     enabledPoints,
+    injectedEntries: injectedPoints,
     injectedPoints,
+    injectedEntryCount: injectedPoints.length,
     injectedCount: injectedPoints.length,
     disabledCount,
     missingCount,
@@ -349,9 +365,11 @@ export const resolveWorldContextForConsumer = ({
 
 export const buildWorldPromptBlock = (worldContext = {}) => {
   const worldview = normalizeText(worldContext.worldview, 'none')
-  const injectedPoints = Array.isArray(worldContext.injectedPoints)
-    ? worldContext.injectedPoints
-    : []
+  const injectedPoints = Array.isArray(worldContext.injectedEntries)
+    ? worldContext.injectedEntries
+    : Array.isArray(worldContext.injectedPoints)
+      ? worldContext.injectedPoints
+      : []
   const boundSummary =
     injectedPoints.length > 0
       ? injectedPoints.map((point) => formatWorldKnowledgePointForPrompt(point)).join('; ')
@@ -359,7 +377,7 @@ export const buildWorldPromptBlock = (worldContext = {}) => {
 
   return [
     `Primary worldview rules: ${worldview}`,
-    `Supplemental role-bound knowledge points: ${boundSummary}.`,
+    `Supplemental role-bound encyclopedia entries: ${boundSummary}.`,
   ].join('\n')
 }
 
@@ -390,8 +408,11 @@ export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
     worldviewPreview: normalizePreview(worldview, 120),
     worldviewCharCount: worldview.length,
     hasWorldview: Boolean(worldview),
+    encyclopediaEntryCount: points.length,
     knowledgeCount: points.length,
+    enabledEncyclopediaEntryCount: enabledKnowledgeCount,
     enabledKnowledgeCount,
+    disabledEncyclopediaEntryCount: disabledKnowledgeCount,
     disabledKnowledgeCount,
     profileTemplateCount: worldProfileTemplates.length,
     linkedBookSourceCount: bookSources.linkedSourceCount,

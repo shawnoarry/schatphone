@@ -10,7 +10,8 @@ import {
 const createSystemStore = ({
   globalWorldview = '',
   worldBook = '',
-  knowledgePoints = [],
+  encyclopediaEntries = [],
+  knowledgePoints = encyclopediaEntries,
   profileTemplates = [],
   activePack = null,
   enabledPacks = [],
@@ -18,6 +19,7 @@ const createSystemStore = ({
   user: {
     globalWorldview,
     worldBook,
+    encyclopediaEntries: encyclopediaEntries.length > 0 ? encyclopediaEntries : knowledgePoints,
     knowledgePoints,
     profileTemplates,
     activeWorldPackId: activePack?.id || 'default_world',
@@ -38,6 +40,11 @@ const createSystemStore = ({
   listEnabledWorldPacks() {
     if (enabledPacks.length > 0) return enabledPacks
     return activePack && activePack.id !== 'default_world' ? [activePack] : []
+  },
+  listEncyclopediaEntries(options = {}) {
+    return options.enabledOnly
+      ? this.user.encyclopediaEntries.filter((point) => point.enabled !== false)
+      : this.user.encyclopediaEntries
   },
   listKnowledgePoints(options = {}) {
     return options.enabledOnly
@@ -178,7 +185,7 @@ describe('world interface', () => {
       {
         id: 7,
         name: 'Nova',
-        knowledgePointIds: [
+        encyclopediaEntryIds: [
           ...enabledPoints.map((point) => point.id),
           'kp_disabled',
           'kp_missing',
@@ -204,6 +211,9 @@ describe('world interface', () => {
     expect(state.injectedPoints.map((point) => point.id)).toEqual(
       enabledPoints.slice(0, 8).map((point) => point.id),
     )
+    expect(state.injectedEntries?.map((entry) => entry.id)).toEqual(
+      enabledPoints.slice(0, 8).map((point) => point.id),
+    )
   })
 
   test('builds prompt block from the same context consumed by Chat UI', () => {
@@ -226,7 +236,7 @@ describe('world interface', () => {
       ],
     })
     const chatStore = createChatStore([
-      { id: 3, name: 'Iris', knowledgePointIds: ['kp_city', 'kp_hidden'] },
+      { id: 3, name: 'Iris', encyclopediaEntryIds: ['kp_city', 'kp_hidden'] },
     ])
 
     const context = resolveWorldContextForConsumer({
@@ -238,7 +248,10 @@ describe('world interface', () => {
     const promptBlock = buildWorldPromptBlock(context)
 
     expect(context.injectedCount).toBe(1)
+    expect(context.injectedEntryCount).toBe(1)
     expect(context.disabledCount).toBe(1)
+    expect(context.injectedEntries?.map((entry) => entry.id)).toEqual(['kp_city'])
+    expect(context.injectedPoints.map((point) => point.id)).toEqual(['kp_city'])
     expect(promptBlock).toContain('Primary worldview rules: Night city baseline.')
     expect(promptBlock).toContain('City etiquette: Formal greeting only. [tags: style]')
     expect(promptBlock).not.toContain('Hidden note')
