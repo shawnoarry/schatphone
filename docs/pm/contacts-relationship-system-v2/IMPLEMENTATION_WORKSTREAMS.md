@@ -81,6 +81,9 @@ Current landed baseline:
 - relationship classification Round 3 adds the role-control relationship surface: Contacts detail shows the current runtime snapshot first, then edits the profile-side relationship premise, seed values, category, modifier tags, classification audit, AI classify, confirmation, and manual save flows.
 - Contacts Role Hub summary now includes a read-only Chat social-channel snapshot so users can understand communication reachability without editing Chat state from Contacts.
 - Contacts World profile fields now support V1 concrete value authoring from WorldBook templates: choose a current-world template, fill role/self/NPC values, set visibility levels, and save `templateLink/profileValues` on the role profile.
+- Contacts World profile fields now include AI draft assistance for empty editor fields only; the AI helper normalizes provider JSON against the chosen template and never saves or overwrites manual values without the user's Save action.
+- Contacts World profile fields now include a current-world adaptation review for profiles using missing, outdated, or other-world templates. The review recommends a current-world template, shows reusable/custom-preserved counts, and can open the editor with AI-migrated draft values without saving.
+- Contacts first entry now feels like a phone contact list: Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles. Recent interactions is a shortcut layer and keeps full list membership intact.
 
 Main tasks:
 
@@ -90,7 +93,8 @@ Main tasks:
 4. after this completed baseline, move deeper memory dedupe/merge and recall rules into Workstream 4.2 instead of extending 4.1 further;
 5. richer Chat-bound state and navigation hints;
 6. danger-zone isolation and confirmation copy;
-7. richer WorldBook template field widgets, template-change review, and AI-assisted value completion after the V1 editor baseline.
+7. continue from the landed richer field widgets, template-change review, AI-assisted draft completion, and Contacts-side template adaptation by improving true template editing and eventual form-builder-quality WorldBook authoring.
+8. later true-device polish for Contacts touch feel and detail-panel progressive disclosure.
 
 Semantic traps to avoid:
 

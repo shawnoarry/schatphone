@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -76,6 +76,11 @@ What is already landed:
 61. WorldBook Profile Templates now includes a product-facing Contacts handoff. The panel tells users that WorldBook defines world-specific profile fields, while `通讯录 / Contacts` fills concrete values for roles, self profile, and NPCs; the action opens Contacts with `from=worldbook&focus=profile_templates`, and Contacts recognizes that route with a focused entry note without making WorldBook own person-value editing.
 62. Contacts role detail now completes the V1 handoff loop with an inline `世界字段 / World profile fields` editor. It keeps the visual ownership language consistent: choose a current-world WorldBook template, fill this person's concrete values, set visibility, and save back to Contacts-owned `templateLink/profileValues`.
 63. The WorldBook Profile Templates -> Contacts focused handoff now has a simulated phone-viewport product check: copy an ABO preset, open Contacts from the handoff, create a role profile, fill `世界字段 / World profile fields`, and verify the saved value renders without page errors, horizontal overflow, or page-level mojibake. E2E also passes with 14 tests across desktop and mobile Chromium.
+64. Contacts now has a first phone-like entry refactor: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles are ordered like a real contact app. Recent interactions is an avatar shortcut row and does not replace the complete role/NPC lists. The simulated mobile E2E covers order, shortcut navigation, search filtering, and no horizontal overflow.
+65. Contacts world-field editing now presents worldview-template fields through stable visual controls: choice chips/selects, long-note areas, tag entry with preview chips, and person-reference guidance. This keeps dynamic world-specific template content readable without creating per-world custom screens.
+66. Contacts template-change review now appears inside the world-field editor before saving. It explains which fields update, which old fields stay as custom values, and keeps the action inline instead of using a blocking modal.
+67. Contacts AI world-field drafting now appears as a secondary inline editor action. It drafts empty fields only, reports applied/kept counts below the editor actions, and preserves Save as the clear user-controlled commit.
+68. Contacts current-world template adaptation now uses a soft review card in role detail when a profile uses an unavailable, older, or other-world template. The card recommends a current-world template, explains carry-over/custom-preserved counts, and opens AI draft adaptation inside the existing editor so users can still review before saving.
 
 Still incomplete:
 
@@ -85,6 +90,7 @@ Still incomplete:
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 5. World Pack app-entry unlocking now has a first implementation; the world UX package has first target-app context treatment in Shopping, Food Delivery, Calendar, and Map, Current World Pack hands off to App Store's `World` section instead of launching entries from Settings, App Store now explains that handoff before opening, and the nonstandard-app review UI is landed with loading/empty/error/rejection handling, but these paths still need phone-sized user testing and broader hardening for labels, accents, safe UX variants, and target-app copy readability.
 6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and world-app-specific CSS remains a later World Pack/app-owned slice instead of returning to global Appearance.
+7. Contacts phone-like entry has simulated mobile coverage, but still needs true-device checks for touch feel, browser chrome, keyboard behavior, and safe-area spacing.
 
 ## 2. Recommended Next Slice
 

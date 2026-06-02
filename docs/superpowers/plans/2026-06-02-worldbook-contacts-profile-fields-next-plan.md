@@ -164,7 +164,7 @@ Expected: all E2E tests pass.
 - Modify: `src/views/ContactsView.vue`
 - Modify: `tests/contacts-profile-template-view.test.js`
 
-- [ ] **Step 1: Add tests for field-type behavior**
+- [x] **Step 1: Add tests for field-type behavior**
 
 Cover at least:
 
@@ -173,7 +173,7 @@ Cover at least:
 3. `long_text` renders as a multi-line input.
 4. `single_select` renders known options.
 
-- [ ] **Step 2: Improve the editor**
+- [x] **Step 2: Improve the editor**
 
 Keep the V1 data model. Do not introduce a new store just for field editing.
 
@@ -185,13 +185,15 @@ User-facing behavior should be:
 4. person-reference fields do not pretend to be a finished relationship picker until the product has a real picker decision;
 5. visibility controls remain close to each field.
 
-- [ ] **Step 3: Validate**
+- [x] **Step 3: Validate**
 
 ```powershell
 npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/profile-template-schema.test.js
 ```
 
 Expected: pass.
+
+Actual on 2026-06-03: `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/profile-template-schema.test.js` passed with 2 files / 15 tests.
 
 ### Task 3: Add Template-Change Review
 
@@ -200,7 +202,7 @@ Expected: pass.
 - Modify: `src/views/ContactsView.vue`
 - Modify: `tests/contacts-profile-template-view.test.js`
 
-- [ ] **Step 1: Add tests for changing templates**
+- [x] **Step 1: Add tests for changing templates**
 
 Test this product behavior:
 
@@ -210,7 +212,7 @@ Test this product behavior:
 4. Fields that do not exist in template B are shown as preserved custom/out-of-template values after save.
 5. The UI warns the user before save that template-owned fields in the chosen template will be updated, while unrelated custom values are preserved.
 
-- [ ] **Step 2: Add a review panel or warning block**
+- [x] **Step 2: Add a review panel or warning block**
 
 The warning should be user-facing, not schema-facing:
 
@@ -218,13 +220,15 @@ The warning should be user-facing, not schema-facing:
 2. "不属于这个模板的旧字段会保留为自定义字段。"
 3. "如需删除旧字段，请在角色档案中单独清理。"
 
-- [ ] **Step 3: Validate**
+- [x] **Step 3: Validate**
 
 ```powershell
 npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/contacts-profile-entities-store.test.js
 ```
 
 Expected: pass.
+
+Actual on 2026-06-03: `npm.cmd run test -- tests/contacts-profile-template-view.test.js` passed with 11 tests for template-change review, preserved custom fields, and existing Contacts profile-template behavior.
 
 ### Task 4: Add AI-Assisted Value Completion As Draft Only
 
@@ -235,7 +239,7 @@ Expected: pass.
 - Modify: `src/views/ContactsView.vue`
 - Modify: `tests/contacts-profile-template-view.test.js`
 
-- [ ] **Step 1: Add a pure helper test**
+- [x] **Step 1: Add a pure helper test**
 
 The helper should build a prompt from:
 
@@ -245,11 +249,11 @@ The helper should build a prompt from:
 4. existing profile values;
 5. a hard rule that AI suggestions are draft-only and must not overwrite manual values without user confirmation.
 
-- [ ] **Step 2: Implement the helper**
+- [x] **Step 2: Implement the helper**
 
 Keep the helper pure where possible. Route actual provider calls through the existing `src/lib/ai.js` seam if UI calls are added.
 
-- [ ] **Step 3: Add Contacts UI entry**
+- [x] **Step 3: Add Contacts UI entry**
 
 The user-facing action should mean:
 
@@ -258,13 +262,42 @@ The user-facing action should mean:
 3. user can edit suggestions before saving;
 4. manual saved values stay higher-priority than AI suggestions.
 
-- [ ] **Step 4: Validate**
+- [x] **Step 4: Validate**
 
 ```powershell
 npm.cmd run test -- tests/profile-template-value-assistant.test.js tests/contacts-profile-template-view.test.js
 ```
 
 Expected: pass.
+
+Actual on 2026-06-03: `npm.cmd run test -- tests/profile-template-value-assistant.test.js tests/contacts-profile-template-view.test.js` passed with 2 files / 16 tests. AI suggestions fill only the current Contacts editor draft, skip saved/manual values, and require the user to press Save before `profileValues` change.
+
+### Task 4.5: Add Contacts-Side Current-World Template Adaptation Draft
+
+**Files:**
+
+- Create: `src/lib/profile-template-adaptation-assistant.js`
+- Create: `tests/profile-template-adaptation-assistant.test.js`
+- Modify: `src/views/ContactsView.vue`
+- Modify: `tests/contacts-profile-template-view.test.js`
+
+- [x] **Step 1: Detect profiles that need current-world adaptation**
+
+Contacts now flags a profile when it has no template, uses an unavailable template, uses an older saved template version, or uses a template from another world. The review recommends the best current-world template without changing WorldBook.
+
+- [x] **Step 2: Add AI adaptation as an editor draft**
+
+The AI helper reads the source template, target template, selected profile, user context, and existing values. It returns target-template field suggestions only. Contacts opens the world-field editor on the recommended template, fills empty draft fields, keeps already-filled/manual values, and preserves out-of-template old values as custom fields.
+
+- [x] **Step 3: Validate**
+
+```powershell
+npm.cmd run test -- tests/profile-template-adaptation-assistant.test.js
+npm.cmd run test -- tests/profile-template-adaptation-assistant.test.js tests/contacts-profile-template-view.test.js
+npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js tests/profile-template-value-assistant.test.js tests/profile-template-adaptation-assistant.test.js
+```
+
+Actual on 2026-06-03: helper tests passed with 4 tests; helper + Contacts tests passed with 2 files / 17 tests; focused suite passed with 8 files / 44 tests. Manual Playwright phone-viewport check at 390px also passed for the adaptation review card with no horizontal overflow and no page/console errors.
 
 ### Task 5: Sync Handoff Docs
 
@@ -276,7 +309,7 @@ Expected: pass.
 - Modify: `docs/pm/contacts-relationship-system-v2/IMPLEMENTATION_WORKSTREAMS.md`
 - Modify: `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` if UX or mobile IA changed
 
-- [ ] **Step 1: Record what changed in product language**
+- [x] **Step 1: Record what changed in product language**
 
 Use Chinese module names first:
 
@@ -285,7 +318,7 @@ Use Chinese module names first:
 3. `角色档案模板 / Role profile templates`
 4. `世界字段 / World profile fields`
 
-- [ ] **Step 2: Record validation**
+- [x] **Step 2: Record validation**
 
 Add exact commands and outcomes. If a command fails because of unrelated local changes, record the failure and do not hide it.
 

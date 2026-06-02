@@ -22,6 +22,11 @@ import {
   normalizeInitialRelationshipSeed,
 } from '../lib/relationship-classification-schema'
 import { classifyRelationshipLabel } from '../lib/relationship-label-classifier'
+import {
+  adaptProfileTemplateValues,
+  buildProfileTemplateAdaptationReview,
+} from '../lib/profile-template-adaptation-assistant'
+import { suggestProfileTemplateValues } from '../lib/profile-template-value-assistant'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import {
   CONTACTS_ENTITY_TYPES,
@@ -83,6 +88,7 @@ const showProfileModal = ref(false)
 const profileModalMode = ref('create')
 const editingProfileId = ref(0)
 const selectedProfileId = ref(0)
+const contactsSearchQuery = ref('')
 const isProfileTemplateEditorOpen = ref(false)
 const dangerIncludeLinkedRecords = ref(false)
 const selectedMemoryKey = ref('')
@@ -93,7 +99,12 @@ const profileTemplateDraft = reactive({
   values: {},
   visibility: {},
 })
+const profileTemplateAiDraftBusy = ref(false)
+const profileTemplateAiDraftStatus = ref('')
+const profileTemplateAdaptationBusy = ref(false)
+const profileTemplateAdaptationStatus = ref('')
 const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
+const CONTACTS_CURRENT_WORLD_ID = 'default_world'
 
 const createEmptyAssetPack = () => ({
   wallpaperAssetIds: [],
@@ -428,8 +439,31 @@ const mainRoleProfiles = computed(() =>
 const npcRoleProfiles = computed(() =>
   roleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.NPC),
 )
-const mainProfiles = mainRoleProfiles
-const npcProfiles = npcRoleProfiles
+
+const normalizeContactSearchText = (value = '') => String(value || '').trim().toLowerCase()
+
+const contactSearchText = (profile = {}) =>
+  [
+    profile.name,
+    profile.role,
+    normalizeRoleId(profile.roleId, profile.id),
+    profile.bio,
+    ...(Array.isArray(profile.profileValues) ? profile.profileValues.map((value) => value.value) : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+const filterContactsBySearch = (profiles = []) => {
+  const query = normalizeContactSearchText(contactsSearchQuery.value)
+  if (!query) return profiles
+  return profiles.filter((profile) => contactSearchText(profile).includes(query))
+}
+
+const isContactsSearchActive = computed(() => normalizeContactSearchText(contactsSearchQuery.value).length > 0)
+const filteredSelfProfiles = computed(() => filterContactsBySearch(selfProfiles.value))
+const filteredMainProfiles = computed(() => filterContactsBySearch(mainRoleProfiles.value))
+const filteredNpcProfiles = computed(() => filterContactsBySearch(npcRoleProfiles.value))
 const selectedProfile = computed(
   () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
 )
@@ -621,8 +655,11 @@ const selectedProfileIsNpc = computed(() => selectedProfileEntityType.value === 
 const selectedProfileChatBound = computed(() =>
   selectedProfile.value?.id ? chatStore.isRoleProfileBound(selectedProfile.value.id) : false,
 )
+const currentWorldProfileTemplates = computed(() =>
+  systemStore.listWorldProfileTemplates(CONTACTS_CURRENT_WORLD_ID),
+)
 const contactsProfileTemplateOptions = computed(() => {
-  const templates = systemStore.listWorldProfileTemplates('default_world')
+  const templates = currentWorldProfileTemplates.value
   const selectedTemplateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
   const selectedTemplate = selectedTemplateId
     ? systemStore.getProfileTemplateById(selectedTemplateId)
@@ -636,6 +673,14 @@ const selectedProfileTemplate = computed(() => {
   const templateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
   return templateId ? systemStore.getProfileTemplateById(templateId) : null
 })
+const selectedProfileTemplateAdaptationReview = computed(() =>
+  buildProfileTemplateAdaptationReview({
+    profile: selectedProfile.value || {},
+    currentTemplate: selectedProfileTemplate.value,
+    currentWorldTemplates: currentWorldProfileTemplates.value,
+    currentWorldId: CONTACTS_CURRENT_WORLD_ID,
+  }),
+)
 const fieldMatchesSelectedProfileEntity = (field = {}) => {
   const entityTypes = Array.isArray(field.entityTypes) ? field.entityTypes : []
   return entityTypes.length === 0 || entityTypes.includes(selectedProfileEntityType.value)
@@ -683,6 +728,23 @@ const profileTemplateDraftFields = computed(() =>
   Array.isArray(profileTemplateDraftTemplate.value?.fields)
     ? profileTemplateDraftTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
     : [],
+)
+const profileTemplateDraftFieldIds = computed(
+  () => new Set(profileTemplateDraftFields.value.map((field) => field.id).filter(Boolean)),
+)
+const profileTemplateDraftPreservedValues = computed(() =>
+  selectedProfileValues.value.filter(
+    (value) => value?.fieldId && !profileTemplateDraftFieldIds.value.has(value.fieldId),
+  ),
+)
+const profileTemplateDraftPreservedRows = computed(() =>
+  profileTemplateDraftPreservedValues.value.map((value) => ({
+    key: value.fieldId,
+    fieldId: value.fieldId,
+    title: profileValueLabel(value),
+    value: formatProfileValue(value),
+    visibility: profileVisibilityLevelLabel(value.visibilityLevel),
+  })),
 )
 const profileTemplateVisibilityOptions = computed(() => [
   { value: PROFILE_VISIBILITY_LEVELS.PUBLIC, label: t('公开资料', 'Public') },
@@ -1389,6 +1451,82 @@ const profileTemplateFieldPlaceholder = (field = {}) => {
   return t('填写这个角色的具体值', 'Enter this profile value')
 }
 
+const profileTemplateFieldTypeLabel = (field = {}) => {
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return t('长文本', 'Notes')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return t('单选', 'Choice')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return t('标签', 'Tags')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return t('人物', 'Person')
+  return t('文本', 'Text')
+}
+
+const profileTemplateFieldIconClass = (field = {}) => {
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return 'fas fa-align-left'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return 'fas fa-list-ul'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return 'fas fa-tags'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return 'fas fa-user-tag'
+  return 'fas fa-pen'
+}
+
+const profileTemplateFieldHelper = (field = {}) => {
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
+    return t(
+      '用逗号分隔多个标签，会保存成这个人物的标签列表。',
+      'Use commas to separate tags. They save as this person’s tag list.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
+    return t(
+      '填写相关人物姓名或角色 ID；正式选择器后续再接入。',
+      'Enter a related person or role ID; a picker can be added later.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) {
+    return t(
+      '适合记录较长的私设、关系背景或世界观补充。',
+      'Use this for longer private context, relationship background, or world-specific notes.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) {
+    return field.options?.length > 0
+      ? t('从当前世界模板给出的选项中选择一个。', 'Choose one option from this world template.')
+      : t('当前模板没有固定选项，可先填写自定义值。', 'No fixed options yet; enter a custom value for this world.')
+  }
+  return t('填写这个人物在当前世界里的具体值。', 'Enter this person’s concrete value in the current world.')
+}
+
+const profileTemplateDraftTagList = (field = {}) => {
+  if (field.type !== PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return []
+  return String(profileTemplateDraft.values[field.id] || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+}
+
+const profileTemplateAdaptationTitle = (review = {}) => {
+  if (review.reason === 'no_template') {
+    return t('这个人物还没有套用当前世界的档案模板。', 'This person has no current-world profile template yet.')
+  }
+  if (review.reason === 'missing_template') {
+    return t('这个人物使用的旧模板当前不可用。', 'This person uses a template that is not available here.')
+  }
+  if (review.reason === 'outside_current_world') {
+    return t('这个人物的档案来自另一个世界模板。', 'This profile comes from another world template.')
+  }
+  if (review.reason === 'outdated_template') {
+    return t('这个人物使用的是旧版本模板。', 'This profile uses an older template version.')
+  }
+  return t('这个人物的世界档案可以继续使用。', 'This world profile can continue to be used.')
+}
+
+const profileTemplateAdaptationSummary = (review = {}) => {
+  const target = review.recommendedTemplateTitle || t('当前世界模板', 'current-world template')
+  return t(
+    `建议适配到「${target}」。AI 只会生成草稿，旧字段会保留为自定义字段，确认保存后才会更新这个人物。`,
+    `Suggested target: ${target}. AI will only create a draft; old fields stay as custom fields until you review and save.`,
+  )
+}
+
 const clearProfileTemplateDraftRecord = (record) => {
   Object.keys(record).forEach((key) => {
     delete record[key]
@@ -1413,6 +1551,8 @@ const resetProfileTemplateDraftValues = (templateId = profileTemplateDraft.templ
 const setProfileTemplateDraftTemplate = (templateId = '') => {
   profileTemplateDraft.templateId = templateId
   resetProfileTemplateDraftValues(templateId)
+  profileTemplateAiDraftStatus.value = ''
+  profileTemplateAdaptationStatus.value = ''
 }
 
 const openProfileTemplateEditor = () => {
@@ -1428,6 +1568,8 @@ const cancelProfileTemplateEditor = () => {
   profileTemplateDraft.templateId = ''
   clearProfileTemplateDraftRecord(profileTemplateDraft.values)
   clearProfileTemplateDraftRecord(profileTemplateDraft.visibility)
+  profileTemplateAiDraftStatus.value = ''
+  profileTemplateAdaptationStatus.value = ''
 }
 
 const serializeProfileTemplateDraftValue = (field = {}) => {
@@ -1444,6 +1586,177 @@ const serializeProfileTemplateDraftValue = (field = {}) => {
 const isEmptyProfileTemplateValue = (value) =>
   Array.isArray(value) ? value.length === 0 : !String(value || '').trim()
 
+const formatProfileTemplateSuggestionForDraft = (field = {}, value = '') => {
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
+    return Array.isArray(value) ? value.join(', ') : String(value || '')
+  }
+  return Array.isArray(value) ? value.join(', ') : String(value || '')
+}
+
+const draftProfileTemplateValuesWithAI = async () => {
+  const profile = selectedProfile.value
+  const template = profileTemplateDraftTemplate.value
+  if (!profile?.id || !template?.id) {
+    setUiNotice('warning', t('请先选择一个世界档案模板。', 'Choose a world profile template first.'))
+    return
+  }
+  const fields = profileTemplateDraftFields.value
+  if (fields.length <= 0) {
+    setUiNotice('warning', t('当前模板没有可起草字段。', 'This template has no fields to draft.'))
+    return
+  }
+
+  profileTemplateAiDraftBusy.value = true
+  profileTemplateAiDraftStatus.value = ''
+  try {
+    const result = await suggestProfileTemplateValues({
+      template: {
+        ...template,
+        fields,
+      },
+      profile,
+      user: user.value,
+      existingValues: selectedProfileValues.value,
+      settings: settings.value,
+      callAi: callAI,
+    })
+    if (!result.ok) {
+      profileTemplateAiDraftStatus.value = t(
+        'AI 暂时没有生成可用草稿。',
+        'AI did not return usable draft values yet.',
+      )
+      setUiNotice('warning', profileTemplateAiDraftStatus.value)
+      return
+    }
+
+    const fieldMap = new Map(fields.map((field) => [field.id, field]))
+    let appliedCount = 0
+    let keptCount = 0
+    result.suggestions.forEach((suggestion) => {
+      const field = fieldMap.get(suggestion.fieldId)
+      if (!field) return
+      const existingSaved = selectedProfileValueMap.value.get(field.id)
+      const currentDraftValue = profileTemplateDraft.values[field.id]
+      if (!isEmptyProfileTemplateValue(existingSaved?.value) || !isEmptyProfileTemplateValue(currentDraftValue)) {
+        keptCount += 1
+        return
+      }
+      profileTemplateDraft.values[field.id] = formatProfileTemplateSuggestionForDraft(field, suggestion.value)
+      profileTemplateDraft.visibility[field.id] =
+        profileTemplateDraft.visibility[field.id] ||
+        field.defaultVisibilityLevel ||
+        PROFILE_VISIBILITY_LEVELS.FAMILIAR
+      appliedCount += 1
+    })
+
+    profileTemplateAiDraftStatus.value = t(
+      `AI 已填入 ${appliedCount} 个草稿字段，保留 ${keptCount} 个已有值。`,
+      `AI filled ${appliedCount} draft field(s) and kept ${keptCount} existing value(s).`,
+    )
+    setUiNotice(
+      appliedCount > 0 ? 'success' : 'warning',
+      profileTemplateAiDraftStatus.value,
+    )
+  } catch (error) {
+    profileTemplateAiDraftStatus.value = t(
+      'AI 起草失败，请检查模型设置后重试。',
+      'AI drafting failed. Check model settings and try again.',
+    )
+    setUiNotice('error', `${profileTemplateAiDraftStatus.value} ${error?.message || ''}`.trim())
+  } finally {
+    profileTemplateAiDraftBusy.value = false
+  }
+}
+
+const draftProfileTemplateAdaptationWithAI = async () => {
+  const profile = selectedProfile.value
+  const review = selectedProfileTemplateAdaptationReview.value
+  const targetTemplate = review?.recommendedTemplate
+  if (!profile?.id || !targetTemplate?.id) {
+    setUiNotice('warning', t('当前没有可适配的世界模板。', 'No world template is available for adaptation.'))
+    return
+  }
+
+  const targetFields = Array.isArray(targetTemplate.fields)
+    ? targetTemplate.fields.filter(fieldMatchesSelectedProfileEntity)
+    : []
+  if (targetFields.length <= 0) {
+    setUiNotice('warning', t('推荐模板没有适用于当前人物类型的字段。', 'The recommended template has no fields for this profile type.'))
+    return
+  }
+
+  isProfileTemplateEditorOpen.value = true
+  setProfileTemplateDraftTemplate(targetTemplate.id)
+  profileTemplateAdaptationBusy.value = true
+  profileTemplateAiDraftStatus.value = ''
+  profileTemplateAdaptationStatus.value = ''
+  try {
+    const result = await adaptProfileTemplateValues({
+      sourceTemplate: selectedProfileTemplate.value || {
+        id: review.currentTemplateId,
+        title: review.currentTemplateTitle,
+        version: review.currentTemplateVersion,
+        fields: [],
+      },
+      targetTemplate: {
+        ...targetTemplate,
+        fields: targetFields,
+      },
+      profile,
+      user: user.value,
+      existingValues: selectedProfileValues.value,
+      settings: settings.value,
+      callAi: callAI,
+    })
+
+    if (!result.ok) {
+      profileTemplateAdaptationStatus.value = t(
+        '已打开适配预览，但 AI 暂时没有生成可用草稿。',
+        'The adaptation review is open, but AI did not return usable draft values yet.',
+      )
+      profileTemplateAiDraftStatus.value = profileTemplateAdaptationStatus.value
+      setUiNotice('warning', profileTemplateAdaptationStatus.value)
+      return
+    }
+
+    const fieldMap = new Map(targetFields.map((field) => [field.id, field]))
+    let appliedCount = 0
+    let keptCount = 0
+    result.suggestions.forEach((suggestion) => {
+      const field = fieldMap.get(suggestion.fieldId)
+      if (!field) return
+      const existingSaved = selectedProfileValueMap.value.get(field.id)
+      const currentDraftValue = profileTemplateDraft.values[field.id]
+      if (!isEmptyProfileTemplateValue(existingSaved?.value) || !isEmptyProfileTemplateValue(currentDraftValue)) {
+        keptCount += 1
+        return
+      }
+      profileTemplateDraft.values[field.id] = formatProfileTemplateSuggestionForDraft(field, suggestion.value)
+      profileTemplateDraft.visibility[field.id] =
+        profileTemplateDraft.visibility[field.id] ||
+        field.defaultVisibilityLevel ||
+        PROFILE_VISIBILITY_LEVELS.FAMILIAR
+      appliedCount += 1
+    })
+
+    profileTemplateAdaptationStatus.value = t(
+      `AI 已生成适配草稿：填入 ${appliedCount} 个新字段，保留 ${keptCount} 个已有值。请检查后保存。`,
+      `AI drafted the adaptation: filled ${appliedCount} new field(s) and kept ${keptCount} existing value(s). Review before saving.`,
+    )
+    profileTemplateAiDraftStatus.value = profileTemplateAdaptationStatus.value
+    setUiNotice(appliedCount > 0 ? 'success' : 'warning', profileTemplateAdaptationStatus.value)
+  } catch (error) {
+    profileTemplateAdaptationStatus.value = t(
+      'AI 适配失败，请检查模型设置后重试。',
+      'AI adaptation failed. Check model settings and try again.',
+    )
+    profileTemplateAiDraftStatus.value = profileTemplateAdaptationStatus.value
+    setUiNotice('error', `${profileTemplateAdaptationStatus.value} ${error?.message || ''}`.trim())
+  } finally {
+    profileTemplateAdaptationBusy.value = false
+  }
+}
+
 const saveProfileTemplateValues = () => {
   const profile = selectedProfile.value
   const template = profileTemplateDraftTemplate.value
@@ -1452,10 +1765,7 @@ const saveProfileTemplateValues = () => {
     return
   }
   const fields = profileTemplateDraftFields.value
-  const editableFieldIds = new Set(fields.map((field) => field.id))
-  const preservedValues = selectedProfileValues.value.filter(
-    (value) => value?.fieldId && !editableFieldIds.has(value.fieldId),
-  )
+  const preservedValues = profileTemplateDraftPreservedValues.value
   const nextValues = fields
     .map((field) => {
       const value = serializeProfileTemplateDraftValue(field)
@@ -1485,6 +1795,8 @@ const saveProfileTemplateValues = () => {
     return
   }
   isProfileTemplateEditorOpen.value = false
+  profileTemplateAiDraftStatus.value = ''
+  profileTemplateAdaptationStatus.value = ''
   setUiNotice('success', t('世界字段已保存到角色档案。', 'World fields saved to the role profile.'))
 }
 
@@ -2011,40 +2323,10 @@ const deleteMemoryGroup = async (memory) => {
   )
 }
 
-const profileAssetSummary = (profile) => {
-  const pack = cloneAssetPack(profile?.assetPack || {})
-  const total =
-    pack.wallpaperAssetIds.length +
-    pack.emojiAssetIds.length +
-    pack.referenceAssetIds.length +
-    pack.scenarioAssetIds.length
-  if (total <= 0) return t('未绑定素材包', 'No asset pack bound')
-  return t(`素材 ${total} 项`, `${total} assets bound`)
-}
-
 const profileKnowledgeSummary = (profile) => {
   const count = Array.isArray(profile?.knowledgePointIds) ? profile.knowledgePointIds.length : 0
   if (count <= 0) return t('未绑定知识点', 'No knowledge points bound')
   return t(`知识点 ${count} 条`, `${count} knowledge points`)
-}
-
-const profileFolderBindingSummary = (profile) => {
-  const summaries = getRoleFolderBindingSummaries(profile?.assetFolderBindings || {})
-  const boundCount = summaries.filter((item) => item.isBound).length
-  const readyCount = summaries.filter((item) => item.status === 'ready').length
-  const totalAssets = summaries.reduce((sum, item) => sum + (item.assetCount || 0), 0)
-
-  if (boundCount <= 0) return t('文件夹绑定未启用', 'Folder bindings not enabled')
-  if (readyCount <= 0) {
-    return t(
-      `文件夹已绑定 ${boundCount} 个槽位 · 当前走默认模式`,
-      `${boundCount} folder slots bound · fallback mode active`,
-    )
-  }
-  return t(
-    `文件夹就绪 ${readyCount}/${boundCount} · 素材 ${totalAssets} 项`,
-    `Folders ready ${readyCount}/${boundCount} · ${totalAssets} assets`,
-  )
 }
 
 const formatLedgerAmount = (item) => {
@@ -2066,15 +2348,6 @@ const profileWalletLedgerSummary = (profile) => {
   return t(
     `账本 ${summary.count} 条 · 净额 ${formatLedgerAmount(primary)} · ${sourceHint}`,
     `${summary.count} ledger item(s) · net ${formatLedgerAmount(primary)} · ${sourceHint}`,
-  )
-}
-
-const profileWalletLatestSummary = (profile) => {
-  const latest = walletStore.summarizeCounterpartyLedger(profile?.name || '').latestTransaction
-  if (!latest) return ''
-  return t(
-    `最近：${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
-    `Latest: ${latest.title} · ${formatLedgerAmount({ amount: (latest.amountCents / 100).toFixed(2), amountCents: latest.type === 'expense' ? -latest.amountCents : latest.amountCents, currency: latest.currency })}`,
   )
 }
 
@@ -2145,6 +2418,70 @@ const profileRelationshipLatestSummary = (profile) => {
   }
   return t('已有关系记录，等待更多事件沉淀。', 'Relationship record exists; waiting for more events.')
 }
+
+const contactWorldFieldCount = (profile = {}) =>
+  Array.isArray(profile.profileValues) ? profile.profileValues.filter((value) => value?.fieldId).length : 0
+
+const contactEventAttachedCount = (profile = {}) =>
+  profile?.id
+    ? Object.values(ROLE_DETAIL_SECTIONS).reduce(
+        (sum, section) =>
+          sum +
+          detailItemsForSection(profile, section).filter(
+            (item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
+          ).length,
+        0,
+      )
+    : 0
+
+const contactIsChatBound = (profile = {}) =>
+  profile?.id ? chatStore.isRoleProfileBound(profile.id) : false
+
+const contactListStatusHint = (profile = {}) => {
+  if (profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+    const worldFieldCount = contactWorldFieldCount(profile)
+    return worldFieldCount > 0
+      ? t(`世界字段 ${worldFieldCount} 项`, `${worldFieldCount} world field(s)`)
+      : t('世界中的用户档案', 'Your profile in this world')
+  }
+  const walletSummary = walletStore.summarizeCounterpartyLedger(profile?.name || '')
+  if (walletSummary.count > 0) return profileWalletLedgerSummary(profile)
+  const snapshot = profileRelationshipSnapshot(profile)
+  if (snapshot?.totalMemoryCount > 0) return profileRelationshipLatestSummary(profile)
+  const worldFieldCount = contactWorldFieldCount(profile)
+  if (worldFieldCount > 0) return t(`世界字段 ${worldFieldCount} 项`, `${worldFieldCount} world field(s)`)
+  if (contactIsChatBound(profile)) return t('已进入 Chat', 'Chat target')
+  const knowledgeSummary = profileKnowledgeSummary(profile)
+  return knowledgeSummary || t('仅在通讯录', 'Contacts only')
+}
+
+const contactRecentScore = (profile = {}) => {
+  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return 0
+  const snapshot = profileRelationshipSnapshot(profile)
+  const chatScore = contactIsChatBound(profile) ? 100 : 0
+  const memoryScore = Number(snapshot?.totalMemoryCount || 0) * 10
+  const detailScore = contactEventAttachedCount(profile)
+  return chatScore + memoryScore + detailScore
+}
+
+const contactRecentSourceLabel = (profile = {}) => {
+  if (contactIsChatBound(profile)) return t('Chat', 'Chat')
+  const snapshot = profileRelationshipSnapshot(profile)
+  if (snapshot?.totalMemoryCount > 0) return t('记忆', 'Memory')
+  if (contactEventAttachedCount(profile) > 0) return t('事件', 'Event')
+  return contactsEntityTypeLabel(profile.entityType)
+}
+
+const recentInteractionContacts = computed(() =>
+  [...mainRoleProfiles.value, ...npcRoleProfiles.value]
+    .map((profile) => ({
+      profile,
+      score: contactRecentScore(profile),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || Number(right.profile.id) - Number(left.profile.id))
+    .slice(0, 10),
+)
 
 const autoGenerateProfile = async () => {
   if (!profileDraft.name.trim()) {
@@ -2719,19 +3056,18 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="contacts-scroll flex-1 overflow-y-auto no-scrollbar">
-      <div class="px-4 py-2">
-        <div class="contacts-search bg-gray-100 rounded-lg px-3 py-1.5 flex items-center text-gray-500 text-sm">
-          <i class="fas fa-search mr-2"></i> {{ t('搜索', 'Search') }}
-        </div>
+      <div class="contacts-top-stack px-4 py-3">
+        <label class="contacts-search" data-testid="contacts-search">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input
+            v-model="contactsSearchQuery"
+            data-testid="contacts-search-input"
+            type="search"
+            :placeholder="t('搜索姓名、角色 ID 或世界字段', 'Search name, role ID, or world fields')"
+            :aria-label="t('搜索联系人', 'Search contacts')"
+          />
+        </label>
       </div>
-      <p class="contacts-boundary-copy px-4 pb-2 text-[11px]" data-testid="contacts-boundary-copy">
-        {{
-          t(
-            'Contacts 是角色档案库与角色中枢。角色可以只存在于这里，不一定成为 Chat 会话；需要进入聊天时再到 Chat Directory 绑定。',
-            'Contacts is the role archive and role hub. A role can live here without becoming a Chat thread; bind it in Chat Directory when it should enter Chat.',
-          )
-        }}
-      </p>
 
       <section
         v-if="isWorldBookProfileTemplateHandoff"
@@ -2761,123 +3097,171 @@ onBeforeUnmount(() => {
         </button>
       </section>
 
-      <div class="contacts-my-card px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <div class="w-14 h-14 rounded-full bg-gray-300 overflow-hidden">
-          <img
-            :src="user.avatar || fallbackAvatarUrl(user.name)"
-            class="w-full h-full object-cover"
-          />
-        </div>
-        <div class="flex-col flex">
-          <span class="font-bold text-lg">{{ user.name }}</span>
-          <span class="text-xs text-gray-400">{{ t('我的名片', 'My Card') }}</span>
-        </div>
-      </div>
-
-      <div class="contacts-list px-4 py-2">
-        <section v-if="selfProfiles.length > 0" class="contacts-list-section">
-          <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('My Profile', 'My Profile') }}</div>
+      <div class="contacts-list px-4">
+        <section class="contacts-list-section contacts-my-profile-section" data-testid="contacts-my-profile-section">
+          <div class="contacts-section-title">
+            <span>{{ t('我的档案', 'My Profile') }}</span>
+          </div>
+          <div
+            v-if="selfProfiles.length === 0"
+            class="contacts-my-card"
+          >
+            <div class="contacts-avatar contacts-avatar-large">
+              <img
+                :src="user.avatar || fallbackAvatarUrl(user.name)"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="contacts-row-name">{{ user.name }}</p>
+              <p class="contacts-row-meta">{{ t('当前用户名片', 'Current user card') }}</p>
+              <p class="contacts-row-hint">{{ t('可在通讯录中创建自我档案后填写世界字段。', 'Create a self profile in Contacts to fill world fields.') }}</p>
+            </div>
+          </div>
           <div
             v-for="contact in selfProfiles"
             :key="contact.id"
-            class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
+            class="contacts-row contacts-row-self"
+            role="button"
+            tabindex="0"
             :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
             :data-testid="`contacts-row-${contact.id}`"
             @click="selectProfile(contact)"
+            @keydown.enter="selectProfile(contact)"
           >
-            <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+            <div class="contacts-avatar">
               <img
                 :src="contactAvatarUrl(contact)"
                 class="w-full h-full object-cover"
               />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
-              <p class="text-[11px] text-gray-400 truncate">{{ t('Self Profile', 'Self Profile') }}</p>
-              <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
+            <div class="contacts-row-copy">
+              <p class="contacts-row-name">{{ contact.name }}</p>
+              <p class="contacts-row-meta">{{ t('Self Profile', 'Self Profile') }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
+              <p class="contacts-row-hint">{{ contactListStatusHint(contact) }}</p>
             </div>
-            <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
-            <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
+            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
+            <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
           </div>
         </section>
 
-        <div class="contacts-section-title text-xs font-bold text-gray-500 mb-2">{{ t('Main Roles', 'Main Roles') }}</div>
-        <div
-          v-for="contact in mainProfiles"
-          :key="contact.id"
-          class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
-          :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
-          :data-testid="`contacts-row-${contact.id}`"
-          @click="selectProfile(contact)"
+        <section
+          v-if="!isContactsSearchActive && recentInteractionContacts.length > 0"
+          class="contacts-recent-section"
+          data-testid="contacts-recent-interactions"
         >
-          <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-            <img
-              :src="contactAvatarUrl(contact)"
-              class="w-full h-full object-cover"
-            />
+          <div class="contacts-section-title">
+            <span>{{ t('最近互动', 'Recent interactions') }}</span>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
-            <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileWalletLedgerSummary(contact) }}</p>
-            <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
-              {{ profileWalletLatestSummary(contact) }}
-            </p>
-            <p
-              class="text-[10px] text-blue-500 truncate"
-              :data-testid="`contacts-relationship-summary-${contact.id}`"
+          <div class="contacts-recent-strip">
+            <button
+              v-for="item in recentInteractionContacts"
+              :key="`recent-${item.profile.id}`"
+              type="button"
+              class="contacts-recent-person"
+              :data-testid="`contacts-recent-${item.profile.id}`"
+              @click="selectProfile(item.profile)"
             >
-              {{ profileRelationshipSummary(contact) }}
-            </p>
-            <p class="text-[10px] text-gray-400 truncate">
-              {{ profileRelationshipLatestSummary(contact) }}
-            </p>
+              <span class="contacts-avatar contacts-recent-avatar">
+                <img :src="contactAvatarUrl(item.profile)" class="w-full h-full object-cover" />
+              </span>
+              <span class="contacts-recent-name">{{ item.profile.name }}</span>
+              <span class="contacts-recent-source">{{ contactRecentSourceLabel(item.profile) }}</span>
+            </button>
           </div>
-          <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
-          <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
+        </section>
+
+        <section class="contacts-list-section" data-testid="contacts-section-main">
+          <div class="contacts-section-title">
+            <span>{{ t('主要角色', 'Main Roles') }}</span>
+            <small>{{ filteredMainProfiles.length }}</small>
+          </div>
+          <div
+            v-for="contact in filteredMainProfiles"
+            :key="contact.id"
+            class="contacts-row"
+            role="button"
+            tabindex="0"
+            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
+            :data-testid="`contacts-row-${contact.id}`"
+            @click="selectProfile(contact)"
+            @keydown.enter="selectProfile(contact)"
+          >
+            <div class="contacts-avatar">
+              <img
+                :src="contactAvatarUrl(contact)"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="contacts-row-copy">
+              <p class="contacts-row-name">{{ contact.name }}</p>
+              <p class="contacts-row-meta">{{ contact.role || t('未设置角色', 'Role not set') }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
+              <p class="contacts-row-hint">{{ contactListStatusHint(contact) }}</p>
+              <p
+                class="contacts-row-status"
+                :data-testid="`contacts-relationship-summary-${contact.id}`"
+              >
+                {{ profileRelationshipSummary(contact) }}
+              </p>
+            </div>
+            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
+            <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
+          </div>
+        </section>
+
+        <section class="contacts-list-section" data-testid="contacts-section-npc">
+          <div class="contacts-section-title">
+            <span>{{ t('NPC / 世界角色', 'NPC / World roles') }}</span>
+            <small>{{ filteredNpcProfiles.length }}</small>
+          </div>
+          <div
+            v-for="contact in filteredNpcProfiles"
+            :key="contact.id"
+            class="contacts-row"
+            role="button"
+            tabindex="0"
+            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
+            :data-testid="`contacts-row-${contact.id}`"
+            @click="selectProfile(contact)"
+            @keydown.enter="selectProfile(contact)"
+          >
+            <div class="contacts-avatar">
+              <img
+                :src="contactAvatarUrl(contact)"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="contacts-row-copy">
+              <p class="contacts-row-name">{{ contact.name }}</p>
+              <p class="contacts-row-meta">{{ contact.role || t('未设置角色', 'Role not set') }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
+              <p class="contacts-row-hint">{{ contactListStatusHint(contact) }}</p>
+              <p
+                class="contacts-row-status"
+                :data-testid="`contacts-relationship-summary-${contact.id}`"
+              >
+                {{ profileRelationshipSummary(contact) }}
+              </p>
+            </div>
+            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
+            <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
+          </div>
+        </section>
+
+        <div
+          v-if="isContactsSearchActive && filteredMainProfiles.length === 0 && filteredNpcProfiles.length === 0 && filteredSelfProfiles.length === 0"
+          class="contacts-empty-search"
+        >
+          {{ t('没有匹配的联系人。', 'No matching contacts.') }}
         </div>
 
-        <div class="contacts-section-title text-xs font-bold text-gray-500 mt-4 mb-2">{{ t('NPC / World roles', 'NPC / World roles') }}</div>
-        <div
-          v-for="contact in npcProfiles"
-          :key="contact.id"
-          class="contacts-row flex items-center gap-3 py-2 border-b border-gray-50"
-          :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
-          :data-testid="`contacts-row-${contact.id}`"
-          @click="selectProfile(contact)"
-        >
-          <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-            <img
-              :src="contactAvatarUrl(contact)"
-              class="w-full h-full object-cover"
-            />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-medium truncate">{{ contact.name }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
-            <p class="text-[11px] text-gray-400 truncate">{{ contact.role || t('未设置角色', 'Role not set') }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileAssetSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileKnowledgeSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileFolderBindingSummary(contact) }}</p>
-            <p class="text-[10px] text-gray-400 truncate">{{ profileWalletLedgerSummary(contact) }}</p>
-            <p v-if="profileWalletLatestSummary(contact)" class="text-[10px] text-gray-400 truncate">
-              {{ profileWalletLatestSummary(contact) }}
-            </p>
-            <p
-              class="text-[10px] text-blue-500 truncate"
-              :data-testid="`contacts-relationship-summary-${contact.id}`"
-            >
-              {{ profileRelationshipSummary(contact) }}
-            </p>
-            <p class="text-[10px] text-gray-400 truncate">
-              {{ profileRelationshipLatestSummary(contact) }}
-            </p>
-          </div>
-          <button @click.stop="openEditProfile(contact)" class="text-xs text-blue-500">{{ t('编辑', 'Edit') }}</button>
-          <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
-        </div>
+        <p class="contacts-boundary-copy" data-testid="contacts-boundary-copy">
+          {{
+            t(
+              'Contacts 是角色档案库与角色中枢。角色可以只存在于这里，不一定成为 Chat 会话；需要进入聊天时再到 Chat Directory 绑定。',
+              'Contacts is the role archive and role hub. A role can live here without becoming a Chat thread; bind it in Chat Directory when it should enter Chat.',
+            )
+          }}
+        </p>
 
         <div
           v-if="selectedProfile"
@@ -3341,6 +3725,69 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
+            <div
+              v-if="selectedProfileTemplateAdaptationReview.needsAttention"
+              class="contacts-template-adaptation-review"
+              data-testid="contacts-template-adaptation-review"
+            >
+              <div class="contacts-template-adaptation-review__head">
+                <i class="fas fa-arrows-rotate" aria-hidden="true"></i>
+                <div>
+                  <p>{{ profileTemplateAdaptationTitle(selectedProfileTemplateAdaptationReview) }}</p>
+                  <span>{{ profileTemplateAdaptationSummary(selectedProfileTemplateAdaptationReview) }}</span>
+                </div>
+              </div>
+              <ul>
+                <li>
+                  {{
+                    t(
+                      `推荐模板：${selectedProfileTemplateAdaptationReview.recommendedTemplateTitle} · v${selectedProfileTemplateAdaptationReview.recommendedTemplateVersion}`,
+                      `Recommended template: ${selectedProfileTemplateAdaptationReview.recommendedTemplateTitle} · v${selectedProfileTemplateAdaptationReview.recommendedTemplateVersion}`,
+                    )
+                  }}
+                </li>
+                <li>
+                  {{
+                    t(
+                      `可直接沿用的字段：${selectedProfileTemplateAdaptationReview.sharedValueCount} 项`,
+                      `Reusable existing field(s): ${selectedProfileTemplateAdaptationReview.sharedValueCount}`,
+                    )
+                  }}
+                </li>
+                <li>
+                  {{
+                    t(
+                      `会保留为自定义字段：${selectedProfileTemplateAdaptationReview.preservedCustomCount} 项`,
+                      `Will stay as custom field(s): ${selectedProfileTemplateAdaptationReview.preservedCustomCount}`,
+                    )
+                  }}
+                </li>
+              </ul>
+              <div class="contacts-template-adaptation-review__actions">
+                <button
+                  type="button"
+                  class="contacts-small-action contacts-ai-draft-action"
+                  data-testid="contacts-ai-adapt-world-profile-template"
+                  :disabled="profileTemplateAdaptationBusy"
+                  @click="draftProfileTemplateAdaptationWithAI"
+                >
+                  <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                  {{
+                    profileTemplateAdaptationBusy
+                      ? t('AI 适配中...', 'AI adapting...')
+                      : t('AI 起草适配', 'AI draft adaptation')
+                  }}
+                </button>
+              </div>
+              <p
+                v-if="profileTemplateAdaptationStatus"
+                class="contacts-ai-draft-status"
+                data-testid="contacts-ai-adapt-world-profile-template-status"
+              >
+                {{ profileTemplateAdaptationStatus }}
+              </p>
+            </div>
+
             <div v-if="selectedProfileWorldFieldRows.length > 0" class="contacts-world-field-list">
               <div
                 v-for="row in selectedProfileWorldFieldRows"
@@ -3356,11 +3803,18 @@ onBeforeUnmount(() => {
                     {{ row.description }}
                   </p>
                 </div>
-                <span class="contacts-source-chip">
+                <span class="contacts-source-chip" :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'">
                   {{
-                    row.value
-                      ? profileVisibilityLevelLabel(row.value.visibilityLevel)
-                      : profileVisibilityLevelLabel(row.field?.defaultVisibilityLevel)
+                    row.isTemplateField
+                      ? row.value
+                        ? profileVisibilityLevelLabel(row.value.visibilityLevel)
+                        : profileVisibilityLevelLabel(row.field?.defaultVisibilityLevel)
+                      : row.value
+                        ? t(
+                            `${profileVisibilityLevelLabel(row.value.visibilityLevel)} · 自定义`,
+                            `${profileVisibilityLevelLabel(row.value.visibilityLevel)} · Custom`,
+                          )
+                        : t('自定义字段', 'Custom field')
                   }}
                 </span>
               </div>
@@ -3407,6 +3861,65 @@ onBeforeUnmount(() => {
                 </option>
               </select>
 
+              <div
+                v-if="profileTemplateDraft.templateId"
+                class="contacts-template-change-review"
+                data-testid="contacts-template-change-review"
+              >
+                <div class="contacts-template-change-review__head">
+                  <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                  <div>
+                    <p>{{ t('保存前预览', 'Save review') }}</p>
+                    <span>
+                      {{
+                        t(
+                          '换模板不会静默删除旧资料；保存前先确认更新和保留范围。',
+                          'Changing templates will not silently delete old details; review what updates and what stays.',
+                        )
+                      }}
+                    </span>
+                  </div>
+                </div>
+                <ul>
+                  <li>
+                    {{
+                      t(
+                        `这些字段会更新到当前角色档案：${profileTemplateDraftFields.length} 项`,
+                        `These fields will update this profile: ${profileTemplateDraftFields.length}`,
+                      )
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      t(
+                        `不属于这个模板的旧字段会保留为自定义字段：${profileTemplateDraftPreservedRows.length} 项`,
+                        `Old fields will stay as custom fields: ${profileTemplateDraftPreservedRows.length}`,
+                      )
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      t(
+                        '如需删除旧字段，请在角色档案中单独清理。',
+                        'To delete old fields, clean them up separately in the role profile.',
+                      )
+                    }}
+                  </li>
+                </ul>
+                <div
+                  v-if="profileTemplateDraftPreservedRows.length > 0"
+                  class="contacts-template-preserved-list"
+                >
+                  <span
+                    v-for="row in profileTemplateDraftPreservedRows"
+                    :key="`preserved-${row.key}`"
+                  >
+                    {{ row.title }}
+                    <small>{{ row.fieldId }}</small>
+                  </span>
+                </div>
+              </div>
+
               <div v-if="contactsProfileTemplateOptions.length === 0" class="contacts-empty-detail">
                 <p>
                   {{
@@ -3426,12 +3939,23 @@ onBeforeUnmount(() => {
                   v-for="field in profileTemplateDraftFields"
                   :key="field.id"
                   class="contacts-world-field-control"
+                  :class="`contacts-world-field-control--${field.type}`"
                   :data-testid="`contacts-profile-template-field-${field.id}`"
                 >
-                  <span>
-                    {{ field.label }}
-                    <small v-if="field.required">{{ t('必填', 'Required') }}</small>
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">
+                      <i :class="profileTemplateFieldIconClass(field)" aria-hidden="true"></i>
+                      <span>{{ field.label }}</span>
+                      <small v-if="field.required">{{ t('必填', 'Required') }}</small>
+                    </span>
+                    <strong class="contacts-world-field-type-chip">{{ profileTemplateFieldTypeLabel(field) }}</strong>
                   </span>
+                  <p
+                    class="contacts-world-field-control__helper"
+                    :data-testid="`contacts-profile-template-helper-${field.id}`"
+                  >
+                    {{ profileTemplateFieldHelper(field) }}
+                  </p>
                   <select
                     v-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT && field.options.length > 0"
                     v-model="profileTemplateDraft.values[field.id]"
@@ -3455,6 +3979,18 @@ onBeforeUnmount(() => {
                     :data-testid="`contacts-profile-template-value-${field.id}`"
                     :placeholder="profileTemplateFieldPlaceholder(field)"
                   />
+                  <div
+                    v-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS"
+                    class="contacts-world-field-tag-preview"
+                    :data-testid="`contacts-profile-template-tag-preview-${field.id}`"
+                  >
+                    <span v-for="tag in profileTemplateDraftTagList(field)" :key="`${field.id}-${tag}`">
+                      {{ tag }}
+                    </span>
+                    <em v-if="profileTemplateDraftTagList(field).length === 0">
+                      {{ t('输入后会在这里预览标签', 'Tags preview here as you type') }}
+                    </em>
+                  </div>
                   <select
                     v-model="profileTemplateDraft.visibility[field.id]"
                     :data-testid="`contacts-profile-template-visibility-${field.id}`"
@@ -3475,10 +4011,31 @@ onBeforeUnmount(() => {
               </p>
 
               <div class="contacts-world-field-editor__actions">
+                <button
+                  type="button"
+                  class="contacts-small-action contacts-ai-draft-action"
+                  data-testid="contacts-ai-draft-world-profile-fields"
+                  :disabled="profileTemplateAiDraftBusy || !profileTemplateDraft.templateId"
+                  @click="draftProfileTemplateValuesWithAI"
+                >
+                  <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                  {{
+                    profileTemplateAiDraftBusy
+                      ? t('AI 起草中...', 'AI drafting...')
+                      : t('AI 起草字段', 'AI draft fields')
+                  }}
+                </button>
                 <button type="button" class="contacts-primary-action" data-testid="contacts-save-world-profile-fields" @click="saveProfileTemplateValues">
                   {{ t('保存世界字段', 'Save world fields') }}
                 </button>
               </div>
+              <p
+                v-if="profileTemplateAiDraftStatus"
+                class="contacts-ai-draft-status"
+                data-testid="contacts-ai-draft-world-profile-fields-status"
+              >
+                {{ profileTemplateAiDraftStatus }}
+              </p>
             </div>
           </section>
 
@@ -4027,17 +4584,33 @@ onBeforeUnmount(() => {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
+.contacts-top-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .contacts-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.76);
-  border-radius: 16px;
+  border-radius: 14px;
+  padding: 0 12px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--contacts-muted);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .contacts-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
   color: var(--contacts-text);
+  font-size: 13px;
+  line-height: 1.2;
+  outline: none;
 }
 
 .contacts-search i {
@@ -4045,7 +4618,10 @@ onBeforeUnmount(() => {
 }
 
 .contacts-boundary-copy {
+  margin: 14px 0 0;
+  padding: 0 2px 6px;
   color: var(--contacts-muted);
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -4116,42 +4692,25 @@ onBeforeUnmount(() => {
 }
 
 .contacts-my-card {
-  position: relative;
-  overflow: hidden;
-  margin: 6px 16px 12px;
-  padding: 14px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 242, 245, 0.86) 56%, rgba(250, 239, 233, 0.78)),
-    var(--contacts-surface-strong);
-  box-shadow: var(--contacts-shadow);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(45, 63, 89, 0.07);
 }
 
-.contacts-my-card::after {
-  content: '';
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 84px;
-  height: 56px;
-  border-radius: 18px;
-  background:
-    linear-gradient(90deg, rgba(66, 111, 143, 0.16) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(66, 111, 143, 0.1) 1px, transparent 1px);
-  background-size: 12px 12px;
-  opacity: 0.52;
-  pointer-events: none;
-}
-
-.contacts-my-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-.contacts-my-card > .rounded-full,
-.contacts-row > .rounded-full,
+.contacts-avatar,
 .contacts-avatar-preview .rounded-full {
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.9);
   background: linear-gradient(135deg, #e4edf1, #fbfcfd);
   box-shadow:
@@ -4159,53 +4718,190 @@ onBeforeUnmount(() => {
     0 10px 22px rgba(45, 63, 89, 0.13);
 }
 
+.contacts-avatar-large {
+  width: 52px;
+  height: 52px;
+}
+
 .contacts-list {
+  display: grid;
+  gap: 14px;
   padding-bottom: 24px;
 }
 
+.contacts-list-section {
+  display: grid;
+  gap: 2px;
+}
+
+.contacts-my-profile-section {
+  gap: 6px;
+}
+
 .contacts-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px;
   color: var(--contacts-muted);
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0;
+  text-transform: none;
+}
+
+.contacts-section-title small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--contacts-soft);
+}
+
+.contacts-recent-section {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contacts-recent-strip {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: none;
+}
+
+.contacts-recent-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.contacts-recent-person {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 78px;
+  flex: 0 0 78px;
+  color: var(--contacts-text);
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.contacts-recent-person:active {
+  transform: scale(0.97);
+}
+
+.contacts-recent-avatar {
+  width: 52px;
+  height: 52px;
+}
+
+.contacts-recent-name,
+.contacts-recent-source {
+  display: block;
+  max-width: 78px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contacts-recent-name {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.contacts-recent-source {
+  color: var(--contacts-muted);
+  font-size: 10px;
 }
 
 .contacts-row {
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 8px;
-  padding: 11px 12px 11px 14px;
-  border: 1px solid var(--contacts-border);
-  border-radius: 18px;
-  background: var(--contacts-surface-strong);
-  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  width: 100%;
+  padding: 9px 2px;
+  border-bottom: 1px solid rgba(49, 64, 86, 0.08);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
   transition:
-    transform var(--system-motion-fast),
-    box-shadow var(--system-motion-fast),
-    border-color var(--system-motion-fast);
-}
-
-.contacts-row::before {
-  content: '';
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 3px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--contacts-accent), var(--contacts-warm));
-  opacity: 0.72;
+    background var(--system-motion-fast),
+    transform var(--system-motion-fast);
 }
 
 .contacts-row:active {
   transform: scale(0.992);
-  border-color: rgba(66, 111, 143, 0.24);
-  box-shadow: 0 8px 18px rgba(45, 63, 89, 0.08);
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .contacts-row-active {
-  border-color: rgba(66, 111, 143, 0.36);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(231, 242, 246, 0.94)),
-    var(--contacts-surface-strong);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.contacts-row-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.contacts-row-name,
+.contacts-row-meta,
+.contacts-row-hint,
+.contacts-row-status {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.contacts-row-name {
+  color: var(--contacts-text);
+  font-size: 14px;
+  font-weight: 780;
+}
+
+.contacts-row-meta {
+  margin-top: 1px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+}
+
+.contacts-row-hint {
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+}
+
+.contacts-row-status {
+  margin-top: 1px;
+  color: var(--contacts-accent);
+  font-size: 10px;
+}
+
+.contacts-row-edit {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--contacts-accent);
+  font-size: 11px;
+  font-weight: 750;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.contacts-row-edit:active {
+  background: var(--contacts-accent-soft);
+}
+
+.contacts-row-chevron {
+  flex-shrink: 0;
+  color: var(--contacts-soft);
+  font-size: 11px;
 }
 
 .contacts-row p,
@@ -4217,6 +4913,15 @@ onBeforeUnmount(() => {
 .contacts-row .text-gray-500,
 .contacts-my-card .text-gray-400 {
   color: var(--contacts-muted);
+}
+
+.contacts-empty-search {
+  border: 1px dashed rgba(49, 64, 86, 0.14);
+  border-radius: 14px;
+  padding: 16px;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .contacts-detail-section {
@@ -4399,6 +5104,115 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.74);
 }
 
+.contacts-template-change-review,
+.contacts-template-adaptation-review {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(191, 115, 84, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 237, 0.72)),
+    var(--contacts-warm-soft);
+  padding: 10px;
+}
+
+.contacts-template-adaptation-review {
+  border-color: rgba(66, 111, 143, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.93), rgba(232, 242, 245, 0.72)),
+    rgba(66, 111, 143, 0.08);
+}
+
+.contacts-template-change-review__head,
+.contacts-template-adaptation-review__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.contacts-template-change-review__head i,
+.contacts-template-adaptation-review__head i {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(191, 115, 84, 0.14);
+  color: #8a4b35;
+  font-size: 11px;
+}
+
+.contacts-template-adaptation-review__head i {
+  background: rgba(66, 111, 143, 0.13);
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-template-change-review__head p,
+.contacts-template-change-review__head span,
+.contacts-template-adaptation-review__head p,
+.contacts-template-adaptation-review__head span {
+  margin: 0;
+}
+
+.contacts-template-change-review__head p,
+.contacts-template-adaptation-review__head p {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.contacts-template-change-review__head span,
+.contacts-template-adaptation-review__head span {
+  display: block;
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+.contacts-template-change-review ul,
+.contacts-template-adaptation-review ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--contacts-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-template-adaptation-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contacts-template-preserved-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.contacts-template-preserved-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border-radius: 999px;
+  background: rgba(49, 64, 86, 0.07);
+  color: var(--contacts-text);
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.contacts-template-preserved-list small {
+  color: var(--contacts-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .contacts-world-field-editor__head,
 .contacts-world-field-editor__actions {
   display: flex;
@@ -4444,16 +5258,56 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 6px;
   min-width: 0;
+  border: 1px solid rgba(66, 111, 143, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 10px;
 }
 
-.contacts-world-field-control > span {
+.contacts-world-field-control__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+}
+
+.contacts-world-field-control__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
   color: var(--contacts-text);
   font-size: 12px;
   font-weight: 800;
+}
+
+.contacts-world-field-control__label > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contacts-world-field-control__label i {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.1);
+  color: var(--contacts-accent-strong);
+  font-size: 11px;
+}
+
+.contacts-world-field-type-chip {
+  flex: 0 0 auto;
+  border: 1px solid rgba(66, 111, 143, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--contacts-muted);
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 850;
 }
 
 .contacts-world-field-control small {
@@ -4462,9 +5316,43 @@ onBeforeUnmount(() => {
   font-weight: 800;
 }
 
+.contacts-world-field-control__helper {
+  margin: 0;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.42;
+}
+
 .contacts-world-field-control textarea {
   min-height: 78px;
   resize: vertical;
+}
+
+.contacts-world-field-tag-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 24px;
+}
+
+.contacts-world-field-tag-preview span,
+.contacts-world-field-tag-preview em {
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.contacts-world-field-tag-preview span {
+  background: rgba(191, 115, 84, 0.12);
+  color: #8a4a34;
+  font-weight: 800;
+}
+
+.contacts-world-field-tag-preview em {
+  color: var(--contacts-muted);
+  background: rgba(49, 64, 86, 0.06);
+  font-style: normal;
 }
 
 .contacts-world-field-control em {
@@ -4487,6 +5375,30 @@ onBeforeUnmount(() => {
 .contacts-primary-action {
   color: var(--contacts-accent-strong);
   background: var(--contacts-accent-soft);
+}
+
+.contacts-ai-draft-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(66, 111, 143, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.contacts-ai-draft-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.contacts-ai-draft-status {
+  margin: 0;
+  border-radius: 12px;
+  background: rgba(66, 111, 143, 0.08);
+  color: var(--contacts-accent-strong);
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .contacts-empty-detail {
@@ -4664,6 +5576,11 @@ onBeforeUnmount(() => {
 .contacts-source-chip-event {
   background: var(--contacts-warm-soft);
   color: #9d583e;
+}
+
+.contacts-source-chip-custom {
+  background: rgba(66, 111, 143, 0.11);
+  color: var(--contacts-accent-strong);
 }
 
 .contacts-event-locked-note {

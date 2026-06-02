@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -27,6 +27,11 @@ Current visual pass:
 - WorldBook's Setting Text panel answers which text AI reads now. Unused or missing text references live in Advanced management, while active changed text stays in the active list with a confirm-new-version action.
 - WorldBook's control deck includes a `世界建立路径 / World setup path` rail: Base worldview, Setting Text, World Pack, Profile Templates, and Knowledge are shown as a readable progression with state labels and direct panel switching.
 - WorldBook's Profile Templates panel now has a clear Contacts handoff: WorldBook defines the fields a world needs, while `通讯录 / Contacts` owns filling concrete role, user, and NPC profile values; Contacts recognizes the handoff route, shows a focused entry note, and role detail has a V1 inline editor for those concrete values.
+- Contacts now has a phone-like first entry pass: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles appear in the order users expect from a real contacts app, while deeper role hub work stays in the selected profile detail.
+- Contacts world-field editing now gives dynamic worldview-template fields stable visual controls, so different world content can vary without creating a separate custom screen for every world.
+- Contacts template changes now use a save-review card in the world-field editor so users can see update and preservation rules before committing a new template.
+- Contacts AI world-field drafting appears as a secondary editor action: it fills draft fields only, shows status inline, and leaves Save as the user's explicit commit action.
+- Contacts current-world template adaptation now appears as a soft review card in role detail, not a blocking modal: it explains why the profile may need the current-world template, shows carry-over/custom counts, and opens an AI draft adaptation path while keeping Save as the explicit commit.
 - WorldBook's Current World Pack and Knowledge panels have a first craft pass; knowledge creation and editing now use a bottom sheet so the Settings page stays scan-first.
 - WorldBook's Kernel and Templates panels now share the same task-panel treatment: compact state headers, controlled editing/list areas, and stronger mobile card rhythm.
 - `文本库 / Book` now has a V1 installed-app-like source-library surface for read-first long text editing, export, and WorldBook source usage state; on phone-sized screens it separates Shelf -> Detail -> Editor so long text editing is a focused sheet rather than inline page expansion.

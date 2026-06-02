@@ -35,6 +35,14 @@ Recommended summary fields:
 - memory/activity hint
 - Chat-bound state
 
+Current landed list-page baseline:
+
+1. Search is the first action after the native Contacts header.
+2. My Profile appears below search and represents the user's world-facing profile, not a chat target.
+3. Recent interactions appears as a horizontal avatar shortcut row below My Profile. It can include Main Roles and NPCs, but it is only a shortcut layer; the same people remain in their complete sections below.
+4. Main Roles and NPC / World Roles remain complete contact-list sections.
+5. Full world-field editing, relationship review, memories, and danger actions stay in the selected contact detail instead of competing on the list page.
+
 ### 2.2 Detail Page / 详情页
 
 Each role needs its own detail page.
@@ -57,6 +65,8 @@ Recommended section order:
 ### 3.0 Current Landed IA Baseline
 
 The selected Contacts detail page now starts with a Role Hub summary before deeper sections.
+
+The Contacts entry page now uses a phone-contact IA before the detail page: Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles. This keeps the first screen focused on finding a person, while preserving the Role Hub as the selected-person detail flow.
 
 The landed baseline shows:
 
@@ -182,6 +192,8 @@ V1 rules:
 - Contacts can show template-applied values as extensible profile fields;
 - Contacts role detail can now edit V1 concrete profile values inline: choose a current-world template, fill values, set visibility, and save into `templateLink/profileValues`;
 - saving values should only replace fields covered by the selected template and preserve older/custom out-of-template values unless a later explicit cleanup flow is added;
+- AI assistance can draft empty world-field values inside the Contacts editor, but suggestions remain unsaved editor drafts and must not overwrite saved/manual values without the user pressing Save;
+- Contacts may flag an unavailable, older-version, or other-world template as needing current-world adaptation; AI can draft migrated values into the editor, but old values remain preserved as custom fields and only the user's Save action updates the profile;
 - manual profile values remain higher priority than event-attached clues.
 
 ## 6. Visible Role ID Rule

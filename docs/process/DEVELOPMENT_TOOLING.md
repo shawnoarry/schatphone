@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-05-28
+Updated: 2026-06-02
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -190,6 +190,7 @@ The current repo-local skills recorded in `.agents/skills` and `skills-lock.json
 | `unit-test-vue-pinia` | Vue/Pinia unit tests for stores, components, composables | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
 | `playwright-testing` | Browser-level journey testing and E2E verification | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
 | `game-engine` | Real game-loop, Canvas/WebGL, minigame work only | `docs/process/EVENT_WORKFLOW.md` |
+| `chinese-novelist` | Chinese fiction craft helper for story-world text, character tension, dialogue, and scene texture; optional support for WorldBook source writing | `docs/process/DEVELOPMENT_TOOLING.md` |
 
 ### 7.1 What Is Already Covered Well
 
@@ -262,6 +263,63 @@ After installing or updating project-local skills:
    - when to use the skill;
    - why the existing stack was insufficient;
    - the install command needed on another PC.
+
+### 8.1 Chinese Novelist Skill
+
+`chinese-novelist` is a repo-local optional writing-support skill.
+
+Use it for:
+
+- drafting Chinese story-world material;
+- shaping character contradictions, relationship tension, dialogue subtext, and scene texture;
+- improving WorldBook main-worldview text such as a modern entertainment-industry / K-pop setting.
+
+Do not use it as the implementation workflow for SchatPhone features. Its native workflow is a long-form Chinese novel pipeline that creates novel project folders, chapter plans, and 3000-5000 word chapters. For SchatPhone, treat it as a creative reference only; Book, WorldBook, World Pack, App Store, Chat Services, and target-module ownership still follow SchatPhone docs.
+
+Install source:
+
+```text
+https://github.com/penglonghuang/chinese-novelist-skill
+```
+
+Install from the confirmed SchatPhone project root:
+
+```powershell
+npx.cmd skills add https://github.com/penglonghuang/chinese-novelist-skill --skill chinese-novelist
+```
+
+If the other machine uses plain `npx` successfully, this equivalent form is acceptable:
+
+```powershell
+npx skills add https://github.com/penglonghuang/chinese-novelist-skill --skill chinese-novelist
+```
+
+Expected local files after install:
+
+```text
+.\.agents\skills\chinese-novelist\SKILL.md
+skills-lock.json
+```
+
+Verification:
+
+```powershell
+Test-Path .\.agents\skills\chinese-novelist\SKILL.md
+Select-String -Path .\skills-lock.json -Pattern '"chinese-novelist"'
+git status --short
+```
+
+The `skills-lock.json` entry should record:
+
+```json
+"chinese-novelist": {
+  "source": "penglonghuang/chinese-novelist-skill",
+  "sourceType": "github",
+  "skillPath": "SKILL.md"
+}
+```
+
+After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
 
 ## 9. Cross-PC Setup Checklist
 

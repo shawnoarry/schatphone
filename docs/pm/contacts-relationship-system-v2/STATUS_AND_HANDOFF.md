@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-06-01
+Updated: 2026-06-03
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -48,6 +48,11 @@ What is already landed:
 36. Contacts now shows a read-only Chat social-channel snapshot in the Role Hub summary so the user can see the role's current communication reachability without making Contacts the event judge.
 37. WorldBook Profile Templates now has an explicit Contacts handoff. WorldBook defines reusable world-specific fields; Contacts remains the owner of concrete role, self-profile, and NPC values. The handoff opens Contacts with `from=worldbook&focus=profile_templates`, and Contacts shows a focused entry note plus a new-profile action.
 38. Contacts role detail now has V1 profile-value authoring for `世界字段 / World profile fields`: users can open an inline editor, choose a current-world WorldBook template, fill concrete values, set visibility levels, and save `templateLink/profileValues` back to the selected Self Profile/Main Role/NPC. Saving overwrites only fields in the chosen template and preserves out-of-template values so older/custom data is not silently erased.
+39. Contacts now has a phone-like first entry screen: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles appear in that order. Recent interactions is a horizontal shortcut layer for recently active Main Roles/NPCs; it does not remove those people from their complete sections below, and Self Profile is kept out of recent shortcuts.
+40. Contacts world-field editing now has a stable field-type UI layer for different worldview templates: single-choice fields render as option selects, long-text fields render as note areas, multi-tag fields explain comma-separated entry and preview tags, and person-reference fields clearly ask for a related person or role ID without pretending a full picker exists yet. This lets WorldBook/world-pack templates vary by world content while Contacts keeps one predictable editing surface.
+41. Contacts world-field editing now reviews template changes before save. When a user switches a role from one current-world template to another, the editor shows which selected-template fields will update, which old values will stay as custom fields, and that deleting old fields must be handled separately in the role profile. Saving preserves out-of-template values and marks them as `Custom` in the detail list.
+42. Contacts world-field editing now has AI-assisted value drafting. The helper builds a draft-only prompt from the current WorldBook template, selected profile, user/self context, and existing values; provider output is normalized against known template fields. The Contacts button fills only empty editor draft fields, skips saved/manual values, and does not change `profileValues` until the user reviews and presses Save.
+43. Contacts now has a current-world template adaptation review. If a profile has no template, an unavailable template, an older saved template version, or a template from another world, Contacts suggests the best current-world template, shows how many values can carry over and how many old values will stay custom, and can ask AI to draft migrated values into the editor. This is draft-only: AI does not save, does not delete old values, and does not overwrite filled/manual fields.
 
 Still incomplete:
 
@@ -61,7 +66,7 @@ Still incomplete:
 
 1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
-3. Continue from the V1 WorldBook/Contacts profile-template baseline by improving template editing, richer field widgets, template-change review, and AI-assisted profile-value completion.
+3. Continue from the V1 WorldBook/Contacts profile-template baseline by hardening current-world template adaptation, richer template editing, and eventual form-builder-quality WorldBook authoring.
 4. Continue polishing the Contacts display-only social snapshot so it remains clear, read-only, and separate from relationship metrics or memory truth.
 
 For cross-device continuation of the WorldBook -> Contacts profile-field line, start from `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`.
@@ -108,11 +113,35 @@ For cross-device continuation of the WorldBook -> Contacts profile-field line, s
 - `npm.cmd test -- tests/relationship-event-gating.test.js tests/relationship-fact-adapters.test.js tests/relationship-runtime-store.test.js tests/control-center-view.test.js`: pass on 2026-05-30 for relationship classification Round 4 event/runtime gating.
 - `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js`: pass on 2026-06-02 for the WorldBook Profile Templates -> Contacts handoff.
 - `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-02 for Contacts World profile fields authoring V1.
-- `npm.cmd run lint`: pass
+- `npm.cmd run lint`: pass on 2026-06-02 after the Contacts phone-like entry refactor.
 - `npm.cmd run test`: pass
-- `npm.cmd run build`: pass
+- `npm.cmd run build`: pass on 2026-06-02 after the Contacts phone-like entry refactor; Vite still reports the pre-existing mixed static/dynamic import warning for `src/lib/push.js`.
 - Manual Playwright phone-viewport check on 2026-06-02: pass for WorldBook Profile Templates -> Contacts focused handoff -> create role profile -> edit `世界字段 / World profile fields` -> save and display. Checked no page errors, no horizontal overflow, and no page-level mojibake in the simulated 390px phone viewport.
 - `npm.cmd run test:e2e`: 14 passed on 2026-06-02 after the WorldBook Profile Templates -> Contacts handoff and Contacts World profile fields authoring V1.
+- `npm.cmd run test -- tests/contacts-profile-template-view.test.js`: pass on 2026-06-02 for the Contacts phone-like first screen, search filtering, My Profile placement, and Recent interactions shortcut layer.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-02 after the Contacts phone-like entry refactor; 6 files / 32 tests.
+- `npm.cmd run test:e2e -- e2e/contacts-phone-ui.spec.js --project=mobile-chrome`: pass on 2026-06-02 for the simulated phone Contacts entry, recent shortcut navigation, search filtering, and no horizontal overflow.
+- `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/profile-template-schema.test.js`: pass on 2026-06-03 for stable world-field type controls and tag-value saving; 2 files / 15 tests.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-03 after the world-field type-control slice; 6 files / 33 tests.
+- `npm.cmd run lint`: pass on 2026-06-03 after the world-field type-control slice.
+- `npm.cmd run build`: pass on 2026-06-03 after the world-field type-control slice; Vite still reports the pre-existing mixed static/dynamic import warning for `src/lib/push.js`.
+- Manual Playwright phone-viewport check on 2026-06-03: pass for Contacts world-field type controls with no horizontal overflow in the simulated 390px phone viewport.
+- `npm.cmd run test -- tests/contacts-profile-template-view.test.js`: pass on 2026-06-03 for template-change review and preserved custom fields; 11 tests.
+- `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/contacts-profile-entities-store.test.js`: pass on 2026-06-03 after template-change review; 2 files / 16 tests.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-03 after template-change review; 6 files / 34 tests.
+- `npm.cmd run lint`: pass on 2026-06-03 after template-change review.
+- `npm.cmd run build`: pass on 2026-06-03 after template-change review; Vite still reports the pre-existing mixed static/dynamic import warning for `src/lib/push.js`.
+- Manual Playwright phone-viewport check on 2026-06-03: pass for Contacts template-change review with no horizontal overflow in the simulated 390px phone viewport.
+- `npm.cmd run test -- tests/profile-template-value-assistant.test.js`: pass on 2026-06-03 for AI draft prompt building, JSON normalization, and parse-failure handling; 4 tests.
+- `npm.cmd run test -- tests/profile-template-value-assistant.test.js tests/contacts-profile-template-view.test.js`: pass on 2026-06-03 for AI-assisted draft filling without saving or overwriting manual values; 2 files / 16 tests.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js tests/profile-template-value-assistant.test.js`: pass on 2026-06-03 after AI-assisted draft completion; 7 files / 39 tests.
+- `npm.cmd run lint`: pass on 2026-06-03 after AI-assisted draft completion.
+- `npm.cmd run build`: pass on 2026-06-03 after AI-assisted draft completion; Vite still reports the pre-existing mixed static/dynamic import warning for `src/lib/push.js`.
+- Manual Playwright phone-viewport check on 2026-06-03: pass for the Contacts AI draft button layout with no horizontal overflow in the simulated 390px phone viewport.
+- `npm.cmd run test -- tests/profile-template-adaptation-assistant.test.js`: pass on 2026-06-03 for current-world template mismatch detection, version detection, prompt construction, and target-field-only normalization; 4 tests.
+- `npm.cmd run test -- tests/profile-template-adaptation-assistant.test.js tests/contacts-profile-template-view.test.js`: pass on 2026-06-03 for Contacts-side AI template adaptation draft behavior without saving until the user confirms; 2 files / 17 tests.
+- `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js tests/profile-template-value-assistant.test.js tests/profile-template-adaptation-assistant.test.js`: pass on 2026-06-03 after Contacts current-world template adaptation; 8 files / 44 tests.
+- Manual Playwright phone-viewport check on 2026-06-03: pass for the Contacts template-adaptation review card at 390px with no horizontal overflow and no page/console errors.
 
 ## 5. Must Sync When Working Here
 

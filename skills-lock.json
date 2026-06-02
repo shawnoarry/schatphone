@@ -7,6 +7,12 @@
       "skillPath": "skills/brainstorming/SKILL.md",
       "computedHash": "f483c304fcde060211ffae00f49bb728536e7e7613c99db45b5b924d9fc17243"
     },
+    "chinese-novelist": {
+      "source": "penglonghuang/chinese-novelist-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "5621a61e01c0433cf21475202922a0b8d7d9673b2b1fa67a8214c63851b7ed8b"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
