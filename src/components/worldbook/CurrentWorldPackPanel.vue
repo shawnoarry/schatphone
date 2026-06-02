@@ -158,7 +158,7 @@ const effectRows = computed(() => [
   {
     key: 'knowledge',
     icon: 'fas fa-sitemap',
-    label: t('启用知识点', 'Enabled knowledge'),
+    label: t('启用百科', 'Enabled encyclopedia'),
     value: t(
       `${props.overview.enabledKnowledgeCount} 条启用，${props.overview.disabledKnowledgeCount} 条停用`,
       `${props.overview.enabledKnowledgeCount} enabled, ${props.overview.disabledKnowledgeCount} disabled`,
@@ -197,7 +197,7 @@ const reviewRows = computed(() => {
   if (!props.activationReview || !Array.isArray(props.activationReview.effectRows)) return []
   const labelMap = {
     book_sources: t('设定文本', 'Setting text'),
-    knowledge: t('知识点', 'Knowledge'),
+    knowledge: t('百科', 'Encyclopedia'),
     templates: t('角色模板', 'Role templates'),
     app_bindings: t('世界应用', 'World apps'),
     service_templates: t('服务号模板', 'Service templates'),

@@ -34,6 +34,7 @@ describe('calendar worldbook context', () => {
     calendarStore = useCalendarStore()
     mapStore = useMapStore()
     systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
 
     systemStore.upsertKnowledgePoint({
       title: 'Route memory',
@@ -102,7 +103,7 @@ describe('calendar worldbook context', () => {
     systemStore = null
   })
 
-  test('shows related WorldBook knowledge points for confirmed events', async () => {
+  test('shows related WorldBook encyclopedia entries for confirmed events', async () => {
     const reminderId = mapStore.mapCalendarReminders[0]?.id
     const routePoint = systemStore.listKnowledgePoints().find((item) => item.title === 'Route memory')
     const eventId = calendarStore.upcomingEvents[0]?.id
@@ -116,6 +117,7 @@ describe('calendar worldbook context', () => {
     )
 
     const eventContext = wrapper.get(`[data-testid="calendar-event-worldbook-${eventId}"]`)
+    expect(eventContext.text()).toContain('Related encyclopedia')
     expect(eventContext.text()).toContain('Route memory')
     expect(eventContext.text()).not.toContain('Tea rituals')
     expect(
@@ -140,6 +142,7 @@ describe('calendar worldbook context', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'calendar',
       homePage: '1',
+      entry: routePoint.id,
       point: routePoint.id,
     })
   })

@@ -81,7 +81,7 @@ const worldviewStatus = computed(() =>
         class="worldbook-overview__metric"
         data-testid="worldbook-overview-knowledge"
       >
-        <span>{{ t('知识点', 'Knowledge') }}</span>
+        <span>{{ t('百科', 'Encyclopedia') }}</span>
         <strong>{{ overview.enabledKnowledgeCount }} / {{ overview.knowledgeCount }}</strong>
         <small>{{ t('启用 / 总数', 'enabled / total') }}</small>
       </div>

@@ -10,7 +10,7 @@ import { useDialog } from '../composables/useDialog'
 import { formatApiErrorForUi } from '../lib/ai'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import {
-  normalizeWorldBookPointIds,
+  normalizeWorldBookEntryIds,
   normalizeWorldBookSource,
   normalizeWorldBookTagFilter,
   normalizeWorldBookUsageFilter,
@@ -310,7 +310,7 @@ const worldbookPanelTabs = computed(() => [
   {
     id: 'knowledge',
     icon: 'fas fa-sitemap',
-    label: t('知识点', 'Knowledge'),
+    label: t('百科', 'Encyclopedia'),
     summary: t(
       `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
       `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
@@ -388,11 +388,11 @@ const worldbookSetupSteps = computed(() => {
       panelId: 'knowledge',
       icon: 'fas fa-sitemap',
       index: '5',
-      title: t('知识点', 'Knowledge'),
+      title: t('百科', 'Encyclopedia'),
       detail:
         knowledgeCount > 0
           ? t(`${enabledKnowledgeCount} / ${knowledgeCount} 条启用`, `${enabledKnowledgeCount} / ${knowledgeCount} enabled`)
-          : t('补充组织、规则、暗线', 'Add organizations, rules, and hidden lines'),
+          : t('补充组织、术语、规则和额外设定', 'Add organizations, terms, rules, and extra lore'),
       state: enabledKnowledgeCount > 0 ? 'done' : 'optional',
       status: enabledKnowledgeCount > 0 ? t('已启用', 'Enabled') : t('可选', 'Optional'),
     },
@@ -506,7 +506,7 @@ const buildWorldAppTemplateContextText = () => {
     bindingLines.length ? ['Existing app bindings:', ...bindingLines].join('\n') : 'Existing app bindings: none',
     worldview ? `Fallback worldview:\n${worldview.slice(0, 2200)}` : 'Fallback worldview: empty',
     sourceLines.length ? ['Active Book sources:', ...sourceLines].join('\n') : 'Active Book sources: none',
-    knowledgeLines.length ? ['Enabled knowledge:', ...knowledgeLines].join('\n') : 'Enabled knowledge: none',
+    knowledgeLines.length ? ['Enabled encyclopedia:', ...knowledgeLines].join('\n') : 'Enabled encyclopedia: none',
   ].join('\n\n')
 }
 
@@ -908,13 +908,13 @@ const createKnowledgePoint = () => {
     enabled: true,
   })
   if (!created) {
-    uiNotice.value = t('知识点保存失败（可能已达上限）。', 'Knowledge point save failed (limit reached).')
+    uiNotice.value = t('百科条目保存失败（可能已达上限）。', 'Encyclopedia entry save failed (limit reached).')
     return
   }
   resetKnowledgeDraft()
   isKnowledgeComposerOpen.value = false
   systemStore.saveNow()
-  pulseSaved(t('知识点已添加。', 'Knowledge point added.'))
+  pulseSaved(t('百科条目已添加。', 'Encyclopedia entry added.'))
 }
 
 const resetKnowledgeDraft = () => {
@@ -974,7 +974,7 @@ const submitKnowledgePoint = () => {
   if (!editingKnowledgePoint.value?.id) {
     resetKnowledgeDraft()
     isKnowledgeComposerOpen.value = false
-    uiNotice.value = t('要编辑的知识点已不存在。', 'The knowledge point you were editing no longer exists.')
+    uiNotice.value = t('要编辑的百科条目已不存在。', 'The encyclopedia entry you were editing no longer exists.')
     return
   }
 
@@ -986,14 +986,14 @@ const submitKnowledgePoint = () => {
     enabled: editingKnowledgePoint.value.enabled !== false,
   })
   if (!savedPoint) {
-    uiNotice.value = t('知识点保存失败（可能已达上限）。', 'Knowledge point save failed (limit reached).')
+    uiNotice.value = t('百科条目保存失败（可能已达上限）。', 'Encyclopedia entry save failed (limit reached).')
     return
   }
 
   resetKnowledgeDraft()
   isKnowledgeComposerOpen.value = false
   systemStore.saveNow()
-  pulseSaved(t('知识点已更新。', 'Knowledge point updated.'))
+  pulseSaved(t('百科条目已更新。', 'Encyclopedia entry updated.'))
 }
 
 const toggleKnowledgePoint = (point) => {
@@ -1250,8 +1250,8 @@ const knowledgeDeepLinkSourceLabel = computed(() => {
 const knowledgeDeepLinkSummary = computed(() => {
   if (knowledgeDeepLinkPointIds.value.length > 0) {
     return t(
-      `${knowledgeDeepLinkSourceLabel.value} 带来了 ${knowledgeDeepLinkPointIds.value.length} 条相关知识点筛选。`,
-      `${knowledgeDeepLinkSourceLabel.value} scoped ${knowledgeDeepLinkPointIds.value.length} related knowledge points.`,
+      `${knowledgeDeepLinkSourceLabel.value} 带来了 ${knowledgeDeepLinkPointIds.value.length} 条相关百科条目筛选。`,
+      `${knowledgeDeepLinkSourceLabel.value} scoped ${knowledgeDeepLinkPointIds.value.length} related encyclopedia entries.`,
     )
   }
   if (knowledgeDeepLinkKeyword.value) {
@@ -1262,8 +1262,8 @@ const knowledgeDeepLinkSummary = computed(() => {
   }
   if (knowledgeDeepLinkTag.value !== 'all' || knowledgeDeepLinkUsage.value !== 'all') {
     return t(
-      `${knowledgeDeepLinkSourceLabel.value} 带来了筛选条件，可直接继续查看相关知识点。`,
-      `${knowledgeDeepLinkSourceLabel.value} applied direct filters for related knowledge points.`,
+      `${knowledgeDeepLinkSourceLabel.value} 带来了筛选条件，可直接继续查看相关百科条目。`,
+      `${knowledgeDeepLinkSourceLabel.value} applied direct filters for related encyclopedia entries.`,
     )
   }
   return t(
@@ -1282,7 +1282,9 @@ const syncWorldBookDeepLink = () => {
   knowledgeDeepLinkTag.value = normalizeWorldBookTagFilter(route.query.tag)
   knowledgeDeepLinkUsage.value = normalizeWorldBookUsageFilter(route.query.usage)
 
-  const pointIds = normalizeWorldBookPointIds(route.query.points || route.query.point)
+  const pointIds = normalizeWorldBookEntryIds(
+    route.query.entries || route.query.entry || route.query.points || route.query.point,
+  )
   const existingPointIds = new Set(knowledgePoints.value.map((point) => point.id))
   knowledgeDeepLinkPointIds.value = pointIds.filter((pointId) => existingPointIds.has(pointId))
 
@@ -1303,14 +1305,14 @@ const clearKnowledgeDeepLink = () => {
 const describeKnowledgePointUsage = (point) => {
   const usage = getKnowledgePointUsage(point)
   if (usage.profiles.length <= 0) {
-    return t('还没有角色绑定这个知识点。', 'No role profile is bound to this point yet.')
+    return t('还没有角色绑定这个百科条目。', 'No role profile is bound to this entry yet.')
   }
 
   const profileCount = usage.profiles.length
   if (point?.enabled === false) {
     return t(
       `已被 ${profileCount} 个角色绑定，但当前停用，不会注入 Chat。`,
-      `${profileCount} role profiles are bound, but this point is disabled and will not be injected into Chat.`,
+      `${profileCount} role profiles are bound, but this entry is disabled and will not be injected into Chat.`,
     )
   }
   if (usage.chatBindingCount <= 0) {
@@ -1338,8 +1340,8 @@ const formatKnowledgePointProfileNames = (point) => {
 const removeKnowledgePoint = async (point) => {
   if (!point?.id) return
   const ok = await confirmDialog({
-    title: t('删除知识点', 'Delete knowledge point'),
-    message: `${t('确认删除知识点', 'Delete knowledge point')}「${point.title || ''}」？`,
+    title: t('删除百科条目', 'Delete encyclopedia entry'),
+    message: `${t('确认删除百科条目', 'Delete encyclopedia entry')}「${point.title || ''}」？`,
     confirmText: t('删除', 'Delete'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -1351,7 +1353,7 @@ const removeKnowledgePoint = async (point) => {
     isKnowledgeComposerOpen.value = false
   }
   systemStore.saveNow()
-  pulseSaved(t('知识点已删除。', 'Knowledge point deleted.'))
+  pulseSaved(t('百科条目已删除。', 'Encyclopedia entry deleted.'))
 }
 
 watch(
@@ -2062,12 +2064,12 @@ onBeforeUnmount(() => {
         <div class="worldbook-knowledge-hero">
           <div>
             <p>{{ t('角色级补丁', 'Role-level patches') }}</p>
-            <h2>{{ t('知识点', 'Knowledge points') }}</h2>
+            <h2>{{ t('百科', 'Encyclopedia') }}</h2>
             <span>
               {{
                 t(
-                  '知识点用于语言规范、额外设定和模型偏好；绑定到角色后，才会进入对应 Chat 上下文。',
-                  'Knowledge points store language rules, extra lore, and model hints; they enter Chat context only after role binding.',
+                  '百科用于记录组织、术语、社会规则、行业常识和额外设定；绑定到角色后，才会进入对应 Chat 上下文。',
+                  'Encyclopedia entries store organizations, terms, social rules, domain facts, and extra lore; they enter Chat context only after role binding.',
                 )
               }}
             </span>
@@ -2094,8 +2096,8 @@ onBeforeUnmount(() => {
 
         <div class="worldbook-knowledge-toolbar">
           <div>
-            <p>{{ t('知识点管理', 'Knowledge management') }}</p>
-            <span>{{ t('保存可绑定到角色的语言规则、设定补丁和模型偏好。', 'Store role-bound language rules, lore patches, and model preferences.') }}</span>
+            <p>{{ t('百科', 'Encyclopedia') }}</p>
+            <span>{{ t('保存可绑定到角色的组织、术语、社会规则、行业常识和额外设定。', 'Store role-bound organizations, terms, social rules, domain facts, and extra lore.') }}</span>
           </div>
           <button
             type="button"
@@ -2104,7 +2106,7 @@ onBeforeUnmount(() => {
             @click="openCreateKnowledgePoint"
           >
             <i class="fas fa-plus"></i>
-            {{ t('新增知识点', 'Add knowledge point') }}
+            {{ t('新增百科条目', 'Add encyclopedia entry') }}
           </button>
         </div>
 
@@ -2118,12 +2120,12 @@ onBeforeUnmount(() => {
           v-if="isKnowledgeComposerOpen"
           class="worldbook-knowledge-compose space-y-2 rounded-xl border border-gray-200 p-3"
           role="dialog"
-          :aria-label="isEditingKnowledgePoint ? t('编辑知识点', 'Edit knowledge point') : t('新增知识点', 'Add knowledge point')"
+          :aria-label="isEditingKnowledgePoint ? t('编辑百科条目', 'Edit encyclopedia entry') : t('新增百科条目', 'Add encyclopedia entry')"
         >
           <div class="worldbook-sheet-head">
             <div>
-              <p>{{ t('知识补丁', 'Knowledge patch') }}</p>
-              <h3>{{ isEditingKnowledgePoint ? t('编辑知识点', 'Edit knowledge point') : t('新增知识点', 'Add knowledge point') }}</h3>
+              <p>{{ t('百科补充', 'Encyclopedia patch') }}</p>
+              <h3>{{ isEditingKnowledgePoint ? t('编辑百科条目', 'Edit encyclopedia entry') : t('新增百科条目', 'Add encyclopedia entry') }}</h3>
             </div>
             <button type="button" class="worldbook-inline-action" @click="closeKnowledgeComposer">
               {{ t('关闭', 'Close') }}
@@ -2131,7 +2133,7 @@ onBeforeUnmount(() => {
           </div>
           <div v-if="isEditingKnowledgePoint" class="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
             <span data-testid="knowledge-editing-state">
-              {{ t('正在编辑已有知识点', 'Editing existing knowledge point') }}
+              {{ t('正在编辑已有百科条目', 'Editing existing encyclopedia entry') }}
             </span>
             <button
               type="button"
@@ -2146,13 +2148,13 @@ onBeforeUnmount(() => {
             v-model="knowledgeDraft.title"
             data-testid="knowledge-draft-title"
             class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            :placeholder="t('知识点标题（如：角色A语言规范）', 'Point title (e.g. Role A language rule)')"
+            :placeholder="t('百科标题（如：打歌节目规则）', 'Entry title (e.g. music show rules)')"
           />
           <textarea
             v-model="knowledgeDraft.content"
             data-testid="knowledge-draft-content"
             class="w-full h-20 border rounded-lg px-3 py-2 text-sm outline-none resize-none"
-            :placeholder="t('知识点内容', 'Knowledge point content')"
+            :placeholder="t('百科内容', 'Encyclopedia entry content')"
           ></textarea>
           <input
             v-model="knowledgeDraft.tags"
@@ -2174,7 +2176,7 @@ onBeforeUnmount(() => {
             data-testid="knowledge-draft-submit"
             class="w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
           >
-            {{ t('新增知识点', 'Add knowledge point') }}
+            {{ t('新增百科条目', 'Add encyclopedia entry') }}
           </button>
         </div>
 
@@ -2284,14 +2286,14 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="knowledgePoints.length === 0" class="worldbook-knowledge-empty text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center">
-          {{ t('暂无知识点。', 'No knowledge points yet.') }}
+          {{ t('暂无百科条目。', 'No encyclopedia entries yet.') }}
         </div>
 
         <div
           v-else-if="visibleKnowledgePoints.length === 0"
           class="worldbook-knowledge-empty text-xs text-gray-500 border border-dashed border-gray-200 rounded-lg p-3 text-center"
         >
-          {{ t('当前筛选下没有知识点。', 'No knowledge points match the current filter.') }}
+          {{ t('当前筛选下没有百科条目。', 'No encyclopedia entries match the current filter.') }}
         </div>
 
         <div v-else class="worldbook-knowledge-list space-y-2">

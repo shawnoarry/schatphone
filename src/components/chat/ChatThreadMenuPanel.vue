@@ -182,8 +182,8 @@ const updateNumberSetting = (key, value) => {
           <p class="mt-1 text-[10px] text-gray-500">
             {{
               t(
-                'Chat 会始终读取全局世界观，并只注入当前角色已绑定且启用的知识点。',
-                'Chat always reads the global worldview and only injects enabled knowledge points bound to this role.',
+                'Chat 会始终读取主/全局世界观，并只注入当前角色已绑定且启用的百科条目。',
+                'Chat always reads the main/global worldview and only injects enabled encyclopedia entries bound to this role.',
               )
             }}
           </p>
@@ -231,7 +231,7 @@ const updateNumberSetting = (key, value) => {
       <div class="rounded-lg border border-white bg-white/80 p-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] font-medium text-gray-700">
-            {{ t('当前注入的知识点', 'Knowledge points in effect') }}
+            {{ t('当前注入的百科条目', 'Encyclopedia entries in effect') }}
           </span>
           <span
             class="text-[10px] text-gray-500"
@@ -270,8 +270,8 @@ const updateNumberSetting = (key, value) => {
         >
           {{
             t(
-              '当前没有可注入的启用知识点。',
-              'There are no enabled bound knowledge points active for this thread.',
+              '当前没有可注入的启用百科条目。',
+              'There are no enabled encyclopedia entries available to inject.',
             )
           }}
         </p>

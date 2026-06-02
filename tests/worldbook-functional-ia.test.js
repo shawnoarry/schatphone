@@ -75,6 +75,7 @@ describe('WorldBook functional IA', () => {
       String(worldview.length),
     )
     expect(overview.get('[data-testid="worldbook-overview-knowledge"]').text()).toContain('1 / 2')
+    expect(overview.get('[data-testid="worldbook-overview-knowledge"]').text()).toContain('Encyclopedia')
     expect(overview.get('[data-testid="worldbook-overview-templates"]').text()).toContain('1')
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(overview.get('[data-testid="worldbook-overview-consumer-runtime"]').text()).toContain(
@@ -87,6 +88,9 @@ describe('WorldBook functional IA', () => {
     )
     expect(currentPack.get('[data-testid="worldbook-current-pack-effects"]').text()).toContain(
       '1 enabled, 1 disabled',
+    )
+    expect(currentPack.get('[data-testid="worldbook-current-pack-effects"]').text()).toContain(
+      'Enabled encyclopedia',
     )
     expect(overview.element.compareDocumentPosition(currentPack.element)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -124,6 +128,7 @@ describe('WorldBook functional IA', () => {
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World setup path')
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Base worldview')
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Profile templates')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Encyclopedia')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
       'none',
     )

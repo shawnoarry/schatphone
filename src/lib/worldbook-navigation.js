@@ -29,6 +29,8 @@ export const normalizeWorldBookPointIds = (raw) =>
     .filter((item, index, list) => list.indexOf(item) === index)
     .slice(0, 8)
 
+export const normalizeWorldBookEntryIds = normalizeWorldBookPointIds
+
 export const normalizeWorldBookUsageFilter = (raw) => {
   const value = normalizeQueryText(raw)
   return WORLD_BOOK_USAGE_FILTER_VALUES.has(value) ? value : 'all'
@@ -48,7 +50,7 @@ export const normalizeWorldBookSource = (raw) => {
 export const buildWorldBookRouteQuery = (options = {}) => {
   const query = {}
   const source = normalizeWorldBookSource(options.source)
-  const pointIds = normalizeWorldBookPointIds(options.pointIds)
+  const entryIds = normalizeWorldBookEntryIds(options.entryIds || options.pointIds)
   const keyword = normalizeQueryText(options.keyword)
   const tag = normalizeWorldBookTagFilter(options.tag)
   const usage = normalizeWorldBookUsageFilter(options.usage)
@@ -56,10 +58,12 @@ export const buildWorldBookRouteQuery = (options = {}) => {
 
   if (source) query.source = source
   if (homePage) query.homePage = homePage
-  if (pointIds.length === 1) {
-    query.point = pointIds[0]
-  } else if (pointIds.length > 1) {
-    query.points = pointIds.join(',')
+  if (entryIds.length === 1) {
+    query.entry = entryIds[0]
+    query.point = entryIds[0]
+  } else if (entryIds.length > 1) {
+    query.entries = entryIds.join(',')
+    query.points = entryIds.join(',')
   }
   if (keyword) query.keyword = keyword
   if (tag !== 'all') query.tag = tag

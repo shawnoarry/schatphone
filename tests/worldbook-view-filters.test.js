@@ -26,6 +26,7 @@ describe('worldbook view filters', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
     systemStore.upsertKnowledgePoint({
       title: 'City etiquette',
       content: 'Formal greeting only.',
@@ -64,7 +65,9 @@ describe('worldbook view filters', () => {
     systemStore = null
   })
 
-  test('supports keyword search and tag filters for knowledge points', async () => {
+  test('supports keyword search and tag filters for encyclopedia entries', async () => {
+    expect(wrapper.text()).toContain('Encyclopedia')
+    expect(wrapper.text()).not.toContain('Knowledge points')
     expect(wrapper.findAll('[data-testid="knowledge-point-card"]')).toHaveLength(3)
 
     const searchInput = wrapper.get('[data-testid="knowledge-search-input"]')
@@ -90,7 +93,7 @@ describe('worldbook view filters', () => {
     expect(wrapper.text()).not.toContain('Tea rituals')
   })
 
-  test('supports editing an existing knowledge point in place', async () => {
+  test('supports editing an existing encyclopedia entry in place', async () => {
     const routePoint = systemStore
       .listKnowledgePoints()
       .find((point) => point.title === 'Route memory')
@@ -131,13 +134,16 @@ describe('worldbook view filters', () => {
       path: '/worldbook',
       query: {
         source: 'map',
-        point: routePoint.id,
+        entry: routePoint.id,
       },
     })
     await flushPromises()
     await nextTick()
 
     expect(wrapper.get('[data-testid="knowledge-deeplink-banner"]').text()).toContain('Route memory')
+    expect(wrapper.get('[data-testid="knowledge-deeplink-banner"]').text()).toContain(
+      'related encyclopedia entries',
+    )
     expect(wrapper.findAll('[data-testid="knowledge-point-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Route memory')
     expect(wrapper.text()).not.toContain('Tea rituals')

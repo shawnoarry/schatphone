@@ -94,7 +94,7 @@ const openWorldBookForPoint = (pointId) => {
         >
           <div class="flex items-center justify-between gap-2">
             <p class="text-[11px] font-medium text-blue-700">
-              {{ t('Related knowledge points', 'Related knowledge points') }}
+              {{ t('相关百科', 'Related encyclopedia') }}
             </p>
             <button
               type="button"
