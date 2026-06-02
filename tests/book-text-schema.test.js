@@ -1,5 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 import {
+  BOOK_TEXT_ASSET_TYPES,
+  WORLDBOOK_SOURCE_USAGES,
   buildWorldBookSourceSnapshot,
   buildBookAssetFromImportedText,
   diffWorldBookSourceText,
@@ -10,6 +12,24 @@ import {
 } from '../src/lib/book-text-schema'
 
 describe('book text schema helpers', () => {
+  test('exports canonical category and role constants with legacy export names', () => {
+    expect(BOOK_TEXT_ASSET_TYPES).toEqual([
+      'worldview',
+      'encyclopedia',
+      'world_rule',
+      'profile_template',
+      'reference_material',
+    ])
+    expect(WORLDBOOK_SOURCE_USAGES).toEqual([
+      'main_worldview',
+      'encyclopedia',
+      'world_rule',
+      'world_pack_reference',
+      'profile_template',
+      'reference_material',
+    ])
+  })
+
   test('imports plain text as a draft worldbook document', () => {
     vi.setSystemTime(new Date('2026-05-29T08:00:00.000Z'))
 
@@ -21,7 +41,8 @@ describe('book text schema helpers', () => {
 
     expect(result.ok).toBe(true)
     expect(result.asset.title).toBe('quiet-city')
-    expect(result.asset.assetType).toBe('worldbook_document')
+    expect(result.asset.category).toBe('worldview')
+    expect(result.asset.assetType).toBe('worldview')
     expect(result.asset.format).toBe('plain')
     expect(result.asset.content).toBe('A calm city baseline.')
     expect(result.asset.status).toBe('draft')
@@ -74,7 +95,8 @@ describe('book text schema helpers', () => {
     expect(result.ok).toBe(true)
     expect(result.asset.id).toBe('book_asset_default')
     expect(result.asset.title).toBe('Default World')
-    expect(result.asset.assetType).toBe('rule_set')
+    expect(result.asset.category).toBe('world_rule')
+    expect(result.asset.assetType).toBe('world_rule')
     expect(result.asset.tags).toEqual(['city', 'ritual'])
     expect(result.asset.sections[0].title).toBe('Basics')
   })
@@ -115,12 +137,35 @@ describe('book text schema helpers', () => {
       id: 'link_1',
       assetId: 'book_asset_1',
       sectionIds: ['section_a', 'section_b'],
-      usage: 'base_worldview',
+      role: 'main_worldview',
+      usage: 'main_worldview',
       enabled: true,
       priority: 2,
       sourceSnapshotText: 'A saved source baseline.',
       sourceSnapshotUpdatedAt: 1770000000000,
       sourceSnapshotCharCount: 24,
+    })
+  })
+
+  test('normalizes old exported assetType and usage values into canonical fields', () => {
+    const asset = normalizeBookTextAsset({
+      title: 'Legacy Knowledge',
+      assetType: 'knowledge_note',
+      content: 'Legacy knowledge text.',
+    })
+    const links = normalizeWorldBookSourceLinks([
+      {
+        id: 'legacy_link',
+        assetId: asset.id,
+        usage: 'knowledge_source',
+      },
+    ])
+
+    expect(asset.category).toBe('encyclopedia')
+    expect(asset.assetType).toBe('encyclopedia')
+    expect(links[0]).toMatchObject({
+      role: 'encyclopedia',
+      usage: 'encyclopedia',
     })
   })
 
@@ -159,7 +204,7 @@ describe('book text schema helpers', () => {
     expect(resolveWorldBookSourceText(asset, ['missing_section'])).toBe('')
   })
 
-  test('invalid asset type falls back to reference note', () => {
+  test('invalid category falls back to reference material', () => {
     const asset = normalizeBookTextAsset({
       id: 'sample',
       title: '',
@@ -169,7 +214,8 @@ describe('book text schema helpers', () => {
     })
 
     expect(asset.title).toBe('Untitled text 1')
-    expect(asset.assetType).toBe('reference_note')
+    expect(asset.category).toBe('reference_material')
+    expect(asset.assetType).toBe('reference_material')
     expect(asset.locked).toBe(false)
     expect(asset.content).toBe('Reference material.')
   })

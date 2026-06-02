@@ -1,30 +1,24 @@
-export const BOOK_TEXT_ASSET_TYPES = Object.freeze([
-  'worldbook_document',
-  'knowledge_note',
-  'glossary',
-  'rule_set',
-  'profile_template_note',
-  'reference_note',
-])
+import {
+  BOOK_TEXT_CATEGORIES,
+  WORLDBOOK_SOURCE_ROLES,
+  normalizeBookTextCategory,
+  normalizeWorldBookSourceRole,
+  pickCanonicalField,
+} from './world-taxonomy'
+
+export const BOOK_TEXT_ASSET_TYPES = BOOK_TEXT_CATEGORIES
 
 export const BOOK_TEXT_FORMATS = Object.freeze(['plain', 'markdown', 'structured_json'])
 
 export const BOOK_TEXT_STATUSES = Object.freeze(['draft', 'active_source', 'archived'])
 
-export const WORLDBOOK_SOURCE_USAGES = Object.freeze([
-  'base_worldview',
-  'knowledge_source',
-  'pack_source',
-  'profile_template_reference',
-])
+export const WORLDBOOK_SOURCE_USAGES = WORLDBOOK_SOURCE_ROLES
 
 export const WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT = 12000
 export const WORLDBOOK_SOURCE_DIFF_BLOCK_LIMIT = 120
 
-const BOOK_TEXT_ASSET_TYPE_SET = new Set(BOOK_TEXT_ASSET_TYPES)
 const BOOK_TEXT_FORMAT_SET = new Set(BOOK_TEXT_FORMATS)
 const BOOK_TEXT_STATUS_SET = new Set(BOOK_TEXT_STATUSES)
-const WORLDBOOK_SOURCE_USAGE_SET = new Set(WORLDBOOK_SOURCE_USAGES)
 
 const toInt = (value, fallback = 0) => {
   const numeric = Number(value)
@@ -83,11 +77,6 @@ const makeUniqueId = (id, seenIds, fallbackPrefix, index = 0) => {
   return candidate
 }
 
-const normalizeAssetType = (value) => {
-  const normalized = normalizeInlineText(value, '').toLowerCase()
-  return BOOK_TEXT_ASSET_TYPE_SET.has(normalized) ? normalized : 'reference_note'
-}
-
 const normalizeFormat = (value, fallback = 'plain') => {
   const normalized = normalizeInlineText(value, '').toLowerCase()
   return BOOK_TEXT_FORMAT_SET.has(normalized) ? normalized : fallback
@@ -96,11 +85,6 @@ const normalizeFormat = (value, fallback = 'plain') => {
 const normalizeStatus = (value) => {
   const normalized = normalizeInlineText(value, '').toLowerCase()
   return BOOK_TEXT_STATUS_SET.has(normalized) ? normalized : 'draft'
-}
-
-const normalizeUsage = (value) => {
-  const normalized = normalizeInlineText(value, '').toLowerCase()
-  return WORLDBOOK_SOURCE_USAGE_SET.has(normalized) ? normalized : 'knowledge_source'
 }
 
 const readExtension = (fileName = '') => {
@@ -244,6 +228,11 @@ export const normalizeBookTextAsset = (raw, index = 0) => {
   const content = typeof source.content === 'string' ? source.content : ''
   const createdAt = toInt(source.createdAt, now)
   const updatedAt = toInt(source.updatedAt, createdAt)
+  const category = pickCanonicalField(
+    source,
+    ['category', 'assetType', 'type'],
+    normalizeBookTextCategory,
+  )
 
   const providedSections = Array.isArray(source.sections)
     ? source.sections.map((section, sectionIndex) => normalizeBookSection(section, sectionIndex)).filter(Boolean)
@@ -258,7 +247,8 @@ export const normalizeBookTextAsset = (raw, index = 0) => {
   return {
     id: normalizeStringId(source.id, createGeneratedId('book_asset', index)),
     title,
-    assetType: normalizeAssetType(source.assetType || source.type),
+    category,
+    assetType: category,
     format,
     categoryId: normalizeStringId(source.categoryId || source.category, ''),
     tags: normalizeArrayOfText(source.tags, 80),
@@ -427,12 +417,18 @@ export const normalizeWorldBookSourceLink = (raw, index = 0) => {
   const createdAt = toInt(source.createdAt, Date.now())
   const rawSnapshotText = typeof source.sourceSnapshotText === 'string' ? source.sourceSnapshotText : ''
   const sourceSnapshotText = normalizeSnapshotText(rawSnapshotText)
+  const role = pickCanonicalField(
+    source,
+    ['role', 'usage'],
+    normalizeWorldBookSourceRole,
+  )
 
   return {
     id: normalizeStringId(source.id, createGeneratedId('world_source', index)),
     assetId,
     sectionIds,
-    usage: normalizeUsage(source.usage),
+    role,
+    usage: role,
     enabled: source.enabled !== false,
     priority: Math.max(0, Math.min(9999, toInt(source.priority, 100))),
     budgetHint: normalizeInlineText(source.budgetHint, 'primary', 40),
@@ -477,7 +473,7 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
       ok: true,
       asset: normalizeBookTextAsset({
         title,
-        assetType: 'worldbook_document',
+        category: 'worldview',
         format: 'markdown',
         categoryId: frontMatter.category || '',
         tags,
@@ -500,7 +496,7 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
       ok: true,
       asset: normalizeBookTextAsset({
         title,
-        assetType: 'worldbook_document',
+        category: 'worldview',
         format: 'plain',
         content: rawContent,
         status: 'draft',
