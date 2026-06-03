@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Product Boundary
 
-Updated: 2026-06-01
+Updated: 2026-06-03
 
 This file defines ownership boundaries for Shopping, Logistics, Food Delivery, Wallet, Assets, and Stock.
 
@@ -50,6 +50,8 @@ Food Delivery owns:
 - food-order event records
 - world-app context display and route context when Food Delivery is the target module
 - business truth for `food_delivery`-bound shop entries surfaced by App Store
+
+Within the Food Delivery pseudo-folder, Food Platform and shop mini apps are peer user-facing entries. Food Platform may provide discovery, filters, and creation handoff, but each shop mini app should present its own cart, checkout confirmation, order status, delivery events, and Wallet expense suggestions.
 
 Food Delivery does not own:
 

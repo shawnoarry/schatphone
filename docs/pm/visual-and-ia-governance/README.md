@@ -32,6 +32,7 @@ Current visual pass:
 - Contacts template changes now use a save-review card in the world-field editor so users can see update and preservation rules before committing a new template.
 - Contacts AI world-field drafting appears as a secondary editor action: it fills draft fields only, shows status inline, and leaves Save as the user's explicit commit action.
 - Contacts current-world template adaptation now appears as a soft review card in role detail, not a blocking modal: it explains why the profile may need the current-world template, shows carry-over/custom counts, and opens an AI draft adaptation path while keeping Save as the explicit commit.
+- The full WorldBook Profile Templates -> Contacts concrete-value loop now has E2E coverage; visual follow-up should focus on making the template-adaptation review read like a clear before/after diff, not on rebuilding the handoff itself.
 - WorldBook's Current World Pack and Knowledge panels have a first craft pass; knowledge creation and editing now use a bottom sheet so the Settings page stays scan-first.
 - WorldBook's Kernel and Templates panels now share the same task-panel treatment: compact state headers, controlled editing/list areas, and stronger mobile card rhythm.
 - `文本库 / Book` now has a V1 installed-app-like source-library surface for read-first long text editing, export, and WorldBook source usage state; on phone-sized screens it separates Shelf -> Detail -> Editor so long text editing is a focused sheet rather than inline page expansion.

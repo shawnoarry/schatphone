@@ -53,6 +53,7 @@ What is already landed:
 41. Contacts world-field editing now reviews template changes before save. When a user switches a role from one current-world template to another, the editor shows which selected-template fields will update, which old values will stay as custom fields, and that deleting old fields must be handled separately in the role profile. Saving preserves out-of-template values and marks them as `Custom` in the detail list.
 42. Contacts world-field editing now has AI-assisted value drafting. The helper builds a draft-only prompt from the current WorldBook template, selected profile, user/self context, and existing values; provider output is normalized against known template fields. The Contacts button fills only empty editor draft fields, skips saved/manual values, and does not change `profileValues` until the user reviews and presses Save.
 43. Contacts now has a current-world template adaptation review. If a profile has no template, an unavailable template, an older saved template version, or a template from another world, Contacts suggests the best current-world template, shows how many values can carry over and how many old values will stay custom, and can ask AI to draft migrated values into the editor. This is draft-only: AI does not save, does not delete old values, and does not overwrite filled/manual fields.
+44. The full WorldBook -> Contacts profile-field loop now has committed E2E coverage: copy the ABO template in WorldBook, open Contacts from the handoff, create a role profile, fill world fields, save, verify the saved values, and confirm the phone-width layout has no horizontal overflow or page errors.
 
 Still incomplete:
 
@@ -66,10 +67,17 @@ Still incomplete:
 
 1. Move to 4.3 World Hub review quality before adding stronger controls.
 2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
-3. Continue from the V1 WorldBook/Contacts profile-template baseline by hardening current-world template adaptation, richer template editing, and eventual form-builder-quality WorldBook authoring.
+3. Continue from the V1 WorldBook/Contacts profile-template baseline by making current-world template adaptation easier to understand: first turn the review into a user-readable visual diff, then revisit richer template editing and eventual form-builder-quality WorldBook authoring.
 4. Continue polishing the Contacts display-only social snapshot so it remains clear, read-only, and separate from relationship metrics or memory truth.
 
-For cross-device continuation of the WorldBook -> Contacts profile-field line, start from `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`.
+For cross-device continuation of the WorldBook -> Contacts profile-field line, start from `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`. Keep `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md` as the original execution plan and completed-task record.
+
+Concrete next task for this line:
+
+1. First deliver the Contacts template-adaptation visual diff described in the 2026-06-03 handoff.
+2. Then replace the Contacts-side `default_world` assumption with the real current-world ID after WorldBook current-world state is stable.
+3. Then add stronger AI adaptation empty/failure states.
+4. Leave WorldBook form-builder-quality template authoring for a later slice unless product direction changes.
 
 4.2 closure baseline:
 
@@ -142,6 +150,8 @@ For cross-device continuation of the WorldBook -> Contacts profile-field line, s
 - `npm.cmd run test -- tests/profile-template-adaptation-assistant.test.js tests/contacts-profile-template-view.test.js`: pass on 2026-06-03 for Contacts-side AI template adaptation draft behavior without saving until the user confirms; 2 files / 17 tests.
 - `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js tests/profile-template-value-assistant.test.js tests/profile-template-adaptation-assistant.test.js`: pass on 2026-06-03 after Contacts current-world template adaptation; 8 files / 44 tests.
 - Manual Playwright phone-viewport check on 2026-06-03: pass for the Contacts template-adaptation review card at 390px with no horizontal overflow and no page/console errors.
+- `npm.cmd run test:e2e -- e2e/worldbook-contacts-profile-fields.spec.js`: pass on 2026-06-03 for the committed WorldBook -> Contacts value-flow guardrail; 2 tests across desktop Chromium and mobile Chromium.
+- `npm.cmd run test:e2e`: pass on 2026-06-03 after adding the WorldBook -> Contacts value-flow guardrail; 18 tests across desktop Chromium and mobile Chromium.
 
 ## 5. Must Sync When Working Here
 

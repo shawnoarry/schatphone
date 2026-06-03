@@ -28,9 +28,10 @@ Executable plan for that design:
 
 - `docs/superpowers/plans/2026-05-19-worldbook-contacts-profile-template-plan.md`
 
-Current cross-device handoff and next plan:
+Current cross-device handoff and execution record:
 
-- `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`
+- Current resume entry: `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`
+- Original execution plan and completed-task record: `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md`
 
 ## Fast Product Meaning
 
@@ -52,6 +53,7 @@ Current cross-device handoff and next plan:
 - Contacts world-field editing now reviews template changes before saving: fields in the chosen template are updated, while old fields outside the chosen template stay visible as custom fields unless the user cleans them up separately.
 - Contacts world-field editing now has AI draft assistance: AI can suggest values for empty template fields inside the editor draft, but it skips existing/manual values and nothing is saved until the user reviews and presses Save.
 - Contacts now detects when a role profile is using an unavailable, older-version, or other-world template and offers a current-world adaptation review. AI can draft migrated values into the editor, but the old values stay preserved as custom fields and nothing changes until the user saves.
+- The complete WorldBook -> Contacts world-field loop now has E2E coverage, so incoming workers should treat the value-flow guardrail as landed and continue from the visual-diff/adaptation clarity tasks rather than rebuilding the basic chain.
 - WorldBook's Profile Templates panel may link users into Contacts, and Contacts shows a focused handoff note for that entry path; concrete role, self-profile, and NPC values remain Contacts-owned.
 - Contacts role detail now has a V1 `世界字段 / World profile fields` editor: users can choose a current-world template, fill concrete values, set visibility levels, and save those values back to the role profile without editing the WorldBook template itself.
 - Contacts entity types now include Self Profile, Main Role, and NPC. Chat Directory is a chat target list, not a Main Role filter; Self Profile must not be bound as a Chat target, and NPC can be bound before upgrade.

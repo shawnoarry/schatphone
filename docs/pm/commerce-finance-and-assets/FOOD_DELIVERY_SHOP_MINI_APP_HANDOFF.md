@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -10,7 +10,7 @@ Food Delivery is a pseudo-folder collection, not a single app that owns every fi
 
 The first layer inside the Home pseudo-folder should contain peer mini apps:
 
-- Food Platform: broad browsing, search, nearby, categories, recent orders, and platform discovery.
+- Food Platform: broad browsing, search, nearby, categories, and platform discovery.
 - Shop mini apps: individual restaurants or themed shops, such as Moon Bistro.
 - Future shops: App Store-installed, user-created, or World Pack-generated shop entries.
 
@@ -36,6 +36,10 @@ The first Food Delivery shop is Moon Bistro.
 - The edit mode is scoped to one dish and can change item title, description, base ingredients, and image source.
 - The cart becomes the ordering anchor in shop mode.
 - Map, order, Wallet, and support information are folded behind an Order & delivery section so they do not dominate the shop first screen.
+- Current visual polish pass adds a shop status pill, scan-friendly rating/ETA/distance metrics, user-facing delivery fee/ETA/distance cards, richer dark tray dish cards with dish descriptions instead of image-source labels, a clearer checkout bar, and a softer empty-cart prompt.
+- The shop checkout is now a shop-local confirmation sheet. Tapping checkout previews the current shop cart, delivery address, ETA, delivery fee, and total; the order is created only after the user submits from that sheet.
+- Shop orders, delivery events, and Wallet suggestions are scoped to the currently opened shop. Food Platform does not render the shop cart, order panel, Wallet suggestions, or Map support panels, so it no longer behaves like a total order controller.
+- The shop header no longer has a `Food platform` return button. Home remains available, while the platform is treated as a peer mini app in the pseudo-folder rather than the parent of the shop.
 
 ## Important Ownership Boundaries
 
@@ -47,6 +51,8 @@ Food Delivery owns:
 - checkout
 - order records and order status
 - food delivery service events
+
+Food Platform is a Food Delivery-owned discovery mini app, but it is not the visible owner of shop order workflows. Individual shop mini apps should present their own cart, checkout, order status, and downstream Wallet suggestions.
 
 Map is a context provider:
 
@@ -82,23 +88,24 @@ Recommended direction: late-night bistro with a dark tray menu.
 Work in this order:
 
 1. Shop header
-   - Make the first screen feel like a real independent shop, not a module panel.
-   - Improve store status, rating, ETA, delivery fee, distance, and short shop identity.
+   - First polish pass is done: the first screen now has shop status, rating, ETA, delivery fee, distance, and short shop identity.
+   - Next pass can add stronger shop cover imagery and a more distinctive Moon Bistro brand mood.
    - Keep Home and Food Platform navigation visible but visually quiet.
 
 2. Dish cards
-   - Push the real-photo embedded tray feel further.
-   - Reduce backend-like labels.
+   - First polish pass is done: cards now push the embedded tray feel further and show dish descriptions instead of backend-like image-source labels.
+   - Next pass should use stronger real-food imagery and tune responsive card density.
    - Keep title, price, visual identity, and add action easy to scan.
 
 3. Bottom cart
-   - Refine it into a real delivery-app checkout bar.
+   - First polish pass is done: it reads more like a delivery-app checkout bar and uses checkout language.
    - Show quantity, total price, and checkout action.
    - Keep empty-cart state quiet.
 
 4. Dish detail sheet
    - Keep the large circular image composition.
-   - Improve spacing, hierarchy, tags, ingredients, quantity stepper, and add-to-cart affordance.
+   - First polish pass removes image-source language from the dark detail view and uses delivery/fee context instead.
+   - Continue improving spacing, hierarchy, tags, ingredients, quantity stepper, and add-to-cart affordance.
    - Keep the small edit icon available but low-noise.
 
 5. Order & delivery section

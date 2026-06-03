@@ -107,6 +107,8 @@ const selectedMenuItemId = ref('')
 const menuDetailMode = ref('detail')
 const menuDetailFeedback = ref('')
 const menuDetailQuantity = ref(1)
+const checkoutSheetOpen = ref(false)
+const checkoutFeedback = ref('')
 const menuItemEditDraft = reactive({
   title: '',
   desc: '',
@@ -316,6 +318,20 @@ const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value) return 'bg-[#fff8ed]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#fff8ed]'
 })
+const activeStoreEtaText = computed(() =>
+  activeRestaurant.value ? `${activeRestaurant.value.deliveryEtaMinutes} min` : '',
+)
+const activeStoreFeeText = computed(() =>
+  activeRestaurant.value
+    ? `${activeRestaurant.value.deliveryFee} ${activeRestaurant.value.currency}`
+    : '',
+)
+const activeStoreDistanceText = computed(() =>
+  activeRestaurant.value ? `${activeRestaurant.value.distanceKm} km` : '',
+)
+const storeCartCtaLabel = computed(() =>
+  foodDeliveryStore.cartQuantity > 0 ? t('去结算', 'Checkout') : t('先选一份', 'Pick an item'),
+)
 const selectedMenuItemDetailTotal = computed(() => {
   const item = selectedMenuItem.value
   if (!item) return `0.00 ${activeRestaurant.value?.currency || 'CNY'}`
@@ -338,7 +354,12 @@ const activeMapHandoffRouteSummary = computed(() =>
     ? activeMapHandoff.value.routeSummaryZh
     : activeMapHandoff.value.routeSummaryEn,
 )
-const recentOrders = computed(() => foodDeliveryStore.recentOrders)
+const scopedFoodOrders = computed(() => {
+  const restaurantId = isStoreMode.value ? activeRestaurant.value?.id || '' : ''
+  if (!restaurantId) return []
+  return foodDeliveryStore.orders.filter((order) => order.restaurantId === restaurantId)
+})
+const recentOrders = computed(() => scopedFoodOrders.value.slice(0, 5))
 const sharedMealContactOptions = computed(() =>
   chatStore.contactsForList
     .filter((contact) => Number(contact.id) > 0)
@@ -358,7 +379,7 @@ const buildSharedMealSuggestion = (order) =>
   })
 
 const walletExpenseSuggestions = computed(() =>
-  foodDeliveryStore.orders
+  scopedFoodOrders.value
     .filter((order) => order.status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
     .map((order) => {
       const sourceId = order.id
@@ -609,16 +630,6 @@ const openRestaurantStore = (restaurant) => {
   })
 }
 
-const closeRestaurantStore = () => {
-  router.push({
-    path: '/food-delivery',
-    query: {
-      ...worldAppRouteQuery.value,
-      category: activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants',
-    },
-  })
-}
-
 const openMenuItemDetail = (menuItemId) => {
   const item = foodDeliveryStore.findMenuItemById(menuItemId)
   if (!item) return
@@ -698,12 +709,29 @@ const addMenuItemToCart = (menuItemId, quantity = 1) => {
   })
 }
 
+const openCheckoutSheet = () => {
+  checkoutFeedback.value = ''
+  if (!isStoreMode.value) {
+    checkoutFeedback.value = t('请先进入一家小店。', 'Open a shop first.')
+    return
+  }
+  if (foodDeliveryStore.cartLineItems.length === 0) {
+    checkoutFeedback.value = t('请先选择一份菜品。', 'Choose a dish first.')
+    return
+  }
+  checkoutSheetOpen.value = true
+}
+
+const closeCheckoutSheet = () => {
+  checkoutSheetOpen.value = false
+}
+
 const checkoutFoodDelivery = () => {
   const mapHandoff = activeMapHandoff.value
   const relationshipTarget = activeRestaurant.value
     ? selectedSharedMealContact(activeRestaurant.value.id)
     : null
-  foodDeliveryStore.checkoutCart({
+  const order = foodDeliveryStore.checkoutCart({
     deliveryAddress: mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
     note: activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
     relationshipBinding: relationshipTarget
@@ -719,6 +747,12 @@ const checkoutFoodDelivery = () => {
     sourceModule: mapHandoff.sourceModule,
     sourceId: mapHandoff.sourceId,
   })
+  if (!order) {
+    checkoutFeedback.value = t('订单没有提交，请确认购物车。', 'Order was not placed. Check the cart.')
+    return
+  }
+  checkoutSheetOpen.value = false
+  checkoutFeedback.value = t('订单已提交，可在本店订单里查看。', 'Order placed. You can track it in this shop.')
 }
 
 const markFoodOrderDelivered = (orderId) =>
@@ -971,7 +1005,7 @@ onBeforeUnmount(() => {
                 {{
                   t(
                     '搜索、附近、订单与所有店铺发现都从这里进入。',
-                    'Search, nearby, orders, and broad discovery stay here.',
+                    'Search, nearby, and broad discovery stay here.',
                   )
                 }}
               </p>
@@ -1094,44 +1128,6 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="activeRestaurant" class="mt-4 rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-menu-panel">
-          <p class="text-xs font-bold">
-            {{ t('当前菜单', 'Current menu') }} · {{ activeStoreDisplayName }}
-          </p>
-          <div class="mt-2 space-y-2">
-            <article
-              v-for="item in activeMenuItems"
-              :key="item.id"
-              class="flex items-center justify-between gap-3 rounded-xl bg-white p-2"
-              :data-testid="`food-delivery-menu-${item.id}`"
-            >
-              <div class="flex min-w-0 items-center gap-2">
-                <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-orange-50">
-                  <img
-                    v-if="foodImageUrl(item)"
-                    :src="foodImageUrl(item)"
-                    :alt="item.image?.alt || item.title"
-                    class="h-full w-full object-cover"
-                  />
-                  <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
-                    <i class="fas fa-bowl-food"></i>
-                  </div>
-                </div>
-                <div class="min-w-0">
-                  <p class="truncate text-xs font-semibold">{{ item.title }}</p>
-                  <p class="text-[11px] text-gray-500">{{ item.price }} {{ item.currency }} · {{ foodImageSourceLabel(item) }}</p>
-                </div>
-              </div>
-              <button
-                class="rounded-full bg-orange-500 px-3 py-1 text-[11px] font-bold text-white"
-                :data-testid="`food-delivery-add-${item.id}`"
-                @click="addMenuItemToCart(item.id)"
-              >
-                {{ t('加入', 'Add') }}
-              </button>
-            </article>
-          </div>
-        </div>
       </section>
       </section>
 
@@ -1296,33 +1292,29 @@ onBeforeUnmount(() => {
       >
         <article
           v-if="activeRestaurant"
-          class="overflow-hidden rounded-3xl shadow-sm"
-          :class="isDarkTrayStore ? 'border border-slate-800 bg-[#171a27]' : 'border border-white/70 bg-white'"
+          class="relative overflow-hidden rounded-[2rem] shadow-sm"
+          :class="
+            isDarkTrayStore
+              ? 'border border-white/[0.08] bg-[#10131d] shadow-[0_24px_70px_rgba(0,0,0,0.35)]'
+              : 'border border-white/70 bg-white'
+          "
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
           :data-store-tone="activeStoreVisual.tone"
           :data-store-template="activeStoreTemplate"
         >
           <div
-            class="bg-gradient-to-br p-4 text-gray-950"
-            :class="isDarkTrayStore ? 'from-[#24283a] via-[#171a27] to-[#0f111a]' : activeStoreVisual.heroClass"
+            class="relative overflow-hidden bg-gradient-to-br p-4 text-gray-950"
+            :class="isDarkTrayStore ? 'from-[#2a2d3e] via-[#171a27] to-[#080a10]' : activeStoreVisual.heroClass"
           >
             <div class="flex items-center justify-between gap-2">
               <button
                 class="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white/90 p-0 text-[0px] font-bold text-gray-900 shadow-sm"
                 data-testid="food-delivery-store-home"
+                aria-label="Home"
                 @click="goHome"
-            >
-                <i class="fas fa-house text-[11px]"></i>
-              {{ t('返回平台', 'Back') }}
-              </button>
-              <button
-                class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm backdrop-blur"
-                data-testid="food-delivery-store-back"
-                @click="closeRestaurantStore"
               >
-                <i class="fas fa-chevron-left"></i>
-                {{ t('Food platform', 'Food platform') }}
+                <i class="fas fa-house text-[11px]"></i>
               </button>
             </div>
             <div
@@ -1336,12 +1328,19 @@ onBeforeUnmount(() => {
                 class="h-full w-full object-cover"
               />
             </div>
-            <div class="mt-5 flex items-end justify-between gap-3">
+            <div class="mt-5 grid grid-cols-[minmax(0,1fr)_5.5rem] items-end gap-4">
               <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/90">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100"
+                  data-testid="food-delivery-store-status"
+                >
+                  <i class="fas fa-circle text-[6px]"></i>
+                  {{ t('营业中', 'Open now') }}
+                </span>
+                <p class="mt-3 line-clamp-2 text-sm font-semibold leading-5 text-slate-300">
                   {{ activeStoreShortDescription }}
                 </p>
-                <h2 class="mt-1 truncate text-2xl font-black text-white">
+                <h2 class="mt-2 truncate text-3xl font-black leading-tight text-white">
                   {{ activeStoreDisplayName }}
                 </h2>
                 <p
@@ -1350,12 +1349,26 @@ onBeforeUnmount(() => {
                 >
                   {{ activeStoreTags.join(' · ') }}
                 </p>
-                <p class="mt-2 text-xs font-semibold text-white/90">
+                <div
+                  class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-100"
+                  data-testid="food-delivery-store-metrics"
+                >
+                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
+                    {{ activeRestaurant.rating.toFixed(1) }} ★
+                  </span>
+                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
+                    {{ activeStoreEtaText }}
+                  </span>
+                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
+                    {{ activeStoreDistanceText }}
+                  </span>
+                </div>
+                <p class="sr-only">
                   {{ activeRestaurant.rating.toFixed(1) }} ★ · {{ activeRestaurant.deliveryEtaMinutes }} min ·
                   {{ activeRestaurant.distanceKm }} km
                 </p>
               </div>
-              <div class="h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-white/90 shadow-sm">
+              <div class="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[1.65rem] bg-white/90 shadow-[0_18px_42px_rgba(0,0,0,0.35)]">
                 <img
                   v-if="foodImageUrl(activeRestaurant)"
                   :src="foodImageUrl(activeRestaurant)"
@@ -1379,23 +1392,23 @@ onBeforeUnmount(() => {
               >
                 {{ t('配送费', 'Fee') }}
               </p>
-              <p class="mt-1 text-xs font-black">{{ activeRestaurant.deliveryFee }} {{ activeRestaurant.currency }}</p>
+              <p class="mt-1 text-xs font-black">{{ activeStoreFeeText }}</p>
             </div>
             <div class="rounded-2xl p-3 text-center" :class="isDarkTrayStore ? 'bg-white/5' : 'bg-gray-50'">
               <p
                 class="text-[10px] font-semibold"
                 :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'"
               >
-                {{ t('来源', 'Source') }}
+                {{ t('预计送达', 'ETA') }}
               </p>
-              <p class="mt-1 truncate text-xs font-black">{{ foodImageSourceLabel(activeRestaurant) }}</p>
+              <p class="mt-1 truncate text-xs font-black">{{ activeStoreEtaText }}</p>
             </div>
             <div
               class="rounded-2xl p-3 text-center"
               :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
             >
-              <p class="text-[10px] font-semibold opacity-70">{{ t('店铺', 'Store') }}</p>
-              <p class="mt-1 truncate text-xs font-black">{{ activeStoreVisual.tone }}</p>
+              <p class="text-[10px] font-semibold opacity-70">{{ t('距离', 'Distance') }}</p>
+              <p class="mt-1 truncate text-xs font-black">{{ activeStoreDistanceText }}</p>
             </div>
           </div>
         </article>
@@ -1403,7 +1416,7 @@ onBeforeUnmount(() => {
         <section
           v-if="activeRestaurant"
           class="rounded-3xl p-4"
-          :class="isDarkTrayStore ? 'border border-slate-800 bg-[#151826] text-white' : 'border border-orange-100 bg-white'"
+          :class="isDarkTrayStore ? 'border border-white/[0.08] bg-[#10131d] text-white' : 'border border-orange-100 bg-white'"
           data-testid="food-delivery-menu-panel"
         >
           <div class="flex items-start justify-between gap-3">
@@ -1420,14 +1433,14 @@ onBeforeUnmount(() => {
               {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
             </span>
           </div>
-          <div class="mt-3" :class="isDarkTrayStore ? 'grid grid-cols-2 gap-3 pt-6' : 'space-y-2'">
+          <div class="mt-3" :class="isDarkTrayStore ? 'grid grid-cols-2 gap-3 pt-7' : 'space-y-2'">
             <article
               v-for="item in activeMenuItems"
               :key="item.id"
               class="relative overflow-hidden"
               :class="
                 isDarkTrayStore
-                  ? 'min-h-[9.5rem] rounded-[1.75rem] bg-[#202436] p-3 pt-10 text-center shadow-[0_18px_40px_rgba(0,0,0,0.22)]'
+                  ? 'min-h-[11rem] rounded-[1.85rem] border border-white/[0.04] bg-[#1b2030] p-3 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
                   : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
               "
               :data-testid="`food-delivery-menu-${item.id}`"
@@ -1443,7 +1456,7 @@ onBeforeUnmount(() => {
                   <span class="sr-only">{{ t('查看菜品详情', 'View item details') }}</span>
                 </button>
                 <div
-                  class="pointer-events-none absolute left-1/2 top-0 z-10 h-20 w-20 -translate-x-1/2 -translate-y-1/3 overflow-hidden rounded-full border-4 border-[#2b3045] bg-[#111421] shadow-[0_14px_30px_rgba(0,0,0,0.35)]"
+                  class="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[5px] border-[#2b3045] bg-[#111421] shadow-[0_18px_40px_rgba(0,0,0,0.42)]"
                   :data-testid="`food-delivery-menu-dish-${item.id}`"
                 >
                   <img
@@ -1460,14 +1473,17 @@ onBeforeUnmount(() => {
                   class="pointer-events-none relative z-10 pt-8"
                   :data-testid="`food-delivery-menu-tray-${item.id}`"
                 >
-                  <p class="line-clamp-2 text-xs font-bold text-white">{{ item.title }}</p>
-                  <p class="mt-2 text-[11px] font-semibold text-orange-200">{{ item.price }} {{ item.currency }}</p>
-                  <p class="mt-1 text-[10px] text-slate-400">{{ foodImageSourceLabel(item) }}</p>
+                  <p class="line-clamp-2 text-sm font-black leading-5 text-white">{{ item.title }}</p>
+                  <p class="mt-2 line-clamp-2 min-h-8 text-[10px] leading-4 text-slate-400">
+                    {{ item.desc || item.ingredients || activeStoreShortDescription }}
+                  </p>
+                  <p class="mt-2 text-[12px] font-black text-orange-100">{{ item.price }} {{ item.currency }}</p>
                   <button
-                    class="pointer-events-auto mt-3 rounded-full bg-orange-400 px-3 py-1.5 text-[11px] font-bold text-[#151826]"
+                    class="pointer-events-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#ff806f] px-3 py-1.5 text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
                     :data-testid="`food-delivery-add-${item.id}`"
                     @click.stop="addMenuItemToCart(item.id)"
                   >
+                    <i class="fas fa-plus text-[10px]"></i>
                     {{ t('加入', 'Add') }}
                   </button>
                 </div>
@@ -1572,7 +1588,7 @@ onBeforeUnmount(() => {
                       {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
                     </span>
                     <span class="rounded-full bg-orange-500/15 px-3 py-1 text-orange-100">
-                      {{ foodImageSourceLabel(selectedMenuItem) }}
+                      {{ activeStoreEtaText }} · {{ activeStoreFeeText }}
                     </span>
                   </div>
                 </div>
@@ -1804,6 +1820,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section
+        v-if="isStoreMode"
         class="rounded-3xl p-4"
         :class="
           isStoreMode
@@ -1813,12 +1830,20 @@ onBeforeUnmount(() => {
         data-testid="food-delivery-cart-panel"
       >
         <div class="flex items-start justify-between gap-3">
-          <div>
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              v-if="isStoreMode"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#ff806f] text-white shadow-[0_12px_28px_rgba(255,128,111,0.25)]"
+            >
+              <i class="fas fa-basket-shopping"></i>
+            </span>
+            <div class="min-w-0">
             <p class="text-sm font-bold">{{ t('外卖购物车', 'Food cart') }}</p>
             <p class="mt-1 text-xs" :class="isStoreMode ? 'text-slate-400' : 'text-gray-500'">
               {{ foodDeliveryStore.cartQuantity }} {{ t('份餐品', 'item(s)') }}
             </p>
           </div>
+            </div>
           <span
             class="rounded-full px-3 py-1 text-[11px] font-semibold"
             :class="isStoreMode ? 'bg-orange-400/15 text-orange-100' : 'bg-amber-50 text-amber-700'"
@@ -1831,7 +1856,7 @@ onBeforeUnmount(() => {
             v-for="line in foodDeliveryStore.cartLineItems"
             :key="line.menuItemId"
             class="rounded-2xl p-3"
-            :class="isStoreMode ? 'bg-white/[0.06]' : 'bg-amber-50/70'"
+            :class="isStoreMode ? 'border border-white/[0.06] bg-white/[0.08]' : 'bg-amber-50/70'"
             :data-testid="`food-delivery-cart-${line.menuItemId}`"
           >
             <p class="text-xs font-bold">{{ line.menuItem.title }} × {{ line.quantity }}</p>
@@ -1843,9 +1868,9 @@ onBeforeUnmount(() => {
             class="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white"
             :class="isStoreMode ? 'bg-[#ff806f] shadow-[0_14px_34px_rgba(255,128,111,0.25)]' : 'bg-gray-950'"
             data-testid="food-delivery-checkout"
-            @click="checkoutFoodDelivery"
+            @click="openCheckoutSheet"
           >
-            {{ t('生成外卖订单', 'Create food order') }}
+            {{ storeCartCtaLabel }}
           </button>
         </div>
         <p
@@ -1853,18 +1878,109 @@ onBeforeUnmount(() => {
           class="mt-3 rounded-2xl p-3 text-xs leading-5"
           :class="isStoreMode ? 'bg-white/[0.06] text-slate-300' : 'bg-amber-50 text-amber-700'"
         >
-          {{ t('先从菜单里加入一份餐品，订单仍归外卖模块，位置与 ETA 后续由 Map 提供。', 'Add a menu item first. Orders stay in Food Delivery; Map can provide location and ETA later.') }}
+          {{ t('选一份喜欢的菜，结算条会在这里亮起。', 'Choose a dish and the checkout bar will light up here.') }}
+        </p>
+        <p
+          v-if="checkoutFeedback"
+          class="mt-3 rounded-2xl bg-white/[0.06] p-3 text-xs font-semibold text-orange-100"
+          data-testid="food-delivery-checkout-feedback"
+        >
+          {{ checkoutFeedback }}
         </p>
       </section>
 
+      <section
+        v-if="checkoutSheetOpen && isStoreMode"
+        class="fixed inset-0 z-50 flex items-end bg-black/60 p-4 backdrop-blur-sm"
+        data-testid="food-delivery-checkout-sheet"
+      >
+        <article class="mx-auto w-full max-w-md rounded-[2rem] border border-white/[0.08] bg-[#11131b] p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[11px] font-black uppercase tracking-[0.18em] text-[#ffb4a8]">
+                {{ activeStoreDisplayName }}
+              </p>
+              <h3 class="mt-1 text-xl font-black">{{ t('确认本店订单', 'Confirm shop order') }}</h3>
+              <p class="mt-2 text-xs leading-5 text-slate-400">
+                {{ activeMapHandoff.deliveryAddress || t('当前 Map 配送地址', 'Current Map delivery address') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-slate-200"
+              data-testid="food-delivery-checkout-close"
+              aria-label="Close checkout"
+              @click="closeCheckoutSheet"
+            >
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            <article
+              v-for="line in foodDeliveryStore.cartLineItems"
+              :key="line.menuItemId"
+              class="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.07] p-3"
+              :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
+            >
+              <div class="min-w-0">
+                <p class="truncate text-sm font-bold">{{ line.menuItem.title }}</p>
+                <p class="mt-1 text-[11px] text-slate-400">
+                  x {{ line.quantity }} · {{ line.subtotal }} {{ line.currency }}
+                </p>
+              </div>
+              <span class="shrink-0 rounded-full bg-[#ff806f]/15 px-2.5 py-1 text-[11px] font-bold text-[#ffb4a8]">
+                {{ line.subtotal }} {{ line.currency }}
+              </span>
+            </article>
+          </div>
+
+          <div class="mt-4 grid grid-cols-3 gap-2">
+            <div class="rounded-2xl bg-white/[0.06] p-3">
+              <p class="text-[10px] font-semibold text-slate-400">{{ t('预计送达', 'ETA') }}</p>
+              <p class="mt-1 text-xs font-black">{{ activeStoreEtaText }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/[0.06] p-3">
+              <p class="text-[10px] font-semibold text-slate-400">{{ t('配送费', 'Fee') }}</p>
+              <p class="mt-1 text-xs font-black">{{ activeStoreFeeText }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/[0.06] p-3">
+              <p class="text-[10px] font-semibold text-slate-400">{{ t('合计', 'Total') }}</p>
+              <p class="mt-1 text-xs font-black">
+                {{ foodDeliveryStore.cartPrimaryTotal.amount }} {{ foodDeliveryStore.cartPrimaryTotal.currency }}
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center gap-2">
+            <button
+              type="button"
+              class="h-12 flex-1 rounded-2xl bg-white/[0.08] px-4 text-sm font-black text-slate-200"
+              data-testid="food-delivery-checkout-cancel"
+              @click="closeCheckoutSheet"
+            >
+              {{ t('再看看', 'Keep browsing') }}
+            </button>
+            <button
+              type="button"
+              class="h-12 flex-[1.4] rounded-2xl bg-[#ff806f] px-4 text-sm font-black text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]"
+              data-testid="food-delivery-checkout-submit"
+              @click="checkoutFoodDelivery"
+            >
+              {{ t('提交订单', 'Place order') }}
+            </button>
+          </div>
+        </article>
+      </section>
+
       <details
+        v-if="isStoreMode"
         class="food-delivery-support-stack"
         :class="
           isStoreMode
             ? 'rounded-3xl border border-slate-800 bg-[#11131b] p-3 text-white'
             : 'contents'
         "
-        :open="!isStoreMode"
         data-testid="food-delivery-store-support-drawer"
       >
         <summary
@@ -1914,7 +2030,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="rounded-3xl border border-gray-100 bg-white p-4" data-testid="food-delivery-orders-panel">
-        <p class="text-sm font-bold">{{ t('最近外卖订单', 'Recent food orders') }}</p>
+        <p class="text-sm font-bold">{{ t('本店订单', 'Shop orders') }}</p>
         <p
           v-if="eventFeedback"
           class="mt-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700"
@@ -1991,7 +2107,7 @@ onBeforeUnmount(() => {
           </article>
         </div>
         <p v-else class="mt-3 rounded-2xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
-          {{ t('还没有外卖订单。', 'No food orders yet.') }}
+          {{ t('本店还没有订单。', 'No shop orders yet.') }}
         </p>
       </section>
 

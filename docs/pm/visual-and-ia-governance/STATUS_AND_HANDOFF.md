@@ -81,6 +81,7 @@ What is already landed:
 66. Contacts template-change review now appears inside the world-field editor before saving. It explains which fields update, which old fields stay as custom values, and keeps the action inline instead of using a blocking modal.
 67. Contacts AI world-field drafting now appears as a secondary inline editor action. It drafts empty fields only, reports applied/kept counts below the editor actions, and preserves Save as the clear user-controlled commit.
 68. Contacts current-world template adaptation now uses a soft review card in role detail when a profile uses an unavailable, older, or other-world template. The card recommends a current-world template, explains carry-over/custom-preserved counts, and opens AI draft adaptation inside the existing editor so users can still review before saving.
+69. The full WorldBook Profile Templates -> Contacts world-field value loop is now protected by E2E: copy a world template, enter Contacts from the handoff, create a profile, fill and save world fields, and verify the phone-width layout has no horizontal overflow or page errors across desktop and mobile Chromium.
 
 Still incomplete:
 
@@ -90,7 +91,7 @@ Still incomplete:
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 5. World Pack app-entry unlocking now has a first implementation; the world UX package has first target-app context treatment in Shopping, Food Delivery, Calendar, and Map, Current World Pack hands off to App Store's `World` section instead of launching entries from Settings, App Store now explains that handoff before opening, and the nonstandard-app review UI is landed with loading/empty/error/rejection handling, but these paths still need phone-sized user testing and broader hardening for labels, accents, safe UX variants, and target-app copy readability.
 6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and world-app-specific CSS remains a later World Pack/app-owned slice instead of returning to global Appearance.
-7. Contacts phone-like entry has simulated mobile coverage, but still needs true-device checks for touch feel, browser chrome, keyboard behavior, and safe-area spacing.
+7. Contacts phone-like entry and the WorldBook -> Contacts value-flow both have simulated mobile coverage, but still need true-device checks for touch feel, browser chrome, keyboard behavior, and safe-area spacing.
 
 ## 2. Recommended Next Slice
 

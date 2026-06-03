@@ -1,6 +1,8 @@
 # Contacts Phone UI Refactor Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Execution Status:** Implemented. This file is retained as execution history and test/design rationale, not as the active task source. Current Contacts follow-up work should start from `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` and the current WorldBook -> Contacts handoff when relevant.
+
+> **For agentic workers:** This file is no longer an active execution checklist. Checked steps below record the implemented slice.
 
 **Goal:** Turn Contacts' first screen into a phone-like contact list with Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles, while preserving the WorldBook profile-field chain.
 
@@ -15,7 +17,7 @@
 **Files:**
 - Modify: `tests/contacts-profile-template-view.test.js`
 
-- [ ] **Step 1: Add a test for the phone Contacts first-screen order**
+- [x] **Step 1: Add a test for the phone Contacts first-screen order**
 
 Add a behavior test that seeds one self profile, one main role, and one NPC, then asserts the rendered order is Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World roles.
 
@@ -55,7 +57,7 @@ test('orders Contacts first screen like a phone contacts app', async () => {
 })
 ```
 
-- [ ] **Step 2: Add a test for recent shortcuts not removing full-list entries**
+- [x] **Step 2: Add a test for recent shortcuts not removing full-list entries**
 
 Use a Chat-bound main role and an NPC with a memory/activity hint. Assert both can appear in the recent shortcut row and still appear in their normal sections.
 
@@ -95,7 +97,7 @@ test('shows recent interaction shortcuts without removing contacts from full lis
 })
 ```
 
-- [ ] **Step 3: Add a test for search filtering full lists**
+- [x] **Step 3: Add a test for search filtering full lists**
 
 Drive the search input through the DOM and assert the matching NPC remains visible while an unmatched main role is hidden.
 
@@ -126,7 +128,7 @@ test('filters Contacts full lists by search text', async () => {
 })
 ```
 
-- [ ] **Step 4: Run focused tests and confirm the new tests fail before implementation**
+- [x] **Step 4: Run focused tests and confirm the new tests fail before implementation**
 
 Run:
 
@@ -141,7 +143,7 @@ Expected before implementation: the new assertions fail because Search is not an
 **Files:**
 - Modify: `src/views/ContactsView.vue`
 
-- [ ] **Step 1: Add reactive search state and helper functions**
+- [x] **Step 1: Add reactive search state and helper functions**
 
 Add these view-level helpers near the profile grouping computed values.
 
@@ -169,7 +171,7 @@ const filterContactsBySearch = (profiles = []) => {
 }
 ```
 
-- [ ] **Step 2: Replace list sources with filtered sources**
+- [x] **Step 2: Replace list sources with filtered sources**
 
 Add filtered computeds and keep the existing unfiltered grouping for recent interactions.
 
@@ -179,7 +181,7 @@ const filteredMainProfiles = computed(() => filterContactsBySearch(mainRoleProfi
 const filteredNpcProfiles = computed(() => filterContactsBySearch(npcRoleProfiles.value))
 ```
 
-- [ ] **Step 3: Add recent-interaction shortcut helpers**
+- [x] **Step 3: Add recent-interaction shortcut helpers**
 
 Use existing signals only: Chat binding, runtime memory count, event-attached detail count, and recent source hints. Do not persist a new history store in this V1. Place these helpers after `detailItemsForSection()` is defined so event-attached detail counting can use the existing role-detail helper safely.
 
@@ -211,7 +213,7 @@ const recentInteractionContacts = computed(() =>
 )
 ```
 
-- [ ] **Step 4: Replace the top list template**
+- [x] **Step 4: Replace the top list template**
 
 Use this visible order in the scroll area:
 
@@ -228,11 +230,11 @@ Use this visible order in the scroll area:
 
 Then render My Profile, Recent interactions, Main Roles, and NPC / World roles in that order. Recent interactions must use buttons with `data-testid="contacts-recent-interactions"` on the row wrapper and `data-testid="contacts-recent-${profile.id}"` for each shortcut.
 
-- [ ] **Step 5: Keep the existing detail flow and edit actions**
+- [x] **Step 5: Keep the existing detail flow and edit actions**
 
 Do not move world-field editing, relationship classification, memories, delete/reset, Chat binding, or NPC upgrade into the list header. The list can open the selected profile; the selected detail still owns deeper work.
 
-- [ ] **Step 6: Run focused Contacts tests**
+- [x] **Step 6: Run focused Contacts tests**
 
 Run:
 
@@ -247,7 +249,7 @@ Expected after implementation: all tests in the file pass.
 **Files:**
 - Create: `e2e/contacts-phone-ui.spec.js`
 
-- [ ] **Step 1: Seed local storage with a self profile, main role, NPC, chat binding, and one relationship fact**
+- [x] **Step 1: Seed local storage with a self profile, main role, NPC, chat binding, and one relationship fact**
 
 Use the existing persisted store keys:
 
@@ -257,7 +259,7 @@ window.localStorage.setItem('schatphone:store:chat', JSON.stringify({ version: 1
 window.localStorage.setItem('schatphone:store:relationshipRuntime', JSON.stringify({ version: 1, savedAt: Date.now(), data: relationshipSnapshot }))
 ```
 
-- [ ] **Step 2: Assert mobile first-screen order and shortcut behavior**
+- [x] **Step 2: Assert mobile first-screen order and shortcut behavior**
 
 Open `/#/contacts`, set viewport to `390x844`, assert:
 
@@ -272,7 +274,7 @@ await expect(page.getByTestId('contacts-role-detail')).toContainText('Main conta
 await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
 ```
 
-- [ ] **Step 3: Assert no horizontal overflow**
+- [x] **Step 3: Assert no horizontal overflow**
 
 Use the same helper pattern as `e2e/worldbook-acceptance.spec.js`:
 
@@ -283,7 +285,7 @@ const hasOverflow = await page.evaluate(
 expect(hasOverflow).toBe(false)
 ```
 
-- [ ] **Step 4: Run the focused E2E**
+- [x] **Step 4: Run the focused E2E**
 
 Run:
 
@@ -300,19 +302,19 @@ Expected: the mobile Contacts entry test passes.
 - Modify: `docs/pm/contacts-relationship-system-v2/ROLE_HUB_INFORMATION_ARCHITECTURE.md`
 - Modify: `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
 
-- [ ] **Step 1: Update Contacts handoff in user-facing language**
+- [x] **Step 1: Update Contacts handoff in user-facing language**
 
 Record that Contacts now opens like a real phone contact list: Search, My Profile, Recent interactions shortcuts, Main Roles, NPC / World Roles. State that Recent interactions is a shortcut layer and does not remove people from their full sections.
 
-- [ ] **Step 2: Update Role Hub IA**
+- [x] **Step 2: Update Role Hub IA**
 
 Record the L0 list-page rule and preserve the L1/L2 role-detail rule: deep world fields, relationship, memory review, and danger actions stay behind selected profile detail.
 
-- [ ] **Step 3: Update Visual handoff**
+- [x] **Step 3: Update Visual handoff**
 
 Record that Contacts has a first phone-entry refactor and still needs later true-device feel testing.
 
-- [ ] **Step 4: Run focused regression suite**
+- [x] **Step 4: Run focused regression suite**
 
 Run:
 
@@ -322,7 +324,7 @@ npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts
 
 Expected: 6 files pass.
 
-- [ ] **Step 5: Run broader checks**
+- [x] **Step 5: Run broader checks**
 
 Run:
 
@@ -333,7 +335,7 @@ npm.cmd run build
 
 Expected: both pass.
 
-- [ ] **Step 6: Review changed files before commit**
+- [x] **Step 6: Review changed files before commit**
 
 Run:
 

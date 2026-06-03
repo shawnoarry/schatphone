@@ -1,5 +1,7 @@
 # WorldBook Contacts Profile Fields V1.1 Implementation Plan
 
+**Execution Status:** Implemented as the original execution plan and completed-task record. Current continuation is superseded by `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`. The remaining open items are preserved there: clearer template-adaptation visual diff, real current-world ID replacement after WorldBook state stabilizes, stronger AI adaptation empty/failure states, and later WorldBook template-authoring polish.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `schatphone-workflow` first. Use a plan/execution skill if available, then implement task-by-task with checkbox tracking. Do not skip the package handoff docs.
 
 **Goal:** Make the WorldBook profile-template to Contacts role-profile flow comfortable enough for real users: WorldBook defines the fields a world needs, while Contacts lets users fill, review, and later AI-assist concrete values for roles, self profile, and NPCs.
@@ -93,7 +95,7 @@ npm.cmd run test:e2e
 Expected current baseline:
 
 1. focused profile-template tests pass;
-2. `npm.cmd run test:e2e` passes with 14 tests;
+2. `npm.cmd run test:e2e` passes; current post-E2E baseline is 18 tests;
 3. if `npm.cmd install` is unnecessary because dependencies already exist, skip it;
 4. if the Vite build later shows the known `src/lib/push.js` dynamic/static import note, treat it as informational unless the command exits non-zero.
 
@@ -109,11 +111,11 @@ npm.cmd run test
 
 Recommended next order:
 
-1. First convert the manual phone-viewport chain into a committed Playwright E2E guardrail.
-2. Then improve the Contacts editor controls for richer field types.
-3. Then add template-change review so users understand what will be preserved, overwritten, or left as custom values.
-4. Then add AI-assisted value completion as a reviewable draft, not an auto-save.
-5. Only after the Contacts value-authoring loop feels clear should the WorldBook template authoring UI become more form-builder-like.
+1. Completed: convert the manual phone-viewport chain into a committed Playwright E2E guardrail.
+2. Completed: improve the Contacts editor controls for richer field types.
+3. Completed: add template-change review so users understand what will be preserved, overwritten, or left as custom values.
+4. Completed: add AI-assisted value completion and current-world template adaptation as reviewable drafts, not auto-save.
+5. Current active next slice now lives in the 2026-06-03 handoff: make the template-adaptation review a clearer visual diff, then replace the `default_world` assumption when WorldBook current-world state is stable.
 
 ### Task 1: Add E2E Coverage For The WorldBook To Contacts Value Flow
 
@@ -122,7 +124,7 @@ Recommended next order:
 - Create: `e2e/worldbook-contacts-profile-fields.spec.js`
 - Modify only if needed: `playwright.config.js`
 
-- [ ] **Step 1: Add the E2E flow**
+- [x] **Step 1: Add the E2E flow**
 
 Create a test that:
 
@@ -141,7 +143,7 @@ Create a test that:
 13. checks no horizontal overflow;
 14. checks no page errors.
 
-- [ ] **Step 2: Run only the new E2E file**
+- [x] **Step 2: Run only the new E2E file**
 
 ```powershell
 npm.cmd run test:e2e -- e2e/worldbook-contacts-profile-fields.spec.js
@@ -149,13 +151,17 @@ npm.cmd run test:e2e -- e2e/worldbook-contacts-profile-fields.spec.js
 
 Expected: pass in desktop Chromium and mobile Chromium projects if the config runs both.
 
-- [ ] **Step 3: Run the existing E2E suite**
+Actual on 2026-06-03: `npm.cmd run test:e2e -- e2e/worldbook-contacts-profile-fields.spec.js` passed with 2 tests across desktop Chromium and mobile Chromium.
+
+- [x] **Step 3: Run the existing E2E suite**
 
 ```powershell
 npm.cmd run test:e2e
 ```
 
 Expected: all E2E tests pass.
+
+Actual on 2026-06-03: `npm.cmd run test:e2e` passed with 18 tests across desktop Chromium and mobile Chromium.
 
 ### Task 2: Improve Field Widgets In Contacts
 
@@ -322,9 +328,11 @@ Use Chinese module names first:
 
 Add exact commands and outcomes. If a command fails because of unrelated local changes, record the failure and do not hide it.
 
-- [ ] **Step 3: Commit in a coherent slice**
+- [x] **Step 3: Commit in a coherent slice**
 
 Commit after tests pass and docs are synced.
+
+Actual: landed in the 2026-06-03 WorldBook -> Contacts profile-fields checkpoint. Current continuation should use `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`.
 
 ## 5. Product Guardrails
 
@@ -341,7 +349,9 @@ Do not do these in the next slice:
 
 ## 6. Copy-Ready Prompt For Another AI Programmer
 
-Use this prompt when starting on another device:
+FROZEN: do not use the older prompt below as a current resume command. This file is now an execution record only. Use the current copy-ready prompt in `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`.
+
+Do not copy the archived prompt block below. It is kept only as historical context and may reference already-completed tasks.
 
 ```text
 当前库已更新。请按 SchatPhone 流程接手，不要从聊天记录猜需求。先读 docs/process/AI_WORK_MODE.md、docs/pm/contacts-relationship-system-v2/README.md、docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md、docs/pm/contacts-relationship-system-v2/ROLE_HUB_INFORMATION_ARCHITECTURE.md、docs/pm/contacts-relationship-system-v2/IMPLEMENTATION_WORKSTREAMS.md，以及 docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md。
