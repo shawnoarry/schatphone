@@ -53,18 +53,21 @@ const openItem = (item) => {
 </script>
 
 <template>
-  <nav class="border-t border-gray-200 bg-white px-2 py-1.5 grid grid-cols-5 gap-1">
+  <nav class="chat-app-tabbar">
     <button
       v-for="item in items"
       :key="item.id"
       type="button"
-      class="min-w-0 rounded-lg px-1.5 py-1 text-[10px] flex flex-col items-center justify-center gap-0.5 transition"
-      :class="active === item.id ? 'text-gray-950 bg-yellow-50' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'"
+      class="chat-app-tabbar__item"
+      :class="{ 'is-active': active === item.id }"
+      :aria-current="active === item.id ? 'page' : undefined"
       :data-testid="`chat-app-tab-${item.id}`"
       @click="openItem(item)"
     >
-      <i :class="item.icon" class="text-[15px] leading-none"></i>
-      <span class="w-full truncate">{{ item.label }}</span>
+      <span class="chat-app-tabbar__icon">
+        <i :class="item.icon"></i>
+      </span>
+      <span class="chat-app-tabbar__label">{{ item.label }}</span>
     </button>
   </nav>
 </template>

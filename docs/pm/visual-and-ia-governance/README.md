@@ -46,7 +46,7 @@ Current visual pass:
 - `组件 / Widgets` now keeps phone-sized pages scan-first: custom widget editing and import JSON entry open as focused sheets instead of extending the Widget Center page inline.
 - `外观 / Appearance` Theme, Font, and App Icons keep state/previews visible first; phone-sized wallpaper-source selection, advanced CSS editing, custom font editing, and per-app icon/accent edits now open as focused sheets.
 
-- Chat App now applies the same entry-ownership rule inside the installed app: bottom `Me` is the user/social surface, the top-right gear opens Chat Settings, and Chat Appearance is a Chat-owned subpage with Kakao/WeChat/iMessage layout modes plus Chat-scoped CSS.
+- Chat App now applies the same entry-ownership rule inside the installed app: bottom `Me` is the user/social surface, the top-right gear opens Chat Settings, and Chat Appearance is a Chat-owned subpage with Kakao/WeChat/iMessage layout modes plus Chat-scoped CSS. The latest polish strengthens the phone-native feel with a Kakao-like Messages header/list sheet, clearer active bottom tabs, `Me` compact social stats plus recent-interaction avatars, and layout thumbnails in Chat Appearance.
 
 ## Read This Package In This Order
 

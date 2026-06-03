@@ -113,6 +113,9 @@ describe('Chat settings, Me, and appearance routes', () => {
     })
     await flushUi()
 
+    expect(wrapper.get('[data-testid="chat-settings-button"]').classes()).toContain('chat-home-icon-button')
+    expect(wrapper.find('.chat-home-sheet').exists()).toBe(true)
+
     await wrapper.get('[data-testid="chat-settings-button"]').trigger('click')
     await flushUi()
 
@@ -160,6 +163,11 @@ describe('Chat settings, Me, and appearance routes', () => {
     await flushUi()
 
     expect(router.currentRoute.value.path).toBe('/chat-me')
+
+    await wrapper.setProps({ active: 'me' })
+    await flushUi()
+    expect(wrapper.get('[data-testid="chat-app-tab-me"]').classes()).toContain('is-active')
+    expect(wrapper.get('[data-testid="chat-app-tab-me"]').attributes('aria-current')).toBe('page')
 
     wrapper.unmount()
   })
@@ -221,6 +229,53 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(text).not.toContain('Maintenance & Diagnostics')
     expect(text).not.toContain('Network reports')
     expect(text).not.toContain('Normalize checkpoints')
+    expect(wrapper.get('[data-testid="chat-me-stats"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('orders recent interaction avatars by recent chat activity in Me', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const firstContact = chatStore.addContact({
+      name: 'Ari Recent',
+      kind: 'role',
+      avatar: 'https://example.com/ari.png',
+    })
+    const secondContact = chatStore.addContact({
+      name: 'Bea Recent',
+      kind: 'role',
+      avatar: 'https://example.com/bea.png',
+    })
+    const now = Date.now()
+
+    Array.from({ length: 8 }).forEach((_, index) => {
+      chatStore.appendMessage(firstContact.id, {
+        role: index % 2 === 0 ? 'assistant' : 'user',
+        content: `Ari message ${index}`,
+        createdAt: now - index * 1000,
+      })
+    })
+    chatStore.appendMessage(secondContact.id, {
+      role: 'assistant',
+      content: 'Bea message',
+      createdAt: now - 500,
+    })
+
+    await router.push('/chat-me')
+    await router.isReady()
+
+    const wrapper = mount(ChatMeView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    const avatars = wrapper.findAll('.chat-me-recent-avatar')
+    expect(wrapper.get('[data-testid="chat-me-recent-avatar-rail"]').exists()).toBe(true)
+    expect(avatars.length).toBeGreaterThanOrEqual(2)
+    expect(avatars[0].text()).toContain('Ari Recent')
 
     wrapper.unmount()
   })
@@ -908,6 +963,10 @@ describe('Chat settings, Me, and appearance routes', () => {
     const assistantRow = () => wrapper.get('[data-testid="chat-message-row-appearance-preview-assistant"]')
     const userRow = () => wrapper.get('[data-testid="chat-message-row-appearance-preview-user"]')
 
+    expect(wrapper.get('[data-testid="chat-layout-option-kakao-sample"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-layout-option-wechat-sample"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-layout-option-imessage-sample"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-layout-option-kakao"]').attributes('aria-pressed')).toBe('true')
     expect(assistantRow().attributes('data-layout-mode')).toBe('kakao')
     expect(assistantRow().find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(true)
     expect(assistantRow().find('[data-testid="chat-message-sender-name"]').exists()).toBe(true)
@@ -915,6 +974,7 @@ describe('Chat settings, Me, and appearance routes', () => {
 
     await wrapper.get('[data-testid="chat-layout-option-wechat"]').trigger('click')
     await flushUi()
+    expect(wrapper.get('[data-testid="chat-layout-option-wechat"]').attributes('aria-pressed')).toBe('true')
     expect(assistantRow().attributes('data-layout-mode')).toBe('wechat')
     expect(assistantRow().find('[data-testid="chat-message-sender-name"]').exists()).toBe(false)
     expect(userRow().find('[data-testid="chat-message-avatar-self"]').exists()).toBe(true)

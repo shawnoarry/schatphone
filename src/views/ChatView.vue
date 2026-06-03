@@ -5975,14 +5975,20 @@ onBeforeUnmount(() => {
 <template>
   <div class="w-full h-full flex flex-col chat-shell" :class="chatShellClasses">
     <template v-if="!activeChat">
-      <div class="pt-12 px-4 pb-3 chat-ink">
+      <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
         <div class="flex items-center justify-between gap-3">
-          <button @click="goHome" class="chat-ink w-10 h-10 rounded-full hover:bg-black/5">{{ t('主页', 'Home') }}</button>
+          <button
+            @click="goHome"
+            class="chat-home-icon-button chat-ink"
+            :aria-label="t('返回主页', 'Back to Home')"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
           <p class="flex-1 text-2xl font-bold leading-tight">{{ t('消息', 'Messages') }}</p>
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              class="chat-home-icon-button chat-ink"
               :aria-label="t('搜索', 'Search')"
               @click="toggleChatSearch"
             >
@@ -5990,7 +5996,7 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              class="chat-home-icon-button chat-ink"
               :aria-label="t('新建会话', 'New chat')"
               @click="openChatObjects"
             >
@@ -5998,7 +6004,7 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="chat-ink w-9 h-9 rounded-full hover:bg-black/5"
+              class="chat-home-icon-button chat-ink"
               :aria-label="t('Chat 设置', 'Chat Settings')"
               data-testid="chat-settings-button"
               @click="openChatSettings"
@@ -6008,7 +6014,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="chatSearchOpen" class="mt-3 flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2">
+        <div v-if="chatSearchOpen" class="chat-home-search mt-3">
           <i class="fas fa-search text-xs text-gray-400"></i>
           <input
             v-model="chatSearchKeyword"
@@ -6027,8 +6033,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto no-scrollbar bg-white rounded-t-2xl mt-2">
-        <section class="mx-4 mt-4 mb-2 rounded-2xl border border-yellow-100 bg-yellow-50 px-4 py-3">
+      <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar">
+        <section class="chat-home-hero mx-4 mt-4 mb-2">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-sm font-bold text-gray-950">{{ chatHomeHeroTitle }}</p>
@@ -6037,7 +6043,7 @@ onBeforeUnmount(() => {
             <div class="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                class="h-8 w-8 rounded-full border border-yellow-200 bg-white text-gray-700"
+                class="chat-home-hero__action"
                 :aria-label="t('对象', 'Objects')"
                 @click="openChatObjects"
               >
@@ -6045,7 +6051,7 @@ onBeforeUnmount(() => {
               </button>
               <button
                 type="button"
-                class="h-8 w-8 rounded-full border border-yellow-200 bg-white text-gray-700"
+                class="chat-home-hero__action"
                 :aria-label="t('群聊', 'Groups')"
                 @click="openChatGroups"
               >
@@ -6057,7 +6063,7 @@ onBeforeUnmount(() => {
 
         <section
           v-if="chatMessageRequestContacts.length > 0"
-          class="mx-4 mb-2 rounded-2xl border border-amber-100 bg-white px-4 py-3"
+          class="chat-home-notice-card mx-4 mb-2 border-amber-100 bg-white"
           data-testid="chat-message-requests-card"
           @click="openMessageRequests"
         >
@@ -6084,7 +6090,7 @@ onBeforeUnmount(() => {
 
         <section
           v-if="showFoldedSubscriptionsCard"
-          class="mx-4 mb-2 rounded-2xl border px-4 py-3 transition-colors"
+          class="chat-home-notice-card mx-4 mb-2 transition-colors"
           :class="chatFoldedSubscriptionUnreadTotal > 0 ? 'border-red-100 bg-red-50/50' : 'border-slate-100 bg-white'"
           data-testid="chat-folded-subscriptions-card"
           @click="openFoldedSubscriptions"
@@ -6158,21 +6164,22 @@ onBeforeUnmount(() => {
           v-for="contact in visibleChatContacts"
           :key="contact.id"
           @click="enterChat(contact)"
-          class="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer"
+          class="chat-list-row"
+          :data-testid="`chat-contact-row-${contact.id}`"
         >
-          <div class="w-12 h-12 rounded-[18px] overflow-hidden bg-gray-200">
+          <div class="chat-list-avatar">
             <img
               :src="contactAvatarForList(contact)"
               class="w-full h-full object-cover"
               :data-testid="`chat-contact-avatar-${contact.id}`"
             />
           </div>
-          <div class="flex-1 min-w-0">
+          <div class="chat-list-content">
             <div class="flex justify-between items-center gap-2">
               <span class="font-bold text-sm truncate">{{ contact.name }}</span>
               <span class="text-[10px] text-gray-400 shrink-0">{{ formatConversationTime(getConversationPreview(contact.id)?.lastMessageAt) }}</span>
             </div>
-            <div class="text-xs line-clamp-1 flex items-center gap-1" :class="getConversationPreview(contact.id)?.draft?.trim() ? 'text-orange-500' : 'text-gray-500'">
+            <div class="chat-list-preview" :class="getConversationPreview(contact.id)?.draft?.trim() ? 'text-orange-500' : 'text-gray-500'">
               <span v-if="contactKindTag(contact)" class="px-1 rounded text-[8px] font-medium" :class="contactKindTagClass(contact)">
                 {{ contactKindTag(contact) }}
               </span>
@@ -6197,7 +6204,7 @@ onBeforeUnmount(() => {
           </div>
           <span
             v-if="getConversationPreview(contact.id)?.unread"
-            class="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] inline-flex items-center justify-center"
+            class="chat-list-unread"
           >
             {{ Math.min(getConversationPreview(contact.id)?.unread || 0, 99) }}
           </span>

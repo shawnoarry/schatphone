@@ -299,6 +299,24 @@ const quickActions = computed(() => [
   },
 ])
 
+const chatMeStats = computed(() => [
+  {
+    id: 'recent',
+    label: t('近 7 天互动', 'Recent'),
+    value: recentInteractionRows.value.length,
+  },
+  {
+    id: 'saved',
+    label: t('已收藏', 'Saved'),
+    value: savedMessageRows.value.length,
+  },
+  {
+    id: 'contacts',
+    label: t('聊天对象', 'Chats'),
+    value: socialContacts.value.length,
+  },
+])
+
 watch(
   () => route.query.section,
   () => {
@@ -311,8 +329,8 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
+  <div class="chat-me-page w-full h-full text-black flex flex-col">
+    <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
       <button @click="router.push('/chat')" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
       </button>
@@ -320,9 +338,9 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-      <section class="rounded-[28px] border border-yellow-100 bg-yellow-50 px-5 py-5">
+      <section class="chat-me-hero px-5 py-5">
         <div class="flex items-center gap-4">
-          <div class="h-20 w-20 shrink-0 overflow-hidden rounded-[24px] bg-white shadow-sm">
+          <div class="chat-me-hero__avatar h-20 w-20 shrink-0 overflow-hidden">
             <img
               v-if="chatAvatar"
               :src="chatAvatar"
@@ -346,6 +364,17 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
             </button>
           </div>
         </div>
+        <div class="chat-me-stats mt-5 grid grid-cols-3 gap-2" data-testid="chat-me-stats">
+          <div
+            v-for="stat in chatMeStats"
+            :key="stat.id"
+            class="chat-me-stat"
+            :data-testid="`chat-me-stat-${stat.id}`"
+          >
+            <span class="chat-me-stat__value">{{ stat.value }}</span>
+            <span class="chat-me-stat__label">{{ stat.label }}</span>
+          </div>
+        </div>
       </section>
 
       <div
@@ -362,7 +391,7 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
         {{ actionFeedbackMessage }}
       </div>
 
-      <section class="grid grid-cols-3 gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-3">
+      <section class="chat-me-quick-actions grid grid-cols-3 gap-2 px-3 py-3">
         <button
           v-for="item in quickActions"
           :key="item.id"
@@ -438,7 +467,20 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
         <div v-if="recentInteractionRows.length === 0" class="rounded-xl border border-dashed border-gray-200 px-3 py-5 text-center text-xs text-gray-400">
           {{ t('还没有近期互动。', 'No recent interactions yet.') }}
         </div>
-        <div v-else class="space-y-2">
+        <div v-else class="space-y-3">
+          <div class="chat-me-recent-rail" data-testid="chat-me-recent-avatar-rail">
+            <button
+              v-for="row in recentInteractionRows"
+              :key="`recent-rail-${row.id}`"
+              type="button"
+              class="chat-me-recent-avatar"
+              :data-testid="`chat-me-recent-avatar-${row.id}`"
+              @click="openChatThread(row.id)"
+            >
+              <img :src="row.avatar" class="h-full w-full object-cover" />
+              <span>{{ row.name }}</span>
+            </button>
+          </div>
           <article
             v-for="row in recentInteractionRows"
             :key="row.id"

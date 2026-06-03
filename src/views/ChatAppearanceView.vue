@@ -202,8 +202,8 @@ const resetChatAppearance = () => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
+  <div class="chat-appearance-page w-full h-full text-black flex flex-col">
+    <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
       <button @click="router.push('/chat-settings')" class="text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('Chat 设置', 'Chat Settings') }}
       </button>
@@ -256,13 +256,34 @@ const resetChatAppearance = () => {
             v-for="option in layoutOptions"
             :key="option.value"
             type="button"
-            class="rounded-xl border px-3 py-3 text-left"
+            class="chat-appearance-layout-option rounded-xl border px-3 py-3 text-left"
             :class="chatAppearanceDraft.messageLayout === option.value ? 'border-yellow-300 bg-yellow-50' : 'border-gray-100 hover:bg-gray-50'"
+            :aria-pressed="chatAppearanceDraft.messageLayout === option.value ? 'true' : 'false'"
             :data-testid="`chat-layout-option-${option.value}`"
             @click="chatAppearanceDraft.messageLayout = option.value"
           >
-            <span class="block text-sm font-semibold text-gray-900">{{ option.label }}</span>
-            <span class="block text-[11px] text-gray-500">{{ option.detail }}</span>
+            <span
+              class="chat-layout-sample"
+              :class="`chat-layout-sample--${option.value}`"
+              :data-testid="`chat-layout-option-${option.value}-sample`"
+              aria-hidden="true"
+            >
+              <span class="chat-layout-sample__row is-contact">
+                <span class="chat-layout-sample__avatar"></span>
+                <span class="chat-layout-sample__bubble"></span>
+              </span>
+              <span class="chat-layout-sample__row is-user">
+                <span class="chat-layout-sample__bubble"></span>
+                <span class="chat-layout-sample__avatar"></span>
+              </span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-gray-900">{{ option.label }}</span>
+              <span class="block text-[11px] text-gray-500">{{ option.detail }}</span>
+            </span>
+            <span class="chat-appearance-layout-option__check">
+              <i class="fas fa-check"></i>
+            </span>
           </button>
         </div>
       </section>
@@ -323,7 +344,7 @@ const resetChatAppearance = () => {
         </div>
       </section>
 
-      <div class="grid grid-cols-2 gap-2">
+      <div class="chat-appearance-actions grid grid-cols-2 gap-2">
         <button
           type="button"
           class="py-3 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700"
