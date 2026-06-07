@@ -1,14 +1,22 @@
 # Modern Seoul K-pop Worldview Writing Plan
 
-Updated: 2026-06-06
+Updated: 2026-06-07
 
-Status: `WRITING_PLAN_REVIEW`
+Status: `MAIN_WORLDVIEW_DRAFT_NEXT`
 
 ## 1. Goal
 
 Plan the content-writing work for **现代首尔 K-pop 娱乐圈** after the content design is approved.
 
 This plan does not contain final worldview prose. It lists the assets to write, the order to write them, review gates, research gates, and acceptance checks.
+
+2026-06-07 priority update:
+
+- Stop treating entity-list polishing as a blocker.
+- Use the current group / generation knowledge draft as a V1 baseline.
+- Retain CORTIS in the new-generation coordinates.
+- Move the next active work to **Asset A: Main Worldview**.
+- Reference material, encyclopedia details, and member tables can be adjusted after the main worldview voice and scope are visible.
 
 ## 2. Inputs
 
@@ -34,6 +42,8 @@ Canonical naming baseline:
 - Do not list real entities without web verification in the entity-list phase.
 - Keep the main worldview readable; keep long lists in reference material.
 - Use Chinese body text, with English / romanized terms where useful.
+- Follow the setting-entry style guide: direct declarative sentences, clear keywords, low literary density, and minimal `不是……而是……` contrast structures.
+- Treat future "style patches" as separate knowledge/assets; do not bake a strong literary voice into the base worldview.
 
 ## 4. Deliverable Set
 
@@ -137,23 +147,22 @@ Structure:
 
 User-readable rule topics:
 
-- AU world status
-- Real entities as coordinates
-- Roster and relationship mutability
-- User profile priority
-- Full-industry role support
-- Romance / PR / career routes as optional routes
-- Young trainee institutional context
-- 2026 snapshot and non-live-update expectation
+- Time system: default real-time progression
+- Chat medium: online short-message mode by default
+- Online/offline boundary: offline co-presence requires explicit support
+- Calendar / Map ownership of confirmed schedules, locations, and movement
+- Notifications, service accounts, and fan-platform messages
+- AI proactive behavior and communication-state changes
+- User override through profile, Book additions, WorldBook edits, and direct prompt
 
 Model-facing rules:
 
-- Do not reduce the world to a trainee story.
-- Do not assign the user to a company, group, role, status, partner, or scandal unless provided.
-- Treat real company / group / platform names as coordinates.
-- Accept user-defined roster changes, replacement members, mixed-gender variants, and altered member counts.
-- Do not auto-explain missing or replaced real members.
-- Keep detailed real entity lists as reference material unless activated or requested.
+- Treat the main worldview as background and the world-rule asset as runtime/play behavior.
+- Default Chat replies to online phone short messages.
+- Use current real time unless overridden.
+- Do not expand ordinary Chat replies into long prose scenes unless requested.
+- Do not assume offline co-presence without explicit context.
+- Do not create confirmed schedules, locations, service records, or business-state changes from Chat text alone.
 
 ### Asset D: Profile Templates
 
@@ -371,6 +380,8 @@ Content acceptance:
 - Encyclopedia entries are consolidated big themes, not tiny glossary fragments.
 - Forum / social-media / fandom-community ecology is a standalone encyclopedia topic.
 - Reference material holds detailed entity lists and terminology.
+- The writing style is setting-entry based: direct, scannable, keyword-rich, and easy for users to edit.
+- The base content avoids excessive literary narration and leaves future prose voice to dedicated style patches.
 
 Product-chain acceptance later:
 
@@ -391,4 +402,3 @@ Before code or data integration:
 4. Write a separate implementation plan if data needs to be built into the app.
 
 Do not skip the entity-list review because the user explicitly requested accuracy and review over real companies, groups, programs, platforms, charts, and awards.
-

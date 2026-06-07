@@ -146,11 +146,17 @@ A future revision may expand the terminology layer for forum and fandom-communit
 
 ### 3.12 Writing Style
 
-Use a **hybrid style**:
+Use a **setting-entry style**.
 
-- opening sections can have literary atmosphere;
-- industry mechanisms should be clearly structured;
-- asset text should remain easy for WorldBook, Book export, Chat prompt context, and user editing.
+- Write direct declarative sentences that tell AI what the world is.
+- Prioritize keywords, roles, entities, mechanisms, places, schedules, and editable setting facts.
+- Avoid frequent `不是……而是……` contrast structures because they increase context load.
+- Keep literary atmosphere light; future style patches can add specific prose flavor later.
+- Keep asset text easy for WorldBook, Book export, Chat prompt context, and user editing.
+
+Detailed style guide:
+
+- `docs/superpowers/specs/2026-06-07-modern-seoul-kpop-worldview-content-style-guide.md`
 
 ## 4. Content Asset Model
 
@@ -207,24 +213,26 @@ World rules must have two layers:
 
 ### 7.1 User-Readable Rules
 
-These rules should read like setting principles:
+These rules should supplement the main worldview with play and runtime mechanics:
 
-- this is a parallel-world / AU industry setting;
-- real entities are coordinates;
-- user profiles and later additions can reshape rosters, relationships, and events;
-- no single career path is assumed;
-- romance, competition, PR, career, fandom, and business can all become play routes.
+- real-time progression by default;
+- Chat as an online short-message medium by default;
+- Calendar ownership of confirmed schedules;
+- Map ownership of locations and movement;
+- notifications, service accounts, and fan-platform messages as app-facing surfaces;
+- AI proactive behavior only when thread settings or runtime mechanisms allow it;
+- user profile, Book additions, and WorldBook edits overriding defaults.
 
 ### 7.2 Model-Facing Rules
 
 These should be short and explicit:
 
-- do not reduce the world to a trainee scenario;
-- do not assume the user belongs to a specific company or group unless the profile says so;
-- do not lock real group rosters;
-- accept user-defined AU roster changes;
-- do not introduce a fixed protagonist, fixed relationship, or fixed scandal from the built-in worldview alone;
-- keep real entity references as industry coordinates unless the user provides a specific AU alteration.
+- treat the main worldview as background and this rule asset as runtime behavior;
+- default Chat replies to online phone short messages;
+- use real current time unless user, Calendar, or context sets a different time;
+- do not turn ordinary Chat replies into long prose scenes unless requested;
+- do not assume offline co-presence without user / Calendar / Map / Book / context support;
+- do not create confirmed schedules, location changes, or business-state changes from Chat text alone.
 
 Do not write a separate legal-style disclaimer section.
 
@@ -370,4 +378,3 @@ Before the actual content is written:
 2. Decide which 8-12 encyclopedia entries are included in V1 after seeing the entity-list scope.
 3. Confirm the profile template field names against current WorldBook / Contacts template support.
 4. Decide whether the first deliverable is pure content files or app-selectable built-in data.
-
