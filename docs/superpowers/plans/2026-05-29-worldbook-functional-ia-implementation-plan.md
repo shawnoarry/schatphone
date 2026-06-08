@@ -231,9 +231,11 @@ defineProps({
 - [ ] Render these data points with stable test ids:
   - `worldbook-overview`
   - `worldbook-overview-pack`
-  - `worldbook-overview-worldview`
-  - `worldbook-overview-knowledge`
-  - `worldbook-overview-templates`
+  - `worldbook-overview-context-total`
+  - `worldbook-overview-text-category-worldview`
+  - `worldbook-overview-text-category-rules`
+  - `worldbook-overview-text-category-encyclopedia`
+  - `worldbook-overview-text-category-profile`
   - `worldbook-overview-consumers`
 
 - [ ] Overview should answer three user questions at a glance:

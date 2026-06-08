@@ -122,6 +122,138 @@ const linkedBookSources = computed(() =>
     }
   }),
 )
+
+const CONTEXT_TEXT_CATEGORIES = Object.freeze([
+  {
+    id: 'worldview',
+    roles: ['main_worldview'],
+    assetCategories: ['worldview'],
+    labelZh: '世界观',
+    labelEn: 'Worldview',
+    detailZh: '当前世界的基础前提',
+    detailEn: 'Core premise for this world',
+  },
+  {
+    id: 'rules',
+    roles: ['world_rule'],
+    assetCategories: ['world_rule'],
+    labelZh: '规则',
+    labelEn: 'Rules',
+    detailZh: '约束对话和运行时的规则',
+    detailEn: 'Rules read by chat and runtime',
+  },
+  {
+    id: 'encyclopedia',
+    roles: ['encyclopedia'],
+    assetCategories: ['encyclopedia'],
+    labelZh: '百科',
+    labelEn: 'Encyclopedia',
+    detailZh: '地点、术语和背景资料',
+    detailEn: 'Places, terms, and reference notes',
+  },
+  {
+    id: 'profile',
+    roles: ['profile_template'],
+    assetCategories: ['profile_template'],
+    labelZh: '人设',
+    labelEn: 'Profiles',
+    detailZh: '角色字段和人物设定模板',
+    detailEn: 'Character fields and profile templates',
+  },
+])
+
+const sourceDirectory = reactive({
+  open: false,
+  categoryId: '',
+  menu: '',
+  assetId: '',
+  draftTitle: '',
+  draftContent: '',
+  notice: '',
+})
+
+const contextTextCategories = computed(() =>
+  CONTEXT_TEXT_CATEGORIES.map((category) => {
+    const enabledLinks = linkedBookSources.value.filter(
+      (link) => link.enabled !== false && category.roles.includes(link.role || link.usage),
+    )
+    const availableAssets = bookStore.worldbookSourceAssets.filter((asset) => {
+      const role = inferBookSourceRole(asset)
+      return category.roles.includes(role) || category.assetCategories.includes(asset.category || asset.assetType)
+    })
+    const enabledCharCount = enabledLinks.reduce(
+      (total, link) => total + String(link.currentSourceText || '').length,
+      0,
+    )
+    return {
+      ...category,
+      label: t(category.labelZh, category.labelEn),
+      detail: t(category.detailZh, category.detailEn),
+      enabledLinks,
+      availableAssets,
+      enabledCharCount,
+      configured: enabledLinks.length > 0,
+    }
+  }),
+)
+
+const activeContextTextCharCount = computed(() => Number(worldOverview.value.worldviewCharCount || 0))
+
+const selectedTextCategory = computed(
+  () => contextTextCategories.value.find((category) => category.id === sourceDirectory.categoryId) || null,
+)
+
+const selectedDirectoryAsset = computed(() =>
+  bookStore.findAssetById(sourceDirectory.assetId) || null,
+)
+
+const directoryLinkForAsset = (assetId = '') => {
+  const asset = bookStore.findAssetById(assetId)
+  if (!asset || !selectedTextCategory.value) return null
+  return selectedTextCategory.value.enabledLinks.find((link) => link.assetId === asset.id) || null
+}
+
+const openSourceDirectory = (categoryId = '') => {
+  const category = contextTextCategories.value.find((item) => item.id === categoryId)
+  if (!category) return
+  sourceDirectory.open = true
+  sourceDirectory.categoryId = category.id
+  sourceDirectory.menu = ''
+  sourceDirectory.assetId = ''
+  sourceDirectory.draftTitle = ''
+  sourceDirectory.draftContent = ''
+  sourceDirectory.notice = ''
+}
+
+const closeSourceDirectory = () => {
+  sourceDirectory.open = false
+  sourceDirectory.menu = ''
+  sourceDirectory.assetId = ''
+  sourceDirectory.notice = ''
+}
+
+const openDirectoryAssetMenu = (asset) => {
+  if (!asset) return
+  sourceDirectory.assetId = asset.id
+  sourceDirectory.menu = 'asset'
+  sourceDirectory.notice = ''
+}
+
+const openDirectoryImportMenu = () => {
+  sourceDirectory.menu = 'import'
+  sourceDirectory.assetId = ''
+  sourceDirectory.draftTitle = selectedTextCategory.value
+    ? `${selectedTextCategory.value.label}文稿`
+    : ''
+  sourceDirectory.draftContent = ''
+  sourceDirectory.notice = ''
+}
+
+const closeDirectoryMenu = () => {
+  sourceDirectory.menu = ''
+  sourceDirectory.assetId = ''
+  sourceDirectory.notice = ''
+}
 const fallbackWorldviewPreview = computed(() => {
   const text = String(globalWorldview.value || '').trim().replace(/\s+/g, ' ')
   if (!text) {
@@ -710,6 +842,69 @@ const clearWorldAppTemplateProposalReview = () => {
   worldAppTemplateProposalReview.value = null
   worldAppTemplateProposalNotice.value = ''
   worldAppTemplateProposalNoticeTone.value = 'info'
+}
+
+const getPrimaryRoleForCategory = (category) => category?.roles?.[0] || 'main_worldview'
+
+const enableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
+  if (!asset || !selectedTextCategory.value) return
+  const role = getPrimaryRoleForCategory(selectedTextCategory.value)
+  const link = systemStore.addWorldBookSourceLink({
+    assetId: asset.id,
+    role,
+    enabled: true,
+    priority: 80 + linkedBookSources.value.length,
+    sourceVersion: asset.version,
+    sourceFingerprint: asset.contentFingerprint,
+    ...buildSourceSnapshotForLink(asset),
+  })
+  if (link) {
+    syncBookAssetSourceStatus(asset.id)
+    systemStore.saveNow()
+    bookStore.saveNow()
+    sourceDirectory.notice = t('已启用这份文稿。', 'Manuscript enabled.')
+    pulseSaved(t('文稿已加入当前世界背景。', 'Text added to current world context.'))
+  }
+}
+
+const disableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
+  if (!asset || !selectedTextCategory.value) return
+  const link = directoryLinkForAsset(asset.id)
+  if (!link) return
+  systemStore.updateWorldBookSourceLink(link.id, { enabled: false })
+  syncBookAssetSourceStatus(asset.id)
+  systemStore.saveNow()
+  bookStore.saveNow()
+  sourceDirectory.notice = t('已停用这份文稿。', 'Manuscript disabled.')
+}
+
+const createDirectoryImportedAsset = ({ enable = false } = {}) => {
+  const category = selectedTextCategory.value
+  const title = String(sourceDirectory.draftTitle || '').trim()
+  const content = String(sourceDirectory.draftContent || '').trim()
+  if (!category || !title || !content) {
+    sourceDirectory.notice = t('请先填写名称和正文。', 'Enter a name and text first.')
+    return null
+  }
+  const asset = bookStore.createAsset({
+    title,
+    category: category.assetCategories[0] || 'worldview',
+    assetType: category.assetCategories[0] || 'worldview',
+    format: content.startsWith('#') ? 'markdown' : 'plain',
+    content,
+    status: 'draft',
+    source: {
+      kind: 'worldbook_directory_import',
+      categoryId: category.id,
+    },
+  })
+  if (enable) enableDirectoryAsset(asset)
+  sourceDirectory.assetId = asset.id
+  sourceDirectory.menu = 'asset'
+  sourceDirectory.notice = enable
+    ? t('已导入并启用。', 'Imported and enabled.')
+    : t('已导入文稿。', 'Manuscript imported.')
+  return asset
 }
 
 const addFirstBookSource = () => {
@@ -1481,8 +1676,145 @@ onBeforeUnmount(() => {
     <div class="worldbook-scroll flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
       <WorldBookOverview
         :overview="worldOverview"
+        :text-categories="contextTextCategories"
+        :active-text-char-count="activeContextTextCharCount"
         :saved="saved"
+        @open-category="openSourceDirectory"
       />
+
+      <div
+        v-if="sourceDirectory.open"
+        class="worldbook-sheet-backdrop"
+        data-testid="worldbook-source-directory-backdrop"
+        @click="closeSourceDirectory"
+      ></div>
+      <div
+        v-if="sourceDirectory.open && selectedTextCategory"
+        class="worldbook-source-directory"
+        data-testid="worldbook-source-directory"
+        role="dialog"
+        :aria-label="selectedTextCategory.label"
+      >
+        <div class="worldbook-sheet-head">
+          <div>
+            <p>{{ t('目录', 'Directory') }}</p>
+            <h3>{{ selectedTextCategory.label }}</h3>
+          </div>
+          <button type="button" class="worldbook-inline-action" @click="closeSourceDirectory">
+            {{ t('关闭', 'Close') }}
+          </button>
+        </div>
+
+        <div class="worldbook-source-directory__active" data-testid="worldbook-source-directory-active">
+          <span>{{ t('当前生效', 'Active now') }}</span>
+          <div>
+            <em
+              v-for="link in selectedTextCategory.enabledLinks"
+              :key="link.id"
+            >
+              {{ link.title }}
+            </em>
+            <em v-if="selectedTextCategory.enabledLinks.length === 0" class="is-empty">
+              {{ t('未设置', 'Not set') }}
+            </em>
+          </div>
+        </div>
+
+        <div class="worldbook-source-directory__list" data-testid="worldbook-source-directory-list">
+          <button
+            type="button"
+            class="worldbook-source-directory__import"
+            data-testid="worldbook-source-directory-import"
+            @click="openDirectoryImportMenu"
+          >
+            <span><i class="fas fa-file-import" aria-hidden="true"></i></span>
+            <strong>{{ t('导入新文稿', 'Import new manuscript') }}</strong>
+            <small>{{ t('需要先命名，再决定是否启用', 'Name it first, then choose whether to enable it') }}</small>
+          </button>
+          <button
+            v-for="asset in selectedTextCategory.availableAssets"
+            :key="asset.id"
+            type="button"
+            class="worldbook-source-directory__row"
+            :class="{ 'is-enabled': Boolean(directoryLinkForAsset(asset.id)) }"
+            :data-testid="`worldbook-source-directory-asset-${asset.id}`"
+            @click="openDirectoryAssetMenu(asset)"
+          >
+            <span>
+              <strong>{{ asset.title }}</strong>
+              <small>
+                {{ asset.content?.length || 0 }} {{ t('字', 'chars') }} ·
+                {{ Array.isArray(asset.sections) ? asset.sections.length : 0 }} {{ t('段落', 'sections') }}
+              </small>
+            </span>
+            <em>{{ directoryLinkForAsset(asset.id) ? t('已启用', 'Enabled') : t('可选', 'Available') }}</em>
+          </button>
+        </div>
+
+        <div v-if="sourceDirectory.menu === 'asset' && selectedDirectoryAsset" class="worldbook-directory-menu" data-testid="worldbook-source-directory-asset-menu">
+          <div>
+            <p>{{ t('文稿操作', 'Manuscript actions') }}</p>
+            <strong>{{ selectedDirectoryAsset.title }}</strong>
+            <small>
+              {{ selectedDirectoryAsset.content?.length || 0 }} {{ t('字', 'chars') }} ·
+              {{ Array.isArray(selectedDirectoryAsset.sections) ? selectedDirectoryAsset.sections.length : 0 }} {{ t('段落', 'sections') }}
+            </small>
+          </div>
+          <div class="worldbook-directory-menu__actions">
+            <button
+              v-if="!directoryLinkForAsset(selectedDirectoryAsset.id)"
+              type="button"
+              class="worldbook-primary-action"
+              data-testid="worldbook-source-directory-enable"
+              @click="enableDirectoryAsset()"
+            >
+              {{ t('启用', 'Enable') }}
+            </button>
+            <button
+              v-else
+              type="button"
+              class="worldbook-secondary-action"
+              data-testid="worldbook-source-directory-disable"
+              @click="disableDirectoryAsset()"
+            >
+              {{ t('停用', 'Disable') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" @click="closeDirectoryMenu">
+              {{ t('返回目录', 'Back') }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="sourceDirectory.menu === 'import'" class="worldbook-directory-menu" data-testid="worldbook-source-directory-import-menu">
+          <div>
+            <p>{{ t('导入文稿', 'Import manuscript') }}</p>
+            <strong>{{ selectedTextCategory.label }}</strong>
+          </div>
+          <label class="worldbook-directory-field">
+            <span>{{ t('文稿名称', 'Manuscript name') }}</span>
+            <input v-model="sourceDirectory.draftTitle" type="text" data-testid="worldbook-source-directory-import-title" />
+          </label>
+          <label class="worldbook-directory-field">
+            <span>{{ t('正文', 'Text') }}</span>
+            <textarea v-model="sourceDirectory.draftContent" rows="5" data-testid="worldbook-source-directory-import-content"></textarea>
+          </label>
+          <div class="worldbook-directory-menu__actions">
+            <button type="button" class="worldbook-primary-action" data-testid="worldbook-source-directory-import-enable" @click="createDirectoryImportedAsset({ enable: true })">
+              {{ t('保存并启用', 'Save and enable') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" data-testid="worldbook-source-directory-import-save" @click="createDirectoryImportedAsset()">
+              {{ t('只保存', 'Save only') }}
+            </button>
+            <button type="button" class="worldbook-secondary-action" @click="closeDirectoryMenu">
+              {{ t('返回目录', 'Back') }}
+            </button>
+          </div>
+        </div>
+
+        <p v-if="sourceDirectory.notice" class="worldbook-directory-notice" data-testid="worldbook-source-directory-notice">
+          {{ sourceDirectory.notice }}
+        </p>
+      </div>
 
       <section class="worldbook-control-deck" data-testid="worldbook-control-deck">
         <div class="worldbook-control-deck__head">
@@ -3414,6 +3746,202 @@ onBeforeUnmount(() => {
     linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted)),
     var(--system-panel-bg);
   box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.worldbook-source-directory {
+  display: grid;
+  gap: 12px;
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 0;
+  z-index: 42;
+  max-height: min(82vh, 720px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
+  background:
+    linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted)),
+    var(--system-panel-bg);
+  box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.worldbook-source-directory__active {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
+}
+
+.worldbook-source-directory__active > span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-source-directory__active div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.worldbook-source-directory__active em {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--system-panel-bg);
+  color: var(--system-accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-source-directory__active em.is-empty {
+  border: 1px dashed var(--system-control-border);
+  background: transparent;
+  color: var(--system-text-soft);
+}
+
+.worldbook-source-directory__list {
+  display: grid;
+  gap: 8px;
+}
+
+.worldbook-source-directory__row,
+.worldbook-source-directory__import {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
+  color: var(--system-text);
+  text-align: left;
+}
+
+.worldbook-source-directory__import {
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+
+.worldbook-source-directory__import > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--system-accent);
+  background: var(--system-info-soft);
+}
+
+.worldbook-source-directory__row.is-enabled {
+  border-color: color-mix(in srgb, var(--system-accent) 40%, var(--system-control-border));
+  background: var(--system-info-soft);
+}
+
+.worldbook-source-directory__row strong,
+.worldbook-source-directory__import strong {
+  display: block;
+  overflow: hidden;
+  color: var(--system-text);
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-source-directory__row small,
+.worldbook-source-directory__import small {
+  display: block;
+  margin-top: 3px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.worldbook-source-directory__row em {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--system-surface-muted);
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.worldbook-source-directory__row.is-enabled em {
+  background: var(--system-panel-bg);
+  color: var(--system-accent);
+}
+
+.worldbook-directory-menu {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+}
+
+.worldbook-directory-menu p {
+  margin: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.worldbook-directory-menu strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--system-text);
+  font-size: 14px;
+}
+
+.worldbook-directory-menu small {
+  display: block;
+  margin-top: 4px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.worldbook-directory-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.worldbook-directory-field {
+  display: grid;
+  gap: 6px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.worldbook-directory-field input,
+.worldbook-directory-field textarea {
+  width: 100%;
+  border: 1px solid var(--system-control-border);
+  border-radius: 10px;
+  background: var(--system-control-bg);
+  color: var(--system-text);
+  padding: 10px;
+  font: inherit;
+}
+
+.worldbook-directory-notice {
+  margin: 0;
+  color: var(--system-accent);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .worldbook-sheet-backdrop {

@@ -87,6 +87,7 @@ What is already landed:
 71. WorldBook's Setting Text picker now keeps library browsing in-place: opening the text library shows Book cards inside the current sheet instead of navigating to Book. Book remains the editor; WorldBook remains the activation surface.
 72. Book/WorldBook now have real built-in placeholder manuscripts for testing interaction breadth: encyclopedia, profile-template, world-pack-reference, and reference-material entries appear as normal Book-card choices instead of mock UI-only cards.
 73. WorldBook's Book-card picker now groups manuscripts inside category/role project cards instead of showing one flat mixed list, making worldviews, rules, encyclopedia, profile templates, world-pack references, and reference materials easier to scan.
+74. WorldBook's Active World overview now acts as the main text-context control surface: it shows active context text character count plus selected manuscript name chips, then opens focused directory sheets for Worldview, Rules, Encyclopedia, and Profiles. Backend reference-style labels are kept out of this primary path.
 
 Still incomplete:
 

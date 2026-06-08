@@ -24,6 +24,7 @@ What is already landed:
 11. WorldBook's Book-library entry is an in-place card catalog, not a route handoff to `/book`. That preserves the ownership split: Book edits assets, WorldBook activates source links.
 12. The additional K-pop placeholder entries are real built-in Book assets exposed through the Book store and WorldBook picker, while still excluded from user persistence and backups.
 13. WorldBook picker grouping is presentation-only: grouped category cards are derived from real Book assets and inferred activation roles; no second storage layer or fake UI-only asset list is introduced.
+14. WorldBook's Active World text overview is also presentation-only: the four visible directories are derived from Book assets and WorldBook source links, while source-link storage remains the same canonical activation layer.
 
 Still incomplete:
 

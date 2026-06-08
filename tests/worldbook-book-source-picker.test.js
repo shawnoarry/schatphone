@@ -210,6 +210,40 @@ describe('WorldBook setting text picker', () => {
     wrapper.unmount()
   })
 
+  test('enables an encyclopedia manuscript from the overview category directory without binding it as worldview', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const { wrapper } = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').trigger('click')
+    await nextTick()
+
+    await wrapper
+      .get(
+        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_encyclopedia_placeholder"]',
+      )
+      .trigger('click')
+    await nextTick()
+
+    await wrapper.get('[data-testid="worldbook-source-directory-enable"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_encyclopedia_placeholder',
+      role: 'encyclopedia',
+      enabled: true,
+    })
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
+      '百科条目占位',
+    )
+    expect(wrapper.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
+      'Not set',
+    )
+
+    wrapper.unmount()
+  })
+
   test('clears base worldview without changing Book assets', async () => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()

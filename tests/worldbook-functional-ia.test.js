@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
 import CurrentWorldPackPanel from '../src/components/worldbook/CurrentWorldPackPanel.vue'
 import { useChatStore } from '../src/stores/chat'
+import { useBookStore } from '../src/stores/book'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -71,12 +72,21 @@ describe('WorldBook functional IA', () => {
 
     expect(overview.text()).toContain('Active world')
     expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
-    expect(overview.get('[data-testid="worldbook-overview-worldview"]').text()).toContain(
+    expect(overview.get('[data-testid="worldbook-overview-context-total"]').text()).toContain(
       String(worldview.length),
     )
-    expect(overview.get('[data-testid="worldbook-overview-knowledge"]').text()).toContain('1 / 2')
-    expect(overview.get('[data-testid="worldbook-overview-knowledge"]').text()).toContain('Encyclopedia')
-    expect(overview.get('[data-testid="worldbook-overview-templates"]').text()).toContain('1')
+    expect(overview.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
+      'Not set',
+    )
+    expect(overview.get('[data-testid="worldbook-overview-text-category-rules"]').text()).toContain(
+      'Not set',
+    )
+    expect(overview.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
+      'Encyclopedia',
+    )
+    expect(overview.get('[data-testid="worldbook-overview-text-category-profile"]').text()).toContain(
+      'Profiles',
+    )
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(overview.get('[data-testid="worldbook-overview-consumer-runtime"]').text()).toContain(
       'Event Runtime',
@@ -97,6 +107,42 @@ describe('WorldBook functional IA', () => {
     )
     expect(currentPack.element.compareDocumentPosition(worldKernel.element)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+
+    wrapper.unmount()
+  })
+
+  test('active text overview opens category directories and shows enabled manuscript names', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    systemStore.settings.system.language = 'en-US'
+    const asset = bookStore.createAsset({
+      id: 'asset_overview_encyclopedia',
+      title: 'Agency Glossary',
+      category: 'encyclopedia',
+      content: 'Trainee dorm terms and agency shorthand.',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: asset.id,
+      role: 'encyclopedia',
+      enabled: true,
+    })
+
+    const wrapper = await mountWorldBook()
+
+    expect(wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
+      'Agency Glossary',
+    )
+
+    await wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-source-directory"]').text()).toContain('Encyclopedia')
+    expect(wrapper.get('[data-testid="worldbook-source-directory-active"]').text()).toContain(
+      'Agency Glossary',
+    )
+    expect(wrapper.get('[data-testid="worldbook-source-directory-asset-asset_overview_encyclopedia"]').text()).toContain(
+      'Enabled',
     )
 
     wrapper.unmount()

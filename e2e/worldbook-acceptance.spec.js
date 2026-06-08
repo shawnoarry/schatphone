@@ -108,8 +108,11 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
 
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-pack')).toContainText('默认世界')
-  await expect(page.getByTestId('worldbook-overview-knowledge')).toContainText('1 / 2')
-  await expect(page.getByTestId('worldbook-overview-templates')).toContainText('1')
+  await expect(page.getByTestId('worldbook-overview-context-total')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-text-category-worldview')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-text-category-rules')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-text-category-encyclopedia')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-text-category-profile')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-consumer-chat')).toContainText('聊天')
 
   await page.getByTestId('worldbook-panel-tab-pack').click()

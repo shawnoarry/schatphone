@@ -7,11 +7,21 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  textCategories: {
+    type: Array,
+    default: () => [],
+  },
+  activeTextCharCount: {
+    type: Number,
+    default: 0,
+  },
   saved: {
     type: Boolean,
     default: false,
   },
 })
+
+const emit = defineEmits(['open-category'])
 
 const { t } = useI18n()
 
@@ -28,10 +38,8 @@ const displayPackName = computed(() =>
   ),
 )
 
-const worldviewStatus = computed(() =>
-  props.overview.hasWorldview
-    ? t('已写入基础规则', 'Base rules present')
-    : t('尚未写入基础规则', 'No base rules yet'),
+const textCategories = computed(() =>
+  Array.isArray(props.textCategories) ? props.textCategories : [],
 )
 </script>
 
@@ -54,8 +62,8 @@ const worldviewStatus = computed(() =>
         <p class="worldbook-overview__description">
           {{
             t(
-              '这里汇总当前会被 Chat 与运行时读取的世界书材料。',
-              'This summarizes the WorldBook material currently read by Chat and runtime.',
+              '这里显示当前真正会进入上下文的文本。点一个类别管理它。',
+              'Shows the text currently active in context. Open a category to manage it.',
             )
           }}
         </p>
@@ -68,31 +76,40 @@ const worldviewStatus = computed(() =>
       </span>
     </div>
 
-    <div class="worldbook-overview__grid">
-      <div
-        class="worldbook-overview__metric"
-        data-testid="worldbook-overview-worldview"
+    <div class="worldbook-overview__context-total" data-testid="worldbook-overview-context-total">
+      <span>{{ t('能起作用的文本字数', 'Active context text') }}</span>
+      <strong>{{ activeTextCharCount }}</strong>
+      <small>{{ t('只统计已启用文稿', 'Enabled manuscripts only') }}</small>
+    </div>
+
+    <div class="worldbook-overview__text-grid" data-testid="worldbook-overview-text-categories">
+      <button
+        v-for="category in textCategories"
+        :key="category.id"
+        type="button"
+        class="worldbook-overview__text-category"
+        :class="{ 'is-configured': category.configured }"
+        :data-testid="`worldbook-overview-text-category-${category.id}`"
+        @click="emit('open-category', category.id)"
       >
-        <span>{{ t('世界观', 'Worldview') }}</span>
-        <strong>{{ overview.worldviewCharCount }}</strong>
-        <small>{{ worldviewStatus }}</small>
-      </div>
-      <div
-        class="worldbook-overview__metric"
-        data-testid="worldbook-overview-knowledge"
-      >
-        <span>{{ t('百科', 'Encyclopedia') }}</span>
-        <strong>{{ overview.enabledKnowledgeCount }} / {{ overview.knowledgeCount }}</strong>
-        <small>{{ t('启用 / 总数', 'enabled / total') }}</small>
-      </div>
-      <div
-        class="worldbook-overview__metric"
-        data-testid="worldbook-overview-templates"
-      >
-        <span>{{ t('角色模板', 'Role templates') }}</span>
-        <strong>{{ overview.profileTemplateCount }}</strong>
-        <small>{{ t('当前世界专用', 'current-world specific') }}</small>
-      </div>
+        <span class="worldbook-overview__text-category-head">
+          <strong>{{ category.label }}</strong>
+          <small>{{ category.detail }}</small>
+        </span>
+        <span class="worldbook-overview__text-tags">
+          <em
+            v-for="link in category.enabledLinks"
+            :key="link.id"
+            class="is-active"
+            :data-testid="`worldbook-overview-active-text-${category.id}-${link.id}`"
+          >
+            {{ link.title }}
+          </em>
+          <em v-if="category.enabledLinks.length === 0" class="is-empty">
+            {{ t('未设置', 'Not set') }}
+          </em>
+        </span>
+      </button>
     </div>
 
     <div
@@ -171,41 +188,108 @@ const worldviewStatus = computed(() =>
   color: var(--system-info);
 }
 
-.worldbook-overview__grid {
+.worldbook-overview__context-total {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 4px;
   margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
 }
 
-.worldbook-overview__metric {
-  min-height: 82px;
+.worldbook-overview__context-total span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.worldbook-overview__context-total strong {
+  color: var(--system-text);
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.worldbook-overview__context-total small {
+  color: var(--system-text-soft);
+  font-size: 10px;
+}
+
+.worldbook-overview__text-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.worldbook-overview__text-category {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  min-height: 98px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
   background: var(--system-control-bg);
   padding: 10px;
+  color: var(--system-text);
+  text-align: left;
 }
 
-.worldbook-overview__metric span,
+.worldbook-overview__text-category.is-configured {
+  border-color: color-mix(in srgb, var(--system-accent) 40%, var(--system-control-border));
+  background:
+    linear-gradient(180deg, var(--system-info-soft), transparent),
+    var(--system-control-bg);
+}
+
+.worldbook-overview__text-category-head,
+.worldbook-overview__text-tags {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.worldbook-overview__text-category-head strong {
+  color: var(--system-text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.worldbook-overview__text-category-head small,
 .worldbook-overview__consumers > span {
-  display: block;
   font-size: 11px;
   color: var(--system-text-muted);
 }
 
-.worldbook-overview__metric strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 20px;
-  line-height: 1;
-  color: var(--system-text);
+.worldbook-overview__text-tags {
+  align-content: start;
 }
 
-.worldbook-overview__metric small {
+.worldbook-overview__text-tags em {
   display: block;
-  margin-top: 6px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: var(--system-surface-muted);
+  color: var(--system-text);
   font-size: 10px;
-  line-height: 1.35;
+  font-style: normal;
+  font-weight: 780;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worldbook-overview__text-tags em.is-active {
+  background: var(--system-panel-bg);
+  color: var(--system-accent);
+}
+
+.worldbook-overview__text-tags em.is-empty {
+  border: 1px dashed var(--system-control-border);
+  background: transparent;
   color: var(--system-text-soft);
 }
 
@@ -234,7 +318,7 @@ const worldviewStatus = computed(() =>
 }
 
 @media (max-width: 430px) {
-  .worldbook-overview__grid {
+  .worldbook-overview__text-grid {
     grid-template-columns: 1fr;
   }
 

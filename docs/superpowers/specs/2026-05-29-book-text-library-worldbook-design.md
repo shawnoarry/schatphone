@@ -23,6 +23,7 @@ Implementation note, 2026-05-29:
 - 2026-06-08 IA correction: opening the Book/text library from `Settings -> WorldBook` now stays in the WorldBook flow and shows an in-place Book-card catalog. It must not route to `/book`; Book remains the editing workspace, while WorldBook only chooses and activates text.
 - 2026-06-08 placeholder-asset follow-up: the K-pop trial library now includes real built-in placeholder manuscripts for encyclopedia, profile-template, world-pack-reference, and reference-material interaction testing. They are Book assets, not static mock cards.
 - 2026-06-08 picker-grouping follow-up: WorldBook's Book-card picker now groups manuscripts by activation role/category, so users choose from a category project card before selecting a specific Book manuscript.
+- 2026-06-08 active-context overview follow-up: the top Active World card is now the primary text-activation entry. It shows active context text character count and only four user-facing Book categories: Worldview, Rules, Encyclopedia, and Profiles. Each category opens an in-place directory sheet with active/available manuscript rows and import actions; reference/world-pack-reference labels stay out of the primary UI.
 
 ## 1. Decision Summary
 
