@@ -19,7 +19,7 @@ npm run dev
 
 Local preview note:
 
-- Do not use `http://127.0.0.1:5173/schatphone/` as the default review link. That port has been used by obsolete preview sessions and must not be treated as the product baseline.
+- Do not reuse stale local preview ports as default review links. Old preview sessions must not be treated as the product baseline.
 - When a local preview is needed, start one deliberate dev server, record its exact URL in the handoff, and confirm with the user before using it as an acceptance reference.
 - The authoritative product review link is the user-confirmed deployment URL, not an automatically reused local port.
 

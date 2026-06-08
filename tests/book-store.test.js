@@ -10,11 +10,61 @@ describe('book store', () => {
     setActivePinia(createPinia())
   })
 
-  test('starts from an empty stable library', () => {
+  test('starts from an empty user library with built-in callable sources', () => {
     const store = useBookStore()
 
     expect(store.assetCount).toBe(0)
-    expect(store.listAssets()).toEqual([])
+    expect(store.createBackupSnapshot()).toEqual({
+      assets: [],
+      categories: [],
+    })
+    expect(store.listAssets({ search: 'K-pop' }).map((asset) => asset.id)).toEqual(
+      expect.arrayContaining([
+        'built_in_modern_seoul_kpop_main_worldview',
+        'built_in_modern_seoul_kpop_world_rules',
+        'built_in_modern_seoul_kpop_encyclopedia_placeholder',
+        'built_in_modern_seoul_kpop_profile_template_placeholder',
+        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
+        'built_in_modern_seoul_kpop_reference_material_placeholder',
+      ]),
+    )
+    expect(store.findAssetById('built_in_modern_seoul_kpop_main_worldview')).toMatchObject({
+      title: '现代首尔 K-pop 娱乐圈：主世界观',
+      category: 'worldview',
+      locked: true,
+      source: {
+        kind: 'built_in',
+      },
+    })
+    expect(store.worldbookSourceAssets.map((asset) => asset.id)).toEqual(
+      expect.arrayContaining([
+        'built_in_modern_seoul_kpop_main_worldview',
+        'built_in_modern_seoul_kpop_encyclopedia_placeholder',
+        'built_in_modern_seoul_kpop_profile_template_placeholder',
+        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
+        'built_in_modern_seoul_kpop_reference_material_placeholder',
+      ]),
+    )
+    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toContain(
+      'built_in_modern_seoul_kpop_encyclopedia_placeholder',
+    )
+    expect(store.listAssets({ category: 'profile_template' }).map((asset) => asset.id)).toContain(
+      'built_in_modern_seoul_kpop_profile_template_placeholder',
+    )
+    expect(store.listAssets({ category: 'reference_material' }).map((asset) => asset.id)).toEqual(
+      expect.arrayContaining([
+        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
+        'built_in_modern_seoul_kpop_reference_material_placeholder',
+      ]),
+    )
+    expect(store.updateAsset('built_in_modern_seoul_kpop_main_worldview', { title: 'Changed' })).toMatchObject({
+      ok: false,
+      reason: 'built_in',
+    })
+    expect(store.deleteAsset('built_in_modern_seoul_kpop_main_worldview', { force: true })).toMatchObject({
+      ok: false,
+      reason: 'built_in',
+    })
     expect(store.createBackupSnapshot()).toEqual({
       assets: [],
       categories: [],
@@ -37,8 +87,12 @@ describe('book store', () => {
     expect(asset.assetType).toBe('world_rule')
     expect(store.findAssetById('asset_city_rules')?.title).toBe('City Rules')
     expect(store.listAssets({ search: 'magic' })).toHaveLength(1)
-    expect(store.listAssets({ category: 'world_rule' })).toHaveLength(1)
-    expect(store.listAssets({ assetType: 'rule_set' })).toHaveLength(1)
+    expect(store.listAssets({ category: 'world_rule' }).map((item) => item.id)).toEqual(
+      expect.arrayContaining(['asset_city_rules', 'built_in_modern_seoul_kpop_world_rules']),
+    )
+    expect(store.listAssets({ assetType: 'rule_set' }).map((item) => item.id)).toEqual(
+      expect.arrayContaining(['asset_city_rules', 'built_in_modern_seoul_kpop_world_rules']),
+    )
     expect(store.listAssets({ tag: 'city' })).toHaveLength(1)
 
     const updated = store.updateAsset(asset.id, {

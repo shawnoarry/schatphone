@@ -182,6 +182,7 @@ The current repo-local skills recorded in `.agents/skills` and `skills-lock.json
 | `find-skills` | Skill discovery and installation help when a new capability is needed | `docs/process/DEVELOPMENT_TOOLING.md` |
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
+| `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
 | `impeccable` | Strict second-pass polish for layout, hierarchy, copy, and edge states | `docs/process/VISUAL_WORKFLOW.md` |
 | `web-design-guidelines` | External UI/UX/accessibility review pass | `docs/process/VISUAL_WORKFLOW.md` |
 | `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
@@ -314,6 +315,58 @@ The `skills-lock.json` entry should record:
 ```json
 "chinese-novelist": {
   "source": "penglonghuang/chinese-novelist-skill",
+  "sourceType": "github",
+  "skillPath": "SKILL.md"
+}
+```
+
+After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
+
+### 8.2 Image To Code Skill
+
+`image-to-code` is a repo-local visual production skill.
+
+Use it for:
+
+- restoring a user-provided UI image, screenshot, Figma export, or long design image into code;
+- enforcing a 750px reference canvas before responsive scaling;
+- exporting high-resolution transparent PNG slices when the source image contains icons, bitmap artwork, or complex visual layers;
+- keeping source-image proportions, positions, stacking, colors, and opacity as the visual contract.
+
+Do not use it for ordinary UI polish, broad redesign, or component-system refactoring. For those tasks, use the regular visual stack in `docs/process/VISUAL_WORKFLOW.md`.
+
+Install source:
+
+```text
+https://github.com/yuzhworkhard-wq/image-to-code.git
+```
+
+Install from the confirmed SchatPhone project root:
+
+```powershell
+npx.cmd skills add https://github.com/yuzhworkhard-wq/image-to-code.git --skill image-to-code
+```
+
+Expected local files after install:
+
+```text
+.\.agents\skills\image-to-code\SKILL.md
+skills-lock.json
+```
+
+Verification:
+
+```powershell
+Test-Path .\.agents\skills\image-to-code\SKILL.md
+Select-String -Path .\skills-lock.json -Pattern '"image-to-code"'
+git status --short
+```
+
+The `skills-lock.json` entry should record:
+
+```json
+"image-to-code": {
+  "source": "yuzhworkhard-wq/image-to-code",
   "sourceType": "github",
   "skillPath": "SKILL.md"
 }

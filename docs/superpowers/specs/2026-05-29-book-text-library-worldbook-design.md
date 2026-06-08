@@ -19,6 +19,10 @@ Implementation note, 2026-05-29:
 - 2026-05-30 visual/IA follow-up: Sources now uses a stats-first source-control panel with linked-source cards, clearer fallback state, and separated destructive removal.
 - 2026-05-30 visual/IA follow-up: Current World Pack and Knowledge panels now have a first craft pass; knowledge create/edit work uses a bottom sheet rather than an always-visible inline authoring form.
 - 2026-05-30 visual/IA follow-up: Kernel and Templates now use the same task-panel treatment as Sources/Pack/Knowledge, with compact state headers and stronger mobile cards.
+- 2026-06-08 content-source follow-up: `现代首尔 K-pop 娱乐圈` now ships as built-in read-only Book assets for main worldview and world rules. They appear in Book and WorldBook source picking, can be linked into active context, stay outside user backup/persistence payloads, and create user-owned copies before editing.
+- 2026-06-08 IA correction: opening the Book/text library from `Settings -> WorldBook` now stays in the WorldBook flow and shows an in-place Book-card catalog. It must not route to `/book`; Book remains the editing workspace, while WorldBook only chooses and activates text.
+- 2026-06-08 placeholder-asset follow-up: the K-pop trial library now includes real built-in placeholder manuscripts for encyclopedia, profile-template, world-pack-reference, and reference-material interaction testing. They are Book assets, not static mock cards.
+- 2026-06-08 picker-grouping follow-up: WorldBook's Book-card picker now groups manuscripts by activation role/category, so users choose from a category project card before selecting a specific Book manuscript.
 
 ## 1. Decision Summary
 

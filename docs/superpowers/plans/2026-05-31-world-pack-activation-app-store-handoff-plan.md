@@ -446,7 +446,7 @@ Expected: all pass. Existing CRLF warnings may appear from unrelated dirty files
 
 - [ ] **Step 4: Browser smoke**
 
-With the dev server on `http://127.0.0.1:5173/schatphone`, smoke:
+With the dev server on `http://127.0.0.1:5188/schatphone`, smoke:
 
 1. Unlock.
 2. Open `#/worldbook?from=settings`.

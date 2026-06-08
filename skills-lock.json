@@ -44,6 +44,12 @@
       "skillPath": "skills/productivity/grill-me/SKILL.md",
       "computedHash": "daf64ca15f4fa081a6747766db538e2dbd1131725ed4fcdd3d538dc62c7035ba"
     },
+    "image-to-code": {
+      "source": "yuzhworkhard-wq/image-to-code",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "66ed9dacab0ff4197b5c69e0c26e2cfac004d7a8068b8cb4ccaa3440f8b42f8f"
+    },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",

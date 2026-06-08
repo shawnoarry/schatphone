@@ -76,6 +76,7 @@ const props = defineProps({
 const emit = defineEmits([
   'select-pack',
   'activate-pack',
+  'reset-pack',
   'analyze-world-profile',
   'enable-pack',
   'disable-pack',
@@ -107,6 +108,11 @@ const selectedPackName = computed(() =>
     selectedPack.value?.name || 'Default world',
   ),
 )
+const isSelectedPackActive = computed(() => selectedPack.value?.id === props.overview.activePack?.id)
+const visibleEnabledPacks = computed(() => props.enabledPacks.filter((pack) => pack?.id !== 'default_world'))
+const canResetWorldPack = computed(
+  () => props.overview.activePack?.id !== 'default_world' || visibleEnabledPacks.value.length > 0,
+)
 
 const activationStateLabel = computed(() =>
   props.overview.activePack?.id === 'default_world'
@@ -120,19 +126,110 @@ const enabledPackIds = computed(() => new Set(props.enabledPacks.map((pack) => p
 const recommendedRows = computed(() => props.recommendationReview?.grouped?.recommended || [])
 const browseableRows = computed(() => props.recommendationReview?.grouped?.browseable || [])
 const unsupportedRows = computed(() => props.recommendationReview?.grouped?.unsupported || [])
+
+const packDisplayName = (pack = {}) => t(pack.title || pack.packTitle || pack.name || pack.packName || '', pack.name || pack.packName || pack.title || pack.packTitle || 'World Pack')
+const packDisplayDescription = (pack = {}) => {
+  const id = pack.id || pack.packId || ''
+  const descriptionMap = {
+    default_world: [
+      '使用当前 Book 与世界书材料，不叠加额外世界默认值。',
+      'Use current Book and WorldBook material without extra world defaults.',
+    ],
+    modern_parallel: [
+      '现实感现代世界，适合媒体、外卖、社交系统等日常设定。',
+      'A realistic contemporary world for media feeds, delivery services, and familiar social systems.',
+    ],
+    school_life: [
+      '为校园设定加入课表、校内公告和学生事务语境。',
+      'Adds campus schedules, class notices, and school-service context.',
+    ],
+    business_family: [
+      '为财阀、企业和家族资源关系加入会议与办公室语境。',
+      'Adds family-office, board-calendar, and resource hierarchy context.',
+    ],
+    urban_mystery: [
+      '为都市怪谈或调查线加入传闻、异常地点和确认入口。',
+      'Adds supernatural rumor and investigation context to an urban worldview.',
+    ],
+    survival_city: [
+      '资源紧张的灾后都市，强调补给、调度、辖区和警报。',
+      'A resource-constrained city where supply, dispatch, territory, and alerts matter.',
+    ],
+    fandom_parallel: [
+      '以粉丝、行程、发布和订阅为核心的偶像企划世界。',
+      'A fandom-centered world with publication feeds, schedules, events, and subscription notices.',
+    ],
+  }
+  const mapped = descriptionMap[id]
+  if (mapped) return t(mapped[0], mapped[1])
+  return t(
+    pack.descriptionZh || pack.summaryZh || pack.description || '',
+    pack.description || pack.descriptionZh || pack.summaryZh || '',
+  )
+}
+
+const traitLabel = (raw = '') => {
+  const value = String(raw || '').trim()
+  const labelMap = {
+    'era:modern': t('现代', 'modern era'),
+    'era:future': t('未来', 'future era'),
+    'era:post_apocalyptic': t('灾后', 'post-disaster era'),
+    'settingTraits:school': t('校园', 'school setting'),
+    'settingTraits:entertainment': t('娱乐圈', 'entertainment setting'),
+    'settingTraits:urban': t('都市', 'urban setting'),
+    'settingTraits:business_family': t('财阀/家族', 'business-family setting'),
+    'settingTraits:corporate': t('企业组织', 'corporate setting'),
+    'settingTraits:survival': t('生存压力', 'survival setting'),
+    'settingTraits:investigation': t('调查线', 'investigation setting'),
+    'realism:realistic': t('现实风格', 'realistic style'),
+    'realism:supernatural': t('超自然', 'supernatural style'),
+    'socialRoles:student': t('学生角色', 'student roles'),
+    'socialRoles:celebrity': t('艺人角色', 'celebrity roles'),
+    'socialRoles:fan': t('粉丝角色', 'fan roles'),
+    'socialRoles:manager': t('经纪/管理角色', 'manager roles'),
+    'economyTraits:ordinary': t('普通经济', 'ordinary economy'),
+    'economyTraits:luxury': t('高资源/奢华', 'luxury economy'),
+    'economyTraits:corporate_controlled': t('企业控制资源', 'corporate-controlled economy'),
+    'economyTraits:resource_scarce': t('资源稀缺', 'resource-scarce economy'),
+    'technologyLevel:real_world': t('现实科技', 'real-world technology'),
+  }
+  return labelMap[value] || value.replace(/^[^:]+:/, '').replace(/_/g, ' ')
+}
+
+const fitStatusLabel = (status = '') => {
+  const labelMap = {
+    recommended: t('高度匹配', 'Strong match'),
+    adaptable: t('可适配', 'Adaptable'),
+    needs_context: t('需要确认背景', 'Needs context confirmation'),
+    conflicting: t('可能冲突', 'May conflict'),
+    unsupported: t('暂不支持', 'Unsupported'),
+  }
+  return labelMap[status] || t('可检查', 'Review needed')
+}
+
+const fitStatusSummary = (row = {}) => {
+  const label = fitStatusLabel(row.fitStatus)
+  const matched = [
+    ...(Array.isArray(row.recommended?.matched) ? row.recommended.matched : []),
+    ...(Array.isArray(row.adaptable?.matched) ? row.adaptable.matched : []),
+  ].slice(0, 3)
+  if (matched.length === 0) return label
+  return `${label} · ${t('匹配', 'Matches')}: ${matched.map(traitLabel).join(' / ')}`
+}
+
 const worldProfileSummary = computed(() => {
   const profile = props.worldProfile || {}
   const traits = [
-    profile.era,
-    ...(Array.isArray(profile.settingTraits) ? profile.settingTraits : []),
-    profile.realism,
-    ...(Array.isArray(profile.socialRoles) ? profile.socialRoles : []),
+    profile.era ? `era:${profile.era}` : '',
+    ...(Array.isArray(profile.settingTraits) ? profile.settingTraits.map((item) => `settingTraits:${item}`) : []),
+    profile.realism ? `realism:${profile.realism}` : '',
+    ...(Array.isArray(profile.socialRoles) ? profile.socialRoles.map((item) => `socialRoles:${item}`) : []),
   ].filter(Boolean)
-  return traits.length ? traits.slice(0, 8).join(' / ') : t('尚未分析', 'Not analyzed yet')
+  return traits.length ? traits.slice(0, 8).map(traitLabel).join(' / ') : t('尚未分析', 'Not analyzed yet')
 })
 
-const activationReviewCount = (key) =>
-  Number(props.activationReview?.effectRows?.find((row) => row.key === key)?.count || 0)
+const activationReviewCount = (...keys) =>
+  Number(props.activationReview?.effectRows?.find((row) => keys.includes(row.key))?.count || 0)
 
 const candidateAppCount = computed(() => activationReviewCount('app_bindings'))
 const candidateServiceCount = computed(() => activationReviewCount('service_templates'))
@@ -197,6 +294,7 @@ const reviewRows = computed(() => {
   if (!props.activationReview || !Array.isArray(props.activationReview.effectRows)) return []
   const labelMap = {
     book_sources: t('设定文本', 'Setting text'),
+    encyclopedia: t('百科', 'Encyclopedia'),
     knowledge: t('百科', 'Encyclopedia'),
     templates: t('角色模板', 'Role templates'),
     app_bindings: t('世界应用', 'World apps'),
@@ -204,6 +302,7 @@ const reviewRows = computed(() => {
   }
   const iconMap = {
     book_sources: 'fas fa-link',
+    encyclopedia: 'fas fa-sitemap',
     knowledge: 'fas fa-sitemap',
     templates: 'fas fa-id-card',
     app_bindings: 'fas fa-mobile-screen-button',
@@ -343,7 +442,7 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
         <p>{{ t('AI 世界画像', 'AI World Profile') }}</p>
         <strong>{{ worldProfileSummary }}</strong>
         <small v-if="worldProfile?.confidence">
-          {{ t('置信度', 'Confidence') }}: {{ worldProfile.confidence }}
+          {{ t('置信度', 'Confidence') }}: {{ confidenceLabel(worldProfile.confidence) }}
         </small>
       </div>
       <button
@@ -361,18 +460,18 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
       <div class="current-world-pack__expansion-head">
         <div>
           <p>{{ t('已启用拓展包', 'Enabled Expansions') }}</p>
-          <strong>{{ enabledPacks.length }}</strong>
+          <strong>{{ visibleEnabledPacks.length }}</strong>
         </div>
       </div>
-      <div v-if="enabledPacks.length > 0" class="current-world-pack__pack-list">
+      <div v-if="visibleEnabledPacks.length > 0" class="current-world-pack__pack-list">
         <div
-          v-for="pack in enabledPacks"
+          v-for="pack in visibleEnabledPacks"
           :key="pack.id"
           class="current-world-pack__pack-row"
           :data-testid="`worldbook-enabled-pack-${pack.id}`"
         >
-          <strong>{{ t(pack.title, pack.name) }}</strong>
-          <span>{{ pack.description }}</span>
+          <strong>{{ packDisplayName(pack) }}</strong>
+          <span>{{ packDisplayDescription(pack) }}</span>
           <button
             type="button"
             :data-testid="`worldbook-disable-pack-${pack.id}`"
@@ -399,15 +498,15 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
           class="current-world-pack__pack-row"
           :data-testid="`worldbook-recommended-pack-${row.packId}`"
         >
-          <strong>{{ row.packName }}</strong>
-          <span>{{ row.reasons.join(' / ') || row.fitStatus }}</span>
+          <strong>{{ packDisplayName(row) }}</strong>
+          <span>{{ fitStatusSummary(row) }}</span>
           <button
             type="button"
-            :disabled="enabledPackIds.has(row.packId)"
+            :class="{ 'is-enabled': enabledPackIds.has(row.packId) }"
             :data-testid="`worldbook-enable-pack-${row.packId}`"
-            @click="emit('enable-pack', row.packId)"
+            @click="enabledPackIds.has(row.packId) ? emit('disable-pack', row.packId) : emit('enable-pack', row.packId)"
           >
-            {{ enabledPackIds.has(row.packId) ? t('已启用', 'Enabled') : t('启用', 'Enable') }}
+            {{ enabledPackIds.has(row.packId) ? t('停用', 'Disable') : t('启用', 'Enable') }}
           </button>
         </div>
       </div>
@@ -422,15 +521,15 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
           class="current-world-pack__pack-row"
           :data-testid="`worldbook-all-pack-${row.packId}`"
         >
-          <strong>{{ row.packName }}</strong>
-          <span>{{ row.fitStatus }}</span>
+          <strong>{{ packDisplayName(row) }}</strong>
+          <span>{{ fitStatusSummary(row) }}</span>
           <button
             type="button"
-            :disabled="enabledPackIds.has(row.packId)"
+            :class="{ 'is-enabled': enabledPackIds.has(row.packId) }"
             :data-testid="`worldbook-enable-all-pack-${row.packId}`"
-            @click="emit('enable-pack', row.packId)"
+            @click="enabledPackIds.has(row.packId) ? emit('disable-pack', row.packId) : emit('enable-pack', row.packId)"
           >
-            {{ enabledPackIds.has(row.packId) ? t('已启用', 'Enabled') : t('启用', 'Enable') }}
+            {{ enabledPackIds.has(row.packId) ? t('停用', 'Disable') : t('启用', 'Enable') }}
           </button>
         </div>
         <div
@@ -439,7 +538,7 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
           class="current-world-pack__pack-row is-disabled"
           :data-testid="`worldbook-unsupported-pack-${row.packId}`"
         >
-          <strong>{{ row.packName }}</strong>
+          <strong>{{ packDisplayName(row) }}</strong>
           <span>{{ t('当前程序不支持，需要专门 App。', 'Unsupported: needs a dedicated app or product support.') }}</span>
         </div>
       </div>
@@ -461,22 +560,33 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
       </small>
     </div>
 
-    <label class="current-world-pack__selector">
-      <span>{{ t('选择要启用的世界包', 'Choose a world pack') }}</span>
-      <select
-        :value="selectedPack?.id"
-        data-testid="worldbook-current-pack-select"
-        @change="onSelectPack"
-      >
-        <option
-          v-for="pack in packs"
-          :key="pack.id"
-          :value="pack.id"
+    <div class="current-world-pack__selector-row">
+      <label class="current-world-pack__selector">
+        <span>{{ t('选择要启用的世界包', 'Choose a world pack') }}</span>
+        <select
+          :value="selectedPack?.id"
+          data-testid="worldbook-current-pack-select"
+          @change="onSelectPack"
         >
-          {{ t(pack.title, pack.name) }}
-        </option>
-      </select>
-    </label>
+          <option
+            v-for="pack in packs"
+            :key="pack.id"
+            :value="pack.id"
+          >
+            {{ t(pack.title, pack.name) }}
+          </option>
+        </select>
+      </label>
+      <button
+        type="button"
+        class="current-world-pack__reset"
+        :disabled="!canResetWorldPack"
+        data-testid="worldbook-current-pack-reset-default"
+        @click="emit('reset-pack')"
+      >
+        {{ canResetWorldPack ? t('恢复默认世界', 'Restore default world') : t('默认世界已启用', 'Default world active') }}
+      </button>
+    </div>
 
     <div
       class="current-world-pack__effects"
@@ -540,12 +650,12 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
       <button
         type="button"
         class="current-world-pack__activate"
-        :disabled="activationReview.blocked || selectedPack?.id === overview.activePack?.id"
+        :disabled="activationReview.blocked || isSelectedPackActive"
         data-testid="worldbook-current-pack-activate"
         @click="emit('activate-pack')"
       >
         {{
-          selectedPack?.id === overview.activePack?.id
+          isSelectedPackActive
             ? t('已是当前世界', 'Already active')
             : t('确认激活这个世界包', 'Activate this pack')
         }}
@@ -1076,6 +1186,12 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   opacity: 0.55;
 }
 
+.current-world-pack__pack-row button.is-enabled {
+  border-color: color-mix(in srgb, var(--system-danger) 32%, var(--system-control-border));
+  background: var(--system-danger-soft);
+  color: var(--system-danger);
+}
+
 .current-world-pack__pack-list {
   display: grid;
   gap: 8px;
@@ -1111,10 +1227,17 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   opacity: 0.68;
 }
 
+.current-world-pack__selector-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 14px;
+}
+
 .current-world-pack__selector {
   display: grid;
   gap: 6px;
-  margin-top: 14px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
   padding: 10px;
@@ -1131,6 +1254,23 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
   background: var(--system-panel-bg);
   color: var(--system-text);
   padding: 0 10px;
+}
+
+.current-world-pack__reset {
+  min-height: 42px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  color: var(--system-info);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.current-world-pack__reset:disabled {
+  cursor: not-allowed;
+  color: var(--system-text-soft);
+  background: var(--system-control-bg);
 }
 
 .current-world-pack__effects {
@@ -1673,7 +1813,8 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
   .current-world-pack__effects,
   .current-world-pack__handoff-summary,
-  .current-world-pack__review-grid {
+  .current-world-pack__review-grid,
+  .current-world-pack__selector-row {
     grid-template-columns: 1fr;
   }
 

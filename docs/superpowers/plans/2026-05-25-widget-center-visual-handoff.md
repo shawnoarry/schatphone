@@ -560,13 +560,13 @@ The function is usable; the next risk is mobile density and readability. This ta
 Run:
 
 ```powershell
-npm.cmd run dev -- --host 127.0.0.1 --port 5173
+npm.cmd run dev -- --host 127.0.0.1 --port 5188
 ```
 
 Expected:
 
 ```text
-Vite serves the app at http://127.0.0.1:5173/
+Vite serves the app at http://127.0.0.1:5188/
 ```
 
 - [ ] **Step 2: Inspect these routes**
@@ -574,9 +574,9 @@ Vite serves the app at http://127.0.0.1:5173/
 Open:
 
 ```text
-http://127.0.0.1:5173/#/widgets
-http://127.0.0.1:5173/#/home?widgetEdit=1&homePage=0
-http://127.0.0.1:5173/#/appearance
+http://127.0.0.1:5188/#/widgets
+http://127.0.0.1:5188/#/home?widgetEdit=1&homePage=0
+http://127.0.0.1:5188/#/appearance
 ```
 
 Check at mobile widths around `360x780`, `390x844`, and `430x932`.

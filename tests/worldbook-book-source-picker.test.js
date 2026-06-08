@@ -46,20 +46,195 @@ describe('WorldBook setting text picker', () => {
     useSystemStore().settings.system.language = 'en-US'
   })
 
-  test('shows base worldview without creating a Book asset', async () => {
+  test('shows built-in Book sources without creating a user Book asset', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    systemStore.setGlobalWorldview('Fallback city rules.')
+
+    const { wrapper, router } = await mountWorldBook()
+
+    const fallback = wrapper.get('[data-testid="worldbook-system-fallback"]')
+    expect(fallback.text()).toContain('Base worldview')
+    expect(fallback.text()).toContain('Fallback city rules')
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-book-source-add"]').text()).toContain('Add setting text')
+    expect(wrapper.get('[data-testid="worldbook-onboarding-card"]').text()).toContain(
+      'Choose worldbook text from Book',
+    )
+    expect(wrapper.get('[data-testid="worldbook-source-stats"]').text()).toContain(
+      'No Book setting text is active',
+    )
+
+    await wrapper.get('[data-testid="worldbook-open-book-library"]').trigger('click')
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/worldbook')
+    expect(wrapper.get('[data-testid="worldbook-source-picker"]').text()).toContain('Book catalog')
+    expect(wrapper.get('[data-testid="worldbook-source-catalog"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="worldbook-source-picker-group-main_worldview"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="worldbook-source-picker-group-world_rule"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="worldbook-source-picker-group-encyclopedia"]').exists()).toBe(true)
+    expect(
+      wrapper
+        .get(
+          '[data-testid="worldbook-source-picker-card-built_in_modern_seoul_kpop_main_worldview"]',
+        )
+        .exists(),
+    ).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('links the built-in K-pop worldview as active Book context', async () => {
+    const bookStore = useBookStore()
+    const systemStore = useSystemStore()
+
+    const { wrapper, router } = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+
+    const picker = wrapper.get('[data-testid="worldbook-source-picker"]')
+    expect(router.currentRoute.value.path).toBe('/worldbook')
+    expect(
+      wrapper
+        .get(
+          '[data-testid="worldbook-source-picker-card-built_in_modern_seoul_kpop_main_worldview"]',
+        )
+        .text(),
+    ).toContain('Built-in')
+    expect(picker.text()).toContain('现代首尔 K-pop 娱乐圈：主世界观')
+    expect(bookStore.assetCount).toBe(0)
+
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await nextTick()
+
+    const link = systemStore.listWorldBookSourceLinks()[0]
+    expect(link).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_main_worldview',
+      role: 'main_worldview',
+      enabled: true,
+    })
+    expect(link.sourceSnapshotText).toContain('现代首尔 K-pop 娱乐圈')
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-active-source-list"]').text()).toContain(
+      '现代首尔 K-pop 娱乐圈：主世界观',
+    )
+    expect(wrapper.get(`[data-testid="worldbook-book-source-${link.id}"]`).text()).toContain(
+      'Built-in text',
+    )
+
+    await wrapper.get(`[data-testid="worldbook-book-source-toggle-${link.id}"]`).trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0].enabled).toBe(false)
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-source-maintenance"]').text()).toContain(
+      '现代首尔 K-pop 娱乐圈：主世界观',
+    )
+
+    await wrapper.get(`[data-testid="worldbook-book-source-toggle-maintenance-${link.id}"]`).trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0].enabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('defaults built-in K-pop world rules to the world-rule source role', async () => {
+    const systemStore = useSystemStore()
+    const { wrapper } = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+
+    await wrapper
+      .get(
+        '[data-testid="worldbook-source-picker-card-built_in_modern_seoul_kpop_world_rules"]',
+      )
+      .trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-source-picker-usage"]').element.value).toBe(
+      'world_rule',
+    )
+
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_world_rules',
+      role: 'world_rule',
+    })
+
+    wrapper.unmount()
+  })
+
+  test.each([
+    ['built_in_modern_seoul_kpop_encyclopedia_placeholder', 'encyclopedia'],
+    ['built_in_modern_seoul_kpop_profile_template_placeholder', 'profile_template'],
+    ['built_in_modern_seoul_kpop_world_pack_reference_placeholder', 'world_pack_reference'],
+    ['built_in_modern_seoul_kpop_reference_material_placeholder', 'reference_material'],
+  ])('selects built-in placeholder Book asset %s with role %s', async (assetId, expectedRole) => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const { wrapper, router } = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+
+    const card = wrapper.get(`[data-testid="worldbook-source-picker-card-${assetId}"]`)
+    expect(card.text()).toContain('Built-in')
+    expect(
+      wrapper.get(`[data-testid="worldbook-source-picker-group-${expectedRole}"]`).text(),
+    ).toContain(card.text().split('\n')[0])
+
+    await card.trigger('click')
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/worldbook')
+    expect(wrapper.get('[data-testid="worldbook-source-picker-usage"]').element.value).toBe(
+      expectedRole,
+    )
+
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
+      assetId,
+      role: expectedRole,
+      enabled: true,
+    })
+    expect(bookStore.assetCount).toBe(0)
+
+    wrapper.unmount()
+  })
+
+  test('clears base worldview without changing Book assets', async () => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()
     systemStore.setGlobalWorldview('Fallback city rules.')
 
     const { wrapper } = await mountWorldBook()
 
-    const fallback = wrapper.get('[data-testid="worldbook-system-fallback"]')
-    expect(fallback.text()).toContain('Base worldview')
-    expect(fallback.text()).toContain('Fallback city rules')
-    expect(bookStore.assetCount).toBe(0)
-    expect(wrapper.get('[data-testid="worldbook-onboarding-card"]').text()).toContain(
-      'Tell AI what this world is',
+    await wrapper.get('[data-testid="worldbook-panel-tab-kernel"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="worldbook-global-worldview"]').element.value).toBe(
+      'Fallback city rules.',
     )
+
+    await wrapper.get('[data-testid="worldbook-clear-worldview"]').trigger('click')
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Clear')
+
+    useDialog().submitDialog()
+    await flushPromises()
+    await nextTick()
+
+    expect(systemStore.user.globalWorldview).toBe('')
+    expect(systemStore.user.worldBook).toBe('')
+    expect(bookStore.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="worldbook-global-worldview"]').element.value).toBe('')
 
     wrapper.unmount()
   })

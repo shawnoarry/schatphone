@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-06-03
+Updated: 2026-06-08
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -17,7 +17,7 @@ What is already landed:
 5. delivery route context can be shown as read-only context without moving order ownership into Map.
 6. Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events can push service-account notification messages into existing Chat Directory service accounts.
 7. The active World Pack can now provide a Shopping marketplace context for `survival_city`: WorldBook opens Shopping as `补给站`, and Shopping offers a safe Daily Fresh / Grocery filter without creating or mutating commerce records.
-8. The active World Pack can now provide a Food Delivery dispatch context for `survival_city` and confirmed nonstandard `dispatch_board` entries: Food Delivery shows the world-app hero/banner, defaults to the Nearby category when no explicit category is present, and preserves `worldPack`/`worldApp` route context while Food Delivery keeps restaurants, menus, carts, food orders, and delivery events.
+8. The active World Pack can expose Food Delivery dispatch entries for `survival_city` and confirmed nonstandard `dispatch_board` entries, but an app binding is now launch context only unless it carries an explicit `uiThemePackage.enabled=true`. Without a Food Delivery UI theme package, Food Delivery uses its original UI and defaults while keeping restaurants, menus, carts, food orders, and delivery events owned by Food Delivery. World Pack boundary explanations are documented and tested, but they should not render as an in-app explainer card.
 9. Food Delivery now has a platform/store split: the Food entry opens a platform browser, restaurant cards open route-query store mini-app surfaces, and cart/order/event/Wallet/Map/Chat ownership remains centralized in Food Delivery and the related source modules.
 10. Food Delivery platform mode now opens as a pseudo-folder style surface: a fixed Food platform entry plus shop-app restaurant entries. Category keys continue to filter shops and do not own order/cart behavior.
 11. Moon Bistro now has the first Food Delivery shop template treatment, `dark_tray_menu`, while checkout and order ownership remain in Food Delivery.
@@ -25,6 +25,7 @@ What is already landed:
 13. Food Delivery menu items now have a focused item-detail sheet: tapping a dish opens description, base ingredients, image source, and add-to-cart; a small edit icon updates only that item copy/image through Food Delivery-owned menu records.
 14. Moon Bistro now opens as a shop-first surface: the Food platform hero/list chrome is hidden, the store owns the first screen, cart becomes the ordering anchor, and Map/order/Wallet support panels are folded behind Order & delivery.
 15. Moon Bistro checkout is now shop-local: checkout opens a confirmation sheet before creating an order, shop orders/events/Wallet suggestions are scoped to the opened shop, and Food Platform no longer renders shop cart/order/Wallet/Map support panels as a total controller.
+16. Food Platform now has a consumer-facing discovery homepage instead of the earlier backend-like platform card stack. It shows a brand/address header, real search input, project-owned transparent rider asset near the search field, campaign hero with food imagery and fallback plate art, a 5-by-2 category icon grid, a membership coupon strip, a horizontal shop-app rail, and a light bottom navigation row. Search filters visible shop mini apps by shop, cuisine, category, and menu text. The shop creation/menu editor is hidden from ordinary platform browsing and appears only for the App Store create-shop handoff. The bottom navigation remains discovery-only; `Orders` must not become an aggregate peer-shop order controller without a separate product decision.
 
 Still incomplete:
 
@@ -44,6 +45,7 @@ Still incomplete:
 5. Continue Food Delivery from store-surface polish, sticky cart ergonomics, and per-store visual differentiation. Keep Food Platform as a peer discovery mini app, not a visible aggregate order controller for shop mini apps.
 6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; continue from the explicit binding-target/create-handoff baseline before adding more Food Delivery-only polish.
 7. When Food Delivery visual polish resumes, start from `FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md` and keep the first slice focused on Moon Bistro before broadening to more shop templates.
+8. Next Food Platform polish should add richer platform-specific empty states and real favorite/recent shop behavior. Only add platform order history if the product later decides that Food Platform owns its own orders; do not surface peer-shop orders as a platform aggregate.
 
 ## 3. Do Not Do
 

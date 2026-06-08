@@ -109,6 +109,9 @@ const menuDetailFeedback = ref('')
 const menuDetailQuantity = ref(1)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
+const platformSearchQuery = ref('')
+const platformSearchInputRef = ref(null)
+const platformRiderImageUrl = `${import.meta.env.BASE_URL || '/'}images/food-delivery/platform-delivery-rider.png`
 const menuItemEditDraft = reactive({
   title: '',
   desc: '',
@@ -124,6 +127,7 @@ const worldAppUxContext = computed(() =>
     moduleKey: 'food_delivery',
     routeQuery: route.query,
     expectedArchetypes: ['dispatch'],
+    requireUiThemePackage: true,
   }),
 )
 const worldAppRouteQuery = computed(() => worldAppUxContext.value?.routeQuery || {})
@@ -137,30 +141,6 @@ const activeCategory = computed(() => findFoodDeliveryCategory(activeCategoryKey
 const foodDeliveryTitle = computed(() =>
   worldAppUxContext.value?.bindingTitle || t('外卖', 'Food Delivery'),
 )
-const foodDeliveryDescription = computed(() => {
-  const context = worldAppUxContext.value
-  if (!context) {
-    return t(
-      '外卖模块使用主屏文件夹式入口，后续可在内部建立不同餐厅分类；订单归外卖，位置与路线由 Map 提供上下文。',
-      'Food Delivery uses the Home folder pattern. It can later host restaurant categories while orders stay here and Map provides location/route context.',
-    )
-  }
-  if (languageBase.value === 'zh' && context.bindingId === 'survival_dispatch') {
-    return '当前世界包把 Food Delivery 作为救援调度入口使用，会强化配送、支援与异常提醒；订单事实仍由 Food Delivery 自己持有。'
-  }
-  return context.description || 'This entry brings the active World Pack UX package into Food Delivery.'
-})
-const foodDeliveryHeroClass = computed(() =>
-  worldAppUxContext.value
-    ? 'bg-gradient-to-br from-sky-800 via-cyan-600 to-lime-300'
-    : 'bg-gradient-to-br from-orange-400 via-amber-300 to-lime-200',
-)
-const foodDeliveryHeroEyebrow = computed(() =>
-  worldAppUxContext.value
-    ? t('Food Delivery / 世界包', 'Food Delivery / World Pack')
-    : 'Food Delivery',
-)
-
 const categoryCards = computed(() =>
   FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
     ...entry,
@@ -257,6 +237,81 @@ const activeRestaurants = computed(() => {
 })
 const platformRestaurantCount = computed(() => foodDeliveryStore.restaurantCount)
 const platformMenuItemCount = computed(() => foodDeliveryStore.menuItemCount)
+const categorySummaryByKey = computed(
+  () => new Map(foodDeliveryStore.categorySummaries.map((summary) => [summary.key, summary])),
+)
+const FOOD_PLATFORM_CATEGORY_VISUALS = Object.freeze({
+  all: {
+    icon: 'fas fa-magnifying-glass',
+    className: 'from-[#e6fffd] to-white text-[#079892]',
+  },
+  restaurants: {
+    icon: 'fas fa-utensils',
+    className: 'from-orange-50 to-white text-orange-600',
+  },
+  nearby: {
+    icon: 'fas fa-location-dot',
+    className: 'from-cyan-50 to-white text-cyan-600',
+  },
+  fast_food: {
+    icon: 'fas fa-burger',
+    className: 'from-amber-50 to-white text-amber-600',
+  },
+  chicken: {
+    icon: 'fas fa-drumstick-bite',
+    className: 'from-yellow-50 to-white text-yellow-700',
+  },
+  pizza: {
+    icon: 'fas fa-pizza-slice',
+    className: 'from-red-50 to-white text-red-500',
+  },
+  cafe: {
+    icon: 'fas fa-mug-hot',
+    className: 'from-emerald-50 to-white text-emerald-600',
+  },
+  dessert: {
+    icon: 'fas fa-ice-cream',
+    className: 'from-rose-50 to-white text-rose-500',
+  },
+  grocery_delivery: {
+    icon: 'fas fa-basket-shopping',
+    className: 'from-lime-50 to-white text-lime-600',
+  },
+  more: {
+    icon: 'fas fa-table-cells-large',
+    className: 'from-slate-50 to-white text-slate-600',
+  },
+})
+const platformCategoryTiles = computed(() =>
+  [
+    { key: 'all', categoryKey: 'nearby', label: t('全部', 'All') },
+    { key: 'restaurants', categoryKey: 'restaurants', label: t('正餐', 'Restaurants') },
+    { key: 'fast_food', categoryKey: 'fast_food', label: t('快餐', 'Fast') },
+    { key: 'chicken', categoryKey: 'fast_food', label: t('炸鸡', 'Chicken') },
+    { key: 'pizza', categoryKey: 'fast_food', label: t('披萨', 'Pizza') },
+    { key: 'nearby', categoryKey: 'nearby', label: t('附近', 'Nearby') },
+    { key: 'cafe', categoryKey: 'cafe', label: t('咖啡', 'Cafe') },
+    { key: 'dessert', categoryKey: 'dessert', label: t('甜品', 'Dessert') },
+    { key: 'grocery_delivery', categoryKey: 'grocery_delivery', label: t('生鲜', 'Grocery') },
+    { key: 'more', categoryKey: activeCategory.value?.key || 'nearby', label: t('全部看', 'More') },
+  ].map((category) => {
+    const categoryKey = category.categoryKey || category.key
+    const summary = categorySummaryByKey.value.get(categoryKey)
+    const restaurantCount =
+      category.key === 'all' || category.key === 'more' || categoryKey === 'nearby'
+        ? foodDeliveryStore.restaurantCount
+        : summary?.restaurantCount || category.restaurantCount || 0
+    const visual = FOOD_PLATFORM_CATEGORY_VISUALS[category.key] || FOOD_PLATFORM_CATEGORY_VISUALS[categoryKey] || FOOD_PLATFORM_CATEGORY_VISUALS.all
+    return {
+      ...category,
+      categoryKey,
+      icon: visual.icon || category.icon,
+      className: visual.className,
+      restaurantCount,
+      active: category.key === activeCategory.value?.key,
+    }
+  }),
+)
 const shopAppEntries = computed(() =>
   activeRestaurants.value.map((restaurant) => {
     const presentation = resolveShopEntryPresentation(restaurant)
@@ -269,6 +324,71 @@ const shopAppEntries = computed(() =>
     }
   }),
 )
+const normalizedPlatformSearchQuery = computed(() => platformSearchQuery.value.trim().toLowerCase())
+const restaurantMatchesPlatformSearch = (restaurant = {}) => {
+  const query = normalizedPlatformSearchQuery.value
+  if (!query) return true
+  const menuText = foodDeliveryStore
+    .listMenuByRestaurant(restaurant.id)
+    .map((item) => `${item.title} ${item.desc} ${item.ingredients}`)
+    .join(' ')
+  return [
+    restaurant.displayName,
+    restaurant.name,
+    restaurant.shortDescription,
+    restaurant.cuisine,
+    restaurant.category,
+    menuText,
+  ].some((value) => String(value || '').toLowerCase().includes(query))
+}
+const platformFeaturedRestaurants = computed(() =>
+  shopAppEntries.value.filter((restaurant) => restaurantMatchesPlatformSearch(restaurant)).slice(0, 8),
+)
+const platformHeroRestaurant = computed(
+  () =>
+    platformFeaturedRestaurants.value.find((restaurant) => restaurant.id === 'food_seed_moon_bistro') ||
+    platformFeaturedRestaurants.value[0] ||
+    null,
+)
+const platformHeroMenuItem = computed(() =>
+  platformHeroRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(platformHeroRestaurant.value.id)[0] || null : null,
+)
+const platformHeroImageUrl = computed(
+  () => foodImageUrl(platformHeroMenuItem.value) || foodImageUrl(platformHeroRestaurant.value),
+)
+const platformLocationLabel = computed(() =>
+  activeMapHandoff.value?.deliveryAddress || t('当前配送地址', 'Current delivery address'),
+)
+const platformBenefitCards = computed(() => [
+  {
+    key: 'club',
+    title: t('外卖会员免配送权益', 'Delivery club free-delivery perks'),
+    desc: t('常点小店、收藏小店和附近好店都会优先被发现。', 'Favorite, saved, and nearby shops stay easy to reach.'),
+    icon: 'fas fa-ticket',
+    className: 'from-[#e7fbfa] to-white text-gray-950',
+  },
+  {
+    key: 'pickup',
+    title: t('附近自取', 'Nearby pickup'),
+    desc: t('不想等骑手时，可以先看附近可自取的小店。', 'When delivery can wait, nearby pickup shops are easy to find.'),
+    icon: 'fas fa-bag-shopping',
+    className: 'from-orange-50 to-white text-orange-900',
+  },
+  {
+    key: 'gift',
+    title: t('送给关系人', 'Send a meal'),
+    desc: t('小店下单后再记录共享用餐，不归平台总控。', 'Shared-meal records stay after shop checkout, not in a platform controller.'),
+    icon: 'fas fa-gift',
+    className: 'from-violet-50 to-white text-violet-900',
+  },
+])
+const platformBottomNavItems = computed(() => [
+  { key: 'home', label: t('首页', 'Home'), icon: 'fas fa-house', active: true },
+  { key: 'search', label: t('搜索', 'Search'), icon: 'fas fa-magnifying-glass', active: false },
+  { key: 'orders', label: t('订单', 'Orders'), icon: 'fas fa-receipt', active: false },
+  { key: 'saved', label: t('收藏', 'Saved'), icon: 'fas fa-heart', active: false },
+  { key: 'profile', label: t('我的', 'Mine'), icon: 'fas fa-face-smile', active: false },
+])
 const selectedRestaurantId = computed(() =>
   typeof route.query.restaurantId === 'string' ? route.query.restaurantId.trim() : '',
 )
@@ -315,8 +435,15 @@ const activeStoreTemplate = computed(
 const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_menu')
 const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isDarkTrayStore.value) return 'bg-[#080a10]'
-  if (isStoreMode.value) return 'bg-[#fff8ed]'
-  return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#fff8ed]'
+  if (isStoreMode.value) return 'bg-[#f4fbfb]'
+  return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
+})
+const foodDeliveryShellStyle = computed(() => {
+  if (isStoreMode.value) return {}
+  return {
+    background:
+      'linear-gradient(180deg, #ffffff 0%, #ffffff 10rem, #f2fbfb 10rem, #ffffff 100%)',
+  }
 })
 const activeStoreEtaText = computed(() =>
   activeRestaurant.value ? `${activeRestaurant.value.deliveryEtaMinutes} min` : '',
@@ -590,7 +717,18 @@ const createCustomRestaurant = () => {
   resetMenuDraft(restaurant.id)
   router.push({
     path: '/food-delivery',
-    query: { ...worldAppRouteQuery.value, category: restaurant.category },
+    query: {
+      ...worldAppRouteQuery.value,
+      category: restaurant.category,
+      ...(openedFromAppStoreShopCreate.value
+        ? {
+            entry: 'shop',
+            createShop: '1',
+            bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+            source: 'app_store',
+          }
+        : {}),
+    },
   })
 }
 
@@ -701,6 +839,24 @@ const openCategory = (key) => {
     path: '/food-delivery',
     query: { ...worldAppRouteQuery.value, category: key },
   })
+}
+
+const openPlatformCategory = (category) => {
+  openCategory(category?.categoryKey || category?.key || 'nearby')
+}
+
+const focusPlatformSearch = () => {
+  platformSearchInputRef.value?.focus?.()
+}
+
+const handlePlatformNavItem = (item) => {
+  if (item.key === 'search') {
+    focusPlatformSearch()
+    return
+  }
+  if (item.key === 'orders') {
+    openCategory(activeCategory.value?.key || 'nearby')
+  }
 }
 
 const addMenuItemToCart = (menuItemId, quantity = 1) => {
@@ -883,58 +1039,82 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 text-gray-950" :class="[foodDeliveryShellClass, isStoreMode ? 'pb-6' : '']">
+  <div
+    class="h-screen min-h-screen overflow-y-auto overscroll-contain p-4 text-gray-950"
+    :class="[foodDeliveryShellClass, isStoreMode ? 'pb-6' : '']"
+    :style="foodDeliveryShellStyle"
+  >
     <div class="mx-auto max-w-md space-y-4">
-      <section v-if="!isStoreMode" class="rounded-[2rem] p-5 text-white shadow-xl" :class="foodDeliveryHeroClass">
-        <button
-          class="mb-4 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white"
-          data-testid="food-delivery-go-home"
-          @click="goHome"
-        >
-          ← {{ t('Home', 'Home') }}
-        </button>
-        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
-          {{ foodDeliveryHeroEyebrow }}
-        </p>
-        <h1 class="mt-2 text-3xl font-black" data-testid="food-delivery-hero-title">{{ foodDeliveryTitle }}</h1>
-        <p class="mt-2 text-sm leading-6 text-white/85">
-          {{ foodDeliveryDescription }}
-        </p>
-      </section>
-
-      <section
-        v-if="worldAppUxContext"
-        class="rounded-3xl border border-sky-100 bg-sky-50 p-4"
-        data-testid="food-delivery-world-app-context"
-        :data-world-pack="worldAppUxContext.packId"
-        :data-world-app="worldAppUxContext.bindingId"
-      >
+      <section v-if="!isStoreMode" class="space-y-5 pt-1" data-testid="food-delivery-platform-top">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-xs font-semibold uppercase text-sky-700">
-              {{ t('世界 UX 包', 'World UX package') }}
-            </p>
-            <h2 class="mt-1 text-lg font-black text-gray-950" data-testid="food-delivery-world-app-title">
-              {{ foodDeliveryTitle }}
-            </h2>
-            <p class="mt-1 text-[11px] font-semibold text-sky-700">
-              {{ t('来自', 'From') }} {{ t(worldAppUxContext.packTitle, worldAppUxContext.packName) }}
-            </p>
-            <p class="mt-2 text-[11px] leading-5 text-gray-600">
-              {{ foodDeliveryDescription }}
-            </p>
-            <p class="mt-2 text-[11px] leading-5 text-sky-800" data-testid="food-delivery-world-app-boundary">
-              {{
-                t(
-                  'Food Delivery 仍拥有餐厅、菜单、订单、状态和配送事件；世界包只改变入口语义、词汇、强调与安全默认视图。',
-                  worldAppUxContext.boundaryCopy,
-                )
-              }}
-            </p>
+            <button
+              type="button"
+              class="block max-w-full text-left"
+              data-testid="food-delivery-go-home"
+              aria-label="Home"
+              @click="goHome"
+            >
+              <h1 class="truncate text-[1.72rem] font-black leading-none text-gray-950" data-testid="food-delivery-hero-title">
+                {{ foodDeliveryTitle }}
+              </h1>
+            </button>
+            <button
+              type="button"
+              class="mt-4 inline-flex max-w-full items-center gap-2 text-[0.94rem] font-black text-gray-950"
+              data-testid="food-delivery-platform-location"
+              @click="focusPlatformSearch"
+            >
+              <i class="fas fa-location-dot text-[#24bcb7]"></i>
+              <span class="truncate">{{ platformLocationLabel }}</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+            </button>
           </div>
-          <span class="shrink-0 rounded-full bg-sky-600 px-3 py-1.5 text-[11px] font-semibold text-white">
-            {{ worldAppUxContext.archetype }}
-          </span>
+          <div class="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
+              aria-label="Notifications"
+            >
+              <i class="fas fa-bell text-lg"></i>
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
+              aria-label="Cart"
+              @click="openCategory(activeCategory.key)"
+            >
+              <i class="fas fa-cart-shopping text-lg"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="relative pt-7">
+          <div
+            class="relative z-10 flex min-h-[3.45rem] items-center gap-3 rounded-[1.15rem] bg-white px-4 pr-28 text-sm font-semibold text-gray-500 shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+            data-testid="food-delivery-platform-search"
+          >
+            <i class="fas fa-magnifying-glass text-xl text-gray-400"></i>
+            <input
+              ref="platformSearchInputRef"
+              v-model="platformSearchQuery"
+              class="min-w-0 flex-1 bg-transparent text-sm font-semibold text-gray-900 outline-none placeholder:text-gray-400"
+              data-testid="food-delivery-platform-search-input"
+              :placeholder="t('搜索美食、菜单、小店名', 'Search food, menu, shop name')"
+            />
+          </div>
+          <div
+            class="pointer-events-none absolute right-[-2.6rem] top-[-2.85rem] z-20 h-[9.45rem] w-[11.55rem]"
+            aria-hidden="true"
+            data-testid="food-delivery-platform-rider"
+          >
+            <img
+              :src="platformRiderImageUrl"
+              alt=""
+              class="h-full w-full object-contain drop-shadow-[0_18px_22px_rgba(20,184,166,0.18)]"
+              draggable="false"
+            />
+          </div>
         </div>
       </section>
 
@@ -992,8 +1172,376 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <div v-if="!isStoreMode" class="space-y-4" data-testid="food-delivery-platform">
-      <section class="space-y-4 rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-pseudo-folder-home">
+      <div v-if="!isStoreMode" class="space-y-5" data-testid="food-delivery-platform">
+      <section class="space-y-5 food-delivery-platform-redesign" data-testid="food-delivery-pseudo-folder-home">
+        <article
+          class="relative min-h-[12.8rem] overflow-hidden rounded-[1.35rem] bg-[#65deda] p-5 text-gray-950 shadow-[0_18px_42px_rgba(18,126,124,0.18)]"
+          data-testid="food-delivery-platform-entry"
+        >
+          <div class="relative z-10 max-w-[62%]">
+            <p class="text-xs font-black text-teal-950/70">{{ t('外卖平台', 'Food Platform') }}</p>
+            <h2 class="mt-3 text-[1.38rem] font-black leading-tight">
+              {{ t('全国好店集合！这个周末想吃什么？', 'Great shops gathered. What sounds good this weekend?') }}
+            </h2>
+            <p class="mt-3 text-sm font-black text-teal-950/80">
+              {{ t('现在就去看看', 'Browse now') }}
+              <i class="fas fa-chevron-right ml-1 text-[0.66rem]"></i>
+            </p>
+          </div>
+          <button
+            type="button"
+            class="absolute inset-0 z-20"
+            aria-label="Browse platform shops"
+            @click="openCategory(activeCategory.key)"
+          ></button>
+          <div
+            class="absolute -right-7 bottom-2 h-40 w-40 overflow-hidden rounded-full bg-white/55 p-2 shadow-[0_16px_40px_rgba(8,86,84,0.22)]"
+            data-testid="food-delivery-platform-hero-image"
+          >
+            <div class="absolute inset-2 overflow-hidden rounded-full bg-[#fff7e8]">
+              <span class="absolute left-6 top-7 h-12 w-12 rounded-full bg-[#f7c843]"></span>
+              <span class="absolute right-5 top-8 h-10 w-10 rounded-full bg-[#f06f4d]"></span>
+              <span class="absolute bottom-5 left-8 h-10 w-16 rounded-full bg-[#5fbf77]"></span>
+              <span class="absolute bottom-8 right-7 h-7 w-9 rounded-full bg-white"></span>
+              <span class="absolute left-4 top-4 h-4 w-4 rounded-full bg-[#dd3f31]"></span>
+            </div>
+            <img
+              v-if="platformHeroImageUrl"
+              :src="platformHeroImageUrl"
+              :alt="platformHeroMenuItem?.image?.alt || platformHeroRestaurant?.name || 'Food'"
+              class="relative z-10 h-full w-full rounded-full object-cover"
+              @error="$event.currentTarget.style.display = 'none'"
+            />
+            <div v-else class="flex h-full w-full items-center justify-center rounded-full bg-white text-4xl text-teal-500">
+              <i class="fas fa-bowl-food"></i>
+            </div>
+          </div>
+          <span class="absolute bottom-4 right-4 z-30 rounded-full bg-gray-950/70 px-3 py-1.5 text-xs font-black text-white backdrop-blur">
+            1 / {{ Math.max(platformRestaurantCount, 1) }}
+            <i class="fas fa-pause ml-2 text-[0.62rem]"></i>
+          </span>
+        </article>
+
+        <section
+          class="rounded-[1.35rem] bg-white p-3 shadow-[0_18px_42px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+          data-testid="food-delivery-category-panel"
+        >
+          <span class="sr-only">{{ activeCategory.key }}</span>
+          <div class="grid grid-cols-5 gap-2">
+            <button
+              v-for="category in platformCategoryTiles"
+              :key="category.key"
+              type="button"
+              class="min-h-[4.95rem] rounded-[1rem] bg-gradient-to-br p-1.5 text-center shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.98]"
+              :class="[
+                category.className,
+                category.active ? 'ring-[#22c4bf]/45 shadow-[0_10px_22px_rgba(34,196,191,0.16)]' : '',
+              ]"
+              :data-testid="`food-delivery-category-${category.key}`"
+              @click="openPlatformCategory(category)"
+            >
+              <span
+                class="mx-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-[1.05rem] shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]"
+              >
+                <i :class="category.icon"></i>
+              </span>
+              <span class="mt-1.5 block truncate text-[0.64rem] font-black text-gray-950">{{ category.label }}</span>
+              <span class="sr-only">{{ category.categoryKey }}</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="space-y-2" data-testid="food-delivery-platform-benefits">
+          <article
+            v-for="card in platformBenefitCards.slice(0, 1)"
+            :key="card.key"
+            class="relative overflow-hidden rounded-[1.2rem] bg-gradient-to-r p-3 shadow-sm ring-1 ring-black/5"
+            :class="card.className"
+          >
+            <div class="relative z-10 max-w-[58%]">
+              <p class="text-base font-black leading-5">{{ t('外卖会员是', 'Delivery club gives') }}</p>
+              <p class="mt-1 text-base font-black leading-5">{{ t('免费配送权益', 'free delivery perks') }}</p>
+              <p class="mt-1 line-clamp-2 text-[0.68rem] font-semibold leading-4 text-gray-500">{{ card.desc }}</p>
+            </div>
+            <div class="absolute right-5 top-1/2 z-10 -translate-y-1/2 rotate-[-7deg]">
+              <div class="rounded-xl bg-white px-5 py-3 text-center shadow-[0_12px_24px_rgba(15,23,42,0.12)] ring-1 ring-black/5">
+                <p class="text-[0.68rem] font-black text-[#24bcb7]">{{ t('会员券', 'CLUB') }}</p>
+                <p class="mt-1 text-lg font-black text-gray-950">{{ t('免配送', 'FREE') }}</p>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"></i>
+          </article>
+        </section>
+
+        <section class="space-y-3" data-testid="food-delivery-data-baseline">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <p class="text-[1.45rem] font-black leading-tight text-gray-950">
+                {{ t('今天吃什么？', 'What to eat today?') }}
+              </p>
+              <span class="hidden">Local data</span>
+              <p class="mt-1 text-xs font-semibold text-gray-500">
+                {{ activeCategoryLabel }} · {{ platformMenuItemCount }} {{ t('个菜单项', 'menu item(s)') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+              @click="openCategory(activeCategory.key)"
+            >
+              {{ t('全部查看', 'View all') }}
+              <i class="fas fa-chevron-right text-[0.62rem]"></i>
+            </button>
+          </div>
+
+          <div class="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3" data-testid="food-delivery-shop-app-list">
+            <article
+              v-for="restaurant in platformFeaturedRestaurants"
+              :key="restaurant.id"
+              class="w-[12.25rem] shrink-0"
+              :data-testid="`food-delivery-shop-app-${restaurant.id}`"
+              :data-store-tone="restaurant.visual.tone"
+            >
+              <button
+                type="button"
+                class="group block w-full text-left"
+                :data-testid="`food-delivery-open-store-${restaurant.id}`"
+                @click="openRestaurantStore(restaurant)"
+              >
+                <div
+                  class="relative h-28 overflow-hidden rounded-[1rem] bg-gray-100 shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
+                  :data-testid="`food-delivery-restaurant-${restaurant.id}`"
+                >
+                  <img
+                    v-if="foodImageUrl(restaurant)"
+                    :src="foodImageUrl(restaurant)"
+                    :alt="restaurant.image?.alt || restaurant.name"
+                    class="h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
+                  />
+                  <div v-else class="flex h-full w-full items-center justify-center text-3xl text-[#24bcb7]">
+                    <i class="fas fa-store"></i>
+                  </div>
+                  <span class="absolute left-2 top-2 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white">
+                    {{ t('精选', 'Pick') }}
+                  </span>
+                  <span class="absolute bottom-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur">
+                    <i class="fas fa-heart text-[0.74rem]"></i>
+                  </span>
+                </div>
+                <p class="mt-3 truncate text-base font-black leading-tight text-gray-950">{{ restaurant.displayName }}</p>
+                <p class="mt-1 text-sm font-semibold text-gray-600">
+                  <span class="text-amber-500">★</span>
+                  {{ restaurant.rating.toFixed(1) }} · {{ restaurant.deliveryEtaMinutes }} min
+                </p>
+                <p class="mt-1 truncate text-sm font-semibold text-gray-500">
+                  {{ restaurant.deliveryFee }} {{ restaurant.currency }} · {{ restaurant.shortDescription }}
+                </p>
+                <p
+                  v-if="restaurant.entryTags.length"
+                  class="mt-1 truncate text-[11px] font-black text-[#24a9a5]"
+                >
+                  {{ restaurant.entryTags.join(' · ') }}
+                </p>
+              </button>
+            </article>
+            <div
+              v-if="platformFeaturedRestaurants.length === 0"
+              class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
+              data-testid="food-delivery-shop-app-empty"
+            >
+              {{
+                t(
+                  'No installed shop mini apps in this folder view. Add them from App Store.',
+                  'No installed shop mini apps in this folder view. Add them from App Store.',
+                )
+              }}
+            </div>
+          </div>
+        </section>
+
+        <nav class="rounded-[1.4rem] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)] ring-1 ring-black/5 backdrop-blur">
+          <div class="grid grid-cols-5 gap-1">
+            <button
+              v-for="item in platformBottomNavItems"
+              :key="item.key"
+              type="button"
+              class="flex min-h-[3.65rem] flex-col items-center justify-center gap-1 rounded-[1rem] text-[0.68rem] font-black transition active:scale-[0.98]"
+              :class="item.active ? 'bg-[#e5fbfa] text-[#13aaa5]' : 'text-gray-500'"
+              @click="handlePlatformNavItem(item)"
+            >
+              <i :class="item.icon" class="text-lg"></i>
+              <span>{{ item.label }}</span>
+            </button>
+          </div>
+        </nav>
+      </section>
+      <section v-if="false" class="hidden space-y-5" data-testid="food-delivery-pseudo-folder-home">
+        <article
+          class="relative overflow-hidden rounded-[2rem] bg-[#65d9d5] p-5 text-gray-950 shadow-[0_20px_48px_rgba(18,126,124,0.18)]"
+          data-testid="food-delivery-platform-entry"
+        >
+          <div class="relative z-10 max-w-[62%]">
+            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-teal-900/70">
+              {{ t('外卖平台', 'Food Platform') }}
+            </p>
+            <h2 class="mt-3 text-2xl font-black leading-tight">
+              {{ t('今天也想吃点好吃的？', 'Good food for today?') }}
+            </h2>
+            <button
+              type="button"
+              class="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-gray-950 shadow-sm"
+              @click="openCategory(activeCategory.key)"
+            >
+              {{ t('现在看看', 'Browse now') }}
+              <i class="fas fa-chevron-right text-[10px]"></i>
+            </button>
+          </div>
+          <div
+            class="absolute -right-4 bottom-0 h-36 w-36 overflow-hidden rounded-full bg-white/45 p-2 shadow-[0_16px_40px_rgba(8,86,84,0.22)]"
+            data-testid="food-delivery-platform-hero-image"
+          >
+            <img
+              v-if="platformHeroImageUrl"
+              :src="platformHeroImageUrl"
+              :alt="platformHeroMenuItem?.image?.alt || platformHeroRestaurant?.name || 'Food'"
+              class="h-full w-full rounded-full object-cover"
+            />
+            <div v-else class="flex h-full w-full items-center justify-center rounded-full bg-white text-4xl text-teal-500">
+              <i class="fas fa-bowl-food"></i>
+            </div>
+          </div>
+          <span class="absolute bottom-4 left-5 rounded-full bg-black/70 px-3 py-1 text-[11px] font-black text-white">
+            {{ platformRestaurantCount }} {{ t('家小店', 'shops') }}
+          </span>
+        </article>
+
+        <section
+          class="rounded-[1.75rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+          data-testid="food-delivery-category-panel"
+        >
+          <div class="grid grid-cols-5 gap-2">
+            <button
+              v-for="category in platformCategoryTiles"
+              :key="category.key"
+              type="button"
+              class="min-h-[5.6rem] rounded-[1.25rem] p-2 text-center transition"
+              :class="category.active ? 'bg-[#e6fbfa] text-gray-950 ring-1 ring-[#24bcb7]/35' : 'bg-white text-gray-800'"
+              :data-testid="`food-delivery-category-${category.key}`"
+              @click="openCategory(category.key)"
+            >
+              <span
+                class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl text-lg"
+                :class="category.active ? 'bg-[#24bcb7] text-white' : 'bg-gray-50 text-gray-950'"
+              >
+                <i :class="category.icon"></i>
+              </span>
+              <span class="mt-2 block truncate text-[11px] font-black">{{ category.label }}</span>
+              <span class="sr-only">{{ category.key }}</span>
+              <span class="mt-0.5 block text-[10px] font-semibold text-gray-400">
+                {{ category.restaurantCount }} {{ t('店', 'shops') }}
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-3 gap-2" data-testid="food-delivery-platform-benefits">
+          <article
+            v-for="card in platformBenefitCards"
+            :key="card.key"
+            class="rounded-[1.35rem] bg-gradient-to-br p-3 shadow-sm ring-1 ring-black/5"
+            :class="card.className"
+          >
+            <i :class="card.icon" class="text-lg"></i>
+            <p class="mt-2 text-xs font-black leading-4">{{ card.title }}</p>
+            <p class="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 opacity-70">{{ card.desc }}</p>
+          </article>
+        </section>
+
+        <section
+          class="space-y-3"
+          data-testid="food-delivery-data-baseline"
+        >
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <p class="text-xl font-black text-gray-950">{{ t('附近热门小店', 'Popular nearby') }}</p>
+              <span class="hidden">Local data</span>
+              <p class="mt-1 text-xs font-semibold text-gray-500">
+                {{ activeCategoryLabel }} · {{ platformMenuItemCount }} {{ t('个菜单项', 'menu item(s)') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+              @click="openCategory(activeCategory.key)"
+            >
+              {{ t('全部', 'All') }}
+            </button>
+          </div>
+
+          <div class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2" data-testid="food-delivery-shop-app-list">
+            <article
+              v-for="restaurant in platformFeaturedRestaurants"
+              :key="restaurant.id"
+              class="w-[11.4rem] shrink-0"
+              :data-testid="`food-delivery-shop-app-${restaurant.id}`"
+              :data-store-tone="restaurant.visual.tone"
+            >
+              <button
+                type="button"
+                class="group block w-full text-left"
+                :data-testid="`food-delivery-open-store-${restaurant.id}`"
+                @click="openRestaurantStore(restaurant)"
+              >
+                <div
+                  class="relative h-28 overflow-hidden rounded-[1.35rem] bg-gray-100 shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
+                  :data-testid="`food-delivery-restaurant-${restaurant.id}`"
+                >
+                  <img
+                    v-if="foodImageUrl(restaurant)"
+                    :src="foodImageUrl(restaurant)"
+                    :alt="restaurant.image?.alt || restaurant.name"
+                    class="h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
+                  />
+                  <div v-else class="flex h-full w-full items-center justify-center text-3xl text-[#24bcb7]">
+                    <i class="fas fa-store"></i>
+                  </div>
+                  <span class="absolute left-2 top-2 rounded-full bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white">
+                    {{ t('精选', 'Pick') }}
+                  </span>
+                </div>
+                <p class="mt-2 truncate text-sm font-black text-gray-950">{{ restaurant.displayName }}</p>
+                <p class="mt-1 text-[11px] font-semibold text-gray-500">
+                  {{ restaurant.rating.toFixed(1) }} ★ · {{ restaurant.deliveryEtaMinutes }} min ·
+                  {{ restaurant.deliveryFee }} {{ restaurant.currency }}
+                </p>
+                <p class="mt-1 truncate text-[11px] font-semibold text-gray-400">
+                  {{ restaurant.shortDescription }}
+                </p>
+                <p
+                  v-if="restaurant.entryTags.length"
+                  class="mt-1 truncate text-[10px] font-black text-[#24a9a5]"
+                >
+                  {{ restaurant.entryTags.join(' · ') }}
+                </p>
+              </button>
+            </article>
+            <div
+              v-if="platformFeaturedRestaurants.length === 0"
+              class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
+              data-testid="food-delivery-shop-app-empty"
+            >
+              {{
+                t(
+                  'No installed shop mini apps in this folder view. Add them from App Store.',
+                  'No installed shop mini apps in this folder view. Add them from App Store.',
+                )
+              }}
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section v-if="false" class="hidden space-y-4 rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-pseudo-folder-home-legacy">
         <article class="overflow-hidden rounded-3xl bg-gray-950 p-4 text-white" data-testid="food-delivery-platform-entry">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
@@ -1131,7 +1679,26 @@ onBeforeUnmount(() => {
       </section>
       </section>
 
-      <section class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-custom-form">
+      <details
+        v-if="openedFromAppStoreShopCreate"
+        class="rounded-[1.75rem] bg-white p-3 shadow-sm ring-1 ring-black/5"
+        :open="openedFromAppStoreShopCreate"
+        data-testid="food-delivery-custom-form"
+      >
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[1.35rem] bg-gray-50 px-3 py-3">
+          <span class="min-w-0">
+            <span class="block text-sm font-black text-gray-950">
+              {{ t('店铺工作台', 'Shop workspace') }}
+            </span>
+            <span class="mt-1 block text-[11px] font-semibold leading-4 text-gray-500">
+              {{ t('创建小店、补菜单和换图片。', 'Create shops, add menu items, and update images.') }}
+            </span>
+          </span>
+          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm">
+            <i class="fas fa-chevron-down text-xs"></i>
+          </span>
+        </summary>
+        <div class="mt-3">
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-bold">{{ t('自定义餐厅与菜单', 'Custom restaurants and menu') }}</p>
@@ -1280,7 +1847,8 @@ onBeforeUnmount(() => {
         <p v-if="customFeedback" class="mt-2 text-[11px] font-semibold text-orange-600">
           {{ customFeedback }}
         </p>
-      </section>
+        </div>
+      </details>
 
       </div>
 

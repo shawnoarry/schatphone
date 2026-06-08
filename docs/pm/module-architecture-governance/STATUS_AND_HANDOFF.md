@@ -19,6 +19,11 @@ What is already landed:
 7. World app bindings now centralize global launch rows and target-app UX context through `src/lib/world-pack-app-bindings.js`; current consumers are Shopping, Food Delivery, Calendar, and Map.
 8. Nonstandard-app proposals now have a guarded whitelist/review seam in `src/lib/world-app-template-registry.js` plus a WorldBook Current World Pack review UI with explicit loading, empty, parse/API error, and rejected-state treatment; confirmed proposals become appBindings only after user action and then reuse the existing App Store/Home/target-app context seams, while unknown, low-confidence, or unsupported proposals cannot create modules, stores, event rules, or App Store entries. `black_market` is currently unsupported as `needs_dedicated_app`, so it is not mapped onto Shopping. Dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths are covered by regression tests.
 9. Book / WorldBook naming has been unified around canonical worldview, encyclopedia, world-rule, profile-template, source-role, and reference concepts. Legacy Book `assetType`, source-link `usage`, `knowledgePoints`, and `knowledgePointIds` remain readable through compatibility aliases.
+10. Built-in Book sources now live outside user persistence and backup payloads. `现代首尔 K-pop 娱乐圈` main worldview and world rules are exposed through the Book store as read-only callable assets; WorldBook source links can target them, while user edits create normal user-owned copies.
+
+11. WorldBook's Book-library entry is an in-place card catalog, not a route handoff to `/book`. That preserves the ownership split: Book edits assets, WorldBook activates source links.
+12. The additional K-pop placeholder entries are real built-in Book assets exposed through the Book store and WorldBook picker, while still excluded from user persistence and backups.
+13. WorldBook picker grouping is presentation-only: grouped category cards are derived from real Book assets and inferred activation roles; no second storage layer or fake UI-only asset list is introduced.
 
 Still incomplete:
 

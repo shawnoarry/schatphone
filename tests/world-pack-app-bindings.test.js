@@ -250,6 +250,61 @@ describe('world pack app bindings', () => {
     expect(context.boundaryCopy).toContain('Food Delivery keeps its own records')
   })
 
+  test('does not resolve target app UX context when a UI theme package is required but missing', () => {
+    const context = resolveWorldAppUxContext({
+      systemStore: createSystemStore(),
+      moduleKey: 'food_delivery',
+      routeQuery: {
+        worldPack: 'survival_city',
+        worldApp: 'survival_dispatch',
+      },
+      expectedArchetypes: ['dispatch'],
+      requireUiThemePackage: true,
+    })
+
+    expect(context).toBeNull()
+  })
+
+  test('resolves target app UX context when an explicit UI theme package is present', () => {
+    const themedPack = normalizeWorldPack({
+      id: 'themed_dispatch_world',
+      appBindings: [
+        {
+          id: 'themed_dispatch',
+          archetype: 'dispatch',
+          title: 'Themed Dispatch',
+          moduleKey: 'food_delivery',
+          route: '/food-delivery',
+          uiThemePackage: {
+            enabled: true,
+            themeId: 'dark_dispatch_food',
+          },
+        },
+      ],
+    })
+
+    const context = resolveWorldAppUxContext({
+      systemStore: createSystemStore(themedPack),
+      moduleKey: 'food_delivery',
+      routeQuery: {
+        worldPack: 'themed_dispatch_world',
+        worldApp: 'themed_dispatch',
+      },
+      expectedArchetypes: ['dispatch'],
+      requireUiThemePackage: true,
+    })
+
+    expect(context).toMatchObject({
+      packId: 'themed_dispatch_world',
+      bindingId: 'themed_dispatch',
+      bindingTitle: 'Themed Dispatch',
+      uiThemePackage: {
+        enabled: true,
+        themeId: 'dark_dispatch_food',
+      },
+    })
+  })
+
   test('resolves generic World UX context for Calendar reservation target apps', () => {
     const context = resolveWorldAppUxContext({
       systemStore: createSystemStore(fandomPack),

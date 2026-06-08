@@ -22,12 +22,17 @@ import {
   diffWorldBookSourceText,
   resolveWorldBookSourceText,
 } from '../lib/book-text-schema'
-import { WORLDBOOK_SOURCE_ROLES, getWorldBookSourceRoleLabel } from '../lib/world-taxonomy'
+import {
+  WORLDBOOK_SOURCE_ROLES,
+  getBookTextCategoryLabel,
+  getWorldBookSourceRoleLabel,
+} from '../lib/world-taxonomy'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
 import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
 import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
+import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 
@@ -113,6 +118,7 @@ const linkedBookSources = computed(() =>
         (snapshotIsPartial || snapshotText !== currentSourceText),
       usageLabel: getSourceRoleLabel(link.role || link.usage),
       sectionSummary: describeBookLinkSections(asset, link.sectionIds),
+      builtIn: isBuiltInBookTextAssetId(link.assetId),
     }
   }),
 )
@@ -133,6 +139,7 @@ const availableBookSourceAssets = computed(() => {
   return bookStore.worldbookSourceAssets.filter((asset) => !linkedIds.has(asset.id))
 })
 const sourcePickerAssets = computed(() => bookStore.worldbookSourceAssets)
+const sourcePickerLinkedAssetIds = computed(() => new Set(linkedBookSources.value.map((link) => link.assetId)))
 const sourcePicker = reactive({
   open: false,
   assetId: '',
@@ -157,6 +164,44 @@ function getSourceRoleLabel(role = '') {
   return t(copy.zh, copy.en)
 }
 
+function getBookAssetCategoryLabel(asset = {}) {
+  const copy = getBookTextCategoryLabel(asset.category || asset.assetType)
+  return t(copy.zh, copy.en)
+}
+
+function isSourcePickerAssetLinked(assetId = '') {
+  return sourcePickerLinkedAssetIds.value.has(assetId)
+}
+
+const inferBookSourceRole = (asset = {}) => {
+  const category = asset?.category || asset?.assetType
+  if (category === 'world_rule') return 'world_rule'
+  if (category === 'encyclopedia') return 'encyclopedia'
+  if (category === 'profile_template') return 'profile_template'
+  const tags = Array.isArray(asset?.tags) ? asset.tags : []
+  if (tags.some((tag) => String(tag || '').toLowerCase().includes('world pack'))) {
+    return 'world_pack_reference'
+  }
+  if (tags.some((tag) => String(tag || '').includes('世界包'))) {
+    return 'world_pack_reference'
+  }
+  if (category === 'reference_material') return 'reference_material'
+  return 'main_worldview'
+}
+
+const sourcePickerGroups = computed(() =>
+  WORLDBOOK_SOURCE_ROLES.map((role) => {
+    const assets = sourcePickerAssets.value.filter((asset) => inferBookSourceRole(asset) === role)
+    const copy = getSourceRoleCopy(role)
+    return {
+      id: role,
+      label: t(copy.zh, copy.en),
+      count: assets.length,
+      assets,
+    }
+  }).filter((group) => group.assets.length > 0),
+)
+
 function describeBookLinkSections(asset, sectionIds = []) {
   const ids = Array.isArray(sectionIds) ? sectionIds.filter(Boolean) : []
   if (ids.length === 0) return t('全文', 'Whole document')
@@ -177,6 +222,7 @@ const buildSourceSnapshotForLink = (asset, sectionIds = []) =>
 const sourcePickerAsset = computed(() =>
   bookStore.findAssetById(sourcePicker.assetId) || sourcePickerAssets.value[0] || null,
 )
+
 const sourcePickerSections = computed(() =>
   Array.isArray(sourcePickerAsset.value?.sections) ? sourcePickerAsset.value.sections : [],
 )
@@ -274,6 +320,10 @@ const openContactsForProfileTemplates = () => {
   })
 }
 
+const openBookLibrary = () => {
+  openBookSourcePicker()
+}
+
 const worldbookPanelTabs = computed(() => [
   {
     id: 'sources',
@@ -284,7 +334,7 @@ const worldbookPanelTabs = computed(() => [
         ? t(`${bookSourceIssueCount.value} 份需确认`, `${bookSourceIssueCount.value} to confirm`)
         : activeBookSourceCount.value > 0
           ? t(`${activeBookSourceCount.value} 份正在使用`, `${activeBookSourceCount.value} in use`)
-          : t('使用基础世界观', 'Using base worldview'),
+          : t('从 Book 添加', 'Add from Book'),
   },
   {
     id: 'pack',
@@ -294,12 +344,6 @@ const worldbookPanelTabs = computed(() => [
       worldOverview.value.activePack?.title || '默认世界',
       worldOverview.value.activePack?.name || 'Default world',
     ),
-  },
-  {
-    id: 'kernel',
-    icon: 'fas fa-compass',
-    label: t('基础世界观', 'Kernel'),
-    summary: t(`${worldBookCount.value} 字`, `${worldBookCount.value} chars`),
   },
   {
     id: 'templates',
@@ -315,6 +359,15 @@ const worldbookPanelTabs = computed(() => [
       `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
       `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
     ),
+  },
+  {
+    id: 'kernel',
+    icon: 'fas fa-sliders-h',
+    label: t('高级兼容', 'Advanced'),
+    summary:
+      worldBookCount.value > 0
+        ? t(`${worldBookCount.value} 字兜底`, `${worldBookCount.value} fallback chars`)
+        : t('无兜底', 'No fallback'),
   },
 ])
 
@@ -332,36 +385,23 @@ const worldbookSetupSteps = computed(() => {
 
   return [
     {
-      id: 'kernel',
-      panelId: 'kernel',
-      icon: 'fas fa-compass',
-      index: '1',
-      title: t('基础世界观', 'Base worldview'),
-      detail:
-        worldBookCount.value > 0
-          ? t(`${worldBookCount.value} 字已写入`, `${worldBookCount.value} chars written`)
-          : t('先写这个世界的核心前提', 'Start with the core premise'),
-      state: worldBookCount.value > 0 ? 'done' : 'todo',
-      status: worldBookCount.value > 0 ? t('已写入', 'Written') : t('待填写', 'To fill'),
-    },
-    {
       id: 'sources',
       panelId: 'sources',
       icon: 'fas fa-book-open',
-      index: '2',
+      index: '1',
       title: t('设定文本', 'Setting text'),
       detail:
         activeBookSourceCount.value > 0
           ? t(`${activeBookSourceCount.value} 份正在使用`, `${activeBookSourceCount.value} in use`)
-          : t('长设定从文本库加入', 'Add long text from Book'),
-      state: activeBookSourceCount.value > 0 ? 'done' : 'optional',
-      status: activeBookSourceCount.value > 0 ? t('正在读取', 'In use') : t('可选补充', 'Optional'),
+          : t('从 Book 选择世界书文本', 'Choose worldbook text from Book'),
+      state: activeBookSourceCount.value > 0 ? 'done' : 'todo',
+      status: activeBookSourceCount.value > 0 ? t('正在读取', 'In use') : t('待选择', 'To choose'),
     },
     {
       id: 'pack',
       panelId: 'pack',
       icon: 'fas fa-cube',
-      index: '3',
+      index: '2',
       title: t('设定包', 'World pack'),
       detail:
         enabledExpansionPackCount > 0
@@ -374,7 +414,7 @@ const worldbookSetupSteps = computed(() => {
       id: 'templates',
       panelId: 'templates',
       icon: 'fas fa-id-card',
-      index: '4',
+      index: '3',
       title: t('档案模板', 'Profile templates'),
       detail:
         templateCount > 0
@@ -387,7 +427,7 @@ const worldbookSetupSteps = computed(() => {
       id: 'knowledge',
       panelId: 'knowledge',
       icon: 'fas fa-sitemap',
-      index: '5',
+      index: '4',
       title: t('百科', 'Encyclopedia'),
       detail:
         knowledgeCount > 0
@@ -395,6 +435,19 @@ const worldbookSetupSteps = computed(() => {
           : t('补充组织、术语、规则和额外设定', 'Add organizations, terms, rules, and extra lore'),
       state: enabledKnowledgeCount > 0 ? 'done' : 'optional',
       status: enabledKnowledgeCount > 0 ? t('已启用', 'Enabled') : t('可选', 'Optional'),
+    },
+    {
+      id: 'kernel',
+      panelId: 'kernel',
+      icon: 'fas fa-sliders-h',
+      index: '5',
+      title: t('高级兼容', 'Advanced fallback'),
+      detail:
+        worldBookCount.value > 0
+          ? t(`${worldBookCount.value} 字兼容说明`, `${worldBookCount.value} fallback chars`)
+          : t('无 Book 文本时才使用', 'Only used when no Book text is active'),
+      state: worldBookCount.value > 0 ? 'done' : 'optional',
+      status: worldBookCount.value > 0 ? t('有兜底', 'Fallback set') : t('可选', 'Optional'),
     },
   ]
 })
@@ -425,6 +478,27 @@ const saveWorldBook = () => {
   pulseSaved(t('世界观已保存。', 'Worldview saved.'))
 }
 
+const clearGlobalWorldview = async () => {
+  if (!String(globalWorldview.value || '').trim()) {
+    uiNotice.value = t('基础世界观已经是空的。', 'Base worldview is already empty.')
+    return
+  }
+  const ok = await confirmDialog({
+    title: t('清空基础世界观', 'Clear base worldview'),
+    message: t(
+      '这只会清空 Settings 中的基础世界观，不会删除 Book 文本、百科条目或世界包。',
+      'This only clears the base worldview in Settings. Book text, encyclopedia entries, and world packs stay untouched.',
+    ),
+    confirmText: t('清空', 'Clear'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!ok) return
+  systemStore.setGlobalWorldview('')
+  systemStore.saveNow()
+  pulseSaved(t('基础世界观已清空。', 'Base worldview cleared.'))
+}
+
 const selectWorldPack = (packId = '') => {
   selectedWorldPackId.value = packId || worldOverview.value.activePack?.id || 'default_world'
 }
@@ -437,6 +511,19 @@ const activateSelectedWorldPack = () => {
   }
   systemStore.saveNow()
   pulseSaved(t('世界包已激活。', 'World pack activated.'))
+}
+
+const resetWorldPackToDefault = () => {
+  const result = systemStore.activateWorldPack('default_world')
+  if (!result?.ok) {
+    uiNotice.value = t('默认世界恢复失败，请稍后再试。', 'Default world reset failed. Try again later.')
+    return
+  }
+  selectedWorldPackId.value = 'default_world'
+  worldAppTemplateProposalReview.value = null
+  worldAppTemplateProposalNotice.value = ''
+  systemStore.saveNow()
+  pulseSaved(t('已恢复默认世界。', 'Default world restored.'))
 }
 
 const analyzeWorldForExpansions = async () => {
@@ -626,53 +713,28 @@ const clearWorldAppTemplateProposalReview = () => {
 }
 
 const addFirstBookSource = () => {
-  if (availableBookSourceAssets.value.length > 0 || sourcePickerAssets.value.length > 0) {
-    openBookSourcePicker()
-    return
-  }
-  const asset = availableBookSourceAssets.value[0]
-  if (!asset) {
-    router.push({
-      path: BOOK_ROUTE,
-      query: {
-        from: 'settings',
-      },
-    })
-    return
-  }
-  const link = systemStore.addWorldBookSourceLink({
-    assetId: asset.id,
-    role: 'main_worldview',
-    enabled: true,
-    priority: 80 + linkedBookSources.value.length,
-    sourceVersion: asset.version,
-    sourceFingerprint: asset.contentFingerprint,
-    ...buildSourceSnapshotForLink(asset),
-  })
-  if (link) {
-    bookStore.updateAsset(asset.id, { status: 'active_source' }, { force: true, preserveVersion: true })
-    systemStore.saveNow()
-    bookStore.saveNow()
-    pulseSaved(t('已添加设定文本。', 'Setting text added.'))
-  }
+  openBookSourcePicker()
 }
 
 const resetSourcePickerForAsset = (asset) => {
   sourcePicker.assetId = asset?.id || ''
-  sourcePicker.role = 'main_worldview'
+  sourcePicker.role = inferBookSourceRole(asset)
   sourcePicker.mode = 'whole'
   sourcePicker.sectionIds = []
+}
+
+const selectSourcePickerAsset = (asset) => {
+  if (!asset) return
+  resetSourcePickerForAsset(asset)
 }
 
 const openBookSourcePicker = () => {
   const asset = availableBookSourceAssets.value[0] || sourcePickerAssets.value[0]
   if (!asset) {
-    router.push({
-      path: BOOK_ROUTE,
-      query: {
-        from: 'settings',
-      },
-    })
+    uiNotice.value = t(
+      '文本库里还没有可用的世界书文本，请先在 Book 创建或导入文本。',
+      'No usable worldbook text is available yet. Create or import text in Book first.',
+    )
     return
   }
   resetSourcePickerForAsset(asset)
@@ -753,6 +815,7 @@ const clearSourcePickerSections = () => {
 }
 
 const syncBookAssetSourceStatus = (assetId = '') => {
+  if (isBuiltInBookTextAssetId(assetId)) return
   const asset = bookStore.findAssetById(assetId)
   if (!asset || asset.status === 'archived') return
   const hasActiveLink = systemStore
@@ -1431,7 +1494,7 @@ onBeforeUnmount(() => {
             {{
               activeBookSourceCount > 0
                 ? t(`${activeBookSourceCount} 份设定正在使用`, `${activeBookSourceCount} setting text(s) in use`)
-                : t('使用基础世界观', 'Using base worldview')
+                : t('等待 Book 设定文本', 'Waiting for Book setting text')
             }}
           </span>
         </div>
@@ -1505,6 +1568,7 @@ onBeforeUnmount(() => {
           :template-proposal-notice-tone="worldAppTemplateProposalNoticeTone"
           @select-pack="selectWorldPack"
           @activate-pack="activateSelectedWorldPack"
+          @reset-pack="resetWorldPackToDefault"
           @analyze-world-profile="analyzeWorldForExpansions"
           @enable-pack="enableWorldPackExpansion"
           @disable-pack="disableWorldPackExpansion"
@@ -1528,12 +1592,12 @@ onBeforeUnmount(() => {
         >
         <div>
           <p>{{ t('第一步', 'First step') }}</p>
-          <h2>{{ t('先告诉 AI 这个世界是什么', 'Tell AI what this world is') }}</h2>
+          <h2>{{ t('从 Book 选择世界书文本', 'Choose worldbook text from Book') }}</h2>
           <span>
             {{
               t(
-                '可以先使用基础世界观；需要更完整的设定时，再从文本库添加长文本。',
-                'You can start with the base worldview, then add longer setting text from Book when needed.',
+                'Book 负责写作和编辑；这里决定哪些文本进入当前世界背景。',
+                'Book owns writing and editing; this page only chooses what enters the current world context.',
               )
             }}
           </span>
@@ -1543,12 +1607,13 @@ onBeforeUnmount(() => {
             {{ sourcePickerAssets.length > 0 ? t('从文本库添加设定', 'Add setting text from Book') : t('打开文本库', 'Open Book') }}
           </button>
           <button
+            v-if="sourcePickerAssets.length > 0"
             type="button"
             class="worldbook-secondary-action"
-            data-testid="worldbook-copy-fallback-to-book"
-            @click="copyFallbackWorldviewToBook"
+            data-testid="worldbook-open-book-library"
+            @click="openBookLibrary"
           >
-            {{ t('把基础世界观存入文本库', 'Save base worldview to Book') }}
+            {{ t('浏览书目卡片', 'Browse Book cards') }}
           </button>
         </div>
       </section>
@@ -1582,14 +1647,14 @@ onBeforeUnmount(() => {
               {{
                 activeBookSourceCount > 0
                   ? t(`${activeBookSourceCount} 份文本正在使用`, `${activeBookSourceCount} text(s) in use`)
-                  : t('当前只使用基础世界观', 'Using only the base worldview')
+                  : t('还没有启用 Book 设定文本', 'No Book setting text is active')
               }}
             </strong>
             <small>
               {{
                 t(
-                  '用户选择什么，AI 就读取什么；未选择的文本不会进入默认世界背景。',
-                  'AI reads the text the user chooses; unselected text is not part of the default world context.',
+                  '需要可编辑世界书时，请先在 Book 写好文本，再在这里启用。',
+                  'Write or edit worldbook text in Book, then enable it here.',
                 )
               }}
             </small>
@@ -1604,21 +1669,30 @@ onBeforeUnmount(() => {
           </span>
         </div>
 
-        <div class="worldbook-system-fallback" data-testid="worldbook-system-fallback">
-          <div>
-            <p>{{ t('基础世界观', 'Base worldview') }}</p>
-            <strong>{{ worldBookCount }} {{ t('字', 'chars') }}</strong>
-            <span>{{ fallbackWorldviewPreview }}</span>
+        <details class="worldbook-fallback-compat" data-testid="worldbook-fallback-compat">
+          <summary>
+            <span>
+              <strong>{{ t('高级兼容：基础世界观', 'Advanced compatibility: base worldview') }}</strong>
+              <small>{{ t('没有启用 Book 文本时，才把这段短说明作为兼容兜底。', 'Only used as a short fallback when no Book text is active.') }}</small>
+            </span>
+            <em>{{ worldBookCount }} {{ t('字', 'chars') }}</em>
+          </summary>
+          <div class="worldbook-system-fallback" data-testid="worldbook-system-fallback">
+            <div>
+              <p>{{ t('基础世界观', 'Base worldview') }}</p>
+              <strong>{{ worldBookCount }} {{ t('字', 'chars') }}</strong>
+              <span>{{ fallbackWorldviewPreview }}</span>
+            </div>
+            <button
+              type="button"
+              class="worldbook-secondary-action"
+              data-testid="worldbook-copy-fallback-to-book"
+              @click="copyFallbackWorldviewToBook"
+            >
+              {{ t('复制到 Book', 'Copy to Book') }}
+            </button>
           </div>
-          <button
-            type="button"
-            class="worldbook-secondary-action"
-            data-testid="worldbook-copy-fallback-to-book-inline"
-            @click="copyFallbackWorldviewToBook"
-          >
-            {{ t('存入文本库', 'Save to Book') }}
-          </button>
-        </div>
+        </details>
 
         <div
           v-if="sourcePicker.open"
@@ -1635,12 +1709,57 @@ onBeforeUnmount(() => {
         >
           <div class="worldbook-sheet-head">
             <div>
-              <p>{{ t('添加设定文本', 'Add setting text') }}</p>
-              <h3>{{ sourcePickerAsset?.title || t('文本库文本', 'Book text') }}</h3>
+              <p>{{ t('文本库书目', 'Book catalog') }}</p>
+              <h3>{{ t('选择一本设定文本', 'Choose a setting text') }}</h3>
             </div>
             <button type="button" class="worldbook-inline-action" @click="closeBookSourcePicker">
               {{ t('关闭', 'Close') }}
             </button>
+          </div>
+          <div class="worldbook-source-catalog" data-testid="worldbook-source-catalog">
+            <section
+              v-for="group in sourcePickerGroups"
+              :key="group.id"
+              class="worldbook-source-catalog-group"
+              :data-testid="`worldbook-source-picker-group-${group.id}`"
+            >
+              <div class="worldbook-source-catalog-group__head">
+                <span>
+                  <strong>{{ group.label }}</strong>
+                  <small>{{ group.count }} {{ t('份文稿', 'manuscript(s)') }}</small>
+                </span>
+              </div>
+              <div class="worldbook-source-catalog-group__items">
+                <button
+                  v-for="asset in group.assets"
+                  :key="asset.id"
+                  type="button"
+                  class="worldbook-source-catalog-card"
+                  :class="{
+                    'is-selected': sourcePicker.assetId === asset.id,
+                    'is-linked': isSourcePickerAssetLinked(asset.id),
+                  }"
+                  :aria-pressed="sourcePicker.assetId === asset.id"
+                  :data-testid="`worldbook-source-picker-card-${asset.id}`"
+                  @click="selectSourcePickerAsset(asset)"
+                >
+                  <span class="worldbook-source-catalog-card__head">
+                    <strong>{{ asset.title }}</strong>
+                    <span class="worldbook-source-catalog-card__badges">
+                      <em v-if="isBuiltInBookTextAssetId(asset.id)">{{ t('内置文本', 'Built-in') }}</em>
+                      <em v-if="isSourcePickerAssetLinked(asset.id)">{{ t('已加入', 'Added') }}</em>
+                    </span>
+                  </span>
+                  <span class="worldbook-source-catalog-card__meta">
+                    {{ getBookAssetCategoryLabel(asset) }} · {{ asset.content?.length || 0 }} {{ t('字', 'chars') }} ·
+                    {{ Array.isArray(asset.sections) ? asset.sections.length : 0 }} {{ t('段落', 'sections') }}
+                  </span>
+                  <span v-if="asset.description" class="worldbook-source-catalog-card__desc">
+                    {{ asset.description }}
+                  </span>
+                </button>
+              </div>
+            </section>
           </div>
           <div v-if="sourcePickerAsset" class="worldbook-picker-asset-summary">
             <span><i class="fas fa-book-open"></i></span>
@@ -1653,14 +1772,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="worldbook-picker-grid">
-            <label>
-              <span>{{ t('选择文本', 'Choose text') }}</span>
-              <select v-model="sourcePicker.assetId" data-testid="worldbook-source-picker-asset">
-                <option v-for="asset in sourcePickerAssets" :key="asset.id" :value="asset.id">
-                  {{ asset.title }}
-                </option>
-              </select>
-            </label>
             <label>
               <span>{{ t('作为哪类设定', 'Use as') }}</span>
               <select v-model="sourcePicker.role" data-testid="worldbook-source-picker-usage">
@@ -1725,7 +1836,7 @@ onBeforeUnmount(() => {
         <div v-if="linkedBookSources.length === 0" class="worldbook-source-empty" data-testid="worldbook-book-source-empty">
           <span><i class="fas fa-link-slash"></i></span>
           <strong>{{ t('还没有添加设定文本', 'No setting text added yet') }}</strong>
-          <p>{{ t('现在 AI 会使用上方基础世界观。需要长设定时，从文本库添加。', 'AI currently uses the base worldview above. Add longer setting text from Book when needed.') }}</p>
+          <p>{{ t('请先在 Book 写好世界书文本，再回到这里加入当前世界背景。', 'Write worldbook text in Book first, then add it to the current world context here.') }}</p>
         </div>
 
         <div v-else-if="activeBookSources.length > 0" class="worldbook-source-list" data-testid="worldbook-active-source-list">
@@ -1751,6 +1862,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="worldbook-source-card__meta">
             <span class="is-success">{{ t('正在使用', 'In use') }}</span>
+            <span v-if="link.builtIn" class="is-muted">{{ t('内置文本', 'Built-in text') }}</span>
             <span v-if="link.changed" class="is-warning">{{ t('需要确认更新', 'Update confirmation needed') }}</span>
           </div>
           <div class="worldbook-source-card__actions">
@@ -1761,7 +1873,7 @@ onBeforeUnmount(() => {
               {{ t('从当前背景移除', 'Remove from context') }}
             </button>
             <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-open-${link.id}`" @click="openBookSource(link.assetId)">
-              {{ t('打开文本', 'Open text') }}
+              {{ link.builtIn ? t('查看文本', 'View text') : t('打开文本', 'Open text') }}
             </button>
             <button type="button" class="worldbook-secondary-action worldbook-danger-action" :data-testid="`worldbook-book-source-remove-${link.id}`" @click="removeBookSource(link.id)">
               {{ t('移除', 'Remove') }}
@@ -1773,7 +1885,7 @@ onBeforeUnmount(() => {
         <div v-else class="worldbook-source-empty" data-testid="worldbook-active-source-empty">
           <span><i class="fas fa-book"></i></span>
           <strong>{{ t('没有正在使用的长文本', 'No long setting text in use') }}</strong>
-          <p>{{ t('AI 仍会读取基础世界观。可以重新启用下方未使用文本，或从文本库添加新的设定。', 'AI still reads the base worldview. Re-enable unused text below or add a new setting from Book.') }}</p>
+          <p>{{ t('重新启用下方未使用文本，或从 Book 添加新的设定文本。', 'Re-enable unused text below, or add new setting text from Book.') }}</p>
         </div>
 
         <details
@@ -1816,6 +1928,7 @@ onBeforeUnmount(() => {
               <div class="worldbook-source-card__meta">
                 <span v-if="link.missing" class="is-danger">{{ t('文本不存在', 'Text missing') }}</span>
                 <span v-else-if="link.changed" class="is-warning">{{ t('需要确认更新', 'Update confirmation needed') }}</span>
+                <span v-else-if="link.builtIn" class="is-muted">{{ t('内置文本', 'Built-in text') }}</span>
                 <span v-else class="is-muted">{{ t('未使用', 'Not in use') }}</span>
               </div>
               <div class="worldbook-source-card__actions">
@@ -1826,7 +1939,7 @@ onBeforeUnmount(() => {
                   {{ link.enabled === false ? t('加入当前背景', 'Use in context') : t('从当前背景移除', 'Remove from context') }}
                 </button>
                 <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-open-maintenance-${link.id}`" @click="openBookSource(link.assetId)">
-                  {{ t('打开文本', 'Open text') }}
+                  {{ link.builtIn ? t('查看文本', 'View text') : t('打开文本', 'Open text') }}
                 </button>
                 <button type="button" class="worldbook-secondary-action worldbook-danger-action" :data-testid="`worldbook-book-source-remove-maintenance-${link.id}`" @click="removeBookSource(link.id)">
                   {{ t('移除引用', 'Remove reference') }}
@@ -1917,13 +2030,13 @@ onBeforeUnmount(() => {
       >
         <div class="worldbook-kernel-hero">
           <div>
-            <p>{{ t('基础规则', 'Core rules') }}</p>
-            <h2>{{ t('基础世界观', 'Global worldview') }}</h2>
+            <p>{{ t('兼容兜底', 'Compatibility fallback') }}</p>
+            <h2>{{ t('高级兼容设置', 'Advanced compatibility') }}</h2>
             <span>
               {{
                 t(
-                  '这里保留一段简短基础世界观；长设定请放进 Book，再从设定文本面板加入当前背景。',
-                  'Keep a short base worldview here; long setting text should live in Book and be added from Setting text.',
+                  '这里只保留无 Book 设定文本时使用的短说明；完整世界书请在 Book 编辑，再回到设定文本面板启用。',
+                  'Only keep a short note for cases with no Book setting text; edit the full worldbook in Book, then enable it from Setting text.',
                 )
               }}
             </span>
@@ -1936,22 +2049,32 @@ onBeforeUnmount(() => {
         <textarea
           v-model="globalWorldview"
           class="worldbook-kernel-editor"
+          data-testid="worldbook-global-worldview"
           :placeholder="
             t(
-              '例如：世界规则、时代背景、组织结构、角色关系约束...',
-              'Example: world rules, era background, organization structure, and role constraints...',
+              '例如：没有启用 Book 文本时，默认使用的极短世界说明...',
+              'Example: a very short world note used only when no Book text is active...',
             )
           "
         ></textarea>
         <div class="worldbook-kernel-actions">
-          <p>{{ t('保存后会作为基础世界观；选中的文本库内容会在此基础上补充细节。', 'Saved text becomes the base worldview; selected Book text adds detail on top of it.') }}</p>
+          <p>{{ t('这不是世界书编辑器；需要反复修改、分段或版本管理的设定，请放进 Book。', 'This is not the worldbook editor; use Book for editable, sectioned, or versioned setting text.') }}</p>
           <button
             type="button"
             class="worldbook-primary-action"
             :class="{ 'is-saved': saved }"
+            data-testid="worldbook-save-worldview"
             @click="saveWorldBook"
           >
-            {{ saved ? t('已保存', 'Saved') : t('保存世界观', 'Save worldview') }}
+            {{ saved ? t('已保存', 'Saved') : t('保存兼容说明', 'Save compatibility note') }}
+          </button>
+          <button
+            type="button"
+            class="worldbook-secondary-action worldbook-danger-action"
+            data-testid="worldbook-clear-worldview"
+            @click="clearGlobalWorldview"
+          >
+            {{ t('清空兼容说明', 'Clear compatibility note') }}
           </button>
         </div>
       </div>
@@ -2316,9 +2439,10 @@ onBeforeUnmount(() => {
                 <button
                   @click="toggleKnowledgePoint(point)"
                   class="px-2 py-0.5 rounded text-[11px] border"
-                  :class="point.enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-600'"
+                  :class="point.enabled ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'"
+                  :data-testid="`knowledge-toggle-${point.id}`"
                 >
-                  {{ point.enabled ? t('启用', 'Enabled') : t('停用', 'Disabled') }}
+                  {{ point.enabled ? t('停用', 'Disable') : t('启用', 'Enable') }}
                 </button>
                 <button
                   :data-testid="`knowledge-edit-${point.id}`"
@@ -2962,6 +3086,78 @@ onBeforeUnmount(() => {
   background: var(--system-surface-muted);
 }
 
+.worldbook-fallback-compat {
+  overflow: hidden;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
+}
+
+.worldbook-fallback-compat summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  color: var(--system-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.worldbook-fallback-compat summary::-webkit-details-marker {
+  display: none;
+}
+
+.worldbook-fallback-compat summary::after {
+  content: '+';
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  color: var(--system-text-muted);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.worldbook-fallback-compat[open] summary::after {
+  content: '-';
+}
+
+.worldbook-fallback-compat summary span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.worldbook-fallback-compat summary strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.worldbook-fallback-compat summary small {
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.worldbook-fallback-compat summary em {
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.worldbook-fallback-compat .worldbook-system-fallback {
+  border: 0;
+  border-top: 1px solid var(--system-control-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .worldbook-system-fallback div {
   display: grid;
   gap: 4px;
@@ -3076,6 +3272,7 @@ onBeforeUnmount(() => {
 }
 
 .worldbook-kernel-actions p {
+  flex: 1 1 auto;
   margin: 0;
   color: var(--system-text-muted);
   font-size: 11px;
@@ -3293,9 +3490,137 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 
+.worldbook-source-catalog {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.worldbook-source-catalog-group {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: color-mix(in srgb, var(--system-control-bg) 82%, transparent);
+}
+
+.worldbook-source-catalog-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.worldbook-source-catalog-group__head span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.worldbook-source-catalog-group__head strong {
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.worldbook-source-catalog-group__head small {
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.worldbook-source-catalog-group__items {
+  display: grid;
+  gap: 8px;
+}
+
+.worldbook-source-catalog-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-control-bg);
+  color: var(--system-text);
+  text-align: left;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.worldbook-source-catalog-card:hover,
+.worldbook-source-catalog-card:focus-visible {
+  border-color: var(--system-accent);
+  background: var(--system-info-soft);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.worldbook-source-catalog-card.is-selected {
+  border-color: var(--system-accent);
+  background: var(--system-info-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--system-accent) 42%, transparent);
+}
+
+.worldbook-source-catalog-card.is-linked:not(.is-selected) {
+  opacity: 0.86;
+}
+
+.worldbook-source-catalog-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.worldbook-source-catalog-card__head strong {
+  min-width: 0;
+  color: var(--system-text);
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 850;
+}
+
+.worldbook-source-catalog-card__badges {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.worldbook-source-catalog-card__badges em {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--system-surface-muted);
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.worldbook-source-catalog-card__meta,
+.worldbook-source-catalog-card__desc {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .worldbook-picker-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -3923,6 +4248,7 @@ onBeforeUnmount(() => {
 
   .worldbook-kernel-hero > span,
   .worldbook-kernel-actions .worldbook-primary-action,
+  .worldbook-kernel-actions .worldbook-secondary-action,
   .worldbook-template-handoff .worldbook-primary-action,
   .worldbook-template-stats {
     width: 100%;

@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookStore } from '../stores/book'
 import { useSystemStore } from '../stores/system'
@@ -9,6 +8,7 @@ import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { BOOK_TEXT_ASSET_TYPES } from '../lib/book-text-schema'
 import { getBookTextCategoryLabel } from '../lib/world-taxonomy'
+import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,7 +16,6 @@ const bookStore = useBookStore()
 const systemStore = useSystemStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
-const { assets } = storeToRefs(bookStore)
 
 const searchQuery = ref('')
 const typeFilter = ref('all')
@@ -64,7 +63,7 @@ const filteredAssets = computed(() => {
 })
 
 const selectedAsset = computed(() =>
-  bookStore.findAssetById(selectedAssetId.value) || filteredAssets.value[0] || assets.value[0] || null,
+  bookStore.findAssetById(selectedAssetId.value) || filteredAssets.value[0] || bookStore.libraryAssets[0] || null,
 )
 
 const selectedSections = computed(() =>
@@ -102,6 +101,8 @@ const selectedStatusLabel = computed(() => {
   const status = selectedAsset.value?.status || 'draft'
   return t(statusLabels[status]?.zh || status, statusLabels[status]?.en || status)
 })
+
+const selectedAssetIsBuiltIn = computed(() => isBuiltInBookTextAssetId(selectedAsset.value?.id))
 
 const aiToolOptions = computed(() => [
   {
@@ -264,6 +265,24 @@ const beginEdit = () => {
 
 const confirmGuardedEdit = () => {
   editGuardVisible.value = false
+  if (selectedAssetIsBuiltIn.value) {
+    const sourceAsset = selectedAsset.value
+    const copy = bookStore.createAsset({
+      ...sourceAsset,
+      id: undefined,
+      title: `${sourceAsset.title} ${t('副本', 'Copy')}`,
+      locked: false,
+      favorite: false,
+      status: 'draft',
+      source: {
+        kind: 'built_in_copy',
+        sourceAssetId: sourceAsset.id,
+        copiedAt: Date.now(),
+      },
+    })
+    selectAsset(copy.id)
+    hydrateDraft()
+  }
   editMode.value = true
 }
 
@@ -307,7 +326,13 @@ const saveEdit = () => {
     shelfOpen.value = false
     importFeedbackTone.value = 'success'
     importFeedback.value = t('已保存文本来源。', 'Text source saved.')
+    return
   }
+  importFeedbackTone.value = 'error'
+  importFeedback.value =
+    result.reason === 'built_in'
+      ? t('内置文本需要先复制成副本再编辑。', 'Built-in text must be copied before editing.')
+      : t('保存失败。', 'Save failed.')
 }
 
 const triggerImport = () => {
@@ -616,10 +641,22 @@ const exportSelected = async () => {
         </div>
 
         <div v-if="editGuardVisible" class="book-guard" data-testid="book-edit-guard">
-          <strong>{{ t('这是启用或锁定的来源', 'This source is active or locked') }}</strong>
-          <p>{{ t('编辑前请确认：保存后可能改变之后的世界书上下文。', 'Confirm before editing: saving may change future WorldBook context.') }}</p>
+          <strong>
+            {{
+              selectedAssetIsBuiltIn
+                ? t('这是内置来源', 'This is a built-in source')
+                : t('这是启用或锁定的来源', 'This source is active or locked')
+            }}
+          </strong>
+          <p>
+            {{
+              selectedAssetIsBuiltIn
+                ? t('继续后会创建一份可编辑副本，内置模板本身不会被改动。', 'Continuing creates an editable copy; the built-in template stays unchanged.')
+                : t('编辑前请确认：保存后可能改变之后的世界书上下文。', 'Confirm before editing: saving may change future WorldBook context.')
+            }}
+          </p>
           <button type="button" class="book-primary-button" @click="confirmGuardedEdit" data-testid="book-edit-guard-confirm">
-            {{ t('继续编辑', 'Continue editing') }}
+            {{ selectedAssetIsBuiltIn ? t('复制后编辑', 'Copy and edit') : t('继续编辑', 'Continue editing') }}
           </button>
         </div>
 

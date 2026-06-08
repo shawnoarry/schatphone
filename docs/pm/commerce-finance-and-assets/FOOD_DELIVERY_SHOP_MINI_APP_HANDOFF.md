@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-06-03
+Updated: 2026-06-08
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -26,6 +26,17 @@ The pseudo-folder direction is now implemented for Food Delivery and Shopping.
 - The pseudo-folder grid can grow and scroll; it is no longer capped to the first eight entries.
 - The old Food Delivery first-layer category entries are removed from Home's pseudo-folder layer.
 
+Food Platform now has a consumer-facing discovery homepage.
+
+- The platform first screen uses a Baemin-like delivery-app rhythm adapted to SchatPhone: top actions, delivery address chip, large title, real search input, teal campaign hero with food imagery, category icon grid, benefit cards, and a horizontal shop mini app rail.
+- The latest visual pass decomposes the AI-generated delivery homepage reference into product modules: brand/address header, search with rider illustration layering, campaign hero, 5-by-2 compact icon category grid, membership coupon strip, recommendation rail, and a light bottom navigation row.
+- The rider illustration is now the user-provided transparent PNG asset (`public/images/food-delivery/platform-delivery-rider.png`) layered near the search field. It adds delivery-app personality without blocking input, and the asset can be replaced without changing platform logic. The hero food image now prefers Moon Bistro-style meal imagery and has a native plate fallback when external images load slowly.
+- Food Platform bottom navigation is visual/discovery-only for now: Home, Search, Orders, Saved, and Mine. `Orders` is a platform affordance placeholder and must not aggregate peer shop orders unless Food Platform later becomes an order-owning mini app.
+- Platform search filters visible shop mini apps by shop name, App Store facade display name, cuisine, category, and menu text.
+- Seed restaurants and seed dishes now include default food-photo URLs so fresh saves do not open with icon-only food cards.
+- The restaurant/menu creation tools are hidden from ordinary Food Platform browsing. They appear only when the user arrives through the App Store create-shop handoff, and creating a restaurant keeps that handoff open so the user can immediately add menu items and images.
+- Food Platform still does not show shop cart, shop orders, Wallet suggestions, Map support panels, or delivery event controls. Those remain inside opened shop mini apps.
+
 The first Food Delivery shop is Moon Bistro.
 
 - Moon Bistro is opened by restaurant context and renders as a shop-first mini app.
@@ -40,6 +51,8 @@ The first Food Delivery shop is Moon Bistro.
 - The shop checkout is now a shop-local confirmation sheet. Tapping checkout previews the current shop cart, delivery address, ETA, delivery fee, and total; the order is created only after the user submits from that sheet.
 - Shop orders, delivery events, and Wallet suggestions are scoped to the currently opened shop. Food Platform does not render the shop cart, order panel, Wallet suggestions, or Map support panels, so it no longer behaves like a total order controller.
 - The shop header no longer has a `Food platform` return button. Home remains available, while the platform is treated as a peer mini app in the pseudo-folder rather than the parent of the shop.
+- World Pack explainer banners are not user-facing UI. World Pack context should appear through app wording, defaults, visual treatment, and flow behavior; boundary explanations stay in docs/tests instead of rendering as an in-app card.
+- Food Delivery now requires an explicit World Pack `uiThemePackage.enabled=true` before consuming a World Pack UI/UX override. If a world app binding only maps a route or entry, Food Delivery falls back to the original app UI and defaults.
 
 ## Important Ownership Boundaries
 
@@ -81,7 +94,9 @@ App Store must not own restaurant/menu/cart/order records.
 
 ## Next Visual Plan
 
-Focus only on Moon Bistro before expanding to other shops.
+Food Platform's first consumer-homepage pass is done, including the Baemin-like reference decomposition. Keep it as discovery-first: future work can add real favorite/recent shop behavior, richer empty states, and platform-specific order history only if Food Platform later becomes an order-owning mini app. Until then, bottom navigation should remain a discovery/navigation affordance, not a hidden aggregate order controller.
+
+Focus shop-template work on Moon Bistro before expanding to other shops.
 
 Recommended direction: late-night bistro with a dark tray menu.
 

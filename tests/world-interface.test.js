@@ -10,6 +10,7 @@ import {
 const createSystemStore = ({
   globalWorldview = '',
   worldBook = '',
+  worldBookSourceLinks = [],
   encyclopediaEntries = [],
   knowledgePoints = encyclopediaEntries,
   profileTemplates = [],
@@ -19,6 +20,7 @@ const createSystemStore = ({
   user: {
     globalWorldview,
     worldBook,
+    worldBookSourceLinks,
     encyclopediaEntries: encyclopediaEntries.length > 0 ? encyclopediaEntries : knowledgePoints,
     knowledgePoints,
     profileTemplates,
@@ -41,6 +43,9 @@ const createSystemStore = ({
     if (enabledPacks.length > 0) return enabledPacks
     return activePack && activePack.id !== 'default_world' ? [activePack] : []
   },
+  listWorldBookSourceLinks() {
+    return this.user.worldBookSourceLinks
+  },
   listEncyclopediaEntries(options = {}) {
     return options.enabledOnly
       ? this.user.encyclopediaEntries.filter((point) => point.enabled !== false)
@@ -55,6 +60,13 @@ const createSystemStore = ({
     return this.user.profileTemplates.filter(
       (template) => template.scope === 'world' && template.worldId === worldId,
     )
+  },
+})
+
+const createBookStore = (assets = []) => ({
+  assets,
+  findAssetById(assetId) {
+    return this.assets.find((asset) => asset.id === assetId) || null
   },
 })
 
@@ -255,5 +267,40 @@ describe('world interface', () => {
     expect(promptBlock).toContain('Primary worldview rules: Night city baseline.')
     expect(promptBlock).toContain('City etiquette: Formal greeting only. [tags: style]')
     expect(promptBlock).not.toContain('Hidden note')
+  })
+
+  test('injects built-in K-pop Book sources through explicit WorldBook links', () => {
+    const asset = {
+      id: 'built_in_modern_seoul_kpop_main_worldview',
+      title: '现代首尔 K-pop 娱乐圈：主世界观',
+      content: '本世界观设定在 2026 年的现代首尔。K-pop 娱乐圈平行世界。',
+      contentFingerprint: 'fp_kpop',
+      version: 1,
+      sections: [],
+    }
+    const systemStore = createSystemStore({
+      globalWorldview: 'Fallback note.',
+      worldBookSourceLinks: [
+        {
+          id: 'world_source_kpop',
+          assetId: asset.id,
+          role: 'main_worldview',
+          enabled: true,
+          sourceFingerprint: asset.contentFingerprint,
+        },
+      ],
+    })
+    const bookStore = createBookStore([asset])
+
+    const context = resolveWorldContextForConsumer({
+      systemStore,
+      bookStore,
+      consumer: 'chat',
+    })
+
+    expect(context.activeBookSourceCount).toBe(1)
+    expect(context.worldview).toContain('K-pop 娱乐圈平行世界')
+    expect(buildWorldPromptBlock(context)).toContain('Primary worldview rules')
+    expect(buildWorldPromptBlock(context)).toContain('K-pop 娱乐圈平行世界')
   })
 })

@@ -126,6 +126,32 @@ describe('worldbook view filters', () => {
     expect(wrapper.find('[data-testid="knowledge-editing-state"]').exists()).toBe(false)
   })
 
+  test('uses action labels for encyclopedia enable toggles', async () => {
+    const routePoint = systemStore.listKnowledgePoints().find((point) => point.title === 'Route memory')
+    const routePointId = routePoint?.id || ''
+
+    expect(routePointId).toBeTruthy()
+    expect(wrapper.get(`[data-testid="knowledge-toggle-${routePointId}"]`).text()).toContain(
+      'Disable',
+    )
+
+    await wrapper.get(`[data-testid="knowledge-toggle-${routePointId}"]`).trigger('click')
+    await nextTick()
+
+    expect(systemStore.getKnowledgePointById(routePointId)?.enabled).toBe(false)
+    expect(wrapper.get(`[data-testid="knowledge-toggle-${routePointId}"]`).text()).toContain(
+      'Enable',
+    )
+
+    await wrapper.get(`[data-testid="knowledge-toggle-${routePointId}"]`).trigger('click')
+    await nextTick()
+
+    expect(systemStore.getKnowledgePointById(routePointId)?.enabled).toBe(true)
+    expect(wrapper.get(`[data-testid="knowledge-toggle-${routePointId}"]`).text()).toContain(
+      'Disable',
+    )
+  })
+
   test('supports deep-link scoping from module context and clearing back to full list', async () => {
     const routePoint = systemStore.listKnowledgePoints().find((point) => point.title === 'Route memory')
     expect(routePoint?.id).toBeTruthy()

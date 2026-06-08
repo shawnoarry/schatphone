@@ -44,12 +44,30 @@ describe('BookView', () => {
     useSystemStore().settings.system.language = 'en-US'
   })
 
-  test('renders library and empty state', async () => {
+  test('renders library with built-in K-pop sources while user assets stay empty', async () => {
+    const store = useBookStore()
     const { wrapper } = await mountBookView()
 
     expect(wrapper.get('[data-testid="book-library"]').text()).toContain('Import text')
-    expect(wrapper.get('[data-testid="book-empty"]').text()).toContain('No text sources yet')
-    expect(wrapper.find('[data-testid="book-detail"]').exists()).toBe(false)
+    expect(store.assetCount).toBe(0)
+    expect(wrapper.get('[data-testid="book-library"]').text()).toContain('现代首尔 K-pop 娱乐圈')
+    expect(wrapper.get('[data-testid="book-detail"]').text()).toContain('现代首尔 K-pop 娱乐圈：主世界观')
+    expect(wrapper.find('[data-testid="book-empty"]').exists()).toBe(false)
+  })
+
+  test('copies a built-in source before editing', async () => {
+    const store = useBookStore()
+    const { wrapper } = await mountBookView()
+
+    await wrapper.get('[data-testid="book-edit"]').trigger('click')
+    expect(wrapper.get('[data-testid="book-edit-guard"]').text()).toContain('built-in source')
+
+    await wrapper.get('[data-testid="book-edit-guard-confirm"]').trigger('click')
+    await nextTick()
+
+    expect(store.assetCount).toBe(1)
+    expect(store.assets[0].source.kind).toBe('built_in_copy')
+    expect(wrapper.get('[data-testid="book-editor"]').exists()).toBe(true)
   })
 
   test('selecting an asset shows read mode by default', async () => {

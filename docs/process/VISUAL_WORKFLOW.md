@@ -93,7 +93,7 @@ If a visual change needs functional code, keep the change minimal and explain wh
 22. Settings-owned WorldBook management should use state-first progressive disclosure: overview first, then focused panels for sources, pack, kernel, templates, and knowledge. Source picking, version review, knowledge creation/editing, import/export confirmation, and other execution steps should use dialogs, sheets, drawers, or dedicated subpages instead of indefinitely extending the same Settings screen.
 23. Widget Center should stay scan-first on phone-sized screens. Keep library, starter templates, and saved widgets visible as the main page; open custom code editing and import JSON entry as focused sheets or equivalent execution panels.
 24. Appearance-owned controls should keep state and preview visible first. Inputs that feel like execution work, such as wallpaper-source picking, advanced CSS editing, custom font-stack editing, or per-app icon/accent edits, should use sheets/drawers/subpages on phone-sized screens instead of extending the main settings scroll.
-25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries now have a first App Store/Home/App Library unlock seam, and Shopping/Food Delivery/Calendar/Map have the first target-app world UX context treatment; broaden that world UX package through target app seams rather than Settings-only copy.
+25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries can appear in App Store/Home/App Library as launch context. Target apps should only change their own UI/UX when the binding includes an explicit app UI theme package; otherwise the launched app keeps its original interface and defaults.
 26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Appearance Advanced CSS now has app/world-app scoped authoring with active World Pack entry selection, target selector preview, pause/clear recovery, and portable Appearance pack import/export; future visual work should user-test those packs before adding finer component hooks.
 
 ## 4. Entry-Context Audit
@@ -183,6 +183,8 @@ These are expected in `.agents/skills` for repo-local visual work:
   - stronger creative direction for pages, components, and app surfaces.
 - `frontend-logic-design`
   - information architecture, navigation depth, MECE grouping, and interaction consistency.
+- `image-to-code`
+  - pixel-level restoration from a provided UI image, screenshot, Figma export, or long design image into code and high-resolution PNG slices.
 - `impeccable`
   - strict second pass across hierarchy, edge states, responsive behavior, UX copy, and implementation-shaped UI.
 - `web-design-guidelines`
@@ -192,6 +194,7 @@ These are expected in `.agents/skills` for repo-local visual work:
 
 - use `frontend-logic-design` first when the problem may be page structure, grouping, entry placement, or inconsistent interaction logic;
 - use `frontend-design` when a surface needs stronger creative direction rather than only cleanup;
+- use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
 - use `impeccable` when the UI is already close but still feels noisy, generic, or under-finished;
 - use `web-design-guidelines` for an external best-practice review before or after visual polish.
 
@@ -201,6 +204,7 @@ Do not add a new visual skill only because one screen needs more polish. First u
 
 - `frontend-logic-design` for information structure;
 - `frontend-design` for stronger screen composition;
+- `image-to-code` for source-image-to-code restoration and high-resolution slicing;
 - `impeccable` for the strict polish pass;
 - `web-design-guidelines` for accessibility and external UI review;
 - `playwright-testing` when browser screenshots or journeys are needed.

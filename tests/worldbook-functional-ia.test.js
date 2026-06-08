@@ -126,9 +126,10 @@ describe('WorldBook functional IA', () => {
     expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('World settings')
     expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('Setting text')
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World setup path')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Base worldview')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World pack')
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Profile templates')
     expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Encyclopedia')
+    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Advanced fallback')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
       'none',
     )
@@ -140,6 +141,9 @@ describe('WorldBook functional IA', () => {
 
     expect(wrapper.get('[data-testid="worldbook-world-kernel"]').element.style.display).not.toBe(
       'none',
+    )
+    expect(wrapper.get('[data-testid="worldbook-world-kernel"]').text()).toContain(
+      'Advanced compatibility',
     )
 
     await wrapper.get('[data-testid="worldbook-setup-step-sources"]').trigger('click')
@@ -215,6 +219,16 @@ describe('WorldBook functional IA', () => {
     expect(chatStore.findWorldServiceTemplateContact('survival_city', 'survival_supply_dispatch')).toBeNull()
     expect(wrapper.vm.$router.currentRoute.value.path).toBe('/worldbook')
 
+    await wrapper.get('[data-testid="worldbook-current-pack-reset-default"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.activeWorldPackId).toBe('default_world')
+    expect(systemStore.user.enabledWorldPackIds).toEqual([])
+    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-reset-default"]').text()).toContain(
+      'Default world active',
+    )
+
     wrapper.unmount()
   })
 
@@ -237,17 +251,25 @@ describe('WorldBook functional IA', () => {
     await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
     await nextTick()
 
-    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('modern')
-    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('high')
+    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('modern era')
+    expect(wrapper.get('[data-testid="worldbook-world-profile"]').text()).toContain('High confidence')
     expect(wrapper.get('[data-testid="worldbook-pack-recommendations"]').text()).toContain(
       'School life expansion',
     )
     expect(wrapper.get('[data-testid="worldbook-pack-all"]').text()).toContain('Business family expansion')
+    expect(wrapper.get('[data-testid="worldbook-pack-all"]').text()).toContain('Adaptable')
+    expect(wrapper.get('[data-testid="worldbook-pack-all"]').text()).not.toContain('adaptable')
+    expect(wrapper.get('[data-testid="worldbook-pack-recommendations"]').text()).not.toContain(
+      'matches settingTraits',
+    )
 
     await wrapper.get('[data-testid="worldbook-enable-pack-school_life"]').trigger('click')
     await nextTick()
 
     expect(systemStore.user.enabledWorldPackIds).toEqual(['school_life'])
+    expect(wrapper.get('[data-testid="worldbook-enable-pack-school_life"]').text()).toContain(
+      'Disable',
+    )
     expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
       'School life expansion',
     )
@@ -262,15 +284,27 @@ describe('WorldBook functional IA', () => {
     await nextTick()
 
     expect(systemStore.user.enabledWorldPackIds).toEqual(['school_life', 'business_family'])
+    expect(wrapper.get('[data-testid="worldbook-enable-all-pack-business_family"]').text()).toContain(
+      'Disable',
+    )
     expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
       'Business family expansion',
     )
 
-    await wrapper.get('[data-testid="worldbook-disable-pack-school_life"]').trigger('click')
+    await wrapper.get('[data-testid="worldbook-enable-pack-school_life"]').trigger('click')
     await nextTick()
 
     expect(systemStore.user.enabledWorldPackIds).toEqual(['business_family'])
     expect(wrapper.find('[data-testid="worldbook-enabled-pack-school_life"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="worldbook-current-pack-reset-default"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.activeWorldPackId).toBe('default_world')
+    expect(systemStore.user.enabledWorldPackIds).toEqual([])
+    expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
+      'No expansion packs are enabled yet',
+    )
 
     wrapper.unmount()
   })

@@ -7,6 +7,7 @@ import {
   normalizeBookTextAsset,
   normalizeBookTextAssets,
 } from '../lib/book-text-schema'
+import { findBuiltInBookTextAssetById, listBuiltInBookTextAssets } from '../lib/built-in-book-assets'
 import { normalizeBookTextCategory } from '../lib/world-taxonomy'
 
 const BOOK_STORAGE_KEY = 'store:book'
@@ -51,6 +52,15 @@ const cloneCategory = (category) => ({ ...category })
 
 const createDuplicatedId = (assetId) => `${assetId || 'book_asset'}_copy_${Date.now()}`
 
+const mergeBuiltInAssets = (userAssets = []) => {
+  const userAssetList = Array.isArray(userAssets) ? userAssets : []
+  const userIds = new Set(userAssetList.map((asset) => asset?.id).filter(Boolean))
+  return [
+    ...userAssetList,
+    ...listBuiltInBookTextAssets().filter((asset) => !userIds.has(asset.id)),
+  ]
+}
+
 const applyAssetPatch = (asset, patch = {}) => {
   const normalized = normalizeBookTextAsset({
     ...asset,
@@ -70,14 +80,16 @@ export const useBookStore = defineStore('book', () => {
   const hasFinishedStorageHydration = ref(false)
 
   const assetCount = computed(() => assets.value.length)
+  const libraryAssets = computed(() => mergeBuiltInAssets(assets.value))
   const worldbookSourceAssets = computed(() =>
-    assets.value.filter((asset) => {
+    libraryAssets.value.filter((asset) => {
       const category = normalizeBookTextCategory(asset.category || asset.assetType)
       return (
         asset.status === 'active_source' ||
         category === 'worldview' ||
         category === 'encyclopedia' ||
         category === 'world_rule' ||
+        category === 'profile_template' ||
         category === 'reference_material'
       )
     }),
@@ -86,7 +98,7 @@ export const useBookStore = defineStore('book', () => {
   const findAssetById = (assetId) => {
     const id = typeof assetId === 'string' ? assetId.trim() : ''
     if (!id) return null
-    return assets.value.find((asset) => asset.id === id) || null
+    return assets.value.find((asset) => asset.id === id) || findBuiltInBookTextAssetById(id)
   }
 
   const listAssets = (filters = {}) => {
@@ -100,7 +112,7 @@ export const useBookStore = defineStore('book', () => {
     const category = rawCategory ? normalizeBookTextCategory(rawCategory) : ''
     const status = typeof filters.status === 'string' ? filters.status.trim() : ''
     const tag = typeof filters.tag === 'string' ? filters.tag.trim().toLowerCase() : ''
-    return assets.value.filter((asset) => {
+    return libraryAssets.value.filter((asset) => {
       if (query) {
         const haystack = [asset.title, asset.content, ...(Array.isArray(asset.tags) ? asset.tags : [])]
           .join(' ')
@@ -133,11 +145,12 @@ export const useBookStore = defineStore('book', () => {
   const updateAsset = (assetId, patch = {}, options = {}) => {
     const asset = findAssetById(assetId)
     if (!asset) return { ok: false, reason: 'not_found' }
+    const index = assets.value.findIndex((item) => item.id === asset.id)
+    if (index < 0) return { ok: false, reason: 'built_in' }
     if (asset.locked && options.force !== true && patch.locked !== false) {
       return { ok: false, reason: 'locked' }
     }
 
-    const index = assets.value.findIndex((item) => item.id === asset.id)
     const next = options.preserveVersion === true
       ? normalizeBookTextAsset({
           ...asset,
@@ -157,6 +170,9 @@ export const useBookStore = defineStore('book', () => {
   const deleteAsset = (assetId, options = {}) => {
     const asset = findAssetById(assetId)
     if (!asset) return { ok: false, reason: 'not_found' }
+    if (!assets.value.some((item) => item.id === asset.id)) {
+      return { ok: false, reason: 'built_in' }
+    }
     if (asset.status === 'active_source' && options.force !== true) {
       return { ok: false, reason: 'active_source' }
     }
@@ -269,6 +285,7 @@ export const useBookStore = defineStore('book', () => {
     categories,
     hasFinishedStorageHydration,
     assetCount,
+    libraryAssets,
     worldbookSourceAssets,
     findAssetById,
     listAssets,

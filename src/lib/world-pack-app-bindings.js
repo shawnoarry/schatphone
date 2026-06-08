@@ -74,7 +74,9 @@ const resolveWorldAppPresentation = (row = {}) =>
   { icon: 'fas fa-globe', accent: 'default' }
 
 const buildWorldAppUxBoundaryCopy = (targetLabel = 'target app') =>
-  `${targetLabel} keeps its own records, workflows, and source-module truth. The World Pack only changes labels, terminology, accent, context banner, and safe default UX.`
+  `${targetLabel} keeps its own records, workflows, and source-module truth. World Pack app bindings are launch context unless they include an explicit UI theme package.`
+
+const hasEnabledUiThemePackage = (binding = {}) => binding?.uiThemePackage?.enabled === true
 
 export const buildWorldAppHomeTileId = ({ packId = '', bindingId = '' } = {}) =>
   `${WORLD_APP_HOME_TILE_ID_PREFIX}${normalizeTileIdPart(packId, 'pack')}_${normalizeTileIdPart(bindingId, 'app')}`
@@ -163,6 +165,7 @@ export const resolveWorldAppUxContext = ({
   moduleKey = '',
   routeQuery = {},
   expectedArchetypes = [],
+  requireUiThemePackage = false,
 } = {}) => {
   const enabledPacks = resolveEnabledWorldPacks(systemStore)
   const requestedPackId = normalizeQueryValue(routeQuery.worldPack)
@@ -182,6 +185,7 @@ export const resolveWorldAppUxContext = ({
     })
     if (!binding) continue
     if (allowedArchetypes.length > 0 && !allowedArchetypes.includes(binding.archetype)) continue
+    if (requireUiThemePackage && !hasEnabledUiThemePackage(binding)) continue
 
     const presentation = resolveWorldAppPresentation(binding)
     const targetLabel = MODULE_TARGET_LABELS[binding.moduleKey] || binding.moduleKey || 'Module'
@@ -203,6 +207,7 @@ export const resolveWorldAppUxContext = ({
       icon: presentation.icon,
       accent: presentation.accent,
       terminology: binding.terminology || {},
+      uiThemePackage: binding.uiThemePackage || { enabled: false, themeId: '', styleScope: 'none' },
       uxPackage: {
         labels: true,
         terminology: true,

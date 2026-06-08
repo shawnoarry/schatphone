@@ -211,6 +211,7 @@ Primary skills for this lane:
 
 - `frontend-design`
 - `frontend-logic-design`
+- `image-to-code` when a source image, screenshot, or design export must be restored into code with strict 750px visual matching
 - `impeccable`
 - `web-design-guidelines`
 

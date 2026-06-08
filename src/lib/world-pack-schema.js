@@ -107,6 +107,17 @@ const normalizeTermMap = (value) => {
   )
 }
 
+const normalizeWorldAppUiThemePackage = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { enabled: false, themeId: '', styleScope: 'none' }
+  }
+  return {
+    enabled: value.enabled === true,
+    themeId: normalizeId(value.themeId || value.id, ''),
+    styleScope: normalizeId(value.styleScope || value.scope, 'app'),
+  }
+}
+
 export const normalizeWorldAppBinding = (raw, index = 0) => {
   const source = raw && typeof raw === 'object' ? raw : {}
   const archetype = normalizeArchetype(source.archetype || source.type)
@@ -121,6 +132,7 @@ export const normalizeWorldAppBinding = (raw, index = 0) => {
     route: normalizeInlineText(source.route, '', 160),
     enabled: source.enabled !== false,
     terminology: normalizeTermMap(source.terminology),
+    uiThemePackage: normalizeWorldAppUiThemePackage(source.uiThemePackage),
   }
 }
 

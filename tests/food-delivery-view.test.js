@@ -47,6 +47,12 @@ describe('FoodDeliveryView', () => {
 
     expect(wrapper.get('[data-testid="food-delivery-pseudo-folder-home"]').text()).toMatch(/Platform|平台/)
     expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').text()).toMatch(/Platform|平台/)
+    expect(wrapper.get('[data-testid="food-delivery-platform-search"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-rider"] img').attributes('src')).toContain(
+      'platform-delivery-rider.png',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-hero-image"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('Moon Bistro')
     expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
     expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toMatch(/本地数据|Local data/)
@@ -55,8 +61,17 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.find('[data-testid="food-delivery-wallet-suggestions"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-map-boundary"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-map-handoff"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-custom-form"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-category-cafe"]').exists()).toBe(true)
 
+    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('Cafe')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('Daylight Cafe')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('Moon Bistro')
+
+    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('')
+    await flushPromises()
     await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
     await flushPromises()
 
@@ -102,7 +117,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('renders World Pack UX context without taking over food-order truth', async () => {
+  test('uses original Food Delivery UI when the World Pack has no Food Delivery UI theme package', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -117,29 +132,46 @@ describe('FoodDeliveryView', () => {
     })
     const store = useFoodDeliveryStore()
 
-    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('救援调度')
-    const banner = wrapper.get('[data-testid="food-delivery-world-app-context"]')
-    expect(banner.text()).toContain('World UX package')
-    expect(wrapper.get('[data-testid="food-delivery-world-app-title"]').text()).toContain('救援调度')
-    expect(wrapper.get('[data-testid="food-delivery-world-app-boundary"]').text()).toContain(
-      'Food Delivery keeps its own records',
-    )
+    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('Food Delivery')
+    expect(wrapper.find('[data-testid="food-delivery-world-app-context"]').exists()).toBe(false)
     expect(store.orderCount).toBe(0)
     expect(store.cartQuantity).toBe(0)
-    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
+    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('Restaurants')
 
     await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'survival_city',
-      worldApp: 'survival_dispatch',
       category: 'cafe',
     })
+    expect(router.currentRoute.value.query.worldPack).toBeUndefined()
+    expect(router.currentRoute.value.query.worldApp).toBeUndefined()
     wrapper.unmount()
   })
 
-  test('renders a confirmed nonstandard dispatch app binding as Food Delivery context', async () => {
+  test('keeps World Pack explainer out of an opened Food Delivery shop', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    expect(systemStore.activateWorldPack('survival_city').ok).toBe(true)
+    await router.push(
+      '/food-delivery?worldPack=survival_city&worldApp=survival_dispatch&restaurantId=food_seed_moon_bistro&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('Moon Bistro')
+    expect(wrapper.find('[data-testid="food-delivery-world-app-context"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-hero-title"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('uses original Food Delivery UI for confirmed dispatch bindings without a UI theme package', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -169,15 +201,9 @@ describe('FoodDeliveryView', () => {
     })
     const store = useFoodDeliveryStore()
 
-    const banner = wrapper.get('[data-testid="food-delivery-world-app-context"]')
-    expect(banner.attributes('data-world-pack')).toBe('default_world')
-    expect(banner.attributes('data-world-app')).toBe(confirmed.binding.id)
-    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('Rescue Desk')
-    expect(wrapper.get('[data-testid="food-delivery-world-app-title"]').text()).toContain('Rescue Desk')
-    expect(wrapper.get('[data-testid="food-delivery-world-app-boundary"]').text()).toContain(
-      'Food Delivery keeps its own records',
-    )
-    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
+    expect(wrapper.get('[data-testid="food-delivery-hero-title"]').text()).toContain('Food Delivery')
+    expect(wrapper.find('[data-testid="food-delivery-world-app-context"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('Restaurants')
     expect(store.orderCount).toBe(0)
     expect(store.cartQuantity).toBe(0)
 
@@ -185,10 +211,10 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'default_world',
-      worldApp: confirmed.binding.id,
       category: 'cafe',
     })
+    expect(router.currentRoute.value.query.worldPack).toBeUndefined()
+    expect(router.currentRoute.value.query.worldApp).toBeUndefined()
     wrapper.unmount()
   })
 
@@ -761,7 +787,9 @@ describe('FoodDeliveryView', () => {
       category: 'reference',
     })
 
-    await router.push('/food-delivery?category=restaurants')
+    await router.push(
+      '/food-delivery?category=restaurants&entry=shop&createShop=1&bindingTarget=food_delivery&source=app_store',
+    )
     await router.isReady()
 
     const wrapper = mount(FoodDeliveryView, {
