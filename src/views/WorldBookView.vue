@@ -3758,19 +3758,43 @@ onBeforeUnmount(() => {
   z-index: 42;
   max-height: min(82vh, 720px);
   overflow: auto;
-  padding: 16px;
+  overscroll-behavior: contain;
+  padding: 12px 16px max(18px, env(safe-area-inset-bottom));
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
   background:
     linear-gradient(180deg, var(--system-panel-bg), var(--system-surface-muted)),
     var(--system-panel-bg);
   box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.22);
+  scrollbar-color: color-mix(in srgb, var(--system-text-soft) 42%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.worldbook-source-directory::before {
+  content: '';
+  justify-self: center;
+  width: 46px;
+  height: 5px;
+  margin-bottom: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--system-text-soft) 38%, transparent);
+}
+
+.worldbook-source-directory::-webkit-scrollbar {
+  width: 4px;
+}
+
+.worldbook-source-directory::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--system-text-soft) 42%, transparent);
 }
 
 .worldbook-source-directory__active {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 9px 10px;
   border: 1px solid var(--system-control-border);
   border-radius: var(--system-radius-md);
   background: var(--system-control-bg);
@@ -3785,7 +3809,9 @@ onBeforeUnmount(() => {
 .worldbook-source-directory__active div {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+  min-width: 0;
 }
 
 .worldbook-source-directory__active em {
@@ -3829,15 +3855,39 @@ onBeforeUnmount(() => {
 }
 
 .worldbook-source-directory__import {
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr) 26px;
+  grid-template-areas:
+    'icon title action'
+    'icon hint action';
+  gap: 2px 10px;
+  min-height: 58px;
+  padding: 9px 10px;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--system-info-soft) 42%, var(--system-control-bg));
+}
+
+.worldbook-source-directory__import::after {
+  content: '+';
+  grid-area: action;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--system-panel-bg);
+  color: var(--system-accent);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .worldbook-source-directory__import > span {
   display: grid;
-  width: 36px;
-  height: 36px;
+  grid-area: icon;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 10px;
   color: var(--system-accent);
   background: var(--system-info-soft);
 }
@@ -3858,12 +3908,27 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.worldbook-source-directory__import strong {
+  grid-area: title;
+  align-self: end;
+}
+
 .worldbook-source-directory__row small,
 .worldbook-source-directory__import small {
   display: block;
   margin-top: 3px;
   color: var(--system-text-muted);
   font-size: 11px;
+}
+
+.worldbook-source-directory__import small {
+  grid-area: hint;
+  align-self: start;
+  overflow: hidden;
+  margin-top: 0;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .worldbook-source-directory__row em {
