@@ -16,7 +16,7 @@ This plan does not contain final worldview prose. It lists the assets to write, 
 - Use the current group / generation knowledge draft as a V1 baseline.
 - Retain CORTIS in the new-generation coordinates.
 - Move the next active work to **Asset A: Main Worldview**.
-- Reference material, encyclopedia details, and member tables can be adjusted after the main worldview voice and scope are visible.
+- Encyclopedia supplements and member tables can be adjusted after the main worldview voice and scope are visible.
 
 ## 2. Inputs
 
@@ -30,8 +30,9 @@ Earlier question-gathering notes:
 
 Canonical naming baseline:
 
-- Book categories: `worldview`, `encyclopedia`, `world_rule`, `profile_template`, `reference_material`
-- WorldBook roles: `main_worldview`, `encyclopedia`, `world_rule`, `profile_template`, `reference_material`
+- Book categories: `worldview`, `encyclopedia`, `world_rule`
+- WorldBook text roles: `main_worldview`, `encyclopedia`, `world_rule`
+- Profile templates: structured template records used by Contacts; universal templates are available in Contacts, and enabled current-world templates are prioritized there.
 
 ## 3. Work Rules
 
@@ -40,7 +41,7 @@ Canonical naming baseline:
 - Do not create original fictional companies, groups, programs, platforms, or awards in V1.
 - Do not lock real group rosters; all rosters are AU-mutable.
 - Do not list real entities without web verification in the entity-list phase.
-- Keep the main worldview readable; keep long lists in reference material.
+- Keep the main worldview readable; keep long lists in encyclopedia entries.
 - Use Chinese body text, with English / romanized terms where useful.
 - Follow the setting-entry style guide: direct declarative sentences, clear keywords, low literary density, and minimal `不是……而是……` contrast structures.
 - Treat future "style patches" as separate knowledge/assets; do not bake a strong literary voice into the base worldview.
@@ -82,7 +83,7 @@ Review focus:
 - Does it remain a broad world framework?
 - Does it avoid becoming a trainee plot?
 - Does it state AU roster freedom clearly but naturally?
-- Does it leave detailed lists to reference material?
+- Does it leave detailed lists to encyclopedia supplements?
 
 ### Asset B: Encyclopedia Entries
 
@@ -168,8 +169,8 @@ Model-facing rules:
 
 Canonical mapping:
 
-- Book category: `profile_template`
-- WorldBook role: `profile_template`
+- Structured profile-template records, not Book text assets.
+- Contacts can use universal templates directly; WorldBook-enabled current-world templates are prioritized in Contacts.
 
 Target count:
 
@@ -205,19 +206,19 @@ Review requirement:
 
 - Check these fields against existing Contacts / WorldBook profile-template support before implementation.
 
-### Asset E: Reference Material - Real Entity Lists
+### Asset E: Encyclopedia - Real Entity Lists
 
 Canonical mapping:
 
-- Book category: `reference_material`
-- WorldBook role: `reference_material`
+- Book category: `encyclopedia`
+- WorldBook role: `encyclopedia`
 
 Research requirement:
 
 - Must browse and verify before drafting.
 - Use current, reputable sources where possible.
 - Include update date.
-- Keep this as reference material, not main-worldview body.
+- Keep this as encyclopedia material, not main-worldview body.
 
 Review order:
 
@@ -267,12 +268,12 @@ Broad market coordinate vocabulary:
 
 No ranking tables.
 
-### Asset F: Reference Material - Chinese Fandom / K-pop Terminology
+### Asset F: Encyclopedia - Chinese Fandom / K-pop Terminology
 
 Canonical mapping:
 
-- Book category: `reference_material`
-- WorldBook role: `reference_material`
+- Book category: `encyclopedia`
+- WorldBook role: `encyclopedia`
 
 Target count:
 
@@ -334,7 +335,7 @@ Actions:
 1. Produce the exact final table of assets.
 2. Confirm encyclopedia entry titles and merge/split decisions.
 3. Confirm profile template titles and fields.
-4. Confirm reference material sections.
+4. Confirm encyclopedia supplement sections.
 
 Exit condition:
 
@@ -347,15 +348,15 @@ Actions:
 1. Draft the main worldview.
 2. Draft world rules.
 3. Draft encyclopedia entries.
-4. Draft profile templates.
-5. Draft reference materials.
+4. Draft structured profile templates.
+5. Draft encyclopedia supplements.
 
 Review gates:
 
 - Main worldview reviewed first.
 - World rules reviewed second.
 - Encyclopedia entries can be reviewed in batches.
-- Reference materials reviewed after entity-list verification.
+- Encyclopedia supplements reviewed after entity-list verification.
 
 ### Phase 5: Product Integration Planning
 
@@ -379,7 +380,7 @@ Content acceptance:
 - The world has enough industry detail for long-term simulation.
 - Encyclopedia entries are consolidated big themes, not tiny glossary fragments.
 - Forum / social-media / fandom-community ecology is a standalone encyclopedia topic.
-- Reference material holds detailed entity lists and terminology.
+- Encyclopedia supplements hold detailed entity lists and terminology.
 - The writing style is setting-entry based: direct, scannable, keyword-rich, and easy for users to edit.
 - The base content avoids excessive literary narration and leaves future prose voice to dedicated style patches.
 

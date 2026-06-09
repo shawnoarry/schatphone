@@ -90,6 +90,9 @@ describe('ContactsView wallet ledger context', () => {
     expect(wrapper.get(`[data-testid="contacts-relationship-summary-${profile.id}"]`).text()).toMatch(
       /关系快照|Relationship snapshot/,
     )
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+
     expect(wrapper.text()).toContain('First shared expense')
 
     wrapper.unmount()

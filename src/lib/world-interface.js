@@ -71,12 +71,17 @@ const listKnowledgePointsFromStore = listEncyclopediaEntriesFromStore
 
 const listWorldProfileTemplatesFromStore = (systemStore, worldId = DEFAULT_WORLD_PACK.id) => {
   if (typeof systemStore?.listWorldProfileTemplates === 'function') {
-    return systemStore.listWorldProfileTemplates(worldId)
+    return systemStore.listWorldProfileTemplates(worldId, { enabledOnly: true })
   }
   const templates = Array.isArray(systemStore?.user?.profileTemplates)
     ? systemStore.user.profileTemplates
     : []
-  return templates.filter((template) => template?.scope === 'world' && template?.worldId === worldId)
+  return templates.filter(
+    (template) =>
+      template?.scope === 'world' &&
+      template?.worldId === worldId &&
+      template?.enabled !== false,
+  )
 }
 
 const listWorldBookSourceLinksFromStore = (systemStore) => {

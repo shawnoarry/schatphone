@@ -6,9 +6,6 @@ export const BUILT_IN_BOOK_ASSET_IDS = Object.freeze({
   modernSeoulKpopMainWorldview: 'built_in_modern_seoul_kpop_main_worldview',
   modernSeoulKpopWorldRules: 'built_in_modern_seoul_kpop_world_rules',
   modernSeoulKpopEncyclopediaPlaceholder: 'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-  modernSeoulKpopProfileTemplatePlaceholder: 'built_in_modern_seoul_kpop_profile_template_placeholder',
-  modernSeoulKpopWorldPackReferencePlaceholder: 'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
-  modernSeoulKpopReferenceMaterialPlaceholder: 'built_in_modern_seoul_kpop_reference_material_placeholder',
 })
 
 const BUILT_IN_UPDATED_AT = Date.parse('2026-06-07T00:00:00.000Z')
@@ -114,70 +111,6 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       sourcePath: 'built-in/placeholders/modern-seoul-kpop-encyclopedia.md',
     },
     2,
-  ),
-  createBuiltInBookAsset(
-    {
-      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopProfileTemplatePlaceholder,
-      title: '现代首尔 K-pop 娱乐圈：人设模板占位',
-      category: 'profile_template',
-      tags: ['内置', 'K-pop', '人设模板', '占位文稿'],
-      content: createPlaceholderMarkdown('现代首尔 K-pop 娱乐圈：人设模板占位', [
-        {
-          title: '艺人字段',
-          content: '占位：艺名、本名、所属组合、担当、练习年限、公开人设、私下压力源和关系禁区。',
-        },
-        {
-          title: '工作人员字段',
-          content: '占位：职位、所属部门、对外权限、危机处理风格、掌握的非公开信息和与艺人的边界。',
-        },
-        {
-          title: '粉丝与媒体字段',
-          content: '占位：身份来源、立场、可见信息、应援方式、传播影响力和潜在冲突点。',
-        },
-      ]),
-      sourcePath: 'built-in/placeholders/modern-seoul-kpop-profile-template.md',
-    },
-    3,
-  ),
-  createBuiltInBookAsset(
-    {
-      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopWorldPackReferencePlaceholder,
-      title: '现代首尔 K-pop 娱乐圈：世界包参考占位',
-      category: 'reference_material',
-      tags: ['内置', 'K-pop', '世界包参考', '占位文稿'],
-      content: createPlaceholderMarkdown('现代首尔 K-pop 娱乐圈：世界包参考占位', [
-        {
-          title: '可扩展世界包',
-          content: '占位：校园练习生线、豪门商务线、都市悬疑线等扩展包可以在这里说明适配前提。',
-        },
-        {
-          title: '应用入口映射',
-          content: '占位：行程板、粉丝站、热帖榜、造型室、练习室预约等入口只描述体验方向，不创建业务真相。',
-        },
-      ]),
-      sourcePath: 'built-in/placeholders/modern-seoul-kpop-world-pack-reference.md',
-    },
-    4,
-  ),
-  createBuiltInBookAsset(
-    {
-      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopReferenceMaterialPlaceholder,
-      title: '现代首尔 K-pop 娱乐圈：参考资料占位',
-      category: 'reference_material',
-      tags: ['内置', 'K-pop', '参考资料', '占位文稿'],
-      content: createPlaceholderMarkdown('现代首尔 K-pop 娱乐圈：参考资料占位', [
-        {
-          title: '语气参考',
-          content: '占位：粉丝评论、经纪人通知、群聊闲谈、媒体报道和危机公关的语气样本可以放在这里。',
-        },
-        {
-          title: '剧情参考',
-          content: '占位：回归周、签售前夜、热搜发酵、练习室冲突、品牌活动等常用场景参考。',
-        },
-      ]),
-      sourcePath: 'built-in/placeholders/modern-seoul-kpop-reference-material.md',
-    },
-    5,
   ),
 ])
 

@@ -47,7 +47,7 @@ describe('WorldBookView profile templates', () => {
     await nextTick()
 
     expect(store.listWorldProfileTemplates('default_world')).toHaveLength(1)
-    expect(wrapper.text()).toContain('World-specific templates')
+    expect(wrapper.text()).toContain('Current-world enabled templates')
 
     wrapper.unmount()
   })

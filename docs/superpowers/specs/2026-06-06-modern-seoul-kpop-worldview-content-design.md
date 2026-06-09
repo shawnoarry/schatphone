@@ -140,7 +140,7 @@ The content format is:
 
 - Chinese main body;
 - necessary English terms, platform names, program names, Korean romanization, and fandom terms retained where useful;
-- a structured reference material for Chinese fandom / K-pop terminology.
+- structured encyclopedia entries for Chinese fandom / K-pop terminology.
 
 A future revision may expand the terminology layer for forum and fandom-community features.
 
@@ -167,8 +167,8 @@ Use the canonical Book / WorldBook vocabulary already implemented:
 | Main worldview | `worldview` | `main_worldview` | Broad AU Seoul K-pop industry premise |
 | Encyclopedia entries | `encyclopedia` | `encyclopedia` | Large reusable industry mechanisms |
 | World rules | `world_rule` | `world_rule` | User-readable rules plus model-facing rules |
-| Profile templates | `profile_template` | `profile_template` | Role/persona fields for multiple industry positions |
-| Reference material | `reference_material` | `reference_material` | Real entity lists, terminology, and writing/reference aids |
+| Profile templates | structured template records | Contacts template options | Role/persona fields for multiple industry positions |
+| Real entity / terminology lists | `encyclopedia` | `encyclopedia` | Searchable knowledge supplements, not a locked canon |
 
 ## 5. Main Worldview Requirements
 
@@ -182,7 +182,7 @@ The main worldview should:
 - include public-image pressure, creative labor, commerce, media attention, and private-life tension;
 - avoid fixed protagonist, fixed agency, fixed group, fixed romance, or fixed crisis.
 
-It should not include a long real entity list. Detailed lists belong to reference material.
+It should not include a long real entity list. Detailed lists belong to encyclopedia entries.
 
 ## 6. Encyclopedia Requirements
 
@@ -262,15 +262,15 @@ Each template should include fields that help place a character in the industry 
 - creative specialty;
 - relationship boundary notes.
 
-## 9. Reference Material Requirements
+## 9. Encyclopedia Supplement Requirements
 
-Reference material should include:
+Encyclopedia supplements should include:
 
 ### 9.1 Real Entity Lists
 
 Entity lists must be produced later through web-verified research.
 
-Detailed lists should be stored as reference material, not as the main worldview body.
+Detailed lists should be stored as encyclopedia entries, not as the main worldview body.
 
 Review order:
 
@@ -368,7 +368,7 @@ Do not design dedicated World Pack apps, service accounts, Calendar templates, o
 - Do not create original fictional companies, groups, programs, platforms, or awards in the built-in content.
 - Do not hard-code a starting role, agency, group, rank, or plot.
 - Do not make this a default world.
-- Do not turn reference material into a locked canon that overrides user AU settings.
+- Do not turn encyclopedia lists into locked canon that overrides user AU settings.
 
 ## 12. Open Items Before Writing Final Assets
 

@@ -93,7 +93,7 @@ const selectedWorldBookUsageSummary = computed(() => {
 })
 
 const selectedAssetTypeLabel = computed(() => {
-  const type = selectedAsset.value?.category || selectedAsset.value?.assetType || 'reference_material'
+  const type = selectedAsset.value?.category || selectedAsset.value?.assetType || 'encyclopedia'
   return t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type)
 })
 

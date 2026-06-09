@@ -88,9 +88,7 @@ export const useBookStore = defineStore('book', () => {
         asset.status === 'active_source' ||
         category === 'worldview' ||
         category === 'encyclopedia' ||
-        category === 'world_rule' ||
-        category === 'profile_template' ||
-        category === 'reference_material'
+        category === 'world_rule'
       )
     }),
   )

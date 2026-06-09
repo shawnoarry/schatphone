@@ -2,17 +2,12 @@ export const BOOK_TEXT_CATEGORIES = Object.freeze([
   'worldview',
   'encyclopedia',
   'world_rule',
-  'profile_template',
-  'reference_material',
 ])
 
 export const WORLDBOOK_SOURCE_ROLES = Object.freeze([
   'main_worldview',
   'encyclopedia',
   'world_rule',
-  'world_pack_reference',
-  'profile_template',
-  'reference_material',
 ])
 
 export const LEGACY_BOOK_TEXT_CATEGORY_ALIASES = Object.freeze({
@@ -20,32 +15,32 @@ export const LEGACY_BOOK_TEXT_CATEGORY_ALIASES = Object.freeze({
   knowledge_note: 'encyclopedia',
   glossary: 'encyclopedia',
   rule_set: 'world_rule',
-  profile_template_note: 'profile_template',
-  reference_note: 'reference_material',
+  profile_template: 'encyclopedia',
+  profile_template_note: 'encyclopedia',
+  reference_material: 'encyclopedia',
+  reference_note: 'encyclopedia',
 })
 
 export const LEGACY_WORLDBOOK_SOURCE_ROLE_ALIASES = Object.freeze({
   base_worldview: 'main_worldview',
   knowledge_source: 'encyclopedia',
-  pack_source: 'world_pack_reference',
-  profile_template_reference: 'profile_template',
+  pack_source: 'encyclopedia',
+  world_pack_reference: 'encyclopedia',
+  profile_template: 'encyclopedia',
+  profile_template_reference: 'encyclopedia',
+  reference_material: 'encyclopedia',
 })
 
 export const BOOK_TEXT_CATEGORY_LABELS = Object.freeze({
   worldview: { zh: '世界观', en: 'Worldview' },
   encyclopedia: { zh: '百科', en: 'Encyclopedia' },
   world_rule: { zh: '世界规则', en: 'World rules' },
-  profile_template: { zh: '人设模板', en: 'Profile template' },
-  reference_material: { zh: '参考资料', en: 'Reference material' },
 })
 
 export const WORLDBOOK_SOURCE_ROLE_LABELS = Object.freeze({
   main_worldview: { zh: '主世界观', en: 'Main worldview' },
   encyclopedia: { zh: '百科', en: 'Encyclopedia' },
   world_rule: { zh: '世界规则', en: 'World rules' },
-  world_pack_reference: { zh: '世界包参考', en: 'World Pack reference' },
-  profile_template: { zh: '人设模板', en: 'Profile template' },
-  reference_material: { zh: '参考资料', en: 'Reference material' },
 })
 
 const normalizeToken = (value = '') =>
@@ -63,7 +58,7 @@ export const normalizeBookTextCategory = (value = '') =>
     value,
     canonicalValues: BOOK_TEXT_CATEGORIES,
     aliases: LEGACY_BOOK_TEXT_CATEGORY_ALIASES,
-    fallback: 'reference_material',
+    fallback: 'encyclopedia',
   })
 
 export const normalizeWorldBookSourceRole = (value = '') =>
@@ -76,7 +71,7 @@ export const normalizeWorldBookSourceRole = (value = '') =>
 
 export const getBookTextCategoryLabel = (category = '') =>
   BOOK_TEXT_CATEGORY_LABELS[normalizeBookTextCategory(category)] ||
-  BOOK_TEXT_CATEGORY_LABELS.reference_material
+  BOOK_TEXT_CATEGORY_LABELS.encyclopedia
 
 export const getWorldBookSourceRoleLabel = (role = '') =>
   WORLDBOOK_SOURCE_ROLE_LABELS[normalizeWorldBookSourceRole(role)] ||

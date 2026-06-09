@@ -172,9 +172,6 @@ describe('WorldBook setting text picker', () => {
 
   test.each([
     ['built_in_modern_seoul_kpop_encyclopedia_placeholder', 'encyclopedia'],
-    ['built_in_modern_seoul_kpop_profile_template_placeholder', 'profile_template'],
-    ['built_in_modern_seoul_kpop_world_pack_reference_placeholder', 'world_pack_reference'],
-    ['built_in_modern_seoul_kpop_reference_material_placeholder', 'reference_material'],
   ])('selects built-in placeholder Book asset %s with role %s', async (assetId, expectedRole) => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()

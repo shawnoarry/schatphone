@@ -261,6 +261,44 @@ describe('Contacts profile template entity UI', () => {
     wrapper.unmount()
   })
 
+  test('uses universal profile templates directly when no world template is enabled', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1208',
+      name: 'Universal template role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+
+    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    const select = wrapper.get('[data-testid="contacts-profile-template-select"]')
+    expect(select.element.value).toBe('preset_basic_modern')
+    expect(select.text()).toContain('Universal · Basic Modern Profile')
+
+    await wrapper.get('[data-testid="contacts-profile-template-value-identity"]').setValue('Solo trainee')
+    await wrapper.get('[data-testid="contacts-save-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    const updated = chatStore.getRoleProfileById(profile.id)
+    expect(updated.templateLink).toMatchObject({
+      primaryWorldId: '',
+      profileTemplateId: 'preset_basic_modern',
+      profileTemplateVersion: 1,
+    })
+    expect(updated.profileValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: 'identity', value: 'Solo trainee' }),
+      ]),
+    )
+
+    wrapper.unmount()
+  })
+
   test('renders world-specific field types with stable controls and saves tag values', async () => {
     const systemStore = useSystemStore()
     const template = systemStore.upsertProfileTemplate({

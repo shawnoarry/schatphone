@@ -59,7 +59,15 @@ const globalWorldview = computed({
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
 const profileTemplatePresets = computed(() => systemStore.listProfileTemplatePresets())
-const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplates('default_world'))
+const currentWorldId = computed(() =>
+  typeof user.value.activeWorldPackId === 'string' && user.value.activeWorldPackId.trim()
+    ? user.value.activeWorldPackId.trim()
+    : 'default_world',
+)
+const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplates(currentWorldId.value))
+const enabledWorldProfileTemplates = computed(() =>
+  systemStore.listWorldProfileTemplates(currentWorldId.value, { enabledOnly: true }),
+)
 const worldOverview = computed(() =>
   resolveActiveWorldOverview({
     systemStore,
@@ -150,15 +158,6 @@ const CONTEXT_TEXT_CATEGORIES = Object.freeze([
     labelEn: 'Encyclopedia',
     detailZh: '地点、术语和背景资料',
     detailEn: 'Places, terms, and reference notes',
-  },
-  {
-    id: 'profile',
-    roles: ['profile_template'],
-    assetCategories: ['profile_template'],
-    labelZh: '人设',
-    labelEn: 'Profiles',
-    detailZh: '角色字段和人物设定模板',
-    detailEn: 'Character fields and profile templates',
   },
 ])
 
@@ -309,15 +308,7 @@ const inferBookSourceRole = (asset = {}) => {
   const category = asset?.category || asset?.assetType
   if (category === 'world_rule') return 'world_rule'
   if (category === 'encyclopedia') return 'encyclopedia'
-  if (category === 'profile_template') return 'profile_template'
-  const tags = Array.isArray(asset?.tags) ? asset.tags : []
-  if (tags.some((tag) => String(tag || '').toLowerCase().includes('world pack'))) {
-    return 'world_pack_reference'
-  }
-  if (tags.some((tag) => String(tag || '').includes('世界包'))) {
-    return 'world_pack_reference'
-  }
-  if (category === 'reference_material') return 'reference_material'
+  if (category === 'profile_template' || category === 'reference_material') return 'encyclopedia'
   return 'main_worldview'
 }
 
@@ -1119,7 +1110,7 @@ const acceptReviewedBookSource = () => {
 
 const copyProfileTemplatePreset = (presetId) => {
   const created = systemStore.createWorldProfileTemplateFromPreset(presetId, {
-    worldId: 'default_world',
+    worldId: currentWorldId.value,
   })
   if (!created) {
     uiNotice.value = t('模板复制失败。', 'Template copy failed.')
@@ -1127,6 +1118,21 @@ const copyProfileTemplatePreset = (presetId) => {
   }
   systemStore.saveNow()
   pulseSaved(t('角色档案模板已复制到当前世界观。', 'Profile template copied into this worldview.'))
+}
+
+const toggleWorldProfileTemplateEnabled = (template) => {
+  if (!template?.id) return
+  const updated = systemStore.setWorldProfileTemplateEnabled(template.id, template.enabled === false)
+  if (!updated) {
+    uiNotice.value = t('模板状态更新失败。', 'Template status update failed.')
+    return
+  }
+  systemStore.saveNow()
+  pulseSaved(
+    updated.enabled
+      ? t('当前世界会在通讯录中提供这个人设模板。', 'This template is now available in Contacts for the current world.')
+      : t('当前世界已停用这个人设模板，通讯录会回到通用模板或其他已启用模板。', 'This world template is disabled; Contacts will fall back to universal or other enabled templates.'),
+  )
 }
 
 const parseTagDraft = (raw) =>
@@ -2442,6 +2448,10 @@ onBeforeUnmount(() => {
               <strong>{{ worldProfileTemplates.length }}</strong>
               {{ t('当前世界', 'World') }}
             </span>
+            <span>
+              <strong>{{ enabledWorldProfileTemplates.length }}</strong>
+              {{ t('已启用', 'Enabled') }}
+            </span>
           </div>
         </div>
 
@@ -2456,13 +2466,13 @@ onBeforeUnmount(() => {
               {{
                 t(
                   '世界书只定义这个世界需要哪些资料栏位；小顺、主训或 NPC 的具体信息，要进入通讯录的角色档案填写。',
-                  'WorldBook only defines which fields this world needs; fill concrete details for roles or NPCs in Contacts.',
+                  'Universal templates can be used directly in Contacts. Enabled world templates become current-world choices for roles and NPCs; concrete values are still filled in Contacts.',
                 )
               }}
             </span>
           </div>
           <div class="worldbook-template-handoff__flow">
-            <span>{{ t('世界书：定义栏位', 'WorldBook: Fields') }}</span>
+            <span>{{ t('世界书：启用世界模板', 'WorldBook: Enable templates') }}</span>
             <i class="fas fa-arrow-right" aria-hidden="true"></i>
             <span>{{ t('通讯录：填写角色', 'Contacts: Values') }}</span>
           </div>
@@ -2478,7 +2488,10 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="worldbook-template-section">
-          <p class="text-sm font-semibold">{{ t('全局预设模板', 'Global preset templates') }}</p>
+          <p class="text-sm font-semibold">{{ t('通用模板', 'Universal templates') }}</p>
+          <p class="text-xs text-gray-500">
+            {{ t('通用模板会直接出现在通讯录，可在任何世界中填写。', 'Universal templates are available directly in Contacts for any world.') }}
+          </p>
           <div v-for="preset in profileTemplatePresets" :key="preset.id" class="worldbook-template-row">
             <div class="min-w-0">
               <p class="font-medium truncate">{{ preset.title }}</p>
@@ -2490,13 +2503,16 @@ onBeforeUnmount(() => {
               :data-testid="`worldbook-template-copy-${preset.id}`"
               @click="copyProfileTemplatePreset(preset.id)"
             >
-              {{ t('复制到当前世界观', 'Copy to worldview') }}
+              {{ t('复制为当前世界模板', 'Copy as world template') }}
             </button>
           </div>
         </div>
 
         <div class="worldbook-template-section">
-          <p class="text-sm font-semibold">{{ t('当前世界模板', 'World-specific templates') }}</p>
+          <p class="text-sm font-semibold">{{ t('当前世界启用模板', 'Current-world enabled templates') }}</p>
+          <p class="text-xs text-gray-500">
+            {{ t('只有启用的世界模板会优先出现在通讯录；停用后，通讯录仍可使用通用模板。', 'Only enabled world templates are prioritized in Contacts; disabled templates fall back to universal templates.') }}
+          </p>
           <p v-if="worldProfileTemplates.length === 0" class="text-sm text-gray-500">
             {{ t('还没有当前世界专用模板。', 'No world-specific templates yet.') }}
           </p>
@@ -2504,9 +2520,18 @@ onBeforeUnmount(() => {
             <div class="min-w-0">
               <p class="font-medium truncate">{{ template.title }}</p>
               <p class="text-xs text-gray-500">
-                v{{ template.version }} · {{ template.fields.length }} {{ t('字段', 'fields') }}
+                v{{ template.version }} · {{ template.fields.length }} {{ t('字段', 'fields') }} ·
+                {{ template.enabled === false ? t('已停用', 'Disabled') : t('已启用', 'Enabled') }}
               </p>
             </div>
+            <button
+              type="button"
+              class="worldbook-secondary-action"
+              :data-testid="`worldbook-template-toggle-${template.id}`"
+              @click="toggleWorldProfileTemplateEnabled(template)"
+            >
+              {{ template.enabled === false ? t('启用', 'Enable') : t('停用', 'Disable') }}
+            </button>
           </div>
         </div>
       </section>

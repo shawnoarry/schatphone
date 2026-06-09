@@ -23,9 +23,6 @@ describe('book store', () => {
         'built_in_modern_seoul_kpop_main_worldview',
         'built_in_modern_seoul_kpop_world_rules',
         'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-        'built_in_modern_seoul_kpop_profile_template_placeholder',
-        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
-        'built_in_modern_seoul_kpop_reference_material_placeholder',
       ]),
     )
     expect(store.findAssetById('built_in_modern_seoul_kpop_main_worldview')).toMatchObject({
@@ -39,23 +36,12 @@ describe('book store', () => {
     expect(store.worldbookSourceAssets.map((asset) => asset.id)).toEqual(
       expect.arrayContaining([
         'built_in_modern_seoul_kpop_main_worldview',
+        'built_in_modern_seoul_kpop_world_rules',
         'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-        'built_in_modern_seoul_kpop_profile_template_placeholder',
-        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
-        'built_in_modern_seoul_kpop_reference_material_placeholder',
       ]),
     )
     expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toContain(
       'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-    )
-    expect(store.listAssets({ category: 'profile_template' }).map((asset) => asset.id)).toContain(
-      'built_in_modern_seoul_kpop_profile_template_placeholder',
-    )
-    expect(store.listAssets({ category: 'reference_material' }).map((asset) => asset.id)).toEqual(
-      expect.arrayContaining([
-        'built_in_modern_seoul_kpop_world_pack_reference_placeholder',
-        'built_in_modern_seoul_kpop_reference_material_placeholder',
-      ]),
     )
     expect(store.updateAsset('built_in_modern_seoul_kpop_main_worldview', { title: 'Changed' })).toMatchObject({
       ok: false,

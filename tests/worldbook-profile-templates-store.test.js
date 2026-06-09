@@ -49,6 +49,25 @@ describe('WorldBook profile templates in system store', () => {
     expect(store.getProfileTemplateById(created.id).title).toBe('My ABO world v2')
   })
 
+  test('filters disabled world-specific templates from enabled current-world lists', () => {
+    const store = useSystemStore()
+    const created = store.createWorldProfileTemplateFromPreset('preset_basic_modern', {
+      worldId: 'world_modern',
+      title: 'Modern world template',
+    })
+
+    expect(store.listWorldProfileTemplates('world_modern', { enabledOnly: true })).toHaveLength(1)
+
+    const disabled = store.setWorldProfileTemplateEnabled(created.id, false)
+
+    expect(disabled).toMatchObject({
+      id: created.id,
+      enabled: false,
+    })
+    expect(store.listWorldProfileTemplates('world_modern')).toHaveLength(1)
+    expect(store.listWorldProfileTemplates('world_modern', { enabledOnly: true })).toHaveLength(0)
+  })
+
   test('hydrates persisted profile templates without losing versions', () => {
     const store = useSystemStore()
     const created = store.createWorldProfileTemplateFromPreset('preset_basic_modern', {

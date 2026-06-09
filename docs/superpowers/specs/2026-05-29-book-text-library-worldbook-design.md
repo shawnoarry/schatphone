@@ -19,17 +19,17 @@ Implementation note, 2026-05-29:
 - 2026-05-30 visual/IA follow-up: Sources now uses a stats-first source-control panel with linked-source cards, clearer fallback state, and separated destructive removal.
 - 2026-05-30 visual/IA follow-up: Current World Pack and Knowledge panels now have a first craft pass; knowledge create/edit work uses a bottom sheet rather than an always-visible inline authoring form.
 - 2026-05-30 visual/IA follow-up: Kernel and Templates now use the same task-panel treatment as Sources/Pack/Knowledge, with compact state headers and stronger mobile cards.
-- 2026-06-08 content-source follow-up: `现代首尔 K-pop 娱乐圈` now ships as built-in read-only Book assets for main worldview and world rules. They appear in Book and WorldBook source picking, can be linked into active context, stay outside user backup/persistence payloads, and create user-owned copies before editing.
+- 2026-06-08 content-source follow-up: `现代首尔 K-pop 娱乐圈` now ships as built-in read-only Book assets for main worldview, world rules, and an encyclopedia placeholder. They appear in Book and WorldBook source picking, can be linked into active context, stay outside user backup/persistence payloads, and create user-owned copies before editing.
 - 2026-06-08 IA correction: opening the Book/text library from `Settings -> WorldBook` now stays in the WorldBook flow and shows an in-place Book-card catalog. It must not route to `/book`; Book remains the editing workspace, while WorldBook only chooses and activates text.
-- 2026-06-08 placeholder-asset follow-up: the K-pop trial library now includes real built-in placeholder manuscripts for encyclopedia, profile-template, world-pack-reference, and reference-material interaction testing. They are Book assets, not static mock cards.
+- 2026-06-09 taxonomy follow-up: Book text categories are narrowed to Worldview, Rules, and Encyclopedia. Old reference/profile-template text labels remain compatibility aliases that normalize to Encyclopedia, but they are not user-facing categories or source roles.
 - 2026-06-08 picker-grouping follow-up: WorldBook's Book-card picker now groups manuscripts by activation role/category, so users choose from a category project card before selecting a specific Book manuscript.
-- 2026-06-08 active-context overview follow-up: the top Active World card is now the primary text-activation entry. It shows active context text character count and only four user-facing Book categories: Worldview, Rules, Encyclopedia, and Profiles. Each category opens an in-place directory sheet with active/available manuscript rows and import actions; reference/world-pack-reference labels stay out of the primary UI.
+- 2026-06-09 active-context overview follow-up: the top Active World card is now the primary text-activation entry. It shows active context text character count and only three user-facing Book text categories: Worldview, Rules, and Encyclopedia. Profile templates are handled by the structured WorldBook/Contacts template panel, not by Book text-source categories.
 
 ## 1. Decision Summary
 
 SchatPhone should separate long-form text storage from WorldBook activation.
 
-The current V1 WorldBook baseline is usable for short worldview text, knowledge points, profile-template rules, and Chat/runtime context injection. It becomes fragile when users import or edit very long worldbooks, because a Settings page with a large editable text area is easy to misread, accidentally change, or overload visually.
+The current V1 WorldBook baseline is usable for short worldview text, encyclopedia entries, structured profile templates, and Chat/runtime context injection. It becomes fragile when users import or edit very long worldbooks, because a Settings page with a large editable text area is easy to misread, accidentally change, or overload visually.
 
 New direction:
 
@@ -54,7 +54,7 @@ Known issues:
 3. Long editable text inside Settings creates accidental edit/delete risk.
 4. Users need a way to choose existing worldbook templates instead of pasting raw text every time.
 5. Users need a way to edit reusable templates without immediately changing the active world context.
-6. Future reusable text types, such as knowledge notes, terminology, rules, or reference material, should not all become WorldBook page sections.
+6. Reusable text should stay in a small set of understandable categories: worldview, rules, and encyclopedia. Profile templates should remain structured records for Contacts rather than freeform Book text.
 
 ## 3. Product Boundary
 
@@ -68,8 +68,6 @@ It should own:
 - knowledge notes;
 - glossary or terminology notes;
 - rule sets;
-- profile-template notes;
-- reusable reference text;
 - imported `.txt`, `.md`, and structured worldbook export files;
 - categories, tags, favorites, draft state, lock state, and version snapshots for text assets.
 
@@ -256,12 +254,11 @@ Recommended record:
 
 V1 asset types:
 
-- `worldbook_document`
-- `knowledge_note`
-- `glossary`
-- `rule_set`
-- `profile_template_note`
-- `reference_note`
+- `worldview`
+- `encyclopedia`
+- `world_rule`
+
+Legacy imported labels such as `worldbook_document`, `knowledge_note`, `glossary`, `rule_set`, `profile_template_note`, and `reference_note` remain readable, but profile/reference text labels normalize into `encyclopedia`.
 
 ### 6.2 Book Section
 
@@ -303,10 +300,11 @@ Recommended record:
 
 V1 usage types:
 
-- `base_worldview`
-- `knowledge_source`
-- `pack_source`
-- `profile_template_reference`
+- `main_worldview`
+- `encyclopedia`
+- `world_rule`
+
+Legacy source roles such as `base_worldview`, `knowledge_source`, `pack_source`, and `profile_template_reference` remain readable through aliases.
 
 Rule:
 
@@ -492,7 +490,7 @@ Decision:
 
 - Future work:
   - Let World Pack refer to Book assets and WorldBook source links.
-  - Keep profile-template values owned by Contacts.
+  - Keep profile-template definitions structured in WorldBook and concrete values owned by Contacts.
   - Keep pack activation inside WorldBook.
 
 ## 11. Non-Goals For V1

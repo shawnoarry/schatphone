@@ -215,6 +215,7 @@ export const normalizeProfileTemplate = (rawTemplate = {}, fallbackIndex = 0) =>
     scope,
     worldId:
       scope === PROFILE_TEMPLATE_SCOPES.WORLD ? normalizeId(source.worldId, 'default_world') : '',
+    enabled: source.enabled !== false,
     version: Math.max(1, toInt(source.version, 1)),
     fields: normalizeProfileTemplateFields(source.fields),
     createdAt: Math.max(0, toInt(source.createdAt, now)),

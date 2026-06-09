@@ -84,9 +84,6 @@ describe('WorldBook functional IA', () => {
     expect(overview.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
       'Encyclopedia',
     )
-    expect(overview.get('[data-testid="worldbook-overview-text-category-profile"]').text()).toContain(
-      'Profiles',
-    )
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(overview.get('[data-testid="worldbook-overview-consumer-runtime"]').text()).toContain(
       'Event Runtime',

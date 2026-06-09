@@ -15,8 +15,6 @@ describe('world taxonomy', () => {
       'worldview',
       'encyclopedia',
       'world_rule',
-      'profile_template',
-      'reference_material',
     ])
   })
 
@@ -25,9 +23,9 @@ describe('world taxonomy', () => {
     expect(normalizeBookTextCategory('knowledge_note')).toBe('encyclopedia')
     expect(normalizeBookTextCategory('glossary')).toBe('encyclopedia')
     expect(normalizeBookTextCategory('rule_set')).toBe('world_rule')
-    expect(normalizeBookTextCategory('profile_template_note')).toBe('profile_template')
-    expect(normalizeBookTextCategory('reference_note')).toBe('reference_material')
-    expect(normalizeBookTextCategory('made_up')).toBe('reference_material')
+    expect(normalizeBookTextCategory('profile_template_note')).toBe('encyclopedia')
+    expect(normalizeBookTextCategory('reference_note')).toBe('encyclopedia')
+    expect(normalizeBookTextCategory('made_up')).toBe('encyclopedia')
   })
 
   test('normalizes legacy WorldBook source usages to canonical roles', () => {
@@ -35,14 +33,11 @@ describe('world taxonomy', () => {
       'main_worldview',
       'encyclopedia',
       'world_rule',
-      'world_pack_reference',
-      'profile_template',
-      'reference_material',
     ])
     expect(normalizeWorldBookSourceRole('base_worldview')).toBe('main_worldview')
     expect(normalizeWorldBookSourceRole('knowledge_source')).toBe('encyclopedia')
-    expect(normalizeWorldBookSourceRole('pack_source')).toBe('world_pack_reference')
-    expect(normalizeWorldBookSourceRole('profile_template_reference')).toBe('profile_template')
+    expect(normalizeWorldBookSourceRole('pack_source')).toBe('encyclopedia')
+    expect(normalizeWorldBookSourceRole('profile_template_reference')).toBe('encyclopedia')
     expect(normalizeWorldBookSourceRole('made_up')).toBe('encyclopedia')
   })
 

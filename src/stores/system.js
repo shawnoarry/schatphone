@@ -2956,10 +2956,13 @@ export const useSystemStore = defineStore('system', () => {
       (template) => template.scope === PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET,
     )
 
-  const listWorldProfileTemplates = (worldId = '') => {
+  const listWorldProfileTemplates = (worldId = '', options = {}) => {
     const targetWorldId = typeof worldId === 'string' && worldId.trim() ? worldId.trim() : 'default_world'
     return listProfileTemplates().filter(
-      (template) => template.scope === PROFILE_TEMPLATE_SCOPES.WORLD && template.worldId === targetWorldId,
+      (template) =>
+        template.scope === PROFILE_TEMPLATE_SCOPES.WORLD &&
+        template.worldId === targetWorldId &&
+        (options.enabledOnly !== true || template.enabled !== false),
     )
   }
 
@@ -3012,6 +3015,16 @@ export const useSystemStore = defineStore('system', () => {
       worldId: updates.worldId || existing.worldId || 'default_world',
       version: Math.max(1, Number(existing.version) || 1) + 1,
       createdAt: existing.createdAt,
+      updatedAt: Date.now(),
+    })
+  }
+
+  const setWorldProfileTemplateEnabled = (templateId, enabled = true) => {
+    const existing = getProfileTemplateById(templateId)
+    if (!existing || existing.scope !== PROFILE_TEMPLATE_SCOPES.WORLD) return null
+    return upsertProfileTemplate({
+      ...existing,
+      enabled: enabled !== false,
       updatedAt: Date.now(),
     })
   }
@@ -4500,6 +4513,7 @@ export const useSystemStore = defineStore('system', () => {
     upsertProfileTemplate,
     createWorldProfileTemplateFromPreset,
     updateWorldProfileTemplate,
+    setWorldProfileTemplateEnabled,
     touchChatTruth,
     getChatTruthSnapshot,
     clearChatTruthState,

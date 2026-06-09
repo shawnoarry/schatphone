@@ -37,6 +37,7 @@ import {
 } from '../lib/role-profile-schema'
 import {
   PROFILE_TEMPLATE_FIELD_TYPES,
+  PROFILE_TEMPLATE_SCOPES,
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
 } from '../lib/profile-template-schema'
@@ -104,7 +105,7 @@ const profileTemplateAiDraftStatus = ref('')
 const profileTemplateAdaptationBusy = ref(false)
 const profileTemplateAdaptationStatus = ref('')
 const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
-const CONTACTS_CURRENT_WORLD_ID = 'default_world'
+const CONTACTS_FALLBACK_WORLD_ID = 'default_world'
 
 const createEmptyAssetPack = () => ({
   wallpaperAssetIds: [],
@@ -469,7 +470,7 @@ const selectedProfile = computed(
 )
 
 const activeWorldRelationshipRegistry = computed(() => {
-  const activePackId = user.value.activeWorldPackId || 'default_world'
+  const activePackId = user.value.activeWorldPackId || CONTACTS_FALLBACK_WORLD_ID
   const activePack = Array.isArray(user.value.worldPacks)
     ? user.value.worldPacks.find((pack) => pack.id === activePackId)
     : null
@@ -480,6 +481,11 @@ const activeWorldRelationshipRegistry = computed(() => {
 })
 const relationshipCategoryOptions = computed(() => activeWorldRelationshipRegistry.value.categories)
 const relationshipModifierOptions = computed(() => activeWorldRelationshipRegistry.value.modifiers)
+const currentContactsWorldId = computed(() =>
+  typeof user.value.activeWorldPackId === 'string' && user.value.activeWorldPackId.trim()
+    ? user.value.activeWorldPackId.trim()
+    : CONTACTS_FALLBACK_WORLD_ID,
+)
 
 const resetRelationshipPremiseDraft = (profile = selectedProfile.value) => {
   relationshipPremiseDraft.relationshipLabelText = profile?.relationshipLabelText || ''
@@ -655,20 +661,35 @@ const selectedProfileIsNpc = computed(() => selectedProfileEntityType.value === 
 const selectedProfileChatBound = computed(() =>
   selectedProfile.value?.id ? chatStore.isRoleProfileBound(selectedProfile.value.id) : false,
 )
+const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
 const currentWorldProfileTemplates = computed(() =>
-  systemStore.listWorldProfileTemplates(CONTACTS_CURRENT_WORLD_ID),
+  systemStore.listWorldProfileTemplates(currentContactsWorldId.value, { enabledOnly: true }),
 )
 const contactsProfileTemplateOptions = computed(() => {
-  const templates = currentWorldProfileTemplates.value
+  const orderedTemplates = [
+    ...currentWorldProfileTemplates.value,
+    ...universalProfileTemplates.value,
+  ]
   const selectedTemplateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
   const selectedTemplate = selectedTemplateId
     ? systemStore.getProfileTemplateById(selectedTemplateId)
     : null
-  if (selectedTemplate && !templates.some((template) => template.id === selectedTemplate.id)) {
-    return [...templates, selectedTemplate]
-  }
-  return templates
+  const templates = selectedTemplate
+    ? [...orderedTemplates, selectedTemplate]
+    : orderedTemplates
+  const seen = new Set()
+  return templates.filter((template) => {
+    if (!template?.id || seen.has(template.id)) return false
+    seen.add(template.id)
+    return true
+  })
 })
+const formatContactsProfileTemplateOption = (template = {}) => {
+  if (template.scope === PROFILE_TEMPLATE_SCOPES.WORLD) {
+    return t(`当前世界 · ${template.title}`, `Current world · ${template.title}`)
+  }
+  return t(`通用 · ${template.title}`, `Universal · ${template.title}`)
+}
 const selectedProfileTemplate = computed(() => {
   const templateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
   return templateId ? systemStore.getProfileTemplateById(templateId) : null
@@ -678,7 +699,7 @@ const selectedProfileTemplateAdaptationReview = computed(() =>
     profile: selectedProfile.value || {},
     currentTemplate: selectedProfileTemplate.value,
     currentWorldTemplates: currentWorldProfileTemplates.value,
-    currentWorldId: CONTACTS_CURRENT_WORLD_ID,
+    currentWorldId: currentContactsWorldId.value,
   }),
 )
 const fieldMatchesSelectedProfileEntity = (field = {}) => {
@@ -1783,7 +1804,10 @@ const saveProfileTemplateValues = () => {
     .filter(Boolean)
   const ok = chatStore.updateRoleProfile(profile.id, {
     templateLink: {
-      primaryWorldId: template.worldId || 'default_world',
+      primaryWorldId:
+        template.scope === PROFILE_TEMPLATE_SCOPES.WORLD
+          ? template.worldId || currentContactsWorldId.value
+          : '',
       profileTemplateId: template.id,
       profileTemplateVersion: template.version || 1,
       supplementalKnowledgePointIds: profile.templateLink?.supplementalKnowledgePointIds || [],
@@ -3857,7 +3881,7 @@ onBeforeUnmount(() => {
                   :key="template.id"
                   :value="template.id"
                 >
-                  {{ template.title }} · v{{ template.version }}
+                  {{ formatContactsProfileTemplateOption(template) }} · v{{ template.version }}
                 </option>
               </select>
 

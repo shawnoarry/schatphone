@@ -17,16 +17,11 @@ describe('book text schema helpers', () => {
       'worldview',
       'encyclopedia',
       'world_rule',
-      'profile_template',
-      'reference_material',
     ])
     expect(WORLDBOOK_SOURCE_USAGES).toEqual([
       'main_worldview',
       'encyclopedia',
       'world_rule',
-      'world_pack_reference',
-      'profile_template',
-      'reference_material',
     ])
   })
 
@@ -69,8 +64,8 @@ describe('book text schema helpers', () => {
       content: 'x',
     })
 
-    expect(asset.category).toBe('reference_material')
-    expect(asset.assetType).toBe('reference_material')
+    expect(asset.category).toBe('encyclopedia')
+    expect(asset.assetType).toBe('encyclopedia')
     expect(asset.categoryId).toBe('custom_shelf')
   })
 
@@ -228,7 +223,7 @@ describe('book text schema helpers', () => {
     expect(resolveWorldBookSourceText(asset, ['missing_section'])).toBe('')
   })
 
-  test('invalid category falls back to reference material', () => {
+  test('invalid category falls back to encyclopedia', () => {
     const asset = normalizeBookTextAsset({
       id: 'sample',
       title: '',
@@ -238,8 +233,8 @@ describe('book text schema helpers', () => {
     })
 
     expect(asset.title).toBe('Untitled text 1')
-    expect(asset.category).toBe('reference_material')
-    expect(asset.assetType).toBe('reference_material')
+    expect(asset.category).toBe('encyclopedia')
+    expect(asset.assetType).toBe('encyclopedia')
     expect(asset.locked).toBe(false)
     expect(asset.content).toBe('Reference material.')
   })
