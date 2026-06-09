@@ -3,6 +3,11 @@ import { computed, reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import {
+  createInitialSoftwareUpdateState,
+  hasSoftwareUpdateCandidate,
+  normalizeSoftwareUpdateState,
+} from '../lib/app-update'
+import {
   normalizePushDisplayMode,
   normalizePushPermission,
   normalizePushServerUrl,
@@ -1357,6 +1362,7 @@ export const useSystemStore = defineStore('system', () => {
       backupReminderIntervalHours: BACKUP_REMINDER_DEFAULT_INTERVAL_HOURS,
       backupReminderLastNotifiedAt: 0,
       backupCopyTone: DEFAULT_BACKUP_COPY_TONE,
+      softwareUpdate: createInitialSoftwareUpdateState(),
     },
     more: createDefaultMoreSettings(),
     aiAutomation: createDefaultAiAutomationSettings(),
@@ -3773,6 +3779,108 @@ export const useSystemStore = defineStore('system', () => {
     }
   }
 
+  const getSoftwareUpdateState = () => {
+    const normalized = normalizeSoftwareUpdateState(settings.system.softwareUpdate)
+    settings.system.softwareUpdate = normalized
+    return normalized
+  }
+
+  const checkSoftwareUpdate = (baseAt = Date.now()) => {
+    const now = normalizeNonNegativeTimestamp(baseAt, Date.now())
+    const current = getSoftwareUpdateState()
+    const updateAvailable = hasSoftwareUpdateCandidate(current)
+    const next = {
+      ...current,
+      status: current.restartRequired
+        ? 'installed'
+        : updateAvailable
+          ? 'available'
+          : 'idle',
+      lastCheckedAt: now,
+    }
+    settings.system.softwareUpdate = next
+    return {
+      ok: true,
+      updateAvailable,
+      state: next,
+    }
+  }
+
+  const installSoftwareUpdate = (baseAt = Date.now()) => {
+    const now = normalizeNonNegativeTimestamp(baseAt, Date.now())
+    const current = getSoftwareUpdateState()
+    if (!hasSoftwareUpdateCandidate(current) && current.restartRequired !== true) {
+      const next = {
+        ...current,
+        status: 'idle',
+        lastCheckedAt: now,
+      }
+      settings.system.softwareUpdate = next
+      return {
+        ok: false,
+        reason: 'no_update',
+        notificationId: '',
+        state: next,
+      }
+    }
+
+    const next = {
+      ...current,
+      status: 'installed',
+      downloadedAt: now,
+      installedAt: now,
+      restartRequired: true,
+    }
+    settings.system.softwareUpdate = next
+    const notificationId = addNotification({
+      title: '软件更新已准备好',
+      content: `SchatPhone ${next.availableVersion} 已安装，重启后生效。`,
+      icon: 'fas fa-arrow-rotate-right',
+      route: '/settings?menu=software-update',
+      source: 'system_software_update',
+      createdAt: now,
+    })
+
+    return {
+      ok: true,
+      reason: 'installed',
+      notificationId,
+      state: next,
+    }
+  }
+
+  const postponeSoftwareUpdate = (baseAt = Date.now()) => {
+    const now = normalizeNonNegativeTimestamp(baseAt, Date.now())
+    const current = getSoftwareUpdateState()
+    const next = {
+      ...current,
+      status: 'postponed',
+      lastCheckedAt: current.lastCheckedAt || now,
+    }
+    settings.system.softwareUpdate = next
+    return {
+      ok: true,
+      state: next,
+    }
+  }
+
+  const finishSoftwareUpdateRestart = (baseAt = Date.now()) => {
+    const now = normalizeNonNegativeTimestamp(baseAt, Date.now())
+    const current = getSoftwareUpdateState()
+    const next = {
+      ...current,
+      currentVersion: current.availableVersion || current.currentVersion,
+      status: 'idle',
+      installedAt: current.installedAt || now,
+      restartRequired: false,
+    }
+    settings.system.softwareUpdate = next
+    return {
+      ok: true,
+      state: next,
+    }
+  }
+
   const lockPhone = () => {
     isLocked.value = true
   }
@@ -3923,6 +4031,9 @@ export const useSystemStore = defineStore('system', () => {
       settings.system.backupCopyTone = normalizeBackupCopyTone(
         settings.system.backupCopyTone,
         DEFAULT_BACKUP_COPY_TONE,
+      )
+      settings.system.softwareUpdate = normalizeSoftwareUpdateState(
+        settings.system.softwareUpdate,
       )
     }
 
@@ -4100,6 +4211,9 @@ export const useSystemStore = defineStore('system', () => {
     settings.system.backupCopyTone = normalizeBackupCopyTone(
       settings.system.backupCopyTone,
       DEFAULT_BACKUP_COPY_TONE,
+    )
+    settings.system.softwareUpdate = normalizeSoftwareUpdateState(
+      settings.system.softwareUpdate,
     )
     settings.more = normalizeMoreSettings(settings.more)
     return true
@@ -4408,6 +4522,10 @@ export const useSystemStore = defineStore('system', () => {
     getBackupReminderPolicy,
     markBackupExported,
     checkBackupReminderDue,
+    checkSoftwareUpdate,
+    installSoftwareUpdate,
+    postponeSoftwareUpdate,
+    finishSoftwareUpdateRestart,
     lockPhone,
     unlockPhone,
     saveNow,

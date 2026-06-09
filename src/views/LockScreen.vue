@@ -45,6 +45,7 @@ const lockNotifications = computed(() => {
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     .slice(0, 8)
 })
+const hasLockNotifications = computed(() => lockNotifications.value.length > 0)
 const unreadCount = computed(() =>
   lockNotifications.value.reduce((count, note) => count + (note.read ? 0 : 1), 0),
 )
@@ -126,6 +127,29 @@ const openNotification = (note) => {
     return
   }
   router.push('/home')
+}
+
+const clearLockNotifications = () => {
+  lockBannerVisible.value = false
+  lockBannerNote.value = null
+  systemStore.clearNotifications()
+  systemStore.saveNow()
+}
+
+const dismissNotification = (note) => {
+  if (!note?.id) return
+  if (lockBannerNote.value?.id === note.id) {
+    lockBannerVisible.value = false
+    lockBannerNote.value = null
+  }
+  systemStore.removeNotification(note.id)
+  systemStore.saveNow()
+}
+
+const openNotificationFromKeyboard = (event, note) => {
+  if (event?.key !== 'Enter' && event?.key !== ' ') return
+  event.preventDefault()
+  openNotification(note)
 }
 
 const clearBannerTimer = () => {
@@ -231,6 +255,17 @@ onBeforeUnmount(() => {
         <span class="text-xs opacity-80">{{ unreadCount }} {{ t('条未读', 'unread') }}</span>
       </div>
 
+      <div v-if="hasLockNotifications" class="lock-notification-clear-row">
+        <button
+          type="button"
+          class="lock-notification-clear-all"
+          data-testid="lock-notifications-clear-all"
+          @click="clearLockNotifications"
+        >
+          {{ t('清除全部', 'Clear all') }}
+        </button>
+      </div>
+
       <div v-if="focusModeEnabled" class="lock-focus-chip" data-testid="lock-focus-mode-chip">
         <i class="fas fa-moon"></i>
         <span>{{ t('专注模式：每组仅显示最新一条', 'Focus mode: newest item per group') }}</span>
@@ -257,12 +292,15 @@ onBeforeUnmount(() => {
           </div>
 
           <TransitionGroup name="lock-list" tag="div" class="space-y-2">
-            <button
+            <article
               v-for="note in group.notes"
               :key="note.id"
               class="lock-notification-card glass text-left"
               :class="{ 'is-read': note.read }"
+              role="button"
+              tabindex="0"
               @click="openNotification(note)"
+              @keydown="openNotificationFromKeyboard($event, note)"
             >
               <AppIconVisual
                 class="lock-notification-icon"
@@ -282,7 +320,17 @@ onBeforeUnmount(() => {
                 </div>
                 <p class="lock-notification-content">{{ note.content }}</p>
               </div>
-            </button>
+              <button
+                type="button"
+                class="lock-notification-dismiss"
+                :aria-label="t('清除这条通知', 'Clear this notification')"
+                :data-testid="`lock-notification-dismiss-${note.id}`"
+                @click.stop="dismissNotification(note)"
+                @keydown.stop
+              >
+                <i class="fas fa-xmark"></i>
+              </button>
+            </article>
           </TransitionGroup>
           <p v-if="group.hiddenCount > 0" class="lock-focus-hidden">
             {{ t(`已收起 ${group.hiddenCount} 条`, `${group.hiddenCount} hidden`) }}
@@ -527,6 +575,29 @@ onBeforeUnmount(() => {
   padding: 0 4px;
 }
 
+.lock-notification-clear-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -2px 0 10px;
+  padding: 0 4px;
+}
+
+.lock-notification-clear-all {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(var(--system-blur-sm));
+  -webkit-backdrop-filter: blur(var(--system-blur-sm));
+}
+
+.lock-notification-clear-all:active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .lock-focus-chip {
   display: inline-flex;
   align-items: center;
@@ -578,6 +649,7 @@ onBeforeUnmount(() => {
 }
 
 .lock-notification-card {
+  position: relative;
   width: 100%;
   border: 1px solid var(--system-border-light);
   border-radius: var(--system-radius-md);
@@ -589,6 +661,14 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
   -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.12);
+  cursor: pointer;
+  outline: none;
+}
+
+.lock-notification-card:focus-visible {
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.12),
+    0 0 0 3px rgba(255, 255, 255, 0.28);
 }
 
 .lock-notification-card.is-read {
@@ -649,6 +729,24 @@ onBeforeUnmount(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.lock-notification-dismiss {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+}
+
+.lock-notification-dismiss:active {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .lock-notification-empty {

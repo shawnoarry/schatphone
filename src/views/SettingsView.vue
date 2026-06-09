@@ -31,8 +31,13 @@ import SettingsBackupSection from '../components/settings/SettingsBackupSection.
 import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
+import SettingsSoftwareUpdateSection from '../components/settings/SettingsSoftwareUpdateSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
+import {
+  SCHATPHONE_BUILD_CHANNEL,
+  SOFTWARE_UPDATE_RELEASE_NOTES,
+} from '../lib/app-update'
 import {
   getPersistenceCapabilities,
   inspectPersistedStateLayers,
@@ -94,12 +99,15 @@ const pushFeedbackMessage = ref('')
 const pushServerHealthState = ref('idle')
 const pushServerHealthMessage = ref('')
 const pushLastHealthCheckAt = ref(0)
+const softwareUpdateFeedbackType = ref('')
+const softwareUpdateFeedbackMessage = ref('')
 let generalSavedTimerId = null
 let notificationSavedTimerId = null
 let automationSavedTimerId = null
 let backupFeedbackTimerId = null
 let storageAuditFeedbackTimerId = null
 let pushFeedbackTimerId = null
+let softwareUpdateFeedbackTimerId = null
 const automationInitialMaster = ref(false)
 const persistenceCapabilities = computed(() => getPersistenceCapabilities())
 const persistenceCapabilityLabel = (available) =>
@@ -138,6 +146,9 @@ const BACKUP_COPY_TONE_DIRECT = 'direct'
 const BACKUP_COPY_TONE_IMMERSIVE = 'immersive'
 const backupReminderIntervalLabel = createBackupReminderIntervalLabel(t)
 const focusModeEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('focus_mode'))
+const softwareUpdateState = computed(() => settings.value.system?.softwareUpdate || {})
+const softwareUpdateReleaseNotes = SOFTWARE_UPDATE_RELEASE_NOTES
+const softwareUpdateBuildChannel = SCHATPHONE_BUILD_CHANNEL
 
 const setPushFeedback = (type, message, durationMs = 2200) => {
   pushFeedbackType.value = type
@@ -146,6 +157,16 @@ const setPushFeedback = (type, message, durationMs = 2200) => {
   pushFeedbackTimerId = setTimeout(() => {
     pushFeedbackType.value = ''
     pushFeedbackMessage.value = ''
+  }, durationMs)
+}
+
+const setSoftwareUpdateFeedback = (type, message, durationMs = 2200) => {
+  softwareUpdateFeedbackType.value = type
+  softwareUpdateFeedbackMessage.value = message
+  if (softwareUpdateFeedbackTimerId) clearTimeout(softwareUpdateFeedbackTimerId)
+  softwareUpdateFeedbackTimerId = setTimeout(() => {
+    softwareUpdateFeedbackType.value = ''
+    softwareUpdateFeedbackMessage.value = ''
   }, durationMs)
 }
 
@@ -835,7 +856,7 @@ const pushDisplayModeHint = computed(() => {
 
 const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
-  const allowed = new Set(['general', 'notification', 'automation', 'about'])
+  const allowed = new Set(['general', 'notification', 'automation', 'about', 'software-update'])
   return allowed.has(raw) ? raw : ''
 }
 
@@ -903,6 +924,47 @@ const saveNotificationSettings = () => {
   notificationSavedTimerId = setTimeout(() => {
     notificationSaved.value = false
   }, 1200)
+}
+
+const checkSoftwareUpdateNow = () => {
+  const result = systemStore.checkSoftwareUpdate(Date.now())
+  systemStore.saveNow()
+  setSoftwareUpdateFeedback(
+    result.updateAvailable ? 'success' : 'info',
+    result.updateAvailable
+      ? t('已找到可用更新。', 'Update available.')
+      : t('当前已经是最新版本。', 'SchatPhone is up to date.'),
+  )
+}
+
+const installSoftwareUpdateNow = () => {
+  const result = systemStore.installSoftwareUpdate(Date.now())
+  systemStore.saveNow()
+  if (!result.ok) {
+    setSoftwareUpdateFeedback(
+      'warn',
+      t('没有可安装的新版本。', 'No new version is available to install.'),
+    )
+    return
+  }
+  setSoftwareUpdateFeedback(
+    'success',
+    t('更新已安装，重启后生效。', 'Update installed. Restart to finish.'),
+  )
+}
+
+const postponeSoftwareUpdateNow = () => {
+  systemStore.postponeSoftwareUpdate(Date.now())
+  systemStore.saveNow()
+  setSoftwareUpdateFeedback('info', t('已改为稍后处理。', 'Update postponed.'))
+}
+
+const restartIntoSoftwareUpdate = () => {
+  systemStore.finishSoftwareUpdateRestart(Date.now())
+  systemStore.saveNow()
+  if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+    window.location.reload()
+  }
 }
 
 const updateNotificationEnabled = (enabled) => {
@@ -2090,6 +2152,7 @@ onBeforeUnmount(() => {
   if (backupFeedbackTimerId) clearTimeout(backupFeedbackTimerId)
   if (storageAuditFeedbackTimerId) clearTimeout(storageAuditFeedbackTimerId)
   if (pushFeedbackTimerId) clearTimeout(pushFeedbackTimerId)
+  if (softwareUpdateFeedbackTimerId) clearTimeout(softwareUpdateFeedbackTimerId)
 })
 
 const initialMenu = normalizeSettingsMenuFromQuery(
@@ -2124,6 +2187,7 @@ if (initialMenu) {
         @open-profile="openProfile"
         @open-worldbook="openWorldBook"
         @open-general="openSubPage('general')"
+        @open-software-update="openSubPage('software-update')"
         @open-automation="openSubPage('automation')"
         @open-notification="openSubPage('notification')"
         @open-network="openNetworkReports"
@@ -2173,6 +2237,28 @@ if (initialMenu) {
           @update-backup-reminder-interval-hours="settings.system.backupReminderIntervalHours = $event"
           @save="saveGeneralSettings"
         />
+      </div>
+
+      <div v-if="activeMenu === 'software-update'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <SettingsSubPageHeader
+          title-zh="软件更新"
+          title-en="Software Update"
+          @close="closeSubPage"
+        />
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
+          <SettingsSoftwareUpdateSection
+            :build-channel="softwareUpdateBuildChannel"
+            :update-state="softwareUpdateState"
+            :release-notes="softwareUpdateReleaseNotes"
+            :feedback-type="softwareUpdateFeedbackType"
+            :feedback-message="softwareUpdateFeedbackMessage"
+            :format-time="formatStorageReportTime"
+            @check-update="checkSoftwareUpdateNow"
+            @install-update="installSoftwareUpdateNow"
+            @postpone-update="postponeSoftwareUpdateNow"
+            @restart-update="restartIntoSoftwareUpdate"
+          />
+        </div>
       </div>
 
       <div v-if="activeMenu === 'automation'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">

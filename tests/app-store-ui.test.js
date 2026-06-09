@@ -79,6 +79,50 @@ describe('App Store entry management UI', () => {
     wrapper.unmount()
   })
 
+  test('Settings exposes a Software Update confirmation flow', async () => {
+    const router = createTestRouter()
+    await router.push('/settings')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(SettingsView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="settings-software-update-entry"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="settings-software-update-section"]').text()).toContain(
+      'Software Update',
+    )
+    expect(wrapper.get('[data-testid="settings-software-update-status"]').text()).toContain(
+      'Not checked',
+    )
+
+    await wrapper.get('[data-testid="settings-software-update-check"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.system.softwareUpdate.status).toBe('available')
+    expect(wrapper.get('[data-testid="settings-software-update-install"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="settings-software-update-install"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.system.softwareUpdate.restartRequired).toBe(true)
+    expect(systemStore.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'system_software_update',
+          route: '/settings?menu=software-update',
+        }),
+      ]),
+    )
+    expect(wrapper.get('[data-testid="settings-software-update-restart"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   test('focus mode still condenses lock-screen notification groups', async () => {
     const router = createTestRouter()
     await router.push('/home')
@@ -115,6 +159,83 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('[data-testid="lock-focus-mode-chip"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Chat two')
     expect(wrapper.text()).not.toContain('Chat one')
+    wrapper.unmount()
+  })
+
+  test('lock screen can clear one notification without opening its route', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.lockPhone()
+    const olderId = systemStore.addNotification({
+      title: 'Backup reminder',
+      content: 'Export a backup soon.',
+      route: '/settings',
+      source: 'system_backup_reminder',
+      createdAt: Date.now() - 1000,
+    })
+    const latestId = systemStore.addNotification({
+      title: 'Update ready',
+      content: 'Restart to finish.',
+      route: '/settings?menu=software-update',
+      source: 'system_software_update',
+      createdAt: Date.now(),
+    })
+
+    const wrapper = mount(LockScreen, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="lock-notification-dismiss-${latestId}"]`).trigger('click')
+
+    expect(systemStore.notifications.map((note) => note.id)).toEqual([olderId])
+    expect(systemStore.isLocked).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/home')
+    wrapper.unmount()
+  })
+
+  test('lock screen can clear all notifications', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.addNotification({
+      title: 'Backup reminder',
+      content: 'Export a backup soon.',
+      source: 'system_backup_reminder',
+      createdAt: Date.now() - 1000,
+    })
+    systemStore.addNotification({
+      title: 'Update ready',
+      content: 'Restart to finish.',
+      source: 'system_software_update',
+      createdAt: Date.now(),
+    })
+
+    const wrapper = mount(LockScreen, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="lock-notifications-clear-all"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.notifications).toEqual([])
+    expect(wrapper.text()).toContain('No new notifications')
     wrapper.unmount()
   })
 

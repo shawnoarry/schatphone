@@ -14,6 +14,7 @@ const emit = defineEmits([
   'open-profile',
   'open-worldbook',
   'open-general',
+  'open-software-update',
   'open-automation',
   'open-notification',
   'open-network',
@@ -39,7 +40,9 @@ const { t } = useI18n()
     </div>
     <div class="flex-1">
       <h2 class="text-lg font-semibold">{{ user.name || t('未命名用户', 'Unnamed User') }}</h2>
-      <p class="text-xs text-gray-500">{{ t('Apple ID、头像与基础人设', 'Apple ID, avatar and profile basics') }}</p>
+      <p class="text-xs text-gray-500">
+        {{ t('Apple ID、头像与基础人设', 'Apple ID, avatar and profile basics') }}
+      </p>
     </div>
     <i class="fas fa-chevron-right text-gray-300"></i>
   </button>
@@ -95,11 +98,21 @@ const { t } = useI18n()
     <SettingsMenuItem
       title-zh="通用"
       title-en="General"
-      subtitle-zh="系统语言、时区等基础项"
+      subtitle-zh="系统语言、时区等基础项目"
       subtitle-en="Language, timezone and basic system options"
       icon="fas fa-sliders"
       icon-class="bg-gray-600"
       @select="emit('open-general')"
+    />
+    <SettingsMenuItem
+      title-zh="软件更新"
+      title-en="Software Update"
+      subtitle-zh="版本号、更新确认与重启"
+      subtitle-en="Version, install confirmation and restart"
+      icon="fas fa-arrow-rotate-right"
+      icon-class="bg-green-500"
+      data-testid="settings-software-update-entry"
+      @select="emit('open-software-update')"
     />
     <SettingsMenuItem
       title-zh="AI 自动响应"

@@ -220,6 +220,10 @@ Primary references:
 - `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
 - `docs/process/AI_WORK_MODE.md`
 
+Recently landed system-shell task:
+
+- `DONE`: Lock-screen notification cleanup and Settings Software Update confirmation. This focused UX/IA interruption added per-item/clear-all lock-screen notification controls and a Settings update-confirmation subpage; implementation record lives in `docs/superpowers/plans/2026-06-09-lock-notifications-software-update-plan.md`.
+
 ### 4.6 World Pack / App Archetype / Service Template System
 
 Status: `PARTIAL_DONE`

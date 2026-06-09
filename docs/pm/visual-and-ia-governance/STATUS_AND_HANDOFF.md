@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-06-03
+Updated: 2026-06-09
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -88,6 +88,7 @@ What is already landed:
 72. Book/WorldBook now have real built-in placeholder manuscripts for testing interaction breadth: encyclopedia, profile-template, world-pack-reference, and reference-material entries appear as normal Book-card choices instead of mock UI-only cards.
 73. WorldBook's Book-card picker now groups manuscripts inside category/role project cards instead of showing one flat mixed list, making worldviews, rules, encyclopedia, profile templates, world-pack references, and reference materials easier to scan.
 74. WorldBook's Active World overview now acts as the main text-context control surface: it shows active context text character count plus selected manuscript name chips, then opens focused directory sheets for Worldview, Rules, Encyclopedia, and Profiles. Backend reference-style labels are kept out of this primary path.
+75. Lock-screen notification cleanup and Settings Software Update V1 are landed. Lock cards now support per-item clear plus clear-all, Settings has a Software Update entry/subpage with current version, available version, release notes, check/install/later/restart actions, and update notifications route to `/settings?menu=software-update`. Plan/result: `docs/superpowers/plans/2026-06-09-lock-notifications-software-update-plan.md`.
 
 Still incomplete:
 
