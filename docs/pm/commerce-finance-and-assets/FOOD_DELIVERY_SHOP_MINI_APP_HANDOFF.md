@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -10,7 +10,7 @@ Food Delivery is a pseudo-folder collection, not a single app that owns every fi
 
 The first layer inside the Home pseudo-folder should contain peer mini apps:
 
-- Food Platform: broad browsing, search, nearby, categories, and platform discovery.
+- Food Platform: broad browsing, search, lightweight categories, platform campaigns, and platform-internal merchant discovery. It is a peer mini app in the folder, not the controller for the other peer shop mini apps.
 - Shop mini apps: individual restaurants or themed shops, such as Moon Bistro.
 - Future shops: App Store-installed, user-created, or World Pack-generated shop entries.
 
@@ -28,14 +28,15 @@ The pseudo-folder direction is now implemented for Food Delivery and Shopping.
 
 Food Platform now has a consumer-facing discovery homepage.
 
-- The platform first screen uses a Baemin-like delivery-app rhythm adapted to SchatPhone: top actions, delivery address chip, large title, real search input, teal campaign hero with food imagery, category icon grid, benefit cards, and a horizontal shop mini app rail.
-- The latest visual pass decomposes the AI-generated delivery homepage reference into product modules: brand/address header, search with rider illustration layering, campaign hero, 5-by-2 compact icon category grid, membership coupon strip, recommendation rail, and a light bottom navigation row.
+- The platform first screen uses a Baemin-like delivery-app rhythm adapted to SchatPhone: top actions, delivery address chip, real search input, rider illustration layering, a shorter horizontal ad-carousel rail, simplified category shortcuts, a horizontal platform-merchant rail, and a light bottom navigation row.
+- The latest visual pass reduces homepage load: the former membership coupon strip is folded into the ad carousel, complex mechanism shortcuts such as Nearby/Grocery/More are removed from the visible category grid, and merchant detail/menu information no longer occupies the bottom of the homepage.
 - The rider illustration is now the user-provided transparent PNG asset (`public/images/food-delivery/platform-delivery-rider.png`) layered near the search field. It adds delivery-app personality without blocking input, and the asset can be replaced without changing platform logic. The hero food image now prefers Moon Bistro-style meal imagery and has a native plate fallback when external images load slowly.
-- Food Platform bottom navigation is visual/discovery-only for now: Home, Search, Orders, Saved, and Mine. `Orders` is a platform affordance placeholder and must not aggregate peer shop orders unless Food Platform later becomes an order-owning mini app.
-- Platform search filters visible shop mini apps by shop name, App Store facade display name, cuisine, category, and menu text.
+- Food Platform bottom navigation is visual/discovery-only for now: Home, Search, Orders, Saved, and Mine. `Orders` is a platform affordance placeholder and must not aggregate peer shop orders.
+- Platform search filters platform-internal merchants by shop name, cuisine, category, badge, and menu text. It does not search, open, or re-skin same-level shop mini apps such as Moon Bistro.
+- Tapping a platform merchant stays inside Food Platform and opens a focused merchant detail sheet with summary metrics and menu preview. Opening a peer shop mini app still happens through the pseudo-folder/App Store/shop route context.
 - Seed restaurants and seed dishes now include default food-photo URLs so fresh saves do not open with icon-only food cards.
 - The restaurant/menu creation tools are hidden from ordinary Food Platform browsing. They appear only when the user arrives through the App Store create-shop handoff, and creating a restaurant keeps that handoff open so the user can immediately add menu items and images.
-- Food Platform still does not show shop cart, shop orders, Wallet suggestions, Map support panels, or delivery event controls. Those remain inside opened shop mini apps.
+- Food Platform still does not show peer-shop cart, peer-shop orders, Wallet suggestions, Map support panels, or delivery event controls. Those remain inside opened shop mini apps.
 
 The first Food Delivery shop is Moon Bistro.
 
@@ -65,7 +66,7 @@ Food Delivery owns:
 - order records and order status
 - food delivery service events
 
-Food Platform is a Food Delivery-owned discovery mini app, but it is not the visible owner of shop order workflows. Individual shop mini apps should present their own cart, checkout, order status, and downstream Wallet suggestions.
+Food Platform is a Food Delivery-owned discovery mini app, but it is not the visible owner of peer shop order workflows. Its own platform merchants can use a unified platform template; individual same-level shop mini apps should present their own cart, checkout, order status, and downstream Wallet suggestions.
 
 Map is a context provider:
 
@@ -94,7 +95,7 @@ App Store must not own restaurant/menu/cart/order records.
 
 ## Next Visual Plan
 
-Food Platform's first consumer-homepage pass is done, including the Baemin-like reference decomposition. Keep it as discovery-first: future work can add real favorite/recent shop behavior, richer empty states, and platform-specific order history only if Food Platform later becomes an order-owning mini app. Until then, bottom navigation should remain a discovery/navigation affordance, not a hidden aggregate order controller.
+Food Platform's first consumer-homepage pass is done, including the Baemin-like reference decomposition and the homepage-load reduction pass. Keep it as discovery-first: future work can add real favorite/recent behavior for platform-internal merchants, real banner rotation/state, and richer platform-specific empty states. Bottom navigation should remain a discovery/navigation affordance, not a hidden aggregate controller for peer shop mini apps.
 
 Focus shop-template work on Moon Bistro before expanding to other shops.
 
@@ -180,7 +181,7 @@ Use this as the first message when continuing with another assistant session:
 ```text
 继续 SchatPhone 外卖 mini app 工作。先阅读 docs/pm/commerce-finance-and-assets/FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md 和 docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md。
 
-当前目标：只打磨 Moon Bistro 第一个外卖小店的视觉和顺手度。保持外卖伪文件夹第一层为 Food Platform + 店铺 mini app；不要把分类重新做成第一层入口。Moon Bistro 打开后必须是 shop-first，不显示外卖平台大头图和平台列表。保留菜品详情弹窗、单菜品编辑按钮、图片可更换、加购物车与订单归 Food Delivery 所有。
+当前目标：继续打磨 Food Delivery。保持外卖伪文件夹第一层为 Food Platform + 店铺 mini app；不要把分类重新做成第一层入口。Food Platform 只展示平台内商家流，不打开、不汇总同级店铺 mini app。Moon Bistro 打开后必须是 shop-first，不显示外卖平台大头图和平台列表。保留菜品详情弹窗、单菜品编辑按钮、图片可更换、加购物车与订单归 Food Delivery 所有。
 
 先检查 src/views/FoodDeliveryView.vue、src/lib/home-folder-mini-app-entries.js、tests/food-delivery-view.test.js、tests/home-folder-entry.test.js。不要使用旧本地预览链接；用当前仓库启动的 Vite 输出 URL。完成后运行 npm run test -- tests/food-delivery-view.test.js tests/home-folder-entry.test.js、npm run lint、npm run build。
 ```

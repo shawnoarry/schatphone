@@ -51,10 +51,14 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-platform-rider"] img').attributes('src')).toContain(
       'platform-delivery-rider.png',
     )
-    expect(wrapper.get('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').text()).toContain('免配送权益')
+    expect(wrapper.find('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-platform-hero-image"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('Moon Bistro')
-    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('nearby')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('逆站洞韩牛汤饭')
+    expect(wrapper.find('[data-testid="food-delivery-shop-app-food_seed_moon_bistro"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('全部')
+    expect(wrapper.find('[data-testid="food-delivery-category-nearby"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-category-grocery_delivery"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toMatch(/本地数据|Local data/)
     expect(wrapper.find('[data-testid="food-delivery-cart-panel"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-orders-panel"]').exists()).toBe(false)
@@ -64,12 +68,21 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.find('[data-testid="food-delivery-custom-form"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-category-cafe"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('Cafe')
+    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('寿司')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('Daylight Cafe')
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('Moon Bistro')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('寿司花')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('逆站洞韩牛汤饭')
 
+    await wrapper.get('[data-testid="food-delivery-select-platform-merchant-platform_sushi_hana"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain('寿司花')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain('花见寿司拼盘')
+
+    await wrapper.get('[data-testid="food-delivery-platform-merchant-close"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('')
     await flushPromises()
     await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
@@ -96,7 +109,10 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
 
     expect(wrapper.find('[data-testid="food-delivery-shop-app-food_seed_moon_bistro"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-empty"]').text()).toContain('No installed')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-platform_hanwoo_gukbap"]').text()).toContain(
+      '逆站洞韩牛汤饭',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-shop-app-empty"]').exists()).toBe(false)
     expect(store.findRestaurantById('food_seed_moon_bistro')).toBeTruthy()
 
     await router.push('/food-delivery?restaurantId=food_seed_moon_bistro&entry=shop')
@@ -218,7 +234,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('opens a restaurant as an individual store surface from the platform', async () => {
+  test('keeps platform merchants inside the platform and opens peer shops only through shop routes', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -235,14 +251,20 @@ describe('FoodDeliveryView', () => {
     const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
 
     expect(wrapper.get('[data-testid="food-delivery-platform"]').text()).toContain('Restaurants')
-    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(restaurant.name)
-    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    expect(wrapper.find(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-platform_hanwoo_gukbap"]').text()).toContain(
+      '逆站洞韩牛汤饭',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-select-platform-merchant-platform_hanwoo_gukbap"]').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.query).toMatchObject({
-      category: 'restaurants',
-      restaurantId: restaurant.id,
-    })
+    expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain('逆站洞韩牛汤饭')
+
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
+    await flushPromises()
+
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain(restaurant.name)
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-id')).toBe(restaurant.id)
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
@@ -290,15 +312,10 @@ describe('FoodDeliveryView', () => {
       },
     })
 
-    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain('Moon Kitchen')
-    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(
-      'Late night comfort menu',
-    )
-    expect(wrapper.get(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).text()).toContain(
-      'late night · comfort',
-    )
+    expect(wrapper.find(`[data-testid="food-delivery-shop-app-${restaurant.id}"]`).exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('Moon Kitchen')
 
-    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
     await flushPromises()
 
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('Moon Kitchen')
@@ -352,7 +369,7 @@ describe('FoodDeliveryView', () => {
     const activeRestaurant = store.listRestaurantsByCategory('restaurants')[0]
     const menuItem = store.listMenuByRestaurant(activeRestaurant.id)[0]
 
-    await wrapper.get(`[data-testid="food-delivery-open-store-${activeRestaurant.id}"]`).trigger('click')
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${activeRestaurant.id}&entry=shop`)
     await flushPromises()
 
     expect(wrapper.get('[data-testid="food-delivery-map-handoff-address"]').text()).toContain('Studio Street 9')
@@ -410,7 +427,7 @@ describe('FoodDeliveryView', () => {
     const restaurant = store.listRestaurantsByCategory('restaurants')[0]
     const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
 
-    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
     await flushPromises()
     await wrapper.get(`[data-testid="food-delivery-menu-open-${menuItem.id}"]`).trigger('click')
     await flushPromises()
@@ -469,7 +486,7 @@ describe('FoodDeliveryView', () => {
     const restaurant = store.findRestaurantById('food_seed_moon_bistro')
     const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
 
-    await wrapper.get(`[data-testid="food-delivery-open-store-${restaurant.id}"]`).trigger('click')
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
     await flushPromises()
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
       'dark_tray_menu',
@@ -823,10 +840,6 @@ describe('FoodDeliveryView', () => {
         url: 'https://example.com/orbit-kitchen.png',
       },
     })
-    expect(wrapper.get(`[data-testid="food-delivery-restaurant-${restaurant.id}"] img`).attributes('src')).toBe(
-      'https://example.com/orbit-kitchen.png',
-    )
-
     expect(imported.ok).toBe(true)
     await wrapper.get('[data-testid="food-delivery-custom-menu-restaurant"]').setValue(restaurant.id)
     await wrapper.get('[data-testid="food-delivery-custom-menu-title"]').setValue('Orbit Bento')
@@ -851,6 +864,9 @@ describe('FoodDeliveryView', () => {
     await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
     await flushPromises()
 
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"] img').attributes('src')).toBe(
+      'https://example.com/orbit-kitchen.png',
+    )
     expect(wrapper.get(`[data-testid="food-delivery-menu-${menuItem.id}"] img`).attributes('src')).toBe(
       'https://example.com/food-gallery.png',
     )
