@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -26,13 +26,14 @@ What is already landed:
 14. Moon Bistro now opens as a shop-first surface: the Food platform hero/list chrome is hidden, the store owns the first screen, cart becomes the ordering anchor, and Map/order/Wallet support panels are folded behind Order & delivery.
 15. Moon Bistro checkout is now shop-local: checkout opens a confirmation sheet before creating an order, shop orders/events/Wallet suggestions are scoped to the opened shop, and Food Platform no longer renders shop cart/order/Wallet/Map support panels as a total controller.
 16. Food Platform now has a consumer-facing discovery homepage instead of the earlier backend-like platform card stack. It shows a brand/address header, real search input, project-owned transparent rider asset near the search field, a shorter horizontal ad-carousel rail, simplified category shortcuts, a horizontal platform-merchant rail, merchant detail/menu in a focused sheet, and a light bottom navigation row. Search filters platform-internal merchants by shop, cuisine, category, badge, and menu text. The platform now pulls homepage banners, merchant photos, and rider decoration from `public/images/ui-assets/apps/food-delivery/platform/` rather than remote placeholder images. The platform no longer opens or aggregates same-level shop mini apps such as Moon Bistro. The shop creation/menu editor is hidden from ordinary platform browsing and appears only for the App Store create-shop handoff. The bottom navigation remains discovery-only; `Orders` must not become an aggregate peer-shop order controller.
+17. Moon Bistro's first visual asset pass is now connected to the project UI asset library: fresh seed data uses the local Moon Bistro cover and dish photos, the dark shop header uses that cover as an immersive background, dish cards keep the circular embedded-photo treatment, and the one-dish edit sheet still lets users replace copy and images through URL/Gallery sources.
 
 Still incomplete:
 
 1. Assets and Stock still need deeper product loops;
 2. future ownership links from Shopping to Assets and from Stock to cue systems still need clearer rollout order.
 3. service-account pushes are functional and boundary-safe, but later visual/copy polish can make them feel more brand-specific.
-4. Food Delivery store surfaces have the first route and IA baseline, but still need the next visual/UX polish pass for richer real-delivery-app ergonomics.
+4. Food Delivery store surfaces have the first route and IA baseline plus Moon Bistro's first local-asset polish, but still need more visual/UX passes for sticky-cart ergonomics, responsive density, and more distinct shop templates.
 5. App Store mini-app editing now has the generalized binding-target baseline, Shopping-bound generated entry support, cover facade management, installed/not-installed target-folder placement, and create-shop V0 owner handoff. A true custom Shopping store/service record model remains a Shopping-owned product decision if user-created Shopping shops need more than preset platform services.
 
 ## 2. Recommended Next Slice

@@ -24,6 +24,12 @@ describe('food delivery store', () => {
       store.listRestaurantsByCategory('nearby')[1]?.distanceKm || 999,
     )
     expect(store.categorySummaries.find((item) => item.key === 'cafe')?.restaurantCount).toBeGreaterThan(0)
+    expect(store.findRestaurantById('food_seed_moon_bistro')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/moon-bistro/cover/',
+    )
+    expect(store.findMenuItemById('food_menu_moon_rice')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/',
+    )
   })
 
   test('upserts restaurant and menu records with image metadata', () => {

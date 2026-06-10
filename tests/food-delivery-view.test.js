@@ -273,6 +273,9 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
       'food-delivery-store-dark-tray',
     )
+    expect(wrapper.get('[data-testid="food-delivery-store-cover"] img').attributes('src')).toContain(
+      '/images/ui-assets/apps/food-delivery/moon-bistro/cover/',
+    )
     expect(wrapper.get(`[data-testid="food-delivery-menu-tray-${menuItem.id}"]`).text()).toContain(menuItem.title)
     expect(wrapper.get(`[data-testid="food-delivery-menu-dish-${menuItem.id}"]`).exists()).toBe(true)
     expect(wrapper.find('[data-testid="food-delivery-store-back"]').exists()).toBe(false)

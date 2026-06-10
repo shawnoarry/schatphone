@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -34,7 +34,7 @@ Food Platform now has a consumer-facing discovery homepage.
 - Food Platform bottom navigation is visual/discovery-only for now: Home, Search, Orders, Saved, and Mine. `Orders` is a platform affordance placeholder and must not aggregate peer shop orders.
 - Platform search filters platform-internal merchants by shop name, cuisine, category, badge, and menu text. It does not search, open, or re-skin same-level shop mini apps such as Moon Bistro.
 - Tapping a platform merchant stays inside Food Platform and opens a focused merchant detail sheet with summary metrics and menu preview. Opening a peer shop mini app still happens through the pseudo-folder/App Store/shop route context.
-- Seed restaurants and seed dishes now include default food-photo URLs so fresh saves do not open with icon-only food cards.
+- Seed restaurants and seed dishes now include default food-photo URLs so fresh saves do not open with icon-only food cards. Moon Bistro now uses project-local UI assets under `public/images/ui-assets/apps/food-delivery/moon-bistro/` for its cover and initial dish photos, while user-edited dish images still use the normal URL/Gallery image picker.
 - The restaurant/menu creation tools are hidden from ordinary Food Platform browsing. They appear only when the user arrives through the App Store create-shop handoff, and creating a restaurant keeps that handoff open so the user can immediately add menu items and images.
 - Food Platform still does not show peer-shop cart, peer-shop orders, Wallet suggestions, Map support panels, or delivery event controls. Those remain inside opened shop mini apps.
 
@@ -44,11 +44,12 @@ The first Food Delivery shop is Moon Bistro.
 - The platform hero and platform list chrome are hidden in shop mode.
 - The shop owns the first screen: shop header, dark tray menu, dish cards, item details, and cart.
 - Dish cards use the dark tray treatment: food imagery is embedded as a raised circular image over each card.
+- Moon Bistro now uses a candlelit cover image as the dark header background, with stronger overlay depth so the first screen reads more like a distinct shop app instead of a generic module panel.
 - Tapping a dish opens a detail sheet with description, base ingredients, quantity, total price, add-to-cart, and a small edit icon.
 - The edit mode is scoped to one dish and can change item title, description, base ingredients, and image source.
 - The cart becomes the ordering anchor in shop mode.
 - Map, order, Wallet, and support information are folded behind an Order & delivery section so they do not dominate the shop first screen.
-- Current visual polish pass adds a shop status pill, scan-friendly rating/ETA/distance metrics, user-facing delivery fee/ETA/distance cards, richer dark tray dish cards with dish descriptions instead of image-source labels, a clearer checkout bar, and a softer empty-cart prompt.
+- Current visual polish pass adds a shop status pill, scan-friendly rating/ETA/distance metrics, user-facing delivery fee/ETA/distance cards, a project-local Moon Bistro cover image, richer dark tray dish cards with embedded real-food imagery and quieter icon-only add buttons, a clearer checkout bar, and a softer empty-cart prompt.
 - The shop checkout is now a shop-local confirmation sheet. Tapping checkout previews the current shop cart, delivery address, ETA, delivery fee, and total; the order is created only after the user submits from that sheet.
 - Shop orders, delivery events, and Wallet suggestions are scoped to the currently opened shop. Food Platform does not render the shop cart, order panel, Wallet suggestions, or Map support panels, so it no longer behaves like a total order controller.
 - The shop header no longer has a `Food platform` return button. Home remains available, while the platform is treated as a peer mini app in the pseudo-folder rather than the parent of the shop.
@@ -104,13 +105,13 @@ Recommended direction: late-night bistro with a dark tray menu.
 Work in this order:
 
 1. Shop header
-   - First polish pass is done: the first screen now has shop status, rating, ETA, delivery fee, distance, and short shop identity.
-   - Next pass can add stronger shop cover imagery and a more distinctive Moon Bistro brand mood.
+   - First polish pass is done: the first screen now has shop status, rating, ETA, delivery fee, distance, short shop identity, and a project-local Moon Bistro cover image.
+   - Next pass can tune the cover crop and add more brand-specific microcopy or motion if the shop needs a stronger personality.
    - Keep Home and Food Platform navigation visible but visually quiet.
 
 2. Dish cards
-   - First polish pass is done: cards now push the embedded tray feel further and show dish descriptions instead of backend-like image-source labels.
-   - Next pass should use stronger real-food imagery and tune responsive card density.
+   - First polish pass is done: cards now push the embedded tray feel further, use project-local Moon Bistro dish photos for the initial menu, and show dish descriptions instead of backend-like image-source labels.
+   - Next pass should tune responsive card density and expand the menu only after the first two dishes feel right.
    - Keep title, price, visual identity, and add action easy to scan.
 
 3. Bottom cart

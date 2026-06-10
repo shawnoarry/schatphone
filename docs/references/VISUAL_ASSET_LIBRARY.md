@@ -1,6 +1,6 @@
 # Visual Reference Asset Library
 
-Updated: 2026-05-23
+Updated: 2026-06-10
 
 This document records the external visual reference library used during SchatPhone visual work.
 
@@ -66,12 +66,30 @@ Before copying an asset:
 1. confirm the asset is needed by a concrete feature or screen;
 2. rename it with a stable, descriptive ASCII filename;
 3. compress or resize large images when appropriate;
-4. place it under a purpose-specific project folder such as `public/assets/`;
+4. place it under a purpose-specific project folder such as `public/images/ui-assets/`;
 5. record why it was added in the relevant visual or product-decision document.
 
 The full external library should stay outside git unless a separate Git LFS-backed reference repository is explicitly created.
 
-## 5. Cross-PC Setup Prompt
+## 5. Project UI Asset Library
+
+Runtime visual assets that are meant to ship with SchatPhone live under:
+
+```text
+public/images/ui-assets/
+```
+
+Current structure:
+
+| Folder | Current use |
+| --- | --- |
+| `apps/food-delivery/platform/` | Food Platform banners, platform merchant photos, category/decorative assets, and rider mascot. |
+| `apps/food-delivery/moon-bistro/` | Moon Bistro cover images and dish photos used by the first shop template. |
+| `_inbox/` | Temporary holding area for user-provided images before classification. Files here should be renamed and moved before code references them. |
+
+Use stable ASCII filenames once an image is selected for product use. Code may reference these project-local public URLs through `/images/ui-assets/...` or Vite base-prefixed URLs.
+
+## 6. Cross-PC Setup Prompt
 
 Use this prompt before visual work on a new machine:
 
@@ -80,4 +98,3 @@ Please confirm the local visual reference asset library path.
 Current-machine example: D:\github\美化包
 If the library is unavailable, should this round continue with project-local resources only?
 ```
-

@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -89,10 +89,11 @@ What is already landed:
 73. WorldBook's Book-card picker now groups manuscripts inside category/role project cards instead of showing one flat mixed list, making worldviews, rules, encyclopedia, profile templates, world-pack references, and reference materials easier to scan.
 74. WorldBook's Active World overview now acts as the main text-context control surface: it shows active context text character count plus selected manuscript name chips, then opens focused directory sheets for Worldview, Rules, Encyclopedia, and Profiles. Backend reference-style labels are kept out of this primary path.
 75. Lock-screen notification cleanup and Settings Software Update V1 are landed. Lock cards now support per-item clear plus clear-all, Settings has a Software Update entry/subpage with current version, available version, release notes, check/install/later/restart actions, and update notifications route to `/settings?menu=software-update`. Plan/result: `docs/superpowers/plans/2026-06-09-lock-notifications-software-update-plan.md`.
+76. Moon Bistro's Food Delivery shop template now has its first local-asset visual polish: the shop header uses a candlelit cover from `public/images/ui-assets/apps/food-delivery/moon-bistro/`, initial menu dishes use local food photos, the dark tray cards have stronger embedded circular image depth, and app-local public image URLs are preserved by the shared image-source contract so visual assets can live in the repo while user-edited dish images remain replaceable.
 
 Still incomplete:
 
-1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes; Food Delivery should continue from store-surface polish, sticky-cart ergonomics, and more distinctive per-store presentation;
+1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes; Food Delivery should continue from Moon Bistro store-surface polish, sticky-cart ergonomics, responsive density, and more distinctive per-store presentation;
 2. some pages still mix destructive actions and ordinary edits too closely;
 3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.

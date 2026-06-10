@@ -355,13 +355,16 @@ const buildFoodDeliveryEventSummary = (order = {}, event = {}) => {
   return `Food Delivery updated ${foodOrderTitle(order)}.`
 }
 
+const foodDeliveryUiAsset = (path) =>
+  `${import.meta.env.BASE_URL || '/'}images/ui-assets/apps/food-delivery/${path}`
+
 const FOOD_SEED_IMAGE_URLS = Object.freeze({
-  moonBistro: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80',
+  moonBistro: foodDeliveryUiAsset('moon-bistro/cover/moon-bistro-cover-02.png'),
   riverNoodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
   daylightCafe: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
   sugarLane: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
-  lunarRice: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80',
-  signalSoup: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80',
+  lunarRice: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-03.png'),
+  signalSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-02.png'),
   riverBeefNoodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
   daylightLatte: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
   tinyMoonCake: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
@@ -458,7 +461,7 @@ const createSeedRestaurants = () =>
       address: 'Luna Street 18',
       imageSourceType: 'url',
       imageUrl: FOOD_SEED_IMAGE_URLS.moonBistro,
-      imageAlt: 'Moon Bistro rice bowl',
+      imageAlt: 'Moon Bistro candlelit dinner table',
       sourceModule: 'seed',
       createdAt: Date.now() - 8 * 60 * 1000,
       updatedAt: Date.now() - 8 * 60 * 1000,
@@ -525,8 +528,8 @@ const createSeedMenuItems = () =>
         title: 'Lunar Rice Set',
         category: 'restaurants',
         price: '58.00',
-        desc: 'Warm dinner set for late-night story scenes.',
-        ingredients: 'rice, egg, greens',
+        desc: 'Grilled slices, warm rice, and crisp pickles for a quiet late-night dinner.',
+        ingredients: 'rice, grilled pork, cucumber, kimchi, herb sauce',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.lunarRice,
         imageAlt: 'Lunar Rice Set',
@@ -540,8 +543,8 @@ const createSeedMenuItems = () =>
         title: 'Signal Soup',
         category: 'restaurants',
         price: '26.00',
-        desc: 'Clear soup with a quiet late-night finish.',
-        ingredients: 'broth, tofu, herbs',
+        desc: 'Creamy mushroom soup with thyme and black pepper, made for slow evenings.',
+        ingredients: 'mushroom, cream, thyme, black pepper, broth',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.signalSoup,
         imageAlt: 'Signal Soup',

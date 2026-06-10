@@ -585,9 +585,13 @@ const activeStoreVisual = computed(() => {
 const activeStorePresentation = computed(() =>
   activeRestaurant.value ? resolveShopEntryPresentation(activeRestaurant.value) : null,
 )
+const activeStoreRestaurantImageUrl = computed(() =>
+  activeRestaurant.value ? foodImageUrl(activeRestaurant.value) : '',
+)
 const activeStoreCoverImageUrl = computed(() => {
   const assetId = activeStorePresentation.value?.coverGalleryAssetId || ''
-  return assetId ? foodImagePreviewMap[assetId] || '' : ''
+  if (assetId) return foodImagePreviewMap[assetId] || ''
+  return isDarkTrayStore.value ? activeStoreRestaurantImageUrl.value : ''
 })
 const activeStoreDisplayName = computed(
   () => activeStorePresentation.value?.displayName || activeRestaurant.value?.name || '',
@@ -2138,9 +2142,9 @@ onBeforeUnmount(() => {
         >
           <div
             class="relative overflow-hidden bg-gradient-to-br p-4 text-gray-950"
-            :class="isDarkTrayStore ? 'from-[#2a2d3e] via-[#171a27] to-[#080a10]' : activeStoreVisual.heroClass"
+            :class="isDarkTrayStore ? 'min-h-[19rem] from-[#2a2d3e] via-[#171a27] to-[#080a10]' : activeStoreVisual.heroClass"
           >
-            <div class="flex items-center justify-between gap-2">
+            <div class="relative z-20 flex items-center justify-between gap-2">
               <button
                 class="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white/90 p-0 text-[0px] font-bold text-gray-900 shadow-sm"
                 data-testid="food-delivery-store-home"
@@ -2152,19 +2156,33 @@ onBeforeUnmount(() => {
             </div>
             <div
               v-if="activeStoreCoverImageUrl"
-              class="mt-4 h-28 overflow-hidden rounded-3xl border border-white/20 bg-white/10"
+              class="overflow-hidden"
+              :class="
+                isDarkTrayStore
+                  ? 'absolute inset-0 z-0 mt-0 h-full rounded-none border-0 bg-transparent'
+                  : 'mt-4 h-28 rounded-3xl border border-white/20 bg-white/10'
+              "
               data-testid="food-delivery-store-cover"
             >
               <img
                 :src="activeStoreCoverImageUrl"
                 :alt="`${activeStoreDisplayName} cover`"
                 class="h-full w-full object-cover"
+                :class="isDarkTrayStore ? 'scale-[1.04] opacity-75' : ''"
               />
+              <div
+                v-if="isDarkTrayStore"
+                class="absolute inset-0 bg-[radial-gradient(circle_at_78%_22%,rgba(255,187,116,0.18),transparent_28%),linear-gradient(180deg,rgba(8,10,16,0.34),rgba(8,10,16,0.88)_72%,rgba(8,10,16,0.96))]"
+              ></div>
             </div>
-            <div class="mt-5 grid grid-cols-[minmax(0,1fr)_5.5rem] items-end gap-4">
+            <div
+              class="relative z-10 grid grid-cols-[minmax(0,1fr)_5.5rem] items-end gap-4"
+              :class="isDarkTrayStore ? 'mt-16' : 'mt-5'"
+            >
               <div class="min-w-0">
                 <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100"
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase"
+                  :class="isDarkTrayStore ? 'bg-white/12 text-emerald-100 backdrop-blur' : 'bg-emerald-400/15 text-emerald-100'"
                   data-testid="food-delivery-store-status"
                 >
                   <i class="fas fa-circle text-[6px]"></i>
@@ -2186,13 +2204,14 @@ onBeforeUnmount(() => {
                   class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-100"
                   data-testid="food-delivery-store-metrics"
                 >
-                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
-                    {{ activeRestaurant.rating.toFixed(1) }} ★
+                  <span class="inline-flex items-center gap-1 rounded-full bg-white/[0.1] px-2.5 py-1 backdrop-blur">
+                    <i class="fas fa-star text-[10px] text-amber-300"></i>
+                    {{ activeRestaurant.rating.toFixed(1) }}
                   </span>
-                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
+                  <span class="rounded-full bg-white/[0.1] px-2.5 py-1 backdrop-blur">
                     {{ activeStoreEtaText }}
                   </span>
-                  <span class="rounded-full bg-white/[0.08] px-2.5 py-1">
+                  <span class="rounded-full bg-white/[0.1] px-2.5 py-1 backdrop-blur">
                     {{ activeStoreDistanceText }}
                   </span>
                 </div>
@@ -2201,10 +2220,13 @@ onBeforeUnmount(() => {
                   {{ activeRestaurant.distanceKm }} km
                 </p>
               </div>
-              <div class="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[1.65rem] bg-white/90 shadow-[0_18px_42px_rgba(0,0,0,0.35)]">
+              <div
+                class="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[1.65rem] shadow-[0_18px_42px_rgba(0,0,0,0.35)]"
+                :class="isDarkTrayStore ? 'border border-white/15 bg-white/12 backdrop-blur-md' : 'bg-white/90'"
+              >
                 <img
-                  v-if="foodImageUrl(activeRestaurant)"
-                  :src="foodImageUrl(activeRestaurant)"
+                  v-if="activeStoreRestaurantImageUrl"
+                  :src="activeStoreRestaurantImageUrl"
                   :alt="activeRestaurant.image?.alt || activeRestaurant.name"
                   class="h-full w-full object-cover"
                 />
@@ -2248,14 +2270,23 @@ onBeforeUnmount(() => {
 
         <section
           v-if="activeRestaurant"
-          class="rounded-3xl p-4"
-          :class="isDarkTrayStore ? 'border border-white/[0.08] bg-[#10131d] text-white' : 'border border-orange-100 bg-white'"
+          class="p-4"
+          :class="
+            isDarkTrayStore
+              ? 'rounded-[2rem] border border-white/[0.08] bg-[#10131d] text-white shadow-[0_20px_56px_rgba(0,0,0,0.28)]'
+              : 'rounded-3xl border border-orange-100 bg-white'
+          "
           data-testid="food-delivery-menu-panel"
         >
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-sm font-bold">{{ t('本店菜单', 'Store menu') }}</p>
-              <p class="mt-1 text-xs" :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'">
+              <p
+                class="font-black"
+                :class="isDarkTrayStore ? 'text-[1.35rem] leading-tight text-white' : 'text-sm'"
+              >
+                {{ t('本店菜单', 'Store menu') }}
+              </p>
+              <p class="mt-1 text-xs font-semibold" :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'">
                 {{ activeStoreDisplayName }}
               </p>
             </div>
@@ -2273,7 +2304,7 @@ onBeforeUnmount(() => {
               class="relative overflow-hidden"
               :class="
                 isDarkTrayStore
-                  ? 'min-h-[11rem] rounded-[1.85rem] border border-white/[0.04] bg-[#1b2030] p-3 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
+                  ? 'min-h-[11.6rem] rounded-[1.85rem] border border-white/[0.05] bg-[linear-gradient(180deg,#202536,#161a27)] p-3 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
                   : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
               "
               :data-testid="`food-delivery-menu-${item.id}`"
@@ -2289,7 +2320,7 @@ onBeforeUnmount(() => {
                   <span class="sr-only">{{ t('查看菜品详情', 'View item details') }}</span>
                 </button>
                 <div
-                  class="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[5px] border-[#2b3045] bg-[#111421] shadow-[0_18px_40px_rgba(0,0,0,0.42)]"
+                  class="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[5px] border-[#30364d] bg-[#111421] shadow-[0_18px_40px_rgba(0,0,0,0.42),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
                   :data-testid="`food-delivery-menu-dish-${item.id}`"
                 >
                   <img
@@ -2310,15 +2341,17 @@ onBeforeUnmount(() => {
                   <p class="mt-2 line-clamp-2 min-h-8 text-[10px] leading-4 text-slate-400">
                     {{ item.desc || item.ingredients || activeStoreShortDescription }}
                   </p>
-                  <p class="mt-2 text-[12px] font-black text-orange-100">{{ item.price }} {{ item.currency }}</p>
-                  <button
-                    class="pointer-events-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#ff806f] px-3 py-1.5 text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
-                    :data-testid="`food-delivery-add-${item.id}`"
-                    @click.stop="addMenuItemToCart(item.id)"
-                  >
-                    <i class="fas fa-plus text-[10px]"></i>
-                    {{ t('加入', 'Add') }}
-                  </button>
+                  <div class="mt-3 flex items-center justify-between gap-2">
+                    <p class="text-[12px] font-black text-orange-100">{{ item.price }} {{ item.currency }}</p>
+                    <button
+                      class="pointer-events-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff806f] text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
+                      :data-testid="`food-delivery-add-${item.id}`"
+                      :aria-label="`Add ${item.title}`"
+                      @click.stop="addMenuItemToCart(item.id)"
+                    >
+                      <i class="fas fa-plus text-[10px]"></i>
+                    </button>
+                  </div>
                 </div>
               </template>
               <template v-else>
@@ -2369,7 +2402,7 @@ onBeforeUnmount(() => {
           class="mx-auto w-full max-w-md shadow-2xl"
           :class="
             isDarkTrayStore && menuDetailMode === 'detail'
-              ? 'relative mt-20 overflow-visible rounded-[2rem] border border-white/10 bg-[#11131b] text-white shadow-[0_28px_80px_rgba(0,0,0,0.55)]'
+              ? 'relative mt-20 overflow-visible rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#151824,#0b0d13)] text-white shadow-[0_28px_80px_rgba(0,0,0,0.55)]'
               : 'overflow-hidden rounded-[2rem] bg-white'
           "
         >
@@ -2458,7 +2491,7 @@ onBeforeUnmount(() => {
 
                 <div class="flex items-center justify-between gap-4">
                   <div
-                    class="inline-flex h-10 items-center rounded-full border border-orange-300/50 bg-black/20 text-orange-100"
+                    class="inline-flex h-10 items-center rounded-full border border-orange-300/55 bg-black/24 text-orange-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                     data-testid="food-delivery-menu-detail-quantity"
                   >
                     <button
@@ -2489,7 +2522,7 @@ onBeforeUnmount(() => {
 
                 <button
                   type="button"
-                  class="w-full rounded-2xl bg-[#ff806f] px-4 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(255,128,111,0.28)]"
+                  class="w-full rounded-2xl bg-[#ff806f] px-4 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(255,128,111,0.28)] transition active:scale-[0.99]"
                   data-testid="food-delivery-menu-detail-add"
                   @click="addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity)"
                 >

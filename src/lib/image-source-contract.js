@@ -16,10 +16,14 @@ export const normalizeHttpImageUrl = (value) => {
   if (typeof value !== 'string') return ''
   const trimmed = value.trim()
   if (!trimmed) return ''
+  if (!/^https?:\/\//i.test(trimmed) && !(trimmed.startsWith('/') && !trimmed.startsWith('//'))) return ''
   try {
-    const parsed = new URL(trimmed)
+    const parsed = new URL(trimmed, 'https://schatphone.local')
     const protocol = parsed.protocol.toLowerCase()
     if (protocol !== 'http:' && protocol !== 'https:') return ''
+    if (parsed.origin === 'https://schatphone.local') {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`
+    }
     return parsed.href
   } catch {
     return ''
