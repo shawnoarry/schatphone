@@ -111,7 +111,11 @@ const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
-const platformRiderImageUrl = `${import.meta.env.BASE_URL || '/'}images/food-delivery/platform-delivery-rider.png`
+const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
+const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
+const platformRiderImageUrl = foodDeliveryUiAsset(
+  'platform/decorations/mascot/delivery-rider-mascot-01.png',
+)
 const selectedPlatformMerchantId = ref('')
 const platformMerchantSheetOpen = ref(false)
 const menuItemEditDraft = reactive({
@@ -299,7 +303,8 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaZh: '领取权益',
     ctaEn: 'Claim perks',
     icon: 'fas fa-ticket',
-    className: 'from-[#5ee4dc] via-[#d9fbf8] to-white text-gray-950',
+    imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-member-delivery-01.png'),
+    className: 'from-white/95 via-white/75 to-white/10 text-gray-950',
     chipClass: 'bg-white/85 text-[#078d87]',
   },
   {
@@ -313,7 +318,8 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaZh: '去发现',
     ctaEn: 'Browse',
     icon: 'fas fa-bowl-food',
-    className: 'from-[#ffe0a1] via-[#ffc46b] to-[#ff8f72] text-gray-950',
+    imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-weekend-food-01.png'),
+    className: 'from-white/90 via-white/60 to-white/5 text-gray-950',
     chipClass: 'bg-white/85 text-orange-700',
   },
   {
@@ -327,7 +333,8 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaZh: '看推荐',
     ctaEn: 'See picks',
     icon: 'fas fa-bolt',
-    className: 'from-[#e9f7ff] via-[#bfeaff] to-[#f7d7ea] text-gray-950',
+    imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-lunch-express-01.png'),
+    className: 'from-white/95 via-white/60 to-white/5 text-gray-950',
     chipClass: 'bg-white/85 text-sky-700',
   },
 ])
@@ -345,7 +352,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '10,000원',
     distanceKm: 1.4,
     badge: '外卖会员',
-    imageUrl: 'https://images.unsplash.com/photo-1625398407796-82650a8c135f?auto=format&fit=crop&w=900&q=80',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-korean-beef-soup-02.png'),
     imageAlt: 'Korean beef soup bowl',
     icon: 'fas fa-bowl-rice',
     fallbackClass: 'from-[#fff2cf] via-[#f6c34d] to-[#e66d4d] text-[#78350f]',
@@ -368,7 +375,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '15,000원',
     distanceKm: 1.9,
     badge: '外卖会员',
-    imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-sushi-02.png'),
     imageAlt: 'Sushi platter',
     icon: 'fas fa-fish',
     fallbackClass: 'from-[#eaf7ff] via-[#b6e4f8] to-[#f7b7c5] text-[#0f5f72]',
@@ -391,7 +398,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '13,000원',
     distanceKm: 2.5,
     badge: '热卖',
-    imageUrl: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=900&q=80',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-pizza-02.png'),
     imageAlt: 'Pizza',
     icon: 'fas fa-pizza-slice',
     fallbackClass: 'from-[#fff1e6] via-[#ffb86b] to-[#f24f35] text-[#7f1d1d]',
@@ -414,7 +421,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '9,000원',
     distanceKm: 0.9,
     badge: '轻食',
-    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-salad-bowl-02.png'),
     imageAlt: 'Fresh salad bowl',
     icon: 'fas fa-seedling',
     fallbackClass: 'from-[#ecfff4] via-[#9ae6b4] to-[#34c2a1] text-[#064e3b]',
@@ -437,7 +444,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '12,000원',
     distanceKm: 1.7,
     badge: '免配送',
-    imageUrl: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=900&q=80',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-fried-chicken-02.png'),
     imageAlt: 'Fried chicken',
     icon: 'fas fa-drumstick-bite',
     fallbackClass: 'from-[#fff7d6] via-[#f6bf55] to-[#d95f35] text-[#78350f]',
@@ -1267,7 +1274,7 @@ onBeforeUnmount(() => {
 
         <div class="relative pt-7">
           <div
-            class="relative z-10 flex min-h-[3.45rem] items-center gap-3 rounded-[1.15rem] bg-white px-4 pr-28 text-sm font-semibold text-gray-500 shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+            class="relative z-10 flex min-h-[3.45rem] items-center gap-3 rounded-[1.15rem] bg-white px-4 pr-[7.25rem] text-sm font-semibold text-gray-500 shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
             data-testid="food-delivery-platform-search"
           >
             <i class="fas fa-magnifying-glass text-xl text-gray-400"></i>
@@ -1280,14 +1287,14 @@ onBeforeUnmount(() => {
             />
           </div>
           <div
-            class="pointer-events-none absolute right-[-2.6rem] top-[-2.85rem] z-20 h-[9.45rem] w-[11.55rem]"
+            class="pointer-events-none absolute right-[-1.45rem] top-[-3.05rem] z-20 h-[8.65rem] w-[10.75rem]"
             aria-hidden="true"
             data-testid="food-delivery-platform-rider"
           >
             <img
               :src="platformRiderImageUrl"
               alt=""
-              class="h-full w-full object-contain drop-shadow-[0_18px_22px_rgba(20,184,166,0.18)]"
+              class="h-full w-full object-contain drop-shadow-[0_18px_20px_rgba(20,184,166,0.2)]"
               draggable="false"
             />
           </div>
@@ -1355,17 +1362,26 @@ onBeforeUnmount(() => {
             <article
               v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
               :key="banner.id"
-              class="relative h-[8.4rem] w-[19.5rem] shrink-0 snap-start overflow-hidden rounded-[1.25rem] bg-gradient-to-br p-4 shadow-[0_16px_32px_rgba(15,118,110,0.14)] ring-1 ring-black/5"
-              :class="banner.className"
+              class="relative h-[7.8rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] p-4 shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
               :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-entry' : `food-delivery-platform-banner-${banner.id}`"
             >
+              <img
+                v-if="banner.imageUrl"
+                :src="banner.imageUrl"
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover"
+                :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-hero-image' : undefined"
+                draggable="false"
+              />
+              <div class="absolute inset-0 bg-gradient-to-r" :class="banner.className"></div>
+              <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.08))]"></div>
               <button
                 type="button"
                 class="absolute inset-0 z-20"
                 :aria-label="languageBase === 'zh' ? banner.ctaZh : banner.ctaEn"
                 @click="openCategory('nearby')"
               ></button>
-              <div class="relative z-10 max-w-[66%]">
+              <div class="relative z-10 max-w-[61%]">
                 <p class="text-[0.68rem] font-black text-gray-950/65">
                   {{ languageBase === 'zh' ? banner.eyebrowZh : banner.eyebrowEn }}
                 </p>
@@ -1384,6 +1400,7 @@ onBeforeUnmount(() => {
                 </span>
               </div>
               <div
+                v-if="!banner.imageUrl"
                 class="absolute -right-5 bottom-3 z-10 flex h-24 w-24 items-center justify-center rounded-full bg-white/55 p-1.5 shadow-[0_14px_30px_rgba(15,23,42,0.16)]"
                 :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-hero-image' : undefined"
               >
@@ -1466,7 +1483,7 @@ onBeforeUnmount(() => {
             <article
               v-for="merchant in platformFeaturedMerchants"
               :key="merchant.id"
-              class="w-[12.25rem] shrink-0"
+              class="w-[12.6rem] shrink-0"
               :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
               :data-platform-category="merchant.category"
             >
@@ -1477,7 +1494,7 @@ onBeforeUnmount(() => {
                 @click="selectPlatformMerchant(merchant)"
               >
                 <div
-                  class="relative h-28 overflow-hidden rounded-[1rem] bg-gray-100 shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
+                  class="relative h-28 overflow-hidden rounded-[1rem] bg-gray-100 shadow-[0_14px_28px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03]"
                   :data-testid="`food-delivery-platform-merchant-card-${merchant.id}`"
                 >
                   <img
@@ -1493,10 +1510,10 @@ onBeforeUnmount(() => {
                   >
                     <i :class="merchant.icon || 'fas fa-store'"></i>
                   </div>
-                  <span class="absolute left-2 top-2 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white">
+                  <span class="absolute left-2 top-2 z-20 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white shadow-sm">
                     {{ merchant.badge }}
                   </span>
-                  <span class="absolute bottom-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur">
+                  <span class="absolute bottom-2 right-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur">
                     <i class="fas fa-heart text-[0.74rem]"></i>
                   </span>
                 </div>

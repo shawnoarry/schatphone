@@ -49,7 +49,7 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').text()).toMatch(/Platform|平台/)
     expect(wrapper.get('[data-testid="food-delivery-platform-search"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-platform-rider"] img').attributes('src')).toContain(
-      'platform-delivery-rider.png',
+      'delivery-rider-mascot-01.png',
     )
     expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').text()).toContain('免配送权益')
     expect(wrapper.find('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(false)
