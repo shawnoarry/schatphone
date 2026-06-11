@@ -286,16 +286,18 @@ describe('wallet store', () => {
   test('persists, restores, and removes transactions', () => {
     const store = useWalletStore()
     store.resetForTesting()
+    expect(store.setPrimaryCurrency('usd')).toBe('USD')
     const transfer = store.addTransferTransaction({
       amount: '42',
-      currency: 'CNY',
       counterparty: 'Mika',
     })
+    expect(transfer.currency).toBe('USD')
     store.saveNow()
 
     setActivePinia(createPinia())
     const restoredStore = useWalletStore()
 
+    expect(restoredStore.primaryCurrency).toBe('USD')
     expect(restoredStore.findTransactionById(transfer.id)?.counterparty).toBe('Mika')
     expect(restoredStore.removeTransaction(transfer.id)).toBe(true)
     expect(restoredStore.findTransactionById(transfer.id)).toBeNull()
@@ -316,5 +318,59 @@ describe('wallet store', () => {
     expect(restoredStore.restoreFromBackup(snapshot)).toBe(true)
     expect(restoredStore.transactionCount).toBe(1)
     expect(restoredStore.findTransactionById('wallet_backup_1')?.amountCents).toBe(1000)
+  })
+
+  test('uses the primary currency as the default for new ledger records', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    expect(store.setPrimaryCurrency('eur')).toBe('EUR')
+    expect(store.addTransferTransaction({ amount: '12.00' })).toMatchObject({
+      currency: 'EUR',
+    })
+    expect(store.addChatTransferTransaction({ messageId: 'msg_eur_1', amount: '8.00' })).toMatchObject({
+      currency: 'EUR',
+    })
+    expect(store.setPrimaryCurrency('bad currency')).toBe('')
+    expect(store.primaryCurrency).toBe('EUR')
+  })
+
+  test('registers world pack currencies and keeps editable CNY exchange rates', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const registered = store.registerWorldCurrency(
+      {
+        code: 'crd',
+        labelZh: '信用点',
+        labelEn: 'Credits',
+        symbol: 'CR',
+      },
+      { id: 'survival_city' },
+    )
+
+    expect(registered).toMatchObject({
+      code: 'CRD',
+      source: 'world_pack',
+      worldPackId: 'survival_city',
+    })
+    expect(store.currencyOptions.map((currency) => currency.code)).toContain('CRD')
+    expect(store.setCurrencyCnyRate('CRD', '0.25')).toBeCloseTo(0.25)
+    expect(store.exchangeRateRows.find((row) => row.code === 'CRD')).toMatchObject({
+      code: 'CRD',
+      rateToCnyLabel: '0.2500',
+    })
+    expect(store.setPrimaryCurrency('CRD')).toBe('CRD')
+    expect(store.addChatTransferTransaction({ messageId: 'msg_crd_1', amount: '8.00' })).toMatchObject({
+      currency: 'CRD',
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.currencyOptions.map((currency) => currency.code)).not.toContain('CRD')
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.primaryCurrency).toBe('CRD')
+    expect(store.currencyOptions.map((currency) => currency.code)).toContain('CRD')
+    expect(store.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
   })
 })

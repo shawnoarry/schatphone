@@ -1,4 +1,5 @@
 import { normalizeWorldPackCompatibility } from './world-pack-compatibility'
+import { normalizeCurrencyDefinition } from './currency-system'
 
 export const DEFAULT_WORLD_PACK_ID = 'default_world'
 
@@ -105,6 +106,41 @@ const normalizeTermMap = (value) => {
       .filter(([key, term]) => key && term)
       .slice(0, 40),
   )
+}
+
+const normalizeWorldPackEconomy = (value = {}, options = {}) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const rawCurrencies = Array.isArray(source.currencies)
+    ? source.currencies
+    : Array.isArray(source.injectedCurrencies)
+      ? source.injectedCurrencies
+      : []
+  const seen = new Set()
+  const currencies = rawCurrencies
+    .map((currency) => {
+      const normalized = normalizeCurrencyDefinition(currency, {
+        source: 'world_pack',
+        worldPackId: options.worldPackId || '',
+      })
+      if (!normalized) return null
+      return {
+        ...normalized,
+        rateToCny:
+          Number.isFinite(Number(currency?.rateToCny)) && Number(currency.rateToCny) > 0
+            ? Number(currency.rateToCny)
+            : 0,
+      }
+    })
+    .filter((currency) => {
+      if (!currency || seen.has(currency.code)) return false
+      seen.add(currency.code)
+      return true
+    })
+    .slice(0, 12)
+
+  return {
+    currencies,
+  }
 }
 
 const normalizeWorldAppUiThemePackage = (value) => {
@@ -513,6 +549,7 @@ export const normalizeWorldPack = (raw, index = 0) => {
     appBindings,
     serviceAccountTemplates,
     terminology: normalizeTermMap(source.terminology),
+    economy: normalizeWorldPackEconomy(source.economy || source.economySettings, { worldPackId: id }),
     createdAt,
     updatedAt: toInt(source.updatedAt, createdAt),
   }

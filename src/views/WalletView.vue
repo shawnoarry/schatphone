@@ -10,7 +10,7 @@ import {
 } from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
-import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../stores/wallet'
+import { WALLET_TRANSACTION_SOURCE_FILTERS, formatWalletExchangeRate, useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,15 +18,27 @@ const { t } = useI18n()
 const chatStore = useChatStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const walletStore = useWalletStore()
-const { transactionCount, transactionSourceSummary, primaryBalance, balances } = storeToRefs(walletStore)
+const {
+  transactionCount,
+  transactionSourceSummary,
+  primaryBalance,
+  balances,
+  primaryCurrency,
+  currencyOptions,
+  exchangeRateRows,
+  exchangeRates,
+} = storeToRefs(walletStore)
 
 const transferDraft = ref({
   contactId: '',
   amount: '',
-  currency: 'CNY',
+  currency: primaryCurrency.value,
   counterparty: '',
   note: '',
 })
+const primaryCurrencyDraft = ref(primaryCurrency.value)
+const usdCnyDraft = ref(String(exchangeRates.value.reference?.rate || '7.2'))
+const rateDrafts = ref({})
 const feedback = ref('')
 const feedbackType = ref('success')
 const sourceFilter = ref(WALLET_TRANSACTION_SOURCE_FILTERS.ALL)
@@ -109,6 +121,52 @@ const getTransactionSourceClass = (transaction) =>
       ? 'bg-emerald-50 text-emerald-700'
       : 'bg-gray-100 text-gray-600'
 
+const savePrimaryCurrency = () => {
+  const nextCurrency = walletStore.setPrimaryCurrency(primaryCurrencyDraft.value)
+  if (!nextCurrency) {
+    primaryCurrencyDraft.value = primaryCurrency.value
+    showFeedback('warning', t('币种格式无效。', 'Invalid currency format.'))
+    return
+  }
+  primaryCurrencyDraft.value = nextCurrency
+  if (!transferDraft.value.currency) transferDraft.value.currency = nextCurrency
+  showFeedback('success', t('主币种已更新。', 'Primary currency updated.'))
+}
+
+const saveUsdCnyRate = () => {
+  const next = walletStore.setUsdCnyRate(usdCnyDraft.value)
+  if (!next) {
+    usdCnyDraft.value = String(exchangeRates.value.reference?.rate || '')
+    showFeedback('warning', t('USD/CNY 汇率格式无效。', 'Invalid USD/CNY rate.'))
+    return
+  }
+  usdCnyDraft.value = String(formatWalletExchangeRate(next))
+  showFeedback('success', t('USD/CNY 参考汇率已更新。', 'USD/CNY reference rate updated.'))
+}
+
+const rateDraftValue = (currencyCode = '') => {
+  if (rateDrafts.value[currencyCode]) return rateDrafts.value[currencyCode]
+  const row = exchangeRateRows.value.find((item) => item.code === currencyCode)
+  return row?.rateToCnyLabel || ''
+}
+
+const updateRateDraft = (currencyCode = '', value = '') => {
+  rateDrafts.value = {
+    ...rateDrafts.value,
+    [currencyCode]: value,
+  }
+}
+
+const saveCurrencyRate = (currencyCode = '') => {
+  const next = walletStore.setCurrencyCnyRate(currencyCode, rateDraftValue(currencyCode))
+  if (!next) {
+    showFeedback('warning', t('汇率格式无效。', 'Invalid exchange rate.'))
+    return
+  }
+  updateRateDraft(currencyCode, formatWalletExchangeRate(next))
+  showFeedback('success', t('币种汇率已更新。', 'Currency rate updated.'))
+}
+
 const submitTransfer = () => {
   const relationshipTarget = selectedRelationshipContact.value
   const created = walletStore.addTransferTransaction({
@@ -144,6 +202,7 @@ const submitTransfer = () => {
 
   transferDraft.value.contactId = ''
   transferDraft.value.amount = ''
+  transferDraft.value.currency = primaryCurrency.value
   transferDraft.value.counterparty = ''
   transferDraft.value.note = ''
   showFeedback('success', t('已记录一笔虚拟转账。', 'Virtual transfer recorded.'))
@@ -177,6 +236,32 @@ const removeTransaction = (transactionId) => {
       <section class="rounded-2xl bg-white border border-gray-200 p-4">
         <p class="text-xs text-gray-500">{{ t('当前余额', 'Current balance') }}</p>
         <p class="mt-1 text-3xl font-bold">{{ primaryBalance.amount }} {{ primaryBalance.currency }}</p>
+        <div class="mt-3 flex items-end gap-2">
+          <label class="min-w-0 flex-1 text-[11px] font-semibold text-gray-500">
+            <span class="mb-1 block">{{ t('主币种', 'Primary currency') }}</span>
+            <select
+              v-model="primaryCurrencyDraft"
+              class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold uppercase outline-none"
+              data-testid="wallet-primary-currency"
+            >
+              <option
+                v-for="currency in currencyOptions"
+                :key="currency.code"
+                :value="currency.code"
+              >
+                {{ currency.code }} · {{ t(currency.labelZh || currency.code, currency.labelEn || currency.code) }}
+              </option>
+            </select>
+          </label>
+          <button
+            type="button"
+            class="rounded-lg bg-gray-950 px-3 py-2 text-xs font-semibold text-white"
+            data-testid="wallet-save-primary-currency"
+            @click="savePrimaryCurrency"
+          >
+            {{ t('保存', 'Save') }}
+          </button>
+        </div>
         <p class="mt-2 text-[11px] text-gray-500">
           {{
             t(
@@ -193,6 +278,70 @@ const removeTransaction = (transactionId) => {
           >
             {{ item.amount }} {{ item.currency }}
           </span>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold">{{ t('汇率坐标', 'Exchange rates') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{ t('以 USD/CNY 为核心参考，世界包注入的自定义货币也在这里维护。', 'USD/CNY is the reference pair; custom world currencies are maintained here too.') }}
+            </p>
+          </div>
+          <span class="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+            USD/CNY
+          </span>
+        </div>
+        <div class="grid grid-cols-[1fr_auto] gap-2">
+          <label class="text-[11px] font-semibold text-gray-500">
+            <span class="mb-1 block">{{ t('1 USD 等于 CNY', '1 USD equals CNY') }}</span>
+            <input
+              :value="usdCnyDraft"
+              inputmode="decimal"
+              class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+              data-testid="wallet-usd-cny-rate"
+              @input="usdCnyDraft = $event.target.value"
+            />
+          </label>
+          <button
+            type="button"
+            class="self-end rounded-lg bg-gray-950 px-3 py-2 text-xs font-semibold text-white"
+            data-testid="wallet-save-usd-cny-rate"
+            @click="saveUsdCnyRate"
+          >
+            {{ t('保存', 'Save') }}
+          </button>
+        </div>
+        <div class="space-y-2">
+          <div
+            v-for="row in exchangeRateRows"
+            :key="row.code"
+            class="grid grid-cols-[minmax(0,1fr)_minmax(92px,120px)_auto] items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2"
+            :data-testid="`wallet-rate-row-${row.code}`"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold">{{ row.code }} · {{ t(row.labelZh || row.code, row.labelEn || row.code) }}</p>
+              <p class="text-[11px] text-gray-500">{{ row.source === 'world_pack' ? t('世界包注入', 'World pack') : t('系统货币', 'System currency') }}</p>
+            </div>
+            <input
+              :value="rateDraftValue(row.code)"
+              :disabled="row.code === 'CNY'"
+              inputmode="decimal"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              :data-testid="`wallet-cny-rate-${row.code}`"
+              @input="updateRateDraft(row.code, $event.target.value)"
+            />
+            <button
+              type="button"
+              :disabled="row.code === 'CNY'"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] font-semibold text-gray-700 disabled:text-gray-400"
+              :data-testid="`wallet-save-cny-rate-${row.code}`"
+              @click="saveCurrencyRate(row.code)"
+            >
+              {{ t('更新', 'Update') }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -220,13 +369,19 @@ const removeTransaction = (transactionId) => {
             data-testid="wallet-transfer-amount"
             :placeholder="t('金额', 'Amount')"
           />
-          <input
+          <select
             v-model="transferDraft.currency"
-            type="text"
-            maxlength="8"
             class="rounded-lg border border-gray-200 px-3 py-2 text-sm uppercase outline-none"
-            placeholder="CNY"
-          />
+            data-testid="wallet-transfer-currency"
+          >
+            <option
+              v-for="currency in currencyOptions"
+              :key="currency.code"
+              :value="currency.code"
+            >
+              {{ currency.code }}
+            </option>
+          </select>
         </div>
         <input
           v-model="transferDraft.counterparty"

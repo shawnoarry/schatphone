@@ -123,6 +123,7 @@ PM meaning:
 - World Pack V1 now persists built-in/user world packs, supports legacy activation review, keeps additive enabled expansion packs per save, and exposes enabled-pack app/service-template metadata through `world-interface`. Current World Pack now shows enabled service-account template availability only; Chat Directory's `Services` management area now lets users edit/reset built-in current-world service/official account candidates before opting in through the Chat-owned idempotent create/reuse seam, shows descriptive source notification plans for supported event streams, and keeps WorldBook out of account creation.
 - World Pack expansion V1 now treats packs as compatible add-ons over the user's main world rather than requiring a separate base-world layer. WorldBook can store an AI world-profile analysis, recommend compatible packs, and still let users manually enable other supported packs. The built-in trial set now includes `school_life`, `business_family`, and `urban_mystery`; multiple enabled packs feed App Store World entries and Chat Services candidates together.
 - World Pack schema can now carry relationship category/modifier registry additions as data-only extensions for later classification and event rules; there is no world-category editor UI in this slice.
+- World Pack can now carry custom currency declarations from Current World Pack's Economy & currency settings. Injected currencies become Wallet currency options, while Wallet owns primary-currency selection and editable USD/CNY-centered exchange rates.
 - The reusable World Pack / App Archetype / Service Account Template direction is now partially implemented for service-account entry generation and the first concrete app-binding behavior: `survival_city` can open Shopping as `补给站`, show active world context, and apply a safe Daily Fresh / Grocery filter.
 - The first global World Pack app-entry unlock seam is implemented: active app bindings become stable `world_app_*` entries in App Store and Home/App Library placement flows, and launch target modules with `worldPack`/`worldApp` route context instead of staying trapped in WorldBook.
 - Current World Pack now behaves like an activation/status surface rather than a launcher: it shows the active world-app snapshot and tells users to use App Store's `World` section for world-app browsing, placement, and launch, without adding a Settings-side App Store jump button.
@@ -293,7 +294,7 @@ PM meaning:
 - Which built-in nonstandard-app templates should ship first, and what confidence/evidence threshold AI extraction needs before proposing them.
 - Whether the next scoped custom CSS step should prioritize finer component selectors, phone-sized authoring polish, or pack-sharing recovery QA.
 - Whether true closed-page background events are worth backend complexity.
-- Whether Wallet should support editable fictional funds soon or remain downstream first.
+- How far Wallet's fictional/custom currency support should go next now that V1 world-currency injection and editable reference rates are landed.
 
 ## 6. Recommended Next Engineering Slice
 

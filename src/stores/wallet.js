@@ -7,11 +7,27 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import {
+  DEFAULT_WALLET_CURRENCY,
+  SYSTEM_WALLET_CURRENCIES,
+  createDefaultWalletExchangeRates,
+  formatExchangeRate,
+  getRateToCny,
+  normalizeCurrencyCode,
+  normalizeCurrencyDefinition,
+  normalizeWalletExchangeRates,
+} from '../lib/currency-system'
+
+export {
+  DEFAULT_WALLET_CURRENCY,
+  formatExchangeRate as formatWalletExchangeRate,
+  normalizeCurrencyCode as normalizeWalletCurrency,
+} from '../lib/currency-system'
 
 const WALLET_STORAGE_KEY = 'store:wallet'
 const WALLET_STORAGE_VERSION = 1
 const WALLET_TRANSACTION_LIMIT = 200
-const DEFAULT_CURRENCY = 'CNY'
+const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
   ALL: 'all',
   MANUAL: 'manual',
@@ -35,9 +51,27 @@ const normalizeText = (value, fallback = '', max = 120) => {
   return normalized.slice(0, max)
 }
 
-const normalizeCurrency = (value, fallback = DEFAULT_CURRENCY) => {
-  const normalized = normalizeText(value, fallback, 8).toUpperCase()
-  return /^[A-Z]{2,8}$/.test(normalized) ? normalized : fallback
+const normalizeCurrency = normalizeCurrencyCode
+
+const createDefaultRegisteredCurrencies = () =>
+  SYSTEM_WALLET_CURRENCIES.map((currency) =>
+    normalizeCurrencyDefinition(currency, { source: 'system' }),
+  ).filter(Boolean)
+
+const normalizeWalletCurrencyList = (rawCurrencies = []) => {
+  const byCode = new Map()
+  createDefaultRegisteredCurrencies().forEach((currency) => {
+    byCode.set(currency.code, currency)
+  })
+  ;(Array.isArray(rawCurrencies) ? rawCurrencies : []).forEach((currency) => {
+    const normalized = normalizeCurrencyDefinition(currency)
+    if (!normalized) return
+    byCode.set(normalized.code, {
+      ...(byCode.get(normalized.code) || {}),
+      ...normalized,
+    })
+  })
+  return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code))
 }
 
 const normalizeAmountCents = (value) => {
@@ -53,6 +87,11 @@ const normalizeAmountCents = (value) => {
 const formatAmount = (amountCents = 0) => {
   const safeCents = Number.isFinite(Number(amountCents)) ? Math.abs(Math.floor(Number(amountCents))) : 0
   return (safeCents / 100).toFixed(2)
+}
+
+const normalizeRateValue = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) && number > 0 ? number : 0
 }
 
 const createWalletTransactionId = () => `wallet_tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -77,7 +116,7 @@ const normalizeTransactionSourceFilter = (value) => {
     : WALLET_TRANSACTION_SOURCE_FILTERS.ALL
 }
 
-const normalizeWalletTransaction = (rawTransaction, index = 0) => {
+const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency = DEFAULT_CURRENCY) => {
   if (!rawTransaction || typeof rawTransaction !== 'object') return null
 
   const amountCents =
@@ -99,7 +138,7 @@ const normalizeWalletTransaction = (rawTransaction, index = 0) => {
     counterparty: normalizeText(rawTransaction.counterparty, '', 120),
     note: normalizeText(rawTransaction.note, '', 240),
     amountCents,
-    currency: normalizeCurrency(rawTransaction.currency),
+    currency: normalizeCurrency(rawTransaction.currency, fallbackCurrency),
     sourceModule: normalizeText(rawTransaction.sourceModule, 'wallet', 40),
     sourceId: normalizeText(rawTransaction.sourceId, '', 140),
     relationshipBinding: normalizeRelationshipBinding(rawTransaction.relationshipBinding),
@@ -108,12 +147,12 @@ const normalizeWalletTransaction = (rawTransaction, index = 0) => {
   }
 }
 
-const normalizeWalletTransactions = (rawTransactions) => {
+const normalizeWalletTransactions = (rawTransactions, fallbackCurrency = DEFAULT_CURRENCY) => {
   if (!Array.isArray(rawTransactions)) return []
   const seenIds = new Set()
   const normalized = []
   rawTransactions.forEach((item, index) => {
-    const record = normalizeWalletTransaction(item, index)
+    const record = normalizeWalletTransaction(item, index, fallbackCurrency)
     if (!record || seenIds.has(record.id)) return
     seenIds.add(record.id)
     normalized.push(record)
@@ -141,6 +180,9 @@ const createSeedTransactions = () => {
 }
 
 export const useWalletStore = defineStore('wallet', () => {
+  const primaryCurrency = ref(DEFAULT_CURRENCY)
+  const registeredCurrencies = ref(createDefaultRegisteredCurrencies())
+  const exchangeRates = ref(createDefaultWalletExchangeRates())
   const transactions = ref([])
   const hasFinishedStorageHydration = ref(false)
 
@@ -172,11 +214,47 @@ export const useWalletStore = defineStore('wallet', () => {
       .sort((a, b) => a.currency.localeCompare(b.currency))
   })
 
-  const primaryBalance = computed(() => balances.value.find((item) => item.currency === DEFAULT_CURRENCY) || {
-    currency: DEFAULT_CURRENCY,
+  const primaryBalance = computed(() => balances.value.find((item) => item.currency === primaryCurrency.value) || {
+    currency: primaryCurrency.value,
     amountCents: 0,
     amount: '0.00',
   })
+
+  const currencyOptions = computed(() => {
+    const byCode = new Map()
+    normalizeWalletCurrencyList(registeredCurrencies.value).forEach((currency) => {
+      byCode.set(currency.code, currency)
+    })
+    ;[primaryCurrency.value, ...transactions.value.map((transaction) => transaction.currency)].forEach((currency) => {
+      const code = normalizeCurrency(currency, '')
+      if (!code || byCode.has(code)) return
+      byCode.set(code, normalizeCurrencyDefinition({ code, source: 'ledger' }))
+    })
+    return [...byCode.values()].sort((a, b) => {
+      if (a.code === DEFAULT_CURRENCY) return -1
+      if (b.code === DEFAULT_CURRENCY) return 1
+      if (a.code === 'USD') return -1
+      if (b.code === 'USD') return 1
+      return a.code.localeCompare(b.code)
+    })
+  })
+
+  const exchangeRateRows = computed(() =>
+    currencyOptions.value.map((currency) => {
+      const rateToCny = currency.code === 'CNY' ? 1 : getRateToCny(exchangeRates.value, currency.code)
+      return {
+        ...currency,
+        rateToCny,
+        rateToCnyLabel: formatExchangeRate(rateToCny),
+        isPrimary: currency.code === primaryCurrency.value,
+      }
+    }),
+  )
+
+  const primaryCurrencyDefinition = computed(
+    () => currencyOptions.value.find((currency) => currency.code === primaryCurrency.value) ||
+      normalizeCurrencyDefinition({ code: primaryCurrency.value, source: 'ledger' }),
+  )
 
   const findTransactionById = (transactionId) => {
     const id = typeof transactionId === 'string' ? transactionId.trim() : ''
@@ -259,10 +337,11 @@ export const useWalletStore = defineStore('wallet', () => {
     const now = Date.now()
     const transaction = normalizeWalletTransaction({
       ...input,
+      currency: input.currency || primaryCurrency.value,
       id: input.id || createWalletTransactionId(),
       createdAt: input.createdAt || now,
       updatedAt: now,
-    })
+    }, 0, primaryCurrency.value)
     if (!transaction) return null
     transactions.value.unshift(transaction)
     if (transactions.value.length > WALLET_TRANSACTION_LIMIT) {
@@ -273,7 +352,7 @@ export const useWalletStore = defineStore('wallet', () => {
 
   const addTransferTransaction = ({
     amount,
-    currency = DEFAULT_CURRENCY,
+    currency = '',
     counterparty = '',
     note = '',
     relationshipBinding = null,
@@ -282,7 +361,7 @@ export const useWalletStore = defineStore('wallet', () => {
       type: 'transfer',
       title: '聊天转账',
       amount,
-      currency,
+      currency: currency || primaryCurrency.value,
       counterparty,
       note,
       sourceModule: 'wallet_manual',
@@ -292,7 +371,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const addChatTransferTransaction = ({
     messageId = '',
     amount,
-    currency = DEFAULT_CURRENCY,
+    currency = '',
     counterparty = '',
     note = '',
     createdAt,
@@ -307,7 +386,7 @@ export const useWalletStore = defineStore('wallet', () => {
       type: 'expense',
       title: 'Chat transfer',
       amount,
-      currency,
+      currency: currency || primaryCurrency.value,
       counterparty,
       note,
       sourceModule: 'chat_transfer',
@@ -353,14 +432,109 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
+  const setPrimaryCurrency = (currency = '') => {
+    const nextCurrency = normalizeCurrency(currency, '')
+    if (!nextCurrency) return ''
+    registerCurrency({ code: nextCurrency, source: 'manual' })
+    primaryCurrency.value = nextCurrency
+    return nextCurrency
+  }
+
+  const registerCurrency = (input = {}) => {
+    const normalized = normalizeCurrencyDefinition(input, { source: input?.source || 'manual' })
+    if (!normalized) return null
+    const current = normalizeWalletCurrencyList(registeredCurrencies.value)
+    const index = current.findIndex((currency) => currency.code === normalized.code)
+    const next = {
+      ...(index >= 0 ? current[index] : {}),
+      ...normalized,
+      updatedAt: Date.now(),
+    }
+    if (index >= 0) {
+      current.splice(index, 1, next)
+    } else {
+      current.push(next)
+    }
+    registeredCurrencies.value = normalizeWalletCurrencyList(current)
+
+    if (normalized.rateToUsd > 0) {
+      exchangeRates.value = normalizeWalletExchangeRates({
+        ...exchangeRates.value,
+        ratesToUsd: {
+          ...exchangeRates.value.ratesToUsd,
+          [normalized.code]: normalized.rateToUsd,
+        },
+      })
+    }
+    return next
+  }
+
+  const registerWorldCurrency = (input = {}, worldPack = {}) =>
+    registerCurrency({
+      ...input,
+      source: input.source || 'world_pack',
+      worldPackId: input.worldPackId || worldPack.id || worldPack.packId || '',
+    })
+
+  const setUsdCnyRate = (rate) => {
+    const nextRate = normalizeRateValue(rate)
+    if (!nextRate) return null
+    exchangeRates.value = normalizeWalletExchangeRates({
+      ...exchangeRates.value,
+      usdCnyRate: nextRate,
+    })
+    return exchangeRates.value.reference.rate
+  }
+
+  const setCurrencyCnyRate = (currency = '', rateToCny = 0) => {
+    const code = normalizeCurrency(currency, '')
+    const rate = normalizeRateValue(rateToCny)
+    if (!code || !rate) return null
+    registerCurrency({ code, source: 'manual' })
+    if (code === 'CNY') return 1
+    const usdCny = normalizeRateValue(exchangeRates.value.reference?.rate) || 1
+    exchangeRates.value = normalizeWalletExchangeRates({
+      ...exchangeRates.value,
+      ratesToUsd: {
+        ...exchangeRates.value.ratesToUsd,
+        [code]: rate / usdCny,
+      },
+    })
+    return getRateToCny(exchangeRates.value, code)
+  }
+
+  const findCurrencyOption = (currency = '') => {
+    const code = normalizeCurrency(currency, '')
+    if (!code) return null
+    return currencyOptions.value.find((item) => item.code === code) || null
+  }
+
   const applyPersistedSource = (source) => {
-    const sourceTransactions = Array.isArray(source)
-      ? source
+    const sourceObject = Array.isArray(source)
+      ? { transactions: source }
       : source && typeof source === 'object'
-        ? source.transactions || source.ledger
+        ? source
         : null
-    if (!Array.isArray(sourceTransactions)) return false
-    transactions.value = normalizeWalletTransactions(sourceTransactions)
+    if (!sourceObject) return false
+    const sourceTransactions = sourceObject.transactions || sourceObject.ledger
+    const hasWalletPayload =
+      Array.isArray(sourceTransactions) ||
+      Array.isArray(sourceObject.registeredCurrencies) ||
+      Array.isArray(sourceObject.currencies) ||
+      Boolean(sourceObject.exchangeRates)
+    if (!hasWalletPayload) return false
+    primaryCurrency.value = normalizeCurrency(
+      sourceObject.primaryCurrency || sourceObject.defaultCurrency || sourceObject.settings?.primaryCurrency,
+      primaryCurrency.value,
+    )
+    registeredCurrencies.value = normalizeWalletCurrencyList(
+      sourceObject.registeredCurrencies || sourceObject.currencies || registeredCurrencies.value,
+    )
+    exchangeRates.value = normalizeWalletExchangeRates(sourceObject.exchangeRates || sourceObject.rates)
+    transactions.value = normalizeWalletTransactions(
+      Array.isArray(sourceTransactions) ? sourceTransactions : [],
+      primaryCurrency.value,
+    )
     return true
   }
 
@@ -379,6 +553,12 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   const createBackupSnapshot = () => ({
+    primaryCurrency: primaryCurrency.value,
+    registeredCurrencies: registeredCurrencies.value.map((item) => ({ ...item })),
+    exchangeRates: {
+      reference: { ...exchangeRates.value.reference },
+      ratesToUsd: { ...exchangeRates.value.ratesToUsd },
+    },
     transactions: transactions.value.map((item) => ({ ...item })),
   })
 
@@ -403,6 +583,9 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   const resetForTesting = () => {
+    primaryCurrency.value = DEFAULT_CURRENCY
+    registeredCurrencies.value = createDefaultRegisteredCurrencies()
+    exchangeRates.value = createDefaultWalletExchangeRates()
     transactions.value = []
   }
 
@@ -420,7 +603,7 @@ export const useWalletStore = defineStore('wallet', () => {
   })()
 
   watch(
-    transactions,
+    [transactions, primaryCurrency, registeredCurrencies, exchangeRates],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -430,10 +613,16 @@ export const useWalletStore = defineStore('wallet', () => {
 
   return {
     transactions,
+    primaryCurrency,
+    registeredCurrencies,
+    exchangeRates,
     transactionCount,
     transactionSourceSummary,
     balances,
     primaryBalance,
+    currencyOptions,
+    exchangeRateRows,
+    primaryCurrencyDefinition,
     hasFinishedStorageHydration,
     findTransactionById,
     findTransactionBySource,
@@ -443,6 +632,12 @@ export const useWalletStore = defineStore('wallet', () => {
     addTransaction,
     addTransferTransaction,
     addChatTransferTransaction,
+    setPrimaryCurrency,
+    registerCurrency,
+    registerWorldCurrency,
+    setUsdCnyRate,
+    setCurrencyCnyRate,
+    findCurrencyOption,
     removeTransaction,
     anonymizeTransaction,
     cleanupRelationshipForProfile,

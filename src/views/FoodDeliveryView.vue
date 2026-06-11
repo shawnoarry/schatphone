@@ -52,6 +52,7 @@ const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
 const systemStore = useSystemStore()
 const walletStore = useWalletStore()
+const activeCurrency = computed(() => walletStore.primaryCurrency || 'CNY')
 const FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID = 'food-delivery-view'
 const foodImagePreviewMap = reactive({})
 
@@ -96,6 +97,7 @@ const menuDraft = reactive({
   restaurantId: '',
   title: '',
   category: 'restaurants',
+  menuSection: 'signature',
   price: '',
   desc: '',
   imageSourceType: 'none',
@@ -111,8 +113,10 @@ const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
+const activeStoreMenuSectionKey = ref('all')
 const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
 const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
+const displayMoney = (amount = '0.00', currency = '') => `${amount} ${currency || activeCurrency.value}`
 const platformRiderImageUrl = foodDeliveryUiAsset(
   'platform/decorations/mascot/delivery-rider-mascot-01.png',
 )
@@ -455,6 +459,26 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     ],
   },
 ])
+const STORE_MENU_SECTION_ORDER = Object.freeze([
+  'signature',
+  'warm_soup',
+  'rice_set',
+  'grill',
+  'seafood',
+  'greens',
+  'pasta',
+  'dessert',
+])
+const STORE_MENU_SECTION_META = Object.freeze({
+  signature: { zh: '招牌', en: 'Signature', shortZh: '招牌', shortEn: 'Sign', icon: 'fas fa-star' },
+  warm_soup: { zh: '暖汤', en: 'Soups', shortZh: '暖汤', shortEn: 'Soup', icon: 'fas fa-bowl-food' },
+  rice_set: { zh: '套餐', en: 'Sets', shortZh: '套餐', shortEn: 'Sets', icon: 'fas fa-bowl-rice' },
+  grill: { zh: '主菜', en: 'Grill', shortZh: '主菜', shortEn: 'Grill', icon: 'fas fa-drumstick-bite' },
+  seafood: { zh: '海鲜', en: 'Seafood', shortZh: '海鲜', shortEn: 'Sea', icon: 'fas fa-fish' },
+  greens: { zh: '轻食', en: 'Greens', shortZh: '轻食', shortEn: 'Fresh', icon: 'fas fa-seedling' },
+  pasta: { zh: '意面', en: 'Pasta', shortZh: '意面', shortEn: 'Pasta', icon: 'fas fa-utensils' },
+  dessert: { zh: '甜品', en: 'Dessert', shortZh: '甜品', shortEn: 'Sweet', icon: 'fas fa-ice-cream' },
+})
 const platformCategoryTiles = computed(() =>
   [
     { key: 'all', categoryKey: 'nearby', label: t('全部', 'All') },
@@ -575,6 +599,62 @@ const activeRestaurant = computed(() =>
 const activeMenuItems = computed(() =>
   activeRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(activeRestaurant.value.id) : [],
 )
+const resolveStoreMenuSectionMeta = (sectionKey = '') => {
+  const key = sectionKey || 'signature'
+  return STORE_MENU_SECTION_META[key] || {
+    zh: key,
+    en: key,
+    shortZh: key,
+    shortEn: key,
+    icon: 'fas fa-utensils',
+  }
+}
+const activeStoreMenuSections = computed(() => {
+  const sections = new Map()
+  activeMenuItems.value.forEach((item) => {
+    const key = item.menuSection || 'signature'
+    const meta = resolveStoreMenuSectionMeta(key)
+    const current = sections.get(key) || {
+      key,
+      icon: meta.icon,
+      label: languageBase.value === 'zh' ? meta.zh : meta.en,
+      shortLabel: languageBase.value === 'zh' ? meta.shortZh : meta.shortEn,
+      count: 0,
+      order: STORE_MENU_SECTION_ORDER.indexOf(key),
+    }
+    current.count += 1
+    sections.set(key, current)
+  })
+  const orderedSections = [...sections.values()].sort((a, b) => {
+    const orderA = a.order >= 0 ? a.order : 999
+    const orderB = b.order >= 0 ? b.order : 999
+    if (orderA !== orderB) return orderA - orderB
+    return a.label.localeCompare(b.label)
+  })
+  return [
+    {
+      key: 'all',
+      icon: 'fas fa-layer-group',
+      label: t('全部', 'All'),
+      shortLabel: t('全部', 'All'),
+      count: activeMenuItems.value.length,
+      order: -1,
+    },
+    ...orderedSections,
+  ]
+})
+const activeStoreMenuSection = computed(
+  () =>
+    activeStoreMenuSections.value.find((section) => section.key === activeStoreMenuSectionKey.value) ||
+    activeStoreMenuSections.value[0] ||
+    null,
+)
+const visibleActiveMenuItems = computed(() => {
+  if (activeStoreMenuSectionKey.value === 'all') return activeMenuItems.value
+  return activeMenuItems.value.filter(
+    (item) => (item.menuSection || 'signature') === activeStoreMenuSectionKey.value,
+  )
+})
 const selectedMenuItem = computed(() =>
   selectedMenuItemId.value ? foodDeliveryStore.findMenuItemById(selectedMenuItemId.value) : null,
 )
@@ -627,7 +707,7 @@ const activeStoreEtaText = computed(() =>
 )
 const activeStoreFeeText = computed(() =>
   activeRestaurant.value
-    ? `${activeRestaurant.value.deliveryFee} ${activeRestaurant.value.currency}`
+    ? `${activeRestaurant.value.deliveryFee} ${activeRestaurant.value.currency || activeCurrency.value}`
     : '',
 )
 const activeStoreDistanceText = computed(() =>
@@ -638,9 +718,9 @@ const storeCartCtaLabel = computed(() =>
 )
 const selectedMenuItemDetailTotal = computed(() => {
   const item = selectedMenuItem.value
-  if (!item) return `0.00 ${activeRestaurant.value?.currency || 'CNY'}`
+  if (!item) return `0.00 ${activeRestaurant.value?.currency || activeCurrency.value}`
   const quantity = Math.min(99, Math.max(1, Number(menuDetailQuantity.value) || 1))
-  return `${((Number(item.priceCents || 0) * quantity) / 100).toFixed(2)} ${item.currency || 'CNY'}`
+  return `${((Number(item.priceCents || 0) * quantity) / 100).toFixed(2)} ${item.currency || activeCurrency.value}`
 })
 const galleryImageOptions = computed(() =>
   galleryStore.assets
@@ -707,6 +787,9 @@ const walletExpenseSuggestions = computed(() =>
     })
     .filter((suggestion) => Number(suggestion.amount) > 0)
     .slice(0, 6),
+)
+const hasStoreSupportContent = computed(() =>
+  isStoreMode.value && (scopedFoodOrders.value.length > 0 || walletExpenseSuggestions.value.length > 0),
 )
 const chatSourceOrderId = computed(() =>
   typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
@@ -853,6 +936,7 @@ const resetMenuDraft = (restaurantId = activeRestaurant.value?.id || '') => {
   menuDraft.restaurantId = restaurantId
   menuDraft.title = ''
   menuDraft.category = activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants'
+  menuDraft.menuSection = 'signature'
   menuDraft.price = ''
   menuDraft.desc = ''
   menuDraft.imageSourceType = 'none'
@@ -918,6 +1002,7 @@ const createCustomMenuItem = () => {
     restaurantId,
     title: menuDraft.title,
     category: menuDraft.category || restaurant?.category || 'restaurants',
+    menuSection: menuDraft.menuSection,
     price: menuDraft.price,
     desc: menuDraft.desc,
     sourceModule: 'food_delivery_user_custom_menu',
@@ -1002,6 +1087,7 @@ const saveMenuItemEdit = () => {
     restaurantId: item.restaurantId,
     title: menuItemEditDraft.title,
     category: item.category,
+    menuSection: item.menuSection || 'signature',
     price: item.price,
     desc: menuItemEditDraft.desc,
     ingredients: menuItemEditDraft.ingredients,
@@ -1170,6 +1256,14 @@ const foodImageSourceLabel = (item) => {
 }
 
 watch(
+  () => walletStore.primaryCurrency,
+  (currency) => {
+    foodDeliveryStore.setPrimaryCurrency(currency || 'CNY')
+  },
+  { immediate: true },
+)
+
+watch(
   activeCategoryKey,
   () => {
     if (!restaurantDraft.name) restaurantDraft.category = activeCategory.value?.key || 'restaurants'
@@ -1181,12 +1275,22 @@ watch(
 watch(
   () => activeRestaurant.value?.id || '',
   (restaurantId) => {
+    activeStoreMenuSectionKey.value = 'all'
     if (selectedMenuItem.value && selectedMenuItem.value.restaurantId !== restaurantId) {
       closeMenuItemDetail()
     }
     if (!menuDraft.restaurantId || !foodDeliveryStore.findRestaurantById(menuDraft.restaurantId)) {
       menuDraft.restaurantId = restaurantId
     }
+  },
+  { immediate: true },
+)
+
+watch(
+  activeStoreMenuSections,
+  (sections) => {
+    if (sections.some((section) => section.key === activeStoreMenuSectionKey.value)) return
+    activeStoreMenuSectionKey.value = sections[0]?.key || 'all'
   },
   { immediate: true },
 )
@@ -1527,7 +1631,7 @@ onBeforeUnmount(() => {
                   {{ merchant.rating.toFixed(1) }} · {{ merchant.deliveryEtaMinutes }} min
                 </p>
                 <p class="mt-1 truncate text-sm font-semibold text-gray-500">
-                  {{ merchant.deliveryFee }} {{ merchant.currency }} · {{ merchant.cuisine }}
+                  {{ displayMoney(merchant.deliveryFee) }} · {{ merchant.cuisine }}
                 </p>
               </button>
             </article>
@@ -1612,7 +1716,7 @@ onBeforeUnmount(() => {
             <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
               <p class="text-[10px] font-black text-gray-400">{{ t('配送费', 'Delivery') }}</p>
               <p class="mt-1 text-sm font-black text-gray-950">
-                {{ selectedPlatformMerchant.deliveryFee }} {{ selectedPlatformMerchant.currency }}
+                {{ displayMoney(selectedPlatformMerchant.deliveryFee) }}
               </p>
             </div>
             <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
@@ -2294,26 +2398,86 @@ onBeforeUnmount(() => {
               class="rounded-full px-3 py-1 text-[11px] font-semibold"
               :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
             >
-              {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
+              {{ visibleActiveMenuItems.length }} / {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
             </span>
           </div>
-          <div class="mt-3" :class="isDarkTrayStore ? 'grid grid-cols-2 gap-3 pt-7' : 'space-y-2'">
+          <div
+            class="mt-4"
+            :class="isDarkTrayStore ? 'grid grid-cols-[4.85rem_minmax(0,1fr)] gap-3' : 'space-y-3'"
+          >
+            <nav
+              v-if="isDarkTrayStore"
+              class="sticky top-3 self-start rounded-[1.4rem] border border-white/[0.06] bg-[#0c1019] p-1.5 shadow-[0_18px_38px_rgba(0,0,0,0.26)]"
+              data-testid="food-delivery-store-menu-section-rail"
+              :aria-label="t('店内分类', 'Store menu sections')"
+            >
+              <button
+                v-for="section in activeStoreMenuSections"
+                :key="section.key"
+                type="button"
+                class="mb-1 flex min-h-[3.65rem] w-full flex-col items-center justify-center gap-1 rounded-[1.05rem] px-1 text-center text-[0.62rem] font-black leading-tight transition last:mb-0 active:scale-[0.97]"
+                :class="
+                  section.key === activeStoreMenuSectionKey
+                    ? 'bg-[#ff806f] text-white shadow-[0_12px_26px_rgba(255,128,111,0.24)]'
+                    : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'
+                "
+                :data-testid="`food-delivery-store-menu-section-${section.key}`"
+                @click="activeStoreMenuSectionKey = section.key"
+              >
+                <i :class="section.icon" class="text-[0.95rem]"></i>
+                <span class="line-clamp-2">{{ section.shortLabel }}</span>
+                <span
+                  class="inline-flex min-w-5 justify-center rounded-full px-1 text-[0.55rem]"
+                  :class="section.key === activeStoreMenuSectionKey ? 'bg-white/20 text-white' : 'bg-white/[0.06] text-slate-500'"
+                >
+                  {{ section.count }}
+                </span>
+              </button>
+            </nav>
+            <div
+              v-else
+              class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+              data-testid="food-delivery-store-menu-section-rail"
+            >
+              <button
+                v-for="section in activeStoreMenuSections"
+                :key="section.key"
+                type="button"
+                class="shrink-0 rounded-full px-3 py-2 text-xs font-black transition active:scale-[0.98]"
+                :class="
+                  section.key === activeStoreMenuSectionKey
+                    ? activeStoreVisual.buttonClass
+                    : 'bg-gray-50 text-gray-500'
+                "
+                :data-testid="`food-delivery-store-menu-section-${section.key}`"
+                @click="activeStoreMenuSectionKey = section.key"
+              >
+                {{ section.label }} · {{ section.count }}
+              </button>
+            </div>
+            <div
+              class="min-w-0"
+              :class="isDarkTrayStore ? 'grid grid-cols-1 gap-y-10 pt-12' : 'space-y-2'"
+              :data-active-section="activeStoreMenuSection?.key"
+              data-testid="food-delivery-store-menu-items"
+            >
             <article
-              v-for="item in activeMenuItems"
+              v-for="item in visibleActiveMenuItems"
               :key="item.id"
-              class="relative overflow-hidden"
+              class="relative"
               :class="
                 isDarkTrayStore
-                  ? 'min-h-[11.6rem] rounded-[1.85rem] border border-white/[0.05] bg-[linear-gradient(180deg,#202536,#161a27)] p-3 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
+                  ? 'min-h-[11.2rem] overflow-visible rounded-[1.85rem] border border-white/[0.05] bg-[linear-gradient(180deg,#202536,#161a27)] p-4 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
                   : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
               "
               :data-testid="`food-delivery-menu-${item.id}`"
+              :data-menu-section="item.menuSection || 'signature'"
               :data-template="activeStoreTemplate"
             >
               <template v-if="isDarkTrayStore">
                 <button
                   type="button"
-                  class="absolute inset-0 z-0 text-left"
+                  class="absolute inset-0 z-0 rounded-[1.85rem] text-left"
                   :data-testid="`food-delivery-menu-open-${item.id}`"
                   @click="openMenuItemDetail(item.id)"
                 >
@@ -2337,14 +2501,26 @@ onBeforeUnmount(() => {
                   class="pointer-events-none relative z-10 pt-8"
                   :data-testid="`food-delivery-menu-tray-${item.id}`"
                 >
-                  <p class="line-clamp-2 text-sm font-black leading-5 text-white">{{ item.title }}</p>
-                  <p class="mt-2 line-clamp-2 min-h-8 text-[10px] leading-4 text-slate-400">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <p class="line-clamp-2 text-[1.05rem] font-black leading-6 text-white">{{ item.title }}</p>
+                      <p class="mt-1 text-[0.66rem] font-bold uppercase tracking-[0.16em] text-orange-200/70">
+                        {{ resolveStoreMenuSectionMeta(item.menuSection).en }}
+                      </p>
+                    </div>
+                    <p class="shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-black text-orange-100">
+                      {{ item.price }} {{ item.currency }}
+                    </p>
+                  </div>
+                  <p class="mt-2 line-clamp-2 min-h-9 text-[0.74rem] leading-5 text-slate-400">
                     {{ item.desc || item.ingredients || activeStoreShortDescription }}
                   </p>
-                  <div class="mt-3 flex items-center justify-between gap-2">
-                    <p class="text-[12px] font-black text-orange-100">{{ item.price }} {{ item.currency }}</p>
+                  <div class="mt-4 flex items-center justify-between gap-2">
+                    <p class="text-[0.72rem] font-bold text-slate-500">
+                      {{ t('点开看详情和食材', 'Tap for details and ingredients') }}
+                    </p>
                     <button
-                      class="pointer-events-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff806f] text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
+                      class="pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ff806f] text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
                       :data-testid="`food-delivery-add-${item.id}`"
                       :aria-label="`Add ${item.title}`"
                       @click.stop="addMenuItemToCart(item.id)"
@@ -2388,6 +2564,7 @@ onBeforeUnmount(() => {
                 </button>
               </template>
             </article>
+            </div>
           </div>
         </section>
       </section>
@@ -2686,7 +2863,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="isStoreMode"
+        v-if="isStoreMode && (foodDeliveryStore.cartLineItems.length > 0 || checkoutFeedback)"
         class="rounded-3xl p-4"
         :class="
           isStoreMode
@@ -2714,7 +2891,7 @@ onBeforeUnmount(() => {
             class="rounded-full px-3 py-1 text-[11px] font-semibold"
             :class="isStoreMode ? 'bg-orange-400/15 text-orange-100' : 'bg-amber-50 text-amber-700'"
           >
-            {{ foodDeliveryStore.cartPrimaryTotal.amount }} {{ foodDeliveryStore.cartPrimaryTotal.currency }}
+            {{ t('预计合计', 'Est. total') }} {{ foodDeliveryStore.cartPrimaryTotal.amount }} {{ foodDeliveryStore.cartPrimaryTotal.currency }}
           </span>
         </div>
         <div v-if="foodDeliveryStore.cartLineItems.length > 0" class="mt-3 space-y-2">
@@ -2738,6 +2915,9 @@ onBeforeUnmount(() => {
           >
             {{ storeCartCtaLabel }}
           </button>
+          <p class="text-[10px] font-semibold text-slate-500">
+            {{ t('含配送费', 'Includes delivery') }} {{ activeStoreFeeText }}
+          </p>
         </div>
         <p
           v-else
@@ -2840,7 +3020,7 @@ onBeforeUnmount(() => {
       </section>
 
       <details
-        v-if="isStoreMode"
+        v-if="hasStoreSupportContent"
         class="food-delivery-support-stack"
         :class="
           isStoreMode

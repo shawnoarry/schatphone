@@ -81,6 +81,7 @@ const { confirmDialog } = useDialog()
 const { settings, user } = storeToRefs(systemStore)
 const { contactsForList, loadingAI } = storeToRefs(chatStore)
 const { currentLocationText } = storeToRefs(mapStore)
+const { primaryCurrency, currencyOptions } = storeToRefs(walletStore)
 
 const DEFAULT_THREAD_AI_PREFS = {
   suggestedRepliesEnabled: false,
@@ -244,7 +245,7 @@ const userActionDraft = reactive({
   linkTitle: '',
   linkNote: '',
   transferAmount: '',
-  transferCurrency: 'CNY',
+  transferCurrency: primaryCurrency.value,
   transferNote: '',
   voiceTranscript: '',
   voiceDurationSec: 8,
@@ -4526,7 +4527,7 @@ const resetUserActionDraft = () => {
   userActionDraft.linkTitle = ''
   userActionDraft.linkNote = ''
   userActionDraft.transferAmount = ''
-  userActionDraft.transferCurrency = 'CNY'
+  userActionDraft.transferCurrency = primaryCurrency.value || 'CNY'
   userActionDraft.transferNote = ''
   userActionDraft.voiceTranscript = ''
   userActionDraft.voiceDurationSec = 8
@@ -4790,7 +4791,7 @@ const transferFormState = computed(() => {
   const rawCurrency = typeof userActionDraft.transferCurrency === 'string'
     ? userActionDraft.transferCurrency.trim()
     : ''
-  const currency = rawCurrency ? rawCurrency.toUpperCase() : 'CNY'
+  const currency = rawCurrency ? rawCurrency.toUpperCase() : primaryCurrency.value || 'CNY'
   if (!/^[A-Z]{2,8}$/.test(currency)) {
     return {
       valid: false,
@@ -6929,6 +6930,7 @@ onBeforeUnmount(() => {
             :user-action-grid-hint="userActionGridHint"
             :link-form-state="linkFormState"
             :transfer-form-state="transferFormState"
+            :currency-options="currencyOptions"
             :voice-form-state="voiceFormState"
             :gallery-picker-category="galleryPickerCategory"
             :gallery-picker-category-options="galleryPickerCategoryOptions"

@@ -32,6 +32,8 @@ Updated: 2026-06-03
 - ledger cleanup rules
 - relationship support records where needed
 - order-support relationship facts must remain supporting-only when Shopping or Food Delivery already owns the primary memory
+- shared currency registry, Wallet primary-currency selection, and editable USD/CNY-centered reference exchange rates
+- custom World Pack currencies may be injected from WorldBook, but Wallet owns selection/rates and Chat/Food Delivery consume the Wallet currency options
 
 ## 4. Workstream D: Assets And Stock
 
@@ -49,3 +51,4 @@ Treat these as bugs:
 4. Stock starts absorbing other financial domains without a clear decision
 5. World Pack app bindings mutate commerce records instead of staying at route/context/filter/banner level
 6. App Store mini-app facades mutate Shopping or Food Delivery business records, browsing organization, favorites/recent lists, or category filters instead of only managing install identity/open context
+7. World Pack currency declarations bypass Wallet's primary-currency and exchange-rate controls

@@ -5,6 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
+import { useWalletStore } from '../stores/wallet'
+import { normalizeCurrencyDefinition } from '../lib/currency-system'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { formatApiErrorForUi } from '../lib/ai'
@@ -41,10 +43,12 @@ const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const bookStore = useBookStore()
+const walletStore = useWalletStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { user, settings } = storeToRefs(systemStore)
 const { roleProfiles, contacts } = storeToRefs(chatStore)
+const { currencyOptions } = storeToRefs(walletStore)
 
 const globalWorldview = computed({
   get: () =>
@@ -412,6 +416,14 @@ const knowledgeDraft = reactive({
   content: '',
   tags: '',
 })
+const worldCurrencyDraft = reactive({
+  code: '',
+  labelZh: '',
+  labelEn: '',
+  symbol: '',
+  rateToCny: '',
+})
+const worldCurrencyNotice = ref('')
 const editingKnowledgePointId = ref('')
 const isKnowledgeComposerOpen = ref(false)
 const activeWorldbookPanel = ref('sources')
@@ -688,6 +700,95 @@ const disableWorldPackExpansion = (packId = '') => {
   if (!result?.ok) return
   systemStore.saveNow()
   pulseSaved(t('拓展包已停用。', 'Expansion pack disabled.'))
+}
+
+const resetWorldCurrencyDraft = () => {
+  worldCurrencyDraft.code = ''
+  worldCurrencyDraft.labelZh = ''
+  worldCurrencyDraft.labelEn = ''
+  worldCurrencyDraft.symbol = ''
+  worldCurrencyDraft.rateToCny = ''
+}
+
+const updateWorldCurrencyDraft = ({ key, value } = {}) => {
+  if (typeof key !== 'string' || !Object.prototype.hasOwnProperty.call(worldCurrencyDraft, key)) return
+  worldCurrencyDraft[key] = value
+}
+
+const saveWorldCurrencyDraft = () => {
+  const pack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
+  const normalized = normalizeCurrencyDefinition(
+    {
+      code: worldCurrencyDraft.code,
+      labelZh: worldCurrencyDraft.labelZh,
+      labelEn: worldCurrencyDraft.labelEn,
+      symbol: worldCurrencyDraft.symbol,
+      source: 'world_pack',
+      worldPackId: pack?.id || 'default_world',
+    },
+    {
+      source: 'world_pack',
+      worldPackId: pack?.id || 'default_world',
+    },
+  )
+  if (!normalized) {
+    worldCurrencyNotice.value = t('请输入 2-8 位英文货币代码。', 'Enter a 2-8 letter currency code.')
+    return
+  }
+
+  const rateToCny = Number(worldCurrencyDraft.rateToCny)
+  const normalizedForPack = {
+    ...normalized,
+    rateToCny: Number.isFinite(rateToCny) && rateToCny > 0 ? rateToCny : 0,
+  }
+  const currencies = Array.isArray(pack?.economy?.currencies) ? [...pack.economy.currencies] : []
+  const index = currencies.findIndex((currency) => currency.code === normalizedForPack.code)
+  if (index >= 0) {
+    currencies.splice(index, 1, normalizedForPack)
+  } else {
+    currencies.push(normalizedForPack)
+  }
+
+  const result = systemStore.updateWorldPackEconomy(pack?.id || 'default_world', { currencies })
+  if (!result?.ok) {
+    worldCurrencyNotice.value = t('世界包货币保存失败。', 'World currency save failed.')
+    return
+  }
+
+  const registered = walletStore.registerWorldCurrency(normalizedForPack, result.pack)
+  if (Number.isFinite(rateToCny) && rateToCny > 0) {
+    walletStore.setCurrencyCnyRate(normalized.code, rateToCny)
+  }
+  systemStore.saveNow()
+  walletStore.saveNow()
+  resetWorldCurrencyDraft()
+  worldCurrencyNotice.value = t(
+    `${registered?.code || normalized.code} 已注入 Wallet，可在钱包里设为主币种并调整汇率。`,
+    `${registered?.code || normalized.code} is now available in Wallet. You can set it as primary and tune its rate there.`,
+  )
+  pulseSaved(t('世界包货币已保存。', 'World currency saved.'))
+}
+
+const injectExistingWorldCurrency = (currency = {}) => {
+  const pack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
+  const normalized = normalizeCurrencyDefinition(currency, {
+    source: 'world_pack',
+    worldPackId: pack?.id || 'default_world',
+  })
+  if (!normalized) {
+    worldCurrencyNotice.value = t('货币代码无效。', 'Invalid currency code.')
+    return
+  }
+  const registered = walletStore.registerWorldCurrency(normalized, pack)
+  if (Number.isFinite(Number(currency.rateToCny)) && Number(currency.rateToCny) > 0) {
+    walletStore.setCurrencyCnyRate(normalized.code, Number(currency.rateToCny))
+  }
+  walletStore.saveNow()
+  worldCurrencyNotice.value = t(
+    `${registered?.code || normalized.code} 已注入 Wallet。`,
+    `${registered?.code || normalized.code} is now available in Wallet.`,
+  )
+  pulseSaved(t('世界包货币已注入 Wallet。', 'World currency injected into Wallet.'))
 }
 
 const buildWorldAppTemplateContextText = () => {
@@ -1904,6 +2005,9 @@ onBeforeUnmount(() => {
           :template-proposal-loading="worldAppTemplateProposalLoading"
           :template-proposal-notice="worldAppTemplateProposalNotice"
           :template-proposal-notice-tone="worldAppTemplateProposalNoticeTone"
+          :wallet-currency-options="currencyOptions"
+          :currency-draft="worldCurrencyDraft"
+          :currency-notice="worldCurrencyNotice"
           @select-pack="selectWorldPack"
           @activate-pack="activateSelectedWorldPack"
           @reset-pack="resetWorldPackToDefault"
@@ -1915,6 +2019,9 @@ onBeforeUnmount(() => {
           @update-template-proposal-draft="updateWorldAppTemplateProposalDraft"
           @confirm-template-proposal="confirmWorldAppTemplateProposalEntry"
           @clear-template-proposal-review="clearWorldAppTemplateProposalReview"
+          @update-currency-draft="updateWorldCurrencyDraft"
+          @save-currency-draft="saveWorldCurrencyDraft"
+          @inject-pack-currency="injectExistingWorldCurrency"
         />
       </div>
 

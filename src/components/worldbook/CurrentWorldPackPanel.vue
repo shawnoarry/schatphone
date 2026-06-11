@@ -71,6 +71,24 @@ const props = defineProps({
     type: String,
     default: 'info',
   },
+  walletCurrencyOptions: {
+    type: Array,
+    default: () => [],
+  },
+  currencyDraft: {
+    type: Object,
+    default: () => ({
+      code: '',
+      labelZh: '',
+      labelEn: '',
+      symbol: '',
+      rateToCny: '',
+    }),
+  },
+  currencyNotice: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits([
@@ -85,6 +103,9 @@ const emit = defineEmits([
   'update-template-proposal-draft',
   'confirm-template-proposal',
   'clear-template-proposal-review',
+  'update-currency-draft',
+  'save-currency-draft',
+  'inject-pack-currency',
 ])
 
 const { t } = useI18n()
@@ -375,6 +396,24 @@ const templateReviewIsEmpty = computed(
 )
 
 const templateNoticeToneClass = computed(() => `is-${props.templateProposalNoticeTone || 'info'}`)
+const activePackCurrencies = computed(() =>
+  Array.isArray(props.overview.activePack?.economy?.currencies)
+    ? props.overview.activePack.economy.currencies
+    : [],
+)
+const activeCurrencySummary = computed(() => {
+  if (activePackCurrencies.value.length === 0) {
+    return t('未注入世界专属货币', 'No world currency injected')
+  }
+  return activePackCurrencies.value.map((currency) => currency.code).join(' / ')
+})
+const walletCurrencyCodeSet = computed(
+  () => new Set(props.walletCurrencyOptions.map((currency) => currency?.code).filter(Boolean)),
+)
+
+const updateCurrencyDraft = (key, value) => {
+  emit('update-currency-draft', { key, value })
+}
 </script>
 
 <template>
@@ -604,6 +643,116 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
         <strong>{{ row.value }}</strong>
       </div>
     </div>
+
+    <section
+      class="current-world-pack__economy"
+      data-testid="worldbook-current-pack-economy"
+    >
+      <div class="current-world-pack__economy-head">
+        <span class="current-world-pack__section-mark" aria-hidden="true">
+          <i class="fas fa-coins"></i>
+        </span>
+        <div>
+          <p>{{ t('经济与货币', 'Economy & currency') }}</p>
+          <strong>{{ activeCurrencySummary }}</strong>
+        </div>
+      </div>
+      <p class="current-world-pack__economy-copy">
+        {{
+          t(
+            '这里只声明当前世界可用的专属货币；主币种和汇率仍在 Wallet 统一选择与维护。',
+            'This only declares currencies for the active world; Wallet still owns the primary currency and exchange rates.',
+          )
+        }}
+      </p>
+      <div
+        v-if="activePackCurrencies.length > 0"
+        class="current-world-pack__currency-list"
+      >
+        <div
+          v-for="currency in activePackCurrencies"
+          :key="currency.code"
+          class="current-world-pack__currency-row"
+          :data-testid="`worldbook-pack-currency-${currency.code}`"
+        >
+          <div>
+            <strong>{{ currency.code }}</strong>
+            <span>{{ t(currency.labelZh || currency.code, currency.labelEn || currency.code) }}</span>
+          </div>
+          <button
+            type="button"
+            :data-testid="`worldbook-inject-currency-${currency.code}`"
+            @click="emit('inject-pack-currency', currency)"
+          >
+            {{ walletCurrencyCodeSet.has(currency.code) ? t('已在 Wallet', 'In Wallet') : t('注入 Wallet', 'Inject') }}
+          </button>
+        </div>
+      </div>
+      <div class="current-world-pack__currency-form">
+        <label>
+          <span>{{ t('代码', 'Code') }}</span>
+          <input
+            :value="currencyDraft.code"
+            maxlength="8"
+            data-testid="worldbook-currency-code"
+            placeholder="CRD"
+            @input="updateCurrencyDraft('code', $event.target.value)"
+          />
+        </label>
+        <label>
+          <span>{{ t('中文名', 'Chinese name') }}</span>
+          <input
+            :value="currencyDraft.labelZh"
+            data-testid="worldbook-currency-label-zh"
+            placeholder="信用点"
+            @input="updateCurrencyDraft('labelZh', $event.target.value)"
+          />
+        </label>
+        <label>
+          <span>{{ t('英文名', 'English name') }}</span>
+          <input
+            :value="currencyDraft.labelEn"
+            data-testid="worldbook-currency-label-en"
+            placeholder="Credits"
+            @input="updateCurrencyDraft('labelEn', $event.target.value)"
+          />
+        </label>
+        <label>
+          <span>{{ t('符号', 'Symbol') }}</span>
+          <input
+            :value="currencyDraft.symbol"
+            maxlength="12"
+            data-testid="worldbook-currency-symbol"
+            placeholder="CR"
+            @input="updateCurrencyDraft('symbol', $event.target.value)"
+          />
+        </label>
+        <label>
+          <span>{{ t('1 单位约等于 CNY', '1 unit equals CNY') }}</span>
+          <input
+            :value="currencyDraft.rateToCny"
+            inputmode="decimal"
+            data-testid="worldbook-currency-rate-cny"
+            placeholder="0.25"
+            @input="updateCurrencyDraft('rateToCny', $event.target.value)"
+          />
+        </label>
+        <button
+          type="button"
+          data-testid="worldbook-save-currency"
+          @click="emit('save-currency-draft')"
+        >
+          {{ t('保存并注入 Wallet', 'Save & inject') }}
+        </button>
+      </div>
+      <p
+        v-if="currencyNotice"
+        class="current-world-pack__currency-notice"
+        data-testid="worldbook-currency-notice"
+      >
+        {{ currencyNotice }}
+      </p>
+    </section>
 
     <div
       v-if="activationReview"
@@ -1130,7 +1279,8 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 .current-world-pack__profile,
 .current-world-pack__enabled,
 .current-world-pack__recommendations,
-.current-world-pack__all-packs {
+.current-world-pack__all-packs,
+.current-world-pack__economy {
   display: grid;
   gap: 10px;
   margin-top: 12px;
@@ -1425,7 +1575,8 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
 .current-world-pack__apps-head,
 .current-world-pack__templates-head,
-.current-world-pack__services-head {
+.current-world-pack__services-head,
+.current-world-pack__economy-head {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
@@ -1442,7 +1593,8 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
 .current-world-pack__apps-head p,
 .current-world-pack__templates-head p,
-.current-world-pack__services-head p {
+.current-world-pack__services-head p,
+.current-world-pack__economy-head p {
   color: var(--system-text-muted);
   font-size: 11px;
   font-weight: 700;
@@ -1451,7 +1603,8 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
 .current-world-pack__apps-head strong,
 .current-world-pack__templates-head strong,
-.current-world-pack__services-head strong {
+.current-world-pack__services-head strong,
+.current-world-pack__economy-head strong {
   display: block;
   margin-top: 2px;
   color: var(--system-text);
@@ -1460,10 +1613,92 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
 .current-world-pack__apps-copy,
 .current-world-pack__templates-copy,
-.current-world-pack__services-copy {
+.current-world-pack__services-copy,
+.current-world-pack__economy-copy {
   color: var(--system-text-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.current-world-pack__currency-list {
+  display: grid;
+  gap: 8px;
+}
+
+.current-world-pack__currency-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-surface-muted);
+  padding: 10px;
+}
+
+.current-world-pack__currency-row div {
+  min-width: 0;
+}
+
+.current-world-pack__currency-row strong {
+  display: block;
+  color: var(--system-text);
+  font-size: 13px;
+}
+
+.current-world-pack__currency-row span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.current-world-pack__currency-row button,
+.current-world-pack__currency-form button {
+  min-height: 34px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  background: var(--system-text);
+  color: var(--system-text-inverse);
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.current-world-pack__currency-form {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 1fr 0.65fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.current-world-pack__currency-form label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.current-world-pack__currency-form input {
+  min-height: 34px;
+  width: 100%;
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  background: var(--system-panel-bg);
+  color: var(--system-text);
+  padding: 0 9px;
+  font-size: 12px;
+  outline: none;
+}
+
+.current-world-pack__currency-notice {
+  border: 1px solid var(--system-success-soft);
+  border-radius: 8px;
+  background: var(--system-success-soft);
+  color: var(--system-success);
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .current-world-pack__service-handoff {
@@ -1820,7 +2055,9 @@ const templateNoticeToneClass = computed(() => `is-${props.templateProposalNotic
 
   .current-world-pack__app-row,
   .current-world-pack__template-row,
-  .current-world-pack__service-row {
+  .current-world-pack__service-row,
+  .current-world-pack__currency-row,
+  .current-world-pack__currency-form {
     grid-template-columns: 1fr;
   }
 

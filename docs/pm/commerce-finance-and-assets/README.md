@@ -12,6 +12,8 @@ Current World Pack note: `survival_city` can open Shopping as `补给站` throug
 
 Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform should remain a discovery/filter/create-handoff surface; shop mini apps should present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions.
 
+Current Wallet currency note: WorldBook Current World Pack can declare and inject custom world currencies. Wallet owns the user-facing primary currency, the USD/CNY reference coordinate, and editable exchange rates; Chat transfers and Food Delivery prices should consume Wallet currency settings instead of owning separate currency rules.
+
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`

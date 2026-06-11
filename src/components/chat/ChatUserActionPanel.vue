@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { useI18n } from '../../composables/useI18n'
 import AssetStatusBadge from '../assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../assets/AssetThumbnailOption.vue'
@@ -31,6 +31,10 @@ defineProps({
   transferFormState: {
     type: Object,
     required: true,
+  },
+  currencyOptions: {
+    type: Array,
+    default: () => [],
   },
   voiceFormState: {
     type: Object,
@@ -111,7 +115,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @click="$emit('trigger-media-picker', USER_MEDIA_KIND_IMAGE)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
-        {{ t('图片', 'Image') }}
+        {{ t('鍥剧墖', 'Image') }}
       </button>
       <button
         data-testid="chat-user-action-open-gif"
@@ -134,7 +138,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @click="$emit('open-form', USER_ACTION_FORM_LINK)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
-        {{ t('链接', 'Link') }}
+        {{ t('閾炬帴', 'Link') }}
       </button>
       <button
         data-testid="chat-user-action-send-location"
@@ -143,29 +147,29 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
         :class="locationShareState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
       >
-        {{ t('位置', 'Location') }}
+        {{ t('浣嶇疆', 'Location') }}
       </button>
       <button
         data-testid="chat-user-action-open-transfer"
         @click="$emit('open-form', USER_ACTION_FORM_TRANSFER)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
-        {{ t('转账', 'Transfer') }}
+        {{ t('杞处', 'Transfer') }}
       </button>
       <button
         data-testid="chat-user-action-open-voice"
         @click="$emit('open-form', USER_ACTION_FORM_VOICE)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
-        {{ t('语音卡片', 'Voice card') }}
+        {{ t('璇煶鍗＄墖', 'Voice card') }}
       </button>
       <button
         data-testid="chat-user-action-open-shopping"
         @click="$emit('open-shopping')"
         class="rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-left text-[11px] text-orange-700 transition hover:bg-orange-100"
       >
-        <span class="block font-semibold">{{ t('购物建议', 'Shopping pick') }}</span>
-        <span class="block text-[10px] text-orange-500">{{ t('去 Shopping 确认', 'Confirm in Shopping') }}</span>
+        <span class="block font-semibold">{{ t('璐墿寤鸿', 'Shopping pick') }}</span>
+        <span class="block text-[10px] text-orange-500">{{ t('鍘?Shopping 纭', 'Confirm in Shopping') }}</span>
       </button>
     </div>
     <div
@@ -173,8 +177,8 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       class="mt-2 rounded-xl border border-orange-100 bg-orange-50/70 p-2"
     >
       <div class="flex items-center justify-between gap-2">
-        <p class="text-[11px] font-semibold text-orange-800">{{ t('只读商品预览', 'Read-only product preview') }}</p>
-        <span class="text-[10px] text-orange-500">{{ t('结算仍在 Shopping', 'Checkout stays in Shopping') }}</span>
+        <p class="text-[11px] font-semibold text-orange-800">{{ t('鍙鍟嗗搧棰勮', 'Read-only product preview') }}</p>
+        <span class="text-[10px] text-orange-500">{{ t('缁撶畻浠嶅湪 Shopping', 'Checkout stays in Shopping') }}</span>
       </div>
       <div class="mt-2 grid grid-cols-1 gap-2">
         <button
@@ -193,7 +197,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
               >
                 {{ product.serviceLabel || product.serviceKey }}
               </span>
-              <span class="mt-0.5 block truncate text-[10px] text-gray-500">{{ product.desc || t('来自 Shopping 商品目录', 'From Shopping catalog') }}</span>
+              <span class="mt-0.5 block truncate text-[10px] text-gray-500">{{ product.desc || t('鏉ヨ嚜 Shopping 鍟嗗搧鐩綍', 'From Shopping catalog') }}</span>
             </span>
             <span class="shrink-0 text-[10px] font-semibold text-orange-600">{{ product.price }}</span>
           </span>
@@ -206,10 +210,10 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
               {{ product.serviceLabel || product.serviceKey }}
             </span>
             <span v-if="product.assetEligible" class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-emerald-600">
-              {{ t('可转资产', 'Asset-ready') }}
+              {{ t('鍙浆璧勪骇', 'Asset-ready') }}
             </span>
             <span v-if="product.giftable" class="rounded-full bg-rose-50 px-1.5 py-0.5 text-rose-600">
-              {{ t('可赠礼', 'Giftable') }}
+              {{ t('可赠送', 'Giftable') }}
             </span>
           </span>
           <span class="mt-2 flex items-center gap-2">
@@ -222,9 +226,9 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
               @keydown.space.prevent.stop="$emit('send-product-card', product)"
               class="rounded-full bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
             >
-              {{ t('发送商品卡', 'Send card') }}
+              {{ t('鍙戦€佸晢鍝佸崱', 'Send card') }}
             </span>
-            <span class="text-[10px] text-orange-600">{{ t('点卡片去确认', 'Tap card to confirm') }}</span>
+            <span class="text-[10px] text-orange-600">{{ t('鐐瑰崱鐗囧幓纭', 'Tap card to confirm') }}</span>
           </span>
         </button>
       </div>
@@ -254,7 +258,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @input="$emit('update-user-action-draft', { key: 'linkTitle', value: $event.target.value })"
         type="text"
         class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-        :placeholder="t('链接标题（可选）', 'Link title (optional)')"
+        :placeholder="t('閾炬帴鏍囬锛堝彲閫夛級', 'Link title (optional)')"
       />
       <input
         data-testid="chat-user-action-link-note"
@@ -262,7 +266,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @input="$emit('update-user-action-draft', { key: 'linkNote', value: $event.target.value })"
         type="text"
         class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-        :placeholder="t('附加说明（可选）', 'Note (optional)')"
+        :placeholder="t('闄勫姞璇存槑锛堝彲閫夛級', 'Note (optional)')"
       />
       <p
         class="text-[10px]"
@@ -276,7 +280,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           @click="$emit('back-to-grid')"
           class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
         >
-          {{ t('返回', 'Back') }}
+          {{ t('杩斿洖', 'Back') }}
         </button>
         <button
           data-testid="chat-user-action-submit-link"
@@ -301,16 +305,22 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           type="text"
           inputmode="decimal"
           class="col-span-2 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-          :placeholder="t('金额，如 88.00', 'Amount, e.g. 88.00')"
+          :placeholder="t('閲戦锛屽 88.00', 'Amount, e.g. 88.00')"
         />
-        <input
+        <select
           data-testid="chat-user-action-transfer-currency"
           :value="userActionDraft.transferCurrency"
-          @input="$emit('update-user-action-draft', { key: 'transferCurrency', value: $event.target.value })"
-          type="text"
+          @change="$emit('update-user-action-draft', { key: 'transferCurrency', value: $event.target.value })"
           class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] uppercase outline-none"
-          :placeholder="t('币种', 'Currency')"
-        />
+        >
+          <option
+            v-for="currency in currencyOptions"
+            :key="currency.code"
+            :value="currency.code"
+          >
+            {{ currency.code }}
+          </option>
+        </select>
       </div>
       <input
         data-testid="chat-user-action-transfer-note"
@@ -318,7 +328,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @input="$emit('update-user-action-draft', { key: 'transferNote', value: $event.target.value })"
         type="text"
         class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-        :placeholder="t('转账备注（可选）', 'Transfer note (optional)')"
+        :placeholder="t('杞处澶囨敞锛堝彲閫夛級', 'Transfer note (optional)')"
       />
       <p
         class="text-[10px]"
@@ -331,7 +341,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           @click="$emit('back-to-grid')"
           class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
         >
-          {{ t('返回', 'Back') }}
+          {{ t('杩斿洖', 'Back') }}
         </button>
         <button
           data-testid="chat-user-action-submit-transfer"
@@ -353,7 +363,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @input="$emit('update-user-action-draft', { key: 'voiceTranscript', value: $event.target.value })"
         rows="2"
         class="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none resize-none"
-        :placeholder="t('输入语音内容', 'Enter voice transcript')"
+        :placeholder="t('杈撳叆璇煶鍐呭', 'Enter voice transcript')"
       ></textarea>
       <div class="flex items-center gap-2">
         <span class="text-[11px] text-gray-600">{{ t('时长（秒）', 'Duration (sec)') }}</span>
@@ -378,7 +388,7 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           @click="$emit('back-to-grid')"
           class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
         >
-          {{ t('返回', 'Back') }}
+          {{ t('杩斿洖', 'Back') }}
         </button>
         <button
           data-testid="chat-user-action-submit-voice"
@@ -415,19 +425,10 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       >
         {{
           activeRoleAssetContext.preferredImageAssetId
-            ? t(
-                `会话优先素材已启用（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                `Thread preferred asset is enabled (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-              )
+            ? `${t('会话优先素材已启用', 'Thread preferred asset is enabled')} · ${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}`
             : activeRoleAssetContext.profileFolderAssetIds.length > 0
-              ? t(
-                  `当前会话正在读取角色档案素材包与文件夹绑定（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                  `This chat is using profile pack + folder bindings (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-                )
-              : t(
-                  `当前会话正在读取角色档案素材包（来源：${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}）。`,
-                  `This chat is using profile-bound asset pack (source: ${activeRoleAssetContext.profileName || t('Profile', 'Profile')}).`,
-                )
+              ? `${t('正在读取角色素材包与文件夹绑定', 'Using profile pack and folder bindings')} · ${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}`
+              : `${t('正在读取角色素材包', 'Using profile-bound asset pack')} · ${activeRoleAssetContext.profileName || t('角色档案', 'Profile')}`
         }}
       </p>
 
@@ -483,13 +484,13 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           @click="$emit('back-to-grid')"
           class="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
         >
-          {{ t('返回', 'Back') }}
+          {{ t('杩斿洖', 'Back') }}
         </button>
         <button
           @click="$emit('open-gallery')"
           class="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100"
         >
-          {{ t('打开相册', 'Open Gallery') }}
+          {{ t('鎵撳紑鐩稿唽', 'Open Gallery') }}
         </button>
       </div>
     </div>
@@ -501,14 +502,14 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         class="rounded-lg border border-emerald-200 px-2 py-1 text-[11px] text-emerald-700 hover:bg-emerald-50"
         :disabled="loadingSuggestions || loadingAI"
       >
-        <span v-if="loadingSuggestions">{{ t('生成中...', 'Generating...') }}</span>
-        <span v-else>{{ t('生成建议回复', 'Generate suggested replies') }}</span>
+        <span v-if="loadingSuggestions">{{ t('鐢熸垚涓?..', 'Generating...') }}</span>
+        <span v-else>{{ t('鐢熸垚寤鸿鍥炲', 'Generate suggested replies') }}</span>
       </button>
       <button
         @click="$emit('close')"
         class="ml-auto rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
       >
-        {{ t('收起', 'Collapse') }}
+        {{ t('鏀惰捣', 'Collapse') }}
       </button>
     </div>
   </div>

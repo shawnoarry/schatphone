@@ -62,7 +62,7 @@ These routes should feel like apps when opened as full-screen destinations.
 | Stock icon | `/stock` | Installed App: Stock | Stock app placeholder/MVP. |
 | Files icon | `/files` | Installed App / Utility App | File utility; system import/export pickers should be reassessed separately. |
 | Shopping folder child app | `/shopping?service=...` | Installed App: selected Shopping platform | The Home folder is system-owned, but tapping a child opens a platform-like Shopping app identity such as Schat Mall, Style Cloud, Nova Digital, or Daily Fresh. |
-| Food Delivery folder child | `/food-delivery?category=...` | Installed App: Food Delivery | Current children are category entry points inside the Food Delivery app. They are not editable OS folders and should not use Settings styling. |
+| Food Delivery folder child | `/food-delivery?...` | Installed App: Food Delivery mini app entry | Current children are the Food Platform entry plus installed shop mini apps such as Moon Bistro. They are app-like entries inside the Food Delivery pseudo-folder, not category shortcuts and not editable OS folders. |
 | Assets icon | `/assets` | Installed App: Assets | Assets is a direct app entry, not a Home folder child. |
 | App Store icon | `/app-store` | Native System App: App Store | Standalone app-entry manager for preinstalled apps and Home placement. |
 
@@ -74,8 +74,9 @@ Home folders are system-controlled launch containers. They simulate phone folder
 | --- | --- | --- | --- | --- |
 | Home -> Shopping folder tile | Folder overlay | Native System | Shopping platform entries | Use neutral Home folder material. Show platform entries as app-like icons and labels, but do not make the folder panel look like a Shopping page. |
 | Shopping folder -> Schat Mall / Style Cloud / Nova Digital / Daily Fresh | `/shopping?service=...&category=...` | Installed App: selected Shopping platform | Shared Shopping store, platform metadata | Ownership changes after navigation. The Shopping route should present the selected platform app shell, while cart, order, and product data remain shared. |
-| Home -> Food Delivery folder tile | Folder overlay | Native System | Food Delivery category entries | Use the same neutral Home folder material. Current children are entry shortcuts into Food Delivery categories. |
-| Food Delivery folder -> category child | `/food-delivery?category=...` | Installed App: Food Delivery | Food Delivery store, category metadata | Ownership changes after navigation. The destination should feel like Food Delivery, not a system category page. |
+| Home -> Food Delivery folder tile | Folder overlay | Native System | Food Platform plus installed shop mini apps | Use the same neutral Home folder material. The folder can grow/scroll as App Store installs shop mini apps into Food Delivery. |
+| Food Delivery folder -> Food Platform child | `/food-delivery?entry=platform` | Installed App: Food Platform mini app | Food Delivery platform discovery data | Ownership changes after navigation. Food Platform is a peer discovery mini app and must not aggregate same-level shop orders as a visible controller. |
+| Food Delivery folder -> shop child | `/food-delivery?restaurantId=...&entry=shop` | Installed App: Food Delivery shop mini app | Food Delivery restaurant, menu, cart, order, event records | Ownership changes after navigation. The destination should feel like a distinct shop app; categories remain in-shop filters/tags. |
 | Home -> Assets icon | `/assets` | Installed App: Assets | Assets store | Direct app launch. Do not treat it as part of the folder pattern. |
 
 ## 4. Chat-Owned Surfaces

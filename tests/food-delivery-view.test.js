@@ -128,7 +128,7 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-metrics"]').text()).toContain('32 min')
     expect(wrapper.get('[data-testid="food-delivery-store-home"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="food-delivery-store-back"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="food-delivery-store-support-drawer"]').element.open).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-store-support-drawer"]').exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -375,7 +375,7 @@ describe('FoodDeliveryView', () => {
     await router.push(`/food-delivery?category=restaurants&restaurantId=${activeRestaurant.id}&entry=shop`)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="food-delivery-map-handoff-address"]').text()).toContain('Studio Street 9')
+    expect(wrapper.find('[data-testid="food-delivery-map-handoff-address"]').exists()).toBe(false)
 
     await wrapper.get(`[data-testid="food-delivery-add-${menuItem.id}"]`).trigger('click')
     await flushPromises()
@@ -388,12 +388,14 @@ describe('FoodDeliveryView', () => {
 
     expect(store.orderCount).toBe(0)
     expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(activeRestaurant.name)
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain('Studio Street 9')
     expect(wrapper.get(`[data-testid="food-delivery-checkout-line-${menuItem.id}"]`).text()).toContain(menuItem.title)
 
     await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
     await flushPromises()
 
     expect(store.orderCount).toBe(1)
+    expect(wrapper.get('[data-testid="food-delivery-store-support-drawer"]').element.open).toBe(false)
     expect(store.orders[0]).toMatchObject({
       restaurantId: activeRestaurant.id,
       restaurantName: activeRestaurant.name,
@@ -409,6 +411,34 @@ describe('FoodDeliveryView', () => {
 
     expect(wrapper.find('[data-testid="food-delivery-orders-panel"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-wallet-suggestions"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('shows active food prices with the Wallet primary currency', async () => {
+    const router = createTestRouter()
+    const walletStore = useWalletStore()
+    walletStore.setPrimaryCurrency('eur')
+    await router.push('/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const restaurant = store.findRestaurantById('food_seed_moon_bistro')
+    const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
+    await flushPromises()
+
+    expect(store.primaryCurrency).toBe('EUR')
+    expect(wrapper.get(`[data-testid="food-delivery-menu-tray-${menuItem.id}"]`).text()).toContain('EUR')
+
+    await wrapper.get(`[data-testid="food-delivery-add-${menuItem.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain('EUR')
+    expect(store.cartPrimaryTotal.currency).toBe('EUR')
     wrapper.unmount()
   })
 
@@ -514,6 +544,46 @@ describe('FoodDeliveryView', () => {
 
     await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
     expect(store.cartQuantity).toBe(2)
+    wrapper.unmount()
+  })
+
+  test('filters the dark tray store menu through the side section rail', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const restaurant = store.findRestaurantById('food_seed_moon_bistro')
+    const pastaItems = store.listMenuByRestaurant(restaurant.id).filter((item) => item.menuSection === 'pasta')
+    const soupItems = store.listMenuByRestaurant(restaurant.id).filter((item) => item.menuSection === 'warm_soup')
+    expect(pastaItems.length).toBeGreaterThan(0)
+    expect(soupItems.length).toBeGreaterThan(0)
+
+    await router.push(`/food-delivery?category=restaurants&restaurantId=${restaurant.id}&entry=shop`)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="food-delivery-store-menu-section-pasta"]').trigger('click')
+    await flushPromises()
+
+    const menuItems = wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')
+    expect(menuItems).toHaveLength(pastaItems.length)
+    menuItems.forEach((item) => {
+      expect(item.attributes('data-menu-section')).toBe('pasta')
+    })
+    expect(wrapper.find(`[data-testid="food-delivery-menu-${soupItems[0].id}"]`).exists()).toBe(false)
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${pastaItems[0].id}"]`).trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(pastaItems[0].title)
+
     wrapper.unmount()
   })
 

@@ -68,6 +68,8 @@ Wallet owns:
 - ledger
 - transfers
 - downstream expense/income records
+- primary currency selection
+- shared currency registry and editable reference exchange rates
 
 Wallet does not own:
 
@@ -75,6 +77,7 @@ Wallet does not own:
 - order truth
 - market behavior
 - asset truth
+- World Pack activation or world-specific currency authorship
 
 ## 5. Assets
 
@@ -110,6 +113,7 @@ Stock does not own:
 - Shopping can consume a World Pack app binding as label/context/default-filter input, and Food Delivery can consume a `dispatch -> Food Delivery` binding as label/context/default-view input, but the binding must not create Shopping products, restaurants, menus, carts, checkout records, orders, logistics or delivery events, Wallet records, Assets records, Calendar cues, or Chat messages.
 - App Store may surface `food_delivery` and `shopping` folder mini-app entries, and may route `Add mini app` into the selected target with `createShop=1`, but those entries are install facades/open contexts/owner handoffs only. Food Delivery and Shopping keep their own menus/products, carts, checkout, orders, fulfillment events, browsing filters, favorites/recent lists, handoffs, and service notifications.
 - Wallet may provide supporting relationship traceability for Shopping/Food records, but the primary order or shared-meal memory remains owned by the upstream module lineage.
+- WorldBook/World Pack may declare custom world currencies, but Wallet owns whether they are selected as the primary currency and how their USD/CNY/CNY reference rates are maintained.
 - Shopping and qualifying purchases can later feed Assets.
 - Stock can later feed cues or investment summaries, but should not absorb Wallet or Assets ownership.
 - Files or Photos may support these modules, but do not become the business owner of their records.

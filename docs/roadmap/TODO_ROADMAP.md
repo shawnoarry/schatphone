@@ -244,6 +244,7 @@ V1 WorldBook baseline landed:
 - WorldBook's Current World Pack and Knowledge task panels now have their first internal craft pass; knowledge creation/editing is a focused bottom sheet, keeping the panel itself for status, filters, and list review.
 - The compatible-expansion model is now in V1: WorldBook keeps the main world premise, AI can analyze that premise into a world profile, Current World Pack recommends compatible expansion packs, and users can still browse/enable additional compatible packs. The first trial expansions are `school_life`, `business_family`, and `urban_mystery`; enabled packs flow into App Store World entries and Chat Services candidates together instead of replacing the main world one at a time.
 - Kernel and Templates now share the same task-panel visual system, so the whole WorldBook console is closer to one coherent Settings-owned management surface instead of mixed legacy panels.
+- Current World Pack now has an Economy & currency baseline: a world pack can declare custom currencies, inject them into Wallet, and Wallet owns the primary currency plus editable USD/CNY-centered exchange rates. Chat transfer cards and commerce prices consume that shared Wallet setting instead of creating app-local currency systems.
 
 Current product direction:
 

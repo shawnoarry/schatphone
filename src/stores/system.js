@@ -2620,6 +2620,14 @@ export const useSystemStore = defineStore('system', () => {
         ? pack.serviceAccountTemplates.map((template) => ({ ...template }))
         : [],
       terminology: pack.terminology && typeof pack.terminology === 'object' ? { ...pack.terminology } : {},
+      economy: pack.economy && typeof pack.economy === 'object'
+        ? {
+            ...pack.economy,
+            currencies: Array.isArray(pack.economy.currencies)
+              ? pack.economy.currencies.map((currency) => ({ ...currency }))
+              : [],
+          }
+        : { currencies: [] },
     }))
 
   const getWorldPackById = (packId = '') => {
@@ -2799,6 +2807,19 @@ export const useSystemStore = defineStore('system', () => {
     }
     user.worldPacks = normalizeWorldPacks(current)
     return getWorldPackById(normalized.id)
+  }
+
+  const updateWorldPackEconomy = (packId = '', economyPatch = {}) => {
+    const pack = getWorldPackById(packId)
+    if (!pack) return { ok: false, reason: 'pack_not_found', pack: null }
+    const nextPack = upsertWorldPack({
+      ...pack,
+      economy: {
+        ...(pack.economy || {}),
+        ...(economyPatch && typeof economyPatch === 'object' ? economyPatch : {}),
+      },
+    })
+    return { ok: true, reason: 'updated', pack: nextPack }
   }
 
   const updateWorldServiceAccountTemplate = (packId = '', templateId = '', patch = {}) => {
@@ -4345,6 +4366,14 @@ export const useSystemStore = defineStore('system', () => {
               ? pack.serviceAccountTemplates.map((template) => ({ ...template }))
               : [],
             terminology: pack.terminology && typeof pack.terminology === 'object' ? { ...pack.terminology } : {},
+            economy: pack.economy && typeof pack.economy === 'object'
+              ? {
+                  ...pack.economy,
+                  currencies: Array.isArray(pack.economy.currencies)
+                    ? pack.economy.currencies.map((currency) => ({ ...currency }))
+                    : [],
+                }
+              : { currencies: [] },
           })),
           activeWorldPackId: user.activeWorldPackId || DEFAULT_WORLD_PACK_ID,
           worldPackActivation: normalizeWorldPackActivation(user.worldPackActivation, user.activeWorldPackId),
@@ -4499,6 +4528,7 @@ export const useSystemStore = defineStore('system', () => {
     buildWorldPackActivationReview,
     activateWorldPack,
     upsertWorldPack,
+    updateWorldPackEconomy,
     updateWorldServiceAccountTemplate,
     resetWorldServiceAccountTemplate,
     listWorldAppTemplates,

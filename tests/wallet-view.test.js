@@ -75,6 +75,57 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
+  test('updates the finance primary currency from Wallet settings', async () => {
+    const walletStore = useWalletStore()
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-primary-currency"]').setValue('EUR')
+    await wrapper.get('[data-testid="wallet-save-primary-currency"]').trigger('click')
+    await flushUi()
+
+    expect(walletStore.primaryCurrency).toBe('EUR')
+    await wrapper.get('[data-testid="wallet-transfer-currency"]').setValue('EUR')
+
+    await wrapper.get('[data-testid="wallet-transfer-amount"]').setValue('12.00')
+    await wrapper.get('[data-testid="wallet-submit-transfer"]').trigger('click')
+    await flushUi()
+
+    expect(walletStore.listTransactionsBySourceFilter('all')[0]).toMatchObject({
+      amountCents: 1200,
+      currency: 'EUR',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('shows editable exchange rates for custom world currencies', async () => {
+    const walletStore = useWalletStore()
+    walletStore.registerWorldCurrency(
+      {
+        code: 'CRD',
+        labelZh: '信用点',
+        labelEn: 'Credits',
+      },
+      { id: 'survival_city' },
+    )
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-usd-cny-rate"]').setValue('7.35')
+    await wrapper.get('[data-testid="wallet-save-usd-cny-rate"]').trigger('click')
+    await flushUi()
+
+    expect(walletStore.exchangeRates.reference.rate).toBe(7.35)
+
+    await wrapper.get('[data-testid="wallet-cny-rate-CRD"]').setValue('0.25')
+    await wrapper.get('[data-testid="wallet-save-cny-rate-CRD"]').trigger('click')
+    await flushUi()
+
+    expect(walletStore.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
+    expect(wrapper.get('[data-testid="wallet-rate-row-CRD"]').text()).toContain('CRD')
+
+    wrapper.unmount()
+  })
+
   test('removes a transaction and clears its relationship fact from the module list', async () => {
     const walletStore = useWalletStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

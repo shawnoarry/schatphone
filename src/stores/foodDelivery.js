@@ -13,6 +13,7 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
+import { DEFAULT_WALLET_CURRENCY, normalizeWalletCurrency } from './wallet'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 1
@@ -21,7 +22,8 @@ const FOOD_MENU_ITEM_LIMIT = 360
 const FOOD_CART_LINE_LIMIT = 40
 const FOOD_ORDER_LIMIT = 120
 const FOOD_ORDER_EVENT_LIMIT = 24
-const DEFAULT_CURRENCY = 'CNY'
+const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
+const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   PLACED: 'placed',
@@ -66,10 +68,7 @@ const normalizeText = (value, fallback = '', max = 120) => {
   return normalized.slice(0, max)
 }
 
-const normalizeCurrency = (value, fallback = DEFAULT_CURRENCY) => {
-  const normalized = normalizeText(value, fallback, 8).toUpperCase()
-  return /^[A-Z]{2,8}$/.test(normalized) ? normalized : fallback
-}
+const normalizeCurrency = normalizeWalletCurrency
 
 const normalizeAmountCents = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -90,6 +89,8 @@ const normalizeCategory = (value, fallback = 'restaurants') => {
   const normalized = normalizeText(value, fallback, 40)
   return FOOD_CATEGORY_KEY_SET.has(normalized) ? normalized : fallback
 }
+
+const normalizeMenuSection = (value, fallback = 'signature') => normalizeText(value, fallback, 40)
 
 const normalizeFoodId = (value) => normalizeText(value, '', 140)
 
@@ -191,6 +192,7 @@ const normalizeMenuItem = (rawItem, restaurantIds, index = 0) => {
     restaurantId,
     title,
     category: normalizeCategory(rawItem.category, 'restaurants'),
+    menuSection: normalizeMenuSection(rawItem.menuSection || rawItem.section || rawItem.menuCategory),
     priceCents,
     price: formatAmount(priceCents),
     currency: normalizeCurrency(rawItem.currency),
@@ -365,6 +367,13 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   sugarLane: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
   lunarRice: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-03.png'),
   signalSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-02.png'),
+  velvetSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-01.png'),
+  tideShrimpStew: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-05.png'),
+  emberVegetables: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-07.png'),
+  rosemaryChicken: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-09.png'),
+  nightTagliatelle: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-29.png'),
+  emberLasagna: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-50.png'),
+  blueMoonBowl: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-15.png'),
   riverBeefNoodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
   daylightLatte: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
   tinyMoonCake: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
@@ -450,7 +459,7 @@ const normalizeFoodOrders = (rawOrders) => {
 const createSeedRestaurants = () =>
   normalizeRestaurants([
     {
-      id: 'food_seed_moon_bistro',
+      id: MOON_BISTRO_SEED_RESTAURANT_ID,
       name: 'Moon Bistro',
       category: 'restaurants',
       cuisine: 'Fusion dinner',
@@ -524,9 +533,10 @@ const createSeedMenuItems = () =>
     [
       {
         id: 'food_menu_moon_rice',
-        restaurantId: 'food_seed_moon_bistro',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
         title: 'Lunar Rice Set',
         category: 'restaurants',
+        menuSection: 'rice_set',
         price: '58.00',
         desc: 'Grilled slices, warm rice, and crisp pickles for a quiet late-night dinner.',
         ingredients: 'rice, grilled pork, cucumber, kimchi, herb sauce',
@@ -539,9 +549,10 @@ const createSeedMenuItems = () =>
       },
       {
         id: 'food_menu_moon_soup',
-        restaurantId: 'food_seed_moon_bistro',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
         title: 'Signal Soup',
         category: 'restaurants',
+        menuSection: 'warm_soup',
         price: '26.00',
         desc: 'Creamy mushroom soup with thyme and black pepper, made for slow evenings.',
         ingredients: 'mushroom, cream, thyme, black pepper, broth',
@@ -551,6 +562,118 @@ const createSeedMenuItems = () =>
         sourceModule: 'seed',
         createdAt: Date.now() - 7 * 60 * 1000,
         updatedAt: Date.now() - 7 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_velvet_soup',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Velvet Thyme Soup',
+        category: 'restaurants',
+        menuSection: 'warm_soup',
+        price: '28.00',
+        desc: 'A softer mushroom soup with extra thyme cream and cracked pepper.',
+        ingredients: 'mushroom, cream, thyme, black pepper, onion broth',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.velvetSoup,
+        imageAlt: 'Velvet Thyme Soup',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 9 * 60 * 1000,
+        updatedAt: Date.now() - 9 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_tide_stew',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Tide Shrimp Stew',
+        category: 'restaurants',
+        menuSection: 'seafood',
+        price: '64.00',
+        desc: 'Shrimp, tomato, lime, and warm spice in a bright dinner stew.',
+        ingredients: 'shrimp, tomato, lime, mushroom, chili, herb broth',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.tideShrimpStew,
+        imageAlt: 'Tide Shrimp Stew',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 10 * 60 * 1000,
+        updatedAt: Date.now() - 10 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_ember_greens',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Ember Greens',
+        category: 'restaurants',
+        menuSection: 'greens',
+        price: '38.00',
+        desc: 'Roasted seasonal vegetables with a smoky honey pepper glaze.',
+        ingredients: 'broccoli, carrot, pumpkin, onion, brussels sprout, glaze',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.emberVegetables,
+        imageAlt: 'Ember Greens',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 11 * 60 * 1000,
+        updatedAt: Date.now() - 11 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_rosemary_chicken',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Rosemary Roast Chicken',
+        category: 'restaurants',
+        menuSection: 'grill',
+        price: '76.00',
+        desc: 'Whole roasted chicken with potatoes, carrots, and rosemary oil.',
+        ingredients: 'chicken, potato, carrot, onion, rosemary, olive oil',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.rosemaryChicken,
+        imageAlt: 'Rosemary Roast Chicken',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 12 * 60 * 1000,
+        updatedAt: Date.now() - 12 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_night_tagliatelle',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Night Tagliatelle',
+        category: 'restaurants',
+        menuSection: 'pasta',
+        price: '52.00',
+        desc: 'Creamy mushroom tagliatelle with herbs and blistered tomato.',
+        ingredients: 'tagliatelle, mushroom, cream, tomato, thyme, parmesan',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.nightTagliatelle,
+        imageAlt: 'Night Tagliatelle',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 13 * 60 * 1000,
+        updatedAt: Date.now() - 13 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_ember_lasagna',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Ember Lasagna',
+        category: 'restaurants',
+        menuSection: 'pasta',
+        price: '58.00',
+        desc: 'Layered tomato lasagna with basil and a browned cheese top.',
+        ingredients: 'lasagna, tomato ragu, beef, basil, mozzarella, parmesan',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.emberLasagna,
+        imageAlt: 'Ember Lasagna',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 14 * 60 * 1000,
+        updatedAt: Date.now() - 14 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_moon_blue_bowl',
+        restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
+        title: 'Blue Moon Jelly Bowl',
+        category: 'restaurants',
+        menuSection: 'dessert',
+        price: '34.00',
+        desc: 'Blue coconut jelly, berries, mango, and mint for a cold finish.',
+        ingredients: 'coconut jelly, blueberry, strawberry, mango, mint',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.blueMoonBowl,
+        imageAlt: 'Blue Moon Jelly Bowl',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 15 * 60 * 1000,
+        updatedAt: Date.now() - 15 * 60 * 1000,
       },
       {
         id: 'food_menu_river_noodles',
@@ -601,8 +724,13 @@ const createSeedMenuItems = () =>
     new Set(['food_seed_moon_bistro', 'food_seed_river_noodles', 'food_seed_daylight_cafe', 'food_seed_sugar_lane']),
   )
 
+const MOON_BISTRO_REQUIRED_MENU_ITEMS = createSeedMenuItems().filter(
+  (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
+)
+
 export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const getChatStore = () => useChatStore()
+  const primaryCurrency = ref(DEFAULT_CURRENCY)
   const restaurants = ref([])
   const menuItems = ref([])
   const cartItems = ref([])
@@ -618,6 +746,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   )
   const orderCount = computed(() => orders.value.length)
   const recentOrders = computed(() => orders.value.slice(0, 5))
+  const presentRestaurant = (restaurant = {}) => ({
+    ...restaurant,
+    currency: primaryCurrency.value,
+  })
+  const presentMenuItem = (item = {}) => ({
+    ...item,
+    currency: primaryCurrency.value,
+  })
   const categorySummaries = computed(() =>
     FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
       key: entry.key,
@@ -631,9 +767,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const cartLineItems = computed(() =>
     cartItems.value
       .map((item) => {
-        const menuItem = menuItemMap.value.get(item.menuItemId)
+        const sourceMenuItem = menuItemMap.value.get(item.menuItemId)
+        const menuItem = sourceMenuItem ? presentMenuItem(sourceMenuItem) : null
         if (!menuItem) return null
-        const restaurant = restaurantMap.value.get(menuItem.restaurantId) || null
+        const sourceRestaurant = restaurantMap.value.get(menuItem.restaurantId) || null
+        const restaurant = sourceRestaurant ? presentRestaurant(sourceRestaurant) : null
         const subtotalCents = menuItem.priceCents * item.quantity
         return {
           ...item,
@@ -658,12 +796,12 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         currency: line.menuItem.currency,
       })),
       cartRestaurant.value?.deliveryFeeCents || 0,
-      cartRestaurant.value?.currency || DEFAULT_CURRENCY,
+      primaryCurrency.value,
     ),
   )
   const cartPrimaryTotal = computed(() =>
-    cartTotals.value.find((item) => item.currency === DEFAULT_CURRENCY) || cartTotals.value[0] || {
-      currency: DEFAULT_CURRENCY,
+    cartTotals.value.find((item) => item.currency === primaryCurrency.value) || cartTotals.value[0] || {
+      currency: primaryCurrency.value,
       amountCents: 0,
       amount: '0.00',
     },
@@ -672,13 +810,15 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const findRestaurantById = (restaurantId) => {
     const id = normalizeFoodId(restaurantId)
     if (!id) return null
-    return restaurantMap.value.get(id) || null
+    const restaurant = restaurantMap.value.get(id) || null
+    return restaurant ? presentRestaurant(restaurant) : null
   }
 
   const findMenuItemById = (menuItemId) => {
     const id = normalizeFoodId(menuItemId)
     if (!id) return null
-    return menuItemMap.value.get(id) || null
+    const item = menuItemMap.value.get(id) || null
+    return item ? presentMenuItem(item) : null
   }
 
   const findOrderById = (orderId) => {
@@ -689,20 +829,20 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
 
   const listRestaurantsByCategory = (category = '') => {
     const normalized = normalizeCategory(category, '')
-    if (!normalized) return restaurants.value.slice()
+    if (!normalized) return restaurants.value.map(presentRestaurant)
     if (normalized === 'nearby') {
-      return restaurants.value.slice().sort((a, b) => a.distanceKm - b.distanceKm)
+      return restaurants.value.slice().sort((a, b) => a.distanceKm - b.distanceKm).map(presentRestaurant)
     }
     if (normalized === 'grocery_delivery') {
-      return restaurants.value.filter((restaurant) => restaurant.category === 'grocery_delivery')
+      return restaurants.value.filter((restaurant) => restaurant.category === 'grocery_delivery').map(presentRestaurant)
     }
-    return restaurants.value.filter((restaurant) => restaurant.category === normalized)
+    return restaurants.value.filter((restaurant) => restaurant.category === normalized).map(presentRestaurant)
   }
 
   const listMenuByRestaurant = (restaurantId = '') => {
     const id = normalizeFoodId(restaurantId)
     if (!id) return []
-    return menuItems.value.filter((item) => item.restaurantId === id)
+    return menuItems.value.filter((item) => item.restaurantId === id).map(presentMenuItem)
   }
 
   const upsertRestaurant = (input = {}) => {
@@ -714,6 +854,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const existing = existingIndex >= 0 ? restaurants.value[existingIndex] : null
     const restaurant = normalizeRestaurant({
       ...input,
+      currency: input.currency || primaryCurrency.value,
       id: inputId || createRestaurantId(),
       createdAt: existing?.createdAt || input.createdAt || now,
       updatedAt: now,
@@ -724,14 +865,15 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       restaurants.value.splice(existingIndex, 1, {
         ...existing,
         ...restaurant,
+        currency: primaryCurrency.value,
         createdAt: existing.createdAt,
       })
-      return restaurants.value[existingIndex]
+      return presentRestaurant(restaurants.value[existingIndex])
     }
 
     restaurants.value.unshift(restaurant)
     if (restaurants.value.length > FOOD_RESTAURANT_LIMIT) restaurants.value.splice(FOOD_RESTAURANT_LIMIT)
-    return restaurant
+    return presentRestaurant(restaurant)
   }
 
   const upsertMenuItem = (input = {}) => {
@@ -745,7 +887,9 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const menuItem = normalizeMenuItem(
       {
         ...input,
+        currency: input.currency || primaryCurrency.value,
         id: inputId || createMenuItemId(),
+        menuSection: input.menuSection || input.section || existing?.menuSection,
         createdAt: existing?.createdAt || input.createdAt || now,
         updatedAt: now,
       },
@@ -757,14 +901,15 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       menuItems.value.splice(existingIndex, 1, {
         ...existing,
         ...menuItem,
+        currency: primaryCurrency.value,
         createdAt: existing.createdAt,
       })
-      return menuItems.value[existingIndex]
+      return presentMenuItem(menuItems.value[existingIndex])
     }
 
     menuItems.value.unshift(menuItem)
     if (menuItems.value.length > FOOD_MENU_ITEM_LIMIT) menuItems.value.splice(FOOD_MENU_ITEM_LIMIT)
-    return menuItem
+    return presentMenuItem(menuItem)
   }
 
   const addToCart = (menuItemId, quantity = 1, options = {}) => {
@@ -886,7 +1031,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       restaurantId: restaurant.id,
       restaurantName: restaurant.name,
       deliveryFeeCents: restaurant.deliveryFeeCents,
-      currency: restaurant.currency,
+      currency: primaryCurrency.value,
       items: lines.map((line) => ({
         id: `${line.menuItemId}_${line.addedAt}`,
         menuItemId: line.menuItemId,
@@ -894,7 +1039,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         category: line.menuItem.category,
         quantity: line.quantity,
         unitPriceCents: line.menuItem.priceCents,
-        currency: line.menuItem.currency,
+        currency: primaryCurrency.value,
       })),
       deliveryAddress,
       note,
@@ -1005,6 +1150,36 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
   }
 
+  const applySeedMenuMigrations = () => {
+    const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
+    if (!restaurantIds.has(MOON_BISTRO_SEED_RESTAURANT_ID)) return false
+
+    let changed = false
+    const nextMenuItems = menuItems.value.map((item) => ({ ...item }))
+    const existingMenuItemIds = new Set(nextMenuItems.map((item) => item.id))
+    const existingById = new Map(nextMenuItems.map((item) => [item.id, item]))
+
+    MOON_BISTRO_REQUIRED_MENU_ITEMS.forEach((seedItem) => {
+      const existing = existingById.get(seedItem.id)
+      if (!existing) {
+        nextMenuItems.push({ ...seedItem })
+        changed = true
+        return
+      }
+      if (!existing.menuSection || existing.menuSection === 'signature') {
+        existing.menuSection = seedItem.menuSection
+        changed = true
+      }
+    })
+
+    if (!changed) return false
+    menuItems.value = normalizeMenuItems(
+      nextMenuItems.filter((item) => item.restaurantId !== MOON_BISTRO_SEED_RESTAURANT_ID || existingMenuItemIds.has(item.id) || item.sourceModule === 'seed'),
+      restaurantIds,
+    )
+    return true
+  }
+
   const applyPersistedSource = (source) => {
     const rawSource = source && typeof source === 'object' ? source : null
     if (!rawSource) return false
@@ -1017,6 +1192,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     menuItems.value = nextMenuItems
     cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemIds)
     orders.value = normalizeFoodOrders(rawSource.orders)
+    primaryCurrency.value = normalizeCurrency(
+      rawSource.primaryCurrency || rawSource.defaultCurrency || rawSource.settings?.primaryCurrency,
+      primaryCurrency.value,
+    )
+    applySeedMenuMigrations()
     return true
   }
 
@@ -1035,6 +1215,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   }
 
   const createBackupSnapshot = () => ({
+    primaryCurrency: primaryCurrency.value,
     restaurants: restaurants.value.map((restaurant) => ({ ...restaurant })),
     menuItems: menuItems.value.map((item) => ({ ...item })),
     cartItems: cartItems.value.map((item) => ({ ...item })),
@@ -1067,10 +1248,18 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   }
 
   const resetForTesting = () => {
+    primaryCurrency.value = DEFAULT_CURRENCY
     restaurants.value = []
     menuItems.value = []
     cartItems.value = []
     orders.value = []
+  }
+
+  const setPrimaryCurrency = (currency = '') => {
+    const nextCurrency = normalizeCurrency(currency, '')
+    if (!nextCurrency) return ''
+    primaryCurrency.value = nextCurrency
+    return nextCurrency
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -1088,7 +1277,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   })()
 
   watch(
-    [restaurants, menuItems, cartItems, orders],
+    [restaurants, menuItems, cartItems, orders, primaryCurrency],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1101,6 +1290,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     menuItems,
     cartItems,
     orders,
+    primaryCurrency,
     restaurantCount,
     menuItemCount,
     cartQuantity,
@@ -1128,6 +1318,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     removeOrder,
     neutralizeRelationshipOrder,
     cleanupRelationshipForProfile,
+    setPrimaryCurrency,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,

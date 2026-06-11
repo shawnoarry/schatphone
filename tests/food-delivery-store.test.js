@@ -30,6 +30,13 @@ describe('food delivery store', () => {
     expect(store.findMenuItemById('food_menu_moon_rice')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/',
     )
+    const moonBistroMenu = store.listMenuByRestaurant('food_seed_moon_bistro')
+    expect(moonBistroMenu.length).toBeGreaterThanOrEqual(8)
+    expect(new Set(moonBistroMenu.map((item) => item.menuSection)).size).toBeGreaterThanOrEqual(5)
+    expect(store.findMenuItemById('food_menu_moon_night_tagliatelle')).toMatchObject({
+      restaurantId: 'food_seed_moon_bistro',
+      menuSection: 'pasta',
+    })
   })
 
   test('upserts restaurant and menu records with image metadata', () => {
@@ -101,6 +108,64 @@ describe('food delivery store', () => {
     })
   })
 
+  test('migrates older Moon Bistro local data without overwriting edited menu content', () => {
+    localStorage.setItem(
+      'schatphone:store:food-delivery',
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        data: {
+          restaurants: [
+            {
+              id: 'food_seed_moon_bistro',
+              name: 'Moon Bistro',
+              category: 'restaurants',
+              deliveryFee: '6.00',
+              imageSourceType: 'url',
+              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/cover/moon-bistro-cover-02.png',
+            },
+          ],
+          menuItems: [
+            {
+              id: 'food_menu_moon_rice',
+              restaurantId: 'food_seed_moon_bistro',
+              title: 'User Edited Rice',
+              category: 'restaurants',
+              price: '58.00',
+              imageSourceType: 'url',
+              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-03.png',
+            },
+            {
+              id: 'food_menu_moon_soup',
+              restaurantId: 'food_seed_moon_bistro',
+              title: 'Signal Soup',
+              category: 'restaurants',
+              price: '26.00',
+              imageSourceType: 'url',
+              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-02.png',
+            },
+          ],
+          cartItems: [],
+          orders: [],
+        },
+      }),
+    )
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    const moonBistroMenu = store.listMenuByRestaurant('food_seed_moon_bistro')
+
+    expect(store.findMenuItemById('food_menu_moon_rice')).toMatchObject({
+      title: 'User Edited Rice',
+      menuSection: 'rice_set',
+    })
+    expect(store.findMenuItemById('food_menu_moon_night_tagliatelle')).toMatchObject({
+      restaurantId: 'food_seed_moon_bistro',
+      menuSection: 'pasta',
+    })
+    expect(moonBistroMenu.length).toBeGreaterThanOrEqual(8)
+  })
+
   test('creates single-restaurant cart and local orders', () => {
     const store = useFoodDeliveryStore()
     store.resetForTesting()
@@ -160,6 +225,44 @@ describe('food delivery store', () => {
     expect(store.orderCount).toBe(1)
     expect(store.updateOrderStatus(order.id, FOOD_DELIVERY_ORDER_STATUS.COOKING)).toBe(true)
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.COOKING)
+  })
+
+  test('uses the finance primary currency for active food pricing without rewriting historic orders', () => {
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+    expect(store.setPrimaryCurrency('usd')).toBe('USD')
+    const restaurant = store.upsertRestaurant({
+      id: 'food_currency_shop',
+      name: 'Currency Kitchen',
+      category: 'restaurants',
+      deliveryFee: '4.00',
+    })
+    const item = store.upsertMenuItem({
+      id: 'food_currency_item',
+      restaurantId: restaurant.id,
+      title: 'Currency Meal',
+      price: '20.00',
+    })
+
+    expect(restaurant.currency).toBe('USD')
+    expect(item.currency).toBe('USD')
+    store.addToCart(item.id)
+    expect(store.cartPrimaryTotal).toEqual({
+      currency: 'USD',
+      amountCents: 2400,
+      amount: '24.00',
+    })
+    const order = store.checkoutCart({ deliveryAddress: 'Currency Address' })
+    expect(order).toMatchObject({
+      currency: 'USD',
+      totalCents: 2400,
+      items: [expect.objectContaining({ currency: 'USD' })],
+    })
+
+    store.setPrimaryCurrency('eur')
+    expect(store.findRestaurantById(restaurant.id).currency).toBe('EUR')
+    expect(store.findMenuItemById(item.id).currency).toBe('EUR')
+    expect(store.findOrderById(order.id).currency).toBe('USD')
   })
 
   test('adds normalized order events without moving ownership out of Food Delivery', () => {

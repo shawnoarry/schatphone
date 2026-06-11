@@ -8,6 +8,7 @@ import CurrentWorldPackPanel from '../src/components/worldbook/CurrentWorldPackP
 import { useChatStore } from '../src/stores/chat'
 import { useBookStore } from '../src/stores/book'
 import { useSystemStore } from '../src/stores/system'
+import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
 
@@ -510,6 +511,37 @@ describe('WorldBook functional IA', () => {
       'danger',
     )
     expect(wrapper.get('[data-testid="worldbook-current-pack-template-empty"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('injects current world pack currency into Wallet finance options', async () => {
+    const systemStore = useSystemStore()
+    const walletStore = useWalletStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('survival_city')
+
+    const wrapper = await mountWorldBook()
+    await wrapper.get('[data-testid="worldbook-panel-tab-pack"]').trigger('click')
+    await nextTick()
+
+    await wrapper.get('[data-testid="worldbook-currency-code"]').setValue('CRD')
+    await wrapper.get('[data-testid="worldbook-currency-label-zh"]').setValue('信用点')
+    await wrapper.get('[data-testid="worldbook-currency-label-en"]').setValue('Credits')
+    await wrapper.get('[data-testid="worldbook-currency-symbol"]').setValue('CR')
+    await wrapper.get('[data-testid="worldbook-currency-rate-cny"]').setValue('0.25')
+    await wrapper.get('[data-testid="worldbook-save-currency"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.getActiveWorldPack().economy.currencies).toEqual([
+      expect.objectContaining({
+        code: 'CRD',
+        labelEn: 'Credits',
+      }),
+    ])
+    expect(walletStore.currencyOptions.map((currency) => currency.code)).toContain('CRD')
+    expect(walletStore.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
+    expect(wrapper.get('[data-testid="worldbook-currency-notice"]').text()).toContain('CRD')
 
     wrapper.unmount()
   })

@@ -53,6 +53,9 @@ The first Food Delivery shop is Moon Bistro.
 - The shop checkout is now a shop-local confirmation sheet. Tapping checkout previews the current shop cart, delivery address, ETA, delivery fee, and total; the order is created only after the user submits from that sheet.
 - Shop orders, delivery events, and Wallet suggestions are scoped to the currently opened shop. Food Platform does not render the shop cart, order panel, Wallet suggestions, or Map support panels, so it no longer behaves like a total order controller.
 - The shop header no longer has a `Food platform` return button. Home remains available, while the platform is treated as a peer mini app in the pseudo-folder rather than the parent of the shop.
+- Moon Bistro now seeds or migrates a fuller nine-dish menu using project-local photos. The shop menu is grouped by a sticky side rail: all, warm soup, rice set, grill, seafood, greens, pasta, and dessert. Filtering changes the dish list in place, while tapping a dish still opens the item detail/edit sheet.
+- The empty shop surface no longer shows an empty cart card or empty Order & delivery support drawer. The checkout bar appears after the user adds food; order/Wallet/Map support appears only after real shop-scoped order support exists.
+- Active Food Delivery prices now follow Wallet's persisted primary currency. This affects current restaurant/menu display, platform demo merchant fees, cart totals, checkout, and newly created food orders. Existing orders remain in their original currency because they are historical ledger/order records rather than live menu pricing.
 - World Pack explainer banners are not user-facing UI. World Pack context should appear through app wording, defaults, visual treatment, and flow behavior; boundary explanations stay in docs/tests instead of rendering as an in-app card.
 - Food Delivery now requires an explicit World Pack `uiThemePackage.enabled=true` before consuming a World Pack UI/UX override. If a world app binding only maps a route or entry, Food Delivery falls back to the original app UI and defaults.
 
@@ -111,11 +114,13 @@ Work in this order:
 
 2. Dish cards
    - First polish pass is done: cards now push the embedded tray feel further, use project-local Moon Bistro dish photos for the initial menu, and show dish descriptions instead of backend-like image-source labels.
-   - Next pass should tune responsive card density and expand the menu only after the first two dishes feel right.
+   - Latest pass is done: the shop has nine dishes across multiple sections and a sticky side category rail for browseability.
+   - Next pass should tune responsive card density and polish the section labels/selected states after real-device review.
    - Keep title, price, visual identity, and add action easy to scan.
 
 3. Bottom cart
    - First polish pass is done: it reads more like a delivery-app checkout bar and uses checkout language.
+   - Latest pass hides it while empty, so the shop home does not start with a backend-looking empty-cart module.
    - Show quantity, total price, and checkout action.
    - Keep empty-cart state quiet.
 

@@ -150,9 +150,9 @@ Default direction:
 - Users may choose which app entries appear on Home, but app icons should not compete with widget placement.
 - Extra apps should go to the standalone App Store/App Library surface or another system-owned overflow surface.
 - System-controlled Home folders are OS launch containers. Their tile preview, overlay material, close behavior, icon grid, and spacing belong to Home/Appearance.
-- Child entries inside a Home folder may represent installed app identities or app-internal category shortcuts. Once the user taps a child and navigation opens a route, visual ownership changes to the destination app.
+- Child entries inside a Home folder represent app-like entries owned by the parent pseudo-folder, such as a Shopping platform identity or a Food Delivery shop mini app. Once the user taps a child and navigation opens a route, visual ownership changes to the opened entry.
 - Shopping is the first platform-style folder case: the folder shell stays native-system, while `Schat Mall`, `Style Cloud`, `Nova Digital`, and `Daily Fresh` should become selected Shopping platform identities after opening `/shopping?service=...`.
-- Food Delivery currently uses folder children as category shortcuts into the Food Delivery app. If it later becomes platform-style, update this document and `VISUAL_ENTRY_OWNERSHIP_MAP.md` before visual implementation.
+- Food Delivery now uses the same controlled pseudo-folder direction: the first layer contains the Food Platform mini app plus installed shop mini apps such as Moon Bistro. Food categories such as fast food, cafe, dessert, grocery, and nearby are filters/tags inside Food Delivery surfaces, not first-level folder children.
 - Do not replace this controlled folder model with fully user-editable desktop folders until the product direction explicitly changes.
 
 Current implementation note:

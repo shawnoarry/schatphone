@@ -31,6 +31,7 @@ What is already landed:
 19. the Chat `+` action panel now has stable test anchors for image, GIF, gallery, link, location, transfer, voice, and product-card paths. Transfer, voice, product, external-link, current-location, gallery-asset, and one-off media cards are covered through real panel-click tests; copy-to-clipboard feedback now verifies that link cards copy structured rich-message context. Browser smoke paths now cover transfer/voice/product quote-recall-delete behavior and the link/location/gallery/one-off media entry flow on a mobile viewport.
 20. rich message editing now updates structured card fields instead of only changing detached message text. Link, location, transfer, voice, and image cards use field editing so UI, copy, and AI context stay aligned; source-owned product and service cards intentionally do not expose field editing in this slice. Assistant rich-message reroll is covered as a structured replacement path that keeps the original message id while replacing blocks and marking `aiMeta.rerollOf`.
 21. Chat now exposes a service-account linkage contract for the parallel subscription/World Pack lane. `createWorldServiceTemplateContact` reuses generated service/official accounts idempotently while clearing role-profile ownership fields, and `getServiceAccountLinkContract(contactId)` returns Chat routes, origin ids, source bindings, the derived source notification plan, required `service_notification` fields, reply/quote capabilities, unread/mute/fold ownership, and the rule that Chat stores source references only.
+22. Chat transfer cards now consume Wallet's currency registry and primary-currency setting. The `+` transfer form defaults to Wallet's primary currency, offers Wallet-registered currencies including World Pack custom currencies, and still writes sourced Chat transfer records into Wallet instead of keeping a separate Chat-only ledger.
 
 Still incomplete or risky:
 
@@ -66,6 +67,7 @@ Still incomplete or risky:
 9. Do not put appearance, diagnostics, or default conversation settings back into the bottom `Me` tab.
 10. Do not let Chat-side friend/block state become current relationship metrics, stage, or memory truth.
 11. Do not let AI-generated or runtime-generated role social proposals mutate Chat state directly; they must go through the event-runtime social-event review seam.
+12. Do not make Chat own currency definitions, exchange rates, or a separate transfer ledger; Wallet owns the financial registry and sourced records.
 
 ## 4. Must Sync When Working Here
 

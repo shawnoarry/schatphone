@@ -23,6 +23,7 @@ import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
 import { useShoppingStore } from '../src/stores/shopping'
+import { useWalletStore } from '../src/stores/wallet'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { callAI } from '../src/lib/ai'
 
@@ -485,7 +486,7 @@ describe('Chat settings, Me, and appearance routes', () => {
     await wrapper.get('[data-testid="chat-user-action-open-transfer"]').trigger('click')
     await flushUi()
     await wrapper.get('[data-testid="chat-user-action-transfer-amount"]').setValue('88.50')
-    await wrapper.get('[data-testid="chat-user-action-transfer-currency"]').setValue('usd')
+    await wrapper.get('[data-testid="chat-user-action-transfer-currency"]').setValue('USD')
     await wrapper.get('[data-testid="chat-user-action-transfer-note"]').setValue('panel transfer note')
     await flushUi()
     await wrapper.get('[data-testid="chat-user-action-submit-transfer"]').trigger('click')
@@ -561,6 +562,58 @@ describe('Chat settings, Me, and appearance routes', () => {
 
     expect(chatStore.getMessagesByContactId(contact.id).find((item) => item.id === productMessage.id)).toBeUndefined()
     expect(wrapper.text()).not.toContain('Signal Ribbon')
+
+    wrapper.unmount()
+  })
+
+  test('uses Wallet primary currency for Chat transfer cards and sourced ledger records', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const walletStore = useWalletStore()
+    walletStore.resetForTesting()
+    walletStore.registerWorldCurrency(
+      {
+        code: 'CRD',
+        labelZh: '信用点',
+        labelEn: 'Credits',
+      },
+      { id: 'survival_city' },
+    )
+    walletStore.setPrimaryCurrency('CRD')
+    const contact = chatStore.addContact({
+      kind: 'role',
+      name: 'Mina Credits',
+      role: 'Tester',
+    })
+
+    await router.push(`/chat/${contact.id}`)
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-user-action-toggle"]').trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="chat-user-action-open-transfer"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="chat-user-action-transfer-currency"]').element.value).toBe('CRD')
+
+    await wrapper.get('[data-testid="chat-user-action-transfer-amount"]').setValue('12.00')
+    await wrapper.get('[data-testid="chat-user-action-submit-transfer"]').trigger('click')
+    await flushUi()
+
+    const transfer = walletStore.listTransactionsBySourceFilter('chat')[0]
+    expect(transfer).toMatchObject({
+      amountCents: 1200,
+      currency: 'CRD',
+      counterparty: 'Mina Credits',
+      sourceModule: 'chat_transfer',
+    })
+    expect(chatStore.getMessagesByContactId(contact.id).at(-1).content).toContain('12.00 CRD')
 
     wrapper.unmount()
   })
