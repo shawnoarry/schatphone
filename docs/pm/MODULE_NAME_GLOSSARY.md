@@ -31,7 +31,7 @@ Use it when the team needs to confirm:
 | 会话通讯录 | Chat Directory | `/chat-contacts` | route only | Chat/context entry | Chat-side binding and service-account management |
 | 通讯录 | Contacts | `/contacts` | `app_contacts` | Home app | global role archive and role-centered management |
 | 世界书 | WorldBook | `/worldbook` | route only | Settings/context entry | worldview, encyclopedia entries, world rules, profile templates, source activation, and World Pack governance |
-| 文本库 | Book | `/book` | `app_book` | recoverable Home/App Store app | reusable text library for worldview documents, encyclopedia material, world rules, profile templates, and references |
+| 文本库 | Book | `/book` | `app_book` | recoverable Home/App Store app | reusable text library for worldview documents, encyclopedia material, and world rules |
 | 个人资料 | Profile | `/profile` | route only | Settings entry | user profile and AI context preview |
 | 相册 | Photos | `/gallery` | `app_gallery` | Home app | shared media center |
 | 电话 | Phone | `/phone` | `app_phone` | Home app | calls and call history |

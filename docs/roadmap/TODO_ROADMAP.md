@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-06-01
+Updated: 2026-06-12
 
 This is the only live execution board for implementation order.
 
@@ -208,6 +208,8 @@ Scope:
 1. keep cleaning one-owner-per-concept semantics;
 2. continue low-risk decomposition of oversized views and files;
 3. clean stale compatibility layers and historical doc noise in batches.
+4. keep agent-generated specs/plans/content from becoming shadow task boards.
+5. keep known validation failures visible in active governance docs until fixed.
 
 Acceptance:
 
@@ -219,6 +221,14 @@ Primary references:
 
 - `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
 - `docs/process/AI_WORK_MODE.md`
+
+Current implementation note:
+
+- 2026-06-12 governance pass clarified process authority across `AI_WORK_MODE`, `schatphone-workflow`, event/visual workflows, command/path conventions, frozen event/visual references, and `docs/superpowers/**` working artifacts.
+- Validation debt found during this pass is cleared: Chat shopping-entry mojibake copy and stale WorldBook e2e expectations are now green in unit and E2E validation.
+- Production dependency audit is clean after transitive lockfile updates; no framework migration is recommended in this governance slice. E2E shell-entry navigation is now centralized in a shared helper for lock-screen unlock, Home readiness, hash-route readiness, and Home dock app opening; full Playwright validation is green.
+- The Vite build warning for `src/lib/push.js` mixed static/dynamic imports is cleared by making the main entry use the same static helper import as the rest of the app while preserving deferred service-worker registration.
+- The mojibake guard now follows the active-document model: it protects source and current docs, keeps `docs/superpowers/**/README.md` governance notes covered, and excludes archived plus non-README `docs/superpowers/**` draft/reference files from the active quality gate.
 
 Recently landed system-shell task:
 
@@ -237,7 +247,7 @@ V1 WorldBook baseline landed:
 - Current World Pack no longer acts as a mini launcher for enabled world apps. It shows the active snapshot and tells users to use App Store's `World` section for browsing, placement, and launch, without providing a direct App Store jump button inside Settings.
 - The first world UX package seam is landed in the same helper: target apps can resolve active-pack labels, terminology, accent, route query, and boundary copy. Shopping consumes it for the marketplace filter path, Food Delivery uses any confirmed `dispatch -> Food Delivery` context for hero title, banner, route-context preservation, and safe Nearby default, Calendar uses the `reservation -> Calendar` context for title/boundary presentation, and Map uses the `transit -> Map` context for title/banner presentation while each target app keeps source-record ownership.
 - World Pack schema can now carry explicit relationship category/modifier registry additions for later classification/event use. This is data-only in the current slice; no editor UI is added.
-- Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place. `现代首尔 K-pop 娱乐圈` is now seeded as built-in read-only Book sources for the main worldview, world rules, and an encyclopedia placeholder, so WorldBook can activate it without requiring a paste/import step.
+- Book text-library V1 is trial-ready: `/book`, `bookStore`, Book schema helpers, import/create/edit/read/export flows, App Store/Home recovery entry, Settings backup/restore integration, WorldBook source picker, section-level activation, changed-source warnings, visual diff review, and reviewed source-link refresh are in place. `现代首尔 K-pop 娱乐圈` is now seeded as built-in read-only Book sources for the main worldview, world rules, and the first encyclopedia entries: K-pop industry mechanisms, Chinese fandom terms, Seoul youth lifestyle, company/group/program references, and representative member profiles. WorldBook can activate them without requiring a paste/import step.
 - Book / WorldBook IA is being tightened around a first-use source setup path: system fallback stays outside Book until copied, Book import/export uses confirmation surfaces, active Book usage is shown from the text library detail view, WorldBook text-library browsing stays in the current picker as grouped Book-card choices instead of routing to `/book`, Book text categories are limited to Worldview/Rules/Encyclopedia, and Book now uses a phone-native Shelf -> Detail -> Editor flow instead of stacking library, reading, and editing on one scroll. Profile templates are structured records: Contacts can use universal templates directly, while WorldBook can enable current-world templates for Contacts to prioritize.
 - `Settings -> WorldBook` now uses a single-focus control console after the active-world overview: Sources, Pack, Kernel, Templates, and Knowledge are task panels instead of one long stacked management page. Source linking and changed-source review open as layered sheets so activation work does not stretch the main screen.
 - The Sources task panel now reads as a source-control console with active/review/available/disabled stats, system fallback status, linked-source cards, and separated destructive removal actions.

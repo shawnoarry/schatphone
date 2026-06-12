@@ -63,7 +63,7 @@ When this phrase appears, the assistant should treat the task as design-focused 
 - starting new product feature tracks;
 - expanding Chat, Map, Calendar, Push, backup, or storage behavior unless the change is a small design-supporting adjustment;
 - large business-logic refactors;
-- roadmap status changes unless the user explicitly asks for PM sync.
+- roadmap status changes for routine cosmetic polish. If the visual work changes IA, ownership, active scope, or priority, sync the visual package handoff and PM/roadmap docs through `docs/process/AI_WORK_MODE.md`.
 
 If a visual change needs functional code, keep the change minimal and explain why it is needed.
 
@@ -325,7 +325,8 @@ Use this sequence for visual work unless the user asks for a narrower path:
 12. If themes are touched, verify both `default` and `zen`.
 13. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
 14. Verify with `git diff --check`, then lint/build/test when code changed.
-15. Summarize:
+15. Sync visual package/PM/roadmap docs only when the work changes IA, ownership, active scope, or priority; routine visual-only polish can skip roadmap sync.
+16. Summarize:
    - changed surfaces;
    - visual-owner decisions;
    - remaining risks;

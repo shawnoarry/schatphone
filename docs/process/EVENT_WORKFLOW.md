@@ -48,8 +48,10 @@ When this phrase appears, treat the task as event-system work, not as visual pol
 - event architecture docs:
   - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
   - `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`
-- event handoff docs:
+- frozen event reference docs:
   - `docs/overview/IMMERSIVE_EVENT_TODO.md`
+- live event handoff docs:
+  - `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`
   - `docs/process/EVENT_WORKFLOW.md`
 - future event library:
   - `src/lib/simulation/*`
@@ -212,7 +214,7 @@ Use this sequence for event work unless the user asks for a narrower path:
 1. Read `docs/process/EVENT_WORKFLOW.md`.
 2. Read `docs/architecture/SIMULATION_EVENT_ENGINE.md`.
 3. If the event depends on WorldBook, worldview, or AI-generated copy, read `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
-4. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` and `docs/roadmap/TODO_ROADMAP.md`.
+4. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
 5. Identify whether the task is:
    - documentation-only;
    - store/library foundation;
@@ -225,8 +227,8 @@ Use this sequence for event work unless the user asks for a narrower path:
 8. Prefer the smallest useful module adapter before broad cross-module orchestration.
 9. Add deterministic tests before adding random trigger behavior.
 10. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
-11. Update `docs/overview/IMMERSIVE_EVENT_TODO.md` with landed work and next recommendation.
-12. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` without turning this workflow into a second roadmap.
+11. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
+12. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
 13. Verify with `git diff --check`, then run targeted tests for touched stores/views.
 
 ## 8. First Prompt Templates

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const systemSnapshot = {
   settings: {
@@ -103,21 +104,13 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasOverflow).toBe(false)
 }
 
-const navigateInsideUnlockedApp = async (page, hashPath) => {
-  await page.evaluate((target) => {
-    window.location.hash = target
-  }, hashPath)
-}
-
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await seedContactsSnapshot(page)
 })
 
 test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
-  await page.goto('/#/lock')
-  await page.getByRole('button', { name: /解锁进入主屏|Unlock to Home/ }).click()
-  await expect(page).toHaveURL(/#\/home/)
+  await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/contacts')
 
   const search = page.getByTestId('contacts-search-input')

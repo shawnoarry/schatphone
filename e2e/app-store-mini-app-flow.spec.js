@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
-const unlockToHome = async (page) => {
+const seedEnglishSystem = async (page) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'schatphone:store:system',
@@ -17,17 +18,6 @@ const unlockToHome = async (page) => {
       }),
     )
   })
-
-  await page.goto('/#/lock')
-  await page.locator('.lock-unlock-button').click()
-  await expect(page).toHaveURL(/#\/home/)
-  await expect(page.locator('.home-dock')).toBeVisible()
-}
-
-const navigateInsideUnlockedApp = async (page, hashPath) => {
-  await page.evaluate((target) => {
-    window.location.hash = target
-  }, hashPath)
 }
 
 const getVisibleAction = async (page, inlineTestId, sheetTestId = `${inlineTestId}-sheet`) => {
@@ -57,6 +47,7 @@ test('mobile App Store mini apps hand off to Food Delivery and Shopping without 
     pageErrors.push(error.message)
   })
 
+  await seedEnglishSystem(page)
   await unlockToHome(page)
 
   await navigateInsideUnlockedApp(page, '/app-store?section=shops&homePage=2')

@@ -8,6 +8,12 @@ const DOCS_DIR = join(ROOT_DIR, 'docs')
 const SCANNED_EXTENSIONS = new Set(['.vue', '.js', '.mjs', '.md'])
 const EXCLUDED_DIR_PARTS = new Set(['archive'])
 
+const isDraftReferenceWorkspaceFile = (filePath) => {
+  const relativePath = relative(ROOT_DIR, filePath).replace(/\\/g, '/')
+  if (!relativePath.startsWith('docs/superpowers/')) return false
+  return !relativePath.endsWith('/README.md')
+}
+
 const MOJIBAKE_MARKERS = [
   '锟?',
   '�',
@@ -44,7 +50,7 @@ const walkSourceFiles = (dir, output = []) => {
       walkSourceFiles(fullPath, output)
       return
     }
-    if (SCANNED_EXTENSIONS.has(extname(name))) {
+    if (SCANNED_EXTENSIONS.has(extname(name)) && !isDraftReferenceWorkspaceFile(fullPath)) {
       output.push(fullPath)
     }
   })

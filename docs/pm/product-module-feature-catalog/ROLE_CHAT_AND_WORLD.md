@@ -14,7 +14,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Chat Directory | `/chat-contacts` | Chat/context entry | Chat-side binding and service-account entry management |
 | Contacts | `/contacts` | Home app | global role archive and role-centered management |
 | WorldBook | `/worldbook` | Settings/context entry | worldview and reusable knowledge points |
-| Book | `/book` | recoverable Home/App Store app | reusable text-source library for worldbook documents and knowledge/reference notes |
+| Book | `/book` | recoverable Home/App Store app | reusable text-source library for worldview documents, encyclopedia material, and world rules |
 | World Hub | `/control-center` | optional hidden app | runtime review and narrow control |
 | Cheats | not frozen yet | future hidden surface | future stronger override lane |
 
@@ -90,7 +90,7 @@ Important boundary:
 
 What it is:
 
-- the reusable text-source library for long worldbooks, knowledge notes, rules, glossary material, and references.
+- the reusable text-source library for long worldviews, encyclopedia material, and world rules.
 
 What users mainly do here:
 

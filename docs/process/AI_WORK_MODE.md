@@ -1,10 +1,12 @@
 # SchatPhone AI Work Mode
 
-Updated: 2026-06-01
+Updated: 2026-06-12
 
 Purpose: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.
 
 This file is the single workflow/process rulebook. It does not replace the task board; it defines how task documents should be used, what to read first, and what must be synced after each work round.
+
+If this file conflicts with a project-local skill, package note, archived plan, or old TODO-style reference, this file wins unless the user explicitly overrides the workflow for that round.
 
 ## 0. Core Workflow Principle
 
@@ -28,9 +30,11 @@ Do not let code run ahead while docs still describe an old product meaning.
 | `docs/pm/TODO_PM_STATUS_REPORT.md` | PM-readable status mirror | Sync after meaningful roadmap, boundary, or current-priority change. |
 | `docs/process/OPERATION_GUIDE.md` | daily operation and validation guide | Use for commands, QA flow, and release/deploy steps. |
 | `docs/process/AI_WORK_MODE.md` | workflow and documentation governance | This file. Keep process rules here instead of creating new process docs. |
+| `.agents/skills/schatphone-workflow/SKILL.md` | takeover shortcut skill | Mirrors this workflow as a quick checklist. It must not become a second authority. |
 | `docs/pm/TASK_PACKAGE_INDEX.md` | task-package index | Use when deciding which package should own the current task. |
 | package `STATUS_AND_HANDOFF.md` | current handoff page | Read after package `README.md` to see current status, next safe slice, and do-not-do rules. |
 | domain reference docs, including old `TODO` / `NEXT` / `PLAN` notes | decisions, contracts, and domain details | Must not become active task boards unless explicitly promoted into `TODO_ROADMAP.md`. |
+| `docs/superpowers/**` | agent-assisted specs, plans, handoffs, and content drafts | Treat as execution history, reference material, or draft content unless a roadmap/package handoff links to a specific active slice. |
 | `docs/archive/**` | historical lookup only | Never use as current execution source. |
 
 ## 2. Anti-Scatter Rules
@@ -44,6 +48,7 @@ Do not let code run ahead while docs still describe an old product meaning.
 7. Treat every non-listed `TODO`, `NEXT`, `PLAN`, `ROADMAP`, `STATUS`, or `HANDOFF` file as frozen context, not executable work.
 8. If a frozen note has a useful idea, copy the concrete slice into `TODO_ROADMAP.md` and the matching package handoff before implementation.
 9. Do not continue an old checklist just because it contains `NEXT`, `TODO`, or unchecked items.
+10. Do not resume `docs/superpowers/**` files as active project work unless the roadmap or package handoff has promoted that exact slice.
 
 ## 3. Role Definition
 
@@ -175,18 +180,20 @@ Workflow docs already own most skill-routing detail. Use this section as the top
 
 - `schatphone-workflow`
   - use for any non-trivial SchatPhone continuation task;
-  - owns reading order, package selection, and end-of-round doc sync.
+  - mirrors the reading order, package selection, and end-of-round doc sync from this file.
 
 ### Planning and requirement-pressure skills
 
 - `brainstorming`
   - use before new feature creation, major behavior changes, or unclear product design;
+  - not required for audits, bug fixes, doc sync, status reviews, or already-promoted roadmap/package work with clear acceptance;
   - output should be a reviewed design/spec before implementation planning.
 - `grill-me`
   - use to stress-test an existing plan, architecture proposal, or requirement set;
   - prefer answering questions from project docs/code first, and ask the user only when a decision cannot be inferred safely.
 - `writing-plans`
   - use after a spec or clear requirement exists and before multi-step implementation;
+  - skip for small doc/code fixes where the scope and validation are obvious;
   - output should be an implementation plan with concrete files, tests, validation commands, and small executable tasks.
 
 ### Event / runtime / relationship-engineering lane
@@ -234,6 +241,13 @@ If a workflow starts depending on a project-local skill and that dependency is n
 2. this file;
 3. `docs/process/DEVELOPMENT_TOOLING.md` when inventory or install assumptions changed.
 
+### Skill Conflict And Tool-Policy Overrides
+
+- Apply broad skill trigger language through this SchatPhone map. A generic skill that says "always" or "MUST" does not expand the project workflow beyond the scope defined here.
+- Subagent or Agent-tool instructions inside a skill are optional and must obey the current tool policy. If subagents are unavailable or not explicitly requested, complete the equivalent local repo scan and note the fallback in the delivery.
+- A skill must not create a second roadmap, second task board, or competing package handoff. Promote active work into `TODO_ROADMAP.md` and the matching package `STATUS_AND_HANDOFF.md`.
+- If a skill's recommended validation command conflicts with `docs/process/DEVELOPMENT_TOOLING.md`, use the machine-local command convention from `DEVELOPMENT_TOOLING.md`.
+
 ## 6. Requirement Translation Template
 
 For each request, define:
@@ -256,7 +270,7 @@ For each request, define:
 1. Translate the request quickly.
 2. Scan relevant code and docs.
 3. Implement the minimum viable change.
-4. Run required checks:
+4. Run required checks, using the logical command names below; on the current Windows PowerShell machine, prefer the `.cmd` forms documented in `docs/process/DEVELOPMENT_TOOLING.md`:
    - `npm run lint`
    - `npm run build`
    - `npm run test` when behavior changed
@@ -278,7 +292,7 @@ Use this matrix at the end of every meaningful work round.
 | Map / Calendar / Reminders boundary change | `docs/pm/map-calendar-reminders/README.md`, `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when status changed |
 | Commerce / Finance / Assets boundary change | `docs/pm/commerce-finance-and-assets/README.md`, `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when status changed |
 | visual direction or large IA change | `docs/overview/APPEARANCE_REBUILD_SCOPE.md`, `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`, `docs/process/VISUAL_WORKFLOW.md` when workflow changed |
-| visual / IA governance change | `docs/pm/visual-and-ia-governance/README.md`, `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/process/VISUAL_WORKFLOW.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when priority changed |
+| visual / IA governance change | `docs/pm/visual-and-ia-governance/README.md`, `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/process/VISUAL_WORKFLOW.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when priority changed. Routine visual-only polish does not need PM/roadmap sync unless it changes scope, IA, ownership, or priority. |
 | module maturity or next-slice priority change | `docs/pm/module-architecture-governance/README.md`, `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`, `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`, `docs/roadmap/PROJECT_MODULE_AUDIT.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` |
 
 ## 10. Response Format

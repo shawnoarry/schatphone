@@ -73,6 +73,16 @@ opencli.cmd
 
 Avoid assuming plain `npm`, `npx`, or `opencli` will work in PowerShell.
 
+Command naming convention:
+
+- Cross-platform workflow docs may write `npm run ...` or `npx ...` as logical command names.
+- On this Windows PowerShell machine, run the `.cmd` shims: `npm.cmd ...`, `npx.cmd ...`, and `opencli.cmd ...`.
+- For `npm audit`, use the official npm registry if the configured mirror does not implement the audit endpoint:
+
+```powershell
+npm.cmd audit --omit=dev --registry=https://registry.npmjs.org/
+```
+
 ## 3. Project Commands
 
 Run from the confirmed SchatPhone project root:
@@ -121,8 +131,10 @@ Current installation:
 ```text
 Package: @jackwener/opencli
 Version: 1.7.19
-Global command: C:\Users\Administrator\AppData\Roaming\npm\opencli.cmd
+Global command: C:\Users\PC\AppData\Roaming\npm\opencli.cmd
 ```
+
+The global command path is machine-specific. Confirm it against `npm.cmd config get prefix` on a new PC before copying this value into another setup note.
 
 Install command:
 

@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-05-19
+Updated: 2026-06-12
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -69,6 +69,7 @@ Compatibility entry docs still exist:
 | Strategy | `docs/strategy/` | long-range project and technical direction |
 | Design | `docs/design/` | visual ownership and style references |
 | Templates | `docs/templates/` | reusable prompt, requirement, and audit templates |
+| Superpowers working artifacts | `docs/superpowers/` | agent-assisted specs, plans, handoffs, and content drafts; reference only unless promoted |
 | Archive | `docs/archive/` | historical or obsolete docs only |
 
 ## 5. Key Workflow Documents
@@ -95,6 +96,8 @@ Compatibility entry docs still exist:
   - visual/IA skill invocation matrix
 - `docs/process/RUNTIME_CONTROL_AND_CHEATS_PACK_PLAN.md`
   - planning entry for the future World Hub / Cheats formal task package
+- `docs/superpowers/README.md`
+  - authority and promotion rules for old specs, plans, handoffs, and content drafts
 
 ## 6. Frozen TODO / PLAN Rule
 
@@ -111,6 +114,8 @@ Only these documents can drive current implementation:
    - use them for context, next safe slice, and do-not-do rules, not as independent roadmaps.
 
 Any other file whose name contains `TODO`, `NEXT`, `PLAN`, `ROADMAP`, `STATUS`, or `HANDOFF` is non-executable unless it is explicitly listed above or linked from the live roadmap for the current task.
+
+Files under `docs/superpowers/**` follow the same rule even when they contain status labels, approval labels, or unchecked task boxes.
 
 If an older note contains a useful idea, do not implement from that note directly. First promote the concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the matching task package handoff.
 

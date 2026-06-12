@@ -2,6 +2,24 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useBookStore } from '../src/stores/book'
 
+const BUILT_IN_KPOP_BOOK_ASSET_IDS = [
+  'built_in_modern_seoul_kpop_main_worldview',
+  'built_in_modern_seoul_kpop_world_rules',
+  'built_in_modern_seoul_kpop_industry_mechanisms',
+  'built_in_modern_seoul_kpop_chinese_fandom_terms',
+  'built_in_modern_seoul_youth_lifestyle',
+  'built_in_modern_seoul_kpop_real_entity_coordinate',
+  'built_in_modern_seoul_kpop_representative_members',
+]
+
+const BUILT_IN_KPOP_ENCYCLOPEDIA_IDS = [
+  'built_in_modern_seoul_kpop_industry_mechanisms',
+  'built_in_modern_seoul_kpop_chinese_fandom_terms',
+  'built_in_modern_seoul_youth_lifestyle',
+  'built_in_modern_seoul_kpop_real_entity_coordinate',
+  'built_in_modern_seoul_kpop_representative_members',
+]
+
 describe('book store', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -19,11 +37,7 @@ describe('book store', () => {
       categories: [],
     })
     expect(store.listAssets({ search: 'K-pop' }).map((asset) => asset.id)).toEqual(
-      expect.arrayContaining([
-        'built_in_modern_seoul_kpop_main_worldview',
-        'built_in_modern_seoul_kpop_world_rules',
-        'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-      ]),
+      expect.arrayContaining(BUILT_IN_KPOP_BOOK_ASSET_IDS),
     )
     expect(store.findAssetById('built_in_modern_seoul_kpop_main_worldview')).toMatchObject({
       title: '现代首尔 K-pop 娱乐圈：主世界观',
@@ -34,15 +48,30 @@ describe('book store', () => {
       },
     })
     expect(store.worldbookSourceAssets.map((asset) => asset.id)).toEqual(
-      expect.arrayContaining([
-        'built_in_modern_seoul_kpop_main_worldview',
-        'built_in_modern_seoul_kpop_world_rules',
-        'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-      ]),
+      expect.arrayContaining(BUILT_IN_KPOP_BOOK_ASSET_IDS),
     )
-    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toContain(
+    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toEqual(
+      expect.arrayContaining(BUILT_IN_KPOP_ENCYCLOPEDIA_IDS),
+    )
+    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).not.toContain(
       'built_in_modern_seoul_kpop_encyclopedia_placeholder',
     )
+    expect(store.findAssetById('built_in_modern_seoul_kpop_encyclopedia_placeholder')).toMatchObject({
+      title: 'K-pop 行业机制',
+      category: 'encyclopedia',
+      locked: true,
+    })
+    const builtInEncyclopediaContent = BUILT_IN_KPOP_ENCYCLOPEDIA_IDS.map(
+      (id) => store.findAssetById(id)?.content || '',
+    ).join('\n\n')
+    expect(builtInEncyclopediaContent).not.toContain('百科条目占位')
+    expect(builtInEncyclopediaContent).not.toContain('内部校订备注')
+    expect(builtInEncyclopediaContent).not.toContain('后续校订点')
+    expect(builtInEncyclopediaContent).not.toContain('消息来源')
+    expect(builtInEncyclopediaContent).not.toContain('资料来源')
+    expect(builtInEncyclopediaContent).not.toContain('参考资料')
+    expect(builtInEncyclopediaContent).not.toContain('参考来源')
+    expect(builtInEncyclopediaContent).not.toMatch(/^\|.*\|$/m)
     expect(store.updateAsset('built_in_modern_seoul_kpop_main_worldview', { title: 'Changed' })).toMatchObject({
       ok: false,
       reason: 'built_in',

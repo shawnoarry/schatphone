@@ -1,14 +1,14 @@
 # Immersive Event TODO
 
-Updated: 2026-05-19
+Updated: 2026-06-12
 
 > **Frozen reference / 冻结参考**
 >
 > This file is not an active TODO, roadmap, or implementation source. Do not start work from this file directly. If an idea here becomes active, first promote the concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the matching task package `STATUS_AND_HANDOFF.md`.
 
-Purpose: this is the current event-lane handoff board.
+Purpose: this is the frozen event-lane reference board.
 
-It is not a live execution board. Use it to understand the current event/runtime baseline, what is already landed, what is intentionally deferred, and what the next safe event slices are.
+It is not a live execution board. Use it to understand the current event/runtime baseline, what is already landed, what is intentionally deferred, and which candidate slices previously looked safe.
 
 Authority:
 
@@ -141,9 +141,9 @@ Do not start these until the current foundation is trusted:
 - Gallery-driven relationship memory as a mainline input;
 - deep economy simulation across Wallet, Stock, Shopping, and Assets without stronger controls.
 
-## 7. Recommended Next Event Slice
+## 7. Candidate Next Event Slices (Frozen Reference)
 
-Recommended next:
+Candidate order from this frozen reference:
 
 1. improve event explanation and review quality before widening automation;
 2. keep relationship-memory growth on the text/event-first path;
@@ -175,7 +175,7 @@ Current event-lane skills already documented there include:
 
 ## 9. Reading Path
 
-Use this file as the short event handoff entry, then read:
+Use this file as the short frozen event reference entry, then read:
 
 1. `docs/process/EVENT_WORKFLOW.md`
 2. `docs/architecture/SIMULATION_EVENT_ENGINE.md`

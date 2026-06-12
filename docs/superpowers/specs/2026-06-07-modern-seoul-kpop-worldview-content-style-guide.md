@@ -52,7 +52,8 @@ Encyclopedia / knowledge supplements:
 - structured Chinese entries;
 - clear section titles;
 - short explanatory paragraphs;
-- optional compact tables when a table improves scanning;
+- prefer grouped entries, key-value clauses, and compact bullet lists;
+- avoid Markdown tables in active Book / WorldBook assets;
 - keywords and examples prioritized over literary atmosphere.
 
 World rules:
@@ -69,8 +70,10 @@ Profile templates:
 
 Reference material:
 
-- lists and tables are allowed;
-- accuracy notes and source trails can remain outside active prose;
+- internal review files may use lists and tables;
+- accuracy notes, source trails, verification links, and reference lists must stay in separate internal review files;
+- before a text is loaded into Book / WorldBook context, convert tables into setting entries or key-value lists;
+- before a text is loaded into Book / WorldBook context, remove source notes, reference sections, verification links, and audit trails from the loaded body;
 - detailed real-entity lists should stay here, not in the main worldview.
 
 ## 4. Keyword Priority
@@ -92,6 +95,7 @@ A content asset passes this style guide when:
 - it outputs useful setting keywords;
 - it avoids excessive `不是……而是……` contrast clauses;
 - it avoids high-literary narration unless a later style patch explicitly adds it;
+- it avoids Markdown tables when the asset is meant to be loaded as Book / WorldBook context;
+- it avoids source notes, reference lists, verification links, and audit trails in the loaded Book / WorldBook body;
 - it keeps detailed entity lists in reference material;
 - it preserves user freedom and AU mutability clearly.
-

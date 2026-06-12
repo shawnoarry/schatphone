@@ -171,8 +171,12 @@ describe('WorldBook setting text picker', () => {
   })
 
   test.each([
-    ['built_in_modern_seoul_kpop_encyclopedia_placeholder', 'encyclopedia'],
-  ])('selects built-in placeholder Book asset %s with role %s', async (assetId, expectedRole) => {
+    ['built_in_modern_seoul_kpop_industry_mechanisms', 'encyclopedia', 'K-pop 行业机制'],
+    ['built_in_modern_seoul_kpop_chinese_fandom_terms', 'encyclopedia', '中文饭圈术语'],
+    ['built_in_modern_seoul_youth_lifestyle', 'encyclopedia', '首尔年轻人生活方式'],
+    ['built_in_modern_seoul_kpop_real_entity_coordinate', 'encyclopedia', 'K-pop 公司、团体与节目'],
+    ['built_in_modern_seoul_kpop_representative_members', 'encyclopedia', 'K-pop 代表成员资料'],
+  ])('selects built-in encyclopedia Book asset %s with role %s', async (assetId, expectedRole, expectedTitle) => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()
     const { wrapper, router } = await mountWorldBook()
@@ -182,6 +186,7 @@ describe('WorldBook setting text picker', () => {
 
     const card = wrapper.get(`[data-testid="worldbook-source-picker-card-${assetId}"]`)
     expect(card.text()).toContain('Built-in')
+    expect(card.text()).toContain(expectedTitle)
     expect(
       wrapper.get(`[data-testid="worldbook-source-picker-group-${expectedRole}"]`).text(),
     ).toContain(card.text().split('\n')[0])
@@ -202,6 +207,9 @@ describe('WorldBook setting text picker', () => {
       role: expectedRole,
       enabled: true,
     })
+    expect(systemStore.listWorldBookSourceLinks()[0].sourceSnapshotText).toContain(expectedTitle)
+    expect(systemStore.listWorldBookSourceLinks()[0].sourceSnapshotText).not.toContain('后续校订点')
+    expect(systemStore.listWorldBookSourceLinks()[0].sourceSnapshotText).not.toContain('内部校订备注')
     expect(bookStore.assetCount).toBe(0)
 
     wrapper.unmount()
@@ -217,7 +225,7 @@ describe('WorldBook setting text picker', () => {
 
     await wrapper
       .get(
-        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_encyclopedia_placeholder"]',
+        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_industry_mechanisms"]',
       )
       .trigger('click')
     await nextTick()
@@ -226,13 +234,13 @@ describe('WorldBook setting text picker', () => {
     await nextTick()
 
     expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
-      assetId: 'built_in_modern_seoul_kpop_encyclopedia_placeholder',
+      assetId: 'built_in_modern_seoul_kpop_industry_mechanisms',
       role: 'encyclopedia',
       enabled: true,
     })
     expect(bookStore.assetCount).toBe(0)
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
-      '百科条目占位',
+      'K-pop 行业机制',
     )
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
       'Not set',

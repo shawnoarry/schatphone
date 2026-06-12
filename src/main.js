@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { ensurePushServiceWorkerRegistration } from './lib/push'
 import './style.css'
 
 const runAfterFirstPaint = (task) => {
@@ -24,11 +25,9 @@ const loadDeferredIconStyles = () => {
 
 const registerPushServiceWorker = () => {
   if (typeof window === 'undefined' || window.isSecureContext !== true) return
-  void import('./lib/push')
-    .then(({ ensurePushServiceWorkerRegistration }) => ensurePushServiceWorkerRegistration())
-    .catch(() => {
-      // Notification subscription is still user-driven in Settings.
-    })
+  void ensurePushServiceWorkerRegistration().catch(() => {
+    // Notification subscription is still user-driven in Settings.
+  })
 }
 
 if (typeof window !== 'undefined') {

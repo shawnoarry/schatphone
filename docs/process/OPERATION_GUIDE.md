@@ -11,11 +11,13 @@ For workflow governance and documentation sync rules, read:
 
 ## 1. Local Setup
 
-```bash
-cd D:\github\schatphone
-npm install
-npm run dev
+```powershell
+cd H:\SchatPhone\schatphone
+npm.cmd install
+npm.cmd run dev
 ```
+
+On another PC, replace the path with the confirmed SchatPhone project root from `docs/process/DEVELOPMENT_TOOLING.md`. Cross-platform docs may use plain `npm`, but this Windows PowerShell setup should prefer `npm.cmd`.
 
 Local preview note:
 
@@ -213,15 +215,15 @@ Visible copy rule:
 
 Required for code changes:
 
-```bash
-npm run lint
-npm run build
+```powershell
+npm.cmd run lint
+npm.cmd run build
 ```
 
 Recommended when behavior changed:
 
-```bash
-npm run test
+```powershell
+npm.cmd run test
 ```
 
 Useful doc-only check:

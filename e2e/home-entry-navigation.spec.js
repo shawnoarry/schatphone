@@ -1,19 +1,10 @@
 import { expect, test } from '@playwright/test'
-
-const unlockToHome = async (page) => {
-  await page.goto('/#/lock')
-  await page.locator('.lock-unlock-button').click()
-  await expect(page).toHaveURL(/#\/home/)
-  await expect(page.locator('.home-dock')).toBeVisible()
-}
-
-const returnToHome = async (page) => {
-  await page.evaluate(() => {
-    window.location.hash = '/home'
-  })
-  await expect(page).toHaveURL(/#\/home/)
-  await expect(page.locator('.home-dock')).toBeVisible()
-}
+import {
+  navigateInsideUnlockedApp,
+  openHomeDockApp,
+  returnToHome,
+  unlockToHome,
+} from './helpers/navigation.js'
 
 const seedGalleryIconAsset = async (page) => {
   await page.addInitScript(() => {
@@ -97,20 +88,16 @@ test.describe('Home entry navigation', () => {
 
     await unlockToHome(page)
 
-    await page.locator('.home-dock .home-dock-icon').nth(0).click()
-    await expect(page).toHaveURL(/#\/chat(?:\?|$)/)
+    await openHomeDockApp(page, 'app_chat', '/chat')
 
     await returnToHome(page)
-    await page.locator('.home-dock .home-dock-icon').nth(1).click()
-    await expect(page).toHaveURL(/#\/contacts(?:\?|$)/)
+    await openHomeDockApp(page, 'app_contacts', '/contacts')
 
     await returnToHome(page)
-    await page.locator('.home-dock .home-dock-icon').nth(2).click()
-    await expect(page).toHaveURL(/#\/settings(?:\?|$)/)
+    await openHomeDockApp(page, 'app_settings', '/settings')
 
     await returnToHome(page)
-    await page.getByTestId('home-dock-widgets').click()
-    await expect(page).toHaveURL(/#\/widgets(?:\?|$)/)
+    await openHomeDockApp(page, 'app_widgets', '/widgets')
 
     await returnToHome(page)
     await page.locator('[data-home-tile-id="app_network"]').click()
@@ -126,19 +113,13 @@ test.describe('Home entry navigation', () => {
     })
 
     await unlockToHome(page)
-    await page.evaluate(() => {
-      window.location.hash = '/app-store'
-    })
-    await expect(page).toHaveURL(/#\/app-store/)
+    await navigateInsideUnlockedApp(page, '/app-store')
 
     await page.getByTestId('app-store-item-app_chat').click()
     await openVisibleAppStoreAction(page)
     await expect(page).toHaveURL(/#\/chat(?:\?|$)/)
 
-    await page.evaluate(() => {
-      window.location.hash = '/app-store'
-    })
-    await expect(page).toHaveURL(/#\/app-store/)
+    await navigateInsideUnlockedApp(page, '/app-store')
 
     await page.getByTestId('app-store-item-app_widgets').click()
     await openVisibleAppStoreAction(page)
@@ -194,10 +175,7 @@ test.describe('Home entry navigation', () => {
     })
 
     await unlockToHome(page)
-    await page.evaluate(() => {
-      window.location.hash = '/app-store?section=world'
-    })
-    await expect(page).toHaveURL(/#\/app-store/)
+    await navigateInsideUnlockedApp(page, '/app-store?section=world')
 
     await page.getByTestId('app-store-item-world_app_survival_city_survival_supply_board').click()
     const handoff = await visibleWorldHandoff(page)
@@ -221,10 +199,7 @@ test.describe('Home entry navigation', () => {
     await seedGalleryIconAsset(page)
     await unlockToHome(page)
 
-    await page.evaluate(() => {
-      window.location.hash = '/app-store'
-    })
-    await expect(page).toHaveURL(/#\/app-store/)
+    await navigateInsideUnlockedApp(page, '/app-store')
 
     await page.getByTestId('app-store-item-app_gallery').click()
     await openVisibleIdentityAction(page)

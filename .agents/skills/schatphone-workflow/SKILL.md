@@ -1,13 +1,13 @@
 ---
 name: schatphone-workflow
-description: Use this skill when taking over SchatPhone implementation work. It defines the required reading order, task-package selection, end-of-round documentation sync matrix, and semantic guardrails across Contacts, Chat, event runtime, World Hub, Cheats, commerce modules, visual governance, and architecture cleanup.
+description: Use this skill when taking over SchatPhone implementation work. It mirrors the required reading order, task-package selection, end-of-round documentation sync matrix, and semantic guardrails from docs/process/AI_WORK_MODE.md across Contacts, Chat, event runtime, World Hub, Cheats, commerce modules, visual governance, and architecture cleanup.
 ---
 
 # SchatPhone Workflow
 
 Use this skill whenever the task is about continuing SchatPhone work rather than answering a generic code question.
 
-This skill is the baseline takeover skill, not the only skill entry.
+This skill is the baseline takeover shortcut, not an independent workflow authority. The canonical process authority is `docs/process/AI_WORK_MODE.md`; if this skill conflicts with that file, follow `AI_WORK_MODE.md` and sync this skill.
 
 For specialist skill routing:
 
@@ -19,10 +19,11 @@ For specialist skill routing:
 
 For any non-trivial task, read:
 
-1. `docs/README.md`
-2. `docs/overview/PROJECT_MASTER_GUIDE.md`
-3. `docs/roadmap/TODO_ROADMAP.md`
-4. `docs/pm/TASK_PACKAGE_INDEX.md`
+1. `docs/process/AI_WORK_MODE.md`
+2. `docs/README.md`
+3. `docs/overview/PROJECT_MASTER_GUIDE.md`
+4. `docs/roadmap/TODO_ROADMAP.md`
+5. `docs/pm/TASK_PACKAGE_INDEX.md`
 
 Then pick the matching task package below.
 
@@ -118,6 +119,8 @@ For each meaningful work round:
    - `npm run build`
    - `npm run test` when behavior changed
 5. sync docs before finishing the round
+
+Use these as logical package-script names. On the current Windows PowerShell setup, prefer `npm.cmd` invocations from `docs/process/DEVELOPMENT_TOOLING.md`.
 
 ## 3.1 Communication Rule
 

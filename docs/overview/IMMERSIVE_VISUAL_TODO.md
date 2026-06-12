@@ -1,14 +1,14 @@
 # Immersive Visual TODO
 
-Updated: 2026-05-19
+Updated: 2026-06-12
 
 > **Frozen reference / 冻结参考**
 >
 > This file is not an active TODO, roadmap, or implementation source. Do not start work from this file directly. If an idea here becomes active, first promote the concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the matching task package `STATUS_AND_HANDOFF.md`.
 
-Purpose: this is the current visual-lane handoff board.
+Purpose: this is the frozen visual-lane reference board.
 
-It tracks the short-to-mid-term visual direction that grew out of:
+It records the short-to-mid-term visual direction that grew out of:
 
 - native-system vs installed-app surface ownership;
 - system-controlled Home folder behavior;
@@ -100,9 +100,9 @@ Do not start these until the visual architecture above is stable:
 - automatic Wallet writeback as part of visual work;
 - deep Map courier-trip simulation as part of visual work.
 
-## 6. Recommended Next Visual Slice
+## 6. Candidate Next Visual Slices (Frozen Reference)
 
-Recommended next:
+Candidate order from this frozen reference:
 
 1. continue the system-controlled Home folder visual pass;
 2. then deepen Shopping platform app-shell identity;
@@ -133,7 +133,7 @@ Machine-local visual support skills may also exist, but repo-local workflow shou
 
 ## 8. Reading Path
 
-Use this file as the short visual handoff entry, then read:
+Use this file as the short frozen visual reference entry, then read:
 
 1. `docs/process/VISUAL_WORKFLOW.md`
 2. `docs/design/VISUAL_ENTRY_OWNERSHIP_MAP.md`

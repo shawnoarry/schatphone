@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const systemSnapshot = {
   settings: {
@@ -77,12 +78,6 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasOverflow).toBe(false)
 }
 
-const navigateInsideUnlockedApp = async (page, hashPath) => {
-  await page.evaluate((target) => {
-    window.location.hash = target
-  }, hashPath)
-}
-
 const openVisibleAppStoreAction = async (page) => {
   const inlineAction = page.getByTestId('app-store-open')
   if (await inlineAction.isVisible()) {
@@ -98,9 +93,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('Settings entry opens readable WorldBook V1 overview and current pack shell', async ({ page }) => {
-  await page.goto('/#/lock')
-  await page.getByRole('button', { name: /解锁进入主屏|Unlock to Home/ }).click()
-  await expect(page).toHaveURL(/#\/home/)
+  await unlockToHome(page)
 
   await navigateInsideUnlockedApp(page, '/settings')
   await page.locator('[data-settings-menu-title="World Book"]').click()
@@ -112,7 +105,7 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
   await expect(page.getByTestId('worldbook-overview-text-category-worldview')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-rules')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-encyclopedia')).toBeVisible()
-  await expect(page.getByTestId('worldbook-overview-text-category-profile')).toBeVisible()
+  await expect(page.getByTestId('worldbook-panel-tab-templates')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-consumer-chat')).toContainText('聊天')
 
   await page.getByTestId('worldbook-panel-tab-pack').click()
@@ -161,8 +154,7 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
 
 test('WorldBook overview stays readable on mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/#/lock')
-  await page.getByRole('button', { name: /解锁进入主屏|Unlock to Home/ }).click()
+  await unlockToHome(page)
 
   await navigateInsideUnlockedApp(page, '/worldbook')
 

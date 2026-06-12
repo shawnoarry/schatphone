@@ -26,6 +26,8 @@ Updated: 2026-05-31
 - remove stale or unused code
 - identify obsolete docs or compatibility layers
 - keep archive boundaries clean
+- keep generated specs/plans/content under `docs/superpowers/**` as reference material unless promoted by the live roadmap/package handoff
+- record known validation debt in active package handoffs instead of burying it inside old plan checklists
 
 ## 5. Semantic Guardrails
 
