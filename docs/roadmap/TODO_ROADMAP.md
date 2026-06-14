@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-06-12
+Updated: 2026-06-15
 
 This is the only live execution board for implementation order.
 
@@ -224,6 +224,14 @@ Primary references:
 
 Current implementation note:
 
+- `DONE` 2026-06-15: first API reports interface governance slice. `src/composables/useSystemApiReports.js` now exposes a narrow tested interface for API/storage diagnostic report reads, summaries, add, and clear; `NetworkView.vue` consumes it for diagnostics list/summary/add/clear, and `SettingsView.vue` consumes it for storage diagnostic report read/add/clear. Chat/Map/Calendar/App report emitters, provider/API key settings, backup/export raw `apiReports` payloads, and storage persistence shape stayed out of this slice.
+- `DONE` 2026-06-15: seventh notification interface caller migration slice. `ChatView.vue` system-notification stack calls and notification-enabled checks for AI reply completion, notify-only auto invoke, and offline auto-invoke settlement now go through `src/composables/useSystemNotifications.js`; Chat service-account `service_notification` rich messages, source-module service pushes, notification persistence shape, push delivery payloads, and broad ChatView decomposition stayed out of this slice.
+- `DONE` 2026-06-15: sixth notification interface caller migration slice. Settings notification toggle/display and Chat Settings notification status copy now go through `src/composables/useSystemNotifications.js`; backup/export raw notification payloads, notification persistence shape, push delivery payloads, and ChatView notification emitters stayed out of this slice.
+- `DONE` 2026-06-15: fifth notification interface caller migration slice. Calendar notification-enabled checks in the Calendar store and Calendar UI push-readiness copy now go through `src/composables/useSystemNotifications.js`; Calendar event/reminder ownership, real-push payloads, scheduling semantics, persistence shape, Settings backup/export, and Chat emitters stayed out of this slice.
+- `DONE` 2026-06-15: fourth notification interface caller migration slice. `Map` notification emitters and notification-enabled checks now go through `src/composables/useSystemNotifications.js`; route/trip state, arrival scheduling behavior, push relay payloads, persistence shape, Settings backup/export, and Chat emitters stayed out of this slice.
+- `DONE` 2026-06-15: third notification interface caller migration slice. `Phone` missed-call notification emission now goes through `src/composables/useSystemNotifications.js`, while Calendar missed-call cue ownership, notification persistence shape, Settings backup/export, and Chat/Map emitters stayed out of that slice.
+- `DONE` 2026-06-15: second notification interface caller migration slice. `App.vue` now consumes `src/composables/useSystemNotifications.js` for shell foreground notification watching, mark-read/open behavior, and notification-enabled checks used by shell push startup/scheduling. This stayed out of Settings backup/export and source-module notification emitters.
+- `DONE` 2026-06-15: first `systemStore` notification interface governance slice. `src/composables/useSystemNotifications.js` now exposes a narrow tested interface for notification reads/writes, and `LockScreen.vue` consumes it for recent notifications, mark-read, remove, and clear-all flows. This slice did not change notification persistence shape, push delivery, or lock-screen visual behavior. Future notification governance should migrate the remaining callers to this interface instead of creating another notification wrapper.
 - 2026-06-12 governance pass clarified process authority across `AI_WORK_MODE`, `schatphone-workflow`, event/visual workflows, command/path conventions, frozen event/visual references, and `docs/superpowers/**` working artifacts.
 - Validation debt found during this pass is cleared: Chat shopping-entry mojibake copy and stale WorldBook e2e expectations are now green in unit and E2E validation.
 - Production dependency audit is clean after transitive lockfile updates; no framework migration is recommended in this governance slice. E2E shell-entry navigation is now centralized in a shared helper for lock-screen unlock, Home readiness, hash-route readiness, and Home dock app opening; full Playwright validation is green.

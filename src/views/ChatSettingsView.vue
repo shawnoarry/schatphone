@@ -6,6 +6,7 @@ import { useChatStore } from '../stores/chat'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +16,7 @@ const { contactsForList } = storeToRefs(chatStore)
 const { settings } = storeToRefs(systemStore)
 const { confirmDialog } = useDialog()
 const { t } = useI18n()
+const systemNotifications = useSystemNotifications({ systemStore })
 
 const actionFeedbackType = ref('')
 const actionFeedbackMessage = ref('')
@@ -154,7 +156,9 @@ const settingsEntries = computed(() => [
     id: 'immersion',
     icon: 'fas fa-bell-slash',
     title: t('沉浸与通知', 'Immersion & Notifications'),
-    meta: settings.value.system.notifications !== false ? t('系统通知开启', 'System notifications on') : t('系统通知关闭', 'System notifications off'),
+    meta: systemNotifications.notificationEnabled.value
+      ? t('系统通知开启', 'System notifications on')
+      : t('系统通知关闭', 'System notifications off'),
     action: () => router.push('/settings'),
   },
   {

@@ -146,4 +146,13 @@ describe('calendar worldbook context', () => {
       point: routePoint.id,
     })
   })
+
+  test('explains that real push is unavailable when system notifications are disabled', async () => {
+    systemStore.settings.system.notifications = false
+    await nextTick()
+
+    expect(wrapper.text()).toContain(
+      'System notifications are off, so Calendar cannot schedule real push.',
+    )
+  })
 })

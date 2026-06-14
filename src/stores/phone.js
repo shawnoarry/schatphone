@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { useCalendarStore } from './calendar'
 import { useSystemStore } from './system'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import {
   anonymizeRelationshipText,
   bindingMatchesProfile,
@@ -233,7 +234,8 @@ export const usePhoneStore = defineStore('phone', () => {
     const payload = createMissedCallNotificationPayload(call)
     if (!payload) return ''
     const systemStore = useSystemStore()
-    return systemStore.addNotification(payload)
+    const systemNotifications = useSystemNotifications({ systemStore })
+    return systemNotifications.addNotification(payload)
   }
 
   const addMissedCallWithNotification = (input = {}) => {

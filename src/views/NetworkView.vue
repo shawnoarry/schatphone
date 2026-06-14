@@ -14,13 +14,12 @@ import {
   buildNetworkSetupState,
 } from '../lib/network-guidance'
 import {
-  filterNetworkReports,
   normalizeNetworkReportLevelFilter,
   normalizeNetworkReportModuleFilter,
-  summarizeNetworkReports,
 } from '../lib/network-report-state'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import { useSystemApiReports } from '../composables/useSystemApiReports'
 import NetworkDiagnosticsPanel from '../components/network/NetworkDiagnosticsPanel.vue'
 import NetworkManualModelSavePanel from '../components/network/NetworkManualModelSavePanel.vue'
 import NetworkSetupPresetPanel from '../components/network/NetworkSetupPresetPanel.vue'
@@ -30,9 +29,10 @@ import { buildReturnSourceQuery, pushReturnTarget, resolveReturnLabel } from '..
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
-const { settings, apiReports } = storeToRefs(systemStore)
+const { settings } = storeToRefs(systemStore)
 const { t, systemLanguage, languageBase } = useI18n()
 const { confirmDialog } = useDialog()
+const systemApiReports = useSystemApiReports({ systemStore })
 
 const modelOptions = ref([])
 const modelsLoading = ref(false)
@@ -104,12 +104,12 @@ const reportLevelOptions = computed(() => [
   { value: 'info', label: t('信息', 'Info') },
 ])
 const networkReports = computed(() =>
-  filterNetworkReports(apiReports.value, {
+  systemApiReports.listReports({
     moduleFilter: reportModuleFilter.value,
     levelFilter: reportLevelFilter.value,
   }),
 )
-const reportSummary = computed(() => summarizeNetworkReports(apiReports.value))
+const reportSummary = systemApiReports.reportSummary
 const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
 const returnButtonLabel = computed(() =>
   returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
@@ -305,7 +305,7 @@ const saveNetworkSettings = () => {
 }
 
 const clearApiReportHistory = async () => {
-  if ((apiReports.value || []).length === 0) return
+  if (systemApiReports.reportItems.value.length === 0) return
   const scopedByModule = reportModuleFilter.value !== 'all'
   const scopedByLevel = reportLevelFilter.value !== 'all'
   const scopedClear = scopedByModule || scopedByLevel
@@ -327,11 +327,11 @@ const clearApiReportHistory = async () => {
   if (!ok) return
 
   const removed = scopedClear
-    ? systemStore.clearApiReports({
+    ? systemApiReports.clearReports({
         module: scopedByModule ? reportModuleFilter.value : '',
         level: scopedByLevel ? reportLevelFilter.value : '',
       })
-    : systemStore.clearApiReports()
+    : systemApiReports.clearReports()
 
   if (removed > 0) {
     setUiFeedback('success', t(`已清空 ${removed} 条记录。`, `Cleared ${removed} record(s).`))
@@ -353,7 +353,7 @@ const buildPreflightError = (apiUrl, apiKey) => {
 }
 
 const recordNetworkFailure = (guidance, message) => {
-  systemStore.addApiReport({
+  systemApiReports.addReport({
     level: 'error',
     module: 'network',
     action: 'fetch_models',
@@ -366,7 +366,7 @@ const recordNetworkFailure = (guidance, message) => {
 }
 
 const recordChatSmokeResult = (level, payload = {}) => {
-  systemStore.addApiReport({
+  systemApiReports.addReport({
     level,
     module: 'network',
     action: 'chat_smoke_test',

@@ -14,6 +14,7 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -818,6 +819,7 @@ const normalizeMapProviderVisualResult = (rawText) => {
 
 export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
+  const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
   const currentLocation = ref(createDefaultCurrentLocation())
@@ -1025,8 +1027,9 @@ export const useMapStore = defineStore('map', () => {
   const canUseTripArrivalRealPush = () => {
     const systemStore = getSystemStore()
     const systemSettings = systemStore.settings?.system || {}
+    const systemNotifications = getSystemNotifications()
     return (
-      systemSettings.notifications !== false &&
+      systemNotifications.notificationEnabled.value &&
       systemSettings.realPushEnabled === true &&
       systemSettings.pushSubscriptionActive === true &&
       typeof systemSettings.pushServerUrl === 'string' &&
@@ -1508,7 +1511,7 @@ export const useMapStore = defineStore('map', () => {
           : providerResult.mode === MAP_PROVIDER_VISUAL_MODE_TEXT
             ? ' Provider style note updated.'
             : ''
-      systemStore.addNotification({
+      getSystemNotifications().addNotification({
         title: 'Map',
         content:
           settings.mode === MAP_VISUAL_MODE_GALLERY && assetAvailable
@@ -1554,7 +1557,7 @@ export const useMapStore = defineStore('map', () => {
       .join(' | ')
 
     if (systemStore.isLocked) {
-      systemStore.addNotification({
+      getSystemNotifications().addNotification({
         title: useChinese ? '地图后台更新' : 'Map background update',
         content: summary || (useChinese ? '地图状态已更新。' : 'Map status updated.'),
         icon: 'fas fa-map-location-dot',
@@ -1642,7 +1645,7 @@ export const useMapStore = defineStore('map', () => {
         lastReason: policy.quietHoursActive ? 'quiet_hours_notify_only' : 'notify_only_mode',
       }
       if (systemStore.isLocked) {
-        systemStore.addNotification({
+        getSystemNotifications().addNotification({
           title: 'Map',
           content: policy.quietHoursActive
             ? 'Quiet-hours notify-only: skipped AI visual refresh.'

@@ -11,6 +11,7 @@ import { useSimulationStore } from './stores/simulation'
 import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
 import { useAppIconImagePreviews } from './composables/useAppIconImagePreviews'
+import { useSystemNotifications } from './composables/useSystemNotifications'
 import AppIconVisual from './components/shared/AppIconVisual.vue'
 import {
   appendForegroundBannerQueue,
@@ -41,7 +42,8 @@ const simulationStore = useSimulationStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
-const { settings, notifications } = storeToRefs(systemStore)
+const { settings } = storeToRefs(systemStore)
+const systemNotifications = useSystemNotifications({ systemStore })
 
 const currentTime = ref('')
 const currentDate = ref('')
@@ -249,7 +251,7 @@ const openShellBannerNotification = () => {
   const note = shellBannerNote.value
   if (!note) return
   hideShellBanner()
-  systemStore.markNotificationRead(note.id)
+  systemNotifications.markNotificationRead(note.id)
   if (typeof note.route === 'string' && note.route.trim()) {
     router.push(note.route)
     return
@@ -407,7 +409,7 @@ watch(
 )
 
 watch(
-  notifications,
+  systemNotifications.notificationItems,
   (list, prevList) => {
     if (!Array.isArray(list) || list.length === 0) return
 
@@ -606,7 +608,7 @@ const stopSimulationForegroundTickLifecycle = () => {
 
 const runPushStartupSelfHeal = async () => {
   systemStore.syncPushPermissionFromBrowser()
-  if (settings.value.system?.notifications === false) return
+  if (!systemNotifications.notificationEnabled.value) return
   if (settings.value.system?.realPushEnabled !== true) return
 
   const serverUrl = normalizePushServerUrl(settings.value.system?.pushServerUrl, '')
@@ -682,7 +684,7 @@ const runPushStartupSelfHeal = async () => {
 const canUseRemotePushScheduling = () => {
   const systemSettings = settings.value.system || {}
   return (
-    systemSettings.notifications !== false &&
+    systemNotifications.notificationEnabled.value &&
     systemSettings.realPushEnabled === true &&
     systemSettings.pushSubscriptionActive === true &&
     typeof systemSettings.pushServerUrl === 'string' &&

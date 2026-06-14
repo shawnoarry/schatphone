@@ -210,6 +210,27 @@ describe('Chat settings, Me, and appearance routes', () => {
     wrapper.unmount()
   })
 
+  test('shows disabled system notification state in Chat Settings', async () => {
+    const router = createTestRouter()
+    await router.push('/chat-settings')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.notifications = false
+
+    const wrapper = mount(ChatSettingsView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="chat-settings-entry-immersion"]').text()).toContain(
+      'System notifications off',
+    )
+
+    wrapper.unmount()
+  })
+
   test('keeps Me focused on identity and recent interaction data', async () => {
     const router = createTestRouter()
     await router.push('/chat-me')

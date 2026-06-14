@@ -56,6 +56,7 @@ import {
 } from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
 import ChatThreadMenuPanel from '../components/chat/ChatThreadMenuPanel.vue'
 import ChatUserActionPanel from '../components/chat/ChatUserActionPanel.vue'
@@ -77,6 +78,7 @@ const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
+const systemNotifications = useSystemNotifications({ systemStore })
 
 const { settings, user } = storeToRefs(systemStore)
 const { contactsForList, loadingAI } = storeToRefs(chatStore)
@@ -1511,7 +1513,7 @@ const autoBackgroundReminderHint = computed(() => {
 
   const systemSettings = settings.value.system || {}
   const remotePushReady =
-    systemSettings.notifications !== false &&
+    systemNotifications.notificationEnabled.value &&
     systemSettings.realPushEnabled === true &&
     systemSettings.pushSubscriptionActive === true &&
     typeof systemSettings.pushServerUrl === 'string' &&
@@ -2924,7 +2926,7 @@ const notifyOnlyHintByPolicy = (policy) => {
 
 const pushNotifyOnlyAutoInvokeNotification = (contactId, policy, createdAt = Date.now()) => {
   if (!systemStore.isLocked) return
-  systemStore.addNotification({
+  systemNotifications.addNotification({
     title: contactNameById(contactId),
     content: notifyOnlyHintByPolicy(policy),
     icon: 'fas fa-bell',
@@ -2973,7 +2975,7 @@ const pushRestoreSettlementNotifications = (settledItems = []) => {
             )
           : `${t('离线消息事件', 'Offline chat event')} ${sequence}/${total}`
 
-      systemStore.addNotification({
+      systemNotifications.addNotification({
         title: contactNameById(contactId),
         content,
         icon: 'fas fa-comment-dots',
@@ -3669,7 +3671,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
       },
     )
     if (systemStore.isLocked && result?.count > 0) {
-      systemStore.addNotification({
+      systemNotifications.addNotification({
         title: result.contactName || t('新消息', 'New Message'),
         content: summarizeAssistantMessagesForNotification(result.messages),
         icon: 'fas fa-comment-dots',

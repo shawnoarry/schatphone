@@ -540,6 +540,34 @@ describe('map trip baseline loop', () => {
     expect(mapStore.tripState.scheduledPushId).toBe('map_trip_1')
   })
 
+  test('startTrip skips background arrival push when system notifications are disabled', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_1',
+      pushSubscriptionActive: true,
+    })
+    systemStore.settings.system.notifications = false
+
+    const scheduleSpy = vi.spyOn(pushLib, 'schedulePushNotification').mockResolvedValue({
+      ok: true,
+      scheduleId: 'map_trip_blocked',
+      deliverAt: Date.now() + 60_000,
+    })
+
+    mapStore.setTripEndpoint('from', 'Home')
+    mapStore.setTripEndpoint('to', 'Office')
+    const started = mapStore.startTrip()
+    const pushResult = await started.remotePushPromise
+
+    expect(started.ok).toBe(true)
+    expect(pushResult).toMatchObject({ ok: false, reason: 'real_push_disabled' })
+    expect(scheduleSpy).not.toHaveBeenCalled()
+    expect(mapStore.tripState.scheduledPushId).toBe('')
+  })
+
   test('cancelTrip clears an armed background arrival push schedule', async () => {
     const mapStore = useMapStore()
     const systemStore = useSystemStore()

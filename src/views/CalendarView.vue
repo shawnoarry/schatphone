@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
@@ -24,6 +25,7 @@ const mapStore = useMapStore()
 const remindersStore = useRemindersStore()
 const systemStore = useSystemStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
+const systemNotifications = useSystemNotifications({ systemStore })
 const { upcomingEvents } = storeToRefs(calendarStore)
 const { activeReminderItems } = storeToRefs(remindersStore)
 const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
@@ -141,7 +143,7 @@ const calendarPushRuntime = computed(() => {
     displayMode: systemSettings.pushDisplayMode || 'minimal',
   }
 
-  if (systemSettings.notifications === false) {
+  if (!systemNotifications.notificationEnabled.value) {
     return {
       ...base,
       detailZh: '系统通知总开关已关闭，Calendar 不会安排真实推送。',

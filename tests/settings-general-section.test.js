@@ -119,6 +119,27 @@ describe('SettingsView general section', () => {
     wrapper.unmount()
   })
 
+  test('updates message notifications through the notification settings subpage', async () => {
+    const store = useSystemStore()
+    const saveSpy = vi.spyOn(store, 'saveNow')
+    const { wrapper } = await mountSettingsView('/settings?menu=notification')
+
+    await wrapper.get('[data-testid="settings-notifications-toggle"]').setValue(false)
+    await flushUi()
+
+    expect(store.settings.system.notifications).toBe(false)
+    expect(saveSpy).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-testid="settings-notifications-toggle"]').setValue(true)
+    await flushUi()
+
+    expect(store.settings.system.notifications).toBe(true)
+    expect(saveSpy).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
+    saveSpy.mockRestore()
+  })
+
   test('normalizes invalid backup reminder interval on save', async () => {
     const store = useSystemStore()
     store.settings.system.backupReminderIntervalHours = 9999

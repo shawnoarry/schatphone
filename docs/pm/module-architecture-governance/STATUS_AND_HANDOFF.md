@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-06-12
+Updated: 2026-06-15
 
 This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
 
@@ -30,6 +30,9 @@ What is already landed:
 17. Build-warning cleanup 2026-06-12: `src/main.js` now statically imports the push service-worker registration helper while still deferring execution until after first paint. This removes the Vite warning caused by `src/lib/push.js` being both dynamically and statically imported.
 18. E2E navigation helper cleanup 2026-06-12: `e2e/helpers/navigation.js` now owns the repeated lock-screen unlock, Home readiness, hash-route navigation, and Home dock app-open flow. Current E2E specs use that shared test Module instead of keeping shallow per-file copies.
 19. Encoding-guard scope cleanup 2026-06-12: `tests/mojibake-guard.test.js` now matches the documentation authority model by guarding source and active docs, keeping `docs/superpowers/**/README.md` governance notes covered, and excluding `docs/archive/**` plus non-README `docs/superpowers/**` draft/reference files.
+20. Architecture debt review refresh 2026-06-14: `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md` is now a clean evidence report, not a task board. It re-measures God View, `systemStore`, store-coupling, `lib` fan-in, and type-coverage signals, and frames next directions as decision inputs for 4.5 only.
+21. `systemStore` notification interface governance slices 2026-06-15: `src/composables/useSystemNotifications.js` now provides the first narrow tested interface over system notifications. `LockScreen.vue` consumes it for recent notification listing, mark-read, remove, and clear-all actions; `App.vue` consumes it for shell foreground banner watching, mark-read/open behavior, and notification-enabled checks used by shell push startup/scheduling; `Phone` consumes it for missed-call notification emission; `Map` consumes it for notification emitters and notification-enabled checks; Calendar consumes it for event real-push readiness checks and Calendar UI push-readiness copy; Settings consumes it for the notification toggle/display state; Chat Settings consumes it for notification status copy; `ChatView.vue` consumes it for AI reply completion, notify-only auto invoke, offline auto-invoke settlement notifications, and related notification-enabled checks. Persistence shape, push delivery payloads, Calendar event/reminder ownership, Calendar missed-call cues, route/trip state, Settings backup/export raw payloads, Chat service-account `service_notification` rich messages, and visible notification behavior are unchanged.
+22. API reports interface governance slice 2026-06-15: `src/composables/useSystemApiReports.js` now provides a narrow tested interface over API/storage diagnostic report reads, summaries, add, and clear. `NetworkView.vue` consumes it for diagnostics list/summary/add/clear, and `SettingsView.vue` consumes it for storage diagnostic report read/add/clear. Chat/Map/Calendar/App report emitters, provider/API key settings, backup/export raw `apiReports` payloads, and storage persistence shape are unchanged.
 
 Still incomplete:
 
@@ -43,6 +46,14 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
+Latest completed governance slice:
+
+- `DONE` 2026-06-15: first API reports interface governance slice. `src/composables/useSystemApiReports.js` now routes API/storage diagnostic report list, summary, add, clear, latest-by-module, and count-by-filter access through a focused facade. `NetworkView.vue` consumes it for diagnostics list/summary/add/clear; `SettingsView.vue` consumes it for storage diagnostic report read/add/clear. Regression coverage includes the new interface tests plus existing Network and Settings view tests. Chat/Map/Calendar/App report emitters, provider/API key settings, backup/export raw `apiReports` payloads, storage persistence shape, and broad view decomposition stayed out of this slice.
+
+Active governance slice:
+
+- None after the 2026-06-15 first API reports interface slice. Choose the next narrow slice from the list below before implementation and mark it here as `IN_PROGRESS`.
+
 1. Continue one-owner-per-concept cleanup where docs and code still drift.
 2. Keep extracting low-risk pieces from oversized files while preserving tests and migrations.
 3. Audit stale docs, unused code, and compatibility layers in small safe batches.
@@ -51,6 +62,7 @@ Still incomplete:
 6. Keep dependency work to patch/minor updates while the current stack is healthy; major Vite/Vitest/ESLint jumps should remain separate migration tasks.
 7. Continue hardening E2E only where flakes are observed; reuse `e2e/helpers/navigation.js` for shell entry flows and prefer stable user-facing/test-id locators plus explicit route readiness over broad timeout increases.
 8. Keep future build-warning cleanup narrow: remove warning causes when ownership is clear, but avoid broad bundling or code-splitting changes without a measured performance reason.
+9. Use `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md` as evidence when choosing 4.5 slices; promote a concrete slice into the roadmap/package handoff before implementing any `systemStore`, large-view, cross-store adapter, or TypeScript cleanup.
 
 ## 3. Do Not Do
 

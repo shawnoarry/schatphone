@@ -20,6 +20,8 @@ import { useWalletStore } from '../stores/wallet'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
+import { useSystemApiReports } from '../composables/useSystemApiReports'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import {
   BACKUP_REMINDER_INTERVAL_OPTIONS,
   createBackupReminderIntervalLabel,
@@ -78,6 +80,8 @@ const walletStore = useWalletStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
+const systemApiReports = useSystemApiReports({ systemStore })
+const systemNotifications = useSystemNotifications({ systemStore })
 
 const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
@@ -329,7 +333,7 @@ const writeStorageAuditReport = ({
   statusCode = 0,
   model = '',
 }) => {
-  systemStore.addApiReport({
+  systemApiReports.addReport({
     level,
     module: 'storage',
     action,
@@ -355,7 +359,7 @@ const clearStorageReports = async () => {
   })
   if (!ok) return
 
-  const removed = systemStore.clearApiReports({ module: 'storage' })
+  const removed = systemApiReports.clearReports({ module: 'storage' })
   if (removed > 0) {
     setStorageAuditFeedback(
       'success',
@@ -408,13 +412,11 @@ const formatStorageAuditTime = (timestamp) => {
 }
 
 const latestStorageReport = computed(() => {
-  const list = Array.isArray(apiReports.value) ? apiReports.value : []
-  return list.find((item) => item?.module === 'storage') || null
+  return systemApiReports.latestReportByModule('storage')
 })
 
 const storageReportErrorCount = computed(() => {
-  const list = Array.isArray(apiReports.value) ? apiReports.value : []
-  return list.filter((item) => item?.module === 'storage' && item?.level === 'error').length
+  return systemApiReports.countReports({ moduleFilter: 'storage', levelFilter: 'error' })
 })
 
 const storageReportReasonLabel = (report) => {
@@ -968,7 +970,7 @@ const restartIntoSoftwareUpdate = () => {
 }
 
 const updateNotificationEnabled = (enabled) => {
-  settings.value.system.notifications = enabled === true
+  systemNotifications.setNotificationEnabled(enabled)
   saveNotificationSettings()
 }
 
@@ -2304,6 +2306,7 @@ if (initialMenu) {
         <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <SettingsPushSection
             :settings="settings"
+            :notification-enabled="systemNotifications.notificationEnabled.value"
             :web-push-supported="webPushSupported"
             :push-permission-label="pushPermissionLabel"
             :push-subscription-label="pushSubscriptionLabel"

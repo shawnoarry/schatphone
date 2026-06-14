@@ -62,6 +62,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  notificationEnabled: {
+    type: Boolean,
+    default: true,
+  },
   notificationSaved: {
     type: Boolean,
     default: false,
@@ -100,9 +104,10 @@ const { t } = useI18n()
       <p class="text-[10px] text-gray-400">{{ t('用于聊天消息与系统提醒', 'Used for chat messages and system alerts') }}</p>
     </div>
     <input
-      :checked="settings.system.notifications"
+      :checked="notificationEnabled"
       type="checkbox"
       class="w-5 h-5"
+      data-testid="settings-notifications-toggle"
       @change="$emit('update-notifications', $event.target.checked)"
     />
   </div>

@@ -407,6 +407,42 @@ describe('calendar event store', () => {
     expect(restoredEvent?.pushHistory[0]?.action).toBe('cancel')
   })
 
+  test('skips real push scheduling when system notifications are disabled', async () => {
+    const store = useCalendarStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_1',
+      pushSubscriptionActive: true,
+    })
+    systemStore.settings.system.notifications = false
+
+    const scheduleSpy = vi
+      .spyOn(pushLib, 'schedulePushNotification')
+      .mockImplementation(async ({ scheduleId, deliverAt }) => ({
+        ok: true,
+        scheduleId,
+        deliverAt,
+      }))
+
+    const event = store.upsertEvent({
+      id: 'calendar_event_notifications_disabled',
+      titleZh: 'Notifications disabled',
+      titleEn: 'Notifications disabled',
+      startsAt: Date.now() + 60 * 60 * 1000,
+    })
+
+    const result = await store.ensureEventPushScheduled(event.id, {
+      source: 'test_calendar_notifications_disabled',
+    })
+
+    expect(result).toMatchObject({ ok: false, reason: 'real_push_disabled' })
+    expect(scheduleSpy).not.toHaveBeenCalled()
+    expect(store.findEventById(event.id)?.scheduledPushId).toBe('')
+    expect(store.findEventById(event.id)?.pushStatus).toBe('idle')
+  })
+
   test('keeps concurrent push scheduling isolated per event while deduping same-event requests', async () => {
     const store = useCalendarStore()
     const systemStore = useSystemStore()

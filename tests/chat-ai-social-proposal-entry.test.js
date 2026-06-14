@@ -121,4 +121,63 @@ describe('Chat AI social proposal entry', () => {
 
     wrapper.unmount()
   })
+
+  test('adds locked-screen AI reply notifications through the system notification stack', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+    systemStore.lockPhone()
+    chatStore.setContactChatSocialState(1, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, { at: 1 })
+
+    await router.push('/chat/1')
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')
+    await flushUi()
+
+    expect(systemStore.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'chat_ai_reply',
+          route: '/chat/1',
+          content: 'I need distance for a while.',
+        }),
+      ]),
+    )
+
+    wrapper.unmount()
+  })
+
+  test('does not add locked-screen AI reply notifications when system notifications are disabled', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+    systemStore.lockPhone()
+    systemStore.settings.system.notifications = false
+    chatStore.setContactChatSocialState(1, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, { at: 1 })
+
+    await router.push('/chat/1')
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')
+    await flushUi()
+
+    expect(systemStore.notifications).toEqual([])
+
+    wrapper.unmount()
+  })
 })

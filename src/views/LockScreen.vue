@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from '../lib/notification-presentation'
 
@@ -24,7 +25,8 @@ const router = useRouter()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
-const { notifications, settings } = storeToRefs(systemStore)
+const { settings } = storeToRefs(systemStore)
+const systemNotifications = useSystemNotifications({ systemStore })
 const LOCK_BANNER_HIDE_MS = 2600
 const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const notificationLocale = computed(() =>
@@ -40,11 +42,7 @@ const { appIconImageUrl } = useAppIconImagePreviews({
 
 const lockClockStyle = computed(() => settings.value.appearance.lockClockStyle || 'classic')
 const focusModeEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('focus_mode'))
-const lockNotifications = computed(() => {
-  return [...notifications.value]
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-    .slice(0, 8)
-})
+const lockNotifications = computed(() => systemNotifications.listRecentNotifications(8))
 const hasLockNotifications = computed(() => lockNotifications.value.length > 0)
 const unreadCount = computed(() =>
   lockNotifications.value.reduce((count, note) => count + (note.read ? 0 : 1), 0),
@@ -119,7 +117,7 @@ const unlockPhone = () => {
 const openNotification = (note) => {
   if (!note) return
   lockBannerVisible.value = false
-  systemStore.markNotificationRead(note.id)
+  systemNotifications.markNotificationRead(note.id)
   systemStore.unlockPhone()
 
   if (typeof note.route === 'string' && note.route.trim()) {
@@ -132,8 +130,7 @@ const openNotification = (note) => {
 const clearLockNotifications = () => {
   lockBannerVisible.value = false
   lockBannerNote.value = null
-  systemStore.clearNotifications()
-  systemStore.saveNow()
+  systemNotifications.clearNotifications({ save: true })
 }
 
 const dismissNotification = (note) => {
@@ -142,8 +139,7 @@ const dismissNotification = (note) => {
     lockBannerVisible.value = false
     lockBannerNote.value = null
   }
-  systemStore.removeNotification(note.id)
-  systemStore.saveNow()
+  systemNotifications.removeNotification(note.id, { save: true })
 }
 
 const openNotificationFromKeyboard = (event, note) => {

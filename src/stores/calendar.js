@@ -17,6 +17,7 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useRemindersStore } from './reminders'
 import { useChatStore } from './chat'
 import { useRelationshipRuntimeStore } from './relationshipRuntime'
@@ -181,6 +182,7 @@ const sortCalendarEvents = (items = []) =>
 
 export const useCalendarStore = defineStore('calendar', () => {
   const getSystemStore = () => useSystemStore()
+  const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const getRemindersStore = () => useRemindersStore()
   const getRelationshipRuntimeStore = () => useRelationshipRuntimeStore()
   const events = ref([])
@@ -598,8 +600,9 @@ export const useCalendarStore = defineStore('calendar', () => {
   const canUseCalendarEventRealPush = () => {
     const systemStore = getSystemStore()
     const systemSettings = systemStore.settings?.system || {}
+    const systemNotifications = getSystemNotifications()
     return (
-      systemSettings.notifications !== false &&
+      systemNotifications.notificationEnabled.value &&
       systemSettings.realPushEnabled === true &&
       systemSettings.pushSubscriptionActive === true &&
       typeof systemSettings.pushServerUrl === 'string' &&
