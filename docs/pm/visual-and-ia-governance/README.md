@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-06-03
+Updated: 2026-06-15
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -63,3 +63,4 @@ Also read when needed:
 - `docs/process/VISUAL_WORKFLOW.md`
 - `docs/product-decisions/HOME_DESKTOP_LAYOUT_SYSTEM.md`
 - `docs/references/VISUAL_ASSET_LIBRARY.md`
+- `UI_APP_STORE_SAFE_POLISH_GUIDE.md`
