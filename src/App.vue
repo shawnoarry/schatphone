@@ -11,6 +11,7 @@ import { useSimulationStore } from './stores/simulation'
 import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
 import { useAppIconImagePreviews } from './composables/useAppIconImagePreviews'
+import { useSystemApiReports } from './composables/useSystemApiReports'
 import { useSystemNotifications } from './composables/useSystemNotifications'
 import AppIconVisual from './components/shared/AppIconVisual.vue'
 import {
@@ -43,6 +44,7 @@ const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
 
 const { settings } = storeToRefs(systemStore)
+const systemApiReports = useSystemApiReports({ systemStore })
 const systemNotifications = useSystemNotifications({ systemStore })
 
 const currentTime = ref('')
@@ -592,7 +594,7 @@ const ensureSimulationForegroundTickLifecycle = () => {
     route,
     documentRef: typeof document !== 'undefined' ? document : null,
     writeReport: (report) => {
-      systemStore.addApiReport(report)
+      systemApiReports.addReport(report)
     },
   })
   return simulationForegroundTickLifecycle
@@ -616,7 +618,7 @@ const runPushStartupSelfHeal = async () => {
     systemStore.setPushState({
       pushLastError: t('请先填写 Push Server 地址。', 'Enter a Push Server URL first.'),
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'push',
       action: PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH,
@@ -633,7 +635,7 @@ const runPushStartupSelfHeal = async () => {
       pushLastError:
         healthResult.message || t('Push Server 不可达。', 'Push Server is unreachable.'),
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'push',
       action: PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH,
@@ -660,7 +662,7 @@ const runPushStartupSelfHeal = async () => {
       pushLastError:
         resyncResult.message || t('启动时重同步订阅失败。', 'Startup subscription resync failed.'),
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'push',
       action: PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC,
@@ -742,7 +744,7 @@ const cancelChatAutoPushForContact = async (contactId, options = {}) => {
   })
 
   if (!result.ok) {
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'push',
       action: 'cancel_schedule',
@@ -830,7 +832,7 @@ const syncChatAutoPushSchedules = async ({ force = false } = {}) => {
       })
 
       if (!result.ok) {
-        systemStore.addApiReport({
+        systemApiReports.addReport({
           level: 'error',
           module: 'push',
           action: 'schedule',

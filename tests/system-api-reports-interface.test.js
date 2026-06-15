@@ -63,6 +63,15 @@ describe('system API reports interface', () => {
     expect(apiReports.latestReportByModule('storage')?.id).toBe(storageErrorId)
     expect(apiReports.countReports({ moduleFilter: 'storage' })).toBe(2)
     expect(apiReports.countReports({ moduleFilter: 'storage', levelFilter: 'error' })).toBe(1)
+
+    const snapshot = apiReports.createReportSnapshot()
+    expect(snapshot.map((item) => item.id)).toEqual([
+      storageErrorId,
+      storageInfoId,
+      networkId,
+    ])
+    snapshot[0].message = 'Changed outside the store'
+    expect(apiReports.reportItems.value[0].message).toBe('Storage mirror drift detected')
   })
 
   test('clears reports with store-compatible filters', () => {

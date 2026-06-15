@@ -65,7 +65,7 @@ The `src/composables/` directory now contains 5 files:
 - `useSystemApiReports.js`
 - `useSystemNotifications.js`
 
-That means view-level state, computed values, and side effects are still mostly written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups and the first API reports interface is in place for Network diagnostics plus Settings storage diagnostics.
+That means view-level state, computed values, and side effects are still mostly written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups and the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots.
 
 ### 3.2 God Store Module: `system.js`
 
@@ -235,7 +235,7 @@ Do not start by ripping the store apart. Start by creating stable facades or ada
 Best first candidates:
 
 - notifications; first seven slices `DONE` on 2026-06-15 through `src/composables/useSystemNotifications.js`, with `LockScreen.vue` migrated as the reference caller, `App.vue` migrated for shell foreground banners, mark-read/open behavior, and notification-enabled push checks, `Phone` migrated for missed-call notification emission, `Map` migrated for notification emitters plus notification-enabled checks, Calendar migrated for event real-push readiness checks plus Calendar UI push-readiness copy, Settings / Chat Settings migrated for notification toggle/display and status copy, and `ChatView.vue` migrated for AI reply completion, notify-only auto invoke, offline auto-invoke settlement notifications, and related notification-enabled checks. Future notification cleanup should reuse that interface when new callers appear, while backup/export raw notification payloads stay under storage-format governance.
-- network/API reports; first slice `DONE` on 2026-06-15 through `src/composables/useSystemApiReports.js`, with Network diagnostics and Settings storage diagnostics migrated for report list/summary/add/clear while Chat/Map/Calendar/App report emitters, provider/API key settings, backup/export raw `apiReports` payloads, and storage persistence shape remain future slices;
+- network/API reports; first six slices `DONE` on 2026-06-15 through `src/composables/useSystemApiReports.js`, with Network diagnostics and Settings storage diagnostics migrated for report list/summary/add/clear, Chat diagnostic-report emitters migrated for notify-only automation, AI reply failure, cancel request, and reroll failure, Map/Calendar store diagnostic-report emitters migrated for push scheduling/cancellation plus Map background automation, App shell diagnostic-report emitters migrated for foreground tick/startup/auto-push diagnostics, Settings remaining diagnostic-report emitters migrated for simulation/push diagnostics, and backup/export raw report snapshots migrated behind the reports interface without changing exported shape. Direct source-level `addApiReport` callers outside `systemStore` and the facade are now cleared. Provider/API key settings and storage persistence/restore shape remain larger future slices;
 - appearance and scoped CSS;
 - Home layout and app placement;
 - backup reminder settings.

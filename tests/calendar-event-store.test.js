@@ -341,6 +341,13 @@ describe('calendar event store', () => {
         deliverAt: dueAt,
       }),
     )
+    expect(systemStore.apiReports[0]).toMatchObject({
+      level: 'info',
+      module: 'push',
+      action: 'schedule',
+      provider: 'push_relay',
+      model: 'test_calendar_event_schedule',
+    })
 
     const editedStartsAt = dueAt + 60 * 60 * 1000
     expect(store.setEventStartsAt(event.id, editedStartsAt)).toBe(true)

@@ -56,6 +56,7 @@ import {
 } from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
 import ChatThreadMenuPanel from '../components/chat/ChatThreadMenuPanel.vue'
@@ -78,6 +79,7 @@ const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const simulationStore = useSimulationStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
+const systemApiReports = useSystemApiReports({ systemStore })
 const systemNotifications = useSystemNotifications({ systemStore })
 
 const { settings, user } = storeToRefs(systemStore)
@@ -2824,7 +2826,7 @@ const enqueueAutoInvokeTaskForContact = async (contactId) => {
       autoLastSettledAt: now,
       autoLastSettledMissedCycles: 1,
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'info',
       module: 'chat',
       action: 'auto_notify_only',
@@ -3698,7 +3700,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     if (!isAutoSource) {
       resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
     }
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'chat',
       action: isAutoSource ? 'auto_reply' : 'manual_reply',
@@ -3722,7 +3724,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 
 const cancelActiveRequest = () => {
   if (!activeAbortController.value) return
-  systemStore.addApiReport({
+  systemApiReports.addReport({
     level: 'info',
     module: 'chat',
     action: 'cancel_reply',
@@ -4428,7 +4430,7 @@ const rerollMessage = async (message) => {
         : formatApiErrorForUi(error, t('重roll失败，请稍后重试。', 'Reroll failed. Please retry later.'))
     retryRerollMessageId.value = target.id
     resetConversationAutoNextAt(activeChat.value.id, Date.now() + getAutomationCooldownMs())
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'error',
       module: 'chat',
       action: 'reroll_reply',

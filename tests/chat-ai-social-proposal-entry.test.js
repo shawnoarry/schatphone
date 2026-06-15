@@ -12,6 +12,7 @@ import { useSystemStore } from '../src/stores/system'
 
 const aiMockState = vi.hoisted(() => ({
   calls: [],
+  nextError: null,
 }))
 
 vi.mock('../src/lib/ai', async () => {
@@ -20,6 +21,9 @@ vi.mock('../src/lib/ai', async () => {
     ...actual,
     callAI: vi.fn(async (payload) => {
       aiMockState.calls.push(payload)
+      if (aiMockState.nextError) {
+        throw aiMockState.nextError
+      }
       return {
         text: JSON.stringify({
           messages: [
@@ -76,6 +80,7 @@ describe('Chat AI social proposal entry', () => {
   beforeEach(() => {
     localStorage.clear()
     aiMockState.calls.length = 0
+    aiMockState.nextError = null
     setActivePinia(createPinia())
     useSystemStore().settings.system.language = 'en-US'
   })
@@ -177,6 +182,46 @@ describe('Chat AI social proposal entry', () => {
     await flushUi()
 
     expect(systemStore.notifications).toEqual([])
+
+    wrapper.unmount()
+  })
+
+  test('records Chat AI reply failures through system diagnostic reports', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+    systemStore.settings.api.resolvedKind = 'openai_compatible'
+    systemStore.settings.api.model = 'gpt-test'
+    aiMockState.nextError = Object.assign(new Error('Auth failed'), {
+      code: 'AUTH',
+      status: 401,
+    })
+    chatStore.setContactChatSocialState(1, CHAT_CONTACT_SOCIAL_STATES.CONNECTED, { at: 1 })
+
+    await router.push('/chat/1')
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')
+    await flushUi()
+
+    expect(aiMockState.calls).toHaveLength(1)
+    expect(systemStore.apiReports[0]).toMatchObject({
+      level: 'error',
+      module: 'chat',
+      action: 'manual_reply',
+      provider: 'openai_compatible',
+      model: 'gpt-test',
+      statusCode: 401,
+      code: 'AUTH',
+    })
+    expect(systemStore.apiReports[0].message).toContain('鉴权失败')
 
     wrapper.unmount()
   })

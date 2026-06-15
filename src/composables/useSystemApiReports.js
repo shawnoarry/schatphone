@@ -19,6 +19,9 @@ export const useSystemApiReports = (options = {}) => {
   const listReports = (filters = {}) =>
     filterNetworkReports(reportItems.value, filters)
 
+  const createReportSnapshot = () =>
+    reportItems.value.map((report) => ({ ...report }))
+
   const addReport = (rawReport = {}) => systemStore.addApiReport(rawReport)
 
   const clearReports = (filters = {}) => systemStore.clearApiReports(filters)
@@ -36,6 +39,7 @@ export const useSystemApiReports = (options = {}) => {
     reportItems,
     reportSummary,
     listReports,
+    createReportSnapshot,
     addReport,
     clearReports,
     latestReportByModule,

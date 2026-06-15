@@ -14,6 +14,7 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useSystemStore } from './system'
 
@@ -819,6 +820,7 @@ const normalizeMapProviderVisualResult = (rawText) => {
 
 export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
+  const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
@@ -1094,7 +1096,7 @@ export const useMapStore = defineStore('map', () => {
         }
 
         if (!result.ok) {
-          systemStore.addApiReport({
+          getSystemApiReports().addReport({
             level: 'error',
             module: 'push',
             action: 'cancel_schedule',
@@ -1160,7 +1162,7 @@ export const useMapStore = defineStore('map', () => {
         })
 
         if (!result.ok) {
-          systemStore.addApiReport({
+          getSystemApiReports().addReport({
             level: 'error',
             module: 'push',
             action: 'schedule',
@@ -1184,7 +1186,7 @@ export const useMapStore = defineStore('map', () => {
           }
         }
 
-        systemStore.addApiReport({
+        getSystemApiReports().addReport({
           level: 'info',
           module: 'push',
           action: 'schedule',
@@ -1567,7 +1569,7 @@ export const useMapStore = defineStore('map', () => {
       })
     }
 
-    systemStore.addApiReport({
+    getSystemApiReports().addReport({
       level: 'info',
       module: 'map',
       action: 'auto_background_update',

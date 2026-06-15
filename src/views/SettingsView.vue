@@ -83,7 +83,7 @@ const { confirmDialog } = useDialog()
 const systemApiReports = useSystemApiReports({ systemStore })
 const systemNotifications = useSystemNotifications({ systemStore })
 
-const { settings, user, notifications, apiReports, truthState } = storeToRefs(systemStore)
+const { settings, user, notifications, truthState } = storeToRefs(systemStore)
 const { roleProfiles, contacts, chatHistory, conversations, messagesByConversation } = storeToRefs(chatStore)
 
 const activeMenu = ref('')
@@ -770,7 +770,7 @@ const runSimulationTickDiagnostic = async () => {
         : 'skipped'
     const pilotCount = Array.isArray(result?.pilotResults) ? result.pilotResults.length : 0
 
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: ok ? 'info' : 'error',
       module: 'simulation',
       action: 'run_event_tick',
@@ -1016,7 +1016,7 @@ const checkPushServerHealthNow = async ({ silent = false } = {}) => {
       systemStore.setPushState({
         pushLastError: result.message || '',
       })
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'error',
         module: 'push',
         action: 'health_check',
@@ -1038,7 +1038,7 @@ const checkPushServerHealthNow = async ({ silent = false } = {}) => {
       pushLastError: '',
     })
     if (!silent) {
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'info',
         module: 'push',
         action: 'health_check',
@@ -1084,7 +1084,7 @@ const resyncRealPushNow = async ({ silent = false } = {}) => {
         pushSubscriptionActive: hasMissingLocalSubscription ? false : settings.value.system.pushSubscriptionActive,
         pushLastError: result.message || '',
       })
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'error',
         module: 'push',
         action: 'resync',
@@ -1110,7 +1110,7 @@ const resyncRealPushNow = async ({ silent = false } = {}) => {
       pushLastError: '',
     })
     if (!silent) {
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'info',
         module: 'push',
         action: 'resync',
@@ -1159,7 +1159,7 @@ const subscribeRealPushNow = async () => {
         pushPermission: readPushPermission(),
         pushLastError: result.message || '',
       })
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'error',
         module: 'push',
         action: 'subscribe',
@@ -1183,7 +1183,7 @@ const subscribeRealPushNow = async () => {
       pushLastError: '',
       pushVapidPublicKey: result.publicKey,
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'info',
       module: 'push',
       action: 'subscribe',
@@ -1231,7 +1231,7 @@ const unsubscribeRealPushNow = async () => {
       systemStore.setPushState({
         pushLastError: result.message || '',
       })
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'error',
         module: 'push',
         action: 'unsubscribe',
@@ -1253,7 +1253,7 @@ const unsubscribeRealPushNow = async () => {
       pushLastError: '',
       pushVapidPublicKey: '',
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'info',
       module: 'push',
       action: 'unsubscribe',
@@ -1285,7 +1285,7 @@ const sendRealPushTestNow = async () => {
       systemStore.setPushState({
         pushLastError: result.message || '',
       })
-      systemStore.addApiReport({
+      systemApiReports.addReport({
         level: 'error',
         module: 'push',
         action: 'test',
@@ -1303,7 +1303,7 @@ const sendRealPushTestNow = async () => {
       pushLastSyncedAt: Date.now(),
       pushLastError: '',
     })
-    systemStore.addApiReport({
+    systemApiReports.addReport({
       level: 'info',
       module: 'push',
       action: 'test',
@@ -1677,7 +1677,7 @@ const buildBackupPayload = async () => {
     settings: settings.value,
     user: user.value,
     notifications: notifications.value,
-    apiReports: apiReports.value,
+    apiReports: systemApiReports.createReportSnapshot(),
     truthState: truthState.value,
     roleProfiles: roleProfiles.value,
     contacts: contacts.value,
@@ -1928,7 +1928,7 @@ const createRollbackSnapshot = () => {
       settings: deepClone(settings.value),
       user: deepClone(user.value),
       notifications: deepClone(notifications.value),
-      apiReports: deepClone(apiReports.value),
+      apiReports: systemApiReports.createReportSnapshot(),
       truthState: deepClone(truthState.value),
     },
     chat: {

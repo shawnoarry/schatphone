@@ -538,6 +538,13 @@ describe('map trip baseline loop', () => {
     expect(started.ok).toBe(true)
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
     expect(mapStore.tripState.scheduledPushId).toBe('map_trip_1')
+    expect(systemStore.apiReports[0]).toMatchObject({
+      level: 'info',
+      module: 'push',
+      action: 'schedule',
+      provider: 'push_relay',
+      model: 'map_trip_start',
+    })
   })
 
   test('startTrip skips background arrival push when system notifications are disabled', async () => {
@@ -600,6 +607,7 @@ describe('map trip baseline loop', () => {
     expect(cancelled).toBe(true)
     expect(cancelSpy).toHaveBeenCalledTimes(1)
     expect(mapStore.tripState.status).toBe('idle')
+    expect(systemStore.apiReports.some((item) => item.action === 'cancel_schedule')).toBe(false)
   })
 
   test('can bind and later neutralize a shared-route trip record for relationship cleanup', () => {

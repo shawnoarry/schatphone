@@ -17,6 +17,7 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useRemindersStore } from './reminders'
 import { useChatStore } from './chat'
@@ -182,6 +183,7 @@ const sortCalendarEvents = (items = []) =>
 
 export const useCalendarStore = defineStore('calendar', () => {
   const getSystemStore = () => useSystemStore()
+  const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const getRemindersStore = () => useRemindersStore()
   const getRelationshipRuntimeStore = () => useRelationshipRuntimeStore()
@@ -719,7 +721,7 @@ export const useCalendarStore = defineStore('calendar', () => {
         }
 
         if (!result.ok) {
-          systemStore.addApiReport({
+          getSystemApiReports().addReport({
             level: 'error',
             module: 'push',
             action: 'cancel_schedule',
@@ -808,7 +810,7 @@ export const useCalendarStore = defineStore('calendar', () => {
             reason: result.reason || 'schedule_failed',
             message: result.message || '',
           })
-          systemStore.addApiReport({
+          getSystemApiReports().addReport({
             level: 'error',
             module: 'push',
             action: 'schedule',
@@ -837,7 +839,7 @@ export const useCalendarStore = defineStore('calendar', () => {
           deliverAt: result.deliverAt || event.startsAt,
         })
 
-        systemStore.addApiReport({
+        getSystemApiReports().addReport({
           level: 'info',
           module: 'push',
           action: 'schedule',
