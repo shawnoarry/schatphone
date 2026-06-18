@@ -536,7 +536,13 @@ describe('Chat settings, Me, and appearance routes', () => {
       item.blocks?.some((block) => block?.type === 'voice_virtual' && block.transcript === 'panel voice secret'),
     )
     const productMessage = messages.find((item) =>
-      item.blocks?.some((block) => block?.type === 'product_card' && block.productId === product.id),
+      item.blocks?.some(
+        (block) =>
+          block?.type === 'share_card' &&
+          block.shareType === 'product_link' &&
+          block.sourceModule === 'shopping' &&
+          block.sourceId === product.id,
+      ),
     )
 
     expect(transferMessage?.content).toContain('88.50 USD')
@@ -545,6 +551,7 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(wrapper.get(`[data-testid="chat-message-row-${transferMessage.id}"]`).text()).toContain('panel transfer note')
     expect(wrapper.get(`[data-testid="chat-message-row-${voiceMessage.id}"]`).text()).toContain('panel voice secret')
     expect(wrapper.get(`[data-testid="chat-message-row-${productMessage.id}"]`).text()).toContain('Signal Ribbon')
+    expect(wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).text()).toContain('Open source')
 
     const transferRow = wrapper.get(`[data-testid="chat-message-row-${transferMessage.id}"]`)
     await transferRow.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
@@ -1207,6 +1214,7 @@ describe('Chat settings, Me, and appearance routes', () => {
   })
 
   test('wraps rich message blocks in bounded block containers', () => {
+    useSystemStore().settings.system.language = 'zh-CN'
     const longToken = 'supercalifragilisticexpialidocious'.repeat(4)
     const richRow = mount(ChatMessageRow, {
       props: createMessageRowProps({
@@ -1248,23 +1256,43 @@ describe('Chat settings, Me, and appearance routes', () => {
                 },
               ],
             },
+            {
+              type: 'share_card',
+              shareType: 'product_link',
+              sourceModule: 'shopping',
+              sourceId: `share-${longToken}`,
+              title: `Share ${longToken}`,
+              summary: `Shared product ${longToken}`,
+              statusLabel: 'Product link',
+              amountLabel: '$99.00',
+              route: '/shopping?productId=share-test',
+              aiContext: {
+                mutationBoundary: 'Chat displays this shared object; Shopping owns product state.',
+              },
+            },
           ],
         },
       }),
     })
 
     const blocks = richRow.findAll('.chat-message-block')
-    expect(blocks).toHaveLength(3)
+    expect(blocks).toHaveLength(4)
     expect(blocks.map((block) => block.attributes('data-block-type'))).toEqual([
       'text',
       'product_card',
       'service_notification',
+      'share_card',
     ])
     expect(richRow.get('[data-testid="chat-message-block-rich-blocks-1"]').classes()).toContain('chat-message-block')
+    expect(richRow.text()).not.toContain('可转资产')
+    expect(richRow.text()).not.toContain('鍙浆')
     expect(richRow.get(`[data-testid="chat-product-card-open-product-${longToken}"]`).classes()).toContain('text-orange-700')
     const serviceCard = richRow.get(`[data-testid="chat-service-notification-shopping-service-${longToken}"]`)
     expect(serviceCard.attributes('data-service-tone')).toBe('shopping')
     expect(richRow.get(`[data-testid="chat-service-notification-action-service-${longToken}-0"]`).classes()).toContain('text-amber-700')
+    expect(richRow.get(`[data-testid="chat-share-card-shopping-share-${longToken}"]`).text()).toContain('Product link')
+    expect(richRow.get(`[data-testid="chat-share-card-open-shopping-share-${longToken}"]`).classes()).toContain('text-amber-700')
+    expect(richRow.text()).toContain('Shopping owns product state')
 
     richRow.unmount()
   })

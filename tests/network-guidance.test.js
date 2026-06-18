@@ -32,6 +32,16 @@ describe('network guidance helpers', () => {
     expect(withUrl.nextStep).toBe('key')
     expect(withUrl.detectedKind).toBe('openai_compatible')
 
+    const localReady = buildNetworkSetupState({
+      url: 'http://localhost:11434/v1',
+      key: '',
+      model: 'llama3',
+    })
+    expect(localReady.keyRequired).toBe(false)
+    expect(localReady.hasKey).toBe(true)
+    expect(localReady.readyToTest).toBe(true)
+    expect(localReady.nextStep).toBe('test')
+
     const ready = buildNetworkSetupState({
       url: 'https://generativelanguage.googleapis.com/v1beta/models',
       key: 'gemini-key',
@@ -94,6 +104,47 @@ describe('network guidance helpers', () => {
     expect(gateway.tone).toBe('warn')
     expect(gateway.checklist.some((item) => item.id === 'cors' && item.tone === 'warn')).toBe(true)
     expect(gateway.modelFallbackEn).toContain('enter a model')
+
+    const local = buildNetworkEndpointGuidance({
+      url: 'http://localhost:11434/api/chat',
+      model: 'llama3',
+    })
+    expect(local.localEndpoint).toBe(true)
+    expect(local.keyRequired).toBe(false)
+    expect(local.pathLooksOk).toBe(true)
+    expect(local.tone).toBe('success')
+
+    const responses = buildNetworkEndpointGuidance({
+      url: 'https://gateway.example.com/v1/responses',
+      model: 'gpt-4.1-mini',
+    })
+    expect(responses.pathLooksOk).toBe(true)
+
+    const geminiRoot = buildNetworkEndpointGuidance({
+      url: 'https://generativelanguage.googleapis.com/',
+      model: 'gemini-2.5-flash',
+    })
+    expect(geminiRoot.kind).toBe('gemini')
+    expect(geminiRoot.pathLooksOk).toBe(true)
+
+    const anthropic = buildNetworkEndpointGuidance({
+      url: 'https://api.anthropic.com/v1/messages',
+      key: 'anthropic-key',
+      model: 'claude-test',
+    })
+    expect(anthropic.kind).toBe('anthropic')
+    expect(anthropic.providerLabelEn).toBe('Anthropic')
+    expect(anthropic.pathLooksOk).toBe(true)
+    expect(anthropic.checklist.some((item) => item.id === 'auth' && item.textEn.includes('x-api-key'))).toBe(true)
+
+    const azure = buildNetworkEndpointGuidance({
+      url: 'https://demo.openai.azure.com/openai/deployments/main/responses?api-version=preview',
+      key: 'azure-key',
+      model: 'main',
+    })
+    expect(azure.kind).toBe('azure_openai_responses')
+    expect(azure.providerLabelEn).toBe('Azure OpenAI')
+    expect(azure.pathLooksOk).toBe(true)
   })
 
   test('flags malformed endpoint before fetch', () => {
@@ -119,13 +170,14 @@ describe('network guidance helpers', () => {
 
     const gateway = buildNetworkPresetSaveGuidance({
       url: 'https://gateway.example.com/proxy',
-      key: 'gateway-key',
+      key: '',
       model: '',
     })
     expect(gateway.tone).toBe('warn')
     expect(gateway.blocking).toHaveLength(0)
     expect(gateway.warnings.some((item) => item.id === 'custom_gateway')).toBe(true)
     expect(gateway.warnings.some((item) => item.id === 'model')).toBe(true)
+    expect(gateway.confirmations.some((item) => item.id === 'no_key_required')).toBe(true)
 
     const invalid = buildNetworkPresetSaveGuidance({
       url: 'ftp://api.example.com/v1/chat/completions',

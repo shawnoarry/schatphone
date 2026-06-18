@@ -78,6 +78,7 @@ const emit = defineEmits([
   'open-module-route',
   'open-external-url',
   'open-shopping-product-card',
+  'open-share-card-route',
   'open-service-notification-route',
   'quote-service-notification',
 ])
@@ -211,6 +212,54 @@ const SERVICE_NOTIFICATION_TONES = {
 
 const serviceNotificationTone = (block = {}) =>
   SERVICE_NOTIFICATION_TONES[serviceNotificationToneKey(block)] || SERVICE_NOTIFICATION_TONES.service
+
+const shareCardTypeLabel = (block = {}) => {
+  if (block.shareType === 'gift_card') return t('礼品卡', 'Gift card')
+  if (block.shareType === 'virtual_gift') return t('虚拟礼物', 'Virtual gift')
+  if (block.shareType === 'tracking_share') return t('物流分享', 'Tracking share')
+  if (block.shareType === 'order_share') return t('订单分享', 'Order share')
+  if (block.shareType === 'food_shop_link') return t('店铺链接', 'Shop link')
+  if (block.shareType === 'location_share') return t('位置分享', 'Location share')
+  if (block.shareType === 'calendar_invite') return t('日程邀请', 'Calendar invite')
+  if (block.shareType === 'gallery_asset_share') return t('素材分享', 'Asset share')
+  return t('商品链接', 'Product link')
+}
+
+const shareCardSourceLabel = (block = {}) => {
+  if (block.serviceLabel || block.serviceKey) return block.serviceLabel || block.serviceKey
+  if (block.sourceModule === 'shopping') return t('Shopping', 'Shopping')
+  if (block.sourceModule === 'logistics') return t('Logistics', 'Logistics')
+  if (block.sourceModule === 'food_delivery') return t('Food Delivery', 'Food Delivery')
+  if (block.sourceModule === 'map') return t('Map', 'Map')
+  if (block.sourceModule === 'calendar') return t('Calendar', 'Calendar')
+  if (block.sourceModule === 'gallery') return t('Gallery', 'Gallery')
+  return t('来源 App', 'Source app')
+}
+
+const shareCardToneClass = (block = {}) => {
+  if (block.shareType === 'gift_card' || block.shareType === 'virtual_gift') {
+    return {
+      card: 'border-rose-100 bg-rose-50/80',
+      label: 'text-rose-600',
+      pill: 'bg-white text-rose-700',
+      button: 'border-rose-200 bg-white text-rose-700',
+    }
+  }
+  if (block.shareType === 'tracking_share') {
+    return {
+      card: 'border-sky-100 bg-sky-50/80',
+      label: 'text-sky-700',
+      pill: 'bg-white text-sky-700',
+      button: 'border-sky-200 bg-white text-sky-700',
+    }
+  }
+  return {
+    card: 'border-amber-100 bg-amber-50/80',
+    label: 'text-amber-700',
+    pill: 'bg-white text-amber-700',
+    button: 'border-amber-200 bg-white text-amber-700',
+  }
+}
 
 const quoteLabel = (quote = {}) => {
   if (quote.sourceType === 'service_notification') return t('引用通知', 'Quoted notification')
@@ -381,7 +430,6 @@ const metaClasses = computed(() => [
               <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-orange-600">{{ block.price }}</span>
               <span v-if="block.category" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">{{ block.category }}</span>
               <span v-if="block.serviceLabel || block.serviceKey" class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{{ block.serviceLabel || block.serviceKey }}</span>
-              <span v-if="block.assetEligible" class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600">{{ t('鍙浆璧勪骇', 'Asset-ready') }}</span>
               <span v-if="block.giftable" class="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] text-rose-600">{{ t('Giftable', 'Giftable') }}</span>
             </div>
             <button
@@ -390,6 +438,56 @@ const metaClasses = computed(() => [
               class="mt-2 rounded-md border border-orange-200 bg-white px-2 py-1 text-[11px] text-orange-700"
             >
               {{ t('Confirm in Shopping', 'Confirm in Shopping') }}
+            </button>
+          </div>
+
+          <div
+            v-else-if="block.type === 'share_card'"
+            class="rounded-lg border px-2.5 py-2"
+            :class="shareCardToneClass(block).card"
+            :data-testid="`chat-share-card-${block.sourceModule}-${block.sourceId}`"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <p class="text-[10px] font-semibold uppercase tracking-wide" :class="shareCardToneClass(block).label">
+                  {{ shareCardTypeLabel(block) }}
+                </p>
+                <p v-if="block.serviceLabel || block.serviceKey || block.sourceModule" class="mt-1 text-[10px] font-semibold text-gray-500">
+                  {{ shareCardSourceLabel(block) }}
+                </p>
+              </div>
+              <span
+                v-if="block.statusLabel"
+                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                :class="shareCardToneClass(block).pill"
+              >
+                {{ block.statusLabel }}
+              </span>
+            </div>
+            <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
+            <p v-if="block.summary" class="mt-1 text-[11px] leading-4 text-gray-600 line-clamp-2">{{ block.summary }}</p>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+              <span v-if="block.amountLabel" class="rounded-full px-2 py-0.5 text-[10px] font-semibold" :class="shareCardToneClass(block).pill">
+                {{ block.amountLabel }}
+              </span>
+              <span v-if="block.category" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">
+                {{ block.category }}
+              </span>
+              <span v-if="block.sourceModule" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">
+                {{ block.sourceModule }}
+              </span>
+            </div>
+            <p v-if="block.aiContext?.mutationBoundary" class="mt-2 rounded-md border border-white/70 bg-white/60 px-2 py-1.5 text-[10px] leading-4 text-gray-500">
+              {{ block.aiContext.mutationBoundary }}
+            </p>
+            <button
+              type="button"
+              :data-testid="`chat-share-card-open-${block.sourceModule}-${block.sourceId}`"
+              @click="emit('open-share-card-route', block)"
+              class="mt-2 rounded-md border px-2 py-1 text-[11px] font-semibold"
+              :class="shareCardToneClass(block).button"
+            >
+              {{ t('打开来源', 'Open source') }}
             </button>
           </div>
 

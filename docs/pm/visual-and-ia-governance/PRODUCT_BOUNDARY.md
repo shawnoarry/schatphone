@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-05-31
+Updated: 2026-06-18
 
 ## 1. Core Rule
 
@@ -43,6 +43,11 @@ It also owns:
   - Current World Pack may summarize enabled world entries and service-account availability, but App Store owns browse/place/open for world app entries and Chat will own service-account add flows;
   - nonstandard-app proposals must be reviewed inside Current World Pack before they become appBindings, with loading, empty, error, and rejected states staying readable and rejected suggestions staying invisible outside the review surface;
   - source apps still keep their own visual owner after launch, with the World Pack providing labels, terminology, accents, default context, and safe UX variants through target-app UX context seams.
+- how Network setup should be interpreted:
+  - `Network & API` is a native-system configuration surface;
+  - the primary user action is entering or loading an API endpoint configuration, not choosing a provider brand;
+  - Gemini vs OpenAI-compatible behavior is inferred from the URL and confirmed through diagnostics/smoke tests;
+  - saved API configurations are the appropriate dropdown content, while provider-brand templates should stay secondary helpers rather than visible first-level choices.
 
 ## 3. What It Should Not Replace
 

@@ -14,6 +14,7 @@ Updated: 2026-06-01
 - messaging-app style first-level shell and thread-list controls
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
 - Chat Me for user identity/anonymity, recent interaction data, and derived social feed items
+- source-owned `share_card` rendering, message context, and Shopping share send paths for product links, gift cards, and virtual gifts
 
 ## 2. Workstream B: Chat Directory And Binding
 
@@ -67,3 +68,4 @@ Treat these as bugs:
 8. Chat Settings starts owning Chat-side identity/social presence instead of behavior, appearance, and maintenance controls
 9. friend/block social state is treated as current relationship progress, or generated social events bypass event-runtime review/audit
 10. recall is implemented as deletion, or recalled original content remains available through copy, quote preview, pending quote bars, edit, reroll, saved-message, AI context, or history review
+11. `product_link` share cards are presented as purchased, delivered, or directly giftable items; user-sendable gifts should be source-created digital gifts, vouchers, or virtual gifts

@@ -81,7 +81,7 @@ describe('ChatView Shopping product preview routing', () => {
     expect(router.currentRoute.value.path).toBe('/shopping')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
-      intent: 'product_card',
+      intent: 'product_link',
       category: 'digital',
       service: 'nova_digital',
       productId: product.id,
@@ -91,7 +91,7 @@ describe('ChatView Shopping product preview routing', () => {
     wrapper.unmount()
   })
 
-  test('sends a Shopping product card as a local chat message without checkout side effects', async () => {
+  test('sends a Shopping product link share card as a local chat message without checkout side effects', async () => {
     const router = createTestRouter()
     await router.push('/chat/1')
     await router.isReady()
@@ -121,22 +121,21 @@ describe('ChatView Shopping product preview routing', () => {
     await nextTick()
 
     expect(router.currentRoute.value.path).toBe('/chat/1')
-    expect(wrapper.text()).toContain('Shopping 商品卡')
+    expect(wrapper.text()).toContain('Product link')
     expect(wrapper.text()).toContain('Mira Lens')
     expect(wrapper.text()).toContain('Nova Digital')
-    expect(wrapper.get(`[data-testid="chat-product-card-open-${product.id}"]`).exists()).toBe(true)
+    expect(wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).exists()).toBe(true)
     expect(shoppingStore.cartQuantity).toBe(0)
     expect(shoppingStore.orderCount).toBe(0)
 
-    await wrapper.get(`[data-testid="chat-product-card-open-${product.id}"]`).trigger('click')
+    await wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).trigger('click')
     await flushPromises()
     await nextTick()
 
     expect(router.currentRoute.value.path).toBe('/shopping')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
-      intent: 'product_card',
-      chatId: '1',
+      intent: 'product_link',
       category: 'digital',
       service: 'nova_digital',
       productId: product.id,

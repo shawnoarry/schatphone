@@ -91,6 +91,7 @@ const VALID_BLOCK_TYPES = new Set([
   'link_external',
   'transfer_virtual',
   'product_card',
+  'share_card',
   'service_notification',
   'image_virtual',
   'mini_scene',
@@ -289,6 +290,24 @@ const normalizeSourceEventId = (value) => normalizeSingleLineText(value, 140)
 
 const normalizeServiceNotificationKind = (value) =>
   SERVICE_NOTIFICATION_KINDS.has(value) ? value : 'shopping_order'
+
+const normalizeShareCardType = (value) => normalizeSingleLineText(value, 80, 'share')
+
+const normalizeShareCardAiContext = (value = {}) => {
+  const raw = value && typeof value === 'object' ? value : {}
+  const sourceTruthOwner = normalizeSingleLineText(raw.sourceTruthOwner, MAX_SHORT_LABEL_LENGTH, 'Source app')
+
+  return {
+    intent: normalizeSingleLineText(raw.intent, 80, 'share'),
+    recipientMeaning: trimTo(raw.recipientMeaning, MAX_DETAIL_TEXT_LENGTH),
+    sourceTruthOwner,
+    mutationBoundary: trimTo(
+      raw.mutationBoundary,
+      MAX_DETAIL_TEXT_LENGTH,
+      `Chat displays this shared object; ${sourceTruthOwner} owns the source state.`,
+    ),
+  }
+}
 
 const sanitizeKnowledgePointId = (value) => {
   const raw = trimTo(value, MAX_KNOWLEDGE_POINT_ID_LENGTH)
@@ -690,6 +709,32 @@ const normalizeMessageBlock = (rawBlock) => {
     }
   }
 
+  if (blockType === 'share_card') {
+    const title = normalizeSingleLineText(rawBlock.title || rawBlock.label, MAX_SHORT_LABEL_LENGTH, 'Share card')
+    const sourceModule = normalizeSourceModule(rawBlock.sourceModule)
+    const sourceId = normalizeSourceId(rawBlock.sourceId)
+    if (!title || !sourceModule || !sourceId) return null
+
+    return {
+      type: 'share_card',
+      shareType: normalizeShareCardType(rawBlock.shareType),
+      sourceModule,
+      sourceId,
+      sourceEventId: normalizeSourceEventId(rawBlock.sourceEventId),
+      title,
+      summary: trimTo(rawBlock.summary || rawBlock.desc || rawBlock.description, MAX_DETAIL_TEXT_LENGTH),
+      statusLabel: normalizeSingleLineText(rawBlock.statusLabel, MAX_SHORT_LABEL_LENGTH),
+      amountLabel: normalizeSingleLineText(rawBlock.amountLabel || rawBlock.amount || rawBlock.price, 80),
+      previewImageUrl: sanitizeImageUrl(rawBlock.previewImageUrl || rawBlock.imageUrl),
+      route: sanitizeRoutePath(rawBlock.route, SAFE_ROUTE_FALLBACK),
+      actions: normalizeServiceNotificationActions(rawBlock.actions),
+      aiContext: normalizeShareCardAiContext(rawBlock.aiContext),
+      category: normalizeSingleLineText(rawBlock.category, 80),
+      serviceKey: normalizeSingleLineText(rawBlock.serviceKey, 80),
+      serviceLabel: normalizeSingleLineText(rawBlock.serviceLabel, MAX_SHORT_LABEL_LENGTH),
+    }
+  }
+
   if (blockType === 'service_notification') {
     const title = normalizeSingleLineText(rawBlock.title || rawBlock.label, MAX_SHORT_LABEL_LENGTH, '服务通知')
     const sourceModule = normalizeSourceModule(rawBlock.sourceModule)
@@ -777,6 +822,11 @@ const summarizeBlocks = (blocks) => {
     ? blocks.find((block) => block?.type === 'product_card' && block.title)
     : null
   if (firstProductCard) return `[商品] ${firstProductCard.title}`
+
+  const firstShareCard = Array.isArray(blocks)
+    ? blocks.find((block) => block?.type === 'share_card' && block.title)
+    : null
+  if (firstShareCard) return `[Share] ${firstShareCard.title}`
 
   if (!Array.isArray(blocks) || blocks.length === 0) return ''
 

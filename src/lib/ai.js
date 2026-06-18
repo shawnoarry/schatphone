@@ -2,6 +2,9 @@ const OPENAI_DEFAULT_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini'
 const GEMINI_DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash'
+const ANTHROPIC_DEFAULT_BASE_URL = 'https://api.anthropic.com/v1'
+const ANTHROPIC_DEFAULT_MODEL = 'claude-sonnet-4-6'
+const ANTHROPIC_VERSION = '2023-06-01'
 const MODELS_REQUEST_TIMEOUT_MS = 12000
 const CHAT_REQUEST_TIMEOUT_MS = 30000
 const MAX_IMAGE_REFERENCES = 3
@@ -121,9 +124,44 @@ export const formatApiErrorForUi = (error, fallbackMessage = '请求失败，请
 export const detectApiKindFromUrl = (url) => {
   const lower = normalizeUrl(url).toLowerCase()
   if (!lower) return 'openai_compatible'
+  if (lower.includes('api.anthropic.com') || lower.includes('/v1/messages')) return 'anthropic'
+  if (lower.includes('openai.azure.com') && lower.includes('/responses')) return 'azure_openai_responses'
+  if (lower.includes('openai.azure.com')) return 'azure_openai'
+  if (lower.includes('generativelanguage.googleapis.com') && lower.includes('/openai')) return 'openai_compatible'
   if (lower.includes('generativelanguage.googleapis.com')) return 'gemini'
   if (lower.includes('/v1beta/models') || lower.includes(':generatecontent')) return 'gemini'
+  if (lower.includes('/responses')) return 'openai_responses'
   return 'openai_compatible'
+}
+
+const isLocalHostName = (hostname = '') => {
+  const normalized = hostname.toLowerCase()
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1' || normalized === '[::1]'
+}
+
+const isOfficialOpenAiHostName = (hostname = '') => hostname.toLowerCase() === 'api.openai.com'
+const isOfficialGeminiHostName = (hostname = '') =>
+  hostname.toLowerCase() === 'generativelanguage.googleapis.com'
+const isOfficialAnthropicHostName = (hostname = '') => hostname.toLowerCase() === 'api.anthropic.com'
+const isAzureOpenAiHostName = (hostname = '') => hostname.toLowerCase().endsWith('.openai.azure.com')
+
+export const requiresApiKeyForUrl = (url) => {
+  try {
+    const parsed = ensureUrl(url, OPENAI_DEFAULT_CHAT_URL)
+    const kind = detectApiKindFromUrl(parsed.toString())
+    if (kind === 'anthropic') return isOfficialAnthropicHostName(parsed.hostname)
+    if (kind === 'azure_openai_responses') return isAzureOpenAiHostName(parsed.hostname)
+    if (kind === 'azure_openai') return isAzureOpenAiHostName(parsed.hostname)
+    if (kind === 'gemini') return isOfficialGeminiHostName(parsed.hostname)
+    if (kind === 'openai_responses') return isOfficialOpenAiHostName(parsed.hostname)
+    if (kind === 'openai_compatible') {
+      if (isLocalHostName(parsed.hostname)) return false
+      return isOfficialOpenAiHostName(parsed.hostname) || isOfficialGeminiHostName(parsed.hostname)
+    }
+  } catch {
+    return true
+  }
+  return true
 }
 
 export const normalizeImageReferences = (input = []) =>
@@ -276,8 +314,28 @@ const toOpenAIChatUrl = (url) => {
     return parsed.toString()
   }
 
+  if (path.endsWith('/api/chat') || path.endsWith('/api/generate') || path.endsWith('/api/tags')) {
+    parsed.pathname = '/v1/chat/completions'
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/responses')) {
+    parsed.pathname = `${path.slice(0, -'/responses'.length)}/chat/completions`
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/completions')) {
+    parsed.pathname = `${path.slice(0, -'/completions'.length)}/chat/completions`
+    return parsed.toString()
+  }
+
   if (path.endsWith('/models')) {
     parsed.pathname = `${path.slice(0, -'/models'.length)}/chat/completions`
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/openai')) {
+    parsed.pathname = `${path}/chat/completions`
     return parsed.toString()
   }
 
@@ -310,6 +368,172 @@ const toOpenAIModelsUrl = (url) => {
 
   chatUrl.pathname = '/v1/models'
   return chatUrl.toString()
+}
+
+const toOpenAIResponsesUrl = (url) => {
+  const parsed = ensureUrl(url, 'https://api.openai.com/v1/responses')
+  const path = parsed.pathname.replace(/\/+$/, '')
+
+  if (!path || path === '') {
+    parsed.pathname = '/v1/responses'
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/responses')) {
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/chat/completions')) {
+    parsed.pathname = `${path.slice(0, -'/chat/completions'.length)}/responses`
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/models')) {
+    parsed.pathname = `${path.slice(0, -'/models'.length)}/responses`
+    return parsed.toString()
+  }
+
+  if (path === '/v1' || path.endsWith('/v1')) {
+    parsed.pathname = `${path}/responses`
+    return parsed.toString()
+  }
+
+  return parsed.toString()
+}
+
+const toAnthropicMessagesUrl = (url) => {
+  const parsed = ensureUrl(url, `${ANTHROPIC_DEFAULT_BASE_URL}/messages`)
+  const path = parsed.pathname.replace(/\/+$/, '')
+
+  if (!path || path === '') {
+    parsed.pathname = '/v1/messages'
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/messages')) {
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/models')) {
+    parsed.pathname = `${path.slice(0, -'/models'.length)}/messages`
+    return parsed.toString()
+  }
+
+  if (path === '/v1' || path.endsWith('/v1')) {
+    parsed.pathname = `${path}/messages`
+    return parsed.toString()
+  }
+
+  return parsed.toString()
+}
+
+const toAnthropicModelsUrl = (url) => {
+  const messagesUrl = new URL(toAnthropicMessagesUrl(url))
+  const path = messagesUrl.pathname.replace(/\/+$/, '')
+
+  if (path.endsWith('/messages')) {
+    messagesUrl.pathname = `${path.slice(0, -'/messages'.length)}/models`
+    return messagesUrl.toString()
+  }
+
+  if (path === '/v1' || path.endsWith('/v1')) {
+    messagesUrl.pathname = `${path}/models`
+    return messagesUrl.toString()
+  }
+
+  messagesUrl.pathname = '/v1/models'
+  return messagesUrl.toString()
+}
+
+const toAzureOpenAIChatUrl = (url) => {
+  const parsed = ensureUrl(url, OPENAI_DEFAULT_CHAT_URL)
+  const path = parsed.pathname.replace(/\/+$/, '')
+
+  if (path.endsWith('/chat/completions')) {
+    if (!parsed.searchParams.has('api-version')) {
+      parsed.searchParams.set('api-version', '2024-10-21')
+    }
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/responses')) {
+    if (!parsed.searchParams.has('api-version')) {
+      parsed.searchParams.set('api-version', 'preview')
+    }
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/models')) {
+    parsed.pathname = `${path.slice(0, -'/models'.length)}/chat/completions`
+  } else if (path === '/openai' || path.endsWith('/openai')) {
+    const deployment = parsed.searchParams.get('deployment') || parsed.searchParams.get('deploymentId') || ''
+    if (deployment) {
+      parsed.pathname = `${path}/deployments/${encodeURIComponent(deployment)}/chat/completions`
+      parsed.searchParams.delete('deployment')
+      parsed.searchParams.delete('deploymentId')
+    }
+  }
+
+  if (!parsed.searchParams.has('api-version')) {
+    parsed.searchParams.set('api-version', '2024-10-21')
+  }
+  return parsed.toString()
+}
+
+const toAzureOpenAIResponsesUrl = (url) => {
+  const parsed = ensureUrl(url, OPENAI_DEFAULT_CHAT_URL)
+  const path = parsed.pathname.replace(/\/+$/, '')
+
+  if (path.endsWith('/responses')) {
+    if (!parsed.searchParams.has('api-version')) {
+      parsed.searchParams.set('api-version', 'preview')
+    }
+    return parsed.toString()
+  }
+
+  if (path.endsWith('/chat/completions')) {
+    parsed.pathname = `${path.slice(0, -'/chat/completions'.length)}/responses`
+  } else if (path === '/openai' || path.endsWith('/openai')) {
+    const deployment = parsed.searchParams.get('deployment') || parsed.searchParams.get('deploymentId') || ''
+    if (deployment) {
+      parsed.pathname = `${path}/deployments/${encodeURIComponent(deployment)}/responses`
+      parsed.searchParams.delete('deployment')
+      parsed.searchParams.delete('deploymentId')
+    }
+  }
+
+  if (!parsed.searchParams.has('api-version')) {
+    parsed.searchParams.set('api-version', 'preview')
+  }
+  return parsed.toString()
+}
+
+const toAzureOpenAIModelsUrl = (url) => {
+  const parsed = ensureUrl(url, OPENAI_DEFAULT_CHAT_URL)
+  const path = parsed.pathname.replace(/\/+$/, '')
+  const apiVersion = parsed.searchParams.get('api-version') || '2024-10-21'
+
+  if (path.endsWith('/deployments')) {
+    parsed.searchParams.set('api-version', apiVersion)
+    return parsed.toString()
+  }
+
+  const deploymentIndex = path.indexOf('/deployments/')
+  if (deploymentIndex >= 0) {
+    parsed.pathname = `${path.slice(0, deploymentIndex)}/deployments`
+    parsed.searchParams.set('api-version', apiVersion)
+    return parsed.toString()
+  }
+
+  if (path === '/openai' || path.endsWith('/openai')) {
+    parsed.pathname = `${path}/deployments`
+    parsed.searchParams.set('api-version', apiVersion)
+    return parsed.toString()
+  }
+
+  parsed.pathname = '/openai/deployments'
+  parsed.searchParams.set('api-version', apiVersion)
+  return parsed.toString()
 }
 
 const toGeminiVersionBaseUrl = (url) => {
@@ -345,9 +569,50 @@ const toGeminiGenerateUrl = (url, modelName) => {
   return `${versionBaseUrl}/models/${model}:generateContent`
 }
 
+const extractAnthropicText = (data) =>
+  (data?.content || [])
+    .map((item) => (item?.type === 'text' ? item.text : ''))
+    .filter(Boolean)
+    .join('\n')
+
+const messageContentToText = (content) => {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) return content.map((item) => item?.text || '').filter(Boolean).join('\n')
+  return ''
+}
+
+const toResponsesInput = (messages = [], systemPrompt = '') => {
+  const input = []
+  if (systemPrompt) {
+    input.push({
+      role: 'system',
+      content: systemPrompt,
+    })
+  }
+  ;(Array.isArray(messages) ? messages : []).forEach((message) => {
+    const content = messageContentToText(message?.content)
+    if (!content) return
+    input.push({
+      role: message?.role === 'assistant' ? 'assistant' : 'user',
+      content,
+    })
+  })
+  return input
+}
+
+const extractResponsesText = (data) => {
+  if (typeof data?.output_text === 'string') return data.output_text
+  const output = Array.isArray(data?.output) ? data.output : []
+  return output
+    .flatMap((item) => (Array.isArray(item?.content) ? item.content : []))
+    .map((item) => item?.text || '')
+    .filter(Boolean)
+    .join('\n')
+}
+
 export async function fetchAvailableModels({ settings }) {
   const key = settings.api.key?.trim()
-  if (!key) {
+  if (!key && requiresApiKeyForUrl(settings.api.url)) {
     throw createApiError('No API Key', 'NO_API_KEY')
   }
 
@@ -378,12 +643,69 @@ export async function fetchAvailableModels({ settings }) {
       return { kind, models }
     }
 
+    if (kind === 'anthropic') {
+      const modelsUrl = toAnthropicModelsUrl(settings.api.url)
+      const response = await fetchWithTimeout(modelsUrl, {
+        method: 'GET',
+        headers: {
+          'anthropic-version': ANTHROPIC_VERSION,
+          'x-api-key': key,
+        },
+      })
+      if (!response.ok) {
+        throw createApiError(
+          `Load models failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let payload
+      try {
+        payload = await response.json()
+      } catch {
+        throw createApiError('Load models failed: invalid JSON', 'PARSE_ERROR')
+      }
+
+      const models = (payload.data || payload.models || []).map((item) => item?.id || item?.name).filter(Boolean)
+      return { kind, models }
+    }
+
+    if (kind === 'azure_openai' || kind === 'azure_openai_responses') {
+      const modelsUrl = toAzureOpenAIModelsUrl(settings.api.url)
+      const response = await fetchWithTimeout(modelsUrl, {
+        method: 'GET',
+        headers: {
+          'api-key': key,
+        },
+      })
+      if (!response.ok) {
+        throw createApiError(
+          `Load deployments failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let payload
+      try {
+        payload = await response.json()
+      } catch {
+        throw createApiError('Load deployments failed: invalid JSON', 'PARSE_ERROR')
+      }
+
+      const models = (payload.data || payload.value || [])
+        .map((item) => item?.id || item?.model || item?.name)
+        .filter(Boolean)
+      return { kind, models }
+    }
+
     const modelsUrl = toOpenAIModelsUrl(settings.api.url)
+    const headers = {}
+    if (key) headers.Authorization = `Bearer ${key}`
     const response = await fetchWithTimeout(modelsUrl, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${key}`,
-      },
+      headers,
     })
     if (!response.ok) {
       throw createApiError(
@@ -430,7 +752,7 @@ export async function callAI({
   withMeta = false,
 }) {
   const key = settings.api.key?.trim()
-  if (!key) {
+  if (!key && requiresApiKeyForUrl(settings.api.url)) {
     throw createApiError('No API Key', 'NO_API_KEY')
   }
 
@@ -523,6 +845,170 @@ export async function callAI({
       return buildCallPayload(data.candidates?.[0]?.content?.parts?.[0]?.text || '', executionMeta, withMeta)
     }
 
+    if (apiKind === 'anthropic') {
+      const url = toAnthropicMessagesUrl(settings.api.url)
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'anthropic-version': ANTHROPIC_VERSION,
+            'x-api-key': key,
+          },
+          body: JSON.stringify({
+            model: settings.api.model || ANTHROPIC_DEFAULT_MODEL,
+            system: systemPrompt,
+            messages: contextEnhancedMessages.map((message) => ({
+              role: message.role === 'assistant' ? 'assistant' : 'user',
+              content: message.content,
+            })),
+            max_tokens: 500,
+            temperature: 0.7,
+          }),
+          signal,
+        },
+        CHAT_REQUEST_TIMEOUT_MS,
+      )
+
+      if (!response.ok) {
+        throw createApiError(
+          `Anthropic API Request Failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw createApiError('Anthropic API invalid JSON', 'PARSE_ERROR')
+      }
+      executionMeta.finalTransportMode =
+        normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      return buildCallPayload(extractAnthropicText(data), executionMeta, withMeta)
+    }
+
+    if (apiKind === 'openai_responses') {
+      const url = toOpenAIResponsesUrl(settings.api.url)
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(key ? { Authorization: `Bearer ${key}` } : {}),
+          },
+          body: JSON.stringify({
+            model: settings.api.model || OPENAI_DEFAULT_MODEL,
+            input: toResponsesInput(contextEnhancedMessages, systemPrompt),
+            temperature: 0.7,
+            max_output_tokens: 500,
+          }),
+          signal,
+        },
+        CHAT_REQUEST_TIMEOUT_MS,
+      )
+
+      if (!response.ok) {
+        throw createApiError(
+          `Responses API Request Failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw createApiError('Responses API invalid JSON', 'PARSE_ERROR')
+      }
+      executionMeta.finalTransportMode =
+        normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      return buildCallPayload(extractResponsesText(data), executionMeta, withMeta)
+    }
+
+    if (apiKind === 'azure_openai_responses') {
+      const url = toAzureOpenAIResponsesUrl(settings.api.url)
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': key,
+          },
+          body: JSON.stringify({
+            input: toResponsesInput(contextEnhancedMessages, systemPrompt),
+            temperature: 0.7,
+            max_output_tokens: 500,
+          }),
+          signal,
+        },
+        CHAT_REQUEST_TIMEOUT_MS,
+      )
+
+      if (!response.ok) {
+        throw createApiError(
+          `Azure OpenAI Responses API Request Failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw createApiError('Azure OpenAI Responses API invalid JSON', 'PARSE_ERROR')
+      }
+      executionMeta.finalTransportMode =
+        normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      return buildCallPayload(extractResponsesText(data), executionMeta, withMeta)
+    }
+
+    if (apiKind === 'azure_openai') {
+      const url = toAzureOpenAIChatUrl(settings.api.url)
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': key,
+          },
+          body: JSON.stringify({
+            messages: [{ role: 'system', content: systemPrompt }, ...contextEnhancedMessages],
+            temperature: 0.7,
+            max_tokens: 500,
+            stream: false,
+          }),
+          signal,
+        },
+        CHAT_REQUEST_TIMEOUT_MS,
+      )
+
+      if (!response.ok) {
+        throw createApiError(
+          `Azure OpenAI API Request Failed: ${response.status}`,
+          classifyHttpCode(response.status),
+          { status: response.status },
+        )
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw createApiError('Azure OpenAI API invalid JSON', 'PARSE_ERROR')
+      }
+      executionMeta.finalTransportMode =
+        normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      return buildCallPayload(data.choices?.[0]?.message?.content || '', executionMeta, withMeta)
+    }
+
     const url = toOpenAIChatUrl(settings.api.url)
     const requestOpenAi = async (bodyMessages) => {
       const payload = {
@@ -537,7 +1023,7 @@ export async function callAI({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${key}`,
+            ...(key ? { Authorization: `Bearer ${key}` } : {}),
           },
           body: JSON.stringify(payload),
           signal,

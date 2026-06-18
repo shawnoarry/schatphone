@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-06-10
+Updated: 2026-06-18
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -91,6 +91,9 @@ What is already landed:
 75. Lock-screen notification cleanup and Settings Software Update V1 are landed. Lock cards now support per-item clear plus clear-all, Settings has a Software Update entry/subpage with current version, available version, release notes, check/install/later/restart actions, and update notifications route to `/settings?menu=software-update`. Plan/result: `docs/superpowers/plans/2026-06-09-lock-notifications-software-update-plan.md`.
 76. Moon Bistro's Food Delivery shop template now has its first local-asset visual polish: the shop header uses a candlelit cover from `public/images/ui-assets/apps/food-delivery/moon-bistro/`, initial menu dishes use local food photos, the dark tray cards have stronger embedded circular image depth, and app-local public image URLs are preserved by the shared image-source contract so visual assets can live in the repo while user-edited dish images remain replaceable.
 77. Moon Bistro's shop menu now has a sectioned browse pattern: nine seeded local-photo dishes are grouped behind a sticky side rail, empty cart and support panels stay hidden until useful, and the first screen reads more like a real independent shop mini app than a Food Delivery backend/status page.
+78. Network & API setup now follows a URL-first IA: the page no longer presents OpenAI official, OpenAI-compatible gateway, and Gemini as first-level choice buttons. Users enter the endpoint directly, the app auto-detects the transport type, and saved API configurations are loaded from the dropdown near the URL field. Provider templates remain a helper-level code concept only and should not dominate the visible setup path.
+79. Network & API URL-first IA now has broader transport affordance coverage: common OpenAI-compatible base/model/chat paths, OpenAI/Azure Responses paths, Anthropic Messages paths, Gemini native paths, Azure deployment URLs, and local/server-auth gateway endpoints can be entered directly. The API Key step may become optional after URL detection; the visible dropdown is for saved user configurations, not provider-brand selection.
+80. Network & API setup now keeps the necessary functional loop compact: URL, key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel, while saved-configuration management and diagnostics are secondary disclosures. The page should not return to one large stacked block per capability.
 
 Still incomplete:
 

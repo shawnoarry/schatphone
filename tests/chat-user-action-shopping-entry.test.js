@@ -17,11 +17,11 @@ const createBaseProps = () => ({
   },
   gallerySendState: {
     enabled: true,
-    message: '素材可发送',
+    message: 'Assets can be sent.',
   },
   locationShareState: {
     enabled: true,
-    message: '位置可发送',
+    message: 'Location can be sent.',
   },
   userActionGridHint: 'Chat can recommend products, but Shopping owns checkout.',
   linkFormState: {
@@ -58,7 +58,9 @@ const createBaseProps = () => ({
       serviceKey: 'nova_digital',
       serviceLabel: 'Nova Digital',
       assetEligible: true,
-      giftable: true,
+      shareType: 'product_link',
+      shareLabel: 'Product link',
+      giftable: false,
     },
   ],
   suggestionFeatureEnabled: false,
@@ -72,18 +74,19 @@ describe('ChatUserActionPanel Shopping entry', () => {
     setActivePinia(createPinia())
   })
 
-  test('offers a Shopping suggestion entry without owning checkout state', async () => {
+  test('offers Shopping share previews without owning checkout state', async () => {
     const wrapper = mount(ChatUserActionPanel, {
       props: createBaseProps(),
     })
 
     const shoppingButton = wrapper.get('[data-testid="chat-user-action-open-shopping"]')
-    expect(shoppingButton.text()).toContain('购物建议')
-    expect(shoppingButton.text()).toContain('去 Shopping 确认')
-    expect(wrapper.text()).toContain('只读商品预览')
+    expect(shoppingButton.text()).toContain('Shopping')
     expect(wrapper.text()).toContain('Mira Lens')
     expect(wrapper.text()).toContain('1288.00 CNY')
     expect(wrapper.text()).toContain('Nova Digital')
+    expect(wrapper.text()).toContain('Product link')
+    expect(wrapper.text()).not.toContain('Giftable')
+    expect(wrapper.text()).not.toContain('Asset-ready')
 
     await shoppingButton.trigger('click')
 
@@ -113,7 +116,9 @@ describe('ChatUserActionPanel Shopping entry', () => {
         serviceKey: 'nova_digital',
         serviceLabel: 'Nova Digital',
         assetEligible: true,
-        giftable: true,
+        shareType: 'product_link',
+        shareLabel: 'Product link',
+        giftable: false,
       },
     ])
     wrapper.unmount()

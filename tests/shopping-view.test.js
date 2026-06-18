@@ -58,7 +58,7 @@ describe('ShoppingView', () => {
       giftable: true,
     })
     const sourceContact = chatStore.getContactById(1)
-    await router.push(`/shopping?category=digital&productId=${product.id}&source=chat&intent=product_card&chatId=1`)
+    await router.push(`/shopping?category=digital&productId=${product.id}&source=chat&intent=product_link&chatId=1`)
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -72,7 +72,7 @@ describe('ShoppingView', () => {
     expect(wrapper.find('[data-testid="shopping-chat-source-banner"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Mira Lens')
     expect(wrapper.text()).toContain('联动边界状态')
-    expect(wrapper.text()).toContain('Chat 商品卡片')
+    expect(wrapper.text()).toContain('Chat 商品链接')
     expect(wrapper.text()).toContain('Calendar 配送线索')
     expect(wrapper.text()).toContain('Wallet 消费记账')
     expect(wrapper.text()).toContain('用户确认')

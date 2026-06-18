@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-06-01
+Updated: 2026-06-18
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -28,6 +28,7 @@ Updated: 2026-06-01
 - unsupported nonstandard proposals such as `black_market` must be blocked with a clear reason until a dedicated app shell exists; they must not be visually repackaged as an unrelated existing app.
 - scoped customization layers: global Appearance CSS, Chat-scoped CSS, and app/world-app CSS should layer predictably, with user-authored overrides above World Pack defaults. Shell-level `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks are now available, and Appearance Advanced CSS can now save app/world-app scoped CSS layers with active World Pack entry selection, target selector preview, and pause/clear recovery.
 - app-scoped CSS and world-app-scoped CSS should remain predictable when they target the same element: app scope provides the broad app layer, while world-app scope is narrower and emitted later for the selected `data-world-pack`/`data-world-app`.
+- Network & API setup should keep the URL-first flow: endpoint input and saved API configuration loading are the main path; provider-brand templates can exist as helper data but should not render as first-level buttons.
 
 ## 3. Workstream C: Visual Rebuild Queue
 
@@ -50,3 +51,4 @@ Treat these as bugs:
 8. AI-proposed nonstandard app entries bypass Current World Pack review or appear in App Store before explicit confirmation
 9. Current World Pack starts creating Chat service accounts, launching world apps, or jumping to App Store directly from Settings instead of staying a lightweight activation/status surface
 10. Shop-entry UI treats Food Delivery as the only possible runtime target, or lets App Store mutate Shopping/Food Delivery business records instead of handing off to the selected owner.
+11. Network setup asks the user to choose a provider brand before allowing direct endpoint entry, even though the transport type can be inferred from URL.

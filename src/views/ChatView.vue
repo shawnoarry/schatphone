@@ -46,6 +46,12 @@ import {
 } from '../lib/world-interface'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
+  SHAREABLE_OBJECT_TYPES,
+  createProductLinkShareObject,
+  createVirtualGiftShareObject,
+  shareableObjectToChatBlock,
+} from '../lib/shareable-object'
+import {
   getAvatarImageGalleryAssetId,
   resolveAvatarImageSourceUrl,
 } from '../lib/avatar-image-source-resolver'
@@ -634,6 +640,47 @@ const foodDeliveryServiceLabel = (serviceKey) => {
   return t(preset.zh, preset.en)
 }
 
+const VIRTUAL_GIFT_SHARE_TYPES = new Set([
+  SHAREABLE_OBJECT_TYPES.GIFT_CARD,
+  SHAREABLE_OBJECT_TYPES.VIRTUAL_GIFT,
+])
+
+const normalizeShoppingShareType = (value, rawProduct = {}) => {
+  if (VIRTUAL_GIFT_SHARE_TYPES.has(value)) return value
+  if (value === SHAREABLE_OBJECT_TYPES.PRODUCT_LINK) return value
+
+  const productText = [
+    rawProduct.id,
+    rawProduct.productId,
+    rawProduct.title,
+    rawProduct.category,
+    rawProduct.desc,
+  ]
+    .filter((item) => typeof item === 'string')
+    .join(' ')
+    .toLowerCase()
+
+  const looksLikeGiftCard =
+    productText.includes('gift card') ||
+    productText.includes('gift-card') ||
+    productText.includes('voucher') ||
+    productText.includes('coupon') ||
+    productText.includes('redeem') ||
+    productText.includes('redemption') ||
+    productText.includes('membership') ||
+    productText.includes('礼品卡') ||
+    productText.includes('兑换券') ||
+    productText.includes('兑换码') ||
+    productText.includes('虚拟礼物')
+
+  return looksLikeGiftCard ? SHAREABLE_OBJECT_TYPES.VIRTUAL_GIFT : SHAREABLE_OBJECT_TYPES.PRODUCT_LINK
+}
+
+const isVirtualGiftShareType = (shareType) => VIRTUAL_GIFT_SHARE_TYPES.has(shareType)
+
+const shoppingShareLabel = (shareType) =>
+  isVirtualGiftShareType(shareType) ? t('虚拟礼物', 'Virtual gift') : t('商品链接', 'Product link')
+
 const normalizeShoppingCardPayload = (rawProduct = {}) => {
   const productId = typeof rawProduct.productId === 'string' ? rawProduct.productId.trim() : typeof rawProduct.id === 'string' ? rawProduct.id.trim() : ''
   const title = typeof rawProduct.title === 'string' ? rawProduct.title.trim() : ''
@@ -649,6 +696,7 @@ const normalizeShoppingCardPayload = (rawProduct = {}) => {
   const price = typeof rawProduct.price === 'string' && rawProduct.price.trim()
     ? rawProduct.price.trim()
     : formatShoppingPreviewPrice(rawProduct)
+  const shareType = normalizeShoppingShareType(rawProduct.shareType, rawProduct)
   return {
     id: productId,
     productId,
@@ -660,7 +708,9 @@ const normalizeShoppingCardPayload = (rawProduct = {}) => {
     price,
     currency,
     assetEligible: rawProduct.assetEligible === true,
-    giftable: rawProduct.giftable === true,
+    shareType,
+    shareLabel: shoppingShareLabel(shareType),
+    giftable: isVirtualGiftShareType(shareType),
   }
 }
 
@@ -817,17 +867,8 @@ const shoppingPreviewProducts = computed(() =>
     : shoppingStore.products)
     .filter((product) => product?.stockStatus !== 'sold_out')
     .slice(0, 3)
-    .map((product) => ({
-      id: product.id,
-      title: product.title,
-      category: product.category,
-      desc: product.desc,
-      serviceKey: product.serviceKey,
-      serviceLabel: shoppingServiceLabel(product.serviceKey),
-      price: formatShoppingPreviewPrice(product),
-      assetEligible: product.assetEligible === true,
-      giftable: product.giftable === true,
-    })),
+    .map((product) => normalizeShoppingCardPayload(product))
+    .filter(Boolean),
 )
 
 const activeGiftOrderSummaries = computed(() => {
@@ -2163,6 +2204,22 @@ const messageBlockContextText = (block = {}) => {
       .filter(Boolean)
       .join(' | ')
   }
+  if (block.type === 'share_card') {
+    return [
+      '[share]',
+      block.shareType ? `type: ${block.shareType}` : '',
+      block.title || '',
+      block.statusLabel ? `status: ${block.statusLabel}` : '',
+      block.amountLabel ? `amount: ${block.amountLabel}` : '',
+      block.category ? `category: ${block.category}` : '',
+      block.summary || '',
+      block.aiContext?.recipientMeaning ? `meaning: ${block.aiContext.recipientMeaning}` : '',
+      block.aiContext?.sourceTruthOwner ? `source owner: ${block.aiContext.sourceTruthOwner}` : '',
+      block.aiContext?.mutationBoundary ? `boundary: ${block.aiContext.mutationBoundary}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  }
   if (block.type === 'service_notification') return serviceNotificationContextText(block)
   if (block.type === 'image_virtual') {
     return ['[image]', block.alt || '', block.caption ? `caption: ${block.caption}` : '']
@@ -2192,6 +2249,7 @@ const messageBlockPreviewText = (block = {}) => {
     return `${t('转账', 'Transfer')} · ${block.amount || ''} ${block.currency || ''}`.trim()
   }
   if (block.type === 'product_card') return `${t('商品', 'Product')} · ${block.title || ''}`.trim()
+  if (block.type === 'share_card') return `${shoppingShareLabel(block.shareType)} · ${block.title || ''}`.trim()
   if (block.type === 'service_notification') {
     return [block.title, block.summary].filter(Boolean).join(' · ')
   }
@@ -3208,6 +3266,13 @@ const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
   if (first.type === 'product_card') {
     return trimAssistantText(
       `${first.title} ${first.price || ''} ${first.currency || ''}`.trim(),
+      MAX_ASSISTANT_TEXT_CHARS,
+      '',
+    )
+  }
+  if (first.type === 'share_card') {
+    return trimAssistantText(
+      `${first.title || ''} ${first.amountLabel || ''}`.trim(),
       MAX_ASSISTANT_TEXT_CHARS,
       '',
     )
@@ -4995,28 +5060,22 @@ const submitShoppingProductCard = (rawProduct = {}) => {
   if (!activeChat.value) return
   const product = normalizeShoppingCardPayload(rawProduct)
   if (!product) {
-    showUiNotice('warning', t('商品卡片不可用。', 'Product card is unavailable.'))
+    showUiNotice('warning', t('分享卡片不可用。', 'Share card is unavailable.'))
     return
   }
+  const shareable = isVirtualGiftShareType(product.shareType)
+    ? createVirtualGiftShareObject(product)
+    : createProductLinkShareObject(product)
+  const shareBlock = shareableObjectToChatBlock(shareable)
+  if (!shareBlock) {
+    showUiNotice('warning', t('分享卡片不可用。', 'Share card is unavailable.'))
+    return
+  }
+  const label = shoppingShareLabel(product.shareType)
   appendUserMessage({
-    content: `${t('商品推荐', 'Product pick')}: ${product.title}`,
-    blocks: [
-      {
-        type: 'product_card',
-        productId: product.productId,
-        title: product.title,
-        category: product.category,
-        price: product.price,
-        currency: product.currency,
-        desc: product.desc,
-        route: '/shopping',
-        serviceKey: product.serviceKey,
-        serviceLabel: product.serviceLabel,
-        assetEligible: product.assetEligible,
-        giftable: product.giftable,
-      },
-    ],
-    source: 'shopping_product_card',
+    content: `${label}: ${product.title}`,
+    blocks: [shareBlock],
+    source: isVirtualGiftShareType(product.shareType) ? 'shopping_virtual_gift' : 'shopping_product_link',
   })
   closeUserActionPanel()
 }
@@ -5567,6 +5626,14 @@ const openServiceNotificationRoute = (block = {}, action = null) => {
   recordServiceRouteFeedback(block, action, routePath)
 }
 
+const openShareCardRoute = (block = {}) => {
+  if (!pushSafeServiceRoute(block.route)) return
+  showUiNotice(
+    'info',
+    t('已打开来源 App；聊天记录保持不变。', 'Opened the source app; Chat history stays unchanged.'),
+  )
+}
+
 const reopenServiceRouteFeedbackSource = () => {
   const routePath = activeServiceRouteFeedback.value?.route
   if (!routePath) return
@@ -5579,7 +5646,7 @@ const openShoppingFromChat = (payload = {}) => {
   const serviceKey = typeof payload?.serviceKey === 'string' ? payload.serviceKey.trim() : ''
   const intent = typeof payload?.intent === 'string' && payload.intent.trim()
     ? payload.intent.trim()
-    : 'product_card'
+    : SHAREABLE_OBJECT_TYPES.PRODUCT_LINK
   const orderId = typeof payload?.orderId === 'string' ? payload.orderId.trim() : ''
   const chatId = Number(activeChat.value?.id)
   closeUserActionPanel()
@@ -6814,6 +6881,7 @@ onBeforeUnmount(() => {
             @open-module-route="openModuleRoute"
             @open-external-url="openExternalUrl"
             @open-shopping-product-card="openShoppingProductCard"
+            @open-share-card-route="openShareCardRoute"
             @open-service-notification-route="openServiceNotificationRoute"
             @quote-service-notification="quoteServiceNotification"
           />

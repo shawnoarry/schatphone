@@ -106,7 +106,7 @@ Important files:
 
 - `src/lib/ai.js`
   - unified AI entry point
-  - provider-aware transport behavior
+  - provider-aware transport behavior and URL normalization for Gemini native, OpenAI-compatible chat, OpenAI Responses, Anthropic Messages, and Azure OpenAI endpoints, including base `/v1`, model-list, deployment, responses, and local/server-auth gateway shapes
   - error normalization
 - `src/lib/persistence.js`
   - storage helpers

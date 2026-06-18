@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-06-15
+Updated: 2026-06-18
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -48,6 +48,9 @@ Current visual pass:
 - `外观 / Appearance` Theme, Font, and App Icons keep state/previews visible first; phone-sized wallpaper-source selection, advanced CSS editing, custom font editing, and per-app icon/accent edits now open as focused sheets.
 
 - Chat App now applies the same entry-ownership rule inside the installed app: bottom `Me` is the user/social surface, the top-right gear opens Chat Settings, and Chat Appearance is a Chat-owned subpage with Kakao/WeChat/iMessage layout modes plus Chat-scoped CSS. The latest polish strengthens the phone-native feel with a Kakao-like Messages header/list sheet, clearer active bottom tabs, `Me` compact social stats plus recent-interaction avatars, and layout thumbnails in Chat Appearance.
+- `缃戠粶涓?API / Network & API` now treats endpoint entry as the primary setup path: users paste or type a URL, the app auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations appear as the loadable dropdown. Common base/model/chat URLs, native responses/messages/deployment URLs, and local/server-auth compatible gateways should be handled through URL affordances; provider-brand templates should not return as first-level choice buttons on this system settings page.
+
+- Network & API's current compact IA keeps URL, key, model input/selection, model-list refresh, connection test, and save-current-settings in one primary connection panel. Saved-configuration management and diagnostics remain available behind secondary disclosures instead of becoming default stacked page blocks.
 
 ## Read This Package In This Order
 

@@ -105,6 +105,22 @@ const USER_ACTION_FORM_LINK = 'link'
 const USER_ACTION_FORM_TRANSFER = 'transfer'
 const USER_ACTION_FORM_VOICE = 'voice'
 const USER_ACTION_FORM_GALLERY = 'gallery'
+
+const isVirtualGiftShare = (product = {}) =>
+  product.shareType === 'gift_card' || product.shareType === 'virtual_gift'
+
+const shoppingShareTypeLabel = (product = {}) => {
+  if (product.shareLabel) return product.shareLabel
+  return isVirtualGiftShare(product) ? t('虚拟礼物', 'Virtual gift') : t('商品链接', 'Product link')
+}
+
+const shoppingShareActionLabel = (product = {}) =>
+  isVirtualGiftShare(product) ? t('发送礼物', 'Send gift') : t('发送链接', 'Send link')
+
+const shoppingShareHint = (product = {}) =>
+  isVirtualGiftShare(product)
+    ? t('来源创建礼物', 'Source creates gift')
+    : t('来源保留商品状态', 'Source keeps product state')
 </script>
 
 <template>
@@ -168,8 +184,8 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
         @click="$emit('open-shopping')"
         class="rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-left text-[11px] text-orange-700 transition hover:bg-orange-100"
       >
-        <span class="block font-semibold">{{ t('购物建议', 'Shopping pick') }}</span>
-        <span class="block text-[10px] text-orange-500">{{ t('去 Shopping 确认', 'Confirm in Shopping') }}</span>
+        <span class="block font-semibold">{{ t('Shopping 分享', 'Shopping share') }}</span>
+        <span class="block text-[10px] text-orange-500">{{ t('去 Shopping 生成', 'Create in Shopping') }}</span>
       </button>
     </div>
     <div
@@ -177,8 +193,8 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
       class="mt-2 rounded-xl border border-orange-100 bg-orange-50/70 p-2"
     >
       <div class="flex items-center justify-between gap-2">
-        <p class="text-[11px] font-semibold text-orange-800">{{ t('只读商品预览', 'Read-only product preview') }}</p>
-        <span class="text-[10px] text-orange-500">{{ t('结算仍在 Shopping', 'Checkout stays in Shopping') }}</span>
+        <p class="text-[11px] font-semibold text-orange-800">{{ t('Shopping 分享预览', 'Shopping share preview') }}</p>
+        <span class="text-[10px] text-orange-500">{{ t('来源状态仍在 Shopping', 'Source state stays in Shopping') }}</span>
       </div>
       <div class="mt-2 grid grid-cols-1 gap-2">
         <button
@@ -203,16 +219,16 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
           </span>
           <span class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
             <span class="rounded-full bg-orange-50 px-1.5 py-0.5 text-orange-600">{{ product.category }}</span>
+            <span class="rounded-full bg-white px-1.5 py-0.5 text-orange-700">
+              {{ shoppingShareTypeLabel(product) }}
+            </span>
             <span
               v-if="product.serviceLabel || product.serviceKey"
               class="rounded-full bg-amber-50 px-1.5 py-0.5 text-amber-700"
             >
               {{ product.serviceLabel || product.serviceKey }}
             </span>
-            <span v-if="product.assetEligible" class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-emerald-600">
-              {{ t('可转资产', 'Asset-ready') }}
-            </span>
-            <span v-if="product.giftable" class="rounded-full bg-rose-50 px-1.5 py-0.5 text-rose-600">
+            <span v-if="isVirtualGiftShare(product)" class="rounded-full bg-rose-50 px-1.5 py-0.5 text-rose-600">
               {{ t('可赠送', 'Giftable') }}
             </span>
           </span>
@@ -226,9 +242,9 @@ const USER_ACTION_FORM_GALLERY = 'gallery'
               @keydown.space.prevent.stop="$emit('send-product-card', product)"
               class="rounded-full bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
             >
-              {{ t('发送商品卡', 'Send card') }}
+              {{ shoppingShareActionLabel(product) }}
             </span>
-            <span class="text-[10px] text-orange-600">{{ t('点卡片去确认', 'Tap card to confirm') }}</span>
+            <span class="text-[10px] text-orange-600">{{ shoppingShareHint(product) }}</span>
           </span>
         </button>
       </div>

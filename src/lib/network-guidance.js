@@ -1,4 +1,4 @@
-import { detectApiKindFromUrl } from './ai'
+import { detectApiKindFromUrl, requiresApiKeyForUrl } from './ai'
 
 const OPENAI_TEMPLATE = Object.freeze({
   id: 'openai',
@@ -42,6 +42,7 @@ const normalizeStatusCode = (value) => {
   const status = Number(value)
   return Number.isFinite(status) && status > 0 ? Math.floor(status) : 0
 }
+
 const parseHttpUrl = (value) => {
   const url = normalizeText(value)
   if (!url) return null
@@ -53,6 +54,90 @@ const parseHttpUrl = (value) => {
   } catch {
     return null
   }
+}
+
+const isLocalEndpoint = (parsed) => {
+  const host = parsed?.hostname?.toLowerCase() || ''
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]'
+}
+
+const getProviderLabels = (kind) => {
+  if (kind === 'gemini') return { providerLabelZh: 'Gemini', providerLabelEn: 'Gemini' }
+  if (kind === 'anthropic') return { providerLabelZh: 'Anthropic', providerLabelEn: 'Anthropic' }
+  if (kind === 'azure_openai' || kind === 'azure_openai_responses') {
+    return { providerLabelZh: 'Azure OpenAI', providerLabelEn: 'Azure OpenAI' }
+  }
+  if (kind === 'openai_responses') {
+    return { providerLabelZh: 'OpenAI Responses', providerLabelEn: 'OpenAI Responses' }
+  }
+  return { providerLabelZh: 'OpenAI 兼容', providerLabelEn: 'OpenAI-compatible' }
+}
+
+const openAiCompatiblePathLooksOk = (path) => {
+  if (!path || path === '/') return true
+  if (path === '/v1' || path.endsWith('/v1')) return true
+  if (path.endsWith('/models')) return true
+  if (path.endsWith('/chat/completions')) return true
+  if (path.endsWith('/responses')) return true
+  if (path.endsWith('/completions')) return true
+  if (path.endsWith('/api/chat') || path.endsWith('/api/generate') || path.endsWith('/api/tags')) return true
+  if (path.endsWith('/openai') || path.endsWith('/openai/v1')) return true
+  if (path.includes('/openai/') && (path.endsWith('/models') || path.endsWith('/chat/completions'))) return true
+  return false
+}
+
+const geminiPathLooksOk = (path, officialGemini) => {
+  if (officialGemini && (!path || path === '/')) return true
+  return path.includes('/v1beta') || path.includes('/v1') || path.includes(':generatecontent')
+}
+
+const anthropicPathLooksOk = (path) => {
+  if (!path || path === '/') return true
+  return path === '/v1' || path.endsWith('/v1') || path.endsWith('/messages') || path.endsWith('/models')
+}
+
+const azureOpenAiPathLooksOk = (path) => {
+  if (!path || path === '/') return true
+  if (path === '/openai' || path.endsWith('/openai')) return true
+  if (path.endsWith('/deployments')) return true
+  if (path.includes('/deployments/') && path.endsWith('/chat/completions')) return true
+  if (path.includes('/deployments/') && path.endsWith('/responses')) return true
+  return false
+}
+
+const pathLooksOkForKind = (kind, path, officialGemini) => {
+  if (kind === 'gemini') return geminiPathLooksOk(path, officialGemini)
+  if (kind === 'anthropic') return anthropicPathLooksOk(path)
+  if (kind === 'azure_openai' || kind === 'azure_openai_responses') return azureOpenAiPathLooksOk(path)
+  if (kind === 'openai_responses') return openAiCompatiblePathLooksOk(path)
+  return openAiCompatiblePathLooksOk(path)
+}
+
+const getEndpointPathTextEn = (kind) => {
+  if (kind === 'gemini') {
+    return 'Gemini native URLs can be a root URL, /v1beta, /v1, or models/generateContent path; generation derives the model path.'
+  }
+  if (kind === 'anthropic') {
+    return 'Anthropic URLs can be a root URL, /v1, /messages, or /models; requests use the native Messages API.'
+  }
+  if (kind === 'azure_openai' || kind === 'azure_openai_responses') {
+    return 'Azure OpenAI URLs should include /openai/deployments/{deployment}/chat/completions or /responses, plus api-version.'
+  }
+  if (kind === 'openai_responses') {
+    return 'OpenAI Responses URLs can be a root URL, /v1, /responses, /models, or /chat/completions; calls use the Responses API.'
+  }
+  return 'OpenAI-compatible URLs can be a root URL, /v1, /models, /chat/completions, or local Ollama-style /api/chat paths.'
+}
+
+const getEndpointAuthTextEn = (kind, keyRequired, keyProvided) => {
+  if (kind === 'gemini') return 'Gemini native endpoints require a Google API key, sent as a query parameter.'
+  if (kind === 'anthropic') return 'Anthropic official endpoints require x-api-key authentication.'
+  if (kind === 'azure_openai' || kind === 'azure_openai_responses') return 'Azure OpenAI endpoints require an api-key header.'
+  if (keyRequired) return 'Official endpoints require Bearer token auth, so add an API key.'
+  if (keyProvided) {
+    return 'This compatible endpoint will receive a Bearer token. Leave it blank if the gateway does not need one.'
+  }
+  return 'This compatible endpoint can be tested without a key. Add one only if the gateway requires auth.'
 }
 
 export const getNetworkProviderTemplate = (templateId) =>
@@ -74,7 +159,8 @@ export const buildNetworkSetupState = (apiSettings = {}) => {
   const model = normalizeText(apiSettings.model)
   const detectedKind = detectApiKindFromUrl(url)
   const hasUrl = Boolean(url)
-  const hasKey = Boolean(key)
+  const keyRequired = hasUrl ? requiresApiKeyForUrl(url) : true
+  const hasKey = keyRequired ? Boolean(key) : true
   const hasModel = Boolean(model)
   const completedSteps = [hasUrl, hasKey, hasModel].filter(Boolean).length
 
@@ -87,6 +173,7 @@ export const buildNetworkSetupState = (apiSettings = {}) => {
     hasUrl,
     hasKey,
     hasModel,
+    keyRequired,
     completedSteps,
     totalSteps: 3,
     progressPercent: Math.round((completedSteps / 3) * 100),
@@ -98,17 +185,16 @@ export const buildNetworkSetupState = (apiSettings = {}) => {
 
 export const buildNetworkSetupCopy = (state = {}) => {
   const detectedKind = state.detectedKind || 'openai_compatible'
-  const providerLabelZh = detectedKind === 'gemini' ? 'Gemini' : 'OpenAI 兼容'
-  const providerLabelEn = detectedKind === 'gemini' ? 'Gemini' : 'OpenAI-compatible'
+  const { providerLabelZh, providerLabelEn } = getProviderLabels(detectedKind)
 
   if (state.nextStep === 'url') {
     return {
-      titleZh: '先选择或填写接口地址',
-      titleEn: 'Choose or enter an endpoint first',
-      detailZh: '可以点下方供应商模板快速填入 URL，再粘贴自己的 Key。',
-      detailEn: 'Use a provider template below to fill the URL, then paste your own key.',
-      actionZh: '选择模板',
-      actionEn: 'Choose template',
+      titleZh: '先填写接口 URL',
+      titleEn: 'Enter an endpoint URL first',
+      detailZh: '可以粘贴基础地址、模型列表地址或对话接口地址，也可以从已保存配置下拉载入。',
+      detailEn: 'Paste a base URL, model-list URL, or chat endpoint, or load one from saved configurations.',
+      actionZh: '填写 URL',
+      actionEn: 'Enter URL',
       tone: 'warn',
       providerLabelZh,
       providerLabelEn,
@@ -117,10 +203,10 @@ export const buildNetworkSetupCopy = (state = {}) => {
 
   if (state.nextStep === 'key') {
     return {
-      titleZh: '继续粘贴 API Key',
+      titleZh: '继续填写 API Key',
       titleEn: 'Paste the API key next',
-      detailZh: `当前识别为 ${providerLabelZh}，Key 只保存在本地配置中。`,
-      detailEn: `Detected as ${providerLabelEn}. The key is only stored in local settings.`,
+      detailZh: `当前识别为 ${providerLabelZh}，这个地址通常需要 Key 才能测试。`,
+      detailEn: `Detected as ${providerLabelEn}. This endpoint usually needs a key before testing.`,
       actionZh: '填写 Key',
       actionEn: 'Fill key',
       tone: 'warn',
@@ -146,8 +232,12 @@ export const buildNetworkSetupCopy = (state = {}) => {
   return {
     titleZh: '配置已可测试',
     titleEn: 'Configuration is ready to test',
-    detailZh: '点击刷新模型列表来确认 URL、Key 与模型接口是否可用。',
-    detailEn: 'Refresh models to verify the endpoint, key, and model API.',
+    detailZh: state.keyRequired
+      ? '点击刷新模型列表来确认 URL、Key 与模型接口是否可用。'
+      : '这个地址可无 Key 测试；点击刷新模型列表确认 URL 与模型接口是否可用。',
+    detailEn: state.keyRequired
+      ? 'Refresh models to verify the endpoint, key, and model API.'
+      : 'This endpoint can be tested without a key. Refresh models to verify the URL and model API.',
     actionZh: '测试连接',
     actionEn: 'Test connection',
     tone: 'success',
@@ -158,24 +248,31 @@ export const buildNetworkSetupCopy = (state = {}) => {
 
 export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
   const url = normalizeText(apiSettings.url)
+  const key = normalizeText(apiSettings.key)
   const model = normalizeText(apiSettings.model)
   const kind = detectApiKindFromUrl(url)
-  const providerLabelZh = kind === 'gemini' ? 'Gemini' : 'OpenAI 兼容'
-  const providerLabelEn = kind === 'gemini' ? 'Gemini' : 'OpenAI-compatible'
+  const { providerLabelZh, providerLabelEn } = getProviderLabels(kind)
   const parsed = parseHttpUrl(url)
   const host = parsed?.hostname?.toLowerCase() || ''
   const path = parsed?.pathname?.replace(/\/+$/, '').toLowerCase() || ''
   const validHttpUrl = Boolean(parsed)
   const officialOpenAi = host === 'api.openai.com'
   const officialGemini = host === 'generativelanguage.googleapis.com'
-  const officialProvider = kind === 'gemini' ? officialGemini : officialOpenAi
+  const officialAnthropic = host === 'api.anthropic.com'
+  const officialAzureOpenAi = host.endsWith('.openai.azure.com')
+  const officialProvider =
+    kind === 'gemini'
+      ? officialGemini
+      : kind === 'anthropic'
+        ? officialAnthropic
+        : kind === 'azure_openai' || kind === 'azure_openai_responses'
+          ? officialAzureOpenAi
+          : officialOpenAi || (officialGemini && path.includes('/openai'))
+  const localEndpoint = isLocalEndpoint(parsed)
   const customGateway = validHttpUrl && !officialProvider
-  const pathLooksOk =
-    !validHttpUrl
-      ? false
-      : kind === 'gemini'
-        ? path.includes('/v1beta') || path.includes('/v1')
-        : path === '/v1' || path.endsWith('/v1') || path.endsWith('/models') || path.endsWith('/chat/completions')
+  const keyRequired = validHttpUrl ? requiresApiKeyForUrl(url) : true
+  const keyProvided = Boolean(key)
+  const pathLooksOk = validHttpUrl ? pathLooksOkForKind(kind, path, officialGemini) : false
 
   const checklist = []
 
@@ -187,12 +284,15 @@ export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
       providerLabelEn,
       validHttpUrl: false,
       customGateway: false,
+      localEndpoint: false,
+      keyRequired: true,
+      keyProvided: false,
       pathLooksOk: false,
       tone: 'neutral',
       titleZh: '等待接口地址',
       titleEn: 'Waiting for endpoint',
-      detailZh: '选择模板或填写 URL 后会显示路径与网关检查。',
-      detailEn: 'Choose a template or enter a URL to see path and gateway checks.',
+      detailZh: '填写或载入 API URL 后，会显示路径、鉴权和网关检查。',
+      detailEn: 'Enter or load an API URL to see path, auth, and gateway checks.',
       checklist,
       modelFallbackActive: false,
     }
@@ -212,6 +312,9 @@ export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
       providerLabelEn,
       validHttpUrl,
       customGateway: false,
+      localEndpoint: false,
+      keyRequired: true,
+      keyProvided,
       pathLooksOk: false,
       tone: 'error',
       titleZh: '接口地址格式需要修正',
@@ -225,50 +328,66 @@ export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
 
   checklist.push({
     id: 'protocol',
-    tone: 'success',
-    textZh: parsed.protocol === 'https:' ? '已使用 HTTPS。' : '当前是 HTTP，仅建议用于 localhost 或内网调试。',
-    textEn: parsed.protocol === 'https:' ? 'HTTPS is enabled.' : 'HTTP should only be used for localhost or internal testing.',
+    tone: parsed.protocol === 'https:' || localEndpoint ? 'success' : 'warn',
+    textZh:
+      parsed.protocol === 'https:'
+        ? '已使用 HTTPS。'
+        : localEndpoint
+          ? '本地 HTTP 地址可用于本机模型或内网调试。'
+          : '当前是 HTTP，仅建议用于 localhost 或内网调试。',
+    textEn:
+      parsed.protocol === 'https:'
+        ? 'HTTPS is enabled.'
+        : localEndpoint
+          ? 'Local HTTP is acceptable for local models or internal testing.'
+          : 'HTTP should only be used for localhost or internal testing.',
   })
+
   checklist.push({
     id: 'path',
     tone: pathLooksOk ? 'success' : 'warn',
     textZh:
       kind === 'gemini'
-        ? 'Gemini 通常使用 /v1beta/models，生成请求会自动拼接模型路径。'
-        : 'OpenAI 兼容接口建议使用 /v1/chat/completions，模型列表会自动换算到 /v1/models。',
+        ? 'Gemini 原生 URL 可填写根地址、/v1beta、/v1 或 models/generateContent 路径，生成请求会自动拼接模型路径。'
+        : 'OpenAI 兼容 URL 可填写根地址、/v1、/models、/chat/completions、/responses，或本地 Ollama /api/chat 等常见路径。',
     textEn:
-      kind === 'gemini'
-        ? 'Gemini usually uses /v1beta/models; generation requests derive the model path automatically.'
-        : 'OpenAI-compatible endpoints should use /v1/chat/completions; model listing derives /v1/models automatically.',
+      getEndpointPathTextEn(kind),
   })
+
   checklist.push({
     id: 'cors',
-    tone: customGateway ? 'warn' : 'success',
-    textZh: customGateway
-      ? '自定义网关需允许当前站点跨域访问，否则浏览器会报网络/CORS 错误。'
-      : '官方接口路径已识别；若浏览器环境受限，可改用允许跨域的网关。',
-    textEn: customGateway
-      ? 'Custom gateways must allow CORS from this app, otherwise the browser reports network/CORS errors.'
-      : 'Official endpoint detected. If the browser environment blocks it, use a CORS-enabled gateway.',
+    tone: customGateway && !localEndpoint ? 'warn' : 'success',
+    textZh:
+      customGateway && !localEndpoint
+        ? '自定义网关需要允许当前站点跨域访问，否则浏览器会报网络/CORS 错误。'
+        : localEndpoint
+          ? '本地服务仍需允许浏览器跨域访问当前站点。'
+          : '官方或标准路径已识别；如果浏览器环境受限，可改用允许跨域的网关。',
+    textEn:
+      customGateway && !localEndpoint
+        ? 'Custom gateways must allow CORS from this app, otherwise the browser reports network/CORS errors.'
+        : localEndpoint
+          ? 'The local service still needs to allow browser CORS from this app.'
+          : 'Official or standard endpoint detected. If the browser environment blocks it, use a CORS-enabled gateway.',
   })
+
   checklist.push({
     id: 'auth',
-    tone: customGateway ? 'warn' : 'success',
+    tone: keyRequired && !keyProvided ? 'warn' : 'success',
     textZh:
       kind === 'gemini'
-        ? 'Gemini 模型列表会把 Key 作为查询参数发送；请确认 Key 属于目标 Google 项目。'
-        : customGateway
-          ? 'OpenAI 兼容网关需接受 Bearer token，或在网关侧完成鉴权转换。'
-          : 'OpenAI 官方接口会使用 Bearer token 鉴权。',
+        ? 'Gemini 原生接口需要 Google API Key，并会把 Key 作为查询参数发送。'
+        : keyRequired
+          ? '官方接口需要 Bearer token 鉴权，请填写 API Key。'
+          : keyProvided
+            ? '这个兼容地址会携带 Bearer token；如果网关不需要 Key，也可以留空。'
+            : '这个兼容地址可无 Key 测试；如果网关要求鉴权，再填写对应 Key。',
     textEn:
-      kind === 'gemini'
-        ? 'Gemini model listing sends the key as a query parameter; confirm it belongs to the target Google project.'
-        : customGateway
-          ? 'OpenAI-compatible gateways must accept Bearer tokens or translate auth server-side.'
-          : 'OpenAI official endpoints use Bearer token authentication.',
+      getEndpointAuthTextEn(kind, keyRequired, keyProvided),
   })
 
   const modelFallbackActive = Boolean(model)
+  const tone = !pathLooksOk ? 'warn' : customGateway && !localEndpoint ? 'warn' : 'success'
   return {
     visible: true,
     kind,
@@ -276,16 +395,23 @@ export const buildNetworkEndpointGuidance = (apiSettings = {}) => {
     providerLabelEn,
     validHttpUrl,
     customGateway,
+    localEndpoint,
+    keyRequired,
+    keyProvided,
     pathLooksOk,
-    tone: customGateway || !pathLooksOk ? 'warn' : 'success',
-    titleZh: customGateway ? '自定义网关检查' : '供应商接口检查',
-    titleEn: customGateway ? 'Custom gateway check' : 'Provider endpoint check',
-    detailZh: customGateway
-      ? `当前按 ${providerLabelZh} 网关处理。请重点确认路径、CORS 与鉴权转发。`
-      : `当前识别为 ${providerLabelZh} 官方/标准路径。`,
-    detailEn: customGateway
-      ? `This is treated as a ${providerLabelEn} gateway. Verify path, CORS, and auth forwarding.`
-      : `Detected as a standard ${providerLabelEn} endpoint.`,
+    tone,
+    titleZh: localEndpoint ? '本地接口检查' : customGateway ? '自定义网关检查' : '供应商接口检查',
+    titleEn: localEndpoint ? 'Local endpoint check' : customGateway ? 'Custom gateway check' : 'Provider endpoint check',
+    detailZh: localEndpoint
+      ? `当前按 ${providerLabelZh} 本地/内网接口处理，请确认服务已启动并允许浏览器访问。`
+      : customGateway
+        ? `当前按 ${providerLabelZh} 网关处理，请重点确认路径、CORS 与鉴权转发。`
+        : `当前识别为 ${providerLabelZh} 官方/标准路径。`,
+    detailEn: localEndpoint
+      ? `This is treated as a local/internal ${providerLabelEn} endpoint. Confirm the service is running and browser-accessible.`
+      : customGateway
+        ? `This is treated as a ${providerLabelEn} gateway. Verify path, CORS, and auth forwarding.`
+        : `Detected as a standard ${providerLabelEn} endpoint.`,
     checklist,
     modelFallbackActive,
     modelFallbackZh: modelFallbackActive
@@ -301,6 +427,7 @@ export const buildNetworkPresetSaveGuidance = (apiSettings = {}) => {
   const endpoint = buildNetworkEndpointGuidance(apiSettings)
   const hasKey = Boolean(normalizeText(apiSettings.key))
   const hasModel = Boolean(normalizeText(apiSettings.model))
+  const keyRequired = endpoint.keyRequired !== false
   const blocking = []
   const warnings = []
   const confirmations = []
@@ -308,48 +435,56 @@ export const buildNetworkPresetSaveGuidance = (apiSettings = {}) => {
   if (!endpoint.validHttpUrl) {
     blocking.push({
       id: 'url',
-      textZh: '接口地址格式仍需修正，建议先不要保存为预设。',
-      textEn: 'Endpoint format still needs fixing; avoid saving it as a preset yet.',
+      textZh: '接口地址格式仍需修正，建议先不要保存为配置。',
+      textEn: 'Endpoint format still needs fixing; avoid saving it as a configuration yet.',
     })
   }
 
-  if (!hasKey) {
+  if (!hasKey && keyRequired) {
     blocking.push({
       id: 'key',
-      textZh: '缺少 API Key，保存后无法直接用于连接测试。',
-      textEn: 'API key is missing, so the preset cannot be tested directly after saving.',
+      textZh: '缺少 API Key，保存后无法直接用于官方接口连接测试。',
+      textEn: 'API key is missing, so this configuration cannot directly test official endpoints.',
     })
   }
 
-  if (endpoint.customGateway) {
+  if (endpoint.customGateway && !endpoint.localEndpoint) {
     warnings.push({
       id: 'custom_gateway',
-      textZh: '这是自定义网关预设，请确认 CORS 与鉴权转发稳定。',
-      textEn: 'This is a custom gateway preset. Confirm CORS and auth forwarding are stable.',
+      textZh: '这是自定义网关配置，请确认 CORS 与鉴权转发稳定。',
+      textEn: 'This is a custom gateway configuration. Confirm CORS and auth forwarding are stable.',
+    })
+  }
+
+  if (!hasKey && endpoint.validHttpUrl && !keyRequired) {
+    confirmations.push({
+      id: 'no_key_required',
+      textZh: '这个兼容地址可不保存 Key，适合本地模型或由网关侧完成鉴权的配置。',
+      textEn: 'This compatible endpoint can be saved without a key, useful for local models or server-auth gateways.',
     })
   }
 
   if (endpoint.validHttpUrl && !endpoint.pathLooksOk) {
     warnings.push({
       id: 'path',
-      textZh: '接口路径看起来不是标准路径，保存前建议先测试连接。',
-      textEn: 'Endpoint path does not look standard; test the connection before saving.',
+      textZh: '接口路径不是常见可换算路径，保存前建议先测试连接。',
+      textEn: 'Endpoint path is not a common adapter path; test the connection before saving.',
     })
   }
 
   if (hasKey) {
     confirmations.push({
       id: 'key_storage',
-      textZh: 'Key 会随预设保存在本地浏览器配置中；不要在共享设备上保存真实生产 Key。',
-      textEn: 'The key is stored with the preset in local browser settings. Do not save production keys on shared devices.',
+      textZh: 'Key 会随配置保存在本地浏览器设置中；不要在共享设备上保存真实生产 Key。',
+      textEn: 'The key is stored with the configuration in local browser settings. Do not save production keys on shared devices.',
     })
   }
 
   if (hasModel) {
     confirmations.push({
       id: 'manual_model',
-      textZh: '当前模型名会随预设保存；模型列表不可用时会作为手动兜底使用。',
-      textEn: 'The current model name is saved with the preset and used as manual fallback when model listing is unavailable.',
+      textZh: '当前模型名会随配置保存；模型列表不可用时会作为手动兜底使用。',
+      textEn: 'The current model name is saved with the configuration and used as manual fallback when model listing is unavailable.',
     })
   } else {
     warnings.push({
@@ -370,28 +505,28 @@ export const buildNetworkPresetSaveGuidance = (apiSettings = {}) => {
     confirmations,
     titleZh:
       tone === 'error'
-        ? '预设保存前还需修正'
+        ? '配置保存前还需修正'
         : tone === 'warn'
-          ? '预设可保存，但建议先确认'
-          : '预设保存信息完整',
+          ? '配置可保存，但建议先确认'
+          : '配置保存信息完整',
     titleEn:
       tone === 'error'
-        ? 'Preset needs fixes before saving'
+        ? 'Configuration needs fixes before saving'
         : tone === 'warn'
-          ? 'Preset can be saved, but review first'
-          : 'Preset is ready to save',
+          ? 'Configuration can be saved, but review first'
+          : 'Configuration is ready to save',
     detailZh:
       tone === 'error'
         ? '建议先补齐必需项，避免保存一个无法复用的配置。'
         : tone === 'warn'
           ? '保存不会被阻止，但这些信息会影响后续复用稳定性。'
-          : 'URL、Key 与模型兜底信息已具备，可作为可复用配置保存。',
+          : 'URL、鉴权方式与模型兜底信息已具备，可作为可复用配置保存。',
     detailEn:
       tone === 'error'
         ? 'Fix required items first to avoid saving an unusable configuration.'
         : tone === 'warn'
           ? 'Saving is allowed, but these details affect reuse stability.'
-          : 'Endpoint, key, and model fallback are ready for a reusable preset.',
+          : 'Endpoint, auth mode, and model fallback are ready for a reusable configuration.',
   }
 }
 
@@ -399,8 +534,7 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
   const url = normalizeText(apiSettings.url)
   const model = normalizeText(apiSettings.model)
   const detectedKind = detectApiKindFromUrl(url)
-  const providerLabelZh = detectedKind === 'gemini' ? 'Gemini' : 'OpenAI 兼容'
-  const providerLabelEn = detectedKind === 'gemini' ? 'Gemini' : 'OpenAI-compatible'
+  const { providerLabelZh, providerLabelEn } = getProviderLabels(detectedKind)
   const rawCode = normalizeErrorCode(error.code)
   const statusCode = normalizeStatusCode(error.status || error.statusCode)
   const code = rawCode || (statusCode >= 500 ? 'SERVER' : statusCode > 0 ? 'HTTP_ERROR' : 'UNKNOWN')
@@ -420,10 +554,10 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
       ...base,
       titleZh: '接口地址还没填写',
       titleEn: 'Endpoint is missing',
-      detailZh: '先选择一个供应商模板，或填写完整的 API 接口地址。',
-      detailEn: 'Choose a provider template first, or enter the full API endpoint URL.',
-      fixZh: '优先点上方模板；如果使用自建网关，确认地址以 http/https 开头并包含正确路径。',
-      fixEn: 'Use a template first. For a custom gateway, make sure the URL starts with http/https and includes the right path.',
+      detailZh: '请先输入完整 API URL，或从已保存的 API 配置下拉载入。',
+      detailEn: 'Enter the full API endpoint URL, or load one from saved API configurations.',
+      fixZh: '可填写基础地址、/v1、/models、/chat/completions、Gemini /v1beta，或本地模型服务地址。',
+      fixEn: 'Use a base URL, /v1, /models, /chat/completions, Gemini /v1beta, or a local model service URL.',
     }
   }
 
@@ -432,10 +566,10 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
       ...base,
       titleZh: 'API Key 缺失',
       titleEn: 'API key is missing',
-      detailZh: `当前识别为 ${providerLabelZh}，但还没有可用于测试的 Key。`,
-      detailEn: `Detected as ${providerLabelEn}, but no key is available for testing.`,
-      fixZh: '粘贴供应商后台生成的 Key；如果是网关 Key，请确认网关是否接受 Bearer token。',
-      fixEn: 'Paste the key generated by the provider. For gateway keys, verify that the gateway accepts Bearer tokens.',
+      detailZh: `当前识别为 ${providerLabelZh}，但这个地址需要 Key 才能测试。`,
+      detailEn: `Detected as ${providerLabelEn}, but this endpoint needs a key for testing.`,
+      fixZh: '粘贴供应商后台生成的 Key；如果是自建网关，也可改用由网关侧完成鉴权的兼容地址。',
+      fixEn: 'Paste the key generated by the provider. For custom gateways, you can also use a server-auth compatible endpoint.',
     }
   }
 
@@ -446,8 +580,8 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
       titleEn: 'Endpoint URL is invalid',
       detailZh: '浏览器无法解析当前 URL，因此请求还没有真正发出。',
       detailEn: 'The browser cannot parse the current URL, so the request was not sent.',
-      fixZh: '检查是否缺少 https://、域名或路径；可重新套用供应商模板后再改。',
-      fixEn: 'Check for missing https://, domain, or path. Reapply a provider template and adjust from there.',
+      fixZh: '检查是否缺少 https://、域名或路径；也可以粘贴一个已知可用的基础地址或接口地址。',
+      fixEn: 'Check for missing https://, domain, or path. Paste a known working base URL or endpoint if available.',
     }
   }
 
@@ -458,8 +592,8 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
       titleEn: 'Authentication failed',
       detailZh: `供应商返回 ${statusCode || '401/403'}，通常是 Key 无效、权限不足或项目未启用。`,
       detailEn: `Provider returned ${statusCode || '401/403'}, usually because the key is invalid, lacks permission, or the project is disabled.`,
-      fixZh: '重新生成 Key，确认余额/权限/模型访问已开启；Gemini 需确认 API Key 属于同一 Google 项目。',
-      fixEn: 'Regenerate the key and verify billing, permissions, and model access. For Gemini, confirm the key belongs to the same Google project.',
+      fixZh: '重新生成 Key，并确认余额、权限和模型访问已开启；Gemini 需确认 API Key 属于目标 Google 项目。',
+      fixEn: 'Regenerate the key and verify billing, permissions, and model access. For Gemini, confirm the key belongs to the target Google project.',
     }
   }
 
@@ -470,8 +604,8 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
       titleEn: 'Endpoint path was not found',
       detailZh: `供应商返回 ${statusCode || 404}，通常是 URL 路径或网关转发路径不匹配。`,
       detailEn: `Provider returned ${statusCode || 404}, usually because the endpoint path or gateway route is wrong.`,
-      fixZh: 'OpenAI 兼容接口通常需要 /v1/chat/completions 或 /v1/models；Gemini 通常使用 /v1beta/models。',
-      fixEn: 'OpenAI-compatible endpoints usually need /v1/chat/completions or /v1/models. Gemini usually uses /v1beta/models.',
+      fixZh: '可尝试基础地址、/v1、/v1/models、/v1/chat/completions、Gemini /v1beta，或 Ollama/本地服务的 /v1 兼容接口。',
+      fixEn: 'Try a base URL, /v1, /v1/models, /v1/chat/completions, Gemini /v1beta, or the /v1-compatible path for Ollama/local services.',
     }
   }
 

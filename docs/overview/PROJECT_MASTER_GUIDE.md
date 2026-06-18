@@ -211,9 +211,10 @@ Rule: views and components should not invent their own provider-calling logic or
 
 ### 7.4 Network
 
-- provider URL and key setup;
-- model selection;
-- diagnostics.
+- URL-first provider setup: users paste or load an API URL, and `src/lib/ai.js` auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport;
+- URL adaptation accepts common OpenAI-compatible base, `/v1`, `/models`, `/chat/completions`, local Ollama-style `/api/chat`, OpenAI/Azure `/responses`, Anthropic `/v1/messages`, and Azure deployment URLs while keeping official provider endpoints key-required and allowing local/server-auth gateways to omit a browser-stored key;
+- the visible setup path is intentionally compact: URL, API key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel;
+- saved API configurations and diagnostics remain available as secondary disclosure areas so setup does not become a long stacked utility page.
 
 ### 7.5 Chat
 

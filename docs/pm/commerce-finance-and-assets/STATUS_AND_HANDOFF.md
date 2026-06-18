@@ -30,6 +30,7 @@ What is already landed:
 18. Moon Bistro now has a fuller browseable shop menu: fresh or migrated saves receive nine seeded dishes across warm soup, rice set, grill, seafood, greens, pasta, and dessert sections without overwriting user-edited dish copy/images. The dark shop surface adds a sticky side section rail, filters the right-side dish list by section, keeps circular embedded dish photos, hides the empty cart until the user adds food, and keeps order/Wallet/Map support hidden until there is real order support content.
 19. Wallet now has a persisted primary-currency setting, and Food Delivery active pricing follows that finance setting instead of hard-coded UI currency text. Current restaurant/menu display, platform demo merchant fees, cart totals, checkout, and new food orders use the Wallet primary currency. Existing food orders and Wallet transactions keep the currency they were created with, so changing the finance setting does not silently rewrite historical ledger records.
 20. Wallet now also owns the shared currency registry and editable reference exchange-rate table. The default financial coordinate is USD/CNY, system currencies are available by default, and WorldBook Current World Pack can inject custom world currencies into Wallet. Wallet keeps the primary-currency choice and per-currency CNY reference rates; World Pack stores only the world-specific currency declarations. Chat transfer cards and sourced Chat ledger records now use the Wallet currency options instead of a hard-coded CNY text field.
+21. Shopping can now be represented in Chat through source-owned `share_card` objects. The active Chat `+` Shopping send path converts ordinary products into `product_link` cards and reserves direct gift wording for gift-card / voucher / virtual-gift-like products. This removes the earlier implication that every product card is an instant user-owned gift while keeping Shopping as the owner of products, checkout, orders, Wallet handoff, Assets suggestions, and later gift/redeem state.
 
 Still incomplete:
 
@@ -38,6 +39,7 @@ Still incomplete:
 3. service-account pushes are functional and boundary-safe, but later visual/copy polish can make them feel more brand-specific.
 4. Food Delivery store surfaces have the first route and IA baseline plus Moon Bistro's local-asset/category-rail/finance-currency polish, but still need more visual/UX passes for responsive density, checkout microcopy, detail-sheet polish, and more distinct shop templates.
 5. App Store mini-app editing now has the generalized binding-target baseline, Shopping-bound generated entry support, cover facade management, installed/not-installed target-folder placement, and create-shop V0 owner handoff. A true custom Shopping store/service record model remains a Shopping-owned product decision if user-created Shopping shops need more than preset platform services.
+6. Logistics/tracking share UI is reserved by the shared object contract but does not yet have a full source-app send surface. Future order/tracking screens should create `tracking_share` or `order_share` objects rather than asking Chat to infer physical-gift state.
 
 ## 2. Recommended Next Slice
 
@@ -50,6 +52,7 @@ Still incomplete:
 6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; continue from the explicit binding-target/create-handoff baseline before adding more Food Delivery-only polish.
 7. When Food Delivery visual polish resumes, start from `FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md` and keep the first slice focused on Moon Bistro before broadening to more shop templates.
 8. Next Food Platform polish should add richer platform-specific empty states, real favorite/recent behavior for platform-internal merchants, and real banner rotation/state if the ad rail becomes interactive. Do not surface peer-shop orders as a platform aggregate.
+9. When Shopping gift/redeem work resumes, model gift cards, vouchers, and virtual gifts as source-created share objects with validity/redeem state in Shopping. Keep ordinary products as `product_link` until checkout/order/tracking creates a stronger source event.
 
 ## 3. Do Not Do
 

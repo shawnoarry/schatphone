@@ -3,6 +3,10 @@ import { useI18n } from '../../composables/useI18n'
 import { createNetworkReportLabels } from '../../lib/network-report-labels'
 
 defineProps({
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
   reportSummary: {
     type: Object,
     required: true,
@@ -64,7 +68,7 @@ const updateLevelFilter = (event) => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl p-4">
+  <div :class="embedded ? 'network-diagnostics-embedded' : 'bg-white rounded-xl p-4'">
     <div class="flex items-center justify-between mb-2">
       <p class="text-xs text-gray-500">{{ t('诊断报告中心（API/推送/存储）', 'Diagnostics Center (API/Push/Storage)') }}</p>
       <button

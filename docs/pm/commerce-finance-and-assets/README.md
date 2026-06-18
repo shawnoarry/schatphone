@@ -8,6 +8,8 @@ Current 4.2 reminder: Wallet order-support facts may preserve Shopping/Food line
 
 Current 4.4 note: Shopping, Logistics, and Food Delivery can push Chat service-account notifications into existing Chat Directory service accounts. These messages carry source references and route actions; source modules still own orders, logistics state, Wallet records, and route context.
 
+Current share-card note: Shopping now has a source-owned Chat share path through `share_card`. Ordinary Shopping products shared from Chat are `product_link` objects, while only gift-card / voucher / virtual-gift-like products are labeled as direct sendable gifts. Physical products should move through product links, order shares, or tracking shares; Shopping and Logistics still own checkout, order truth, fulfillment, and delivery/signature state. The helper contract lives in `src/lib/shareable-object.js`.
+
 Current World Pack note: `survival_city` can open Shopping as `补给站` through `marketplace -> Shopping`, and Food Delivery as `救援调度` through `dispatch -> Food Delivery`. Confirmed nonstandard `dispatch_board` entries use the same Food Delivery context path. These change entry wording, world context, banners, and safe view/route defaults only; Shopping/Food Delivery still own products, restaurants, menus, carts, checkout, orders, delivery events, logistics review, Wallet suggestions, and Assets suggestions.
 
 Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform should remain a discovery/filter/create-handoff surface; shop mini apps should present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions.

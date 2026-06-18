@@ -22,6 +22,8 @@ Chat owns:
 - message deletion
 - message recall as a retained Chat event that hides original text and rich-block details from UI actions, AI context, quote previews, pending quote bars, and history review while preserving who recalled it
 - rich message display
+- source-owned share-card display and transport, including Shopping `product_link`, `gift_card` / `virtual_gift`, and future tracking/location/calendar/media share objects
+- legacy product-card compatibility display while the active Shopping send path migrates to `share_card`
 - Chat-local saved-message flags for ordinary role/group threads
 - AI reply trigger and prompt assembly
 - the user-facing Chat App shell for message entry and thread-level controls
@@ -36,6 +38,8 @@ Chat does not own:
 - current relationship truth
 - system-wide theme management or global custom CSS
 - event eligibility for generated social events
+- Shopping checkout, order truth, Wallet suggestions, or Assets transfer suggestions
+- product, voucher, delivery, route, calendar, media, or asset source truth represented by a `share_card`
 
 ### Chat Directory
 
@@ -98,6 +102,19 @@ Chat-side service notification feedback, such as source-open reminders, reply-re
 Chat-side presentation may digest or compact repeated service notifications to make the thread readable, but every notification remains a message record with source-open and reply affordances. Compacting a card must not merge, delete, or mutate the owning source-module record.
 
 Chat may expose a service-account linkage contract to other modules. This contract can describe the Chat thread route, Services route, origin ids, source bindings, derived source notification plan, required notification fields, reply/quote support, and source-record boundary. The contract is descriptive and does not give other modules ownership of Chat history or give Chat ownership of source records.
+
+## 4.5 Share Cards
+
+`share_card` is the peer-to-peer version of a source-owned object shared into Chat. It is not the same as a service-account notification.
+
+Chat may store:
+
+- `shareType`, such as `product_link`, `gift_card`, `virtual_gift`, or `tracking_share`;
+- `sourceModule`, `sourceId`, and optional `sourceEventId`;
+- title, summary, status, amount, preview image, and source route snapshots;
+- `aiContext` that explains what the object means and which app owns the truth.
+
+Chat must not treat a `product_link` as a purchased or delivered gift. User-sent gifts inside Chat should be source-created digital objects such as gift cards, vouchers, redemption codes, or virtual gifts. Physical goods should enter Chat as product links, order shares, or tracking/signature shares, while Shopping or Logistics owns purchase, fulfillment, and delivery state.
 
 World Pack service-account templates should surface as availability from WorldBook and be joined from Chat Directory's `Services` management area. WorldBook must not become the service-account editor or creator. Chat Directory may let the user edit/reset enabled-pack service-account candidate metadata before joining, and may review AI/pasted service-candidate proposals from active WorldBook/World Pack context. Confirming a proposal only writes a World Pack template; it does not subscribe the user, create source-module business records, or silently rewrite already joined Chat accounts. Generated entries may store origin metadata such as `worldPackId`, `worldServiceTemplateId`, and `worldAppBindingId`, and may display a source notification plan for supported source bindings, but the generated entry is still owned by Chat Directory and must not become a role profile or source-module record owner.
 

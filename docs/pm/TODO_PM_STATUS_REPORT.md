@@ -46,6 +46,7 @@ PM meaning:
 - Home supports normal entries plus folder-style grouped entries.
 - More / Experimental Toggles can hide or show optional entries such as World Hub.
 - Settings owns backup, restore, storage diagnostics, API/network configuration, push settings, automation settings, and appearance settings.
+- Network/API setup is URL-first rather than provider-button-first: users enter or load an API URL, the app detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations can include local or server-auth gateways without a browser-stored key. The visible flow stays compact around URL, key, model selection, model-list refresh, connection test, save-current-settings, saved-configuration reuse, and diagnostics instead of stacking each function as a large page block.
 
 PM meaning:
 

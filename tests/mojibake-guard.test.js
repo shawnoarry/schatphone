@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { extname, join, relative } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { basename, extname, join, relative } from 'node:path'
 
 const ROOT_DIR = process.cwd()
 const SRC_DIR = join(ROOT_DIR, 'src')
 const DOCS_DIR = join(ROOT_DIR, 'docs')
+const AGENTS_SKILLS_DIR = join(ROOT_DIR, '.agents', 'skills')
 const SCANNED_EXTENSIONS = new Set(['.vue', '.js', '.mjs', '.md'])
 const EXCLUDED_DIR_PARTS = new Set(['archive'])
 
@@ -12,6 +13,11 @@ const isDraftReferenceWorkspaceFile = (filePath) => {
   const relativePath = relative(ROOT_DIR, filePath).replace(/\\/g, '/')
   if (!relativePath.startsWith('docs/superpowers/')) return false
   return !relativePath.endsWith('/README.md')
+}
+
+const isProjectSkillInstructionFile = (filePath) => {
+  const relativePath = relative(ROOT_DIR, filePath).replace(/\\/g, '/')
+  return relativePath.startsWith('.agents/skills/') && basename(filePath) === 'SKILL.md'
 }
 
 const MOJIBAKE_MARKERS = [
@@ -40,6 +46,8 @@ const MOJIBAKE_MARKERS = [
   '琛ョ粰',
   '鏁戞彺',
   '棰戦亾',
+  '鍙浆',
+  '璧勪骇',
 ]
 
 const walkSourceFiles = (dir, output = []) => {
@@ -58,10 +66,17 @@ const walkSourceFiles = (dir, output = []) => {
 }
 
 describe('mojibake guard', () => {
-  test('keeps user-visible source and active docs free of known Chinese mojibake fragments', () => {
+  test('keeps user-visible source, active docs, and project skills free of known Chinese mojibake fragments', () => {
     const hits = []
 
-    ;[SRC_DIR, DOCS_DIR].flatMap((dir) => walkSourceFiles(dir)).forEach((filePath) => {
+    const guardedFiles = [
+      ...[SRC_DIR, DOCS_DIR].flatMap((dir) => walkSourceFiles(dir)),
+      ...(existsSync(AGENTS_SKILLS_DIR)
+        ? walkSourceFiles(AGENTS_SKILLS_DIR).filter(isProjectSkillInstructionFile)
+        : []),
+    ]
+
+    guardedFiles.forEach((filePath) => {
       const relativePath = relative(ROOT_DIR, filePath)
       readFileSync(filePath, 'utf8')
         .split(/\r?\n/)

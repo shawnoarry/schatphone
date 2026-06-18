@@ -115,8 +115,9 @@ const sourceIntent = computed(() =>
 const sourceChatId = computed(() =>
   typeof route.query.chatId === 'string' ? route.query.chatId.trim() : '',
 )
-const openedFromChatProductCard = computed(() =>
-  sourceModule.value === 'chat' && sourceIntent.value === 'product_card',
+const openedFromChatProductLink = computed(() =>
+  sourceModule.value === 'chat' &&
+  (sourceIntent.value === 'product_link' || sourceIntent.value === 'product_card'),
 )
 const openedFromChatGiftOrder = computed(() =>
   sourceModule.value === 'chat' && sourceIntent.value === 'gift_order',
@@ -387,7 +388,7 @@ const serviceCards = computed(() =>
 const sourcePlan = computed(() => [
   {
     key: SHOPPING_SOURCE_KEYS.CHAT_PRODUCT_CARD,
-    title: t('Chat 商品卡片', 'Chat product cards'),
+    title: t('Chat 商品链接', 'Chat product links'),
     desc: t('Chat 后续可分享或推荐商品，但结账必须留在 Shopping。', 'Chat may later share or recommend goods, while checkout must remain in Shopping.'),
   },
   {
@@ -847,7 +848,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="openedFromChatProductCard || openedFromChatGiftOrder || openedFromChatShoppingOrder || openedFromChatLogistics"
+        v-if="openedFromChatProductLink || openedFromChatGiftOrder || openedFromChatShoppingOrder || openedFromChatLogistics"
         class="rounded-2xl border bg-white p-4"
         :class="openedFromChatGiftOrder ? 'border-rose-200' : openedFromChatLogistics ? 'border-sky-200' : openedFromChatShoppingOrder ? 'border-indigo-200' : 'border-orange-200'"
         data-testid="shopping-chat-source-banner"
@@ -865,7 +866,7 @@ onBeforeUnmount(() => {
                     ? t('From Chat logistics reminder', 'From Chat logistics reminder')
                     : openedFromChatShoppingOrder
                       ? t('From Chat service order notification', 'From Chat service order notification')
-                  : t('From Chat product card', 'From Chat product card')
+                  : t('From Chat product link', 'From Chat product link')
               }}
             </p>
             <p class="mt-1 text-[11px] leading-5 text-gray-500">

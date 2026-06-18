@@ -3,10 +3,14 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { callAI, detectApiKindFromUrl, fetchAvailableModels, formatApiErrorForUi } from '../lib/ai'
 import {
-  NETWORK_PROVIDER_TEMPLATES,
-  applyNetworkProviderTemplate,
+  callAI,
+  detectApiKindFromUrl,
+  fetchAvailableModels,
+  formatApiErrorForUi,
+  requiresApiKeyForUrl,
+} from '../lib/ai'
+import {
   buildNetworkEndpointGuidance,
   buildNetworkFailureGuidance,
   buildNetworkPresetSaveGuidance,
@@ -21,9 +25,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import NetworkDiagnosticsPanel from '../components/network/NetworkDiagnosticsPanel.vue'
-import NetworkManualModelSavePanel from '../components/network/NetworkManualModelSavePanel.vue'
-import NetworkSetupPresetPanel from '../components/network/NetworkSetupPresetPanel.vue'
-import NetworkSmokeControlsPanel from '../components/network/NetworkSmokeControlsPanel.vue'
+import NetworkConnectionPanel from '../components/network/NetworkConnectionPanel.vue'
 import { buildReturnSourceQuery, pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 
 const router = useRouter()
@@ -79,6 +81,10 @@ const ensurePresetState = () => {
 const apiKindLabel = computed(() => {
   const kind = settings.value.api.resolvedKind
   if (kind === 'gemini') return 'Gemini API'
+  if (kind === 'anthropic') return 'Anthropic API'
+  if (kind === 'azure_openai') return 'Azure OpenAI'
+  if (kind === 'azure_openai_responses') return 'Azure OpenAI Responses'
+  if (kind === 'openai_responses') return 'OpenAI Responses'
   if (kind === 'openai_compatible') return t('OpenAI 兼容', 'OpenAI-Compatible')
   return t('自动识别', 'Auto')
 })
@@ -161,8 +167,16 @@ const savePreset = () => {
     setUiFeedback('error', t('请输入预设名称。', 'Please enter a preset name.'))
     return
   }
-  if (!url || !key) {
-    setUiFeedback('error', t('请先填写 URL 和 Key。', 'Please enter URL and Key first.'))
+  if (!url) {
+    setUiFeedback('error', t('请先填写 URL。', 'Please enter URL first.'))
+    return
+  }
+  if (!isHttpApiUrl(url)) {
+    setUiFeedback('error', t('URL 必须以 http:// 或 https:// 开头。', 'URL must start with http:// or https://.'))
+    return
+  }
+  if (!key && requiresApiKeyForUrl(url)) {
+    setUiFeedback('error', t('这个地址需要 API Key，请先填写 Key。', 'This endpoint needs an API key. Please enter the key first.'))
     return
   }
 
@@ -193,20 +207,12 @@ const savePreset = () => {
   if (guidance?.tone === 'warn') {
     setUiFeedback(
       'warn',
-      t('预设已保存，但建议稍后完成连接测试确认。', 'Preset saved, but run a connection test when possible.'),
+      t('配置已保存，但建议稍后完成连接测试确认。', 'Configuration saved, but run a connection test when possible.'),
       3200,
     )
     return
   }
-  setUiFeedback('success', t('预设已保存，Key 仅保存在本地配置中。', 'Preset saved. The key stays in local settings.'))
-}
-
-const applyProviderTemplate = (templateId) => {
-  const ok = applyNetworkProviderTemplate(settings.value.api, templateId)
-  if (!ok) return
-  clearModelState()
-  scheduleAutoLoadModels()
-  setUiFeedback('success', t('已套用供应商模板，请继续填写 Key。', 'Provider template applied. Continue with your key.'))
+  setUiFeedback('success', t('配置已保存；如填写 Key，它只保存在本地配置中。', 'Configuration saved. If a key is set, it stays in local settings.'))
 }
 
 const applyPreset = (presetId) => {
@@ -346,9 +352,19 @@ const clearModelState = () => {
   modelsError.value = ''
 }
 
+const isHttpApiUrl = (value) => {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 const buildPreflightError = (apiUrl, apiKey) => {
   if (!apiUrl) return { code: 'MISSING_URL' }
-  if (!apiKey) return { code: 'NO_API_KEY' }
+  if (!isHttpApiUrl(apiUrl)) return { code: 'INVALID_URL' }
+  if (!apiKey && requiresApiKeyForUrl(apiUrl)) return { code: 'NO_API_KEY' }
   return null
 }
 
@@ -538,7 +554,7 @@ const scheduleAutoLoadModels = () => {
 
   settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
 
-  if (!apiUrl || !apiKey) {
+  if (!apiUrl || (!apiKey && requiresApiKeyForUrl(apiUrl))) {
     clearModelState()
     connectionGuidance.value = null
     return
@@ -620,29 +636,21 @@ ensurePresetState()
     </div>
 
     <div class="network-scroll flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <NetworkSetupPresetPanel
+      <NetworkConnectionPanel
         v-model:api-url="settings.api.url"
         v-model:api-key="settings.api.key"
+        v-model="settings.api.model"
         v-model:show-api-key="showApiKey"
         v-model:preset-name="presetName"
         v-model:active-preset-id="settings.api.activePresetId"
+        :api-kind-label="apiKindLabel"
         :network-setup-copy="networkSetupCopy"
         :network-setup-state="networkSetupState"
-        :provider-templates="NETWORK_PROVIDER_TEMPLATES"
         :endpoint-guidance="endpointGuidance"
         :preset-save-guidance="presetSaveGuidance"
         :presets="presets"
         :ui-feedback-type="uiFeedbackType"
         :ui-feedback-message="uiFeedbackMessage"
-        @apply-template="applyProviderTemplate"
-        @save-preset="savePreset"
-        @remove-active-preset="removeActivePreset"
-        @clear-all-presets="clearAllPresets"
-      />
-
-      <NetworkSmokeControlsPanel
-        v-model="settings.api.model"
-        :api-kind-label="apiKindLabel"
         :models-loading="modelsLoading"
         :models-error="modelsError"
         :connection-guidance="connectionGuidance"
@@ -650,30 +658,52 @@ ensurePresetState()
         :smoke-test-result="smokeTestResult"
         :smoke-test-error="smokeTestError"
         :model-options="modelOptions"
+        :saved="saved"
+        @save-preset="savePreset"
+        @remove-active-preset="removeActivePreset"
+        @clear-all-presets="clearAllPresets"
         @test-models="loadModels({ manual: true })"
         @run-chat-smoke-test="runChatSmokeTest"
-      />
-
-      <NetworkManualModelSavePanel
-        v-model="settings.api.model"
-        :saved="saved"
         @save-settings="saveNetworkSettings"
       />
 
-      <NetworkDiagnosticsPanel
-        v-model:report-module-filter="reportModuleFilter"
-        v-model:report-level-filter="reportLevelFilter"
-        :report-summary="reportSummary"
-        :network-reports="networkReports"
-        :report-module-options="reportModuleOptions"
-        :report-level-options="reportLevelOptions"
-        :copied-report-id="copiedReportId"
-        :format-report-time="formatReportTime"
-        @clear-reports="clearApiReportHistory"
-        @copy-report="copyReport"
-        @open-storage-diagnostics="openStorageDiagnostics"
-        @open-push-settings="openPushSettings"
-      />
+      <details class="network-diagnostics-disclosure bg-white rounded-xl p-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span class="min-w-0">
+            <span class="block text-xs font-semibold text-gray-700">
+              {{ t('报错诊断', 'Error diagnostics') }}
+            </span>
+            <span class="mt-0.5 block text-[11px] text-gray-500">
+              {{
+                reportSummary.errorCount > 0
+                  ? t(`${reportSummary.errorCount} 条错误记录`, `${reportSummary.errorCount} error record(s)`)
+                  : t('连接或使用出错时再查看', 'Open when connection or usage fails')
+              }}
+            </span>
+          </span>
+          <span class="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
+            {{ reportSummary.total }}
+          </span>
+        </summary>
+
+        <div class="mt-3">
+          <NetworkDiagnosticsPanel
+            embedded
+            v-model:report-module-filter="reportModuleFilter"
+            v-model:report-level-filter="reportLevelFilter"
+            :report-summary="reportSummary"
+            :network-reports="networkReports"
+            :report-module-options="reportModuleOptions"
+            :report-level-options="reportLevelOptions"
+            :copied-report-id="copiedReportId"
+            :format-report-time="formatReportTime"
+            @clear-reports="clearApiReportHistory"
+            @copy-report="copyReport"
+            @open-storage-diagnostics="openStorageDiagnostics"
+            @open-push-settings="openPushSettings"
+          />
+        </div>
+      </details>
     </div>
   </div>
 </template>
@@ -749,13 +779,6 @@ ensurePresetState()
 
 .network-scroll .rounded-lg.border {
   border-color: var(--system-subtle-border);
-}
-
-.network-save-button {
-  min-height: 46px;
-  border-radius: 14px;
-  box-shadow: 0 10px 22px var(--system-focus-ring);
-  -webkit-tap-highlight-color: transparent;
 }
 
 .network-shell :deep(.bg-white) {

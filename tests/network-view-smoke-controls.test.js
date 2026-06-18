@@ -120,6 +120,30 @@ describe('NetworkView Chat smoke controls', () => {
     wrapper.unmount()
   })
 
+  test('allows local OpenAI-compatible smoke tests without an API key', async () => {
+    const store = useSystemStore()
+    store.settings.api.url = 'http://localhost:11434/v1'
+    store.settings.api.key = ''
+    store.settings.api.model = 'llama3'
+    aiMockState.nextResult = 'OK from local model'
+
+    const { wrapper } = await mountNetworkView()
+
+    await wrapper.get('[data-testid="network-chat-smoke-run"]').trigger('click')
+    await flushUi()
+
+    expect(aiMockState.calls).toHaveLength(1)
+    expect(wrapper.get('[data-testid="network-chat-smoke-success"]').text()).toContain('OK from local model')
+    expect(store.apiReports[0]).toMatchObject({
+      level: 'info',
+      module: 'network',
+      action: 'chat_smoke_test',
+      code: 'CHAT_SMOKE_OK',
+    })
+
+    wrapper.unmount()
+  })
+
   test('blocks model connection test before URL is configured and writes diagnostics', async () => {
     const store = useSystemStore()
     store.settings.api.url = ''
@@ -132,7 +156,7 @@ describe('NetworkView Chat smoke controls', () => {
     await flushUi()
 
     expect(aiMockState.modelFetchCalls).toHaveLength(0)
-    expect(wrapper.get('[data-testid="network-model-test-error"]').text()).toContain('接口地址')
+    expect(wrapper.get('[data-testid="network-model-test-error"]').text()).toContain('API URL')
     expect(wrapper.get('[data-testid="network-connection-guidance"]').text()).toContain('MISSING_URL')
     expect(store.apiReports[0]).toMatchObject({
       level: 'error',
@@ -144,21 +168,32 @@ describe('NetworkView Chat smoke controls', () => {
     wrapper.unmount()
   })
 
-  test('applies provider templates through the setup panel without replacing the key', async () => {
+  test('loads saved API configurations through the setup panel dropdown', async () => {
     const store = useSystemStore()
-    store.settings.api.url = ''
-    store.settings.api.key = 'sk-keep-me'
-    store.settings.api.model = ''
+    store.settings.api.url = 'https://initial.test/v1/chat/completions'
+    store.settings.api.key = 'sk-initial'
+    store.settings.api.model = 'initial-model'
+    store.settings.api.presets = [
+      {
+        id: 'preset_primary',
+        name: 'Primary gateway',
+        url: 'https://api.openai.com/v1/chat/completions',
+        key: 'sk-primary',
+        model: 'gpt-4o-mini',
+      },
+    ]
+    store.settings.api.activePresetId = ''
 
     const { wrapper } = await mountNetworkView()
 
-    await wrapper.get('[data-testid="network-provider-template-openai"]').trigger('click')
+    expect(wrapper.find('[data-testid^="network-provider-template-"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="network-active-preset-select"]').setValue('preset_primary')
     await flushUi()
 
     expect(store.settings.api.url).toBe('https://api.openai.com/v1/chat/completions')
-    expect(store.settings.api.key).toBe('sk-keep-me')
+    expect(store.settings.api.key).toBe('sk-primary')
     expect(store.settings.api.model).toBe('gpt-4o-mini')
-    expect(store.settings.api.resolvedKind).toBe('openai_compatible')
     expect(wrapper.get('[data-testid="network-setup-progress"]').text()).toBe('3/3')
 
     wrapper.unmount()
@@ -180,6 +215,26 @@ describe('NetworkView Chat smoke controls', () => {
     expect(store.settings.api.key).toBe('sk-updated')
     expect(wrapper.get('[data-testid="network-api-key-input"]').attributes('type')).toBe('text')
     expect(wrapper.get('[data-testid="network-endpoint-guidance"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('keeps the core connection flow in one compact panel with diagnostics behind a disclosure', async () => {
+    const store = useSystemStore()
+    configureReadyApi(store)
+
+    const { wrapper } = await mountNetworkView()
+
+    const connectionPanel = wrapper.get('.network-connection-panel')
+    expect(connectionPanel.find('[data-testid="network-api-url-input"]').exists()).toBe(true)
+    expect(connectionPanel.find('[data-testid="network-api-key-input"]').exists()).toBe(true)
+    expect(connectionPanel.find('[data-testid="network-manual-model-input"]').exists()).toBe(true)
+    expect(connectionPanel.find('[data-testid="network-model-test-run"]').exists()).toBe(true)
+    expect(connectionPanel.find('[data-testid="network-chat-smoke-run"]').exists()).toBe(true)
+    expect(connectionPanel.find('[data-testid="network-save-settings"]').exists()).toBe(true)
+    const diagnosticsDisclosure = wrapper.get('.network-diagnostics-disclosure')
+    expect(diagnosticsDisclosure.element.tagName).toBe('DETAILS')
+    expect(diagnosticsDisclosure.find('[data-testid="network-report-module-filter"]').exists()).toBe(true)
 
     wrapper.unmount()
   })
@@ -250,6 +305,30 @@ describe('NetworkView Chat smoke controls', () => {
     expect(store.settings.api.presets).toHaveLength(0)
     expect(store.settings.api.activePresetId).toBe('')
     expect(wrapper.find('[data-testid="network-active-preset-select"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('saves no-key compatible API configurations', async () => {
+    const store = useSystemStore()
+    store.settings.api.url = 'http://localhost:11434/v1'
+    store.settings.api.key = ''
+    store.settings.api.model = 'llama3'
+
+    const { wrapper } = await mountNetworkView()
+
+    await wrapper.get('[data-testid="network-preset-name-input"]').setValue('Local Ollama')
+    await wrapper.get('[data-testid="network-preset-save"]').trigger('click')
+    await flushUi()
+
+    expect(store.settings.api.presets).toHaveLength(1)
+    expect(store.settings.api.presets[0]).toMatchObject({
+      name: 'Local Ollama',
+      url: 'http://localhost:11434/v1',
+      key: '',
+      model: 'llama3',
+    })
+    expect(wrapper.get('[data-testid="network-setup-progress"]').text()).toBe('3/3')
 
     wrapper.unmount()
   })
