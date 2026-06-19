@@ -51,17 +51,13 @@ import {
   shareableObjectToChatBlock,
 } from '../lib/shareable-object'
 import { getAvatarImageGalleryAssetId } from '../lib/avatar-image-source-resolver'
-import {
-  findFoodDeliveryServicePreset,
-  findLogisticsServicePreset,
-  findShoppingServicePreset,
-} from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import {
   DEFAULT_CHAT_THREAD_AI_PREFS,
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
+import { useChatServiceThreadDisplayModel } from '../composables/useChatServiceThreadDisplayModel'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
@@ -305,130 +301,42 @@ const {
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
 
-const activeServiceStatusTags = computed(() => {
-  if (!isActiveServiceChat.value) return []
-  const tags = []
-  if (activeServiceIsMuted.value) {
-    tags.push({
-      key: 'muted',
-      label: t('免打扰', 'Muted'),
-      className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    })
-  }
-  if (activeServiceIsFolded.value) {
-    tags.push({
-      key: 'folded',
-      label: t('已折叠', 'Folded'),
-      className: 'bg-slate-100 text-slate-700 border-slate-200',
-    })
-  }
-  return tags
-})
-
-const activeServiceHeaderStatus = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  const tagText = activeServiceStatusTags.value.map((tag) => tag.label).join(' · ')
-  if (tagText) return tagText
-  return activeChat.value?.kind === 'official'
-    ? t('官方订阅更新', 'Official updates')
-    : t('订阅更新', 'Subscription updates')
-})
-
-const activeServiceTemplateText = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  return activeChat.value?.serviceTemplate || t('未设置服务模板', 'Service template not set')
-})
-
-const activeServiceChannelPreview = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  const conversation = activeConversation.value
-  if (conversation?.lastMessage) return conversation.lastMessage
-  return activeChat.value?.bio || t('还没有订阅消息', 'No subscription messages yet')
-})
-
-const showActiveServiceEmptyState = computed(() =>
-  Boolean(isActiveServiceChat.value && activeMessages.value.length === 0),
-)
-
-const activeServiceEmptyStateTitle = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  return activeChat.value?.kind === 'official'
-    ? t('还没有公告', 'No notices yet')
-    : t('还没有订阅更新', 'No updates yet')
-})
-
-const activeServiceEmptyStateDetail = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  const name = activeChat.value?.name || t('服务号', 'Service account')
-  if (activeChat.value?.serviceTemplate) {
-    return t(
-      `${name} 的新更新会直接出现在这里。`,
-      `${name} updates will appear here.`,
-    )
-  }
-  return t('新的服务消息会直接出现在这条聊天里。', 'New service messages will appear in this chat.')
-})
-
-const activeServiceRouteFeedback = computed(() => {
-  if (!isActiveServiceChat.value || !serviceRouteFeedback.value) return null
-  return Number(serviceRouteFeedback.value.chatId) === Number(activeChat.value?.id)
-    ? serviceRouteFeedback.value
-    : null
-})
-
-const activeServiceRouteFeedbackDetail = computed(() => {
-  const feedback = activeServiceRouteFeedback.value
-  if (!feedback) return ''
-  const destination = feedback.destination || t('来源', 'source')
-  return t(
-    `刚刚已打开 ${destination}，回到 Chat 后可以继续围绕这条通知回复；Chat 不会改动来源记录。`,
-    `Opened ${destination}; you can keep replying around this notification in Chat. Chat did not change source records.`,
-  )
-})
-
-const activeServiceNotificationActionFeedback = computed(() =>
-  isActiveServiceChat.value ? serviceNotificationActionFeedback.value : null,
-)
-
-const activeServiceInteractionDock = computed(() => {
-  if (!isActiveServiceChat.value) return null
-  const routeFeedback = activeServiceRouteFeedback.value
-  if (routeFeedback) {
-    return {
-      type: 'source',
-      icon: 'fas fa-arrow-up-right-from-square',
-      title: t('已打开来源', 'Source opened'),
-      context: routeFeedback.title,
-      detail: activeServiceRouteFeedbackDetail.value,
-      primaryLabel: routeFeedback.route ? t('再次打开来源', 'Open again') : '',
-      dismissLabel: t('知道了', 'OK'),
-    }
-  }
-
-  const actionFeedback = activeServiceNotificationActionFeedback.value
-  if (!actionFeedback) return null
-  return {
-    type: actionFeedback.type || 'reply',
-    icon: actionFeedback.type === 'read' ? 'fas fa-check-double' : 'fas fa-reply',
-    title: actionFeedback.heading,
-    context: actionFeedback.title,
-    detail: actionFeedback.detail,
-    primaryLabel: '',
-    dismissLabel: t('知道了', 'OK'),
-  }
-})
-
-const activeServiceInteractionDockClasses = computed(() => {
-  if (activeServiceInteractionDock.value?.type === 'source') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-950'
-  }
-  if (activeServiceInteractionDock.value?.type === 'read') {
-    return 'border-slate-200 bg-white text-slate-800'
-  }
-  if (activeServiceInteractionDock.value?.type === 'sent') {
-    return 'border-emerald-200 bg-white text-emerald-950'
-  }
-  return 'border-sky-200 bg-sky-50 text-sky-950'
+const {
+  shoppingServiceLabel,
+  activeShoppingServiceKey,
+  activeLogisticsServiceKey,
+  activeFoodDeliveryServiceKey,
+  activeServiceStatusTags,
+  activeServiceHeaderStatus,
+  activeServiceTemplateText,
+  activeServiceChannelPreview,
+  showActiveServiceEmptyState,
+  activeServiceEmptyStateTitle,
+  activeServiceEmptyStateDetail,
+  activeServiceRouteFeedback,
+  activeServiceRouteFeedbackDetail,
+  activeServiceNotificationActionFeedback,
+  activeServiceInteractionDock,
+  activeServiceInteractionDockClasses,
+  activeServiceSourceChips,
+  activeServiceSourceNotificationPlan,
+  activeServiceSourceScheduleRows,
+  serviceSourceScheduleRowScheduleLabel,
+  activeServiceSourceScheduleSummary,
+  activeServiceInboxPlacement,
+  activeServiceThreadPromises,
+} = useChatServiceThreadDisplayModel({
+  chatStore,
+  activeChat,
+  activeConversation,
+  activeMessages,
+  isActiveServiceChat,
+  activeServiceIsMuted,
+  activeServiceIsFolded,
+  canActiveChatCommunicate,
+  serviceRouteFeedback,
+  serviceNotificationActionFeedback,
+  t,
 })
 
 const pendingQuoteLabel = computed(() => {
@@ -591,24 +499,6 @@ const formatShoppingPreviewPrice = (product) =>
 const formatShoppingOrderAmount = (order = {}) =>
   `${(Number(order?.totalCents || 0) / 100).toFixed(2)} ${order?.currency || 'CNY'}`
 
-const shoppingServiceLabel = (serviceKey) => {
-  const preset = findShoppingServicePreset(serviceKey || '')
-  if (!preset?.key || preset.key !== serviceKey) return ''
-  return t(preset.zh, preset.en)
-}
-
-const logisticsServiceLabel = (serviceKey) => {
-  const preset = findLogisticsServicePreset(serviceKey || '')
-  if (!preset?.key || preset.key !== serviceKey) return ''
-  return t(preset.zh, preset.en)
-}
-
-const foodDeliveryServiceLabel = (serviceKey) => {
-  const preset = findFoodDeliveryServicePreset(serviceKey || '')
-  if (!preset?.key || preset.key !== serviceKey) return ''
-  return t(preset.zh, preset.en)
-}
-
 const VIRTUAL_GIFT_SHARE_TYPES = new Set([
   SHAREABLE_OBJECT_TYPES.GIFT_CARD,
   SHAREABLE_OBJECT_TYPES.VIRTUAL_GIFT,
@@ -682,153 +572,6 @@ const normalizeShoppingCardPayload = (rawProduct = {}) => {
     giftable: isVirtualGiftShareType(shareType),
   }
 }
-
-const activeShoppingServiceKey = computed(() => activeChat.value?.shoppingServiceKey || '')
-const activeLogisticsServiceKey = computed(() => activeChat.value?.logisticsServiceKey || '')
-const activeFoodDeliveryServiceKey = computed(() => activeChat.value?.foodDeliveryServiceKey || '')
-
-const activeServiceSourceChips = computed(() => {
-  if (!isActiveServiceChat.value) return []
-  const chips = []
-  const shoppingLabel = shoppingServiceLabel(activeShoppingServiceKey.value)
-  const logisticsLabel = logisticsServiceLabel(activeLogisticsServiceKey.value)
-  const foodDeliveryLabel = foodDeliveryServiceLabel(activeFoodDeliveryServiceKey.value)
-
-  if (shoppingLabel) {
-    chips.push({
-      key: 'shopping',
-      label: t(`Shopping · ${shoppingLabel}`, `Shopping · ${shoppingLabel}`),
-      className: 'border-amber-100 bg-amber-50 text-amber-700',
-    })
-  }
-  if (logisticsLabel) {
-    chips.push({
-      key: 'logistics',
-      label: t(`Logistics · ${logisticsLabel}`, `Logistics · ${logisticsLabel}`),
-      className: 'border-sky-100 bg-sky-50 text-sky-700',
-    })
-  }
-  if (foodDeliveryLabel) {
-    chips.push({
-      key: 'food-delivery',
-      label: t(`Food Delivery · ${foodDeliveryLabel}`, `Food Delivery · ${foodDeliveryLabel}`),
-      className: 'border-orange-100 bg-orange-50 text-orange-700',
-    })
-  }
-
-  if (chips.length === 0) {
-    chips.push({
-      key: 'chat-only',
-      label: activeChat.value?.kind === 'official'
-        ? t('Chat 公众号', 'Chat official channel')
-        : t('Chat 服务号', 'Chat service channel'),
-      className: 'border-gray-100 bg-gray-50 text-gray-600',
-    })
-  }
-
-  return chips
-})
-
-const activeServiceLinkContract = computed(() =>
-  isActiveServiceChat.value && activeChat.value?.id
-    ? chatStore.getServiceAccountLinkContract(activeChat.value.id)
-    : null,
-)
-
-const activeServiceSourceNotificationPlan = computed(() =>
-  activeServiceLinkContract.value?.sourceNotificationPlan || null,
-)
-
-const activeServiceSourceScheduleRows = computed(() =>
-  Array.isArray(activeServiceSourceNotificationPlan.value?.rows)
-    ? activeServiceSourceNotificationPlan.value.rows
-    : [],
-)
-
-const serviceSourceScheduleRowLabel = (row = {}) => {
-  if (row.id === 'shopping_orders') return t('购物订单', 'Shopping orders')
-  if (row.id === 'shopping_logistics') return t('物流追踪', 'Logistics tracking')
-  if (row.id === 'food_delivery_orders') return t('外卖订单', 'Food Delivery orders')
-  return row?.label || t('服务更新', 'Service updates')
-}
-
-const serviceSourceScheduleRowScheduleLabel = (row = {}) => {
-  if (row.id === 'shopping_orders') return t('购物订单有进展时推送', 'Triggered by Shopping order events')
-  if (row.id === 'shopping_logistics') return t('物流节点变化时推送', 'Triggered by tracking milestones')
-  if (row.id === 'food_delivery_orders') return t('外卖订单变化时推送', 'Triggered by Food Delivery order events')
-  return row?.scheduleLabel || t('有新进展时推送', 'Event-driven updates')
-}
-
-const activeServiceSourceScheduleLabels = computed(() =>
-  activeServiceSourceScheduleRows.value.map((row) => serviceSourceScheduleRowLabel(row)).filter(Boolean),
-)
-
-const activeServiceSourceScheduleSummary = computed(() =>
-  activeServiceSourceScheduleLabels.value.length > 0
-    ? t(
-        `${activeServiceSourceScheduleLabels.value.join(' / ')} 有新进展时会推送到这里。`,
-        `${activeServiceSourceScheduleLabels.value.join(' / ')} can push event-driven updates into this Chat service thread.`,
-      )
-    : t(
-        '暂未连接来源 App，可作为普通订阅频道使用。',
-        'No source app is connected yet; this can still work as a regular subscription channel.',
-      ),
-)
-
-const activeServiceInboxPlacement = computed(() => {
-  if (!isActiveServiceChat.value) return ''
-  if (activeServiceIsFolded.value && activeServiceIsMuted.value) {
-    return t(
-      '已折叠且免打扰：不出现在消息首页，更新会安静留在服务号页和本会话。',
-      'Folded and muted: hidden from Messages, with updates kept quietly in Services and this thread.',
-    )
-  }
-  if (activeServiceIsFolded.value) {
-    return t(
-      '已折叠：不出现在 Messages 首页，历史和新通知仍保留在这里。',
-      'Folded: hidden from Messages while history and new notifications remain here.',
-    )
-  }
-  if (activeServiceIsMuted.value) {
-    return t(
-      '免打扰：更新会保留在 Chat，但不会抢占你的消息首页注意力。',
-      'Muted: updates stay in Chat without demanding attention in Messages.',
-    )
-  }
-  return t(
-    '显示在 Messages：新更新会像普通聊天一样进入消息首页。',
-    'Visible in Messages: new updates enter the message list like normal chats.',
-  )
-})
-
-const activeServiceThreadPromises = computed(() => {
-  if (!isActiveServiceChat.value) return []
-  return [
-    {
-      key: 'reply',
-      label: t('可直接回复', 'Reply in Chat'),
-      detail: canActiveChatCommunicate.value
-        ? t('回复会保留在这条会话里。', 'Replies stay in this thread.')
-        : t('当前状态只能查看历史。', 'This state is history-only.'),
-    },
-    {
-      key: 'source',
-      label: t('来源负责业务', 'Source owns records'),
-      detail: t(
-        '订单、物流和外卖状态仍由来源 App 处理。',
-        'Orders, delivery, and fulfillment stay in source apps.',
-      ),
-    },
-    {
-      key: 'history',
-      label: t('历史不会丢', 'History kept'),
-      detail: t(
-        '免打扰或折叠不会删除通知卡片。',
-        'Muting or folding never deletes notification cards.',
-      ),
-    },
-  ]
-})
 
 const shoppingPreviewProducts = computed(() =>
   (activeShoppingServiceKey.value

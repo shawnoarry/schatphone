@@ -104,7 +104,7 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/views/ChatView.vue` | 7093 | still the largest maintainability hotspot; active-thread read-model seam is now extracted |
+| `src/views/ChatView.vue` | 6836 | still the largest maintainability hotspot; active-thread and service-thread display read-model seams are now extracted |
 | `src/views/ContactsView.vue` | 5863 | major product-critical surface; needs careful IA and ownership protection |
 | `src/views/WorldBookView.vue` | 5036 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
 | `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive |
@@ -198,7 +198,7 @@ Engineering meaning:
 ### Chat
 
 - product state: strongest gameplay module
-- engineering note: still the single biggest maintainability hotspot; `src/composables/useChatActiveThreadModel.js` now owns the first active-thread read-model seam
+- engineering note: still the single biggest maintainability hotspot; `src/composables/useChatActiveThreadModel.js` owns active-thread reading and `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading
 - recommendation: prefer extraction and IA cleanup before more thread-side feature growth
 
 ### Chat Directory
