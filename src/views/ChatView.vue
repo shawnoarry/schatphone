@@ -57,6 +57,10 @@ import {
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
 import {
+  CHAT_MESSAGE_ACTION_IDS,
+  useChatMessageActionSheetModel,
+} from '../composables/useChatMessageActionSheetModel'
+import {
   CHAT_MESSAGE_EDITABLE_RICH_TYPES,
   useChatMessageEditDisplayModel,
 } from '../composables/useChatMessageEditDisplayModel'
@@ -198,7 +202,6 @@ const retryRerollMessageId = ref('')
 const showThreadMenu = ref(false)
 const chatSearchOpen = ref(false)
 const chatSearchKeyword = ref('')
-const activeMessageActionId = ref('')
 const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
 const editingMessageId = ref('')
@@ -310,6 +313,36 @@ const {
   avatarPreviewMap,
   t,
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
+})
+
+const closeUserActionPanel = () => {
+  showUserActionPanel.value = false
+  backToUserActionGrid()
+  galleryPickerCategory.value = 'all'
+  clearGalleryPickerPreviewMap()
+  resetUserActionDraft()
+}
+
+const {
+  activeActionMessage,
+  hasActiveMessageActions,
+  messageActionRows,
+  openMessageActions,
+  closeMessageActions,
+  canCopyMessage,
+  canQuoteMessage,
+  canEditMessage,
+  canRerollMessage,
+  canToggleSavedMessage,
+  canRecallMessage,
+  canRestoreSemanticRevision,
+  messageActionButtonClass,
+} = useChatMessageActionSheetModel({
+  activeMessages,
+  isActiveServiceChat,
+  editableRichMessageTypes: CHAT_MESSAGE_EDITABLE_RICH_TYPES,
+  closeUserActionPanel,
+  t,
 })
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
@@ -805,13 +838,6 @@ const threadImageBlockPolicyHint = computed(() => {
     'No role image references are bound; system falls back to text-first replies (no image blocks).',
   )
 })
-
-const activeActionMessage = computed(() => {
-  if (!activeMessageActionId.value) return null
-  return activeMessages.value.find((item) => item.id === activeMessageActionId.value) || null
-})
-
-const hasActiveMessageActions = computed(() => Boolean(activeActionMessage.value))
 
 const normalizedChatSearchKeyword = computed(() => chatSearchKeyword.value.trim().toLowerCase())
 
@@ -3480,21 +3506,10 @@ const requestPendingAiReply = () => {
   })
 }
 
-const closeMessageActions = () => {
-  activeMessageActionId.value = ''
-}
-
 const clearMessageLongPressTimer = () => {
   if (!messageLongPressTimerId) return
   clearTimeout(messageLongPressTimerId)
   messageLongPressTimerId = null
-}
-
-const openMessageActions = (messageId) => {
-  const id = typeof messageId === 'string' ? messageId.trim() : ''
-  if (!id) return
-  closeUserActionPanel()
-  activeMessageActionId.value = id
 }
 
 const shouldIgnoreMessageLongPressTarget = (event) => {
@@ -3563,9 +3578,6 @@ const copyMessage = async (message) => {
   closeMessageActions()
 }
 
-const canCopyMessage = (message) => Boolean(message && !isRecalledMessage(message))
-const canQuoteMessage = (message) => Boolean(message && !isRecalledMessage(message))
-
 const resetEditingRichFields = () => {
   Object.keys(editingMessageRichFields).forEach((key) => {
     editingMessageRichFields[key] = ''
@@ -3632,42 +3644,6 @@ const updateEditingMessageRichField = ({ key, value } = {}) => {
   if (!Object.prototype.hasOwnProperty.call(editingMessageRichFields, key)) return
   editingMessageRichFields[key] = typeof value === 'string' ? value : String(value ?? '')
 }
-
-const canEditMessage = (message) =>
-  Boolean(
-    message &&
-      !isRecalledMessage(message) &&
-      (message.role === 'user' || message.role === 'assistant') &&
-      (!hasRichMessageBlocks(message.blocks) || getEditableRichMessageBlockEntry(message)),
-  )
-const canRerollMessage = (message) =>
-  Boolean(message && !isRecalledMessage(message) && message.role === 'assistant')
-const canToggleSavedMessage = (message) =>
-  Boolean(
-    message &&
-      !isRecalledMessage(message) &&
-      !isActiveServiceChat.value &&
-      (message.role === 'user' || message.role === 'assistant'),
-  )
-const canRecallMessage = (message) =>
-  Boolean(
-    message &&
-      !isRecalledMessage(message) &&
-      !isActiveServiceChat.value &&
-      (message.role === 'user' || message.role === 'assistant'),
-  )
-const canRestoreSemanticRevision = (message) =>
-  Boolean(
-    message &&
-      !isRecalledMessage(message) &&
-      typeof message?.semanticRevision?.revisedText === 'string' &&
-      message.semanticRevision.revisedText.trim() &&
-      typeof message?.semanticRevision?.originalText === 'string' &&
-      message.semanticRevision.originalText.trim(),
-  )
-
-const recallMessageActionLabel = (message) =>
-  message?.role === 'assistant' ? t('让角色撤回', 'Make contact recall') : t('撤回', 'Recall')
 
 const toggleSavedMessage = (message) => {
   if (!activeChat.value || !canToggleSavedMessage(message)) return
@@ -3906,6 +3882,26 @@ const deleteMessage = async (message) => {
   closeMessageActions()
 }
 
+const handleMessageAction = (actionId, message) => {
+  if (actionId === CHAT_MESSAGE_ACTION_IDS.QUOTE) {
+    quoteMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.COPY) {
+    void copyMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.SAVE) {
+    toggleSavedMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.EDIT) {
+    editMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.RESTORE) {
+    restoreSemanticRevision(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.REROLL) {
+    void rerollMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.RECALL) {
+    void recallMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.DELETE) {
+    void deleteMessage(message)
+  }
+}
+
 const rerollMessage = async (message) => {
   if (!activeChat.value || !canRerollMessage(message)) return
   if (loadingAI.value || activeAbortController.value) return
@@ -4070,14 +4066,6 @@ const resetUserActionDraft = () => {
 
 const backToUserActionGrid = () => {
   userActionFormType.value = USER_ACTION_FORM_NONE
-}
-
-const closeUserActionPanel = () => {
-  showUserActionPanel.value = false
-  backToUserActionGrid()
-  galleryPickerCategory.value = 'all'
-  clearGalleryPickerPreviewMap()
-  resetUserActionDraft()
 }
 
 const toggleUserActionPanel = () => {
@@ -5411,7 +5399,7 @@ watch(
     closeMessageEditModal()
     galleryPickerCategory.value = 'all'
     clearGalleryPickerPreviewMap()
-    activeMessageActionId.value = ''
+    closeMessageActions()
     pendingQuote.value = null
     threadSettingsSaved.value = false
     threadIdentitySaved.value = false
@@ -6572,67 +6560,13 @@ onBeforeUnmount(() => {
 
           <div class="space-y-2">
             <button
-              v-if="canQuoteMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              data-testid="chat-message-action-quote"
-              @click="quoteMessage(activeActionMessage)"
+              v-for="action in messageActionRows"
+              :key="action.id"
+              :class="messageActionButtonClass(action)"
+              :data-testid="action.testId"
+              @click="handleMessageAction(action.id, activeActionMessage)"
             >
-              {{ t('引用', 'Quote') }}
-            </button>
-            <button
-              v-if="canCopyMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              data-testid="chat-message-action-copy"
-              @click="copyMessage(activeActionMessage)"
-            >
-              {{ t('复制', 'Copy') }}
-            </button>
-            <button
-              v-if="canToggleSavedMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              data-testid="chat-message-action-save"
-              @click="toggleSavedMessage(activeActionMessage)"
-            >
-              {{ activeActionMessage.savedAt ? t('取消收藏', 'Unsave') : t('收藏', 'Save') }}
-            </button>
-            <button
-              v-if="canEditMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              data-testid="chat-message-action-edit"
-              @click="editMessage(activeActionMessage)"
-            >
-              {{ t('编辑', 'Edit') }}
-            </button>
-            <button
-              v-if="canRestoreSemanticRevision(activeActionMessage)"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              data-testid="chat-message-action-restore"
-              @click="restoreSemanticRevision(activeActionMessage)"
-            >
-              {{ t('恢复原文', 'Restore original') }}
-            </button>
-            <button
-              v-if="canRerollMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-100"
-              data-testid="chat-message-action-reroll"
-              @click="rerollMessage(activeActionMessage)"
-            >
-              {{ t('重roll', 'Reroll') }}
-            </button>
-            <button
-              v-if="canRecallMessage(activeActionMessage)"
-              class="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-100"
-              data-testid="chat-message-action-recall"
-              @click="recallMessage(activeActionMessage)"
-            >
-              {{ recallMessageActionLabel(activeActionMessage) }}
-            </button>
-            <button
-              class="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-100"
-              data-testid="chat-message-action-delete"
-              @click="deleteMessage(activeActionMessage)"
-            >
-              {{ t('删除', 'Delete') }}
+              {{ action.label }}
             </button>
           </div>
 
