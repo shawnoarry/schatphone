@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-06-15
+Updated: 2026-06-19
 
 > Scope and authority note
 >
@@ -16,7 +16,7 @@ Updated: 2026-06-15
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements below were re-run on 2026-06-14 against the current working tree. Notification-interface completion notes were updated on 2026-06-15.
+- Measurements below were re-run on 2026-06-19 against the current working tree after the Settings backup, storage diagnostics, and push workflow extractions.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -27,8 +27,8 @@ Updated: 2026-06-15
 
 The `lib/` layer and the module-ownership philosophy are the project's strongest assets. The largest structural risks are still both "God object" patterns:
 
-1. God View Modules: the top 8 view files now average about 4294 lines each.
-2. God Store Module: `src/stores/system.js` is now 4186 lines and is directly imported by 22 of 30 view files.
+1. God View Modules: the top 8 view files now average about 4690 lines each.
+2. God Store Module: `src/stores/system.js` is now 4581 lines and is directly imported by 22 of 30 view files.
 
 Both risks directly work against the ownership-closure goal. The ongoing `4.5 Architecture Cleanup` lane is the right home for this work, and the current snapshot still shows debt concentrated in the same hot view files and the same store module.
 
@@ -55,9 +55,9 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 | `src/views/AppStoreView.vue` | 3635 |
 | `src/views/FoodDeliveryView.vue` | 3260 |
 
-The top 8 view files average about 4815 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
+The top 8 view files average about 4690 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
 
-The `src/composables/` directory now contains 7 files:
+The `src/composables/` directory now contains 8 files:
 
 - `useDialog.js`
 - `useI18n.js`
@@ -65,9 +65,10 @@ The `src/composables/` directory now contains 7 files:
 - `useSystemApiReports.js`
 - `useSystemNotifications.js`
 - `useSettingsBackupWorkflow.js`
+- `useSettingsPushWorkflow.js`
 - `useSettingsStorageDiagnosticsWorkflow.js`
 
-That means view-level state, computed values, and side effects are still mostly written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots, Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, and Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`.
+That means view-level state, computed values, and side effects are still often written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots. Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`, and Settings real-push setup/health/subscription/test/feedback orchestration now lives behind `useSettingsPushWorkflow.js`.
 
 ### 3.2 God Store Module: `system.js`
 
@@ -150,10 +151,10 @@ This layer is the best local model for future cleanup: focused modules, semantic
 
 Current source snapshot:
 
-- `src` contains 99 `.js` files.
-- `src` contains 69 `.vue` files.
+- `src` contains 105 `.js` files.
+- `src` contains 67 `.vue` files.
 - `src` contains 0 `.ts` / `.tsx` files.
-- Total measured `.js` + `.vue` source lines under `src`: about 98.7k.
+- Total measured `.js` + `.vue` source lines under `src`: about 109.7k.
 
 TypeScript is present in devDependencies, but current application source is still JavaScript. That is acceptable for now, but it increases risk when refactoring structured contracts such as:
 
@@ -237,7 +238,7 @@ Do not start by ripping the store apart. Start by creating stable facades or ada
 Best first candidates:
 
 - notifications; first seven slices `DONE` on 2026-06-15 through `src/composables/useSystemNotifications.js`, with `LockScreen.vue` migrated as the reference caller, `App.vue` migrated for shell foreground banners, mark-read/open behavior, and notification-enabled push checks, `Phone` migrated for missed-call notification emission, `Map` migrated for notification emitters plus notification-enabled checks, Calendar migrated for event real-push readiness checks plus Calendar UI push-readiness copy, Settings / Chat Settings migrated for notification toggle/display and status copy, and `ChatView.vue` migrated for AI reply completion, notify-only auto invoke, offline auto-invoke settlement notifications, and related notification-enabled checks. Future notification cleanup should reuse that interface when new callers appear, while backup/export raw notification payloads stay under storage-format governance.
-- network/API reports; first six slices `DONE` on 2026-06-15 through `src/composables/useSystemApiReports.js`, with Network diagnostics and Settings storage diagnostics migrated for report list/summary/add/clear, Chat diagnostic-report emitters migrated for notify-only automation, AI reply failure, cancel request, and reroll failure, Map/Calendar store diagnostic-report emitters migrated for push scheduling/cancellation plus Map background automation, App shell diagnostic-report emitters migrated for foreground tick/startup/auto-push diagnostics, Settings remaining diagnostic-report emitters migrated for simulation/push diagnostics, and backup/export raw report snapshots migrated behind the reports interface without changing exported shape. Direct source-level `addApiReport` callers outside `systemStore` and the facade are now cleared. Provider/API key settings and storage persistence/restore shape remain larger future slices;
+- network/API reports; first six slices `DONE` on 2026-06-15 through `src/composables/useSystemApiReports.js`, with Network diagnostics and Settings storage diagnostics migrated for report list/summary/add/clear, Chat diagnostic-report emitters migrated for notify-only automation, AI reply failure, cancel request, and reroll failure, Map/Calendar store diagnostic-report emitters migrated for push scheduling/cancellation plus Map background automation, App shell diagnostic-report emitters migrated for foreground tick/startup/auto-push diagnostics, Settings remaining diagnostic-report emitters migrated for simulation/push diagnostics, and backup/export raw report snapshots migrated behind the reports interface without changing exported shape. The 2026-06-19 Settings push workflow extraction now consumes this facade from `useSettingsPushWorkflow.js` instead of keeping push report orchestration in `SettingsView.vue`. Direct source-level `addApiReport` callers outside `systemStore` and the facade are now cleared. Provider/API key settings and storage persistence/restore shape remain larger future slices;
 - appearance and scoped CSS;
 - Home layout and app placement;
 - backup reminder settings.
@@ -257,7 +258,7 @@ Target the largest view files first:
 3. `WorldBookView.vue`
 4. `HomeView.vue`
 
-`SettingsView.vue` is still dense, but it is no longer a top large-view hotspot after the backup workflow and storage diagnostics workflow extractions. The next Settings slice, if chosen, should be the push workflow rather than another storage-diagnostics pass.
+`SettingsView.vue` is now about 1295 lines after the backup workflow, storage diagnostics workflow, and push workflow extractions. It is no longer a top large-view hotspot. Future Settings work should be bug-led or scoped to a named remaining subdomain; the next architecture-governance slice should usually move to `ChatView.vue`, `ContactsView.vue`, `WorldBookView.vue`, or a narrow `systemStore` facade.
 
 For each view, prefer extracting state, computed values, and side effects into focused composables under `src/composables/<domain>/`.
 

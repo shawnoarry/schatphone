@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow and storage-diagnostics workflow splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
+**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow, storage-diagnostics workflow, and push-workflow splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
 
 **Architecture:** `docs/roadmap/TODO_ROADMAP.md` remains the roadmap authority, and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` remains the active handoff. This file is a reference and execution plan, not a second task board. Before implementing any slice, promote that concrete slice into both authority files as `IN_PROGRESS`.
 
@@ -12,7 +12,7 @@
 
 ## Current Evidence Snapshot
 
-Measured on 2026-06-19 after `useSettingsBackupWorkflow.js` and `useSettingsStorageDiagnosticsWorkflow.js` landed.
+Measured on 2026-06-19 after `useSettingsBackupWorkflow.js`, `useSettingsStorageDiagnosticsWorkflow.js`, and `useSettingsPushWorkflow.js` landed.
 
 Top view hot spots:
 
@@ -26,7 +26,7 @@ Top view hot spots:
 | `src/views/WidgetsView.vue` | 4050 | Widget authoring and preview logic are still broad. |
 | `src/views/AppStoreView.vue` | 3635 | App discovery, install, world-app entry, and Home wiring are concentrated. |
 | `src/views/FoodDeliveryView.vue` | 3260 | Commerce UI and service-notification integration remain large. |
-| `src/views/SettingsView.vue` | 1712 | Improved; no longer top-tier after backup and storage-diagnostics workflow extraction. |
+| `src/views/SettingsView.vue` | 1295 | Improved; no longer top-tier after backup, storage-diagnostics, and push workflow extraction. |
 
 Top store hot spots:
 
@@ -42,7 +42,7 @@ Top store hot spots:
 
 Other current signals:
 
-- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, and `src/composables/useSettingsStorageDiagnosticsWorkflow.js` are the current successful governance pattern.
+- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, and `src/composables/useSettingsPushWorkflow.js` are the current successful governance pattern.
 - `useSystemStore` is still imported by 22 view files.
 - Direct store-to-store references remain in Calendar, Reminders, Shopping, Food Delivery, Gallery, Phone, Map, and Stock.
 - No `src/**/*.ts` or `src/**/*.tsx` files were found. Type adoption should stay incremental and contract-first.
@@ -146,15 +146,15 @@ Rule of thumb:
 
 ### Phase 0: Close Or Park The Current Worktree
 
-Why now: the previous Settings backup-workflow slice is implemented but the worktree is still dirty. Continuing implementation without separating this work will make future review harder.
+Why now: the Settings backup, storage diagnostics, and push workflow slices are implemented. Continuing into a top-hotspot view without separating this work will make future review harder.
 
-- [ ] Commit or intentionally park the current Settings backup-workflow changes.
+- [ ] Commit or intentionally park the current Settings governance changes.
 - [ ] Keep unrelated `docs/superpowers/content/**` draft edits out of the architecture-governance commit unless requested.
 - [ ] After the commit or parking decision, start exactly one new governance slice.
 
 Acceptance:
 
-- A reviewer can identify the completed Settings backup-workflow slice without unrelated content draft noise.
+- A reviewer can identify the completed Settings workflow decomposition slices without unrelated content draft noise.
 
 ### Phase 1: Finish Low-Risk Settings Residual Workflows
 
@@ -183,20 +183,26 @@ Acceptance:
 - `DONE`: Repair behavior still re-runs a silent audit after repair.
 - `DONE`: Existing backup import rollback coverage remains green.
 
-Second Settings candidate:
+Completed second Settings slice:
 
 `Settings push workflow extraction`
 
-Why it follows, not leads:
+Why it followed storage diagnostics:
 
 - It is still a good Settings decomposition slice.
 - It touches browser push helpers, permission state, subscribe/resync/unsubscribe flows, and user confirmation, so it has more mocking and edge-state risk than storage diagnostics.
 
-Expected files:
+Completed files:
 
-- Create `src/composables/useSettingsPushWorkflow.js`.
-- Update `src/views/SettingsView.vue` and keep `src/components/settings/SettingsPushSection.vue` props/events compatible.
-- Cover health check, resync, subscribe failure, unsubscribe confirmation, and push feedback state.
+- Created `src/composables/useSettingsPushWorkflow.js`.
+- Updated `src/views/SettingsView.vue` while keeping `src/components/settings/SettingsPushSection.vue` props/events compatible.
+- Added `tests/settings-push-workflow.test.js`.
+
+Acceptance:
+
+- `DONE`: Health check, resync, subscribe failure, unsubscribe confirmation, and feedback timer disposal are covered by focused tests.
+- `DONE`: Push helper behavior, persisted settings shape, notification facade semantics, provider/API key settings, storage/report codes, and visible Settings UI stayed unchanged.
+- `DONE`: `SettingsView.vue` no longer imports `src/lib/push.js` directly for the Notification subpage.
 
 ### Phase 2: Start Top-Hotspot View Decomposition
 
@@ -223,7 +229,7 @@ Do not split `systemStore` directly. Continue adding narrow facades where caller
 Candidate order:
 
 1. Backup reminder settings facade.
-2. Push settings facade if it naturally follows the Settings push workflow.
+2. Push settings facade only if a later caller needs a narrower settings-store boundary than `useSettingsPushWorkflow.js` currently provides.
 3. Network/API provider settings facade after deciding the provider/API key storage boundary.
 4. Appearance settings facade.
 5. Home layout and app placement facade.
@@ -297,8 +303,8 @@ Do not:
 
 ## Immediate Next Action
 
-Start with Phase 0, then promote and implement:
+Start with Phase 2 unless the team explicitly wants a store-interface slice:
 
-`Settings push workflow extraction`
+`ChatView.vue route/thread/read-model or panel-state extraction`
 
-This is now the best current balance of safety, value, and continuity. It continues the successful Settings decomposition pattern without jumping straight into the highest-risk views, but it needs more browser-push mocking care than the completed storage-diagnostics slice.
+This is now the best current balance of value and governance pressure. Settings has completed the three warm residual workflows; the remaining day-to-day risk is concentrated in top hotspot views, especially `ChatView.vue`. Promote exactly one ChatView seam into `docs/roadmap/TODO_ROADMAP.md` and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` as `IN_PROGRESS` before implementation.

@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-05-31
+Updated: 2026-06-19
 
 ## 1. Workstream A: Ownership Closure
 
@@ -13,6 +13,7 @@ Updated: 2026-05-31
 - split overgrown files
 - isolate contracts
 - preserve tests while decomposing
+- mark one explicit slice as `IN_PROGRESS` before implementation and `DONE` only after validation and docs sync
 
 ## 3. Workstream C: Storage And Migration
 

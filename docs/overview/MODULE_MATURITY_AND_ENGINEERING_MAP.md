@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-05-29
+Updated: 2026-06-19
 
 Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
 
@@ -74,7 +74,7 @@ These modules are useful now, but feature growth without cleanup will get expens
 
 | Module | Maturity | Main risk |
 | --- | --- | --- |
-| Settings | usable but dense | too many subdomains still meet in one view |
+| Settings | usable, recently decomposed | core backup, storage diagnostics, and push workflows now sit behind composable Interfaces; avoid new pile-up |
 | Chat Directory | strong internal tool | concept density is high: role/service/template/binding semantics |
 | Contacts | active growth area | now product-critical, but large and semantically dense |
 | Map | feature-rich | still concentrated despite previous extraction work |
@@ -114,7 +114,7 @@ Current approximate sizes:
 | `src/views/FoodDeliveryView.vue` | 3260 | commerce UI and service-notification integration remain large |
 | `src/views/BookView.vue` | 2347 | text-library app; keep future editor/source-picker growth modular |
 | `src/views/AppearanceView.vue` | 2107 | visual configuration surface; avoid mixing visual polish with ownership changes |
-| `src/views/SettingsView.vue` | 1712 | denser than ideal, but backup workflow and storage diagnostics workflow orchestration are now extracted |
+| `src/views/SettingsView.vue` | 1295 | improved after backup, storage diagnostics, and push workflow orchestration were extracted |
 
 ### Largest stores
 
@@ -186,8 +186,8 @@ Engineering meaning:
 ### Settings
 
 - product state: strong configuration center
-- engineering note: still dense, but many display-only extractions already landed; backup/export/restore orchestration now lives in `src/composables/useSettingsBackupWorkflow.js`, and storage audit/report/repair orchestration now lives in `src/composables/useSettingsStorageDiagnosticsWorkflow.js`
-- recommendation: avoid deep behavior rewrites; continue one narrow Settings subdomain at a time when the Interface can preserve storage and restore semantics
+- engineering note: no longer a top large-view hotspot after display-only extractions plus `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, and `src/composables/useSettingsPushWorkflow.js`
+- recommendation: avoid deep behavior rewrites; continue Settings only for named bugs or a narrow subdomain Interface that preserves storage, restore, push, and report semantics. For general architecture cleanup, move next to Chat/Contacts/WorldBook/Home view seams or a narrow `systemStore` facade.
 
 ### Network
 

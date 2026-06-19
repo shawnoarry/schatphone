@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-05-19
+Updated: 2026-06-19
 
 > **Frozen execution status / 非执行看板**
 >
@@ -57,6 +57,7 @@ These are already part of the current baseline and should not keep appearing as 
 - delivery route read-only UI handoff
 - completed-order Wallet downstream suggestion loop
 - many older Chat / Settings / Map display-only extraction slices
+- Settings backup, storage diagnostics, and push workflow composable extractions
 - first World Pack app-binding and world UX package seams for Shopping, Food Delivery, Calendar, and Map
 - Appearance pack import/export and the guarded nonstandard-app template whitelist/review UI seam
 
