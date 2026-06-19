@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow, storage-diagnostics workflow, push-workflow, Chat active-thread read-model, Chat service-thread display read-model, Chat message edit display-state, and Chat message action-sheet display-state splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
+**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow, storage-diagnostics workflow, push-workflow, Chat active-thread read-model, Chat service-thread display read-model, Chat message edit display-state, Chat message action-sheet display-state, and Chat `+` panel-state splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
 
 **Architecture:** `docs/roadmap/TODO_ROADMAP.md` remains the roadmap authority, and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` remains the active handoff. This file is a reference and execution plan, not a second task board. Before implementing any slice, promote that concrete slice into both authority files as `IN_PROGRESS`.
 
@@ -12,13 +12,13 @@
 
 ## Current Evidence Snapshot
 
-Measured on 2026-06-19 after `useSettingsBackupWorkflow.js`, `useSettingsStorageDiagnosticsWorkflow.js`, `useSettingsPushWorkflow.js`, `useChatActiveThreadModel.js`, `useChatServiceThreadDisplayModel.js`, `useChatMessageEditDisplayModel.js`, and `useChatMessageActionSheetModel.js` landed.
+Measured on 2026-06-20 after `useSettingsBackupWorkflow.js`, `useSettingsStorageDiagnosticsWorkflow.js`, `useSettingsPushWorkflow.js`, `useChatActiveThreadModel.js`, `useChatServiceThreadDisplayModel.js`, `useChatMessageEditDisplayModel.js`, `useChatMessageActionSheetModel.js`, and `useChatUserActionPanelModel.js` landed.
 
 Top view hot spots:
 
 | File | Lines | Governance reading |
 | --- | ---: | --- |
-| `src/views/ChatView.vue` | 6597 | Highest-risk view. Active-thread, service-thread display, message-edit display-state, and message action-sheet display-state seams are extracted; continue only by different tested behavior seams. |
+| `src/views/ChatView.vue` | 6300 | Highest-risk view. Active-thread, service-thread display, message-edit display-state, message action-sheet display-state, and `+` panel-state seams are extracted; continue only by different tested behavior seams. |
 | `src/views/ContactsView.vue` | 5863 | Role/profile/relationship/danger flows are still concentrated. |
 | `src/views/WorldBookView.vue` | 5036 | World activation, source links, templates, and review UI remain dense. |
 | `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive. |
@@ -42,7 +42,7 @@ Top store hot spots:
 
 Other current signals:
 
-- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, `src/composables/useSettingsPushWorkflow.js`, `src/composables/useChatActiveThreadModel.js`, `src/composables/useChatServiceThreadDisplayModel.js`, `src/composables/useChatMessageEditDisplayModel.js`, and `src/composables/useChatMessageActionSheetModel.js` are the current successful governance pattern.
+- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, `src/composables/useSettingsPushWorkflow.js`, `src/composables/useChatActiveThreadModel.js`, `src/composables/useChatServiceThreadDisplayModel.js`, `src/composables/useChatMessageEditDisplayModel.js`, `src/composables/useChatMessageActionSheetModel.js`, and `src/composables/useChatUserActionPanelModel.js` are the current successful governance pattern.
 - `useSystemStore` is still imported by 22 view files.
 - Direct store-to-store references remain in Calendar, Reminders, Shopping, Food Delivery, Gallery, Phone, Map, and Stock.
 - No `src/**/*.ts` or `src/**/*.tsx` files were found. Type adoption should stay incremental and contract-first.
@@ -146,7 +146,7 @@ Rule of thumb:
 
 ### Phase 0: Close Or Park The Current Worktree
 
-Why now: the Settings backup, storage diagnostics, push workflow, Chat active-thread read-model, Chat service-thread display read-model, Chat message edit display-state, and Chat message action-sheet display-state slices are implemented. Continuing into another hotspot seam without separating this work will make future review harder.
+Why now: the Settings backup, storage diagnostics, push workflow, Chat active-thread read-model, Chat service-thread display read-model, Chat message edit display-state, Chat message action-sheet display-state, and Chat `+` panel-state slices are implemented. Continuing into another hotspot seam without separating this work will make future review harder.
 
 - [x] Commit or intentionally park the current Settings governance changes.
 - [ ] Keep unrelated `docs/superpowers/content/**` and `docs/superpowers/specs/**` draft edits out of the architecture-governance commit unless requested.
@@ -210,7 +210,7 @@ Do not start with a full `ChatView.vue` rewrite. Start with one tested seam.
 
 Recommended order:
 
-1. `ChatView.vue`: route/thread/read-model, service-thread display, message-edit display-state, and message action-sheet display-state composables are `DONE` via `useChatActiveThreadModel.js`, `useChatServiceThreadDisplayModel.js`, `useChatMessageEditDisplayModel.js`, and `useChatMessageActionSheetModel.js`. Continue with one new adjacent panel-state seam if Chat remains the focus. Avoid service-message schema changes, message mutation semantics, automation queue changes, and broad visual rewrites in the same slice.
+1. `ChatView.vue`: route/thread/read-model, service-thread display, message-edit display-state, message action-sheet display-state, and `+` panel-state composables are `DONE` via `useChatActiveThreadModel.js`, `useChatServiceThreadDisplayModel.js`, `useChatMessageEditDisplayModel.js`, `useChatMessageActionSheetModel.js`, and `useChatUserActionPanelModel.js`. Continue with one different adjacent seam if Chat remains the focus, such as thread-menu/settings draft state, search/list state, or pending quote/service feedback state. Avoid service-message schema changes, message mutation semantics, automation queue changes, and broad visual rewrites in the same slice.
 2. `ContactsView.vue`: extract selected-contact/detail-danger-flow or relationship-classification view state. Reuse the existing Contacts tests as guardrails.
 3. `WorldBookView.vue`: extract source-picker/catalog read models or profile-template section state. Keep Book ownership and WorldBook activation ownership separate.
 4. `HomeView.vue`: extract Home edit/library/template-picker state or split visual subcomponents only after interaction tests are identified.
@@ -305,6 +305,6 @@ Do not:
 
 Start with Phase 2 unless the team explicitly wants a store-interface slice:
 
-`ChatView.vue adjacent panel-state extraction`
+`ChatView.vue next adjacent display-state extraction`
 
-This is now the best current balance of value and governance pressure if Chat work continues. Settings has completed the three warm residual workflows, and Chat has completed active-thread, service-thread display, message-edit display-state, and message action-sheet display-state seams; the remaining day-to-day risk is still concentrated in top hotspot views, especially `ChatView.vue`. Promote exactly one next ChatView seam into `docs/roadmap/TODO_ROADMAP.md` and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` as `IN_PROGRESS` before implementation.
+This is now the best current balance of value and governance pressure if Chat work continues. Settings has completed the three warm residual workflows, and Chat has completed active-thread, service-thread display, message-edit display-state, message action-sheet display-state, and `+` panel-state seams; the remaining day-to-day risk is still concentrated in top hotspot views, especially `ChatView.vue`. Promote exactly one next ChatView seam into `docs/roadmap/TODO_ROADMAP.md` and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` as `IN_PROGRESS` before implementation.

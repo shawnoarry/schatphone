@@ -7,7 +7,7 @@ import { useSystemStore } from '../stores/system'
 import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
-import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
+import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
 import { useCalendarStore } from '../stores/calendar'
@@ -65,6 +65,10 @@ import {
   useChatMessageEditDisplayModel,
 } from '../composables/useChatMessageEditDisplayModel'
 import { useChatServiceThreadDisplayModel } from '../composables/useChatServiceThreadDisplayModel'
+import {
+  CHAT_USER_MEDIA_KINDS,
+  useChatUserActionPanelModel,
+} from '../composables/useChatUserActionPanelModel'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
@@ -175,14 +179,6 @@ const MESSAGE_LONG_PRESS_MS = 380
 const SERVICE_ROUTE_FEEDBACK_SESSION_KEY = 'schatphone:chat-service-route-feedback'
 const SERVICE_ROUTE_FEEDBACK_MAX_AGE_MS = 10 * 60 * 1000
 const SERVICE_DIRECTORY_FILTERS = new Set(['all', 'unread', 'muted', 'folded', 'service', 'official'])
-const USER_MEDIA_KIND_IMAGE = 'image'
-const USER_MEDIA_KIND_GIF = 'gif'
-const USER_ACTION_FORM_NONE = ''
-const USER_ACTION_FORM_LINK = 'link'
-const USER_ACTION_FORM_TRANSFER = 'transfer'
-const USER_ACTION_FORM_VOICE = 'voice'
-const USER_ACTION_FORM_GALLERY = 'gallery'
-
 const inputMessage = ref('')
 const chatContainer = ref(null)
 const messageTextInputRef = ref(null)
@@ -190,10 +186,6 @@ const userMediaInputRef = ref(null)
 const loadingSuggestions = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
-const showUserActionPanel = ref(false)
-const pendingUserMediaKind = ref(USER_MEDIA_KIND_IMAGE)
-const userActionFormType = ref(USER_ACTION_FORM_NONE)
-const galleryPickerCategory = ref('all')
 const aiErrorMessage = ref('')
 const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
@@ -245,18 +237,6 @@ let uiNoticeTimerId = null
 let messageLongPressTimerId = null
 let messageLongPressTargetId = ''
 
-const userActionDraft = reactive({
-  linkUrl: 'https://',
-  linkTitle: '',
-  linkNote: '',
-  transferAmount: '',
-  transferCurrency: primaryCurrency.value,
-  transferNote: '',
-  voiceTranscript: '',
-  voiceDurationSec: 8,
-})
-
-const galleryPickerPreviewMap = reactive({})
 const messageImagePreviewMap = reactive({})
 const messageImagePreviewAssetIdMap = reactive({})
 const avatarPreviewMap = reactive({})
@@ -313,36 +293,6 @@ const {
   avatarPreviewMap,
   t,
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
-})
-
-const closeUserActionPanel = () => {
-  showUserActionPanel.value = false
-  backToUserActionGrid()
-  galleryPickerCategory.value = 'all'
-  clearGalleryPickerPreviewMap()
-  resetUserActionDraft()
-}
-
-const {
-  activeActionMessage,
-  hasActiveMessageActions,
-  messageActionRows,
-  openMessageActions,
-  closeMessageActions,
-  canCopyMessage,
-  canQuoteMessage,
-  canEditMessage,
-  canRerollMessage,
-  canToggleSavedMessage,
-  canRecallMessage,
-  canRestoreSemanticRevision,
-  messageActionButtonClass,
-} = useChatMessageActionSheetModel({
-  activeMessages,
-  isActiveServiceChat,
-  editableRichMessageTypes: CHAT_MESSAGE_EDITABLE_RICH_TYPES,
-  closeUserActionPanel,
-  t,
 })
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
@@ -405,23 +355,6 @@ const triggerReplyButtonLabel = computed(() =>
   isActiveServiceChat.value ? t('服务号回复', 'Service Reply') : t('触发回复', 'Trigger Reply'),
 )
 
-const galleryCategoryLabel = (categoryKey) => {
-  if (categoryKey === 'all') return t('全部', 'All')
-  if (categoryKey === 'wallpaper') return t('壁纸', 'Wallpaper')
-  if (categoryKey === 'emoji') return t('表情', 'Emoji')
-  if (categoryKey === 'reference') return t('参考图', 'Reference')
-  if (categoryKey === 'scenario') return t('场景图', 'Scenario')
-  return categoryKey
-}
-
-const galleryPickerCategoryOptions = computed(() => [
-  { value: 'all', label: galleryCategoryLabel('all') },
-  ...GALLERY_ASSET_CATEGORIES.map((categoryKey) => ({
-    value: categoryKey,
-    label: galleryCategoryLabel(categoryKey),
-  })),
-])
-
 const createEmptyProfileAssetPack = () => ({
   wallpaperAssetIds: [],
   emojiAssetIds: [],
@@ -465,79 +398,6 @@ const resolveRoleFolderAssetsByCategory = (contract, category = 'all') => {
     },
   )
 }
-
-const galleryPickerAssets = computed(() => {
-  const baseList = galleryStore.getAssetsByCategory(galleryPickerCategory.value)
-  const chatId = Number(activeChat.value?.id)
-  if (!Number.isFinite(chatId) || chatId <= 0) {
-    return baseList.slice(0, 36)
-  }
-
-  const roleBindingContract = chatStore.getRoleBindingContract(chatId, {
-    moduleKey: 'chat',
-  })
-  const preferredId = roleBindingContract.assets?.preferredImageAssetId || ''
-  const profileIds = Array.isArray(roleBindingContract.assets?.profileAssetIds)
-    ? roleBindingContract.assets.profileAssetIds
-    : []
-  const profileIdSet = new Set(profileIds)
-  const folderResolved = resolveRoleFolderAssetsByCategory(
-    roleBindingContract,
-    galleryPickerCategory.value,
-  )
-  const folderIdSet = new Set(folderResolved.assetIds)
-
-  const sorted = [...baseList].sort((left, right) => {
-    const getPriority = (asset) => {
-      const preferredBoost = preferredId && asset.id === preferredId ? 100 : 0
-      const folderBoost = folderIdSet.has(asset.id) ? 10 : 0
-      const profileBoost = profileIdSet.has(asset.id) ? 1 : 0
-      return preferredBoost + folderBoost + profileBoost
-    }
-    const leftPriority = getPriority(left)
-    const rightPriority = getPriority(right)
-    if (leftPriority !== rightPriority) return rightPriority - leftPriority
-    return (right.updatedAt || 0) - (left.updatedAt || 0)
-  })
-
-  return sorted.slice(0, 36)
-})
-
-const gallerySendState = computed(() => {
-  const total = Array.isArray(galleryStore.assets) ? galleryStore.assets.length : 0
-  if (total > 0) {
-    return {
-      enabled: true,
-      message: t('可从素材库选择发送。', 'Assets are available to send.'),
-    }
-  }
-  return {
-    enabled: false,
-    message: t('素材库为空，请先在相册导入素材。', 'Asset library is empty. Import assets in Gallery first.'),
-  }
-})
-
-const locationShareState = computed(() => {
-  const raw = typeof currentLocationText.value === 'string' ? currentLocationText.value.trim() : ''
-  if (!raw || raw.includes('未设置') || raw.toLowerCase().includes('not set')) {
-    return {
-      enabled: false,
-      message: t('请先在地图中设置当前位置。', 'Set current location in Map first.'),
-    }
-  }
-  return {
-    enabled: true,
-    message: t('可发送当前位置。', 'Current location is ready to send.'),
-  }
-})
-
-const userActionGridHint = computed(() => {
-  const hints = []
-  if (!gallerySendState.value.enabled) hints.push(gallerySendState.value.message)
-  if (!locationShareState.value.enabled) hints.push(locationShareState.value.message)
-  if (hints.length > 0) return hints.join(' · ')
-  return t('可通过 + 面板发送图片、链接、位置、转账、语音卡片与购物建议。', 'Use + panel to send images, links, location, transfer cards, voice cards and shopping picks.')
-})
 
 const formatShoppingPreviewPrice = (product) =>
   `${(Number(product?.priceCents || 0) / 100).toFixed(2)} ${product?.currency || 'CNY'}`
@@ -988,6 +848,81 @@ const showUiNotice = (type, message, durationMs = 1800) => {
     uiNoticeMessage.value = ''
   }, durationMs)
 }
+
+let closeMessageActionsFromSheet = () => {}
+
+const {
+  showUserActionPanel,
+  pendingUserMediaKind,
+  userActionFormType,
+  userActionDraft,
+  galleryPickerCategory,
+  galleryPickerCategoryOptions,
+  galleryPickerAssets,
+  galleryPickerPreviewMap,
+  gallerySendState,
+  locationShareState,
+  userActionGridHint,
+  linkFormState,
+  transferFormState,
+  voiceFormState,
+  normalizeExternalUrl,
+  backToUserActionGrid,
+  closeUserActionPanel,
+  toggleUserActionPanel,
+  openUserActionForm,
+  updateUserActionDraft,
+  setGalleryPickerCategory,
+  clearGalleryPickerPreviewMap,
+} = useChatUserActionPanelModel({
+  galleryStore,
+  activeChat,
+  activeRoleAssetContext,
+  currentLocationText,
+  primaryCurrency,
+  canActiveChatCommunicate,
+  resolveFolderAssetsByCategory: (category) => {
+    const chatId = Number(activeChat.value?.id)
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      return {
+        assetIds: [],
+        sourceByAssetId: {},
+      }
+    }
+    const contract = chatStore.getRoleBindingContract(chatId, {
+      moduleKey: 'chat',
+    })
+    return resolveRoleFolderAssetsByCategory(contract, category)
+  },
+  closeMessageActions: () => closeMessageActionsFromSheet(),
+  showUiNotice,
+  previewScopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
+  t,
+})
+
+const {
+  activeActionMessage,
+  hasActiveMessageActions,
+  messageActionRows,
+  openMessageActions,
+  closeMessageActions,
+  canCopyMessage,
+  canQuoteMessage,
+  canEditMessage,
+  canRerollMessage,
+  canToggleSavedMessage,
+  canRecallMessage,
+  canRestoreSemanticRevision,
+  messageActionButtonClass,
+} = useChatMessageActionSheetModel({
+  activeMessages,
+  isActiveServiceChat,
+  editableRichMessageTypes: CHAT_MESSAGE_EDITABLE_RICH_TYPES,
+  closeUserActionPanel,
+  t,
+})
+
+closeMessageActionsFromSheet = closeMessageActions
 
 const canUseSessionStorage = () =>
   typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
@@ -4053,86 +3988,7 @@ const generateSmartReplies = async () => {
   }
 }
 
-const resetUserActionDraft = () => {
-  userActionDraft.linkUrl = 'https://'
-  userActionDraft.linkTitle = ''
-  userActionDraft.linkNote = ''
-  userActionDraft.transferAmount = ''
-  userActionDraft.transferCurrency = primaryCurrency.value || 'CNY'
-  userActionDraft.transferNote = ''
-  userActionDraft.voiceTranscript = ''
-  userActionDraft.voiceDurationSec = 8
-}
-
-const backToUserActionGrid = () => {
-  userActionFormType.value = USER_ACTION_FORM_NONE
-}
-
-const toggleUserActionPanel = () => {
-  if (!canActiveChatCommunicate.value) {
-    showUiNotice('warning', t('当前通讯状态不允许发送附件或卡片。', 'Current communication state does not allow attachments or cards.'))
-    return
-  }
-  if (!showUserActionPanel.value) {
-    closeMessageActions()
-    showUserActionPanel.value = true
-    backToUserActionGrid()
-    return
-  }
-  closeUserActionPanel()
-}
-
-const openUserActionForm = (formType) => {
-  const nextType =
-    formType === USER_ACTION_FORM_LINK ||
-    formType === USER_ACTION_FORM_TRANSFER ||
-    formType === USER_ACTION_FORM_VOICE ||
-    formType === USER_ACTION_FORM_GALLERY
-      ? formType
-      : USER_ACTION_FORM_NONE
-  if (nextType === USER_ACTION_FORM_GALLERY && !gallerySendState.value.enabled) {
-    showUiNotice('warning', gallerySendState.value.message)
-    return
-  }
-  showUserActionPanel.value = true
-  userActionFormType.value = nextType
-  if (nextType === USER_ACTION_FORM_GALLERY) {
-    const context = activeRoleAssetContext.value
-    if (context.preferredImageAssetId) {
-      const preferredAsset = galleryStore.findAssetById(context.preferredImageAssetId)
-      if (preferredAsset?.category) {
-        galleryPickerCategory.value = preferredAsset.category
-        return
-      }
-    }
-    if ((context.profileAssetPack?.referenceAssetIds || []).length > 0) {
-      galleryPickerCategory.value = 'reference'
-      return
-    }
-    if ((context.profileAssetPack?.scenarioAssetIds || []).length > 0) {
-      galleryPickerCategory.value = 'scenario'
-      return
-    }
-    if ((context.profileAssetPack?.emojiAssetIds || []).length > 0) {
-      galleryPickerCategory.value = 'emoji'
-      return
-    }
-  }
-}
-
-const updateUserActionDraft = ({ key, value } = {}) => {
-  if (typeof key !== 'string' || !(key in userActionDraft)) return
-  userActionDraft[key] = value
-}
-
 const buildMessageImagePreviewKey = (messageId, blockIndex) => `${messageId}:${blockIndex}`
-
-const clearGalleryPickerPreviewMap = () => {
-  Object.keys(galleryPickerPreviewMap).forEach((assetId) => {
-    galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
-    delete galleryPickerPreviewMap[assetId]
-  })
-}
 
 const clearMessageImagePreviewMap = () => {
   Object.keys(messageImagePreviewMap).forEach((key) => {
@@ -4143,15 +3999,6 @@ const clearMessageImagePreviewMap = () => {
     }
     delete messageImagePreviewMap[key]
   })
-}
-
-const ensureGalleryPickerPreview = async (assetId) => {
-  if (!assetId || galleryPickerPreviewMap[assetId]) return
-  const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
-    scopeId: CHAT_ASSET_PREVIEW_SCOPE_ID,
-  })
-  if (!previewUrl) return
-  galleryPickerPreviewMap[assetId] = previewUrl
 }
 
 const ensureMessageImagePreview = async (messageId, blockIndex, assetId) => {
@@ -4250,122 +4097,6 @@ const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) 
   return appended
 }
 
-const normalizeExternalUrl = (value) => {
-  const raw = typeof value === 'string' ? value.trim() : ''
-  if (!raw) return ''
-  const candidate = /^https?:\/\//i.test(raw) ? raw : /^www\./i.test(raw) ? `https://${raw}` : ''
-  if (!candidate) return ''
-  try {
-    const parsed = new URL(candidate)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
-    return parsed.toString()
-  } catch {
-    return ''
-  }
-}
-
-const linkFormState = computed(() => {
-  const normalizedUrl = normalizeExternalUrl(userActionDraft.linkUrl)
-  if (!normalizedUrl) {
-    return {
-      valid: false,
-      message: t('链接格式无效，仅支持 http/https。', 'Invalid URL. Only http/https is supported.'),
-      url: '',
-      label: '',
-      note: '',
-    }
-  }
-
-  const label =
-    typeof userActionDraft.linkTitle === 'string' && userActionDraft.linkTitle.trim()
-      ? userActionDraft.linkTitle.trim()
-      : t('外部链接', 'External link')
-  const note = typeof userActionDraft.linkNote === 'string' ? userActionDraft.linkNote.trim() : ''
-  return {
-    valid: true,
-    message: t('链接格式可用。', 'URL format looks good.'),
-    url: normalizedUrl,
-    label,
-    note,
-  }
-})
-
-const transferFormState = computed(() => {
-  const amount = typeof userActionDraft.transferAmount === 'string' ? userActionDraft.transferAmount.trim() : ''
-  if (!amount) {
-    return {
-      valid: false,
-      message: t('请输入转账金额。', 'Please enter transfer amount.'),
-      amount: '',
-      currency: '',
-      note: '',
-    }
-  }
-  if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
-    return {
-      valid: false,
-      message: t('金额格式无效。', 'Invalid amount format.'),
-      amount: '',
-      currency: '',
-      note: '',
-    }
-  }
-
-  const rawCurrency = typeof userActionDraft.transferCurrency === 'string'
-    ? userActionDraft.transferCurrency.trim()
-    : ''
-  const currency = rawCurrency ? rawCurrency.toUpperCase() : primaryCurrency.value || 'CNY'
-  if (!/^[A-Z]{2,8}$/.test(currency)) {
-    return {
-      valid: false,
-      message: t('币种格式无效。', 'Invalid currency format.'),
-      amount: '',
-      currency: '',
-      note: '',
-    }
-  }
-
-  const note = typeof userActionDraft.transferNote === 'string' ? userActionDraft.transferNote.trim() : ''
-  return {
-    valid: true,
-    message: t('转账卡片信息可发送。', 'Transfer card is ready to send.'),
-    amount,
-    currency,
-    note,
-  }
-})
-
-const voiceFormState = computed(() => {
-  const transcript = typeof userActionDraft.voiceTranscript === 'string'
-    ? userActionDraft.voiceTranscript.trim()
-    : ''
-  if (!transcript) {
-    return {
-      valid: false,
-      message: t('语音内容不能为空。', 'Voice transcript cannot be empty.'),
-      transcript: '',
-      durationSec: 0,
-    }
-  }
-
-  const duration = Number(userActionDraft.voiceDurationSec)
-  if (!Number.isFinite(duration)) {
-    return {
-      valid: false,
-      message: t('时长格式无效。', 'Invalid duration format.'),
-      transcript: '',
-      durationSec: 0,
-    }
-  }
-
-  return {
-    valid: true,
-    message: t('语音卡片信息可发送。', 'Voice card is ready to send.'),
-    transcript,
-    durationSec: Math.min(600, Math.max(1, Math.floor(duration))),
-  }
-})
-
 const openExternalUrl = (rawUrl) => {
   const url = normalizeExternalUrl(rawUrl)
   if (!url) {
@@ -4375,11 +4106,12 @@ const openExternalUrl = (rawUrl) => {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-const triggerUserMediaPicker = (kind = USER_MEDIA_KIND_IMAGE) => {
+const triggerUserMediaPicker = (kind = CHAT_USER_MEDIA_KINDS.IMAGE) => {
   if (!userMediaInputRef.value) return
-  pendingUserMediaKind.value = kind === USER_MEDIA_KIND_GIF ? USER_MEDIA_KIND_GIF : USER_MEDIA_KIND_IMAGE
+  pendingUserMediaKind.value =
+    kind === CHAT_USER_MEDIA_KINDS.GIF ? CHAT_USER_MEDIA_KINDS.GIF : CHAT_USER_MEDIA_KINDS.IMAGE
   userMediaInputRef.value.accept =
-    pendingUserMediaKind.value === USER_MEDIA_KIND_GIF ? 'image/gif' : 'image/*'
+    pendingUserMediaKind.value === CHAT_USER_MEDIA_KINDS.GIF ? 'image/gif' : 'image/*'
   userMediaInputRef.value.value = ''
   userMediaInputRef.value.click()
 }
@@ -4579,8 +4311,11 @@ const handleUserMediaPicked = async (event) => {
   const file = inputEl?.files?.[0]
   if (!file || !activeChat.value) return
 
-  const mediaKind = pendingUserMediaKind.value === USER_MEDIA_KIND_GIF ? USER_MEDIA_KIND_GIF : USER_MEDIA_KIND_IMAGE
-  if (mediaKind === USER_MEDIA_KIND_GIF && file.type !== 'image/gif') {
+  const mediaKind =
+    pendingUserMediaKind.value === CHAT_USER_MEDIA_KINDS.GIF
+      ? CHAT_USER_MEDIA_KINDS.GIF
+      : CHAT_USER_MEDIA_KINDS.IMAGE
+  if (mediaKind === CHAT_USER_MEDIA_KINDS.GIF && file.type !== 'image/gif') {
     showUiNotice('warning', t('请选择 GIF 文件。', 'Please select a GIF file.'))
     if (inputEl) inputEl.value = ''
     return
@@ -4600,7 +4335,7 @@ const handleUserMediaPicked = async (event) => {
 
     if (!shouldImportToGallery) {
       const expectedMediaKind =
-        mediaKind === USER_MEDIA_KIND_GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
+        mediaKind === CHAT_USER_MEDIA_KINDS.GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
       const sizeGuard = validateMediaFileBySize(file, {
         scene: MEDIA_SIZE_SCENE.ONE_OFF_INLINE,
         fallbackKind: expectedMediaKind,
@@ -4622,7 +4357,8 @@ const handleUserMediaPicked = async (event) => {
         return
       }
 
-      const fallbackAlt = mediaKind === USER_MEDIA_KIND_GIF ? t('单次 GIF', 'One-off GIF') : t('单次图片', 'One-off image')
+      const fallbackAlt =
+        mediaKind === CHAT_USER_MEDIA_KINDS.GIF ? t('单次 GIF', 'One-off GIF') : t('单次图片', 'One-off image')
       const safeName = typeof file.name === 'string' && file.name.trim() ? file.name.trim() : fallbackAlt
       appendUserMessage({
         content: `${fallbackAlt}: ${safeName}`,
@@ -4649,7 +4385,7 @@ const handleUserMediaPicked = async (event) => {
     }
 
     const result = await galleryStore.importAssetsFromFiles([file], {
-      category: mediaKind === USER_MEDIA_KIND_GIF ? 'emoji' : 'reference',
+      category: mediaKind === CHAT_USER_MEDIA_KINDS.GIF ? 'emoji' : 'reference',
     })
 
     let targetAssetId = ''
@@ -4662,7 +4398,7 @@ const handleUserMediaPicked = async (event) => {
 
     if (!targetAssetId) {
       if (result.skippedTooLargeCount > 0) {
-        const expectedKind = mediaKind === USER_MEDIA_KIND_GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
+        const expectedKind = mediaKind === CHAT_USER_MEDIA_KINDS.GIF ? MEDIA_KIND.GIF : MEDIA_KIND.IMAGE
         const limitBytes = resolveMediaSizeLimitBytes(expectedKind, {
           scene: MEDIA_SIZE_SCENE.GALLERY_IMPORT,
         })
@@ -5290,38 +5026,6 @@ const saveThreadSettings = () => {
 }
 
 watch(
-  galleryPickerAssets,
-  (assets) => {
-    if (!showUserActionPanel.value || userActionFormType.value !== USER_ACTION_FORM_GALLERY) return
-    const activeIds = new Set(assets.map((asset) => asset.id))
-    assets.forEach((asset) => {
-      void ensureGalleryPickerPreview(asset.id)
-    })
-    Object.keys(galleryPickerPreviewMap).forEach((assetId) => {
-      if (!activeIds.has(assetId)) {
-        galleryStore.releaseAssetPreview(assetId, CHAT_ASSET_PREVIEW_SCOPE_ID)
-        delete galleryPickerPreviewMap[assetId]
-      }
-    })
-  },
-  { immediate: true },
-)
-
-watch(
-  () => ({
-    panelOpened: showUserActionPanel.value,
-    formType: userActionFormType.value,
-    category: galleryPickerCategory.value,
-  }),
-  () => {
-    if (!showUserActionPanel.value || userActionFormType.value !== USER_ACTION_FORM_GALLERY) return
-    galleryPickerAssets.value.forEach((asset) => {
-      void ensureGalleryPickerPreview(asset.id)
-    })
-  },
-)
-
-watch(
   activeMessages,
   (messages) => {
     const validKeys = new Set()
@@ -5397,8 +5101,6 @@ watch(
     showThreadMenu.value = false
     closeUserActionPanel()
     closeMessageEditModal()
-    galleryPickerCategory.value = 'all'
-    clearGalleryPickerPreviewMap()
     closeMessageActions()
     pendingQuote.value = null
     threadSettingsSaved.value = false
@@ -6476,7 +6178,7 @@ onBeforeUnmount(() => {
             @submit-voice-card-form="submitVoiceCardForm"
             @send-product-card="submitShoppingProductCard"
             @update-user-action-draft="updateUserActionDraft"
-            @update-gallery-picker-category="galleryPickerCategory = $event"
+            @update-gallery-picker-category="setGalleryPickerCategory"
             @submit-gallery-asset="submitGalleryAsset"
             @open-gallery="openModuleRoute('/gallery')"
             @open-shopping="openShoppingFromChat"
