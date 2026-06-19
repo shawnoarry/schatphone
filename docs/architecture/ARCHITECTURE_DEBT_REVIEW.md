@@ -46,30 +46,32 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 
 | File | Lines |
 | --- | ---: |
-| `src/views/ChatView.vue` | 6506 |
-| `src/views/ContactsView.vue` | 5428 |
-| `src/views/WorldBookView.vue` | 4565 |
-| `src/views/HomeView.vue` | 3920 |
-| `src/views/ChatDirectoryView.vue` | 3802 |
-| `src/views/WidgetsView.vue` | 3617 |
-| `src/views/AppStoreView.vue` | 3352 |
-| `src/views/FoodDeliveryView.vue` | 3161 |
+| `src/views/ChatView.vue` | 7197 |
+| `src/views/ContactsView.vue` | 5863 |
+| `src/views/WorldBookView.vue` | 5036 |
+| `src/views/HomeView.vue` | 4355 |
+| `src/views/ChatDirectoryView.vue` | 4122 |
+| `src/views/WidgetsView.vue` | 4050 |
+| `src/views/AppStoreView.vue` | 3635 |
+| `src/views/FoodDeliveryView.vue` | 3260 |
 
-The top 8 view files average about 4294 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
+The top 8 view files average about 4815 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
 
-The `src/composables/` directory now contains 5 files:
+The `src/composables/` directory now contains 7 files:
 
 - `useDialog.js`
 - `useI18n.js`
 - `useAppIconImagePreviews.js`
 - `useSystemApiReports.js`
 - `useSystemNotifications.js`
+- `useSettingsBackupWorkflow.js`
+- `useSettingsStorageDiagnosticsWorkflow.js`
 
-That means view-level state, computed values, and side effects are still mostly written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups and the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots.
+That means view-level state, computed values, and side effects are still mostly written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots, Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, and Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`.
 
 ### 3.2 God Store Module: `system.js`
 
-`src/stores/system.js` is 4186 lines.
+`src/stores/system.js` is 4581 lines.
 
 It is directly imported by 22 of 30 view files. The 8 view files without a direct `useSystemStore` import are:
 
@@ -254,6 +256,8 @@ Target the largest view files first:
 2. `ContactsView.vue`
 3. `WorldBookView.vue`
 4. `HomeView.vue`
+
+`SettingsView.vue` is still dense, but it is no longer a top large-view hotspot after the backup workflow and storage diagnostics workflow extractions. The next Settings slice, if chosen, should be the push workflow rather than another storage-diagnostics pass.
 
 For each view, prefer extracting state, computed values, and side effects into focused composables under `src/composables/<domain>/`.
 

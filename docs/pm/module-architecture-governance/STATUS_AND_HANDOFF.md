@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-06-15
+Updated: 2026-06-19
 
 This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
 
@@ -35,6 +35,9 @@ What is already landed:
 22. API reports interface governance slices 2026-06-15: `src/composables/useSystemApiReports.js` now provides a narrow tested interface over API/storage diagnostic report reads, summaries, add, clear, and raw snapshot creation for backup/export callers. `NetworkView.vue` consumes it for diagnostics list/summary/add/clear; `SettingsView.vue` consumes it for storage diagnostic report read/add/clear, simulation/push diagnostic-report emission, and backup/export raw `apiReports` snapshots; `ChatView.vue` consumes it for notify-only automation, AI reply failure, cancel request, and reroll failure diagnostic-report emission; `Map` and Calendar stores consume it for push scheduling/cancellation and Map background automation diagnostic-report emission; `App.vue` consumes it for shell foreground tick, push startup self-heal, and chat auto-push scheduling/cancellation diagnostics. Direct source-level `addApiReport` callers outside `systemStore` and `useSystemApiReports.js` are cleared. Provider/API key settings, exported data shape, storage persistence shape, and restore semantics are unchanged.
 23. Encoding and IA cleanup 2026-06-18: the old corrupted Chat product-card asset badge was removed from the Chat surface instead of being reintroduced as `可转资产`; asset-transfer meaning now stays in Shopping's post-order suggestion layer. `tests/chat-settings-me-appearance.test.js` covers that Chat rich product cards no longer render the asset handoff label, and `tests/mojibake-guard.test.js` now catches the old corrupted fragment while also guarding project-local `.agents/skills/**/SKILL.md` instruction files. No Chat block schema, store contract, persistence shape, service-notification behavior, or skill behavior changed.
 
+24. Settings large-file decomposition 2026-06-19: `src/composables/useSettingsBackupWorkflow.js` now owns Settings backup/export/restore orchestration behind a focused composable Module Interface for export/import actions, copy tone, asset-package mode, and feedback state. `SettingsView.vue` no longer directly coordinates Gallery, Files, Book, Shopping, Food Delivery, Assets, Wallet, Phone, Stock, or relationship-runtime backup/restore details. Backup JSON shape, restore/rollback semantics, storage diagnostic report codes, provider/API key settings, and visible Settings UI are unchanged.
+25. Settings storage diagnostics decomposition 2026-06-19: `src/composables/useSettingsStorageDiagnosticsWorkflow.js` now owns storage audit targets, persistence inspection, storage report clearing, mirror repair orchestration, status labels, and feedback timer state behind a focused composable Module Interface. `SettingsView.vue` now consumes that Interface for the About / Storage Diagnostics panel instead of directly importing persistence diagnostic helpers. Storage report codes, persistence inspection/repair behavior, backup/export shapes, provider/API key settings, and visible Settings UI are unchanged.
+
 Still incomplete:
 
 1. legacy field semantics and fallback paths still need continued cleanup;
@@ -49,12 +52,14 @@ Still incomplete:
 
 Latest completed governance slice:
 
+- `DONE` 2026-06-19: Settings storage diagnostics workflow extraction. `src/composables/useSettingsStorageDiagnosticsWorkflow.js` now owns Settings storage audit/report/repair orchestration, status/label helpers, and feedback lifecycle behind a focused composable Module Interface. `SettingsView.vue` dropped direct persistence diagnostic helper usage and now wires the About / Storage Diagnostics UI through that Interface. `tests/settings-storage-diagnostics-workflow.test.js` covers healthy audit reports, drift repair semantics, storage-only report clearing, and feedback timer cleanup. Storage report codes, persistence inspection/repair behavior, backup/export shapes, provider/API key settings, and visible Settings UI stayed unchanged.
+- `DONE` 2026-06-19: first Settings large-file decomposition slice. Backup/export/restore orchestration moved from `SettingsView.vue` into `src/composables/useSettingsBackupWorkflow.js`, giving Settings a narrower Interface while keeping backup payload shape, restore rollback, storage reports, provider/API key settings, and UI behavior unchanged. `tests/settings-backup-workflow.test.js` covers the new export Interface, and the existing Settings import rollback regression remains green.
 - `DONE` 2026-06-18: narrow encoding and IA cleanup. Chat product cards no longer show the downstream asset-transfer badge; Shopping still keeps the asset-transfer suggestion flow after checkout. The old corrupted fragment is covered by mojibake guard markers, project-local `SKILL.md` guard coverage was added, and runtime behavior, Chat message schema, source-module ownership, persistence, and skill behavior stayed unchanged.
 - `DONE` 2026-06-15: sixth API reports interface governance slice. Backup/export read access for raw `apiReports` snapshots now routes through `src/composables/useSystemApiReports.js#createReportSnapshot`. Regression coverage verifies the snapshot is detached from the live store, plus Settings export/rollback paths still pass. Exported data shape, persisted storage shape, provider/API key settings, restore semantics, and Settings decomposition stayed out of this slice.
 
 Active governance slice:
 
-- None after the 2026-06-18 narrow encoding cleanup. Remaining API reports work is now a larger decision: either storage-shape/restore governance inside `systemStore`, provider/API key settings extraction, or broader Settings/systemStore decomposition. Choose one explicit slice and mark it here as `IN_PROGRESS` before implementation.
+- None after the 2026-06-19 Settings storage diagnostics workflow extraction. Next safe candidate is `Settings push workflow extraction` because it continues the same Settings decomposition pattern, but it has more browser-push mocking risk than the completed storage diagnostics slice. Choose one explicit slice and mark it here as `IN_PROGRESS` before implementation.
 
 1. Continue one-owner-per-concept cleanup where docs and code still drift.
 2. Keep extracting low-risk pieces from oversized files while preserving tests and migrations.

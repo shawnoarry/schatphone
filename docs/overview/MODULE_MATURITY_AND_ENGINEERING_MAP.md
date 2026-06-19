@@ -104,16 +104,17 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/views/ChatView.vue` | 4534 | still the largest maintainability hotspot |
-| `src/views/ContactsView.vue` | 2255 | now a major product-critical surface; needs careful IA and ownership protection |
-| `src/views/SettingsView.vue` | 2181 | dense system/config surface |
-| `src/views/ChatDirectoryView.vue` | 1872 | concept-heavy management surface |
-| `src/views/MapView.vue` | 1670 | still concentrated, though healthier than before |
-| `src/views/WorldBookView.vue` | 1718 | larger after Book source links, source diff review, and World Pack activation; extract panels before another major feature slice |
-| `src/views/GalleryView.vue` | 1159 | manageable, but still important because of shared asset contracts |
-| `src/views/ControlCenterView.vue` | 914 | review/control surface now large enough to deserve explicit engineering attention |
-| `src/views/BookView.vue` | 759 | new V1 text-library app; keep future editor/source-picker growth modular |
-| `src/views/CalendarView.vue` | 622 | comparatively healthy |
+| `src/views/ChatView.vue` | 7197 | still the largest maintainability hotspot |
+| `src/views/ContactsView.vue` | 5863 | major product-critical surface; needs careful IA and ownership protection |
+| `src/views/WorldBookView.vue` | 5036 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
+| `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive |
+| `src/views/ChatDirectoryView.vue` | 4122 | concept-heavy management surface |
+| `src/views/WidgetsView.vue` | 4050 | widget authoring and preview logic are broad |
+| `src/views/AppStoreView.vue` | 3635 | app discovery, install, world-app entry, and Home wiring are concentrated |
+| `src/views/FoodDeliveryView.vue` | 3260 | commerce UI and service-notification integration remain large |
+| `src/views/BookView.vue` | 2347 | text-library app; keep future editor/source-picker growth modular |
+| `src/views/AppearanceView.vue` | 2107 | visual configuration surface; avoid mixing visual polish with ownership changes |
+| `src/views/SettingsView.vue` | 1712 | denser than ideal, but backup workflow and storage diagnostics workflow orchestration are now extracted |
 
 ### Largest stores
 
@@ -121,15 +122,16 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/stores/system.js` | 3593 | central infrastructure store; change carefully and avoid adding new domain ownership |
-| `src/stores/chat.js` | 2190 | rich domain logic with high coordination responsibility |
-| `src/stores/map.js` | 2137 | broad product logic; prefer improving seams before deep redesign |
-| `src/stores/gallery.js` | 1325 | important asset rules live here; avoid casual contract churn |
-| `src/stores/calendar.js` | 1005 | larger than before because of compatibility and schedule responsibilities |
-| `src/stores/relationshipRuntime.js` | 939 | now a real cross-module truth layer; deserves stricter semantic protection |
-| `src/stores/foodDelivery.js` | 903 | active commerce/event lane |
-| `src/stores/shopping.js` | 844 | active commerce/event lane |
-| `src/stores/reminders.js` | 660 | key ownership seam for cross-module cue handling |
+| `src/stores/system.js` | 4581 | central infrastructure store; change carefully and avoid adding new domain ownership |
+| `src/stores/chat.js` | 3411 | rich domain logic with high coordination responsibility |
+| `src/stores/map.js` | 2332 | broad product logic; prefer improving seams before deep redesign |
+| `src/stores/gallery.js` | 1471 | important asset rules live here; avoid casual contract churn |
+| `src/stores/relationshipRuntime.js` | 1397 | real cross-module truth layer; deserves stricter semantic protection |
+| `src/stores/foodDelivery.js` | 1328 | active commerce/event lane |
+| `src/stores/calendar.js` | 1116 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
+| `src/stores/shopping.js` | 1043 | active commerce/event lane |
+| `src/stores/simulation.js` | 888 | runtime/event lane with increasing diagnostic responsibility |
+| `src/stores/reminders.js` | 735 | key ownership seam for cross-module cue handling |
 
 ## 4. Practical Engineering Rules
 
@@ -184,8 +186,8 @@ Engineering meaning:
 ### Settings
 
 - product state: strong configuration center
-- engineering note: still dense, but many display-only extractions already landed
-- recommendation: avoid deep behavior rewrites; only continue low-risk cleanup if a clear UX need appears
+- engineering note: still dense, but many display-only extractions already landed; backup/export/restore orchestration now lives in `src/composables/useSettingsBackupWorkflow.js`, and storage audit/report/repair orchestration now lives in `src/composables/useSettingsStorageDiagnosticsWorkflow.js`
+- recommendation: avoid deep behavior rewrites; continue one narrow Settings subdomain at a time when the Interface can preserve storage and restore semantics
 
 ### Network
 
