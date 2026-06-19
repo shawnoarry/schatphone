@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow, storage-diagnostics workflow, and push-workflow splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
+**Goal:** Re-baseline the remaining architecture-governance work after the 2026-06-19 Settings backup-workflow, storage-diagnostics workflow, push-workflow, and first Chat active-thread read-model splits, then continue the `4.5 Architecture Cleanup` lane in safe, marked slices.
 
 **Architecture:** `docs/roadmap/TODO_ROADMAP.md` remains the roadmap authority, and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` remains the active handoff. This file is a reference and execution plan, not a second task board. Before implementing any slice, promote that concrete slice into both authority files as `IN_PROGRESS`.
 
@@ -12,13 +12,13 @@
 
 ## Current Evidence Snapshot
 
-Measured on 2026-06-19 after `useSettingsBackupWorkflow.js`, `useSettingsStorageDiagnosticsWorkflow.js`, and `useSettingsPushWorkflow.js` landed.
+Measured on 2026-06-19 after `useSettingsBackupWorkflow.js`, `useSettingsStorageDiagnosticsWorkflow.js`, `useSettingsPushWorkflow.js`, and `useChatActiveThreadModel.js` landed.
 
 Top view hot spots:
 
 | File | Lines | Governance reading |
 | --- | ---: | --- |
-| `src/views/ChatView.vue` | 7197 | Highest-risk view. Split only by tested behavior seams. |
+| `src/views/ChatView.vue` | 7093 | Highest-risk view. First active-thread read-model seam is extracted; continue only by tested behavior seams. |
 | `src/views/ContactsView.vue` | 5863 | Role/profile/relationship/danger flows are still concentrated. |
 | `src/views/WorldBookView.vue` | 5036 | World activation, source links, templates, and review UI remain dense. |
 | `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive. |
@@ -42,11 +42,11 @@ Top store hot spots:
 
 Other current signals:
 
-- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, and `src/composables/useSettingsPushWorkflow.js` are the current successful governance pattern.
+- `src/composables/useSystemNotifications.js`, `src/composables/useSystemApiReports.js`, `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, `src/composables/useSettingsPushWorkflow.js`, and `src/composables/useChatActiveThreadModel.js` are the current successful governance pattern.
 - `useSystemStore` is still imported by 22 view files.
 - Direct store-to-store references remain in Calendar, Reminders, Shopping, Food Delivery, Gallery, Phone, Map, and Stock.
 - No `src/**/*.ts` or `src/**/*.tsx` files were found. Type adoption should stay incremental and contract-first.
-- The worktree currently contains unrelated draft content changes under `docs/superpowers/content/**`; do not include those in architecture-governance commits unless the user explicitly asks.
+- The worktree currently contains unrelated draft content/spec changes under `docs/superpowers/content/**` and `docs/superpowers/specs/**`; do not include those in architecture-governance commits unless the user explicitly asks.
 
 ## Remaining Governance Problems
 
@@ -146,15 +146,15 @@ Rule of thumb:
 
 ### Phase 0: Close Or Park The Current Worktree
 
-Why now: the Settings backup, storage diagnostics, and push workflow slices are implemented. Continuing into a top-hotspot view without separating this work will make future review harder.
+Why now: the Settings backup, storage diagnostics, push workflow, and first Chat active-thread read-model slices are implemented. Continuing into another hotspot seam without separating this work will make future review harder.
 
-- [ ] Commit or intentionally park the current Settings governance changes.
-- [ ] Keep unrelated `docs/superpowers/content/**` draft edits out of the architecture-governance commit unless requested.
-- [ ] After the commit or parking decision, start exactly one new governance slice.
+- [x] Commit or intentionally park the current Settings governance changes.
+- [ ] Keep unrelated `docs/superpowers/content/**` and `docs/superpowers/specs/**` draft edits out of the architecture-governance commit unless requested.
+- [x] After the commit or parking decision, start exactly one new governance slice.
 
 Acceptance:
 
-- A reviewer can identify the completed Settings workflow decomposition slices without unrelated content draft noise.
+- A reviewer can identify the completed Settings workflow decomposition slices and the first Chat read-model slice without unrelated content draft noise.
 
 ### Phase 1: Finish Low-Risk Settings Residual Workflows
 
@@ -210,7 +210,7 @@ Do not start with a full `ChatView.vue` rewrite. Start with one tested seam.
 
 Recommended order:
 
-1. `ChatView.vue`: extract a route/thread/read-model or panel-state composable first. Avoid service-message schema changes, automation queue changes, and broad visual rewrites in the same slice.
+1. `ChatView.vue`: first route/thread/read-model composable is `DONE` via `useChatActiveThreadModel.js`. Continue with one adjacent panel-state or service-thread display read-model seam. Avoid service-message schema changes, automation queue changes, and broad visual rewrites in the same slice.
 2. `ContactsView.vue`: extract selected-contact/detail-danger-flow or relationship-classification view state. Reuse the existing Contacts tests as guardrails.
 3. `WorldBookView.vue`: extract source-picker/catalog read models or profile-template section state. Keep Book ownership and WorldBook activation ownership separate.
 4. `HomeView.vue`: extract Home edit/library/template-picker state or split visual subcomponents only after interaction tests are identified.
@@ -288,7 +288,7 @@ Scope:
 
 Do not:
 
-- Rewrite old `docs/superpowers/content/**` drafts as part of architecture governance.
+- Rewrite old `docs/superpowers/content/**` or `docs/superpowers/specs/**` drafts as part of architecture governance.
 - Delete compatibility paths without migration evidence.
 - Create new task boards outside the roadmap and PM handoff files.
 
@@ -305,6 +305,6 @@ Do not:
 
 Start with Phase 2 unless the team explicitly wants a store-interface slice:
 
-`ChatView.vue route/thread/read-model or panel-state extraction`
+`ChatView.vue adjacent panel-state or service-thread display read-model extraction`
 
-This is now the best current balance of value and governance pressure. Settings has completed the three warm residual workflows; the remaining day-to-day risk is concentrated in top hotspot views, especially `ChatView.vue`. Promote exactly one ChatView seam into `docs/roadmap/TODO_ROADMAP.md` and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` as `IN_PROGRESS` before implementation.
+This is now the best current balance of value and governance pressure. Settings has completed the three warm residual workflows, and Chat has completed its first active-thread read-model seam; the remaining day-to-day risk is still concentrated in top hotspot views, especially `ChatView.vue`. Promote exactly one next ChatView seam into `docs/roadmap/TODO_ROADMAP.md` and `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` as `IN_PROGRESS` before implementation.

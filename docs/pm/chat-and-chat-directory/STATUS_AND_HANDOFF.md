@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-06-03
+Updated: 2026-06-19
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -33,6 +33,7 @@ What is already landed:
 21. Chat now exposes a service-account linkage contract for the parallel subscription/World Pack lane. `createWorldServiceTemplateContact` reuses generated service/official accounts idempotently while clearing role-profile ownership fields, and `getServiceAccountLinkContract(contactId)` returns Chat routes, origin ids, source bindings, the derived source notification plan, required `service_notification` fields, reply/quote capabilities, unread/mute/fold ownership, and the rule that Chat stores source references only.
 22. Chat transfer cards now consume Wallet's currency registry and primary-currency setting. The `+` transfer form defaults to Wallet's primary currency, offers Wallet-registered currencies including World Pack custom currencies, and still writes sourced Chat transfer records into Wallet instead of keeping a separate Chat-only ledger.
 23. Chat now has the first source-owned share-card path. `src/lib/shareable-object.js` normalizes shareable objects and Chat stores/renders `share_card` blocks with source module/id, route, display snapshot, and AI context boundary. The Chat `+` Shopping preview defaults ordinary products to `product_link`; only gift-card / voucher / virtual-gift-like items are labeled as direct sendable gifts. Physical products should be shared as links, order shares, or tracking shares rather than instant Chat-owned gifts. Legacy `product_card` remains a compatibility block, but the active Shopping send path now uses `share_card` and leaves checkout, order truth, logistics, Wallet, and Assets suggestions in source modules.
+24. ChatView decomposition has started with the active-thread read-model seam. `src/composables/useChatActiveThreadModel.js` owns route-derived active chat selection, active conversation/messages, merged AI prefs, communication availability, Chat appearance classes, avatar/module identity read-models, and service-thread muted/folded flags. This is architecture cleanup only: message schema, service-notification contract, source-module record ownership, AI reply generation, automation queue behavior, route behavior, persisted storage shape, and visible Chat UI stayed unchanged.
 
 Still incomplete or risky:
 

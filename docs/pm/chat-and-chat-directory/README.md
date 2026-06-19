@@ -1,8 +1,10 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-06-03
+Updated: 2026-06-19
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
+
+Current architecture note: Chat active-thread route/read-model state now lives behind `src/composables/useChatActiveThreadModel.js`. It owns the route-derived active chat id/contact, active conversation, merged AI prefs, active messages, communication availability, Chat appearance classes, avatar/module identity read models, and service-thread muted/folded flags without changing Chat schema, service notification behavior, AI behavior, automation, routing, storage, or visible UI.
 
 Current 4.4 note: Shopping, Logistics, and Food Delivery can now push reusable Chat service-notification messages with source references and route actions. Chat owns the message history; the source modules keep the business records. Chat-side source notification plans now describe which source modules can push event-driven updates into a joined service account; these plans are descriptive and do not auto-create subscriptions or source records.
 

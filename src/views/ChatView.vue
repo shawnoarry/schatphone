@@ -22,7 +22,6 @@ import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/a
 import { buildMessageEditValidation, MESSAGE_EDIT_REASON } from '../lib/chat-message-edit'
 import { normalizeChatAiSocialEvents } from '../lib/chat-ai-social-proposals'
 import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
-import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import {
   getRoleAssetFolderSlotKeysByCategory,
   resolveFolderBoundAssetIds,
@@ -51,10 +50,7 @@ import {
   createVirtualGiftShareObject,
   shareableObjectToChatBlock,
 } from '../lib/shareable-object'
-import {
-  getAvatarImageGalleryAssetId,
-  resolveAvatarImageSourceUrl,
-} from '../lib/avatar-image-source-resolver'
+import { getAvatarImageGalleryAssetId } from '../lib/avatar-image-source-resolver'
 import {
   findFoodDeliveryServicePreset,
   findLogisticsServicePreset,
@@ -62,6 +58,10 @@ import {
 } from '../lib/planned-module-registry'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
+import {
+  DEFAULT_CHAT_THREAD_AI_PREFS,
+  useChatActiveThreadModel,
+} from '../composables/useChatActiveThreadModel'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import ChatMessageEditModal from '../components/chat/ChatMessageEditModal.vue'
@@ -93,24 +93,7 @@ const { contactsForList, loadingAI } = storeToRefs(chatStore)
 const { currentLocationText } = storeToRefs(mapStore)
 const { primaryCurrency, currencyOptions } = storeToRefs(walletStore)
 
-const DEFAULT_THREAD_AI_PREFS = {
-  suggestedRepliesEnabled: false,
-  contextTurns: 8,
-  bilingualEnabled: false,
-  secondaryLanguage: 'en',
-  allowQuoteReply: true,
-  allowSelfQuote: false,
-  virtualVoiceEnabled: true,
-  replyMode: 'manual',
-  replyCount: 1,
-  responseStyle: 'immersive',
-  proactiveOpenerEnabled: false,
-  proactiveOpenerStrategy: 'on_enter_once',
-  imageReferenceMode: 'auto',
-  allowImageVirtualWithoutReference: false,
-  autoInvokeEnabled: false,
-  autoInvokeIntervalSec: 360,
-}
+const DEFAULT_THREAD_AI_PREFS = DEFAULT_CHAT_THREAD_AI_PREFS
 
 const REPLY_MODE_OPTIONS = computed(() => [
   { value: 'manual', label: t('手动触发', 'Manual trigger') },
@@ -291,48 +274,34 @@ const threadIdentityDraft = reactive({
   contactAvatar: '',
 })
 
-const activeChatId = computed(() => {
-  const id = Number(route.params.id)
-  return Number.isNaN(id) ? null : id
+const {
+  activeChatId,
+  activeChat,
+  activeConversation,
+  activeAiPrefs,
+  activeMessages,
+  activeChatSocialState,
+  canActiveChatCommunicate,
+  activeChatMessageLayout,
+  chatShellClasses,
+  isActiveServiceChat,
+  activeServiceIsMuted,
+  activeServiceIsFolded,
+  resolveContactDisplayAvatar,
+  activeContactAvatar,
+  activeModuleNickname,
+  activeSelfAvatar,
+} = useChatActiveThreadModel({
+  route,
+  chatStore,
+  contactsForList,
+  settings,
+  user,
+  galleryStore,
+  avatarPreviewMap,
+  t,
+  defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
 })
-
-const activeChat = computed(() => {
-  if (!activeChatId.value) return null
-  return contactsForList.value.find((contact) => contact.id === activeChatId.value) || null
-})
-
-const activeConversation = computed(() => {
-  if (!activeChat.value) return null
-  return chatStore.getConversationByContactId(activeChat.value.id)
-})
-
-const activeAiPrefs = computed(() => {
-  if (!activeConversation.value?.aiPrefs) return DEFAULT_THREAD_AI_PREFS
-  return {
-    ...DEFAULT_THREAD_AI_PREFS,
-    ...activeConversation.value.aiPrefs,
-  }
-})
-
-const activeMessages = computed(() => {
-  if (!activeChat.value) return []
-  return chatStore.getMessagesByContactId(activeChat.value.id) || []
-})
-
-const activeChatSocialState = computed(() => chatStore.getContactChatSocialState(activeChat.value))
-
-const canActiveChatCommunicate = computed(() =>
-  activeChat.value ? chatStore.canContactSendMessages(activeChat.value) : false,
-)
-
-const activeChatAppearance = computed(() => settings.value.appearance?.chat || {})
-
-const activeChatMessageLayout = computed(() => activeChatAppearance.value.messageLayout || 'kakao')
-
-const chatShellClasses = computed(() => [
-  `chat-preset-${activeChatAppearance.value.presetId || 'kakao_immersive'}`,
-  `chat-layout-${activeChatMessageLayout.value}`,
-])
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
 
@@ -1180,72 +1149,6 @@ const chatHomeHeroDetail = computed(() => {
   return t('聊天默认保持沉浸，控制项放在会话内、我和设置里。', 'Chats stay immersive by default; controls live in threads, Me, and Settings.')
 })
 
-const contactHasThreadOrModuleAvatarOverride = (contactId) => {
-  const id = Number(contactId)
-  if (!Number.isFinite(id) || id <= 0) return false
-  const threadOverrides = chatStore.getConversationIdentityOverrides(id)
-  if (threadOverrides.contactAvatar) return true
-  if (chatStore.getModuleContactAvatarOverride(id)) return true
-  const moduleAvatarOverrides = chatStore.getModuleAvatarOverrides()
-  return Boolean(moduleAvatarOverrides.defaultContactAvatar)
-}
-
-const resolveContactAvatarImageUrl = (contact) =>
-  resolveAvatarImageSourceUrl({
-    galleryStore,
-    previewMap: avatarPreviewMap,
-    avatarImage: contact?.avatarImage,
-    legacyAvatar: contact?.avatar,
-    fallbackAlt: contact?.name || t('联系人', 'Contact'),
-  })
-
-const resolveContactDisplayAvatar = (contact) => {
-  if (!contact?.id) {
-    return resolveAvatarWithHierarchy({
-      fallbackSeed: contact?.name || t('联系人', 'Contact'),
-    })
-  }
-
-  if (contactHasThreadOrModuleAvatarOverride(contact.id)) {
-    return chatStore.resolveContactAvatar(contact.id)
-  }
-
-  return resolveContactAvatarImageUrl(contact) || chatStore.resolveContactAvatar(contact.id)
-}
-
-const activeContactAvatar = computed(() => {
-  if (!activeChat.value) {
-    return resolveAvatarWithHierarchy({ fallbackSeed: t('联系人', 'Contact') })
-  }
-  return resolveContactDisplayAvatar(activeChat.value)
-})
-
-const activeModuleIdentity = computed(() => chatStore.getModuleIdentity())
-const activeModuleNickname = computed(
-  () => activeModuleIdentity.value.nickname || user.value.name || t('自己', 'Me'),
-)
-
-const activeSelfAvatar = computed(() => {
-  const moduleIdentity = activeModuleIdentity.value
-  const threadOverrides = activeChat.value
-    ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
-    : { selfAvatar: '' }
-  const userAvatarUrl = resolveAvatarImageSourceUrl({
-    galleryStore,
-    previewMap: avatarPreviewMap,
-    avatarImage: user.value.avatarImage,
-    legacyAvatar: user.value.avatar,
-    fallbackAlt: activeModuleNickname.value,
-  })
-
-  return resolveAvatarWithHierarchy({
-    threadAvatar: threadOverrides.selfAvatar,
-    moduleAvatar: moduleIdentity.avatar,
-    globalAvatar: userAvatarUrl,
-    fallbackSeed: activeModuleNickname.value,
-  })
-})
-
 const pendingReplyTriggerMessageId = computed(() => {
   const list = activeMessages.value
   if (!list.length) return ''
@@ -1274,13 +1177,6 @@ const canRetryAi = computed(() =>
 )
 const canRequestAiReply = computed(() =>
   Boolean(activeChat.value && canActiveChatCommunicate.value && !loadingAI.value && !activeAbortController.value),
-)
-const isActiveServiceChat = computed(() => Boolean(activeChat.value && ['service', 'official'].includes(activeChat.value.kind || 'role')))
-const activeServiceIsMuted = computed(() =>
-  activeChat.value ? chatStore.isChatSubscriptionMuted(activeChat.value) : false,
-)
-const activeServiceIsFolded = computed(() =>
-  activeChat.value ? chatStore.isChatSubscriptionFolded(activeChat.value) : false,
 )
 const suggestionFeatureEnabled = computed(() => Boolean(activeAiPrefs.value.suggestedRepliesEnabled))
 const automationSettings = computed(() => settings.value.aiAutomation || null)
