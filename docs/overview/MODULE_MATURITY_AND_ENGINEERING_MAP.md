@@ -105,7 +105,7 @@ Current approximate sizes:
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
 | `src/views/ContactsView.vue` | 5863 | major product-critical surface; needs careful IA and ownership protection |
-| `src/views/ChatView.vue` | 5477 | still a product-critical maintainability hotspot; active-thread, AI request state, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
+| `src/views/ChatView.vue` | 5328 | still a product-critical maintainability hotspot; active-thread, AI request state, automation status/readiness, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
 | `src/views/WorldBookView.vue` | 5036 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
 | `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive |
 | `src/views/ChatDirectoryView.vue` | 4122 | concept-heavy management surface |
@@ -198,7 +198,7 @@ Engineering meaning:
 ### Chat
 
 - product state: strongest gameplay module
-- engineering note: still one of the biggest product-critical maintainability hotspots; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatAiRequestStateModel.js` owns AI request/retry/reroll display state, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatServiceFeedbackModel.js` owns service route/action feedback state, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state, and `src/composables/useChatPendingQuoteModel.js` owns pending quote display/action state
+- engineering note: still one of the biggest product-critical maintainability hotspots; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatAiRequestStateModel.js` owns AI request/retry/reroll display state, `src/composables/useChatAutomationStatusModel.js` owns automation status/readiness display state, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatServiceFeedbackModel.js` owns service route/action feedback state, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state, and `src/composables/useChatPendingQuoteModel.js` owns pending quote display/action state
 - recommendation: prefer extraction and IA cleanup before more thread-side feature growth
 
 ### Chat Directory

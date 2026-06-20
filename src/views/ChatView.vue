@@ -57,6 +57,7 @@ import {
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
 import { useChatAiRequestStateModel } from '../composables/useChatAiRequestStateModel'
+import { useChatAutomationStatusModel } from '../composables/useChatAutomationStatusModel'
 import { useChatHomeListModel } from '../composables/useChatHomeListModel'
 import {
   CHAT_MESSAGE_ACTION_IDS,
@@ -765,17 +766,29 @@ const {
   loadingAI,
 })
 const suggestionFeatureEnabled = computed(() => Boolean(activeAiPrefs.value.suggestedRepliesEnabled))
-const automationSettings = computed(() => settings.value.aiAutomation || null)
-const chatAutomationEnabled = computed(() =>
-  systemStore.isAiAutomationEnabledForModule(CHAT_AUTOMATION_MODULE_KEY),
-)
-const chatAutomationPolicyNow = computed(() =>
-  systemStore.getAiAutomationRuntimePolicy(CHAT_AUTOMATION_MODULE_KEY, Date.now()),
-)
-const autoStatusLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
-
 const getChatAutomationRuntimePolicy = (baseAt = Date.now()) =>
   systemStore.getAiAutomationRuntimePolicy(CHAT_AUTOMATION_MODULE_KEY, baseAt)
+
+const {
+  automationSettings,
+  chatAutomationEnabled,
+  autoScheduleHintText,
+  autoBackgroundReminderHint,
+  autoLastTriggeredHintText,
+  autoRestoreSettlementHintText,
+} = useChatAutomationStatusModel({
+  activeChat,
+  activeAiPrefs,
+  activeConversation,
+  settings,
+  systemNotifications,
+  systemLanguage,
+  languageBase,
+  isChatAutomationEnabled: () =>
+    systemStore.isAiAutomationEnabledForModule(CHAT_AUTOMATION_MODULE_KEY),
+  getChatAutomationRuntimePolicy,
+  t,
+})
 
 const markManualAction = () => {
   lastManualActionAt.value = Date.now()
@@ -905,188 +918,6 @@ const openActiveServiceInteractionDockPrimary = () => {
     reopenServiceRouteFeedbackSource()
   }
 }
-
-const formatAutoStatusTime = (timestamp) => {
-  if (!timestamp) return '--:--'
-  const date = new Date(timestamp)
-  if (Number.isNaN(date.getTime())) return '--:--'
-  return date.toLocaleTimeString(autoStatusLocale.value, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
-const autoScheduleHintText = computed(() => {
-  if (!activeChat.value) return ''
-  if (!chatAutomationEnabled.value) {
-    return t(
-      '全局或 Chat 模块自动响应已关闭。',
-      'Global or Chat automation is currently disabled.',
-    )
-  }
-  if (!activeAiPrefs.value.autoInvokeEnabled) {
-    return t(
-      '当前会话未开启定时自主调用。',
-      'Timed autonomous invoke is disabled in this thread.',
-    )
-  }
-
-  if (chatAutomationPolicyNow.value.notifyOnly) {
-    return chatAutomationPolicyNow.value.quietHoursActive
-      ? t(
-          '当前处于安静时段：仅通知，不自动生成回复。',
-          'Quiet hours active: notify-only, no autonomous AI generation.',
-        )
-      : t(
-          '当前为仅通知模式：仅推送通知，不自动生成回复。',
-          'Notify-only mode active: push notifications without autonomous AI generation.',
-        )
-  }
-
-  const nextAt = activeConversation.value?.autoNextAt || 0
-  if (!nextAt) {
-    return t(
-      '定时器等待中，保存设置后会自动刷新下一次触发时间。',
-      'Timer is pending. Next invoke time refreshes after saving settings.',
-    )
-  }
-
-  return `${t('下次预计触发', 'Next planned invoke')}: ${formatAutoStatusTime(nextAt)}`
-})
-
-const autoLastTriggeredHintText = computed(() => {
-  if (!activeChat.value || !activeAiPrefs.value.autoInvokeEnabled) return ''
-  const lastAt = activeConversation.value?.autoLastTriggeredAt || 0
-  if (!lastAt) {
-    return t('尚无自动调用记录。', 'No autonomous invoke history yet.')
-  }
-  return `${t('上次自动调用', 'Last autonomous invoke')}: ${formatAutoStatusTime(lastAt)}`
-})
-
-const autoRestoreSettlementHintText = computed(() => {
-  if (!activeChat.value || !activeAiPrefs.value.autoInvokeEnabled) return ''
-  const missedCycles = Number(activeConversation.value?.autoLastSettledMissedCycles || 0)
-  if (!Number.isFinite(missedCycles) || missedCycles <= 0) return ''
-
-  const settledAt = Number(activeConversation.value?.autoLastSettledAt || 0)
-  const settledAtText = settledAt ? formatAutoStatusTime(settledAt) : '--:--'
-  return `${t('恢复补算', 'Resume settlement')}: ${missedCycles} ${t('个周期', 'cycle(s)')} · ${settledAtText}`
-})
-
-const autoBackgroundReminderHint = computed(() => {
-  if (!activeChat.value) {
-    return { text: '', tone: 'muted' }
-  }
-
-  if (!chatAutomationEnabled.value) {
-    return {
-      text: t(
-        '后台提醒未启用：全局或 Chat 自动响应关闭。',
-        'Background reminder is off because global or Chat automation is disabled.',
-      ),
-      tone: 'warning',
-    }
-  }
-
-  if (!activeAiPrefs.value.autoInvokeEnabled) {
-    return {
-      text: t(
-        '后台提醒未启用：当前会话未开启定时自主调用。',
-        'Background reminder is off because timed invoke is disabled in this thread.',
-      ),
-      tone: 'muted',
-    }
-  }
-
-  const systemSettings = settings.value.system || {}
-  const remotePushReady =
-    systemNotifications.notificationEnabled.value &&
-    systemSettings.realPushEnabled === true &&
-    systemSettings.pushSubscriptionActive === true &&
-    typeof systemSettings.pushServerUrl === 'string' &&
-    systemSettings.pushServerUrl.trim() &&
-    typeof systemSettings.pushDeviceId === 'string' &&
-    systemSettings.pushDeviceId.trim()
-
-  if (!remotePushReady) {
-    return {
-      text: t(
-        '后台提醒未布置：真推送尚未完成授权或订阅。',
-        'Background reminder is not armed because real push is not fully authorized or subscribed.',
-      ),
-      tone: 'warning',
-    }
-  }
-
-  const nextAt = Number(activeConversation.value?.autoNextAt || 0)
-  if (!nextAt) {
-    return {
-      text: t(
-        '后台提醒等待同步：保存设置后会自动刷新。',
-        'Background reminder is waiting to sync and will refresh after saving.',
-      ),
-      tone: 'muted',
-    }
-  }
-
-  if (nextAt <= Date.now() + 1000) {
-    return {
-      text: t(
-        '当前已进入触发窗口：前台处理优先，本轮不再单独布置后台提醒。',
-        'This cycle is already due, so foreground handling takes priority instead of a separate background reminder.',
-      ),
-      tone: 'muted',
-    }
-  }
-
-  const duePolicy = getChatAutomationRuntimePolicy(nextAt)
-  if (duePolicy.invokeEnabled !== true) {
-    return duePolicy.notifyOnly
-      ? {
-          text: duePolicy.quietHoursActive
-            ? t(
-                '下个周期落在安静时段：不会自动生成回复，也不会提前布置后台提醒。',
-                'The next cycle falls in quiet hours, so no autonomous reply or background reminder is armed.',
-              )
-            : t(
-                '当前为仅通知模式：本轮不会布置后台提醒。',
-                'Notify-only mode is active, so no background reminder is armed for this cycle.',
-              ),
-          tone: 'warning',
-        }
-      : {
-          text: t(
-            '后台提醒未布置：当前自动响应策略不允许该周期执行。',
-            'Background reminder is not armed because the current automation policy blocks this cycle.',
-          ),
-          tone: 'warning',
-        }
-  }
-
-  const scheduleId =
-    typeof activeConversation.value?.autoPushScheduleId === 'string'
-      ? activeConversation.value.autoPushScheduleId.trim()
-      : ''
-  const scheduledAt = Number(activeConversation.value?.autoPushScheduledAt || 0)
-
-  if (scheduleId && scheduledAt > Date.now()) {
-    return {
-      text: `${t('后台提醒已布置', 'Background reminder armed')}: ${formatAutoStatusTime(
-        scheduledAt,
-      )}`,
-      tone: 'success',
-    }
-  }
-
-  return {
-    text: t(
-      '后台提醒等待同步：系统会自动校准下一次远程提醒。',
-      'Background reminder is waiting to sync. The system will auto-calibrate the next remote reminder.',
-    ),
-    tone: 'muted',
-  }
-})
 
 const clampContextTurns = (value) => {
   const turns = Number(value)
