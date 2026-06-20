@@ -56,6 +56,7 @@ import {
   DEFAULT_CHAT_THREAD_AI_PREFS,
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
+import { useChatAiRequestStateModel } from '../composables/useChatAiRequestStateModel'
 import { useChatHomeListModel } from '../composables/useChatHomeListModel'
 import {
   CHAT_MESSAGE_ACTION_IDS,
@@ -188,11 +189,6 @@ const userMediaInputRef = ref(null)
 const loadingSuggestions = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
-const aiErrorMessage = ref('')
-const activeAbortController = ref(null)
-const activeTriggerMessageId = ref('')
-const retryTriggerMessageId = ref('')
-const retryRerollMessageId = ref('')
 const showEditMessageModal = ref(false)
 const editingMessageId = ref('')
 const editingMessageRole = ref('user')
@@ -743,19 +739,31 @@ const pendingReplyTriggerMessageId = computed(() => {
   return ''
 })
 
-const canCancelAi = computed(() => Boolean(activeAbortController.value && activeChat.value && loadingAI.value))
-const canRetryAi = computed(() =>
-  Boolean(
-    aiErrorMessage.value &&
-      activeChat.value &&
-      (retryTriggerMessageId.value || retryRerollMessageId.value) &&
-      !loadingAI.value &&
-      !activeAbortController.value,
-  ),
-)
-const canRequestAiReply = computed(() =>
-  Boolean(activeChat.value && canActiveChatCommunicate.value && !loadingAI.value && !activeAbortController.value),
-)
+const {
+  aiErrorMessage,
+  retryTriggerMessageId,
+  retryRerollMessageId,
+  hasActiveRequest,
+  canCancelAi,
+  canRetryAi,
+  canRequestAiReply,
+  isAiRequestBusy,
+  beginAiRequest,
+  finishAiRequest,
+  clearAiError,
+  clearAiErrorAndRetryTargets,
+  completeAiRequestSuccess,
+  recordReplyFailure,
+  recordRerollFailure,
+  prepareRerollRequest,
+  clearRetryTargetForMessage,
+  clearAiRequestStateForThreadSwitch,
+  cancelActiveAiRequest,
+} = useChatAiRequestStateModel({
+  activeChat,
+  canActiveChatCommunicate,
+  loadingAI,
+})
 const suggestionFeatureEnabled = computed(() => Boolean(activeAiPrefs.value.suggestedRepliesEnabled))
 const automationSettings = computed(() => settings.value.aiAutomation || null)
 const chatAutomationEnabled = computed(() =>
@@ -2193,7 +2201,7 @@ const resetConversationAutoNextAt = (contactId, baseAt = Date.now()) => {
 const scheduleAutoInvokeTick = () => {
   clearAutoInvokeTimer()
   if (!chatAutomationEnabled.value) return
-  if (loadingAI.value || activeAbortController.value) {
+  if (isAiRequestBusy.value) {
     autoInvokeTimerId = setTimeout(() => {
       void runDueAutoInvokes()
     }, getAutomationCooldownMs())
@@ -2228,7 +2236,7 @@ const executeAutoInvokeForContactTask = async (contactId, options = {}) => {
     return false
   }
 
-  if (loadingAI.value || activeAbortController.value) {
+  if (isAiRequestBusy.value) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
     return false
   }
@@ -2271,7 +2279,7 @@ const enqueueAutoInvokeTaskForContact = async (contactId) => {
   const conversation = chatStore.getConversationByContactId(contactId)
   if (conversation.autoNextAt && now + 250 < conversation.autoNextAt) return false
 
-  if (loadingAI.value || activeAbortController.value) {
+  if (isAiRequestBusy.value) {
     resetConversationAutoNextAt(contactId, now + getAutomationCooldownMs())
     return false
   }
@@ -3098,7 +3106,7 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
 
 const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
   if (!contactId) return false
-  if (loadingAI.value || activeAbortController.value) return false
+  if (isAiRequestBusy.value) return false
   const truthContact = contactById(contactId)
   if (!chatStore.canContactSendMessages(truthContact)) {
     if (options.source !== 'auto') {
@@ -3131,11 +3139,8 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
   const replyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
-  const controller = new AbortController()
-  activeAbortController.value = controller
-  activeTriggerMessageId.value = normalizedTriggerId
-  loadingAI.value = true
-  aiErrorMessage.value = ''
+  const controller = beginAiRequest(normalizedTriggerId)
+  if (!controller) return false
 
   try {
     const result = await generateAIResponse(
@@ -3162,16 +3167,14 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     if (!isAutoSource) {
       resetConversationAutoNextAt(contactId, Date.now())
     }
-    retryTriggerMessageId.value = ''
-    retryRerollMessageId.value = ''
+    completeAiRequestSuccess()
     return true
   } catch (error) {
-    aiErrorMessage.value =
+    const message =
       error?.code === 'CANCELED'
         ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
         : formatApiErrorForUi(error, t('AI 回复失败，请稍后重试。', 'AI reply failed. Please retry later.'))
-    retryTriggerMessageId.value = normalizedTriggerId
-    retryRerollMessageId.value = ''
+    recordReplyFailure(message, normalizedTriggerId)
     if (!isAutoSource) {
       resetConversationAutoNextAt(contactId, Date.now() + getAutomationCooldownMs())
     }
@@ -3187,9 +3190,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
     })
     return false
   } finally {
-    loadingAI.value = false
-    activeAbortController.value = null
-    activeTriggerMessageId.value = ''
+    finishAiRequest()
     scrollToBottom()
     if (shouldAutoSchedule) {
       scheduleAutoInvokeTick()
@@ -3198,7 +3199,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
 }
 
 const cancelActiveRequest = () => {
-  if (!activeAbortController.value) return
+  if (!hasActiveRequest.value) return
   systemApiReports.addReport({
     level: 'info',
     module: 'chat',
@@ -3207,12 +3208,12 @@ const cancelActiveRequest = () => {
     model: settings.value.api.model || '',
     message: t('用户主动取消当前请求。', 'User canceled the in-flight request.'),
   })
-  activeAbortController.value.abort()
+  cancelActiveAiRequest()
 }
 
 const retryLastMessage = () => {
   if (!canRetryAi.value || !activeChat.value) return
-  aiErrorMessage.value = ''
+  clearAiError()
   if (retryRerollMessageId.value) {
     const target = activeMessages.value.find((item) => item.id === retryRerollMessageId.value)
     if (target) {
@@ -3553,8 +3554,7 @@ const recallMessage = async (message) => {
     return
   }
 
-  if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
-  if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
+  clearRetryTargetForMessage(message.id)
   clearPendingQuoteForMessage(message.id)
   showUiNotice('success', t('已撤回消息。', 'Message recalled.'))
   closeMessageActions()
@@ -3577,8 +3577,7 @@ const deleteMessage = async (message) => {
     return
   }
 
-  if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
-  if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
+  clearRetryTargetForMessage(message.id)
   clearPendingQuoteForMessage(message.id)
   closeMessageActions()
 }
@@ -3605,18 +3604,14 @@ const handleMessageAction = (actionId, message) => {
 
 const rerollMessage = async (message) => {
   if (!activeChat.value || !canRerollMessage(message)) return
-  if (loadingAI.value || activeAbortController.value) return
+  if (isAiRequestBusy.value) return
   markManualAction()
 
   const target = activeMessages.value.find((item) => item.id === message.id)
   if (!target || target.role !== 'assistant') return
 
-  const controller = new AbortController()
-  activeAbortController.value = controller
-  activeTriggerMessageId.value = target.id
-  loadingAI.value = true
-  aiErrorMessage.value = ''
-  retryTriggerMessageId.value = ''
+  const controller = prepareRerollRequest(target.id)
+  if (!controller) return
 
   try {
     const replacement = await generateRerollResponse(activeChat.value.id, target, {
@@ -3649,14 +3644,14 @@ const rerollMessage = async (message) => {
       })
     }
     resetConversationAutoNextAt(activeChat.value.id, Date.now())
-    retryRerollMessageId.value = ''
+    completeAiRequestSuccess()
     closeMessageActions()
   } catch (error) {
-    aiErrorMessage.value =
+    const message =
       error?.code === 'CANCELED'
         ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
         : formatApiErrorForUi(error, t('重roll失败，请稍后重试。', 'Reroll failed. Please retry later.'))
-    retryRerollMessageId.value = target.id
+    recordRerollFailure(message, target.id)
     resetConversationAutoNextAt(activeChat.value.id, Date.now() + getAutomationCooldownMs())
     systemApiReports.addReport({
       level: 'error',
@@ -3669,9 +3664,7 @@ const rerollMessage = async (message) => {
       message: aiErrorMessage.value || formatApiErrorForUi(error),
     })
   } finally {
-    loadingAI.value = false
-    activeAbortController.value = null
-    activeTriggerMessageId.value = ''
+    finishAiRequest()
     scrollToBottom()
     scheduleAutoInvokeTick()
   }
@@ -3679,7 +3672,7 @@ const rerollMessage = async (message) => {
 
 const shouldTriggerProactiveOpener = (contactId) => {
   if (!contactId) return { allowed: false, strategy: 'on_enter_once', replyCount: 1 }
-  if (loadingAI.value || activeAbortController.value) return { allowed: false, strategy: 'on_enter_once', replyCount: 1 }
+  if (isAiRequestBusy.value) return { allowed: false, strategy: 'on_enter_once', replyCount: 1 }
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
   if (!aiPrefs.proactiveOpenerEnabled) {
@@ -3715,7 +3708,7 @@ const maybeTriggerProactiveOpener = async (contactId) => {
 }
 
 const generateSmartReplies = async () => {
-  if (!activeChat.value || loadingAI.value || activeAbortController.value) return
+  if (!activeChat.value || isAiRequestBusy.value) return
   if (!canActiveChatCommunicate.value) {
     showUiNotice('warning', t('当前通讯状态不允许生成快捷回复。', 'Current communication state does not allow smart replies.'))
     return
@@ -3833,9 +3826,7 @@ const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) 
     recordServiceNotificationSentFeedback(quotePayload)
   }
   showSuggestions.value = false
-  aiErrorMessage.value = ''
-  retryTriggerMessageId.value = ''
-  retryRerollMessageId.value = ''
+  clearAiErrorAndRetryTargets()
   closeMessageActions()
   scrollToBottom()
 
@@ -4829,9 +4820,7 @@ watch(
 
     suggestions.value = []
     showSuggestions.value = false
-    aiErrorMessage.value = ''
-    retryTriggerMessageId.value = ''
-    retryRerollMessageId.value = ''
+    clearAiRequestStateForThreadSwitch()
     scrollToBottom()
     scheduleAutoInvokeTick()
   },
