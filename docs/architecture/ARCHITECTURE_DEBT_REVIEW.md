@@ -47,7 +47,7 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 | File | Lines |
 | --- | ---: |
 | `src/views/ContactsView.vue` | 5863 |
-| `src/views/ChatView.vue` | 5328 |
+| `src/views/ChatView.vue` | 5378 |
 | `src/views/WorldBookView.vue` | 5036 |
 | `src/views/HomeView.vue` | 4355 |
 | `src/views/ChatDirectoryView.vue` | 4122 |
@@ -55,15 +55,16 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 | `src/views/AppStoreView.vue` | 3635 |
 | `src/views/FoodDeliveryView.vue` | 3260 |
 
-The top 8 view files average about 4456 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
+The top 8 view files average about 4463 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
 
-The `src/composables/` directory now contains 19 files:
+The `src/composables/` directory now contains 20 files:
 
 - `useDialog.js`
 - `useI18n.js`
 - `useAppIconImagePreviews.js`
 - `useChatActiveThreadModel.js`
 - `useChatAiRequestStateModel.js`
+- `useChatAiPromptContextModel.js`
 - `useChatAutomationStatusModel.js`
 - `useChatHomeListModel.js`
 - `useChatMessageActionSheetModel.js`
@@ -79,7 +80,7 @@ The `src/composables/` directory now contains 19 files:
 - `useSettingsPushWorkflow.js`
 - `useSettingsStorageDiagnosticsWorkflow.js`
 
-That means view-level state, computed values, and side effects are still often written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots. Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`, Settings real-push setup/health/subscription/test/feedback orchestration now lives behind `useSettingsPushWorkflow.js`, Chat active-thread route/read-model state now lives behind `useChatActiveThreadModel.js`, Chat AI request/retry/reroll display state now lives behind `useChatAiRequestStateModel.js`, Chat automation status/readiness display state now lives behind `useChatAutomationStatusModel.js`, Chat home search/list display state now lives behind `useChatHomeListModel.js`, Chat service/official thread display state now lives behind `useChatServiceThreadDisplayModel.js`, Chat service route/action feedback state now lives behind `useChatServiceFeedbackModel.js`, Chat message edit display/validation state now lives behind `useChatMessageEditDisplayModel.js`, Chat message action-sheet display state now lives behind `useChatMessageActionSheetModel.js`, Chat `+` panel display/draft state now lives behind `useChatUserActionPanelModel.js`, Chat thread menu/settings draft state now lives behind `useChatThreadMenuModel.js`, and Chat pending quote display/action state now lives behind `useChatPendingQuoteModel.js`.
+That means view-level state, computed values, and side effects are still often written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots. Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`, Settings real-push setup/health/subscription/test/feedback orchestration now lives behind `useSettingsPushWorkflow.js`, Chat active-thread route/read-model state now lives behind `useChatActiveThreadModel.js`, Chat AI request/retry/reroll display state now lives behind `useChatAiRequestStateModel.js`, Chat AI prompt/context preparation now lives behind `useChatAiPromptContextModel.js`, Chat automation status/readiness display state now lives behind `useChatAutomationStatusModel.js`, Chat home search/list display state now lives behind `useChatHomeListModel.js`, Chat service/official thread display state now lives behind `useChatServiceThreadDisplayModel.js`, Chat service route/action feedback state now lives behind `useChatServiceFeedbackModel.js`, Chat message edit display/validation state now lives behind `useChatMessageEditDisplayModel.js`, Chat message action-sheet display state now lives behind `useChatMessageActionSheetModel.js`, Chat `+` panel display/draft state now lives behind `useChatUserActionPanelModel.js`, Chat thread menu/settings draft state now lives behind `useChatThreadMenuModel.js`, and Chat pending quote display/action state now lives behind `useChatPendingQuoteModel.js`.
 
 ### 3.2 God Store Module: `system.js`
 
@@ -269,7 +270,7 @@ Target the largest view files first:
 3. `WorldBookView.vue`
 4. `HomeView.vue`
 
-`SettingsView.vue` is now about 1295 lines after the backup workflow, storage diagnostics workflow, and push workflow extractions. `ChatView.vue` is now about 5328 lines after the active-thread, AI request-state, automation-status, home-list, service-thread display, service-feedback, message-edit, action-sheet, `+` panel, thread-menu, and pending-quote extractions, but it remains a high-risk product-critical view. Future Settings work should be bug-led or scoped to a named remaining subdomain; the next architecture-governance slice should usually continue a different tested Chat seam, move to `ContactsView.vue` / `WorldBookView.vue`, or target a narrow `systemStore` facade.
+`SettingsView.vue` is now about 1295 lines after the backup workflow, storage diagnostics workflow, and push workflow extractions. `ChatView.vue` is now about 5378 lines after the active-thread, AI request-state, AI prompt/context preparation, automation-status, home-list, service-thread display, service-feedback, message-edit, action-sheet, `+` panel, thread-menu, and pending-quote extractions, but it remains a high-risk product-critical view. Future Settings work should be bug-led or scoped to a named remaining subdomain; the next architecture-governance slice should usually continue a different tested Chat seam, move to `ContactsView.vue` / `WorldBookView.vue`, or target a narrow `systemStore` facade.
 
 For each view, prefer extracting state, computed values, and side effects into focused composables under `src/composables/<domain>/`.
 
