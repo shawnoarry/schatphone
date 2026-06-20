@@ -65,6 +65,7 @@ import {
   CHAT_MESSAGE_EDITABLE_RICH_TYPES,
   useChatMessageEditDisplayModel,
 } from '../composables/useChatMessageEditDisplayModel'
+import { useChatPendingQuoteModel } from '../composables/useChatPendingQuoteModel'
 import { useChatServiceThreadDisplayModel } from '../composables/useChatServiceThreadDisplayModel'
 import { useChatThreadMenuModel } from '../composables/useChatThreadMenuModel'
 import {
@@ -193,7 +194,6 @@ const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
 const retryRerollMessageId = ref('')
-const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
 const editingMessageId = ref('')
 const editingMessageRole = ref('user')
@@ -354,13 +354,6 @@ const {
   serviceRouteFeedback,
   serviceNotificationActionFeedback,
   t,
-})
-
-const pendingQuoteLabel = computed(() => {
-  if (pendingQuote.value?.sourceType === 'service_notification') {
-    return t('回复服务通知', 'Replying to notification')
-  }
-  return pendingQuote.value?.role === 'assistant' ? t('引用 AI', 'Quoted assistant') : t('引用用户', 'Quoted user')
 })
 
 const messageInputPlaceholder = computed(() => {
@@ -853,6 +846,28 @@ const {
 
 closeMessageActionsFromSheet = closeMessageActions
 
+let clearServiceNotificationActionFeedbackFromQuote = () => {}
+let getMessagePrimaryTextForQuote = (message) => message?.content || ''
+
+const {
+  pendingQuote,
+  pendingQuoteLabel,
+  quoteMessage: setPendingQuoteMessage,
+  quoteServiceNotification: setPendingServiceNotificationQuote,
+  clearPendingQuote,
+  clearPendingQuoteSilently,
+  clearPendingQuoteForMessage,
+  clearInvalidPendingQuote,
+  buildPendingQuotePayload,
+} = useChatPendingQuoteModel({
+  activeMessages,
+  canActiveChatCommunicate,
+  canQuoteMessage,
+  messagePrimaryText: (message) => getMessagePrimaryTextForQuote(message),
+  onServiceQuoteCleared: () => clearServiceNotificationActionFeedbackFromQuote(),
+  t,
+})
+
 const canUseSessionStorage = () =>
   typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
 
@@ -913,6 +928,8 @@ const clearServiceRouteFeedback = () => {
 const clearServiceNotificationActionFeedback = () => {
   serviceNotificationActionFeedback.value = null
 }
+
+clearServiceNotificationActionFeedbackFromQuote = clearServiceNotificationActionFeedback
 
 const dismissActiveServiceInteractionDock = () => {
   if (activeServiceInteractionDock.value?.type === 'source') {
@@ -1841,6 +1858,8 @@ const messagePrimaryText = (message) => {
   if (typeof message.content === 'string' && message.content.trim()) return message.content.trim()
   return extractMessageTextForContext(message)
 }
+
+getMessagePrimaryTextForQuote = messagePrimaryText
 
 const truncateMessagePreview = (text, maxLength = 72) => {
   const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
@@ -3496,12 +3515,7 @@ const toggleSavedMessage = (message) => {
 }
 
 const quoteMessage = (message) => {
-  if (!canQuoteMessage(message)) return
-  pendingQuote.value = {
-    messageId: message.id,
-    role: message.role === 'assistant' ? 'assistant' : 'user',
-    preview: truncateMessagePreview(messagePrimaryText(message), 80) || t('引用消息', 'Quoted message'),
-  }
+  if (!setPendingQuoteMessage(message)) return
   closeMessageActions()
 }
 
@@ -3512,38 +3526,12 @@ const focusMessageInput = () => {
 }
 
 const quoteServiceNotification = ({ block, message } = {}) => {
-  if (!block || !canActiveChatCommunicate.value) return
-  const preview = [block.title, block.summary].filter(Boolean).join(' · ')
-  pendingQuote.value = {
-    messageId: message?.id || '',
-    role: 'assistant',
-    preview: truncateMessagePreview(preview, 80) || t('服务通知', 'Service notification'),
-    sourceType: 'service_notification',
-  }
+  const quote = setPendingServiceNotificationQuote({ block, message })
+  if (!quote) return
   recordServiceNotificationReplyFeedback(block)
   closeMessageActions()
   focusMessageInput()
   scrollToBottom()
-}
-
-const clearPendingQuote = () => {
-  if (pendingQuote.value?.sourceType === 'service_notification') clearServiceNotificationActionFeedback()
-  pendingQuote.value = null
-}
-
-const findActiveMessageById = (messageId) =>
-  activeMessages.value.find((item) => item?.id === messageId) || null
-
-const isPendingQuoteTargetValid = () => {
-  if (!pendingQuote.value?.messageId) return false
-  const target = findActiveMessageById(pendingQuote.value.messageId)
-  return Boolean(target && !isRecalledMessage(target))
-}
-
-const clearInvalidPendingQuote = () => {
-  if (!pendingQuote.value) return
-  if (isPendingQuoteTargetValid()) return
-  clearPendingQuote()
 }
 
 watch(activeMessages, clearInvalidPendingQuote, { deep: true })
@@ -3689,7 +3677,7 @@ const recallMessage = async (message) => {
 
   if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
   if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
-  if (pendingQuote.value?.messageId === message.id) pendingQuote.value = null
+  clearPendingQuoteForMessage(message.id)
   showUiNotice('success', t('已撤回消息。', 'Message recalled.'))
   closeMessageActions()
 }
@@ -3713,7 +3701,7 @@ const deleteMessage = async (message) => {
 
   if (retryTriggerMessageId.value === message.id) retryTriggerMessageId.value = ''
   if (retryRerollMessageId.value === message.id) retryRerollMessageId.value = ''
-  if (pendingQuote.value?.messageId === message.id) pendingQuote.value = null
+  clearPendingQuoteForMessage(message.id)
   closeMessageActions()
 }
 
@@ -3934,22 +3922,6 @@ const resolveImageBlockUrl = (messageId, blockIndex, block) => {
   return messageImagePreviewMap[key] || block?.url || ''
 }
 
-const buildPendingQuotePayload = () => {
-  if (!pendingQuote.value) return null
-  if (!isPendingQuoteTargetValid()) {
-    clearPendingQuote()
-    return null
-  }
-  return {
-    messageId: pendingQuote.value.messageId,
-    role: pendingQuote.value.role === 'assistant' ? 'assistant' : 'user',
-    preview: pendingQuote.value.preview || '',
-    ...(pendingQuote.value.sourceType === 'service_notification'
-      ? { sourceType: 'service_notification' }
-      : {}),
-  }
-}
-
 const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) => {
   if (!activeChat.value) return null
   if (!canActiveChatCommunicate.value) {
@@ -3978,7 +3950,7 @@ const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) 
   }
   resetConversationAutoNextAt(chatId, Date.now())
 
-  pendingQuote.value = null
+  clearPendingQuoteSilently()
   if (quotePayload?.sourceType === 'service_notification') {
     recordServiceNotificationSentFeedback(quotePayload)
   }
@@ -4947,7 +4919,7 @@ watch(
     closeUserActionPanel()
     closeMessageEditModal()
     closeMessageActions()
-    pendingQuote.value = null
+    clearPendingQuoteSilently()
     resetThreadMenuSavedFeedback()
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
