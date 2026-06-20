@@ -56,6 +56,7 @@ import {
   DEFAULT_CHAT_THREAD_AI_PREFS,
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
+import { useChatHomeListModel } from '../composables/useChatHomeListModel'
 import {
   CHAT_MESSAGE_ACTION_IDS,
   useChatMessageActionSheetModel,
@@ -192,8 +193,6 @@ const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
 const retryRerollMessageId = ref('')
 const showThreadMenu = ref(false)
-const chatSearchOpen = ref(false)
-const chatSearchKeyword = ref('')
 const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
 const editingMessageId = ref('')
@@ -293,6 +292,26 @@ const {
   avatarPreviewMap,
   t,
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
+})
+
+const {
+  chatSearchOpen,
+  chatSearchKeyword,
+  normalizedChatSearchKeyword,
+  chatMessageRequestContacts,
+  chatFoldedSubscriptionContacts,
+  chatFoldedSubscriptionUnreadTotal,
+  chatFoldedSubscriptionUnreadContactCount,
+  showFoldedSubscriptionsCard,
+  visibleChatContacts,
+  chatHomeHeroTitle,
+  chatHomeHeroDetail,
+  getConversationPreview,
+  toggleChatSearch,
+} = useChatHomeListModel({
+  contactsForList,
+  chatStore,
+  t,
 })
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
@@ -697,98 +716,6 @@ const threadImageBlockPolicyHint = computed(() => {
     '当前角色未绑定参考图，系统将回退为文字优先（不输出图片消息）。',
     'No role image references are bound; system falls back to text-first replies (no image blocks).',
   )
-})
-
-const normalizedChatSearchKeyword = computed(() => chatSearchKeyword.value.trim().toLowerCase())
-
-const chatMessageRequestContacts = computed(() =>
-  contactsForList.value.filter((contact) => chatStore.isChatMessageRequestContact(contact)),
-)
-
-const chatBlockedContacts = computed(() =>
-  contactsForList.value.filter((contact) => chatStore.isChatContactBlocked(contact)),
-)
-
-const chatFoldedSubscriptionContacts = computed(() =>
-  contactsForList.value.filter((contact) => chatStore.isChatSubscriptionFolded(contact)),
-)
-
-const chatFoldedSubscriptionUnreadTotal = computed(() =>
-  chatFoldedSubscriptionContacts.value.reduce((sum, contact) => {
-    const conversation = chatStore.getConversationByContactId(contact.id)
-    return sum + Math.max(0, Number(conversation?.unread) || 0)
-  }, 0),
-)
-
-const chatFoldedSubscriptionUnreadContactCount = computed(
-  () =>
-    chatFoldedSubscriptionContacts.value.filter((contact) => {
-      const conversation = chatStore.getConversationByContactId(contact.id)
-      return Math.max(0, Number(conversation?.unread) || 0) > 0
-    }).length,
-)
-
-const showFoldedSubscriptionsCard = computed(() =>
-  !normalizedChatSearchKeyword.value && chatFoldedSubscriptionContacts.value.length > 0,
-)
-
-const chatMainListContacts = computed(() =>
-  contactsForList.value.filter(
-    (contact) =>
-      !chatStore.isChatMessageRequestContact(contact) &&
-      !chatStore.isChatSubscriptionFolded(contact),
-  ),
-)
-
-const visibleChatContacts = computed(() => {
-  const keyword = normalizedChatSearchKeyword.value
-  const source = keyword ? contactsForList.value : chatMainListContacts.value
-  if (!keyword) return source
-  return source.filter((contact) => {
-    const conversation = chatStore.getConversationByContactId(contact.id)
-    return [contact.name, contact.role, contact.bio, conversation?.lastMessage, conversation?.draft]
-      .some((field) => typeof field === 'string' && field.toLowerCase().includes(keyword))
-  })
-})
-
-const chatHomeUnreadTotal = computed(() =>
-  chatMainListContacts.value.reduce((sum, contact) => {
-    const conversation = chatStore.getConversationByContactId(contact.id)
-    return sum + Math.max(0, Number(conversation?.unread) || 0)
-  }, 0),
-)
-
-const chatHomeHeroTitle = computed(() => {
-  if (contactsForList.value.length === 0) return t('先把对象带进 Chat', 'Bring someone into Chat')
-  if (chatMessageRequestContacts.value.length > 0) {
-    return t(
-      `${chatMessageRequestContacts.value.length} 条消息请求待处理`,
-      `${chatMessageRequestContacts.value.length} message requests pending`,
-    )
-  }
-  if (chatHomeUnreadTotal.value > 0) {
-    return t(`有 ${chatHomeUnreadTotal.value} 条未读消息`, `${chatHomeUnreadTotal.value} unread messages`)
-  }
-  return t('消息、群聊和服务号都在这里', 'Messages, groups, and services live here')
-})
-
-const chatHomeHeroDetail = computed(() => {
-  if (contactsForList.value.length === 0) {
-    return t('从对象页绑定角色，或创建服务号与群聊。', 'Bind roles from Objects, or create services and groups.')
-  }
-  if (chatFoldedSubscriptionContacts.value.length > 0) {
-    return t(
-      '折叠的服务号收在服务号页里，消息页只保留正在看的会话。',
-      'Folded service subscriptions stay under Services, while Messages keeps active chats in view.',
-    )
-  }
-  if (chatBlockedContacts.value.length > 0) {
-    return t(
-      '已屏蔽会话会保留历史，解除后继续使用原记录。',
-      'Blocked chats keep history and continue from the same thread after unblock.',
-    )
-  }
-  return t('聊天默认保持沉浸，控制项放在会话内、我和设置里。', 'Chats stay immersive by default; controls live in threads, Me, and Settings.')
 })
 
 const pendingReplyTriggerMessageId = computed(() => {
@@ -1408,10 +1335,6 @@ const leaveChat = () => {
     return
   }
   router.push('/chat')
-}
-const toggleChatSearch = () => {
-  chatSearchOpen.value = !chatSearchOpen.value
-  if (!chatSearchOpen.value) chatSearchKeyword.value = ''
 }
 
 const openChatObjects = () => {
@@ -4466,7 +4389,6 @@ const sanitizeRenderedHtml = (rawHtml = '') => {
 }
 
 const renderMarkdown = (text) => sanitizeRenderedHtml(marked.parse(text || ''))
-const getConversationPreview = (contactId) => chatStore.getConversationByContactId(contactId)
 
 const formatConversationTime = (timestamp) => {
   if (!timestamp) return t('昨天', 'Yesterday')
