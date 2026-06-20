@@ -66,6 +66,7 @@ import {
   useChatMessageEditDisplayModel,
 } from '../composables/useChatMessageEditDisplayModel'
 import { useChatPendingQuoteModel } from '../composables/useChatPendingQuoteModel'
+import { useChatServiceFeedbackModel } from '../composables/useChatServiceFeedbackModel'
 import { useChatServiceThreadDisplayModel } from '../composables/useChatServiceThreadDisplayModel'
 import { useChatThreadMenuModel } from '../composables/useChatThreadMenuModel'
 import {
@@ -179,8 +180,6 @@ const MANUAL_PRIORITY_GUARD_MS = 1500
 const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
 const SAVE_FEEDBACK_DURATION_MS = 1200
 const MESSAGE_LONG_PRESS_MS = 380
-const SERVICE_ROUTE_FEEDBACK_SESSION_KEY = 'schatphone:chat-service-route-feedback'
-const SERVICE_ROUTE_FEEDBACK_MAX_AGE_MS = 10 * 60 * 1000
 const SERVICE_DIRECTORY_FILTERS = new Set(['all', 'unread', 'muted', 'folded', 'service', 'official'])
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -225,8 +224,6 @@ const { messageEditRichFieldDefinitions, messageEditState } = useChatMessageEdit
 const lastManualActionAt = ref(0)
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
-const serviceRouteFeedback = ref(null)
-const serviceNotificationActionFeedback = ref(null)
 let autoInvokeTimerId = null
 let uiNoticeTimerId = null
 let messageLongPressTimerId = null
@@ -317,6 +314,23 @@ const {
 })
 
 const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
+
+const {
+  serviceRouteFeedback,
+  serviceNotificationActionFeedback,
+  clearServiceRouteFeedback,
+  clearServiceNotificationActionFeedback,
+  syncServiceFeedbackForChat,
+  recordServiceNotificationReplyFeedback,
+  recordServiceNotificationSentFeedback,
+  recordServiceThreadReadFeedback,
+  recordServiceRouteFeedback,
+} = useChatServiceFeedbackModel({
+  activeChat,
+  isActiveServiceChat,
+  chatStore,
+  t,
+})
 
 const {
   shoppingServiceLabel,
@@ -868,67 +882,6 @@ const {
   t,
 })
 
-const canUseSessionStorage = () =>
-  typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
-
-const normalizeServiceRouteFeedback = (raw = {}) => {
-  const chatId = Number(raw?.chatId)
-  const openedAt = Number(raw?.openedAt)
-  if (!Number.isFinite(chatId) || chatId <= 0) return null
-  if (!Number.isFinite(openedAt) || openedAt <= 0) return null
-  if (Date.now() - openedAt > SERVICE_ROUTE_FEEDBACK_MAX_AGE_MS) return null
-  return {
-    chatId,
-    openedAt,
-    title: typeof raw.title === 'string' ? raw.title.trim().slice(0, 120) : '',
-    destination: typeof raw.destination === 'string' ? raw.destination.trim().slice(0, 80) : '',
-    actionLabel: typeof raw.actionLabel === 'string' ? raw.actionLabel.trim().slice(0, 80) : '',
-    route: typeof raw.route === 'string' && raw.route.startsWith('/') ? raw.route : '',
-  }
-}
-
-const readServiceRouteFeedback = (chatId) => {
-  if (!canUseSessionStorage()) return null
-  try {
-    const raw = window.sessionStorage.getItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
-    if (!raw) return null
-    const feedback = normalizeServiceRouteFeedback(JSON.parse(raw))
-    if (!feedback || Number(feedback.chatId) !== Number(chatId)) return null
-    return feedback
-  } catch {
-    return null
-  }
-}
-
-const writeServiceRouteFeedback = (feedback) => {
-  const normalized = normalizeServiceRouteFeedback(feedback)
-  serviceRouteFeedback.value = normalized
-  if (!canUseSessionStorage()) return
-  try {
-    if (normalized) {
-      window.sessionStorage.setItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY, JSON.stringify(normalized))
-    } else {
-      window.sessionStorage.removeItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
-    }
-  } catch {
-    // Session feedback is best-effort UI state.
-  }
-}
-
-const clearServiceRouteFeedback = () => {
-  serviceRouteFeedback.value = null
-  if (!canUseSessionStorage()) return
-  try {
-    window.sessionStorage.removeItem(SERVICE_ROUTE_FEEDBACK_SESSION_KEY)
-  } catch {
-    // Session feedback is best-effort UI state.
-  }
-}
-
-const clearServiceNotificationActionFeedback = () => {
-  serviceNotificationActionFeedback.value = null
-}
-
 clearServiceNotificationActionFeedbackFromQuote = clearServiceNotificationActionFeedback
 
 const dismissActiveServiceInteractionDock = () => {
@@ -943,81 +896,6 @@ const openActiveServiceInteractionDockPrimary = () => {
   if (activeServiceInteractionDock.value?.type === 'source') {
     reopenServiceRouteFeedbackSource()
   }
-}
-
-const serviceNotificationDestinationLabel = (block = {}, path = '') => {
-  const sourceModule = typeof block.sourceModule === 'string' ? block.sourceModule : ''
-  if (path === '/food-delivery' || sourceModule.includes('food_delivery')) {
-    return t('Food Delivery', 'Food Delivery')
-  }
-  if (path === '/shopping' || sourceModule.includes('shopping') || sourceModule.includes('logistics')) {
-    return t('Shopping', 'Shopping')
-  }
-  if (path === '/calendar') return t('Calendar', 'Calendar')
-  if (path === '/wallet') return t('Wallet', 'Wallet')
-  return t('来源模块', 'Source')
-}
-
-const recordServiceNotificationReplyFeedback = (block = {}) => {
-  if (!activeChat.value || !isActiveServiceChat.value) return
-  serviceNotificationActionFeedback.value = {
-    type: 'reply',
-    title:
-      (typeof block.title === 'string' && block.title.trim()) ||
-      t('服务通知', 'Service notification'),
-    heading: t('已接上这条通知', 'Reply context ready'),
-    detail: t(
-      '输入框正在引用这条通知；发送后会留在当前聊天，不会改动来源记录。',
-      'The composer is quoting this notification; sending keeps it in this chat and does not change source records.',
-    ),
-  }
-}
-
-const recordServiceNotificationSentFeedback = (quotePayload = {}) => {
-  if (!activeChat.value || !isActiveServiceChat.value) return
-  serviceNotificationActionFeedback.value = {
-    type: 'sent',
-    title:
-      (typeof quotePayload.preview === 'string' && quotePayload.preview.trim()) ||
-      t('服务通知', 'Service notification'),
-    heading: t('已在 Chat 回复', 'Reply sent in Chat'),
-    detail: t(
-      '这条回复已留在当前服务号会话；来源订单、物流或外卖记录没有被 Chat 修改。',
-      'This reply stayed in the service chat; Chat did not change source order, tracking, or delivery records.',
-    ),
-  }
-}
-
-const recordServiceThreadReadFeedback = (contact = {}, unreadCount = 0) => {
-  if (!contact || !chatStore.isChatSubscriptionContact(contact)) return
-  const count = Math.max(0, Math.floor(Number(unreadCount) || 0))
-  if (count <= 0) return
-  serviceNotificationActionFeedback.value = {
-    type: 'read',
-    title: contact.name || t('服务号', 'Service account'),
-    heading: t('已清除 Chat 未读', 'Chat unread cleared'),
-    detail: t(
-      `已清除 ${count} 条 Chat 未读；通知卡仍保留在这条服务号会话里，来源记录不受影响。`,
-      `Cleared ${count} Chat unread update${count === 1 ? '' : 's'}; notification cards remain in this service thread and source records are unchanged.`,
-    ),
-  }
-}
-
-const recordServiceRouteFeedback = (block = {}, action = null, routePath = '') => {
-  if (!activeChat.value || !isActiveServiceChat.value) return
-  const [path] = typeof routePath === 'string' ? routePath.split('?') : ['']
-  writeServiceRouteFeedback({
-    chatId: activeChat.value.id,
-    openedAt: Date.now(),
-    title:
-      (typeof block.title === 'string' && block.title.trim()) ||
-      (typeof action?.label === 'string' && action.label.trim()) ||
-      t('服务通知', 'Service notification'),
-    destination: serviceNotificationDestinationLabel(block, path),
-    actionLabel: typeof action?.label === 'string' ? action.label : '',
-    route: typeof routePath === 'string' && routePath.startsWith('/') ? routePath : '',
-  })
-  clearServiceNotificationActionFeedback()
 }
 
 const formatAutoStatusTime = (timestamp) => {
@@ -4923,8 +4801,7 @@ watch(
     resetThreadMenuSavedFeedback()
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
-    serviceRouteFeedback.value = id ? readServiceRouteFeedback(id) : null
-    serviceNotificationActionFeedback.value = null
+    syncServiceFeedbackForChat(id)
 
     if (id) {
       chatStore.ensureConversationForContact(id)
