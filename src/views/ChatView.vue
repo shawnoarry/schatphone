@@ -53,6 +53,7 @@ import {
   DEFAULT_CHAT_THREAD_AI_PREFS,
   useChatActiveThreadModel,
 } from '../composables/useChatActiveThreadModel'
+import { useChatAiImageReferenceModel } from '../composables/useChatAiImageReferenceModel'
 import { useChatAiPromptContextModel } from '../composables/useChatAiPromptContextModel'
 import { useChatAiRequestStateModel } from '../composables/useChatAiRequestStateModel'
 import { useChatAutomationStatusModel } from '../composables/useChatAutomationStatusModel'
@@ -141,9 +142,6 @@ const MAX_ASSISTANT_DETAIL_CHARS = 800
 const MAX_ASSISTANT_LABEL_CHARS = 80
 const MAX_ASSISTANT_BLOCKS = 12
 const MAX_ASSISTANT_QUOTE_PREVIEW_CHARS = 240
-const MAX_CONTEXT_REFERENCE_IMAGES = 3
-const MAX_CONTEXT_REFERENCE_IMAGE_BYTES = 1_500_000
-const IMAGE_REFERENCE_TRANSPORT_MODES = new Set(['none', 'context_only', 'native_url'])
 const SEMANTIC_REVISION_TRACE_MODE = normalizeSemanticRevisionTraceMode(
   import.meta?.env?.VITE_SEMANTIC_REVISION_TRACE_MODE,
   SEMANTIC_REVISION_TRACE_MODES.SILENT,
@@ -933,31 +931,6 @@ const normalizeImageReferenceMode = (value) =>
     ? value
     : DEFAULT_THREAD_AI_PREFS.imageReferenceMode
 
-const normalizeImageReferenceTransportMode = (value) =>
-  IMAGE_REFERENCE_TRANSPORT_MODES.has(value) ? value : 'none'
-
-const normalizeImageReferenceCount = (value) => {
-  const count = Number(value)
-  if (!Number.isFinite(count)) return 0
-  return Math.min(MAX_CONTEXT_REFERENCE_IMAGES, Math.max(0, Math.floor(count)))
-}
-
-const normalizeImageReferenceProvider = (value) =>
-  typeof value === 'string' && value.trim() ? value.trim().slice(0, 32) : ''
-
-const buildAssistantImageReferenceMeta = (
-  callMeta = null,
-  fallbackReferenceCount = 0,
-  fallbackProvider = '',
-) => ({
-  imageReferenceMode: normalizeImageReferenceTransportMode(callMeta?.finalTransportMode),
-  imageReferenceCount: normalizeImageReferenceCount(
-    callMeta?.referenceCount ?? fallbackReferenceCount,
-  ),
-  imageReferenceFallback: Boolean(callMeta?.fallbackUsed),
-  imageReferenceProvider: normalizeImageReferenceProvider(callMeta?.apiKind || fallbackProvider),
-})
-
 const trimAssistantText = (value, maxLength, fallback = '') => {
   const text = typeof value === 'string' ? value.trim() : ''
   if (!text) return fallback
@@ -1201,6 +1174,13 @@ const {
   getActiveMessageSenderName: activeMessageSenderName,
 })
 
+const { buildAssistantImageReferenceMeta, collectImageReferencesForAiCall } =
+  useChatAiImageReferenceModel({
+    chatStore,
+    galleryStore,
+    t,
+  })
+
 const truncateMessagePreview = (text, maxLength = 72) => {
   const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
   if (!normalized) return ''
@@ -1365,206 +1345,6 @@ const openWorldBookFromThreadContext = (pointId = '') => {
       usage: directPointId || injectedPointIds.length > 0 ? 'all' : 'chat_ready',
     }),
   })
-}
-
-const roleFolderSlotHintLabel = (slotKey) => {
-  if (slotKey === 'imageReference') return t('参考图', 'Reference')
-  if (slotKey === 'dynamicMedia') return t('动态图', 'Dynamic')
-  if (slotKey === 'profileImage') return t('形象照', 'Profile image')
-  if (slotKey === 'emojiPack') return t('表情包', 'Emoji')
-  return slotKey || ''
-}
-
-const buildRoleBoundReferenceCandidates = (contactId) => {
-  const contract = chatStore.getRoleBindingContract(contactId, {
-    moduleKey: 'chat',
-  })
-  if (!contract?.roleBound) {
-    return {
-      profileName: '',
-      candidateAssetIds: [],
-      sourceByAssetId: {},
-    }
-  }
-
-  const profilePack = contract.assets?.profileAssetPack || createEmptyProfileAssetPack()
-  const folderResolved = resolveFolderBoundAssetIds(
-    galleryStore,
-    contract.assets?.profileAssetFolderBindings,
-    getRoleAssetFolderSlotKeysByCategory('reference'),
-    {
-      category: 'all',
-      limit: 80,
-    },
-  )
-
-  const candidateAssetIds = []
-  const pushAssetId = (assetId) => {
-    const normalized = typeof assetId === 'string' ? assetId.trim() : ''
-    if (!normalized || candidateAssetIds.includes(normalized)) return
-    candidateAssetIds.push(normalized)
-  }
-
-  pushAssetId(contract.assets?.preferredImageAssetId)
-  ;(Array.isArray(profilePack.referenceAssetIds) ? profilePack.referenceAssetIds : []).forEach((id) =>
-    pushAssetId(id),
-  )
-  ;(Array.isArray(profilePack.scenarioAssetIds) ? profilePack.scenarioAssetIds : []).forEach((id) =>
-    pushAssetId(id),
-  )
-  folderResolved.assetIds.forEach((id) => pushAssetId(id))
-
-  return {
-    profileName: contract.profile?.name || contract.contact?.name || '',
-    candidateAssetIds,
-    sourceByAssetId: folderResolved.sourceByAssetId || {},
-  }
-}
-
-const collectImageReferencesFromContextMessages = async (messages = []) => {
-  if (!Array.isArray(messages) || messages.length === 0) return []
-  const collected = []
-  const seen = new Set()
-
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    if (collected.length >= MAX_CONTEXT_REFERENCE_IMAGES) break
-    const message = messages[i]
-    if (message?.role !== 'user' || !Array.isArray(message.blocks)) continue
-
-    for (const block of message.blocks) {
-      if (collected.length >= MAX_CONTEXT_REFERENCE_IMAGES) break
-      if (!block || block.type !== 'image_virtual') continue
-
-      const assetId =
-        typeof block.assetId === 'string' && block.assetId.trim()
-          ? block.assetId.trim()
-          : ''
-      const asset = assetId ? galleryStore.findAssetById(assetId) : null
-      let sourceUrl = typeof block.url === 'string' ? block.url.trim() : ''
-      let sourceReason = ''
-
-      if (!sourceUrl && assetId) {
-        const resolved = await galleryStore.getAssetAiReferenceUrl(assetId, {
-          maxBytes: MAX_CONTEXT_REFERENCE_IMAGE_BYTES,
-        })
-        if (resolved?.ok && typeof resolved.url === 'string' && resolved.url.trim()) {
-          sourceUrl = resolved.url.trim()
-        } else if (resolved?.reason) {
-          sourceReason = resolved.reason
-        }
-      }
-
-      const label =
-        (typeof block.alt === 'string' && block.alt.trim()) ||
-        (typeof asset?.name === 'string' && asset.name.trim()) ||
-        t('参考图', 'Reference image')
-      const noteBase =
-        (typeof block.caption === 'string' && block.caption.trim()) ||
-        t('来自聊天上下文', 'From chat context')
-      const note =
-        sourceReason === 'blob_too_large'
-          ? `${noteBase} · ${t('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
-          : noteBase
-      const sourceKey = `${label}|${assetId}|${sourceUrl.slice(0, 120)}`
-      if (seen.has(sourceKey)) continue
-      seen.add(sourceKey)
-      collected.push({
-        label,
-        note,
-        sourceUrl,
-        assetId,
-      })
-    }
-  }
-
-  return collected
-}
-
-const collectImageReferencesFromRoleBindings = async (
-  contactId,
-  { limit = MAX_CONTEXT_REFERENCE_IMAGES, excludeAssetIds = [] } = {},
-) => {
-  const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.floor(Number(limit))) : 0
-  if (normalizedLimit <= 0) return []
-
-  const excludeSet = new Set(
-    Array.isArray(excludeAssetIds)
-      ? excludeAssetIds
-          .map((assetId) => (typeof assetId === 'string' ? assetId.trim() : ''))
-          .filter(Boolean)
-      : [],
-  )
-  const { profileName, candidateAssetIds, sourceByAssetId } =
-    buildRoleBoundReferenceCandidates(contactId)
-  if (!candidateAssetIds.length) return []
-
-  const collected = []
-  const seen = new Set()
-
-  for (const assetId of candidateAssetIds) {
-    if (collected.length >= normalizedLimit) break
-    if (excludeSet.has(assetId)) continue
-
-    const asset = galleryStore.findAssetById(assetId)
-    if (!asset) continue
-    if (asset.category === 'emoji') continue
-
-    const resolved = await galleryStore.getAssetAiReferenceUrl(assetId, {
-      maxBytes: MAX_CONTEXT_REFERENCE_IMAGE_BYTES,
-    })
-    const sourceUrl = resolved?.ok && typeof resolved.url === 'string' ? resolved.url.trim() : ''
-    const sourceReason = typeof resolved?.reason === 'string' ? resolved.reason : ''
-
-    const sourceEntry = sourceByAssetId?.[assetId]
-    const slotLabels =
-      Array.isArray(sourceEntry?.slotKeys) && sourceEntry.slotKeys.length > 0
-        ? sourceEntry.slotKeys.map((slotKey) => roleFolderSlotHintLabel(slotKey)).filter(Boolean)
-        : []
-    const slotHint = slotLabels.length > 0 ? slotLabels.join('/') : ''
-    const noteBase = slotHint
-      ? t(
-          `来自角色绑定素材（${slotHint}${profileName ? ` · ${profileName}` : ''}）`,
-          `From role-bound asset (${slotHint}${profileName ? ` · ${profileName}` : ''})`,
-        )
-      : t(
-          `来自角色绑定素材${profileName ? `（${profileName}）` : ''}`,
-          `From role-bound asset${profileName ? ` (${profileName})` : ''}`,
-        )
-    const note =
-      sourceReason === 'blob_too_large'
-        ? `${noteBase} · ${t('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
-        : noteBase
-    const label =
-      (typeof asset?.name === 'string' && asset.name.trim()) ||
-      t('角色参考图', 'Profile reference image')
-
-    const sourceKey = `${label}|${assetId}|${sourceUrl.slice(0, 120)}`
-    if (seen.has(sourceKey)) continue
-    seen.add(sourceKey)
-    collected.push({
-      label,
-      note,
-      sourceUrl,
-      assetId,
-    })
-  }
-
-  return collected
-}
-
-const collectImageReferencesForAiCall = async (contactId, contextMessages = []) => {
-  const contextReferences = await collectImageReferencesFromContextMessages(contextMessages)
-  const remain = Math.max(0, MAX_CONTEXT_REFERENCE_IMAGES - contextReferences.length)
-  if (remain <= 0) return contextReferences.slice(0, MAX_CONTEXT_REFERENCE_IMAGES)
-
-  const roleReferences = await collectImageReferencesFromRoleBindings(contactId, {
-    limit: remain,
-    excludeAssetIds: contextReferences
-      .map((item) => (typeof item?.assetId === 'string' ? item.assetId.trim() : ''))
-      .filter(Boolean),
-  })
-
-  return [...contextReferences, ...roleReferences].slice(0, MAX_CONTEXT_REFERENCE_IMAGES)
 }
 
 const clearAutoInvokeTimer = () => {

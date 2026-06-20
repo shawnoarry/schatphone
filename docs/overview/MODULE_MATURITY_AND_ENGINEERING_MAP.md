@@ -104,17 +104,17 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/views/ContactsView.vue` | 5863 | major product-critical surface; needs careful IA and ownership protection |
-| `src/views/ChatView.vue` | 5378 | still a product-critical maintainability hotspot; active-thread, AI request state, AI prompt/context preparation, automation status/readiness, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
-| `src/views/WorldBookView.vue` | 5036 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
-| `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive |
-| `src/views/ChatDirectoryView.vue` | 4122 | concept-heavy management surface |
-| `src/views/WidgetsView.vue` | 4050 | widget authoring and preview logic are broad |
-| `src/views/AppStoreView.vue` | 3635 | app discovery, install, world-app entry, and Home wiring are concentrated |
-| `src/views/FoodDeliveryView.vue` | 3260 | commerce UI and service-notification integration remain large |
-| `src/views/BookView.vue` | 2347 | text-library app; keep future editor/source-picker growth modular |
-| `src/views/AppearanceView.vue` | 2107 | visual configuration surface; avoid mixing visual polish with ownership changes |
-| `src/views/SettingsView.vue` | 1295 | improved after backup, storage diagnostics, and push workflow orchestration were extracted |
+| `src/views/ContactsView.vue` | 5428 | major product-critical surface; needs careful IA and ownership protection |
+| `src/views/ChatView.vue` | 4736 | still a product-critical maintainability hotspot; active-thread, AI request state, AI prompt/context preparation, AI image-reference preparation, automation status/readiness, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
+| `src/views/WorldBookView.vue` | 4565 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
+| `src/views/HomeView.vue` | 3920 | Home layout/editing/library UI is large and visually sensitive |
+| `src/views/ChatDirectoryView.vue` | 3802 | concept-heavy management surface |
+| `src/views/WidgetsView.vue` | 3617 | widget authoring and preview logic are broad |
+| `src/views/AppStoreView.vue` | 3352 | app discovery, install, world-app entry, and Home wiring are concentrated |
+| `src/views/FoodDeliveryView.vue` | 3161 | commerce UI and service-notification integration remain large |
+| `src/views/BookView.vue` | 2057 | text-library app; keep future editor/source-picker growth modular |
+| `src/views/AppearanceView.vue` | 1917 | visual configuration surface; avoid mixing visual polish with ownership changes |
+| `src/views/SettingsView.vue` | 1178 | improved after backup, storage diagnostics, and push workflow orchestration were extracted |
 
 ### Largest stores
 
@@ -122,16 +122,16 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/stores/system.js` | 4581 | central infrastructure store; change carefully and avoid adding new domain ownership |
-| `src/stores/chat.js` | 3411 | rich domain logic with high coordination responsibility |
-| `src/stores/map.js` | 2332 | broad product logic; prefer improving seams before deep redesign |
-| `src/stores/gallery.js` | 1471 | important asset rules live here; avoid casual contract churn |
-| `src/stores/relationshipRuntime.js` | 1397 | real cross-module truth layer; deserves stricter semantic protection |
-| `src/stores/foodDelivery.js` | 1328 | active commerce/event lane |
-| `src/stores/calendar.js` | 1116 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
-| `src/stores/shopping.js` | 1043 | active commerce/event lane |
-| `src/stores/simulation.js` | 888 | runtime/event lane with increasing diagnostic responsibility |
-| `src/stores/reminders.js` | 735 | key ownership seam for cross-module cue handling |
+| `src/stores/system.js` | 4186 | central infrastructure store; change carefully and avoid adding new domain ownership |
+| `src/stores/chat.js` | 3062 | rich domain logic with high coordination responsibility |
+| `src/stores/map.js` | 2146 | broad product logic; prefer improving seams before deep redesign |
+| `src/stores/gallery.js` | 1325 | important asset rules live here; avoid casual contract churn |
+| `src/stores/relationshipRuntime.js` | 1287 | real cross-module truth layer; deserves stricter semantic protection |
+| `src/stores/foodDelivery.js` | 1222 | active commerce/event lane |
+| `src/stores/calendar.js` | 1014 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
+| `src/stores/shopping.js` | 943 | active commerce/event lane |
+| `src/stores/simulation.js` | 801 | runtime/event lane with increasing diagnostic responsibility |
+| `src/stores/reminders.js` | 660 | key ownership seam for cross-module cue handling |
 
 ## 4. Practical Engineering Rules
 
@@ -198,7 +198,7 @@ Engineering meaning:
 ### Chat
 
 - product state: strongest gameplay module
-- engineering note: still one of the biggest product-critical maintainability hotspots; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatAiRequestStateModel.js` owns AI request/retry/reroll display state, `src/composables/useChatAiPromptContextModel.js` owns AI prompt/context preparation, `src/composables/useChatAutomationStatusModel.js` owns automation status/readiness display state, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatServiceFeedbackModel.js` owns service route/action feedback state, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state, and `src/composables/useChatPendingQuoteModel.js` owns pending quote display/action state
+- engineering note: still one of the biggest product-critical maintainability hotspots; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatAiRequestStateModel.js` owns AI request/retry/reroll display state, `src/composables/useChatAiPromptContextModel.js` owns AI prompt/context preparation, `src/composables/useChatAiImageReferenceModel.js` owns AI image-reference preparation, `src/composables/useChatAutomationStatusModel.js` owns automation status/readiness display state, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatServiceFeedbackModel.js` owns service route/action feedback state, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state, and `src/composables/useChatPendingQuoteModel.js` owns pending quote display/action state
 - recommendation: prefer extraction and IA cleanup before more thread-side feature growth
 
 ### Chat Directory
