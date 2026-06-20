@@ -59,6 +59,10 @@ import {
   CHAT_ASSISTANT_RESPONSE_LIMITS,
   useChatAssistantResponseModel,
 } from '../composables/useChatAssistantResponseModel'
+import {
+  CHAT_ASSISTANT_MANUAL_TRIGGER_ID,
+  useChatAssistantResultModel,
+} from '../composables/useChatAssistantResultModel'
 import { useChatAutomationStatusModel } from '../composables/useChatAutomationStatusModel'
 import { useChatHomeListModel } from '../composables/useChatHomeListModel'
 import {
@@ -161,7 +165,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/app-store',
 ])
 
-const MANUAL_TRIGGER_ID = '__manual__'
+const MANUAL_TRIGGER_ID = CHAT_ASSISTANT_MANUAL_TRIGGER_ID
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
 const MIN_AUTO_INVOKE_INTERVAL_SEC = 60
 const MAX_AUTO_INVOKE_INTERVAL_SEC = 86400
@@ -275,6 +279,17 @@ const {
   avatarPreviewMap,
   t,
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
+})
+
+const {
+  createAssistantReplyNotificationPayload,
+  settleAssistantReplyResult,
+} = useChatAssistantResultModel({
+  activeChatId,
+  chatStore,
+  simulationStore,
+  systemStore,
+  t,
 })
 
 const {
@@ -1638,69 +1653,6 @@ const chatAutomationTaskHandler = async (task) => {
   }
 }
 
-const clampNotificationPreview = (text, max = 72) => {
-  const normalized = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
-  if (!normalized) return t('你收到了一条新回复', 'You received a new reply')
-  if (normalized.length <= max) return normalized
-  return `${normalized.slice(0, max)}...`
-}
-
-const summarizeAssistantMessagesForNotification = (messages = []) => {
-  if (!Array.isArray(messages) || messages.length === 0) return t('你收到了一条新回复', 'You received a new reply')
-
-  for (const message of messages) {
-    if (Array.isArray(message?.blocks)) {
-      const primaryTextBlock = message.blocks.find(
-        (block) =>
-          block?.type === 'text' &&
-          block?.variant !== 'secondary' &&
-          typeof block.text === 'string' &&
-          block.text.trim(),
-      )
-      if (primaryTextBlock) return clampNotificationPreview(primaryTextBlock.text)
-    }
-
-    if (typeof message?.content === 'string' && message.content.trim()) {
-      return clampNotificationPreview(message.content)
-    }
-  }
-
-  return t('你收到了一条新回复', 'You received a new reply')
-}
-
-const submitAssistantSocialEvents = ({
-  contactId,
-  socialEvents = [],
-  assistantMessages = [],
-  triggerMessageId = '',
-} = {}) => {
-  if (!Array.isArray(socialEvents) || socialEvents.length === 0) return []
-  const firstAssistantMessage = assistantMessages.find((message) => message?.id) || null
-  const sourceMessageId = firstAssistantMessage?.id || ''
-  const sourceTriggerId =
-    triggerMessageId && triggerMessageId !== MANUAL_TRIGGER_ID ? triggerMessageId : ''
-
-  return socialEvents
-    .map((event) =>
-      simulationStore.submitChatSocialEventProposal(
-        {
-          contactId,
-          eventType: event.eventType,
-          explanation: event.explanation,
-          triggerSource: 'ai_assisted',
-          source: {
-            moduleKey: 'chat',
-            conversationId: contactId,
-            messageId: sourceMessageId,
-            runtimeLogId: sourceTriggerId,
-          },
-        },
-        { chatStore, at: Date.now() },
-      ),
-    )
-    .filter(Boolean)
-}
-
 const generateAIResponse = async (contactId, triggerMessageId, options = {}) => {
   const contact = contactsForList.value.find((item) => item.id === contactId)
   if (!contact) throw new Error('Contact not found')
@@ -1769,28 +1721,21 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     })
     appendedMessages.push(appended)
   })
-  const submittedSocialEvents = submitAssistantSocialEvents({
+  const result = settleAssistantReplyResult({
     contactId,
+    contact,
+    parsedMessages,
+    appendedMessages,
     socialEvents: parsed.socialEvents,
-    assistantMessages: appendedMessages,
     triggerMessageId,
-  })
-
-  if (activeChatId.value === contactId) {
-    chatStore.markConversationRead(contactId)
-  } else {
-    chatStore.incrementConversationUnread(contactId, parsedMessages.length || 1)
-  }
-  systemStore.touchChatTruth(contact, 'assistant_reply', {
-    count: Math.max(1, parsedMessages.length || 1),
     source: options.isProactive ? 'proactive' : 'reply',
   })
 
   return {
-    count: parsedMessages.length,
-    messages: parsedMessages,
-    socialEventCount: submittedSocialEvents.length,
-    contactName: contact.name || t('新消息', 'New Message'),
+    count: result.count,
+    messages: result.messages,
+    socialEventCount: result.socialEventCount,
+    contactName: result.contactName,
   }
 }
 
@@ -1909,14 +1854,15 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
         isProactive: Boolean(options.isProactive),
       },
     )
-    if (systemStore.isLocked && result?.count > 0) {
-      systemNotifications.addNotification({
-        title: result.contactName || t('新消息', 'New Message'),
-        content: summarizeAssistantMessagesForNotification(result.messages),
-        icon: 'fas fa-comment-dots',
-        route: `/chat/${contactId}`,
-        source: 'chat_ai_reply',
-      })
+    const notificationPayload = createAssistantReplyNotificationPayload({
+      contactId,
+      contactName: result?.contactName,
+      messages: result?.messages,
+      count: result?.count,
+      isLocked: systemStore.isLocked,
+    })
+    if (notificationPayload) {
+      systemNotifications.addNotification(notificationPayload)
     }
     if (options.markProactiveOpened) {
       chatStore.markConversationProactiveOpened(contactId)
