@@ -19,8 +19,7 @@ import {
   useFoodDeliveryStore,
 } from '../stores/foodDelivery'
 import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
-import { normalizeChatAiSocialEvents } from '../lib/chat-ai-social-proposals'
-import { extractAssistantPayloadText, parseAssistantJsonPayload, stripCodeFence } from '../lib/chat-response'
+import { stripCodeFence } from '../lib/chat-response'
 import {
   getRoleAssetFolderSlotKeysByCategory,
   resolveFolderBoundAssetIds,
@@ -56,6 +55,10 @@ import {
 import { useChatAiImageReferenceModel } from '../composables/useChatAiImageReferenceModel'
 import { useChatAiPromptContextModel } from '../composables/useChatAiPromptContextModel'
 import { useChatAiRequestStateModel } from '../composables/useChatAiRequestStateModel'
+import {
+  CHAT_ASSISTANT_RESPONSE_LIMITS,
+  useChatAssistantResponseModel,
+} from '../composables/useChatAssistantResponseModel'
 import { useChatAutomationStatusModel } from '../composables/useChatAutomationStatusModel'
 import { useChatHomeListModel } from '../composables/useChatHomeListModel'
 import {
@@ -129,19 +132,7 @@ const IMAGE_REFERENCE_MODE_OPTIONS = computed(() => [
   { value: 'native_url', label: t('偏好原生图输入', 'Prefer native image input') },
 ])
 
-// Keep AI reply content independent from global UI language.
-const AI_REPLY_FALLBACK_TEXT = Object.freeze({
-  voiceLabel: '语音消息',
-  moduleLabel: '打开模块',
-  transferLabel: '转账卡片',
-  imageAlt: '图片消息',
-  sceneTitle: '小剧场',
-})
-const MAX_ASSISTANT_TEXT_CHARS = 3000
-const MAX_ASSISTANT_DETAIL_CHARS = 800
-const MAX_ASSISTANT_LABEL_CHARS = 80
-const MAX_ASSISTANT_BLOCKS = 12
-const MAX_ASSISTANT_QUOTE_PREVIEW_CHARS = 240
+const MAX_ASSISTANT_TEXT_CHARS = CHAT_ASSISTANT_RESPONSE_LIMITS.maxTextChars
 const SEMANTIC_REVISION_TRACE_MODE = normalizeSemanticRevisionTraceMode(
   import.meta?.env?.VITE_SEMANTIC_REVISION_TRACE_MODE,
   SEMANTIC_REVISION_TRACE_MODES.SILENT,
@@ -931,40 +922,6 @@ const normalizeImageReferenceMode = (value) =>
     ? value
     : DEFAULT_THREAD_AI_PREFS.imageReferenceMode
 
-const trimAssistantText = (value, maxLength, fallback = '') => {
-  const text = typeof value === 'string' ? value.trim() : ''
-  if (!text) return fallback
-  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) return text
-  return text.length <= maxLength ? text : text.slice(0, maxLength)
-}
-
-const trimAssistantSingleLine = (value, maxLength, fallback = '') =>
-  trimAssistantText(value, maxLength, fallback).replace(/\s+/g, ' ').trim()
-
-const sanitizeAssistantRoute = (value, fallback = '/home') => {
-  const route = trimAssistantText(value, 200)
-  if (!route) return fallback
-  if (!route.startsWith('/') || route.startsWith('//')) return fallback
-  if (/\s/.test(route)) return fallback
-  return SAFE_MODULE_ROUTES.has(route) ? route : fallback
-}
-
-const sanitizeAssistantImageUrl = (value) => {
-  const url = trimAssistantText(value, 500)
-  if (!url) return ''
-  if (url.startsWith('/')) return url
-  if (/^https?:\/\//i.test(url)) return url
-  return ''
-}
-
-const sanitizeAssistantHtmlSnippet = (value) => {
-  const snippet = trimAssistantText(value, 4000)
-  if (!snippet) return ''
-  return snippet
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-    .replace(/javascript:/gi, '')
-}
-
 const readFileAsDataUrl = (file) =>
   new Promise((resolve, reject) => {
     try {
@@ -1179,6 +1136,12 @@ const { buildAssistantImageReferenceMeta, collectImageReferencesForAiCall } =
     chatStore,
     galleryStore,
     t,
+  })
+
+const { normalizeAssistantMessagePayload, parseAssistantResponse } =
+  useChatAssistantResponseModel({
+    clampReplyCount,
+    safeModuleRoutes: Array.from(SAFE_MODULE_ROUTES),
   })
 
 const truncateMessagePreview = (text, maxLength = 72) => {
@@ -1672,390 +1635,6 @@ const chatAutomationTaskHandler = async (task) => {
   return {
     ok,
     contactId: payloadContactId,
-  }
-}
-
-const normalizeAssistantReplyType = (replyType, aiPrefs) => {
-  const input = typeof replyType === 'string' ? replyType : 'plain'
-  if (!aiPrefs.allowQuoteReply) return 'plain'
-  if (input === 'quote_self' && !aiPrefs.allowSelfQuote) return 'plain'
-  if (['plain', 'quote_user', 'quote_self'].includes(input)) return input
-  return 'plain'
-}
-
-const normalizeAssistantQuote = (rawQuote) => {
-  if (!rawQuote || typeof rawQuote !== 'object') return null
-  const preview = trimAssistantText(rawQuote.preview, MAX_ASSISTANT_QUOTE_PREVIEW_CHARS)
-  if (!preview) return null
-  return {
-    messageId: trimAssistantText(rawQuote.messageId, 128),
-    role: rawQuote.role === 'assistant' ? 'assistant' : 'user',
-    preview,
-  }
-}
-
-const normalizeAssistantBlock = (rawBlock, aiPrefs, options = {}) => {
-  if (!rawBlock || typeof rawBlock !== 'object') return null
-  const blockType = typeof rawBlock.type === 'string' ? rawBlock.type : 'text'
-
-  if (blockType === 'text') {
-    const text = trimAssistantText(rawBlock.text, MAX_ASSISTANT_TEXT_CHARS)
-    if (!text) return null
-    return {
-      type: 'text',
-      text,
-      variant: rawBlock.variant === 'secondary' ? 'secondary' : 'primary',
-      lang: typeof rawBlock.lang === 'string' ? rawBlock.lang : 'auto',
-    }
-  }
-
-  if (blockType === 'voice_virtual') {
-    if (!aiPrefs?.virtualVoiceEnabled) return null
-    return {
-      type: 'voice_virtual',
-      label: trimAssistantSingleLine(
-        rawBlock.label,
-        MAX_ASSISTANT_LABEL_CHARS,
-        AI_REPLY_FALLBACK_TEXT.voiceLabel,
-      ),
-      transcript: trimAssistantText(rawBlock.transcript, MAX_ASSISTANT_DETAIL_CHARS),
-      durationSec: Number.isFinite(Number(rawBlock.durationSec)) ? Math.max(1, Math.floor(Number(rawBlock.durationSec))) : 8,
-    }
-  }
-
-  if (blockType === 'module_link') {
-    return {
-      type: 'module_link',
-      label: trimAssistantSingleLine(
-        rawBlock.label,
-        MAX_ASSISTANT_LABEL_CHARS,
-        AI_REPLY_FALLBACK_TEXT.moduleLabel,
-      ),
-      route: sanitizeAssistantRoute(rawBlock.route, '/home'),
-      note: trimAssistantText(rawBlock.note, MAX_ASSISTANT_DETAIL_CHARS),
-    }
-  }
-
-  if (blockType === 'transfer_virtual') {
-    return {
-      type: 'transfer_virtual',
-      label: trimAssistantSingleLine(
-        rawBlock.label,
-        MAX_ASSISTANT_LABEL_CHARS,
-        AI_REPLY_FALLBACK_TEXT.transferLabel,
-      ),
-      amount: trimAssistantSingleLine(rawBlock.amount, 24, '0.00'),
-      currency: trimAssistantSingleLine(rawBlock.currency, 8, 'CNY').toUpperCase(),
-      to: trimAssistantText(rawBlock.to, 120),
-      note: trimAssistantText(rawBlock.note, MAX_ASSISTANT_DETAIL_CHARS),
-      actionRoute: sanitizeAssistantRoute(rawBlock.actionRoute, '/wallet'),
-    }
-  }
-
-  if (blockType === 'product_card') {
-    const productId = trimAssistantSingleLine(rawBlock.productId, 140)
-    const title = trimAssistantSingleLine(rawBlock.title || rawBlock.label, MAX_ASSISTANT_LABEL_CHARS, '')
-    if (!productId || !title) return null
-    return {
-      type: 'product_card',
-      productId,
-      title,
-      category: trimAssistantSingleLine(rawBlock.category, 40),
-      price: trimAssistantSingleLine(rawBlock.price, 40),
-      currency: trimAssistantSingleLine(rawBlock.currency, 8, 'CNY').toUpperCase(),
-      desc: trimAssistantText(rawBlock.desc || rawBlock.description, MAX_ASSISTANT_DETAIL_CHARS),
-      route: sanitizeAssistantRoute(rawBlock.route, '/shopping'),
-      assetEligible: rawBlock.assetEligible === true,
-      giftable: rawBlock.giftable === true,
-    }
-  }
-
-  if (blockType === 'service_notification') {
-    return null
-  }
-
-  if (blockType === 'image_virtual') {
-    if (options.allowImageVirtual === false) return null
-    return {
-      type: 'image_virtual',
-      alt: trimAssistantSingleLine(
-        rawBlock.alt,
-        MAX_ASSISTANT_LABEL_CHARS,
-        AI_REPLY_FALLBACK_TEXT.imageAlt,
-      ),
-      url: sanitizeAssistantImageUrl(rawBlock.url),
-      caption: trimAssistantText(rawBlock.caption, MAX_ASSISTANT_DETAIL_CHARS),
-    }
-  }
-
-  if (blockType === 'mini_scene') {
-    return {
-      type: 'mini_scene',
-      title: trimAssistantSingleLine(
-        rawBlock.title,
-        MAX_ASSISTANT_LABEL_CHARS,
-        AI_REPLY_FALLBACK_TEXT.sceneTitle,
-      ),
-      description: trimAssistantText(rawBlock.description, MAX_ASSISTANT_DETAIL_CHARS),
-      htmlSnippet: sanitizeAssistantHtmlSnippet(rawBlock.htmlSnippet),
-    }
-  }
-
-  return null
-}
-
-const getQuoteTargetRole = (replyType) => (replyType === 'quote_self' ? 'assistant' : 'user')
-
-const pickQuoteCandidate = (quoteCandidates, targetRole, normalizedQuote) => {
-  const list = Array.isArray(quoteCandidates) ? quoteCandidates : []
-  if (!list.length) return null
-
-  const byMessageId =
-    normalizedQuote?.messageId &&
-    list.find((item) => item.id === normalizedQuote.messageId && item.role === targetRole)
-  if (byMessageId) return byMessageId
-
-  const byPreview =
-    normalizedQuote?.preview &&
-    list.find((item) => item.role === targetRole && item.preview === normalizedQuote.preview)
-  if (byPreview) return byPreview
-
-  for (let i = list.length - 1; i >= 0; i -= 1) {
-    const candidate = list[i]
-    if (candidate?.role === targetRole) return candidate
-  }
-  return null
-}
-
-const resolveAssistantQuote = (rawQuote, replyType, quoteCandidates = []) => {
-  if (replyType === 'plain') return null
-  const targetRole = getQuoteTargetRole(replyType)
-  const normalizedQuote = normalizeAssistantQuote(rawQuote)
-  const candidate = pickQuoteCandidate(quoteCandidates, targetRole, normalizedQuote)
-  if (!candidate) return null
-  return {
-    messageId: candidate.id,
-    role: targetRole,
-    preview: candidate.preview,
-  }
-}
-
-const summarizePrimaryTextFromFirstRichBlock = (blocks = []) => {
-  if (!Array.isArray(blocks) || blocks.length === 0) return ''
-  const first = blocks.find((block) => block?.type && block.type !== 'text')
-  if (!first) return ''
-
-  if (first.type === 'voice_virtual') {
-    return trimAssistantText(
-      first.transcript ? `${first.label}：${first.transcript}` : first.label,
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'module_link') {
-    return trimAssistantText(`${first.label} (${first.route || '/home'})`, MAX_ASSISTANT_TEXT_CHARS, '')
-  }
-  if (first.type === 'link_external') {
-    return trimAssistantText(`${first.label} (${first.url || ''})`, MAX_ASSISTANT_TEXT_CHARS, '')
-  }
-  if (first.type === 'transfer_virtual') {
-    return trimAssistantText(
-      `${first.label} ${first.amount || '0.00'} ${first.currency || 'CNY'}`,
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'product_card') {
-    return trimAssistantText(
-      `${first.title} ${first.price || ''} ${first.currency || ''}`.trim(),
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'share_card') {
-    return trimAssistantText(
-      `${first.title || ''} ${first.amountLabel || ''}`.trim(),
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'service_notification') {
-    return trimAssistantText(
-      `${first.title || ''} ${first.summary || ''}`.trim(),
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'image_virtual') {
-    return trimAssistantText(
-      first.caption ? `${first.alt}：${first.caption}` : first.alt,
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  if (first.type === 'mini_scene') {
-    return trimAssistantText(
-      first.description ? `${first.title}：${first.description}` : first.title,
-      MAX_ASSISTANT_TEXT_CHARS,
-      '',
-    )
-  }
-  return ''
-}
-
-const normalizeAssistantTextBlocksFlow = (blocks = [], aiPrefs) => {
-  const list = Array.isArray(blocks) ? blocks.filter(Boolean).slice(0, MAX_ASSISTANT_BLOCKS) : []
-  const primaryTextBlocks = []
-  const secondaryTextBlocks = []
-  const richBlocks = []
-
-  list.forEach((block) => {
-    if (block.type !== 'text') {
-      richBlocks.push(block)
-      return
-    }
-
-    const text = trimAssistantText(block.text, MAX_ASSISTANT_TEXT_CHARS)
-    if (!text) return
-    const normalized = {
-      ...block,
-      text,
-      variant: block.variant === 'secondary' ? 'secondary' : 'primary',
-    }
-
-    if (normalized.variant === 'secondary') {
-      secondaryTextBlocks.push(normalized)
-    } else {
-      primaryTextBlocks.push(normalized)
-    }
-  })
-
-  const primaryTextSet = new Set(primaryTextBlocks.map((item) => item.text))
-  const filteredSecondary = secondaryTextBlocks.filter((item, index) => {
-    if (!aiPrefs?.bilingualEnabled) return false
-    if (primaryTextSet.has(item.text)) return false
-    return (
-      secondaryTextBlocks.findIndex((other) => other.text === item.text && other.lang === item.lang) === index
-    )
-  })
-
-  return [...primaryTextBlocks, ...richBlocks, ...filteredSecondary.slice(0, 1)].slice(0, MAX_ASSISTANT_BLOCKS)
-}
-
-const ensureAssistantPrimaryTextBlock = (blocks, fallbackText = '...') => {
-  const normalizedBlocks = Array.isArray(blocks) ? [...blocks].slice(0, MAX_ASSISTANT_BLOCKS) : []
-  const hasPrimaryTextBlock = normalizedBlocks.some(
-    (block) => block.type === 'text' && block.variant !== 'secondary' && block.text?.trim(),
-  )
-  if (hasPrimaryTextBlock) return normalizedBlocks
-
-  const secondarySeed = normalizedBlocks.find(
-    (block) => block.type === 'text' && block.variant === 'secondary' && block.text?.trim(),
-  )
-  if (secondarySeed) {
-    normalizedBlocks.unshift({
-      type: 'text',
-      text: trimAssistantText(secondarySeed.text, MAX_ASSISTANT_TEXT_CHARS, fallbackText),
-      variant: 'primary',
-      lang: 'auto',
-    })
-    return normalizedBlocks.slice(0, MAX_ASSISTANT_BLOCKS)
-  }
-
-  normalizedBlocks.unshift({
-    type: 'text',
-    text: trimAssistantText(fallbackText, MAX_ASSISTANT_TEXT_CHARS, '...'),
-    variant: 'primary',
-    lang: 'auto',
-  })
-  return normalizedBlocks
-}
-
-const resolvePayloadTextFallback = (payload, fallbackText = '...') =>
-  trimAssistantText(extractAssistantPayloadText(payload), MAX_ASSISTANT_TEXT_CHARS, fallbackText)
-
-const normalizeAssistantMessagePayload = (rawMessage, aiPrefs, fallbackText = '...', options = {}) => {
-  const payload = rawMessage && typeof rawMessage === 'object' ? rawMessage : {}
-  const replyType = normalizeAssistantReplyType(payload.replyType, aiPrefs)
-  const messagePolicy =
-    options.messagePolicy && typeof options.messagePolicy === 'object'
-      ? options.messagePolicy
-      : {}
-
-  let parsedBlocks = Array.isArray(payload.blocks)
-    ? payload.blocks
-        .map((block) => normalizeAssistantBlock(block, aiPrefs, messagePolicy))
-        .filter(Boolean)
-    : []
-
-  if (!aiPrefs.bilingualEnabled) {
-    parsedBlocks = parsedBlocks.filter((block) => !(block.type === 'text' && block.variant === 'secondary'))
-  }
-
-  parsedBlocks = normalizeAssistantTextBlocksFlow(parsedBlocks, aiPrefs)
-  const fallbackFromRichBlock = summarizePrimaryTextFromFirstRichBlock(parsedBlocks)
-  const fallbackFromPayload = resolvePayloadTextFallback(payload, fallbackText)
-  parsedBlocks = ensureAssistantPrimaryTextBlock(
-    parsedBlocks,
-    fallbackFromRichBlock || fallbackFromPayload || fallbackText,
-  )
-  parsedBlocks = normalizeAssistantTextBlocksFlow(parsedBlocks, aiPrefs)
-  const primaryTextBlock = parsedBlocks.find((block) => block.type === 'text' && block.variant !== 'secondary')
-  const content = trimAssistantText(
-    primaryTextBlock?.text || parsedBlocks.find((block) => block.type === 'text')?.text || fallbackText,
-    MAX_ASSISTANT_TEXT_CHARS,
-    '...',
-  )
-  const resolvedQuote = resolveAssistantQuote(payload.quote, replyType, options.quoteCandidates || [])
-  const normalizedReplyType = replyType !== 'plain' && !resolvedQuote ? 'plain' : replyType
-
-  return {
-    content: content || '...',
-    blocks: parsedBlocks,
-    quote: resolvedQuote,
-    replyType: normalizedReplyType,
-  }
-}
-
-const parseAssistantResponse = (rawText, aiPrefs, options = {}) => {
-  const text = typeof rawText === 'string' ? rawText : ''
-  const cleanText = stripCodeFence(text)
-  const expectedReplyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
-  const fallbackText = trimAssistantText(cleanText, MAX_ASSISTANT_TEXT_CHARS, '...')
-  const quoteCandidates = Array.isArray(options.quoteCandidates) ? options.quoteCandidates : []
-  const messagePolicy =
-    options.messagePolicy && typeof options.messagePolicy === 'object'
-      ? options.messagePolicy
-      : {}
-  const parsedPayload = parseAssistantJsonPayload(cleanText)
-  const normalizedFallback = () =>
-    normalizeAssistantMessagePayload({}, aiPrefs, fallbackText, {
-      quoteCandidates,
-      messagePolicy,
-    })
-
-  if (!parsedPayload || typeof parsedPayload !== 'object') {
-    return { messages: [normalizedFallback()], socialEvents: [] }
-  }
-
-  const rawMessages = Array.isArray(parsedPayload.messages) ? parsedPayload.messages : [parsedPayload]
-  const normalizedMessages = rawMessages
-    .slice(0, expectedReplyCount)
-    .map((item) =>
-      normalizeAssistantMessagePayload(item, aiPrefs, fallbackText, {
-        quoteCandidates,
-        messagePolicy,
-      }),
-    )
-    .filter(Boolean)
-
-  if (!normalizedMessages.length) {
-    return { messages: [normalizedFallback()], socialEvents: [] }
-  }
-
-  return {
-    messages: normalizedMessages,
-    socialEvents: normalizeChatAiSocialEvents(parsedPayload),
   }
 }
 
