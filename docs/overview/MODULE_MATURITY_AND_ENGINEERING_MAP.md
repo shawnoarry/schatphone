@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-06-19
+Updated: 2026-06-20
 
 Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
 
@@ -104,7 +104,7 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/views/ChatView.vue` | 6221 | still the largest maintainability hotspot; active-thread, Messages search/list, service-thread display, message-edit display-state, message action-sheet display-state, and `+` panel-state seams are now extracted |
+| `src/views/ChatView.vue` | 6142 | still the largest maintainability hotspot; active-thread, Messages search/list, service-thread display, message-edit display-state, message action-sheet display-state, `+` panel-state, and thread menu/settings draft-state seams are now extracted |
 | `src/views/ContactsView.vue` | 5863 | major product-critical surface; needs careful IA and ownership protection |
 | `src/views/WorldBookView.vue` | 5036 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
 | `src/views/HomeView.vue` | 4355 | Home layout/editing/library UI is large and visually sensitive |
@@ -198,7 +198,7 @@ Engineering meaning:
 ### Chat
 
 - product state: strongest gameplay module
-- engineering note: still the single biggest maintainability hotspot; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, and `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state
+- engineering note: still the single biggest maintainability hotspot; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, and `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state
 - recommendation: prefer extraction and IA cleanup before more thread-side feature growth
 
 ### Chat Directory

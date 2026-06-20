@@ -66,6 +66,7 @@ import {
   useChatMessageEditDisplayModel,
 } from '../composables/useChatMessageEditDisplayModel'
 import { useChatServiceThreadDisplayModel } from '../composables/useChatServiceThreadDisplayModel'
+import { useChatThreadMenuModel } from '../composables/useChatThreadMenuModel'
 import {
   CHAT_USER_MEDIA_KINDS,
   useChatUserActionPanelModel,
@@ -192,7 +193,6 @@ const activeAbortController = ref(null)
 const activeTriggerMessageId = ref('')
 const retryTriggerMessageId = ref('')
 const retryRerollMessageId = ref('')
-const showThreadMenu = ref(false)
 const pendingQuote = ref(null)
 const showEditMessageModal = ref(false)
 const editingMessageId = ref('')
@@ -223,15 +223,11 @@ const { messageEditRichFieldDefinitions, messageEditState } = useChatMessageEdit
   t,
 })
 const lastManualActionAt = ref(0)
-const threadSettingsSaved = ref(false)
-const threadIdentitySaved = ref(false)
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
 const serviceRouteFeedback = ref(null)
 const serviceNotificationActionFeedback = ref(null)
 let autoInvokeTimerId = null
-let threadSettingsSavedTimerId = null
-let threadIdentitySavedTimerId = null
 let uiNoticeTimerId = null
 let messageLongPressTimerId = null
 let messageLongPressTargetId = ''
@@ -241,28 +237,34 @@ const messageImagePreviewAssetIdMap = reactive({})
 const avatarPreviewMap = reactive({})
 const CHAT_ASSET_PREVIEW_SCOPE_ID = 'chat-view'
 
-const threadSettingsDraft = reactive({
-  suggestedRepliesEnabled: DEFAULT_THREAD_AI_PREFS.suggestedRepliesEnabled,
-  contextTurns: DEFAULT_THREAD_AI_PREFS.contextTurns,
-  bilingualEnabled: DEFAULT_THREAD_AI_PREFS.bilingualEnabled,
-  secondaryLanguage: DEFAULT_THREAD_AI_PREFS.secondaryLanguage,
-  allowQuoteReply: DEFAULT_THREAD_AI_PREFS.allowQuoteReply,
-  allowSelfQuote: DEFAULT_THREAD_AI_PREFS.allowSelfQuote,
-  virtualVoiceEnabled: DEFAULT_THREAD_AI_PREFS.virtualVoiceEnabled,
-  replyMode: DEFAULT_THREAD_AI_PREFS.replyMode,
-  replyCount: DEFAULT_THREAD_AI_PREFS.replyCount,
-  responseStyle: DEFAULT_THREAD_AI_PREFS.responseStyle,
-  proactiveOpenerEnabled: DEFAULT_THREAD_AI_PREFS.proactiveOpenerEnabled,
-  proactiveOpenerStrategy: DEFAULT_THREAD_AI_PREFS.proactiveOpenerStrategy,
-  imageReferenceMode: DEFAULT_THREAD_AI_PREFS.imageReferenceMode,
-  allowImageVirtualWithoutReference: DEFAULT_THREAD_AI_PREFS.allowImageVirtualWithoutReference,
-  autoInvokeEnabled: DEFAULT_THREAD_AI_PREFS.autoInvokeEnabled,
-  autoInvokeIntervalSec: DEFAULT_THREAD_AI_PREFS.autoInvokeIntervalSec,
-})
-
-const threadIdentityDraft = reactive({
-  selfAvatar: '',
-  contactAvatar: '',
+const {
+  showThreadMenu,
+  threadSettingsSaved,
+  threadIdentitySaved,
+  threadSettingsDraft,
+  threadIdentityDraft,
+  syncThreadSettingsDraft,
+  syncThreadIdentityDraft,
+  closeThreadMenu,
+  toggleThreadMenu: toggleThreadMenuModel,
+  clearThreadIdentityDraft,
+  updateThreadIdentityDraft,
+  updateThreadSettingsDraft,
+  createThreadIdentityPayload,
+  createThreadSettingsPayload,
+  triggerThreadSettingsSaved,
+  triggerThreadIdentitySaved,
+  resetThreadMenuSavedFeedback,
+  disposeThreadMenuModel,
+} = useChatThreadMenuModel({
+  defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
+  replyModeOptions: REPLY_MODE_OPTIONS,
+  responseStyleOptions: RESPONSE_STYLE_OPTIONS,
+  proactiveStrategyOptions: PROACTIVE_STRATEGY_OPTIONS,
+  imageReferenceModeOptions: IMAGE_REFERENCE_MODE_OPTIONS,
+  minAutoInvokeIntervalSec: MIN_AUTO_INVOKE_INTERVAL_SEC,
+  maxAutoInvokeIntervalSec: MAX_AUTO_INVOKE_INTERVAL_SEC,
+  saveFeedbackDurationMs: SAVE_FEEDBACK_DURATION_MS,
 })
 
 const {
@@ -1201,9 +1203,6 @@ const clampAutoInvokeInterval = (value) => {
   return Math.min(MAX_AUTO_INVOKE_INTERVAL_SEC, Math.max(MIN_AUTO_INVOKE_INTERVAL_SEC, Math.floor(seconds)))
 }
 
-const normalizeReplyMode = (value) =>
-  REPLY_MODE_OPTIONS.value.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.replyMode
-
 const normalizeResponseStyle = (value) =>
   RESPONSE_STYLE_OPTIONS.value.some((item) => item.value === value) ? value : DEFAULT_THREAD_AI_PREFS.responseStyle
 
@@ -1365,44 +1364,22 @@ const enterChat = (contact) => {
   router.push(`/chat/${contact.id}`)
 }
 
-const applyThreadPrefsToDraft = (prefs = {}) => {
-  threadSettingsDraft.suggestedRepliesEnabled = Boolean(prefs.suggestedRepliesEnabled)
-  threadSettingsDraft.contextTurns = clampContextTurns(prefs.contextTurns)
-  threadSettingsDraft.bilingualEnabled = Boolean(prefs.bilingualEnabled)
-  threadSettingsDraft.secondaryLanguage = prefs.secondaryLanguage || DEFAULT_THREAD_AI_PREFS.secondaryLanguage
-  threadSettingsDraft.allowQuoteReply = Boolean(prefs.allowQuoteReply)
-  threadSettingsDraft.allowSelfQuote = Boolean(prefs.allowSelfQuote)
-  threadSettingsDraft.virtualVoiceEnabled = Boolean(prefs.virtualVoiceEnabled)
-  threadSettingsDraft.replyMode = normalizeReplyMode(prefs.replyMode)
-  threadSettingsDraft.replyCount = clampReplyCount(prefs.replyCount)
-  threadSettingsDraft.responseStyle = normalizeResponseStyle(prefs.responseStyle)
-  threadSettingsDraft.proactiveOpenerEnabled = Boolean(prefs.proactiveOpenerEnabled)
-  threadSettingsDraft.proactiveOpenerStrategy = normalizeProactiveStrategy(prefs.proactiveOpenerStrategy)
-  threadSettingsDraft.imageReferenceMode = normalizeImageReferenceMode(prefs.imageReferenceMode)
-  threadSettingsDraft.allowImageVirtualWithoutReference = Boolean(prefs.allowImageVirtualWithoutReference)
-  threadSettingsDraft.autoInvokeEnabled = Boolean(prefs.autoInvokeEnabled)
-  threadSettingsDraft.autoInvokeIntervalSec = clampAutoInvokeInterval(prefs.autoInvokeIntervalSec)
-}
-
 const applyThreadSettingsDraft = () => {
-  applyThreadPrefsToDraft(activeAiPrefs.value)
+  syncThreadSettingsDraft(activeAiPrefs.value)
 }
 
 const applyDefaultThreadPresetToDraft = () => {
-  applyThreadPrefsToDraft(chatStore.getDefaultConversationAiPrefs())
+  syncThreadSettingsDraft(chatStore.getDefaultConversationAiPrefs())
   showUiNotice('success', t('已套用默认回复预设，保存后生效。', 'Default reply preset applied. Save to keep it.'))
 }
 
 const applyThreadIdentityDraft = () => {
   if (!activeChat.value) {
-    threadIdentityDraft.selfAvatar = ''
-    threadIdentityDraft.contactAvatar = ''
+    syncThreadIdentityDraft(null)
     return
   }
 
-  const overrides = chatStore.getConversationIdentityOverrides(activeChat.value.id)
-  threadIdentityDraft.selfAvatar = overrides.selfAvatar || ''
-  threadIdentityDraft.contactAvatar = overrides.contactAvatar || ''
+  syncThreadIdentityDraft(chatStore.getConversationIdentityOverrides(activeChat.value.id))
 }
 
 const contactAvatarForList = (contact) => resolveContactDisplayAvatar(contact)
@@ -4628,22 +4605,6 @@ const headerSecondaryStatusClass = computed(() =>
     : '',
 )
 
-const triggerThreadSettingsSaved = () => {
-  threadSettingsSaved.value = true
-  if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
-  threadSettingsSavedTimerId = setTimeout(() => {
-    threadSettingsSaved.value = false
-  }, SAVE_FEEDBACK_DURATION_MS)
-}
-
-const triggerThreadIdentitySaved = () => {
-  threadIdentitySaved.value = true
-  if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
-  threadIdentitySavedTimerId = setTimeout(() => {
-    threadIdentitySaved.value = false
-  }, SAVE_FEEDBACK_DURATION_MS)
-}
-
 const messageStatusText = (message) => {
   if (isRecalledMessage(message)) return ''
   if (message.role !== 'user') return ''
@@ -4816,7 +4777,7 @@ const openFoodDeliveryOrder = (row = {}) => {
 }
 
 const openChatDirectory = () => {
-  showThreadMenu.value = false
+  closeThreadMenu()
   if (isActiveServiceChat.value) {
     router.push({
       path: '/chat-contacts',
@@ -4825,25 +4786,6 @@ const openChatDirectory = () => {
     return
   }
   router.push('/chat-contacts')
-}
-
-const closeThreadMenu = () => {
-  showThreadMenu.value = false
-}
-
-const clearThreadIdentityDraft = () => {
-  threadIdentityDraft.selfAvatar = ''
-  threadIdentityDraft.contactAvatar = ''
-}
-
-const updateThreadIdentityDraft = ({ key, value }) => {
-  if (key !== 'selfAvatar' && key !== 'contactAvatar') return
-  threadIdentityDraft[key] = typeof value === 'string' ? value : ''
-}
-
-const updateThreadSettingsDraft = ({ key, value }) => {
-  if (!Object.prototype.hasOwnProperty.call(threadSettingsDraft, key)) return
-  threadSettingsDraft[key] = value
 }
 
 const transferActionLabel = (block) => {
@@ -4879,21 +4821,21 @@ const toggleActiveServiceFolded = () => {
 }
 
 const toggleThreadMenu = () => {
-  const next = !showThreadMenu.value
-  showThreadMenu.value = next
-  if (next) {
-    applyThreadSettingsDraft()
-    applyThreadIdentityDraft()
-  }
+  toggleThreadMenuModel({
+    prefs: activeAiPrefs.value,
+    identityOverrides: activeChat.value
+      ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
+      : null,
+  })
 }
 
 const saveThreadIdentityOverrides = () => {
   if (!activeChat.value) return
 
-  const changed = chatStore.setConversationIdentityOverrides(activeChat.value.id, {
-    selfAvatar: threadIdentityDraft.selfAvatar,
-    contactAvatar: threadIdentityDraft.contactAvatar,
-  })
+  const changed = chatStore.setConversationIdentityOverrides(
+    activeChat.value.id,
+    createThreadIdentityPayload(),
+  )
 
   if (!changed) {
     showUiNotice('warning', t('未检测到身份变更。', 'No identity changes detected.'))
@@ -4907,29 +4849,10 @@ const saveThreadIdentityOverrides = () => {
 const saveThreadSettings = () => {
   if (!activeChat.value) return
 
-  chatStore.setConversationAiPrefs(activeChat.value.id, {
-    suggestedRepliesEnabled: Boolean(threadSettingsDraft.suggestedRepliesEnabled),
-    contextTurns: clampContextTurns(threadSettingsDraft.contextTurns),
-    bilingualEnabled: Boolean(threadSettingsDraft.bilingualEnabled),
-    secondaryLanguage:
-      typeof threadSettingsDraft.secondaryLanguage === 'string' && threadSettingsDraft.secondaryLanguage.trim()
-        ? threadSettingsDraft.secondaryLanguage.trim()
-        : 'en',
-    allowQuoteReply: Boolean(threadSettingsDraft.allowQuoteReply),
-    allowSelfQuote: Boolean(threadSettingsDraft.allowSelfQuote),
-    virtualVoiceEnabled: Boolean(threadSettingsDraft.virtualVoiceEnabled),
-    replyMode: normalizeReplyMode(threadSettingsDraft.replyMode),
-    replyCount: clampReplyCount(threadSettingsDraft.replyCount),
-    responseStyle: normalizeResponseStyle(threadSettingsDraft.responseStyle),
-    proactiveOpenerEnabled: Boolean(threadSettingsDraft.proactiveOpenerEnabled),
-    proactiveOpenerStrategy: normalizeProactiveStrategy(threadSettingsDraft.proactiveOpenerStrategy),
-    imageReferenceMode: normalizeImageReferenceMode(threadSettingsDraft.imageReferenceMode),
-    allowImageVirtualWithoutReference: Boolean(
-      threadSettingsDraft.allowImageVirtualWithoutReference,
-    ),
-    autoInvokeEnabled: chatAutomationEnabled.value && Boolean(threadSettingsDraft.autoInvokeEnabled),
-    autoInvokeIntervalSec: clampAutoInvokeInterval(threadSettingsDraft.autoInvokeIntervalSec),
+  const nextPrefs = createThreadSettingsPayload({
+    chatAutomationEnabled: chatAutomationEnabled.value,
   })
+  chatStore.setConversationAiPrefs(activeChat.value.id, nextPrefs)
 
   if (threadSettingsDraft.autoInvokeEnabled) {
     resetConversationAutoNextAt(activeChat.value.id, Date.now())
@@ -4937,13 +4860,13 @@ const saveThreadSettings = () => {
     chatStore.setConversationAutoState(activeChat.value.id, { autoNextAt: 0 })
   }
 
-  if (!threadSettingsDraft.suggestedRepliesEnabled) {
+  if (!nextPrefs.suggestedRepliesEnabled) {
     showSuggestions.value = false
   }
 
   chatStore.saveNow()
   triggerThreadSettingsSaved()
-  showThreadMenu.value = false
+  closeThreadMenu()
   scheduleAutoInvokeTick()
 }
 
@@ -5020,13 +4943,12 @@ watch(
 watch(
   activeChatId,
   (id) => {
-    showThreadMenu.value = false
+    closeThreadMenu()
     closeUserActionPanel()
     closeMessageEditModal()
     closeMessageActions()
     pendingQuote.value = null
-    threadSettingsSaved.value = false
-    threadIdentitySaved.value = false
+    resetThreadMenuSavedFeedback()
     uiNoticeType.value = ''
     uiNoticeMessage.value = ''
     serviceRouteFeedback.value = id ? readServiceRouteFeedback(id) : null
@@ -5112,8 +5034,7 @@ onBeforeUnmount(() => {
   systemStore.unregisterAiAutomationHandler(CHAT_AUTOMATION_MODULE_KEY, chatAutomationTaskHandler)
   clearAutoInvokeTimer()
   cancelMessageLongPress()
-  if (threadSettingsSavedTimerId) clearTimeout(threadSettingsSavedTimerId)
-  if (threadIdentitySavedTimerId) clearTimeout(threadIdentitySavedTimerId)
+  disposeThreadMenuModel()
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearGalleryPickerPreviewMap()
   clearMessageImagePreviewMap()
