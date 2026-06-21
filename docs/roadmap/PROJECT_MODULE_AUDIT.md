@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-05-29
+Updated: 2026-06-21
 
 > **Candidate pool only / 仅候选池**
 >
@@ -66,10 +66,10 @@ Priority legend:
 | Network | technically usable provider setup and diagnostics | provider setup still feels technical | transport changes hidden inside UI polish work | improve guidance and examples instead of changing transport semantics | P1 |
 | Chat | strongest immersive core loop | large view and dense thread settings | Chat-side compatibility fields being mistaken for truth again | keep refining presentation and IA before adding more side-systems | P0.5 |
 | Chat Directory | real Chat-side role/service management surface | concept density is high for non-technical readers | drifting back into global role-truth ownership | keep meaning narrow and plain-language | P1 |
-| Contacts | real role archive and relationship-management lane | full role-detail IA still needs polish | destructive flows and relationship truth are semantically sensitive | finish Contacts V2 detail IA and memory presentation | P1 |
+| Contacts | real role archive and relationship-management lane with ten extracted display read-model seams | full role-detail IA still needs product-level template-adaptation visual diff and richer template authoring | destructive flows and relationship truth are semantically sensitive | finish Contacts V2 detail IA without repeating home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, or profile-template editor display seams | P1 |
 | Gallery | real shared media center and cross-module asset source | still balancing album feel and asset-management feel | forcing it into high-friction relationship-memory authoring too early | keep it asset/atmosphere-first | P0.5 |
 | Appearance | strong MVP for wallpaper, theme, and icon presets | broader visual identity work is still parked | accidentally reopening the global visual rebuild | revisit only in explicit visual slices | P2 |
-| WorldBook | real shared world-context layer with Book source links, World Pack activation, and user-approved service-template generation | readability matters more than new feature count | turning it into a universal control console | extract panels before the next major behavior slice | P1 |
+| WorldBook | real shared world-context layer with Book source links, World Pack activation, user-approved service-template generation, role-bound encyclopedia entries, and profile templates; source-link/picker/diff, encyclopedia filtering/read-model, and profile-template display/read-model seams are extracted | readability matters more than new feature count | turning it into a universal control console | continue unrepeated panels such as Current World Pack review/display before the next major behavior slice | P1 |
 | Book | trial-ready text-source library with WorldBook source links | visual diff review is still basic | becoming Files, a reader app, or an activation console | phone-test source activation, then harden diff review | P1 |
 | Map | strong simulation-first baseline with trip, route, familiarity, and area-feedback loops | still product-rich and easy to overload | re-absorbing reminder or memory ownership | keep Map as travel/context owner, not reminder or relationship truth owner | P1 |
 | Calendar | real schedule/date app with confirmed events and push hooks | fuller event-management polish can still improve | slipping back into raw cue inbox behavior | keep it confirmed schedule/date-first | P1 |
@@ -90,7 +90,8 @@ Priority legend:
 
 | Workstream | Why it matters | Candidate next move |
 | --- | --- | --- |
-| Contacts role-hub polish | Contacts is now a product-critical role and destructive-action surface | finish role-detail IA and memory management presentation |
+| Contacts detail polish | Contacts is now a product-critical role and destructive-action surface | continue role-detail IA through the template-adaptation visual diff, or switch architecture cleanup to another large view |
+| WorldBook large-view cleanup | WorldBook is now a shared world-context activation surface and still carries several dense panels | continue Current World Pack review/display; do not repeat Book source-link/picker/diff, encyclopedia filtering/read-model, or profile-template display/read-model extraction |
 | Memory dedupe and recall | several modules now feed relationship continuity | tighten primary-memory vs supporting-attachment behavior |
 | Runtime review clarity | event/runtime systems already exist, but stronger control would confuse users too early | improve World Hub detail panels and explanation quality |
 | Large-view cleanup | a few oversized views still carry too many unrelated flows | continue low-risk component extraction without rewriting truth layers |
@@ -109,9 +110,10 @@ Before promoting a candidate from this audit into the live roadmap:
 
 If the team needs the next best candidate pool order, use:
 
-1. Contacts role-hub and memory-management polish
-2. relationship-memory dedupe / merge / recall cleanup
-3. World Hub review clarity
+1. Contacts detail and memory-management polish, avoiding already extracted home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display seams
+2. WorldBook Current World Pack review/display cleanup, avoiding the already extracted Book source-link/picker/diff, encyclopedia filtering/read-model, and profile-template display/read-model seams
+3. relationship-memory dedupe / merge / recall cleanup
+4. World Hub review clarity
 4. service-account continuity polish in Shopping and Food Delivery
 5. only then broader secondary-module deepening
 

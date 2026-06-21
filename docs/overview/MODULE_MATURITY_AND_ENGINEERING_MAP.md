@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 
 Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
 
@@ -104,9 +104,9 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/views/ContactsView.vue` | 5428 | major product-critical surface; needs careful IA and ownership protection |
+| `src/views/ContactsView.vue` | 4754 | major product-critical surface; home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are extracted; remaining profile-template work is product-level visual diff and richer template authoring, not another small display seam |
 | `src/views/ChatView.vue` | 4312 | still a product-critical maintainability hotspot; active-thread, AI request state, AI prompt/context preparation, AI image-reference preparation, assistant response parsing/normalization, assistant result post-processing, automation status/readiness, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
-| `src/views/WorldBookView.vue` | 4565 | source links, profile templates, and World Pack review UI are dense; extract panels before another major feature slice |
+| `src/views/WorldBookView.vue` | 4130 | source-link/picker/diff display is now behind `useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display is behind `useWorldBookKnowledgeModel.js`, and profile-template display/read-model state is behind `useWorldBookProfileTemplateModel.js`; Current World Pack review UI remains the clearest unrepeated dense candidate |
 | `src/views/HomeView.vue` | 3920 | Home layout/editing/library UI is large and visually sensitive |
 | `src/views/ChatDirectoryView.vue` | 3802 | concept-heavy management surface |
 | `src/views/WidgetsView.vue` | 3617 | widget authoring and preview logic are broad |
@@ -122,16 +122,16 @@ Current approximate sizes:
 
 | File | Approx. lines | Meaning |
 | --- | ---: | --- |
-| `src/stores/system.js` | 4186 | central infrastructure store; change carefully and avoid adding new domain ownership |
-| `src/stores/chat.js` | 3062 | rich domain logic with high coordination responsibility |
-| `src/stores/map.js` | 2146 | broad product logic; prefer improving seams before deep redesign |
-| `src/stores/gallery.js` | 1325 | important asset rules live here; avoid casual contract churn |
-| `src/stores/relationshipRuntime.js` | 1287 | real cross-module truth layer; deserves stricter semantic protection |
-| `src/stores/foodDelivery.js` | 1222 | active commerce/event lane |
-| `src/stores/calendar.js` | 1014 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
-| `src/stores/shopping.js` | 943 | active commerce/event lane |
-| `src/stores/simulation.js` | 801 | runtime/event lane with increasing diagnostic responsibility |
-| `src/stores/reminders.js` | 660 | key ownership seam for cross-module cue handling |
+| `src/stores/system.js` | 4581 | central infrastructure store; change carefully and avoid adding new domain ownership |
+| `src/stores/chat.js` | 3411 | rich domain logic with high coordination responsibility |
+| `src/stores/map.js` | 2332 | broad product logic; prefer improving seams before deep redesign |
+| `src/stores/gallery.js` | 1471 | important asset rules live here; avoid casual contract churn |
+| `src/stores/relationshipRuntime.js` | 1397 | real cross-module truth layer; deserves stricter semantic protection |
+| `src/stores/foodDelivery.js` | 1328 | active commerce/event lane |
+| `src/stores/calendar.js` | 1116 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
+| `src/stores/shopping.js` | 1043 | active commerce/event lane |
+| `src/stores/simulation.js` | 888 | runtime/event lane with increasing diagnostic responsibility |
+| `src/stores/reminders.js` | 735 | key ownership seam for cross-module cue handling |
 
 ## 4. Practical Engineering Rules
 
@@ -210,7 +210,7 @@ Engineering meaning:
 ### Contacts
 
 - product state: active strategic module
-- engineering note: large, semantically important, and now part of destructive flows / role-hub direction
+- engineering note: large, semantically important, and now part of destructive flows / role-hub direction; home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are already behind focused composables
 - recommendation: current best investment is Contacts detail IA and manual-vs-event-attached presentation, not field sprawl
 
 ### Gallery
@@ -228,8 +228,8 @@ Engineering meaning:
 ### WorldBook
 
 - product state: real cross-module world kernel with integrated World Pack V1 activation
-- engineering note: readability matters more than piling on more features, especially now that it links Book sources, active pack state, appBindings, and reviewed template proposals
-- recommendation: extract WorldBook panels before the next major behavior slice; the next product step should user-test and harden the landed template review UI, not copy business records into WorldBook
+- engineering note: readability matters more than piling on more features, especially now that it links Book sources, active pack state, appBindings, reviewed template proposals, profile templates, and role-bound encyclopedia entries; Book source-link/picker/diff display now sits behind `useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display sits behind `useWorldBookKnowledgeModel.js`, and profile-template display/read-model state sits behind `useWorldBookProfileTemplateModel.js`
+- recommendation: continue only unrepeated WorldBook seams such as Current World Pack review/display before the next major behavior slice; the next product step should user-test and harden the landed template review UI, not copy business records into WorldBook
 
 ### Book
 

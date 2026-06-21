@@ -11,30 +11,17 @@ import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { formatApiErrorForUi } from '../lib/ai'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
-import {
-  normalizeWorldBookEntryIds,
-  normalizeWorldBookSource,
-  normalizeWorldBookTagFilter,
-  normalizeWorldBookUsageFilter,
-} from '../lib/worldbook-navigation'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { BOOK_ROUTE } from '../lib/planned-module-registry'
-import {
-  buildWorldBookSourceSnapshot,
-  diffWorldBookSourceText,
-  resolveWorldBookSourceText,
-} from '../lib/book-text-schema'
-import {
-  WORLDBOOK_SOURCE_ROLES,
-  getBookTextCategoryLabel,
-  getWorldBookSourceRoleLabel,
-} from '../lib/world-taxonomy'
 import { resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
 import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
 import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
+import { useWorldBookKnowledgeModel } from '../composables/useWorldBookKnowledgeModel'
+import { useWorldBookProfileTemplateModel } from '../composables/useWorldBookProfileTemplateModel'
+import { useWorldBookSourceModel } from '../composables/useWorldBookSourceModel'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 
@@ -109,61 +96,6 @@ const worldAppTemplateProposalNoticeTone = ref('info')
 const worldPackRecommendationReview = computed(() => systemStore.buildWorldPackRecommendationReview())
 const worldProfileAnalysisLoading = ref(false)
 const worldProfileAnalysisNotice = ref('')
-const linkedBookSources = computed(() =>
-  systemStore.listWorldBookSourceLinks().map((link) => {
-    const asset = bookStore.findAssetById(link.assetId)
-    const currentSourceText = resolveWorldBookSourceText(asset, link.sectionIds)
-    const snapshotText = typeof link.sourceSnapshotText === 'string' ? link.sourceSnapshotText : ''
-    const snapshotIsPartial = Number(link.sourceSnapshotCharCount || 0) > snapshotText.length
-    return {
-      ...link,
-      asset,
-      title: link.titleOverride || asset?.title || link.assetId,
-      missing: !asset,
-      currentSourceText,
-      snapshotIsPartial,
-      changed:
-        Boolean(asset) &&
-        Boolean(link.sourceFingerprint) &&
-        Boolean(asset.contentFingerprint) &&
-        link.sourceFingerprint !== asset.contentFingerprint &&
-        (snapshotIsPartial || snapshotText !== currentSourceText),
-      usageLabel: getSourceRoleLabel(link.role || link.usage),
-      sectionSummary: describeBookLinkSections(asset, link.sectionIds),
-      builtIn: isBuiltInBookTextAssetId(link.assetId),
-    }
-  }),
-)
-
-const CONTEXT_TEXT_CATEGORIES = Object.freeze([
-  {
-    id: 'worldview',
-    roles: ['main_worldview'],
-    assetCategories: ['worldview'],
-    labelZh: '世界观',
-    labelEn: 'Worldview',
-    detailZh: '当前世界的基础前提',
-    detailEn: 'Core premise for this world',
-  },
-  {
-    id: 'rules',
-    roles: ['world_rule'],
-    assetCategories: ['world_rule'],
-    labelZh: '规则',
-    labelEn: 'Rules',
-    detailZh: '约束对话和运行时的规则',
-    detailEn: 'Rules read by chat and runtime',
-  },
-  {
-    id: 'encyclopedia',
-    roles: ['encyclopedia'],
-    assetCategories: ['encyclopedia'],
-    labelZh: '百科',
-    labelEn: 'Encyclopedia',
-    detailZh: '地点、术语和背景资料',
-    detailEn: 'Places, terms, and reference notes',
-  },
-])
 
 const sourceDirectory = reactive({
   open: false,
@@ -174,47 +106,6 @@ const sourceDirectory = reactive({
   draftContent: '',
   notice: '',
 })
-
-const contextTextCategories = computed(() =>
-  CONTEXT_TEXT_CATEGORIES.map((category) => {
-    const enabledLinks = linkedBookSources.value.filter(
-      (link) => link.enabled !== false && category.roles.includes(link.role || link.usage),
-    )
-    const availableAssets = bookStore.worldbookSourceAssets.filter((asset) => {
-      const role = inferBookSourceRole(asset)
-      return category.roles.includes(role) || category.assetCategories.includes(asset.category || asset.assetType)
-    })
-    const enabledCharCount = enabledLinks.reduce(
-      (total, link) => total + String(link.currentSourceText || '').length,
-      0,
-    )
-    return {
-      ...category,
-      label: t(category.labelZh, category.labelEn),
-      detail: t(category.detailZh, category.detailEn),
-      enabledLinks,
-      availableAssets,
-      enabledCharCount,
-      configured: enabledLinks.length > 0,
-    }
-  }),
-)
-
-const activeContextTextCharCount = computed(() => Number(worldOverview.value.worldviewCharCount || 0))
-
-const selectedTextCategory = computed(
-  () => contextTextCategories.value.find((category) => category.id === sourceDirectory.categoryId) || null,
-)
-
-const selectedDirectoryAsset = computed(() =>
-  bookStore.findAssetById(sourceDirectory.assetId) || null,
-)
-
-const directoryLinkForAsset = (assetId = '') => {
-  const asset = bookStore.findAssetById(assetId)
-  if (!asset || !selectedTextCategory.value) return null
-  return selectedTextCategory.value.enabledLinks.find((link) => link.assetId === asset.id) || null
-}
 
 const openSourceDirectory = (categoryId = '') => {
   const category = contextTextCategories.value.find((item) => item.id === categoryId)
@@ -267,14 +158,6 @@ const fallbackWorldviewPreview = computed(() => {
   }
   return text.length > 140 ? `${text.slice(0, 140)}...` : text
 })
-const hasBookSourceLinks = computed(() => linkedBookSources.value.length > 0)
-const showWorldBookOnboarding = computed(() => !hasBookSourceLinks.value)
-const availableBookSourceAssets = computed(() => {
-  const linkedIds = new Set(linkedBookSources.value.map((link) => link.assetId))
-  return bookStore.worldbookSourceAssets.filter((asset) => !linkedIds.has(asset.id))
-})
-const sourcePickerAssets = computed(() => bookStore.worldbookSourceAssets)
-const sourcePickerLinkedAssetIds = computed(() => new Set(linkedBookSources.value.map((link) => link.assetId)))
 const sourcePicker = reactive({
   open: false,
   assetId: '',
@@ -285,111 +168,44 @@ const sourcePicker = reactive({
 const sourceReview = reactive({
   linkId: '',
 })
-const getSourceRoleCopy = (role = '') => getWorldBookSourceRoleLabel(role)
 
-const sourceRoleOptions = computed(() =>
-  WORLDBOOK_SOURCE_ROLES.map((role) => ({
-    id: role,
-    label: t(getSourceRoleCopy(role).zh, getSourceRoleCopy(role).en),
-  })),
-)
-
-function getSourceRoleLabel(role = '') {
-  const copy = getSourceRoleCopy(role)
-  return t(copy.zh, copy.en)
-}
-
-function getBookAssetCategoryLabel(asset = {}) {
-  const copy = getBookTextCategoryLabel(asset.category || asset.assetType)
-  return t(copy.zh, copy.en)
-}
-
-function isSourcePickerAssetLinked(assetId = '') {
-  return sourcePickerLinkedAssetIds.value.has(assetId)
-}
-
-const inferBookSourceRole = (asset = {}) => {
-  const category = asset?.category || asset?.assetType
-  if (category === 'world_rule') return 'world_rule'
-  if (category === 'encyclopedia') return 'encyclopedia'
-  if (category === 'profile_template' || category === 'reference_material') return 'encyclopedia'
-  return 'main_worldview'
-}
-
-const sourcePickerGroups = computed(() =>
-  WORLDBOOK_SOURCE_ROLES.map((role) => {
-    const assets = sourcePickerAssets.value.filter((asset) => inferBookSourceRole(asset) === role)
-    const copy = getSourceRoleCopy(role)
-    return {
-      id: role,
-      label: t(copy.zh, copy.en),
-      count: assets.length,
-      assets,
-    }
-  }).filter((group) => group.assets.length > 0),
-)
-
-function describeBookLinkSections(asset, sectionIds = []) {
-  const ids = Array.isArray(sectionIds) ? sectionIds.filter(Boolean) : []
-  if (ids.length === 0) return t('全文', 'Whole document')
-  const sections = Array.isArray(asset?.sections) ? asset.sections : []
-  const selectedTitles = sections
-    .filter((section) => ids.includes(section.id))
-    .map((section) => section.title)
-    .filter(Boolean)
-  if (selectedTitles.length === 0) {
-    return t(`${ids.length} 个章节`, `${ids.length} sections`)
-  }
-  return selectedTitles.slice(0, 3).join(' / ')
-}
-
-const buildSourceSnapshotForLink = (asset, sectionIds = []) =>
-  buildWorldBookSourceSnapshot(resolveWorldBookSourceText(asset, sectionIds))
-
-const sourcePickerAsset = computed(() =>
-  bookStore.findAssetById(sourcePicker.assetId) || sourcePickerAssets.value[0] || null,
-)
-
-const sourcePickerSections = computed(() =>
-  Array.isArray(sourcePickerAsset.value?.sections) ? sourcePickerAsset.value.sections : [],
-)
-const sourcePickerSelectedSections = computed(() =>
-  sourcePicker.mode === 'sections'
-    ? sourcePickerSections.value.filter((section) => sourcePicker.sectionIds.includes(section.id))
-    : [],
-)
-const reviewingBookSource = computed(() =>
-  linkedBookSources.value.find((link) => link.id === sourceReview.linkId) || null,
-)
-const sourceReviewDiff = computed(() => {
-  const link = reviewingBookSource.value
-  if (!link) return diffWorldBookSourceText('', '')
-  return diffWorldBookSourceText(link.sourceSnapshotText || '', link.currentSourceText || '')
+const {
+  activeBookSourceCount,
+  activeBookSources,
+  activeContextTextCharCount,
+  availableBookSourceAssets,
+  bookSourceIssueCount,
+  buildSourceSnapshotForLink,
+  contextTextCategories,
+  directoryLinkForAsset,
+  disabledBookSourceCount,
+  getBookAssetCategoryLabel,
+  inferBookSourceRole,
+  isSourcePickerAssetLinked,
+  linkedBookSources,
+  reviewingBookSource,
+  selectedDirectoryAsset,
+  selectedTextCategory,
+  showWorldBookOnboarding,
+  sourceMaintenanceLinks,
+  sourcePickerAsset,
+  sourcePickerAssets,
+  sourcePickerGroups,
+  sourcePickerSections,
+  sourcePickerSelectedSections,
+  sourceReviewDiff,
+  sourceReviewSummary,
+  sourceRoleOptions,
+} = useWorldBookSourceModel({
+  systemStore,
+  bookStore,
+  globalWorldview,
+  worldOverview,
+  sourceDirectory,
+  sourcePicker,
+  sourceReview,
+  t,
 })
-const sourceReviewSummary = computed(() =>
-  t(
-    `新增 ${sourceReviewDiff.value.addedCount} 段，移除 ${sourceReviewDiff.value.removedCount} 段，未变 ${sourceReviewDiff.value.unchangedCount} 段`,
-    `${sourceReviewDiff.value.addedCount} added, ${sourceReviewDiff.value.removedCount} removed, ${sourceReviewDiff.value.unchangedCount} unchanged`,
-  ),
-)
-const activeBookSources = computed(() =>
-  linkedBookSources.value.filter((link) => link.enabled !== false && !link.missing),
-)
-const bookSourceIssueLinks = computed(() =>
-  linkedBookSources.value.filter((link) => link.missing || link.changed),
-)
-const sourceMaintenanceLinks = computed(() =>
-  linkedBookSources.value.filter((link) => link.enabled === false || link.missing),
-)
-const activeBookSourceCount = computed(() =>
-  activeBookSources.value.length,
-)
-const bookSourceIssueCount = computed(() =>
-  bookSourceIssueLinks.value.length,
-)
-const disabledBookSourceCount = computed(() =>
-  linkedBookSources.value.filter((link) => link.enabled === false).length,
-)
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
 const knowledgeUsageFilter = ref('all')
@@ -399,15 +215,52 @@ const knowledgeDeepLinkSource = ref('')
 const knowledgeDeepLinkKeyword = ref('')
 const knowledgeDeepLinkTag = ref('all')
 const knowledgeDeepLinkUsage = ref('all')
-const roleProfileChatBindingMap = computed(() => {
-  const map = new Map()
-  contacts.value.forEach((contact) => {
-    if (!contact || (contact.kind || 'role') !== 'role') return
-    const profileId = Number(contact.profileId)
-    if (!Number.isFinite(profileId) || profileId <= 0) return
-    map.set(profileId, (map.get(profileId) || 0) + 1)
-  })
-  return map
+const {
+  boundKnowledgePointCount,
+  chatReadyKnowledgePointCount,
+  describeKnowledgePointUsage,
+  enabledKnowledgePointCount,
+  formatKnowledgePointProfileNames,
+  getKnowledgePointUsage,
+  getKnowledgePointUsageBadge,
+  isDeepLinkedKnowledgePoint,
+  knowledgeDeepLinkActive,
+  knowledgeDeepLinkPoints,
+  knowledgeDeepLinkSummary,
+  knowledgeSearchPlaceholder,
+  knowledgeTagFilterOptions,
+  knowledgeUsageFilterOptions,
+  knowledgeUsageSortOptions,
+  syncWorldBookDeepLink,
+  visibleKnowledgePoints,
+} = useWorldBookKnowledgeModel({
+  systemStore,
+  knowledgePoints,
+  roleProfiles,
+  contacts,
+  knowledgeSearchKeyword,
+  knowledgeTagFilter,
+  knowledgeUsageFilter,
+  knowledgeUsageSort,
+  knowledgeDeepLinkPointIds,
+  knowledgeDeepLinkSource,
+  knowledgeDeepLinkKeyword,
+  knowledgeDeepLinkTag,
+  knowledgeDeepLinkUsage,
+  t,
+})
+const {
+  profileTemplateHandoff,
+  profileTemplatePresetRows,
+  profileTemplateStats,
+  universalTemplateSection,
+  worldProfileTemplateRows,
+  worldTemplateSection,
+} = useWorldBookProfileTemplateModel({
+  profileTemplatePresets,
+  worldProfileTemplates,
+  enabledWorldProfileTemplates,
+  t,
 })
 const saved = ref(false)
 const uiNotice = ref('')
@@ -1367,339 +1220,8 @@ const toggleKnowledgePoint = (point) => {
   systemStore.saveNow()
 }
 
-const getKnowledgePointUsage = (point) => {
-  const pointId = typeof point?.id === 'string' ? point.id.trim() : ''
-  if (!pointId) {
-    return {
-      profiles: [],
-      chatBindingCount: 0,
-      chatProfileCount: 0,
-    }
-  }
-
-  const profiles = roleProfiles.value.filter((profile) =>
-    Array.isArray(profile?.knowledgePointIds) && profile.knowledgePointIds.includes(pointId),
-  )
-  const chatProfiles = profiles.filter((profile) =>
-    (roleProfileChatBindingMap.value.get(Number(profile.id)) || 0) > 0,
-  )
-  const chatBindingCount = chatProfiles.reduce(
-    (sum, profile) => sum + (roleProfileChatBindingMap.value.get(Number(profile.id)) || 0),
-    0,
-  )
-
-  return {
-    profiles,
-    chatBindingCount,
-    chatProfileCount: chatProfiles.length,
-  }
-}
-
-const getKnowledgePointUsageBadge = (point) => {
-  const state = getKnowledgePointUsageState(point)
-  if (state === 'unused') {
-    return {
-      label: t('未使用', 'Unused'),
-      tone: 'neutral',
-      icon: 'fas fa-circle',
-    }
-  }
-  if (state === 'disabled') {
-    return {
-      label: t('已停用', 'Disabled'),
-      tone: 'amber',
-      icon: 'fas fa-pause',
-    }
-  }
-  if (state === 'profile_only') {
-    return {
-      label: t('仅角色档案', 'Profile only'),
-      tone: 'amber',
-      icon: 'fas fa-user-tag',
-    }
-  }
-  return {
-    label: t('进入 Chat', 'In Chat'),
-    tone: 'emerald',
-    icon: 'fas fa-comments',
-  }
-}
-
-const getKnowledgePointUsageState = (point) => {
-  const usage = getKnowledgePointUsage(point)
-  if (point?.enabled === false) return 'disabled'
-  if (usage.profiles.length <= 0) return 'unused'
-  if (usage.chatBindingCount <= 0) return 'profile_only'
-  return 'chat_ready'
-}
-
-const enabledKnowledgePointCount = computed(() =>
-  knowledgePoints.value.filter((point) => point.enabled !== false).length,
-)
-
-const boundKnowledgePointCount = computed(() =>
-  knowledgePoints.value.filter((point) => getKnowledgePointUsage(point).profiles.length > 0).length,
-)
-
-const chatReadyKnowledgePointCount = computed(() =>
-  knowledgePoints.value.filter((point) => getKnowledgePointUsageState(point) === 'chat_ready').length,
-)
-
-const knowledgeUsageFilterOptions = computed(() => {
-  const counts = scopedKnowledgePoints.value.reduce(
-    (acc, point) => {
-      const state = getKnowledgePointUsageState(point)
-      acc.all += 1
-      acc[state] = (acc[state] || 0) + 1
-      return acc
-    },
-    {
-      all: 0,
-      unused: 0,
-      profile_only: 0,
-      chat_ready: 0,
-      disabled: 0,
-    },
-  )
-
-  return [
-    { value: 'all', label: t('全部', 'All'), count: counts.all },
-    { value: 'chat_ready', label: t('已进入 Chat', 'In Chat'), count: counts.chat_ready },
-    { value: 'profile_only', label: t('仅角色档案', 'Profile only'), count: counts.profile_only },
-    { value: 'unused', label: t('未使用', 'Unused'), count: counts.unused },
-    { value: 'disabled', label: t('已停用', 'Disabled'), count: counts.disabled },
-  ]
-})
-
-const normalizedKnowledgeSearchKeyword = computed(() => knowledgeSearchKeyword.value.trim())
-
-const searchedKnowledgePoints = computed(() =>
-  systemStore.listKnowledgePoints({
-    keyword: normalizedKnowledgeSearchKeyword.value,
-  }),
-)
-
-const scopedKnowledgePoints = computed(() => {
-  if (knowledgeDeepLinkPointIds.value.length <= 0) return searchedKnowledgePoints.value
-  const pointIdSet = new Set(knowledgeDeepLinkPointIds.value)
-  return searchedKnowledgePoints.value.filter((point) => pointIdSet.has(point.id))
-})
-
-const knowledgeSearchPlaceholder = computed(() =>
-  t('搜索标题、内容或标签', 'Search title, content, or tags'),
-)
-
-const knowledgeTagFilterOptions = computed(() => {
-  const counts = new Map()
-  const usageFilteredPoints = scopedKnowledgePoints.value.filter(
-    (point) =>
-      knowledgeUsageFilter.value === 'all' || getKnowledgePointUsageState(point) === knowledgeUsageFilter.value,
-  )
-
-  usageFilteredPoints.forEach((point) => {
-    if (!Array.isArray(point?.tags)) return
-    point.tags.forEach((tag) => {
-      if (typeof tag !== 'string' || !tag.trim()) return
-      counts.set(tag, (counts.get(tag) || 0) + 1)
-    })
-  })
-
-  const options = [
-    {
-      value: 'all',
-      label: t('全部标签', 'All tags'),
-      count: usageFilteredPoints.length,
-    },
-    ...[...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }))
-      .map(([tag, count]) => ({
-        value: tag,
-        label: `#${tag}`,
-        count,
-      })),
-  ]
-
-  if (
-    knowledgeTagFilter.value !== 'all' &&
-    !options.some((option) => option.value === knowledgeTagFilter.value)
-  ) {
-    options.push({
-      value: knowledgeTagFilter.value,
-      label: `#${knowledgeTagFilter.value}`,
-      count: 0,
-    })
-  }
-
-  return options
-})
-
-const knowledgeUsageSortOptions = computed(() => [
-  { value: 'recent', label: t('最近更新', 'Recent') },
-  { value: 'state', label: t('使用状态', 'Usage state') },
-  { value: 'role_count', label: t('绑定角色数', 'Bound roles') },
-  { value: 'title', label: t('标题', 'Title') },
-])
-
-const knowledgePointUpdatedAt = (point) => {
-  const updatedAt = Number(point?.updatedAt)
-  if (Number.isFinite(updatedAt) && updatedAt > 0) return updatedAt
-  const createdAt = Number(point?.createdAt)
-  return Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0
-}
-
-const compareKnowledgePointTitle = (a, b) => {
-  const titleA = typeof a?.title === 'string' ? a.title.trim() : ''
-  const titleB = typeof b?.title === 'string' ? b.title.trim() : ''
-  return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' })
-}
-
-const visibleKnowledgePoints = computed(() => {
-  const filter = knowledgeUsageFilter.value
-  const sort = knowledgeUsageSort.value
-  const tagFilter = knowledgeTagFilter.value
-  const usageStateOrder = {
-    unused: 0,
-    profile_only: 1,
-    disabled: 2,
-    chat_ready: 3,
-  }
-
-  return scopedKnowledgePoints.value
-    .filter((point) => filter === 'all' || getKnowledgePointUsageState(point) === filter)
-    .filter(
-      (point) =>
-        tagFilter === 'all' ||
-        (Array.isArray(point?.tags) && point.tags.some((tag) => tag === tagFilter)),
-    )
-    .slice()
-    .sort((a, b) => {
-      if (sort === 'title') return compareKnowledgePointTitle(a, b)
-      if (sort === 'role_count') {
-        const usageA = getKnowledgePointUsage(a)
-        const usageB = getKnowledgePointUsage(b)
-        return usageB.profiles.length - usageA.profiles.length || compareKnowledgePointTitle(a, b)
-      }
-      if (sort === 'state') {
-        return (
-          usageStateOrder[getKnowledgePointUsageState(a)] -
-            usageStateOrder[getKnowledgePointUsageState(b)] ||
-          compareKnowledgePointTitle(a, b)
-        )
-      }
-      return knowledgePointUpdatedAt(b) - knowledgePointUpdatedAt(a) || compareKnowledgePointTitle(a, b)
-    })
-})
-
-const knowledgeDeepLinkPoints = computed(() =>
-  knowledgeDeepLinkPointIds.value
-    .map((pointId) => systemStore.getKnowledgePointById(pointId))
-    .filter(Boolean),
-)
-
-const knowledgeDeepLinkActive = computed(
-  () =>
-    knowledgeDeepLinkPointIds.value.length > 0 ||
-    Boolean(knowledgeDeepLinkSource.value) ||
-    Boolean(knowledgeDeepLinkKeyword.value) ||
-    knowledgeDeepLinkTag.value !== 'all' ||
-    knowledgeDeepLinkUsage.value !== 'all',
-)
-
-const knowledgeDeepLinkSourceLabel = computed(() => {
-  if (knowledgeDeepLinkSource.value === 'calendar') return t('Calendar', 'Calendar')
-  if (knowledgeDeepLinkSource.value === 'map') return t('Map', 'Map')
-  if (knowledgeDeepLinkSource.value === 'chat') return t('Chat', 'Chat')
-  return t('模块上下文', 'Module context')
-})
-
-const knowledgeDeepLinkSummary = computed(() => {
-  if (knowledgeDeepLinkPointIds.value.length > 0) {
-    return t(
-      `${knowledgeDeepLinkSourceLabel.value} 带来了 ${knowledgeDeepLinkPointIds.value.length} 条相关百科条目筛选。`,
-      `${knowledgeDeepLinkSourceLabel.value} scoped ${knowledgeDeepLinkPointIds.value.length} related encyclopedia entries.`,
-    )
-  }
-  if (knowledgeDeepLinkKeyword.value) {
-    return t(
-      `${knowledgeDeepLinkSourceLabel.value} 预填了关键字：${knowledgeDeepLinkKeyword.value}`,
-      `${knowledgeDeepLinkSourceLabel.value} prefilled keyword: ${knowledgeDeepLinkKeyword.value}`,
-    )
-  }
-  if (knowledgeDeepLinkTag.value !== 'all' || knowledgeDeepLinkUsage.value !== 'all') {
-    return t(
-      `${knowledgeDeepLinkSourceLabel.value} 带来了筛选条件，可直接继续查看相关百科条目。`,
-      `${knowledgeDeepLinkSourceLabel.value} applied direct filters for related encyclopedia entries.`,
-    )
-  }
-  return t(
-    `${knowledgeDeepLinkSourceLabel.value} 已把你带到当前相关的 WorldBook 范围。`,
-    `${knowledgeDeepLinkSourceLabel.value} brought you into the relevant WorldBook scope.`,
-  )
-})
-
-const isDeepLinkedKnowledgePoint = (point) =>
-  Boolean(point?.id) && knowledgeDeepLinkPointIds.value.includes(point.id)
-
-const syncWorldBookDeepLink = () => {
-  knowledgeDeepLinkSource.value = normalizeWorldBookSource(route.query.source)
-  knowledgeDeepLinkKeyword.value =
-    typeof route.query.keyword === 'string' ? route.query.keyword.trim() : ''
-  knowledgeDeepLinkTag.value = normalizeWorldBookTagFilter(route.query.tag)
-  knowledgeDeepLinkUsage.value = normalizeWorldBookUsageFilter(route.query.usage)
-
-  const pointIds = normalizeWorldBookEntryIds(
-    route.query.entries || route.query.entry || route.query.points || route.query.point,
-  )
-  const existingPointIds = new Set(knowledgePoints.value.map((point) => point.id))
-  knowledgeDeepLinkPointIds.value = pointIds.filter((pointId) => existingPointIds.has(pointId))
-
-  const singlePoint =
-    knowledgeDeepLinkPointIds.value.length === 1
-      ? systemStore.getKnowledgePointById(knowledgeDeepLinkPointIds.value[0])
-      : null
-
-  knowledgeSearchKeyword.value = knowledgeDeepLinkKeyword.value || singlePoint?.title || ''
-  knowledgeTagFilter.value = knowledgeDeepLinkTag.value
-  knowledgeUsageFilter.value = knowledgeDeepLinkUsage.value
-}
-
 const clearKnowledgeDeepLink = () => {
   router.replace('/worldbook')
-}
-
-const describeKnowledgePointUsage = (point) => {
-  const usage = getKnowledgePointUsage(point)
-  if (usage.profiles.length <= 0) {
-    return t('还没有角色绑定这个百科条目。', 'No role profile is bound to this entry yet.')
-  }
-
-  const profileCount = usage.profiles.length
-  if (point?.enabled === false) {
-    return t(
-      `已被 ${profileCount} 个角色绑定，但当前停用，不会注入 Chat。`,
-      `${profileCount} role profiles are bound, but this entry is disabled and will not be injected into Chat.`,
-    )
-  }
-  if (usage.chatBindingCount <= 0) {
-    return t(
-      `已被 ${profileCount} 个角色绑定；这些角色尚未绑定到 Chat 会话，因此暂未进入 Chat 提示词链路。`,
-      `${profileCount} role profiles are bound; none are bound to Chat contacts yet, so this entry is not in the Chat prompt chain.`,
-    )
-  }
-  return t(
-    `已被 ${profileCount} 个角色绑定，其中 ${usage.chatProfileCount} 个角色已连接 ${usage.chatBindingCount} 个 Chat 会话；启用时会进入这些会话的提示词链路。`,
-    `${profileCount} role profiles are bound; ${usage.chatProfileCount} profiles connect to ${usage.chatBindingCount} Chat contacts, so this enabled entry enters those Chat prompt chains.`,
-  )
-}
-
-const formatKnowledgePointProfileNames = (point) => {
-  const usage = getKnowledgePointUsage(point)
-  if (usage.profiles.length <= 0) return ''
-  const names = usage.profiles
-    .map((profile) => (typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : t('未命名角色', 'Unnamed role')))
-    .slice(0, 4)
-  const overflow = Math.max(0, usage.profiles.length - names.length)
-  return overflow > 0 ? `${names.join(' / ')} +${overflow}` : names.join(' / ')
 }
 
 const removeKnowledgePoint = async (point) => {
@@ -1761,7 +1283,7 @@ watch(
 watch(
   () => route.fullPath,
   () => {
-    syncWorldBookDeepLink()
+    syncWorldBookDeepLink(route.query)
   },
   { immediate: true },
 )
@@ -2548,15 +2070,15 @@ onBeforeUnmount(() => {
           </div>
           <div class="worldbook-template-stats">
             <span>
-              <strong>{{ profileTemplatePresets.length }}</strong>
+              <strong>{{ profileTemplateStats.presetCount }}</strong>
               {{ t('预设', 'Presets') }}
             </span>
             <span>
-              <strong>{{ worldProfileTemplates.length }}</strong>
+              <strong>{{ profileTemplateStats.worldCount }}</strong>
               {{ t('当前世界', 'World') }}
             </span>
             <span>
-              <strong>{{ enabledWorldProfileTemplates.length }}</strong>
+              <strong>{{ profileTemplateStats.enabledWorldCount }}</strong>
               {{ t('已启用', 'Enabled') }}
             </span>
           </div>
@@ -2567,21 +2089,14 @@ onBeforeUnmount(() => {
           data-testid="worldbook-template-contacts-handoff"
         >
           <div class="worldbook-template-handoff__copy">
-            <p>{{ t('下一步', 'Next step') }}</p>
-            <h3>{{ t('到通讯录填写角色资料', 'Contacts fills role profiles') }}</h3>
-            <span>
-              {{
-                t(
-                  '世界书只定义这个世界需要哪些资料栏位；小顺、主训或 NPC 的具体信息，要进入通讯录的角色档案填写。',
-                  'Universal templates can be used directly in Contacts. Enabled world templates become current-world choices for roles and NPCs; concrete values are still filled in Contacts.',
-                )
-              }}
-            </span>
+            <p>{{ profileTemplateHandoff.eyebrow }}</p>
+            <h3>{{ profileTemplateHandoff.title }}</h3>
+            <span>{{ profileTemplateHandoff.detail }}</span>
           </div>
           <div class="worldbook-template-handoff__flow">
-            <span>{{ t('世界书：启用世界模板', 'WorldBook: Enable templates') }}</span>
+            <span>{{ profileTemplateHandoff.fromLabel }}</span>
             <i class="fas fa-arrow-right" aria-hidden="true"></i>
-            <span>{{ t('通讯录：填写角色', 'Contacts: Values') }}</span>
+            <span>{{ profileTemplateHandoff.toLabel }}</span>
           </div>
           <button
             type="button"
@@ -2590,19 +2105,19 @@ onBeforeUnmount(() => {
             @click="openContactsForProfileTemplates"
           >
             <i class="fas fa-address-book" aria-hidden="true"></i>
-            {{ t('打开通讯录', 'Open Contacts') }}
+            {{ profileTemplateHandoff.actionLabel }}
           </button>
         </div>
 
         <div class="worldbook-template-section">
-          <p class="text-sm font-semibold">{{ t('通用模板', 'Universal templates') }}</p>
+          <p class="text-sm font-semibold">{{ universalTemplateSection.title }}</p>
           <p class="text-xs text-gray-500">
-            {{ t('通用模板会直接出现在通讯录，可在任何世界中填写。', 'Universal templates are available directly in Contacts for any world.') }}
+            {{ universalTemplateSection.detail }}
           </p>
-          <div v-for="preset in profileTemplatePresets" :key="preset.id" class="worldbook-template-row">
+          <div v-for="preset in profileTemplatePresetRows" :key="preset.id" class="worldbook-template-row">
             <div class="min-w-0">
               <p class="font-medium truncate">{{ preset.title }}</p>
-              <p class="text-xs text-gray-500">{{ preset.fields.length }} {{ t('字段', 'fields') }}</p>
+              <p class="text-xs text-gray-500">{{ preset.fieldCountLabel }}</p>
             </div>
             <button
               type="button"
@@ -2610,25 +2125,24 @@ onBeforeUnmount(() => {
               :data-testid="`worldbook-template-copy-${preset.id}`"
               @click="copyProfileTemplatePreset(preset.id)"
             >
-              {{ t('复制为当前世界模板', 'Copy as world template') }}
+              {{ preset.copyLabel }}
             </button>
           </div>
         </div>
 
         <div class="worldbook-template-section">
-          <p class="text-sm font-semibold">{{ t('当前世界启用模板', 'Current-world enabled templates') }}</p>
+          <p class="text-sm font-semibold">{{ worldTemplateSection.title }}</p>
           <p class="text-xs text-gray-500">
-            {{ t('只有启用的世界模板会优先出现在通讯录；停用后，通讯录仍可使用通用模板。', 'Only enabled world templates are prioritized in Contacts; disabled templates fall back to universal templates.') }}
+            {{ worldTemplateSection.detail }}
           </p>
-          <p v-if="worldProfileTemplates.length === 0" class="text-sm text-gray-500">
-            {{ t('还没有当前世界专用模板。', 'No world-specific templates yet.') }}
+          <p v-if="worldProfileTemplateRows.length === 0" class="text-sm text-gray-500">
+            {{ worldTemplateSection.emptyCopy }}
           </p>
-          <div v-for="template in worldProfileTemplates" :key="template.id" class="worldbook-template-row">
+          <div v-for="template in worldProfileTemplateRows" :key="template.id" class="worldbook-template-row">
             <div class="min-w-0">
               <p class="font-medium truncate">{{ template.title }}</p>
               <p class="text-xs text-gray-500">
-                v{{ template.version }} · {{ template.fields.length }} {{ t('字段', 'fields') }} ·
-                {{ template.enabled === false ? t('已停用', 'Disabled') : t('已启用', 'Enabled') }}
+                {{ template.versionLabel }} · {{ template.fieldCountLabel }} · {{ template.stateLabel }}
               </p>
             </div>
             <button
@@ -2637,7 +2151,7 @@ onBeforeUnmount(() => {
               :data-testid="`worldbook-template-toggle-${template.id}`"
               @click="toggleWorldProfileTemplateEnabled(template)"
             >
-              {{ template.enabled === false ? t('启用', 'Enable') : t('停用', 'Disable') }}
+              {{ template.toggleLabel }}
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 
 > Scope and authority note
 >
@@ -16,7 +16,7 @@ Updated: 2026-06-20
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements below were re-run on 2026-06-20 against the current working tree after the Settings backup, storage diagnostics, push workflow, Chat active-thread read-model, Chat home search/list display-state, Chat service-thread display read-model, Chat message edit display-state, Chat message action-sheet display-state, Chat `+` panel-state, Chat thread menu/settings draft-state, Chat pending quote display/action-state, Chat AI prompt/context preparation, Chat automation status, Chat AI image-reference preparation, Chat assistant response parsing/normalization, and Chat assistant result post-processing extractions.
+- Measurements below were re-run on 2026-06-21 against the current working tree after the Settings backup, storage diagnostics, push workflow, Chat active-thread read-model, Chat home search/list display-state, Chat service-thread display read-model, Chat message edit display-state, Chat message action-sheet display-state, Chat `+` panel-state, Chat thread menu/settings draft-state, Chat pending quote display/action-state, Chat AI prompt/context preparation, Chat automation status, Chat AI image-reference preparation, Chat assistant response parsing/normalization, Chat assistant result post-processing, Contacts home list read-model, Contacts memory list read-model, Contacts memory detail read-model, Contacts linked-activity read-model, Contacts Role Hub read-model, Contacts world-field/template-adaptation display read-model, Contacts danger-zone display read-model, Contacts detail-section display read-model, Contacts profile-header display read-model, Contacts profile-template editor display read-model, WorldBook source display read-model, WorldBook encyclopedia filtering/read-model, and WorldBook profile-template display/read-model extractions.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -27,7 +27,7 @@ Updated: 2026-06-20
 
 The `lib/` layer and the module-ownership philosophy are the project's strongest assets. The largest structural risks are still both "God object" patterns:
 
-1. God View Modules: the top 8 view files now average about 4020 lines each.
+1. God View Modules: the top 8 view files now average about 3881 lines each.
 2. God Store Module: `src/stores/system.js` is now 4186 lines and is directly imported by 22 of 30 view files.
 
 Both risks directly work against the ownership-closure goal. The ongoing `4.5 Architecture Cleanup` lane is the right home for this work, and the current snapshot still shows debt concentrated in the same hot view files and the same store module.
@@ -46,18 +46,18 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 
 | File | Lines |
 | --- | ---: |
-| `src/views/ContactsView.vue` | 5428 |
+| `src/views/ContactsView.vue` | 4754 |
 | `src/views/ChatView.vue` | 4312 |
-| `src/views/WorldBookView.vue` | 4565 |
+| `src/views/WorldBookView.vue` | 4130 |
 | `src/views/HomeView.vue` | 3920 |
 | `src/views/ChatDirectoryView.vue` | 3802 |
 | `src/views/WidgetsView.vue` | 3617 |
 | `src/views/AppStoreView.vue` | 3352 |
 | `src/views/FoodDeliveryView.vue` | 3161 |
 
-The top 8 view files average about 4020 lines. This is a strong decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination.
+The top 8 view files average about 3881 lines. This is still a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination, but the recent Chat, Contacts, and WorldBook display/read-model slices have started lowering the hotspot pressure.
 
-The `src/composables/` directory now contains 23 files:
+The `src/composables/` directory now contains 36 files:
 
 - `useDialog.js`
 - `useI18n.js`
@@ -77,13 +77,26 @@ The `src/composables/` directory now contains 23 files:
 - `useChatServiceThreadDisplayModel.js`
 - `useChatThreadMenuModel.js`
 - `useChatUserActionPanelModel.js`
+- `useContactsHomeListModel.js`
+- `useContactsDangerZoneModel.js`
+- `useContactsDetailSectionModel.js`
+- `useContactsLinkedActivityModel.js`
+- `useContactsMemoryDetailModel.js`
+- `useContactsMemoryListModel.js`
+- `useContactsProfileHeaderModel.js`
+- `useContactsProfileTemplateEditorModel.js`
+- `useContactsRoleHubModel.js`
+- `useContactsWorldFieldModel.js`
 - `useSystemApiReports.js`
 - `useSystemNotifications.js`
 - `useSettingsBackupWorkflow.js`
 - `useSettingsPushWorkflow.js`
 - `useSettingsStorageDiagnosticsWorkflow.js`
+- `useWorldBookKnowledgeModel.js`
+- `useWorldBookProfileTemplateModel.js`
+- `useWorldBookSourceModel.js`
 
-That means view-level state, computed values, and side effects are still often written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots. Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`, Settings real-push setup/health/subscription/test/feedback orchestration now lives behind `useSettingsPushWorkflow.js`, Chat active-thread route/read-model state now lives behind `useChatActiveThreadModel.js`, Chat AI request/retry/reroll display state now lives behind `useChatAiRequestStateModel.js`, Chat AI prompt/context preparation now lives behind `useChatAiPromptContextModel.js`, Chat AI image-reference preparation now lives behind `useChatAiImageReferenceModel.js`, Chat assistant response parsing/normalization now lives behind `useChatAssistantResponseModel.js`, Chat assistant result post-processing now lives behind `useChatAssistantResultModel.js`, Chat automation status/readiness display state now lives behind `useChatAutomationStatusModel.js`, Chat home search/list display state now lives behind `useChatHomeListModel.js`, Chat service/official thread display state now lives behind `useChatServiceThreadDisplayModel.js`, Chat service route/action feedback state now lives behind `useChatServiceFeedbackModel.js`, Chat message edit display/validation state now lives behind `useChatMessageEditDisplayModel.js`, Chat message action-sheet display state now lives behind `useChatMessageActionSheetModel.js`, Chat `+` panel display/draft state now lives behind `useChatUserActionPanelModel.js`, Chat thread menu/settings draft state now lives behind `useChatThreadMenuModel.js`, and Chat pending quote display/action state now lives behind `useChatPendingQuoteModel.js`.
+That means view-level state, computed values, and side effects are still often written inline inside `<script setup>` rather than moved behind focused composable interfaces, though the first notification interface is now in place with seven migrated caller groups, the API reports interface is in place for Network diagnostics, Settings storage diagnostics and emitters, Chat diagnostic-report emitters, Map/Calendar store diagnostic-report emitters, App shell diagnostic-report emitters, and Settings backup/export raw report snapshots. Settings backup/export/restore orchestration now lives behind `useSettingsBackupWorkflow.js`, Settings storage audit/report/repair orchestration now lives behind `useSettingsStorageDiagnosticsWorkflow.js`, Settings real-push setup/health/subscription/test/feedback orchestration now lives behind `useSettingsPushWorkflow.js`, Chat active-thread route/read-model state now lives behind `useChatActiveThreadModel.js`, Chat AI request/retry/reroll display state now lives behind `useChatAiRequestStateModel.js`, Chat AI prompt/context preparation now lives behind `useChatAiPromptContextModel.js`, Chat AI image-reference preparation now lives behind `useChatAiImageReferenceModel.js`, Chat assistant response parsing/normalization now lives behind `useChatAssistantResponseModel.js`, Chat assistant result post-processing now lives behind `useChatAssistantResultModel.js`, Chat automation status/readiness display state now lives behind `useChatAutomationStatusModel.js`, Chat home search/list display state now lives behind `useChatHomeListModel.js`, Chat service/official thread display state now lives behind `useChatServiceThreadDisplayModel.js`, Chat service route/action feedback state now lives behind `useChatServiceFeedbackModel.js`, Chat message edit display/validation state now lives behind `useChatMessageEditDisplayModel.js`, Chat message action-sheet display state now lives behind `useChatMessageActionSheetModel.js`, Chat `+` panel display/draft state now lives behind `useChatUserActionPanelModel.js`, Chat thread menu/settings draft state now lives behind `useChatThreadMenuModel.js`, Chat pending quote display/action state now lives behind `useChatPendingQuoteModel.js`, Contacts home search/grouping/recent-interaction read-model state now lives behind `useContactsHomeListModel.js`, Contacts selected-profile memory list/source-filter/count-copy read-model state now lives behind `useContactsMemoryListModel.js`, Contacts selected-memory source-audit/timeline/headline-facts read-model state now lives behind `useContactsMemoryDetailModel.js`, Contacts linked-activity summary/list rows now live behind `useContactsLinkedActivityModel.js`, Contacts Role Hub summary cards plus read-only Chat social snapshot rows now live behind `useContactsRoleHubModel.js`, Contacts world-field/template-adaptation display rows now live behind `useContactsWorldFieldModel.js`, Contacts danger-zone impact/confirmation display rows now live behind `useContactsDangerZoneModel.js`, Contacts role-detail section display rows now live behind `useContactsDetailSectionModel.js`, Contacts profile-header display state now lives behind `useContactsProfileHeaderModel.js`, Contacts profile-template editor display rows now live behind `useContactsProfileTemplateEditorModel.js`, WorldBook Book source-link/picker/diff display rows now live behind `useWorldBookSourceModel.js`, WorldBook encyclopedia filtering/readiness/deep-link display now lives behind `useWorldBookKnowledgeModel.js`, and WorldBook profile-template display/read-model state now lives behind `useWorldBookProfileTemplateModel.js`.
 
 ### 3.2 God Store Module: `system.js`
 
@@ -150,11 +163,11 @@ For contrast, `src/lib/` remains the healthiest part of the project.
 
 Current snapshot:
 
-- 68 JavaScript modules under `src/lib/`.
+- 69 JavaScript modules under `src/lib/`.
 - Highest measured fan-in:
-  - `navigation-return.js`: 24
-  - `persistence.js`: 17
+  - `navigation-return.js`: 23
   - `planned-module-registry.js`: 17
+  - `persistence.js`: 17
   - `world-pack-app-bindings.js`: 8
   - `ai.js`: 7
   - `relationship-cleanup-helpers.js`: 7
@@ -166,10 +179,10 @@ This layer is the best local model for future cleanup: focused modules, semantic
 
 Current source snapshot:
 
-- `src` contains 113 `.js` files.
+- `src` contains 133 `.js` files.
 - `src` contains 67 `.vue` files.
 - `src` contains 0 `.ts` / `.tsx` files.
-- Total measured `.js` + `.vue` source lines under `src`: about 110.4k.
+- Total measured `.js` + `.vue` source lines under `src`: about 102.76k.
 
 TypeScript is present in devDependencies, but current application source is still JavaScript. That is acceptable for now, but it increases risk when refactoring structured contracts such as:
 
@@ -273,7 +286,7 @@ Target the largest view files first:
 3. `WorldBookView.vue`
 4. `HomeView.vue`
 
-`SettingsView.vue` is now about 1178 lines after the backup workflow, storage diagnostics workflow, and push workflow extractions. `ChatView.vue` is now about 4312 lines after the active-thread, AI request-state, AI prompt/context preparation, AI image-reference preparation, assistant response parsing/normalization, assistant result post-processing, automation-status, home-list, service-thread display, service-feedback, message-edit, action-sheet, `+` panel, thread-menu, and pending-quote extractions, but it remains a high-risk product-critical view. Future Settings work should be bug-led or scoped to a named remaining subdomain; the next architecture-governance slice should usually continue a different tested Chat seam, move to `ContactsView.vue` / `WorldBookView.vue`, or target a narrow `systemStore` facade.
+`SettingsView.vue` remains much smaller than the top hotspots after the backup workflow, storage diagnostics workflow, and push workflow extractions. `ChatView.vue` is now about 4312 lines after the active-thread, AI request-state, AI prompt/context preparation, AI image-reference preparation, assistant response parsing/normalization, assistant result post-processing, automation-status, home-list, service-thread display, service-feedback, message-edit, action-sheet, `+` panel, thread-menu, and pending-quote extractions. `ContactsView.vue` is now about 4754 lines after the home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model extractions. `WorldBookView.vue` is now about 4130 lines after the Book source-link/picker/diff display, encyclopedia filtering/readiness/deep-link display, and profile-template display/read-model extractions. These remain high-risk product-critical views, but the next architecture-governance slice should usually continue an unrepeated Contacts / WorldBook / Home view seam or target a narrow `systemStore` facade rather than returning to Settings by inertia.
 
 For each view, prefer extracting state, computed values, and side effects into focused composables under `src/composables/<domain>/`.
 

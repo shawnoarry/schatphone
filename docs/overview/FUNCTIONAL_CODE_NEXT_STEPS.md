@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-06-19
+Updated: 2026-06-21
 
 > **Frozen execution status / 非执行看板**
 >
@@ -79,6 +79,8 @@ Current focus inside this lane:
 2. memory-group presentation
 3. manual entry vs event-attached entry distinction
 4. safer review of what gets removed during delete/reset/memory cleanup
+
+Architecture note: Contacts home-list, memory-list, memory-detail, linked-activity, Role Hub summary, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are already extracted behind focused composables. WorldBook Book source-link/picker/diff display is also extracted behind `src/composables/useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display is extracted behind `src/composables/useWorldBookKnowledgeModel.js`, and profile-template display/read-model state is extracted behind `src/composables/useWorldBookProfileTemplateModel.js`. Future work in this lane should move to the product-level Contacts template-adaptation visual diff, unrepeated WorldBook Current World Pack review/display, or switch architecture cleanup to Home.
 
 ### Priority B: text/event-first relationship-memory dedupe and recall
 

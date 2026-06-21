@@ -85,6 +85,16 @@ Current landed baseline:
 - Contacts World profile fields now include a current-world adaptation review for profiles using missing, outdated, or other-world templates. The review recommends a current-world template, shows reusable/custom-preserved counts, and can open the editor with AI-migrated draft values without saving.
 - The WorldBook -> Contacts value-flow now has committed E2E coverage, so future work should not rebuild the basic handoff/value chain unless the product flow changes.
 - Contacts first entry now feels like a phone contact list: Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles. Recent interactions is a shortcut layer and keeps full list membership intact.
+- Contacts first-entry search/grouping/recent-interaction logic now lives behind `src/composables/useContactsHomeListModel.js`, so future architecture cleanup should not repeat that home-list seam.
+- Contacts selected-profile memory-list/source-filter/count-copy logic now lives behind `src/composables/useContactsMemoryListModel.js`, so future architecture cleanup should not repeat that memory-list seam.
+- Contacts selected-memory source-audit/timeline/headline-facts logic now lives behind `src/composables/useContactsMemoryDetailModel.js`, so future architecture cleanup should not repeat that memory-detail seam.
+- Contacts linked-activity summary/list row logic now lives behind `src/composables/useContactsLinkedActivityModel.js`, so future architecture cleanup should not repeat that linked-activity seam.
+- Contacts Role Hub summary-card and read-only Chat social snapshot logic now lives behind `src/composables/useContactsRoleHubModel.js`, so future architecture cleanup should not repeat that Role Hub seam.
+- Contacts world-field/template-adaptation display logic now lives behind `src/composables/useContactsWorldFieldModel.js`, so future architecture cleanup should not repeat that world-field display seam.
+- Contacts danger-zone impact/confirmation/memory-delete safety copy now lives behind `src/composables/useContactsDangerZoneModel.js`, so future architecture cleanup should not repeat that danger-zone display seam.
+- Contacts Preferences / Life Pattern / Social Graph section metadata, manual/event-attached grouping, counts, policy copy, and source labels/hints now live behind `src/composables/useContactsDetailSectionModel.js`, so future architecture cleanup should not repeat that detail-section display seam.
+- Contacts selected-profile header avatar/name/meta/bio/NPC-upgrade display state now lives behind `src/composables/useContactsProfileHeaderModel.js`, so future architecture cleanup should not repeat that profile-header display seam.
+- Contacts profile-template editor field rows, save-review facts, preserved custom-field rows, helper/placeholder/type/icon copy, empty copy, and tag previews now live behind `src/composables/useContactsProfileTemplateEditorModel.js`, so future architecture cleanup should not repeat that profile-template editor display seam.
 
 Main tasks:
 
@@ -93,9 +103,10 @@ Main tasks:
 3. richer memory list and memory detail behavior;
 4. after this completed baseline, move deeper memory dedupe/merge and recall rules into Workstream 4.2 instead of extending 4.1 further;
 5. richer Chat-bound state and navigation hints;
-6. danger-zone isolation and confirmation copy;
+6. keep danger-zone action semantics guarded while future UI polish avoids changing delete/reset execution;
 7. continue from the landed richer field widgets, template-change review, AI-assisted draft completion, and Contacts-side template adaptation by first turning adaptation review into a user-readable visual diff, then improving true template editing and eventual form-builder-quality WorldBook authoring.
 8. later true-device polish for Contacts touch feel and detail-panel progressive disclosure.
+9. for architecture-only cleanup, either move to Contacts template-adaptation visual diff or shift to WorldBook/Home seams while preserving delete/reset, review-status writes, profile-template writes, AI draft actions, and relationship-runtime ownership.
 
 Semantic traps to avoid:
 

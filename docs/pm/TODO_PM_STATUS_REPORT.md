@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-06-01
+Updated: 2026-06-21
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -121,6 +121,7 @@ PM meaning:
 - Calendar, Chat, Map, and event runtime can read WorldBook context.
 - Chat prompt context and the Chat thread WorldBook summary now share the same `world-interface` result, so user-visible injection state matches the context sent to AI.
 - Book text-library V1 now separates long-form source text from activation: `Book` stores reusable worldview documents, encyclopedia material, and world rules, while `Settings -> WorldBook` can choose whole documents or selected sections as active world context, preview changed-source diffs, and accept a newer source version after review.
+- WorldBook source management now has a focused display/read-model seam: Book source-link rows, Active World text directories, source picker grouping, changed-source diff summaries, and active/issue/disabled counts are handled outside the large view, while Book asset editing and WorldBook activation actions stay in their existing owners.
 - The `现代首尔 K-pop 娱乐圈` built-in Book set now includes formal read-only encyclopedia entries for industry mechanisms, Chinese fandom terms, Seoul youth lifestyle, company/group/program references, and representative member profiles; WorldBook can activate them directly as encyclopedia context.
 - World Pack V1 now persists built-in/user world packs, supports legacy activation review, keeps additive enabled expansion packs per save, and exposes enabled-pack app/service-template metadata through `world-interface`. Current World Pack now shows enabled service-account template availability only; Chat Directory's `Services` management area now lets users edit/reset built-in current-world service/official account candidates before opting in through the Chat-owned idempotent create/reuse seam, shows descriptive source notification plans for supported event streams, and keeps WorldBook out of account creation.
 - World Pack expansion V1 now treats packs as compatible add-ons over the user's main world rather than requiring a separate base-world layer. WorldBook can store an AI world-profile analysis, recommend compatible packs, and still let users manually enable other supported packs. The built-in trial set now includes `school_life`, `business_family`, and `urban_mystery`; multiple enabled packs feed App Store World entries and Chat Services candidates together.
@@ -235,6 +236,7 @@ PM meaning:
   - runtime memory-count fields now describe the full target state before display caps, so compact UI requests do not undercount total, visible, or archived memory groups;
   - runtime relationship snapshots now expose canonical primary-memory, memory-count, and source-summary fields that both Contacts and World Hub consume directly;
   - Contacts linked-activity source totals now dedupe runtime refs against event-attached detail refs, preventing one shared event from inflating source counts;
+  - Contacts home-list, memory-list, memory-detail, linked-activity, Role Hub summary, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are now extracted behind focused composables; WorldBook source-link/picker/diff display is extracted behind `useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display is extracted behind `useWorldBookKnowledgeModel.js`, and profile-template display/read-model state is extracted behind `useWorldBookProfileTemplateModel.js`; future architecture cleanup should not repeat those slices;
   - Assets, Stock, Phone, and several secondary modules still need deeper product loops;
 - true closed-page background event generation would still require a larger backend design.
 

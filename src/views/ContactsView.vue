@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
-import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
+import { useChatStore } from '../stores/chat'
 import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
@@ -22,10 +22,7 @@ import {
   normalizeInitialRelationshipSeed,
 } from '../lib/relationship-classification-schema'
 import { classifyRelationshipLabel } from '../lib/relationship-label-classifier'
-import {
-  adaptProfileTemplateValues,
-  buildProfileTemplateAdaptationReview,
-} from '../lib/profile-template-adaptation-assistant'
+import { adaptProfileTemplateValues } from '../lib/profile-template-adaptation-assistant'
 import { suggestProfileTemplateValues } from '../lib/profile-template-value-assistant'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import {
@@ -51,10 +48,22 @@ import {
   cleanupCoverageText as formatCleanupCoverageText,
   cleanupResultSummaryText as formatCleanupResultSummaryText,
   createRelationshipSourceCleanupHandlers,
-  sourceRecordIdFromRelationshipSourceId,
   sourceModuleSummaryText as formatSourceModuleSummaryText,
 } from '../lib/relationship-source-cleanup-handlers'
 import { useDialog } from '../composables/useDialog'
+import { useContactsHomeListModel } from '../composables/useContactsHomeListModel'
+import { useContactsDangerZoneModel } from '../composables/useContactsDangerZoneModel'
+import { useContactsDetailSectionModel } from '../composables/useContactsDetailSectionModel'
+import { useContactsLinkedActivityModel } from '../composables/useContactsLinkedActivityModel'
+import { useContactsMemoryDetailModel } from '../composables/useContactsMemoryDetailModel'
+import { useContactsMemoryListModel } from '../composables/useContactsMemoryListModel'
+import { useContactsProfileHeaderModel } from '../composables/useContactsProfileHeaderModel'
+import { useContactsProfileTemplateEditorModel } from '../composables/useContactsProfileTemplateEditorModel'
+import {
+  contactsEntityTypeLabel as formatContactsEntityTypeLabel,
+  useContactsRoleHubModel,
+} from '../composables/useContactsRoleHubModel'
+import { useContactsWorldFieldModel } from '../composables/useContactsWorldFieldModel'
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
@@ -429,42 +438,6 @@ const availableKnowledgePoints = computed(() => {
   return source.slice(0, 160)
 })
 
-const selfProfiles = computed(() =>
-  roleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE),
-)
-const mainRoleProfiles = computed(() =>
-  roleProfiles.value.filter(
-    (item) => (item.entityType || CONTACTS_ENTITY_TYPES.MAIN_ROLE) === CONTACTS_ENTITY_TYPES.MAIN_ROLE,
-  ),
-)
-const npcRoleProfiles = computed(() =>
-  roleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.NPC),
-)
-
-const normalizeContactSearchText = (value = '') => String(value || '').trim().toLowerCase()
-
-const contactSearchText = (profile = {}) =>
-  [
-    profile.name,
-    profile.role,
-    normalizeRoleId(profile.roleId, profile.id),
-    profile.bio,
-    ...(Array.isArray(profile.profileValues) ? profile.profileValues.map((value) => value.value) : []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-const filterContactsBySearch = (profiles = []) => {
-  const query = normalizeContactSearchText(contactsSearchQuery.value)
-  if (!query) return profiles
-  return profiles.filter((profile) => contactSearchText(profile).includes(query))
-}
-
-const isContactsSearchActive = computed(() => normalizeContactSearchText(contactsSearchQuery.value).length > 0)
-const filteredSelfProfiles = computed(() => filterContactsBySearch(selfProfiles.value))
-const filteredMainProfiles = computed(() => filterContactsBySearch(mainRoleProfiles.value))
-const filteredNpcProfiles = computed(() => filterContactsBySearch(npcRoleProfiles.value))
 const selectedProfile = computed(
   () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
 )
@@ -657,149 +630,62 @@ const selectedProfileValues = computed(() =>
 const selectedProfileEntityType = computed(
   () => selectedProfile.value?.entityType || CONTACTS_ENTITY_TYPES.MAIN_ROLE,
 )
-const selectedProfileIsNpc = computed(() => selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.NPC)
 const selectedProfileChatBound = computed(() =>
   selectedProfile.value?.id ? chatStore.isRoleProfileBound(selectedProfile.value.id) : false,
 )
-const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
-const currentWorldProfileTemplates = computed(() =>
-  systemStore.listWorldProfileTemplates(currentContactsWorldId.value, { enabledOnly: true }),
-)
-const contactsProfileTemplateOptions = computed(() => {
-  const orderedTemplates = [
-    ...currentWorldProfileTemplates.value,
-    ...universalProfileTemplates.value,
-  ]
-  const selectedTemplateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
-  const selectedTemplate = selectedTemplateId
-    ? systemStore.getProfileTemplateById(selectedTemplateId)
-    : null
-  const templates = selectedTemplate
-    ? [...orderedTemplates, selectedTemplate]
-    : orderedTemplates
-  const seen = new Set()
-  return templates.filter((template) => {
-    if (!template?.id || seen.has(template.id)) return false
-    seen.add(template.id)
-    return true
-  })
-})
-const formatContactsProfileTemplateOption = (template = {}) => {
-  if (template.scope === PROFILE_TEMPLATE_SCOPES.WORLD) {
-    return t(`当前世界 · ${template.title}`, `Current world · ${template.title}`)
-  }
-  return t(`通用 · ${template.title}`, `Universal · ${template.title}`)
-}
-const selectedProfileTemplate = computed(() => {
-  const templateId = selectedProfile.value?.templateLink?.profileTemplateId || ''
-  return templateId ? systemStore.getProfileTemplateById(templateId) : null
-})
-const selectedProfileTemplateAdaptationReview = computed(() =>
-  buildProfileTemplateAdaptationReview({
-    profile: selectedProfile.value || {},
-    currentTemplate: selectedProfileTemplate.value,
-    currentWorldTemplates: currentWorldProfileTemplates.value,
-    currentWorldId: currentContactsWorldId.value,
-  }),
-)
-const fieldMatchesSelectedProfileEntity = (field = {}) => {
-  const entityTypes = Array.isArray(field.entityTypes) ? field.entityTypes : []
-  return entityTypes.length === 0 || entityTypes.includes(selectedProfileEntityType.value)
-}
-const selectedProfileTemplateFields = computed(() =>
-  Array.isArray(selectedProfileTemplate.value?.fields)
-    ? selectedProfileTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
-    : [],
-)
-const selectedProfileValueMap = computed(() => {
-  const map = new Map()
-  selectedProfileValues.value.forEach((value) => {
-    if (value?.fieldId) map.set(value.fieldId, value)
-  })
-  return map
-})
-const selectedProfileWorldFieldRows = computed(() => {
-  const templateFieldIds = new Set(selectedProfileTemplateFields.value.map((field) => field.id))
-  const templateRows = selectedProfileTemplateFields.value.map((field) => ({
-    key: field.id,
-    field,
-    value: selectedProfileValueMap.value.get(field.id) || null,
-    title: field.label || field.id,
-    description: field.description || '',
-    isTemplateField: true,
-  }))
-  const extraRows = selectedProfileValues.value
-    .filter((value) => value?.fieldId && !templateFieldIds.has(value.fieldId))
-    .map((value) => ({
-      key: value.fieldId,
-      field: null,
-      value,
-      title: profileValueLabel(value),
-      description: '',
-      isTemplateField: false,
-    }))
-  return [...templateRows, ...extraRows]
-})
-const profileTemplateDraftTemplate = computed(() =>
-  profileTemplateDraft.templateId
-    ? systemStore.getProfileTemplateById(profileTemplateDraft.templateId)
-    : null,
-)
-const profileTemplateDraftFields = computed(() =>
-  Array.isArray(profileTemplateDraftTemplate.value?.fields)
-    ? profileTemplateDraftTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
-    : [],
-)
-const profileTemplateDraftFieldIds = computed(
-  () => new Set(profileTemplateDraftFields.value.map((field) => field.id).filter(Boolean)),
-)
-const profileTemplateDraftPreservedValues = computed(() =>
-  selectedProfileValues.value.filter(
-    (value) => value?.fieldId && !profileTemplateDraftFieldIds.value.has(value.fieldId),
-  ),
-)
-const profileTemplateDraftPreservedRows = computed(() =>
-  profileTemplateDraftPreservedValues.value.map((value) => ({
-    key: value.fieldId,
-    fieldId: value.fieldId,
-    title: profileValueLabel(value),
-    value: formatProfileValue(value),
-    visibility: profileVisibilityLevelLabel(value.visibilityLevel),
-  })),
-)
-const profileTemplateVisibilityOptions = computed(() => [
-  { value: PROFILE_VISIBILITY_LEVELS.PUBLIC, label: t('公开资料', 'Public') },
-  { value: PROFILE_VISIBILITY_LEVELS.FAMILIAR, label: t('熟悉后知道', 'Familiar') },
-  { value: PROFILE_VISIBILITY_LEVELS.INTIMATE, label: t('亲密后知道', 'Intimate') },
-  { value: PROFILE_VISIBILITY_LEVELS.HIDDEN, label: t('隐藏设定', 'Hidden') },
-  { value: PROFILE_VISIBILITY_LEVELS.WORLD_SPECIFIC, label: t('世界专属', 'World-specific') },
-])
-
 const selectedRoleChatContact = computed(() => {
   const profileId = selectedProfile.value?.id
   if (!profileId) return null
   return chatStore.contacts.find((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId)) || null
 })
+const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
+const currentWorldProfileTemplates = computed(() =>
+  systemStore.listWorldProfileTemplates(currentContactsWorldId.value, { enabledOnly: true }),
+)
+const {
+  contactsProfileTemplateOptions,
+  fieldMatchesSelectedProfileEntity,
+  formatContactsProfileTemplateOption,
+  formatProfileValue,
+  profileTemplateVisibilityOptions,
+  profileValueLabel,
+  profileVisibilityLevelLabel,
+  selectedProfileTemplate,
+  selectedProfileTemplateAdaptationDisplay,
+  selectedProfileTemplateAdaptationReview,
+  selectedProfileValueMap,
+  selectedProfileWorldFieldRows,
+  selectedWorldFieldIntroText,
+} = useContactsWorldFieldModel({
+  selectedProfile,
+  selectedProfileEntityType,
+  selectedProfileValues,
+  currentWorldProfileTemplates,
+  universalProfileTemplates,
+  currentContactsWorldId,
+  getProfileTemplateById: (templateId) => systemStore.getProfileTemplateById(templateId),
+  t,
+})
 
-const selectedRoleHubStats = computed(() => {
-  const profile = selectedProfile.value
-  const totals = {
-    manual: 0,
-    eventAttached: 0,
-  }
-  if (profile?.id) {
-    for (const section of Object.values(ROLE_DETAIL_SECTIONS)) {
-      const stats = detailItemStatsForSection(profile, section)
-      totals.manual += stats.manual
-      totals.eventAttached += stats.eventAttached
-    }
-  }
-  return {
-    ...totals,
-    worldFieldCount: selectedProfileValues.value.length,
-    memoryCount: selectedRelationshipSnapshot.value?.totalMemoryCount || 0,
-    chatBound: selectedProfileChatBound.value,
-  }
+const {
+  profileTemplateDraftTemplate,
+  profileTemplateDraftFields,
+  profileTemplateDraftFieldRows,
+  profileTemplateDraftPreservedValues,
+  profileTemplateDraftPreservedRows,
+  profileTemplateChangeReview,
+  emptyTemplateFieldText,
+  emptyTemplateOptionsText,
+  tagPreviewEmptyText,
+} = useContactsProfileTemplateEditorModel({
+  profileTemplateDraft,
+  selectedProfileValues,
+  fieldMatchesSelectedProfileEntity,
+  getProfileTemplateById: (templateId) => systemStore.getProfileTemplateById(templateId),
+  formatProfileValue,
+  profileValueLabel,
+  profileVisibilityLevelLabel,
+  t,
 })
 
 const selectedRelationshipSnapshot = computed(() =>
@@ -821,15 +707,21 @@ const selectedDeleteImpact = computed(() =>
     : null,
 )
 
-const selectedMemoryGroups = computed(() =>
-  selectedProfile.value
-    ? relationshipRuntimeStore.listMemoryGroupsForTarget(
-        profileRelationshipTarget(selectedProfile.value),
-        50,
-        { sortMode: memorySortMode.value },
-      )
-    : [],
-)
+const {
+  availableMemorySourceFilters,
+  visibleMemoryGroups,
+  memoryListSummaryText,
+  selectedMemoryListCountLabel,
+  selectedMemoryListOverflowText,
+} = useContactsMemoryListModel({
+  selectedProfile,
+  memorySourceFilter,
+  memorySortMode,
+  t,
+  getRelationshipTarget: (profile) => profileRelationshipTarget(profile),
+  listMemoryGroupsForTarget: (...args) => relationshipRuntimeStore.listMemoryGroupsForTarget(...args),
+  formatSourceModuleLabel: (sourceModule) => relationshipSourceModuleLabel(sourceModule),
+})
 
 const selectedMemoryDetail = computed(() =>
   selectedProfile.value && selectedMemoryKey.value
@@ -882,391 +774,69 @@ const formatRelationshipAuditTimestamp = (value) => {
   }).format(timestamp)
 }
 
-const selectedMemorySourceAudit = computed(() => {
-  const detail = selectedMemoryDetail.value
-  const sourceCounts = detail?.sourceModuleCounts || {}
-  const sourceRefs = Array.isArray(detail?.sourceRefs) ? detail.sourceRefs : []
-  if (!detail || Object.keys(sourceCounts).length === 0) return []
-
-  const refsByModule = sourceRefs.reduce((acc, ref) => {
-    const moduleKey = ref?.sourceModule || ''
-    if (!moduleKey) return acc
-    if (!acc[moduleKey]) acc[moduleKey] = []
-    if (ref?.sourceId) acc[moduleKey].push(ref.sourceId)
-    return acc
-  }, {})
-
-  return Object.entries(sourceCounts)
-    .sort(([leftModule], [rightModule]) => leftModule.localeCompare(rightModule))
-    .map(([sourceModule, count]) => {
-      const rawSourceIds = [...new Set((refsByModule[sourceModule] || []).filter(Boolean))]
-      return {
-        sourceModule,
-        label: relationshipSourceModuleLabel(sourceModule),
-        count: Number(count) || 0,
-        cleanupConnected: typeof relationshipSourceCleanupHandlers.value[sourceModule] === 'function',
-        rawSourceIds,
-        recordIds: rawSourceIds.map((sourceId) => sourceRecordIdFromRelationshipSourceId(sourceId)),
-      }
-    })
+const {
+  selectedMemorySourceAudit,
+  selectedMemoryEventTimeline,
+  selectedMemoryHeadlineFacts,
+} = useContactsMemoryDetailModel({
+  selectedMemoryDetail,
+  t,
+  getCleanupHandlers: () => relationshipSourceCleanupHandlers.value,
+  formatSourceModuleLabel: (sourceModule) => relationshipSourceModuleLabel(sourceModule),
+  formatFactTypeLabel: (factType) => relationshipFactTypeLabel(factType),
+  formatReviewStatusLabel: (status) => memoryReviewStatusLabel(status),
+  formatAuditTimestamp: (value) => formatRelationshipAuditTimestamp(value),
+  formatSourceModuleSummary: (sourceModuleCounts) => sourceModuleSummaryText(sourceModuleCounts),
 })
 
-const selectedMemoryEventTimeline = computed(() => {
-  const detail = selectedMemoryDetail.value
-  const events = Array.isArray(detail?.events) ? detail.events : []
-  return events.slice(0, 4).map((event, index) => ({
-    id: event.id || `${detail?.memoryKey || 'memory'}_${index}`,
-    sourceModule: event.sourceModule || '',
-    sourceModuleLabel: relationshipSourceModuleLabel(event.sourceModule),
-    factTypeLabel: relationshipFactTypeLabel(event.factType),
-    summary:
-      event.summary ||
-      detail?.displaySummary ||
-      detail?.primarySummary ||
-      detail?.latestSummary ||
-      detail?.memoryKey ||
-      '',
-    createdAtText: formatRelationshipAuditTimestamp(event.createdAt),
-    sourceId: event.sourceId || '',
-    recordId: sourceRecordIdFromRelationshipSourceId(event.sourceId || ''),
-  }))
+const {
+  selectedDetailSectionRows,
+  roleDetailPolicyText,
+  detailItemsForSection,
+  detailItemStatsForSection,
+  roleDetailSourceLabel,
+  roleDetailSourceHint,
+} = useContactsDetailSectionModel({
+  selectedProfile,
+  t,
+  listDetailItemsForSection: (profile, section) =>
+    profile?.id ? chatStore.listRoleDetailItems(profile.id, section) : [],
 })
 
-const availableMemorySourceFilters = computed(() => {
-  const modules = new Set()
-  selectedMemoryGroups.value.forEach((memory) => {
-    ;(memory.sourceModules || []).forEach((moduleKey) => {
-      if (moduleKey) modules.add(moduleKey)
-    })
-  })
-  return [
-    { value: 'all', label: t('全部来源', 'All sources') },
-    ...[...modules]
-      .sort((left, right) => left.localeCompare(right))
-      .map((moduleKey) => ({
-        value: moduleKey,
-        label: relationshipSourceModuleLabel(moduleKey),
-      })),
-  ]
+const {
+  selectedLinkedActivityEntries,
+  selectedLinkedActivitySummary,
+} = useContactsLinkedActivityModel({
+  selectedProfile,
+  selectedRelationshipSnapshot,
+  t,
+  listDetailItemsForSection: (profile, section) => detailItemsForSection(profile, section),
+  formatSourceModuleLabel: (sourceModule) => relationshipSourceModuleLabel(sourceModule),
+  formatSourceModuleSummary: (sourceModuleCounts) => sourceModuleSummaryText(sourceModuleCounts),
+  formatMemoryReviewSummary: (memory) => relationshipMemoryReviewSummaryText(memory),
 })
 
-const filteredMemoryGroups = computed(() => {
-  const filterValue = memorySourceFilter.value
-  return filterValue === 'all'
-    ? selectedMemoryGroups.value
-    : selectedMemoryGroups.value.filter((memory) => (memory.sourceModules || []).includes(filterValue))
+const contactsEntityTypeLabel = (entityType) => formatContactsEntityTypeLabel(entityType, t)
+
+const {
+  selectedRoleHubStats,
+  selectedChatStateDetail,
+  selectedChatSocialSnapshot,
+  selectedRoleHubCards,
+} = useContactsRoleHubModel({
+  selectedProfile,
+  selectedProfileEntityType,
+  selectedProfileValues,
+  selectedProfileChatBound,
+  selectedRoleChatContact,
+  selectedRelationshipSnapshot,
+  selectedLinkedActivitySummary,
+  t,
+  getDetailItemStatsForSection: (profile, section) => detailItemStatsForSection(profile, section),
+  getContactChatSocialState: (contact) => chatStore.getContactChatSocialState(contact),
+  formatAuditTimestamp: (value) => formatRelationshipAuditTimestamp(value),
+  formatEntityTypeLabel: (entityType) => contactsEntityTypeLabel(entityType),
 })
-
-const visibleMemoryGroups = computed(() =>
-  filteredMemoryGroups.value.slice(0, 12),
-)
-
-const visibleMemoryCount = computed(() => visibleMemoryGroups.value.length)
-
-const totalMemoryCount = computed(() => filteredMemoryGroups.value.length)
-
-const hiddenMemoryCount = computed(() => Math.max(0, totalMemoryCount.value - visibleMemoryCount.value))
-
-const memoryListSummaryText = computed(() => {
-  if (totalMemoryCount.value === 0) {
-    return t('暂无关系记忆组。', 'No relationship memory groups yet.')
-  }
-  if (hiddenMemoryCount.value <= 0) {
-    return t(
-      `当前展示 ${visibleMemoryCount.value} 条记忆组。`,
-      `Showing ${visibleMemoryCount.value} memory groups.`,
-    )
-  }
-  return t(
-    `当前展示前 ${visibleMemoryCount.value} 条，另有 ${hiddenMemoryCount.value} 条符合筛选。`,
-    `Showing the first ${visibleMemoryCount.value}; ${hiddenMemoryCount.value} more match the current filter.`,
-  )
-})
-
-const selectedMemoryListCountLabel = computed(() =>
-  hiddenMemoryCount.value > 0
-    ? `${visibleMemoryCount.value} / ${totalMemoryCount.value}`
-    : String(visibleMemoryCount.value),
-)
-
-const selectedMemoryListOverflowText = computed(() =>
-  hiddenMemoryCount.value > 0
-    ? t(
-        `${hiddenMemoryCount.value} 条其余记忆已按当前排序保留在列表外，避免详情页过长。`,
-        `${hiddenMemoryCount.value} additional memories stay outside the visible list to keep the detail page manageable.`,
-      )
-    : '',
-)
-
-const selectedMemoryHeadlineFacts = computed(() => {
-  const detail = selectedMemoryDetail.value
-  if (!detail) return []
-  return [
-    {
-      key: 'sources',
-      label: t('来源模块', 'Source modules'),
-      value: String((detail.sourceModules || []).length || 0),
-      detail: sourceModuleSummaryText(detail.sourceModuleCounts),
-    },
-    {
-      key: 'supporting',
-      label: t('支撑事件', 'Supporting events'),
-      value: String((detail.events || []).length || 0),
-      detail: t('该记忆组当前承接的关系事件数', 'Relationship events attached to this memory group'),
-    },
-    {
-      key: 'latest',
-      label: t('最近沉淀', 'Latest update'),
-      value: formatRelationshipAuditTimestamp(detail.latestCreatedAt),
-      detail: detail.latestSummary || detail.primarySummary || detail.memoryKey,
-    },
-    {
-      key: 'review',
-      label: t('管理状态', 'Review state'),
-      value: memoryReviewStatusLabel(detail.reviewStatus),
-      detail: detail.reviewNote || t('暂无管理备注', 'No review note yet'),
-    },
-  ]
-})
-
-const selectedLinkedActivityEntries = computed(() => {
-  const detailItems = selectedProfile.value?.id
-    ? Object.values(ROLE_DETAIL_SECTIONS).flatMap((section) =>
-        detailItemsForSection(selectedProfile.value, section).filter(
-          (item) =>
-            item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED &&
-            (item.sourceModule || item.memoryKey || item.sourceId),
-        ),
-      )
-    : []
-  const memorySummaries = Array.isArray(selectedRelationshipSnapshot.value?.memorySummaries)
-    ? selectedRelationshipSnapshot.value.memorySummaries
-    : []
-  const memorySummaryByKey = new Map(
-    memorySummaries.map((memory) => [
-      memory.memoryKey,
-      memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey || '',
-    ]),
-  )
-  const eventByMemoryKey = new Map(
-    (selectedRelationshipSnapshot.value?.recentEvents || []).map((event) => [event.memoryKey, event]),
-  )
-
-  return detailItems
-    .map((item) => {
-      const sourceModuleLabel = relationshipSourceModuleLabel(item.sourceModule)
-      const latestEvent = item.memoryKey ? eventByMemoryKey.get(item.memoryKey) : null
-      return {
-        id: item.id,
-        title: item.title || item.detail || sourceModuleLabel,
-        sectionLabel:
-          item.section === ROLE_DETAIL_SECTIONS.LIFE_PATTERN
-            ? t('生活模式', 'Life Pattern')
-            : item.section === ROLE_DETAIL_SECTIONS.SOCIAL_GRAPH
-              ? t('社会关系', 'Social Graph')
-              : t('偏好', 'Preferences'),
-        sourceModule: item.sourceModule || '',
-        sourceModuleLabel,
-        memoryKey: item.memoryKey || '',
-        sourceId: item.sourceId || '',
-        recordId: sourceRecordIdFromRelationshipSourceId(item.sourceId || ''),
-        summary:
-          memorySummaryByKey.get(item.memoryKey) ||
-          latestEvent?.summary ||
-          item.detail ||
-          t('等待更多关系事件沉淀。', 'Waiting for more relationship events.'),
-      }
-    })
-    .sort((left, right) => left.sourceModuleLabel.localeCompare(right.sourceModuleLabel))
-})
-
-const selectedLinkedActivitySummary = computed(() => {
-  const profile = selectedProfile.value
-  if (!profile?.id) {
-    return {
-      sourceText: t('No linked activity yet', 'No linked activity yet'),
-      supportingCount: 0,
-      eventAttachedCount: 0,
-      latestSummary: '',
-    }
-  }
-  const runtimeSourceRefs = Array.isArray(selectedRelationshipSnapshot.value?.sourceRefs)
-    ? selectedRelationshipSnapshot.value.sourceRefs
-    : []
-  const sourceRefMap = new Map(
-    runtimeSourceRefs
-      .filter((ref) => ref?.sourceModule)
-      .map((ref) => [
-        `${ref.sourceModule}:${ref.sourceId || ''}`,
-        {
-          sourceModule: ref.sourceModule,
-          sourceId: ref.sourceId || '',
-        },
-      ]),
-  )
-  const eventAttachedItems = Object.values(ROLE_DETAIL_SECTIONS).flatMap((section) =>
-    detailItemsForSection(profile, section).filter(
-      (item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
-    ),
-  )
-  eventAttachedItems.forEach((item) => {
-    if (!item.sourceModule) return
-    const key = `${item.sourceModule}:${item.sourceId || `detail_item:${item.id}`}`
-    if (!sourceRefMap.has(key)) {
-      sourceRefMap.set(key, {
-        sourceModule: item.sourceModule,
-        sourceId: item.sourceId || '',
-      })
-    }
-  })
-  const sourceCounts = [...sourceRefMap.values()].reduce((acc, ref) => {
-    acc[ref.sourceModule] = (Number(acc[ref.sourceModule]) || 0) + 1
-    return acc
-  }, {})
-  return {
-    sourceText:
-      Object.keys(sourceCounts).length > 0
-        ? sourceModuleSummaryText(sourceCounts)
-        : t('No linked activity yet', 'No linked activity yet'),
-    supportingCount: Object.values(sourceCounts).reduce((sum, count) => sum + (Number(count) || 0), 0),
-    eventAttachedCount: eventAttachedItems.length,
-    latestSummary:
-      relationshipMemoryReviewSummaryText(selectedRelationshipSnapshot.value?.primaryMemory) ||
-      selectedRelationshipSnapshot.value?.primaryMemory?.recallSummary ||
-      selectedRelationshipSnapshot.value?.primaryMemory?.displaySummary ||
-      selectedRelationshipSnapshot.value?.primaryMemory?.primarySummary ||
-      selectedRelationshipSnapshot.value?.primaryMemory?.latestSummary ||
-      selectedRelationshipSnapshot.value?.latestEventSummary ||
-      '',
-  }
-})
-
-const contactsEntityTypeLabel = (entityType) => {
-  if (entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return t('自我档案', 'Self Profile')
-  if (entityType === CONTACTS_ENTITY_TYPES.NPC) return t('NPC / 世界角色', 'NPC / World Role')
-  return t('主要角色', 'Main Role')
-}
-
-const selectedChatStateLabel = computed(() => {
-  if (selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
-    return t('不作为 Chat 目标', 'Not a Chat target')
-  }
-  return selectedProfileChatBound.value ? t('Chat 目标', 'Chat target') : t('仅在 Contacts', 'Contacts only')
-})
-
-const selectedChatStateDetail = computed(() => {
-  if (selectedProfileEntityType.value === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
-    return t(
-      '自我档案只通过可见性门控进入上下文，不会绑定成聊天对象。',
-      'Self Profile only enters context through visibility gates and is not bound as a chat target.',
-    )
-  }
-  if (selectedProfileChatBound.value) {
-    return t(
-      '已进入 Chat Directory；这里仍保留档案、关系和记忆管理。',
-      'Already in Chat Directory; Contacts still owns profile, relationship, and memory management.',
-    )
-  }
-  return t(
-    '需要聊天时到 Chat Directory 绑定；Contacts 仍可先维护完整档案。',
-    'Bind in Chat Directory when this role should enter Chat; Contacts can maintain the profile first.',
-  )
-})
-
-const chatSocialSnapshotLabel = (state = '') => {
-  if (state === CHAT_CONTACT_SOCIAL_STATES.CONNECTED) return t('可正常聊天', 'Can chat normally')
-  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) {
-    return t('还不是常规 Chat 联系人', 'Not a normal Chat contact yet')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) {
-    return t('打招呼请求待处理', 'Greeting request pending')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) {
-    return t('用户已发送打招呼请求', 'User greeting request sent')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) {
-    return t('请求已被忽略或拒绝', 'Request declined or ignored')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) return t('已被用户拉黑', 'Blocked by user')
-  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) {
-    return t('对方暂不接收消息', 'They are not receiving messages')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
-    return t('双方互相拉黑', 'Both sides are blocked')
-  }
-  return t('没有 Chat 绑定', 'No Chat binding')
-}
-
-const selectedChatSocialSnapshot = computed(() => {
-  const contact = selectedRoleChatContact.value
-  if (!contact) {
-    return {
-      exists: false,
-      label: t('没有 Chat 绑定', 'No Chat binding'),
-      detail: t(
-        'Contacts 保留角色档案；Chat Directory 决定这个角色是否能进入聊天。',
-        'Contacts keeps the role profile. Chat Directory decides whether this role can chat.',
-      ),
-      note: '',
-      updatedAtLabel: '',
-    }
-  }
-  const state = chatStore.getContactChatSocialState(contact)
-  return {
-    exists: true,
-    state,
-    label: chatSocialSnapshotLabel(state),
-    detail: t(
-      '来自 Chat 的只读快照。Contacts 只展示这个状态，不应用通讯变更。',
-      'Read-only from Chat. Contacts displays this state but does not apply communication changes.',
-    ),
-    note: contact.chatSocialNote || '',
-    updatedAtLabel: contact.chatSocialUpdatedAt
-      ? formatRelationshipAuditTimestamp(contact.chatSocialUpdatedAt)
-      : '',
-  }
-})
-
-const selectedRoleHubCards = computed(() => [
-  {
-    key: 'entity',
-    label: t('实体', 'Entity'),
-    value: contactsEntityTypeLabel(selectedProfileEntityType.value),
-    detail: selectedChatStateDetail.value,
-  },
-  {
-    key: 'chat',
-    label: t('Chat 状态', 'Chat state'),
-    value: selectedChatStateLabel.value,
-    detail: selectedRoleChatContact.value
-      ? t(`会话 ID ${selectedRoleChatContact.value.id}`, `Chat ID ${selectedRoleChatContact.value.id}`)
-      : t('还没有会话入口', 'No chat entry yet'),
-  },
-  {
-    key: 'manual',
-    label: t('手动条目', 'Manual details'),
-    value: String(selectedRoleHubStats.value.manual),
-    detail: t('用户维护的稳定设定', 'User-maintained stable facts'),
-  },
-  {
-    key: 'event',
-    label: t('事件挂载', 'Event-attached'),
-    value: String(selectedRoleHubStats.value.eventAttached),
-    detail: t('随记忆或关系重置清理', 'Cleared with memory or relationship reset'),
-  },
-  {
-    key: 'world',
-    label: t('世界字段', 'World fields'),
-    value: String(selectedRoleHubStats.value.worldFieldCount),
-    detail: t('来自 WorldBook 模板', 'From WorldBook templates'),
-  },
-  {
-    key: 'memory',
-    label: t('记忆组', 'Memories'),
-    value: String(selectedRoleHubStats.value.memoryCount),
-    detail: selectedLinkedActivitySummary.value.sourceText,
-  },
-])
 
 const openSelectedChatTarget = () => {
   const contact = selectedRoleChatContact.value
@@ -1276,30 +846,6 @@ const openSelectedChatTarget = () => {
 const openChatDirectory = () => {
   router.push('/chat-contacts')
 }
-
-const roleDetailSections = computed(() => [
-  {
-    key: ROLE_DETAIL_SECTIONS.PREFERENCES,
-    title: t('偏好', 'Preferences'),
-    empty: t('暂无偏好条目。', 'No preference entries yet.'),
-    placeholderTitle: t('偏好标题', 'Preference title'),
-    placeholderDetail: t('偏好说明', 'Preference detail'),
-  },
-  {
-    key: ROLE_DETAIL_SECTIONS.LIFE_PATTERN,
-    title: t('生活模式', 'Life Pattern'),
-    empty: t('暂无生活模式条目。', 'No life-pattern entries yet.'),
-    placeholderTitle: t('模式标题', 'Pattern title'),
-    placeholderDetail: t('生活节奏、作息或习惯', 'Rhythm, schedule, or habit'),
-  },
-  {
-    key: ROLE_DETAIL_SECTIONS.SOCIAL_GRAPH,
-    title: t('社会关系', 'Social Graph'),
-    empty: t('暂无社会关系条目。', 'No social-graph entries yet.'),
-    placeholderTitle: t('关系标题', 'Relationship title'),
-    placeholderDetail: t('人物、组织或关系说明', 'Person, group, or relationship detail'),
-  },
-])
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -1327,59 +873,6 @@ const selectProfile = (profile) => {
 
 const selectMemoryGroup = (memory) => {
   selectedMemoryKey.value = memory?.memoryKey || ''
-}
-
-const detailItemsForSection = (profile, section) =>
-  profile?.id ? chatStore.listRoleDetailItems(profile.id, section) : []
-
-const detailItemStatsForSection = (profile, section) => {
-  const items = detailItemsForSection(profile, section)
-  return {
-    total: items.length,
-    manual: items.filter((item) => item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED).length,
-    eventAttached: items.filter((item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED).length,
-  }
-}
-
-const detailItemGroupsForSection = (profile, section) => {
-  const items = detailItemsForSection(profile, section)
-  return [
-    {
-      key: ROLE_DETAIL_SOURCE_KINDS.MANUAL,
-      title: t('手动条目', 'Manual details'),
-      description: t('用户维护的稳定设定，可在这里单独删除。', 'User-maintained stable facts that can be deleted here.'),
-      items: items.filter((item) => item.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED),
-    },
-    {
-      key: ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
-      title: t('事件挂载', 'Event-attached'),
-      description: t(
-        '由聊天、地图、日程等发展挂载；通过对应记忆或关系重置清理。',
-        'Attached by Chat, Map, Calendar, or other development; clear through the linked memory or relationship reset.',
-      ),
-      items: items.filter((item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED),
-    },
-  ].filter((group) => group.items.length > 0)
-}
-
-const roleDetailSourceLabel = (item) =>
-  item?.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED
-    ? t('事件挂载', 'Event-attached')
-    : t('手动', 'Manual')
-
-const roleDetailSourceHint = (item) => {
-  if (item?.sourceKind !== ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED) {
-    return t('用户手动输入，可单独删除。', 'User-entered detail. It can be deleted directly.')
-  }
-  const refs = [
-    item.memoryKey ? `${t('记忆', 'Memory')}: ${item.memoryKey}` : '',
-    item.sourceModule ? `${t('来源', 'Source')}: ${item.sourceModule}` : '',
-  ].filter(Boolean)
-  const suffix = refs.length ? ` ${refs.join(' · ')}` : ''
-  return `${t(
-    '事件发展挂载，需删除对应记忆或重置关系后自动清理。',
-    'Attached by relationship events; delete the linked memory or reset the relationship to clear it.',
-  )}${suffix}`
 }
 
 const openLinkedMemoryFromDetailItem = (item) => {
@@ -1442,110 +935,6 @@ const saveManualDetailItemEdit = (item) => {
   }
   cancelEditingManualDetailItem()
   setUiNotice('success', t('条目已更新。', 'Entry updated.'))
-}
-
-const profileValueLabel = (value) => {
-  if (!value?.fieldId) return t('自定义字段', 'Custom field')
-  const matchedField = selectedProfileTemplateFields.value.find((field) => field.id === value.fieldId)
-  if (matchedField?.label) return matchedField.label
-  if (value.fieldId === 'pheromone') return t('信息素', 'Pheromone')
-  if (value.fieldId === 'relationship_setting') return t('关系设定', 'Relationship setting')
-  return value.fieldId
-}
-
-const formatProfileValue = (value) => {
-  if (Array.isArray(value?.value)) return value.value.join(', ')
-  return typeof value?.value === 'string' ? value.value : ''
-}
-
-const profileVisibilityLevelLabel = (level = '') =>
-  profileTemplateVisibilityOptions.value.find((option) => option.value === level)?.label ||
-  t('熟悉后知道', 'Familiar')
-
-const profileTemplateFieldPlaceholder = (field = {}) => {
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
-    return t('用逗号分隔多个标签', 'Separate tags with commas')
-  }
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
-    return t('填写相关人物或角色 ID', 'Enter related person or role ID')
-  }
-  return t('填写这个角色的具体值', 'Enter this profile value')
-}
-
-const profileTemplateFieldTypeLabel = (field = {}) => {
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return t('长文本', 'Notes')
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return t('单选', 'Choice')
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return t('标签', 'Tags')
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return t('人物', 'Person')
-  return t('文本', 'Text')
-}
-
-const profileTemplateFieldIconClass = (field = {}) => {
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return 'fas fa-align-left'
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return 'fas fa-list-ul'
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return 'fas fa-tags'
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return 'fas fa-user-tag'
-  return 'fas fa-pen'
-}
-
-const profileTemplateFieldHelper = (field = {}) => {
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
-    return t(
-      '用逗号分隔多个标签，会保存成这个人物的标签列表。',
-      'Use commas to separate tags. They save as this person’s tag list.',
-    )
-  }
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
-    return t(
-      '填写相关人物姓名或角色 ID；正式选择器后续再接入。',
-      'Enter a related person or role ID; a picker can be added later.',
-    )
-  }
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) {
-    return t(
-      '适合记录较长的私设、关系背景或世界观补充。',
-      'Use this for longer private context, relationship background, or world-specific notes.',
-    )
-  }
-  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) {
-    return field.options?.length > 0
-      ? t('从当前世界模板给出的选项中选择一个。', 'Choose one option from this world template.')
-      : t('当前模板没有固定选项，可先填写自定义值。', 'No fixed options yet; enter a custom value for this world.')
-  }
-  return t('填写这个人物在当前世界里的具体值。', 'Enter this person’s concrete value in the current world.')
-}
-
-const profileTemplateDraftTagList = (field = {}) => {
-  if (field.type !== PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return []
-  return String(profileTemplateDraft.values[field.id] || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 8)
-}
-
-const profileTemplateAdaptationTitle = (review = {}) => {
-  if (review.reason === 'no_template') {
-    return t('这个人物还没有套用当前世界的档案模板。', 'This person has no current-world profile template yet.')
-  }
-  if (review.reason === 'missing_template') {
-    return t('这个人物使用的旧模板当前不可用。', 'This person uses a template that is not available here.')
-  }
-  if (review.reason === 'outside_current_world') {
-    return t('这个人物的档案来自另一个世界模板。', 'This profile comes from another world template.')
-  }
-  if (review.reason === 'outdated_template') {
-    return t('这个人物使用的是旧版本模板。', 'This profile uses an older template version.')
-  }
-  return t('这个人物的世界档案可以继续使用。', 'This world profile can continue to be used.')
-}
-
-const profileTemplateAdaptationSummary = (review = {}) => {
-  const target = review.recommendedTemplateTitle || t('当前世界模板', 'current-world template')
-  return t(
-    `建议适配到「${target}」。AI 只会生成草稿，旧字段会保留为自定义字段，确认保存后才会更新这个人物。`,
-    `Suggested target: ${target}. AI will only create a draft; old fields stay as custom fields until you review and save.`,
-  )
 }
 
 const clearProfileTemplateDraftRecord = (record) => {
@@ -1937,6 +1326,14 @@ const draftAvatarPreviewUrl = computed(() =>
 
 const contactAvatarUrl = (contact = {}) => resolveAvatarImageUrl(contact) || fallbackAvatarUrl(contact.name)
 
+const { selectedProfileHeader } = useContactsProfileHeaderModel({
+  selectedProfile,
+  selectedProfileChatBound,
+  t,
+  getAvatarUrl: (profile) => contactAvatarUrl(profile),
+  formatRoleId: (roleId, id) => normalizeRoleId(roleId, id),
+})
+
 watch(
   draftPreviewKeepAliveAssetIds,
   (assetIds) => {
@@ -2129,12 +1526,6 @@ const cleanupResultSummaryText = (cleanupResult) => {
   return formatCleanupResultSummaryText(cleanupResult, t)
 }
 
-const selectedDangerImpactText = computed(() =>
-  selectedDeleteImpact.value
-    ? `${t('影响', 'Impact')}: ${t('Chat 绑定', 'Chat bindings')} ${selectedDeleteImpact.value.chatBindingCount || 0} · ${t('记忆组', 'memories')} ${selectedDeleteImpact.value.memoryGroupCount || 0} · ${t('来源', 'sources')} ${sourceModuleSummaryText(selectedDeleteImpact.value.sourceModuleCounts)}`
-    : '',
-)
-
 const relationshipSourceCleanupHandlers = computed(() =>
   createRelationshipSourceCleanupHandlers({
     phoneStore,
@@ -2169,20 +1560,13 @@ const confirmTypedRole = async (profile, title, message) => {
 const resetSelectedRelationship = async () => {
   const profile = selectedProfile.value
   if (!profile?.id) return
-  const snapshot = selectedRelationshipSnapshot.value
-  const impact = selectedDeleteImpact.value
   const firstOk = await confirmDialog({
     title: t('重置关系进度', 'Reset relationship progress'),
     message: t(
       '该操作会保留角色档案，但清除关系指标、阶段、里程碑、成长特征、记忆组、事件挂载详情和聊天记录。',
       'This keeps the role profile but clears metrics, stage, milestones, growth traits, memories, event-attached details, and chat history.',
     ),
-    details: [
-      `${t('当前阶段', 'Current stage')}: ${relationshipStageLabel(snapshot?.relationshipStage)}`,
-      `${t('记忆组', 'Memory groups')}: ${impact?.memoryGroupCount || 0}`,
-      `${t('跨模块来源', 'Cross-module sources')}: ${sourceModuleSummaryText(impact?.sourceModuleCounts)}`,
-      cleanupCoverageText(impact?.sourceModuleCounts),
-    ],
+    details: resetRelationshipDialogDetails.value,
     confirmText: t('继续', 'Continue'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2216,22 +1600,13 @@ const resetSelectedRelationship = async () => {
 const deleteSelectedProfile = async () => {
   const profile = selectedProfile.value
   if (!profile?.id) return
-  const impact = selectedDeleteImpact.value
   const firstOk = await confirmDialog({
     title: t('删除角色档案', 'Delete role profile'),
     message: t(
       '该操作不可撤销，会删除 Contacts 档案、Chat Directory 绑定、该角色聊天记录、关系进度和记忆组。',
       'This cannot be undone. It deletes the Contacts profile, Chat Directory binding, role chat history, relationship progress, and memories.',
     ),
-    details: [
-      `${t('角色', 'Role')}: ${profile.name || ''} · ID ${normalizeRoleId(profile.roleId, profile.id)}`,
-      `${t('Chat 绑定', 'Chat bindings')}: ${impact?.chatBindingCount || 0}`,
-      `${t('记忆组', 'Memory groups')}: ${impact?.memoryGroupCount || 0}`,
-      t(
-        'Photos 素材不会被静默删除，只会解除角色档案引用；如需删除图片，请前往相册手动处理。',
-        'Photos assets are not silently deleted; role references are unbound only. Delete images manually in Gallery if needed.',
-      ),
-    ],
+    details: deleteRoleProfileDialogDetails.value,
     confirmText: t('继续', 'Continue'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2243,18 +1618,7 @@ const deleteSelectedProfile = async () => {
       '请再次确认这次删除会跨越 Contacts、Chat Directory、聊天记录和关系运行时数据。',
       'Confirm this deletion crosses Contacts, Chat Directory, chat history, and relationship runtime data.',
     ),
-    details: [
-      `${t('范围', 'Scope')}: Contacts profile · Chat Directory binding · Chat history · Relationship runtime`,
-      `${t('角色', 'Role')}: ${profile.name || ''} · ID ${normalizeRoleId(profile.roleId, profile.id)}`,
-      selectedDangerImpactText.value,
-      dangerIncludeLinkedRecords.value
-        ? cleanupCoverageText(impact?.sourceModuleCounts)
-        : t('不会删除跨模块源记录；它们只保留在影响清单中。', 'Cross-module source records will not be deleted; they stay in the impact summary only.'),
-      t(
-        'Photos 素材只解除引用，不会静默删除源图片。',
-        'Photos assets are unbound only; source images are not silently deleted.',
-      ),
-    ],
+    details: deleteRoleScopeDialogDetails.value,
     confirmText: t('继续输入 ID', 'Continue to ID'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2293,12 +1657,8 @@ const deleteMemoryGroup = async (memory) => {
       )
   const ok = await confirmDialog({
     title: t('删除记忆组', 'Delete memory group'),
-    message: detail?.displaySummary || memory.displaySummary || memory.primarySummary || memory.memoryKey,
-    details: [
-      `${t('包含关系事件', 'Relationship events')}: ${detail?.events?.length || memory.supportingCount || 0}`,
-      `${t('来源', 'Sources')}: ${sourceModuleSummaryText(detail?.sourceModuleCounts)}`,
-      cleanupCoverageText(detail?.sourceModuleCounts),
-    ],
+    message: memoryDeletePreviewMessage(memory, detail),
+    details: memoryDeletePreviewDetails(memory, detail),
     confirmText: t('继续', 'Continue'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2310,17 +1670,7 @@ const deleteMemoryGroup = async (memory) => {
       '将删除该记忆组、直接挂载的关系事件和事件挂载详情。',
       'This deletes this memory group, directly attached relationship events, and event-attached details.',
     ),
-    details: [
-      `${t('记忆键', 'Memory key')}: ${memory.memoryKey}`,
-      t(
-        '普通自由聊天消息不会被删除。',
-        'Normal free-form chat messages will not be deleted.',
-      ),
-      t(
-        '如需删除原始聊天文本，请前往 Chat 对话中处理。',
-        'Delete original chat text from the Chat conversation if needed.',
-      ),
-    ],
+    details: memoryDeleteFinalDetails(memory),
     confirmText: t('删除记忆组', 'Delete memory'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2384,6 +1734,27 @@ const relationshipStageLabel = (stage) => {
   if (stage === 'conflict') return t('冲突', 'Conflict')
   return t('陌生/未展开', 'Stranger / unset')
 }
+
+const {
+  selectedDangerImpactText,
+  resetRelationshipDialogDetails,
+  deleteRoleProfileDialogDetails,
+  deleteRoleScopeDialogDetails,
+  dangerIncludeLinkedRecordsText,
+  memoryDeletePreviewMessage,
+  memoryDeletePreviewDetails,
+  memoryDeleteFinalDetails,
+} = useContactsDangerZoneModel({
+  selectedProfile,
+  selectedRelationshipSnapshot,
+  selectedDeleteImpact,
+  dangerIncludeLinkedRecords,
+  t,
+  formatRoleId: (roleId, id) => normalizeRoleId(roleId, id),
+  formatRelationshipStageLabel: (stage) => relationshipStageLabel(stage),
+  formatSourceModuleSummary: (sourceModuleCounts) => sourceModuleSummaryText(sourceModuleCounts),
+  formatCleanupCoverage: (sourceModuleCounts) => cleanupCoverageText(sourceModuleCounts),
+})
 
 const profileRelationshipTarget = (profile) => ({
   entityKey: profile?.id ? `role:${profile.id}` : '',
@@ -2449,17 +1820,31 @@ const contactWorldFieldCount = (profile = {}) =>
 const contactEventAttachedCount = (profile = {}) =>
   profile?.id
     ? Object.values(ROLE_DETAIL_SECTIONS).reduce(
-        (sum, section) =>
-          sum +
-          detailItemsForSection(profile, section).filter(
-            (item) => item.sourceKind === ROLE_DETAIL_SOURCE_KINDS.EVENT_ATTACHED,
-          ).length,
+        (sum, section) => sum + detailItemStatsForSection(profile, section).eventAttached,
         0,
       )
     : 0
 
 const contactIsChatBound = (profile = {}) =>
   profile?.id ? chatStore.isRoleProfileBound(profile.id) : false
+
+const {
+  selfProfiles,
+  isContactsSearchActive,
+  filteredSelfProfiles,
+  filteredMainProfiles,
+  filteredNpcProfiles,
+  recentInteractionContacts,
+  contactRecentSourceLabel,
+} = useContactsHomeListModel({
+  roleProfiles,
+  contactsSearchQuery,
+  t,
+  isChatBound: contactIsChatBound,
+  getRelationshipSnapshot: profileRelationshipSnapshot,
+  getEventAttachedCount: contactEventAttachedCount,
+  formatEntityTypeLabel: contactsEntityTypeLabel,
+})
 
 const contactListStatusHint = (profile = {}) => {
   if (profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
@@ -2478,34 +1863,6 @@ const contactListStatusHint = (profile = {}) => {
   const knowledgeSummary = profileKnowledgeSummary(profile)
   return knowledgeSummary || t('仅在通讯录', 'Contacts only')
 }
-
-const contactRecentScore = (profile = {}) => {
-  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return 0
-  const snapshot = profileRelationshipSnapshot(profile)
-  const chatScore = contactIsChatBound(profile) ? 100 : 0
-  const memoryScore = Number(snapshot?.totalMemoryCount || 0) * 10
-  const detailScore = contactEventAttachedCount(profile)
-  return chatScore + memoryScore + detailScore
-}
-
-const contactRecentSourceLabel = (profile = {}) => {
-  if (contactIsChatBound(profile)) return t('Chat', 'Chat')
-  const snapshot = profileRelationshipSnapshot(profile)
-  if (snapshot?.totalMemoryCount > 0) return t('记忆', 'Memory')
-  if (contactEventAttachedCount(profile) > 0) return t('事件', 'Event')
-  return contactsEntityTypeLabel(profile.entityType)
-}
-
-const recentInteractionContacts = computed(() =>
-  [...mainRoleProfiles.value, ...npcRoleProfiles.value]
-    .map((profile) => ({
-      profile,
-      score: contactRecentScore(profile),
-    }))
-    .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score || Number(right.profile.id) - Number(left.profile.id))
-    .slice(0, 10),
-)
 
 const autoGenerateProfile = async () => {
   if (!profileDraft.name.trim()) {
@@ -3295,23 +2652,23 @@ onBeforeUnmount(() => {
           <section class="contacts-detail-section">
             <div class="flex items-start gap-3">
               <div class="w-14 h-14 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                <img :src="contactAvatarUrl(selectedProfile)" class="w-full h-full object-cover" />
+                <img :src="selectedProfileHeader.avatarUrl" class="w-full h-full object-cover" />
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('Profile', 'Profile') }}</p>
-                <h2 class="text-lg font-bold truncate">{{ selectedProfile.name }}</h2>
+                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ selectedProfileHeader.eyebrow }}</p>
+                <h2 class="text-lg font-bold truncate">{{ selectedProfileHeader.name }}</h2>
                 <p class="text-xs text-gray-500 truncate">
-                  {{ selectedProfile.role || t('未设置角色', 'Role not set') }} · ID {{ normalizeRoleId(selectedProfile.roleId, selectedProfile.id) }}
+                  {{ selectedProfileHeader.metaText }}
                 </p>
                 <p class="text-[11px] text-gray-500 mt-1 line-clamp-3">
-                  {{ selectedProfile.bio || t('暂无档案简介。', 'No profile intro yet.') }}
+                  {{ selectedProfileHeader.bioText }}
                 </p>
               </div>
               <button @click="openEditProfile(selectedProfile)" class="contacts-small-action">
                 {{ t('编辑', 'Edit') }}
               </button>
             </div>
-            <div v-if="selectedProfileIsNpc" class="mt-3 space-y-2">
+            <div v-if="selectedProfileHeader.isNpc" class="mt-3 space-y-2">
               <button
                 type="button"
                 class="contacts-primary-action"
@@ -3321,11 +2678,7 @@ onBeforeUnmount(() => {
                 {{ t('Upgrade to main role', 'Upgrade to main role') }}
               </button>
               <p class="text-xs text-gray-500">
-                {{
-                  selectedProfileChatBound
-                    ? t('Existing Chat binding will be preserved.', 'Existing Chat binding will be preserved.')
-                    : t('Upgrade will not force Chat Directory binding.', 'Upgrade will not force Chat Directory binding.')
-                }}
+                {{ selectedProfileHeader.upgradeHint }}
               </p>
             </div>
           </section>
@@ -3726,17 +3079,7 @@ onBeforeUnmount(() => {
                 </p>
                 <h3 class="font-semibold">{{ t('扩展设定', 'Extended settings') }}</h3>
                 <p class="mt-1 text-[11px] leading-4 text-gray-500">
-                  {{
-                    selectedProfileTemplate
-                      ? t(
-                          `来自模板：${selectedProfileTemplate.title}`,
-                          `From template: ${selectedProfileTemplate.title}`,
-                        )
-                      : t(
-                          '这里填写由世界书模板定义的角色、用户档案或 NPC 专属资料。',
-                          'Fill concrete role, self-profile, or NPC values defined by WorldBook templates.',
-                        )
-                  }}
+                  {{ selectedWorldFieldIntroText }}
                 </p>
               </div>
               <button
@@ -3750,41 +3093,23 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="selectedProfileTemplateAdaptationReview.needsAttention"
+              v-if="selectedProfileTemplateAdaptationDisplay.needsAttention"
               class="contacts-template-adaptation-review"
               data-testid="contacts-template-adaptation-review"
             >
               <div class="contacts-template-adaptation-review__head">
                 <i class="fas fa-arrows-rotate" aria-hidden="true"></i>
                 <div>
-                  <p>{{ profileTemplateAdaptationTitle(selectedProfileTemplateAdaptationReview) }}</p>
-                  <span>{{ profileTemplateAdaptationSummary(selectedProfileTemplateAdaptationReview) }}</span>
+                  <p>{{ selectedProfileTemplateAdaptationDisplay.title }}</p>
+                  <span>{{ selectedProfileTemplateAdaptationDisplay.summary }}</span>
                 </div>
               </div>
               <ul>
-                <li>
-                  {{
-                    t(
-                      `推荐模板：${selectedProfileTemplateAdaptationReview.recommendedTemplateTitle} · v${selectedProfileTemplateAdaptationReview.recommendedTemplateVersion}`,
-                      `Recommended template: ${selectedProfileTemplateAdaptationReview.recommendedTemplateTitle} · v${selectedProfileTemplateAdaptationReview.recommendedTemplateVersion}`,
-                    )
-                  }}
-                </li>
-                <li>
-                  {{
-                    t(
-                      `可直接沿用的字段：${selectedProfileTemplateAdaptationReview.sharedValueCount} 项`,
-                      `Reusable existing field(s): ${selectedProfileTemplateAdaptationReview.sharedValueCount}`,
-                    )
-                  }}
-                </li>
-                <li>
-                  {{
-                    t(
-                      `会保留为自定义字段：${selectedProfileTemplateAdaptationReview.preservedCustomCount} 项`,
-                      `Will stay as custom field(s): ${selectedProfileTemplateAdaptationReview.preservedCustomCount}`,
-                    )
-                  }}
+                <li
+                  v-for="fact in selectedProfileTemplateAdaptationDisplay.facts"
+                  :key="fact.key"
+                >
+                  {{ fact.text }}
                 </li>
               </ul>
               <div class="contacts-template-adaptation-review__actions">
@@ -3821,25 +3146,14 @@ onBeforeUnmount(() => {
               >
                 <div>
                   <p class="font-medium">{{ row.title }}</p>
-                  <p v-if="row.value" class="text-sm text-gray-600">{{ formatProfileValue(row.value) }}</p>
+                  <p v-if="row.displayValue" class="text-sm text-gray-600">{{ row.displayValue }}</p>
                   <p v-else class="text-sm text-gray-400">{{ t('未填写', 'Not filled') }}</p>
                   <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
                     {{ row.description }}
                   </p>
                 </div>
                 <span class="contacts-source-chip" :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'">
-                  {{
-                    row.isTemplateField
-                      ? row.value
-                        ? profileVisibilityLevelLabel(row.value.visibilityLevel)
-                        : profileVisibilityLevelLabel(row.field?.defaultVisibilityLevel)
-                      : row.value
-                        ? t(
-                            `${profileVisibilityLevelLabel(row.value.visibilityLevel)} · 自定义`,
-                            `${profileVisibilityLevelLabel(row.value.visibilityLevel)} · Custom`,
-                          )
-                        : t('自定义字段', 'Custom field')
-                  }}
+                  {{ row.badgeLabel }}
                 </span>
               </div>
             </div>
@@ -3893,41 +3207,18 @@ onBeforeUnmount(() => {
                 <div class="contacts-template-change-review__head">
                   <i class="fas fa-clipboard-check" aria-hidden="true"></i>
                   <div>
-                    <p>{{ t('保存前预览', 'Save review') }}</p>
+                    <p>{{ profileTemplateChangeReview.title }}</p>
                     <span>
-                      {{
-                        t(
-                          '换模板不会静默删除旧资料；保存前先确认更新和保留范围。',
-                          'Changing templates will not silently delete old details; review what updates and what stays.',
-                        )
-                      }}
+                      {{ profileTemplateChangeReview.summary }}
                     </span>
                   </div>
                 </div>
                 <ul>
-                  <li>
-                    {{
-                      t(
-                        `这些字段会更新到当前角色档案：${profileTemplateDraftFields.length} 项`,
-                        `These fields will update this profile: ${profileTemplateDraftFields.length}`,
-                      )
-                    }}
-                  </li>
-                  <li>
-                    {{
-                      t(
-                        `不属于这个模板的旧字段会保留为自定义字段：${profileTemplateDraftPreservedRows.length} 项`,
-                        `Old fields will stay as custom fields: ${profileTemplateDraftPreservedRows.length}`,
-                      )
-                    }}
-                  </li>
-                  <li>
-                    {{
-                      t(
-                        '如需删除旧字段，请在角色档案中单独清理。',
-                        'To delete old fields, clean them up separately in the role profile.',
-                      )
-                    }}
+                  <li
+                    v-for="fact in profileTemplateChangeReview.facts"
+                    :key="fact.key"
+                  >
+                    {{ fact.text }}
                   </li>
                 </ul>
                 <div
@@ -3946,21 +3237,16 @@ onBeforeUnmount(() => {
 
               <div v-if="contactsProfileTemplateOptions.length === 0" class="contacts-empty-detail">
                 <p>
-                  {{
-                    t(
-                      '当前世界还没有角色档案模板。先到世界书复制或建立模板，再回来填写角色值。',
-                      'This world has no role profile template yet. Create or copy one in WorldBook first.',
-                    )
-                  }}
+                  {{ emptyTemplateOptionsText }}
                 </p>
                 <button type="button" class="contacts-small-action mt-2" @click="openWorldBookProfileTemplates">
                   {{ t('打开世界书', 'Open WorldBook') }}
                 </button>
               </div>
 
-              <div v-else-if="profileTemplateDraftFields.length > 0" class="contacts-world-field-form">
+              <div v-else-if="profileTemplateDraftFieldRows.length > 0" class="contacts-world-field-form">
                 <label
-                  v-for="field in profileTemplateDraftFields"
+                  v-for="field in profileTemplateDraftFieldRows"
                   :key="field.id"
                   class="contacts-world-field-control"
                   :class="`contacts-world-field-control--${field.type}`"
@@ -3968,20 +3254,20 @@ onBeforeUnmount(() => {
                 >
                   <span class="contacts-world-field-control__head">
                     <span class="contacts-world-field-control__label">
-                      <i :class="profileTemplateFieldIconClass(field)" aria-hidden="true"></i>
+                      <i :class="field.iconClass" aria-hidden="true"></i>
                       <span>{{ field.label }}</span>
                       <small v-if="field.required">{{ t('必填', 'Required') }}</small>
                     </span>
-                    <strong class="contacts-world-field-type-chip">{{ profileTemplateFieldTypeLabel(field) }}</strong>
+                    <strong class="contacts-world-field-type-chip">{{ field.typeLabel }}</strong>
                   </span>
                   <p
                     class="contacts-world-field-control__helper"
                     :data-testid="`contacts-profile-template-helper-${field.id}`"
                   >
-                    {{ profileTemplateFieldHelper(field) }}
+                    {{ field.helper }}
                   </p>
                   <select
-                    v-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT && field.options.length > 0"
+                    v-if="field.controlKind === 'select'"
                     v-model="profileTemplateDraft.values[field.id]"
                     :data-testid="`contacts-profile-template-value-${field.id}`"
                   >
@@ -3991,28 +3277,28 @@ onBeforeUnmount(() => {
                     </option>
                   </select>
                   <textarea
-                    v-else-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT"
+                    v-else-if="field.controlKind === 'textarea'"
                     v-model="profileTemplateDraft.values[field.id]"
                     :data-testid="`contacts-profile-template-value-${field.id}`"
-                    :placeholder="profileTemplateFieldPlaceholder(field)"
+                    :placeholder="field.placeholder"
                     rows="3"
                   ></textarea>
                   <input
                     v-else
                     v-model="profileTemplateDraft.values[field.id]"
                     :data-testid="`contacts-profile-template-value-${field.id}`"
-                    :placeholder="profileTemplateFieldPlaceholder(field)"
+                    :placeholder="field.placeholder"
                   />
                   <div
-                    v-if="field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS"
+                    v-if="field.hasTagPreview"
                     class="contacts-world-field-tag-preview"
                     :data-testid="`contacts-profile-template-tag-preview-${field.id}`"
                   >
-                    <span v-for="tag in profileTemplateDraftTagList(field)" :key="`${field.id}-${tag}`">
+                    <span v-for="tag in field.tagPreview" :key="`${field.id}-${tag}`">
                       {{ tag }}
                     </span>
-                    <em v-if="profileTemplateDraftTagList(field).length === 0">
-                      {{ t('输入后会在这里预览标签', 'Tags preview here as you type') }}
+                    <em v-if="field.tagPreview.length === 0">
+                      {{ tagPreviewEmptyText }}
                     </em>
                   </div>
                   <select
@@ -4031,7 +3317,7 @@ onBeforeUnmount(() => {
                 </label>
               </div>
               <p v-else-if="profileTemplateDraft.templateId" class="contacts-empty-detail">
-                {{ t('这个模板没有适用于当前人物类型的字段。', 'This template has no fields for this profile type.') }}
+                {{ emptyTemplateFieldText }}
               </p>
 
               <div class="contacts-world-field-editor__actions">
@@ -4064,7 +3350,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section
-            v-for="section in roleDetailSections"
+            v-for="section in selectedDetailSectionRows"
             :key="section.key"
             class="contacts-detail-section space-y-2"
             :data-testid="`contacts-detail-section-${section.key}`"
@@ -4075,22 +3361,22 @@ onBeforeUnmount(() => {
                 class="contacts-detail-counts"
                 :data-testid="`contacts-detail-counts-${section.key}`"
               >
-                <span>{{ t('手动', 'Manual') }} {{ detailItemStatsForSection(selectedProfile, section.key).manual }}</span>
-                <span>{{ t('事件', 'Event') }} {{ detailItemStatsForSection(selectedProfile, section.key).eventAttached }}</span>
+                <span>{{ t('手动', 'Manual') }} {{ section.stats.manual }}</span>
+                <span>{{ t('事件', 'Event') }} {{ section.stats.eventAttached }}</span>
               </div>
             </div>
             <p class="text-[11px] leading-4 text-gray-500">
-              {{ t('手动条目由用户维护；事件挂载条目来自聊天、地图、日程等发展，会随记忆删除或关系重置一起清理。', 'Manual entries are user-maintained; event-attached entries come from Chat, Map, Calendar, and other development, and are cleared with memory deletion or relationship reset.') }}
+              {{ roleDetailPolicyText }}
             </p>
             <div
-              v-if="detailItemsForSection(selectedProfile, section.key).length === 0"
+              v-if="section.items.length === 0"
               class="contacts-empty-detail"
             >
               {{ section.empty }}
             </div>
             <div v-else class="space-y-2">
               <div
-                v-for="group in detailItemGroupsForSection(selectedProfile, section.key)"
+                v-for="group in section.groups"
                 :key="group.key"
                 class="contacts-detail-group"
                 :data-testid="`contacts-detail-group-${section.key}-${group.key}`"
@@ -4487,7 +3773,7 @@ onBeforeUnmount(() => {
                 data-testid="contacts-danger-include-linked-records"
               />
               <span>
-                {{ t('同时尝试删除已明确接入 cleanup 的跨模块源记录；未接入或语义不明的记录只会出现在影响清单中。', 'Also attempt to delete cross-module source records with explicit cleanup handlers. Missing or ambiguous records stay in the impact summary only.') }}
+                {{ dangerIncludeLinkedRecordsText }}
               </span>
             </label>
             <div class="grid grid-cols-2 gap-2">
