@@ -97,18 +97,53 @@ Status: `ENCYCLOPEDIA_REAL_ENTITY_MEMBER_COORDINATE_MERGED_DRAFT`
 - &TEAM：2022 出道，HYBE Labels Japan / YX Labels；日本市场、HYBE 全球化、跨国团体和日语活动坐标。
 - NEXZ：2024 出道，JYP Entertainment / Sony Music；JYP 日本市场、Nizi Project 系列、K-pop / J-pop 交界坐标。
 
-## 3. 节目、平台、榜单与奖项坐标
+## 3. 电视台、节目、平台、榜单与奖项坐标
+
+电视台、频道与制作体系：
+
+- KBS：韩国公共电视台；Music Bank、KBS 歌谣大祝祭、KBS World、KBS Kpop YouTube 和传统综艺制作坐标。常见语境包括汝矣岛电视台、KBS 新馆公开厅、上班路、全球播出、年末舞台和公共电视台采访。
+- MBC：韩国公共电视台；Show! Music Core、MBC 歌谣大祭典、Radio Star、I Live Alone、The Manager 和 MBC M / MBC every1 音乐综艺坐标。常见语境包括上岩 MBC、日山 MBC Dream Center、电视台待机室、长寿节目、综艺剪辑和话题采访。
+- SBS：韩国商业电视台；Inkigayo、Running Man、SBS 歌谣大战、娱乐新闻和 SBS KPOP 官方频道坐标。常见语境包括登村洞 SBS Open Hall、公开录制、节目后台、艺人上班路、户外任务和新闻标题。
+- Mnet / CJ ENM：音乐频道与内容制作体系；M Countdown、MAMA Awards、KCON、STUDIO CHOOM、M2、选秀节目和全球 K-pop 内容坐标。常见语境包括上岩 CJ ENM Center、全球投票、选秀叙事、舞蹈影像、海外市场和平台联动。
+- tvN / TVING：CJ ENM 旗下娱乐频道与流媒体坐标；Amazing Saturday、You Quiz on the Block、Earth Arcade、Jinny's Kitchen 和 Na PD 系列内容适合承接综艺曝光、旅行企划、谈话采访和流媒体二次传播。
+- JTBC：综合编成频道；Knowing Bros、选秀类节目、音乐企划和话题综艺坐标。常见语境包括棚内录制、学校设定、前后辈玩笑、嘉宾宣传和节目高光剪辑。
+- ENA：新兴有线频道与娱乐内容坐标；适合承接轻综艺、观察类节目、季播企划、演员与 idol 跨界曝光。
+- Arirang TV：面向海外观众的英语/多语种韩国内容频道；Simply K-Pop、采访、海外粉丝沟通和英语主持坐标。
+- MBC M / MBC every1：音乐与综艺有线频道；Show Champion、Weekly Idol、Idol Radio 和新人团体综艺曝光坐标。常见语境包括日山 Bitmaru Broadcasting Center、偶像综艺棚、随机舞蹈、录前问候和新人宣传。
 
 音乐节目与舞台：
 
-- M Countdown：Mnet 音乐节目；打歌、预录、粉丝投票、后台同框、挑战内容和全球 K-pop 节目坐标。
-- Music Bank：KBS 音乐节目；K-Chart、电视台预录、上班路、全球特别场和年末舞台坐标。
-- Show! Music Core：MBC 音乐节目；打歌舞台、直播表演、主持人资源和粉丝应援坐标。
-- Inkigayo：SBS 音乐节目；周末打歌、热门舞台、MC 同框和一位竞争坐标。
-- The Show：SBS M 音乐节目；新人、回归初期、粉丝投票和小型公司曝光坐标。
-- Show Champion：MBC M 音乐节目；打歌补充、粉丝投票和回归期曝光坐标。
+- M Countdown：Mnet 音乐节目；上岩 CJ ENM Center、打歌、预录、粉丝投票、后台同框、挑战内容和全球 K-pop 节目坐标。
+- Music Bank：KBS 音乐节目；汝矣岛 KBS 新馆公开厅、K-Chart、电视台预录、上班路、全球特别场和年末舞台坐标。
+- Show! Music Core：MBC 音乐节目；日山 MBC Dream Center、打歌舞台、直播表演、主持人资源和粉丝应援坐标。
+- Inkigayo：SBS 音乐节目；登村洞 SBS Open Hall、周末打歌、热门舞台、MC 同框和一位竞争坐标。
+- The Show：SBS M / SBS funE 系音乐节目；上岩 SBS Prism Tower、新人、回归初期、粉丝投票、小型公司曝光和已播节目历史坐标。2026 语境中可作为旧物料、回忆、AU 复开或架空节目使用。
+- Show Champion：MBC M 音乐节目；日山 Bitmaru Broadcasting Center、打歌补充、粉丝投票和回归期曝光坐标。
+- Simply K-Pop：Arirang TV 音乐节目；英语主持、海外粉丝、全球介绍和中小公司国际曝光坐标。
 - STUDIO CHOOM：数字舞台内容；高质量舞蹈视频、performance 推广和短视频二创坐标。
 - KCON：全球 K-pop 活动；海外 showcase、粉丝互动、品牌展位和全球市场坐标。
+
+热门综艺、谈话节目与网络内容：
+
+- Running Man：SBS 长寿户外综艺；任务、追逐、名牌撕扯、队伍竞争、体能反应、综艺感和全球路人认知坐标。
+- Knowing Bros / Ask Us Anything：JTBC 棚内综艺；学校设定、半语玩笑、个人技、团体化学反应、前后辈调侃和回归宣传坐标。
+- Weekly Idol：MBC M / MBC every1 偶像综艺；新人团体介绍、随机舞蹈、成员定位、个人技、团体默契和粉丝入坑坐标。
+- Idol Human Theater：KBS Kpop 网络综艺；伪纪录片式团体日常、成员人设、轻喜剧剪辑和回归期网络曝光坐标。
+- Amazing Saturday：tvN 音乐综艺；歌词听写、市场美食、固定班底反应、idol 嘉宾宣传和短视频高光坐标。
+- You Quiz on the Block：tvN 谈话节目；个人叙事、职业转折、公众认可、人生采访和成熟艺人形象坐标。
+- Radio Star：MBC 谈话综艺；资深 MC、尖锐提问、艺能压力、反转故事和标题化传播坐标。
+- I Live Alone：MBC 观察综艺；独居生活、日常习惯、家居空间、真实感曝光和成年艺人生活坐标。
+- The Manager / Omniscient Interfering View：MBC 观察综艺；经纪人视角、保姆车、行程移动、后台准备、艺人生活节奏和工作人员关系坐标。
+- Workdol：YouTube 网络综艺；idol 体验打工、轻量任务、综艺反应、年轻观众和短视频传播坐标。
+- Salon Drip：TEO YouTube 谈话内容；访谈、笑点、舒适聊天、演员与 idol 跨界宣传坐标。
+- No Prepare：Lee Young Ji 主持的网络谈话内容；朋友式谈话、坦率反应、成人向轻松氛围和短视频切片坐标。
+- Pinggyego / DdeunDdeun：Yoo Jae-suk 系网络谈话内容；熟人聊天、轻松访谈、资深 MC 信任感和长视频传播坐标。
+
+制作人、MC 与节目席位：
+
+- 综艺 MC、音乐节目 MC、制作人、节目 PD、作家、剪辑团队、A&R、编舞师、vocal director、performance director、品牌 PR、记者、翻译、安保和现场执行，属于行业名人与功能性角色坐标。
+- Yoo Jae-suk / 刘在锡、Kang Ho-dong / 姜镐童、Shin Dong-yup / 申东烨、Lee Soo-geun / 李寿根、Kim Heechul / 金希澈、Boom、Jang Do-yeon / 张度练、Lee Young Ji / 李泳知、Park Bo-gum / 朴宝剑、Na Young-seok / 罗暎锡、Kim Tae-ho / 金泰浩等，可以作为节目与制作生态的代表性名字。
+- 这类角色的详细职责、事件触发方式、公司制作团队和临时事件角色用法，由行业名人与功能性角色百科承接。
 
 粉丝平台、社媒与内容平台：
 

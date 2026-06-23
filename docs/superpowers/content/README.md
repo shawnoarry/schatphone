@@ -29,6 +29,7 @@ Current merged encyclopedia drafts:
 - `2026-06-21-modern-seoul-kpop-production-stage-live-merged-encyclopedia-draft.md`
 - `2026-06-21-modern-seoul-kpop-city-life-state-relationship-merged-encyclopedia-draft.md`
 - `2026-06-21-modern-seoul-kpop-real-entity-member-coordinate-merged-encyclopedia-draft.md`
+- `2026-06-23-modern-seoul-kpop-industry-celebrity-functional-role-encyclopedia-draft.md`
 
 Do not keep old small drafts after their content has been fully absorbed and no current registration, test, or user-facing link references them. Use `2026-06-20-modern-seoul-kpop-encyclopedia-merge-map-draft.md` as the audit map before deleting or replacing K-pop content drafts.
 
