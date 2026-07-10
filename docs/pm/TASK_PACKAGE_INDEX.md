@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-05-19
+Updated: 2026-07-10
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -10,6 +10,12 @@ Use it when the team needs to know:
 - what should be read first;
 - which package owns the current product meaning for that lane;
 - where the current status and next safe slice are recorded.
+
+Current routing note:
+
+- roadmap 4.5 security/toolchain/architecture work belongs to `module-architecture-governance`;
+- roadmap 4.6 World Pack hardening can span visual/IA, Chat/service accounts, commerce, and map/date packages, but the live roadmap owns priority;
+- roadmap 4.7 Modern Seoul K-pop carrier governance remains `DECISION` until one concrete slice is promoted into its owning package.
 
 ## 1. Standard Package Structure
 

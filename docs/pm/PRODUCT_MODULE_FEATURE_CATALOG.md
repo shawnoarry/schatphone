@@ -1,6 +1,6 @@
 # SchatPhone Product Module Feature Catalog
 
-Updated: 2026-05-29
+Updated: 2026-07-10
 
 Purpose: this is the PM-facing module dictionary for SchatPhone.
 
@@ -55,7 +55,10 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | App Store | `/app-store` | Home app | `SHELL_AND_SYSTEM.md` |
 | Profile | `/profile` | Settings entry | `SHELL_AND_SYSTEM.md` |
 | Chat | `/chat`, `/chat/:id` | Home app | `ROLE_CHAT_AND_WORLD.md` |
-| Chat Directory | `/chat-contacts` | Chat/context entry | `ROLE_CHAT_AND_WORLD.md` |
+| Chat Directory | `/chat-contacts` | Chat Objects/Services entry | `ROLE_CHAT_AND_WORLD.md` |
+| Chat Groups | `/chat-groups` | Chat tab/context entry | `ROLE_CHAT_AND_WORLD.md` |
+| Chat Me | `/chat-me` | Chat tab | `ROLE_CHAT_AND_WORLD.md` |
+| Chat Settings / Appearance | `/chat-settings`, `/chat-settings/appearance` | Chat gear/subpage | `ROLE_CHAT_AND_WORLD.md` |
 | Contacts | `/contacts` | Home app | `ROLE_CHAT_AND_WORLD.md` |
 | WorldBook | `/worldbook` | Settings/context entry | `ROLE_CHAT_AND_WORLD.md` |
 | Book | `/book` | recoverable Home/App Store app | `ROLE_CHAT_AND_WORLD.md` |

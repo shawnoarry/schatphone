@@ -1,335 +1,320 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-06-01
+Updated: 2026-07-10
 
-## 1. Purpose
+## 1. Purpose And Status Method
 
-This is the main whole-project overview for product readers, designers, QA, and incoming AI engineers.
+This is the main whole-project overview for product, design, QA, engineering, and incoming AI assistants.
 
-Use this file to understand:
+Use it to understand:
 
 - what SchatPhone is;
-- which product direction is current;
-- how the major modules relate to each other;
-- which docs to read next.
+- how the product and code are organized;
+- what is complete, partial, guarded, or deferred;
+- which risks matter now;
+- which documents control execution.
 
-If an older document conflicts with this file, use this file together with `docs/roadmap/TODO_ROADMAP.md` as the current reference.
+This guide does not claim one synthetic “project completion percentage.” A single number would mix stable infrastructure, integrated V1 features, unfinished visual quality, and deferred product decisions. Current progress is reported through four evidence-based states:
+
+- `Stable`: a core path is usable, tested, and safe to build on;
+- `Integrated V1`: the cross-module loop works, but product hardening remains;
+- `Partial / Guarded`: a narrow baseline exists and broader behavior is intentionally constrained;
+- `Deferred / Decision`: work must not start without a new decision.
+
+Concrete execution status belongs only in `docs/roadmap/TODO_ROADMAP.md`.
 
 ## 2. Product Definition
 
-SchatPhone is an immersive virtual-phone product.
-
-It is not just a chat UI and not just a module playground. The intended experience is:
-
-1. a believable phone shell with lock screen, Home, notifications, and app modules;
-2. a local-first world, role, and life-simulation workspace;
-3. an AI relationship and story system that stays behind the scenes as much as possible;
-4. an extensible module ecosystem where each app owns its own records, while shared services coordinate storage, prompts, events, media, and diagnostics.
-
-The product goal is to make the user feel they are living inside a coherent virtual phone world.
-
-Events, growth, tasks, and numeric systems are allowed, but they should support immersion rather than make the product feel like a visible admin panel or a rigid task manager.
+SchatPhone is a local-first immersive virtual-phone and AI life-simulation product.
 
-## 3. Key Product Boundaries
+The intended experience combines:
 
-These boundaries are now frozen at the product level unless a later decision explicitly changes them.
+1. a believable phone shell with lock screen, Home, notifications, and app-like modules;
+2. a role, world, relationship, schedule, location, media, commerce, and finance workspace;
+3. AI conversation and story continuity that stays behind normal phone interactions where possible;
+4. optional event/runtime review without making ordinary use feel like an administration console;
+5. an extensible app system where each module owns its records and shared seams coordinate context, storage, media, events, and diagnostics.
 
-### 3.1 Contacts vs Chat Directory
+The product is no longer a prototype shell. It is an integrated local-first V1 with uneven depth: the core communication/world/relationship loops are substantial, while final visual quality, production hardening, true-device QA, and some secondary modules remain incomplete.
 
-- `Contacts` is the global role archive and role-centered management hub.
-- `Chat Directory` is the Chat-side contact list and binding surface.
-- A role can exist in Contacts without being bound into Chat.
-- Unbinding a role in Chat Directory must not delete the Contacts role profile.
+## 3. Frozen Product Boundaries
 
-### 3.2 Chat vs Relationship Runtime
+### 3.1 Contacts, Chat Directory, Chat, Relationship Runtime
 
-- `Chat` owns message history, thread behavior, and manual chat-message deletion.
-- `Relationship Runtime` owns relationship progress, memory groups, milestones, and compact continuity summaries.
-- Legacy Chat-side fields such as `relationshipLevel` or `relationshipNote` are compatibility or light-annotation fields only.
-- Chat Directory now labels those legacy fields as Chat-local tuning/note, not `Affinity` or current relationship progress.
+- `Contacts / 通讯录` owns the global role archive, concrete role/self/NPC profile values, role-centered destructive actions, and read-only relationship review.
+- `Chat Directory / Chat 通讯录` owns Chat-side role binding, groups, and service/official account subscription management.
+- `Chat` owns conversations, messages, rich cards, applied communication state, and manual message actions.
+- `Relationship Runtime` owns current metrics, stage, milestones, memory groups, and confirmed continuity facts.
+- Chat compatibility fields such as `relationshipLevel` and `relationshipNote` are local tuning/annotation only.
 
-### 3.3 Calendar vs Reminders
+### 3.2 Book, WorldBook, World Pack
 
-- `Calendar` owns confirmed schedule/date meaning.
-- `Reminders` owns cross-module cue queues, callbacks, follow-ups, logistics reminders, and future objective/task cues.
-- Raw reminder cues must not directly write relationship facts; they must first become confirmed Calendar events.
+- `Book / 文本库` owns reusable long-form worldviews, world rules, and encyclopedia text.
+- `WorldBook / 世界书` owns activation, selected Book links/sections, knowledge bindings, profile-template definitions, and active-world review.
+- `World Pack / 世界包` owns reviewed capability bundles such as app bindings, service templates, terminology, currencies, and compatible extensions.
+- Target apps retain their business records. A World Pack app binding is launch/presentation context unless a narrower explicit contract says otherwise.
 
-### 3.4 World Hub vs Cheats
-
-- `World Hub` is the optional runtime review and narrow-control app.
-- `Cheats` belongs to the same future control family, but is not yet a completed product surface.
-- Neither should become the normal user path for everyday data entry.
-
-## 4. Current State Snapshot
-
-Project stage: stable core shell plus immersive-expansion baseline.
-
-Already stable enough to build on:
-
-1. `Lock -> Home -> Chat / Settings` main path;
-2. local-first persistence, backup/restore, and storage diagnostics baseline;
-3. Chat manual trigger flow plus optional richer prompt context;
-4. global role profiles, profile-side relationship premise/classification storage, Chat-side role binding, and relationship-runtime baseline;
-5. Gallery as shared media center for cross-module asset references;
-6. Map simulation baseline with trip/location context;
-7. Calendar and Reminders split baseline;
-8. low-impact relationship fact adapters across several modules;
-9. optional World Hub runtime review baseline.
-
-Still not final:
-
-1. visual rebuild across the shell and several major modules;
-2. full Contacts detail IA polish;
-3. stronger World Hub controls and frozen Cheats design;
-4. deeper product loops for some secondary modules such as Assets and Stock.
-5. world-driven app and service-account templating beyond the current service-notification baseline.
-
-Immediate active lane:
-
-- 4.2 memory dedupe has reached current acceptance for explicit-lineage chains across Phone callback, Shopping gift plus Calendar delivery follow-up, Food Delivery shared meal plus Wallet support, Shopping gift plus Wallet support, and Map shared-route plus Map-derived Calendar follow-up.
-- relationship runtime now separates prompt-facing `recallSummary` from UI-facing review summaries, so Chat can keep source context while Contacts and World Hub show product-facing related-record copy.
-- relationship runtime summary counts are now full target-state counts independent of display caps, so short UI memory lists no longer undercount total, visible, or archived memories.
-- Calendar now exposes relationship review detail on confirmed events, including lineage, target, memory role, and duplicate-growth status.
-- 4.3 World Hub review quality now has a complete review-pack baseline: event logs and relationship facts can be filtered, selected, and inspected with product-facing explanations before any stronger controls are considered.
-- 4.4 service-account continuity is now landed for Shopping checkout, Shopping logistics events, Food Delivery checkout, and Food Delivery order events. Chat stores notification messages with source references and route actions, while Shopping/Food Delivery/Wallet/Map keep the authoritative business state.
-- the V1 WorldBook baseline now uses the older entry model: `Settings -> WorldBook -> Current World Pack`, with active-world overview and a shared `world-interface` seam feeding Chat, runtime worldview fallback, active Book source links, and the active World Pack. World Pack V1 now has persisted packs, activation review, one-active-pack-per-save semantics, and service-account template availability. WorldBook no longer creates Chat Directory entries directly; it shows the enabled service-account count, while Chat Directory's `Services` management area lets the user opt into current-world service/official account candidates through the Chat-owned idempotent create/reuse seam. The first concrete app-binding path remains `survival_city` opening Shopping as `补给站` with a safe Daily Fresh / Grocery filter; other archetypes remain guarded. The first global app-entry seam is now landed: active World Pack app bindings become stable `world_app_*` entries in App Store and Home/App Library placement flows, then launch target apps with `worldPack`/`worldApp` route context. Current World Pack only shows the active snapshot and tells users that world entries live in the App Store `World` section; it does not provide App Store jump buttons or per-app launch links inside Settings. The world UX package now has a first target-app seam through shared `world-pack-app-bindings` context: Shopping, Food Delivery, Calendar, and Map can show active-pack title/context/boundary copy and safe default views without moving source-module ownership.
-- World Pack service-account candidates are now user-adjustable before subscription: Chat Directory's `Services` management area can edit and reset built-in active-pack service/official account candidates, storing user overrides on the World Pack template metadata. Chat Services also has the reviewed AI/pasted candidate lane for service/official accounts: proposals read active WorldBook/World Pack context, low-confidence/duplicate/unknown-binding suggestions are blocked, and confirmation only adds a World Pack template. Joining still creates/reuses a Chat-owned subscription entry, later candidate edits do not silently overwrite already joined accounts, and source notification plans now show which Shopping/logistics/Food Delivery event streams become ready after join without auto-subscribing or creating source records.
-- the current World Pack UX slice adds `transit -> Map` as a concrete target-app context: `survival_city` now includes `survival_safe_route_pass`, and Map can show the active-pack transit title/context/boundary banner while keeping route, trip, location, ETA, and shared-route facts owned by Map.
-- the guarded World Pack direction is not "AI creates new apps". It is a built-in nonstandard-app archetype/template registry plus AI extraction from active WorldBook context. The Current World Pack panel now exposes the review UI as an advanced/collapsible review area: AI or pasted JSON can propose matching entries, loading/empty/error/rejected states are explicit, the whitelist/normalizer separates confirmable vs rejected items, and user confirmation writes an appBinding to the active pack only. The confirmed-entry path is now covered through App Store detail/open, Home library placement/launch, and Map target-app context for a generated `transit_pass`; `reservation_board` is covered from confirmation through App Store open into Calendar context; and `dispatch_board` is covered from confirmation through App Store open into Food Delivery context with a safe Nearby default. `black_market` is deliberately blocked with `needs_dedicated_app` and does not map onto Shopping. Rejected or unconfirmed proposals stay out of App Store and normal apps continue unchanged.
-- World Pack app bindings are entry/launch context by default. A target app should change its own UI only when the binding explicitly carries a UI theme package such as `uiThemePackage.enabled=true`; otherwise the app opens in its original interface and defaults.
-- World Pack can now declare custom world currencies from `Settings -> WorldBook -> Current World Pack -> Economy & currency`, but Wallet remains the financial control center. Injected currencies become Wallet currency options; Wallet owns primary-currency selection and editable USD/CNY-centered reference exchange rates, and Chat transfer cards plus Food Delivery active prices consume that Wallet setting.
-- Appearance customization remains a core freedom layer. Global CSS and Chat-scoped CSS already exist; `src/lib/app-shell-scope.js` now gives the root app shell stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks, and `src/lib/appearance-scoped-css.js` plus the Appearance Advanced CSS sheet now provide app/world-app scoped CSS authoring through `settings.appearance.scopedCustomCss`. The World App scoped editor can choose from the active World Pack's current app entries while keeping manual targets as fallback, and it exposes target selectors plus pause/clear recovery controls; when app-scoped and world-app-scoped CSS both target the same element, the world-app layer is narrower and emitted later. Appearance packs can now export/import portable visual settings, including theme, wallpaper, icon overrides, global CSS, and scoped CSS, without copying Home layout, widgets, or Chat-specific appearance.
-- Book text-library V1 now exists as a separate app for long worldview documents, world rules, and encyclopedia text. `Settings -> WorldBook` remains the activation panel that links whole documents or selected Book sections into active world context. The first built-in Book content set, `现代首尔 K-pop 娱乐圈`, is available as callable read-only Book sources for the main worldview, world rules, and the first encyclopedia entries: K-pop industry mechanisms, Chinese fandom terms, Seoul youth lifestyle, company/group/program references, and representative member profiles. Editing creates a user copy instead of changing the built-in template.
-- opening the text library from WorldBook stays in the current WorldBook sheet and presents Book-card choices; it must not navigate to Book unless the user explicitly enters the editing workspace.
-- K-pop trial setup keeps Book text categories limited to worldview, rules, and encyclopedia. Role profile templates are structured WorldBook/Contacts records: Contacts can use universal templates directly, while WorldBook can enable current-world templates for Contacts to prioritize.
-- WorldBook's text picker groups those Book manuscripts by activation role/category before showing the individual manuscript cards, keeping the Book data model flat while the picker reads as organized project cards.
-- WorldBook's top Active World card now shows active context text character count and selected manuscript name chips, then opens three user-facing Book text directories: Worldview, Rules, and Encyclopedia. Profile templates appear in the dedicated structured template panel, not as Book text-source categories.
-- the Book source chain is now tested through the consumer path: Chat prompt context, Chat thread summary, and runtime world-context resolution all receive active Book source text through explicit `bookStore` adapters.
-- Chat App now has a clearer messaging-app shell: `Messages`, `Objects`, `Groups`, `Services`, and `Me`. The main message list stays immersive while binding, group management, and service accounts have explicit control layers; the top-right gear opens dedicated Chat Settings, `Me` owns Chat identity/anonymity and recent social data, and Chat Settings owns appearance plus maintenance diagnostics.
-- incoming Chat social/channel states such as greetings, accepted/declined requests, blocks, and being-blocked markers now have both a direct Chat-side V1 shell and a generated-event review seam. User actions still happen inside Chat; Chat AI responses can return optional normalized social proposals, the foreground/session runtime can propose conservative role greetings for stranger or declined role contacts, and role refusal/block/restore/unblock proposals wait for World Hub review before Chat applies the communication state. World Hub explains proposal source, trigger policy, and safety boundaries; Contacts displays role-level snapshots only, and relationship runtime records only confirmed relationship facts or memories.
-- Chat Directory relationship compatibility containment is landed: legacy `relationshipLevel` and `relationshipNote` are still persisted for binding compatibility, but visible copy now calls them Chat-local tuning/note and states that current relationship truth is owned by relationship runtime.
-- relationship classification Rounds 1 through 4 are landed for the profile/store/AI/Contacts/event surface: Contacts role profiles can persist free-text relationship premise fields, initial seed values, and stored category/modifier classification metadata; `src/lib/relationship-label-classifier.js` classifies labels through `src/lib/ai.js` plus shared JSON parsing; the Contacts detail page shows the read-only current relationship runtime snapshot first, then edits the profile-side relationship premise, seed, category, modifiers, and classification audit. High-confidence AI results save as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, manual edits save as `user_edited`, existing `user_edited` classifications remain protected from silent AI overwrite, and event/runtime reads saved classification fields rather than raw premise prose. Relationship runtime still owns current metrics, stage, milestones, and memories.
-- relationship classification Round 4 is landed for the event/runtime seam: low-impact module facts attach read-only `relationshipGate` audit metadata derived from saved `primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit fields only. Event gating does not read `relationshipLabelText` or `relationshipLabelNote`; named high-risk hard-gate presets now exist for tests/future event packs, but no new high-impact automation or event classes are enabled.
-- fuzzy same-text memory merging remains out of scope until a later product decision.
-
-## 5. Technical Stack
-
-Current stack from `package.json` and `package-lock.json`:
-
-1. Vue `^3.5.24` (locked `3.5.27`)
-2. Vue Router `^5.0.2` (locked `5.0.2`)
-3. Pinia `^3.0.4` (locked `3.0.4`)
-4. Vite `^7.2.4` (locked `7.3.1`)
-5. Tailwind CSS `^4.1.18` (locked `4.1.18`)
-6. Vitest `^1.6.0` with jsdom (locked `1.6.1`)
-7. ESLint 9 plus Prettier 3
-
-## 6. Core Architecture
-
-### 6.1 App Shell
-
-The shell owns:
-
-- lock state;
-- Home and app entry navigation;
-- top-level route switching;
-- theme, wallpaper, and shell-level behavior.
-
-Important files:
-
-- `src/App.vue`
-- `src/main.js`
-- `src/router/index.js`
-
-### 6.2 State Layer
-
-Major stores:
-
-- `src/stores/system.js`
-  - system settings
-  - appearance, including Chat-scoped appearance preferences and custom CSS
-  - notifications
-  - backup/restore hooks
-  - general user profile and worldview settings
-- `src/stores/chat.js`
-  - role profiles
-  - profile-side relationship premise and stored classification metadata
-  - Chat Directory contacts and service accounts
-  - conversations and messages
-  - service notification messages with source references, not copied order state
-  - thread-level AI preferences
-- `src/stores/relationshipRuntime.js`
-  - relationship metrics
-  - memory groups
-  - milestones
-  - pending confirmations
-- `src/stores/reminders.js`
-  - cross-module cue queues
-- `src/stores/map.js`
-  - local trip and location simulation
-- `src/stores/simulation.js`
-  - event runtime logs, cooldowns, caps, and runtime execution metadata
-- `src/stores/book.js`
-  - reusable text-source library for long worldview, rules, and encyclopedia documents, separate from hidden Files indexing
+### 3.3 Calendar, Reminders, Map
+
+- `Calendar / 日历` owns confirmed schedule/date events and push scheduling.
+- `Reminders / 提醒事项` owns raw cross-module cues, callbacks, follow-ups, and future objective/task cues.
+- `Map / 地图` owns location, route, trip, ETA, familiarity, and travel continuity.
+- Raw reminder cues do not write relationship facts; confirmed Calendar events may do so through the shared relationship adapter path.
 
-### 6.3 Service And Utility Layer
+### 3.4 Commerce And Finance
 
-Important shared seams:
-
-- `src/lib/ai.js`
-  - the only approved entry point for AI requests
-- `src/lib/persistence.js`
-  - local persistence and storage-layer migration helpers
-- `src/lib/chat-response.js`
-  - assistant payload parsing and fallback extraction
-- `src/lib/relationship-fact-adapters.js`
-  - shared seam for cross-module relationship facts
+- Shopping and Food Delivery own catalog/menu, cart, checkout, order, and source-event truth.
+- Logistics is a tracking/communication lane, not a storefront.
+- Wallet owns downstream ledger records, primary currency, and exchange-rate settings.
+- Assets owns durable owned-object records; Stock owns its own simulated market/holding lane.
+- Chat service notifications store source references and presentation snapshots, not copied business truth.
 
-Rule: views and components should not invent their own provider-calling logic or relationship-truth layer.
-
-## 7. Current Functional Modules
+### 3.5 World Hub, Cheats, Push
 
-### 7.1 Lock Screen
+- `World Hub / 世界中枢` is an optional review and narrow-control app.
+- `Cheats` is not a finished product surface.
+- the Node push relay schedules/delivers push payloads; it is not a closed-page simulation backend.
 
-- default entry route;
-- unlock guard;
-- notification return path.
-
-### 7.2 Home
-
-- app grid and widgets;
-- hidden or optional app entry handling;
-- folder-style grouping for some module families.
+## 4. Verified Repository Baseline
 
-### 7.3 Settings
+Audit date: 2026-07-10.
 
-- backup/restore;
-- diagnostics;
-- automation;
-- push behavior;
-- appearance and general system settings.
+| Evidence | Result |
+| --- | --- |
+| Git baseline | `main`, clean before this documentation round, latest prior commit `47b8c35` from 2026-06-25 |
+| Source scale | 201 files / about 104k lines under `src` |
+| Application shape | 30 Vue route views, 16 Pinia stores, 36 components, 36 composables |
+| Unit tests | 171 files / 1050 tests, all passing |
+| E2E | 18 Playwright tests, all passing across desktop Chromium and Pixel 5 mobile emulation |
+| Lint | ESLint pass |
+| Production build | Vite pass, 252 modules transformed, no build warning |
+| Dependency audit | production dependencies: 0 known vulnerabilities; full tree: 15 development/tooling advisories |
 
-### 7.4 Network
+Build-size signals:
+
+- main entry chunk: about 482 KB, 145 KB gzip;
+- Chat route chunk: about 217 KB, 67 KB gzip;
+- Book store/content chunk: about 130 KB, 47 KB gzip;
+- large route chunks remain acceptable for the current local-first V1, but future splitting should be driven by measurements and user impact.
+
+Test limitations:
+
+- there is no coverage threshold or published branch/statement coverage metric;
+- CI runs lint, unit tests, and build, but not Playwright;
+- current E2E is browser emulation, not real-device QA;
+- push delivery, browser permission behavior, weak-network recovery, and provider-specific AI behavior still require environment/manual testing.
 
-- URL-first provider setup: users paste or load an API URL, and `src/lib/ai.js` auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport;
-- URL adaptation accepts common OpenAI-compatible base, `/v1`, `/models`, `/chat/completions`, local Ollama-style `/api/chat`, OpenAI/Azure `/responses`, Anthropic `/v1/messages`, and Azure deployment URLs while keeping official provider endpoints key-required and allowing local/server-auth gateways to omit a browser-stored key;
-- the visible setup path is intentionally compact: URL, API key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel;
-- saved API configurations and diagnostics remain available as secondary disclosure areas so setup does not become a long stacked utility page.
+## 5. Functional Progress
 
-### 7.5 Chat
+### 5.1 Roadmap Closure
+
+Four major lanes have reached current acceptance:
+
+1. Contacts V2 detail IA and memory presentation;
+2. explicit-lineage relationship-memory dedupe and recall;
+3. World Hub review quality before stronger controls;
+4. Shopping/logistics/Food Delivery service-account continuity.
+
+Active or incomplete:
+
+- architecture, security, CI, and documentation maintenance is active;
+- World Pack/App Archetype/Service Template is an integrated V1 with phone QA and hardening remaining;
+- Modern Seoul K-pop carrier governance is a decision item, not approved implementation work.
 
-- user messages and AI invocation;
-- thread-level preferences;
-- rich message surfaces;
-- service-account style communication;
-- service-account notifications with source module/id references and route actions;
-- group-chat targets with Chat-side member ids and reply-mode metadata;
-- compact relationship context consumption.
-- Chat-local settings routes for Chat appearance, default behavior entry points, maintenance diagnostics, and the user/social `Me` surface.
+### 5.2 Module Completion Matrix
 
-### 7.6 Contacts and Chat Directory
+| Product area | State | What is real now | Main remaining gap |
+| --- | --- | --- | --- |
+| Lock / Home / shell | `Stable` | lock guard, status shell, notifications, Home pages, Today View, app/folder/widget placement, App Store recovery | final device-level visual/touch polish; Home remains a large view |
+| Settings / Network | `Stable` | URL-first AI provider setup, backup/restore, storage diagnostics, automation, push, appearance, software update shell | credential-export policy, production security guidance, push/provider environment QA |
+| Chat | `Stable, heavy` | role/service/group threads, AI replies, rich messages, message edit/delete/recall/save, Chat appearance, service subscriptions, social-event review | deeper group speaker orchestration, real-device media flows, large-view/store maintainability |
+| Contacts / relationship | `Stable V2 baseline` | role archive, role IDs, Self/Main/NPC, WorldBook fields, relationship snapshot/classification, memory review/source audit, guarded cleanup | template-adaptation visual diff, richer template authoring, later polish; high-impact automation remains deferred |
+| Book / WorldBook | `Integrated V1` | Book source library, section activation, changed-source review, active-world context, knowledge/profile templates | phone trial hardening; built-in K-pop registration still points to old small drafts |
+| World Pack / App Store | `Integrated V1` | compatible packs, world app entries, guarded app/service proposals, target-app context, currencies | true-device end-to-end testing, broader target-app hardening, next archetype decision |
+| Map / Calendar / Reminders / Phone | `Stable MVP` | trip/route context, confirmed schedule, raw cue inbox, push handoff, callback/relationship adapters | Map visual/interaction pass, richer cue/task semantics, broader real-world route/date coverage |
+| Shopping / Food Delivery / Logistics | `Integrated V1` | product/menu/order flows, mini-app facades, Wallet/Map/Chat handoffs, service notifications, Moon Bistro asset pass | responsive/detail/checkout polish, tracking share UI, broader shop differentiation |
+| Wallet | `Stable support` | sourced ledger, currencies, primary currency, exchange rates, Chat/commerce integration | cleanup/explainability polish; deeper economy remains a product decision |
+| Gallery | `Stable platform service` | shared media assets, binary storage, image-source contracts, cross-module references | stronger Photos-like collections/visual polish; relationship-memory authoring stays deferred |
+| Assets / Stock | `Usable but shallow` | persisted MVP records and supporting connectors | deeper user-facing loops and clearer rollout value |
+| Event Runtime / World Hub | `Partial / Guarded` | logs, cooldowns, caps, foreground tick, safe Food Delivery pilot, Chat social proposal audit/review | richer scheduling and adapters, stronger controls only after safety decisions; no closed-page backend autonomy |
+| Appearance / visual system | `Partial` | themes, wallpaper, widgets, app icons, app skins, Chat appearance, global/scoped CSS ownership | cross-module visual consistency and real-device polish remain unfinished |
+| Files | `Internal` | hidden metadata/index compatibility surface | must not become a normal public app without a new decision |
+
+## 6. Technical Stack
+
+Current installed baseline:
+
+| Area | Technology |
+| --- | --- |
+| UI | Vue 3.5.27 with Composition API and `<script setup>` |
+| Routing | Vue Router 5.0.2, hash history |
+| State | Pinia 3.0.4 |
+| Build | Vite 7.3.1 and `@vitejs/plugin-vue` 6.0.4 |
+| Styling | Tailwind CSS 4.1.18 plus project CSS/tokens and Font Awesome 7.1.0 |
+| Text rendering | Marked 17.0.1 |
+| Unit/component tests | Vitest 1.6.1, jsdom 24.1.3, Vue Test Utils 2.4.6 |
+| E2E | Playwright 1.60.0 |
+| Quality | ESLint 9, Prettier 3 |
+| Push relay | Node HTTP server plus `web-push` 3.6.7 |
+| Language | application source is JavaScript/Vue; TypeScript is installed but there are zero `.ts/.tsx` source files |
+
+The stack is appropriate for the current product. No framework rewrite is recommended. Toolchain maintenance is required because the full dependency audit currently reports development-time advisories, including direct Vite/Vitest findings.
+
+## 7. Architecture
+
+### 7.1 Shell And Routing
+
+Primary files:
+
+- `src/main.js`: app/bootstrap, mobile viewport guards, deferred icons, service-worker registration;
+- `src/App.vue`: phone shell, notification banners, global appearance layers, automation/push lifecycle coordination;
+- `src/router/index.js`: lazy route modules and lock guard.
+
+The app is a static SPA deployed under `/schatphone/` with hash routing. Most route views are lazy-loaded, while central stores/shared helpers remain in common chunks.
+
+### 7.2 State Ownership
+
+Sixteen stores exist:
+
+| Store | Primary owner |
+| --- | --- |
+| `system` | settings, Home placement, appearance, notifications, AI/network config, world compatibility state, automation queue |
+| `chat` | role profiles, Chat Directory contacts, groups/service accounts, conversations/messages, Chat AI preferences |
+| `relationshipRuntime` | relationship facts, metrics, stages, milestones, memory groups, pending confirmations |
+| `simulation` | runtime logs, cooldowns, caps, module permissions, execution metadata |
+| `book` | long-form text assets |
+| `gallery` | media assets and binary-reference ownership |
+| `map` | locations, routes, trips, familiarity, route context |
+| `calendar` | confirmed events and push schedule state |
+| `reminders` | raw cues and handling state |
+| `shopping` | products, cart, orders, logistics events |
+| `foodDelivery` | restaurants, menus, cart, food orders, delivery events |
+| `wallet` | sourced transactions and currencies |
+| `assets` | durable asset records |
+| `stock` | simulated stock/watchlist state |
+| `phone` | call/callback records |
+| `files` | internal metadata/index state |
+
+Domain-store separation is sound overall. The main exception is `systemStore`, which has become a broad infrastructure and compatibility bucket.
+
+### 7.3 Shared Contract Layer
+
+Important seams include:
 
-- `/contacts`: global role archive and role-centered management
-- `/chat-contacts`: Chat-side binding and service-account management
+- `src/lib/ai.js`: the only approved AI transport entry;
+- `src/lib/persistence.js`: version envelopes, local writes, IndexedDB mirroring, inspection, and reconciliation;
+- `src/lib/relationship-fact-adapters.js`: low-impact cross-module facts;
+- `src/lib/role-binding-contract.js`: Contacts/Chat role context;
+- `src/lib/world-interface.js`: active world context for Chat and runtime;
+- `src/lib/world-pack-app-bindings.js`: reviewed world-app entry and target context;
+- `src/lib/shareable-object.js`: source-owned rich sharing;
+- focused composables that expose narrower view/store interfaces.
 
-This split is important. They are related, but they are not the same product surface.
+### 7.4 Persistence
 
-### 7.7 Gallery
+- primary synchronous persistence is namespaced browser `localStorage`;
+- IndexedDB mirrors the same serialized envelopes by default and can repair layer drift;
+- Gallery binaries use a separate binary-storage path while metadata remains in stores;
+- each domain store owns hydration, migration, snapshot, and save behavior;
+- Settings backup/restore coordinates all stores and supports rollback plus optional Gallery asset packages.
 
-- shared media center;
-- cross-module asset references;
-- local image intake before structured module consumption when appropriate.
+Security implication: backup currently exports `settings` wholesale, which includes the configured AI API key. Backup files must therefore be treated as sensitive until a credential-export policy is implemented.
 
-### 7.8 Map
+### 7.5 AI And Runtime
 
-- local trip and route simulation;
-- route context for other modules;
-- exploration and location continuity.
+- browser-side AI requests go through `src/lib/ai.js`;
+- URL detection supports Gemini native, OpenAI-compatible chat, OpenAI Responses, Anthropic Messages, Azure OpenAI, and local/server-auth gateways;
+- prompt assembly consumes WorldBook, role profile, self profile, relationship, and thread context through explicit helpers/composables;
+- foreground automation is opt-in and local-session based;
+- high-impact social proposals use runtime audit and World Hub review before Chat state changes.
 
-### 7.9 Calendar and Reminders
+### 7.6 Push And Deployment
 
-- Calendar: confirmed schedule/date surface
-- Reminders: cross-module cue surface
+- the PWA service worker and Node relay support subscriptions, scheduled payloads, cancellation, retry, and delivery;
+- the relay persists VAPID keys, subscriptions, and schedules in local JSON files;
+- it has permissive CORS and no authentication, so it is a development/single-operator relay, not a production multi-user backend;
+- GitHub Pages deploys the static client; the relay is not deployed by that workflow;
+- true closed-page event generation is not implemented.
 
-### 7.10 Shopping, Logistics, Food Delivery, Wallet, Assets, Stock
+### 7.7 Appearance Ownership
 
-- Shopping and Food Delivery own their own business records;
-- Logistics is a delivery/tracking-facing surface, not a storefront;
-- Wallet is the downstream ledger, not the owner of orders;
-- Assets and Stock are separate future-deepening lanes.
-- world-specific variants should register these modules through app archetypes and world app bindings instead of copying their business records into WorldBook. The first landed examples are `marketplace -> Shopping`, `dispatch -> Food Delivery`, `reservation -> Calendar`, and `transit -> Map`, where World Pack provides entry/context/UX language while the target apps still own catalog, carts, orders, delivery events, schedules, push state, route/trip truth, and downstream suggestions.
-- when a World Pack changes an app's UI/UX, that change should be visible in the actual target app and global entry surfaces, not only described inside Settings or WorldBook.
-- user customization is allowed to sit above World Pack defaults. The app shell now exposes stable scoped hooks for app id, route scope, world pack id, and world app id, and Appearance can store scoped custom CSS for app/world-app targets plus import/export portable Appearance packs; future CSS work should continue targeting those hooks instead of implementation-only utility classes.
+Visual ownership is intentionally split:
 
-### 7.11 World Hub
+- global Appearance owns theme, wallpaper, global CSS, and shell-level portable settings;
+- App Store/app owners own app icon identity and standard app skins;
+- scoped app/world-app CSS stays app/world-specific;
+- Chat Appearance owns Chat layout and Chat CSS;
+- Home/Widgets own layout and widget records.
 
-- optional hidden-by-default runtime review/control app;
-- can inspect event runtime and relationship runtime;
-- currently remains narrow and safer than a full cheat console.
+Global Appearance pack export/import includes only global portable fields such as theme, wallpaper, status-bar/haptic settings, global CSS, variables, and lock-clock style. It excludes app icons, app skins, app/world-app scoped CSS, Home layout/widgets, and Chat appearance.
 
-### 7.12 Book / Text Library Direction
+## 8. Architecture And Product Risks
 
-- visible app-like text workspace for long worldviews, world rules, and encyclopedia material;
-- reachable as `Book`, while product copy can describe it as a text library;
-- does not replace `Settings -> WorldBook`, because WorldBook owns activation and injection governance;
-- does not replace `Files`, because Files remains a hidden/internal metadata and storage-index component;
-- imports/creates/edits/exports text assets and exposes active-source state for WorldBook links;
-- supports trial-ready WorldBook activation through whole-document links, selected-section links, changed-source warning, and source-version refresh;
-- active Book sources are expected to affect Chat prompt context and runtime world-context resolution, not only the WorldBook settings page;
-- future novel, fanfic, or reader-style features should use a different module name and not overload Book.
+### P0: Security And Toolchain
 
-## 8. Data And Storage Model
+1. backup JSON includes locally stored AI credentials through the full settings snapshot;
+2. the full dependency audit reports 15 development/tool advisories: 1 critical, 9 high, and 5 moderate; production dependencies report zero;
+3. the push relay is not authenticated or production hardened;
+4. local AI keys and world/chat data rely on the browser/profile security boundary, not encryption at rest.
 
-Current storage direction:
+### P1: Maintainability
 
-1. local-first persistence is the baseline;
-2. domain stores own their own product records;
-3. shared services coordinate persistence, media references, prompt assembly, and diagnostics;
-4. relationship runtime stores compact continuity data, not full copies of module-owned records;
-5. backup/restore must preserve user-visible continuity without collapsing module boundaries.
+Largest current files:
 
-## 9. AI Interaction Rules
+- `ContactsView.vue`: 4754 lines;
+- `ChatView.vue`: 4312 lines;
+- `system.js`: 4186 lines;
+- `WorldBookView.vue`: 4130 lines;
+- `HomeView.vue`: 3920 lines;
+- `ChatDirectoryView.vue`: 3802 lines.
 
-1. all AI requests must go through `src/lib/ai.js`;
-2. manual trigger must remain clear and available in Chat;
-3. system language controls UI text, not the meaning of AI-generated content;
-4. prompt assembly can use worldview, role, memory, and thread context, but should preserve clear ownership boundaries;
-5. modules should degrade gracefully when an AI feature is disabled or unavailable.
-6. relationship-label classification uses the shared AI seam and only expresses the confidence/save policy; event/runtime gating reads saved classification fields, not raw premise prose, and current Round 4 only adds low-risk audit metadata plus named helper-level high-risk hard-gating presets.
+`systemStore` is imported by 22 of 30 route views. Focused composables have reduced inline logic, but the files remain mixed-responsibility hotspots.
 
-## 10. Documentation Reading Order
+### P1: Release Confidence
 
-If you are taking over coding work:
+- CI does not run E2E or dependency audit;
+- the Pages workflow performs only install/build and is not directly gated by CI success;
+- no coverage threshold exists;
+- mobile checks are emulated, not true-device checks.
+
+### P1: Product Finish
+
+- visual consistency is uneven across shell and large modules;
+- World Pack flows need real phone testing;
+- group orchestration, Assets, Stock, and several support loops are less deep than Chat/WorldBook/commerce;
+- World Hub remains intentionally narrow and closed-page autonomy is undecided.
+
+### P2: Contract Hardening
+
+- application contracts are JavaScript-only and depend on normalizers/tests;
+- some domain stores still receive concrete cross-owner stores through adapters;
+- old compatibility fields and routes must remain contained until migrations can be removed safely.
+
+## 9. Current Execution Direction
+
+1. security/toolchain and credential-backup policy;
+2. CI/release gating and one named architecture hotspot slice;
+3. World Pack true-device validation and focused hardening;
+4. decision on the K-pop content carrier split and first migration slice;
+5. secondary-module or runtime expansion only after explicit promotion.
+
+See `docs/roadmap/TODO_ROADMAP.md` for exact status and acceptance.
+
+## 10. Reading Order
+
+For implementation:
 
 1. `docs/README.md`
-2. this file
+2. this guide
 3. `docs/roadmap/TODO_ROADMAP.md`
 4. `docs/pm/TASK_PACKAGE_INDEX.md`
-5. the matching package `README.md`
-6. the matching package `STATUS_AND_HANDOFF.md`
-7. the matching package boundary and workstream docs
-8. `docs/process/AI_WORK_MODE.md`
+5. matching package `README.md`
+6. matching package `STATUS_AND_HANDOFF.md`
+7. `docs/process/AI_WORK_MODE.md`
 
-If you are reviewing product status:
+For PM/design review:
 
 1. `docs/pm/TODO_PM_STATUS_REPORT.md`
-2. this file
-3. `docs/strategy/PROJECT_ITERATION_PLAN.md`
-4. `docs/pm/TASK_PACKAGE_INDEX.md`
-
-## 11. Collaboration Rules For Incoming AI Engineers
-
-1. read this file and `docs/roadmap/TODO_ROADMAP.md` before coding;
-2. use `docs/pm/TASK_PACKAGE_INDEX.md` to pick the correct task package;
-3. always read the package `STATUS_AND_HANDOFF.md` before changing code;
-4. after each meaningful round, sync the required docs in `docs/process/AI_WORK_MODE.md`;
-5. do not let code semantics outrun product semantics in the docs.
-
-## 12. Current High-Value References
-
-- `docs/process/AI_WORK_MODE.md`
-- `docs/pm/TASK_PACKAGE_INDEX.md`
-- `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
-- `docs/architecture/ROLE_BINDING_CONTRACT.md`
-- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
-- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+2. this guide
+3. `docs/pm/PRODUCT_MANAGER_PROJECT_BRIEF.md`
+4. `docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md`

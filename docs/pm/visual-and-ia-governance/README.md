@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-06-18
+Updated: 2026-07-10
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -42,7 +42,7 @@ Current visual pass:
 - WorldBook's Current World Pack panel now has a compatible-expansion IA: AI world-profile analysis recommends matching packs, users can still browse and toggle other supported packs, and the enabled-pack list stays separate from the legacy single-pack activation preview.
 - World Pack's world UX package now has a first target-app seam: Shopping, Food Delivery, Calendar, and Map can show active-pack title/context/boundary treatment in the actual app while the source module keeps workflow ownership. Broader labels, accents, and safe UX variants still need hardening.
 - WorldBook's Current World Pack panel now also has a guarded nonstandard-app proposal review surface: AI extraction or pasted JSON shows whitelist matches, loading/empty/error states, rejection reasons, and explicit confirmation before adding an appBinding. Confirmed entries are visible in App Store detail with world-pack/target-module metadata, can be placed from Home's library, and open the target app with world context; current dynamic coverage includes `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery`. `black_market` is blocked as needing a dedicated app shell, so it is not presented as Shopping.
-- User customization remains a first-class layer above World Pack defaults. Global Appearance CSS and Chat-scoped CSS already exist, the root app shell now exposes stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks, and Appearance Advanced CSS now has app/world-app scoped CSS authoring with active World Pack entry selection, manual fallback, exact target previews, pause/clear recovery, app-vs-world-app layer-order protection, and Appearance pack import/export for portable visual layers without copying Home layout, widgets, or Chat-specific appearance.
+- User customization remains a first-class layer above World Pack defaults. Global Appearance CSS and Chat-scoped CSS exist, and the root shell exposes stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks. Persisted app/world-app scoped CSS remains runtime-compatible, but the current global Appearance surface no longer authors or exports app-owned layers. Global Appearance packs exclude app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance.
 - `应用商城 / App Store` keeps desktop list/detail management, but phone-sized screens now open selected app details as a root-level sheet instead of stretching the catalog.
 - `组件 / Widgets` now keeps phone-sized pages scan-first: custom widget editing and import JSON entry open as focused sheets instead of extending the Widget Center page inline.
 - `外观 / Appearance` Theme, Font, and App Icons keep state/previews visible first; phone-sized wallpaper-source selection, advanced CSS editing, custom font editing, and per-app icon/accent edits now open as focused sheets.

@@ -1,6 +1,6 @@
 # SchatPhone Operation Guide
 
-Updated: 2026-05-19
+Updated: 2026-07-10
 
 This is the practical guide for daily development, validation, and release flow.
 
@@ -217,19 +217,30 @@ Required for code changes:
 
 ```powershell
 npm.cmd run lint
+npm.cmd run test
 npm.cmd run build
 ```
 
-Recommended when behavior changed:
+Required when a user-facing route flow changed:
 
 ```powershell
-npm.cmd run test
+npm.cmd run test:e2e
 ```
 
-Useful doc-only check:
+Dependency changes also require:
 
-```bash
+```powershell
+npm.cmd audit --omit=dev
+npm.cmd audit
+```
+
+The production-only and full audit results must be reported separately.
+
+Useful for doc-only work:
+
+```powershell
 git diff --check
+npm.cmd run test -- tests/mojibake-guard.test.js
 ```
 
 ## 13. Release / Deployment Flow
@@ -240,7 +251,7 @@ git commit -m "feat: your message"
 git push origin main
 ```
 
-Deployment is handled by the existing GitHub Actions pipeline.
+Deployment is handled by GitHub Actions. The current Pages workflow runs a build-only job, while CI runs lint/unit/build separately. Repository/workflow protection must therefore enforce the intended quality gate; a successful Pages build alone is not the full Definition of Done. The optional push relay is not deployed by the Pages workflow.
 
 ## 14. Quick Troubleshooting
 

@@ -1,155 +1,246 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
-This file is the handoff page for architecture cleanup, state ownership, storage direction, and long-term maintainability work.
+This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
 ## 1. Current Status
 
-Status: `PARTIAL_DONE`
+Status: `IN_PROGRESS`
 
-What is already landed:
+Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
-1. package-level ownership docs now exist for the major product lanes;
-2. relationship/runtime semantics have already gone through one important cleanup pass;
-3. some low-risk component extraction and cleanup work has already started in the UI layer.
-4. `src/lib/world-interface.js` now centralizes active WorldBook/world-context reading for Chat, WorldBook overview, active Book source links, active World Pack metadata, and runtime worldview fallback.
-5. Book text-library V1 now implements the ownership split: Book owns long reusable text sources, WorldBook owns activation/source links, and Files remains hidden/internal.
-6. World Pack V1 now has persisted built-in packs, one active pack per save, activation review, World Interface exposure, and service-account template availability. Current World Pack now hands service-account creation off to the future Chat-side add flow instead of directly generating Chat Directory entries from Settings.
-7. World app bindings now centralize global launch rows and target-app UX context through `src/lib/world-pack-app-bindings.js`; current consumers are Shopping, Food Delivery, Calendar, and Map.
-8. Nonstandard-app proposals now have a guarded whitelist/review seam in `src/lib/world-app-template-registry.js` plus a WorldBook Current World Pack review UI with explicit loading, empty, parse/API error, and rejected-state treatment; confirmed proposals become appBindings only after user action and then reuse the existing App Store/Home/target-app context seams, while unknown, low-confidence, or unsupported proposals cannot create modules, stores, event rules, or App Store entries. `black_market` is currently unsupported as `needs_dedicated_app`, so it is not mapped onto Shopping. Dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths are covered by regression tests.
-9. Book / WorldBook text naming is now narrowed around canonical worldview, encyclopedia, and world-rule concepts. Legacy Book `assetType`, source-link `usage`, `knowledgePoints`, `knowledgePointIds`, and old reference/profile-template text labels remain readable through compatibility aliases, but they are not user-facing Book/WorldBook text categories.
-10. Built-in Book sources now live outside user persistence and backup payloads. `现代首尔 K-pop 娱乐圈` main worldview and world rules are exposed through the Book store as read-only callable assets; WorldBook source links can target them, while user edits create normal user-owned copies.
+SchatPhone's domain architecture is sound enough to preserve. The current problem is concentration and hardening, not missing architecture or a need for framework replacement.
 
-11. WorldBook's Book-library entry is an in-place card catalog, not a route handoff to `/book`. That preserves the ownership split: Book edits assets, WorldBook activates source links.
-12. The K-pop trial Book entries are real built-in Book assets exposed through the Book store and WorldBook picker, while still excluded from user persistence and backups; the trial set now keeps Book text to worldview, rules, and encyclopedia. The encyclopedia placeholder has been replaced in the visible catalog by the first formal entries: K-pop industry mechanisms, Chinese fandom terms, Seoul youth lifestyle, company/group/program references, and representative member profiles. The old placeholder id remains readable only as a hidden compatibility path for existing source links.
-13. WorldBook picker grouping is presentation-only: grouped category cards are derived from real Book assets and inferred activation roles; no second storage layer or fake UI-only asset list is introduced.
-14. WorldBook's Active World text overview is also presentation-only: the three visible text directories are derived from Book assets and WorldBook source links, while source-link storage remains the same canonical activation layer. Profile templates are structured WorldBook/Contacts records: universal templates can be used directly in Contacts, and enabled current-world templates are prioritized by Contacts.
-15. Governance pass 2026-06-12: `docs/process/AI_WORK_MODE.md` is now the explicit process authority over project-local skills and old TODO/PLAN references; `schatphone-workflow` is documented as a shortcut, not a second rulebook; `docs/superpowers/**` now has directory-level authority/promotion rules so old specs, plans, handoffs, and content drafts are not mistaken for active execution boards.
-16. Dependency security pass 2026-06-12: production audit is clean after lockfile-only transitive updates for `picomatch`, `postcss`, `yaml`, and `nanoid`. No framework migration is required for this pass.
-17. Build-warning cleanup 2026-06-12: `src/main.js` now statically imports the push service-worker registration helper while still deferring execution until after first paint. This removes the Vite warning caused by `src/lib/push.js` being both dynamically and statically imported.
-18. E2E navigation helper cleanup 2026-06-12: `e2e/helpers/navigation.js` now owns the repeated lock-screen unlock, Home readiness, hash-route navigation, and Home dock app-open flow. Current E2E specs use that shared test Module instead of keeping shallow per-file copies.
-19. Encoding-guard scope cleanup 2026-06-12: `tests/mojibake-guard.test.js` now matches the documentation authority model by guarding source and active docs, keeping `docs/superpowers/**/README.md` governance notes covered, and excluding `docs/archive/**` plus non-README `docs/superpowers/**` draft/reference files.
-20. Architecture debt review refresh 2026-06-14: `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md` is now a clean evidence report, not a task board. It re-measures God View, `systemStore`, store-coupling, `lib` fan-in, and type-coverage signals, and frames next directions as decision inputs for 4.5 only.
-21. `systemStore` notification interface governance slices 2026-06-15: `src/composables/useSystemNotifications.js` now provides the first narrow tested interface over system notifications. `LockScreen.vue` consumes it for recent notification listing, mark-read, remove, and clear-all actions; `App.vue` consumes it for shell foreground banner watching, mark-read/open behavior, and notification-enabled checks used by shell push startup/scheduling; `Phone` consumes it for missed-call notification emission; `Map` consumes it for notification emitters and notification-enabled checks; Calendar consumes it for event real-push readiness checks and Calendar UI push-readiness copy; Settings consumes it for the notification toggle/display state; Chat Settings consumes it for notification status copy; `ChatView.vue` consumes it for AI reply completion, notify-only auto invoke, offline auto-invoke settlement notifications, and related notification-enabled checks. Persistence shape, push delivery payloads, Calendar event/reminder ownership, Calendar missed-call cues, route/trip state, Settings backup/export raw payloads, Chat service-account `service_notification` rich messages, and visible notification behavior are unchanged.
-22. API reports interface governance slices 2026-06-15: `src/composables/useSystemApiReports.js` now provides a narrow tested interface over API/storage diagnostic report reads, summaries, add, clear, and raw snapshot creation for backup/export callers. `NetworkView.vue` consumes it for diagnostics list/summary/add/clear; `SettingsView.vue` consumes it for storage diagnostic report read/add/clear, simulation/push diagnostic-report emission, and backup/export raw `apiReports` snapshots; `ChatView.vue` consumes it for notify-only automation, AI reply failure, cancel request, and reroll failure diagnostic-report emission; `Map` and Calendar stores consume it for push scheduling/cancellation and Map background automation diagnostic-report emission; `App.vue` consumes it for shell foreground tick, push startup self-heal, and chat auto-push scheduling/cancellation diagnostics. Direct source-level `addApiReport` callers outside `systemStore` and `useSystemApiReports.js` are cleared. Provider/API key settings, exported data shape, storage persistence shape, and restore semantics are unchanged.
-23. Encoding and IA cleanup 2026-06-18: the old corrupted Chat product-card asset badge was removed from the Chat surface instead of being reintroduced as `可转资产`; asset-transfer meaning now stays in Shopping's post-order suggestion layer. `tests/chat-settings-me-appearance.test.js` covers that Chat rich product cards no longer render the asset handoff label, and `tests/mojibake-guard.test.js` now catches the old corrupted fragment while also guarding project-local `.agents/skills/**/SKILL.md` instruction files. No Chat block schema, store contract, persistence shape, service-notification behavior, or skill behavior changed.
+Verified baseline:
 
-24. Settings large-file decomposition 2026-06-19: `src/composables/useSettingsBackupWorkflow.js` now owns Settings backup/export/restore orchestration behind a focused composable Module Interface for export/import actions, copy tone, asset-package mode, and feedback state. `SettingsView.vue` no longer directly coordinates Gallery, Files, Book, Shopping, Food Delivery, Assets, Wallet, Phone, Stock, or relationship-runtime backup/restore details. Backup JSON shape, restore/rollback semantics, storage diagnostic report codes, provider/API key settings, and visible Settings UI are unchanged.
-25. Settings storage diagnostics decomposition 2026-06-19: `src/composables/useSettingsStorageDiagnosticsWorkflow.js` now owns storage audit targets, persistence inspection, storage report clearing, mirror repair orchestration, status labels, and feedback timer state behind a focused composable Module Interface. `SettingsView.vue` now consumes that Interface for the About / Storage Diagnostics panel instead of directly importing persistence diagnostic helpers. Storage report codes, persistence inspection/repair behavior, backup/export shapes, provider/API key settings, and visible Settings UI are unchanged.
-26. Settings push workflow decomposition 2026-06-19: `src/composables/useSettingsPushWorkflow.js` now owns Settings real-push capability labels, permission sync, server health checks, resync, subscribe, test, unsubscribe, notification-toggle updates, and push feedback timers behind a focused composable Module Interface. `SettingsView.vue` now wires the Notification subpage through that Interface while `SettingsPushSection.vue` props/events stay compatible. Push helper behavior, persisted settings shape, notification facade semantics, provider/API key settings, storage/report codes, and visible Settings UI are unchanged.
-27. Chat active thread read-model decomposition 2026-06-19: `src/composables/useChatActiveThreadModel.js` now owns the route-derived active chat id/contact, active conversation, active AI prefs, active messages, communication availability, Chat appearance classes, avatar/module identity read-models, and service-thread muted/folded flags behind a focused composable Module Interface. `ChatView.vue` now consumes that read-model instead of keeping the first active-thread layer inline. Chat message schema, service-notification contract, source-module record ownership, AI reply generation, automation queue behavior, route behavior, persisted storage shape, and visible Chat UI are unchanged.
-28. Chat service-thread display read-model decomposition 2026-06-19: `src/composables/useChatServiceThreadDisplayModel.js` now owns service/official thread presentation-only computed state behind a focused composable Module Interface: service status tags/header copy, template/channel preview, source chips/source notification plan display rows, inbox placement, empty-state copy, and composer-adjacent source/reply/read/sent feedback dock. `ChatView.vue` now consumes that display read-model instead of keeping the second service-thread layer inline. Chat message schema, service-notification contract, source-module record ownership, subscription mute/fold actions, session route-feedback storage behavior, AI reply behavior, automation, routing, persisted storage shape, and visible Chat UI are unchanged.
-29. Chat message edit display-state decomposition 2026-06-19: `src/composables/useChatMessageEditDisplayModel.js` now owns edit modal field definitions, rich-card edit validation, text edit validation display state, and the editable rich-card type list behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping message mutation actions, delete/recall/save/reroll behavior, service-notification schema, source-module ownership, AI context assembly, routing, persistence, and visible Chat UI copy unchanged.
-30. Chat message action-sheet display-state decomposition 2026-06-19: `src/composables/useChatMessageActionSheetModel.js` now owns message action target lookup, sheet open/close state, visible action rows, action labels, per-action visibility rules, action tone classes, and stable action test ids behind a focused composable Module Interface. `ChatView.vue` now renders action rows from that Interface while keeping the actual quote/copy/save/edit/restore/reroll/recall/delete actions, message mutation semantics, service-notification schema, source-module ownership, AI context assembly, routing, persistence, and visible Chat UI styling unchanged.
-31. Chat `+` panel-state decomposition 2026-06-20: `src/composables/useChatUserActionPanelModel.js` now owns the composer-adjacent user action panel display/draft state behind a focused composable Module Interface: panel open/close, selected form, draft reset/update, link/transfer/voice validation state, gallery category selection and role-prioritized ordering, gallery preview cache lifecycle, and gallery/location readiness copy. `ChatView.vue` now consumes that Interface while keeping message sending, Wallet transaction writing, Gallery asset binding, media import, Shopping share semantics, service-notification contracts, AI reply behavior, automation, routing, persistence, and visible Chat UI unchanged.
-32. Chat home search/list display-state decomposition 2026-06-20: `src/composables/useChatHomeListModel.js` now owns the Messages home list read-model behind a focused composable Module Interface: search open/keyword state, normalized search keyword, message-request / folded-service / blocked grouping, folded-service unread totals, main/visible contact filtering, unread-total copy, conversation preview lookup, and home hero copy. `ChatView.vue` now consumes that Interface while keeping Chat message schema, service-notification behavior, source-module ownership, AI reply behavior, automation, routing, persistence, rich-message mutation actions, Wallet writes, Gallery asset binding, media import, Shopping share semantics, and visible Chat UI behavior unchanged.
-33. Chat thread menu/settings draft-state decomposition 2026-06-20: `src/composables/useChatThreadMenuModel.js` now owns active-thread menu open/close state, thread tuning draft defaults/normalization, thread identity draft state, settings/identity payload builders, and saved-feedback timers behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping the existing store writes, AI reply generation, automation scheduling, service-notification behavior, route behavior, persisted storage shape, thread-menu UI copy, and visible Chat behavior unchanged.
-34. Chat pending quote display/action-state decomposition 2026-06-20: `src/composables/useChatPendingQuoteModel.js` now owns quote target resolution, pending quote bar label/preview state, service-notification quote payload state, invalid/recalled target cleanup, source-message recall/delete cleanup, active-thread silent cleanup, and quote payload construction behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping message schema, recall/delete semantics, AI context assembly, service-notification behavior, route behavior, persisted storage shape, and visible Chat copy unchanged.
-35. Chat service route/action feedback-state decomposition 2026-06-20: `src/composables/useChatServiceFeedbackModel.js` now owns service source-open/reply/read/sent feedback state, route-feedback normalization, best-effort session recovery, and service-feedback clearing behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping service-notification schema, source-module record ownership, route behavior, persisted storage shape, and visible Chat copy unchanged.
-36. Chat AI request/retry/reroll display-state decomposition 2026-06-20: `src/composables/useChatAiRequestStateModel.js` now owns in-flight AI request state, request/retry/cancel eligibility, retry target ids, controller cancellation, and error/retry cleanup behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, diagnostics, automation scheduling, message mutation semantics, service-notification behavior, and persisted storage shape unchanged.
-37. Chat automation status display-state decomposition 2026-06-20: `src/composables/useChatAutomationStatusModel.js` now owns automation enabled/readiness copy, next/last/settlement/background-reminder display state, and status-time formatting behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping automation policy decisions, queue execution, notification emission, diagnostics, conversation auto-state persistence, AI request behavior, and visible copy unchanged.
-38. Chat AI prompt/context preparation decomposition 2026-06-20: `src/composables/useChatAiPromptContextModel.js` now owns system-prompt block assembly, message-context conversion, context-window selection, quote candidates, smart-reply history preparation, and automation fingerprint source text behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, assistant parsing semantics, message append/mutation, automation scheduling, diagnostics, social-event submission, relationship/runtime/source-module ownership, message schema, and visible Chat copy unchanged.
-39. Chat AI image-reference preparation decomposition 2026-06-20: `src/composables/useChatAiImageReferenceModel.js` now owns assistant image-reference metadata normalization, context-message image reference collection, role-bound reference candidate selection, and Gallery AI-reference URL preparation behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, provider capability selection, prompt semantics, assistant parsing semantics, message append/mutation, automation scheduling, Gallery asset ownership, role binding contract shape, image-reference fallback semantics, message schema, and visible Chat copy unchanged.
-40. Chat assistant response parsing/normalization decomposition 2026-06-20: `src/composables/useChatAssistantResponseModel.js` now owns assistant JSON payload parsing, replyType/quote resolution, assistant rich-block normalization, primary text fallback generation, social-event proposal extraction handoff, and reroll fallback normalization behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, provider capability selection, image-reference preparation, message append/mutation, reroll replacement behavior, social-event submission, automation scheduling, message/rich-block schemas, safe-route allowlist semantics, and visible Chat copy unchanged.
-41. Chat assistant result post-processing decomposition 2026-06-20: `src/composables/useChatAssistantResultModel.js` now owns locked-screen AI reply notification summary/payload preparation, assistant social-event proposal submission metadata, active-thread read/unread settlement, and assistant reply truth-count recording behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, image-reference preparation, assistant response parsing, message append/mutation, reroll replacement behavior, automation scheduling, service-notification schemas, route semantics, notification visible copy, and Chat UI unchanged.
-42. Contacts home list read-model decomposition 2026-06-20: `src/composables/useContactsHomeListModel.js` now owns Contacts home search normalization, profile search text construction, Self Profile / Main Role / NPC grouping, filtered list outputs, and recent-interaction scoring/source labels behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping Contacts role profile storage, Chat Directory binding ownership, relationship-runtime truth, memory cleanup, delete/reset behavior, profile-template editing, Wallet summaries, visible Contacts UI, and route behavior unchanged.
-43. Contacts memory list read-model decomposition 2026-06-20: `src/composables/useContactsMemoryListModel.js` now owns selected-profile memory-group listing, source-filter options, filtered and visible memory groups, visible/total/hidden counts, list summary copy, count labels, and overflow copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, selected memory detail, source audit, review-status updates, memory delete/reset flows, Contacts profile storage, Chat Directory binding ownership, visible UI, and route behavior unchanged.
-44. Contacts memory detail read-model decomposition 2026-06-20: `src/composables/useContactsMemoryDetailModel.js` now owns selected-memory source audit rows, cleanup-readiness labels, supporting-event timeline rows, source record ID normalization, and headline facts behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, memory list filtering, selected memory opening, review-status updates, memory delete/reset flows, Contacts profile storage, source-module cleanup ownership, visible UI, and route behavior unchanged.
-45. Contacts linked activity read-model decomposition 2026-06-20: `src/composables/useContactsLinkedActivityModel.js` now owns selected-role linked activity summary/list rows, runtime source-ref plus event-attached detail source dedupe, source counts, event-attached counts, source record id normalization, memory/event fallback summaries, and latest linked-activity copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, detail item editing, selected memory opening, memory review/delete/reset flows, profile-template writes, source-module ownership, visible UI, and route behavior unchanged.
-46. Contacts Role Hub read-model decomposition 2026-06-20: `src/composables/useContactsRoleHubModel.js` now owns Role Hub entity/chat-state copy, summary card construction, manual/event/world-field/memory counts, Chat entry labels, and read-only Chat social snapshot rows behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping Chat Directory binding ownership, relationship-runtime truth/write APIs, profile-template writes, selected memory flows, delete/reset behavior, social-state application, visible UI, and route behavior unchanged.
-47. Contacts world-field/template-adaptation display read-model decomposition 2026-06-20: `src/composables/useContactsWorldFieldModel.js` now owns Contacts world-field display rows, current-world/universal/legacy template option ordering, field/entity filtering, visibility/custom badges, template intro copy, and current-world template-adaptation review display facts behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile-template saving, AI draft/adaptation actions, Chat Directory binding ownership, relationship-runtime truth/write APIs, selected memory flows, delete/reset behavior, and visible UI behavior unchanged.
-48. Contacts danger-zone display read-model decomposition 2026-06-21: `src/composables/useContactsDangerZoneModel.js` now owns the selected-role danger impact summary, reset/delete confirmation detail rows, linked-record cleanup policy copy, and memory-delete preview/final safety details behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping destructive action execution, typed-role confirmations, Chat Directory binding ownership, relationship-runtime truth/write APIs, source cleanup handlers, Photos unbinding semantics, and visible UI behavior unchanged.
-49. Contacts detail-section display read-model decomposition 2026-06-21: `src/composables/useContactsDetailSectionModel.js` now owns the Preferences / Life Pattern / Social Graph section metadata, manual/event-attached grouping, detail counts, shared policy copy, and source chip labels/hints behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping manual detail add/edit/delete actions, event-attached item lock behavior, selected-memory navigation, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior unchanged.
-50. Contacts profile-header display read-model decomposition 2026-06-21: `src/composables/useContactsProfileHeaderModel.js` now owns selected-profile header avatar URL, eyebrow/name/meta/bio copy, empty state, NPC detection, and NPC upgrade hint copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile editing, NPC upgrade execution, Chat Directory binding ownership, avatar asset resolution, relationship-runtime truth/write APIs, and visible UI behavior unchanged.
-51. Contacts profile-template editor display read-model decomposition 2026-06-21: `src/composables/useContactsProfileTemplateEditorModel.js` now owns profile-template editor draft template reads, applicable field rows, save-review facts, preserved custom-field rows, empty copy, helper/placeholder/type/icon copy, and tag previews behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile-template saves, AI draft/adaptation actions, profile-value serialization, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior unchanged.
-52. WorldBook source display read-model decomposition 2026-06-21: `src/composables/useWorldBookSourceModel.js` now owns Book source-link display rows, Active World text-category directories, source picker grouping, source review diff summary, active/issue/disabled counts, and source snapshot helpers behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping Book asset creation/editing, source-link add/enable/disable/remove/refresh actions, World Pack activation, AI proposal review, profile-template writes, knowledge-point writes, storage shape, and visible WorldBook behavior unchanged.
-53. WorldBook encyclopedia filtering/read-model decomposition 2026-06-21: `src/composables/useWorldBookKnowledgeModel.js` now owns encyclopedia usage/readiness counts, role/Chat binding usage state, usage badges, search/tag/usage filters, sorting, deep-link scoping/summaries, and bound-profile display names behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping encyclopedia create/edit/delete/enable actions, profile-template writes, World Pack activation, Book source-link actions, storage shape, route clearing, and visible WorldBook behavior unchanged.
-54. WorldBook profile-template display/read-model decomposition 2026-06-21: `src/composables/useWorldBookProfileTemplateModel.js` now owns template stats, universal/current-world template rows, Contacts handoff copy, section copy, field/version/state/toggle labels, and fallback template titles behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping template copy/enable actions, Contacts handoff routing, profile-template storage, Contacts ownership of concrete values, World Pack activation, Book source-link actions, storage shape, and visible WorldBook behavior unchanged.
+- 30 route views, 16 Pinia stores, 36 components, 36 composables;
+- about 104k source lines;
+- 171 Vitest files / 1050 tests pass;
+- 18 Playwright desktop/mobile scenarios pass;
+- lint and production build pass;
+- production dependency audit is clean;
+- full dependency audit reports development/tooling advisories.
 
-Still incomplete:
+## 2. Landed Architecture Baselines
 
-1. legacy field semantics and fallback paths still need continued cleanup;
-2. some large files still need careful decomposition;
-3. historical docs and encoding debt still need targeted cleanup;
-4. stale code and compatibility layers still need periodic audit.
-5. The next WorldBook expansion should focus on user-testing the landed nonstandard-app review UI, concrete app-archetype behavior, and broader subscription generation, not new ownership surfaces.
-6. Validation debt found during the 2026-06-12 governance pass has been cleared: `ChatUserActionPanel.vue` shopping-entry/user-action copy is no longer mojibake, and WorldBook e2e specs now assert the current overview/templates UI contract.
-7. E2E stability pass 2026-06-12: Home dock navigation, Contacts route entry, WorldBook entry, and App Store mini-app specs now share one navigation helper for unlock, Home readiness, hash-route navigation, and dock app opening; full Playwright validation is green after the fix.
+### Ownership Contracts
 
-## 2. Recommended Next Slice
+- Contacts, Chat Directory, Chat, and relationship runtime have distinct owners;
+- Book, WorldBook, World Pack, and Files have distinct owners;
+- Calendar, Reminders, and Map have distinct owners;
+- Shopping/Food Delivery, Logistics, Wallet, Assets, and Chat notification references have distinct owners;
+- World Hub reviews runtime state without becoming an ordinary record owner.
 
-Latest completed governance slice:
+### Shared Interfaces
 
-- `DONE` 2026-06-21: WorldBook profile-template display/read-model extraction. `src/composables/useWorldBookProfileTemplateModel.js` now owns template stats, universal/current-world template rows, Contacts handoff copy, section copy, field/version/state/toggle labels, and fallback template titles behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping template copy/enable actions, Contacts handoff routing, profile-template storage, Contacts ownership of concrete values, World Pack activation, Book source-link actions, storage shape, and visible WorldBook UI unchanged. `tests/worldbook-profile-template-model.test.js` covers stats, preset rows, current-world enabled/disabled rows, handoff/section copy, and fallback titles without mounting the full WorldBook view.
-- `DONE` 2026-06-21: WorldBook encyclopedia filtering/read-model extraction. `src/composables/useWorldBookKnowledgeModel.js` now owns encyclopedia usage/readiness counts, role/Chat binding usage state, badges, search/tag/usage filters, sorting, deep-link scoping/summaries, and bound-profile display names behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping encyclopedia create/edit/delete/enable actions, profile-template writes, World Pack activation, Book source-link actions, storage shape, route clearing, and visible WorldBook UI unchanged. `tests/worldbook-knowledge-model.test.js` covers usage classification, filter counts, tag preservation, sorting, deep-link synchronization, single-entry search seeding, and profile-name overflow without mounting the full WorldBook view.
-- `DONE` 2026-06-21: WorldBook source display read-model extraction. `src/composables/useWorldBookSourceModel.js` now owns Book source-link rows, Active World category directories, source picker grouping, source review diff summary, active/issue/disabled counts, inferred source roles, section summaries, category labels, and snapshot helper construction behind a focused composable Module Interface. `WorldBookView.vue` now consumes that Interface while keeping Book asset creation/editing, source-link add/enable/disable/remove/refresh actions, World Pack activation, AI/pasted app proposal review, profile-template writes, knowledge-point writes, storage shape, route behavior, and visible WorldBook UI unchanged. `tests/worldbook-source-model.test.js` covers source rows, counts, category directories, picker grouping, linked-state labels, changed-source diffs, and snapshot payloads without mounting the full WorldBook view.
-- `DONE` 2026-06-21: Contacts profile-template editor display read-model extraction. `src/composables/useContactsProfileTemplateEditorModel.js` now owns profile-template editor draft template reads, applicable field rows, save-review facts, preserved custom-field rows, empty copy, helper/placeholder/type/icon copy, and tag previews behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile-template saves, AI draft/adaptation actions, profile-value serialization, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior unchanged. `tests/contacts-profile-template-editor-model.test.js` covers draft template lookup, applicable fields, preserved custom rows, field row display metadata, save-review facts, empty copy, tag previews, and missing-template fallback without mounting the full Contacts view.
-- `DONE` 2026-06-21: Contacts profile-header display read-model extraction. `src/composables/useContactsProfileHeaderModel.js` now owns selected-profile header avatar URL, eyebrow/name/meta/bio copy, empty state, NPC detection, and NPC upgrade hint copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile editing, NPC upgrade execution, Chat Directory binding ownership, avatar asset resolution, relationship-runtime truth/write APIs, and visible UI behavior unchanged. `tests/contacts-profile-header-model.test.js` covers header display state, missing role/bio fallback copy, NPC upgrade hint copy, and no-profile empty state without mounting the full Contacts view.
-- `DONE` 2026-06-21: Contacts detail-section display read-model extraction. `src/composables/useContactsDetailSectionModel.js` now owns Preferences / Life Pattern / Social Graph section metadata, manual/event-attached grouping, detail counts, shared policy copy, and source chip labels/hints behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping manual detail add/edit/delete actions, event-attached item lock behavior, selected-memory navigation, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior unchanged. `tests/contacts-detail-section-model.test.js` covers section metadata, empty rows, manual/event-attached counts, grouped detail rows, source labels, source hints, and shared policy copy without mounting the full Contacts view.
-- `DONE` 2026-06-21: Contacts danger-zone display read-model extraction. `src/composables/useContactsDangerZoneModel.js` now owns selected-role danger impact summary, reset/delete confirmation detail rows, linked-record cleanup policy copy, and memory-delete preview/final safety details behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping destructive action execution, typed-role confirmations, Chat Directory binding ownership, relationship-runtime truth/write APIs, source cleanup handlers, Photos unbinding semantics, and visible UI behavior unchanged. `tests/contacts-danger-zone-model.test.js` covers impact copy, reset confirmation details, role deletion preview/scope rows, linked-record cleanup policy copy, and memory-delete safety details without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts world-field/template-adaptation display read-model extraction. `src/composables/useContactsWorldFieldModel.js` now owns Contacts world-field rows, template option ordering/deduping, selected template fields, saved value map, visibility/custom badge labels, intro copy, and current-world adaptation display facts behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping profile-template saving, AI draft/adaptation actions, Chat Directory binding ownership, relationship-runtime truth/write APIs, selected memory flows, delete/reset behavior, and visible UI behavior unchanged. `tests/contacts-world-field-model.test.js` covers template option dedupe, current-world/universal labels, entity filtering, template/custom rows, array display values, visibility badges, adaptation review display facts, empty/fallback labels, and field/entity helpers without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts Role Hub read-model extraction. `src/composables/useContactsRoleHubModel.js` now owns Role Hub entity/chat-state copy, summary card construction, manual/event/world-field/memory counts, Chat entry labels, and read-only Chat social snapshot rows behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping Chat Directory binding ownership, relationship-runtime truth/write APIs, profile-template writes, selected memory flows, delete/reset behavior, social-state application, visible UI, and route behavior unchanged. `tests/contacts-role-hub-model.test.js` covers entity labels, social-state labels, Self Profile context-only copy, unbound role copy, summary card counts, linked-activity source detail handoff, bound Chat target copy, and read-only Chat social snapshot metadata without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts linked activity read-model extraction. `src/composables/useContactsLinkedActivityModel.js` now owns selected-role linked activity summary/list rows, runtime source-ref plus event-attached detail source dedupe, source counts, event-attached counts, source record id normalization, memory/event fallback summaries, and latest linked-activity copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, detail item editing, selected memory opening, memory review/delete/reset flows, profile-template writes, source-module ownership, visible UI, and route behavior unchanged. `tests/contacts-linked-activity-model.test.js` covers no-profile empty state, runtime/detail-source dedupe, detail-only source counting, sorted linked-activity rows, memory/event fallback summaries, source record IDs, and waiting copy without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts memory detail read-model extraction. `src/composables/useContactsMemoryDetailModel.js` now owns selected-memory source audit rows, cleanup-readiness labels, supporting-event timeline rows, source record ID normalization, and headline facts behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, memory list filtering, selected memory opening, review-status updates, memory delete/reset flows, Contacts profile storage, source-module cleanup ownership, visible UI, and route behavior unchanged. `tests/contacts-memory-detail-model.test.js` covers empty detail state, sorted/deduped source audit rows, cleanup readiness, capped supporting-event timeline fallback, source record IDs, and headline facts without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts memory list read-model extraction. `src/composables/useContactsMemoryListModel.js` now owns selected-profile memory-group listing, source-filter options, filtered and visible memory groups, visible/total/hidden counts, list summary copy, count labels, and overflow copy behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping relationship-runtime truth/write APIs, selected memory detail, source audit, review-status updates, memory delete/reset flows, Contacts profile storage, Chat Directory binding ownership, visible UI, and route behavior unchanged. `tests/contacts-memory-list-model.test.js` covers no-profile empty state, target/sort adapter handoff, source filter generation and filtering, visible cap/overflow copy, and no-overflow count copy without mounting the full Contacts view.
-- `DONE` 2026-06-20: Contacts home list read-model extraction. `src/composables/useContactsHomeListModel.js` now owns Contacts home search normalization, profile search text construction, Self Profile / Main Role / NPC grouping, filtered list outputs, and recent-interaction scoring/source labels behind a focused composable Module Interface. `ContactsView.vue` now consumes that Interface while keeping Contacts role profile storage, Chat Directory binding ownership, relationship-runtime truth, memory cleanup, delete/reset behavior, profile-template editing, Wallet summaries, visible Contacts UI, and route behavior unchanged. `tests/contacts-home-list-model.test.js` covers grouping, search matching through role fields/profile values/role ids, recent-interaction scoring, Self Profile exclusion from recent interactions, and source-label priority without mounting the full Contacts view.
-- `DONE` 2026-06-20: Chat assistant result post-processing extraction. `src/composables/useChatAssistantResultModel.js` now owns locked-screen AI reply notification summary/payload preparation, assistant social-event proposal submission metadata, active-thread read/unread settlement, and assistant reply truth-count recording behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, image-reference preparation, assistant response parsing, message append/mutation, reroll replacement behavior, automation scheduling, service-notification schemas, route semantics, notification visible copy, and Chat UI unchanged. `tests/chat-assistant-result-model.test.js` covers notification summary fallback/primary-text priority, locked-screen notification payload gating, Chat-owned social proposal source metadata, manual-trigger source cleanup, active-thread read settlement, background-thread unread settlement, and assistant reply truth-count recording without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat assistant response parsing/normalization extraction. `src/composables/useChatAssistantResponseModel.js` now owns assistant JSON payload parsing, replyType/quote resolution, assistant rich-block normalization, primary text fallback generation, social-event proposal extraction handoff, and reroll fallback normalization behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, provider capability selection, image-reference preparation, message append/mutation, reroll replacement behavior, social-event submission, automation scheduling, message/rich-block schemas, safe-route allowlist semantics, and visible Chat copy unchanged. `tests/chat-assistant-response-model.test.js` covers plain-text fallback replies, quote resolution/fallback, bilingual secondary filtering, rich-block schema normalization, service-notification rejection, image-policy gating, safe-route fallback, mini-scene HTML cleanup, social-event proposal handoff, and reply-count/text/block caps without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat AI image-reference preparation extraction. `src/composables/useChatAiImageReferenceModel.js` now owns assistant image-reference metadata normalization, context-message image reference collection, role-bound reference candidate selection, and Gallery AI-reference URL preparation behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, provider capability selection, prompt semantics, assistant parsing semantics, message append/mutation, automation scheduling, Gallery asset ownership, role binding contract shape, image-reference fallback semantics, message schema, and visible Chat copy unchanged. `tests/chat-ai-image-reference-model.test.js` covers metadata clamping/provider normalization, newest-first context image references, asset URL resolution and text-only fallback notes, role-bound preferred/reference/scenario/folder candidates, emoji/excluded asset filtering, and context-first reference merging without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat AI prompt/context preparation extraction. `src/composables/useChatAiPromptContextModel.js` now owns system-prompt block assembly, message-context conversion, context-window selection, quote candidates, smart-reply history preparation, and automation fingerprint source text behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, assistant parsing semantics, message append/mutation, automation scheduling, diagnostics, social-event submission, relationship/runtime/source-module ownership, message schema, and visible Chat copy unchanged. `tests/chat-ai-prompt-context-model.test.js` covers prompt limits, truth-event summaries, context-window selection, AI message conversion, quote candidates, recalled/rich/service/revised message context, role/service/group/anonymous prompt instructions, source-module ownership copy, and image-reference prompt policy without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat automation status display-state extraction. `src/composables/useChatAutomationStatusModel.js` now owns automation enabled/readiness copy, next/last/settlement/background-reminder display state, and status-time formatting behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping automation policy decisions, queue execution, notification emission, diagnostics, conversation auto-state persistence, AI request behavior, and visible copy unchanged. `tests/chat-automation-status-model.test.js` covers disabled/notify-only/quiet-hours schedule copy, next/last/settlement hints, real-push readiness, due-window, policy-blocked, notify-only, and armed background-reminder states without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat AI request/retry/reroll display-state extraction. `src/composables/useChatAiRequestStateModel.js` now owns in-flight AI request state, request/retry/cancel eligibility, retry target ids, controller cancellation, and error/retry cleanup behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping AI transport, prompt/context assembly, diagnostics, automation scheduling, message mutation semantics, service-notification behavior, and persisted storage shape unchanged. `tests/chat-ai-request-state-model.test.js` covers start/finish/cancel state, reply/reroll retry gating, deleted-message retry cleanup, thread-switch cleanup, and busy-state request gating without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat service route/action feedback-state extraction. `src/composables/useChatServiceFeedbackModel.js` now owns service source-open/reply/read/sent feedback state, route-feedback normalization, best-effort session recovery, and service-feedback clearing behind a focused composable Module Interface. `ChatView.vue` now consumes that Interface while keeping service-notification schema, source-module record ownership, route behavior, persisted storage shape, and visible Chat copy unchanged. `tests/chat-service-feedback-model.test.js` covers route feedback persistence/recovery/expiry, unsafe-route normalization, reply/sent/read feedback gating, and session-clearing behavior without mounting the full Chat view; the existing `tests/chat-service-thread-display-model.test.js` still covers the composer-adjacent feedback dock.
-- `DONE` 2026-06-20: Chat pending quote display/action-state extraction. `src/composables/useChatPendingQuoteModel.js` now owns quote target resolution, pending quote bar label/preview state, service-notification quote payload state, invalid/recalled target cleanup, source-message recall/delete cleanup, active-thread silent cleanup, and quote payload construction for existing send actions. `ChatView.vue` now consumes that Interface while keeping message schema, recall/delete semantics, AI context assembly, service-notification behavior, route behavior, persisted storage shape, and visible Chat copy unchanged. `tests/chat-pending-quote-model.test.js` covers ordinary quote previews, service-notification quote payloads, communication-state gating, invalid/recalled target cleanup, service quote feedback cleanup, and silent post-send/thread-switch cleanup without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat thread menu/settings draft-state extraction. `src/composables/useChatThreadMenuModel.js` now owns active-thread menu open/close state, thread tuning draft defaults/normalization, thread identity draft updates, save-feedback flags/timers, and normalized payload builders for the existing save actions. `ChatView.vue` now consumes that Interface while keeping store writes, message schema, AI reply generation, automation scheduling, service-notification behavior, route behavior, persisted storage shape, thread-menu UI copy, and visible Chat behavior unchanged. `tests/chat-thread-menu-model.test.js` covers menu draft normalization, identity draft updates, automation-gated payloads, unknown-field guards, and saved-feedback timer cleanup without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat home search/list display-state extraction. `src/composables/useChatHomeListModel.js` now owns the Messages home list read-model: search open/keyword state, message-request / folded-service / blocked grouping, folded-service unread count, visible contact filtering, unread-total copy, conversation preview lookup, and home hero copy. `ChatView.vue` now consumes that Interface while keeping Chat message schema, service-notification behavior, source-module ownership, AI reply behavior, automation, routing, persistence, rich-message mutation actions, Wallet writes, Gallery asset binding, media import, Shopping share semantics, and visible Chat UI behavior unchanged. `tests/chat-home-list-model.test.js` covers grouping, search matching, folded unread totals, hero-copy priority, search toggle cleanup, and conversation-preview lookup without mounting the full Chat view.
-- `DONE` 2026-06-20: Chat `+` panel-state extraction. `src/composables/useChatUserActionPanelModel.js` now owns the user action panel display/draft layer: open/close state, current form, draft reset/update, link/transfer/voice validation, gallery category and asset ordering, preview cache lifecycle, and gallery/location readiness copy. `ChatView.vue` now consumes that Interface while keeping text/rich-message sending, Wallet ledger writes, Gallery asset usage binding, media import, Shopping share semantics, service-notification contracts, AI reply generation, automation queue behavior, routing, persistence, and visible Chat UI unchanged. `tests/chat-user-action-panel-model.test.js` covers the new Interface directly, and the existing Chat panel path tests stayed green.
-- `DONE` 2026-06-19: Chat message action-sheet display-state extraction. `src/composables/useChatMessageActionSheetModel.js` now owns the message action sheet display state: active target lookup, sheet open/close state, action rows, action labels, visibility rules, tone classes, and stable action test ids. `ChatView.vue` now renders the sheet from that Interface while keeping quote/copy/save/edit/restore/reroll/recall/delete action implementations, message mutation semantics, service-notification schema, source-module ownership, AI context assembly, routing, persistence, and visible Chat UI styling unchanged. `tests/chat-message-action-sheet-model.test.js` covers normal, service-thread, recalled, semantic-revision, and editable/source-owned rich-card action rows without mounting the full Chat view.
-- `DONE` 2026-06-19: Chat message edit display-state extraction. `src/composables/useChatMessageEditDisplayModel.js` now owns the edit-modal display state for ordinary text validation and editable rich cards, including field definitions, normalized rich-card patches/content, validation copy, and editable rich-card type listing. `ChatView.vue` dropped that inline display/validation layer while keeping message mutation actions, delete/recall/save/reroll behavior, service-notification schema, source-module ownership, AI context assembly, routing, persistence, and visible Chat UI unchanged. `tests/chat-message-edit-display-model.test.js` covers text validation plus external-link, transfer, and voice-card edit outputs without mounting the full Chat view.
-- `DONE` 2026-06-19: Chat service-thread display read-model extraction. `src/composables/useChatServiceThreadDisplayModel.js` now owns the service/official thread display layer for service status tags/header copy, template/channel preview, source chips/source notification plan display rows, inbox placement, empty-state copy, and composer-adjacent source/reply/read/sent feedback dock. `ChatView.vue` dropped that inline display read-model while keeping message schema, service-notification contract, source-module record ownership, subscription mute/fold actions, session route-feedback storage behavior, AI reply behavior, automation, routing, persisted storage shape, and visible Chat UI unchanged. `tests/chat-service-thread-display-model.test.js` covers service status/inbox/source-plan/empty-state/dock outputs without mounting the full Chat view.
-- `DONE` 2026-06-19: Chat active thread read-model extraction. `src/composables/useChatActiveThreadModel.js` now owns the first active-thread read layer for Chat: route-derived active chat id/contact, active conversation, merged AI prefs, active messages, communication availability, Chat appearance classes, avatar/module identity read-models, and service-thread muted/folded flags. `ChatView.vue` dropped that inline read-model while keeping message schema, service-notification contract, source-module record ownership, AI reply generation, automation queue behavior, route behavior, persisted storage shape, and visible Chat UI unchanged. `tests/chat-active-thread-model.test.js` covers active route resolution, default/fallback behavior, merged AI prefs, service-thread flags, appearance classes, and avatar hierarchy.
-- `DONE` 2026-06-19: Settings push workflow extraction. `src/composables/useSettingsPushWorkflow.js` now owns real-push capability/permission/server-health/resync/subscribe/test/unsubscribe orchestration, notification-toggle updates, and feedback/saved-state timers behind a focused composable Module Interface. `SettingsView.vue` dropped direct `src/lib/push.js` and notification facade wiring for this subpage, while `SettingsPushSection.vue` prop/event compatibility stayed intact. `tests/settings-push-workflow.test.js` covers health-check success, missing local subscription resync, subscribe failure, unsubscribe confirmation success, and workflow timer disposal. Push helper behavior, persisted settings shape, notification facade semantics, provider/API key settings, storage/report codes, and visible Settings UI stayed unchanged.
-- `DONE` 2026-06-19: Settings storage diagnostics workflow extraction. `src/composables/useSettingsStorageDiagnosticsWorkflow.js` now owns Settings storage audit/report/repair orchestration, status/label helpers, and feedback lifecycle behind a focused composable Module Interface. `SettingsView.vue` dropped direct persistence diagnostic helper usage and now wires the About / Storage Diagnostics UI through that Interface. `tests/settings-storage-diagnostics-workflow.test.js` covers healthy audit reports, drift repair semantics, storage-only report clearing, and feedback timer cleanup. Storage report codes, persistence inspection/repair behavior, backup/export shapes, provider/API key settings, and visible Settings UI stayed unchanged.
-- `DONE` 2026-06-19: first Settings large-file decomposition slice. Backup/export/restore orchestration moved from `SettingsView.vue` into `src/composables/useSettingsBackupWorkflow.js`, giving Settings a narrower Interface while keeping backup payload shape, restore rollback, storage reports, provider/API key settings, and UI behavior unchanged. `tests/settings-backup-workflow.test.js` covers the new export Interface, and the existing Settings import rollback regression remains green.
-- `DONE` 2026-06-18: narrow encoding and IA cleanup. Chat product cards no longer show the downstream asset-transfer badge; Shopping still keeps the asset-transfer suggestion flow after checkout. The old corrupted fragment is covered by mojibake guard markers, project-local `SKILL.md` guard coverage was added, and runtime behavior, Chat message schema, source-module ownership, persistence, and skill behavior stayed unchanged.
-- `DONE` 2026-06-15: sixth API reports interface governance slice. Backup/export read access for raw `apiReports` snapshots now routes through `src/composables/useSystemApiReports.js#createReportSnapshot`. Regression coverage verifies the snapshot is detached from the live store, plus Settings export/rollback paths still pass. Exported data shape, persisted storage shape, provider/API key settings, restore semantics, and Settings decomposition stayed out of this slice.
+- `src/lib/ai.js` is the only provider transport entry;
+- `src/lib/world-interface.js` centralizes active world context;
+- relationship facts, role bindings, source cleanup, app bindings, service templates, shareable objects, image sources, and persistence use named helper contracts;
+- notification and API report access has focused `systemStore` facades;
+- Settings backup, storage diagnostics, and push orchestration has focused workflow composables.
 
-Active governance slice:
+### Large-View Decomposition Already Landed
 
-- None. The most recent WorldBook profile-template display/read-model slice is complete and full lint/test/build validated.
+Do not repeat these seams.
 
-Next low-risk candidates:
+Chat has 15 focused composables for:
 
-- Contacts template-adaptation visual diff if the next round should stay in the profile-template product lane; keep profile-template writes, AI draft/adaptation actions, and old custom-field preservation unchanged.
-- WorldBook Current World Pack review/display if the next cleanup should keep moving away from Chat after the fifteen completed Chat seams, ten Contacts seams, and three WorldBook read-model seams. Do not repeat Book source-link/picker/diff, encyclopedia filtering/read-model, or profile-template display/read-model extraction.
-- Chat retry/error report or smart-reply preparation seam only if a Chat-specific need appears; keep AI transport, message append/mutation, automation scheduling, diagnostics schema, and visible copy unchanged.
+- active thread;
+- AI request state;
+- AI prompt context;
+- AI image references;
+- assistant response parsing;
+- assistant result post-processing;
+- automation status;
+- home list;
+- service-thread display;
+- service feedback;
+- message edit display;
+- message action sheet;
+- user action panel;
+- thread menu;
+- pending quote.
 
-1. Continue one-owner-per-concept cleanup where docs and code still drift.
-2. Keep extracting low-risk pieces from oversized files while preserving tests and migrations.
-3. Audit stale docs, unused code, and compatibility layers in small safe batches.
-4. If continuing WorldBook/Book work, use the implemented V1 baseline in `docs/superpowers/specs/2026-05-29-book-text-library-worldbook-design.md` and `docs/superpowers/plans/2026-05-29-book-text-library-worldbook-plan.md` as reference only; promote the concrete continuation slice into the roadmap/package handoff before implementation.
-5. Next cleanup should continue with broader encoding review outside draft/reference workspaces plus obsolete compatibility layers, now that the current unit/e2e baseline is green.
-6. Keep dependency work to patch/minor updates while the current stack is healthy; major Vite/Vitest/ESLint jumps should remain separate migration tasks.
-7. Continue hardening E2E only where flakes are observed; reuse `e2e/helpers/navigation.js` for shell entry flows and prefer stable user-facing/test-id locators plus explicit route readiness over broad timeout increases.
-8. Keep future build-warning cleanup narrow: remove warning causes when ownership is clear, but avoid broad bundling or code-splitting changes without a measured performance reason.
-9. Use `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md` as evidence when choosing 4.5 slices; promote a concrete slice into the roadmap/package handoff before implementing any `systemStore`, large-view, cross-store adapter, or TypeScript cleanup.
+Contacts has 10 focused composables for:
 
-## 3. Do Not Do
+- home list;
+- memory list;
+- memory detail;
+- linked activity;
+- Role Hub;
+- world fields/template adaptation display;
+- danger zone;
+- detail sections;
+- profile header;
+- profile-template editor display.
 
-1. Do not refactor without migration clarity and regression coverage.
-2. Do not create parallel owners for the same concept.
-3. Do not let cleanup work invent new product requirements.
-4. Do not reuse hidden `Files` as the Book UI or make Book responsible for WorldBook activation.
+WorldBook has 3 focused composables for:
 
-## 4. Must Sync When Working Here
+- Book source links/picker/diff;
+- knowledge filters/readiness/deep links;
+- profile-template display.
 
-At the end of a meaningful round, check and update:
+Settings has focused workflows for:
 
-1. `README.md`
-2. this file
-3. `PRODUCT_BOUNDARY.md`
-4. `IMPLEMENTATION_WORKSTREAMS.md`
-5. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-6. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
-7. `docs/roadmap/PROJECT_MODULE_AUDIT.md` when audit priority changed
+- backup/restore;
+- storage diagnostics/repair;
+- push setup and lifecycle.
+
+## 3. Current Measured Debt
+
+### Largest Views
+
+| File | Lines |
+| --- | ---: |
+| `ContactsView.vue` | 4754 |
+| `ChatView.vue` | 4312 |
+| `WorldBookView.vue` | 4130 |
+| `HomeView.vue` | 3920 |
+| `ChatDirectoryView.vue` | 3802 |
+| `WidgetsView.vue` | 3617 |
+| `AppStoreView.vue` | 3352 |
+| `FoodDeliveryView.vue` | 3161 |
+
+### Central Store
+
+`src/stores/system.js` is 4186 lines and directly imported by 22 of 30 route views. It coordinates settings, appearance, Home, app placement, notifications, API/network, push, world compatibility, automation, reports, and backup-reminder state.
+
+Preferred response: add one stable facade at a time while preserving storage/backup compatibility. Do not split the store wholesale.
+
+### Direct Store Coupling
+
+Current direct store imports include:
+
+```text
+calendar      -> Reminders, Chat, RelationshipRuntime, System
+foodDelivery  -> Chat
+gallery       -> Map, System
+map           -> System
+phone         -> Calendar, System
+reminders     -> Calendar, Map
+shopping      -> Calendar, Chat
+stock         -> Calendar
+```
+
+Calendar's relationship-fact path is the best first adapter-depth candidate because Calendar still passes concrete Chat and relationship-runtime stores into the shared adapter.
+
+### Type Coverage
+
+There are zero `.ts/.tsx` source files. Existing normalizers and tests are valuable, but high-value shared payloads have no compile-time contract.
+
+Use incremental JSDoc or TypeScript for new/extracted contract modules only. Do not begin a whole-app migration.
+
+## 4. Security And Release Debt
+
+### Backup Credentials
+
+Settings backup exports the full settings snapshot, including `settings.api.key`, in plaintext JSON.
+
+Decision required:
+
+- exclude credentials by default;
+- or require explicit opt-in with a strong warning;
+- or design encryption and key management.
+
+The roadmap recommends exclude-by-default as the simplest safe first implementation, but product acceptance must be promoted before changing backup compatibility.
+
+### Dependency Audit
+
+2026-07-10 results:
+
+- production audit: 0 vulnerabilities;
+- full audit: 1 critical, 9 high, 5 moderate advisories;
+- Vite can receive a compatible 7.x patch update;
+- Vitest remediation is a major upgrade and must be isolated.
+
+Do not report only the production audit when describing developer/CI safety.
+
+### Push Relay
+
+The relay is development/single-operator infrastructure:
+
+- no authentication or authorization;
+- permissive CORS;
+- local JSON persistence for VAPID keys, subscriptions, and schedules;
+- no rate limits, tenancy, secret manager, or authoritative app state;
+- not deployed by GitHub Pages.
+
+Do not describe it as a production backend or closed-page simulation engine.
+
+### CI And Deployment
+
+- CI runs lint, unit tests, and build;
+- CI does not run Playwright or dependency audit;
+- no coverage threshold exists;
+- Pages deployment performs a build-only workflow;
+- local validation used Node 22 while CI uses Node 20.
+
+## 5. Completed In The 2026-07-10 Governance Round
+
+1. rebuilt master, roadmap, PM, architecture, maturity, strategy, and candidate docs from one evidence baseline;
+2. removed recommendations to begin already completed 4.1-4.4 work;
+3. corrected global Appearance pack semantics;
+4. recorded the K-pop planning artifact as a decision gate;
+5. ran full lint/unit/build/E2E and dependency audits;
+6. kept code and storage behavior unchanged.
+
+## 6. Recommended Next Slice
+
+Use the live roadmap order.
+
+### P0: Security/Toolchain
+
+1. promote and implement backup credential policy;
+2. update compatible Vite/transitive dependencies;
+3. plan the Vitest migration separately;
+4. validate and re-audit.
+
+### P1: Release Gate
+
+1. add or explicitly defer Playwright/audit CI gates;
+2. align Pages release policy with the Definition of Done.
+
+### P1: One Architecture Seam
+
+Choose one:
+
+- a `systemStore` facade;
+- Current World Pack display/review state;
+- one Home edit/library seam;
+- one Chat Directory management seam;
+- the Calendar relationship adapter.
+
+One slice must preserve storage shapes and product behavior, add focused tests, and update measurements.
+
+## 7. Do Not Do
+
+1. do not refactor several hotspots in one round;
+2. do not combine dependency migration with product features;
+3. do not split `systemStore` before defining storage migration and rollback;
+4. do not repeat completed Chat/Contacts/WorldBook composable seams;
+5. do not use TypeScript adoption as a broad rewrite;
+6. do not turn cleanup into new product requirements;
+7. do not treat `docs/superpowers/**` plans as active work without roadmap promotion;
+8. do not remove compatibility state without migration evidence.
+
+## 8. Validation
+
+Required for every meaningful 4.5 slice:
+
+- targeted tests for the new interface/migration;
+- `npm.cmd run lint`;
+- `npm.cmd run test`;
+- `npm.cmd run build`;
+- Playwright when routes or user flows are affected;
+- dependency audit when the lockfile changes.
+
+## 9. Must Sync
+
+1. this file and package README;
+2. `docs/roadmap/TODO_ROADMAP.md`;
+3. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`;
+4. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`;
+5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`;
+6. `docs/architecture/ARCHITECTURE.md` and debt review when evidence/semantics change;
+7. `docs/pm/TODO_PM_STATUS_REPORT.md` when priority or release posture changes.

@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-06-02
+Updated: 2026-07-10
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -408,7 +408,28 @@ opencli.cmd --version
 git status --short
 ```
 
-## 10. Ownership Rule
+## 10. Current Project Toolchain Baseline
+
+Verified on 2026-07-10:
+
+- local Node: 22.13.0; CI Node: 20;
+- npm: 10.9.2;
+- Vite: 7.3.1;
+- Vitest: 1.6.1;
+- Playwright: 1.60.0;
+- lint/unit/build/E2E all pass.
+
+Audit posture:
+
+- `npm.cmd audit --omit=dev` reports zero production vulnerabilities;
+- full `npm.cmd audit` reports development/tooling advisories, including direct Vite/Vitest findings;
+- Vite has a compatible 7.x update available;
+- Vitest remediation requires a separately planned major upgrade;
+- do not expose the Vite dev server or Vitest UI beyond a trusted development environment until the toolchain is updated.
+
+Dependency updates must remain isolated from product behavior and must run lint, unit, build, E2E, and both audit commands.
+
+## 11. Ownership Rule
 
 This file is for shared tooling and skill inventory only.
 

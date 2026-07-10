@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-06-03
+Updated: 2026-07-10
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -67,28 +67,24 @@ What is already landed:
 
 Still incomplete:
 
-1. legacy Chat-side relationship compatibility fields still need continued semantic containment.
-2. WorldBook template authoring remains a compact V1 baseline, not a full form-builder or onboarding flow.
-3. deeper World Hub review quality continues under roadmap 4.3.
-4. High-impact relationship automation is still deferred; Round 4 only adds helper-level hard-gating behavior and low-impact audit metadata.
-5. Incoming generated Chat social events are not authored here. Contacts displays the current social-channel snapshot for a role, while Chat owns the applied communication state, Event Runtime/World Hub own generated-event review, and relationship runtime owns confirmed relationship continuity.
+1. legacy Chat-side relationship compatibility fields still need semantic containment until a separate migration removes them;
+2. WorldBook template authoring remains a compact V1, not a full form builder or onboarding system;
+3. Contacts template adaptation is functional but the before/after preservation review can become a clearer visual diff;
+4. high-impact relationship automation remains deferred;
+5. the proposed K-pop role-template expansion is still part of roadmap 4.7 `DECISION`, not approved Contacts work.
 
 ## 2. Recommended Next Slice
 
-1. Move to 4.3 World Hub review quality before adding stronger controls.
-2. Keep watching Chat-side legacy relationship compatibility fields so they do not grow back into relationship truth.
-3. Continue from the V1 WorldBook/Contacts profile-template baseline by making current-world template adaptation easier to understand: first turn the review into a user-readable visual diff, then revisit richer template editing and eventual form-builder-quality WorldBook authoring.
-4. Continue polishing the Contacts display-only social snapshot so it remains clear, read-only, and separate from relationship metrics or memory truth.
-5. For architecture cleanup, do not repeat the already extracted home-list search/grouping, memory-list/source-filter, memory-detail/source-audit, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, or profile-template editor display seams. The next Contacts product lane should be the template-adaptation visual diff, or move architecture cleanup to WorldBook/Home.
+Contacts V2 and memory 4.2 are complete at current acceptance. Do not restart them from older plans.
 
-For cross-device continuation of the WorldBook -> Contacts profile-field line, start from `docs/superpowers/plans/2026-06-03-worldbook-contacts-profile-fields-handoff.md`. Keep `docs/superpowers/plans/2026-06-02-worldbook-contacts-profile-fields-next-plan.md` as the original execution plan and completed-task record.
+Current safe candidates:
 
-Concrete next task for this line:
+1. keep compatibility fields contained and fix only a named semantic leak;
+2. promote a focused template-adaptation visual diff if product review selects it;
+3. if roadmap 4.7 approves a K-pop profile-template slice, add only the confirmed template fields while keeping concrete values Contacts-owned;
+4. otherwise move architecture cleanup to another hotspot instead of repeating the ten extracted Contacts read models.
 
-1. First deliver the Contacts template-adaptation visual diff described in the 2026-06-03 handoff.
-2. Then replace the Contacts-side `default_world` assumption with the real current-world ID after WorldBook current-world state is stable.
-3. Then add stronger AI adaptation empty/failure states.
-4. Leave WorldBook form-builder-quality template authoring for a later slice unless product direction changes.
+The older cross-device plans remain implementation history. They are not current task sources unless the live roadmap promotes an exact remaining slice.
 
 4.2 closure baseline:
 

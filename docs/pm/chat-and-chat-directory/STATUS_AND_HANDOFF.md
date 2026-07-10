@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-06-20
+Updated: 2026-07-10
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -48,13 +48,16 @@ Still incomplete or risky:
 
 ## 2. Recommended Next Slice
 
-1. Continue shrinking semantic drift in any remaining Chat-side relationship displays and binding flows.
-2. Keep extracting low-risk Chat or Chat Directory UI pieces only when behavior can stay stable.
-3. Continue hands-on mobile smoke testing of the remaining rich-message branches: saved-message review, real-device media-picker behavior, and source-owned product/service card boundaries should feel like normal chat actions and never expose recalled original content.
-4. Postpone service-account polish that depends on World Pack app archetypes until the World Pack contract settles.
-5. If continuing World Pack service-account work, use `SERVICE_ACCOUNT_LINK_CONTRACT.md` and `getServiceAccountLinkContract(contactId)` as the Chat-side handshake, then exercise the confirmed source notification plans from concrete source modules without making Chat own source-module records or auto-subscribing users.
-6. If continuing group chat work, build the next layer as explicit speaker orchestration rather than overloading ordinary one-contact reply behavior.
-7. Continue the next generated social-event layer from the landed review seam: tune the foreground/runtime greeting source, add richer scheduling or additional social-event types only when World Hub can keep source and ownership explanations readable, and never let generated proposals bypass Event Runtime review or Chat-owned application.
+Chat's 4.4 service-continuity baseline and the World Pack service-template contract are landed. Current candidates are:
+
+1. perform real-device rich-message/media-picker/service-thread smoke testing;
+2. exercise existing source notification plans from concrete source modules before adding another account family;
+3. build group chat's next layer only from an explicit multi-speaker orchestration design;
+4. fix a named Chat-side relationship semantic leak if one is found, without reviving compatibility fields as truth;
+5. deepen generated social behavior only through Event Runtime audit and World Hub review;
+6. if roadmap 4.7 approves K-pop service accounts, add candidates/templates first and keep user subscription manual.
+
+Do not start another broad Chat decomposition by inertia while the active roadmap priority is security/toolchain maintenance.
 
 ## 3. Do Not Do
 

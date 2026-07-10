@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-05-31
+Updated: 2026-07-10
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -21,18 +21,22 @@ What is already landed:
 
 Still incomplete:
 
-1. Calendar relationship-fact review polish still needs work;
-2. Reminders can still use stronger product clarity around future objective/task cues;
-3. Map still needs a later visual and interaction pass;
-4. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
-5. Calendar and Map world-app presentation contexts need phone-sized user testing together with WorldBook/App Store/Home entry flows.
+1. Reminders can still use stronger product clarity when a real objective/task cue family is promoted;
+2. Map still needs a later visual and interaction pass;
+3. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
+4. Calendar and Map world-app presentation contexts need true-device testing together with WorldBook/App Store/Home entry flows;
+5. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
 
 ## 2. Recommended Next Slice
 
-1. Deepen Calendar relationship review and memory-review details.
-2. Keep Reminders as the only raw-cue inbox while refining its filters and explanation.
-3. Continue expanding read-only route/travel context without moving record ownership out of the source modules.
-4. User-test Calendar reservation and Map transit world context as presentation only, not second owners for schedules, route truth, or event judgment.
+Calendar relationship review and memory-lineage detail have reached the current 4.2 acceptance.
+
+Current safe candidates:
+
+1. user-test Calendar reservation and Map transit world context on a real phone as presentation only;
+2. deepen the confirmed-event relationship adapter without changing Calendar, Chat, or relationship-runtime ownership;
+3. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family;
+4. if roadmap 4.7 approves K-pop carriers, introduce schedule types and location context in separate Calendar/Map slices rather than one cross-owner data model.
 
 ## 3. Do Not Do
 

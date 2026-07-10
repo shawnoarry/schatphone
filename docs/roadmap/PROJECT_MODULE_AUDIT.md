@@ -1,137 +1,122 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
 > **Candidate pool only / 仅候选池**
 >
-> This file is not an active roadmap or implementation source. Use it to compare module maturity and discover candidates. Promote any chosen slice into `docs/roadmap/TODO_ROADMAP.md` and the matching task package handoff before implementation.
+> This file compares module maturity and future opportunities. It is not an implementation source. Promote selected work into `TODO_ROADMAP.md` and the owning package handoff.
 
-Purpose: this document is the candidate pool and product-level module audit for future planning.
+## 1. Audit Judgment
 
-Use it to answer:
+SchatPhone has an integrated local-first V1 with strong core loops and uneven finish.
 
-- which modules are already stable enough to expand;
-- which ones still have product or ownership risk;
-- which candidate directions are worth promotion into the live roadmap later.
+Current product risks, in order:
 
-Authority:
+1. credential/toolchain/release hardening;
+2. large view/store hotspots;
+3. true-device and end-to-end visual quality;
+4. World Pack/runtime hardening;
+5. shallow secondary-module loops;
+6. content plans that are not yet mapped to the right product carriers.
 
-- this file is not the live execution board;
-- active implementation order still belongs in `docs/roadmap/TODO_ROADMAP.md`;
-- handoff-oriented engineering risk still belongs in `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`;
-- package ownership and workflow rules still belong in `docs/pm/TASK_PACKAGE_INDEX.md` and `docs/process/AI_WORK_MODE.md`.
+Priority meanings:
 
-## 1. Quick Judgment
+- `P0`: security or release-confidence issue;
+- `P1`: strong next candidate after promotion;
+- `P2`: useful later deepening;
+- `Watch`: preserve, no proactive feature push;
+- `Decision`: cannot implement safely yet.
 
-SchatPhone has passed the "can the shell run?" stage.
+## 2. Module Candidate Audit
 
-Current product reality:
-
-1. the shell is real;
-2. Chat and relationship continuity are real;
-3. Map / Reminders / Calendar / push is a meaningful cross-module loop;
-4. Gallery is a real asset center;
-5. runtime and World Hub exist as narrow, optional layers;
-6. several support modules are real MVPs rather than pure placeholders;
-7. Book now exists as a trial-ready V1 text-source library for WorldBook activation.
-
-Main product risk now:
-
-> module maturity is uneven, and old ownership confusion can still come back if candidate ideas are promoted too casually.
-
-## 2. How To Read This Audit
-
-For each module:
-
-- `current state` = what is actually true today;
-- `main gap` = the most visible missing piece from a product perspective;
-- `boundary risk` = where a future change is likely to break ownership clarity;
-- `candidate next move` = a reasonable future direction, not an already-approved task;
-- `priority` = candidate priority only, not live roadmap status.
-
-Priority legend:
-
-- `P0.5`: near-term stabilization or polish before broader expansion
-- `P1`: strong candidate for active immersive-expansion work
-- `P2`: later module growth
-- `Watch`: keep healthy, no immediate feature push
-
-## 3. Module Candidate Audit
-
-| Module | Current state | Main gap | Boundary risk | Candidate next move | Priority |
+| Module / area | Current state | Main gap | Boundary risk | Candidate next move | Priority |
 | --- | --- | --- | --- | --- | --- |
-| Lock Screen | stable shell entry with notification tap-through and unlock flow | finer visual/device polish | future modules bypassing shell notification rules | keep new module notification metadata aligned with shell rules | Watch |
-| Home | stable app-entry shell with folder model and gated layout editing | customization discoverability remains intentionally low | turning Home into a second control console | keep it focused on phone entry, not deep product logic | Watch |
-| Settings | strong configuration hub for backup, diagnostics, automation, push, and appearance | page density is still high | mixing system config changes with domain ownership changes | continue low-risk section cleanup only when UX needs it | P0.5 |
-| Network | technically usable provider setup and diagnostics | provider setup still feels technical | transport changes hidden inside UI polish work | improve guidance and examples instead of changing transport semantics | P1 |
-| Chat | strongest immersive core loop | large view and dense thread settings | Chat-side compatibility fields being mistaken for truth again | keep refining presentation and IA before adding more side-systems | P0.5 |
-| Chat Directory | real Chat-side role/service management surface | concept density is high for non-technical readers | drifting back into global role-truth ownership | keep meaning narrow and plain-language | P1 |
-| Contacts | real role archive and relationship-management lane with ten extracted display read-model seams | full role-detail IA still needs product-level template-adaptation visual diff and richer template authoring | destructive flows and relationship truth are semantically sensitive | finish Contacts V2 detail IA without repeating home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, or profile-template editor display seams | P1 |
-| Gallery | real shared media center and cross-module asset source | still balancing album feel and asset-management feel | forcing it into high-friction relationship-memory authoring too early | keep it asset/atmosphere-first | P0.5 |
-| Appearance | strong MVP for wallpaper, theme, and icon presets | broader visual identity work is still parked | accidentally reopening the global visual rebuild | revisit only in explicit visual slices | P2 |
-| WorldBook | real shared world-context layer with Book source links, World Pack activation, user-approved service-template generation, role-bound encyclopedia entries, and profile templates; source-link/picker/diff, encyclopedia filtering/read-model, and profile-template display/read-model seams are extracted | readability matters more than new feature count | turning it into a universal control console | continue unrepeated panels such as Current World Pack review/display before the next major behavior slice | P1 |
-| Book | trial-ready text-source library with WorldBook source links | visual diff review is still basic | becoming Files, a reader app, or an activation console | phone-test source activation, then harden diff review | P1 |
-| Map | strong simulation-first baseline with trip, route, familiarity, and area-feedback loops | still product-rich and easy to overload | re-absorbing reminder or memory ownership | keep Map as travel/context owner, not reminder or relationship truth owner | P1 |
-| Calendar | real schedule/date app with confirmed events and push hooks | fuller event-management polish can still improve | slipping back into raw cue inbox behavior | keep it confirmed schedule/date-first | P1 |
-| Reminders | real cross-module cue and follow-up surface | longer-term task/objective presentation is still light | being collapsed back into Calendar or being mistaken for World Hub | keep raw cues and follow-up meaning here | P1 |
-| Files | internal metadata/index component by decision | user-facing expectations must stay low | reopening Files as a normal public app | only expand when another module truly needs an internal bridge | P2 |
-| More | lightweight utility/labs surface | feature toggles are intentionally modest | becoming a random dump for unresolved product ideas | let current toggles mature before adding more | P2 |
-| Profile | useful support surface for user identity context | still more support than standalone fantasy | decorative field sprawl with no downstream use | only add fields that real consumers use | P2 |
-| Phone | working support loop for call logs and callback-style continuity | not yet a deep fantasy lane | over-investing before Chat/Calendar/support loops need it | keep it support-focused for now | P2 |
-| Wallet | real downstream ledger and continuity connector | broader economy fantasy is still intentionally light | turning Wallet into order or relationship truth owner | preserve downstream-ledger meaning | P2 |
-| Stock | support module with working simulated baseline | not yet central to the product fantasy | trying to push it into mainline loops too early | keep it secondary until narrative economy is justified | P2 |
-| Shopping | stable independent commerce lane with relationship-memory connectors | logistics/social continuity can deepen further | ownership leaking into Wallet, Chat, or World Hub | continue service-account and continuity polish through existing seams | P1 |
-| Food Delivery | strongest low-risk event pilot lane | still only one safe automatic pilot family | over-broad automation before review/explanation quality is ready | keep using it as the safest runtime-expansion test lane | P1 |
-| Assets | useful supporting module with continuity value | not yet a headline user fantasy | unclear overlap with Gallery or Files | deepen only through clearly owned use cases | P2 |
-| World Hub | narrow optional runtime review/control surface | detail readability must improve before stronger controls | becoming mandatory or turning into a generic admin console | improve review quality before control breadth | P1 |
-| Push / relay path | real delivery channel baseline exists | no true closed-page autonomous event generation | confusing delivery with backend orchestration | keep delivery-only language honest until a later decision | P1 decision |
+| Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
+| Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
+| Settings | strong system hub | credential backup policy | owning domain records | exclude/warn for credentials; preserve migrations | P0 |
+| Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
+| Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
+| Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
+| Contacts | stable V2 baseline with ten read models | template-adaptation diff/richer authoring | destructive and relationship semantics | visual diff only after focused acceptance | P1 |
+| Relationship Runtime | stable truth layer | new source chains only as needed | copied metrics/memories elsewhere | preserve; add adapters only for explicit events | Watch |
+| Gallery | stable media owner | Photos-like collections/visual finish | forced memory/admin role | keep asset-first | P2 |
+| Appearance | strong split ownership baseline | product-wide visual consistency | global pack absorbing app-owned layers | real-device authoring/recovery QA | P1 |
+| App Store | integrated app/world/mini-app manager | growing catalog density | owning target-app business state | search/detail density review after phone test | P1 |
+| Book | integrated V1 long-text library | content migration and phone hardening | becoming Files/reader/activation owner | K-pop built-in migration after decision | P1 decision |
+| WorldBook | integrated V1, very large | Current World Pack panel density | universal control-console drift | extract one unrepeated pack display seam | P1 |
+| World Pack | partial V1 acceptance | true-device product loop | generating arbitrary apps/rules | harden current four paths before another archetype | P1 |
+| Map | stable MVP, broad store/view | final interaction/visual pass | absorbing schedule/order truth | true-device route/context polish | P1 |
+| Calendar | stable confirmed-event owner | adapter depth and event-management polish | direct cross-store knowledge | deeper confirmed-event relationship interface | P1 |
+| Reminders | stable raw-cue owner | future objective/task clarity | collapsing back into Calendar | refine only when a real cue family needs it | P2 |
+| Phone | working callback support | shallow standalone fantasy | premature expansion | preserve as connector | Watch |
+| Shopping | integrated commerce V1 | tracking/order share and polish | Chat/Wallet ownership leakage | source-owned share surface | P1 |
+| Food Delivery | integrated commerce/event V1 | responsive/detail/template polish | platform aggregating peer-shop truth | true-device shop/order polish | P1 |
+| Logistics | contextual tracking lane | full source-app share UI | becoming storefront | tracking share from source records | P2 |
+| Wallet | stable downstream ledger | cleanup/rate UX | owning source orders | improve explainability only | P2 |
+| Assets | persisted support MVP | convincing owned-object loop | overlap with Gallery/Wallet | one clearly owned use case | P2 |
+| Stock | persisted support MVP | narrative/economy relevance | absorbing finance domains | defer until economy decision | P2 |
+| Event Runtime | guarded foreground baseline | broader sources/scheduling | invisible high-impact mutation | expand only through review-first packs | P1 guarded |
+| World Hub | completed review baseline, narrow controls | stronger control design | becoming required admin UI | wait for a specific review/control gap | P2 |
+| Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
+| Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
+| Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
+| QA / CI | strong local tests | no E2E/audit gate or coverage floor | build-only release confidence | add explicit gate policy | P0 |
 
-## 4. Cross-Cutting Candidate Workstreams
+## 3. Cross-Cutting Candidates
 
-| Workstream | Why it matters | Candidate next move |
-| --- | --- | --- |
-| Contacts detail polish | Contacts is now a product-critical role and destructive-action surface | continue role-detail IA through the template-adaptation visual diff, or switch architecture cleanup to another large view |
-| WorldBook large-view cleanup | WorldBook is now a shared world-context activation surface and still carries several dense panels | continue Current World Pack review/display; do not repeat Book source-link/picker/diff, encyclopedia filtering/read-model, or profile-template display/read-model extraction |
-| Memory dedupe and recall | several modules now feed relationship continuity | tighten primary-memory vs supporting-attachment behavior |
-| Runtime review clarity | event/runtime systems already exist, but stronger control would confuse users too early | improve World Hub detail panels and explanation quality |
-| Large-view cleanup | a few oversized views still carry too many unrelated flows | continue low-risk component extraction without rewriting truth layers |
-| Delivery vs autonomy clarity | push exists, backend orchestration does not | keep product language honest and defer backend-autonomy promises |
+### Security And Release
 
-## 5. Recommended Promotion Rules
+- backup secret treatment;
+- compatible Vite/transitive update;
+- isolated Vitest migration;
+- Playwright/audit CI policy;
+- Pages release gating.
 
-Before promoting a candidate from this audit into the live roadmap:
+### Maintainability
 
-1. confirm the module owner is still clear;
-2. confirm the task does not conflict with frozen boundaries such as `Contacts vs Chat Directory`, `Calendar vs Reminders`, or `World Hub vs Cheats`;
-3. move the concrete slice into `docs/roadmap/TODO_ROADMAP.md`;
-4. if the slice changes semantics, sync the matching task package and strategy/decision docs in the same round.
+- one `systemStore` facade;
+- one large-view state seam;
+- deeper Calendar relationship adapter;
+- incremental contract types.
 
-## 6. Recommended Current Candidate Order
+### Product Validation
 
-If the team needs the next best candidate pool order, use:
+- true-device World Pack loop;
+- Chat rich media and service threads on real phones;
+- app/scoped CSS recovery;
+- shop/detail/checkout density;
+- push/provider permission and failure paths.
 
-1. Contacts detail and memory-management polish, avoiding already extracted home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display seams
-2. WorldBook Current World Pack review/display cleanup, avoiding the already extracted Book source-link/picker/diff, encyclopedia filtering/read-model, and profile-template display/read-model seams
-3. relationship-memory dedupe / merge / recall cleanup
-4. World Hub review clarity
-4. service-account continuity polish in Shopping and Food Delivery
-5. only then broader secondary-module deepening
+### Content Governance
 
-## 7. Reading Path
+- approve K-pop carrier split;
+- migrate built-in Book content first;
+- keep profile/schedule/location/service/app/event carriers separate;
+- do not execute the planning draft as one large package.
 
-For live action:
+## 4. Recommended Candidate Order
 
-1. `docs/roadmap/TODO_ROADMAP.md`
-2. `docs/pm/TASK_PACKAGE_INDEX.md`
-3. matching package docs
-4. `docs/process/AI_WORK_MODE.md`
+1. backup/toolchain security and CI/release confidence;
+2. one named architecture hotspot or adapter seam;
+3. true-device World Pack product loop and focused fixes;
+4. K-pop carrier decision and one migration slice;
+5. source-owned tracking/share or focused commerce polish;
+6. secondary modules and broader runtime only after explicit promotion.
 
-For engineering risk:
+## 5. Promotion Checklist
 
-1. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-2. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
+Before moving a candidate to the live roadmap:
 
-## 8. Change Log
+1. identify the product owner and package;
+2. state what data/behavior must not move;
+3. define user-visible or semantic acceptance;
+4. name targeted tests and full validation;
+5. update package handoff and live roadmap together;
+6. keep unrelated candidate ideas in this audit.
 
-1. 2026-05-04: created as a product planning and engineering handoff audit.
-2. 2026-05-19: rewritten to remove mixed-encoding residue, align with the current ownership model, and reposition the file as a candidate pool rather than a semi-live task log.
+## 6. Read Next
+
+- live board: `docs/roadmap/TODO_ROADMAP.md`
+- maturity/engineering risk: `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
+- architecture evidence: `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md`
+- package routing: `docs/pm/TASK_PACKAGE_INDEX.md`

@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-06-12
+Updated: 2026-07-10
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -15,6 +15,13 @@ If you are taking over implementation work:
 5. the matching package `STATUS_AND_HANDOFF.md`
 6. the matching package boundary and implementation files
 7. `docs/process/AI_WORK_MODE.md`
+
+Current audit note:
+
+- the 2026-07-10 project audit refreshed the master guide, live roadmap, PM status, architecture, maturity map, candidate pool, strategy plan, and task-package handoffs from the same code/test/build evidence;
+- security/toolchain maintenance is the active 4.5 lane;
+- World Pack hardening remains 4.6 `PARTIAL_DONE`;
+- the Modern Seoul K-pop system plan is registered as a 4.7 `DECISION`, not executable work.
 
 ## 2. Fast Reading Order For PM Or Design Review
 

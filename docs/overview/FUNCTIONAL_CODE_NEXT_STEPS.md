@@ -1,185 +1,156 @@
 # Functional Code Next Steps
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
 > **Frozen execution status / 非执行看板**
 >
-> This file is a reference for functional-code opportunities, not an active TODO, roadmap, or implementation source. Do not continue work from this file directly. If a next step here becomes active, first promote the concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the matching task package `STATUS_AND_HANDOFF.md`.
+> This is a candidate reference, not an active TODO. Promote a selected slice into `docs/roadmap/TODO_ROADMAP.md` and the matching package handoff before implementation.
 
-Purpose: this document records the current functional-code opportunities after broad visual rebuild work was intentionally parked.
+## 1. Current Verdict
 
-Use it when future engineers or AI assistants need to decide:
+Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-account 4.4 work.
 
-- what code work can safely move next;
-- which slices are low-risk and high-value;
-- which old directions are now historical and should not be mistaken for the live recommendation.
+The best next code work is:
 
-Authority:
+1. security/toolchain hardening;
+2. release-gate alignment;
+3. one measured architecture seam;
+4. World Pack phone-validation fixes;
+5. one approved content-carrier migration.
 
-- this file is a handoff reference, not the live execution board;
-- active work with status still belongs in `docs/roadmap/TODO_ROADMAP.md`;
-- if an item here becomes active implementation work, promote it into the live roadmap;
-- use task packages and workflow docs for execution procedure.
+## 2. Completed Enough To Stop Re-Listing
 
-Main references:
+- Calendar / Reminders product split;
+- Contacts V2 detail and cleanup baseline;
+- relationship runtime and explicit-lineage memory dedupe;
+- Calendar relationship review details;
+- filtered World Hub event/relationship review;
+- Chat generated social-event review V1;
+- Shopping/logistics/Food Delivery service notifications;
+- Book source library and WorldBook activation;
+- compatible World Packs, App Store world entries, reviewed app/service proposals;
+- Shopping/Food Delivery/Calendar/Map world-app context;
+- global/scoped appearance ownership seams;
+- Settings, Chat, Contacts, and WorldBook composable extraction batches already listed in architecture docs.
 
-- `docs/roadmap/TODO_ROADMAP.md`
-- `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-- `docs/overview/IMMERSIVE_EVENT_TODO.md`
-- `docs/process/AI_WORK_MODE.md`
-- `docs/process/EVENT_WORKFLOW.md`
-- `docs/pm/TODO_PM_STATUS_REPORT.md`
+## 3. Candidate A: Backup Credential Policy
 
-## 1. Quick Verdict
+Problem:
 
-The next functional-code move should still not be a giant new gameplay system.
+Settings backup exports the full settings object, including `settings.api.key`.
 
-The best next work remains:
+Possible product choices:
 
-1. ownership-safe refinement of already-landed loops;
-2. maintainability cleanup around large product-critical surfaces;
-3. text/event-first relationship-memory cleanup before new memory-input channels;
-4. runtime explanation/review quality before stronger automation.
+1. exclude credentials by default and require re-entry after restore;
+2. add an explicit “include credentials” option with strong warning;
+3. introduce encrypted export only if key management is designed.
 
-In other words:
+Recommended first implementation:
 
-> refine and clarify before expanding again.
+- exclude API credentials by default;
+- preserve non-secret provider URL/model configuration;
+- show a clear restore result saying credentials must be re-entered;
+- add export/import/rollback tests.
 
-## 2. What Is Already Landed Enough To Stop Re-Listing As TODO
+Do not implement until the product choice is promoted because backup compatibility is user-visible.
 
-These are already part of the current baseline and should not keep appearing as if they are still open first-step tasks:
+## 4. Candidate B: Toolchain And CI Hardening
 
-- Calendar / Reminders split baseline
-- relationship runtime baseline
-- first safe relationship fact-adapter batch
-- World Hub read-only runtime review baseline
-- foreground event tick lifecycle baseline
-- delivery route read-only UI handoff
-- completed-order Wallet downstream suggestion loop
-- many older Chat / Settings / Map display-only extraction slices
-- Settings backup, storage diagnostics, and push workflow composable extractions
-- first World Pack app-binding and world UX package seams for Shopping, Food Delivery, Calendar, and Map
-- Appearance pack import/export and the guarded nonstandard-app template whitelist/review UI seam
+Current evidence:
 
-Those historical slices mattered, but they are no longer the best "what next?" answer.
+- production audit: clean;
+- full audit: development/tool advisories, including direct Vite/Vitest findings;
+- Vite has a compatible 7.x update available;
+- Vitest remediation is a major migration;
+- CI omits Playwright and audit;
+- Pages deployment is build-only.
 
-## 3. Current Functional Priorities
+Safe sequence:
 
-### Priority A: Contacts V2 presentation and management layer
+1. compatible Vite/transitive update;
+2. full validation;
+3. isolated Vitest migration plan;
+4. add a Playwright browser job and audit policy;
+5. gate deployment through repository/workflow policy.
 
-Why this is the best near-term functional slice:
+## 5. Candidate C: One Named Hotspot Seam
 
-- the underlying role ID, relationship runtime, delete/reset, and cleanup seams already exist;
-- Contacts now has real destructive-action responsibility;
-- the weakest part is no longer raw plumbing, but product-grade presentation and semantic clarity.
+Choose one, not several:
 
-Current focus inside this lane:
+- Current World Pack review/display state from `WorldBookView.vue` / `CurrentWorldPackPanel.vue`;
+- one Home edit/library state seam from `HomeView.vue`;
+- one Chat Directory service/template management seam;
+- one `systemStore` facade for API settings, Home placement, appearance, or automation;
+- Contacts template-adaptation visual diff as a product slice, not another duplicate read model.
 
-1. Contacts detail IA
-2. memory-group presentation
-3. manual entry vs event-attached entry distinction
-4. safer review of what gets removed during delete/reset/memory cleanup
+Acceptance:
 
-Architecture note: Contacts home-list, memory-list, memory-detail, linked-activity, Role Hub summary, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are already extracted behind focused composables. WorldBook Book source-link/picker/diff display is also extracted behind `src/composables/useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display is extracted behind `src/composables/useWorldBookKnowledgeModel.js`, and profile-template display/read-model state is extracted behind `src/composables/useWorldBookProfileTemplateModel.js`. Future work in this lane should move to the product-level Contacts template-adaptation visual diff, unrepeated WorldBook Current World Pack review/display, or switch architecture cleanup to Home.
+- storage and route behavior unchanged;
+- visible behavior unchanged unless the slice explicitly includes UX acceptance;
+- focused tests cover the extracted interface;
+- file/fan-out measurement is updated.
 
-### Priority B: text/event-first relationship-memory dedupe and recall
+## 6. Candidate D: Deeper Calendar Relationship Adapter
 
-Why:
+Current issue:
 
-- multiple modules now feed relationship continuity;
-- the next risk is duplicated or noisy memory, not lack of sources;
-- Gallery/media-driven memory should stay deferred until input friction is low enough.
+Calendar uses the shared fact adapter but still passes concrete Chat and relationship-runtime stores.
 
-Current focus inside this lane:
+Desired direction:
 
-1. one life event should not become several top-level memories;
-2. source-level attachments should not multiply relationship growth;
-3. recall should prefer one primary memory plus optional supporting anchors;
-4. Calendar remains the safe schedule/date memory source.
+- Calendar submits a confirmed-event domain payload;
+- a neutral relationship service resolves target/context and writes runtime state;
+- Calendar does not need concrete relationship-owner knowledge;
+- existing memory lineage and review behavior remain identical.
 
-### Priority C: runtime review quality before stronger control
+This is a good ownership improvement after security/toolchain work.
 
-Why:
+## 7. Candidate E: World Pack Phone Validation
 
-- World Hub already exists and already reads multiple truth layers;
-- stronger control without better explanation would create confusion fast.
+Run the real product loop:
 
-Current focus inside this lane:
+1. Book import/edit/export;
+2. WorldBook activation and changed-source review;
+3. compatible pack recommendation/enablement;
+4. App Store world entry placement and launch;
+5. Shopping/Food Delivery/Calendar/Map target context;
+6. Chat Services candidate review/join;
+7. recovery after invalid CSS, missing source, or rejected proposal.
 
-1. better filtered detail panels in World Hub;
-2. clearer explanation for why foreground events triggered or skipped;
-3. stronger PM/QA auditability before broader mutation controls.
+Promote only the concrete failures found during testing. Do not broaden archetypes first.
 
-## 4. Still-Good Low-Risk Engineering Moves
+## 8. Candidate F: K-pop Built-In Content Migration
 
-These are still good slices when we want progress without heavy contract churn:
+The 2026-06-24 K-pop system plan is a planning draft. Current built-in Book assets still import older small drafts.
 
-1. display/interaction cleanup inside large views;
-2. component extraction that does not rewrite store contracts;
-3. diagnostics and explanation surfaces;
-4. narrow adapter additions through existing seams;
-5. documentation sync that prevents semantic drift.
+If the carrier decision is approved, the recommended first code slice is:
 
-Examples:
+- point built-in Book assets to reviewed merged content;
+- keep user-facing titles free of `draft`, date, and coordinate terminology;
+- fix world-rule body extraction;
+- preserve section-level activation and context budgets;
+- update Book/WorldBook regression tests;
+- archive old source drafts only after code no longer imports them.
 
-- Contacts detail sections
-- World Hub review/detail panels
-- Chat-side display cleanup where compatibility fields still confuse users or implementers
-- Calendar relationship review surfaces
+Do not implement profile templates, schedule types, locations, service accounts, app bindings, and event seeds in the same slice.
 
-## 5. Work To Avoid Right Now
+## 9. Later Product Candidates
 
-Do not prioritize these unless the user explicitly reprioritizes:
+- explicit group multi-speaker orchestration;
+- tracking/order share surfaces from source apps;
+- deeper Assets and Stock loops;
+- Reminders objective/task presentation;
+- stronger Map visual/interaction pass;
+- another World Pack archetype;
+- broader runtime event families after review safety;
+- production backend/autonomy only after a separate architecture decision.
 
-1. major Chat store redesign
-2. broad visual rebuild by accident while touching functional code
-3. Gallery-driven relationship-memory mainline implementation
-4. broad hidden automation or destructive random runtime behavior
-5. turning World Hub into the normal data-entry surface
-6. reopening Files as a normal user-facing app
-7. generic standalone fantasy tracks for Phone, Wallet, or Stock before the stronger loops settle
+## 10. Avoid
 
-## 6. Promotion Template
-
-If one item becomes active execution work, add a short entry to `docs/roadmap/TODO_ROADMAP.md` using this shape:
-
-```md
-EN: P1 maintainability slice: [short task name] — `IN_PROGRESS`.
-中文：P1 可维护性切片：[简短任务名] — `IN_PROGRESS`。
-
-- EN: Scope: [what changes and what explicitly does not].
-  中文：范围：[改什么，不改什么]。
-- EN: Acceptance: [user-visible or semantic result].
-  中文：验收：[用户可见或语义结果]。
-- EN: Regression checks: `npm run lint`, `npm run build`, and targeted tests.
-  中文：回归检查：`npm run lint`、`npm run build` 与相关专项测试。
-```
-
-## 7. Recommended Next Human Decision
-
-If the team wants the cleanest near-term execution choice, use this order:
-
-1. finish Contacts V2 detail IA and memory-management presentation;
-2. then tighten text/event-first memory dedupe and recall;
-3. then improve World Hub review quality;
-4. only after that, choose the next cross-module connector or runtime-expansion slice.
-
-## 8. Reading Path
-
-Before using this file to choose a slice, read:
-
-1. `docs/roadmap/TODO_ROADMAP.md`
-2. `docs/overview/PROJECT_MASTER_GUIDE.md`
-3. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-4. `docs/pm/TASK_PACKAGE_INDEX.md`
-5. the matching task package handoff docs
-
-For event/runtime-related choices, also read:
-
-1. `docs/overview/IMMERSIVE_EVENT_TODO.md`
-2. `docs/process/EVENT_WORKFLOW.md`
-
-## 9. Change Log
-
-1. 2026-05-02 to 2026-05-17: accumulated many landed extraction slices, connector slices, and event/runtime updates.
-2. 2026-05-19: condensed the long historical log into a current functional next-steps guide so future contributors can find the real next recommendation faster.
+- broad Chat/store redesign;
+- whole-app TypeScript migration;
+- fuzzy memory merging without a product decision;
+- Gallery-first relationship-memory mainline;
+- automatic subscription/source-record creation;
+- hiding security debt behind a production-only audit result;
+- treating `docs/superpowers/**` checklists as executable status.

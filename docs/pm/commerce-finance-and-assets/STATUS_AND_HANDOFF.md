@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-06-10
+Updated: 2026-07-10
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -43,16 +43,16 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-1. Continue tightening Wallet cleanup rules, downstream record explainability, and the currency registry/rate-editing UX.
-2. Expand asset and stock loops only after ownership boundaries stay clear.
-3. Keep service-account push additions source-owned: do not auto-create Chat service identities from commerce stores.
-4. Treat the current `补给站` and `救援调度` paths as trial app-binding examples before broadening to auctions, reservations, subscriptions, or more dispatch behavior.
+Roadmap 4.4 service-account continuity is complete at current acceptance. Current candidates are:
 
-5. Continue Food Delivery from store-surface polish, sticky cart ergonomics, and per-store visual differentiation. Keep Food Platform as a peer discovery mini app, not a visible aggregate order controller for shop mini apps.
-6. When App Store shop management resumes, start from `docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md`; continue from the explicit binding-target/create-handoff baseline before adding more Food Delivery-only polish.
-7. When Food Delivery visual polish resumes, start from `FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md` and keep the first slice focused on Moon Bistro before broadening to more shop templates.
-8. Next Food Platform polish should add richer platform-specific empty states, real favorite/recent behavior for platform-internal merchants, and real banner rotation/state if the ad rail becomes interactive. Do not surface peer-shop orders as a platform aggregate.
-9. When Shopping gift/redeem work resumes, model gift cards, vouchers, and virtual gifts as source-created share objects with validity/redeem state in Shopping. Keep ordinary products as `product_link` until checkout/order/tracking creates a stronger source event.
+1. true-device test Shopping/Food Delivery world-app, checkout, service-notification, and return-to-source flows;
+2. continue Wallet cleanup/explainability and currency UX only as a focused slice;
+3. exercise existing source notification plans without auto-creating Chat identities;
+4. treat `补给站` and `救援调度` as trial bindings before another archetype;
+5. expand Assets/Stock only through a named user loop;
+6. if roadmap 4.7 approves K-pop carriers, keep marketplace/service templates separate from Calendar, Map, and Event Runtime slices.
+
+Later product candidates remain Food Delivery store-surface polish, App Store shop management, source-owned tracking/order shares, and Shopping gift/redeem records. Promote one exact slice before implementation.
 
 ## 3. Do Not Do
 

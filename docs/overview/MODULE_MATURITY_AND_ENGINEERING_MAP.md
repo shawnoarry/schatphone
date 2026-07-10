@@ -1,334 +1,187 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
-Purpose: this is a handoff-oriented engineering reference for future developers and AI assistants.
+Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
-It translates the current roadmap, PM status, module ownership, file-size hotspots, and test posture into a practical map for deciding:
+This file is not a task board. Promote concrete work into `docs/roadmap/TODO_ROADMAP.md` and the matching package handoff.
 
-- where new work is cheapest;
-- where edit risk is highest;
-- which modules are mature enough to expand;
-- which ones need boundary protection before more features.
+## 1. Current Judgment
 
-Authority:
+SchatPhone is in:
 
-- this file is a current engineering-reference document, not a live task board;
-- active work with status still belongs in `docs/roadmap/TODO_ROADMAP.md`;
-- use this file to judge maturity, ownership clarity, and engineering risk;
-- use task packages and workflow docs for the actual execution path.
+> integrated local-first V1 + architecture/security hardening + selective product validation
 
-Main references:
+The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-- `docs/overview/PROJECT_MASTER_GUIDE.md`
-- `docs/pm/TODO_PM_STATUS_REPORT.md`
-- `docs/roadmap/TODO_ROADMAP.md`
-- `docs/roadmap/PROJECT_MODULE_AUDIT.md`
-- `docs/process/AI_WORK_MODE.md`
-- current route/store/view scan
+Four roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention should move to credential/toolchain risk, release gates, named hotspots, and World Pack phone validation.
 
-## 1. Quick Judgment
+## 2. Maturity Tiers
 
-SchatPhone is no longer in the "can it run?" stage.
+### Tier A: Stable Foundations
 
-It is now in:
-
-> stable baseline + selective P1 expansion + ownership cleanup
-
-The biggest engineering risk is no longer missing architecture. It is:
-
-1. maturity imbalance across modules;
-2. oversized views/stores that continue absorbing product growth;
-3. old compatibility fields or ownership seams drifting back into product truth.
-
-The strongest current user-visible loops are:
-
-1. Lock -> Home -> Chat -> notification feedback
-2. WorldBook / Book -> Chat prompt context
-3. Map / Reminders / Calendar / push handoff
-4. Gallery asset references across multiple modules
-5. Shopping / Food Delivery / Wallet / relationship-memory continuity
-
-## 2. Current Maturity Tiers
-
-### Tier A: stable core loops
-
-These are active foundations, not placeholders:
-
-| Module | Maturity | Why |
+| Area | Judgment | Engineering rule |
 | --- | --- | --- |
-| Lock Screen | stable | default entry, lock guard, notification tap-through all exist |
-| Home | stable | protected app entries, page shell, edit gating, and folder model are in place |
-| Chat | stable but heavy | strongest gameplay loop, but still one of the biggest engineering hotspots |
-| Gallery | stable | real cross-module asset hub with meaningful ownership |
-| WorldBook | stable integrated V1 | shared world-context layer, Book source activation, and World Pack activation are now consumed through one path |
-| Book | trial-ready V1 | reusable long-text source storage now exists, with export, section activation, and WorldBook activation links |
-| Map | stable baseline + active expansion | route/trip/reward/context loop is real and already integrated outward |
-| Calendar | stable MVP | confirmed schedule/date behavior is meaningful and connected to push |
-| Reminders | stable MVP | cross-module cue queue has its own visible product identity now |
-| Persistence / backup / diagnostics | stable infrastructure | backup, restore, diagnostics, and storage checks are real system foundations |
+| Lock / shell navigation | stable | preserve notification and lock-return contracts |
+| Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
+| Chat core | stable but very heavy | extract named seams before adding another side system |
+| Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
+| Gallery | stable platform service | keep one media owner and explicit asset references |
+| persistence / backup / diagnostics | stable infrastructure with credential-policy gap | preserve migration/rollback; fix secret export explicitly |
 
-### Tier B: usable but structurally heavy
+### Tier B: Integrated V1
 
-These modules are useful now, but feature growth without cleanup will get expensive:
-
-| Module | Maturity | Main risk |
+| Area | Judgment | Main remaining work |
 | --- | --- | --- |
-| Settings | usable, recently decomposed | core backup, storage diagnostics, and push workflows now sit behind composable Interfaces; avoid new pile-up |
-| Chat Directory | strong internal tool | concept density is high: role/service/template/binding semantics |
-| Contacts | active growth area | now product-critical, but large and semantically dense |
-| Map | feature-rich | still concentrated despite previous extraction work |
-| World Hub | narrow baseline | runtime review is useful, but detail quality must improve before stronger controls |
+| Book / WorldBook | integrated V1 | phone hardening and K-pop built-in content migration decision |
+| World Pack / App Store | integrated V1, partial acceptance | true-device loop, target-app hardening, next archetype decision |
+| Map / Calendar / Reminders | stable MVP | visual/detail polish and broader real-life handoff coverage |
+| Shopping / Food Delivery / Logistics | integrated V1 | responsive/detail/checkout/tracking polish |
+| Wallet | stable support | cleanup/explainability and later economy decisions |
+| Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
+| Network | strong MVP | security guidance and provider-environment QA |
 
-### Tier C: MVP present, long-term role still controlled
+### Tier C: Partial Or Guarded
 
-These modules are real, but their long-term product role is still intentionally constrained:
-
-| Module | Maturity | Open constraint |
+| Area | Judgment | Constraint |
 | --- | --- | --- |
-| Network | strong MVP | provider setup could become more guided, but transport semantics should stay stable |
-| Appearance | strong MVP | visual lane is parked; do not casually reopen larger style direction |
-| Profile | useful support surface | mostly a prompt/context-facing identity layer, not a deep standalone loop yet |
-| Files | internal component | hidden as a standalone app; only expand when another module needs an internal metadata bridge |
-| More | lightweight utility/labs surface | let existing toggles mature before adding more ownership there |
-| Assets | meaningful support module | product loops still lighter than Chat/Map/Shopping/Food Delivery |
-| Stock | working support loop | useful, but should not compete with primary immersion loops yet |
-| Phone | working support loop | useful, but still a support lane rather than a top-level fantasy anchor |
-| Wallet | working support loop | real downstream ledger, but broader economy simulation stays controlled |
+| Event Runtime | guarded foreground baseline | conservative event families only |
+| World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
+| Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
+| Phone | working support loop | not a main fantasy lane |
+| Assets | usable support MVP | deeper owned-object loop not proven |
+| Stock | usable support MVP | secondary until economy direction hardens |
+| Profile | useful identity context | only add fields consumed downstream |
 
-## 3. Engineering Hotspots Right Now
+### Tier D: Internal, Deferred, Or Decision
 
-### Largest views
+| Area | State |
+| --- | --- |
+| Files | internal metadata/index compatibility surface |
+| Cheats | decision; no frozen product contract |
+| Gallery-first relationship memory | on hold |
+| high-impact automatic relationship events | on hold |
+| closed-page autonomous event generation | backend/privacy decision |
+| broad K-pop system rollout | decision; planning draft is not executable |
 
-Current approximate sizes:
+## 3. Measured Engineering Baseline
 
-| File | Approx. lines | Meaning |
+Verified on 2026-07-10:
+
+- 30 route views;
+- 16 Pinia stores;
+- 36 components;
+- 36 composables;
+- 133 JavaScript files and 67 Vue files under `src`;
+- zero TypeScript source files;
+- about 104k source lines;
+- 171 unit-test files / 1050 tests;
+- 18 Playwright scenarios across desktop/mobile projects.
+
+### Largest Views
+
+| File | Lines | Risk |
 | --- | ---: | --- |
-| `src/views/ContactsView.vue` | 4754 | major product-critical surface; home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are extracted; remaining profile-template work is product-level visual diff and richer template authoring, not another small display seam |
-| `src/views/ChatView.vue` | 4312 | still a product-critical maintainability hotspot; active-thread, AI request state, AI prompt/context preparation, AI image-reference preparation, assistant response parsing/normalization, assistant result post-processing, automation status/readiness, Messages search/list, service-thread display, service feedback, message-edit display-state, message action-sheet display-state, `+` panel-state, thread menu/settings draft-state, and pending quote display/action-state seams are now extracted |
-| `src/views/WorldBookView.vue` | 4130 | source-link/picker/diff display is now behind `useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display is behind `useWorldBookKnowledgeModel.js`, and profile-template display/read-model state is behind `useWorldBookProfileTemplateModel.js`; Current World Pack review UI remains the clearest unrepeated dense candidate |
-| `src/views/HomeView.vue` | 3920 | Home layout/editing/library UI is large and visually sensitive |
-| `src/views/ChatDirectoryView.vue` | 3802 | concept-heavy management surface |
-| `src/views/WidgetsView.vue` | 3617 | widget authoring and preview logic are broad |
-| `src/views/AppStoreView.vue` | 3352 | app discovery, install, world-app entry, and Home wiring are concentrated |
-| `src/views/FoodDeliveryView.vue` | 3161 | commerce UI and service-notification integration remain large |
-| `src/views/BookView.vue` | 2057 | text-library app; keep future editor/source-picker growth modular |
-| `src/views/AppearanceView.vue` | 1917 | visual configuration surface; avoid mixing visual polish with ownership changes |
-| `src/views/SettingsView.vue` | 1178 | improved after backup, storage diagnostics, and push workflow orchestration were extracted |
+| `ContactsView.vue` | 4754 | role/profile/memory/destructive-flow concentration |
+| `ChatView.vue` | 4312 | messaging/AI/rich-card/service/runtime coordination |
+| `WorldBookView.vue` | 4130 | source/pack/template/knowledge control density |
+| `HomeView.vue` | 3920 | layout/edit/library/shell sensitivity |
+| `ChatDirectoryView.vue` | 3802 | role/group/service/template concept density |
+| `WidgetsView.vue` | 3617 | authoring/import/preview breadth |
+| `AppStoreView.vue` | 3352 | app/world/mini-app/placement ownership |
+| `FoodDeliveryView.vue` | 3161 | platform/shop/order/commerce presentation |
 
-### Largest stores
+### Largest Stores
 
-Current approximate sizes:
-
-| File | Approx. lines | Meaning |
+| File | Lines | Risk |
 | --- | ---: | --- |
-| `src/stores/system.js` | 4581 | central infrastructure store; change carefully and avoid adding new domain ownership |
-| `src/stores/chat.js` | 3411 | rich domain logic with high coordination responsibility |
-| `src/stores/map.js` | 2332 | broad product logic; prefer improving seams before deep redesign |
-| `src/stores/gallery.js` | 1471 | important asset rules live here; avoid casual contract churn |
-| `src/stores/relationshipRuntime.js` | 1397 | real cross-module truth layer; deserves stricter semantic protection |
-| `src/stores/foodDelivery.js` | 1328 | active commerce/event lane |
-| `src/stores/calendar.js` | 1116 | compatibility, schedule, reminder, and push responsibilities still need adapter care |
-| `src/stores/shopping.js` | 1043 | active commerce/event lane |
-| `src/stores/simulation.js` | 888 | runtime/event lane with increasing diagnostic responsibility |
-| `src/stores/reminders.js` | 735 | key ownership seam for cross-module cue handling |
+| `system.js` | 4186 | broad infrastructure/compatibility owner; 22/30 view imports |
+| `chat.js` | 3062 | rich communication/profile domain |
+| `map.js` | 2146 | broad simulation and route responsibilities |
+| `gallery.js` | 1325 | asset ownership and binary lifecycle |
+| `relationshipRuntime.js` | 1287 | cross-module truth layer |
+| `foodDelivery.js` | 1222 | active commerce/event lane |
+| `calendar.js` | 1014 | confirmed schedule, push, compatibility, relationship handoff |
+| `shopping.js` | 943 | commerce/logistics/service handoff |
 
-## 4. Practical Engineering Rules
+Line counts are signals, not goals. A file becomes a priority when size combines with mixed responsibilities, frequent feature growth, cross-owner knowledge, or weak test locality.
 
-Prefer this order when improving maintainability:
+## 4. Test And Release Posture
 
-1. extract display and interaction panels from oversized views first;
-2. improve semantics and ownership boundaries second;
-3. touch store/domain contracts only when product behavior truly changes.
+Strongly defended areas:
 
-More guardrails:
+- persistence, hydration, backup rollback, and diagnostics;
+- Chat store, response parsing, rich actions, service accounts, social review, and extracted models;
+- relationship runtime, gating, cleanup, and cross-module adapters;
+- WorldBook/Book/World Pack/App Store contracts;
+- Map/Calendar/Reminders and commerce/Wallet handoffs;
+- core Home/App Store/Contacts/WorldBook browser paths.
 
-1. do not rewrite data contracts and do component extraction in the same slice unless absolutely necessary;
-2. if a slice touches ownership or runtime truth, update docs in the same round;
-3. if the task is visual, do not smuggle in functional ownership changes;
-4. if the task is event/runtime, do not move module-owned records into a review/control surface.
+Gaps:
 
-## 5. Test Coverage Signals
+- no coverage threshold;
+- CI omits Playwright and dependency audit;
+- push/provider/permission flows are not end-to-end CI tested;
+- real-device keyboard/touch/safe-area/media/weak-network checks are absent;
+- full dependency audit reports development-tool advisories.
 
-The current repo has meaningful protection around core domain stores and important cross-module loops.
+## 5. Module Engineering Guidance
 
-Stronger defended areas include:
+### Shell / Home
 
-- system and persistence
-- chat behavior and prompt assembly
-- map route/trip/world-context behavior
-- calendar event and world-context behavior
-- gallery asset logic
-- relationship runtime and fact adapters
-- control-center/world-hub review behavior
-- shopping / food-delivery / wallet connectors
+Preserve app entry recovery and lock/notification semantics. A future Home cleanup should target one editor/library state seam, not redesign layout storage and UI together.
 
-Engineering meaning:
+### Settings / System
 
-1. store refactors are possible, but validation is more expensive than view-level cleanup;
-2. view extraction and ownership clarification are still the cheapest maintainability investments;
-3. relationship/runtime changes should be deliberate because multiple surfaces now consume them.
+The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. Next work should address backup credential policy or one facade such as Home placement, appearance, API settings, or automation. Preserve the storage key until a migration slice is explicit.
 
-## 6. Module-By-Module Notes
+### Chat / Chat Directory
 
-### Lock Screen
+Fifteen Chat composable seams already exist. Do not repeat them. Next work should be product-driven: a retry/error seam only when needed, deeper group orchestration through an explicit design, or Chat Directory concept-density cleanup.
 
-- product state: stable
-- engineering note: reuse existing notification metadata path; do not invent parallel lock behavior
-- recommendation: no proactive refactor needed
+### Contacts / Relationship
 
-### Home
+Ten Contacts read-model seams already exist. Contacts 4.1 and relationship-memory 4.2 are complete. Future work is the template-adaptation visual diff, richer template authoring after a decision, or later polish. Do not reopen ownership or duplicate extracted models.
 
-- product state: stable shell
-- engineering note: layout editing stays intentionally gated
-- recommendation: treat as shell infrastructure, not a general experimentation surface
+### Book / WorldBook / World Pack
 
-### Settings
+Three WorldBook display models already exist. Current risks are Current World Pack panel density, end-to-end phone comprehension, and content-carrier governance. The K-pop plan should first promote a small built-in Book registration/migration slice if approved.
 
-- product state: strong configuration center
-- engineering note: no longer a top large-view hotspot after display-only extractions plus `src/composables/useSettingsBackupWorkflow.js`, `src/composables/useSettingsStorageDiagnosticsWorkflow.js`, and `src/composables/useSettingsPushWorkflow.js`
-- recommendation: avoid deep behavior rewrites; continue Settings only for named bugs or a narrow subdomain Interface that preserves storage, restore, push, and report semantics. For general architecture cleanup, move next to Chat/Contacts/WorldBook/Home view seams or a narrow `systemStore` facade.
+### Map / Calendar / Reminders
 
-### Network
+Preserve confirmed-event versus raw-cue ownership. The best architecture candidate is a deeper Calendar relationship-fact interface that hides concrete Chat/relationship store coordination.
 
-- product state: technically usable
-- engineering note: provider setup is still more "technical" than "guided"
-- recommendation: if revisited, prefer guided copy, examples, and diagnostics clarity over transport-layer churn
+### Commerce / Finance
 
-### Chat
+Preserve source records and use Chat/Wallet/Map only through explicit handoffs. Product polish is more valuable than new cross-owner data copying. Assets/Stock should deepen only through named user loops.
 
-- product state: strongest gameplay module
-- engineering note: still one of the biggest product-critical maintainability hotspots; `src/composables/useChatActiveThreadModel.js` owns active-thread reading, `src/composables/useChatAiRequestStateModel.js` owns AI request/retry/reroll display state, `src/composables/useChatAiPromptContextModel.js` owns AI prompt/context preparation, `src/composables/useChatAiImageReferenceModel.js` owns AI image-reference preparation, `src/composables/useChatAssistantResponseModel.js` owns assistant response parsing/normalization, `src/composables/useChatAssistantResultModel.js` owns assistant result post-processing, `src/composables/useChatAutomationStatusModel.js` owns automation status/readiness display state, `src/composables/useChatHomeListModel.js` owns Messages home search/list reading, `src/composables/useChatServiceThreadDisplayModel.js` owns service-thread display reading, `src/composables/useChatServiceFeedbackModel.js` owns service route/action feedback state, `src/composables/useChatMessageEditDisplayModel.js` owns edit-modal display/validation state, `src/composables/useChatMessageActionSheetModel.js` owns message action-sheet display state, `src/composables/useChatUserActionPanelModel.js` owns composer `+` panel display/draft state, `src/composables/useChatThreadMenuModel.js` owns thread menu/settings draft state, and `src/composables/useChatPendingQuoteModel.js` owns pending quote display/action state
-- recommendation: prefer extraction and IA cleanup before more thread-side feature growth
+### Runtime / World Hub / Push
 
-### Chat Directory
+Keep review-first semantics. The push relay must be described and deployed as a delivery helper until authentication, server state, and privacy are designed.
 
-- product state: real management tool
-- engineering note: concept density is a bigger problem than raw capability
-- recommendation: keep product meaning narrow and plain-language before adding more management power
+## 6. Current Engineering Order
 
-### Contacts
+1. backup credential decision and safe toolchain update;
+2. CI/release gating alignment;
+3. one named view/store hotspot seam;
+4. one deeper cross-store adapter;
+5. World Pack true-device findings and focused fixes;
+6. incremental typing only for high-value contracts.
 
-- product state: active strategic module
-- engineering note: large, semantically important, and now part of destructive flows / role-hub direction; home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model seams are already behind focused composables
-- recommendation: current best investment is Contacts detail IA and manual-vs-event-attached presentation, not field sprawl
+## 7. Work To Avoid
 
-### Gallery
+- framework rewrite or whole-app TypeScript migration;
+- broad `systemStore` split without storage migration design;
+- feature and refactor mixed in one large slice;
+- more hidden automation before review/ownership clarity;
+- treating a planning draft as a live backlog;
+- broad visual restyling while changing data ownership;
+- production claims based only on a green static build.
 
-- product state: real platform-level asset hub
-- engineering note: must not turn into a second admin console
-- recommendation: keep it asset/atmosphere-first for now; do not force relationship-memory authoring into it yet
+## 8. Reading Path
 
-### Appearance
-
-- product state: strong MVP
-- engineering note: visual lane is separate; Appearance packs and scoped CSS are user override layers, not source-record owners
-- recommendation: user-test portable Appearance pack import/export and scoped CSS recovery before adding finer hooks
-
-### WorldBook
-
-- product state: real cross-module world kernel with integrated World Pack V1 activation
-- engineering note: readability matters more than piling on more features, especially now that it links Book sources, active pack state, appBindings, reviewed template proposals, profile templates, and role-bound encyclopedia entries; Book source-link/picker/diff display now sits behind `useWorldBookSourceModel.js`, encyclopedia filtering/readiness/deep-link display sits behind `useWorldBookKnowledgeModel.js`, and profile-template display/read-model state sits behind `useWorldBookProfileTemplateModel.js`
-- recommendation: continue only unrepeated WorldBook seams such as Current World Pack review/display before the next major behavior slice; the next product step should user-test and harden the landed template review UI, not copy business records into WorldBook
-
-### Book
-
-- product state: trial-ready V1 text-source library baseline
-- engineering note: owns reusable long-form source text, while WorldBook owns activation
-- recommendation: phone-test Book import/export, section activation, and changed-source diff review as part of the full WorldBook setup loop without turning Book into Files or a reader app
-
-### Map
-
-- product state: active expansion core
-- engineering note: product depth is rising quickly, so boundaries matter; `transit -> Map` World Pack context is presentation only
-- recommendation: keep Map as context/progression/trip owner; do not let it re-absorb reminders, event judgment, or other modules' records
-
-### Calendar
-
-- product state: meaningful schedule/date app
-- engineering note: no longer a placeholder; ownership matters
-- recommendation: continue schedule/date semantics, not raw cue-inbox regression
-
-### Reminders
-
-- product state: meaningful cross-module cue surface
-- engineering note: key ownership seam that protects Calendar from inbox drift
-- recommendation: keep raw cues and follow-up flows here
-
-### Files
-
-- product state: internal metadata/index component
-- engineering note: hidden as a standalone app by decision
-- recommendation: only expand when another module needs an internal bridge
-
-### More
-
-- product state: utility/labs surface
-- engineering note: existing toggles now have some UI consumers
-- recommendation: let current toggles mature before adding more control ownership
-
-### Phone
-
-- product state: working support loop
-- engineering note: useful for logs, callbacks, and relationship facts, but not yet a primary fantasy anchor
-- recommendation: keep it support-focused for now
-
-### Wallet
-
-- product state: working downstream ledger
-- engineering note: now important because of order/relationship continuity
-- recommendation: preserve downstream-ledger semantics before expanding into deeper economy systems
-
-### Stock
-
-- product state: support module with real baseline
-- engineering note: useful connector, but not a mainline product fantasy yet
-- recommendation: keep it secondary until broader economy/gameplay decisions harden
-
-### World Hub
-
-- product state: narrow optional runtime review app
-- engineering note: now a genuine engineering hotspot because it reads multiple truth layers
-- recommendation: improve review quality and filtering before exposing stronger mutation controls
-
-## 7. Recommended Near-Term Engineering Order
-
-Best immediate work:
-
-1. Contacts detail IA and memory-management presentation
-2. text/event-first relationship-memory dedupe, merge, and recall cleanup
-3. World Hub review/detail readability
-4. Chat/Contacts/Chat Directory semantic cleanup where old compatibility fields can still confuse truth ownership
-5. only then consider the next cross-module expansion slice
-
-Work to avoid right now:
-
-1. major Chat store redesign
-2. broad new Phone/Wallet/Stock fantasy tracks
-3. renewed WorldBook feature sprawl without readability protection
-4. moving reminder ownership back from Reminders/Calendar boundaries
-5. broad value-editing controls in World Hub before review quality is strong enough
-
-## 8. Reading Path For Future Contributors
-
-If you are taking over implementation work, read:
-
-1. `docs/README.md`
+1. `docs/roadmap/TODO_ROADMAP.md`
 2. `docs/overview/PROJECT_MASTER_GUIDE.md`
-3. `docs/roadmap/TODO_ROADMAP.md`
-4. `docs/pm/TASK_PACKAGE_INDEX.md`
-5. the matching package `README.md`
-6. the matching package `STATUS_AND_HANDOFF.md`
-7. this file
-
-If you are deciding what to build next:
-
-1. check `docs/roadmap/TODO_ROADMAP.md` for active execution order;
-2. use this file to judge engineering risk and maturity;
-3. use `docs/roadmap/PROJECT_MODULE_AUDIT.md` for candidate discovery only.
-
-## 9. Change Log
-
-1. 2026-05-02: created as a dedicated handoff reference linking roadmap, module audit, hotspots, and test-coverage signals.
-2. 2026-05-03 to 2026-05-04: accumulated many extraction and connector notes.
-3. 2026-05-19: condensed historical mixed-encoding and long log-style content into a current-state engineering map, refreshed hotspot sizes, and added Contacts / Reminders / World Hub as first-class engineering guidance targets.
+3. `docs/architecture/ARCHITECTURE.md`
+4. `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md`
+5. matching task package handoff

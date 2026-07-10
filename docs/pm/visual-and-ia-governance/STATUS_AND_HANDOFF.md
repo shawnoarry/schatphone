@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-06-18
+Updated: 2026-07-10
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -53,7 +53,7 @@ What is already landed:
 40. World Pack direction is clarified for the next lane: activation remains in Settings -> WorldBook, but the effects must not stay trapped there. Active packs should provide a global world UX package for existing apps and unlock world-specific app entries into Home/App Store/App Library entry management.
 41. The first World Pack global app-entry unlock seam is landed: active pack app bindings show as World entries in App Store, can be routed into Home/App Library placement, and open target apps with `worldPack`/`worldApp` context. Activation/review still belongs to Settings -> WorldBook.
 42. The first World Pack target-app UX seam is landed: `world-pack-app-bindings` resolves active-pack labels, terminology, accent, route query, and boundary copy. Food Delivery shows dispatch world-app hero/banner plus safe Nearby default without taking over food-order workflow, Calendar shows reservation context without taking over schedule/push ownership, and Map shows transit context without taking over trip/location truth.
-43. The Appearance / World Pack layering direction is clarified and has a working authoring/import path: World Pack supplies default immersive treatment, while user customization remains a higher-priority explicit override layer. `src/lib/app-shell-scope.js` adds stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks; Appearance Advanced CSS can save app/world-app scoped CSS through `settings.appearance.scopedCustomCss`; world-app scoped CSS is narrower and emitted after app-scoped CSS when both target the same element; and Appearance packs now export/import portable theme, wallpaper, icon, global CSS, and scoped CSS layers without carrying Home layout, widgets, or Chat-specific appearance.
+43. The Appearance / World Pack layering direction is clarified: World Pack supplies default immersive treatment, while user customization remains a higher-priority explicit override layer. `src/lib/app-shell-scope.js` provides stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks, and persisted scoped CSS remains runtime-compatible. The current global Appearance surface no longer authors app/world-app scoped CSS, and global Appearance packs export only global portable fields; app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance stay with their owners.
 
 44. WorldBook's Current World Pack panel now exposes the nonstandard-app proposal review UI: AI extraction or pasted JSON can be reviewed against the built-in whitelist, loading/empty/error states are explicit, rejected suggestions show why they were blocked, and confirmable suggestions require an explicit add-to-pack action before they become appBindings. Confirmed entries now carry world-pack/target-module metadata in App Store detail, can be placed from Home's library, and open their target app with world context; dynamic `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery` paths have regression coverage.
 45. Current World Pack now separates activation/status from global entry management: it shows the active world-app snapshot, tells users that browse/place/open flows live in App Store's `World` section, does not provide an App Store jump button inside Settings, shows service-account template availability as a Chat handoff, and keeps nonstandard proposal review as an advanced/collapsible area. `black_market` is blocked as `needs_dedicated_app` and does not masquerade as a Shopping world app.
@@ -99,21 +99,22 @@ Still incomplete:
 
 1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes; Food Delivery should continue from Moon Bistro detail-sheet polish, responsive density, checkout ergonomics, and more distinctive per-store presentation;
 2. some pages still mix destructive actions and ordinary edits too closely;
-3. Contacts detail can now move out of active IA completion work; remaining effort should focus on later polish or on 4.2 memory dedupe/recall semantics.
+3. Contacts detail and memory 4.2 are complete at current acceptance; remaining Contacts work is later polish or an explicitly promoted template-adaptation visual diff.
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
 5. World Pack app-entry unlocking now has a first implementation; the world UX package has first target-app context treatment in Shopping, Food Delivery, Calendar, and Map, Current World Pack hands off to App Store's `World` section instead of launching entries from Settings, App Store now explains that handoff before opening, and the nonstandard-app review UI is landed with loading/empty/error/rejection handling, but these paths still need phone-sized user testing and broader hardening for labels, accents, safe UX variants, and target-app copy readability.
-6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and world-app-specific CSS remains a later World Pack/app-owned slice instead of returning to global Appearance.
+6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and persisted app/world-app scoped CSS stays compatibility/runtime state until a later app/World Pack-owned authoring surface is explicitly designed.
 7. Contacts phone-like entry and the WorldBook -> Contacts value-flow both have simulated mobile coverage, but still need true-device checks for touch feel, browser chrome, keyboard behavior, and safe-area spacing.
 
 ## 2. Recommended Next Slice
 
-1. Continue the Home template-slot function loop before deeper visual polish: per-instance action overrides and stronger placement recovery if user testing still shows friction. Home cross-screen drag placement remains a separate polish item; the shipped baseline is explicit screen switching before slot placement.
-2. After the loop is stable, polish the remaining related UI surfaces together: desktop edit mode microcopy/states, deeper `组件 / Widgets` component craftsmanship, `应用商城 / App Store` listing craft, and any lingering deep `外观 / Appearance` controls that still feel utility-like.
-3. Keep deciding rebuild vs polish module by module instead of doing cosmetic passes everywhere.
-4. Continue isolating destructive actions visually and structurally from normal edit flows.
-5. User-test the WorldBook -> `补给站` -> Shopping path, `救援调度` -> Food Delivery hero/banner/default Nearby path, `fandom_schedule_board` -> Calendar context, and `survival_safe_route_pass` -> Map context on mobile before broadening the same pattern to other archetypes.
-6. When World Pack resumes, continue from the landed scoped CSS authoring/recovery/import, App Store handoff, service-account handoff, and nonstandard-app review slices: user-test Appearance packs, harden the world UX package seam, verify rejected/unsupported AI proposals stay invisible outside WorldBook, and only then add another archetype so an app's changed UI/UX appears in the actual app and user CSS can intentionally override it.
-7. Continue App Store from the landed target-folder mini-app model: binding target field/UI, Food Delivery migration, Shopping-bound generated entries, shop cover facade editing, installed/not-installed pseudo-folder placement, and create-shop V0 owner handoff are in place. Consumer shop filters and favorites/recent organization belong inside Food Delivery or Shopping, not App Store.
+The active roadmap priority is security/toolchain maintenance, not a broad visual pass. Current visual candidates are:
+
+1. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
+2. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
+3. fix observed Home/Widget/App Store placement and recovery friction rather than assuming per-instance overrides are required;
+4. continue isolating destructive actions from normal edits;
+5. keep consumer shop filters/favorites/recent behavior inside Food Delivery or Shopping, not App Store;
+6. promote one focused visual scope at a time after the active 4.5 risk work.
 
 ## 3. Do Not Do
 

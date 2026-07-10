@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-05-31
+Updated: 2026-07-10
 
 This document defines the `视觉专项` workflow.
 
@@ -94,7 +94,7 @@ If a visual change needs functional code, keep the change minimal and explain wh
 23. Widget Center should stay scan-first on phone-sized screens. Keep library, starter templates, and saved widgets visible as the main page; open custom code editing and import JSON entry as focused sheets or equivalent execution panels.
 24. Appearance-owned controls should keep state and preview visible first. Inputs that feel like execution work, such as wallpaper-source picking, advanced CSS editing, custom font-stack editing, or per-app icon/accent edits, should use sheets/drawers/subpages on phone-sized screens instead of extending the main settings scroll.
 25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries can appear in App Store/Home/App Library as launch context. Target apps should only change their own UI/UX when the binding includes an explicit app UI theme package; otherwise the launched app keeps its original interface and defaults.
-26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Appearance Advanced CSS now has app/world-app scoped authoring with active World Pack entry selection, target selector preview, pause/clear recovery, and portable Appearance pack import/export; future visual work should user-test those packs before adding finer component hooks.
+26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Persisted scoped CSS remains runtime-compatible, but the current global Appearance surface does not author or export app-owned layers. Global Appearance packs carry global portable settings only; app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance remain with their owners.
 
 ## 4. Entry-Context Audit
 

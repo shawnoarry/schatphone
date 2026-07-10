@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-06-01
+Updated: 2026-07-10
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
@@ -37,10 +37,15 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-1. Move to service-account continuity unless product review identifies another concrete read-only World Hub or Settings explanation gap.
-2. Keep runtime-trigger explanation readable in product language as new event adapters are added; do not add invisible safe checks or new event-enabled modules without updating the Settings range and module-permission copy.
-3. Freeze Cheats only after World Hub review surfaces are trusted enough.
-4. Deepen the landed Chat social-event review seam: tune runtime greeting cooldown/cap policy, add richer scheduling only when the World Hub explanation remains clear, and keep high-risk role-initiated friend/block/refusal changes review-first.
+Roadmap 4.3 review quality and 4.4 service-account continuity are complete. Do not restart either lane from this handoff.
+
+Current safe candidates:
+
+1. keep runtime-trigger explanation readable whenever a new adapter is explicitly promoted;
+2. deepen Chat social scheduling only through the existing audit/review seam and with visible cooldown/cap policy;
+3. add a K-pop event seed only after roadmap 4.7 approves the carrier split, beginning with low-risk reminders/official updates rather than high-impact relationship behavior;
+4. keep Cheats and closed-page autonomy as separate decisions;
+5. do not add a new runtime feature ahead of the active 4.5 security/toolchain lane unless the user explicitly reprioritizes it.
 
 ## 3. Do Not Do
 

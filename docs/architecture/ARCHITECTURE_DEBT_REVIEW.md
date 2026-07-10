@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
 > Scope and authority note
 >
@@ -16,7 +16,7 @@ Updated: 2026-06-21
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements below were re-run on 2026-06-21 against the current working tree after the Settings backup, storage diagnostics, push workflow, Chat active-thread read-model, Chat home search/list display-state, Chat service-thread display read-model, Chat message edit display-state, Chat message action-sheet display-state, Chat `+` panel-state, Chat thread menu/settings draft-state, Chat pending quote display/action-state, Chat AI prompt/context preparation, Chat automation status, Chat AI image-reference preparation, Chat assistant response parsing/normalization, Chat assistant result post-processing, Contacts home list read-model, Contacts memory list read-model, Contacts memory detail read-model, Contacts linked-activity read-model, Contacts Role Hub read-model, Contacts world-field/template-adaptation display read-model, Contacts danger-zone display read-model, Contacts detail-section display read-model, Contacts profile-header display read-model, Contacts profile-template editor display read-model, WorldBook source display read-model, WorldBook encyclopedia filtering/read-model, and WorldBook profile-template display/read-model extractions.
+- Measurements were re-run on 2026-07-10 against the current working tree after the Settings, Chat, Contacts, and WorldBook composable extractions listed below. File sizes and fan-out remain unchanged from the last architecture commit, so they are still current evidence rather than historical estimates.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -37,6 +37,9 @@ Additional debt remains real:
 - store-to-store coupling still crosses domain lines;
 - the relationship-fact adapter seam exists, but some stores still have to pass concrete store instances into it;
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
+- backup export currently includes `settings.api.key` through the full settings snapshot;
+- the full dependency audit reports 15 development/tooling advisories even though production dependencies audit clean;
+- CI does not run Playwright or dependency audit, and the Pages workflow is build-only.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -193,6 +196,21 @@ TypeScript is present in devDependencies, but current application source is stil
 - Book and WorldBook schemas;
 - backup and persistence payloads.
 
+### 3.6 Security, Quality, And Release Evidence
+
+Verified on 2026-07-10:
+
+- `npm.cmd audit --omit=dev`: 0 production vulnerabilities;
+- full `npm.cmd audit`: 1 critical, 9 high, and 5 moderate development/tooling advisories;
+- direct affected tools include Vite 7.3.1 and Vitest 1.6.1; the audit's Vitest remediation is a major upgrade and must be isolated;
+- Settings backup serializes `settings` directly, including the configured AI API key;
+- the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
+- CI runs lint, unit tests, and build, but not Playwright or audit;
+- GitHub Pages deployment runs build only and does not deploy the push relay;
+- the repository has no coverage threshold.
+
+These findings do not mean the built static client has vulnerable production dependencies. They mean development-server/test tooling and exported/local secrets need an explicit hardening lane before the project is described as production ready.
+
 ## 4. Findings
 
 ### 4.1 [Structural] God View Modules
@@ -200,7 +218,7 @@ TypeScript is present in devDependencies, but current application source is stil
 - The top view files are far beyond a comfortable single-file size.
 - `ChatView.vue` alone imports 11 stores and coordinates messaging, rich messages, AI calls, service accounts, social-event review, appearance, commerce hooks, maps, calendar, wallet, and runtime state.
 - `ContactsView.vue` imports 10 stores and combines profile editing, social snapshots, relationship memory review, source audit, commerce/media context, and destructive-role flows.
-- The tiny composable layer means there are few reusable interfaces for view state and effects.
+- The composable layer has grown to 36 focused files, but substantial orchestration and cross-owner knowledge still remains inline in the largest views.
 
 Why it matters:
 
@@ -246,7 +264,33 @@ Better direction:
 - add JSDoc typedefs or `.ts` files only where they reduce real refactor risk;
 - keep Vue and Pinia migration incremental.
 
-### 4.5 [Preserve] What Is Working Well
+### 4.5 [Security] Credential And Development-Tool Boundaries
+
+- backup export includes the locally configured AI API key;
+- local browser state and exported JSON are not encrypted;
+- the push relay is a local/single-operator delivery helper, not a production security boundary;
+- Vite/Vitest and transitive development dependencies have active advisories.
+
+Why it matters:
+
+- users may treat backup files as ordinary documents even though they contain credentials and private world/chat data;
+- exposing a development server or Vitest UI beyond a trusted machine increases risk;
+- a clean production audit can hide development and CI exposure if the two results are not reported separately.
+
+### 4.6 [Release] CI Does Not Exercise The Full Acceptance Baseline
+
+- local Playwright passes, but CI does not run it;
+- dependency audit is not a CI gate;
+- the Pages workflow can complete its build without itself running lint or tests;
+- no code-coverage floor exists.
+
+Why it matters:
+
+- a route/mobile regression can reach `main` without the browser suite being exercised;
+- a successful Pages job is not equivalent to the project's stated Definition of Done;
+- test-count growth does not prove important branches are covered.
+
+### 4.7 [Preserve] What Is Working Well
 
 1. `src/lib/` is already a good decomposition model.
 2. Product ownership rules are unusually clear in the docs.
@@ -258,6 +302,17 @@ Better direction:
 ## 5. Recommended Directions
 
 These are directions, not tasks. Promote one concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the module-architecture package handoff before implementation.
+
+### 5.0 Priority 0: Close Credential And Toolchain Risk
+
+Before another broad feature family:
+
+1. decide backup credential treatment and add export/import regression coverage;
+2. update the compatible Vite patch line and safe transitive dependencies;
+3. plan Vitest's major upgrade as an isolated migration;
+4. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
+
+Do not mix these changes with product behavior or a large view refactor.
 
 ### 5.1 Priority 1: Put A Stable Interface Around `systemStore`
 
@@ -338,22 +393,26 @@ Goal:
 
 ## 6. Relationship To Current Roadmap
 
-- This review supports `4.5 Architecture Cleanup In Safe Batches`.
+- This review supports `4.5 Architecture, Security, And Documentation Maintenance`.
 - It does not change roadmap order by itself.
 - It argues that future `4.6 World Pack` broadening should be paired with cleanup around world-context ownership and `systemStore`, otherwise new World Pack complexity will continue to land in the same hot modules.
 - The strongest near-term code-level contributions to ownership closure are:
+  - explicit backup credential handling and safe toolchain updates;
+  - CI/release gating that matches the local Definition of Done;
   - a stable interface around `systemStore`;
   - composables for the largest views;
   - deeper cross-store adapter seams.
 
 ## 7. Evidence Reproduction
 
-The 2026-06-19 measurements were produced with local file scans:
+The 2026-07-10 measurements were reproduced with local file scans:
 
 1. Count lines per `src/views/*.vue` file and sort descending.
 2. Count direct `useSystemStore` imports across `src/views/*.vue`.
 3. List direct `useXxxStore` imports inside `src/stores/*.js`.
 4. Count references to `src/lib/<module>` imports across `src/**/*.vue` and `src/**/*.js`.
 5. Count `.js`, `.vue`, `.ts`, and `.tsx` files under `src`.
+6. Run production-only and full dependency audits separately.
+7. Inspect backup payload construction and CI/deploy workflows directly.
 
 Re-run these checks after each cleanup round to confirm whether the debt is shrinking.

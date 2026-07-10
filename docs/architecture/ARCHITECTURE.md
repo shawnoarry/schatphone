@@ -1,285 +1,365 @@
 # SchatPhone Architecture
 
-Updated: 2026-06-01
+Updated: 2026-07-10
 
 ## 1. Architecture Goals
 
-SchatPhone follows a layered architecture built around:
+SchatPhone is a static, local-first Vue application organized around:
 
-1. a phone-like shell;
-2. domain-owned module records;
-3. shared service seams for AI, persistence, media references, and runtime coordination.
+1. a phone shell and lazy route modules;
+2. Pinia domain stores with one product owner per record family;
+3. shared contracts for AI, persistence, world context, relationship facts, media, and app entries;
+4. a small optional Node push relay for delivery, not world-state authority;
+5. tests and documentation as semantic guardrails for cross-module boundaries.
 
 Primary goals:
 
-- keep the Lock / Home / Chat / Settings main path stable;
-- let new modules grow without rewriting the shell;
-- preserve local-first behavior and backup safety;
-- keep AI usage explicit, controlled, and replaceable;
-- avoid several competing owners for the same product concept.
+- keep the Lock/Home/Chat/Settings path stable;
+- preserve user data across migrations and backup/restore;
+- prevent shell or control surfaces from absorbing domain records;
+- keep AI transport replaceable and explicit;
+- grow World Pack/runtime features through reviewed contracts;
+- reduce the cost of working in large product-critical files.
 
-## 2. Tech Stack
+## 2. Runtime Topology
 
-- Vue `^3.5.24` (locked `3.5.27`)
-- Vue Router `^5.0.2` (locked `5.0.2`)
-- Pinia `^3.0.4` (locked `3.0.4`)
-- Vite `^7.2.4` (locked `7.3.1`)
-- Tailwind CSS `^4.1.18` (locked `4.1.18`)
-- Vitest `^1.6.0` (locked `1.6.1`)
-- ESLint 9 and Prettier 3
+```text
+Browser / static SPA
+  App shell + hash router
+    Route views
+      Focused components/composables
+        Pinia domain stores
+          Shared lib contracts
+            localStorage primary state
+            IndexedDB serialized mirror
+            Gallery binary storage
+            external AI provider APIs
+            optional push relay
 
-## 3. Layered Design
+GitHub Pages
+  hosts only the built static SPA
 
-### 3.1 App Shell Layer
+Optional Node push relay
+  stores VAPID config, subscriptions, and schedules in local JSON
+  sends Web Push payloads
+  does not own app state or generate world events
+```
 
-Responsibilities:
+The application uses Vue Router hash history and Vite base `/schatphone/`, so static hosting does not need server route rewriting.
 
-- root route switching;
-- lock-state guarding;
-- Home entry navigation;
-- shell-level appearance and global layout behavior.
+## 3. Technical Stack
 
-Primary files:
+| Concern | Current baseline |
+| --- | --- |
+| UI | Vue 3.5.27, Composition API, `<script setup>` |
+| Router | Vue Router 5.0.2, hash history |
+| State | Pinia 3.0.4 |
+| Build | Vite 7.3.1, plugin-vue 6.0.4 |
+| Styling | Tailwind CSS 4.1.18, shared CSS tokens, Font Awesome 7.1.0 |
+| Long text | Marked 17.0.1 |
+| Unit tests | Vitest 1.6.1, jsdom, Vue Test Utils |
+| E2E | Playwright 1.60.0 |
+| Quality | ESLint 9, Prettier 3 |
+| Push | Node HTTP, `web-push` 3.6.7, service worker |
+| Source language | JavaScript and Vue; TypeScript dependency exists but no `.ts/.tsx` application files |
 
-- `src/App.vue`
-- `src/main.js`
-- `src/router/index.js`
+## 4. Shell And Route Layer
 
-### 3.2 State Layer
+### `src/main.js`
 
-Responsibilities:
+Owns:
 
-- keep domain state in domain stores;
-- avoid one oversized global store;
-- preserve one clear owner per concept.
+- Vue/Pinia/router bootstrap;
+- CSS and deferred icon loading;
+- mobile viewport/gesture guards;
+- deferred push service-worker registration.
 
-Main stores:
+### `src/App.vue`
 
-- `src/stores/system.js`
-  - settings
-  - appearance, including Chat-scoped appearance state and custom CSS
-  - notifications
-  - user profile, worldview settings, WorldBook source links, and World Pack activation state
-- `src/stores/chat.js`
-  - role profiles
-  - Chat Directory contacts
-  - service accounts
-  - conversations
-  - messages
-  - service notification rich messages with source references
-  - thread-level AI prefs
-- `src/stores/relationshipRuntime.js`
-  - entity snapshots
-  - metrics such as affinity, trust, intimacy, tension, dependency
-  - memory groups
-  - milestones
-  - pending confirmation events
-- `src/stores/simulation.js`
-  - event logs
-  - cooldowns
-  - caps
-  - runtime enablement and execution metadata
-- `src/stores/reminders.js`
-  - cross-module cue queues
-- `src/stores/map.js`
-  - local trip and location simulation
-- `src/stores/book.js`
-  - reusable long-form text assets for worldbook documents, knowledge notes, rules, glossary text, and references
-  - remains separate from `Files`, because Files is an internal metadata/index bridge
+Owns:
 
-Important semantic notes:
+- the visual phone shell and global status/home indicators;
+- global/scoped/Chat appearance style injection;
+- Gallery-backed wallpaper resolution;
+- foreground notification banner queue;
+- root automation tick coordination;
+- foreground simulation lifecycle;
+- push startup self-heal and Chat auto-push scheduling.
 
-- `roleId` belongs to the role profile as a user-visible identifier.
-- `profileId` is an internal role-profile key.
-- `entityKey` is a runtime key used by relationship runtime.
-- `relationshipLevel` and `relationshipNote` inside Chat-side structures are compatibility or annotation fields only, not the truth layer for current relationship progress.
+`App.vue` is about 1049 lines and coordinates several infrastructure owners. Future work should prefer focused shell services/composables when adding lifecycle behavior.
 
-### 3.3 Service And Utility Layer
+### `src/router/index.js`
 
-Responsibilities:
+Owns:
 
-- AI provider integration;
-- persistence abstraction;
-- shared parsing, formatting, and contract helpers.
+- lazy route imports;
+- compatibility redirects;
+- the global lock guard.
 
-Important files:
+There are 30 route views. Normal user-facing modules are lazy-loaded. `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
 
-- `src/lib/ai.js`
-  - unified AI entry point
-  - provider-aware transport behavior and URL normalization for Gemini native, OpenAI-compatible chat, OpenAI Responses, Anthropic Messages, and Azure OpenAI endpoints, including base `/v1`, model-list, deployment, responses, and local/server-auth gateway shapes
-  - error normalization
-- `src/lib/persistence.js`
-  - storage helpers
-  - migration helpers
-  - diagnostics hooks
-- `src/lib/chat-response.js`
-  - assistant payload parsing
-  - fallback extraction
-- `src/lib/relationship-fact-adapters.js`
-  - cross-module fact adapters into relationship runtime
-- `src/lib/world-interface.js`
-  - shared active-world and WorldBook context seam for Chat prompt context, WorldBook overview, active Book source links, enabled World Pack metadata, and runtime worldview fallback
-- `src/lib/world-pack-compatibility.js` and `src/lib/world-profile-analysis.js`
-  - normalize AI world-profile analysis, score World Pack compatibility, group recommended/adaptable/unsupported packs, and keep AI recommendation advisory so users can still enable other supported packs
-- `src/lib/world-pack-service-accounts.js`
-  - maps enabled World Pack service-account templates into Chat-owned service-account payload candidates without creating source-module business records; Current World Pack shows availability only, while Chat Directory's `Services` management area owns user opt-in, editable/resettable built-in candidates, and idempotent add/create
-- `src/lib/world-service-template-proposals.js`
-  - normalizes AI/pasted World Pack service-account proposals for Chat Services review; low-confidence, duplicate, invalid-category, or unknown world-app-binding proposals are rejected, while confirmed proposals add templates only and do not create Chat subscriptions or source-module records
-- `src/lib/service-account-source-plan.js`
-  - derives descriptive source notification plans for Chat service/official accounts from source bindings; supported V1 rows cover Shopping orders, Shopping logistics tracking, and Food Delivery order/event pushes while keeping schedule ownership and source records in source modules
-- `src/lib/world-pack-app-bindings.js`
-  - maps enabled World Pack app bindings into launch rows, stable global `world_app_*` app-entry records for App Store/Home/App Library placement, source-module route context, and target-app UX context; current concrete consumers are Shopping marketplace filters, Food Delivery dispatch hero/banner/default-view context, Calendar reservation title/context presentation, and Map transit title/context presentation
-- `src/lib/world-app-template-registry.js`
-  - defines the guarded nonstandard-app template whitelist and AI extraction/review normalization; WorldBook's Current World Pack panel presents AI/pasted proposals with loading, empty, parse/API error, and rejected-state treatment for user review, and confirmed proposals become World Pack appBindings that then flow through the existing App Store/Home/target-app context seams while low-confidence, unsupported, or unknown proposals cannot create routes, stores, business records, event rules, or App Store entries
-- `src/lib/chat-social-event-review.js`
-  - evaluates generated Chat social proposals before communication state changes; low-risk role greetings may auto-apply with audit, while role refusal/block/restore/unblock proposals wait for World Hub review and then apply through Chat-owned actions
-- `src/lib/chat-social-runtime-source.js`
-  - selects conservative foreground/session tick role greeting candidates for stranger or declined role contacts, then hands them to Event Runtime review instead of mutating Chat directly
-- `src/lib/chat-ai-social-proposals.js`
-  - normalizes optional `socialEvents` returned by Chat AI responses so malformed or unsupported role social proposals are ignored before reaching Event Runtime
+## 5. State Layer
 
-Rule: UI components must not bypass these shared seams for core cross-module concerns.
+SchatPhone has 16 Pinia stores.
 
-### 3.4 View Layer
+| Store | Owned records and responsibility |
+| --- | --- |
+| `system` | system/API/push settings, appearance, Home/App Store placement, notifications, reports, user/world compatibility state, automation queue |
+| `chat` | role profiles, Chat Directory contacts, groups/service accounts, conversations/messages, Chat-side social state and AI prefs |
+| `relationshipRuntime` | current relationship facts, metrics, stage, milestones, memory groups, review state, pending confirmations |
+| `simulation` | event/runtime logs, cooldowns, caps, permissions, Surprise Mode, execution metadata |
+| `book` | reusable long-form text assets |
+| `gallery` | media metadata, binary references, categories, cross-module asset operations |
+| `map` | location, destination, route, trip, ETA, familiarity, travel context |
+| `calendar` | confirmed events, event time changes, push schedule state, confirmed relationship handoff |
+| `reminders` | raw cross-module cue queue and handling state |
+| `shopping` | products, cart, orders, logistics events, commerce handoffs |
+| `foodDelivery` | restaurants, menus, cart, food orders, delivery events |
+| `wallet` | sourced transactions, currency registry, primary currency, reference rates |
+| `assets` | durable owned-object records |
+| `stock` | stock/watchlist/simulated market state |
+| `phone` | call log and callback records |
+| `files` | internal metadata/index bridge |
 
-Responsibilities:
+### State Ownership Rules
 
-- screen orchestration;
-- user interaction;
-- presenting store state;
-- calling store actions and shared service seams.
+1. domain stores own domain records;
+2. shared stores may carry references and compact snapshots, not copied truth;
+3. shell settings do not become business records;
+4. World Hub reviews runtime state but does not become the source of ordinary app data;
+5. compatibility fields stay contained until a tested migration removes them.
 
-Views should not become the permanent home of:
+### `systemStore` Concentration
 
-- AI provider logic;
-- relationship-truth computation;
-- storage migration logic.
+`src/stores/system.js` is about 4186 lines and is imported by 22 of 30 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, and user/system settings.
 
-## 4. Core Product-Semantic Ownership
+The preferred strategy is stable facades, not a big-bang store split:
 
-This table matters as much as the code layout.
+- `useSystemNotifications.js` and `useSystemApiReports.js` are existing examples;
+- new facades must preserve the storage key and backup shape until a separate migration is approved;
+- one ownership area should move behind an interface per slice.
 
-| Concept | Owner | Notes |
-| --- | --- | --- |
-| global role archive | `Contacts` + role-profile storage in `chat.js` | user-facing role identity lives here |
-| Chat-side bindability | `Chat Directory` | can bind/unbind without deleting the role archive |
-| ordinary message history | `Chat` | includes manual chat-message deletion |
-| current relationship progress | `relationshipRuntimeStore` | the truth layer for relationship state |
-| confirmed Chat social/channel state | Chat / Chat Directory | who can message, pending friend state, blocked, or blocked-by-role status after a direct user action or confirmed event |
-| generated social-event review | `simulationStore` / event runtime | Chat AI and foreground/session runtime greeting proposals require audit/review before mutating Chat channel state; World Hub explains source/policy/ownership; refusal/block/restore/unblock stay high-risk review-first |
-| cross-module cue queues | `reminders.js` / Reminders | not Calendar |
-| confirmed schedule/date meaning | Calendar | not Reminders |
-| event logs and runtime metadata | `simulationStore` | not module business records |
-| optional runtime review | World Hub | not the main data-entry surface |
-| reusable long-form text source assets | `Book` / `bookStore` | visible text-library app; not Files, not a novel reader, not a world-store shell |
-| world meaning and prompt-facing world context | WorldBook activation via `systemStore` plus `src/lib/world-interface.js` | WorldBook stays under Settings/context links; Book stores long source text, WorldBook activates whole documents or selected sections; World Pack stores the legacy active-pack activation review plus additive enabled expansion packs and AI world-profile analysis |
-| Chat service-account entries from a world template | Chat Directory contacts in `chat.js` plus `src/lib/service-account-source-plan.js` | World Pack suggests templates from every enabled compatible pack and WorldBook may show availability, but edit/reset/AI-review/confirm/add actions belong in Chat Directory's `Services` management area; user candidate overrides and confirmed AI/pasted candidates stay on World Pack template metadata, joined entries are Chat-owned subscription accounts, source notification plans are descriptive, and source modules keep business records |
-| world app binding launch context | `src/lib/world-pack-app-bindings.js` plus the target source module view | World Pack provides app name, route, stable `world_app_*` entry id, and safe defaults; the target module keeps business state. V1 maps `marketplace -> Shopping` as `补给站` / Daily Fresh / Grocery context, maps any confirmed `dispatch -> Food Delivery` binding as hero/banner plus Nearby default context, maps `reservation -> Calendar` as title/context treatment, maps `transit -> Map` as title/context treatment, and exposes enabled bindings through App Store/Home/App Library placement |
-| World Pack global UX effects | `src/lib/world-pack-app-bindings.js` plus target app presentation context | activation/review stays in WorldBook, but active-pack UI/UX changes should appear in the target app through labels, terminology, accents, context banners, and safe variants without moving source-module ownership |
-| World Pack app UI theme package gate | `src/lib/world-pack-app-bindings.js` plus normalized app bindings | A World Pack app binding is entry/launch context by default. A target app should change its own UI only when the binding explicitly includes `uiThemePackage.enabled=true`; otherwise the app keeps its original UI, defaults, and terminology. |
-| world currency declarations and finance rates | WorldBook `Current World Pack` economy settings plus Wallet store currency registry | World Pack can declare custom currencies for the current world, but Wallet owns the primary-currency selection, the shared currency registry, and editable USD/CNY-centered reference exchange rates. Chat transfer cards and commerce displays consume Wallet currency options; World Pack must not create ledger records or bypass Wallet rate controls. |
-| user-authored appearance overrides | `Appearance` global CSS, Chat Appearance CSS, `src/lib/app-shell-scope.js`, `src/lib/appearance-scoped-css.js`, and `src/lib/appearance-pack.js` | user CSS is an explicit override above system and World Pack defaults; app/world-app scoped CSS is stored in `settings.appearance.scopedCustomCss`, the editor can choose active World Pack entries for world-app targets, preview exact selectors, pause/clear scoped layers for recovery, compiled CSS targets stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` attributes, world-app scoped CSS is narrower and emitted after app-scoped CSS for intentional per-world overrides, and Appearance pack import/export moves only portable visual layers rather than Home layout, widgets, or Chat appearance |
-| AI-proposed world-specific app entries | `src/lib/world-app-template-registry.js` plus WorldBook Current World Pack confirmation | AI may read active WorldBook context and propose entries only from a built-in nonstandard-app template registry; the Current World Pack panel can review AI or pasted JSON proposals with loading/error/empty/rejected states; confirmed suggestions become appBindings, while mismatched, unsupported, or low-confidence suggestions stay out of App Store and cannot create code modules, event rules, or business stores. Current dynamic coverage includes `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery`; `black_market` is blocked as `needs_dedicated_app` and does not map onto Shopping |
+## 6. Shared Contract Layer
 
-## 5. Lock And Notification Architecture
+### AI
 
-### 5.1 Lock Flow
+`src/lib/ai.js` is the only approved provider transport entry.
 
-- default route redirects to `/lock`;
-- when the device is locked, non-lock routes are blocked;
-- unlock returns the user to the target route when appropriate.
+It supports:
 
-### 5.2 Notification Flow
+- Gemini native;
+- OpenAI-compatible chat;
+- OpenAI Responses;
+- Anthropic Messages;
+- Azure OpenAI;
+- local/server-auth gateway URL shapes.
 
-- notifications are persisted locally;
-- lock screen can show and route through them;
-- system notifications and in-app notification behavior must stay aligned with shell ownership.
+Views and stores may build domain prompts/context, but they must not implement provider HTTP calls independently.
 
-## 6. Chat Domain Architecture
+### World Context
 
-### 6.1 Chat Data Shapes
+- `world-interface.js` produces shared active-world context for Chat and runtime;
+- `book-text-schema.js` and `bookStore` own long text assets;
+- `world-pack-schema.js`, compatibility helpers, app bindings, service templates, and proposal registries normalize reviewed capability data;
+- target apps receive route/context metadata and retain business ownership.
 
-High-level data families:
+### Role And Relationship
 
-- role profiles
-- Chat Directory contacts
-- conversations
-- messages
-- thread-level AI prefs
+- `role-binding-contract.js` normalizes Contacts-to-Chat role context;
+- `relationship-fact-adapters.js` accepts low-impact module facts;
+- `relationship-event-gating.js` reads stored category/modifier classifications, never raw premise prose;
+- relationship runtime owns memory grouping and current state;
+- cleanup helpers remove or anonymize source-linked data through explicit handlers.
 
-Chat-side contact entries can include:
+### Media And Sharing
 
-- `id`
-- `name`
-- `kind`
-- `profileId`
-- `serviceTemplate`
-- `worldPackId`
-- `worldServiceTemplateId`
-- `worldAppBindingId`
-- `relationshipLevel`
-- `relationshipNote`
+- `image-source-contract.js` normalizes URL/Gallery/project asset sources;
+- Gallery owns user media and preview lifecycle;
+- `shareable-object.js` carries source-owned share cards into Chat;
+- cards keep source ids/routes and a display snapshot, not editable source business state.
 
-Important rule:
+### Entry And Appearance
 
-- if a product-facing surface needs the current live relationship state, it must also read relationship runtime instead of trusting `relationshipLevel` or `relationshipNote`.
+- Home/App Store registries normalize apps, folders, mini apps, and world entries;
+- app-shell scope attributes provide stable CSS targets;
+- global Appearance, app identity/skins, world-app scoped CSS, Chat appearance, and Home/widgets remain separate owners.
 
-### 6.2 Chat Interaction Model
+Global Appearance packs export only global portable fields. They exclude:
 
-- user send and AI invoke are decoupled;
-- manual AI trigger remains explicit;
-- rich message surfaces are supported;
-- service-account notification rich messages may keep source module, source record id, optional source event id, and route actions, but they must not copy or own Shopping, Logistics, Food Delivery, Wallet, or Map business state;
-- thread-level preferences control prompt behavior;
-- Chat prompt assembly can read role, worldview, and relationship-runtime summaries, but Chat does not own the relationship truth itself.
-- Chat-local appearance preferences live under `systemStore.settings.appearance.chat`, because they are UI presentation preferences rather than conversation content.
-- Chat Settings owns Chat appearance, default-behavior entry points, and maintenance diagnostics; Chat Me owns user identity/anonymity and recent social-presence data.
-- Friend/block/refusal social events separate channel state from relationship truth: Chat applies confirmed social/channel state, Contacts may display snapshots, event runtime reviews generated proposals, World Hub reviews high-risk proposals, and relationship runtime records only confirmed continuity facts.
+- `appIconOverrides`;
+- `appSkins`;
+- `scopedCustomCss` for app/world-app targets;
+- Home placement and widgets;
+- Chat appearance.
 
-### 6.3 Role Binding Contract
+## 7. Persistence And Backup
 
-Cross-module role-context consumption should use the contract documented in:
+### Layered Persistence
 
-- `docs/architecture/ROLE_BINDING_CONTRACT.md`
+`src/lib/persistence.js` uses:
 
-This keeps avatar selection, profile metadata, and Chat-side binding semantics reusable without letting each module invent a new interpretation.
+1. namespaced `localStorage` as the synchronous primary layer;
+2. IndexedDB as an asynchronous serialized mirror by default;
+3. versioned envelopes with `version`, `savedAt`, and `data`;
+4. inspection/reconciliation that selects the newest valid layer and repairs drift.
 
-## 7. Home Layout And Entry Architecture
+Each store supplies its own normalization, hydration, migration, and snapshot logic. This keeps legacy data handling close to the domain owner.
 
-Home owns:
+### Gallery Binaries
 
-- app-entry visibility and placement behavior;
-- widget entry behavior;
-- hidden or optional app entry integration.
+Gallery metadata participates in store backup. Binary assets use a dedicated storage helper and are optional in exported backup packages with size/item limits.
 
-Important rules:
+### Backup/Restore
 
-- `app_*` Home entries should not be casually removed;
-- optional apps such as World Hub must remain compatible with toggle-based visibility;
-- shell-level entry behavior should stay distinct from module-owned business state.
+Settings coordinates:
 
-## 8. Data And Security Boundaries
+- snapshots for all 16 stores and system state;
+- optional Gallery binary packaging;
+- schema validation;
+- ordered restore;
+- rollback if import fails;
+- storage diagnostics and reports.
 
-- persistence is local-first by default;
-- backup/import must remain rollback-safe;
-- context should be sent to AI only through approved seams;
-- deleting a role, memory group, or record must follow the correct owner and cleanup rules rather than a loose UI-only delete.
+Current security gap:
 
-## 9. Extension Rules
+- backup payload includes `settings` directly;
+- `settings.api.key` is therefore exported in plaintext JSON;
+- backup files must be treated as secrets until policy and code change;
+- the next slice should decide exclusion-by-default, explicit secret inclusion, or a strong warning/encryption approach.
 
-When adding or changing features:
+## 8. Cross-Module Data Flows
 
-1. keep one owner per concept;
-2. put business records in domain stores, not shell stores;
-3. route AI calls through `src/lib/ai.js`;
-4. update docs in the same round when route/schema/core semantics change;
-5. prefer adding shared seams when several modules need the same concept, rather than duplicating logic;
-6. keep long text source storage (`Book`) separate from world activation (`WorldBook`) and hidden file indexing (`Files`).
+### Chat AI Reply
 
-## 10. Documents To Read With This One
+```text
+Chat thread
+  -> role binding context
+  -> WorldBook/Book active context
+  -> relationship runtime summary
+  -> thread history and optional media references
+  -> src/lib/ai.js
+  -> normalized assistant result
+  -> Chat message history
+  -> optional social proposal -> Event Runtime / World Hub review
+```
+
+### Relationship Fact
+
+```text
+Owning module explicit event
+  -> relationship fact adapter
+  -> classification gate audit
+  -> relationship runtime
+  -> primary/supporting memory grouping
+  -> Contacts/World Hub review and Chat recall summary
+```
+
+### Service Notification
+
+```text
+Shopping / logistics / Food Delivery source event
+  -> existing joined Chat service account
+  -> service_notification with source references/actions
+  -> Chat thread/unread/reply state
+  -> source action returns to owning module
+```
+
+### World App Entry
+
+```text
+WorldBook reviewed World Pack
+  -> app binding registry
+  -> App Store / Home placement
+  -> target route with worldPack/worldApp context
+  -> target app resolves presentation/defaults
+  -> target store remains record owner
+```
+
+## 9. Event Runtime And Push
+
+### Foreground Runtime
+
+- runs only while the application/session lifecycle allows it;
+- uses module permissions, Surprise Mode, cooldowns, caps, safe conditions, and logs;
+- current automatic families are deliberately conservative;
+- high-risk Chat social proposals wait for review.
+
+### Push Relay
+
+`server/push-server.mjs` supports:
+
+- VAPID key generation/loading;
+- subscribe/unsubscribe;
+- schedule/list/cancel;
+- retry and delivery;
+- health and test endpoints.
+
+Its boundary is important:
+
+- JSON-file persistence;
+- no authentication/authorization;
+- permissive CORS;
+- no rate limiting, tenancy, encrypted secret store, or authoritative app data;
+- suitable for local/single-operator trials, not a public multi-user production service.
+
+## 10. Testing, CI, And Deployment
+
+### Local Baseline
+
+- ESLint;
+- 171 Vitest files / 1050 tests;
+- Vite production build;
+- 18 Playwright scenarios across desktop and mobile emulation.
+
+### CI
+
+`.github/workflows/ci.yml` runs Node 20, `npm ci`, lint, unit tests, and build.
+
+Gaps:
+
+- no Playwright job;
+- no dependency-audit job;
+- no coverage threshold;
+- local audit used Node 22 while CI uses Node 20, so both supported environments should remain tested intentionally.
+
+### Deployment
+
+`.github/workflows/deploy.yml` builds and deploys `dist` to GitHub Pages on `main`.
+
+It does not deploy the push relay. The deploy job also runs only build, so workflow/repository protections must ensure failed quality checks cannot be interpreted as a validated release.
+
+## 11. Current Debt And Direction
+
+Highest-risk files:
+
+- `ContactsView.vue` 4754 lines;
+- `ChatView.vue` 4312 lines;
+- `system.js` 4186 lines;
+- `WorldBookView.vue` 4130 lines;
+- `HomeView.vue` 3920 lines;
+- `ChatDirectoryView.vue` 3802 lines.
+
+Other debt:
+
+- direct store-to-store coupling across some ownership boundaries;
+- no compile-time contract layer;
+- development dependency advisories;
+- CI/release gaps;
+- incomplete true-device and push/provider QA.
+
+Recommended order:
+
+1. credential/toolchain and release-gate decisions;
+2. one measured hotspot or facade slice;
+3. one deeper cross-store adapter;
+4. incremental types for shared contracts only;
+5. broader World Pack/runtime features after the foundation remains green.
+
+## 12. Documents To Read With This One
 
 - `docs/overview/PROJECT_MASTER_GUIDE.md`
-- `docs/process/AI_WORK_MODE.md`
-- `docs/pm/TASK_PACKAGE_INDEX.md`
+- `docs/roadmap/TODO_ROADMAP.md`
+- `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md`
 - `docs/architecture/ROLE_BINDING_CONTRACT.md`
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
+- `docs/architecture/SIMULATION_EVENT_ENGINE.md`

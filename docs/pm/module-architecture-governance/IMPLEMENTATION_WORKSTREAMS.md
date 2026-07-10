@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-06-19
+Updated: 2026-07-10
 
 ## 1. Workstream A: Ownership Closure
 
@@ -30,7 +30,23 @@ Updated: 2026-06-19
 - keep generated specs/plans/content under `docs/superpowers/**` as reference material unless promoted by the live roadmap/package handoff
 - record known validation debt in active package handoffs instead of burying it inside old plan checklists
 
-## 5. Semantic Guardrails
+## 5. Workstream E: Security And Credential Boundaries
+
+- define whether backup exports API credentials
+- keep local browser storage and exported JSON sensitivity explicit
+- treat the current push relay as development/single-operator infrastructure
+- separate production dependency results from development-tool audit results
+- isolate security/toolchain updates from product features
+
+## 6. Workstream F: CI And Release Confidence
+
+- align CI with the required lint/test/build/E2E baseline
+- decide dependency-audit policy
+- keep Pages deployment gated by repository/workflow policy
+- add coverage thresholds only after selecting meaningful critical-path metrics
+- test supported Node versions intentionally
+
+## 7. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -39,3 +55,6 @@ Treat these as bugs:
 3. refactors move fast but lose migration clarity
 4. AI-proposed world app entries write appBindings without passing through the shared template registry and WorldBook confirmation seam
 5. Settings -> WorldBook becomes the direct launcher or Chat Directory creator for world-pack outputs instead of handing off to App Store and Chat-owned flows
+6. backup files are described as ordinary portable data while they contain credentials
+7. a build-only deployment is described as fully validated
+8. a production-only audit result is used to hide development-tool advisories

@@ -1,24 +1,36 @@
 # Module Architecture Governance Package
 
-Updated: 2026-06-21
+Updated: 2026-07-10
 
-Use this package for state ownership, storage direction, refactor planning, module maturity, and cleanup governance.
+Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
-Current governance note: Settings backup/export/restore, storage diagnostics, and real-push setup workflows now use focused composable Interfaces. Chat has fifteen top-hotspot view seams: active-thread route/read-model state in `src/composables/useChatActiveThreadModel.js`, AI request/retry/reroll display state in `src/composables/useChatAiRequestStateModel.js`, AI prompt/context preparation in `src/composables/useChatAiPromptContextModel.js`, AI image-reference preparation in `src/composables/useChatAiImageReferenceModel.js`, assistant response parsing/normalization in `src/composables/useChatAssistantResponseModel.js`, assistant result post-processing in `src/composables/useChatAssistantResultModel.js`, automation status/readiness display state in `src/composables/useChatAutomationStatusModel.js`, Messages home search/list display state in `src/composables/useChatHomeListModel.js`, service/official thread display state in `src/composables/useChatServiceThreadDisplayModel.js`, service route/action feedback state in `src/composables/useChatServiceFeedbackModel.js`, message edit display/validation state in `src/composables/useChatMessageEditDisplayModel.js`, message action-sheet display state in `src/composables/useChatMessageActionSheetModel.js`, `+` panel display/draft state in `src/composables/useChatUserActionPanelModel.js`, thread menu/settings draft state in `src/composables/useChatThreadMenuModel.js`, and pending quote display/action state in `src/composables/useChatPendingQuoteModel.js`. Contacts now has ten top-hotspot view seams: `src/composables/useContactsHomeListModel.js` owns the Contacts home list read-model for search, Self/Main/NPC grouping, and recent-interaction ordering; `src/composables/useContactsMemoryListModel.js` owns the selected-profile memory list read-model for source filters, visible memory groups, count labels, summary copy, and overflow copy; `src/composables/useContactsMemoryDetailModel.js` owns selected-memory source audit rows, supporting-event timeline rows, and headline facts; `src/composables/useContactsLinkedActivityModel.js` owns linked-activity summary/list rows, runtime source-ref plus event-attached detail dedupe, source counts, and latest linked-activity copy; `src/composables/useContactsRoleHubModel.js` owns Role Hub summary cards, entity/chat-state copy, and read-only Chat social snapshot rows; `src/composables/useContactsWorldFieldModel.js` owns Contacts world-field rows, template options, visibility labels, and current-world template-adaptation display copy; `src/composables/useContactsDangerZoneModel.js` owns danger-zone impact summary, destructive confirmation detail rows, linked-record policy copy, and memory-delete safety details; `src/composables/useContactsDetailSectionModel.js` owns role-detail section metadata, manual/event-attached grouping, counts, policy copy, and source labels/hints; `src/composables/useContactsProfileHeaderModel.js` owns selected-profile header avatar/name/meta/bio/NPC-upgrade display state; and `src/composables/useContactsProfileTemplateEditorModel.js` owns profile-template editor field rows, save-review facts, preserved custom-field rows, helper/placeholder/type/icon copy, and tag previews. The next architecture-governance work should usually move to Contacts template-adaptation visual diff, WorldBook/Home, or add a narrow `systemStore` facade rather than continuing Settings by inertia.
+Current state:
 
-WorldBook now has three large-view seams: `src/composables/useWorldBookSourceModel.js` owns Book source-link display rows, Active World text-category directories, source picker grouping, source review diff summary, active/issue/disabled counts, and snapshot helpers; `src/composables/useWorldBookKnowledgeModel.js` owns encyclopedia usage/readiness counts, role/Chat binding usage copy, search/tag/usage filters, sorting, deep-link scoping, and profile-name summaries; `src/composables/useWorldBookProfileTemplateModel.js` owns profile-template stats, universal/current-world template rows, Contacts handoff copy, section copy, version/field/state labels, and enable/disable labels. Do not repeat those slices; the next WorldBook cleanup should target Current World Pack review/display or switch to Home.
-
-Current note: `src/lib/world-interface.js` is the shared seam for active WorldBook/world-context reading, including active Book source links, encyclopedia entries, and active World Pack metadata. Book V1 is now long-form text-source storage, while WorldBook remains the activation surface. World Pack service-account templates currently surface as Chat-add availability and should be added from Chat once the Chat-side flow exists. World app bindings are centralized through `src/lib/world-pack-app-bindings.js`, with Shopping/Food Delivery/Calendar/Map as current target-app consumers and App Store/Home as the global entry-management path. Nonstandard app proposals pass through `src/lib/world-app-template-registry.js` and the WorldBook Current World Pack review UI before any appBinding is written; unsupported proposals such as `black_market` stay rejected until a dedicated app shell exists.
+- domain ownership and shared `lib` contracts are strong enough to preserve;
+- Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
+- the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
+- the active 4.5 lane also includes backup credential policy, development dependency advisories, and CI/release gating;
+- framework replacement or a broad TypeScript migration is not recommended.
 
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`
 2. `PRODUCT_BOUNDARY.md`
 3. `IMPLEMENTATION_WORKSTREAMS.md`
+4. `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md`
 
-Also read when needed:
+Also read:
 
 - `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
 - `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
+- `docs/roadmap/PROJECT_MODULE_AUDIT.md`
 - `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
 - `docs/strategy/STORAGE_STRATEGY.md`
+
+## Guardrails
+
+1. promote one concrete slice before implementation;
+2. preserve storage/backup compatibility unless migration and rollback are explicit;
+3. do not combine dependency migration, product behavior, and large refactoring;
+4. measure before and after;
+5. sync the live roadmap and PM status when priority or release posture changes.
