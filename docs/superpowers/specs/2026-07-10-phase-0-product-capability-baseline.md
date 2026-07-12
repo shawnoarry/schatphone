@@ -1,6 +1,6 @@
 # SchatPhone Phase 0 Product Capability Baseline
 
-Updated: 2026-07-10
+Updated: 2026-07-12
 
 Status: `WORKING_DRAFT`
 
@@ -30,7 +30,8 @@ Rules:
 2. a persisted field without a working user flow is `Skeleton`;
 3. a complete narrow loop may still be `Partial` against the user's intended product;
 4. product completeness remains `Undefined target` until the user confirms the target;
-5. facts and inferences must remain visibly separate.
+5. facts and inferences must remain visibly separate;
+6. after every user-confirmed target boundary, update this file and the linked conversation handoff before asking the next question, because remote conversation compaction is not a reliable progress record.
 
 ## 2. Journey 1 Definition
 
@@ -271,13 +272,72 @@ Target meaning:
 - SchatPhone does not provide internal save slots, multiple active worlds, or workspace switching;
 - the user may operate several separately installed/exported desktop clients when their browser or operating system gives them isolated website-data containers;
 - ordinary tabs or windows inside the same browser profile and origin are the same save, not independent worlds;
-- complete local backup export/import remains the migration, clone, and restore mechanism for one desktop client;
+- complete local backup export/import remains one whole-product archive of all settings and data for migration and restore;
+- no separate identity-copy, cross-save synchronization, or workspace layer is needed;
 - cross-save synchronization, conflict merging, and parallel-world runtime are outside the current target.
+
+### Confirmed decision 3: Settings owns one active global profile plus optional profile documents
+
+Target meaning:
+
+- one current save has one globally unique active user-profile slot;
+- Settings is the sole input, detailed editing, deletion/reset, application, and reusable-document management surface;
+- Contacts renders a special-format projection aligned with its role directory, but does not own or independently edit another Self Profile record;
+- the Contacts projection is not a Main Role/NPC-style context source and must not itself enter Chat conversation context;
+- each feature may own feature-specific avatar, nickname, anonymity, and detail-guidance settings as presentation/privacy overrides without creating another user profile;
+- Chat may use the global user profile only when the current Chat mode permits it; anonymous mode must prevent all user-profile context from being sent with a conversation request;
+- Settings may save multiple optional user-profile documents as reusable templates. These documents are inert and are not additional active identities;
+- `Apply globally` copies one optional document into the active global slot. Later edits to either record do not silently change the other;
+- `Save as optional profile` stores current profile content as a reusable document without applying it globally;
+- optional documents do not appear as Contacts identities and cannot enter feature or Chat context until explicitly applied;
+- deleting the active profile clears it to an empty/unconfigured slot while preserving optional documents;
+- complete backup includes the active slot, all optional documents, and every feature-owned override through the existing whole-product export/import flow.
+
+Rejected alternatives:
+
+- no live link between an optional document and the active global profile;
+- no multiple switchable active user profiles or internal identity/save-slot system.
+
+### Confirmed decision 4: role pause and archive form a reversible depth hierarchy
+
+Target meaning:
+
+- this lifecycle applies to Main Roles and NPCs, not to the global user personal profile;
+- `Active` roles appear in ordinary Contacts and Chat surfaces and may participate in allowed conversation/runtime activity;
+- `Paused` roles remain visible in ordinary Contacts and Chat lists for profile/history review, while all role-profile-sourced world activity stops: no new reply, proactive contact, scheduled action, background/runtime participation, AI ecosystem movement, alternate-account attempt, or role-directed proxy contact may originate from that profile;
+- `Archived` is a deeper level that implies pause and removes the role from ordinary Contacts lists, Chat lists, and runtime/event candidate pools;
+- archiving preserves the role profile, original Chat thread/history, relationship state, and memories;
+- Contacts owns `Archived Roles` as the sole restore entry. Chat does not restore archived roles;
+- archived role detail remains reviewable in Contacts, including profile, relationship/memory review, and a Chat-history summary;
+- restoring returns the role to ordinary Contacts and its original Chat thread/history, but keeps the role paused and read-only until explicitly resumed;
+- restore must not create a new role/thread or reset relationship and memory state.
+
+Rejected boundary:
+
+- pause must not merely disable role-initiated messages and background/runtime activity while ordinary user-initiated conversation remains available, because that duplicates the existing proactive-activity and background-activity switches for active roles.
+
+### Confirmed decision 5: pause is a global role/world-activity gate, not a Chat state
+
+Target meaning:
+
+- every event, message, request, alternate account, proxy route, or AI-generated ecosystem action attributable to a paused role profile is blocked before it reaches another feature;
+- a paused role cannot bypass the gate through another communication method, a newly generated account, a relative/friend account acting on its behalf, or a temporary conversation request;
+- a different active role may independently mention the paused role, but that remains the active role's action and does not become activity by the paused role;
+- public or ambient content may still contain the same name when AI-model knowledge or world content independently knows the real, historical, fictional, K-pop, or other prototype;
+- same-name ambient content is not automatically bound to the SchatPhone role profile and cannot resume it, create Chat requests, advance relationship state, create memories, or enter role-runtime history without explicit provenance linkage;
+- Chat block and Chat contact deletion simulate communication-app state. They do not pause or delete the global role;
+- an active role may later support other-channel contact, new friend requests, alternate accounts, or relationship-network contact attempts after Chat block/delete;
+- those bypass behaviors are target semantics and may not be implemented today;
+- pause overrides all current and future channel-bypass behavior until explicit resume.
+
+Still undecided within this contract:
+
+- how Contacts and Chat present a paused role for review without suggesting it can interact or moving lifecycle ownership away from Contacts.
 
 ### Remaining questions
 
-1. Confirm the narrowed Self Profile contract: one per-save identity truth shared by Settings and Contacts, with Chat-only presentation overrides and copy-not-sync reuse across saves.
-2. What does a complete role lifecycle require: archive, disable, restore, downgrade, duplicate, or world migration?
+1. How should paused roles be presented in Contacts and Chat?
+2. What other lifecycle operations are required: Main/NPC downgrade, duplicate, or world migration?
 3. Should `initialRelationshipSeed` initialize live Relationship Runtime metrics or remain profile-only premise context?
 4. What should relationship reset preserve or remove, especially Chat history?
 5. What should unbinding from Chat preserve if the role is later rebound?
@@ -288,27 +348,22 @@ Target meaning:
 
 ## 8. Current Question For User Review
 
-The Main Role/NPC decision and the one-isolated-desktop-client/one-current-save decision are recorded above. The user's Self Profile intent is substantially narrowed, but the detailed ownership contract has not yet been explicitly confirmed.
+The Main Role/NPC decision, one-isolated-desktop-client/one-current-save decision, Settings-owned active-profile/optional-document contract, reversible pause/archive hierarchy, global pause gate, external-mention provenance rule, and Chat channel-state boundary are recorded above. One paused-state presentation detail remains before moving to other role lifecycle operations.
 
 Question:
 
-> Should each current save have exactly one personal profile, with Settings and Contacts opening the same identity truth, while Chat nickname/avatar/anonymity and optional per-thread avatar remain presentation overrides rather than additional profiles?
+> Should a paused Chat thread remain visible but read-only, show a clear `Role paused` state, and send the user to the Contacts role detail when they want to resume the role?
 
-Recommended target awaiting confirmation:
+Proposed boundary for confirmation:
 
-1. One save contains one obvious `Self Profile / Personal Profile`.
-2. Settings personal profile and Contacts `My Profile` are two entry points to the same data owner.
-3. Base identity and current-world extension fields belong to that one per-save profile.
-4. Chat can override nickname, avatar, anonymity, and optionally the avatar for one thread without creating another identity entity.
-5. Reusing a standard identity in another independently managed save copies the profile as a starting point; the two saves do not remain linked.
-6. Complete backup must include the base profile and all Chat presentation overrides.
+Recommended target: yes. Chat preserves the thread and history but disables message composition, reply generation, friend-request actions, and role-driven shortcuts. A visible paused-state notice explains that the role has stopped activity. Its action opens the Contacts-owned role detail, where lifecycle state can be reviewed and resumed.
 
-Reason: this preserves one understandable "me" inside the simulated phone, supports believable Chat presentation, and does not force every world or independently managed save to share one mutable identity.
+Contacts continues to show the role in ordinary lists with a paused badge and allows profile/history/relationship review. Chat must not own a separate resume toggle because Contacts owns the global role lifecycle.
 
 ## 9. Next Phase 0 Action
 
-1. Ask only whether the Self Profile contract in section 8 is confirmed.
+1. Ask only whether paused-state presentation should follow section 8.
 2. Record the user's answer without broadening to later questions.
-3. Update the target definition for Self Profile and contextual identity layers.
-4. Continue the remaining Journey 1 target questions one at a time.
+3. Update both this baseline and the Phase 0 conversation handoff before asking another question.
+4. Continue the remaining role-lifecycle operations, then the remaining Journey 1 target questions one at a time.
 5. Only after Journey 1 target review, derive its product gaps and architecture requirements.
