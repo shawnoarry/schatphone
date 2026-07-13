@@ -1,6 +1,6 @@
 # SchatPhone Phase 0 Product Capability Baseline
 
-Updated: 2026-07-12
+Updated: 2026-07-14
 
 Status: `WORKING_DRAFT`
 
@@ -32,6 +32,14 @@ Rules:
 4. product completeness remains `Undefined target` until the user confirms the target;
 5. facts and inferences must remain visibly separate;
 6. after every user-confirmed target boundary, update this file and the linked conversation handoff before asking the next question, because remote conversation compaction is not a reliable progress record.
+7. before each product decision, brief the user as a project manager newly entering that unfinished area: explain current behavior, implemented evidence, prior design intent, missing behavior, ownership, contradictions, constraints, and risks before presenting options or a recommendation.
+
+Planning-alignment rule:
+
+- do not assume that a stored field, old design term, passing test, or completed narrow loop is already a user-understood product capability;
+- distinguish `implemented now`, `documented intent`, `proposed target`, and `absent/incomplete` explicitly;
+- define unfamiliar concepts through concrete examples and ask one bounded decision at a time;
+- if the user says the premise was not explained adequately, reopen and revalidate the decision instead of continuing from it.
 
 ## 2. Journey 1 Definition
 
@@ -247,22 +255,33 @@ These questions must be answered one at a time. Do not infer the answers from cu
 
 ### Confirmed decision 1: Main Role and NPC use configurable capabilities with defaults
 
-User answer: `3 + 1`.
+User answer: option `B`, re-confirmed on 2026-07-13 after reviewing the current implementation and the difference between labels, stored capability fields, and enforced product behavior.
 
 Target meaning:
 
-- `Main Role` and `NPC` remain meaningful identity labels and provide default capability presets;
+- `Main Role` and `NPC` remain meaningful narrative/identity labels and provide different default depth presets;
 - Main Role defaults to deeper relationship, memory, proactive behavior, and long-running story capabilities;
-- NPC defaults to a lightweight capability set and can be upgraded;
-- actual behavior is controlled by independently configurable capabilities, which a role or world template may override;
-- identity type must not become a permanent hard-coded ceiling on what a role can do.
+- NPC defaults to a lightweight world-person experience but may opt into individual deeper capabilities without first becoming a Main Role;
+- a Main Role is not forced to use every deep capability, and may keep selected areas lightweight;
+- identity type is neither a hard permission tier nor a permanent ceiling on what a role can do;
+- actual behavior must eventually be controlled by explicit, user-understandable capability contracts rather than by the type label alone;
+- role or world templates may propose capability defaults, but the ownership, override, and confirmation rules still require separate review.
+
+Current implementation warning:
+
+- the product currently stores six capability booleans, but exposes no user-facing capability editor or default-versus-override provenance;
+- only Chat Directory eligibility is directly enforced as a broad product gate; the relationship, memory, route, world-event, and social-feed fields are incomplete or mostly descriptive;
+- the current NPC-to-Main action defaults to lightweight relationship mode, so its `unlock main-role capabilities` copy overstates the effective behavior;
+- option `B` is therefore the confirmed target direction, not a claim that the current capability system already implements it.
 
 Still undecided within this contract:
 
-- how explicit role overrides merge when an NPC is upgraded;
-- whether Main Role can be downgraded;
+- the user-visible capability families and the concrete experience each one enables;
+- which capabilities should be independent and which must share one continuity contract;
+- where role-level choices live and how world-template recommendations interact with them;
+- how explicit role overrides merge during Main Role/NPC type conversion;
 - which capability changes require user confirmation;
-- how Self Profile relates to per-world and Chat identities.
+- how existing records are handled when a capability is later disabled.
 
 ### Confirmed decision 2: one isolated desktop client runs one current save
 
@@ -330,40 +349,134 @@ Target meaning:
 - those bypass behaviors are target semantics and may not be implemented today;
 - pause overrides all current and future channel-bypass behavior until explicit resume.
 
-Still undecided within this contract:
+### Confirmed decision 6: paused Chat threads remain visible but read-only
 
-- how Contacts and Chat present a paused role for review without suggesting it can interact or moving lifecycle ownership away from Contacts.
+Target meaning:
+
+- a paused role remains visible in ordinary Contacts and Chat lists with a clear paused-state indicator;
+- its original Chat thread and history remain available for review, but the thread is read-only while the role is paused;
+- Chat disables message composition, AI reply generation, friend-request actions, and role-driven shortcuts for that thread;
+- the paused-state notice routes lifecycle management to the Contacts role detail;
+- Contacts continues to allow profile, history, relationship, and memory review for the paused role;
+- Contacts is the only ordinary management surface that can resume the global role lifecycle. Chat does not own a separate resume toggle.
+
+Rejected alternatives:
+
+- do not hide paused threads from Chat, because hiding belongs to the deeper Archived state;
+- do not expose a Chat-owned resume action, because Chat owns communication state rather than the global role lifecycle.
+
+### Confirmed decision 7: hidden relationship truth provides continuity while AI provides interpretation and expression
+
+Target meaning:
+
+- SchatPhone keeps a persistent, auditable relationship truth layer so long-term relationships do not depend on one model call or the current Chat context window;
+- this truth includes confirmed facts and memories plus slow-changing relationship state; it is not ordinary user-facing game score;
+- AI interprets a confirmed event through the role's identity, values, history, current situation, and relationship state, then expresses emotion, intention, hesitation, initiative, or restraint in natural language and behavior;
+- AI may propose structured appraisal, short-term emotion, intention, memory importance, and bounded relationship effects, but it cannot silently rewrite confirmed facts or directly set arbitrary long-term values;
+- deterministic validation, limits, ownership rules, persistence, and audit decide which proposed effects become relationship truth;
+- short-term emotion and open intentions/unfinished matters are separate from slow relationship state, so a temporary mood can decay without erasing lasting trust damage or a remembered event;
+- ordinary Chat and phone-life surfaces communicate relationship change through behavior and natural-language summaries rather than visible numeric meters;
+- optional special-control surfaces may reveal the underlying values for review or control, but their read/write hierarchy remains a separate decision.
+
+Rejected extremes:
+
+- do not make fixed numeric thresholds directly script ordinary dialogue or expose the product as a conventional affection-meter game;
+- do not delegate persistent relationship truth entirely to AI-generated prose or model memory, because that cannot reliably preserve continuity, ownership, or auditability.
+
+### Confirmed decision 8: World Hub inspects relationship values; Cheats performs explicit overrides
+
+Target meaning:
+
+- ordinary Chat and Contacts summaries remain non-numeric and communicate relationship change through behavior and natural language;
+- World Hub may reveal hidden relationship values, stages, trends, contributing events, uncertainty, and pending effects for review and explanation;
+- World Hub does not provide broad direct numeric editing, but retains bounded commands such as approve/dismiss, relationship reset, and memory-group deletion;
+- future Cheats is separately enabled and owns explicit numeric or state overrides;
+- every Cheats override records before/after state, time, reason, and manual-intervention provenance, and supports preview, safe undo, and downstream recomputation where applicable;
+- a manual override must not fabricate a natural relationship event or shared memory that never happened;
+- the current product already has part of the World Hub numeric review baseline, while the Cheats editor remains a future product surface.
+
+Rejected alternatives:
+
+- do not hide all numeric evidence from World Hub, because that makes relationship behavior difficult to explain or audit;
+- do not place broad freeform value editing in World Hub, because that would turn an optional review surface into an everyday administration console and blur its boundary with Cheats.
+
+### Confirmed decision 9: every active AI role has a minimum personhood and continuity baseline
+
+Target meaning:
+
+- every active Main Role and NPC receives a non-disableable baseline of stable identity/boundaries, current world/time awareness, communication and lifecycle state, recent-interaction continuity, lightweight relationship state, minimal salient memory, and transient emotion/intention;
+- `Active` here excludes paused and archived roles, whose previously confirmed lifecycle gate still blocks new role-profile-sourced activity;
+- the baseline preserves believable personhood; it does not imply full background autonomy, unlimited memory, detailed numeric simulation, or a long-running story route for every NPC;
+- Main Role/NPC presets and per-role settings scale relationship resolution, memory horizon, autonomous-agency scope, continuous-story complexity, update frequency, and context/resource budgets above the baseline;
+- an NPC may deepen one dimension without changing identity type, and a Main Role may keep one dimension lightweight;
+- user personal profiles, service/official accounts, and non-character system actors use separate contracts rather than inheriting this AI-role baseline.
+
+Rejected alternatives:
+
+- do not allow capability switches to remove basic memory, emotion, or relationship continuity from an otherwise active AI role, because that produces fluent but hollow characters;
+- do not run every role at full deep-simulation scope, because that creates excessive context cost, background noise, low-value records, and uncontrolled ecosystem activity.
+
+### Confirmed decision 10: program-owned six-dimensional truth is projected to AI through a constrained interface
+
+Target meaning:
+
+- Relationship Runtime is the sole owner and writer of the complete six-dimensional long-term relationship state; the exact six dimension names and semantics remain to be frozen;
+- complete numeric state, provenance, evidence, lenses, facets, memories, and audit history remain program-internal and are not copied wholesale into every AI prompt;
+- a deterministic context projector selects only the current role/event-relevant state and renders it as qualitative relationship guidance, relevant evidence, current emotion/intention, unresolved matters, and behavioral constraints;
+- AI receives that bounded projection, generates natural expression, and may return a schema-constrained proposal for appraisal, transient emotion, intention, memory importance, and categorical relationship effects;
+- AI does not perform relationship arithmetic, create arbitrary dimensions/lenses/facets, or directly mutate persistent truth;
+- a deterministic validator checks event provenance, role lifecycle, dedupe, allowed enums, per-event bounds, cooldowns/caps, lens applicability, and review requirements before applying, rejecting, or holding a proposal;
+- relationship lenses are persistent records with source/confidence metadata: user-confirmed premise and world/template definitions have priority, accumulated evidence may create candidates, and AI may suggest but not silently replace them;
+- World Hub/Cheats may inspect numeric truth under the already confirmed hierarchy; ordinary AI prompts normally receive qualitative bands and causal summaries rather than raw values.
+
+Rejected alternatives:
+
+- do not let each model call reinterpret the complete relationship schema or select a new relationship lens from free text;
+- do not treat AI-generated prose as an implicit state mutation;
+- do not send the full numeric/audit/memory graph on every request, because it increases token cost and semantic confusion without improving the current response.
+
+### Confirmed review scope: type conversion first, duplication second, world migration in Journey 2
+
+- review Main Role/NPC type conversion next as part of Journey 1 role lifecycle;
+- treat the existing NPC-to-Main upgrade and the proposed Main-to-NPC downgrade as two directions of one role type-conversion contract rather than unrelated actions;
+- review role duplication after type conversion because duplication creates a new identity and needs separate preservation rules;
+- defer world migration to Journey 2, where current-world ownership, world templates, and cross-world field mapping can be defined first;
+- this review order does not pre-confirm the detailed preservation behavior of type conversion or duplication.
 
 ### Remaining questions
 
-1. How should paused roles be presented in Contacts and Chat?
-2. What other lifecycle operations are required: Main/NPC downgrade, duplicate, or world migration?
-3. Should `initialRelationshipSeed` initialize live Relationship Runtime metrics or remain profile-only premise context?
-4. What should relationship reset preserve or remove, especially Chat history?
-5. What should unbinding from Chat preserve if the role is later rebound?
-6. Should users manually author/edit memories, or should memories remain event-derived with review controls only?
-7. How autonomous should roles be: requests only, generated messages, schedules, ongoing activity, or full event-driven initiative?
-8. What is the target group-chat speaking model?
-9. Which relationship/social changes require World Hub review, and which should happen immersively without administration?
+1. Which relationship processing must always be deterministic/local, and when may AI appraisal participate in the same Chat call or an optional separate call?
+2. What are the exact six universal relationship dimensions and their non-overlapping semantics?
+3. Which controlled lenses/facets exist, and what evidence/review changes them?
+4. What depth controls define memory horizon, autonomous agency, and continuous-story complexity?
+5. After those capabilities are defined, how should role-level overrides and type conversion work?
+6. Which role data may be copied into a new identity during role duplication?
+7. Should `initialRelationshipSeed` initialize live Relationship Runtime metrics or remain profile-only premise context?
+8. What should relationship reset preserve or remove, especially Chat history?
+9. What should unbinding from Chat preserve if the role is later rebound?
+10. Should users manually author/edit memories, or should memories remain event-derived with review controls only?
+11. What is the target group-chat speaking model?
+12. Which relationship/social changes require World Hub review, and which should happen immersively without administration?
 
 ## 8. Current Question For User Review
 
-The Main Role/NPC decision, one-isolated-desktop-client/one-current-save decision, Settings-owned active-profile/optional-document contract, reversible pause/archive hierarchy, global pause gate, external-mention provenance rule, and Chat channel-state boundary are recorded above. One paused-state presentation detail remains before moving to other role lifecycle operations.
+The ownership/projection boundary is confirmed. The next architecture decision is the runtime split between built-in deterministic processing and bounded AI appraisal, including whether routine relationship processing requires additional model calls.
 
 Question:
 
-> Should a paused Chat thread remain visible but read-only, show a clear `Role paused` state, and send the user to the Contacts role detail when they want to resume the role?
+> Should relationship processing use a local deterministic core for facts, six-dimensional state, memory selection, decay, validation, persistence, and audit; fold subjective appraisal into the existing Chat response call when Chat already invokes AI; process objective/routine cross-module events with built-in rules; and reserve optional separate AI appraisal calls for ambiguous or high-salience events rather than every event?
 
-Proposed boundary for confirmation:
+Recommended target: yes. This keeps normal local computation cheap and reproducible, avoids doubling Chat latency/cost, and still lets AI interpret sarcasm, apology, perceived intent, mixed emotion, and memory importance where fixed rules are weak. If AI metadata is absent or invalid, the message may still succeed while no unverified relationship mutation occurs.
 
-Recommended target: yes. Chat preserves the thread and history but disables message composition, reply generation, friend-request actions, and role-driven shortcuts. A visible paused-state notice explains that the role has stopped activity. Its action opens the Contacts-owned role detail, where lifecycle state can be reviewed and resumed.
-
-Contacts continues to show the role in ordinary lists with a paused badge and allows profile/history/relationship review. Chat must not own a separate resume toggle because Contacts owns the global role lifecycle.
+Alternative 1 uses rules only; it is cheap and stable but misses subjective interpretation. Alternative 2 calls AI for every event; it is expressive but adds latency, cost, model variability, offline failure, and excessive background requests.
 
 ## 9. Next Phase 0 Action
 
-1. Ask only whether paused-state presentation should follow section 8.
-2. Record the user's answer without broadening to later questions.
-3. Update both this baseline and the Phase 0 conversation handoff before asking another question.
-4. Continue the remaining role-lifecycle operations, then the remaining Journey 1 target questions one at a time.
-5. Only after Journey 1 target review, derive its product gaps and architecture requirements.
+1. Confirm the deterministic-core plus bounded/optional AI-appraisal runtime split.
+2. Freeze the six dimensions and relationship-lens/facet registry after the processing boundary is accepted.
+3. Define lightweight/deep update frequency, context budgets, decay, and fallback behavior.
+4. Continue with memory horizon, autonomous agency, and continuous-story complexity one at a time.
+5. Only after capability meanings are confirmed, return to Main Role/NPC type-conversion defaults and override rules.
+6. Review role duplication next; defer world migration until Journey 2.
+7. Continue the remaining Journey 1 target questions one at a time.
+8. Only after Journey 1 target review, derive its product gaps and architecture requirements.

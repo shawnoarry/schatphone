@@ -1,13 +1,13 @@
 # SchatPhone Phase 0 Product Baseline Conversation Handoff
 
-Updated: 2026-07-12
+Updated: 2026-07-14
 
 Status: `ACTIVE_CONVERSATION_RESUME_NOTE`
 
 Phase 0 progress:
 
 - the Journey 1 evidence-first current capability inventory has been drafted in `docs/superpowers/specs/2026-07-10-phase-0-product-capability-baseline.md`;
-- target decision 1 is recorded: Main Role/NPC are configurable capability profiles with Main-full/NPC-lightweight defaults (`3 + 1`);
+- target decision 1 is re-confirmed after a current-state explanation: Main Role/NPC use Main-deep/NPC-lightweight default presets, but type is not a hard permission tier and either type may override individual depth capabilities;
 - target decision 2 is recorded: one independently isolated desktop Web App/browser storage container runs one current save; SchatPhone does not need an internal save-slot or parallel-world workspace system;
 - target decision 3 is recorded: Settings owns one active global user-profile slot plus reusable optional profile documents; `Apply globally` copies a document into the active slot, while `Save as optional profile` creates or updates an inert reusable document without linking it to the active profile;
 - Chat may consume the user profile only when its current presentation/privacy mode allows it; anonymous mode must prevent the profile from entering conversation context;
@@ -17,7 +17,14 @@ Phase 0 progress:
 - target decision 5 is recorded: pausing a role removes every role-profile-sourced trace from world activity, background chains, AI ecosystem movement, Chat replies, alternate-account attempts, and relationship-network proxy contact until explicit resume;
 - external forums or other features may still mention the same real/historical/fictional name from model knowledge or world content, but that mention is not role activity, must not bind to the paused profile by name alone, and must not create relationship/runtime effects;
 - Chat block/delete remains a communication-app simulation state for active roles rather than a lifecycle gate; future active roles may attempt other channels, new requests, alternate accounts, or relationship-network routes, while paused roles may not;
-- the next interaction is the paused-state presentation question: whether Chat should show the retained thread as read-only with a clear route back to the Contacts-owned role status.
+- target decision 6 is recorded: paused Chat threads remain visible with their history but are read-only, show a clear paused state, and route lifecycle management to the Contacts role detail; Chat does not own a resume toggle;
+- target decision 7 is recorded: persistent hidden relationship truth provides long-term continuity, while AI provides bounded subjective interpretation, short-term emotion, intention, and natural expression; ordinary social surfaces do not expose game-like numeric meters;
+- target decision 8 is recorded: World Hub exposes relationship values and evidence for read-only value inspection while retaining bounded review/cleanup commands; future Cheats owns explicit, auditable overrides and must not fabricate natural events or memories;
+- target decision 9 is recorded: every active Main Role/NPC receives a non-disableable minimum personhood/continuity baseline, while presets and per-role settings scale resolution, horizon, autonomy, story complexity, update frequency, and resource budgets;
+- target decision 10 is recorded: Relationship Runtime solely owns complete six-dimensional numeric truth; a deterministic projector sends AI only relevant qualitative context; AI submits schema-constrained proposals that deterministic validation may apply, reject, or hold; AI cannot mutate truth or invent lenses;
+- the remaining lifecycle review order is confirmed: review bidirectional Main Role/NPC type conversion first, role duplication second, and defer world migration to Journey 2;
+- the user requires a project-manager alignment briefing before every later planning decision: explain current behavior, prior design, implementation status, gaps, ownership, contradictions, constraints, and risks before presenting options;
+- the next interaction follows that protocol to confirm the runtime split: deterministic local processing by default, AI appraisal folded into existing Chat calls, and optional separate AI appraisal only for ambiguous/high-salience events.
 
 Purpose: preserve the current user decisions, audit findings, and exact next action in case remote conversation compaction truncates the thread.
 
@@ -35,6 +42,15 @@ Decision-persistence rule requested by the user:
 - persist the confirmed meaning, rejected alternatives when they prevent future ambiguity, remaining unresolved details, and the exact next question;
 - run Markdown/diff checks after each documentation update; application tests are required only when application behavior changes;
 - a resumed conversation must read these two files first and must not reconstruct product decisions from memory or stale roadmap wording.
+
+Product-planning alignment rule requested by the user:
+
+- treat the user as a project manager newly entering each unfinished product area;
+- before asking for a decision, explain the current user experience, implemented evidence, existing design intent, missing behavior, module ownership, contradictions, constraints, and likely risks;
+- distinguish implemented behavior from schema-only fields, old document goals, and new proposals;
+- define unfamiliar terms with concrete examples, then present two or three approaches with trade-offs and a recommendation;
+- ask one bounded decision at a time and persist it in both Phase 0 files;
+- if the user says the premise was not explained adequately, reopen and revalidate the decision instead of extending it.
 
 ## 1. Current User Request
 
@@ -147,9 +163,86 @@ Confirmed target:
 - those bypass behaviors are target semantics and may not exist in the current implementation yet; they must not be reported as already implemented;
 - pause overrides all current and future channel-bypass behavior until the role is explicitly resumed.
 
-Still pending:
+### 2.10 Paused Chat threads remain visible but read-only
 
-- decide how the retained paused state is presented in Contacts and Chat so the user can review history without mistaking the role for active or changing lifecycle state from the wrong owner.
+Confirmed target:
+
+- paused roles remain visible in ordinary Contacts and Chat lists with a clear paused-state indicator;
+- the original Chat thread and history remain reviewable, but message composition, AI reply generation, friend-request actions, and role-driven shortcuts are disabled;
+- the paused-state notice routes the user to the Contacts role detail for lifecycle review and resume;
+- Contacts continues to expose profile, history, relationship, and memory review for the paused role;
+- Chat does not expose a separate resume toggle because Contacts owns the global role lifecycle;
+- paused threads are not hidden, because removal from ordinary Chat belongs to the deeper Archived state.
+
+### 2.11 Remaining lifecycle review order
+
+Confirmed review scope:
+
+- review Main Role/NPC type conversion next in Journey 1;
+- model the current NPC-to-Main upgrade and proposed Main-to-NPC downgrade as two directions of one type-conversion contract;
+- review role duplication after the type-conversion preservation rules are confirmed;
+- defer world migration to Journey 2 so it can depend on an explicit current-world and world-template contract;
+- this sequence does not yet decide how type conversion changes capabilities or which records role duplication may copy.
+
+### 2.12 Main Role/NPC use depth presets rather than hard tiers
+
+Confirmed target after current-state review:
+
+- Main Role and NPC remain meaningful narrative/identity labels with different default depth presets;
+- Main Role defaults to deeper relationship, long-term memory, proactive behavior, and continuous-story behavior;
+- NPC defaults to a lightweight world-person experience;
+- an NPC may opt into individual deep capabilities without being promoted, and a Main Role may keep selected capabilities lightweight;
+- the type label alone must not grant or deny behavior; future modules must consume explicit capability contracts;
+- the present six stored capability booleans are not a finished user-facing system: there is no capability editor or override provenance, and most fields are not broadly enforced;
+- therefore capability families and their user-visible meaning must be defined before type-conversion merge rules.
+
+### 2.13 Hidden relationship truth and AI expression are separate layers
+
+Confirmed target:
+
+- persistent relationship facts, memories, and slow-changing relationship state provide continuity across model calls and context windows;
+- AI interprets confirmed events through role identity, values, history, current situation, and relationship state, then expresses emotion and intention naturally;
+- AI may propose structured appraisal, transient emotion, intention, memory importance, and bounded effects, but validation and persistence decide what becomes relationship truth;
+- AI cannot silently rewrite confirmed facts or assign arbitrary long-term values;
+- transient emotion and unfinished intentions remain separate from slow relationship state;
+- ordinary Chat and phone-life surfaces reveal relationship change through behavior and natural-language summaries, not visible game-like numeric meters;
+- optional special-control surfaces may expose underlying values.
+
+### 2.14 World Hub inspects values; Cheats performs explicit overrides
+
+Confirmed target:
+
+- ordinary Chat and Contacts summaries remain non-numeric and immersive;
+- World Hub may show hidden values, stages, trends, event evidence, uncertainty, and pending effects without direct numeric editing;
+- World Hub retains bounded approve/dismiss, relationship-reset, and memory-delete commands;
+- future Cheats is separately enabled and owns explicit numeric/state overrides;
+- Cheats records before/after state, time, reason, and manual provenance, with preview, safe undo, and downstream recomputation where applicable;
+- manual overrides do not fabricate natural relationship events or shared memories;
+- this confirms a product target and does not imply that the unfinished Cheats surface is already implemented.
+
+### 2.15 Every active AI role has a minimum personhood/continuity baseline
+
+Confirmed target:
+
+- every active Main Role/NPC keeps stable identity/boundaries, world/time awareness, communication/lifecycle state, recent continuity, lightweight relationship state, minimal salient memory, and transient emotion/intention;
+- paused and archived roles remain governed by the previously confirmed global activity gate;
+- the baseline does not grant every NPC unlimited memory, full numeric depth, background autonomy, or a long-running story route;
+- Main/NPC defaults and per-role settings scale relationship resolution, memory horizon, agency scope, story complexity, update frequency, and context/resource budgets;
+- an NPC may deepen one dimension without promotion, and a Main Role may keep one dimension lightweight;
+- Self/user profiles, service accounts, and non-character system actors use separate contracts;
+- basic memory, emotion, and relationship continuity cannot be switched off for an otherwise active AI role.
+
+### 2.16 Program-owned relationship truth uses constrained AI projection and proposals
+
+Confirmed target:
+
+- Relationship Runtime is the sole owner/writer of complete six-dimensional long-term relationship state;
+- numeric state, provenance, evidence, lenses, facets, memories, and audit stay internal;
+- a deterministic projector sends AI only current-task qualitative guidance, relevant evidence, emotion/intention, unresolved matters, and behavioral constraints;
+- AI generates natural expression and may submit schema-constrained appraisal/effect proposals, but cannot perform arithmetic, invent schema, or mutate truth;
+- deterministic validation checks provenance, lifecycle, dedupe, enums, bounds, cooldowns/caps, lens applicability, and review policy;
+- relationship lenses persist with source/confidence; user/world/template sources have priority, evidence may create candidates, and AI may suggest but not silently change them;
+- ordinary AI calls normally receive qualitative bands rather than raw numeric/audit graphs; World Hub/Cheats retain their separate numeric inspection/control roles.
 
 ## 3. Corrected Product-Stage Interpretation
 
@@ -409,7 +502,7 @@ Continue Phase 0 target review:
 
 1. read `docs/superpowers/specs/2026-07-10-phase-0-product-capability-baseline.md`;
 2. use its Journey 1 matrix as the current-fact baseline;
-3. preserve confirmed decision 1: Main Role/NPC are semantic labels and default capability presets, while actual capabilities remain configurable per role or world template;
+3. preserve re-confirmed decision 1: Main Role/NPC are narrative/identity labels with Main-deep/NPC-lightweight defaults, not hard permission tiers; either type may override individual depth capabilities;
 4. preserve confirmed decision 2: one independently isolated desktop Web App/browser storage container runs one current save, with no internal save slots or parallel-world workspace;
 5. preserve confirmed decision 3: Settings owns one active global user-profile slot plus inert optional profile documents; applying a document copies it, deletion clears the active slot, and optional documents remain reusable;
 6. preserve the Contacts projection, feature-specific presentation/privacy overrides, and anonymous Chat no-context rules;
@@ -417,11 +510,19 @@ Continue Phase 0 target review:
 8. preserve confirmed decision 4: `Active -> Paused -> Archived` is a depth hierarchy; archive hides but preserves the role, Contacts owns the archived-role restore entry, and restoration keeps the role paused while returning the original Chat/history;
 9. preserve confirmed decision 5: pause is a global role/world-activity gate that blocks every profile-sourced action and future channel-bypass route; external same-name mentions remain possible only when they are not sourced from or bound to the paused profile;
 10. preserve the Chat boundary: block/delete affects the communication surface for active roles and does not pause/delete the global role; some bypass behaviors are future targets rather than current implementation facts;
-11. ask the user only whether paused Chat threads should be visibly read-only and route lifecycle management back to Contacts;
-12. persist the answer in both Phase 0 files before asking any following question;
-13. keep product-target decisions separate from current implementation facts;
-14. only after Journey 1 target review, derive its product gaps and Phase A architecture requirements;
-15. only after target review, update active PM/roadmap/architecture documents.
+11. preserve confirmed decision 6: paused Chat threads remain visible but read-only, show a clear paused state, and route lifecycle management to Contacts without a Chat-owned resume toggle;
+12. preserve the review sequence: Main Role/NPC type conversion first, role duplication second, world migration in Journey 2;
+13. preserve confirmed decision 7: hidden auditable relationship truth provides continuity; AI provides bounded interpretation, transient emotion, intention, and natural expression; ordinary social surfaces remain non-numeric;
+14. preserve confirmed decision 8: World Hub inspects values/evidence without direct numeric editing and retains bounded review/cleanup commands; future Cheats owns explicit, audited overrides;
+15. preserve confirmed decision 9: all active AI roles receive a non-disableable minimum personhood/continuity baseline while presets and per-role controls scale depth and budgets;
+16. preserve confirmed decision 10: program-owned six-dimensional truth is projected to AI qualitatively; AI proposes through a schema and deterministic validation is the sole mutation gate;
+17. ask whether runtime is deterministic/local by default, folds appraisal into existing Chat AI calls, and uses optional separate AI appraisal only for ambiguous/high-salience events;
+18. freeze six dimensions, lenses/facets, update frequency, context budgets, decay, and fallback after that runtime split is confirmed;
+19. continue memory horizon, autonomous agency, and continuous-story complexity after relationship resolution;
+20. return to type-conversion default/override rules only after those capability meanings are confirmed;
+21. keep product-target decisions separate from current implementation facts;
+22. only after Journey 1 target review, derive its product gaps and Phase A architecture requirements;
+23. only after target review, update active PM/roadmap/architecture documents.
 
 ## 10. Copy-Ready Resume Prompt
 
@@ -439,7 +540,7 @@ First read:
 
 The handoff records explicit user decisions that supersede the still-dirty 2026-07-10 release-hardening interpretation. Do not start public-release hardening, immediate true-device testing, K-pop migration, save-slot/workspace implementation, or code refactoring.
 
-Resume at section 9 of the handoff and sections 7-8 of the capability baseline. Preserve the recorded `3 + 1` Main Role/NPC decision, the one-isolated-desktop-client/one-current-save decision, and the Settings-owned profile contract: one active global slot, multiple inert optional profile documents, copy-on-apply, clear-to-unconfigured deletion, Contacts projection only, feature presentation/privacy overrides, and no user-profile context in anonymous Chat. Backup remains one complete whole-product export/import containing all of these records without cross-save or workspace logic. Also preserve the role lifecycle hierarchy: paused roles stay visible for review but produce no profile-sourced world activity; archived roles disappear from daily Contacts/Chat/runtime while all data remains in Contacts `Archived Roles`; restoring returns the original profile and Chat history but keeps the role paused. External model/world knowledge may still mention the same name without binding to or acting as the paused role. Chat block/delete is only a communication-surface state for active roles; current or future alternate-channel, new-request, alternate-account, or relationship-network contact must be blocked whenever the global role is paused. Ask me only whether paused Chat threads should be visibly read-only and route lifecycle management back to Contacts, then write every confirmed answer to both Phase 0 files before continuing. Preserve all existing worktree changes.
+Resume at section 9 of the handoff and sections 7-8 of the capability baseline. Preserve the re-confirmed Main Role/NPC direction, hybrid hidden-truth/AI-expression principle, World Hub-inspection/Cheats-override hierarchy, and minimum personhood baseline. Preserve decision 10: Relationship Runtime is the sole owner/writer of complete six-dimensional numeric truth; numeric state, evidence, lenses, facets, memories, and audit stay internal; a deterministic projector sends AI only relevant qualitative guidance; AI may return schema-constrained appraisal/effect proposals but cannot perform arithmetic, invent schema, or mutate truth; deterministic validation is the only mutation gate; lenses persist with source/confidence and AI may suggest but not silently change them. Also preserve the one-isolated-desktop-client/one-current-save decision, Settings-owned user-profile contract, complete backup contract, and Active/Paused/Archived lifecycle hierarchy. Ask only whether relationship processing is deterministic/local by default, folds subjective appraisal into existing Chat AI calls when Chat already invokes AI, handles routine objective cross-module facts with built-in rules, and reserves optional separate AI appraisal calls for ambiguous/high-salience events. After that, freeze six dimensions and lens/facet semantics, then continue memory horizon, autonomous agency, story complexity, type conversion, duplication, and later Journey 2 world migration. Write every confirmed answer to both Phase 0 files before continuing. Preserve all existing worktree changes.
 ```
 
 ## 11. Validation State

@@ -72,6 +72,22 @@ Rules:
 
 This rule applies to answers, handoff notes, specs, implementation plans, review findings, and roadmap updates.
 
+## 3.2 Product Planning Alignment Protocol
+
+When a round asks the user to define, choose, approve, or revise product behavior, treat the user as a project manager newly entering an unfinished product area. Do not jump from internal terminology or a stored field directly to a recommendation.
+
+Before asking for a product decision:
+
+1. explain the user-visible purpose and current experience in plain product language;
+2. distinguish what is implemented now, what exists only in documents or schema, what is proposed, and what is absent;
+3. explain the original or current design intent and the product problem it was meant to solve;
+4. identify contradictions, incomplete loops, ownership ambiguity, technical constraints, and likely user-facing risks;
+5. define unfamiliar terms through concrete examples instead of assuming the user knows the codebase;
+6. present two or three viable approaches with trade-offs and a reasoned recommendation only after the shared context is established;
+7. ask for one bounded decision at a time, then persist the confirmed meaning and unresolved follow-up questions before continuing.
+
+The explanation should be detailed enough for the user to challenge the premise, not merely choose among labels. If the user's response shows that a concept was not adequately explained, reopen the premise and treat the earlier answer as needing revalidation rather than defending or extending it.
+
 ## 4. Dual-Track Execution
 
 - Track A: immediate request track (`user-now`)
