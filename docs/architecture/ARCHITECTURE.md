@@ -309,7 +309,7 @@ Its boundary is important:
 - ESLint;
 - 172 Vitest files / 1054 tests;
 - Vite production build;
-- 18 Playwright scenarios across desktop and mobile emulation.
+- 30 Playwright scenarios across desktop and mobile emulation.
 
 ### CI
 

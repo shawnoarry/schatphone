@@ -176,7 +176,7 @@ Run on 2026-07-10:
 - `npm.cmd run lint`: pass;
 - `npm.cmd run test`: 172 files, 1054 tests, pass;
 - `npm.cmd run build`: pass, no warning;
-- `npm.cmd run test:e2e`: 18 tests, pass across desktop and mobile projects;
+- `npm.cmd run test:e2e`: 30 tests, pass across desktop and mobile projects;
 - `npm.cmd audit --omit=dev`: 0 vulnerabilities;
 - full `npm.cmd audit`: 15 development/tooling advisories.
 

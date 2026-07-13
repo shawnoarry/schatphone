@@ -85,7 +85,7 @@ Audit date: 2026-07-10.
 | Source scale | 201 files / about 104k lines under `src` |
 | Application shape | 30 Vue route views, 16 Pinia stores, 36 components, 36 composables |
 | Unit tests | 172 files / 1054 tests, all passing |
-| E2E | 18 Playwright tests, all passing across desktop Chromium and Pixel 5 mobile emulation |
+| E2E | 30 Playwright tests, all passing across desktop Chromium and Pixel 5 mobile emulation |
 | Lint | ESLint pass |
 | Production build | Vite pass, 252 modules transformed, no build warning |
 | Dependency audit | production dependencies: 0 known vulnerabilities; full tree: 15 development/tooling advisories |

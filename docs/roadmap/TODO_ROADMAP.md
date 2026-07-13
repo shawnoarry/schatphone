@@ -21,7 +21,7 @@ SchatPhone is past prototype viability and now has a stable local-first product 
 
 Verified on 2026-07-10:
 
-1. the worktree baseline passes lint, 172 Vitest files / 1054 tests, production build, and 18 Playwright desktop/mobile scenarios;
+1. the worktree baseline passes lint, 172 Vitest files / 1054 tests, production build, and 30 Playwright desktop/mobile scenarios;
 2. 30 route views and 16 Pinia domain stores implement the phone shell plus communication, world, relationship, map/date, media, commerce, finance, and runtime lanes;
 3. the production dependency audit is clean;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;

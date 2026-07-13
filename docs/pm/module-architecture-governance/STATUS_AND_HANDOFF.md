@@ -17,7 +17,7 @@ Verified baseline:
 - 30 route views, 16 Pinia stores, 36 components, 36 composables;
 - about 104k source lines;
 - 172 Vitest files / 1054 tests pass;
-- 18 Playwright desktop/mobile scenarios pass;
+- 30 Playwright desktop/mobile scenarios pass;
 - lint and production build pass;
 - production dependency audit is clean;
 - full dependency audit reports development/tooling advisories.

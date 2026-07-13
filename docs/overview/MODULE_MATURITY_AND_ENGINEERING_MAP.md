@@ -76,7 +76,7 @@ Verified on 2026-07-10:
 - zero TypeScript source files;
 - about 104k source lines;
 - 172 unit-test files / 1054 tests;
-- 18 Playwright scenarios across desktop/mobile projects.
+- 30 Playwright scenarios across desktop/mobile projects.
 
 ### Largest Views
 
