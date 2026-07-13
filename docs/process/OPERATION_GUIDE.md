@@ -240,7 +240,7 @@ Useful for doc-only work:
 
 ```powershell
 git diff --check
-npm.cmd run test -- tests/mojibake-guard.test.js
+npm.cmd run governance:check
 ```
 
 ## 13. Release / Deployment Flow

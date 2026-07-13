@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -77,6 +77,7 @@ Command naming convention:
 
 - Cross-platform workflow docs may write `npm run ...` or `npx ...` as logical command names.
 - On this Windows PowerShell machine, run the `.cmd` shims: `npm.cmd ...`, `npx.cmd ...`, and `opencli.cmd ...`.
+- Repository Markdown and skill files use UTF-8. In Windows PowerShell, prefer `Get-Content -Encoding UTF8` so valid Chinese text is not misread through the legacy system code page.
 - For `npm audit`, use the official npm registry if the configured mirror does not implement the audit endpoint:
 
 ```powershell
@@ -158,39 +159,36 @@ PowerShell note:
 
 ## 6. Skills System Overview
 
-Project-local skills are installed under:
+Project-local skill contents are vendored under:
 
 ```text
 .\.agents\skills
 ```
 
-The lock file for project-local skill sources is:
+The generated provenance lock for externally sourced project-local skills is:
 
 ```text
 skills-lock.json
 ```
 
-These two sources are the truth for "what this repo expects to be locally installed."
+`.agents/skills` is the truth for what a clone actually contains. `skills-lock.json` records the external source and content hash for those vendored skills. Root `AGENTS.md` and workflow documents are project instructions, not skills, and must not be placed in the skill inventory.
 
 Workflow ownership is split like this:
 
-- `schatphone-workflow`: general SchatPhone takeover and documentation sync.
+- root `AGENTS.md`: stable bootstrap and independent workflow/skill audit rule.
+- `docs/process/AI_WORK_MODE.md`: canonical project execution and documentation governance.
 - `docs/process/EVENT_WORKFLOW.md`: event/runtime lane skill routing.
 - `docs/process/VISUAL_WORKFLOW.md`: visual/IA lane skill routing.
-- `docs/process/AI_WORK_MODE.md`: overall workflow-to-skill map across lanes.
 
 Global machine-local skills may also exist outside the repo. Those can support work on the current machine, but they are not required for repo portability unless explicitly documented.
 
 ## 7. Current Project-Local Skill Inventory
 
-The current repo-local skills recorded in `.agents/skills` and `skills-lock.json` are:
+The current externally sourced repo-local skills recorded in `.agents/skills` and `skills-lock.json` are:
 
 | Skill | Main use | Primary workflow owner |
 | --- | --- | --- |
-| `schatphone-workflow` | SchatPhone takeover, reading order, doc-sync matrix, semantic guardrails | `docs/process/AI_WORK_MODE.md` |
-| `brainstorming` | New feature/design discovery before implementation planning; produces reviewed specs | `docs/process/AI_WORK_MODE.md` |
 | `grill-me` | Stress-test plans, architecture proposals, and requirement assumptions one decision branch at a time | `docs/process/AI_WORK_MODE.md` |
-| `writing-plans` | Convert approved specs or clear requirements into executable implementation plans | `docs/process/AI_WORK_MODE.md` |
 | `find-skills` | Skill discovery and installation help when a new capability is needed | `docs/process/DEVELOPMENT_TOOLING.md` |
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
@@ -221,11 +219,12 @@ These workflow docs already wire skills in a clear way:
 
 When cleaning or splitting docs, preserve these rules:
 
-1. `schatphone-workflow` remains the baseline skill for any non-trivial SchatPhone continuation task.
-2. Event/runtime work keeps its own skill matrix in `EVENT_WORKFLOW.md`.
-3. Visual/IA work keeps its own skill matrix in `VISUAL_WORKFLOW.md`.
-4. `skills-lock.json` and `.agents/skills` remain the inventory truth for repo-local skills.
-5. If a new workflow starts depending on a project-local skill, document that dependency in:
+1. root `AGENTS.md` stays a short bootstrap and never duplicates the full workflow.
+2. `AI_WORK_MODE.md` remains the only project execution rulebook.
+3. Event/runtime work keeps its own skill matrix in `EVENT_WORKFLOW.md`.
+4. Visual/IA work keeps its own skill matrix in `VISUAL_WORKFLOW.md`.
+5. `.agents/skills` remains the content inventory; `skills-lock.json` remains external provenance rather than a workflow authority.
+6. If a new workflow starts depending on a project-local skill, document that dependency in:
    - the workflow doc;
    - `docs/process/AI_WORK_MODE.md`;
    - this file when install/inventory assumptions change.
@@ -271,8 +270,9 @@ After installing or updating project-local skills:
 
 1. confirm `.agents\skills` contains the new skill;
 2. confirm `skills-lock.json` contains the new source entry;
-3. restart Codex or the agent host so the skill is loaded.
-4. update `docs/process/VISUAL_WORKFLOW.md` or the relevant workflow doc with:
+3. run `npm.cmd run governance:check` to verify inventory and active-doc references;
+4. restart Codex or the agent host so the skill is loaded;
+5. update `docs/process/VISUAL_WORKFLOW.md` or the relevant workflow doc with:
    - when to use the skill;
    - why the existing stack was insufficient;
    - the install command needed on another PC.
@@ -395,7 +395,7 @@ Use this checklist before another device takes over development:
 3. Confirm PowerShell can run `npm.cmd` and `npx.cmd`.
 4. Clone SchatPhone and run project install from the confirmed root.
 5. Install OpenCLI globally if that PC needs browser/app CLI tooling.
-6. Install or confirm project-local skills from `.agents\skills` and `skills-lock.json`.
+6. Confirm the vendored project-local skills from `.agents\skills` and `skills-lock.json`; do not reinstall them from moving upstream branches during ordinary setup.
 7. If visual work is in scope, follow `docs/process/VISUAL_WORKFLOW.md` for visual skill setup.
 8. If visual reference assets are in scope, confirm the external asset library path documented in `docs/references/VISUAL_ASSET_LIBRARY.md`.
 9. Run verification commands:
@@ -410,10 +410,10 @@ git status --short
 
 ## 10. Current Project Toolchain Baseline
 
-Verified on 2026-07-10:
+Verified on 2026-07-14:
 
-- local Node: 22.13.0; CI Node: 20;
-- npm: 10.9.2;
+- local Node: 24.13.0; CI Node: 20;
+- npm: 11.6.2;
 - Vite: 7.3.1;
 - Vitest: 1.6.1;
 - Playwright: 1.60.0;

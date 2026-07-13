@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -75,7 +75,7 @@ Verified on 2026-07-10:
 - 133 JavaScript files and 67 Vue files under `src`;
 - zero TypeScript source files;
 - about 104k source lines;
-- 171 unit-test files / 1050 tests;
+- 172 unit-test files / 1054 tests;
 - 18 Playwright scenarios across desktop/mobile projects.
 
 ### Largest Views

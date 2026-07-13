@@ -13,7 +13,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "governance:check": "vitest run tests/workflow-governance.test.js tests/mojibake-guard.test.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",

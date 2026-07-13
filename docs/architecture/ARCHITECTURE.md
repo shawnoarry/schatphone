@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 ## 1. Architecture Goals
 
@@ -307,7 +307,7 @@ Its boundary is important:
 ### Local Baseline
 
 - ESLint;
-- 171 Vitest files / 1050 tests;
+- 172 Vitest files / 1054 tests;
 - Vite production build;
 - 18 Playwright scenarios across desktop and mobile emulation.
 

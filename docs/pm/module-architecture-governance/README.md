@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -10,6 +10,7 @@ Current state:
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
 - the active 4.5 lane also includes backup credential policy, development dependency advisories, and CI/release gating;
+- workflow bootstrap and project-local skill inventory are now guarded by a root instruction file and an automated governance test;
 - framework replacement or a broad TypeScript migration is not recommended.
 
 ## Read This Package In This Order

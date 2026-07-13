@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -8,13 +8,13 @@ This is the top-level map for project documents. If two documents seem to overla
 
 If you are taking over implementation work:
 
-1. `docs/overview/PROJECT_MASTER_GUIDE.md`
-2. `docs/roadmap/TODO_ROADMAP.md`
-3. `docs/pm/TASK_PACKAGE_INDEX.md`
-4. the matching package `README.md`
-5. the matching package `STATUS_AND_HANDOFF.md`
-6. the matching package boundary and implementation files
-7. `docs/process/AI_WORK_MODE.md`
+1. root `AGENTS.md` for the stable bootstrap
+2. `docs/process/AI_WORK_MODE.md` for execution rules
+3. `docs/roadmap/TODO_ROADMAP.md` for live priority
+4. `docs/pm/TASK_PACKAGE_INDEX.md` when task ownership is unclear
+5. the matching package `README.md` and `STATUS_AND_HANDOFF.md`
+6. only the focused package, architecture, or product-decision files required by the change
+7. `docs/overview/PROJECT_MASTER_GUIDE.md` when whole-project context is necessary
 
 Current audit note:
 
@@ -81,6 +81,9 @@ Compatibility entry docs still exist:
 
 ## 5. Key Workflow Documents
 
+- root `AGENTS.md`
+  - stable agent bootstrap
+  - authority order and independent workflow/skill audit rule
 - `docs/process/AI_WORK_MODE.md`
   - task-type reading order
   - top-level installed-skill routing map

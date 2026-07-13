@@ -1,10 +1,10 @@
 # SchatPhone AI Work Mode
 
-Updated: 2026-06-12
+Updated: 2026-07-14
 
 Purpose: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.
 
-This file is the single workflow/process rulebook. It does not replace the task board; it defines how task documents should be used, what to read first, and what must be synced after each work round.
+This file is the single workflow/process rulebook. Root `AGENTS.md` is only the stable bootstrap that points agents here; it is not a second rulebook. This file does not replace the task board; it defines how task documents should be used, what to read first, and what must be synced after each work round.
 
 If this file conflicts with a project-local skill, package note, archived plan, or old TODO-style reference, this file wins unless the user explicitly overrides the workflow for that round.
 
@@ -23,6 +23,7 @@ Do not let code run ahead while docs still describe an old product meaning.
 
 | Document | Role | Rule |
 | --- | --- | --- |
+| `AGENTS.md` | agent bootstrap | Keep it short. It points to current authorities and defines how workflow/skill audits stay independent. |
 | `docs/README.md` | documentation map | Use first when choosing which document to read or update. |
 | `docs/overview/PROJECT_MASTER_GUIDE.md` | whole-project overview | Read first for product and architecture context. |
 | `docs/roadmap/TODO_ROADMAP.md` | only live execution board | Any executable task with status must live here. |
@@ -30,7 +31,6 @@ Do not let code run ahead while docs still describe an old product meaning.
 | `docs/pm/TODO_PM_STATUS_REPORT.md` | PM-readable status mirror | Sync after meaningful roadmap, boundary, or current-priority change. |
 | `docs/process/OPERATION_GUIDE.md` | daily operation and validation guide | Use for commands, QA flow, and release/deploy steps. |
 | `docs/process/AI_WORK_MODE.md` | workflow and documentation governance | This file. Keep process rules here instead of creating new process docs. |
-| `.agents/skills/schatphone-workflow/SKILL.md` | takeover shortcut skill | Mirrors this workflow as a quick checklist. It must not become a second authority. |
 | `docs/pm/TASK_PACKAGE_INDEX.md` | task-package index | Use when deciding which package should own the current task. |
 | package `STATUS_AND_HANDOFF.md` | current handoff page | Read after package `README.md` to see current status, next safe slice, and do-not-do rules. |
 | domain reference docs, including old `TODO` / `NEXT` / `PLAN` notes | decisions, contracts, and domain details | Must not become active task boards unless explicitly promoted into `TODO_ROADMAP.md`. |
@@ -92,9 +92,11 @@ Read the smallest current set that matches the work.
 
 Read in order:
 
-1. `docs/README.md`
-2. `docs/overview/PROJECT_MASTER_GUIDE.md`
-3. `docs/roadmap/TODO_ROADMAP.md`
+1. `docs/roadmap/TODO_ROADMAP.md`
+2. `docs/pm/TASK_PACKAGE_INDEX.md` when ownership is unclear
+3. the matching package `README.md` and `STATUS_AND_HANDOFF.md`
+4. focused package, architecture, or product-decision files required by the change
+5. `docs/overview/PROJECT_MASTER_GUIDE.md` only when whole-project context is necessary
 
 ### 5.2 Contacts / Role / Relationship / Memory Task
 
@@ -176,25 +178,11 @@ Read in order:
 
 Workflow docs already own most skill-routing detail. Use this section as the top-level map so future assistants do not have to guess where skill expectations live.
 
-### Baseline takeover skill
+### Requirement-pressure skill
 
-- `schatphone-workflow`
-  - use for any non-trivial SchatPhone continuation task;
-  - mirrors the reading order, package selection, and end-of-round doc sync from this file.
-
-### Planning and requirement-pressure skills
-
-- `brainstorming`
-  - use before new feature creation, major behavior changes, or unclear product design;
-  - not required for audits, bug fixes, doc sync, status reviews, or already-promoted roadmap/package work with clear acceptance;
-  - output should be a reviewed design/spec before implementation planning.
 - `grill-me`
   - use to stress-test an existing plan, architecture proposal, or requirement set;
   - prefer answering questions from project docs/code first, and ask the user only when a decision cannot be inferred safely.
-- `writing-plans`
-  - use after a spec or clear requirement exists and before multi-step implementation;
-  - skip for small doc/code fixes where the scope and validation are obvious;
-  - output should be an implementation plan with concrete files, tests, validation commands, and small executable tasks.
 
 ### Event / runtime / relationship-engineering lane
 
@@ -244,6 +232,7 @@ If a workflow starts depending on a project-local skill and that dependency is n
 ### Skill Conflict And Tool-Policy Overrides
 
 - Apply broad skill trigger language through this SchatPhone map. A generic skill that says "always" or "MUST" does not expand the project workflow beyond the scope defined here.
+- Skills are reviewable implementation aids, not authorities. A workflow or skill under audit must not be invoked as evidence for its own correctness.
 - Subagent or Agent-tool instructions inside a skill are optional and must obey the current tool policy. If subagents are unavailable or not explicitly requested, complete the equivalent local repo scan and note the fallback in the delivery.
 - A skill must not create a second roadmap, second task board, or competing package handoff. Promote active work into `TODO_ROADMAP.md` and the matching package `STATUS_AND_HANDOFF.md`.
 - If a skill's recommended validation command conflicts with `docs/process/DEVELOPMENT_TOOLING.md`, use the machine-local command convention from `DEVELOPMENT_TOOLING.md`.
@@ -321,6 +310,8 @@ Each delivery should include:
   - `npm run lint`
   - `npm run build`
   - `npm run test` when behavior logic changed
+  - targeted or full `npm run test:e2e` when a user-facing route flow changed
+  - production and full `npm audit` when dependencies or the lockfile changed
 - documentation and roadmap are updated in the same turn
 
 ## 13. Copy-Ready Handoff Prompt
@@ -329,9 +320,9 @@ Each delivery should include:
 You are taking over the SchatPhone project.
 
 Execution rules:
-1) Read docs/README.md, docs/overview/PROJECT_MASTER_GUIDE.md, and docs/roadmap/TODO_ROADMAP.md first.
-2) Read docs/pm/TASK_PACKAGE_INDEX.md and enter the matching package before coding.
-3) Read the matching package STATUS_AND_HANDOFF.md before changing code.
+1) Read AGENTS.md, docs/process/AI_WORK_MODE.md, and docs/roadmap/TODO_ROADMAP.md first.
+2) Use docs/pm/TASK_PACKAGE_INDEX.md when ownership is unclear, then enter the matching package.
+3) Read the matching package README.md and STATUS_AND_HANDOFF.md before changing code.
 4) Translate the request into goal, scope, acceptance, and risk.
 5) After each meaningful code round, run validation and sync the required docs in docs/process/AI_WORK_MODE.md.
 6) Route AI calls only through src/lib/ai.js.

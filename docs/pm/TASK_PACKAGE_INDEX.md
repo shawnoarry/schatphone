@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -170,11 +170,11 @@ Current handoff page:
 
 If you do not know where to start:
 
-1. `docs/README.md`
+1. root `AGENTS.md`
 2. `docs/process/AI_WORK_MODE.md`
-3. this file
-4. the matching package `README.md`
-5. the matching package `STATUS_AND_HANDOFF.md`
+3. `docs/roadmap/TODO_ROADMAP.md`
+4. this file when ownership is unclear
+5. the matching package `README.md` and `STATUS_AND_HANDOFF.md`
 
 ## 4. Workflow Rule
 
@@ -182,8 +182,8 @@ Task packages define product meaning and implementation grouping.
 
 Process rules still belong to:
 
+- root `AGENTS.md` for the stable bootstrap;
 - `docs/process/AI_WORK_MODE.md`
-- `.agents/skills/schatphone-workflow/SKILL.md`
 
 Skill-family details are intentionally not repeated in every package. Use:
 

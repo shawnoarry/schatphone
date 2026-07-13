@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 ## 1. Purpose And Status Method
 
@@ -84,7 +84,7 @@ Audit date: 2026-07-10.
 | Git baseline | `main`, clean before this documentation round, latest prior commit `47b8c35` from 2026-06-25 |
 | Source scale | 201 files / about 104k lines under `src` |
 | Application shape | 30 Vue route views, 16 Pinia stores, 36 components, 36 composables |
-| Unit tests | 171 files / 1050 tests, all passing |
+| Unit tests | 172 files / 1054 tests, all passing |
 | E2E | 18 Playwright tests, all passing across desktop Chromium and Pixel 5 mobile emulation |
 | Lint | ESLint pass |
 | Production build | Vite pass, 252 modules transformed, no build warning |

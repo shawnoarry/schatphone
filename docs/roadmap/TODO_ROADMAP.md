@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This is the only live execution board for implementation order.
 
@@ -21,7 +21,7 @@ SchatPhone is past prototype viability and now has a stable local-first product 
 
 Verified on 2026-07-10:
 
-1. the worktree baseline passes lint, 171 Vitest files / 1050 tests, production build, and 18 Playwright desktop/mobile scenarios;
+1. the worktree baseline passes lint, 172 Vitest files / 1054 tests, production build, and 18 Playwright desktop/mobile scenarios;
 2. 30 route views and 16 Pinia domain stores implement the phone shell plus communication, world, relationship, map/date, media, commerce, finance, and runtime lanes;
 3. the production dependency audit is clean;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
@@ -107,6 +107,13 @@ Completed in the 2026-07-10 audit round:
 2. removed stale recommendations that still treated completed 4.1-4.4 work as the next lane;
 3. corrected global Appearance pack semantics: portable packs exclude app icons, app skins, app/world-app scoped CSS, Home layout/widgets, and Chat appearance;
 4. recorded the K-pop planning artifact as a decision gate rather than a shadow backlog.
+
+Completed in the 2026-07-14 workflow-governance round:
+
+1. retired the self-referential `schatphone-workflow` skill and the removed Superpowers planning skills;
+2. added root `AGENTS.md` as a short, reviewable bootstrap while keeping `AI_WORK_MODE.md` as the only process rulebook;
+3. unified active reading-order and skill-inventory documentation;
+4. added an automated governance check for skill provenance, retired references, bootstrap independence, task-package structure, and mojibake.
 
 Open slices, in order:
 

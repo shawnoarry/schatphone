@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -16,7 +16,7 @@ Verified baseline:
 
 - 30 route views, 16 Pinia stores, 36 components, 36 composables;
 - about 104k source lines;
-- 171 Vitest files / 1050 tests pass;
+- 172 Vitest files / 1054 tests pass;
 - 18 Playwright desktop/mobile scenarios pass;
 - lint and production build pass;
 - production dependency audit is clean;
@@ -174,9 +174,19 @@ Do not describe it as a production backend or closed-page simulation engine.
 - CI does not run Playwright or dependency audit;
 - no coverage threshold exists;
 - Pages deployment performs a build-only workflow;
-- local validation used Node 22 while CI uses Node 20.
+- local validation uses Node 24 while CI uses Node 20.
 
-## 5. Completed In The 2026-07-10 Governance Round
+## 5. Completed Governance Rounds
+
+### 2026-07-14 Workflow Governance
+
+1. retired `schatphone-workflow` so a workflow or skill cannot make itself mandatory or prove its own correctness;
+2. retained `AI_WORK_MODE.md` as the only process rulebook and added root `AGENTS.md` as a short bootstrap;
+3. removed the retired Superpowers planning skills and synchronized active inventory documentation;
+4. added `npm.cmd run governance:check` for inventory, retired-reference, bootstrap, task-package, and mojibake checks;
+5. aligned the documented local Node/npm baseline with the current machine without changing the CI Node version.
+
+### 2026-07-10 Project Governance
 
 1. rebuilt master, roadmap, PM, architecture, maturity, strategy, and candidate docs from one evidence baseline;
 2. removed recommendations to begin already completed 4.1-4.4 work;
@@ -228,6 +238,7 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 
 Required for every meaningful 4.5 slice:
 
+- `npm.cmd run governance:check` when workflow, active documentation, task packages, or skills change;
 - targeted tests for the new interface/migration;
 - `npm.cmd run lint`;
 - `npm.cmd run test`;
