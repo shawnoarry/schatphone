@@ -180,6 +180,7 @@ Workflow docs already own most skill-routing detail. Use this section as the top
 
 ### Requirement-pressure skill
 
+- This project does not install or route through Superpowers skills. Use the active roadmap, package handoff, and the built-in task plan for ordinary implementation planning.
 - `grill-me`
   - use to stress-test an existing plan, architecture proposal, or requirement set;
   - prefer answering questions from project docs/code first, and ask the user only when a decision cannot be inferred safely.
@@ -207,8 +208,8 @@ Primary skills for this lane:
 - `frontend-design`
 - `frontend-logic-design`
 - `image-to-code` when a source image, screenshot, or design export must be restored into code with strict 750px visual matching
-- `impeccable`
-- `web-design-guidelines`
+
+Choose at most one visual specialist for a work round. `frontend-logic-design` owns IA diagnosis, `frontend-design` owns visual rebuild or polish, and `image-to-code` is reserved for strict source-image restoration. Routine fixes use no specialist skill.
 
 Machine-local visual support skills may also be documented there when available.
 

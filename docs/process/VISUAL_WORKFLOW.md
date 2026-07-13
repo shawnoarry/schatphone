@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This document defines the `视觉专项` workflow.
 
@@ -164,17 +164,6 @@ If temporary copy is needed, write product copy, not developer copy.
 
 The current visual workflow expects these skills.
 
-### Global machine-local support skills
-
-These may exist outside the repo on the current machine:
-
-- `ui-aesthetics`
-  - visual judgment, product-grade composition, color/depth/motion, diagnosis of generic or cluttered UI.
-- `ui-ux-pro-max`
-  - accessibility, touch targets, interaction states, layout, typography, color systems, and product-type recommendations.
-
-These are helpful, but repo portability should not depend on them unless explicitly documented for a given workflow.
-
 ### Project-local skills
 
 These are expected in `.agents/skills` for repo-local visual work:
@@ -185,18 +174,15 @@ These are expected in `.agents/skills` for repo-local visual work:
   - information architecture, navigation depth, MECE grouping, and interaction consistency.
 - `image-to-code`
   - pixel-level restoration from a provided UI image, screenshot, Figma export, or long design image into code and high-resolution PNG slices.
-- `impeccable`
-  - strict second pass across hierarchy, edge states, responsive behavior, UX copy, and implementation-shaped UI.
-- `web-design-guidelines`
-  - framework-neutral UI/UX/accessibility review pass.
 
 ### Skill routing guidance
 
-- use `frontend-logic-design` first when the problem may be page structure, grouping, entry placement, or inconsistent interaction logic;
-- use `frontend-design` when a surface needs stronger creative direction rather than only cleanup;
+- choose at most one specialist skill for a visual work round;
+- use `frontend-logic-design` when the problem is page structure, grouping, entry placement, or inconsistent interaction logic;
+- use `frontend-design` when a surface needs visual rebuilding or a deliberate polish pass;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
-- use `impeccable` when the UI is already close but still feels noisy, generic, or under-finished;
-- use `web-design-guidelines` for an external best-practice review before or after visual polish.
+- skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance;
+- do not chain visual specialist skills by default.
 
 ### Adding or discovering visual skills
 
@@ -205,8 +191,6 @@ Do not add a new visual skill only because one screen needs more polish. First u
 - `frontend-logic-design` for information structure;
 - `frontend-design` for stronger screen composition;
 - `image-to-code` for source-image-to-code restoration and high-resolution slicing;
-- `impeccable` for the strict polish pass;
-- `web-design-guidelines` for accessibility and external UI review;
 - `playwright-testing` when browser screenshots or journeys are needed.
 
 Add a new project-local skill only when there is a repeated workflow gap that the current stack does not cover. Use `find-skills` and the Skills CLI from the confirmed SchatPhone project root:
@@ -312,12 +296,7 @@ Use this sequence for visual work unless the user asks for a narrower path:
 4. Run the entry-context audit.
 5. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
 6. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
-7. Choose the design-supporting skills:
-   - `frontend-design` for stronger creative direction;
-   - `frontend-logic-design` for IA and interaction consistency;
-   - `impeccable` for strict second-pass shaping;
-   - `web-design-guidelines` for external review;
-   - machine-local support skills when they are available and useful.
+7. Choose zero or one specialist skill: `frontend-logic-design` for IA, `frontend-design` for visual rebuild or polish, or `image-to-code` only when a source image is the contract.
 8. For interactive or editor surfaces, define the key state matrix before styling: normal, edit idle, panel open with no selection, item selected, compatible targets, incompatible targets, picker/replace state, success, empty, and error states.
 9. Define the smallest useful change slice before editing.
 10. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
@@ -366,9 +345,12 @@ For code changes:
 npm run lint
 npm test
 npm run build
+npm run test:visual
 ```
 
-For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports.
+`test:visual` is the single default visual-quality check. It currently covers Home, Settings, and Appearance across `default` and `zen` in desktop and mobile Chromium. It blocks page errors, horizontal overflow, and critical axe violations, and attaches screenshots plus the full axe report to Playwright results.
+
+For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports. Do not add another visual tool unless a repeated gap cannot be covered by Playwright.
 
 For Home desktop and template-edit work, inspect at least these states:
 

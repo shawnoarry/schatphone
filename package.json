@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:visual": "playwright test e2e/visual-quality.spec.js",
     "governance:check": "vitest run tests/workflow-governance.test.js tests/mojibake-guard.test.js"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^9.16.0",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.1.18",

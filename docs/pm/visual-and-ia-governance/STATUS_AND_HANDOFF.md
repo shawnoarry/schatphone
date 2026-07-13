@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -94,6 +94,7 @@ What is already landed:
 78. Network & API setup now follows a URL-first IA: the page no longer presents OpenAI official, OpenAI-compatible gateway, and Gemini as first-level choice buttons. Users enter the endpoint directly, the app auto-detects the transport type, and saved API configurations are loaded from the dropdown near the URL field. Provider templates remain a helper-level code concept only and should not dominate the visible setup path.
 79. Network & API URL-first IA now has broader transport affordance coverage: common OpenAI-compatible base/model/chat paths, OpenAI/Azure Responses paths, Anthropic Messages paths, Gemini native paths, Azure deployment URLs, and local/server-auth gateway endpoints can be entered directly. The API Key step may become optional after URL detection; the visible dropdown is for saved user configurations, not provider-brand selection.
 80. Network & API setup now keeps the necessary functional loop compact: URL, key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel, while saved-configuration management and diagnostics are secondary disclosures. The page should not return to one large stacked block per capability.
+81. Visual governance now has a minimal engineering gate: a visual round uses zero or one specialist skill, while `npm run test:visual` checks Home, Settings, and Appearance in day/night plus desktop/mobile, attaches screenshots and axe reports, and blocks page errors, horizontal overflow, and critical accessibility violations. The first run also fixed missing accessible names on Home Dock entries and the Settings backup-asset checkbox.
 
 Still incomplete:
 
@@ -109,12 +110,13 @@ Still incomplete:
 
 The active roadmap priority is security/toolchain maintenance, not a broad visual pass. Current visual candidates are:
 
-1. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
-2. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
-3. fix observed Home/Widget/App Store placement and recovery friction rather than assuming per-instance overrides are required;
-4. continue isolating destructive actions from normal edits;
-5. keep consumer shop filters/favorites/recent behavior inside Food Delivery or Shopping, not App Store;
-6. promote one focused visual scope at a time after the active 4.5 risk work.
+1. extend `test:visual` only when a touched surface has a repeated regression risk; do not build a second visual toolchain;
+2. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
+3. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
+4. fix observed Home/Widget/App Store placement and recovery friction rather than assuming per-instance overrides are required;
+5. continue isolating destructive actions from normal edits;
+6. keep consumer shop filters/favorites/recent behavior inside Food Delivery or Shopping, not App Store;
+7. promote one focused visual scope at a time after the active 4.5 risk work.
 
 ## 3. Do Not Do
 

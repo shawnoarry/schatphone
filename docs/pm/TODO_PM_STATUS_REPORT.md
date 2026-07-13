@@ -54,7 +54,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline, partial release gate` | all current checks pass; CI lacks E2E/audit and true-device QA |
+| QA / release | `Strong local baseline, partial release gate` | CI now gates focused visual-quality Playwright checks; full E2E, dependency audit, and true-device QA remain outside the gate |
 
 ## 4. What Users Can Do Now
 
@@ -115,7 +115,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
 - full dependency audit reports development/tool advisories even though production dependencies are clean;
-- CI does not run Playwright or dependency audit, and the Pages build workflow is not a full quality gate;
+- CI runs the focused visual-quality Playwright suite, but not the full product E2E suite or dependency audit; the Pages build workflow is not a full quality gate;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
 ### Engineering
@@ -136,7 +136,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P1: Release And Architecture Confidence
 
-1. decide CI E2E/audit gating and Pages deployment dependency;
+1. decide full-product CI E2E/audit gating and Pages deployment dependency after the focused visual gate stabilizes;
 2. take one named large-view or `systemStore` seam at a time;
 3. deepen one cross-store adapter without changing product ownership;
 4. keep docs synchronized in the same round.

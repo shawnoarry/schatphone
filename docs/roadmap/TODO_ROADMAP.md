@@ -115,6 +115,13 @@ Completed in the 2026-07-14 workflow-governance round:
 3. unified active reading-order and skill-inventory documentation;
 4. added an automated governance check for skill provenance, retired references, bootstrap independence, task-package structure, and mojibake.
 
+Completed in the 2026-07-14 visual-governance round:
+
+1. removed the project-local Superpowers skills and their active workflow routing;
+2. reduced visual work to at most one specialist skill per round;
+3. added a focused Playwright visual-quality gate for Home, Settings, and Appearance across day/night and desktop/mobile, including screenshots, horizontal-overflow checks, page-error checks, and critical axe checks;
+4. added the focused visual-quality gate and failure report artifact to CI.
+
 Open slices, in order:
 
 1. `P0 Security/toolchain maintenance` - `TODO`
@@ -122,8 +129,8 @@ Open slices, in order:
    - update the Vite 7 patch line and transitive lockfile where compatible;
    - plan the Vitest 1 to supported-version migration separately because the audit fix is a major upgrade;
    - re-run the full dependency audit and validation after the upgrade.
-2. `P1 CI and release gating` - `TODO`
-   - decide whether Playwright smoke tests and dependency audit should gate pull requests;
+2. `P1 CI and release gating` - `PARTIAL_DONE`
+   - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
 3. `P1 Hotspot decomposition` - `TODO`
    - select one named seam from `ContactsView.vue`, `ChatView.vue`, `WorldBookView.vue`, `HomeView.vue`, `ChatDirectoryView.vue`, or `systemStore`;

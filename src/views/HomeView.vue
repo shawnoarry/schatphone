@@ -2332,7 +2332,12 @@ onBeforeUnmount(() => {
         ></button>
       </div>
       <div class="home-dock">
-        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_chat').accent)" @click="openAppById('app_chat')">
+        <button
+          class="home-dock-icon"
+          :style="iconStyle(dockAppMeta('app_chat').accent)"
+          :aria-label="dockAppMeta('app_chat').label"
+          @click="openAppById('app_chat')"
+        >
           <AppIconVisual
             class="home-dock-icon-visual"
             data-testid="home-dock-icon-app_chat"
@@ -2342,7 +2347,12 @@ onBeforeUnmount(() => {
             :alt="dockAppMeta('app_chat').label"
           />
         </button>
-        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_contacts').accent)" @click="openAppById('app_contacts')">
+        <button
+          class="home-dock-icon"
+          :style="iconStyle(dockAppMeta('app_contacts').accent)"
+          :aria-label="dockAppMeta('app_contacts').label"
+          @click="openAppById('app_contacts')"
+        >
           <AppIconVisual
             class="home-dock-icon-visual"
             data-testid="home-dock-icon-app_contacts"
@@ -2352,7 +2362,12 @@ onBeforeUnmount(() => {
             :alt="dockAppMeta('app_contacts').label"
           />
         </button>
-        <button class="home-dock-icon" :style="iconStyle(dockAppMeta('app_settings').accent)" @click="openAppById('app_settings')">
+        <button
+          class="home-dock-icon"
+          :style="iconStyle(dockAppMeta('app_settings').accent)"
+          :aria-label="dockAppMeta('app_settings').label"
+          @click="openAppById('app_settings')"
+        >
           <AppIconVisual
             class="home-dock-icon-visual"
             data-testid="home-dock-icon-app_settings"
@@ -2365,6 +2380,7 @@ onBeforeUnmount(() => {
         <button
           class="home-dock-icon"
           :style="iconStyle(dockAppMeta('app_widgets').accent)"
+          :aria-label="dockAppMeta('app_widgets').label"
           data-testid="home-dock-widgets"
           @click="openAppById('app_widgets')"
           @pointerdown="scheduleWidgetEntryLongPress"

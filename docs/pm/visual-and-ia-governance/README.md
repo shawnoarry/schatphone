@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -46,9 +46,10 @@ Current visual pass:
 - `应用商城 / App Store` keeps desktop list/detail management, but phone-sized screens now open selected app details as a root-level sheet instead of stretching the catalog.
 - `组件 / Widgets` now keeps phone-sized pages scan-first: custom widget editing and import JSON entry open as focused sheets instead of extending the Widget Center page inline.
 - `外观 / Appearance` Theme, Font, and App Icons keep state/previews visible first; phone-sized wallpaper-source selection, advanced CSS editing, custom font editing, and per-app icon/accent edits now open as focused sheets.
+- Visual work now uses zero or one specialist skill per round. Playwright is the single default verification path, with focused day/night, desktop/mobile, screenshot, overflow, page-error, and critical axe coverage for Home, Settings, and Appearance.
 
 - Chat App now applies the same entry-ownership rule inside the installed app: bottom `Me` is the user/social surface, the top-right gear opens Chat Settings, and Chat Appearance is a Chat-owned subpage with Kakao/WeChat/iMessage layout modes plus Chat-scoped CSS. The latest polish strengthens the phone-native feel with a Kakao-like Messages header/list sheet, clearer active bottom tabs, `Me` compact social stats plus recent-interaction avatars, and layout thumbnails in Chat Appearance.
-- `缃戠粶涓?API / Network & API` now treats endpoint entry as the primary setup path: users paste or type a URL, the app auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations appear as the loadable dropdown. Common base/model/chat URLs, native responses/messages/deployment URLs, and local/server-auth compatible gateways should be handled through URL affordances; provider-brand templates should not return as first-level choice buttons on this system settings page.
+- `网络与 API / Network & API` now treats endpoint entry as the primary setup path: users paste or type a URL, the app auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations appear as the loadable dropdown. Common base/model/chat URLs, native responses/messages/deployment URLs, and local/server-auth compatible gateways should be handled through URL affordances; provider-brand templates should not return as first-level choice buttons on this system settings page.
 
 - Network & API's current compact IA keeps URL, key, model input/selection, model-list refresh, connection test, and save-current-settings in one primary connection panel. Saved-configuration management and diagnostics remain available behind secondary disclosures instead of becoming default stacked page blocks.
 

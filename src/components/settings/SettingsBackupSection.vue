@@ -112,6 +112,7 @@ const { t } = useI18n()
           :checked="backupIncludeAssetPackage"
           type="checkbox"
           class="w-5 h-5 shrink-0"
+          :aria-label="t('导出包含素材包', 'Include asset package in export')"
           :disabled="backupExporting || backupImporting"
           @change="$emit('update-include-asset-package', $event.target.checked)"
         />

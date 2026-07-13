@@ -94,6 +94,7 @@ npm.cmd run dev
 npm.cmd run lint
 npm.cmd test
 npm.cmd run build
+npm.cmd run test:visual
 ```
 
 If plain `npm` fails because of PowerShell policy, retry with `npm.cmd`.
@@ -193,8 +194,6 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
-| `impeccable` | Strict second-pass polish for layout, hierarchy, copy, and edge states | `docs/process/VISUAL_WORKFLOW.md` |
-| `web-design-guidelines` | External UI/UX/accessibility review pass | `docs/process/VISUAL_WORKFLOW.md` |
 | `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
 | `pinia` | Store shape, actions, hydration, persistence patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
 | `vue-pinia-best-practices` | Vue + Pinia reactivity and store-consumption patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
@@ -212,8 +211,8 @@ These workflow docs already wire skills in a clear way:
   - explicit invocation matrix for `pinia`, `vue-pinia-best-practices`, `unit-test-vue-pinia`, `playwright-testing`, `game-engine`, `improve-codebase-architecture`, and `frontend-logic-design`.
 - `docs/process/VISUAL_WORKFLOW.md`
   - explicit installed-skills section;
-  - explicit routing for `frontend-design`, `frontend-logic-design`, `impeccable`, and `web-design-guidelines`;
-  - machine-local visual support skills are documented there too.
+  - mutually exclusive routing for `frontend-design` and `frontend-logic-design`, with `image-to-code` reserved for strict source-image work;
+  - Playwright plus `@axe-core/playwright` is the single default visual-quality verification path.
 
 ### 7.2 What Must Not Be Lost In Future Cleanup
 
