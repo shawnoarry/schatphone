@@ -14,6 +14,13 @@ const ACTIVE_GOVERNANCE_FILES = [
   'docs/pm/TASK_PACKAGE_INDEX.md',
 ]
 
+const ACTIVE_VISUAL_GOVERNANCE_FILES = [
+  'docs/process/AI_WORK_MODE.md',
+  'docs/process/VISUAL_WORKFLOW.md',
+  'docs/pm/visual-and-ia-governance/README.md',
+  'docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md',
+]
+
 const REQUIRED_PACKAGE_FILES = [
   'README.md',
   'STATUS_AND_HANDOFF.md',
@@ -22,9 +29,25 @@ const REQUIRED_PACKAGE_FILES = [
 ]
 
 const RETIRED_SKILLS = ['schatphone-workflow', 'brainstorming', 'writing-plans']
+const RETIRED_VISUAL_MECHANISMS = [
+  ...RETIRED_SKILLS,
+  'impeccable',
+  'web-design-guidelines',
+]
 
 const readProjectFile = (relativePath) =>
   readFileSync(join(ROOT_DIR, relativePath), 'utf8')
+
+const getNamedWorkflowStep = (content, stepName) => {
+  const lines = content.split(/\r?\n/)
+  const stepStart = lines.findIndex((line) => line === `      - name: ${stepName}`)
+  if (stepStart === -1) return []
+
+  const stepEnd = lines.findIndex(
+    (line, index) => index > stepStart && line.startsWith('      - name:'),
+  )
+  return lines.slice(stepStart, stepEnd === -1 ? undefined : stepEnd)
+}
 
 describe('workflow governance', () => {
   test('keeps vendored skill contents aligned with external provenance lock entries', () => {
@@ -51,6 +74,57 @@ describe('workflow governance', () => {
     })
 
     expect(hits).toEqual([])
+  })
+
+  test('does not reference retired mechanisms from active visual governance files', () => {
+    const hits = []
+
+    ACTIVE_VISUAL_GOVERNANCE_FILES.forEach((relativePath) => {
+      const content = readProjectFile(relativePath)
+      RETIRED_VISUAL_MECHANISMS.forEach((mechanism) => {
+        if (content.includes(mechanism)) hits.push(`${relativePath}: ${mechanism}`)
+      })
+    })
+
+    expect(hits).toEqual([])
+  })
+
+  test('keeps visual specialist routing narrow and optional for routine fixes', () => {
+    const aiWorkMode = readProjectFile('docs/process/AI_WORK_MODE.md')
+    const visualWorkflow = readProjectFile('docs/process/VISUAL_WORKFLOW.md')
+
+    expect(aiWorkMode).toContain('Choose at most one visual specialist for a work round')
+    expect(aiWorkMode).toContain('Routine fixes use no specialist skill')
+    expect(visualWorkflow).toContain(
+      'choose at most one specialist skill for a visual work round',
+    )
+    expect(visualWorkflow).toContain(
+      'skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance',
+    )
+    expect(visualWorkflow).toContain('do not chain visual specialist skills by default')
+  })
+
+  test('keeps the focused visual check wired through package scripts and CI', () => {
+    const packageJson = JSON.parse(readProjectFile('package.json'))
+    const ciWorkflow = readProjectFile('.github/workflows/ci.yml')
+    const visualQualityStep = getNamedWorkflowStep(ciWorkflow, 'Visual quality gate')
+
+    expect(packageJson.scripts['test:visual']).toBe(
+      'playwright test e2e/visual-quality.spec.js',
+    )
+    expect(visualQualityStep).toContain('        id: visual-quality')
+    expect(visualQualityStep).toContain('        run: npm run test:visual')
+  })
+
+  test('keeps the Playwright report upload on visual gate failures', () => {
+    const ciWorkflow = readProjectFile('.github/workflows/ci.yml')
+    const uploadStep = getNamedWorkflowStep(ciWorkflow, 'Upload Playwright report')
+
+    expect(uploadStep).toContain(
+      "        if: ${{ failure() && steps.visual-quality.outcome == 'failure' }}",
+    )
+    expect(uploadStep).toContain('        uses: actions/upload-artifact@v4')
+    expect(uploadStep).toContain('          path: playwright-report/')
   })
 
   test('keeps the root bootstrap independent from skills under review', () => {
