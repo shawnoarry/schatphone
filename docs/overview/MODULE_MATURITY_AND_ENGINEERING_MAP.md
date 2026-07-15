@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -10,11 +10,11 @@ This file is not a task board. Promote concrete work into `docs/roadmap/TODO_ROA
 
 SchatPhone is in:
 
-> integrated local-first V1 + architecture/security hardening + selective product validation
+> internal personal development + core-system deepening + evolvable architecture construction
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention should move to credential/toolchain risk, release gates, named hotspots, and World Pack phone validation.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention starts with the promoted browser/PWA-first persistence, backup, and data-lifecycle architecture slice before selecting a reference migration or returning to toolchain, release, hotspot, and device work.
 
 ## 2. Maturity Tiers
 
@@ -26,8 +26,8 @@ Four roadmap baselines are complete: Contacts IA, memory dedupe, World Hub revie
 | Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
-| Gallery | stable platform service | keep one media owner and explicit asset references |
-| persistence / backup / diagnostics | stable infrastructure with credential-policy gap | preserve migration/rollback; fix secret export explicitly |
+| Gallery | stable image-asset platform service; material-library contract active | keep one reusable-media owner, require user retention before generated candidates become durable, and close selective cloud/offload semantics before expansion |
+| persistence / backup / diagnostics | usable snapshot baseline; architecture decision active | preserve one-container/one-save, complete backup, no-silent-deletion, committed-content durability, and transient raw-AI-payload semantics while defining IndexedDB-first hot/cold repositories, integrity, staged restore, and migration/rollback |
 
 ### Tier B: Integrated V1
 
@@ -133,7 +133,7 @@ Preserve app entry recovery and lock/notification semantics. A future Home clean
 
 ### Settings / System
 
-The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. Next work should address backup credential policy or one facade such as Home placement, appearance, API settings, or automation. Preserve the storage key until a migration slice is explicit.
+The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. Current work must first freeze the browser/PWA-first persistence and complete-backup contract. Preserve existing storage keys and shapes until one reference migration is explicitly approved; later facade work must not pre-empt that contract.
 
 ### Chat / Chat Directory
 
@@ -161,12 +161,13 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. backup credential decision and safe toolchain update;
-2. CI/release gating alignment;
-3. one named view/store hotspot seam;
-4. one deeper cross-store adapter;
-5. World Pack true-device findings and focused fixes;
-6. incremental typing only for high-value contracts.
+1. close the Gallery/selective-media preservation gate inside the promoted persistence architecture slice;
+2. finish IndexedDB-first persistence, reversible hot/cold retention, complete-backup, quota, multi-tab, migration, and rollback contracts;
+3. one separately approved reference migration after architecture acceptance;
+4. sensitive-backup warning and safe toolchain update;
+5. CI/release gating alignment;
+6. one named view/store hotspot seam or deeper cross-store adapter;
+7. later device findings and incremental typing only where dependencies justify them.
 
 ## 7. Work To Avoid
 

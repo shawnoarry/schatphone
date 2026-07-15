@@ -1,6 +1,6 @@
 # Relationship Growth Event System / 好感度、关系进展与角色成长事件系统
 
-Updated: 2026-06-01
+Updated: 2026-07-15
 
 ## 1. Purpose
 
@@ -47,6 +47,8 @@ Recommended ownership:
 
 - `simulationStore` owns event logs, cooldowns, caps, Surprise Mode, and runtime execution metadata.
 - `relationshipRuntimeStore` owns affinity values, relationship stages, growth traits, milestones, pending confirmations, cross-module relationship event history, and compact memory summaries.
+- Accepted facts and the provenance needed to audit persistent relationship truth cannot be silently or irreversibly deleted for capacity management. Older evidence may move into reversible cold archives while remaining reviewable and restorable.
+- Relationship Runtime persists validated structured appraisal/effect data, source references, and minimum AI provenance, not full prompts, raw provider responses, or copied canonical bodies from social/forum/offline/narrative modules. AI transport material remains temporary; the content owner persists any formally committed artifact.
 - Chat owns conversation messages, role replies, service-account display, and prompt assembly.
 - Contacts owns the global role archive, visible role identity, role detail semantics, and destructive relationship management.
 - Chat Directory owns Chat-side role binding and service-account entry management.
@@ -65,6 +67,7 @@ Do not:
 - Let AI directly mutate affinity/stage values without a local rule or user confirmation.
 - Let module adapters bypass the shared event engine for random or condition-driven relationship changes.
 - Let every module create its own standalone long-term memory for the same life event when a shared memory summary would be enough.
+- Treat a hot-list cap as permission to erase already-applied relationship evidence. Hot/runtime limits and durable audit retention are separate concerns.
 - Let Chat or Contacts directly apply generated friend/block/refusal social events without the event-runtime review seam.
 
 ## 4. Core Data Concepts

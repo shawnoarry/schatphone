@@ -12,6 +12,41 @@ Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
 SchatPhone's domain architecture is sound enough to preserve. The current problem is concentration and hardening, not missing architecture or a need for framework replacement.
 
+Current active architecture slice:
+
+- ordinary browsers and installable PWAs remain complete first-class clients;
+- one isolated browser/Web App storage container owns one current save;
+- authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
+- any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
+- full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
+- IndexedDB-first structured persistence is the target direction, while `localStorage` becomes small hot state and recovery metadata;
+- optional remote backup is personal BYOS: there is no project/workgroup-owned unique cloud, each user owns a separate Cloudflare account and R2 destination, and Cloudflare R2 is the first officially guided target behind a provider-neutral contract;
+- each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; SchatPhone may retain only a revocable, scoped device token and must not retain an R2 API Secret;
+- personal remote backups are encrypted on the client and support two independent recovery paths: a recovery password or separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, losing both paths is irreversible, and initial setup must verify recovery before automatic backup becomes ready;
+- remote backup keeps the local save authoritative and may run after app launch and while the browser/PWA remains open; it is not live server storage, cross-device sync, automatic merge, or a promise of closed-app background execution;
+- a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
+- this is a promoted architecture-decision slice, not approval to migrate application storage yet.
+
+### Product Decision Checkpoint - 2026-07-16
+
+| Area | Status | Current meaning |
+| --- | --- | --- |
+| Browser/PWA persistence | `CONFIRMED` | One isolated browser/Web App container owns one current save; IndexedDB-first is the target and `localStorage` becomes small hot/recovery state. |
+| Durable records | `CONFIRMED` | Committed user/AI/system content and authoritative/audit truth remain durable under their owning modules; raw transport and rebuildable material do not. |
+| Personal cloud | `CONFIRMED` | No shared project/workgroup archive. Each user owns a separate Cloudflare R2 destination behind a provider-neutral contract. |
+| Remote security | `CONFIRMED` | A personal Worker gateway uses a revocable scoped device token; the app never stores the R2 API Secret. Backups are client-encrypted with recovery-password or recovery-file restore. |
+| Browser automation | `CONFIRMED` | Automatic backup may run after launch and while the app remains open; closed-app scheduling, sync, and merge are not promised. |
+| Gallery role | `CONFIRMED` | Gallery is the user-facing reusable media/material library. Source modules own why/how a retained asset is used; Chat still owns message-scoped media records. |
+| Generated media | `CONFIRMED` | Every image/media generation flow must present a user retention decision before the result becomes durable; rejected candidates remain transient. |
+| URL media | `CONFIRMED` | Media type and storage source are separate. A URL may represent an image, sticker, GIF, audio item, or other media without first becoming a local file. |
+| Per-result three-way storage choice | `WITHDRAWN` | Do not require `discard / local only / cloud protected` on every generated result; this exposed storage mechanics as a primary workflow. |
+| Fixed `8 GB` product budget | `WITHDRAWN` | No fixed budget is approved before real backup-size measurement and a media-retention contract exist. |
+| Selective media protection | `UNRESOLVED` | Define whether kept material is cloud-protected by default, how users exclude or bulk-select it, and how favorites/current use/module importance affect recommendations or priority. |
+| Remote media placement | `UNRESOLVED` | Decide whether R2 remains backup-only or may hold verified originals while SchatPhone releases local binary cache to reduce device storage. |
+| URL exact-copy policy | `UNRESOLVED` | Decide when backup stores only URL/provenance and when it protects exact bytes; public/free image hosts are sources, not yet an approved authoritative backup layer. |
+| Deletion/version retention | `UNRESOLVED` | Define current deletion, historical restore, changed content behind one URL, asset cleanup, and quota-aware version rotation after the earlier gates close. |
+| Storage implementation | `NOT_APPROVED` | No IndexedDB migration, Cloudflare connector, media offload, or Gallery schema implementation begins from planning alone. |
+
 Verified baseline:
 
 - 30 route views, 16 Pinia stores, 36 components, 36 composables;
@@ -137,13 +172,12 @@ Use incremental JSDoc or TypeScript for new/extracted contract modules only. Do 
 
 Settings backup exports the full settings snapshot, including `settings.api.key`, in plaintext JSON.
 
-Decision required:
+Confirmed product contract:
 
-- exclude credentials by default;
-- or require explicit opt-in with a strong warning;
-- or design encryption and key management.
-
-The roadmap recommends exclude-by-default as the simplest safe first implementation, but product acceptance must be promoted before changing backup compatibility.
+- complete local migration backup remains a whole-product snapshot and includes configured credentials;
+- the product must describe the exported file as sensitive local data before download;
+- a future redacted/shareable export may exclude credentials, but it must not silently replace the migration backup;
+- encryption remains optional future work and requires an explicit key-management and recovery contract.
 
 ### Dependency Audit
 
@@ -207,9 +241,30 @@ Do not describe it as a production backend or closed-page simulation engine.
 
 Use the live roadmap order.
 
-### P0: Security/Toolchain
+### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-1. promote and implement backup credential policy;
+Status: `IN_PROGRESS` planning; no migration implementation is approved.
+
+1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data;
+2. close the Gallery/material-library preservation gate: define candidate-to-keep/discard semantics, reusable Gallery ownership versus module-scoped media, and user-visible selective-protection behavior;
+3. decide URL-only versus exact-byte protection, then decide whether verified R2 media may release local binary cache and what offline behavior remains;
+4. define deletion/replacement/history semantics and quota-aware version retention only after backup-size reporting requirements are explicit;
+5. define an IndexedDB-first logical schema, reversible hot/cold archive boundaries, append/update behavior, transactions, idempotency, multi-tab coordination, quota visibility, and domain repository contracts;
+6. define versioned complete backup, integrity checks, staged restore, binary inclusion, rollback, and legacy `localStorage` snapshot migration;
+7. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
+8. select one small reference migration only after the preceding contracts and acceptance criteria are approved.
+
+Cross-package dependencies:
+
+- Contacts owns global role lifecycle and archived-role recovery semantics;
+- Relationship Runtime remains the sole owner/writer of persistent relationship truth and audit evidence;
+- Event Runtime owns event/proposal definitions and provenance while its ontology remains extensible;
+- Chat owns conversation records and thread behavior only, including future paused-thread read-only enforcement.
+- Gallery owns reusable retained media and cross-module asset references; source modules own generated-candidate meaning and the records that use accepted media; Settings owns backup controls and status, not media truth.
+
+### P0: Security/Toolchain After The Storage Contract
+
+1. add the confirmed sensitive-file warning without changing complete-migration contents;
 2. update compatible Vite/transitive dependencies;
 3. plan the Vitest migration separately;
 4. validate and re-audit.
@@ -241,6 +296,11 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 6. do not turn cleanup into new product requirements;
 7. do not treat `docs/superpowers/**` plans as active work without roadmap promotion;
 8. do not remove compatibility state without migration evidence.
+9. do not treat the current IndexedDB mirror as the primary database or as proof that `localStorage` capacity is no longer a constraint.
+10. do not introduce SQLite-only assumptions while browsers/PWAs remain complete first-class clients.
+11. do not solve capacity pressure by silently deleting authoritative history, accepted relationship evidence, user documents, or referenced assets.
+12. do not turn AI diagnostics, API reports, backups, or audit records into an undeclared permanent copy of full prompts or raw provider responses.
+13. do not classify durable content by today's module list or discard an AI-generated post, scene, long-form record, performance record, or state history after its owner has formally committed it.
 
 ## 8. Validation
 

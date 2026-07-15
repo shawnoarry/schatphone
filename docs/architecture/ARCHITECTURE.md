@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 ## 1. Architecture Goals
 
@@ -156,6 +156,8 @@ It supports:
 
 Views and stores may build domain prompts/context, but they must not implement provider HTTP calls independently.
 
+Full assembled prompts, raw provider responses, headers, and transport payloads are transient transport/diagnostic material rather than persistent product truth. Any artifact that an owning module formally publishes, confirms, applies, or admits into revisitable/continuity-bearing history becomes that module's durable canonical content regardless of user/AI/system origin. Durable storage therefore includes committed module content, authoritative state/facts, cross-module references, validated structured proposals/effects, and minimum provenance. Full-payload capture requires an explicit temporary diagnostic mode with hard limits and user clearing.
+
 ### World Context
 
 - `world-interface.js` produces shared active-world context for Chat and runtime;
@@ -205,6 +207,20 @@ Global Appearance packs export only global portable fields. They exclude:
 
 Each store supplies its own normalization, hydration, migration, and snapshot logic. This keeps legacy data handling close to the domain owner.
 
+Confirmed target direction, not current implementation:
+
+- browsers and installable PWAs remain complete first-class clients;
+- IndexedDB becomes the primary structured store behind domain repository contracts, while `localStorage` becomes small hot state and recovery metadata;
+- authoritative history/evidence requires explicit user deletion and may otherwise move only into reversible cold archives;
+- committed content records are durable regardless of user/AI/system origin, while full AI transport payloads, uncommitted drafts, and rebuildable projections are not retained by default;
+- optional remote backup uses separate user-owned Cloudflare R2 destinations rather than one project/workgroup cloud, keeps local state authoritative, and remains provider-neutral below the first officially guided R2 adapter;
+- each personal R2 destination is reached through that user's Cloudflare Worker gateway; the client may retain a revocable, scoped device token but must not retain an R2 API Secret;
+- remote backup is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, losing both paths is irreversible, and setup must verify recovery before automatic backup is ready;
+- ordinary browser/PWA automation may run after launch and while the app is open, but remote backup is not live server storage, cross-device sync, automatic merge, or guaranteed closed-app scheduling;
+- Gallery is the reusable media/material owner, generated media remains source-module candidate state until the user confirms retention, and URL/local/provider source is independent of the asset's image/sticker/GIF/audio meaning;
+- selective cloud inclusion, exact-byte protection for URL sources, and backup-only versus verified-R2 local-cache offload remain an explicit product gate; no fixed `8 GB` budget or per-generation three-way storage prompt is approved;
+- no persistence migration begins until the data classes, backup/integrity contract, migration/rollback path, quota behavior, multi-tab policy, and one reference slice are approved.
+
 ### Gallery Binaries
 
 Gallery metadata participates in store backup. Binary assets use a dedicated storage helper and are optional in exported backup packages with size/item limits.
@@ -225,7 +241,7 @@ Current security gap:
 - backup payload includes `settings` directly;
 - `settings.api.key` is therefore exported in plaintext JSON;
 - backup files must be treated as secrets until policy and code change;
-- the next slice should decide exclusion-by-default, explicit secret inclusion, or a strong warning/encryption approach.
+- complete local migration backup is confirmed to retain configured credentials and therefore requires an explicit sensitive-file warning; a redacted/shareable export and encrypted personal remote backup are separate future contracts.
 
 ## 8. Cross-Module Data Flows
 

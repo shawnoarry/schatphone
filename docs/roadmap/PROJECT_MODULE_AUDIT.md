@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-07-10
+Updated: 2026-07-16
 
 > **Candidate pool only / 仅候选池**
 >
@@ -8,16 +8,15 @@ Updated: 2026-07-10
 
 ## 1. Audit Judgment
 
-SchatPhone has an integrated local-first V1 with strong core loops and uneven finish.
+SchatPhone is in internal personal development with several strong integrated loops and substantial unfinished product/architecture work.
 
 Current product risks, in order:
 
-1. credential/toolchain/release hardening;
-2. large view/store hotspots;
-3. true-device and end-to-end visual quality;
-4. World Pack/runtime hardening;
-5. shallow secondary-module loops;
-6. content plans that are not yet mapped to the right product carriers.
+1. whole-snapshot local persistence, backup completeness, and long-term data lifecycle;
+2. core product definition and ownership-sensitive architecture;
+3. large view/store hotspots;
+4. later credential/toolchain/release hardening;
+5. deferred device/content and shallow secondary-module loops.
 
 Priority meanings:
 
@@ -33,12 +32,12 @@ Priority meanings:
 | --- | --- | --- | --- | --- | --- |
 | Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
 | Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
-| Settings | strong system hub | credential backup policy | owning domain records | exclude/warn for credentials; preserve migrations | P0 |
+| Settings | usable system hub | snapshot persistence, quota visibility, complete-backup integrity | owning domain records or becoming the database | define IndexedDB-first repositories and staged complete backup; add sensitive-file warning | P0 |
 | Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
 | Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
 | Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
 | Contacts | stable V2 baseline with ten read models | template-adaptation diff/richer authoring | destructive and relationship semantics | visual diff only after focused acceptance | P1 |
-| Relationship Runtime | stable truth layer | new source chains only as needed | copied metrics/memories elsewhere | preserve; add adapters only for explicit events | Watch |
+| Relationship Runtime | usable truth layer | 500-event truncation conflicts with long-term audit continuity | copied metrics/memories or lost evidence | define authoritative/audit retention before persistence migration | P0 decision |
 | Gallery | stable media owner | Photos-like collections/visual finish | forced memory/admin role | keep asset-first | P2 |
 | Appearance | strong split ownership baseline | product-wide visual consistency | global pack absorbing app-owned layers | real-device authoring/recovery QA | P1 |
 | App Store | integrated app/world/mini-app manager | growing catalog density | owning target-app business state | search/detail density review after phone test | P1 |
@@ -72,6 +71,18 @@ Priority meanings:
 - Playwright/audit CI policy;
 - Pages release gating.
 
+### Persistence And Recovery
+
+- browser/PWA-first IndexedDB repository contract;
+- authoritative/audit/projection/binary/cache/log classification;
+- explicit user deletion for authoritative history/evidence, with reversible cold archival instead of silent truncation;
+- durable committed content from any future module when formally published/confirmed/applied, regardless of user/AI/system origin;
+- transient full AI prompts/responses, uncommitted drafts, and rebuildable projections, with canonical content, authoritative state/facts, references, structured outcomes, and minimum provenance retained;
+- Chat, relationship-evidence, Book, and Gallery growth policy;
+- generated-media retention confirmation, Gallery selective protection, URL exact-copy behavior, and backup-only versus local-space offload;
+- quota visibility, persistent-storage request, and multi-tab coordination;
+- complete sensitive backup with manifest, integrity, staged restore, legacy migration, and rollback.
+
 ### Maintainability
 
 - one `systemStore` facade;
@@ -96,12 +107,12 @@ Priority meanings:
 
 ## 4. Recommended Candidate Order
 
-1. backup/toolchain security and CI/release confidence;
-2. one named architecture hotspot or adapter seam;
-3. true-device World Pack product loop and focused fixes;
-4. K-pop carrier decision and one migration slice;
-5. source-owned tracking/share or focused commerce polish;
-6. secondary modules and broader runtime only after explicit promotion.
+1. close the Gallery/selective-media preservation gate inside the promoted persistence architecture decision;
+2. finish the remaining local persistence, complete-backup, and data-lifecycle contracts;
+3. approve one small reference migration separately;
+4. backup warning/toolchain security and CI/release confidence;
+5. one named architecture hotspot or adapter seam;
+6. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 
 ## 5. Promotion Checklist
 

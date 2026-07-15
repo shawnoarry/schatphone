@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-06-01
+Updated: 2026-07-15
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -8,6 +8,14 @@ This document records the architecture direction for SchatPhone's immersive even
 - condition-triggered events
 - scheduled simulation
 - module-owned side effects through adapters
+
+Persistence boundary:
+
+- ephemeral eligibility checks, rebuildable projections, and explicitly classified operational logs may rotate;
+- accepted relationship facts and provenance for already-applied persistent truth cannot be silently deleted;
+- durable evidence may move out of the hot runtime set only through reversible cold archival with World Hub review/restore semantics.
+- full AI prompts, raw responses, uncommitted candidates, and transport payloads are not event truth; persist normalized proposals/outcomes and minimum provenance, with full capture limited to explicit temporary diagnostics;
+- when an approved event formally publishes a social/forum record, offline scene, long-form artifact, performance/episode record, or character-state history, the target owner persists the canonical committed content and Event Runtime keeps references/provenance rather than copying the body.
 
 ## 1. Goal
 

@@ -1,6 +1,6 @@
 # SchatPhone State Ownership Strategy
 
-Updated: 2026-05-19
+Updated: 2026-07-15
 
 Purpose: define which parts of SchatPhone should be user-defined, system-owned, AI-assisted, or directly AI-generated.
 
@@ -16,7 +16,7 @@ Use this file together with:
 - `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
 - `docs/process/AI_WORK_MODE.md`
 
-## 1. Four Ownership Categories
+## 1. Six Ownership Categories
 
 ### 1.1 User-defined core
 
@@ -68,20 +68,62 @@ These values must be stored and updated by project logic:
 
 This layer must remain stable even if the user changes AI providers from one turn to another.
 
-### 1.4 AI-generated presentation
+### 1.4 Committed content records
 
-These are outputs, not truth:
+Content becomes a durable module-owned record once it is formally published, confirmed, applied, or admitted into product history and is expected to be revisited, referenced, or affect continuity.
 
-- reply text
-- multi-message sequences
-- virtual-voice wording
-- image descriptions
-- module-link descriptions
-- transfer-card wording
-- mini HTML interaction content
-- event/explanation phrasing
+The authoring source does not change this rule. User-authored, AI-generated, and deterministic-system-generated content use the same persistence boundary after commitment.
+
+Examples include:
+
+- Chat messages and committed rich-message records;
+- social-feed or Moments-style posts, comments, replies, and publication state;
+- forum threads, floors/replies, edits, visibility, and moderation state;
+- public-channel/news/service publication records;
+- offline scenes, episode/performance records, long-form narrative, and revisitable story artifacts;
+- committed character-state history when later behavior or review depends on it;
+- canonical media references and structured cards that belong to those records.
+
+Each owning module stores the canonical record. Other modules store references, necessary display snapshots, or compact facts instead of copying the entire body.
+
+### 1.5 Derived or uncommitted presentation
+
+These are temporary drafts or rebuildable projections, not canonical records:
+
+- unsaved AI drafts and candidate posts;
+- streaming/typing previews and raw multi-message candidates before commit;
+- feed aggregation cards derived from canonical posts;
+- status-bar wording derived from stored character state;
+- search indexes, prompt excerpts, and display-only summaries that can be recomputed;
+- temporary image descriptions, module-link descriptions, or event explanation phrasing that no owner has committed.
 
 These can be regenerated later and should not be the only place where continuity lives.
+
+The same content may change category: an AI forum draft is temporary until the forum owner publishes it, after which the canonical post is a committed content record.
+
+### 1.6 AI transport diagnostics
+
+Full prompts, raw provider responses, headers, and transport payloads are not persistent product truth and are not retained by default.
+
+Durable records keep only what their owner needs:
+
+- each content owner keeps its committed canonical records, including future social/forum/offline/narrative/state-history modules;
+- Relationship Runtime keeps validated structured proposals/effects and their minimum provenance;
+- Event Runtime keeps accepted proposal/review state and source provenance;
+- system diagnostics may keep provider/model/error/timing metadata without duplicating full role, world, memory, or conversation context.
+
+Full-payload capture is allowed only through an explicit temporary diagnostic mode with visible scope, hard limits, user clearing, and no hidden promotion into ordinary history.
+
+## 1.7 Commitment Test
+
+Treat a record as durable when any of these is true:
+
+1. the user or owning module can revisit it as part of product history;
+2. another record or module may reference it;
+3. it changes later character, world, relationship, schedule, financial, social, or narrative behavior;
+4. deleting it would break an audit, explanation, restore, or continuity promise.
+
+Visibility alone is not decisive. A visible unsaved preview may be temporary, while a hidden relationship fact or moderation decision may be durable.
 
 ## 2. Ownership Rules For Current Strategic Boundaries
 
@@ -192,6 +234,8 @@ Each AI call should assemble only the necessary pieces from saved layers:
 - relationship snapshot
 - memory summary
 - time/context state
+
+The assembled prompt is a transient projection. Do not persist it as another long-term copy of the underlying saved layers.
 
 ## 5. Cross-Provider Rule
 

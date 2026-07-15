@@ -1,12 +1,20 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-07-10
+Updated: 2026-07-15
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
+
+Confirmed persistence dependency for future work:
+
+- accepted relationship facts and the provenance needed to audit persistent relationship truth cannot be silently truncated or irreversibly deleted for capacity management;
+- ephemeral eligibility checks, rebuildable projections, and explicitly classified operational logs may rotate, but that policy must not erase evidence for already-applied truth;
+- reversible cold archival may remove old evidence from the hot runtime set while keeping World Hub review and restore semantics available;
+- Event Runtime owns event/proposal definitions and provenance; Relationship Runtime remains the sole owner/writer of long-term relationship truth.
+- normalized proposals, validation/review outcomes, and minimal provenance are durable; full AI prompts, raw responses, uncommitted candidates, and transport payloads remain temporary. Approved output that becomes a formal post, scene, long-form, performance, or state-history record is handed to and persisted by its target owner.
 
 What is already landed:
 

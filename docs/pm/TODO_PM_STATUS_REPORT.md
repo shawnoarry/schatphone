@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -8,7 +8,7 @@ Updated: 2026-07-14
 
 ## 1. Executive Summary
 
-SchatPhone is an integrated local-first virtual-phone V1, not a prototype and not a finished production product.
+SchatPhone is in an internal personal-development phase: product definition, core-system deepening, and evolvable architecture construction. Existing integrated loops are real, but they do not establish whole-product completion.
 
 The core product can already support meaningful use and continued development:
 
@@ -17,12 +17,12 @@ The core product can already support meaningful use and continued development:
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
 - the verified repository baseline is green across lint, 1050 unit tests, build, and 18 desktop/mobile E2E scenarios.
 
-The remaining work is concentrated in four areas:
+The current work is concentrated in four areas:
 
-1. production security/toolchain hardening;
-2. oversized views and central-store maintainability;
-3. final visual consistency and true-device QA;
-4. broader depth for World Pack, runtime, groups, Assets, Stock, and other secondary loops.
+1. local persistence, backup, data-lifecycle, and state-ownership architecture;
+2. core product definition and module depth;
+3. oversized views and central-store maintainability;
+4. later security/toolchain, device, release, content, and secondary-loop work in dependency order.
 
 Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and the new K-pop carrier plan is waiting for a decision.
 
@@ -43,7 +43,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Stable with security gap` | feature-complete baseline; credential export policy must be fixed/decided |
+| Settings / Network / backup | `Usable, architecture decision active` | whole-snapshot persistence works; IndexedDB-first, complete-backup, quota, and migration contracts are being defined |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
 | Book / WorldBook | `Integrated V1` | long text and activation are correctly split; phone hardening and K-pop migration remain |
@@ -118,6 +118,23 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - CI runs the focused visual-quality Playwright suite, but not the full product E2E suite or dependency audit; the Pages build workflow is not a full quality gate;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
+### Persistence And Recovery
+
+- browsers and installable PWAs are confirmed as complete first-class clients;
+- one isolated browser/Web App storage container owns one current save;
+- authoritative user-visible records and relationship evidence cannot be silently or irreversibly deleted; capacity management must preserve reversible review/restore semantics;
+- any content formally published, confirmed, applied, or admitted into an owning module's history becomes durable when it can be revisited, referenced, or affect continuity, including future social/forum/offline/narrative/performance/state-history records regardless of user/AI/system origin;
+- full AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical committed content, authoritative state/facts, references, structured outcomes, and minimum provenance remain durable;
+- current structured stores still use whole `localStorage` snapshots with an IndexedDB mirror rather than an IndexedDB-first database;
+- Chat history, Gallery total binary usage, Book text, and several role/world collections need explicit growth and retention contracts;
+- backup/restore is usable but does not yet provide a fully verified, staged, atomic archive contract for all metadata and binaries;
+- optional cloud backup is confirmed as personal BYOS rather than one shared workgroup archive: each user owns a separate Cloudflare account and R2 destination, with R2 as the first officially guided target;
+- each user connects through a personal Cloudflare Worker gateway; SchatPhone may store a revocable, scoped device token but never the R2 API Secret;
+- cloud backup is encrypted on the client and can be recovered with either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, and initial setup must verify recovery;
+- browser/PWA automatic backup is intended to run after launch and while the app remains open; closed-app scheduling, live server storage, automatic merge, and cross-device sync are outside the confirmed boundary;
+- Gallery is the reusable material library, generated media remains temporary until the user confirms retention, and URL media does not need local conversion merely to be recognized;
+- selective cloud inclusion, URL exact-copy behavior, and whether R2 may release local media binaries remain the current decision gate; the earlier fixed `8 GB` and per-result local/cloud-choice proposals are withdrawn.
+
 ### Engineering
 
 - the largest route views remain between roughly 3.1k and 4.8k lines;
@@ -127,9 +144,19 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ## 6. Current Priorities
 
-### P0: Security And Toolchain Maintenance
+### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-1. decide and implement backup credential handling;
+1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data under the confirmed no-silent-deletion boundary;
+2. define IndexedDB-first repository, transaction, quota, persistent-storage, and multi-tab contracts;
+3. define versioned complete backup, integrity, staged restore, legacy migration, and rollback;
+4. define a provider-neutral remote-backup contract and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
+5. close the Gallery/material-library preservation gate, including generated-result confirmation, selective cloud inclusion, URL exact-copy behavior, and backup-only versus local-space offload;
+6. decide deletion/history cleanup and quota-aware version retention after the media gate and size-reporting requirements are explicit;
+7. approve one reference migration separately; do not begin broad migration from this planning decision alone.
+
+### P0: Security And Toolchain Maintenance After The Storage Contract
+
+1. add a clear sensitive-file warning while preserving complete migration backup contents, including credentials;
 2. update compatible Vite/transitive dependencies;
 3. plan the Vitest major migration separately;
 4. re-run audit, lint, unit, build, and E2E.
@@ -161,7 +188,7 @@ Decision required:
 
 ## 7. PM Decisions Still Needed
 
-1. backup credential export policy;
+1. first reference domain for the later IndexedDB-first migration;
 2. production intent for the push relay versus a real authenticated backend;
 3. whether CI must gate E2E and security audit;
 4. K-pop content carrier split and first migration slice;

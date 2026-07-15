@@ -1,12 +1,19 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-07-10
+Updated: 2026-07-15
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
+
+Confirmed persistence dependency for future work:
+
+- ordinary and archived role threads, user-visible message history, and saved messages cannot be silently or irreversibly deleted for capacity management;
+- older messages may be paged or moved into reversible cold archives, but Chat must preserve review, search/restore expectations, source references, and paused-thread read-only semantics;
+- Chat owns conversation behavior and records only; it does not own global role lifecycle or relationship truth.
+- Chat durably stores messages/rich records formally committed to Chat and minimum AI provenance, not the full assembled prompt, raw provider response, uncommitted candidate, or transport payload; future modules own their own committed content, and any full capture is an explicit temporary diagnostic concern.
 
 What is already landed:
 

@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-07-10
+Updated: 2026-07-16
 
 > **Frozen execution status / 非执行看板**
 >
@@ -10,13 +10,13 @@ Updated: 2026-07-10
 
 Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-account 4.4 work.
 
-The best next code work is:
+The best next work is:
 
-1. security/toolchain hardening;
-2. release-gate alignment;
-3. one measured architecture seam;
-4. World Pack phone-validation fixes;
-5. one approved content-carrier migration.
+1. finish the promoted local persistence, complete-backup, and data-lifecycle architecture decision;
+2. approve one reference migration separately;
+3. security/toolchain hardening;
+4. release-gate alignment and one measured architecture seam;
+5. later product/device/content work in dependency order.
 
 ## 2. Completed Enough To Stop Re-Listing
 
@@ -33,26 +33,33 @@ The best next code work is:
 - global/scoped appearance ownership seams;
 - Settings, Chat, Contacts, and WorldBook composable extraction batches already listed in architecture docs.
 
-## 3. Candidate A: Backup Credential Policy
+## 3. Candidate A: IndexedDB-First Persistence And Complete Backup Architecture
 
 Problem:
 
-Settings backup exports the full settings object, including `settings.api.key`.
+Current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Long Chat history, inline base64 media, Gallery binaries, Book text, and future archived-role continuity need explicit long-term storage contracts.
 
-Possible product choices:
+Confirmed product boundary:
 
-1. exclude credentials by default and require re-entry after restore;
-2. add an explicit “include credentials” option with strong warning;
-3. introduce encrypted export only if key management is designed.
+- ordinary browsers and installable PWAs remain complete first-class clients;
+- one isolated browser/Web App storage container owns one current save;
+- authoritative histories and accepted relationship evidence cannot be silently or irreversibly deleted; cold archival must remain reversible;
+- committed content is durable whenever its owner publishes/confirms/applies it into revisitable or continuity-bearing history, including future social/forum/offline/narrative/performance/state records regardless of user/AI/system origin;
+- complete AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical content, authoritative state/facts, references, structured outcomes, and minimum provenance persist;
+- IndexedDB-first structured persistence is the target direction;
+- complete migration backup includes configured credentials and must be presented as a sensitive local file;
+- Gallery is the reusable material library; generated image/media results require explicit user retention before durability, and URL-backed media does not require local conversion merely to have media meaning;
+- a redacted/shareable export, native SQLite adapter, server sync, or encryption requires a separate contract.
 
-Recommended first implementation:
+Required planning before implementation:
 
-- exclude API credentials by default;
-- preserve non-secret provider URL/model configuration;
-- show a clear restore result saying credentials must be re-entered;
-- add export/import/rollback tests.
+- classify authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport data under the confirmed retention boundaries;
+- define repository boundaries, record/index shape, transactions, idempotency, quota/persistence UX, and multi-tab coordination;
+- close the selective-media gate before schema work: keep/discard intent, Gallery versus module-scoped ownership, cloud inclusion, URL exact-copy behavior, and backup-only versus local-space offload;
+- define versioned manifest, integrity checks, staged restore, binary completeness, legacy import, and rollback;
+- select one small reference migration only after acceptance is frozen.
 
-Do not implement until the product choice is promoted because backup compatibility is user-visible.
+Do not start broad migration from this candidate. It is already promoted as an architecture decision, not as migration implementation.
 
 ## 4. Candidate B: Toolchain And CI Hardening
 

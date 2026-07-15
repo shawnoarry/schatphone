@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-06-03
+Updated: 2026-07-14
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -44,6 +44,7 @@ Current cross-device handoff and execution record:
 - Chat Directory may preserve legacy `relationshipLevel` / `relationshipNote` as Chat-local tuning/note compatibility fields, but must not label them as current affinity or relationship progress.
 - `Chat` owns conversations, messages, and manual chat-message deletion.
 - `Relationship Runtime` owns relationship progress and memory groups.
+- Persistence may page or reversibly cold-archive older role/relationship records, but it cannot silently or irreversibly delete role profiles, archived-role state, accepted facts, memories, or the evidence needed to review persistent truth.
 - Relationship runtime remains the owner of current metrics, stage, milestones, and memories; profile-side classification is saved context, not current relationship truth.
 - Relationship runtime summary counts are canonical: `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` describe the full target state even when the caller requests only a small memory-summary list.
 - Chat social events such as message requests, blocks, and being-blocked states may be displayed in Contacts as role-level reachability/status snapshots, but Contacts must not judge eligibility or apply generated outcomes. Chat owns the applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts or memories.

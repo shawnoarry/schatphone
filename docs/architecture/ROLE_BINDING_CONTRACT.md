@@ -1,6 +1,6 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated: 2026-05-30
+Updated: 2026-07-14
 
 ## 1. Purpose
 
@@ -92,6 +92,7 @@ Rules:
 - NPC may be bound as a Chat target before being upgraded to Main Role.
 - Chat binding does not prove that an entity is a Main Role.
 - NPC -> Main Role upgrade must preserve existing Chat binding and history.
+- Capacity management may page or reversibly cold-archive Chat history, but cannot silently or irreversibly delete authoritative role-thread history; lifecycle ownership remains in Contacts rather than this binding contract.
 
 ## 5. Hierarchy Rules
 

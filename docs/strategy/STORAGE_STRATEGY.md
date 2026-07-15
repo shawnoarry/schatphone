@@ -1,12 +1,25 @@
 # SchatPhone Storage Strategy
 
-Updated: 2026-05-19
+Updated: 2026-07-16
 
 Purpose: summarize how SchatPhone should store settings, saves, chat records, world state, runtime truth, and AI-related data without making browser storage too large, too fragile, or too semantically muddy.
 
 Core recommendation:
 
-> do not treat `localStorage` as the main database; use layered storage with clear ownership.
+> keep browsers and installable PWAs as complete first-class clients, but do not treat `localStorage` as the main database; move toward IndexedDB-first structured storage behind ownership-aware repository contracts.
+
+Confirmed product boundary:
+
+- one isolated browser/Web App storage container owns one current save;
+- there is no internal save-slot, workspace-switching, cross-save merge, or mandatory server-sync layer;
+- authoritative user-visible history and accepted relationship evidence cannot be silently or irreversibly deleted; paging, compression, dedupe, and cold archival must preserve review and restore semantics;
+- automatic rotation is limited to rebuildable caches/projections and explicitly classified diagnostic or operational logs;
+- any content formally published, confirmed, applied, or admitted into an owning module's history is a durable committed record when it is expected to be revisited, referenced, or affect continuity, regardless of whether it came from the user, AI, or deterministic code;
+- durable committed content includes current and future Chat messages, social posts/replies, forum threads, public-feed records, offline scenes, long-form narrative, performance/episode records, and character-state history, with each canonical record stored by its product owner;
+- full AI prompts, raw provider responses, transport payloads, and uncommitted drafts are non-authoritative and are not retained by default; authoritative state/facts, committed content, cross-module references, and minimum provenance remain durable;
+- any full AI diagnostic capture must be explicitly enabled, temporary, bounded, separately clearable, and prevented from becoming a hidden permanent archive;
+- a desktop wrapper may add a storage adapter later, but cannot make SQLite or a native filesystem a requirement for the complete browser/PWA product.
+- this document records the target direction; no persistence migration is approved merely by this decision.
 
 Use this file together with:
 
@@ -16,6 +29,15 @@ Use this file together with:
 - `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 
 ## 1. Main Risk
+
+Current implementation evidence:
+
+- 16 domain stores write whole JSON snapshots to `localStorage` and asynchronously mirror them into one IndexedDB state store;
+- normal startup reads valid `localStorage` first and consults the IndexedDB mirror only when the local snapshot is unavailable;
+- Gallery file binaries use a separate IndexedDB database, while Gallery metadata remains in the snapshot system;
+- Chat message counts, Gallery total asset count/bytes, and several role/world collections do not have one durable archive budget;
+- one-off Chat images/GIFs can be stored as base64 inside the Chat snapshot;
+- storage diagnostics checks mirror readability/drift, not actual quota, persistent-storage status, total backup completeness, or every store.
 
 If all long-term project data is stored directly in browser `localStorage`, the project will eventually hit:
 
@@ -34,7 +56,9 @@ High-risk data types:
 - image/base64-heavy assets;
 - growing runtime/audit histories.
 
-## 2. Recommended Layered Storage Model
+Do not persist repeated full AI prompt context merely for debugging. It duplicates role, world, memory, relationship, conversation, and future social/narrative records while expanding privacy and backup exposure. This does not permit discarding an AI-generated artifact after an owning module has formally published or committed it.
+
+## 2. Target Layered Storage Model
 
 ### Layer A: `localStorage` for small hot state
 
@@ -56,13 +80,15 @@ Rule:
 
 ### Layer B: structured local archive for long-lived app truth
 
-This should be the main long-term structured storage layer over time.
+IndexedDB should become the main long-term structured storage layer for the browser/PWA product.
 
 Recommended contents:
 
 - role profile archives;
 - relationship runtime state;
 - conversation records and message history;
+- canonical social/feed/forum posts, replies, and publication records;
+- offline scene, narrative, performance/episode, and committed character-state records;
 - event logs;
 - wallet and ledger state;
 - map and itinerary state;
@@ -74,9 +100,31 @@ Recommended contents:
 
 This layer should favor:
 
+- per-record append/update and indexed queries instead of whole-store rewrites;
+- versioned domain repositories while Pinia remains an in-memory UI/cache layer;
+- transactions, idempotency, and explicit cross-owner handoff records;
 - structured retrieval;
 - better capacity posture;
 - clearer migration/recovery behavior than endlessly expanding `localStorage`.
+
+### Gallery / material-library preservation checkpoint
+
+Confirmed product meaning:
+
+- Gallery is the reusable media/material owner, while each source module owns the reason an accepted asset is used and Chat continues to own message-scoped media records;
+- image/media generation output is a transient candidate until the user explicitly keeps it; rejected candidates do not become durable Gallery or backup records;
+- media meaning is independent of storage source, so a URL-backed image, sticker, GIF, audio item, or other media does not need to become a local binary merely to be recognized or used;
+- ordinary generation flows must not ask users to manage low-level local/cloud placement for every result.
+
+Current unresolved gate, in order:
+
+1. define the user-visible keep/discard contract and when kept media becomes reusable Gallery material versus module-scoped content;
+2. define selective cloud inclusion, bulk selection, explicit exclusion, and how current use, favorites, source replaceability, and module importance affect recommendations or upload priority;
+3. define URL/provenance-only backup versus exact-byte protection;
+4. decide whether verified personal-R2 media remains only a backup copy or may become the durable original while local binaries become releasable cache;
+5. define deletion, changed content behind a stable URL, historical restore, cleanup, and quota-aware version retention.
+
+No fixed `8 GB` budget, per-generation three-way storage prompt, public image-host authority, or remote-media offload is approved before this gate closes.
 
 ### Layer C: optional server storage
 
@@ -89,6 +137,23 @@ Typical uses:
 - durable push delivery;
 - persistent scheduled jobs;
 - later backend-orchestrated autonomy if the product explicitly chooses it.
+
+Server storage is not part of the confirmed local persistence migration and must not become a hidden requirement for ordinary use.
+
+Confirmed personal remote-backup direction:
+
+- SchatPhone does not provide one project- or workgroup-owned backup archive; each participating user owns a separate Cloudflare account and R2 destination;
+- Cloudflare R2 is the first officially guided BYOS target, but backup packaging and remote-provider contracts must remain portable to later S3-compatible, WebDAV, or other adapters;
+- each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; the app may retain only a revocable, scoped device token and must never retain an R2 API Secret;
+- backup content is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives neither plaintext recovery secret, losing both paths is irreversible, and initial setup must verify recovery before automatic backup is ready;
+- the local save remains authoritative, while the remote destination stores client-created backup objects rather than live module truth;
+- automatic backup in ordinary browsers/PWAs may check and run after launch and while the app remains open, but cannot promise scheduled work after the app is fully closed;
+- this does not add internal save slots, automatic merge, or cross-device sync;
+- implementation requires a complete self-checking setup/recovery guide; quota-aware version retention and exact backup scheduling remain separate decisions.
+
+### Layer D: optional desktop-native adapter
+
+A future packaged desktop client may provide SQLite/filesystem persistence through the same repository contracts. It is an enhancement path, not the canonical contract while browsers/PWAs remain complete clients.
 
 ## 3. Current Placement Guidance
 
@@ -145,6 +210,16 @@ To prevent local storage from growing uncontrollably:
 5. avoid storing regenerated content twice;
 6. avoid storing the same continuity concept in several unrelated module-local mirrors.
 
+Confirmed retention rules:
+
+- authoritative user/domain records require explicit user deletion and may otherwise move only into reversible cold storage;
+- committed content records follow the same rule regardless of user, AI, or deterministic origin;
+- accepted relationship facts and audit evidence must remain reviewable even when removed from the hot working set;
+- derived projections, indexes, and previews may be rebuilt;
+- diagnostic/runtime logs may rotate under named limits;
+- AI transport diagnostics may retain full payloads only inside an explicit temporary diagnostic session; ordinary audit keeps structured outcomes and minimal provenance instead;
+- still-referenced binary assets require explicit user deletion; unreferenced or temporary binaries need a separately defined cleanup policy, visible storage budgets, and complete-backup reporting.
+
 ## 6. Safety And Reliability
 
 Storage design should support:
@@ -157,19 +232,25 @@ Storage design should support:
 Recommended practices:
 
 - version backup formats;
+- include a manifest and integrity checks;
+- validate and restore into staging before replacing the current save;
 - preserve import rollback ability;
 - support legacy-to-new migration;
 - keep export readable and inspectable;
+- identify complete migration exports as sensitive local files because they include configured credentials;
+- keep any future redacted/shareable export separate from the complete migration contract;
 - treat ownership-shifting migrations as product-boundary changes, not only technical refactors.
 
 ## 7. Practical Migration Posture
 
 Current practical posture:
 
-1. keep settings and lightweight indexes small and hot;
-2. let long-lived truth move toward stronger structured storage and clearer archive seams over time;
-3. keep server storage optional until cross-device sync, durable push, or backend autonomy is truly justified;
-4. do not let convenience storage choices quietly redefine product ownership.
+1. freeze the data classes, repository boundaries, backup contract, migration/rollback path, quota behavior, and multi-tab policy before changing persistence code;
+2. keep settings and lightweight recovery metadata small and hot;
+3. move one approved reference domain from legacy snapshots to IndexedDB-first repositories, with compatibility import and focused tests;
+4. validate the reference migration before selecting later domains such as Chat history, relationship audit, or binary assets;
+5. keep server storage optional until cross-device sync, durable push, or backend autonomy is truly justified;
+6. do not let convenience storage choices quietly redefine product ownership.
 
 ## 8. Practical Rule
 

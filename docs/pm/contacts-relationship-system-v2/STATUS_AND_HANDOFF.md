@@ -1,12 +1,18 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-07-10
+Updated: 2026-07-14
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
 ## 1. Current Status
 
 Status: `DONE`
+
+Confirmed persistence dependency for future work:
+
+- role profiles, archived-role state, relationship facts, memories, and accepted audit evidence cannot be silently or irreversibly deleted for capacity management;
+- moving older records out of the hot working set is allowed only through reversible cold archival that preserves Contacts/World Hub review and restore semantics;
+- Relationship Runtime remains the sole truth owner; the storage package owns persistence mechanics and must not copy that truth into Contacts.
 
 What is already landed:
 

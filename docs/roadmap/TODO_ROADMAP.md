@@ -131,28 +131,50 @@ Completed in the 2026-07-16 workflow-layering round:
 
 Open slices, in order:
 
-1. `P0 Security/toolchain maintenance` - `TODO`
-   - decide whether backup export should exclude API credentials by default, require an explicit secrets option, or present a clear sensitive-data warning;
+1. `P0 Local persistence, backup, and data-lifecycle architecture` - `IN_PROGRESS`
+   - confirmed product boundary: ordinary browsers and installable PWAs remain complete first-class clients;
+   - preserve one isolated browser/Web App storage container as one current save; do not add internal save slots, workspace switching, or server sync;
+   - plan IndexedDB as the future primary structured store, with `localStorage` limited to small hot state and recovery metadata;
+   - confirmed retention boundary: authoritative user-visible records and relationship evidence cannot be silently or irreversibly deleted; capacity management may page, compress, dedupe, or move them into reversible cold archives, while only rebuildable caches and named diagnostic logs may rotate automatically;
+   - confirmed committed-record boundary: any content formally published, confirmed, applied, or admitted into an owning module's history becomes durable when it is expected to be revisited, referenced, or affect continuity, regardless of whether it came from the user, AI, or deterministic code; this includes future social posts/replies, forum records, offline scenes, long-form narrative, performance/episode records, and character-state history;
+   - full prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable presentation remain non-authoritative and are not retained by default; persist canonical committed records, authoritative state/facts, cross-module references, and minimum provenance, with any full diagnostic capture explicit, temporary, bounded, and user-clearable;
+   - classify authoritative records, append-only audit evidence, rebuildable projections, binary assets, caches, and diagnostic logs before defining retention or compaction;
+   - define versioned backup, integrity verification, staged/atomic restore, legacy snapshot migration, rollback, quota visibility, persistent-storage requests, and multi-tab coordination;
+   - confirmed optional remote-backup boundary: do not create one project- or workgroup-owned cloud archive; each participating user configures and owns a separate Cloudflare account and R2 destination, while the internal remote-backup contract remains provider-neutral;
+   - treat Cloudflare R2 as the first officially guided personal BYOS target, require a complete self-checking setup/recovery guide, keep the local save authoritative, and do not turn remote backup into live server storage, automatic merge, or cross-device sync;
+   - confirmed remote-authentication boundary: each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; SchatPhone may retain only a revocable, scoped device token and must not retain an R2 API Secret;
+   - confirmed remote-recovery boundary: backup content is encrypted on the client and can be recovered with either the user's recovery password or a separately downloaded recovery file; Cloudflare/Worker never receives plaintext recovery secrets, losing both recovery methods is irreversible, and first-time setup must verify recovery before automatic backup is treated as ready;
+   - in ordinary browsers/PWAs, automatic remote backup may run after launch and while the app remains open, but must not promise scheduled execution after the app is fully closed;
+   - confirmed media-intent boundary: image/media generation results remain temporary candidates until the user explicitly keeps them; rejected candidates are not durable, Gallery owns reusable retained media, and source modules keep their own use/meaning records;
+   - confirmed representation boundary: image, sticker, GIF, audio, or other media meaning is independent of whether its source is a URL, local binary, Gallery asset, or provider record; URL-backed media must not be forced into local storage merely to be recognized as media;
+   - withdrawn proposals: do not require a fixed `8 GB` budget now, and do not ask users to choose `discard / local only / cloud protected` for every generated result; neither proposal is an approved requirement;
+   - current decision gate: define one understandable Gallery/material-library preservation contract covering user keep/discard intent, selective cloud inclusion, URL-only versus exact-byte protection, backup-only versus local-space offload, deletion/replacement behavior, and media restore completeness;
+   - decide quota-aware backup-version retention only after the media contract and measurable backup-size reporting exist;
+   - keep this slice at architecture/acceptance level until the storage contract and first reference migration are separately approved.
+2. `P0 Security/toolchain maintenance` - `TODO`
+   - preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
    - update the Vite 7 patch line and transitive lockfile where compatible;
    - plan the Vitest 1 to supported-version migration separately because the audit fix is a major upgrade;
    - re-run the full dependency audit and validation after the upgrade.
-2. `P1 CI and release gating` - `PARTIAL_DONE`
+3. `P1 CI and release gating` - `PARTIAL_DONE`
    - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
-3. `P1 Hotspot decomposition` - `TODO`
+4. `P1 Hotspot decomposition` - `TODO`
    - select one named seam from `ContactsView.vue`, `ChatView.vue`, `WorldBookView.vue`, `HomeView.vue`, `ChatDirectoryView.vue`, or `systemStore`;
    - preserve storage shapes and product behavior;
    - add focused regression coverage instead of mixing decomposition with feature redesign.
-4. `P1 Cross-store adapter depth` - `TODO`
+5. `P1 Cross-store adapter depth` - `TODO`
    - deepen one ownership-sensitive path, starting with Calendar relationship-fact submission, so domain stores pass domain events rather than concrete cross-owner store instances where practical.
-5. `P2 Incremental contract typing` - `TODO`
+6. `P2 Incremental contract typing` - `TODO`
    - add JSDoc or TypeScript only around high-value shared payload contracts; do not start a whole-app migration.
 
 Acceptance for 4.5:
 
 - active docs describe the same current priorities;
+- the browser/PWA-first persistence target, data classes, backup contract, migration/rollback boundary, and first reference migration acceptance are explicit before storage code changes;
+- the decision ledger distinguishes confirmed, withdrawn, and unresolved media/cloud behavior, and the Gallery preservation gate is closed before any remote-media implementation begins;
 - high-severity development-tool advisories have an explicit remediation path;
-- backup credential handling has a documented product decision and regression coverage;
+- complete migration backup sensitivity has a documented product contract and later implementation receives regression coverage;
 - each cleanup slice reduces a measured hotspot or direct coupling without changing user-visible semantics accidentally.
 
 Primary package:
@@ -239,11 +261,12 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0` 4.5 security/toolchain maintenance.
-2. `P1` 4.5 CI/release gating and one named architecture seam.
-3. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-4. `DECISION` 4.7 K-pop carrier split and first promoted migration slice.
-5. `P2` secondary-module deepening only after one of the above is explicitly selected.
+1. `P0` 4.5 local persistence, backup, and data-lifecycle architecture decision.
+2. `P0` 4.5 security/toolchain maintenance after the persistence contract is clear.
+3. `P1` 4.5 CI/release gating and one named architecture seam.
+4. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
+5. `DECISION` 4.7 K-pop carrier split and first promoted migration slice.
+6. `P2` secondary-module deepening only after one of the above is explicitly selected.
 
 ## 7. Validation Rule
 

@@ -1,6 +1,6 @@
 # Files Internal Storage Role
 
-Updated: 2026-05-19
+Updated: 2026-07-16
 
 ## 1. Decision
 
@@ -21,7 +21,7 @@ SchatPhone is aiming for a believable phone-like immersive experience. A visible
 
 Owning surfaces should stay clear:
 
-- `Gallery` owns photos, wallpapers, memories, journeys, and reusable visual assets.
+- `Gallery` is the user-facing material library and owns photos, wallpapers, memories, journeys, reusable visual assets, and media that a source flow explicitly admits for reuse.
 - `Contacts` owns the global role archive and role-linked asset slots.
 - `Chat Directory` owns Chat-side role binding and service-account entry management.
 - `relationship runtime` owns relationship progress and shared memory groups.
@@ -30,6 +30,14 @@ Owning surfaces should stay clear:
 - `Calendar` owns confirmed events and scheduling handoff.
 - `Reminders` owns raw cues, callbacks, and follow-up style reminders.
 - `Settings` owns backup, restore, diagnostics, and storage transparency.
+
+Generated-media boundary:
+
+- image/media generation remains owned by the source module while a result is only a candidate;
+- every generating module must let the user decide whether the candidate is kept before it becomes durable;
+- once retained for reuse, Gallery owns the reusable asset while the source module keeps its own usage, narrative, appearance, message, or provenance record;
+- media type is independent of source representation: URL, local binary, Gallery reference, and provider record are source choices rather than definitions of whether an item is an image, sticker, GIF, audio item, or other media;
+- expanding the current image-focused Gallery into broader audio/video material support requires an explicit later contract, but it must not move ownership into the finance-oriented `Assets` module or internal `Files` surface.
 
 Important semantic boundary:
 
