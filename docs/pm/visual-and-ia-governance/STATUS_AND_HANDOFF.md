@@ -135,7 +135,7 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The active roadmap priority is security/toolchain maintenance, not a broad visual pass. The portfolio audit does not change that priority. Current visual decisions and candidates are:
+The active roadmap priority is local persistence, backup, and data-lifecycle architecture, followed by security/toolchain maintenance, not a broad visual pass. The portfolio audit does not change that priority. Current visual decisions and candidates are:
 
 1. decide whether wide desktop viewports should show a centered device frame or a deliberately adaptive phone workspace; do not patch individual pages before this shell contract is clear;
 2. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
