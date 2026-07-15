@@ -1,346 +1,125 @@
-# SchatPhone AI Work Mode
+# SchatPhone Project Execution Contract
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
-Purpose: define a stable operating model for Codex, Claude, or any AI coding assistant taking over this project.
+Purpose: define the small set of cross-task rules that every SchatPhone work round must preserve.
 
-This file is the single workflow/process rulebook. Root `AGENTS.md` is only the stable bootstrap that points agents here; it is not a second rulebook. This file does not replace the task board; it defines how task documents should be used, what to read first, and what must be synced after each work round.
+This file is a project execution contract, not a universal implementation workflow. Task packages own domain reading order, product boundaries, workstreams, validation detail, and documentation sync for their lane. Specialist workflow documents own their own invocation and skill-routing rules.
 
-If this file conflicts with a project-local skill, package note, archived plan, or old TODO-style reference, this file wins unless the user explicitly overrides the workflow for that round.
+## 1. Authority
 
-## 0. Core Workflow Principle
+Apply instructions in this order:
 
-One request should produce:
+1. the current user request and host/tool policy;
+2. this cross-task execution contract;
+3. `docs/roadmap/TODO_ROADMAP.md` for live priority and status;
+4. the matching task package `README.md`, `STATUS_AND_HANDOFF.md`, `PRODUCT_BOUNDARY.md`, and `IMPLEMENTATION_WORKSTREAMS.md`;
+5. focused architecture, product-decision, design, or QA contracts required by the change.
 
-1. executable implementation;
-2. validation;
-3. synchronized documentation;
-4. updated execution status when roadmap impact exists.
+Authority boundaries:
 
-Do not let code run ahead while docs still describe an old product meaning.
+- `AGENTS.md` is the stable bootstrap, not a second workflow.
+- `docs/roadmap/TODO_ROADMAP.md` is the only live execution board.
+- Package handoffs describe current domain status and the next safe slice; they do not create another backlog.
+- `docs/roadmap/PROJECT_MODULE_AUDIT.md` is a candidate pool, not an execution board.
+- `docs/superpowers/**` and `docs/archive/**` are reference material unless the live roadmap and matching package handoff promote a concrete slice.
+- Project-local and machine-local skills are optional capabilities, not project authorities.
 
-## 1. Documentation Authority
+When a domain workflow conflicts with this file on a cross-task rule, this file wins. When the disagreement is about domain behavior, acceptance, or ownership, verify the matching package and focused contract instead of expanding this file.
 
-| Document | Role | Rule |
-| --- | --- | --- |
-| `AGENTS.md` | agent bootstrap | Keep it short. It points to current authorities and defines how workflow/skill audits stay independent. |
-| `docs/README.md` | documentation map | Use first when choosing which document to read or update. |
-| `docs/overview/PROJECT_MASTER_GUIDE.md` | whole-project overview | Read first for product and architecture context. |
-| `docs/roadmap/TODO_ROADMAP.md` | only live execution board | Any executable task with status must live here. |
-| `docs/roadmap/PROJECT_MODULE_AUDIT.md` | module maturity audit and candidate pool | Use for sorting and discovery only; promote active work into `TODO_ROADMAP.md`. |
-| `docs/pm/TODO_PM_STATUS_REPORT.md` | PM-readable status mirror | Sync after meaningful roadmap, boundary, or current-priority change. |
-| `docs/process/OPERATION_GUIDE.md` | daily operation and validation guide | Use for commands, QA flow, and release/deploy steps. |
-| `docs/process/AI_WORK_MODE.md` | workflow and documentation governance | This file. Keep process rules here instead of creating new process docs. |
-| `docs/pm/TASK_PACKAGE_INDEX.md` | task-package index | Use when deciding which package should own the current task. |
-| package `STATUS_AND_HANDOFF.md` | current handoff page | Read after package `README.md` to see current status, next safe slice, and do-not-do rules. |
-| domain reference docs, including old `TODO` / `NEXT` / `PLAN` notes | decisions, contracts, and domain details | Must not become active task boards unless explicitly promoted into `TODO_ROADMAP.md`. |
-| `docs/superpowers/**` | agent-assisted specs, plans, handoffs, and content drafts | Treat as execution history, reference material, or draft content unless a roadmap/package handoff links to a specific active slice. |
-| `docs/archive/**` | historical lookup only | Never use as current execution source. |
+## 2. Start And Route
 
-## 2. Anti-Scatter Rules
+For analysis, review, or diagnosis, inspect only the evidence needed for the question. Do not load implementation workflows or skills automatically.
 
-1. Do not create a new roadmap, task pool, or workflow document when an existing category fits.
-2. Put active execution status in `docs/roadmap/TODO_ROADMAP.md` only.
-3. Keep module-level ideas in `docs/roadmap/PROJECT_MODULE_AUDIT.md` until selected for execution.
-4. Keep implementation process rules in this file.
-5. Move superseded planning/status docs into `docs/archive/` with a reason note.
-6. Mark obsolete archives with `Obsolete archive`.
-7. Treat every non-listed `TODO`, `NEXT`, `PLAN`, `ROADMAP`, `STATUS`, or `HANDOFF` file as frozen context, not executable work.
-8. If a frozen note has a useful idea, copy the concrete slice into `TODO_ROADMAP.md` and the matching package handoff before implementation.
-9. Do not continue an old checklist just because it contains `NEXT`, `TODO`, or unchecked items.
-10. Do not resume `docs/superpowers/**` files as active project work unless the roadmap or package handoff has promoted that exact slice.
+For non-trivial implementation work:
 
-## 3. Role Definition
+1. state the goal, scope, acceptance criteria, and main risks before editing;
+2. read the live roadmap to confirm priority and whether the request changes status;
+3. use `docs/pm/TASK_PACKAGE_INDEX.md` when ownership is unclear;
+4. read the owning package `README.md` and `STATUS_AND_HANDOFF.md`;
+5. read its `PRODUCT_BOUNDARY.md`, `IMPLEMENTATION_WORKSTREAMS.md`, and only the focused contracts needed for the slice;
+6. load a specialist workflow only when the task belongs to that lane.
 
-- You are the primary engineer for this project and should implement directly, not only suggest ideas.
-- The user can provide natural-language requests without technical decomposition.
-- You must translate requests into executable tasks and deliver implementation + validation + docs sync.
+Specialist routing:
 
-## 3.1 Communication Rule
+- event/runtime work: `docs/process/EVENT_WORKFLOW.md`;
+- visual/IA work: `docs/process/VISUAL_WORKFLOW.md`;
+- tooling, skill inventory, or cross-PC setup: `docs/process/DEVELOPMENT_TOOLING.md`;
+- commands, QA, release, and deployment: `docs/process/OPERATION_GUIDE.md`.
 
-When talking with the user, PM reviewers, designers, or incoming AI coworkers, default to product and user-facing language.
+Do not create a new persistent workflow for a one-off task. Add or revise a workflow only when a stable task family has repeated rules that are not already owned by a package or specialist lane.
 
-Rules:
+## 3. Task Package Ownership
 
-1. Explain what a feature does, why it matters, and what the user will see before describing files, fields, or implementation details.
-2. Use Chinese module and feature names when the conversation is product-facing, and add English code names only when they help locate implementation.
-   For UX labels, onboarding copy, settings entries, and handoff text, prefer bilingual product naming when the feature is cross-team or newly introduced, for example `事件前台 Tick / Foreground event tick` and `角色主动联系候选 / Role proactive contact candidate`.
-3. Translate technical terms into product meaning, for example "Chat only applies confirmed communication state" before "`chatSocialState` is written".
-4. Do not assume the reader can infer product impact from store names, schema fields, route names, or test names.
-5. Put technical detail after the product explanation, not instead of it.
-6. When a concept affects immersion, user control, safety, or data ownership, say that explicitly in user-understandable terms.
+Each task package owns:
 
-This rule applies to answers, handoff notes, specs, implementation plans, review findings, and roadmap updates.
+- product meaning and module boundaries;
+- current status and the next safe slice;
+- domain-specific workstreams and reading order;
+- do-not-do rules;
+- domain validation detail;
+- the documents that must be synchronized when that lane changes.
 
-## 3.2 Product Planning Alignment Protocol
+For a multi-package task:
 
-When a round asks the user to define, choose, approve, or revise product behavior, treat the user as a project manager newly entering an unfinished product area. Do not jump from internal terminology or a stored field directly to a recommendation.
+1. name one primary package;
+2. identify secondary packages only where their product meaning or contracts change;
+3. preserve one owner per concept;
+4. update the live roadmap only when priority, status, or accepted scope changes.
 
-Before asking for a product decision:
+Skills cannot create another roadmap, task board, package handoff, or mandatory workflow. Skill instructions about tools, subagents, commits, or validation remain subordinate to host policy and the owning workflow.
 
-1. explain the user-visible purpose and current experience in plain product language;
-2. distinguish what is implemented now, what exists only in documents or schema, what is proposed, and what is absent;
-3. explain the original or current design intent and the product problem it was meant to solve;
-4. identify contradictions, incomplete loops, ownership ambiguity, technical constraints, and likely user-facing risks;
-5. define unfamiliar terms through concrete examples instead of assuming the user knows the codebase;
-6. present two or three viable approaches with trade-offs and a reasoned recommendation only after the shared context is established;
-7. ask for one bounded decision at a time, then persist the confirmed meaning and unresolved follow-up questions before continuing.
+## 4. Universal Guardrails
 
-The explanation should be detailed enough for the user to challenge the premise, not merely choose among labels. If the user's response shows that a concept was not adequately explained, reopen the premise and treat the earlier answer as needing revalidation rather than defending or extending it.
+Every work round must:
 
-## 4. Dual-Track Execution
+1. preserve unrelated user changes in a dirty worktree;
+2. verify branch, worktree, and commit relationships before merge, rebase, or cross-worktree synchronization;
+3. implement the smallest coherent slice that meets the request;
+4. preserve domain ownership and persisted-data compatibility unless the slice explicitly includes migration and rollback;
+5. avoid mixing product behavior, dependency migration, and broad refactoring in one change;
+6. keep active status in the live roadmap and current package handoff rather than old plans or unchecked lists;
+7. explain user-visible impact before low-level implementation detail;
+8. treat workflow, skill, and governance audits independently from the mechanisms under review.
 
-- Track A: immediate request track (`user-now`)
-- Track B: main roadmap track (`docs/roadmap/TODO_ROADMAP.md`)
-- Track C: candidate module pool (`docs/roadmap/PROJECT_MODULE_AUDIT.md`)
+The user request takes priority over the roadmap for the current round. Backfill roadmap or package status only when the request changes accepted scope, priority, or completion state.
 
-Rules:
+## 5. Validation Contract
 
-- user request takes priority, but roadmap status must be backfilled after each insertion;
-- Track C is for sorting, not execution status;
-- promote selected work into Track B before implementation.
+Choose checks by change type and then apply any stricter package-specific requirement:
 
-## 5. Task-Type Reading Order
-
-Read the smallest current set that matches the work.
-
-### 5.1 Any Non-Trivial Coding Task
-
-Read in order:
-
-1. `docs/roadmap/TODO_ROADMAP.md`
-2. `docs/pm/TASK_PACKAGE_INDEX.md` when ownership is unclear
-3. the matching package `README.md` and `STATUS_AND_HANDOFF.md`
-4. focused package, architecture, or product-decision files required by the change
-5. `docs/overview/PROJECT_MASTER_GUIDE.md` only when whole-project context is necessary
-
-### 5.2 Contacts / Role / Relationship / Memory Task
-
-Read in order:
-
-1. `docs/README.md`
-2. `docs/pm/contacts-relationship-system-v2/README.md`
-3. `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md`
-4. matching file inside that package:
-   - `PRODUCT_BOUNDARY.md`
-   - `DESTRUCTIVE_ACTIONS.md`
-   - `ROLE_HUB_INFORMATION_ARCHITECTURE.md`
-   - `IMPLEMENTATION_WORKSTREAMS.md`
-5. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
-6. `docs/architecture/ROLE_BINDING_CONTRACT.md` when binding shape or field semantics are involved
-
-### 5.3 Event / Runtime / Surprise / Trigger Task
-
-Read in order:
-
-1. `docs/pm/event-runtime-and-world-hub/README.md`
-2. `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`
-3. `docs/process/EVENT_WORKFLOW.md`
-4. `docs/architecture/SIMULATION_EVENT_ENGINE.md`
-5. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` when relationship facts are involved
-6. `docs/overview/IMMERSIVE_EVENT_TODO.md`
-7. `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md` when the task touches World Hub, GM control, Cheats, runtime review, unlock flow, or future override controls
-8. `docs/process/RUNTIME_CONTROL_AND_CHEATS_PACK_PLAN.md` when the task needs to define or extend the future World Hub / Cheats task package
-
-### 5.4 Chat / Chat Directory / Service Accounts Task
-
-Read in order:
-
-1. `docs/pm/chat-and-chat-directory/README.md`
-2. `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`
-3. the matching file inside that package
-4. `docs/architecture/ROLE_BINDING_CONTRACT.md`
-
-### 5.5 Map / Calendar / Reminders Task
-
-Read in order:
-
-1. `docs/pm/map-calendar-reminders/README.md`
-2. `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`
-3. the matching file inside that package
-4. `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
-
-### 5.6 Commerce / Finance / Assets Task
-
-Read in order:
-
-1. `docs/pm/commerce-finance-and-assets/README.md`
-2. `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md`
-3. the matching file inside that package
-4. `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
-
-### 5.7 Visual / Interaction / IA Task
-
-Read in order:
-
-1. `docs/pm/visual-and-ia-governance/README.md`
-2. `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
-3. `docs/design/DESIGN.md`
-4. `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
-5. `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`
-6. `docs/process/VISUAL_WORKFLOW.md`
-
-### 5.8 Module Audit / Architecture Cleanup Task
-
-Read in order:
-
-1. `docs/pm/module-architecture-governance/README.md`
-2. `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
-3. `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`
-4. `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`
-5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`
-
-## 5.9 Installed Skill Routing Map
-
-Workflow docs already own most skill-routing detail. Use this section as the top-level map so future assistants do not have to guess where skill expectations live.
-
-### Requirement-pressure skill
-
-- This project does not install or route through Superpowers skills. Use the active roadmap, package handoff, and the built-in task plan for ordinary implementation planning.
-- `grill-me`
-  - use to stress-test an existing plan, architecture proposal, or requirement set;
-  - prefer answering questions from project docs/code first, and ask the user only when a decision cannot be inferred safely.
-
-### Event / runtime / relationship-engineering lane
-
-Read `docs/process/EVENT_WORKFLOW.md` for the detailed invocation matrix.
-
-Primary skills for this lane:
-
-- `improve-codebase-architecture`
-- `pinia`
-- `vue-pinia-best-practices`
-- `unit-test-vue-pinia`
-- `playwright-testing`
-- `game-engine` only for true game-loop/minigame work
-- `frontend-logic-design` when the event surface itself has IA problems
-
-### Visual / IA lane
-
-Read `docs/process/VISUAL_WORKFLOW.md` for the detailed invocation matrix.
-
-Primary skills for this lane:
-
-- `frontend-design`
-- `frontend-logic-design`
-- `image-to-code` when a source image, screenshot, or design export must be restored into code with strict 750px visual matching
-
-Choose at most one visual specialist for a work round. `frontend-logic-design` owns IA diagnosis, `frontend-design` owns visual rebuild or polish, and `image-to-code` is reserved for strict source-image restoration. Routine fixes use no specialist skill.
-
-Machine-local visual support skills may also be documented there when available.
-
-### Tooling / install / inventory lane
-
-Read `docs/process/DEVELOPMENT_TOOLING.md` when the task is about:
-
-- confirming which project-local skills are installed;
-- reproducing setup on another PC;
-- checking `skills-lock.json` or `.agents/skills`;
-- understanding which workflow already covers which skill family.
-
-### Rule
-
-If a workflow starts depending on a project-local skill and that dependency is not documented, update:
-
-1. the workflow doc;
-2. this file;
-3. `docs/process/DEVELOPMENT_TOOLING.md` when inventory or install assumptions changed.
-
-### Skill Conflict And Tool-Policy Overrides
-
-- Apply broad skill trigger language through this SchatPhone map. A generic skill that says "always" or "MUST" does not expand the project workflow beyond the scope defined here.
-- Skills are reviewable implementation aids, not authorities. A workflow or skill under audit must not be invoked as evidence for its own correctness.
-- Subagent or Agent-tool instructions inside a skill are optional and must obey the current tool policy. If subagents are unavailable or not explicitly requested, complete the equivalent local repo scan and note the fallback in the delivery.
-- A skill must not create a second roadmap, second task board, or competing package handoff. Promote active work into `TODO_ROADMAP.md` and the matching package `STATUS_AND_HANDOFF.md`.
-- If a skill's recommended validation command conflicts with `docs/process/DEVELOPMENT_TOOLING.md`, use the machine-local command convention from `DEVELOPMENT_TOOLING.md`.
-
-## 6. Requirement Translation Template
-
-For each request, define:
-
-- goal: user-visible result
-- scope: files to touch and not to touch
-- acceptance: functional and interaction criteria
-- risks: compatibility, migration, regressions
-- priority: high/medium/low and whether it blocks mainline
-
-## 7. Prioritization and Interrupt Rules
-
-- High priority: blocking bug or data-risk issue -> execute immediately.
-- Medium priority: non-blocking feature or UX issue -> merge into current iteration in small steps.
-- Low priority: optimization -> register in roadmap backlog.
-- If conflict exists: satisfy user first, then explicitly re-sequence roadmap.
-
-## 8. Standard Delivery Cycle
-
-1. Translate the request quickly.
-2. Scan relevant code and docs.
-3. Implement the minimum viable change.
-4. Run required checks, using the logical command names below; on the current Windows PowerShell machine, prefer the `.cmd` forms documented in `docs/process/DEVELOPMENT_TOOLING.md`:
-   - `npm run lint`
-   - `npm run build`
-   - `npm run test` when behavior changed
-5. Report user-visible outcomes and impact.
-6. Sync docs and roadmap status.
-
-## 9. End-Of-Round Documentation Sync Matrix
-
-Use this matrix at the end of every meaningful work round.
-
-| Change type | Must sync |
+| Change type | Minimum checks |
 | --- | --- |
-| route/schema/core interaction change | `docs/overview/PROJECT_MASTER_GUIDE.md`, `docs/roadmap/TODO_ROADMAP.md`, `docs/pm/TODO_PM_STATUS_REPORT.md`, `docs/architecture/ARCHITECTURE.md` |
-| Contacts / role / relationship semantic change | `docs/pm/contacts-relationship-system-v2/README.md`, `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`, `docs/pm/TODO_PM_STATUS_REPORT.md`, `docs/roadmap/TODO_ROADMAP.md` when status changed |
-| Chat / Chat Directory / service-account semantic change | `docs/pm/chat-and-chat-directory/README.md`, `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/architecture/ROLE_BINDING_CONTRACT.md` when binding semantics changed, `docs/pm/TODO_PM_STATUS_REPORT.md` when status changed |
-| Chat binding contract or role-context field change | `docs/architecture/ROLE_BINDING_CONTRACT.md`, `docs/architecture/ARCHITECTURE.md`, Contacts package docs when product meaning changed |
-| event-engine or runtime-rule change | `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`, `docs/process/EVENT_WORKFLOW.md`, `docs/architecture/SIMULATION_EVENT_ENGINE.md`, `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`, PM/roadmap docs when priority or scope changed |
-| World Hub / Cheats / runtime-control meaning change | `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`, `docs/process/RUNTIME_CONTROL_AND_CHEATS_PACK_PLAN.md`, plus PM/roadmap docs when priority or package scope changed |
-| Map / Calendar / Reminders boundary change | `docs/pm/map-calendar-reminders/README.md`, `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when status changed |
-| Commerce / Finance / Assets boundary change | `docs/pm/commerce-finance-and-assets/README.md`, `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when status changed |
-| visual direction or large IA change | `docs/overview/APPEARANCE_REBUILD_SCOPE.md`, `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`, `docs/process/VISUAL_WORKFLOW.md` when workflow changed |
-| visual / IA governance change | `docs/pm/visual-and-ia-governance/README.md`, `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/process/VISUAL_WORKFLOW.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` when priority changed. Routine visual-only polish does not need PM/roadmap sync unless it changes scope, IA, ownership, or priority. |
-| module maturity or next-slice priority change | `docs/pm/module-architecture-governance/README.md`, `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`, plus the matching file in that package, `docs/overview/MODULE_MATURITY_AND_ENGINEERING_MAP.md`, `docs/overview/FUNCTIONAL_CODE_NEXT_STEPS.md`, `docs/roadmap/PROJECT_MODULE_AUDIT.md`, `docs/pm/TODO_PM_STATUS_REPORT.md` |
+| documentation, workflow, task package, or skill governance | `git diff --check` and `npm.cmd run governance:check` |
+| behavior, shared code, schema, or persistence | `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` |
+| user-facing route flow | add targeted or full `npm.cmd run test:e2e` |
+| visual surface with visual-gate coverage | add `npm.cmd run test:visual` |
+| dependency or lockfile | run production and full `npm.cmd audit` separately, plus the behavior baseline |
 
-## 10. Response Format
+Use the Windows command conventions and environment notes in `docs/process/DEVELOPMENT_TOOLING.md`.
 
-Each delivery should include:
+Do not claim a check passed unless it was run successfully in the relevant tree. If a required check cannot run, report the gap and its impact.
 
-- modified files
-- what changed
-- user-visible results
-- validation results
-- impact on roadmap
-- optional next 1-3 steps
+## 6. Documentation And Status
 
-## 11. Engineering Constraints
+After a meaningful change:
 
-- Stack: Vue 3 + Vite + Pinia + Vue Router + Tailwind v4
-- All AI requests must go through `src/lib/ai.js`.
-- Do not hide or delete `app_*` Home entries.
-- Key input pages must keep explicit save action and feedback.
+1. follow the owning package `STATUS_AND_HANDOFF.md` for domain documentation sync;
+2. update secondary package handoffs only when their meaning or contracts changed;
+3. update `TODO_ROADMAP.md` only when priority, status, or accepted scope changed;
+4. update `TODO_PM_STATUS_REPORT.md` only for meaningful PM-facing priority, boundary, release-posture, or capability changes;
+5. leave frozen reference and archive documents unchanged unless the task explicitly promotes, corrects, or archives them.
 
-## 12. Definition Of Done
+Code changes do not require broad documentation churn when product meaning, ownership, status, and public contracts are unchanged.
 
-- request is implemented and reproducible
-- core user path is not regressed
-- required checks pass:
-  - `npm run lint`
-  - `npm run build`
-  - `npm run test` when behavior logic changed
-  - targeted or full `npm run test:e2e` when a user-facing route flow changed
-  - production and full `npm audit` when dependencies or the lockfile changed
-- documentation and roadmap are updated in the same turn
+## 7. Completion And Handoff
 
-## 13. Copy-Ready Handoff Prompt
+A completed implementation round should leave:
 
-```text
-You are taking over the SchatPhone project.
+1. the requested implementation or document change;
+2. validation proportional to the change risk;
+3. synchronized owning-package documentation where required;
+4. explicit status impact, including `none` when the roadmap did not change;
+5. a concise handoff that names results, validation, remaining risk, and any unpushed commit or unsynchronized worktree.
 
-Execution rules:
-1) Read AGENTS.md, docs/process/AI_WORK_MODE.md, and docs/roadmap/TODO_ROADMAP.md first.
-2) Use docs/pm/TASK_PACKAGE_INDEX.md when ownership is unclear, then enter the matching package.
-3) Read the matching package README.md and STATUS_AND_HANDOFF.md before changing code.
-4) Translate the request into goal, scope, acceptance, and risk.
-5) After each meaningful code round, run validation and sync the required docs in docs/process/AI_WORK_MODE.md.
-6) Route AI calls only through src/lib/ai.js.
-```
+Old task conversations, cached skill instructions, and detached worktree context are not current authority. On resume, verify the current branch, worktree status, roadmap, and owning package before continuing.

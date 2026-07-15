@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -176,17 +176,24 @@ If you do not know where to start:
 4. this file when ownership is unclear
 5. the matching package `README.md` and `STATUS_AND_HANDOFF.md`
 
-## 4. Workflow Rule
+## 4. Workflow Ownership
 
-Task packages define product meaning and implementation grouping.
+Task packages define product meaning and own the execution detail for their lane:
 
-Process rules still belong to:
+- `README.md` owns the package reading path;
+- `STATUS_AND_HANDOFF.md` owns current status, next safe slice, do-not-do rules, validation, and documentation sync;
+- `PRODUCT_BOUNDARY.md` owns domain boundaries;
+- `IMPLEMENTATION_WORKSTREAMS.md` owns stable domain workstreams.
+
+Cross-task rules still belong to:
 
 - root `AGENTS.md` for the stable bootstrap;
-- `docs/process/AI_WORK_MODE.md`
+- `docs/process/AI_WORK_MODE.md` for the thin project execution contract.
 
-Skill-family details are intentionally not repeated in every package. Use:
+Specialist skill-family details remain outside the cross-task contract. Use:
 
 - `docs/process/EVENT_WORKFLOW.md` for event/runtime lane skill routing;
 - `docs/process/VISUAL_WORKFLOW.md` for visual/IA lane skill routing;
 - `docs/process/DEVELOPMENT_TOOLING.md` for project-local skill inventory and setup assumptions.
+
+Do not create a persistent workflow for a one-off task. Add a workflow only for a stable task family with repeated rules that the package quartet does not already express.

@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -85,10 +85,9 @@ Compatibility entry docs still exist:
   - stable agent bootstrap
   - authority order and independent workflow/skill audit rule
 - `docs/process/AI_WORK_MODE.md`
-  - task-type reading order
-  - top-level installed-skill routing map
-  - end-of-round doc-sync matrix
-  - copy-ready handoff prompt
+  - thin cross-task execution contract
+  - authority, routing, worktree safety, and minimum validation rules
+  - delegates domain execution and documentation sync to task packages
 - `docs/process/OPERATION_GUIDE.md`
   - commands and release flow
 - `docs/process/DEVELOPMENT_TOOLING.md`
@@ -147,5 +146,5 @@ Current naming/runtime references:
 Execution reminder:
 
 - use package docs before coding;
-- use `AI_WORK_MODE.md` for process;
+- use `AI_WORK_MODE.md` for the cross-task execution contract;
 - use `TODO_ROADMAP.md` as the only live execution board.

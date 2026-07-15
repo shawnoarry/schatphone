@@ -34,6 +34,13 @@ const RETIRED_VISUAL_MECHANISMS = [
   'impeccable',
   'web-design-guidelines',
 ]
+const SPECIALIST_SKILLS = [
+  'frontend-design',
+  'frontend-logic-design',
+  'image-to-code',
+  'game-engine',
+  'unit-test-vue-pinia',
+]
 
 const readProjectFile = (relativePath) =>
   readFileSync(join(ROOT_DIR, relativePath), 'utf8')
@@ -90,11 +97,8 @@ describe('workflow governance', () => {
   })
 
   test('keeps visual specialist routing narrow and optional for routine fixes', () => {
-    const aiWorkMode = readProjectFile('docs/process/AI_WORK_MODE.md')
     const visualWorkflow = readProjectFile('docs/process/VISUAL_WORKFLOW.md')
 
-    expect(aiWorkMode).toContain('Choose at most one visual specialist for a work round')
-    expect(aiWorkMode).toContain('Routine fixes use no specialist skill')
     expect(visualWorkflow).toContain(
       'choose at most one specialist skill for a visual work round',
     )
@@ -102,6 +106,22 @@ describe('workflow governance', () => {
       'skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance',
     )
     expect(visualWorkflow).toContain('do not chain visual specialist skills by default')
+  })
+
+  test('keeps the cross-task execution contract thin and task-agnostic', () => {
+    const aiWorkMode = readProjectFile('docs/process/AI_WORK_MODE.md')
+
+    expect(aiWorkMode).toContain('This file is a project execution contract, not a universal implementation workflow')
+    expect(aiWorkMode).toContain('Each task package owns:')
+    expect(aiWorkMode).toContain('docs/pm/TASK_PACKAGE_INDEX.md')
+    expect(aiWorkMode.split(/\r?\n/).length).toBeLessThanOrEqual(180)
+    expect(aiWorkMode).not.toContain('Task-Type Reading Order')
+    expect(aiWorkMode).not.toContain('Installed Skill Routing Map')
+    expect(aiWorkMode).not.toContain('End-Of-Round Documentation Sync Matrix')
+
+    SPECIALIST_SKILLS.forEach((skillName) => {
+      expect(aiWorkMode).not.toContain(skillName)
+    })
   })
 
   test('keeps the focused visual check wired through package scripts and CI', () => {
@@ -150,6 +170,14 @@ describe('workflow governance', () => {
           incompletePackages.push(`${name}/${fileName}`)
         }
       })
+
+      const statusPath = join(packageDirectory, 'STATUS_AND_HANDOFF.md')
+      if (existsSync(statusPath)) {
+        const status = readFileSync(statusPath, 'utf8')
+        ;['Recommended Next Slice', 'Do Not Do', 'Must Sync'].forEach((section) => {
+          if (!status.includes(section)) incompletePackages.push(`${name}: ${section}`)
+        })
+      }
     })
 
     expect(incompletePackages).toEqual([])

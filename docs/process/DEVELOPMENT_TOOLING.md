@@ -1,12 +1,12 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
 This file is the tooling companion to:
 
-- `docs/process/AI_WORK_MODE.md` for execution rules;
+- `docs/process/AI_WORK_MODE.md` for the cross-task execution contract;
 - `docs/process/EVENT_WORKFLOW.md` for event/runtime lane skill routing;
 - `docs/process/VISUAL_WORKFLOW.md` for visual/IA lane skill routing.
 
@@ -177,7 +177,7 @@ skills-lock.json
 Workflow ownership is split like this:
 
 - root `AGENTS.md`: stable bootstrap and independent workflow/skill audit rule.
-- `docs/process/AI_WORK_MODE.md`: canonical project execution and documentation governance.
+- `docs/process/AI_WORK_MODE.md`: thin cross-task execution contract.
 - `docs/process/EVENT_WORKFLOW.md`: event/runtime lane skill routing.
 - `docs/process/VISUAL_WORKFLOW.md`: visual/IA lane skill routing.
 
@@ -189,16 +189,16 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 
 | Skill | Main use | Primary workflow owner |
 | --- | --- | --- |
-| `grill-me` | Stress-test plans, architecture proposals, and requirement assumptions one decision branch at a time | `docs/process/AI_WORK_MODE.md` |
+| `grill-me` | Stress-test plans, architecture proposals, and requirement assumptions one decision branch at a time | owning task package or explicit user request |
 | `find-skills` | Skill discovery and installation help when a new capability is needed | `docs/process/DEVELOPMENT_TOOLING.md` |
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
-| `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
-| `pinia` | Store shape, actions, hydration, persistence patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
-| `vue-pinia-best-practices` | Vue + Pinia reactivity and store-consumption patterns | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
-| `unit-test-vue-pinia` | Vue/Pinia unit tests for stores, components, composables | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
-| `playwright-testing` | Browser-level journey testing and E2E verification | `docs/process/EVENT_WORKFLOW.md`, `docs/process/AI_WORK_MODE.md` |
+| `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | module-architecture package; `EVENT_WORKFLOW.md` for event seams |
+| `pinia` | Store shape, actions, hydration, persistence patterns | owning task package; `EVENT_WORKFLOW.md` for event runtime |
+| `vue-pinia-best-practices` | Vue + Pinia reactivity and store-consumption patterns | owning task package; `EVENT_WORKFLOW.md` for event runtime |
+| `unit-test-vue-pinia` | Vue/Pinia unit tests for stores, components, composables | owning task package; `EVENT_WORKFLOW.md` for event runtime |
+| `playwright-testing` | Browser-level journey testing and E2E verification | owning task package; specialist workflow when one applies |
 | `game-engine` | Real game-loop, Canvas/WebGL, minigame work only | `docs/process/EVENT_WORKFLOW.md` |
 | `chinese-novelist` | Chinese fiction craft helper for story-world text, character tension, dialogue, and scene texture; optional support for WorldBook source writing | `docs/process/DEVELOPMENT_TOOLING.md` |
 
@@ -219,13 +219,12 @@ These workflow docs already wire skills in a clear way:
 When cleaning or splitting docs, preserve these rules:
 
 1. root `AGENTS.md` stays a short bootstrap and never duplicates the full workflow.
-2. `AI_WORK_MODE.md` remains the only project execution rulebook.
+2. `AI_WORK_MODE.md` remains a thin cross-task execution contract, not a specialist workflow or skill router.
 3. Event/runtime work keeps its own skill matrix in `EVENT_WORKFLOW.md`.
 4. Visual/IA work keeps its own skill matrix in `VISUAL_WORKFLOW.md`.
 5. `.agents/skills` remains the content inventory; `skills-lock.json` remains external provenance rather than a workflow authority.
 6. If a new workflow starts depending on a project-local skill, document that dependency in:
    - the workflow doc;
-   - `docs/process/AI_WORK_MODE.md`;
    - this file when install/inventory assumptions change.
 
 ## 8. Skills CLI
@@ -434,7 +433,7 @@ This file is for shared tooling and skill inventory only.
 
 Keep:
 
-- process rules in `docs/process/AI_WORK_MODE.md`;
+- cross-task authority, safety, and completion rules in `docs/process/AI_WORK_MODE.md`;
 - event-lane skill routing in `docs/process/EVENT_WORKFLOW.md`;
 - visual-lane skill routing in `docs/process/VISUAL_WORKFLOW.md`;
 - product semantics in package docs and architecture/product-decision docs.

@@ -128,7 +128,7 @@ Main tasks:
 2. sync architecture docs when ownership changes;
 3. sync PM status and roadmap when priority/status changes;
 4. keep module naming aligned with `docs/pm/MODULE_NAME_GLOSSARY.md`;
-5. keep workflow instructions aligned with `docs/process/AI_WORK_MODE.md` and the local workflow skill.
+5. keep this package workflow aligned with the cross-task contract in `docs/process/AI_WORK_MODE.md`; load optional skills only when the current slice needs them.
 6. when relationship classification changes, sync the profile-owner vs runtime-owner boundary in README, status, product boundary, workstreams, roadmap, PM status, and relationship-growth architecture docs.
 
 ## 5. Semantic Drift Watchlist

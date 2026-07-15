@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 This is the only live execution board for implementation order.
 
@@ -111,7 +111,7 @@ Completed in the 2026-07-10 audit round:
 Completed in the 2026-07-14 workflow-governance round:
 
 1. retired the self-referential `schatphone-workflow` skill and the removed Superpowers planning skills;
-2. added root `AGENTS.md` as a short, reviewable bootstrap while keeping `AI_WORK_MODE.md` as the only process rulebook;
+2. added root `AGENTS.md` as a short, reviewable bootstrap while keeping `AI_WORK_MODE.md` as the central cross-task process authority;
 3. unified active reading-order and skill-inventory documentation;
 4. added an automated governance check for skill provenance, retired references, bootstrap independence, task-package structure, and mojibake.
 
@@ -121,6 +121,13 @@ Completed in the 2026-07-14 visual-governance round:
 2. reduced visual work to at most one specialist skill per round;
 3. added a focused Playwright visual-quality gate for Home, Settings, and Appearance across day/night and desktop/mobile, including screenshots, horizontal-overflow checks, page-error checks, and critical axe checks;
 4. added the focused visual-quality gate and failure report artifact to CI.
+
+Completed in the 2026-07-16 workflow-layering round:
+
+1. reduced `AI_WORK_MODE.md` to a thin cross-task execution contract;
+2. delegated domain reading order, workstreams, validation detail, and documentation sync to the seven task packages;
+3. kept specialist skill routing in event/runtime, visual/IA, and tooling workflow documents;
+4. added governance coverage that prevents task-specific workflow detail from returning to the cross-task contract.
 
 Open slices, in order:
 

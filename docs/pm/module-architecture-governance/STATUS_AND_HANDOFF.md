@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -178,10 +178,18 @@ Do not describe it as a production backend or closed-page simulation engine.
 
 ## 5. Completed Governance Rounds
 
+### 2026-07-16 Workflow Layering
+
+1. reduced `AI_WORK_MODE.md` from a universal implementation workflow to a thin cross-task execution contract;
+2. delegated domain reading order, workstreams, validation detail, and documentation sync to the seven task packages;
+3. kept event/runtime and visual/IA skill routing inside their specialist workflow documents;
+4. removed the stale Contacts reference to a local workflow skill;
+5. extended governance tests to prevent task-specific routing and specialist skills from moving back into the cross-task contract.
+
 ### 2026-07-14 Workflow Governance
 
 1. retired `schatphone-workflow` so a workflow or skill cannot make itself mandatory or prove its own correctness;
-2. retained `AI_WORK_MODE.md` as the only process rulebook and added root `AGENTS.md` as a short bootstrap;
+2. retained `AI_WORK_MODE.md` as the central process authority and added root `AGENTS.md` as a short bootstrap;
 3. removed the retired Superpowers planning skills and synchronized active inventory documentation;
 4. added `npm.cmd run governance:check` for inventory, retired-reference, bootstrap, task-package, and mojibake checks;
 5. aligned the documented local Node/npm baseline with the current machine without changing the CI Node version.
