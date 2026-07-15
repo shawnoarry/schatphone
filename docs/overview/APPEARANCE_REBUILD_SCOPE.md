@@ -1,6 +1,6 @@
 # SchatPhone Appearance Rebuild Scope
 
-Updated: 2026-05-30
+Updated: 2026-07-16
 
 Purpose: this is the handoff reference for visual rebuild breadth.
 
@@ -14,19 +14,29 @@ This file is a scope reference, not a live task board. Active work status still 
 
 ## 1. Core Verdict
 
-Under the current plan, the appearance layer should be treated as a full rebuild, not an incremental polish pass.
+The long-term appearance target remains a full product-grade visual system, but the current portfolio should no longer be treated as one blanket rebuild queue.
 
 Why:
 
 - the project already proves many visual features technically;
-- the missing part is not capability coverage, but a converged product-grade visual language;
-- many mature modules still read like functional tools instead of one believable virtual phone.
+- Home, Map, Food Delivery, and Chat now have recognizable visual identities worth preserving;
+- Gallery, Calendar/Reminders, Shopping, and dense WorldBook states still read more like functional tools than finished phone apps;
+- Phone, Wallet, Stock, and Files do not yet have enough product depth to justify bespoke rebuilds;
+- wide desktop viewports currently weaken the phone illusion by stretching many surfaces into sparse full-width pages.
 
 Practical meaning:
 
 1. keep behavior and ownership contracts;
-2. feel free to rebuild presentation aggressively;
-3. do not treat current page chrome, card skins, spacing, blur, icon feel, or motion language as final.
+2. preserve strong page identities and rebuild only the weak surface or state;
+3. decide cross-surface shell behavior before applying desktop fixes page by page;
+4. do not treat current page chrome, card skins, spacing, blur, icon feel, or motion language as final merely because the feature is complete.
+
+Current treatment labels:
+
+- `preserve + polish`: a strong identity exists and should not be restarted;
+- `targeted rebuild`: one page, state, or hierarchy needs structural visual work;
+- `inherit shell`: the module should use the shared system foundation until its product role matures;
+- `decision first`: implementation would otherwise encode an unresolved cross-surface contract.
 
 ## 2. What Already Exists Technically
 
@@ -52,30 +62,36 @@ Conclusion:
 - the control layer is broad enough;
 - the missing part is converged visual language, not basic toggle coverage.
 
-## 3. Why A Full Rebuild Is Still Needed
+## 3. Why Visual Rebuild Work Is Still Needed
 
-The current UI still reads as capability-first and page-local.
+Parts of the current UI still read as capability-first and page-local even though several key surfaces now have strong identities.
 
 Main reasons:
 
-1. there is no single shell-level visual language across Lock, Home, Settings, Chat, Photos, and Map;
-2. many pages still feel like tools or admin panels rather than a phone OS;
-3. module identity exists semantically, but not yet as a polished product-grade visual system;
-4. Appearance still mixes system controls with visual-authoring tools too flatly;
-5. many style tokens are local and opportunistic rather than authoritative;
-6. mature modules already have meaningful behavior, but still lack a unified immersive presentation.
+1. wide viewports do not yet have a frozen device-frame or adaptive-phone-workspace contract;
+2. Gallery, Calendar/Reminders, Shopping, and several dense management states still feel like tools or admin panels rather than phone apps;
+3. module identity is strong in Home, Chat, Map, and Food Delivery but uneven elsewhere;
+4. some system and creation surfaces still mix primary state with advanced execution controls too flatly;
+5. many style tokens remain local and opportunistic rather than authoritative, especially across deep forms and secondary apps;
+6. visual evidence is broadest for initial mobile states, while wide layouts, true-device behavior, and loading/error/edit/destructive states remain less consistent.
 
 ## 4. Rebuild Scope By Layer
 
 ### 4.1 Shell Layer
 
-These should all be treated as full visual rebuild targets:
+These remain the highest-value shared visual surfaces, but their treatment differs:
 
 - Lock Screen
 - Home shell
 - notification surfaces
 - theme/wallpaper shell treatment
 - status bar and micro shell details
+
+Current treatment:
+
+- Home: preserve and polish;
+- Lock and notifications: targeted state polish after broader state evidence;
+- wide-viewport shell framing: decision first because it affects every route.
 
 Preserve:
 
@@ -87,7 +103,7 @@ Preserve:
 
 ### 4.2 Appearance Control Center
 
-`AppearanceView.vue` is functionally real, but should be fully restructured visually.
+`AppearanceView.vue` is functionally real and has a first system-control baseline. Future work should be targeted restructuring rather than another full restart.
 
 Why:
 
@@ -111,7 +127,7 @@ Current interaction baseline:
 
 ### 4.3 Mature Content Modules
 
-These modules already matter product-wise, so their current visuals should not be protected just because they are functional:
+These modules already matter product-wise, but the 2026-07-16 audit shows they need different treatments rather than one shared rebuild instruction:
 
 - Chat
 - Settings
@@ -124,17 +140,22 @@ These modules already matter product-wise, so their current visuals should not b
 - Network
 - Profile
 
-Each of these should be treated as a real rebuild target.
+Current treatment:
+
+- preserve + polish: Chat and Map;
+- targeted rebuild: Gallery's Photos-first entry, Calendar/Reminders schedule identity, Shopping platform identity, and selected dense WorldBook/Contacts states;
+- system-baseline cleanup: Settings, Network, Profile, Appearance, Widgets, and App Store;
+- verify before restyling: World Pack target-app paths and other hybrid entry-context surfaces.
 
 ### 4.4 Ambiguous Or Secondary Modules
 
-These should inherit the new global shell first and receive less bespoke visual design until their product role is more mature:
+These should inherit the global shell first and receive less bespoke visual design until their product role is more mature:
 
 - Phone
 - Wallet
 - Stock
 - Files
-- More
+- More remains a compatibility redirect rather than a visual target.
 
 ## 5. What Must Be Preserved During Rebuild
 
@@ -151,9 +172,13 @@ The visual layer is rebuildable. These behavior contracts are not casually dispo
 
 ## 6. Recommended Rebuild Grouping
 
-This is not a live roadmap. It is the safest grouping logic for future execution:
+This is not a live roadmap. It is the safest dependency order for future execution:
 
-1. global visual foundation
+1. wide-viewport shell decision
+   - centered device frame vs deliberately adaptive phone workspace
+   - supported content width and interaction scale
+   - behavior of status bar, home indicator, sheets, and overlays outside phone width
+2. global visual foundation
    - color system
    - typography
    - spacing scale
@@ -161,28 +186,28 @@ This is not a live roadmap. It is the safest grouping logic for future execution
    - blur/tint policy
    - icon style
    - motion language
-2. shell surfaces
+3. shell surfaces
    - Lock Screen
    - Home
    - Dock
    - wallpaper readability treatment
    - notifications
-3. Appearance and system-control pages
+4. Appearance and system-control pages
    - Appearance
    - Settings
    - Network
    - basic system pages
-4. core immersive apps
+5. focused core-app slices
    - Chat
    - Photos
    - Map
    - Calendar
-5. support modules
+6. support modules
    - Contacts
    - Chat Directory
    - WorldBook
    - Profile
-6. placeholder or secondary modules
+7. placeholder or secondary modules
    - Phone
    - Wallet
    - Stock

@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -52,6 +52,17 @@ Current visual pass:
 - `网络与 API / Network & API` now treats endpoint entry as the primary setup path: users paste or type a URL, the app auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations appear as the loadable dropdown. Common base/model/chat URLs, native responses/messages/deployment URLs, and local/server-auth compatible gateways should be handled through URL affordances; provider-brand templates should not return as first-level choice buttons on this system settings page.
 
 - Network & API's current compact IA keeps URL, key, model input/selection, model-list refresh, connection test, and save-current-settings in one primary connection panel. Saved-configuration management and diagnostics remain available behind secondary disclosures instead of becoming default stacked page blocks.
+
+## 2026-07-16 Portfolio Audit Baseline
+
+The visual portfolio is no longer one undifferentiated rebuild queue. Current evidence supports four maturity treatments:
+
+1. preserve and polish strong identities such as Home, Map, Food Delivery, and Chat instead of restarting them;
+2. use targeted rebuild slices for usable but still tool-like surfaces such as Gallery, Calendar/Reminders, Shopping, and dense WorldBook states;
+3. keep Phone, Wallet, Stock, and Files on the shared shell baseline until their product roles justify bespoke visual systems;
+4. treat wide-viewport phone-shell behavior as a cross-surface product contract that must be decided before page-local desktop polish.
+
+The complete target is a believable phone system rather than one universal skin: Native System surfaces share a coherent device language, installed apps keep deliberate identities, and hybrid surfaces inherit their active parent context. The current maturity matrix and candidate slices live in `STATUS_AND_HANDOFF.md`; they are audit classifications, not a second roadmap.
 
 ## Read This Package In This Order
 

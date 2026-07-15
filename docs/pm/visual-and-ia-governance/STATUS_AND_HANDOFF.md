@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-14
+Updated: 2026-07-16
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -96,9 +96,36 @@ What is already landed:
 80. Network & API setup now keeps the necessary functional loop compact: URL, key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel, while saved-configuration management and diagnostics are secondary disclosures. The page should not return to one large stacked block per capability.
 81. Visual governance now has a minimal engineering gate: a visual round uses zero or one specialist skill, while `npm run test:visual` checks Home, Settings, and Appearance in day/night plus desktop/mobile, attaches screenshots and axe reports, and blocks page errors, horizontal overflow, and critical accessibility violations. The first run also fixed missing accessible names on Home Dock entries and the Settings backup-asset checkbox.
 
+### 2026-07-16 Visual Portfolio Audit
+
+This matrix is a current-state classification, not an execution board. Active priority remains in `docs/roadmap/TODO_ROADMAP.md`, and only one focused visual scope should be promoted at a time.
+
+| Portfolio | Current maturity | Evidence-backed gap | Complete target | Treatment |
+| --- | --- | --- | --- | --- |
+| Device shell, Lock, Home, notifications | Usable system baseline; Home has a strong mobile identity | Wide desktop viewports stretch the phone experience into sparse full-width pages; Lock and notification states have narrower visual evidence than Home | A believable device frame and spatial shell at mobile and wide viewports, with stable safe areas, return context, notification materials, and day/night parity | Decide the wide-viewport shell contract first; then preserve Home and apply focused shell polish |
+| Settings, Appearance, Widgets, App Store, Network, Profile | Usable native-system baseline with progressive-disclosure work already landed | Visual automation covers only Home, Settings, and Appearance; several deep forms still mix system tokens with raw utility colors and page-local card patterns | One calm system-control language with semantic tokens, scan-first primary states, focused execution sheets, and explicit save/feedback | Targeted token and state cleanup; no full restart |
+| Chat, Chat Directory, Chat Me, Chat Settings, Chat Appearance, Groups | Strong mobile app identity and coherent ownership split | Wide layouts are sparse, and supporting pages vary in density and finish | A warm, conversation-first installed app that remains phone-like on wide screens without becoming a stretched web inbox | Preserve identity; polish adaptive layout and state consistency |
+| Contacts, WorldBook, Book | Functionally mature IA with several phone-sized flows | Contacts and WorldBook remain very dense; WorldBook is still visually card-heavy; true-device touch, keyboard, and safe-area checks are incomplete | A readable role archive and in-phone knowledge system with clear overview-to-detail progression and soft review states | Target one state at a time; do not rebuild completed ownership loops |
+| Map, Calendar, Reminders | Map has a strong immersive identity; Calendar and Reminders have usable functional baselines | Schedule surfaces still read as generic status cards rather than a confident time-management app | Preserve Map; give Calendar/Reminders a schedule-first identity while keeping source attribution and confirmation boundaries | Map polish only; Calendar/Reminders are targeted rebuild candidates |
+| Gallery and Assets | Gallery is a functional asset manager; Assets has a stronger domain presentation | Empty Gallery leads with forms and management controls instead of a Photos-first experience | A real album/Photos entry with visual collections first and cross-module asset management disclosed second | Gallery first-screen rebuild is the clearest low-coupling visual candidate |
+| Food Delivery and Shopping | Food Delivery has the strongest asset-led commerce presentation; Shopping has a functional shared shell | Food Delivery still needs detail/checkout/responsive polish; Shopping remains generic and does not yet express selected platform identity strongly | Distinct consumer apps with source-owned browsing/cart/order truth and clear mini-app/platform identities | Preserve Food Delivery direction; target Shopping identity separately |
+| Phone, Wallet, Stock, Files | Functional MVPs with generic form/card presentation | Product roles are not mature enough to justify four independent visual systems | Clean secondary apps that inherit shell ergonomics until deeper product meaning is promoted | Hold bespoke rebuilds; apply only shared-shell and accessibility fixes |
+| World Pack hybrid paths | First cross-entry and target-app context seams are implemented | True-device validation and broader label/accent/safe-default hardening remain incomplete | Parent app keeps visual ownership while World Pack supplies restrained context, terminology, accent, and safe defaults | Validate the existing loop before adding another archetype or visual variant |
+| Visual validation | Single Playwright path is healthy; the 2026-07-16 audit rendered 29 mobile route surfaces and 8 desktop representatives without page errors | Automated visual gate still covers only Home, Settings, and Appearance; screenshots are evidence, not pixel baselines | Risk-based structural, overflow, accessibility, and screenshot evidence through one toolchain | Extend only for repeated regression risk; do not add a parallel visual platform |
+
+Complete portfolio target:
+
+1. preserve a believable phone frame and interaction scale at every supported viewport;
+2. keep Native System surfaces coherent through shared semantic tokens, chrome, spacing, motion, and state patterns;
+3. let installed apps use distinct identities without abandoning safe areas, navigation, accessibility, or touch ergonomics;
+4. make entry and parent context decide hybrid-surface presentation;
+5. lead content-rich apps with real content and imagery instead of management forms;
+6. keep normal, empty, loading, error, edit, selected, success, and destructive states visually intentional;
+7. use the existing Playwright path plus targeted true-device checks as evidence, without making visual work a second roadmap.
+
 Still incomplete:
 
-1. the global shell, Chat, Map, Gallery, Shopping, and Food Delivery all still need later rebuild-quality passes; Food Delivery should continue from Moon Bistro detail-sheet polish, responsive density, checkout ergonomics, and more distinctive per-store presentation;
+1. the wide-viewport shell contract, Lock/notification state coverage, Gallery's Photos-first entry, Calendar/Reminders schedule identity, and Shopping platform identity still need focused visual work; Chat, Map, Home, and Food Delivery now have directions to preserve, with later work limited to adaptive layout, missing states, detail/checkout ergonomics, responsive density, and observed inconsistencies;
 2. some pages still mix destructive actions and ordinary edits too closely;
 3. Contacts detail and memory 4.2 are complete at current acceptance; remaining Contacts work is later polish or an explicitly promoted template-adaptation visual diff.
 4. Home layout storage still keeps ordered page arrays as a compatibility/recovery layer. A later slice should add per-instance action overrides if users need the same widget definition to behave differently in different slots.
@@ -108,14 +135,14 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The active roadmap priority is security/toolchain maintenance, not a broad visual pass. Current visual candidates are:
+The active roadmap priority is security/toolchain maintenance, not a broad visual pass. The portfolio audit does not change that priority. Current visual decisions and candidates are:
 
-1. extend `test:visual` only when a touched surface has a repeated regression risk; do not build a second visual toolchain;
+1. decide whether wide desktop viewports should show a centered device frame or a deliberately adaptive phone workspace; do not patch individual pages before this shell contract is clear;
 2. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
-3. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
-4. fix observed Home/Widget/App Store placement and recovery friction rather than assuming per-instance overrides are required;
-5. continue isolating destructive actions from normal edits;
-6. keep consumer shop filters/favorites/recent behavior inside Food Delivery or Shopping, not App Store;
+3. when a rebuild slice is explicitly promoted, prefer Gallery's Photos-first initial surface because the target is clear and its cross-module asset contracts can remain intact;
+4. treat Calendar/Reminders schedule identity and Shopping platform identity as later separate candidates, not one combined redesign;
+5. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
+6. extend `test:visual` only when a touched surface has a repeated regression risk; do not build a second visual toolchain;
 7. promote one focused visual scope at a time after the active 4.5 risk work.
 
 ## 3. Do Not Do

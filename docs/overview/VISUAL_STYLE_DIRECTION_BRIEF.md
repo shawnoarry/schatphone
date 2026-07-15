@@ -1,6 +1,6 @@
 # SchatPhone Visual Style Direction Brief
 
-Updated: 2026-05-19
+Updated: 2026-07-16
 
 Purpose: this document records the intended visual direction for the appearance rebuild.
 
@@ -32,19 +32,21 @@ Must avoid:
 
 ## 2. Module Direction Table
 
-| Module | Primary reference | Secondary references | Target feeling |
-| --- | --- | --- | --- |
-| Global shell | iPhone system UI | other mobile OS patterns when needed | coherent, immersive, believable phone |
-| Chat | KakaoTalk | WhatsApp, iMessage | warm, social, believable messaging app |
-| Map | Google Maps | ride-hailing trip flows | practical map plus trip system |
-| Photos | iPhone Photos | Memories / Collections style surfaces | real album first, asset center second |
-| Appearance | iPhone Settings + customization surfaces | wallpaper/focus-like organization | system customization, not dev console |
-| Settings | iPhone Settings | app-specific settings patterns | calm system settings surface |
-| Contacts | iPhone Contacts | social profile editors | living character and relationship archive |
-| Calendar | iPhone Calendar | reminder/trip status patterns | personal schedule with clear event meaning |
-| WorldBook | native notes/reference apps | lightweight knowledge-base editors | readable in-phone memory and lore surface |
-| Network | iPhone Settings subpage | technical connection panels when necessary | technical but restrained |
-| Phone / Wallet / Stock / Files / More | inherit shell first | bespoke reference later if needed | secondary until product role matures |
+| Module | Primary reference | Current maturity | Target feeling | Next treatment |
+| --- | --- | --- | --- | --- |
+| Global shell | iPhone system UI plus other mobile OS patterns when useful | Strong mobile Home baseline; unresolved wide-viewport behavior | coherent, immersive, believable phone at every supported viewport | decide device-frame/adaptive-workspace contract before desktop page polish |
+| Chat | KakaoTalk, with WhatsApp and iMessage details | strong mobile identity; sparse wide layout | warm, social, believable messaging app | preserve and polish adaptive layout |
+| Map | Google Maps plus ride-hailing trip flows | strong identity | practical map plus trip system | preserve; polish only observed states |
+| Photos / Gallery | iPhone Photos and collection surfaces | functional asset-management scaffold | real album first, asset center second | targeted first-screen rebuild candidate |
+| Food Delivery | consumer delivery apps with SchatPhone-owned assets | strongest asset-led commerce surface | fast, appetizing, store-specific delivery experience | preserve direction; refine detail, checkout, and responsive density |
+| Shopping | marketplace/platform apps | functional but generic shared shell | selected platform identity with clear shared shopping ownership | targeted platform-identity slice |
+| Appearance | iPhone Settings and customization surfaces | usable system-control baseline | system customization, not dev console | targeted token/state cleanup |
+| Settings / Network / Profile | iPhone Settings and restrained technical panels | usable native-system baseline | calm, legible system utilities | shared system cleanup rather than bespoke rebuilds |
+| Contacts | iPhone Contacts plus social profile editors | mature behavior, dense presentation | living character and relationship archive | target one detail/review state at a time |
+| Calendar / Reminders | iPhone Calendar plus reminder/trip status patterns | functional status-card baseline | personal schedule with clear event meaning | targeted schedule-first rebuild candidate |
+| WorldBook / Book | native notes/reference apps and lightweight knowledge tools | Book has a stronger library identity; WorldBook remains dense | readable in-phone memory and lore system | preserve ownership; target dense states only |
+| Phone / Wallet / Stock / Files | inherit shell first | functional MVPs | clean secondary apps | no bespoke visual system until product role matures |
+| More | none | compatibility redirect | no user-facing surface | no visual work |
 
 ## 3. Chat Direction
 
@@ -150,17 +152,14 @@ For modules without a dedicated visual direction yet:
 2. avoid inventing strong bespoke page identities too early;
 3. update this brief when new reference directions are frozen instead of scattering style notes elsewhere.
 
-Currently still mostly pending:
+Current sequencing rule:
 
-- Phone
-- Wallet
-- Stock
-- Files
-- More
-- Profile
-- Contacts detail direction
-- WorldBook detail direction
-- Calendar detail direction
+- `preserve + polish`: Home, Chat, Map, and Food Delivery;
+- `targeted rebuild`: Gallery first screen, Calendar/Reminders schedule identity, Shopping platform identity, and selected dense WorldBook/Contacts states;
+- `inherit shell`: Phone, Wallet, Stock, and Files;
+- `decision first`: wide-viewport shell framing and interaction scale.
+
+These labels are portfolio guidance, not an execution queue. Promote only one concrete slice through the live roadmap and visual package handoff.
 
 ## 7. Guidance For Future AI Assistants
 
