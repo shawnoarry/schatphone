@@ -10,6 +10,7 @@ const ACTIVE_GOVERNANCE_FILES = [
   'AGENTS.md',
   'docs/README.md',
   'docs/process/AI_WORK_MODE.md',
+  'docs/process/WORKTREE_INTEGRATION_PROTOCOL.md',
   'docs/process/DEVELOPMENT_TOOLING.md',
   'docs/pm/TASK_PACKAGE_INDEX.md',
 ]
@@ -122,6 +123,23 @@ describe('workflow governance', () => {
     SPECIALIST_SKILLS.forEach((skillName) => {
       expect(aiWorkMode).not.toContain(skillName)
     })
+  })
+
+  test('keeps cross-worktree integration user-gated and controller-owned', () => {
+    const protocol = readProjectFile('docs/process/WORKTREE_INTEGRATION_PROTOCOL.md')
+    const aiWorkMode = readProjectFile('docs/process/AI_WORK_MODE.md')
+
+    expect(aiWorkMode).toContain('docs/process/WORKTREE_INTEGRATION_PROTOCOL.md')
+    expect(protocol).toContain('Silence is not approval.')
+    expect(protocol).toContain('USER_DECISION_REQUIRED')
+    expect(protocol).toContain('No business approval can be inferred from technical validation.')
+    expect(protocol).toContain(
+      'Workgroups must not merge, rebase, push, delete worktrees, or synchronize other branches.',
+    )
+    expect(protocol).toContain(
+      'The user may reject, pause, or reopen a decision at any stage before or after integration.',
+    )
+    expect(protocol).toContain('Remote push is a separate action.')
   })
 
   test('keeps the focused visual check wired through package scripts and CI', () => {

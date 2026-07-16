@@ -1,12 +1,13 @@
 # SchatPhone Operation Guide
 
-Updated: 2026-07-10
+Updated: 2026-07-17
 
 This is the practical guide for daily development, validation, and release flow.
 
 For workflow governance and documentation sync rules, read:
 
 - `docs/process/AI_WORK_MODE.md`
+- `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`
 - `docs/process/DEVELOPMENT_TOOLING.md`
 
 ## 1. Local Setup
@@ -243,13 +244,19 @@ git diff --check
 npm.cmd run governance:check
 ```
 
-## 13. Release / Deployment Flow
+## 13. Integration, Push, And Deployment Flow
 
-```bash
-git add .
-git commit -m "feat: your message"
+Separate worktrees follow `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`. Workgroups return a structured handoff and must not merge, rebase, push, delete worktrees, or synchronize other branches themselves.
+
+The integration controller protects dirty work, audits scope and product meaning, coordinates an exact local commit, runs independent validation, integrates into local `main`, performs omission review, and synchronizes safe clean worktrees. The user is not expected to operate Git.
+
+Remote push is separate from local integration. Only the integration controller may run the intended push after the user explicitly authorizes that specific push:
+
+```powershell
 git push origin main
 ```
+
+Previous push approval does not cover future commits. Always report whether local `main` is ahead of `origin/main`.
 
 Deployment is handled by GitHub Actions. The current Pages workflow runs a build-only job, while CI runs lint/unit/build separately. Repository/workflow protection must therefore enforce the intended quality gate; a successful Pages build alone is not the full Definition of Done. The optional push relay is not deployed by the Pages workflow.
 

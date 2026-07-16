@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-07-16
+Updated: 2026-07-17
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -88,6 +88,9 @@ Compatibility entry docs still exist:
   - thin cross-task execution contract
   - authority, routing, worktree safety, and minimum validation rules
   - delegates domain execution and documentation sync to task packages
+- `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`
+  - cross-worktree protection, handoff, review, local integration, synchronization, and push authorization
+  - keeps product approval with the user and Git coordination with the integration controller
 - `docs/process/OPERATION_GUIDE.md`
   - commands and release flow
 - `docs/process/DEVELOPMENT_TOOLING.md`
@@ -147,4 +150,5 @@ Execution reminder:
 
 - use package docs before coding;
 - use `AI_WORK_MODE.md` for the cross-task execution contract;
+- use `WORKTREE_INTEGRATION_PROTOCOL.md` when separate worktrees must be protected, reviewed, integrated, or synchronized;
 - use `TODO_ROADMAP.md` as the only live execution board.

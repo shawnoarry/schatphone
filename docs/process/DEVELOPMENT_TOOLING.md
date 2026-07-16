@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-07-16
+Updated: 2026-07-17
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -178,6 +178,7 @@ Workflow ownership is split like this:
 
 - root `AGENTS.md`: stable bootstrap and independent workflow/skill audit rule.
 - `docs/process/AI_WORK_MODE.md`: thin cross-task execution contract.
+- `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`: cross-worktree delivery and integration ownership.
 - `docs/process/EVENT_WORKFLOW.md`: event/runtime lane skill routing.
 - `docs/process/VISUAL_WORKFLOW.md`: visual/IA lane skill routing.
 
@@ -434,6 +435,7 @@ This file is for shared tooling and skill inventory only.
 Keep:
 
 - cross-task authority, safety, and completion rules in `docs/process/AI_WORK_MODE.md`;
+- cross-worktree protection, handoff, integration, synchronization, and push authorization in `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`;
 - event-lane skill routing in `docs/process/EVENT_WORKFLOW.md`;
 - visual-lane skill routing in `docs/process/VISUAL_WORKFLOW.md`;
 - product semantics in package docs and architecture/product-decision docs.

@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-07-16
+Updated: 2026-07-17
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -189,6 +189,7 @@ Cross-task rules still belong to:
 
 - root `AGENTS.md` for the stable bootstrap;
 - `docs/process/AI_WORK_MODE.md` for the thin project execution contract.
+- `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md` for cross-worktree protection, user gates, controller-owned integration, synchronization, and push authorization.
 
 Specialist skill-family details remain outside the cross-task contract. Use:
 

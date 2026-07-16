@@ -1,6 +1,6 @@
 # SchatPhone Project Execution Contract
 
-Updated: 2026-07-16
+Updated: 2026-07-17
 
 Purpose: define the small set of cross-task rules that every SchatPhone work round must preserve.
 
@@ -42,6 +42,7 @@ For non-trivial implementation work:
 
 Specialist routing:
 
+- cross-worktree protection, handoff, commit, merge, push, or synchronization: `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`;
 - event/runtime work: `docs/process/EVENT_WORKFLOW.md`;
 - visual/IA work: `docs/process/VISUAL_WORKFLOW.md`;
 - tooling, skill inventory, or cross-PC setup: `docs/process/DEVELOPMENT_TOOLING.md`;
@@ -74,7 +75,7 @@ Skills cannot create another roadmap, task board, package handoff, or mandatory 
 Every work round must:
 
 1. preserve unrelated user changes in a dirty worktree;
-2. verify branch, worktree, and commit relationships before merge, rebase, or cross-worktree synchronization;
+2. follow `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md` for separate-worktree handoff and verify branch, worktree, and commit relationships before merge, rebase, push, or synchronization;
 3. implement the smallest coherent slice that meets the request;
 4. preserve domain ownership and persisted-data compatibility unless the slice explicitly includes migration and rollback;
 5. avoid mixing product behavior, dependency migration, and broad refactoring in one change;
@@ -121,5 +122,7 @@ A completed implementation round should leave:
 3. synchronized owning-package documentation where required;
 4. explicit status impact, including `none` when the roadmap did not change;
 5. a concise handoff that names results, validation, remaining risk, and any unpushed commit or unsynchronized worktree.
+
+Work completed in a separate worktree stops at the integration state defined by `docs/process/WORKTREE_INTEGRATION_PROTOCOL.md`. Readiness or technical validation does not authorize the workgroup to merge, rebase, push, synchronize another branch, or begin an unapproved dependent slice.
 
 Old task conversations, cached skill instructions, and detached worktree context are not current authority. On resume, verify the current branch, worktree status, roadmap, and owning package before continuing.
