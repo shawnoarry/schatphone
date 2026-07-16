@@ -131,9 +131,16 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - optional cloud backup is confirmed as personal BYOS rather than one shared workgroup archive: each user owns a separate Cloudflare account and R2 destination, with R2 as the first officially guided target;
 - each user connects through a personal Cloudflare Worker gateway; SchatPhone may store a revocable, scoped device token but never the R2 API Secret;
 - cloud backup is encrypted on the client and can be recovered with either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, and initial setup must verify recovery;
-- browser/PWA automatic backup is intended to run after launch and while the app remains open; closed-app scheduling, live server storage, automatic merge, and cross-device sync are outside the confirmed boundary;
-- Gallery is the reusable material library, generated media remains temporary until the user confirms retention, and URL media does not need local conversion merely to be recognized;
-- selective cloud inclusion, URL exact-copy behavior, and whether R2 may release local media binaries remain the current decision gate; the earlier fixed `8 GB` and per-result local/cloud-choice proposals are withdrawn.
+- manual backup is always available; automatic backup defaults off, requires explicit user opt-in, and can run only after launch or while a browser/PWA remains open;
+- Gallery is the reusable local material library: generated media remains temporary until the user keeps it, and keeping it never uploads or automatically includes it in backup;
+- core save data is always complete; one default-on choice includes the entire locally retained Gallery library without another per-item selection step;
+- URL-backed media always preserves the original URL and minimum metadata rather than exact bytes, including when Gallery binaries are excluded;
+- backups are for rollback and damaged-save recovery, not sync or local-space offload; multiple versions are allowed, every version is a complete standalone importable package, and local originals remain local;
+- local exports use a user-editable product-name-plus-date default and the platform save/share flow;
+- SchatPhone keeps no internal local backup library; local files return only through user-selected import, while configured personal-R2 files are listed and restored directly inside SchatPhone without a separate Cloudflare download;
+- users may permanently delete a selected cloud backup inside SchatPhone; the warning must name the file and explicitly state that the connected R2 copy is also deleted, while the current save, other backups, and local exports remain unchanged;
+- SchatPhone never rotates or deletes cloud backups automatically; each version remains until explicit user-confirmed deletion, and capacity pressure may warn or block another backup but cannot silently remove a recovery point;
+- the earlier fixed `8 GB`, per-result local/cloud choice, per-backup item picker, and incremental-version chain proposals are not approved.
 
 ### Engineering
 
@@ -148,10 +155,10 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data under the confirmed no-silent-deletion boundary;
 2. define IndexedDB-first repository, transaction, quota, persistent-storage, and multi-tab contracts;
-3. define versioned complete backup, integrity, staged restore, legacy migration, and rollback;
+3. define independently importable complete-version backup, integrity, staged restore, local save/share export, legacy migration, and rollback;
 4. define a provider-neutral remote-backup contract and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
-5. close the Gallery/material-library preservation gate, including generated-result confirmation, selective cloud inclusion, URL exact-copy behavior, and backup-only versus local-space offload;
-6. decide deletion/history cleanup and quota-aware version retention after the media gate and size-reporting requirements are explicit;
+5. translate the confirmed whole-Gallery option, URL-only source preservation, default-off automation, recovery-only R2 role, and standalone-version rules into implementation acceptance;
+6. define backup-size/quota reporting and failure behavior without introducing automatic deletion;
 7. approve one reference migration separately; do not begin broad migration from this planning decision alone.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract

@@ -79,9 +79,10 @@ Priority meanings:
 - durable committed content from any future module when formally published/confirmed/applied, regardless of user/AI/system origin;
 - transient full AI prompts/responses, uncommitted drafts, and rebuildable projections, with canonical content, authoritative state/facts, references, structured outcomes, and minimum provenance retained;
 - Chat, relationship-evidence, Book, and Gallery growth policy;
-- generated-media retention confirmation, Gallery selective protection, URL exact-copy behavior, and backup-only versus local-space offload;
+- generated-media local retention, one default-on whole-Gallery backup choice, URL/source-only backup, recovery-only R2 placement, and default-off automation;
 - quota visibility, persistent-storage request, and multi-tab coordination;
-- complete sensitive backup with manifest, integrity, staged restore, legacy migration, and rollback.
+- multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, staged restore, legacy migration, and rollback;
+- confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 
 ### Maintainability
 
@@ -107,8 +108,8 @@ Priority meanings:
 
 ## 4. Recommended Candidate Order
 
-1. close the Gallery/selective-media preservation gate inside the promoted persistence architecture decision;
-2. finish the remaining local persistence, complete-backup, and data-lifecycle contracts;
+1. translate the closed backup product contract into backup-size/quota reporting, integrity, staged restore, and creation-failure acceptance without automatic cleanup;
+2. finish the remaining local persistence, standalone complete-backup, and data-lifecycle contracts;
 3. approve one small reference migration separately;
 4. backup warning/toolchain security and CI/release confidence;
 5. one named architecture hotspot or adapter seam;

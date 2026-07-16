@@ -218,12 +218,21 @@ Confirmed target direction, not current implementation:
 - remote backup is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, losing both paths is irreversible, and setup must verify recovery before automatic backup is ready;
 - ordinary browser/PWA automation may run after launch and while the app is open, but remote backup is not live server storage, cross-device sync, automatic merge, or guaranteed closed-app scheduling;
 - Gallery is the reusable media/material owner, generated media remains source-module candidate state until the user confirms retention, and URL/local/provider source is independent of the asset's image/sticker/GIF/audio meaning;
-- selective cloud inclusion, exact-byte protection for URL sources, and backup-only versus verified-R2 local-cache offload remain an explicit product gate; no fixed `8 GB` budget or per-generation three-way storage prompt is approved;
+- choosing `keep` stores media locally first and never triggers backup; core save data is always included in backup, while one default-on whole-Gallery choice controls retained local binaries without per-item reselection;
+- URL-backed media always preserves its original URL and minimum metadata rather than exact bytes, including when Gallery binaries are excluded;
+- R2 remains recovery backup and never becomes the live media owner or permission to release local originals;
+- manual backup is always available, automatic backup defaults off until the user opts in, and multiple versions are allowed only as complete independently importable packages rather than delta chains;
+- local export uses a user-editable product-name-plus-date default and the platform save/share flow for destination selection;
+- there is no internal local backup library: exported files remain in the platform file system and return only through user-selected import;
+- a configured personal R2 exposes its backup-file list and direct restore inside SchatPhone, without a required Cloudflare-dashboard download or a hidden duplicate local backup store;
+- in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
+- SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
+- no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - no persistence migration begins until the data classes, backup/integrity contract, migration/rollback path, quota behavior, multi-tab policy, and one reference slice are approved.
 
 ### Gallery Binaries
 
-Gallery metadata participates in store backup. Binary assets use a dedicated storage helper and are optional in exported backup packages with size/item limits.
+Gallery metadata participates in core backup. One default-on user choice includes all locally retained Gallery binaries; there is no backup-time per-item picker. URL-backed items preserve their original URL and minimum metadata instead of exact bytes.
 
 ### Backup/Restore
 

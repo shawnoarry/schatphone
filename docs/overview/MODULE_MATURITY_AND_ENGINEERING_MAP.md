@@ -26,8 +26,8 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
-| Gallery | stable image-asset platform service; material-library contract active | keep one reusable-media owner, require user retention before generated candidates become durable, and close selective cloud/offload semantics before expansion |
-| persistence / backup / diagnostics | usable snapshot baseline; architecture decision active | preserve one-container/one-save, complete backup, no-silent-deletion, committed-content durability, and transient raw-AI-payload semantics while defining IndexedDB-first hot/cold repositories, integrity, staged restore, and migration/rollback |
+| Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
+| persistence / backup / diagnostics | usable snapshot baseline; architecture decision active | preserve one-container/one-save, standalone complete versions, default-off automation, platform-owned local files, direct in-app personal-R2 restore, explicit-only cloud deletion, no automatic cleanup, committed-content durability, and transient raw-AI-payload semantics while defining integrity, staged restore, quota reporting, and migration/rollback |
 
 ### Tier B: Integrated V1
 
@@ -161,8 +161,8 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. close the Gallery/selective-media preservation gate inside the promoted persistence architecture slice;
-2. finish IndexedDB-first persistence, reversible hot/cold retention, complete-backup, quota, multi-tab, migration, and rollback contracts;
+1. translate the confirmed explicit-only cloud deletion and no-automatic-cleanup rule into quota-reporting and backup-creation-failure acceptance;
+2. finish IndexedDB-first persistence, reversible hot/cold retention, standalone complete-backup, local export, quota, multi-tab, migration, and rollback contracts;
 3. one separately approved reference migration after architecture acceptance;
 4. sensitive-backup warning and safe toolchain update;
 5. CI/release gating alignment;

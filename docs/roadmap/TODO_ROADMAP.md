@@ -147,9 +147,18 @@ Open slices, in order:
    - in ordinary browsers/PWAs, automatic remote backup may run after launch and while the app remains open, but must not promise scheduled execution after the app is fully closed;
    - confirmed media-intent boundary: image/media generation results remain temporary candidates until the user explicitly keeps them; rejected candidates are not durable, Gallery owns reusable retained media, and source modules keep their own use/meaning records;
    - confirmed representation boundary: image, sticker, GIF, audio, or other media meaning is independent of whether its source is a URL, local binary, Gallery asset, or provider record; URL-backed media must not be forced into local storage merely to be recognized as media;
+   - confirmed keep/backup boundary: choosing `keep` stores accepted media locally first and admits reusable material into Gallery, but does not upload or enroll it in backup; backup is a later user action;
+   - confirmed backup-scope boundary: core save data is always complete, while one default-on `include material library` choice includes all locally retained Gallery binaries without asking users to reselect individual assets;
+   - confirmed URL-backup boundary: URL-backed media always preserves its original URL and minimum descriptive/source metadata, including when Gallery binaries are excluded; backup does not create an exact byte copy and cannot recover content after the external URL stops working;
+   - confirmed recovery-purpose boundary: local and personal-R2 backups exist for rollback and damaged-save recovery, not sync, cloud-library browsing, or local-space offload; successful backup never releases local originals;
+   - confirmed execution boundary: manual backup is always available, while automatic backup is a separate default-off opt-in and remains limited to launch/open-app execution in browsers and PWAs;
+   - confirmed version-package boundary: keep multiple versions, but every local file and remote object is a complete independently readable/importable package with no dependency on an earlier version;
+   - confirmed local-export boundary: users may edit the filename from a generated product-name-plus-date default and choose the destination through the platform save/share flow, with iOS, Android, and desktop controls allowed to differ;
+   - confirmed backup-access boundary: SchatPhone keeps no internal local backup library; local exports return only through user-selected import, while a configured personal R2 must be listed and restored directly inside SchatPhone without a prior Cloudflare-dashboard download;
+   - confirmed cloud-deletion boundary: deleting from the in-app backup view permanently deletes the selected SchatPhone backup object from the connected personal R2; a prominent destructive modal must name the backup, say the cloud copy is also deleted, distinguish unaffected current/other/local data, and wait for cloud confirmation before removing the row;
+   - confirmed cloud-retention boundary: SchatPhone never rotates, expires, or deletes cloud backups automatically; every version remains until explicit user-confirmed deletion, while quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
    - withdrawn proposals: do not require a fixed `8 GB` budget now, and do not ask users to choose `discard / local only / cloud protected` for every generated result; neither proposal is an approved requirement;
-   - current decision gate: define one understandable Gallery/material-library preservation contract covering user keep/discard intent, selective cloud inclusion, URL-only versus exact-byte protection, backup-only versus local-space offload, deletion/replacement behavior, and media restore completeness;
-   - decide quota-aware backup-version retention only after the media contract and measurable backup-size reporting exist;
+   - the Gallery/backup product gate is now closed at product-behavior level; keep implementation blocked until standalone-package integrity, staged restore, quota reporting, migration/rollback, and one reference migration acceptance are explicit;
    - keep this slice at architecture/acceptance level until the storage contract and first reference migration are separately approved.
 2. `P0 Security/toolchain maintenance` - `TODO`
    - preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
@@ -172,7 +181,7 @@ Acceptance for 4.5:
 
 - active docs describe the same current priorities;
 - the browser/PWA-first persistence target, data classes, backup contract, migration/rollback boundary, and first reference migration acceptance are explicit before storage code changes;
-- the decision ledger distinguishes confirmed, withdrawn, and unresolved media/cloud behavior, and the Gallery preservation gate is closed before any remote-media implementation begins;
+- the decision ledger preserves confirmed and withdrawn behavior, and backup implementation does not begin until standalone-package integrity, staged restore, quota reporting, migration/rollback, and reference-migration acceptance are explicit;
 - high-severity development-tool advisories have an explicit remediation path;
 - complete migration backup sensitivity has a documented product contract and later implementation receives regression coverage;
 - each cleanup slice reduces a measured hotspot or direct coupling without changing user-visible semantics accidentally.

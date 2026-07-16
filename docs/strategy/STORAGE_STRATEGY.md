@@ -113,18 +113,38 @@ Confirmed product meaning:
 
 - Gallery is the reusable media/material owner, while each source module owns the reason an accepted asset is used and Chat continues to own message-scoped media records;
 - image/media generation output is a transient candidate until the user explicitly keeps it; rejected candidates do not become durable Gallery or backup records;
+- choosing `keep` persists the accepted result locally first and admits reusable material into Gallery; it never uploads or automatically includes the item in remote backup;
 - media meaning is independent of storage source, so a URL-backed image, sticker, GIF, audio item, or other media does not need to become a local binary merely to be recognized or used;
-- ordinary generation flows must not ask users to manage low-level local/cloud placement for every result.
+- ordinary generation flows must not ask users to manage low-level local/cloud placement for every result;
+- backup always includes the complete core save and exposes only one material choice: include Gallery binaries as a whole, default on, with no second per-item selection step because saving into Gallery was already the curation action;
+- URL-backed media always contributes its original URL and minimum type/name/source metadata, even when Gallery binaries are excluded; backup does not fetch an exact byte copy, so a later-broken external URL cannot be made recoverable by this record alone;
+- R2 remains recovery backup rather than live media storage or local-space offload, and successful backup does not release local originals.
 
-Current unresolved gate, in order:
+Confirmed backup-package behavior:
 
-1. define the user-visible keep/discard contract and when kept media becomes reusable Gallery material versus module-scoped content;
-2. define selective cloud inclusion, bulk selection, explicit exclusion, and how current use, favorites, source replaceability, and module importance affect recommendations or upload priority;
-3. define URL/provenance-only backup versus exact-byte protection;
-4. decide whether verified personal-R2 media remains only a backup copy or may become the durable original while local binaries become releasable cache;
-5. define deletion, changed content behind a stable URL, historical restore, cleanup, and quota-aware version retention.
+1. manual backup is always available;
+2. automatic backup is a separate setting that defaults off and runs only after explicit user opt-in;
+3. keep multiple recovery versions, but make every local file or remote object a complete, independently readable and importable package with no base-version or delta dependency;
+4. local export lets the user edit the filename, starts from a stable product-name-plus-date default, and delegates destination choice to the operating system's save/share flow, whose available locations differ across iOS, Android, and desktop browsers;
+5. SchatPhone does not retain exported files in an internal local backup library; the user selects a local file again when importing;
+6. once personal R2 is configured, SchatPhone lists available remote backup files and restores the selected file directly inside the product, without requiring a prior Cloudflare-dashboard download or creating another hidden local backup copy.
 
-No fixed `8 GB` budget, per-generation three-way storage prompt, public image-host authority, or remote-media offload is approved before this gate closes.
+Confirmed retention behavior:
+
+1. SchatPhone does not rotate, expire, or delete local export files or personal-R2 backup versions automatically;
+2. every complete cloud version remains until the user explicitly confirms permanent deletion;
+3. quota pressure may produce a warning or block creation of a new backup, but cannot silently remove an existing recovery point;
+4. backup-size and quota reporting must help the user decide what to delete manually without converting that guidance into automatic cleanup.
+
+Confirmed explicit deletion behavior:
+
+- the in-app R2 view may permanently delete the selected SchatPhone backup object from the connected personal R2 rather than merely hiding it;
+- the destructive modal names the backup, prominently states that the connected cloud copy is deleted and cannot be restored through SchatPhone, and clarifies that the current save, other backups, and local export files remain unchanged;
+- the visible row remains until the personal Worker confirms deletion success; failure leaves the backup visible and reports that the cloud file was not deleted;
+- the personal Worker must scope list/get/delete operations to SchatPhone's backup prefix rather than exposing arbitrary objects in the user's R2 destination;
+- Cloudflare's Workers R2 API currently exposes strongly consistent `list` and `delete` bucket operations, so this product behavior is technically feasible through the already-confirmed personal Worker gateway: https://developers.cloudflare.com/r2/api/workers/workers-api-reference/.
+
+No fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, public image-host authority, remote-media offload, incremental backup chain, or automatic backup deletion is approved.
 
 ### Layer C: optional server storage
 
@@ -147,9 +167,12 @@ Confirmed personal remote-backup direction:
 - each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; the app may retain only a revocable, scoped device token and must never retain an R2 API Secret;
 - backup content is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives neither plaintext recovery secret, losing both paths is irreversible, and initial setup must verify recovery before automatic backup is ready;
 - the local save remains authoritative, while the remote destination stores client-created backup objects rather than live module truth;
-- automatic backup in ordinary browsers/PWAs may check and run after launch and while the app remains open, but cannot promise scheduled work after the app is fully closed;
+- manual backup remains available; automatic backup defaults off, requires explicit user opt-in, and in ordinary browsers/PWAs may check and run only after launch or while the app remains open;
+- every remote version is a complete standalone encrypted recovery package rather than a delta that depends on an earlier object;
+- remote backup does not release local media originals or become the authoritative material library;
+- the configured R2 connection supports an in-app backup-file list and direct restore; users do not need to visit Cloudflare first, and SchatPhone does not duplicate the remote files into an internal local backup library;
 - this does not add internal save slots, automatic merge, or cross-device sync;
-- implementation requires a complete self-checking setup/recovery guide; quota-aware version retention and exact backup scheduling remain separate decisions.
+- implementation requires a complete self-checking setup/recovery guide; quota reporting, backup-creation failure handling, and exact backup scheduling still require engineering acceptance.
 
 ### Layer D: optional desktop-native adapter
 

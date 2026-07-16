@@ -48,15 +48,21 @@ Confirmed product boundary:
 - complete AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical content, authoritative state/facts, references, structured outcomes, and minimum provenance persist;
 - IndexedDB-first structured persistence is the target direction;
 - complete migration backup includes configured credentials and must be presented as a sensitive local file;
-- Gallery is the reusable material library; generated image/media results require explicit user retention before durability, and URL-backed media does not require local conversion merely to have media meaning;
+- Gallery is the reusable local material library; generated image/media results require explicit user retention before durability, and `keep` never uploads or automatically enrolls material in backup;
+- core data is always complete, while one default-on whole-Gallery choice includes all retained local binaries without per-item reselection; URL-backed items always preserve their original URL and minimum metadata rather than exact bytes;
+- backup is for rollback/recovery rather than sync or local-space offload; manual backup is always available, automatic backup defaults off, and successful remote backup never releases local originals;
+- keep multiple versions, but every local file and remote object must be a complete independently importable package; local export uses a user-editable product-name-plus-date default and the platform save/share flow;
+- do not build an internal local backup library; local files return through explicit import, while a configured personal R2 must be listed and restored directly inside SchatPhone without a separate Cloudflare download;
+- in-app deletion permanently deletes the selected connected-R2 backup and requires an unmistakable destructive confirmation; keep the row visible when the cloud deletion fails;
+- never rotate or delete a cloud backup automatically; quota pressure may warn or block a new backup but every existing version remains until explicit user-confirmed deletion;
 - a redacted/shareable export, native SQLite adapter, server sync, or encryption requires a separate contract.
 
 Required planning before implementation:
 
 - classify authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport data under the confirmed retention boundaries;
 - define repository boundaries, record/index shape, transactions, idempotency, quota/persistence UX, and multi-tab coordination;
-- close the selective-media gate before schema work: keep/discard intent, Gallery versus module-scoped ownership, cloud inclusion, URL exact-copy behavior, and backup-only versus local-space offload;
-- define versioned manifest, integrity checks, staged restore, binary completeness, legacy import, and rollback;
+- define backup-size/quota reporting and creation-failure behavior without automatic cleanup;
+- define standalone complete-package manifest, integrity checks, staged restore, binary completeness, local save/share export, legacy import, and rollback;
 - select one small reference migration only after acceptance is frozen.
 
 Do not start broad migration from this candidate. It is already promoted as an architecture decision, not as migration implementation.

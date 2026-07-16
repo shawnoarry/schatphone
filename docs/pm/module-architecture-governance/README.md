@@ -12,7 +12,12 @@ Current state:
 - formally committed module content is durable regardless of user/AI/system origin; full AI prompts/raw responses, uncommitted drafts, and rebuildable projections remain temporary, while canonical content, authoritative state/facts, references, and minimum provenance persist;
 - optional remote backup is personal BYOS rather than one shared project cloud: Cloudflare R2 is the first officially guided target, each user owns a separate destination and personal Worker gateway, SchatPhone never retains the R2 API Secret, and browser/PWA automation is limited to launch and open-app execution;
 - personal remote backups are client-encrypted and use dual recovery: either a recovery password or separately downloaded recovery file can restore, while Cloudflare/Worker receives neither plaintext secret;
-- the current product gate is Gallery/material-library preservation: generated media requires explicit keep/discard confirmation, media meaning is independent of URL/local/provider source, and selective cloud protection versus local-space offload remains unresolved;
+- the Gallery/material-library preservation contract now keeps accepted media locally first, separates `keep` from backup, uses one default-on whole-library inclusion choice instead of per-item backup selection, preserves URL sources as URLs, and keeps R2 backup-only rather than releasing local originals;
+- manual backup remains available while automatic backup is an explicit default-off opt-in; multiple local or remote versions are allowed, but every version must be a complete standalone importable package rather than an incremental dependency chain;
+- local export naming and destination use a user-editable product-name-plus-date default and the platform save/share flow;
+- SchatPhone keeps no internal local backup library, but a configured personal R2 must be directly visible for in-app backup selection and restore so users do not have to operate the Cloudflare dashboard;
+- explicit in-app deletion permanently deletes the selected connected-R2 backup and requires an unmistakable cloud-deletion warning; it is not a local hide action;
+- SchatPhone never rotates or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, even when quota pressure prevents another backup;
 - the next architecture slice is an IndexedDB-first persistence, complete-backup, data-lifecycle, and legacy-migration contract; no storage migration is approved yet;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;

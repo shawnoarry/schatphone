@@ -303,14 +303,16 @@ Why it matters:
 
 These are directions, not tasks. Promote one concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the module-architecture package handoff before implementation.
 
-### 5.0 Priority 0: Close Credential And Toolchain Risk
+### 5.0 Priority 0: Finish Persistence And Complete-Backup Contracts
 
 Before another broad feature family:
 
-1. decide backup credential treatment and add export/import regression coverage;
-2. update the compatible Vite patch line and safe transitive dependencies;
-3. plan Vitest's major upgrade as an isolated migration;
-4. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
+1. finish the standalone complete-package, integrity, staged-restore, local save/share export, legacy-migration, and rollback contracts before persistence implementation;
+2. preserve platform-owned local export files, direct in-app personal-R2 listing/restore, explicit cloud deletion warnings, and the no-automatic-cleanup rule while defining backup-size/quota reporting and creation-failure behavior;
+3. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
+4. update the compatible Vite patch line and safe transitive dependencies;
+5. plan Vitest's major upgrade as an isolated migration;
+6. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
 
 Do not mix these changes with product behavior or a large view refactor.
 

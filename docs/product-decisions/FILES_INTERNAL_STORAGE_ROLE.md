@@ -35,7 +35,15 @@ Generated-media boundary:
 
 - image/media generation remains owned by the source module while a result is only a candidate;
 - every generating module must let the user decide whether the candidate is kept before it becomes durable;
-- once retained for reuse, Gallery owns the reusable asset while the source module keeps its own usage, narrative, appearance, message, or provenance record;
+- once retained, the asset is persisted locally first; Gallery owns reusable retained material while the source module keeps its own usage, narrative, appearance, message, or provenance record;
+- keeping an asset does not upload it or enroll it in backup; backup is a later user action;
+- backup always includes complete core records and offers one default-on whole-Gallery binary choice rather than asking the user to select individual retained assets again;
+- URL-backed media always carries its original URL and minimum type/name/source metadata in backup, without an exact byte copy and regardless of the Gallery-binary choice;
+- personal-R2 backup is recovery-only and does not transfer Gallery ownership or allow local originals to be released;
+- local export files remain under the phone/computer file system and do not create an internal `Files` or Gallery backup library;
+- Settings may list and directly restore complete backup files from the configured personal R2, but that access does not make Settings, Files, or Gallery the owner of the remote backup objects;
+- Settings may request permanent deletion of a selected SchatPhone backup object from the connected personal R2 only through a prominent cloud-deletion confirmation; this does not delete the current save, other backups, or local export files;
+- Settings must not rotate or delete local or personal-R2 backup files automatically; it may report capacity pressure or block a new backup until the user explicitly deletes a cloud version or handles local files outside SchatPhone;
 - media type is independent of source representation: URL, local binary, Gallery reference, and provider record are source choices rather than definitions of whether an item is an image, sticker, GIF, audio item, or other media;
 - expanding the current image-focused Gallery into broader audio/video material support requires an explicit later contract, but it must not move ownership into the finance-oriented `Assets` module or internal `Files` surface.
 
@@ -53,6 +61,7 @@ Important semantic boundary:
 - favorite/delete state for indexed records;
 - shared media-size guard reuse for local metadata import;
 - backup and storage-diagnostics participation;
+- local backup import through a user-selected platform file and remote backup retrieval through the configured personal R2 connection, without owning a backup library;
 - future bridge records that help modules find related assets without duplicating original content.
 
 Important boundary:
