@@ -1,6 +1,6 @@
 # Module Architecture Governance Boundary / 模块架构治理边界
 
-Updated: 2026-06-19
+Updated: 2026-07-18
 
 ## 1. Core Rule
 
@@ -15,6 +15,9 @@ Behavior extraction is not product expansion. A governance slice can move workfl
 - cleanup of stale semantics or unused structures
 - migration and storage boundary decisions
 - file-size and test-pressure triage
+- complete-package, integrity, capacity, staged-restore, migration, and rollback acceptance
+
+Storage recovery preserves owner meaning: an older backup may restore valid core state without treating currently retained local Gallery material as disposable. Missing media remains an unresolved owner reference rendered through a derived fallback; it does not become fake recovered content or move media truth into Settings.
 
 ## 3. What It Does Not Own
 

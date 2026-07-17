@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -43,7 +43,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Usable, architecture decision active` | whole-snapshot persistence works; IndexedDB-first, complete-backup, quota, and migration contracts are being defined |
+| Settings / Network / backup | `Usable, persistence architecture active` | complete-backup/recovery acceptance is frozen; current whole-snapshot code still awaits IndexedDB-first schema and reference-migration approval |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
 | Book / WorldBook | `Integrated V1` | long text and activation are correctly split; phone hardening and K-pop migration remain |
@@ -127,7 +127,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - full AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical committed content, authoritative state/facts, references, structured outcomes, and minimum provenance remain durable;
 - current structured stores still use whole `localStorage` snapshots with an IndexedDB mirror rather than an IndexedDB-first database;
 - Chat history, Gallery total binary usage, Book text, and several role/world collections need explicit growth and retention contracts;
-- backup/restore is usable but does not yet provide a fully verified, staged, atomic archive contract for all metadata and binaries;
+- backup/restore is usable but current code does not yet implement the accepted complete-package manifest, integrity, capacity preflight, staged atomic activation, crash recovery, or unified metadata/binary rollback contract;
 - optional cloud backup is confirmed as personal BYOS rather than one shared workgroup archive: each user owns a separate Cloudflare account and R2 destination, with R2 as the first officially guided target;
 - each user connects through a personal Cloudflare Worker gateway; SchatPhone may store a revocable, scoped device token but never the R2 API Secret;
 - cloud backup is encrypted on the client and can be recovered with either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, and initial setup must verify recovery;
@@ -140,6 +140,9 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - SchatPhone keeps no internal local backup library; local files return only through user-selected import, while configured personal-R2 files are listed and restored directly inside SchatPhone without a separate Cloudflare download;
 - users may permanently delete a selected cloud backup inside SchatPhone; the warning must name the file and explicitly state that the connected R2 copy is also deleted, while the current save, other backups, and local exports remain unchanged;
 - SchatPhone never rotates or deletes cloud backups automatically; each version remains until explicit user-confirmed deletion, and capacity pressure may warn or block another backup but cannot silently remove a recovery point;
+- restoring a binary-excluded or legacy backup reuses exact matching local binaries and does not delete or hide current-only Gallery material the user already kept;
+- valid legacy core data may restore after a missing-material summary; unavailable media keeps the owning record readable through a typed placeholder and stored descriptive text where available;
+- the complete-backup/recovery engineering contract is accepted, while IndexedDB, R2, Gallery schema, and reference-migration implementation remain unapproved;
 - the earlier fixed `8 GB`, per-result local/cloud choice, per-backup item picker, and incremental-version chain proposals are not approved.
 
 ### Engineering
@@ -153,13 +156,10 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data under the confirmed no-silent-deletion boundary;
-2. define IndexedDB-first repository, transaction, quota, persistent-storage, and multi-tab contracts;
-3. define independently importable complete-version backup, integrity, staged restore, local save/share export, legacy migration, and rollback;
-4. define a provider-neutral remote-backup contract and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
-5. translate the confirmed whole-Gallery option, URL-only source preservation, default-off automation, recovery-only R2 role, and standalone-version rules into implementation acceptance;
-6. define backup-size/quota reporting and failure behavior without introducing automatic deletion;
-7. approve one reference migration separately; do not begin broad migration from this planning decision alone.
+1. preserve the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, migration, crash recovery, and rollback contract;
+2. finish IndexedDB-first repository, transaction, hot/cold placement, quota, persistent-storage, and multi-tab contracts;
+3. finish the provider-neutral remote-backup and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
+4. approve one reference migration separately with compatibility fixtures and rollback proof; do not begin broad migration from architecture planning alone.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 

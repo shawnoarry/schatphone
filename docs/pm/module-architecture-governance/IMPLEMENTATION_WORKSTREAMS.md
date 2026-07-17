@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-07-10
+Updated: 2026-07-18
 
 ## 1. Workstream A: Ownership Closure
 
@@ -21,6 +21,11 @@ Updated: 2026-07-10
 - backup/restore implications
 - compatibility and migration safety
 - Book text-library storage must stay separate from WorldBook activation and hidden Files indexing
+- use `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` as the accepted backup/recovery acceptance boundary
+- preserve immutable source packages, staged version-to-version migration, separate-generation activation, metadata/binary rollback unity, and crash-journal recovery
+- reuse exact local Gallery binaries and retain current-only kept material during older restores; never match by filename, label, prompt, or URL alone
+- classify legacy missing media as unresolved references with type-appropriate derived placeholders, not fabricated recovered assets
+- keep IndexedDB layout, Gallery schema, provider code, and the first reference migration separately unapproved
 
 ## 4. Workstream D: Cleanup Debt
 

@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 > **Frozen execution status / 非执行看板**
 >
@@ -12,7 +12,7 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. finish the promoted local persistence, complete-backup, and data-lifecycle architecture decision;
+1. finish the promoted IndexedDB-first repository/schema and data-lifecycle architecture around the now-accepted complete-backup/recovery contract;
 2. approve one reference migration separately;
 3. security/toolchain hardening;
 4. release-gate alignment and one measured architecture seam;
@@ -34,6 +34,12 @@ The best next work is:
 - Settings, Chat, Contacts, and WorldBook composable extraction batches already listed in architecture docs.
 
 ## 3. Candidate A: IndexedDB-First Persistence And Complete Backup Architecture
+
+Current contract status:
+
+- `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` is accepted at architecture level;
+- it freezes standalone package/manifest integrity, capacity and failure states, staged atomic activation, crash recovery, legacy degraded restore, exact local binary reuse, non-destructive Gallery preservation, migration, rollback, and the test matrix;
+- it does not approve IndexedDB, R2, Gallery schema, or reference-migration implementation.
 
 Problem:
 
@@ -57,12 +63,11 @@ Confirmed product boundary:
 - never rotate or delete a cloud backup automatically; quota pressure may warn or block a new backup but every existing version remains until explicit user-confirmed deletion;
 - a redacted/shareable export, native SQLite adapter, server sync, or encryption requires a separate contract.
 
-Required planning before implementation:
+Remaining planning before implementation:
 
 - classify authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport data under the confirmed retention boundaries;
 - define repository boundaries, record/index shape, transactions, idempotency, quota/persistence UX, and multi-tab coordination;
-- define backup-size/quota reporting and creation-failure behavior without automatic cleanup;
-- define standalone complete-package manifest, integrity checks, staged restore, binary completeness, local save/share export, legacy import, and rollback;
+- preserve the accepted backup-size/quota, creation-failure, standalone package, integrity, staged restore, binary completeness, local delivery, legacy import, and rollback acceptance rather than reopening it during schema work;
 - select one small reference migration only after acceptance is frozen.
 
 Do not start broad migration from this candidate. It is already promoted as an architecture decision, not as migration implementation.

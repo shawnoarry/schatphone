@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 This is the only live execution board for implementation order.
 
@@ -139,7 +139,8 @@ Open slices, in order:
    - confirmed committed-record boundary: any content formally published, confirmed, applied, or admitted into an owning module's history becomes durable when it is expected to be revisited, referenced, or affect continuity, regardless of whether it came from the user, AI, or deterministic code; this includes future social posts/replies, forum records, offline scenes, long-form narrative, performance/episode records, and character-state history;
    - full prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable presentation remain non-authoritative and are not retained by default; persist canonical committed records, authoritative state/facts, cross-module references, and minimum provenance, with any full diagnostic capture explicit, temporary, bounded, and user-clearable;
    - classify authoritative records, append-only audit evidence, rebuildable projections, binary assets, caches, and diagnostic logs before defining retention or compaction;
-   - define versioned backup, integrity verification, staged/atomic restore, legacy snapshot migration, rollback, quota visibility, persistent-storage requests, and multi-tab coordination;
+   - complete-package and recovery acceptance is now frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: versioned manifests, required sections, integrity verification, capacity/quota states, creation self-check, staged/atomic restore, legacy migration, crash recovery, rollback, provider failure handling, and a focused test matrix are `ARCHITECTURE_ACCEPTED`;
+   - remaining persistence planning still must define IndexedDB-first repository/schema details, persistent-storage requests, hot/cold record placement, and the first reference migration before implementation;
    - confirmed optional remote-backup boundary: do not create one project- or workgroup-owned cloud archive; each participating user configures and owns a separate Cloudflare account and R2 destination, while the internal remote-backup contract remains provider-neutral;
    - treat Cloudflare R2 as the first officially guided personal BYOS target, require a complete self-checking setup/recovery guide, keep the local save authoritative, and do not turn remote backup into live server storage, automatic merge, or cross-device sync;
    - confirmed remote-authentication boundary: each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; SchatPhone may retain only a revocable, scoped device token and must not retain an R2 API Secret;
@@ -157,9 +158,11 @@ Open slices, in order:
    - confirmed backup-access boundary: SchatPhone keeps no internal local backup library; local exports return only through user-selected import, while a configured personal R2 must be listed and restored directly inside SchatPhone without a prior Cloudflare-dashboard download;
    - confirmed cloud-deletion boundary: deleting from the in-app backup view permanently deletes the selected SchatPhone backup object from the connected personal R2; a prominent destructive modal must name the backup, say the cloud copy is also deleted, distinguish unaffected current/other/local data, and wait for cloud confirmation before removing the row;
    - confirmed cloud-retention boundary: SchatPhone never rotates, expires, or deletes cloud backups automatically; every version remains until explicit user-confirmed deletion, while quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
+   - confirmed same-device restore boundary: binary-excluded and legacy backups first reuse exact matching local binaries, and an older restore does not delete or hide current-only retained Gallery material;
+   - confirmed missing-media boundary: valid legacy core data may restore after a missing-material summary; unresolved media keeps its owner record and uses a type-appropriate placeholder plus stored caption/alternative/generation-description text when available;
    - withdrawn proposals: do not require a fixed `8 GB` budget now, and do not ask users to choose `discard / local only / cloud protected` for every generated result; neither proposal is an approved requirement;
-   - the Gallery/backup product gate is now closed at product-behavior level; keep implementation blocked until standalone-package integrity, staged restore, quota reporting, migration/rollback, and one reference migration acceptance are explicit;
-   - keep this slice at architecture/acceptance level until the storage contract and first reference migration are separately approved.
+   - the Gallery/backup product gate and complete-backup/recovery engineering-contract gate are closed; keep implementation blocked until the IndexedDB-first logical schema and one reference migration are separately approved;
+   - `Storage implementation = NOT_APPROVED`: no IndexedDB, R2, Gallery schema, or reference-migration implementation begins from this contract.
 2. `P0 Security/toolchain maintenance` - `TODO`
    - preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
    - update the Vite 7 patch line and transitive lockfile where compatible;
@@ -180,8 +183,8 @@ Open slices, in order:
 Acceptance for 4.5:
 
 - active docs describe the same current priorities;
-- the browser/PWA-first persistence target, data classes, backup contract, migration/rollback boundary, and first reference migration acceptance are explicit before storage code changes;
-- the decision ledger preserves confirmed and withdrawn behavior, and backup implementation does not begin until standalone-package integrity, staged restore, quota reporting, migration/rollback, and reference-migration acceptance are explicit;
+- the browser/PWA-first persistence target, data classes, accepted backup/recovery contract, IndexedDB-first schema, and first reference migration acceptance are explicit before storage code changes;
+- the decision ledger preserves confirmed and withdrawn behavior, and backup implementation does not begin until the separately unapproved persistence schema and reference-migration gates close;
 - high-severity development-tool advisories have an explicit remediation path;
 - complete migration backup sensitivity has a documented product contract and later implementation receives regression coverage;
 - each cleanup slice reduces a measured hotspot or direct coupling without changing user-visible semantics accidentally.

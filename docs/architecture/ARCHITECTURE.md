@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 ## 1. Architecture Goals
 
@@ -227,8 +227,10 @@ Confirmed target direction, not current implementation:
 - a configured personal R2 exposes its backup-file list and direct restore inside SchatPhone, without a required Cloudflare-dashboard download or a hidden duplicate local backup store;
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
+- complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: required-section manifests, integrity evidence, capacity preflight, staged generations, atomic activation, crash journals, migration, failure taxonomy, and metadata/binary rollback are frozen before implementation;
+- binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
-- no persistence migration begins until the data classes, backup/integrity contract, migration/rollback path, quota behavior, multi-tab policy, and one reference slice are approved.
+- no persistence migration begins until the remaining IndexedDB-first logical schema, persistent-storage behavior, and one reference slice are separately approved.
 
 ### Gallery Binaries
 
@@ -251,6 +253,15 @@ Current security gap:
 - `settings.api.key` is therefore exported in plaintext JSON;
 - backup files must be treated as secrets until policy and code change;
 - complete local migration backup is confirmed to retain configured credentials and therefore requires an explicit sensitive-file warning; a redacted/shareable export and encrypted personal remote backup are separate future contracts.
+
+Target engineering contract, not current behavior:
+
+- a new `complete` package is a self-verified standalone object with every required owner section and every selected Gallery binary accounted for by size and integrity evidence;
+- package inspection, verification, legacy migration, local-asset resolution, and capacity planning occur before current-save mutation;
+- restore stages a complete new generation, activates it through one atomic root switch, verifies it after activation, and keeps the previous generation until rollback is no longer needed;
+- restoring an older version is non-destructive toward currently retained local Gallery material, but local reuse never weakens clean-device standalone-package requirements;
+- legacy core data may recover with explicit unavailable-media reporting and stable placeholders, while raw provider prompts/responses remain outside durable fallback metadata;
+- local platform handoff, remote object confirmation, and restore activation have distinct success states so the UI cannot claim more durability than the Adapter proved.
 
 ## 8. Cross-Module Data Flows
 

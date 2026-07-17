@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 > **Candidate pool only / 仅候选池**
 >
@@ -32,7 +32,7 @@ Priority meanings:
 | --- | --- | --- | --- | --- | --- |
 | Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
 | Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
-| Settings | usable system hub | snapshot persistence, quota visibility, complete-backup integrity | owning domain records or becoming the database | define IndexedDB-first repositories and staged complete backup; add sensitive-file warning | P0 |
+| Settings | usable system hub | snapshot persistence and unimplemented accepted recovery contract | owning domain records or becoming the database | define IndexedDB-first repositories around the accepted complete-backup contract; add sensitive-file warning later | P0 |
 | Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
 | Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
 | Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
@@ -81,7 +81,7 @@ Priority meanings:
 - Chat, relationship-evidence, Book, and Gallery growth policy;
 - generated-media local retention, one default-on whole-Gallery backup choice, URL/source-only backup, recovery-only R2 placement, and default-off automation;
 - quota visibility, persistent-storage request, and multi-tab coordination;
-- multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, staged restore, legacy migration, and rollback;
+- accepted contract for multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, capacity/failure states, staged restore, exact local-material reuse, non-destructive Gallery preservation, missing-media placeholders, legacy migration, and rollback;
 - confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 
 ### Maintainability
@@ -108,12 +108,11 @@ Priority meanings:
 
 ## 4. Recommended Candidate Order
 
-1. translate the closed backup product contract into backup-size/quota reporting, integrity, staged restore, and creation-failure acceptance without automatic cleanup;
-2. finish the remaining local persistence, standalone complete-backup, and data-lifecycle contracts;
-3. approve one small reference migration separately;
-4. backup warning/toolchain security and CI/release confidence;
-5. one named architecture hotspot or adapter seam;
-6. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
+1. preserve the accepted complete-backup/recovery contract while finishing IndexedDB-first repository/schema, persistent-storage, and data-lifecycle contracts;
+2. freeze one reference migration with fixtures and rollback proof;
+3. backup warning/toolchain security and CI/release confidence;
+4. one named architecture hotspot or adapter seam;
+5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 
 ## 5. Promotion Checklist
 

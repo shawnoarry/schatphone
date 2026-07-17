@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -35,6 +35,9 @@ Current active architecture slice:
 - after personal R2 is connected, SchatPhone provides a direct cloud-backup view that lists available backup files and restores the selected file without sending the user to the Cloudflare dashboard first; the files remain in the user's R2 and are not duplicated into a hidden in-app backup store;
 - the same view may permanently delete a selected SchatPhone backup object from the connected personal R2; deletion is not a local hide action and must use a conspicuous destructive confirmation that names the backup, states that the connected cloud file will also be deleted and cannot be restored through SchatPhone, and clarifies that the current save, other backups, and local exports are unaffected;
 - SchatPhone never rotates, expires, or deletes a cloud backup automatically; every personal-R2 backup remains until the user explicitly confirms permanent deletion, and quota pressure may block a new backup or prompt manual cleanup but cannot authorize silent removal;
+- the complete-backup/recovery engineering contract is accepted: new complete packages use a versioned required-section manifest, integrity evidence, capacity preflight, creation self-check, staged generation restore, atomic activation, crash journal, failure taxonomy, and metadata-plus-binary rollback;
+- binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
+- a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice, not approval to migrate application storage yet.
 
@@ -61,6 +64,9 @@ Current active architecture slice:
 | Backup access surface | `CONFIRMED` | Do not build an internal local backup library. Local files are imported through the platform picker; a connected personal R2 is listed and restored directly inside SchatPhone without a separate Cloudflare download step. |
 | In-app R2 deletion | `CONFIRMED` | Deleting in SchatPhone permanently deletes the selected backup object from the connected personal R2. A prominent modal must name the backup, explicitly say the cloud copy is also deleted, distinguish the unaffected current save/other/local files, and require a destructive confirmation. |
 | Cloud version retention | `CONFIRMED` | SchatPhone never automatically rotates or deletes personal-R2 backups. Every version remains until explicit user-confirmed deletion; quota pressure may warn or block a new backup but cannot silently remove an existing recovery point. |
+| Same-device material preservation | `CONFIRMED` | A restore first reuses exact matching local binaries and does not delete or hide current-only retained Gallery material merely because an older or binary-excluded backup lacks it. |
+| Legacy incomplete media | `CONFIRMED` | Valid legacy core data may restore after a clear missing-material summary. Unresolved media remains as a typed placeholder with stored descriptive text where available rather than corrupting or removing the owning record. |
+| Backup/recovery engineering contract | `ARCHITECTURE_ACCEPTED` | Complete package, integrity, capacity, staged restore, migration, failure, crash recovery, rollback, and acceptance-test boundaries are frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`. |
 | Storage implementation | `NOT_APPROVED` | No IndexedDB migration, Cloudflare connector, media offload, or Gallery schema implementation begins from planning alone. |
 
 Verified baseline:
@@ -262,10 +268,10 @@ Use the live roadmap order.
 Status: `IN_PROGRESS` planning; no migration implementation is approved.
 
 1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data;
-2. translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
-3. translate confirmed explicit R2 deletion and no-automatic-cleanup retention into testable warning, authorization, failure, quota, and backup-size-reporting acceptance;
+2. `DONE 2026-07-18`: translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
+3. `DONE 2026-07-18`: translate complete-package, explicit R2 retention, backup-size/quota, creation/delivery failure, integrity, staged restore, legacy degraded recovery, local-material reuse, migration, crash recovery, and rollback into testable acceptance;
 4. define an IndexedDB-first logical schema, reversible hot/cold archive boundaries, append/update behavior, transactions, idempotency, multi-tab coordination, quota visibility, and domain repository contracts;
-5. define complete standalone backup objects, manifest/integrity checks, staged restore, binary inclusion, local save/share export, rollback, and legacy `localStorage` snapshot migration;
+5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
 6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
 7. select one small reference migration only after the preceding contracts and acceptance criteria are approved.
 
@@ -325,6 +331,9 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 20. do not label R2 deletion as a generic `delete` or treat it as hiding a list row; the action must say it permanently deletes the connected cloud backup.
 21. do not remove the row locally until the personal Worker confirms that the R2 object deletion succeeded.
 22. do not rotate, expire, or delete any local export or personal-R2 backup automatically; capacity pressure may block creation and request user action, but it cannot authorize silent cleanup.
+23. do not let an older restore delete or hide current-only retained Gallery material, and do not attach a local binary by filename, label, prompt, or URL without exact identity/digest evidence.
+24. do not label a missing-media placeholder as a recovered original or discard the owning message/record because its binary is unavailable.
+25. do not treat acceptance of `BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` as approval for IndexedDB, R2, Gallery schema, or reference-migration implementation.
 
 ## 8. Validation
 
@@ -347,3 +356,4 @@ Required for every meaningful 4.5 slice:
 5. `docs/roadmap/PROJECT_MODULE_AUDIT.md`;
 6. `docs/architecture/ARCHITECTURE.md` and debt review when evidence/semantics change;
 7. `docs/pm/TODO_PM_STATUS_REPORT.md` when priority or release posture changes.
+8. `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` when complete-package, integrity, capacity, restore, migration, or rollback acceptance changes.

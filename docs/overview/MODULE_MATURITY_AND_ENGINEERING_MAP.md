@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -27,7 +27,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
-| persistence / backup / diagnostics | usable snapshot baseline; architecture decision active | preserve one-container/one-save, standalone complete versions, default-off automation, platform-owned local files, direct in-app personal-R2 restore, explicit-only cloud deletion, no automatic cleanup, committed-content durability, and transient raw-AI-payload semantics while defining integrity, staged restore, quota reporting, and migration/rollback |
+| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contract accepted but unimplemented | preserve one-container/one-save, standalone complete versions, default-off automation, platform-owned local files, direct in-app personal-R2 restore, explicit-only cloud deletion, no automatic cleanup, committed-content durability, and transient raw-AI-payload semantics while finishing IndexedDB-first schema and reference-migration acceptance |
 
 ### Tier B: Integrated V1
 
@@ -124,6 +124,7 @@ Gaps:
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
 - full dependency audit reports development-tool advisories.
+- the complete-backup/recovery contract is accepted but not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
 
 ## 5. Module Engineering Guidance
 
@@ -133,7 +134,7 @@ Preserve app entry recovery and lock/notification semantics. A future Home clean
 
 ### Settings / System
 
-The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. Current work must first freeze the browser/PWA-first persistence and complete-backup contract. Preserve existing storage keys and shapes until one reference migration is explicitly approved; later facade work must not pre-empt that contract.
+The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. The browser/PWA-first complete-backup/recovery contract is now frozen; current work must finish the IndexedDB-first logical schema and reference-migration acceptance. Preserve existing storage keys and shapes until one reference migration is explicitly approved; later facade work must not pre-empt that contract.
 
 ### Chat / Chat Directory
 
@@ -161,9 +162,9 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. translate the confirmed explicit-only cloud deletion and no-automatic-cleanup rule into quota-reporting and backup-creation-failure acceptance;
-2. finish IndexedDB-first persistence, reversible hot/cold retention, standalone complete-backup, local export, quota, multi-tab, migration, and rollback contracts;
-3. one separately approved reference migration after architecture acceptance;
+1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
+2. finish IndexedDB-first repository/schema, reversible hot/cold retention, persistent-storage, quota, and multi-tab contracts;
+3. one separately approved reference migration after the remaining persistence architecture acceptance;
 4. sensitive-backup warning and safe toolchain update;
 5. CI/release gating alignment;
 6. one named view/store hotspot seam or deeper cross-store adapter;

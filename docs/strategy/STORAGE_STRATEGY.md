@@ -1,6 +1,6 @@
 # SchatPhone Storage Strategy
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 Purpose: summarize how SchatPhone should store settings, saves, chat records, world state, runtime truth, and AI-related data without making browser storage too large, too fragile, or too semantically muddy.
 
@@ -25,6 +25,7 @@ Use this file together with:
 
 - `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
 - `docs/architecture/ARCHITECTURE.md`
+- `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`
 - `docs/product-decisions/FILES_INTERNAL_STORAGE_ROLE.md`
 - `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 
@@ -119,6 +120,8 @@ Confirmed product meaning:
 - backup always includes the complete core save and exposes only one material choice: include Gallery binaries as a whole, default on, with no second per-item selection step because saving into Gallery was already the curation action;
 - URL-backed media always contributes its original URL and minimum type/name/source metadata, even when Gallery binaries are excluded; backup does not fetch an exact byte copy, so a later-broken external URL cannot be made recoverable by this record alone;
 - R2 remains recovery backup rather than live media storage or local-space offload, and successful backup does not release local originals.
+- restoring a binary-excluded or legacy backup first reuses an exact matching local Gallery binary when one is still present; restore must not delete or hide current-only retained Gallery material merely because the older backup does not contain it;
+- when neither the package, an exact local match, nor a working URL can resolve a media reference, the owning record remains intact and renders a type-appropriate unavailable placeholder; a stored caption, alternative description, or natural-language generation description may be shown in the unavailable-media detail without retaining raw provider traffic.
 
 Confirmed backup-package behavior:
 
@@ -264,11 +267,22 @@ Recommended practices:
 - keep any future redacted/shareable export separate from the complete migration contract;
 - treat ownership-shifting migrations as product-boundary changes, not only technical refactors.
 
+Frozen engineering contract:
+
+- `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` now defines the logical package manifest, required section registry, per-section/binary integrity evidence, creation self-check, capacity preflight, staged generation restore, atomic activation, crash journal, rollback boundary, migration registry, failure taxonomy, provider Adapter acceptance, and test matrix;
+- inspection, verification, migration, asset resolution, and restore planning do not mutate the current save;
+- metadata and binaries activate or roll back together, and success is reported only after the active generation reopens and verifies;
+- a whole-Gallery package cannot silently skip a missing or oversized retained binary; the user may explicitly turn off material inclusion, but the product cannot do so automatically;
+- old backup formats may restore valid core data as `legacy_degraded` after missing material is reported; they are never relabeled as originally complete packages;
+- a same-device restore may reuse exact local binaries and merges retained Gallery material non-destructively, while a clean-device standalone restore still depends only on the package itself;
+- local export status distinguishes a verified package from an operating-system handoff whose final save location may be unconfirmable;
+- remote staging objects are not visible recovery versions, while confirmed remote versions remain protected from automatic rotation or deletion.
+
 ## 7. Practical Migration Posture
 
 Current practical posture:
 
-1. freeze the data classes, repository boundaries, backup contract, migration/rollback path, quota behavior, and multi-tab policy before changing persistence code;
+1. preserve the accepted complete-backup/recovery contract while finishing the data classes, repository boundaries, IndexedDB-first logical schema, persistent-storage behavior, and reference-migration acceptance before changing persistence code;
 2. keep settings and lightweight recovery metadata small and hot;
 3. move one approved reference domain from legacy snapshots to IndexedDB-first repositories, with compatibility import and focused tests;
 4. validate the reference migration before selecting later domains such as Chat history, relationship audit, or binary assets;
@@ -290,3 +304,4 @@ Storage is not only a capacity problem. It is also:
 
 1. 2026-03-29: created as the first layered-storage strategy note.
 2. 2026-05-19: rewritten to align with current ownership boundaries, relationship runtime, Calendar/Reminders split, and Files/Gallery roles.
+3. 2026-07-18: accepted the complete-package, integrity, capacity, staged-restore, non-destructive local-material resolution, legacy fallback, migration, failure, and rollback engineering contract without approving storage implementation.

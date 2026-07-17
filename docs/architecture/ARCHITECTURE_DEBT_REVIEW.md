@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-07-10
+Updated: 2026-07-18
 
 > Scope and authority note
 >
@@ -303,16 +303,17 @@ Why it matters:
 
 These are directions, not tasks. Promote one concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the module-architecture package handoff before implementation.
 
-### 5.0 Priority 0: Finish Persistence And Complete-Backup Contracts
+### 5.0 Priority 0: Finish Persistence Architecture After The Backup Contract
 
 Before another broad feature family:
 
-1. finish the standalone complete-package, integrity, staged-restore, local save/share export, legacy-migration, and rollback contracts before persistence implementation;
-2. preserve platform-owned local export files, direct in-app personal-R2 listing/restore, explicit cloud deletion warnings, and the no-automatic-cleanup rule while defining backup-size/quota reporting and creation-failure behavior;
-3. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
-4. update the compatible Vite patch line and safe transitive dependencies;
-5. plan Vitest's major upgrade as an isolated migration;
-6. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
+1. preserve the accepted `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`, including standalone manifests, integrity, capacity/failure states, staged activation, legacy degraded recovery, exact local-material reuse, crash recovery, and rollback;
+2. finish the IndexedDB-first logical repository/schema, persistent-storage, hot/cold placement, and multi-tab write contracts without implementing them;
+3. approve one reference migration separately with immutable fixtures and rollback proof;
+4. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
+5. update the compatible Vite patch line and safe transitive dependencies;
+6. plan Vitest's major upgrade as an isolated migration;
+7. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
 
 Do not mix these changes with product behavior or a large view refactor.
 

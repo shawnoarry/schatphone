@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-07-16
+Updated: 2026-07-18
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -18,7 +18,9 @@ Current state:
 - SchatPhone keeps no internal local backup library, but a configured personal R2 must be directly visible for in-app backup selection and restore so users do not have to operate the Cloudflare dashboard;
 - explicit in-app deletion permanently deletes the selected connected-R2 backup and requires an unmistakable cloud-deletion warning; it is not a local hide action;
 - SchatPhone never rotates or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, even when quota pressure prevents another backup;
-- the next architecture slice is an IndexedDB-first persistence, complete-backup, data-lifecycle, and legacy-migration contract; no storage migration is approved yet;
+- the complete-backup/recovery engineering contract is now accepted: new complete versions require manifest/section/binary integrity, capacity preflight, staged atomic activation, crash-safe rollback, and explicit failure states; no storage migration is approved yet;
+- legacy backups may restore valid core data with a missing-material report and type-appropriate placeholders, while exact local binaries are reused and current-only retained Gallery material is not deleted or hidden by an older restore;
+- the remaining persistence architecture slice is the IndexedDB-first logical repository/schema contract, persistent-storage policy, and one separately approved reference migration;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
 - the active 4.5 lane also includes complete-backup sensitivity, development dependency advisories, and CI/release gating;
@@ -40,6 +42,7 @@ Also read:
 - `docs/roadmap/PROJECT_MODULE_AUDIT.md`
 - `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
 - `docs/strategy/STORAGE_STRATEGY.md`
+- `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`
 
 ## Guardrails
 
@@ -48,3 +51,4 @@ Also read:
 3. do not combine dependency migration, product behavior, and large refactoring;
 4. measure before and after;
 5. sync the live roadmap and PM status when priority or release posture changes.
+6. do not begin storage implementation merely because the backup/recovery acceptance contract is complete.
