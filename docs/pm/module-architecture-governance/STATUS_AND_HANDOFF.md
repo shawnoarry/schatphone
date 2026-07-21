@@ -208,12 +208,13 @@ Confirmed product contract:
 
 ### Dependency Audit
 
-2026-07-10 results:
+2026-07-21 Vite 7 compatible-patch results:
 
+- direct Vite is 7.3.6, with compatible root esbuild 0.28.1 and Rollup 4.62.2; Vue 3.5.27 and plugin-vue 6.0.4 remain unchanged;
 - production audit: 0 vulnerabilities;
-- full audit: 1 critical, 9 high, 5 moderate advisories;
-- Vite can receive a compatible 7.x patch update;
-- Vitest remediation is a major upgrade and must be isolated.
+- full audit: 14 advisories (1 critical, 10 high, 3 moderate), one fewer high advisory after removing the Rollup-related finding;
+- the direct Vite 7 patch is complete, but Vitest 1.6.1 still carries the nested Vite 5.4.21/esbuild 0.21.5 advisory chain;
+- the reported Vitest remediation requires a 4.x major upgrade and must remain an isolated migration rather than being folded into this patch round.
 
 Do not report only the production audit when describing developer/CI safety.
 
@@ -238,6 +239,14 @@ Do not describe it as a production backend or closed-page simulation engine.
 - local validation uses Node 24 while CI uses Node 20.
 
 ## 5. Completed Governance Rounds
+
+### 2026-07-21 Vite 7 Compatible Patch
+
+1. confirmed through the official npm registry that Vite 7.3.6 is the current compatible Vite 7 patch and preserves the existing Node engine floor;
+2. updated only the direct Vite range and its compatible root esbuild, Rollup, `@types/estree`, platform packages, and lockfile metadata;
+3. kept Vue, plugin-vue, Vitest, and the nested Vitest Vite/esbuild line unchanged;
+4. passed governance, lint, 173 Vitest files / 1071 tests, production build, and 34 Playwright scenarios;
+5. kept the full development audit explicit at 14 advisories while the production audit remains clean.
 
 ### 2026-07-16 Workflow Layering
 
@@ -291,9 +300,9 @@ Cross-package dependencies:
 ### P0: Security/Toolchain After The Storage Contract
 
 1. add the confirmed sensitive-file warning without changing complete-migration contents;
-2. update compatible Vite/transitive dependencies;
-3. plan the Vitest migration separately;
-4. validate and re-audit.
+2. `DONE 2026-07-21`: update the compatible direct Vite 7 patch and required root transitive dependencies;
+3. plan the Vitest major migration separately for the remaining Vitest/Vite 5/esbuild advisory chain;
+4. decide the later CI audit policy independently from dependency remediation.
 
 ### P1: Release Gate
 

@@ -163,11 +163,11 @@ Open slices, in order:
    - withdrawn proposals: do not require a fixed `8 GB` budget now, and do not ask users to choose `discard / local only / cloud protected` for every generated result; neither proposal is an approved requirement;
    - the Gallery/backup product gate and complete-backup/recovery engineering-contract gate are closed; keep implementation blocked until the IndexedDB-first logical schema and one reference migration are separately approved;
    - `Storage implementation = NOT_APPROVED`: no IndexedDB, R2, Gallery schema, or reference-migration implementation begins from this contract.
-2. `P0 Security/toolchain maintenance` - `TODO`
-   - preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
-   - update the Vite 7 patch line and transitive lockfile where compatible;
-   - plan the Vitest 1 to supported-version migration separately because the audit fix is a major upgrade;
-   - re-run the full dependency audit and validation after the upgrade.
+2. `P0 Security/toolchain maintenance` - `PARTIAL_DONE`
+   - `DONE 2026-07-21`: updated the direct Vite 7 line to 7.3.6 and refreshed only its compatible root transitive toolchain to esbuild 0.28.1, Rollup 4.62.2, and required lockfile metadata;
+   - `DONE 2026-07-21`: production audit remains 0; full audit is 14 advisories (3 moderate, 10 high, 1 critical), one fewer high advisory after removing the Rollup-related finding;
+   - `TODO`: preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
+   - `TODO`: plan the Vitest 1 major migration separately; Vitest 1.6.1 and its nested Vite 5.4.21/esbuild 0.21.5 advisory chain remain and the reported remediation crosses the approved batch boundary.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
