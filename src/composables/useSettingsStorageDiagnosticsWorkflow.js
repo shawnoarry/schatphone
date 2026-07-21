@@ -9,24 +9,7 @@ import {
   inspectPersistedStateLayers as inspectDefaultPersistedStateLayers,
   reconcilePersistedStateLayers as reconcileDefaultPersistedStateLayers,
 } from '../lib/persistence'
-
-const STORAGE_AUDIT_TARGETS = Object.freeze([
-  { key: 'store:system', version: 1, labelZh: '系统存档', labelEn: 'System state' },
-  { key: 'store:chat', version: 2, labelZh: '聊天存档', labelEn: 'Chat state' },
-  { key: 'store:map', version: 2, labelZh: '地图存档', labelEn: 'Map state' },
-  { key: 'store:calendar', version: 1, labelZh: '日历存档', labelEn: 'Calendar state' },
-  { key: 'store:reminders', version: 1, labelZh: '提醒事项', labelEn: 'Reminders state' },
-  { key: 'store:gallery', version: 1, labelZh: '素材存档', labelEn: 'Gallery state' },
-  { key: 'store:files', version: 1, labelZh: '文件索引', labelEn: 'Files index' },
-  { key: 'store:shopping', version: 1, labelZh: '购物记录', labelEn: 'Shopping records' },
-  { key: 'store:food-delivery', version: 1, labelZh: '外卖记录', labelEn: 'Food delivery records' },
-  { key: 'store:simulation', version: 1, labelZh: '事件模拟', labelEn: 'Simulation events' },
-  { key: 'store:assets', version: 1, labelZh: '资产记录', labelEn: 'Assets records' },
-  { key: 'store:wallet', version: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger' },
-  { key: 'store:phone', version: 1, labelZh: '电话记录', labelEn: 'Phone logs' },
-  { key: 'store:stock', version: 1, labelZh: '模拟行情', labelEn: 'Simulated market' },
-  { key: 'store:relationship-runtime', version: 1, labelZh: '关系运行时', labelEn: 'Relationship runtime' },
-])
+import { PERSISTED_STATE_AUDIT_TARGETS } from '../lib/persistence-owner-inventory'
 
 export const useSettingsStorageDiagnosticsWorkflow = (options = {}) => {
   const systemStore = options.systemStore || useSystemStore()
@@ -221,7 +204,7 @@ export const useSettingsStorageDiagnosticsWorkflow = (options = {}) => {
     storageAuditRunning.value = true
     try {
       const reports = await Promise.all(
-        STORAGE_AUDIT_TARGETS.map(async (target) => {
+        PERSISTED_STATE_AUDIT_TARGETS.map(async (target) => {
           const inspection = await inspectPersistedStateLayers(target.key, {
             version: target.version,
           })
@@ -299,7 +282,7 @@ export const useSettingsStorageDiagnosticsWorkflow = (options = {}) => {
     try {
       const targets = storageAuditResults.value.length > 0
         ? storageAuditResults.value
-        : STORAGE_AUDIT_TARGETS
+        : PERSISTED_STATE_AUDIT_TARGETS
 
       let repairCount = 0
       let failedCount = 0

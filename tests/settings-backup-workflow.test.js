@@ -73,6 +73,33 @@ describe('Settings backup workflow interface', () => {
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     const exportedBlob = createObjectURL.mock.calls[0][0]
     const exported = JSON.parse(exportedBlob.parts.join(''))
+    expect(Object.keys(exported)).toEqual([
+      'backupMeta',
+      'settings',
+      'user',
+      'notifications',
+      'apiReports',
+      'truthState',
+      'roleProfiles',
+      'contacts',
+      'chatHistory',
+      'conversations',
+      'messagesByConversation',
+      'map',
+      'calendar',
+      'reminders',
+      'gallery',
+      'files',
+      'book',
+      'shopping',
+      'foodDelivery',
+      'simulation',
+      'assets',
+      'wallet',
+      'phone',
+      'stock',
+      'relationshipRuntime',
+    ])
     expect(exported.backupMeta).toMatchObject({
       schemaVersion: 2,
       exportMode: 'metadata_only',
@@ -110,5 +137,38 @@ describe('Settings backup workflow interface', () => {
     })
 
     clickSpy.mockRestore()
+  })
+
+  test('blocks export when a required legacy v2 shape section is missing', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const createObjectURL = vi.fn()
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      value: createObjectURL,
+      configurable: true,
+    })
+
+    const workflow = useSettingsBackupWorkflow({
+      systemStore,
+      chatStore,
+      bookStore: {
+        createBackupSnapshot: () => undefined,
+      },
+      t,
+      confirmDialog: vi.fn(async () => true),
+    })
+
+    await workflow.exportData()
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(workflow.backupFeedbackType.value).toBe('error')
+    expect(workflow.backupFeedbackMessage.value).toContain(
+      'Legacy v2 backup payload shape is missing or invalid',
+    )
+    expect(systemStore.apiReports[0]).toMatchObject({
+      module: 'storage',
+      action: 'export_backup',
+      code: 'BACKUP_EXPORT_FAILED',
+    })
   })
 })

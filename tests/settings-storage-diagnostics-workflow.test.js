@@ -47,8 +47,29 @@ describe('Settings storage diagnostics workflow interface', () => {
 
     await workflow.runStorageAudit()
 
-    expect(inspectPersistedStateLayers).toHaveBeenCalledTimes(15)
-    expect(workflow.storageAuditResults.value).toHaveLength(15)
+    expect(inspectPersistedStateLayers).toHaveBeenCalledTimes(16)
+    expect(inspectPersistedStateLayers.mock.calls.map(([key]) => key)).toEqual([
+      'store:system',
+      'store:chat',
+      'store:map',
+      'store:calendar',
+      'store:reminders',
+      'store:gallery',
+      'store:files',
+      'store:book',
+      'store:shopping',
+      'store:food-delivery',
+      'store:simulation',
+      'store:assets',
+      'store:wallet',
+      'store:phone',
+      'store:stock',
+      'store:relationship-runtime',
+    ])
+    expect(workflow.storageAuditResults.value).toHaveLength(16)
+    expect(workflow.storageAuditResults.value).toContainEqual(
+      expect.objectContaining({ key: 'store:book', labelEn: 'Book library' }),
+    )
     expect(workflow.storageAuditAt.value).toBe(Date.parse('2026-06-19T09:00:00.000Z'))
     expect(workflow.storageAuditFeedbackType.value).toBe('success')
     expect(workflow.storageAuditFeedbackMessage.value).toContain('storage state is healthy')
@@ -101,7 +122,7 @@ describe('Settings storage diagnostics workflow interface', () => {
 
     await workflow.repairStorageDrift()
 
-    expect(reconcilePersistedStateLayers).toHaveBeenCalledTimes(15)
+    expect(reconcilePersistedStateLayers).toHaveBeenCalledTimes(16)
     expect(reconcilePersistedStateLayers).toHaveBeenCalledWith('store:chat', {
       version: 2,
       strategy: 'newest_valid',

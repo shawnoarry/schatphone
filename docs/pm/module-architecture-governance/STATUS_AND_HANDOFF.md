@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -36,6 +36,10 @@ Current active architecture slice:
 - the same view may permanently delete a selected SchatPhone backup object from the connected personal R2; deletion is not a local hide action and must use a conspicuous destructive confirmation that names the backup, states that the connected cloud file will also be deleted and cannot be restored through SchatPhone, and clarifies that the current save, other backups, and local exports are unaffected;
 - SchatPhone never rotates, expires, or deletes a cloud backup automatically; every personal-R2 backup remains until the user explicitly confirms permanent deletion, and quota pressure may block a new backup or prompt manual cleanup but cannot authorize silent removal;
 - the complete-backup/recovery engineering contract is accepted: new complete packages use a versioned required-section manifest, integrity evidence, capacity preflight, creation self-check, staged generation restore, atomic activation, crash journal, failure taxonomy, and metadata-plus-binary rollback;
+- the executable canonical inventory independently classifies 16 persisted stores, the serialized mirror, Gallery binary storage, the Home local hint, Chat session feedback, and their logical owner/data classes; Contacts-in-Chat and WorldBook-in-System remain explicit rather than inheriting the physical store owner;
+- Settings diagnostics consumes the inventory's stable 16-store projection and includes Book; legacy v2 backup export consumes a separate schema/section shape registry before download without changing payload fields, Gallery defaults/limits, or import ordering;
+- legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `DRAFT_FOR_CONTROL_REVIEW`: it proposes the hybrid Repository Interface, staged generation plus atomic pointer, localStorage hint allowlist, quota/persist capability seam, configurable WriteCoordinator, and Book immutable-fixture/failure matrix;
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
@@ -67,6 +71,7 @@ Current active architecture slice:
 | Same-device material preservation | `CONFIRMED` | A restore first reuses exact matching local binaries and does not delete or hide current-only retained Gallery material merely because an older or binary-excluded backup lacks it. |
 | Legacy incomplete media | `CONFIRMED` | Valid legacy core data may restore after a clear missing-material summary. Unresolved media remains as a typed placeholder with stored descriptive text where available rather than corrupting or removing the owning record. |
 | Backup/recovery engineering contract | `ARCHITECTURE_ACCEPTED` | Complete package, integrity, capacity, staged restore, migration, failure, crash recovery, rollback, and acceptance-test boundaries are frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`. |
+| Persistence inventory and Repository contract | `CONTROL_REVIEW` | Canonical carrier/owner inventory, runtime-consumed legacy v2 shape validation with explicit known-gap audit, and the hybrid Repository/Book reference contract are implemented as an auditable draft; exact storage schema and cutover remain unapproved. |
 | Storage implementation | `NOT_APPROVED` | No IndexedDB migration, Cloudflare connector, media offload, or Gallery schema implementation begins from planning alone. |
 
 Verified baseline:
@@ -267,13 +272,13 @@ Use the live roadmap order.
 
 Status: `IN_PROGRESS` planning; no migration implementation is approved.
 
-1. classify authoritative, auditable, rebuildable, binary, cache, and diagnostic data;
+1. `READY_FOR_CONTROL_REVIEW 2026-07-21`: independently classify authoritative, auditable, rebuildable, binary, hint, and transient data and connect the 16-store diagnostic projection;
 2. `DONE 2026-07-18`: translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
 3. `DONE 2026-07-18`: translate complete-package, explicit R2 retention, backup-size/quota, creation/delivery failure, integrity, staged restore, legacy degraded recovery, local-material reuse, migration, crash recovery, and rollback into testable acceptance;
-4. define an IndexedDB-first logical schema, reversible hot/cold archive boundaries, append/update behavior, transactions, idempotency, multi-tab coordination, quota visibility, and domain repository contracts;
+4. `DRAFT_FOR_CONTROL_REVIEW 2026-07-21`: define the owner-aware hybrid Repository Interface, record envelope, staged generation/atomic pointer, localStorage hint allowlist, quota/persist capability, configurable multi-tab WriteCoordinator, and rollback gates; concrete IndexedDB schema and user-visible prompt/conflict behavior remain unapproved;
 5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
 6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
-7. select one small reference migration only after the preceding contracts and acceptance criteria are approved.
+7. Book is the control-approved reference candidate; approve its immutable fixtures and failure matrix before any migration runtime or cutover.
 
 Cross-package dependencies:
 

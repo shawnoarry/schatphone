@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -19,6 +19,9 @@ Current state:
 - explicit in-app deletion permanently deletes the selected connected-R2 backup and requires an unmistakable cloud-deletion warning; it is not a local hide action;
 - SchatPhone never rotates or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, even when quota pressure prevents another backup;
 - the complete-backup/recovery engineering contract is now accepted: new complete versions require manifest/section/binary integrity, capacity preflight, staged atomic activation, crash-safe rollback, and explicit failure states; no storage migration is approved yet;
+- the canonical persistence-owner inventory now classifies all current store, mirror, binary, direct-local, and session carriers independently from backup coverage; Settings diagnostics consumes its 16-store projection and now includes Book;
+- legacy v2 export consumes a section-shape registry while preserving the existing payload and import behavior; shape validity is reported separately from complete-package eligibility, and omitted Chat module identity/avatar settings remain an explicit required legacy gap;
+- the hybrid Repository, staged-generation/atomic-pointer, capacity, WriteCoordinator, and Book reference-fixture contract is now `DRAFT_FOR_CONTROL_REVIEW`, not architecture acceptance or implementation approval;
 - legacy backups may restore valid core data with a missing-material report and type-appropriate placeholders, while exact local binaries are reused and current-only retained Gallery material is not deleted or hidden by an older restore;
 - the remaining persistence architecture slice is the IndexedDB-first logical repository/schema contract, persistent-storage policy, and one separately approved reference migration;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
@@ -43,6 +46,7 @@ Also read:
 - `docs/strategy/STATE_OWNERSHIP_STRATEGY.md`
 - `docs/strategy/STORAGE_STRATEGY.md`
 - `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md`
 
 ## Guardrails
 

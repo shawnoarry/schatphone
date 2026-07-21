@@ -19,8 +19,12 @@ import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useDialog } from './useDialog'
 import { useI18n } from './useI18n'
 import { useSystemApiReports } from './useSystemApiReports'
+import {
+  LEGACY_V2_BACKUP_SCHEMA_VERSION,
+  assertLegacyV2BackupPayloadShape,
+} from '../lib/backup-section-registry'
 
-const BACKUP_SCHEMA_VERSION = 2
+const BACKUP_SCHEMA_VERSION = LEGACY_V2_BACKUP_SCHEMA_VERSION
 const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
 const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
 const BACKUP_COPY_TONE_DIRECT = 'direct'
@@ -350,7 +354,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
             maxPackageItems: BACKUP_ASSET_PACKAGE_MAX_ITEMS,
           }
 
-    return {
+    const payload = {
       backupMeta: {
         schemaVersion: BACKUP_SCHEMA_VERSION,
         exportedAt: Date.now(),
@@ -386,6 +390,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       stock: stockStore.createBackupSnapshot(),
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
     }
+    return assertLegacyV2BackupPayloadShape(payload)
   }
 
   const validateBackupPayload = (payload) => {

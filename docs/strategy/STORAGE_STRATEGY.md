@@ -278,11 +278,20 @@ Frozen engineering contract:
 - local export status distinguishes a verified package from an operating-system handoff whose final save location may be unconfirmable;
 - remote staging objects are not visible recovery versions, while confirmed remote versions remain protected from automatic rotation or deletion.
 
+Repository contract draft:
+
+- `src/lib/persistence-owner-inventory.js` is the independent canonical inventory for current physical carriers and logical owner/data classes; it does not import or derive from the backup registry;
+- Settings storage diagnostics now projects all 16 persisted store targets from that inventory, including Book;
+- legacy v2 export consumes `src/lib/backup-section-registry.js` only for schema/section shape validation without changing payload fields, Gallery defaults/limits, or import ordering;
+- shape validation reports `shapeOk` separately from `completePackageEligible`; the current omission of Chat `moduleIdentity` and `moduleAvatarOverrides` is an explicit required known-gap audit, so a structurally valid legacy v2 payload remains ineligible for a future complete-package claim;
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` defines the hybrid record/binary/projection direction, owner-aware Repository Interface, staged generation and atomic pointer, localStorage hint allowlist, capacity and WriteCoordinator Interfaces, and Book fixture/failure gates as `DRAFT_FOR_CONTROL_REVIEW`;
+- concrete IndexedDB keyPaths/stores, Gallery binary schema, R2, Book migration/cutover, dual write, runtime generation activation, persistent-storage prompt timing, and multi-tab conflict UI remain unapproved.
+
 ## 7. Practical Migration Posture
 
 Current practical posture:
 
-1. preserve the accepted complete-backup/recovery contract while finishing the data classes, repository boundaries, IndexedDB-first logical schema, persistent-storage behavior, and reference-migration acceptance before changing persistence code;
+1. preserve the accepted complete-backup/recovery contract while control reviews the canonical inventory and Repository draft, then separately approve the concrete IndexedDB schema, persistent-storage behavior, and Book reference migration before changing persistence code;
 2. keep settings and lightweight recovery metadata small and hot;
 3. move one approved reference domain from legacy snapshots to IndexedDB-first repositories, with compatibility import and focused tests;
 4. validate the reference migration before selecting later domains such as Chat history, relationship audit, or binary assets;
@@ -305,3 +314,4 @@ Storage is not only a capacity problem. It is also:
 1. 2026-03-29: created as the first layered-storage strategy note.
 2. 2026-05-19: rewritten to align with current ownership boundaries, relationship runtime, Calendar/Reminders split, and Files/Gallery roles.
 3. 2026-07-18: accepted the complete-package, integrity, capacity, staged-restore, non-destructive local-material resolution, legacy fallback, migration, failure, and rollback engineering contract without approving storage implementation.
+4. 2026-07-21: added the independent persistence-owner inventory, runtime-consumed legacy v2 shape registry with explicit known-gap audit, 16-store diagnostics projection, and Repository contract draft; storage implementation remains not approved.
