@@ -1,36 +1,47 @@
 # Persistence Repository Contract
 
-Status: `DRAFT_FOR_CONTROL_REVIEW`
+Status: `ARCHITECTURE_ACCEPTED`
 
 Updated: 2026-07-21
 
 Owner: Module Architecture / Technical Governance
 
-Purpose: close the inventory, ownership, Repository Interface, generation, capacity, coordination, and reference-migration contract before any IndexedDB-first write path is approved.
+Purpose: freeze the architecture-accepted container, IndexedDB-first schema, Repository Interface, generation, capacity, coordination, and Book reference-pilot contract before any application write path is changed.
 
-This document is a technical contract for review. It does not authorize a storage migration.
+This document is the accepted technical contract for the non-active Batch 2B foundation/fixture/staging pilot. It does not authorize a storage migration or application runtime activation.
 
 ## 1. Decision State
 
-Approved direction for this draft:
+Confirmed product direction and proposed technical closure:
 
 1. browser and installable PWA clients remain complete first-class clients;
-2. the future Repository uses a hybrid physical model: a generic record envelope for most structured owner records, plus only the specialized binary or projection stores that earn a separate Adapter;
-3. restore and migration activation use a staged generation plus one atomic active-generation pointer;
-4. Book is the first low-risk reference-migration candidate, but only immutable fixture and failure acceptance is defined here;
-5. `system.truthState` remains required legacy compatibility data until immutable fixtures prove it can be reconstructed without continuity loss;
-6. Calendar reminder cues remain legacy import compatibility, while Reminders is the canonical reminder owner;
-7. persistent-storage prompt timing and multi-tab timeout/conflict UI remain `USER_DECISION_REQUIRED` and configurable at the Interface.
+2. each isolated browser profile/site-data container or separately isolated desktop Web App container owns exactly one current save; different containers remain independent and never auto-sync, silently merge, or expose internal save slots;
+3. tabs that share one storage container share one current save; after a bounded safe wait, a competing later tab remains read-only and exposes only retry and refresh/reload-current-save actions, never last-write-wins or force takeover;
+4. persistent-storage permission is never requested on first launch; it is requested contextually before the first qualifying high-volume durable action, while Settings exposes current status and an explicit retry;
+5. the future Repository uses a hybrid physical model: immutable generic record versions plus generation membership for structured owner records, with specialized stores only where correctness requires them;
+6. restore and migration activation use a staged generation plus one atomic active-generation pointer and crash journal;
+7. Book is the approved first low-risk storage pilot; this contract defines its exact schema, Adapter Interface, immutable fixtures, failure acceptance, legacy reader, and rollback boundary without approving cutover;
+8. `system.truthState` remains required legacy compatibility data until immutable fixtures prove it can be reconstructed without continuity loss;
+9. Calendar reminder cues remain legacy import compatibility, while Reminders is the canonical reminder owner.
 
 Explicit status:
 
-- `Storage implementation = NOT_APPROVED`;
-- `IndexedDB-first keyPath and object-store schema = NOT_APPROVED`;
+- `Storage runtime implementation/activation = NOT_APPROVED`;
+- `IndexedDB-first schema and Book foundation contract = ARCHITECTURE_ACCEPTED`;
+- `Batch 2B non-active foundation/fixture/staging pilot = APPROVED`;
 - `Gallery binary schema = NOT_APPROVED`;
 - `R2 Adapter or Worker implementation = NOT_APPROVED`;
 - `Book migration/cutover = NOT_APPROVED`;
 - `dual write = NOT_APPROVED`;
 - `runtime generation activation = NOT_APPROVED`.
+
+Architecture acceptance authorizes only the separately named Batch 2B files and tests in section 11. It does not authorize an application runtime import, Book cutover, or active-pointer activation, and this documentation round does not begin Batch 2B.
+
+### 1.1 Storage-Container Invariant
+
+The Repository has no `saveId`, workspace ID, account ID, or slot ID in any keyPath. The storage container is the save boundary. A second browser profile, another browser's isolated site data, or a separately isolated installed/desktop Web App may therefore hold another independent current save, but the application does not discover or coordinate it.
+
+Same-container tabs coordinate writes because they can see the same IndexedDB database. Different containers cannot see each other's database and must remain independent. Moving state between them requires a complete user-exported backup chosen for import; there is no automatic sync, background reconciliation, cross-container conflict resolution, or silent merge.
 
 ## 2. Current Evidence And Canonical Inventory
 
@@ -99,47 +110,100 @@ Interface invariants:
 
 The deletion test for this Module is positive: without it, generation rules, quota interpretation, conflict handling, and error classification would reappear across every Pinia store. The seam therefore earns leverage for callers and locality for storage failures.
 
-## 4. Hybrid Physical Model
+## 4. IndexedDB-First Physical Contract
 
-### 4.1 Generic Record Envelope
+The primary structured database is `schatphone-repository`, version `1`. It is intentionally separate from the current `schatphone-layered-storage/state` mirror so the pilot cannot reinterpret or destructively upgrade the compatibility mirror. Version 1 creates only the six stores below. It creates no Gallery binary, search-projection, remote-provider, or per-save-slot store.
 
-Most structured owner records use one logical envelope:
+### 4.1 Immutable Record Version
+
+Authoritative structured payloads are immutable revisions in `record_versions`:
 
 ```text
 ownerId
 dataClassId
 recordId
-recordSchemaVersion
-generationId
 revision
+recordSchemaVersion
 createdAt
 updatedAt
 payload
 sourceReferences[]
-integrityMetadata
+integrity.sha256
 ```
+
+Physical keyPath: `['ownerId', 'dataClassId', 'recordId', 'revision']`.
 
 Contract rules:
 
+- `revision` is a positive integer and is monotonic for one owner/class/record identity;
+- inserting an existing compound key is idempotent only when its canonical digest is identical; a different digest is `revision_digest_conflict` and cannot overwrite the stored version;
 - `payload` contains owner data, not copied truth from another module;
-- envelope metadata is sufficient to validate owner/class/version before decoding payload;
-- `revision` is monotonic within one stable record identity and generation lineage;
-- timestamps cannot be used as identity;
-- provenance/reference fields remain compact and cannot become a second copy of full owner content;
-- record digests may be used for integrity and exact binary matching but do not replace stable identity.
+- `payload.id`, when the current owner shape includes it, equals `recordId`;
+- timestamps, array positions, labels, filenames, prompts, and URLs cannot become identity;
+- provenance remains compact and cannot become a second copy of another owner's content;
+- SHA-256 validates canonical UTF-8 JSON bytes using sorted object keys and preserved array order.
 
-This is a logical envelope. Concrete IndexedDB keyPaths, compound keys, object-store count, transaction grouping, serialization encoding, and indexes remain unapproved.
+### 4.2 Generation Membership
 
-### 4.2 Specialized Stores
+`generation_records` maps a complete generation snapshot to immutable record revisions:
 
-A specialized Adapter is permitted only when a generic record envelope cannot provide required correctness or performance without leaking complexity to callers.
+```text
+generationId
+ownerId
+dataClassId
+recordId
+revision
+recordDigest
+indexKeys.position
+indexKeys.updatedAt
+indexKeys.category
+indexKeys.status
+```
 
-Current justified categories for design review:
+Physical keyPath: `['generationId', 'ownerId', 'dataClassId', 'recordId']`.
 
-- Gallery binary content, because Blob lifecycle, byte size, digest, streaming, and reference integrity differ from ordinary structured records;
-- rebuildable query/search projections, only when they can be recreated from authoritative owner records and carry an explicit source generation.
+Every owner/data class declared in a generation manifest has a complete membership set, including an explicit zero count. An unchanged record may reuse an earlier immutable revision, so staging a generation copies only small membership rows rather than duplicating every long-form payload. A membership row whose referenced revision or digest is missing fails verification.
 
-Specialized does not mean separately authoritative. A projection records its source owner/class/generation and is disposable. Gallery metadata remains in the Gallery owner model even if bytes use a binary Adapter.
+No garbage collection is approved in Batch 2B. A record revision or generation cannot be removed while any active, previous rollback, staged, journal-referenced, or backup-required state may still need it.
+
+### 4.3 Exact Version-1 Object Stores And Indexes
+
+| Object store | keyPath | Required indexes |
+| --- | --- | --- |
+| `record_versions` | `['ownerId', 'dataClassId', 'recordId', 'revision']` | `by_record = ['ownerId', 'dataClassId', 'recordId']`; `by_digest = 'integrity.sha256'` |
+| `generation_records` | `['generationId', 'ownerId', 'dataClassId', 'recordId']` | `by_generation_owner_class = ['generationId', 'ownerId', 'dataClassId']`; `by_generation_owner_class_position = ['generationId', 'ownerId', 'dataClassId', 'indexKeys.position', 'recordId']`; `by_generation_owner_class_updated = ['generationId', 'ownerId', 'dataClassId', 'indexKeys.updatedAt', 'recordId']`; `by_generation_owner_class_category = ['generationId', 'ownerId', 'dataClassId', 'indexKeys.category', 'indexKeys.position', 'recordId']`; `by_generation_owner_class_status = ['generationId', 'ownerId', 'dataClassId', 'indexKeys.status', 'indexKeys.position', 'recordId']` |
+| `generations` | `'generationId'` | `by_status_updated = ['status', 'updatedAt', 'generationId']`; `by_operation = 'operationId'` with `unique: true` |
+| `repository_meta` | `'key'` | none |
+| `operation_journal` | `'operationId'` | `by_phase_updated = ['phase', 'updatedAt', 'operationId']`; `by_candidate = 'candidateGenerationId'` |
+| `write_leases` | `'scopeKey'` | `by_expires_at = 'expiresAt'` |
+
+All indexes are non-unique unless explicitly stated. Upgrade code must compare the actual store/index/keyPath contract with this table; a missing, extra, renamed, or differently configured store/index fails schema acceptance rather than being silently tolerated.
+
+The Adapter factory accepts an explicit database-name override only for tests. Production callers use the fixed `schatphone-repository` name. The focused Playwright test uses a unique disposable name per case so it can inspect real Chromium schema/transactions and delete the database without touching the current save.
+
+`repository_meta` allows only named singleton records. Version 1 defines:
+
+- `repository-schema`: database version, contract version, and canonical inventory version;
+- `container-instance`: a diagnostic random ID created once for this storage container; it is not a user-visible save slot or cross-container account key;
+- `active-generation`: the authoritative pointer `{ generationId, pointerRevision, updatedAt, operationId }`, absent before first activation;
+- `persistent-storage-request`: last known platform status and user-initiated attempt metadata, never a substitute for `navigator.storage.persisted()`.
+
+### 4.4 Book Logical Mapping
+
+The inventory class `book.long-form-library` maps to two Repository classes owned by `book`:
+
+| dataClassId | recordId | payload | membership index keys |
+| --- | --- | --- | --- |
+| `book.asset` | current Book asset `id` | `id`, `title`, `category`, `assetType`, `format`, `categoryId`, `tags`, `content`, `sections`, `status`, `locked`, `favorite`, `source`, `version`, `createdAt`, `updatedAt`, `contentFingerprint` | canonical snapshot `position`, `updatedAt`, `category`, `status` |
+| `book.category` | current category `id` | `id`, `title`, `color` | canonical snapshot `position`; other index keys omitted |
+
+User-created/imported assets and categories are durable records. Built-in Book assets remain immutable application-package sources and are not copied into IndexedDB; their stable IDs continue to resolve through `built-in-book-assets.js`. WorldBook source-link truth remains in `worldbook.world-context` inside the current System compatibility carrier until its own migration is approved. The Book Adapter may report link resolution but cannot move or rewrite those links.
+
+Book snapshot order is explicit: adapter round-trip returns assets in the same canonical order produced by `normalizeBookTextAssets`, with `recordId` as the deterministic tie-breaker, and categories in their normalized persisted order. The existing 300 user-asset limit remains unchanged. Search, tag filtering, built-in merging, lock rules, active-source deletion guards, imports, and exports remain Book product behavior rather than IndexedDB schema behavior.
+
+### 4.5 Specialized Stores Deferred
+
+Gallery binary content and rebuildable search projections may later justify specialized stores, but neither is part of database version 1. Specialized never means separately authoritative: Gallery owns Gallery metadata/binaries, and a future projection must declare its source generation and remain disposable.
 
 ## 5. Stable Identity And References
 
@@ -153,37 +217,46 @@ Specialized does not mean separately authoritative. A projection records its sou
 
 ## 6. Generations, Journal, And Atomic Activation
 
-A generation is an immutable candidate snapshot after verification. Ordinary record edits may build a new committed generation internally, but callers observe one active generation at a time.
+A generation is an immutable membership snapshot after verification. Callers observe at most one active Repository generation in one storage container. Owner classes not yet cut over continue using their declared legacy carriers and do not silently fall through the Repository.
 
 Required states:
 
 ```text
 staging -> verified -> activating -> active
                     -> aborted
-activating -> rollback_required -> previous_active
+active -> superseded
+activating/reopen_failed -> rollback_required -> rolled_back
+superseded -> active (rollback only)
 ```
 
-Activation protocol:
+`generations` rows contain `generationId`, `parentGenerationId`, `operationId`, `status`, `inventoryVersion`, `repositorySchemaVersion`, `createdAt`, `updatedAt`, `verifiedAt`, `activatedAt`, `ownerClassCounts`, `ownerClassDigests`, and immutable legacy-source evidence where applicable.
 
-1. capture the current active generation and operation ID in the recovery journal;
-2. finish all staged structured and binary writes;
-3. verify required owner/classes, schemas, references, and binary evidence;
-4. durably mark the candidate verified;
-5. update one atomic active-generation pointer;
-6. reopen through the normal read Interface and verify the new active generation;
-7. clear or finalize the journal only after reopen succeeds;
-8. on failure, restore the previous pointer and verify it before reporting rollback success.
+`operation_journal` rows contain `operationId`, `operationType`, `phase`, `previousGenerationId`, `candidateGenerationId`, `expectedPointerRevision`, `legacyFallbacks`, `startedAt`, `updatedAt`, `errorCode`, and `recoveryAction`. Journal phases are `prepared`, `staging`, `verified`, `activating`, `reopen_pending`, `completed`, `rollback_required`, `rolled_back`, or `hard_failure`.
 
-No active metadata may point to binary content from a different uncommitted generation. Staging cleanup is allowed only for never-activated artifacts and must not delete a confirmed recovery point.
+Activation protocol, reserved for a later cutover slice:
+
+1. the WriteCoordinator acquires the container-wide `repository-write` lease and captures its fencing token;
+2. the journal records the current pointer and candidate before activation starts;
+3. all record versions and memberships are staged and the generation manifest is verified;
+4. one IndexedDB readwrite transaction across `repository_meta`, `generations`, and `operation_journal` compares the expected pointer revision, marks the candidate active, marks the previous generation superseded when present, increments the pointer revision, and moves the journal to `reopen_pending`;
+5. the application reopens the candidate through the normal read Interface and compares owner/class counts, digests, stable IDs, ordering, and reference outcomes;
+6. success moves the journal to `completed`; failure moves it to `rollback_required` and a second fenced transaction restores the previous pointer/status;
+7. for the first Book migration, `previousGenerationId` is null and `legacyFallbacks` names `schatphone:store:book` plus its digest; rollback removes the Repository route and reopens the unchanged legacy snapshot;
+8. rollback is reported successful only after the previous generation or legacy source reopens and reproduces the expected Book snapshot.
+
+On startup, a nonterminal journal is resolved before any new mutation. If the pointer selects a verified candidate and reopen verification succeeds, recovery completes it; otherwise recovery rolls back. It never merges generations or selects a winner by timestamp. A hard failure retains the candidate, previous generation, legacy source, and journal evidence.
+
+Batch 2B may create, stage, inspect, verify, and abort inactive generations in tests and an unreferenced Adapter. It may not execute steps 4-8 from an application runtime path.
 
 ### 6.1 LocalStorage Hint Allowlist
 
-After an approved cutover, `localStorage` may hold only bounded boot/recovery hints such as:
+After an approved cutover, `localStorage` may hold only bounded boot/recovery hints:
 
-- the active-generation pointer or a compact pointer cache;
-- a bounded crash-recovery journal pointer/status;
-- schema/build compatibility hints needed before IndexedDB opens;
-- explicitly classified non-authoritative feature flags such as the current Home layout-edit flag.
+- `schatphone:repository-active-generation`: a non-authoritative cache of database version, generation ID, and pointer revision;
+- `schatphone:repository-recovery`: a bounded operation ID and recovery-required flag with no owner payload;
+- explicitly inventoried non-authoritative feature flags such as the current Home layout-edit flag.
+
+IndexedDB `repository_meta/active-generation` is authoritative. A missing or mismatched local hint is ignored and later repaired from IndexedDB; it cannot select another save or override the pointer.
 
 The current 16 whole-store snapshots remain legacy compatibility carriers until each owner migration is approved. This draft does not delete, relocate, dual-write, or reinterpret them. Chat session feedback remains `sessionStorage` transient state and is not promoted into durable recovery metadata.
 
@@ -193,18 +266,25 @@ The capacity Adapter normalizes platform capabilities without deciding user-visi
 
 - `navigator.storage.estimate()` when available, returning usage/quota and `available`, `insufficient`, `unknown`, or `unavailable` confidence;
 - `navigator.storage.persisted()` when available;
-- a separately invoked `navigator.storage.persist()` attempt only after product UX approves when to ask;
+- a separately invoked `navigator.storage.persist()` attempt only when the confirmed contextual policy below qualifies and the user explicitly continues;
 - per-owner/data-class logical bytes, Gallery binary bytes, staged-generation bytes, and estimated peak working bytes;
 - structured unsupported/denied/error results rather than treating all false values alike.
 
-Conservative defaults:
+Confirmed request policy:
 
 - absence of an estimate is `unknown`, not zero capacity and not permission to skip preflight;
 - denial of persistent storage does not corrupt or erase the current save;
 - capacity pressure never authorizes silent deletion of authoritative records or retained binaries;
-- the Adapter reports facts; Settings or another approved UX Module decides copy and next actions.
+- startup, hydration, ordinary Book edits, and small settings changes never call `navigator.storage.persist()` or display the permission explanation;
+- before the first qualifying action in a container, the policy checks `persisted()` and `estimate()`, explains the risk in that action's context, and calls `persist()` only after the user explicitly continues;
+- qualifying actions are: keeping the first local binary; starting a complete-backup restore; starting a storage migration/cutover; a single Book import estimated at 1 MiB or more; or any batch durable write estimated to add at least 5 MiB or require at least 10 MiB peak working space;
+- byte thresholds are named policy constants, not scattered UI checks; changing them requires technical review and measurement but not a new storage format;
+- denial/cancellation lets the user cancel the pending action or continue with normal best-effort browser storage when that action's existing product contract permits it; it never pretends protection was granted;
+- Settings shows `unsupported`, `not_persistent`, `requesting`, `persistent`, `denied`, or `error`, the last checked/attempt context, and an explicit retry action;
+- Settings retry is user-initiated, rechecks platform state first, and never runs on page load;
+- `repository_meta/persistent-storage-request` stores only attempt metadata. Current truth is refreshed from the browser API because browser/site settings may change outside SchatPhone.
 
-`USER_DECISION_REQUIRED`: the first prompt timing, repeat-prompt policy, and exact visible explanation for persistent-storage permission are not approved.
+Batch 2B may implement the policy classifier and capability Adapter without wiring a prompt into Settings, Gallery, backup restore, or Book UI. User-visible copy and component placement remain a later UX acceptance detail, but the request timing and available Settings retry behavior are confirmed.
 
 ## 8. WriteCoordinator Interface
 
@@ -218,17 +298,46 @@ All mutating Repository operations cross a WriteCoordinator seam. Its Interface 
 - a cross-tab notification containing only bounded coordination metadata;
 - structured `busy`, `timed_out`, `stale_generation`, `lease_lost`, and `unsupported` outcomes.
 
-Possible future Adapters include Web Locks plus BroadcastChannel, or a durable lease record plus BroadcastChannel fallback. This draft does not choose one or prescribe timeout values.
+Version 1 uses one container-wide write scope, `repository-write`. The preferred Adapter is an exclusive Web Lock plus bounded BroadcastChannel metadata. When Web Locks is unavailable, `write_leases/repository-write` provides an IndexedDB compare-and-swap lease plus fencing token; BroadcastChannel remains an optimization, not authority.
 
-Conservative behavior before UX approval: an unresolved competing write must fail closed without changing the active generation. It cannot silently merge owner state, steal a live lease, or show a success result.
+Default policy constants are `waitTimeoutMs = 8000`, `leaseDurationMs = 15000`, and `heartbeatMs = 5000`. Tests use injected clocks and shorter values but preserve ordering. A fallback lease is reclaimable only after expiry, a fencing-token compare-and-swap, and recovery of any nonterminal journal; this is crash recovery, not user-visible force takeover. If safety cannot be proved, the page stays read-only.
 
-`USER_DECISION_REQUIRED`: exact UI after a multi-tab timeout/conflict, including retry, switch-tab, force-takeover, or read-only choices, is not approved. The Interface keeps timeout and allowed actions configurable so implementation cannot freeze that decision.
+Same-container behavior:
 
-## 9. Book Reference-Migration Fixtures
+1. a page captures the active generation/pointer revision before requesting the write lease;
+2. if it acquires the lease, it rechecks that revision before staging and again before commit;
+3. if another page still owns the lease after the safe wait, the later page enters `read_only_conflict`, discards no durable data, and offers `Retry` and `Refresh current save`;
+4. `Retry` starts a new bounded acquisition attempt and keeps the page read-only until acquisition plus active-revision recheck succeeds;
+5. `Refresh current save` discards only that page's uncommitted in-memory mutation, reloads the authoritative active generation, and permits a later ordinary retry; it does not merge local edits;
+6. lease loss or stale revision aborts the inactive operation with a structured error and never changes the active pointer;
+7. there is no force-takeover action, last-write-wins path, timestamp winner, background merge, or silent success.
+
+Different isolated storage containers do not share this Coordinator and do not coordinate through network, backup, or device identity.
+
+## 9. Book Repository Adapter And Reference Fixtures
 
 Book is the first candidate because it has one owner, a bounded Interface (`assets` and `categories`), stable IDs, no separate binary carrier, focused store tests, and lower cross-store write coupling than Chat, System, Gallery, or Relationship Runtime.
 
-Before any migration runtime exists, the following fixtures must be checked into a later approved slice as immutable inputs. A fixture is never rewritten by the migration under test.
+### 9.1 Book Repository Adapter Interface
+
+The Book Adapter is owner-specific mapping over the generic Repository. It does not own activation, cross-tab UI, built-in content, or WorldBook source links.
+
+| Method | Contract |
+| --- | --- |
+| `inspectLegacySource({ localRaw, mirrorRaw })` | return source availability, raw-byte digests, envelope version, parse/decode status, and mirror drift without writing either carrier |
+| `normalizeLegacySnapshot({ sourceKind, raw })` | decode wrapped v1 or accepted unwrapped legacy shape through current Book normalizers; return canonical assets/categories, ordering, warnings, and source digest without mutating input |
+| `stageSnapshot({ operationId, generationId, parentGenerationId, snapshot, sourceEvidence })` | write immutable `book.asset`/`book.category` revisions plus a complete membership set into an inactive generation; never activate |
+| `verifyGeneration({ generationId, expected })` | validate schema, counts, ordered stable-ID sets, payload/member digests, asset/category round-trip, source evidence, and WorldBook link resolution report |
+| `readSnapshot({ generationId })` | reconstruct the current `{ assets, categories }` Book backup shape in canonical order and distinguish missing/corrupt/unsupported results |
+| `readAsset({ generationId, assetId })` | read one user asset by stable ID; built-in fallback remains outside the Adapter |
+| `listAssets({ generationId, category, status, cursor, limit })` | return deterministic user-asset records using declared membership indexes; search/tag filtering may remain in the bounded Book model |
+| `abortGeneration({ operationId, generationId })` | mark a never-active candidate aborted; no active pointer or legacy carrier changes |
+
+All methods return stable codes including `legacy_missing`, `legacy_parse_failed`, `legacy_version_unsupported`, `revision_digest_conflict`, `generation_incomplete`, `reference_report_mismatch`, `lease_timed_out`, `quota_insufficient`, and `carrier_unavailable`. Console text is not an API.
+
+### 9.2 Immutable Fixtures
+
+Before any migration runtime exists, Batch 2B checks in the following immutable inputs. A fixture is never rewritten by the migration under test.
 
 | Fixture ID | Required evidence |
 | --- | --- |
@@ -236,7 +345,7 @@ Before any migration runtime exists, the following fixtures must be checked into
 | `book-single-v1` | one asset/category with all normalized required fields |
 | `book-multi-category-v1` | deterministic category and asset ordering with stable links |
 | `book-worldbook-links-v1` | valid and missing WorldBook source references are reported distinctly |
-| `book-legacy-normalization-v1` | accepted legacy aliases/defaults normalize without identity loss |
+| `book-legacy-unwrapped-v0` | accepted pre-envelope assets/categories normalize without identity loss |
 | `book-limit-edge-v1` | maximum accepted record counts and long text do not truncate silently |
 | `book-invalid-v1` | malformed IDs, duplicate IDs, invalid category links, and unsupported versions are rejected with stable codes |
 
@@ -248,52 +357,148 @@ Each fixture set requires:
 - expected rollback state;
 - a mutation guard proving the source fixture is byte-identical after every run.
 
-### 9.1 Failure-Injection Matrix
+### 9.3 Failure-Injection Matrix
 
 | Phase | Injected failure | Required result |
 | --- | --- | --- |
 | inspect | unreadable/unsupported Book envelope | no staging write; active save unchanged |
+| inspect | valid local source plus different mirror | local primary is selected, drift is reported, and no newest-timestamp winner is inferred |
+| inspect | missing/invalid local plus valid mirror | named `legacy_recovery_candidate`; no silent activation or local overwrite |
 | normalize | duplicate or invalid stable ID | deterministic validation error; no generated replacement ID |
+| schema open/upgrade | missing, extra, or wrong keyPath/index | schema acceptance fails; legacy Book remains current |
+| capacity preflight | insufficient or unknown peak space | no stage when insufficient; explicit unknown result is retained for caller policy |
 | stage records | failure before first/middle/final record | incomplete generation remains inactive and cleanable |
-| stage index | projection/index build failure | authoritative staged records never activate alone |
+| stage membership | missing revision/digest or position gap | authoritative record versions never activate without a complete membership set |
 | verify | count, digest, schema, order, or reference mismatch | candidate rejected; active pointer unchanged |
-| acquire write lease | another tab owns the lease | structured busy/timeout result; no partial write |
+| acquire write lease | another tab owns the lease past 8-second wait | later page receives `read_only_conflict` with retry/refresh only; no partial write or takeover |
+| lease loss | heartbeat/fencing token changes during stage | operation aborts inactive; active pointer unchanged |
 | pointer activation | atomic update fails | previous active generation remains selected |
-| reopen verify | candidate cannot reopen | journal enters rollback-required and previous generation is restored |
+| first Book reopen verify | candidate cannot reopen | journal enters rollback-required and unchanged `schatphone:store:book` reopens |
+| later reopen verify | candidate cannot reopen | journal enters rollback-required and previous generation is restored |
 | rollback | previous pointer cannot reopen | hard recovery error retains both generations and journal evidence |
 | crash/reload | crash at every journal transition | deterministic resume or rollback without mixed generations |
+| persistent-storage request | unsupported, denied, or thrown error | classified status and Settings-retry eligibility; no save deletion or false protected state |
 
-Passing this matrix approves only the Book Adapter implementation presented for review. It does not approve cutover.
+Passing this matrix approves only the Book foundation/fixture implementation presented for review. It does not approve application import, cutover, dual write, or runtime activation.
 
 ## 10. Migration And Rollback Gates
 
-A future owner migration cannot begin until all gates pass:
+### 10.1 Legacy Book Read And Stage Flow
 
-1. canonical inventory and Backup Section Registry cover the owner/data class independently;
-2. current and legacy backup fixtures include that owner and preserve stable references;
-3. logical Repository Interface, owner schema, Adapter transactions, and error codes receive control review;
-4. capacity and peak-working-space behavior is measured;
-5. immutable source fixtures and the complete failure matrix pass;
-6. migration writes only to an inactive generation;
-7. activation and reopen verification are atomic at the generation pointer;
-8. rollback restores structured records, projections, and binaries as one consistency unit;
-9. the legacy carrier remains readable until rollback support is explicitly retired;
-10. any user-visible behavior difference enters `USER_DECISION_REQUIRED` before implementation.
+The exact current source is localStorage key `schatphone:store:book`, normally a version-1 `{ version, savedAt, data: { assets, categories } }` envelope. Accepted unwrapped `{ assets, categories }` input is legacy version 0. The current `schatphone-layered-storage/state` row with the same full key remains a rebuildable mirror, not a timestamp-based co-owner.
 
-Cutover proof must compare owner-visible behavior and exact stable-reference sets before and after migration. Record counts alone are insufficient.
+The future migration flow is:
+
+1. acquire `repository-write` and resolve any earlier nonterminal journal;
+2. read the local raw string and mirror raw string without changing either;
+3. prefer a valid local source; record mirror equality/drift but never choose the newest timestamp;
+4. if local is missing/invalid and the mirror is valid, classify it as `legacy_recovery_candidate`; Batch 2B may test/stage that candidate but cannot silently overwrite local or activate it;
+5. SHA-256 the exact UTF-8 source bytes before parse, decode only accepted envelope versions, and preserve the immutable bytes in fixture evidence;
+6. normalize through the same Book schema functions used by the current store, excluding built-in package assets from persisted records;
+7. stage a complete inactive Book generation with `book.asset` and `book.category` membership, counts, ordered ID sets, and digests;
+8. read the staged snapshot back and compare exact canonical payloads/order plus valid/missing WorldBook link outcomes;
+9. on any failure, abort the candidate and continue reading the unchanged legacy source;
+10. stop. Batch 2B does not write the active pointer, import the Adapter into `book.js`, delete legacy state, or begin dual write.
+
+### 10.2 Later Cutover And Rollback Gate
+
+A later Book cutover cannot begin until all gates pass:
+
+1. canonical inventory and future complete-backup coverage independently include the Repository database, both Book classes, active pointer, and migration evidence;
+2. current and legacy backup fixtures preserve Book stable IDs, category order, long text, and WorldBook reference outcomes;
+3. the implementation conforms to the accepted schema, Adapter transactions, error codes, and permission/coordination behavior and passes implementation review;
+4. measured usage and peak working space pass capacity preflight;
+5. immutable source fixtures and the complete failure matrix pass in supported browser storage;
+6. migration writes only to an inactive generation and retains raw legacy evidence;
+7. activation and reopen verification use the fenced atomic pointer protocol in section 6;
+8. first-cutover rollback returns to the unchanged localStorage source; later rollback restores the previous generation;
+9. `src/stores/book.js` behavior, built-in resolution, backup snapshot, import/export, locks, delete guards, order, and WorldBook reference reports are equivalent before and after;
+10. the legacy carrier remains readable until a separately approved retirement slice with backup/recovery evidence;
+11. any newly discovered user-visible behavior difference enters `USER_DECISION_REQUIRED` before cutover.
 
 No dual-write period is assumed. If later proposed, it requires a separate consistency, precedence, conflict, telemetry, and removal contract; it cannot be introduced as a temporary shortcut.
 
-## 11. Acceptance For Control Review
+## 11. Batch 2A Acceptance And Approved Batch 2B
 
-This draft is ready for control review when:
+### 11.1 Batch 2A Technical-Acceptance Checklist
 
-1. source-level tests fail for an unclassified persisted key, IndexedDB carrier/store, or direct browser-storage key;
-2. Settings diagnostics consume the inventory projection and audit all 16 stores including Book;
-3. the current exporter consumes the independent legacy v2 schema/section shape registry without changing the exported JSON or import order, and the result distinguishes shape validity from complete-package eligibility;
-4. durable authoritative classes cannot be satisfied by an `optional` or `excluded` registry entry;
-5. the Chat identity v2 gap is explicit and cannot support a future complete-package claim;
-6. owner/class, Repository Interface, hybrid model, envelope, identity, generation, allowlist, quota, coordination, Book fixtures, migration, and rollback rules are reviewable;
-7. every still-unapproved implementation and user-visible behavior is labeled rather than inferred.
+This contract is `ARCHITECTURE_ACCEPTED` because:
 
-Approval of this document would approve the technical contract only. Storage implementation remains `NOT_APPROVED` until a later package slice names exact files, schema/Adapter details, fixtures, rollback, validation, and stop conditions.
+1. the storage-container boundary explicitly forbids save slots, automatic sync, silent merge, and cross-container coordination;
+2. database name/version, six object stores, every keyPath/index, singleton metadata, record-version and generation-membership shape are exact;
+3. Book assets/categories, built-in exclusion, WorldBook ownership, ordering, Adapter methods, fixtures, errors, and failure injection are exact;
+4. legacy localStorage and mirror precedence, immutable source evidence, inactive staging, verification, cutover, and rollback are separated;
+5. multi-tab wait/read-only/retry/refresh behavior is confirmed and force takeover/last-write-wins is prohibited;
+6. persistent-storage timing, qualifying actions, status states, and Settings retry behavior are confirmed without prompting on startup;
+7. Gallery schema, R2, other owner migrations, Book cutover, dual write, garbage collection, and runtime activation remain explicitly excluded.
+
+Architecture acceptance closes the technical design gate and approves the non-active Batch 2B scope below. Application storage runtime import, Book cutover, active-pointer activation, Gallery/R2, and other owners remain `NOT_APPROVED`. This workgroup still stops after documentation and waits for a separate instruction to start Batch 2B.
+
+### 11.2 Approved Batch 2B Exact Files
+
+Batch 2B is the non-active IndexedDB foundation plus Book fixture/staging pilot. Its exact allowed files are:
+
+New runtime modules, not imported by application stores or entrypoints:
+
+- `src/lib/persistence-repository-schema.js`
+- `src/lib/persistence-repository.js`
+- `src/lib/write-coordinator.js`
+- `src/lib/persistent-storage-policy.js`
+- `src/lib/book-repository-adapter.js`
+- `src/lib/book-legacy-migration.js`
+
+One required inventory update:
+
+- `src/lib/persistence-owner-inventory.js`
+
+Immutable fixture files:
+
+- `tests/fixtures/persistence/book/book-empty-v1.json`
+- `tests/fixtures/persistence/book/book-single-v1.json`
+- `tests/fixtures/persistence/book/book-multi-category-v1.json`
+- `tests/fixtures/persistence/book/book-worldbook-links-v1.json`
+- `tests/fixtures/persistence/book/book-legacy-unwrapped-v0.json`
+- `tests/fixtures/persistence/book/book-limit-edge-v1.json`
+- `tests/fixtures/persistence/book/book-invalid-v1.json`
+
+Test files:
+
+- `tests/persistence-repository-schema.test.js`
+- `tests/write-coordinator.test.js`
+- `tests/persistent-storage-policy.test.js`
+- `tests/book-repository-adapter.test.js`
+- `tests/book-legacy-migration.test.js`
+- `tests/persistence-owner-inventory.test.js`
+- `e2e/persistence-repository-foundation.spec.js`
+
+No package dependency, Store, View, composable, router, backup workflow, Gallery module, current `src/lib/persistence.js`, or application entrypoint is in the 2B file list.
+
+The current Node 24 Vitest environment has no `globalThis.indexedDB`, so Vitest alone cannot prove browser object-store creation, transaction semantics, Web Locks, or BroadcastChannel behavior. The focused Playwright spec imports the otherwise unreferenced Repository modules directly inside a Chromium page environment served by the existing test server. It passes a unique disposable database name, opens/upgrades the real IndexedDB database, inspects every store/keyPath/index, exercises commit/abort/reopen transactions, closes all connections, and verifies deletion in cleanup. It does not add or modify an application route, Store, entrypoint, or runtime import.
+
+The same spec uses two pages in one Playwright browser context to prove same-container coordination. It covers the available Web Locks plus BroadcastChannel path and a dependency-injected forced fallback that uses the real IndexedDB lease store/fencing behavior. Cross-context or cross-profile synchronization is neither implemented nor tested because isolated containers must remain independent.
+
+### 11.3 Batch 2B Acceptance
+
+1. Vitest proves the exact schema descriptor, canonical serialization/digests, policy state machines, pure Coordinator rules, fixture immutability, Adapter mapping, migration precedence, and deterministic failure codes;
+2. source-level inventory coverage detects the new database, every store, direct storage key, and version;
+3. immutable fixture digests and mutation guards pass;
+4. Book Adapter round-trips exact canonical snapshots/order and preserves valid/missing WorldBook reference reports without writing WorldBook;
+5. legacy tests prove local-first precedence, named mirror recovery candidate, inactive staging, idempotence, and unchanged source bytes;
+6. failure injection proves no active pointer change, no partial active generation, and stable structured errors;
+7. `e2e/persistence-repository-foundation.spec.js` opens a uniquely named real Chromium IndexedDB database and proves exact object-store/keyPath/index equality, transaction commit/abort, close/reopen consistency, schema-drift rejection, and cleanup deletion;
+8. that focused Playwright spec uses two same-context pages to prove the Web Locks/BroadcastChannel path and forced IndexedDB fallback lease path, including one writer, bounded timeout, read-only conflict, retry/refresh, fencing, crash recovery, and no force takeover/last-write-wins;
+9. persistent-storage policy tests prove no startup request, contextual qualifying triggers, browser-state refresh, denial/error classification, and explicit Settings retry capability;
+10. `git diff --check`, governance, lint, targeted Vitest, full unit tests, build, and `npx.cmd playwright test e2e/persistence-repository-foundation.spec.js` pass. The full product E2E suite is not required unless implementation unexpectedly touches an application runtime path.
+
+### 11.4 Batch 2B Stop Conditions
+
+Stop and return to control review if implementation would require:
+
+- importing the new Repository into `src/stores/book.js` or any app runtime entry;
+- writing the active-generation pointer outside tests, deleting/rewriting `schatphone:store:book`, or adding dual write;
+- changing Book user-visible behavior, snapshot shape, 300-asset limit, built-in catalog, WorldBook links, or backup payload;
+- adding Gallery binary/projection schema, R2/provider code, another owner migration, internal save slots, cross-container sync, or merge behavior;
+- adding a force-takeover or last-write-wins path;
+- prompting for persistent storage on startup or adding unreviewed Settings/UI copy;
+- introducing a dependency or changing a file outside the exact list;
+- failing fixture immutability, stable-ID/reference equivalence, capacity preflight, schema drift, rollback, or supported-browser tests.

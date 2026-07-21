@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 > Scope and authority note
 >
@@ -308,8 +308,8 @@ These are directions, not tasks. Promote one concrete slice into `docs/roadmap/T
 Before another broad feature family:
 
 1. preserve the accepted `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`, including standalone manifests, integrity, capacity/failure states, staged activation, legacy degraded recovery, exact local-material reuse, crash recovery, and rollback;
-2. finish the IndexedDB-first logical repository/schema, persistent-storage, hot/cold placement, and multi-tab write contracts without implementing them;
-3. approve one reference migration separately with immutable fixtures and rollback proof;
+2. preserve the architecture-accepted IndexedDB v1 schema, record/generation model, persistent-storage timing, isolated-container rule, and fail-closed multi-tab contract;
+3. run only the approved non-active Book foundation/fixture/staging pilot with targeted real-Chromium IndexedDB and same-container coordination coverage; Book application import, cutover, and runtime activation require a later gate;
 4. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
 5. update the compatible Vite patch line and safe transitive dependencies;
 6. plan Vitest's major upgrade as an isolated migration;

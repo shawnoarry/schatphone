@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 ## 1. Architecture Goals
 
@@ -229,10 +229,11 @@ Confirmed target direction, not current implementation:
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: required-section manifests, integrity evidence, capacity preflight, staged generations, atomic activation, crash journals, migration, failure taxonomy, and metadata/binary rollback are frozen before implementation;
 - `src/lib/persistence-owner-inventory.js` now independently classifies the 16 persisted stores, serialized mirror, Gallery binary carrier, Home local hint, Chat session feedback, and logical-owner/data-class ownership; Settings diagnostics consume its stable 16-store audit projection, including Book;
-- `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap without changing the v2 payload; a shape-valid legacy file is still ineligible for a future complete-package claim while that gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` defines the hybrid Repository, generation, coordination, quota, and Book reference-fixture direction as `DRAFT_FOR_CONTROL_REVIEW` only;
+- `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap without changing the v2 payload; a shape-valid legacy file is still ineligible for a future complete-package claim while that gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is now `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
-- no persistence migration begins until the Repository draft receives control review and the concrete IndexedDB schema, persistent-storage behavior, and Book reference slice are separately approved.
+- one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
+- Batch 2A starts no persistence implementation. The exact non-active Batch 2B schema/Adapter/fixture files and focused real-browser foundation spec are approved for a later instructed round; Gallery/R2/other owners, application import, Book cutover, dual write, and runtime activation remain unapproved.
 
 ### Gallery Binaries
 

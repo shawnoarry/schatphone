@@ -15,7 +15,9 @@ SchatPhone's domain architecture is sound enough to preserve. The current proble
 Current active architecture slice:
 
 - ordinary browsers and installable PWAs remain complete first-class clients;
-- one isolated browser/Web App storage container owns one current save;
+- one isolated browser/Web App storage container owns one current save; different isolated entry containers remain independent and move state only through a user-selected complete backup, never automatic sync or silent merge;
+- same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains read-only with retry and refresh-current-save actions; force takeover and last-write-wins are excluded;
+- persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
@@ -39,17 +41,22 @@ Current active architecture slice:
 - the executable canonical inventory independently classifies 16 persisted stores, the serialized mirror, Gallery binary storage, the Home local hint, Chat session feedback, and their logical owner/data classes; Contacts-in-Chat and WorldBook-in-System remain explicit rather than inheriting the physical store owner;
 - Settings diagnostics consumes the inventory's stable 16-store projection and includes Book; legacy v2 backup export consumes a separate schema/section shape registry before download without changing payload fields, Gallery defaults/limits, or import ordering;
 - legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
-- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `DRAFT_FOR_CONTROL_REVIEW`: it proposes the hybrid Repository Interface, staged generation plus atomic pointer, localStorage hint allowlist, quota/persist capability seam, configurable WriteCoordinator, and Book immutable-fixture/failure matrix;
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED`: it fixes the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual quota/persist policy, fail-closed WriteCoordinator, and Book Adapter/fixture/legacy-reader/rollback contract;
+- Batch 2B is approved as the exact non-active IndexedDB foundation plus Book Adapter/fixture/staging slice, with a focused Playwright spec for real Chromium IndexedDB and same-context multi-page coordination; Book store import/cutover, dual write, runtime activation, Gallery/R2, and other owners remain unapproved;
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice, not approval to migrate application storage yet.
 
-### Product Decision Checkpoint - 2026-07-16
+### Product Decision Checkpoint - 2026-07-21
 
 | Area | Status | Current meaning |
 | --- | --- | --- |
 | Browser/PWA persistence | `CONFIRMED` | One isolated browser/Web App container owns one current save; IndexedDB-first is the target and `localStorage` becomes small hot/recovery state. |
+| Isolated entry containers | `CONFIRMED` | Each isolated browser profile/site-data or separately isolated desktop Web App container is an independent current save. There is no internal slot, automatic sync, cross-container discovery, or silent merge; transfer uses a user-selected complete backup. |
+| Same-container tabs | `CONFIRMED` | Writes wait behind one coordinator. After timeout the later tab remains read-only and offers retry/refresh-current-save only; last-write-wins and force takeover are excluded. |
+| Persistent-storage timing | `CONFIRMED` | Do not ask at first launch. Ask in context before the first qualifying high-volume durable action, and expose browser status plus explicit retry in Settings. |
+| IndexedDB / Book pilot | `CONFIRMED` | IndexedDB foundation and Book are the first storage pilot. Batch 2A is architecture-accepted and the exact non-active Batch 2B foundation/fixture/staging slice is approved; Book runtime import/cutover remains excluded. |
 | Durable records | `CONFIRMED` | Committed user/AI/system content and authoritative/audit truth remain durable under their owning modules; raw transport and rebuildable material do not. |
 | Personal cloud | `CONFIRMED` | No shared project/workgroup archive. Each user owns a separate Cloudflare R2 destination behind a provider-neutral contract. |
 | Remote security | `CONFIRMED` | A personal Worker gateway uses a revocable scoped device token; the app never stores the R2 API Secret. Backups are client-encrypted with recovery-password or recovery-file restore. |
@@ -71,8 +78,8 @@ Current active architecture slice:
 | Same-device material preservation | `CONFIRMED` | A restore first reuses exact matching local binaries and does not delete or hide current-only retained Gallery material merely because an older or binary-excluded backup lacks it. |
 | Legacy incomplete media | `CONFIRMED` | Valid legacy core data may restore after a clear missing-material summary. Unresolved media remains as a typed placeholder with stored descriptive text where available rather than corrupting or removing the owning record. |
 | Backup/recovery engineering contract | `ARCHITECTURE_ACCEPTED` | Complete package, integrity, capacity, staged restore, migration, failure, crash recovery, rollback, and acceptance-test boundaries are frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`. |
-| Persistence inventory and Repository contract | `CONTROL_REVIEW` | Canonical carrier/owner inventory, runtime-consumed legacy v2 shape validation with explicit known-gap audit, and the hybrid Repository/Book reference contract are implemented as an auditable draft; exact storage schema and cutover remain unapproved. |
-| Storage implementation | `NOT_APPROVED` | No IndexedDB migration, Cloudflare connector, media offload, or Gallery schema implementation begins from planning alone. |
+| Persistence inventory and Repository contract | `ARCHITECTURE_ACCEPTED` | Canonical inventory and legacy shape-gap audit remain active; exact IndexedDB v1 schema, generation/pointer/journal, permission, tab coordination, and Book foundation/fixture contract are accepted, with targeted real-browser coverage required in Batch 2B. |
+| Storage runtime implementation | `NOT_APPROVED` | No application Repository import, Book cutover/active-pointer switch, Cloudflare connector, media offload, Gallery schema, or other-owner migration begins from Batch 2B approval. |
 
 Verified baseline:
 
@@ -284,10 +291,10 @@ Status: `IN_PROGRESS` planning; no migration implementation is approved.
 1. `READY_FOR_CONTROL_REVIEW 2026-07-21`: independently classify authoritative, auditable, rebuildable, binary, hint, and transient data and connect the 16-store diagnostic projection;
 2. `DONE 2026-07-18`: translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
 3. `DONE 2026-07-18`: translate complete-package, explicit R2 retention, backup-size/quota, creation/delivery failure, integrity, staged restore, legacy degraded recovery, local-material reuse, migration, crash recovery, and rollback into testable acceptance;
-4. `DRAFT_FOR_CONTROL_REVIEW 2026-07-21`: define the owner-aware hybrid Repository Interface, record envelope, staged generation/atomic pointer, localStorage hint allowlist, quota/persist capability, configurable multi-tab WriteCoordinator, and rollback gates; concrete IndexedDB schema and user-visible prompt/conflict behavior remain unapproved;
+4. `ARCHITECTURE_ACCEPTED 2026-07-21`: the owner-aware Repository Interface, exact separate IndexedDB v1 stores/keyPaths/indexes, immutable record versions and generation membership, atomic pointer/journal, localStorage hints, contextual persistent-storage request, read-only multi-tab conflict behavior, and rollback gates are accepted;
 5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
 6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
-7. Book is the control-approved reference candidate; approve its immutable fixtures and failure matrix before any migration runtime or cutover.
+7. `APPROVED`: the next safe slice is only the exact non-active Batch 2B Adapter/schema/fixture/test list, including `e2e/persistence-repository-foundation.spec.js`; no Store import, cutover, dual write, or activation.
 
 Cross-package dependencies:
 

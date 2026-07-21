@@ -1,6 +1,6 @@
 # SchatPhone Storage Strategy
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 Purpose: summarize how SchatPhone should store settings, saves, chat records, world state, runtime truth, and AI-related data without making browser storage too large, too fragile, or too semantically muddy.
 
@@ -278,20 +278,21 @@ Frozen engineering contract:
 - local export status distinguishes a verified package from an operating-system handoff whose final save location may be unconfirmable;
 - remote staging objects are not visible recovery versions, while confirmed remote versions remain protected from automatic rotation or deletion.
 
-Repository contract draft:
+Repository contract accepted state:
 
 - `src/lib/persistence-owner-inventory.js` is the independent canonical inventory for current physical carriers and logical owner/data classes; it does not import or derive from the backup registry;
 - Settings storage diagnostics now projects all 16 persisted store targets from that inventory, including Book;
 - legacy v2 export consumes `src/lib/backup-section-registry.js` only for schema/section shape validation without changing payload fields, Gallery defaults/limits, or import ordering;
 - shape validation reports `shapeOk` separately from `completePackageEligible`; the current omission of Chat `moduleIdentity` and `moduleAvatarOverrides` is an explicit required known-gap audit, so a structurally valid legacy v2 payload remains ineligible for a future complete-package claim;
-- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` defines the hybrid record/binary/projection direction, owner-aware Repository Interface, staged generation and atomic pointer, localStorage hint allowlist, capacity and WriteCoordinator Interfaces, and Book fixture/failure gates as `DRAFT_FOR_CONTROL_REVIEW`;
-- concrete IndexedDB keyPaths/stores, Gallery binary schema, R2, Book migration/cutover, dual write, runtime generation activation, persistent-storage prompt timing, and multi-tab conflict UI remain unapproved.
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual persistent-storage policy, fail-closed WriteCoordinator, and Book Adapter/fixture/rollback gates;
+- each isolated storage container remains one independent current save; same-container conflicts time out to read-only retry/refresh, while cross-container sync, silent merge, force takeover, and last-write-wins are excluded;
+- Batch 2B is approved only within its exact non-active Adapter/fixture/test list, including a focused real-Chromium IndexedDB and same-context multi-page coordination spec. Gallery binary schema, R2, other owners, application import, Book cutover, dual write, garbage collection, and runtime generation activation remain unapproved.
 
 ## 7. Practical Migration Posture
 
 Current practical posture:
 
-1. preserve the accepted complete-backup/recovery contract while control reviews the canonical inventory and Repository draft, then separately approve the concrete IndexedDB schema, persistent-storage behavior, and Book reference migration before changing persistence code;
+1. preserve the accepted complete-backup/recovery and Repository contracts; the next approved slice is only the exact non-active Batch 2B IndexedDB foundation plus Book fixture/staging pilot, and this documentation round does not begin it;
 2. keep settings and lightweight recovery metadata small and hot;
 3. move one approved reference domain from legacy snapshots to IndexedDB-first repositories, with compatibility import and focused tests;
 4. validate the reference migration before selecting later domains such as Chat history, relationship audit, or binary assets;

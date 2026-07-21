@@ -21,9 +21,10 @@ Current state:
 - the complete-backup/recovery engineering contract is now accepted: new complete versions require manifest/section/binary integrity, capacity preflight, staged atomic activation, crash-safe rollback, and explicit failure states; no storage migration is approved yet;
 - the canonical persistence-owner inventory now classifies all current store, mirror, binary, direct-local, and session carriers independently from backup coverage; Settings diagnostics consumes its 16-store projection and now includes Book;
 - legacy v2 export consumes a section-shape registry while preserving the existing payload and import behavior; shape validity is reported separately from complete-package eligibility, and omitted Chat module identity/avatar settings remain an explicit required legacy gap;
-- the hybrid Repository, staged-generation/atomic-pointer, capacity, WriteCoordinator, and Book reference-fixture contract is now `DRAFT_FOR_CONTROL_REVIEW`, not architecture acceptance or implementation approval;
+- the Repository contract is now `ARCHITECTURE_ACCEPTED` with an exact separate IndexedDB v1 schema, immutable record-version/generation-membership model, atomic pointer/journal, contextual persistent-storage policy, fail-closed multi-tab coordination, and Book Adapter/fixture/rollback contract;
+- each isolated browser or desktop Web App storage container remains one independent current save; same-container tabs coordinate writes, while different entry containers never auto-sync or silently merge;
 - legacy backups may restore valid core data with a missing-material report and type-appropriate placeholders, while exact local binaries are reused and current-only retained Gallery material is not deleted or hidden by an older restore;
-- the remaining persistence architecture slice is the IndexedDB-first logical repository/schema contract, persistent-storage policy, and one separately approved reference migration;
+- the non-active Batch 2B IndexedDB foundation and Book fixture/staging pilot is approved with a focused real-Chromium Playwright gate; Gallery/R2/other stores, application runtime import, Book cutover, dual write, and activation remain unapproved;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
 - the active 4.5 lane also includes complete-backup sensitivity, development dependency advisories, and CI/release gating;

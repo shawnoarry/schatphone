@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 ## 1. Workstream A: Ownership Closure
 
@@ -25,7 +25,8 @@ Updated: 2026-07-18
 - preserve immutable source packages, staged version-to-version migration, separate-generation activation, metadata/binary rollback unity, and crash-journal recovery
 - reuse exact local Gallery binaries and retain current-only kept material during older restores; never match by filename, label, prompt, or URL alone
 - classify legacy missing media as unresolved references with type-appropriate derived placeholders, not fabricated recovered assets
-- keep IndexedDB layout, Gallery schema, provider code, and the first reference migration separately unapproved
+- treat the exact IndexedDB v1/Book foundation contract as architecture-accepted and Batch 2B as an approved non-active Adapter/fixture/staging slice with focused real-browser IndexedDB/coordination coverage; keep application runtime wiring, Gallery schema, provider code, other owners, Book cutover, dual write, and activation separately unapproved
+- preserve one save per isolated storage container; same-container write coordination cannot become cross-container sync, silent merge, force takeover, or last-write-wins
 
 ## 4. Workstream D: Cleanup Debt
 
