@@ -37,7 +37,10 @@ const goHome = () => {
 const openCalendar = () => {
   router.push({
     path: '/calendar',
-    query: route.query.from === 'home' && route.query.homePage ? { from: 'home', homePage: route.query.homePage } : {},
+    query:
+      route.query.from === 'home' && route.query.homePage
+        ? { from: 'home', homePage: route.query.homePage }
+        : {},
   })
 }
 
@@ -64,7 +67,8 @@ const getLocalized = (item, zhKey, enKey, fallback = '') => {
   return languageBase.value === 'zh' ? zh || en || fallback : en || zh || fallback
 }
 
-const getReminderTitle = (item) => getLocalized(item, 'titleZh', 'titleEn', t('提醒事项', 'Reminder'))
+const getReminderTitle = (item) =>
+  getLocalized(item, 'titleZh', 'titleEn', t('提醒事项', 'Reminder'))
 const getReminderSummary = (item) => getLocalized(item, 'summaryZh', 'summaryEn', '')
 const getReminderSourceLabel = (item) =>
   getLocalized(item, 'sourceLabelZh', 'sourceLabelEn', t('来源', 'Source'))
@@ -77,10 +81,10 @@ const getStatusLabel = (item) => {
 }
 
 const getStatusClass = (item) => {
-  if (item.pinned) return 'bg-blue-50 text-blue-600'
-  if (item.status === 'confirmed') return 'bg-emerald-50 text-emerald-600'
-  if (item.status === 'draft') return 'bg-gray-100 text-gray-500'
-  return 'bg-amber-50 text-amber-600'
+  if (item.pinned) return 'reminder-status--pinned'
+  if (item.status === 'confirmed') return 'reminder-status--confirmed'
+  if (item.status === 'draft') return 'reminder-status--draft'
+  return 'reminder-status--pending'
 }
 
 const formatDateTime = (timestamp) => {
@@ -97,7 +101,12 @@ const formatDateTime = (timestamp) => {
 const sourceSummaryItems = computed(() => [
   { key: 'map', labelZh: '地图', labelEn: 'Map', count: sourceCounts.value.map || 0 },
   { key: 'phone', labelZh: '电话', labelEn: 'Phone', count: sourceCounts.value.phone || 0 },
-  { key: 'shopping', labelZh: '购物', labelEn: 'Shopping', count: sourceCounts.value.shopping || 0 },
+  {
+    key: 'shopping',
+    labelZh: '购物',
+    labelEn: 'Shopping',
+    count: sourceCounts.value.shopping || 0,
+  },
   { key: 'stock', labelZh: '股票', labelEn: 'Stock', count: sourceCounts.value.stock || 0 },
 ])
 
@@ -125,7 +134,8 @@ const statusFilterOptions = computed(() =>
 
 const filteredReminderItems = computed(() =>
   activeReminderItems.value.filter((item) => {
-    const sourceMatches = activeSourceFilter.value === 'all' || item.source === activeSourceFilter.value
+    const sourceMatches =
+      activeSourceFilter.value === 'all' || item.source === activeSourceFilter.value
     return sourceMatches && matchesStatusFilter(item, activeStatusFilter.value)
   }),
 )
@@ -162,107 +172,121 @@ watch(
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f7f7fb] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white flex items-center gap-3">
-      <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
+  <div class="reminders-page" data-testid="reminders-page">
+    <header class="reminders-header">
+      <button type="button" class="reminders-back-button" @click="goHome">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        <span>{{ t('首页', 'Home') }}</span>
       </button>
-      <h1 class="font-bold">{{ t('提醒事项', 'Reminders') }}</h1>
-    </div>
+      <h1 class="reminders-page-title">{{ t('提醒事项', 'Reminders') }}</h1>
+    </header>
 
-    <div class="flex-1 overflow-y-auto px-5 py-6 space-y-4">
-      <section class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="text-xs font-semibold uppercase tracking-wide text-orange-500">
+    <main class="reminders-content">
+      <section class="reminders-panel reminders-intro">
+        <p class="reminders-eyebrow">
           {{ t('跨模块线索收件箱', 'Cross-module cue inbox') }}
         </p>
-        <h2 class="mt-2 text-xl font-bold text-gray-950">
-          {{ t('提醒事项先承接线索，日历只保留确认后的日程。', 'Reminders catch cues first; Calendar keeps confirmed schedule events.') }}
-        </h2>
-        <p class="mt-2 text-xs leading-5 text-gray-500">
+        <h2 class="reminders-intro-title">
           {{
             t(
-              '这是 Calendar / Reminders 拆分的第一阶段：数据仍兼容旧 Calendar store，但用户语义已经从“日历线索层”转向“提醒事项”。',
-              'This is phase one of the Calendar / Reminders split: data still stays compatible with the old Calendar store, while the user-facing meaning moves to Reminders.',
+              '提醒事项先承接线索，日历只保留确认后的日程。',
+              'Reminders catch cues first; Calendar keeps confirmed schedule events.',
+            )
+          }}
+        </h2>
+        <p class="reminders-intro-copy">
+          {{
+            t(
+              '来自地图、电话、购物与股票的线索会先汇总在这里；确认后再进入日历。',
+              'Cues from Map, Phone, Shopping, and Stock stay here until you confirm them for Calendar.',
             )
           }}
         </p>
-        <div class="mt-4 grid grid-cols-3 gap-2">
-          <div class="rounded-xl bg-orange-50 px-3 py-2">
-            <p class="text-[10px] text-orange-500">{{ t('待处理', 'Suggested') }}</p>
-            <strong class="text-lg text-orange-700">{{ suggestedReminderCount }}</strong>
+        <div class="reminders-summary-grid">
+          <div class="reminders-summary-item reminders-summary-item--pending">
+            <p>{{ t('待处理', 'Suggested') }}</p>
+            <strong>{{ suggestedReminderCount }}</strong>
           </div>
-          <div class="rounded-xl bg-emerald-50 px-3 py-2">
-            <p class="text-[10px] text-emerald-500">{{ t('已确认', 'Confirmed') }}</p>
-            <strong class="text-lg text-emerald-700">{{ confirmedReminderCount }}</strong>
+          <div class="reminders-summary-item reminders-summary-item--confirmed">
+            <p>{{ t('已确认', 'Confirmed') }}</p>
+            <strong>{{ confirmedReminderCount }}</strong>
           </div>
-          <div class="rounded-xl bg-blue-50 px-3 py-2">
-            <p class="text-[10px] text-blue-500">{{ t('已固定', 'Pinned') }}</p>
-            <strong class="text-lg text-blue-700">{{ pinnedReminderCount }}</strong>
+          <div class="reminders-summary-item reminders-summary-item--pinned">
+            <p>{{ t('已固定', 'Pinned') }}</p>
+            <strong>{{ pinnedReminderCount }}</strong>
           </div>
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('来源统计', 'Sources') }}</p>
-            <h2 class="font-semibold">{{ t('当前提醒', 'Current reminders') }}</h2>
+      <section class="reminders-panel reminders-filter-panel">
+        <div class="reminders-section-header">
+          <div class="reminders-section-copy">
+            <p class="reminders-section-kicker">{{ t('来源统计', 'Sources') }}</p>
+            <h2 class="reminders-section-title">{{ t('当前提醒', 'Current reminders') }}</h2>
           </div>
           <span
-            class="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600"
+            class="reminders-result-count"
             data-testid="reminders-filtered-count"
+            aria-live="polite"
           >
-            {{ t(`${filteredReminderCount} / ${activeReminderCount} 条`, `${filteredReminderCount} / ${activeReminderCount} items`) }}
+            {{
+              t(
+                `${filteredReminderCount} / ${activeReminderCount} 条`,
+                `${filteredReminderCount} / ${activeReminderCount} items`,
+              )
+            }}
           </span>
         </div>
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          <div
-            v-for="source in sourceSummaryItems"
-            :key="source.key"
-            class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2"
-          >
-            <p class="text-[11px] text-gray-500">{{ t(source.labelZh, source.labelEn) }}</p>
-            <strong class="text-base">{{ source.count }}</strong>
+        <div class="reminders-source-summary">
+          <div v-for="source in sourceSummaryItems" :key="source.key" class="reminders-source-stat">
+            <p>{{ t(source.labelZh, source.labelEn) }}</p>
+            <strong>{{ source.count }}</strong>
           </div>
         </div>
-        <div class="mt-4 space-y-3">
-          <div class="flex flex-wrap gap-2" data-testid="reminders-source-filters">
+        <div class="reminders-filter-stack">
+          <div
+            class="reminders-filter-group"
+            data-testid="reminders-source-filters"
+            role="group"
+            :aria-label="t('按来源筛选', 'Filter by source')"
+          >
             <button
               v-for="source in sourceFilterOptions"
               :key="source.key"
               type="button"
-              class="rounded-full border px-3 py-1.5 text-[11px] font-semibold transition"
-              :class="
-                activeSourceFilter === source.key
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-200 bg-white text-gray-600'
-              "
+              class="reminders-filter reminders-filter--source"
+              :class="{ 'is-active': activeSourceFilter === source.key }"
               :data-testid="`reminders-source-filter-${source.key}`"
+              :aria-pressed="activeSourceFilter === source.key"
               @click="setSourceFilter(source.key)"
             >
-              {{ t(source.labelZh, source.labelEn) }} · {{ source.count }}
+              <span class="reminders-filter-label">{{ t(source.labelZh, source.labelEn) }}</span>
+              <span class="reminders-filter-count" aria-hidden="true">{{ source.count }}</span>
             </button>
           </div>
-          <div class="flex flex-wrap gap-2" data-testid="reminders-status-filters">
+          <div
+            class="reminders-filter-group"
+            data-testid="reminders-status-filters"
+            role="group"
+            :aria-label="t('按状态筛选', 'Filter by status')"
+          >
             <button
               v-for="status in statusFilterOptions"
               :key="status.key"
               type="button"
-              class="rounded-full border px-3 py-1.5 text-[11px] font-semibold transition"
-              :class="
-                activeStatusFilter === status.key
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-gray-200 bg-white text-gray-600'
-              "
+              class="reminders-filter reminders-filter--status"
+              :class="{ 'is-active': activeStatusFilter === status.key }"
               :data-testid="`reminders-status-filter-${status.key}`"
+              :aria-pressed="activeStatusFilter === status.key"
               @click="setStatusFilter(status.key)"
             >
-              {{ t(status.labelZh, status.labelEn) }} · {{ status.count }}
+              <span class="reminders-filter-label">{{ t(status.labelZh, status.labelEn) }}</span>
+              <span class="reminders-filter-count" aria-hidden="true">{{ status.count }}</span>
             </button>
             <button
               v-if="hasActiveFilters"
               type="button"
-              class="rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-semibold text-gray-700"
+              class="reminders-filter reminders-filter--reset"
               data-testid="reminders-reset-filters"
               @click="resetFilters"
             >
@@ -272,84 +296,102 @@ watch(
         </div>
       </section>
 
-      <section v-if="visibleReminders.length > 0" class="space-y-3">
+      <section v-if="visibleReminders.length > 0" class="reminders-list">
         <article
           v-for="item in visibleReminders"
           :key="item.key"
-          class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm"
+          class="reminder-card"
           :data-testid="`reminder-card-${item.key}`"
         >
-          <div class="flex items-start gap-3">
-            <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-gray-700">
+          <div class="reminder-card__body">
+            <span class="reminder-card__icon" aria-hidden="true">
               <i :class="item.icon"></i>
             </span>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="text-[11px] text-gray-500">{{ getReminderSourceLabel(item) }}</p>
-                  <h3 class="mt-1 font-semibold text-gray-950 truncate">{{ getReminderTitle(item) }}</h3>
+            <div class="reminder-card__content">
+              <div class="reminder-card__header">
+                <div class="reminder-card__heading">
+                  <p class="reminder-card__source">{{ getReminderSourceLabel(item) }}</p>
+                  <h3 class="reminder-card__title">{{ getReminderTitle(item) }}</h3>
                 </div>
-                <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold" :class="getStatusClass(item)">
+                <span class="reminder-status" :class="getStatusClass(item)" aria-live="polite">
                   {{ getStatusLabel(item) }}
                 </span>
               </div>
-              <p v-if="getReminderSummary(item)" class="mt-2 text-xs leading-5 text-gray-600">
+              <p v-if="getReminderSummary(item)" class="reminder-card__summary">
                 {{ getReminderSummary(item) }}
               </p>
-              <p class="mt-2 text-[11px] text-gray-400">
+              <p class="reminder-card__time">
                 {{ t('建议时间', 'Suggested time') }}: {{ formatDateTime(item.dueAt) }}
               </p>
             </div>
           </div>
 
-          <div class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="reminder-card__actions">
             <button
               v-if="item.status !== 'confirmed'"
-              class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+              type="button"
+              class="reminders-action reminders-action--confirm"
               @click="confirmReminder(item)"
             >
               {{ t('确认进日历', 'Confirm to Calendar') }}
             </button>
-            <span
-              v-else
-              class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
-            >
+            <span v-else class="reminders-feedback reminders-action--confirm">
               {{ t('已进入日历', 'In Calendar') }}
             </span>
             <button
               v-if="item.source === 'map'"
-              class="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700"
+              type="button"
+              class="reminders-action reminders-action--pin"
               @click="toggleReminderPin(item)"
             >
               {{ item.pinned ? t('取消固定', 'Unpin') : t('固定', 'Pin') }}
             </button>
             <button
-              class="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700"
+              type="button"
+              class="reminders-action reminders-action--source"
               @click="openReminderSource(item)"
             >
               {{ t('打开来源', 'Open source') }}
             </button>
             <button
-              class="rounded-full bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700"
+              type="button"
+              class="reminders-action reminders-action--dismiss"
               @click="dismissReminder(item)"
             >
               {{ t('忽略', 'Dismiss') }}
             </button>
           </div>
         </article>
-        <p v-if="hiddenFilteredReminderCount > 0" class="px-1 text-center text-[11px] text-gray-400">
-          {{ t(`还有 ${hiddenFilteredReminderCount} 条匹配提醒未显示`, `${hiddenFilteredReminderCount} more matching reminders`) }}
+        <p v-if="hiddenFilteredReminderCount > 0" class="reminders-hidden-count">
+          {{
+            t(
+              `还有 ${hiddenFilteredReminderCount} 条匹配提醒未显示`,
+              `${hiddenFilteredReminderCount} more matching reminders`,
+            )
+          }}
         </p>
       </section>
 
-      <section v-else class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
-        <p class="font-semibold">
-          {{ hasAnyReminders ? t('当前筛选下暂无提醒', 'No reminders match these filters') : t('暂无提醒事项', 'No reminders yet') }}
-        </p>
-        <p class="mt-2 text-sm leading-6 text-gray-600">
+      <section
+        v-else
+        class="reminders-panel reminders-empty-state"
+        data-testid="reminders-empty-state"
+        :data-empty-kind="hasAnyReminders ? 'filtered' : 'collection'"
+      >
+        <p class="reminders-empty-title">
           {{
             hasAnyReminders
-              ? t('换一个来源或状态继续查看；被确认的提醒会留在这里作为处理记录，同时同步到日历。', 'Try another source or status. Confirmed reminders stay here as handling records and sync to Calendar.')
+              ? t('当前筛选下暂无提醒', 'No reminders match these filters')
+              : t('暂无提醒事项', 'No reminders yet')
+          }}
+        </p>
+        <p class="reminders-empty-copy">
+          {{
+            hasAnyReminders
+              ? t(
+                  '换一个来源或状态继续查看；被确认的提醒会留在这里作为处理记录，同时同步到日历。',
+                  'Try another source or status. Confirmed reminders stay here as handling records and sync to Calendar.',
+                )
               : t(
                   '地图地点反馈、未接来电、购物配送和股票复盘线索会先来到这里；确认后再进入日历日程。',
                   'Map follow-ups, missed calls, Shopping delivery, and Stock review cues will land here first; confirmation sends them to Calendar.',
@@ -359,7 +401,7 @@ watch(
         <button
           v-if="hasAnyReminders && hasActiveFilters"
           type="button"
-          class="mt-3 rounded-full bg-gray-900 px-3 py-2 text-xs font-semibold text-white"
+          class="reminders-empty-reset"
           data-testid="reminders-empty-reset"
           @click="resetFilters"
         >
@@ -367,19 +409,596 @@ watch(
         </button>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold">{{ t('日历边界', 'Calendar boundary') }}</p>
-            <p class="mt-1 text-xs leading-5 text-gray-500">
-              {{ t('日历保留已确认、有时间意义的日程；提醒事项保留仍需用户处理的线索。', 'Calendar keeps confirmed timed schedule; Reminders keeps actionable cues.') }}
+      <section class="reminders-panel reminders-boundary">
+        <div class="reminders-boundary__layout">
+          <div class="reminders-boundary__copy">
+            <p class="reminders-boundary__title">{{ t('日历边界', 'Calendar boundary') }}</p>
+            <p class="reminders-boundary__description">
+              {{
+                t(
+                  '日历保留已确认、有时间意义的日程；提醒事项保留仍需用户处理的线索。',
+                  'Calendar keeps confirmed timed schedule; Reminders keeps actionable cues.',
+                )
+              }}
             </p>
           </div>
-          <button @click="openCalendar" class="rounded-full bg-blue-500 px-3 py-2 text-xs text-white">
+          <button
+            type="button"
+            class="reminders-calendar-button bg-blue-500"
+            @click="openCalendar"
+          >
             {{ t('打开日历', 'Open Calendar') }}
           </button>
         </div>
       </section>
-    </div>
+    </main>
   </div>
 </template>
+
+<style scoped>
+.reminders-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--system-text);
+  background: var(--system-page-bg);
+}
+
+.reminders-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px 12px;
+  border-bottom: 1px solid var(--system-border);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
+}
+
+.reminders-back-button,
+.reminders-filter,
+.reminders-action,
+.reminders-empty-reset,
+.reminders-calendar-button {
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    border-color var(--system-motion-fast),
+    box-shadow var(--system-motion-fast);
+}
+
+.reminders-back-button {
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--system-radius-sm);
+  color: var(--system-accent);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.reminders-back-button span {
+  overflow-wrap: anywhere;
+}
+
+.reminders-page-title {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.reminders-content {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.reminders-panel,
+.reminder-card {
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.reminders-panel,
+.reminder-card {
+  padding: 16px;
+}
+
+.reminders-eyebrow,
+.reminders-section-kicker,
+.reminders-intro-title,
+.reminders-intro-copy,
+.reminders-section-title,
+.reminders-source-stat p,
+.reminder-card__source,
+.reminder-card__title,
+.reminder-card__summary,
+.reminder-card__time,
+.reminders-hidden-count,
+.reminders-empty-title,
+.reminders-empty-copy,
+.reminders-boundary__title,
+.reminders-boundary__description {
+  margin: 0;
+}
+
+.reminders-eyebrow {
+  color: var(--system-warning);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.reminders-intro-title {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 760;
+}
+
+.reminders-intro-copy {
+  margin-top: 8px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.reminders-summary-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-surface-muted);
+}
+
+.reminders-summary-item {
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.reminders-summary-item + .reminders-summary-item {
+  border-left: 1px solid var(--system-subtle-border);
+}
+
+.reminders-summary-item p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.reminders-summary-item strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+}
+
+.reminders-summary-item--pending strong {
+  color: var(--system-warning);
+}
+
+.reminders-summary-item--confirmed strong {
+  color: var(--system-success);
+}
+
+.reminders-summary-item--pinned strong {
+  color: var(--system-info);
+}
+
+.reminders-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reminders-section-copy {
+  min-width: 0;
+}
+
+.reminders-section-kicker {
+  color: var(--system-text-muted);
+  font-size: 12px;
+}
+
+.reminders-section-title {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.reminders-result-count {
+  flex: none;
+  max-width: 48%;
+  padding: 5px 9px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.reminders-source-summary {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block: 1px solid var(--system-subtle-border);
+}
+
+.reminders-source-stat {
+  min-width: 0;
+  padding: 10px 4px;
+}
+
+.reminders-source-stat:nth-child(even) {
+  padding-left: 12px;
+  border-left: 1px solid var(--system-subtle-border);
+}
+
+.reminders-source-stat p {
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.reminders-source-stat strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.reminders-filter-stack {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reminders-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reminders-filter {
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: left;
+}
+
+.reminders-filter-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.reminders-filter-count {
+  flex: none;
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  text-align: center;
+}
+
+.reminders-filter--source.is-active {
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.reminders-filter--status.is-active {
+  border-color: color-mix(in srgb, var(--system-warning) 62%, var(--system-control-border));
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.reminders-filter--reset {
+  color: var(--system-text);
+  background: var(--system-surface-muted);
+}
+
+.reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reminder-card__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.reminder-card__icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--system-radius-sm);
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.reminder-card__content,
+.reminder-card__heading {
+  min-width: 0;
+}
+
+.reminder-card__content {
+  flex: 1;
+}
+
+.reminder-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 8px;
+}
+
+.reminder-card__source {
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.reminder-card__title {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--system-text);
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.reminder-status {
+  max-width: 112px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 750;
+  text-align: center;
+}
+
+.reminder-status--pending {
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.reminder-status--confirmed {
+  color: var(--system-success);
+  background: var(--system-success-soft);
+}
+
+.reminder-status--pinned {
+  color: var(--system-info);
+  background: var(--system-info-soft);
+}
+
+.reminder-status--draft {
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+}
+
+.reminder-card__summary,
+.reminder-card__time {
+  overflow-wrap: anywhere;
+}
+
+.reminder-card__summary {
+  margin-top: 8px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.reminder-card__time {
+  margin-top: 8px;
+  color: var(--system-text-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.reminder-card__actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reminders-action,
+.reminders-feedback,
+.reminders-empty-reset,
+.reminders-calendar-button {
+  min-height: 44px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
+.reminders-action--confirm {
+  border-color: color-mix(in srgb, var(--system-success) 24%, transparent);
+  color: var(--system-success);
+  background: var(--system-success-soft);
+}
+
+.reminders-action--pin {
+  border-color: color-mix(in srgb, var(--system-info) 24%, transparent);
+  color: var(--system-info);
+  background: var(--system-info-soft);
+}
+
+.reminders-action--source {
+  border-color: var(--system-control-border);
+  color: var(--system-text);
+  background: var(--system-control-bg);
+}
+
+.reminders-action--dismiss {
+  border-color: color-mix(in srgb, var(--system-danger) 22%, transparent);
+  color: var(--system-danger);
+  background: var(--system-danger-soft);
+}
+
+.reminders-hidden-count {
+  padding-inline: 4px;
+  color: var(--system-text-soft);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.reminders-empty-state {
+  border-style: dashed;
+}
+
+.reminders-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.reminders-empty-copy {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.reminders-empty-reset {
+  margin-top: 12px;
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.reminders-boundary__layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reminders-boundary__copy {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.reminders-boundary__title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reminders-boundary__description {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.reminders-calendar-button {
+  flex: none;
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.reminders-back-button:hover,
+.reminders-filter:not(.is-active):hover,
+.reminders-action:hover {
+  background: var(--system-hover-bg);
+}
+
+.reminders-page button:active {
+  box-shadow: inset 0 0 0 999px var(--system-pressed-bg);
+}
+
+.reminders-page button:focus-visible {
+  outline: 2px solid var(--system-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+  .reminders-content {
+    padding-inline: 16px;
+  }
+
+  .reminders-header {
+    padding-inline: 12px;
+  }
+
+  .reminder-card__body {
+    gap: 10px;
+  }
+
+  .reminder-card__icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reminders-back-button,
+  .reminders-filter,
+  .reminders-action,
+  .reminders-empty-reset,
+  .reminders-calendar-button {
+    transition: none;
+  }
+}
+</style>
