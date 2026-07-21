@@ -86,6 +86,30 @@ describe('book store', () => {
     })
   })
 
+  test('publishes K-pop worldview and world rules without draft metadata', () => {
+    const store = useBookStore()
+    const mainWorldview = store.findAssetById('built_in_modern_seoul_kpop_main_worldview')
+    const worldRules = store.findAssetById('built_in_modern_seoul_kpop_world_rules')
+
+    expect(mainWorldview?.content).toContain('本世界观设定在 2026 年的现代首尔。')
+    expect(worldRules?.content).toContain(
+      '现代首尔 K-pop 娱乐圈中的角色生活在真实时间、手机私聊、公司日程、地点移动、官方通知和粉丝舆论共同构成的环境里。',
+    )
+    expect(worldRules?.content).toContain('### 1. 时间与节奏')
+    expect(mainWorldview?.content).not.toContain('使用直接陈述句说明世界结构。')
+
+    const publishedAssets = [mainWorldview, worldRules]
+    publishedAssets.forEach((asset) => {
+      expect(asset?.content).not.toContain('Updated:')
+      expect(asset?.content).not.toContain('Status:')
+      expect(asset?.content).not.toContain('资产类型：')
+      expect(asset?.content).not.toContain('用途：')
+      expect(asset?.content).not.toContain('文体规范：')
+      expect(asset?.content).not.toContain('## 正文')
+      expect(asset?.content).not.toContain('## 内部校订备注')
+    })
+  })
+
   test('creates, updates, filters, and deletes assets', () => {
     const store = useBookStore()
 

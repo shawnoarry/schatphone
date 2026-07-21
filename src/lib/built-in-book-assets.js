@@ -118,7 +118,7 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       tags: ['内置', 'K-pop', '世界规则', 'Chat', 'Calendar', 'Map'],
       content: extractPublishedMarkdownBody(kpopWorldRules, {
         title: '现代首尔 K-pop 娱乐圈：世界规则',
-        startHeading: '规则定位',
+        startHeading: '正文',
         endHeading: '内部校订备注',
       }),
       sourcePath: 'docs/superpowers/content/2026-06-07-modern-seoul-kpop-world-rules-draft.md',
