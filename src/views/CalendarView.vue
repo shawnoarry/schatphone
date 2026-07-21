@@ -43,7 +43,9 @@ const calendarWorldAppContext = computed(() =>
     expectedArchetypes: ['reservation'],
   }),
 )
-const calendarTitle = computed(() => calendarWorldAppContext.value?.bindingTitle || t('日历', 'Calendar'))
+const calendarTitle = computed(
+  () => calendarWorldAppContext.value?.bindingTitle || t('日历', 'Calendar'),
+)
 const calendarOverviewEyebrow = computed(
   () =>
     calendarWorldAppContext.value?.packName ||
@@ -63,12 +65,7 @@ const calendarOverviewDescription = computed(() => {
   )
 })
 const calendarOverviewClass = computed(() =>
-  calendarWorldAppContext.value
-    ? 'bg-cyan-50/70 border-cyan-100 shadow-sm'
-    : 'bg-white border-gray-200 shadow-sm',
-)
-const calendarOverviewEyebrowClass = computed(() =>
-  calendarWorldAppContext.value ? 'text-cyan-600' : 'text-blue-500',
+  calendarWorldAppContext.value ? 'calendar-overview--world' : '',
 )
 const pendingReminderItems = computed(() =>
   activeReminderItems.value.filter((item) => item.status !== 'confirmed' && item.pinned !== true),
@@ -86,28 +83,28 @@ const reminderSummaryItems = computed(() => [
     labelZh: '地图',
     labelEn: 'Map',
     count: pendingReminderSourceCounts.value.map || 0,
-    className: 'bg-blue-50 text-blue-600',
+    className: 'calendar-cue-source--map',
   },
   {
     key: 'phone',
     labelZh: '电话',
     labelEn: 'Phone',
     count: pendingReminderSourceCounts.value.phone || 0,
-    className: 'bg-rose-50 text-rose-600',
+    className: 'calendar-cue-source--phone',
   },
   {
     key: 'shopping',
     labelZh: '购物',
     labelEn: 'Shopping',
     count: pendingReminderSourceCounts.value.shopping || 0,
-    className: 'bg-orange-50 text-orange-600',
+    className: 'calendar-cue-source--shopping',
   },
   {
     key: 'stock',
     labelZh: '股票',
     labelEn: 'Stock',
     count: pendingReminderSourceCounts.value.stock || 0,
-    className: 'bg-amber-50 text-amber-600',
+    className: 'calendar-cue-source--stock',
   },
 ])
 const eventTimeQuickShiftOptions = [
@@ -135,7 +132,7 @@ const calendarPushRuntime = computed(() => {
     labelEn: 'Push not ready',
     detailZh: '需要先在设置里启用真实推送并完成设备订阅。',
     detailEn: 'Enable real push and subscribe this device in Settings first.',
-    toneClass: 'bg-gray-100 text-gray-600',
+    toneClass: 'calendar-status--neutral',
     quietHoursEnabled,
     quietHoursActive,
     quietHoursStart: automationSettings.quietHoursStart || '23:00',
@@ -179,7 +176,7 @@ const calendarPushRuntime = computed(() => {
     labelEn: 'Push ready',
     detailZh: '已确认的 Calendar 事件会按事件时间安排真实推送。',
     detailEn: 'Confirmed Calendar events schedule real push at their event time.',
-    toneClass: 'bg-emerald-50 text-emerald-600',
+    toneClass: 'calendar-status--success',
   }
 })
 
@@ -194,7 +191,10 @@ const openMap = () => {
 const openReminders = () => {
   router.push({
     path: '/reminders',
-    query: route.query.from === 'home' && route.query.homePage ? { from: 'home', homePage: route.query.homePage } : {},
+    query:
+      route.query.from === 'home' && route.query.homePage
+        ? { from: 'home', homePage: route.query.homePage }
+        : {},
   })
 }
 
@@ -258,7 +258,9 @@ const getRelatedKnowledgePoints = (collection, itemId) => {
 const getSelectedRelationshipContact = (eventId) => {
   const selectedId = String(calendarRelationshipDrafts.value[eventId] || '')
   if (!selectedId) return null
-  return relationshipContactOptions.value.find((contact) => contact.optionValue === selectedId) || null
+  return (
+    relationshipContactOptions.value.find((contact) => contact.optionValue === selectedId) || null
+  )
 }
 
 const getEventRelationshipSuggestion = (event) =>
@@ -275,11 +277,18 @@ const calendarSourceLabel = (event = {}) => {
   return t('Manual calendar event', 'Manual calendar event')
 }
 
-const buildCalendarEventLineageNotes = (event = {}) => [
-  event.sourceReminderId ? t(`提醒来源：${event.sourceReminderId}`, `Reminder source: ${event.sourceReminderId}`) : '',
-  event.sourceTripId ? t(`路线来源：${event.sourceTripId}`, `Route source: ${event.sourceTripId}`) : '',
-  event.sourceAreaId ? t(`地点来源：${event.sourceAreaId}`, `Area source: ${event.sourceAreaId}`) : '',
-].filter(Boolean)
+const buildCalendarEventLineageNotes = (event = {}) =>
+  [
+    event.sourceReminderId
+      ? t(`提醒来源：${event.sourceReminderId}`, `Reminder source: ${event.sourceReminderId}`)
+      : '',
+    event.sourceTripId
+      ? t(`路线来源：${event.sourceTripId}`, `Route source: ${event.sourceTripId}`)
+      : '',
+    event.sourceAreaId
+      ? t(`地点来源：${event.sourceAreaId}`, `Area source: ${event.sourceAreaId}`)
+      : '',
+  ].filter(Boolean)
 
 const getCalendarEventRelationshipReview = (event) => {
   if (!event?.id) return null
@@ -290,10 +299,13 @@ const getCalendarEventRelationshipReview = (event) => {
   )
   const fact = facts[0] || null
   const summary = fact
-    ? relationshipRuntimeStore.summarizeEntityForTarget({ entityKey: fact.entityKey }, {
-        eventLimit: 3,
-        memoryLimit: 3,
-      })
+    ? relationshipRuntimeStore.summarizeEntityForTarget(
+        { entityKey: fact.entityKey },
+        {
+          eventLimit: 3,
+          memoryLimit: 3,
+        },
+      )
     : null
   const memory =
     fact?.memoryKey && Array.isArray(summary?.memorySummaries)
@@ -305,9 +317,18 @@ const getCalendarEventRelationshipReview = (event) => {
     ...buildCalendarEventLineageNotes(event),
     fact
       ? fact.effectApplied === false
-        ? t('作为补充记录加入同一段记忆；不重复增加关系数值。', 'Supporting record in the same memory; no duplicate relationship growth.')
-        : t('已作为主要日程记忆计入关系进展。', 'Applied as the primary calendar relationship memory.')
-      : t('确认联系人后可写入关系记忆。', 'Choose a contact to record this as relationship memory.'),
+        ? t(
+            '作为补充记录加入同一段记忆；不重复增加关系数值。',
+            'Supporting record in the same memory; no duplicate relationship growth.',
+          )
+        : t(
+            '已作为主要日程记忆计入关系进展。',
+            'Applied as the primary calendar relationship memory.',
+          )
+      : t(
+          '确认联系人后可写入关系记忆。',
+          'Choose a contact to record this as relationship memory.',
+        ),
   ].filter(Boolean)
   return {
     sourceLabel: calendarSourceLabel(event),
@@ -321,7 +342,8 @@ const getCalendarEventRelationshipReview = (event) => {
   }
 }
 
-const getRelationshipFeedbackForEvent = (eventId) => relationshipFeedbackByEventId.value[eventId] || null
+const getRelationshipFeedbackForEvent = (eventId) =>
+  relationshipFeedbackByEventId.value[eventId] || null
 
 const setRelationshipFeedbackForEvent = (eventId, feedback = null) => {
   if (!eventId) return
@@ -349,7 +371,7 @@ const recordEventRelationship = (event) => {
   if (!target) {
     setRelationshipFeedbackForEvent(event.id, {
       type: 'warning',
-      className: 'text-amber-600',
+      className: 'calendar-feedback--warning',
       messageZh: 'Select a relationship contact first.',
       messageEn: 'Select a relationship contact first.',
     })
@@ -360,7 +382,7 @@ const recordEventRelationship = (event) => {
   if (suggestion.imported) {
     setRelationshipFeedbackForEvent(event.id, {
       type: 'success',
-      className: 'text-emerald-600',
+      className: 'calendar-feedback--success',
       messageZh: 'Relationship fact already recorded.',
       messageEn: 'Relationship fact already recorded.',
     })
@@ -373,13 +395,13 @@ const recordEventRelationship = (event) => {
     fact
       ? {
           type: 'success',
-          className: 'text-emerald-600',
+          className: 'calendar-feedback--success',
           messageZh: 'Relationship fact recorded.',
           messageEn: 'Relationship fact recorded.',
         }
       : {
           type: 'warning',
-          className: 'text-amber-600',
+          className: 'calendar-feedback--warning',
           messageZh: 'This event cannot be recorded as a relationship fact.',
           messageEn: 'This event cannot be recorded as a relationship fact.',
         },
@@ -523,41 +545,45 @@ const getCalendarPushStatusMeta = (event) => {
     return {
       labelZh: '已排程',
       labelEn: 'Scheduled',
-      className: 'bg-emerald-50 text-emerald-600',
+      className: 'calendar-status--success',
     }
   }
   if (event.pushStatus === 'needs_reschedule') {
     return {
       labelZh: '待重排',
       labelEn: 'Reschedule pending',
-      className: 'bg-amber-50 text-amber-600',
+      className: 'calendar-status--warning',
     }
   }
-  if (event.lastPushError || event.pushStatus === 'failed' || event.pushStatus === 'cancel_failed') {
+  if (
+    event.lastPushError ||
+    event.pushStatus === 'failed' ||
+    event.pushStatus === 'cancel_failed'
+  ) {
     return {
       labelZh: '排程异常',
       labelEn: 'Schedule issue',
-      className: 'bg-rose-50 text-rose-600',
+      className: 'calendar-status--danger',
     }
   }
   if (!calendarPushRuntime.value.ready) {
     return {
       labelZh: '未就绪',
       labelEn: 'Not ready',
-      className: 'bg-gray-100 text-gray-600',
+      className: 'calendar-status--neutral',
     }
   }
   if (event.pushStatus === 'cancelled') {
     return {
       labelZh: '已取消',
       labelEn: 'Cancelled',
-      className: 'bg-gray-100 text-gray-600',
+      className: 'calendar-status--neutral',
     }
   }
   return {
     labelZh: '待排程',
     labelEn: 'Pending',
-    className: 'bg-blue-50 text-blue-600',
+    className: 'calendar-status--info',
   }
 }
 
@@ -580,7 +606,10 @@ const getCalendarPushDetail = (event) => {
   if (event.pushStatus === 'cancelled') {
     return t('最近一次排程已取消。', 'The most recent schedule was cancelled.')
   }
-  return t('等待下一次同步或手动调整后排程。', 'Waiting for the next sync or time edit to schedule.')
+  return t(
+    '等待下一次同步或手动调整后排程。',
+    'Waiting for the next sync or time edit to schedule.',
+  )
 }
 
 const formatPushHistoryEntry = (entry) => {
@@ -610,131 +639,109 @@ watch(
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f7f7fb] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white flex items-center gap-3">
-      <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
+  <div class="calendar-page" data-testid="calendar-page">
+    <header class="calendar-header">
+      <button type="button" class="calendar-back-button" @click="goHome">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        <span>{{ t('首页', 'Home') }}</span>
       </button>
-      <h1 class="font-bold">{{ calendarTitle }}</h1>
-    </div>
+      <h1 class="calendar-page-title">{{ calendarTitle }}</h1>
+    </header>
 
-    <div class="flex-1 px-5 py-6 space-y-4 overflow-y-auto">
+    <main class="calendar-content">
       <section
-        class="rounded-lg border p-4"
+        class="calendar-panel calendar-overview"
         :class="calendarOverviewClass"
         data-testid="calendar-schedule-overview"
       >
-        <p class="text-xs font-semibold uppercase tracking-wide" :class="calendarOverviewEyebrowClass">
+        <p class="calendar-overview__eyebrow">
           {{ calendarOverviewEyebrow }}
         </p>
-        <h2 class="mt-2 text-lg font-bold text-gray-950">
+        <h2 class="calendar-overview__title">
           {{ calendarOverviewTitle }}
         </h2>
-        <p class="mt-2 text-xs leading-5 text-gray-500">
+        <p class="calendar-overview__description">
           {{ calendarOverviewDescription }}
         </p>
 
         <div
           v-if="calendarWorldAppContext"
-          class="mt-3 rounded-lg border border-cyan-100 bg-white/80 p-3"
+          class="calendar-world-context"
           data-testid="calendar-world-app-context"
           :data-world-pack="calendarWorldAppContext.packId"
           :data-world-app="calendarWorldAppContext.bindingId"
         >
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-50 text-cyan-600">
+          <div class="calendar-world-context__header">
+            <div class="calendar-world-context__identity">
+              <span class="calendar-world-context__icon" aria-hidden="true">
                 <i :class="calendarWorldAppContext.icon"></i>
               </span>
-              <div class="min-w-0">
-                <p class="truncate text-xs font-semibold text-gray-900">
+              <div class="calendar-world-context__copy">
+                <p class="calendar-world-context__title">
                   {{ calendarWorldAppContext.bindingTitle }}
                 </p>
-                <p class="text-[11px] text-gray-500">{{ calendarWorldAppContext.targetLabel }}</p>
+                <p class="calendar-world-context__target">
+                  {{ calendarWorldAppContext.targetLabel }}
+                </p>
               </div>
             </div>
-            <span class="shrink-0 rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+            <span class="calendar-world-context__type">
               {{ calendarWorldAppContext.archetype }}
             </span>
           </div>
-          <p class="mt-2 text-[11px] leading-5 text-gray-500">
+          <p class="calendar-world-context__description">
             {{ calendarWorldAppContext.description || calendarWorldAppContext.boundaryCopy }}
           </p>
         </div>
 
-        <div class="mt-4 grid grid-cols-3 gap-2">
-          <div class="rounded-lg bg-blue-50 px-3 py-2">
-            <p class="text-[10px] text-blue-500">{{ t('日程', 'Events') }}</p>
-            <strong class="text-lg text-blue-700">{{ calendarEventCount }}</strong>
+        <div class="calendar-overview__summary">
+          <div class="calendar-overview__metric calendar-overview__metric--events">
+            <p>{{ t('日程', 'Events') }}</p>
+            <strong>{{ calendarEventCount }}</strong>
           </div>
-          <div class="rounded-lg bg-orange-50 px-3 py-2">
-            <p class="text-[10px] text-orange-500">{{ t('待处理', 'Pending') }}</p>
-            <strong class="text-lg text-orange-700">{{ pendingReminderCount }}</strong>
+          <div class="calendar-overview__metric calendar-overview__metric--pending">
+            <p>{{ t('待处理', 'Pending') }}</p>
+            <strong>{{ pendingReminderCount }}</strong>
           </div>
-          <div class="rounded-lg px-3 py-2" :class="calendarPushRuntime.toneClass">
-            <p class="text-[10px] opacity-80">{{ t('推送', 'Push') }}</p>
-            <strong class="text-sm">{{ t(calendarPushRuntime.labelZh, calendarPushRuntime.labelEn) }}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-reminder-summary">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('提醒事项', 'Reminders') }}</p>
-            <h2 class="font-semibold">{{ t('待处理线索', 'Pending cues') }}</h2>
-          </div>
-          <button
-            class="rounded-full bg-orange-500 px-3 py-2 text-xs font-semibold text-white"
-            data-testid="calendar-open-reminders"
-            @click="openReminders"
-          >
-            {{ t('打开提醒事项', 'Open Reminders') }}
-          </button>
-        </div>
-        <div class="mt-3 grid grid-cols-2 gap-2">
           <div
-            v-for="source in reminderSummaryItems"
-            :key="source.key"
-            class="rounded-lg border border-gray-100 px-3 py-2"
-            :data-testid="`calendar-reminder-source-${source.key}`"
+            class="calendar-overview__metric calendar-overview__metric--push"
+            :class="calendarPushRuntime.toneClass"
           >
-            <p class="text-[11px] text-gray-500">{{ t(source.labelZh, source.labelEn) }}</p>
-            <strong class="text-base" :class="source.className">{{ source.count }}</strong>
+            <p>{{ t('推送', 'Push') }}</p>
+            <strong>{{ t(calendarPushRuntime.labelZh, calendarPushRuntime.labelEn) }}</strong>
           </div>
         </div>
-        <p class="mt-3 text-xs leading-5 text-gray-500">
-          {{
-            pendingReminderCount > 0
-              ? t('确认、固定或忽略都在提醒事项里处理。', 'Confirm, pin, or dismiss them in Reminders.')
-              : t('暂无待处理提醒事项。', 'No pending reminders.')
-          }}
-        </p>
       </section>
 
-      <section v-if="visibleCalendarEvents.length > 0" class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs text-gray-500">{{ t('已确认', 'Confirmed') }}</p>
-            <h2 class="font-semibold">{{ t('日历事件', 'Calendar events') }}</h2>
+      <section
+        v-if="visibleCalendarEvents.length > 0"
+        class="calendar-schedule-section"
+        data-testid="calendar-confirmed-events"
+      >
+        <div class="calendar-section-header">
+          <div class="calendar-section-header__copy">
+            <p class="calendar-section-kicker">{{ t('已确认', 'Confirmed') }}</p>
+            <h2 class="calendar-section-title">{{ t('日历事件', 'Calendar events') }}</h2>
           </div>
-          <span class="rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-600">
+          <span class="calendar-section-count" aria-live="polite">
             {{ t(`${visibleCalendarEvents.length} 条`, `${visibleCalendarEvents.length} events`) }}
           </span>
         </div>
 
-        <div class="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-[11px] text-gray-600">
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-medium text-gray-700">{{ t('真实推送状态', 'Real push status') }}</span>
-            <span class="shrink-0 rounded-full px-2 py-1" :class="calendarPushRuntime.toneClass">
+        <div class="calendar-push-summary">
+          <div class="calendar-push-summary__header">
+            <span class="calendar-push-summary__title">
+              {{ t('真实推送状态', 'Real push status') }}
+            </span>
+            <span class="calendar-status" :class="calendarPushRuntime.toneClass">
               {{ t(calendarPushRuntime.labelZh, calendarPushRuntime.labelEn) }}
             </span>
           </div>
-          <p class="mt-2">{{ t(calendarPushRuntime.detailZh, calendarPushRuntime.detailEn) }}</p>
-          <p class="mt-1">{{ getCalendarQuietHoursLabel() }}</p>
+          <p>{{ t(calendarPushRuntime.detailZh, calendarPushRuntime.detailEn) }}</p>
+          <p>{{ getCalendarQuietHoursLabel() }}</p>
         </div>
 
-        <div class="mt-3 space-y-2">
+        <div class="calendar-event-list">
           <CalendarEventCard
             v-for="event in visibleCalendarEvents"
             :key="event.id"
@@ -765,26 +772,616 @@ watch(
         </div>
       </section>
 
-      <section v-else class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm" data-testid="calendar-empty-events">
-        <p class="font-semibold">{{ t('暂无已确认日程', 'No confirmed events yet') }}</p>
-        <p class="mt-2 text-sm leading-6 text-gray-600">
-          {{ t('到提醒事项中确认线索后，它们会出现在这里。', 'Confirm cues in Reminders, and they will appear here.') }}
+      <section
+        v-else
+        class="calendar-panel calendar-empty-events"
+        data-testid="calendar-empty-events"
+      >
+        <span class="calendar-empty-events__icon" aria-hidden="true">
+          <i class="fas fa-calendar-check"></i>
+        </span>
+        <div class="calendar-empty-events__copy">
+          <p class="calendar-empty-events__title">
+            {{ t('暂无已确认日程', 'No confirmed events yet') }}
+          </p>
+          <p class="calendar-empty-events__description">
+            {{
+              t(
+                '到提醒事项中确认线索后，它们会出现在这里。',
+                'Confirm cues in Reminders, and they will appear here.',
+              )
+            }}
+          </p>
+        </div>
+      </section>
+
+      <section
+        class="calendar-panel calendar-reminders-boundary"
+        data-testid="calendar-reminder-summary"
+      >
+        <div class="calendar-section-header calendar-section-header--action">
+          <div class="calendar-section-header__copy">
+            <p class="calendar-section-kicker">{{ t('提醒事项', 'Reminders') }}</p>
+            <h2 class="calendar-section-title">{{ t('待处理线索', 'Pending cues') }}</h2>
+          </div>
+          <button
+            type="button"
+            class="calendar-action calendar-action--reminders"
+            data-testid="calendar-open-reminders"
+            @click="openReminders"
+          >
+            {{ t('打开提醒事项', 'Open Reminders') }}
+          </button>
+        </div>
+        <div class="calendar-cue-sources">
+          <div
+            v-for="source in reminderSummaryItems"
+            :key="source.key"
+            class="calendar-cue-source"
+            :data-testid="`calendar-reminder-source-${source.key}`"
+          >
+            <p>{{ t(source.labelZh, source.labelEn) }}</p>
+            <strong :class="source.className">{{ source.count }}</strong>
+          </div>
+        </div>
+        <p class="calendar-reminders-boundary__description">
+          {{
+            pendingReminderCount > 0
+              ? t(
+                  '确认、固定或忽略都在提醒事项里处理。',
+                  'Confirm, pin, or dismiss them in Reminders.',
+                )
+              : t('暂无待处理提醒事项。', 'No pending reminders.')
+          }}
         </p>
       </section>
 
-      <div class="rounded-lg bg-white border border-gray-200 p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold">{{ t('地图反馈池', 'Map feedback pool') }}</p>
-            <p class="text-xs text-gray-500">
-              {{ t(`${mapAreaFeedback.length} 条地点反馈可转成提醒`, `${mapAreaFeedback.length} feedback notes can become reminders`) }}
+      <section class="calendar-panel calendar-map-boundary">
+        <div class="calendar-map-boundary__layout">
+          <div class="calendar-map-boundary__copy">
+            <p class="calendar-map-boundary__title">
+              {{ t('地图反馈池', 'Map feedback pool') }}
+            </p>
+            <p class="calendar-map-boundary__description">
+              {{
+                t(
+                  `${mapAreaFeedback.length} 条地点反馈可转成提醒`,
+                  `${mapAreaFeedback.length} feedback notes can become reminders`,
+                )
+              }}
             </p>
           </div>
-          <button @click="openMap" class="rounded-full bg-blue-500 px-3 py-2 text-xs text-white">
+          <button type="button" class="calendar-action calendar-action--map" @click="openMap">
             {{ t('打开地图', 'Open Map') }}
           </button>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
 </template>
+
+<style scoped>
+.calendar-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--system-text);
+  background: var(--system-page-bg);
+}
+
+.calendar-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px 12px;
+  border-bottom: 1px solid var(--system-border);
+  background: var(--system-chrome-bg);
+  box-shadow: var(--system-shadow-chrome);
+}
+
+.calendar-back-button,
+.calendar-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    border-color var(--system-motion-fast),
+    box-shadow var(--system-motion-fast);
+}
+
+.calendar-back-button {
+  min-width: 0;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--system-radius-sm);
+  color: var(--system-accent);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.calendar-back-button span,
+.calendar-page-title {
+  overflow-wrap: anywhere;
+}
+
+.calendar-page-title {
+  min-width: 0;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.calendar-content {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.calendar-panel {
+  padding: 16px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.calendar-overview__eyebrow,
+.calendar-overview__title,
+.calendar-overview__description,
+.calendar-world-context__title,
+.calendar-world-context__target,
+.calendar-world-context__description,
+.calendar-overview__metric p,
+.calendar-section-kicker,
+.calendar-section-title,
+.calendar-push-summary p,
+.calendar-cue-source p,
+.calendar-reminders-boundary__description,
+.calendar-empty-events__title,
+.calendar-empty-events__description,
+.calendar-map-boundary__title,
+.calendar-map-boundary__description {
+  margin: 0;
+}
+
+.calendar-overview__eyebrow {
+  color: var(--system-accent);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.calendar-overview--world .calendar-overview__eyebrow {
+  color: var(--system-info);
+}
+
+.calendar-overview__title {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 760;
+}
+
+.calendar-overview__description {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.calendar-world-context {
+  margin-top: 12px;
+  padding-block: 12px;
+  border-block: 1px solid var(--system-subtle-border);
+}
+
+.calendar-world-context__header,
+.calendar-world-context__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-world-context__header {
+  justify-content: space-between;
+}
+
+.calendar-world-context__identity,
+.calendar-world-context__copy {
+  min-width: 0;
+}
+
+.calendar-world-context__icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--system-radius-sm);
+  color: var(--system-info);
+  background: var(--system-info-soft);
+}
+
+.calendar-world-context__title,
+.calendar-world-context__target,
+.calendar-world-context__type,
+.calendar-world-context__description {
+  overflow-wrap: anywhere;
+}
+
+.calendar-world-context__title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.calendar-world-context__target,
+.calendar-world-context__description {
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.calendar-world-context__target {
+  margin-top: 2px;
+}
+
+.calendar-world-context__type {
+  flex: none;
+  max-width: 42%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--system-info);
+  background: var(--system-info-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendar-world-context__description {
+  margin-top: 8px;
+  line-height: 1.55;
+}
+
+.calendar-overview__summary {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-surface-muted);
+}
+
+.calendar-overview__metric {
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.calendar-overview__metric + .calendar-overview__metric {
+  border-left: 1px solid var(--system-subtle-border);
+}
+
+.calendar-overview__metric p {
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.calendar-overview__metric strong {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.calendar-overview__metric--events strong {
+  color: var(--system-accent);
+}
+
+.calendar-overview__metric--pending strong {
+  color: var(--system-warning);
+}
+
+.calendar-overview__metric--push strong {
+  font-size: 12px;
+}
+
+.calendar-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-section-header__copy {
+  min-width: 0;
+}
+
+.calendar-section-kicker {
+  color: var(--system-text-muted);
+  font-size: 12px;
+}
+
+.calendar-section-title {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 720;
+}
+
+.calendar-section-count,
+.calendar-status {
+  flex: none;
+  max-width: 46%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendar-section-count {
+  color: var(--system-success);
+  background: var(--system-success-soft);
+}
+
+.calendar-push-summary {
+  margin-top: 12px;
+  padding-block: 12px;
+  border-block: 1px solid var(--system-subtle-border);
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.calendar-push-summary__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.calendar-push-summary__title {
+  color: var(--system-text);
+  font-weight: 700;
+}
+
+.calendar-push-summary p {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.calendar-event-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calendar-schedule-section {
+  padding-block: 2px;
+}
+
+.calendar-empty-events {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-style: dashed;
+}
+
+.calendar-empty-events__icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--system-radius-sm);
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.calendar-empty-events__copy {
+  min-width: 0;
+}
+
+.calendar-empty-events__title {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.calendar-empty-events__description {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.calendar-section-header--action {
+  align-items: center;
+}
+
+.calendar-action {
+  max-width: 48%;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendar-action--reminders {
+  border-color: color-mix(in srgb, var(--system-warning) 26%, transparent);
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.calendar-cue-sources {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block: 1px solid var(--system-subtle-border);
+}
+
+.calendar-cue-source {
+  min-width: 0;
+  padding: 10px 4px;
+}
+
+.calendar-cue-source:nth-child(even) {
+  padding-left: 12px;
+  border-left: 1px solid var(--system-subtle-border);
+}
+
+.calendar-cue-source p {
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 11px;
+}
+
+.calendar-cue-source strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.calendar-cue-source--map,
+.calendar-cue-source--stock {
+  color: var(--system-info);
+}
+
+.calendar-cue-source--phone {
+  color: var(--system-danger);
+}
+
+.calendar-cue-source--shopping {
+  color: var(--system-warning);
+}
+
+.calendar-reminders-boundary__description {
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.calendar-map-boundary__layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-map-boundary__copy {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.calendar-map-boundary__title {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.calendar-map-boundary__description {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.calendar-action--map {
+  flex: none;
+  border-color: var(--system-accent);
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.calendar-status--success {
+  color: var(--system-success);
+  background: var(--system-success-soft);
+}
+
+.calendar-status--warning {
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.calendar-status--danger {
+  color: var(--system-danger);
+  background: var(--system-danger-soft);
+}
+
+.calendar-status--info {
+  color: var(--system-info);
+  background: var(--system-info-soft);
+}
+
+.calendar-status--neutral {
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+}
+
+.calendar-back-button:hover,
+.calendar-action:hover {
+  background: var(--system-hover-bg);
+}
+
+.calendar-page button:active {
+  box-shadow: inset 0 0 0 999px var(--system-pressed-bg);
+}
+
+.calendar-page button:focus-visible {
+  outline: 2px solid var(--system-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+  .calendar-content {
+    padding-inline: 16px;
+  }
+
+  .calendar-header {
+    padding-inline: 12px;
+  }
+
+  .calendar-panel {
+    padding: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-back-button,
+  .calendar-action {
+    transition: none;
+  }
+}
+</style>
