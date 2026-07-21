@@ -5,14 +5,65 @@ import { useBookStore } from '../src/stores/book'
 const BUILT_IN_KPOP_BOOK_ASSET_IDS = [
   'built_in_modern_seoul_kpop_main_worldview',
   'built_in_modern_seoul_kpop_world_rules',
-  'built_in_modern_seoul_kpop_industry_mechanisms',
-  'built_in_modern_seoul_kpop_chinese_fandom_terms',
-  'built_in_modern_seoul_youth_lifestyle',
-  'built_in_modern_seoul_kpop_real_entity_coordinate',
-  'built_in_modern_seoul_kpop_representative_members',
+  'built_in_modern_seoul_kpop_industry_career_operation',
+  'built_in_modern_seoul_kpop_production_stage_live',
+  'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
+  'built_in_modern_seoul_kpop_city_life_state_relationship',
+  'built_in_modern_seoul_kpop_real_entity_member_coordinate',
+  'built_in_modern_seoul_kpop_industry_celebrity_functional_role',
 ]
 
-const BUILT_IN_KPOP_ENCYCLOPEDIA_IDS = [
+const BUILT_IN_KPOP_ENCYCLOPEDIA_ASSETS = [
+  {
+    id: 'built_in_modern_seoul_kpop_industry_career_operation',
+    title: 'K-pop 行业与事业',
+    sourcePath:
+      'docs/superpowers/content/2026-06-20-modern-seoul-kpop-industry-career-operation-merged-encyclopedia-draft.md',
+    bodyText: 'K-pop 行业与事业运转由公司、厂牌、练习体系、出道机制',
+  },
+  {
+    id: 'built_in_modern_seoul_kpop_production_stage_live',
+    title: 'K-pop 作品、舞台与通告',
+    sourcePath:
+      'docs/superpowers/content/2026-06-21-modern-seoul-kpop-production-stage-live-merged-encyclopedia-draft.md',
+    bodyText: 'K-pop 作品、舞台与现场生产由 A&R、demo、录音、编舞',
+  },
+  {
+    id: 'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
+    title: 'K-pop 粉丝、平台与舆情',
+    sourcePath:
+      'docs/superpowers/content/2026-06-20-modern-seoul-kpop-fandom-platform-public-opinion-merged-encyclopedia-draft.md',
+    bodyText: 'K-pop 粉丝、平台与舆情生态由粉籍、站子、后援会、数据组',
+  },
+  {
+    id: 'built_in_modern_seoul_kpop_city_life_state_relationship',
+    title: '首尔艺人日常与关系网络',
+    sourcePath:
+      'docs/superpowers/content/2026-06-21-modern-seoul-kpop-city-life-state-relationship-merged-encyclopedia-draft.md',
+    bodyText: '现代首尔 K-pop 娱乐圈中的角色不只存在于舞台、公司和粉丝社区',
+  },
+  {
+    id: 'built_in_modern_seoul_kpop_real_entity_member_coordinate',
+    title: 'K-pop 实体与成员坐标',
+    sourcePath:
+      'docs/superpowers/content/2026-06-21-modern-seoul-kpop-real-entity-member-coordinate-merged-encyclopedia-draft.md',
+    bodyText: '现代首尔 K-pop 世界中的真实实体可以作为行业参照',
+  },
+  {
+    id: 'built_in_modern_seoul_kpop_industry_celebrity_functional_role',
+    title: 'K-pop 行业名人与功能角色',
+    sourcePath:
+      'docs/superpowers/content/2026-06-23-modern-seoul-kpop-industry-celebrity-functional-role-encyclopedia-draft.md',
+    bodyText: 'K-pop 行业中的名人、制作人、MC、PD、作家、编舞师',
+  },
+]
+
+const BUILT_IN_KPOP_ENCYCLOPEDIA_IDS = BUILT_IN_KPOP_ENCYCLOPEDIA_ASSETS.map(
+  (asset) => asset.id,
+)
+
+const LEGACY_BUILT_IN_KPOP_ENCYCLOPEDIA_IDS = [
+  'built_in_modern_seoul_kpop_encyclopedia_placeholder',
   'built_in_modern_seoul_kpop_industry_mechanisms',
   'built_in_modern_seoul_kpop_chinese_fandom_terms',
   'built_in_modern_seoul_youth_lifestyle',
@@ -50,12 +101,11 @@ describe('book store', () => {
     expect(store.worldbookSourceAssets.map((asset) => asset.id)).toEqual(
       expect.arrayContaining(BUILT_IN_KPOP_BOOK_ASSET_IDS),
     )
-    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toEqual(
-      expect.arrayContaining(BUILT_IN_KPOP_ENCYCLOPEDIA_IDS),
-    )
-    expect(store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).not.toContain(
-      'built_in_modern_seoul_kpop_encyclopedia_placeholder',
-    )
+    const encyclopediaIds = store.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)
+    expect(encyclopediaIds).toEqual(BUILT_IN_KPOP_ENCYCLOPEDIA_IDS)
+    LEGACY_BUILT_IN_KPOP_ENCYCLOPEDIA_IDS.forEach((legacyId) => {
+      expect(encyclopediaIds).not.toContain(legacyId)
+    })
     expect(store.findAssetById('built_in_modern_seoul_kpop_encyclopedia_placeholder')).toMatchObject({
       title: 'K-pop 行业机制',
       category: 'encyclopedia',
@@ -85,6 +135,36 @@ describe('book store', () => {
       categories: [],
     })
   })
+
+  test.each(BUILT_IN_KPOP_ENCYCLOPEDIA_ASSETS)(
+    'publishes $title as an independent optional built-in encyclopedia',
+    ({ id, title, sourcePath, bodyText }) => {
+      const store = useBookStore()
+      const asset = store.findAssetById(id)
+
+      expect(asset).toMatchObject({
+        id,
+        title,
+        category: 'encyclopedia',
+        locked: true,
+        status: 'draft',
+        source: {
+          kind: 'built_in',
+          sourceId: id,
+          sourcePath,
+        },
+      })
+      expect(asset).not.toHaveProperty('enabled')
+      expect(asset?.content).toContain(bodyText)
+      expect(asset?.content).not.toContain('Updated:')
+      expect(asset?.content).not.toContain('Status:')
+      expect(asset?.content).not.toContain('资产类型：')
+      expect(asset?.content).not.toContain('用途：')
+      expect(asset?.content).not.toContain('文体规范：')
+      expect(asset?.content).not.toContain('## 条目定位')
+      expect(asset?.content).not.toContain('## 后续校订点')
+    },
+  )
 
   test('publishes K-pop worldview and world rules without draft metadata', () => {
     const store = useBookStore()

@@ -1,5 +1,11 @@
 import kpopMainWorldview from '../../docs/superpowers/content/2026-06-07-modern-seoul-kpop-main-worldview-draft.md?raw'
 import kpopWorldRules from '../../docs/superpowers/content/2026-06-07-modern-seoul-kpop-world-rules-draft.md?raw'
+import kpopIndustryCareerOperation from '../../docs/superpowers/content/2026-06-20-modern-seoul-kpop-industry-career-operation-merged-encyclopedia-draft.md?raw'
+import kpopProductionStageLive from '../../docs/superpowers/content/2026-06-21-modern-seoul-kpop-production-stage-live-merged-encyclopedia-draft.md?raw'
+import kpopFandomPlatformPublicOpinion from '../../docs/superpowers/content/2026-06-20-modern-seoul-kpop-fandom-platform-public-opinion-merged-encyclopedia-draft.md?raw'
+import kpopCityLifeStateRelationship from '../../docs/superpowers/content/2026-06-21-modern-seoul-kpop-city-life-state-relationship-merged-encyclopedia-draft.md?raw'
+import kpopRealEntityMemberCoordinate from '../../docs/superpowers/content/2026-06-21-modern-seoul-kpop-real-entity-member-coordinate-merged-encyclopedia-draft.md?raw'
+import kpopIndustryCelebrityFunctionalRole from '../../docs/superpowers/content/2026-06-23-modern-seoul-kpop-industry-celebrity-functional-role-encyclopedia-draft.md?raw'
 import kpopIndustryMechanisms from '../../docs/superpowers/content/2026-06-09-modern-seoul-kpop-encyclopedia-entries-draft.md?raw'
 import kpopChineseFandomTerms from '../../docs/superpowers/content/2026-06-12-modern-seoul-kpop-chinese-fandom-terminology-draft.md?raw'
 import seoulYouthLifestyle from '../../docs/superpowers/content/2026-06-12-modern-seoul-youth-lifestyle-encyclopedia-draft.md?raw'
@@ -10,6 +16,12 @@ import { normalizeBookTextAsset } from './book-text-schema'
 export const BUILT_IN_BOOK_ASSET_IDS = Object.freeze({
   modernSeoulKpopMainWorldview: 'built_in_modern_seoul_kpop_main_worldview',
   modernSeoulKpopWorldRules: 'built_in_modern_seoul_kpop_world_rules',
+  modernSeoulKpopIndustryCareerOperation: 'built_in_modern_seoul_kpop_industry_career_operation',
+  modernSeoulKpopProductionStageLive: 'built_in_modern_seoul_kpop_production_stage_live',
+  modernSeoulKpopFandomPlatformPublicOpinion: 'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
+  modernSeoulKpopCityLifeStateRelationship: 'built_in_modern_seoul_kpop_city_life_state_relationship',
+  modernSeoulKpopRealEntityMemberCoordinate: 'built_in_modern_seoul_kpop_real_entity_member_coordinate',
+  modernSeoulKpopIndustryCelebrityFunctionalRole: 'built_in_modern_seoul_kpop_industry_celebrity_functional_role',
   modernSeoulKpopEncyclopediaPlaceholder: 'built_in_modern_seoul_kpop_encyclopedia_placeholder',
   modernSeoulKpopIndustryMechanisms: 'built_in_modern_seoul_kpop_industry_mechanisms',
   modernSeoulKpopChineseFandomTerms: 'built_in_modern_seoul_kpop_chinese_fandom_terms',
@@ -127,6 +139,69 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
   ),
   createBuiltInEncyclopediaAsset(
     {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopIndustryCareerOperation,
+      title: 'K-pop 行业与事业',
+      rawMarkdown: kpopIndustryCareerOperation,
+      sourcePath: 'docs/superpowers/content/2026-06-20-modern-seoul-kpop-industry-career-operation-merged-encyclopedia-draft.md',
+      tags: ['行业', '事业', '公司', '练习生', '回归', '合约'],
+    },
+    2,
+  ),
+  createBuiltInEncyclopediaAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopProductionStageLive,
+      title: 'K-pop 作品、舞台与通告',
+      rawMarkdown: kpopProductionStageLive,
+      sourcePath: 'docs/superpowers/content/2026-06-21-modern-seoul-kpop-production-stage-live-merged-encyclopedia-draft.md',
+      tags: ['作品', '舞台', '通告', '录音', '演唱会'],
+    },
+    3,
+  ),
+  createBuiltInEncyclopediaAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopFandomPlatformPublicOpinion,
+      title: 'K-pop 粉丝、平台与舆情',
+      rawMarkdown: kpopFandomPlatformPublicOpinion,
+      sourcePath: 'docs/superpowers/content/2026-06-20-modern-seoul-kpop-fandom-platform-public-opinion-merged-encyclopedia-draft.md',
+      tags: ['粉丝', '平台', '舆情', '饭圈', '官方口径'],
+    },
+    4,
+  ),
+  createBuiltInEncyclopediaAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopCityLifeStateRelationship,
+      title: '首尔艺人日常与关系网络',
+      rawMarkdown: kpopCityLifeStateRelationship,
+      sourcePath: 'docs/superpowers/content/2026-06-21-modern-seoul-kpop-city-life-state-relationship-merged-encyclopedia-draft.md',
+      tags: ['首尔', '日常', '状态', '关系网络', '作息'],
+    },
+    5,
+  ),
+  createBuiltInEncyclopediaAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopRealEntityMemberCoordinate,
+      title: 'K-pop 实体与成员坐标',
+      rawMarkdown: kpopRealEntityMemberCoordinate,
+      sourcePath: 'docs/superpowers/content/2026-06-21-modern-seoul-kpop-real-entity-member-coordinate-merged-encyclopedia-draft.md',
+      tags: ['真实实体', '公司', '团体', '成员', '公开坐标'],
+    },
+    6,
+  ),
+  createBuiltInEncyclopediaAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopIndustryCelebrityFunctionalRole,
+      title: 'K-pop 行业名人与功能角色',
+      rawMarkdown: kpopIndustryCelebrityFunctionalRole,
+      sourcePath: 'docs/superpowers/content/2026-06-23-modern-seoul-kpop-industry-celebrity-functional-role-encyclopedia-draft.md',
+      tags: ['行业名人', '功能角色', 'MC', 'PD', '制作人', '工作人员'],
+    },
+    7,
+  ),
+])
+
+const LEGACY_BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
+  createBuiltInEncyclopediaAsset(
+    {
       id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopIndustryMechanisms,
       title: 'K-pop 行业机制',
       rawMarkdown: kpopIndustryMechanisms,
@@ -134,7 +209,7 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       tags: ['行业机制', '经纪公司', '回归', '打歌', '舆情'],
       endHeading: '内部校订备注',
     },
-    2,
+    8,
   ),
   createBuiltInEncyclopediaAsset(
     {
@@ -144,7 +219,7 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       sourcePath: 'docs/superpowers/content/2026-06-12-modern-seoul-kpop-chinese-fandom-terminology-draft.md',
       tags: ['中文饭圈', '术语', '论坛', '粉丝社区'],
     },
-    3,
+    9,
   ),
   createBuiltInEncyclopediaAsset(
     {
@@ -154,7 +229,7 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       sourcePath: 'docs/superpowers/content/2026-06-12-modern-seoul-youth-lifestyle-encyclopedia-draft.md',
       tags: ['首尔', '生活方式', '作息', '社交', '网络语言'],
     },
-    4,
+    10,
   ),
   createBuiltInEncyclopediaAsset(
     {
@@ -164,7 +239,7 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       sourcePath: 'docs/superpowers/content/2026-06-12-modern-seoul-kpop-real-entity-coordinate-draft.md',
       tags: ['真实实体', '公司', '团体', '节目', '平台'],
     },
-    5,
+    11,
   ),
   createBuiltInEncyclopediaAsset(
     {
@@ -174,11 +249,8 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       sourcePath: 'docs/superpowers/content/2026-06-12-modern-seoul-kpop-representative-member-coordinate-draft.md',
       tags: ['成员', '艺人', '代际', 'MBTI', '生日'],
     },
-    6,
+    12,
   ),
-])
-
-const LEGACY_BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
   createBuiltInEncyclopediaAsset(
     {
       id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopEncyclopediaPlaceholder,
@@ -188,7 +260,7 @@ const LEGACY_BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       tags: ['行业机制', '经纪公司', '回归', '打歌', '旧占位兼容'],
       endHeading: '内部校订备注',
     },
-    7,
+    13,
   ),
 ])
 

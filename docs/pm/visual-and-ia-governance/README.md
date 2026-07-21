@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-07-16
+Updated: 2026-07-21
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -37,6 +37,7 @@ Current visual pass:
 - WorldBook's old Kernel panel is now advanced compatibility: a short base-worldview note only for cases with no active Book text. Templates keeps the same task-panel treatment with compact state headers, controlled editing/list areas, and stronger mobile card rhythm.
 - `文本库 / Book` now has a V1 installed-app-like source-library surface for read-first long text editing, export, and WorldBook source usage state; on phone-sized screens it separates Shelf -> Detail -> Editor so long text editing is a focused sheet rather than inline page expansion.
 - WorldBook's Setting Text panel now supports Book text picking, selected-section activation, changed-text warning, and refresh action for phone-sized trials.
+- The Modern Seoul K-pop Book catalog now exposes two independent core texts and six independent merged encyclopedia manuscripts. WorldBook links each manuscript only after an explicit user choice, permits any encyclopedia subset including zero, and does not use a dedicated World Pack or hidden core-to-encyclopedia binding.
 - WorldBook's Current World Pack panel now exposes active world-app entries as a snapshot and tells users to use App Store's `World` section for browsing, placement, and launch. It does not provide an App Store jump button or behave as a Settings-local launcher.
 - World Pack's global app-entry unlock seam now has a first implementation: enabled compatible expansion-pack app bindings appear together as World entries in App Store and Home/App Library placement, while the target app still owns the launched workflow.
 - WorldBook's Current World Pack panel now has a compatible-expansion IA: AI world-profile analysis recommends matching packs, users can still browse and toggle other supported packs, and the enabled-pack list stays separate from the legacy single-pack activation preview.

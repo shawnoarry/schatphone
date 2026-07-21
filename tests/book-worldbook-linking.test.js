@@ -161,6 +161,52 @@ describe('Book and WorldBook source linking', () => {
     expect(context.worldview).not.toContain('New private text.')
   })
 
+  test('persists an arbitrary built-in encyclopedia subset and allows returning to zero selection', () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const candidateIds = [
+      'built_in_modern_seoul_kpop_industry_career_operation',
+      'built_in_modern_seoul_kpop_production_stage_live',
+      'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
+      'built_in_modern_seoul_kpop_city_life_state_relationship',
+      'built_in_modern_seoul_kpop_real_entity_member_coordinate',
+      'built_in_modern_seoul_kpop_industry_celebrity_functional_role',
+    ]
+    const selectedIds = [candidateIds[1], candidateIds[4]]
+
+    expect(bookStore.listAssets({ category: 'encyclopedia' }).map((asset) => asset.id)).toEqual(
+      candidateIds,
+    )
+    expect(systemStore.listWorldBookSourceLinks()).toHaveLength(0)
+
+    selectedIds.forEach((assetId) => {
+      const asset = bookStore.findAssetById(assetId)
+      systemStore.addWorldBookSourceLink({
+        assetId,
+        role: 'encyclopedia',
+        enabled: true,
+        sourceVersion: asset.version,
+        sourceFingerprint: asset.contentFingerprint,
+        ...buildWorldBookSourceSnapshot(asset.content),
+      })
+    })
+    systemStore.saveNow()
+
+    setActivePinia(createPinia())
+    const restoredStore = useSystemStore()
+    expect(restoredStore.listWorldBookSourceLinks().map((link) => link.assetId)).toEqual(selectedIds)
+    expect(restoredStore.listWorldBookSourceLinks()).toHaveLength(2)
+    expect(restoredStore.listWorldBookSourceLinks().every((link) => link.role === 'encyclopedia')).toBe(true)
+
+    restoredStore.listWorldBookSourceLinks().forEach((link) => {
+      expect(restoredStore.removeWorldBookSourceLink(link.id)).toBe(true)
+    })
+    restoredStore.saveNow()
+
+    setActivePinia(createPinia())
+    expect(useSystemStore().listWorldBookSourceLinks()).toHaveLength(0)
+  })
+
   test('no Book links preserves existing global worldview behavior', () => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()

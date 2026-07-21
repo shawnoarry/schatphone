@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 This is the only live execution board for implementation order.
 
@@ -32,7 +32,7 @@ Roadmap interpretation:
 - four delivery lanes, 4.1 through 4.4, have reached current acceptance;
 - 4.5 is the active maintenance/governance lane;
 - 4.6 has an integrated V1 but still needs product hardening;
-- 4.7 is a decision gate, not approved implementation work.
+- 4.7 has a promoted Book/WorldBook content-carrier slice; later K-pop carriers still require separate promotion.
 
 ## 3. Completed Baselines
 
@@ -223,27 +223,34 @@ Primary packages:
 
 ### 4.7 Modern Seoul K-pop Content And Carrier Governance
 
-Status: `DECISION`
+Status: `PARTIAL_DONE`
 
-Decision source:
+Confirmed product direction on 2026-07-21:
 
-- `docs/superpowers/plans/2026-06-24-modern-seoul-kpop-worldbook-worldpack-system-planning.md`
+1. core setting texts and encyclopedia manuscripts are independent Book assets, not one required installation bundle;
+2. encyclopedia manuscripts in the Book/WorldBook catalog are independent optional candidates, and WorldBook persists only the links the user explicitly chooses; any subset, including zero encyclopedia selections, is valid;
+3. no dedicated `modern_seoul_kpop` World Pack exists for pure Book/encyclopedia content, and core texts must not auto-select or bind encyclopedia manuscripts;
+4. World Pack remains reserved for a future separately approved capability bundle with concrete app bindings, service templates, runtime seeds, or similar grouped behavior;
+5. built-in K-pop content is example and user-interest content, not the only supported play style or a restriction on user-authored/imported material;
+6. any future sensitive-content dimension must begin unselected and user-configured; built-in authoring policy must not become a global input filter.
 
-Verified current state:
+First promoted slice:
 
-- the newer merged K-pop content drafts exist;
-- built-in Book registration still imports the older small drafts;
-- the planning file proposes moving content into the correct carriers: Book text, Contacts templates, Calendar types, Map locations, Chat service accounts, World Pack app bindings, and Event Runtime seeds;
-- the planning file is marked `PLANNING_DRAFT` and has not been approved as an execution package.
+- Book keeps the two independent K-pop core texts and now publishes the six merged encyclopedia manuscripts as six independent built-in assets;
+- WorldBook uses the existing per-manuscript source-link contract, which supports explicit single selection, arbitrary subsets, removal back to zero, and persisted restoration;
+- retired small-draft asset IDs remain hidden compatibility lookups for existing persisted links, while the public Book/WorldBook catalog exposes only the current 2 + 6 set;
+- regression coverage protects clean markdown extraction, exact source registration, individual WorldBook selection, arbitrary-subset persistence, and zero selection;
+- this slice creates no World Pack, app binding, service template, schedule type, map location, event seed, global sensitive-content default, or store-schema change.
 
-Decision required before implementation:
+Remaining governance:
 
-1. confirm that no separate “debuted artist schedule encyclopedia” is needed;
-2. confirm the carrier split between encyclopedia, profile template, schedule type, location, service account, app binding, and event seed;
-3. choose the first concrete promoted slice: recommended first slice is built-in Book registration/content migration with extraction and regression tests;
-4. promote only that slice into this roadmap and the owning package handoff.
+1. this 2 + 6 slice does not include a separate debuted-artist schedule encyclopedia; whether one is needed later, and whether its material belongs in a static encyclopedia or a Calendar schedule carrier, requires separate evaluation and approval;
+2. profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds remain independent future decisions and must not be inferred from the historical planning draft;
+3. `docs/superpowers/**` K-pop plans and content remain historical planning/content evidence, not an executable P1-P4 backlog.
 
-Do not execute the draft's P1-P4 lists directly while this item remains `DECISION`.
+Primary package for the promoted Book/WorldBook slice:
+
+- `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
 
 ## 5. Guarded Or Deferred Directions
 
@@ -277,7 +284,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 2. `P0` 4.5 security/toolchain maintenance after the persistence contract is clear.
 3. `P1` 4.5 CI/release gating and one named architecture seam.
 4. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-5. `DECISION` 4.7 K-pop carrier split and first promoted migration slice.
+5. `P1` 4.7 K-pop Book/WorldBook 2 + 6 carrier slice control review; later carriers remain separately gated.
 6. `P2` secondary-module deepening only after one of the above is explicitly selected.
 
 ## 7. Validation Rule

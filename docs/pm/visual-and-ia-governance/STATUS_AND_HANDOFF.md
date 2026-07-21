@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-16
+Updated: 2026-07-21
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -95,6 +95,7 @@ What is already landed:
 79. Network & API URL-first IA now has broader transport affordance coverage: common OpenAI-compatible base/model/chat paths, OpenAI/Azure Responses paths, Anthropic Messages paths, Gemini native paths, Azure deployment URLs, and local/server-auth gateway endpoints can be entered directly. The API Key step may become optional after URL detection; the visible dropdown is for saved user configurations, not provider-brand selection.
 80. Network & API setup now keeps the necessary functional loop compact: URL, key, model input/selection, model-list refresh, connection test, and save-current-settings live in one primary connection panel, while saved-configuration management and diagnostics are secondary disclosures. The page should not return to one large stacked block per capability.
 81. Visual governance now has a minimal engineering gate: a visual round uses zero or one specialist skill, while `npm run test:visual` checks Home, Settings, and Appearance in day/night plus desktop/mobile, attaches screenshots and axe reports, and blocks page errors, horizontal overflow, and critical accessibility violations. The first run also fixed missing accessible names on Home Dock entries and the Settings backup-asset checkbox.
+82. Modern Seoul K-pop Book/WorldBook carrier correctness now has a promoted 2 + 6 baseline: two core texts and six merged encyclopedia manuscripts are independent built-in Book assets; WorldBook presents and persists only explicit per-manuscript choices, allows arbitrary encyclopedia subsets including zero, and creates no dedicated K-pop World Pack or automatic core-to-encyclopedia binding. Retired small-draft IDs remain hidden compatibility lookups for existing links.
 
 ### 2026-07-16 Visual Portfolio Audit
 

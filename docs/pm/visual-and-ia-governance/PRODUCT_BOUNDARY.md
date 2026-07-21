@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-06-18
+Updated: 2026-07-21
 
 ## 1. Core Rule
 
@@ -43,6 +43,13 @@ It also owns:
   - Current World Pack may summarize enabled world entries and service-account availability, but App Store owns browse/place/open for world app entries and Chat will own service-account add flows;
   - nonstandard-app proposals must be reviewed inside Current World Pack before they become appBindings, with loading, empty, error, and rejected states staying readable and rejected suggestions staying invisible outside the review surface;
   - source apps still keep their own visual owner after launch, with the World Pack providing labels, terminology, accents, default context, and safe UX variants through target-app UX context seams.
+- how Book and WorldBook content selection should behave:
+  - Book owns each core text and encyclopedia manuscript as an independent asset;
+  - WorldBook owns explicit per-manuscript activation and must allow the user to choose any encyclopedia subset from the catalog, including zero;
+  - choosing a core text must not auto-select, force-enable, or silently bind encyclopedia manuscripts;
+  - pure Book/encyclopedia content must not be wrapped in a World Pack; a future pack requires separately approved grouped capabilities such as app bindings, service templates, or runtime seeds;
+  - built-in content is optional example content and must not limit user-authored or imported worlds;
+  - real-person built-in authoring policy must not become a global input filter or a preselected sensitive-content state.
 - how Network setup should be interpreted:
   - `Network & API` is a native-system configuration surface;
   - the primary user action is entering or loading an API endpoint configuration, not choosing a provider brand;

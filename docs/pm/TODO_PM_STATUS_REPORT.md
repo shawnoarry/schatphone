@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-18
+Updated: 2026-07-21
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -24,7 +24,7 @@ The current work is concentrated in four areas:
 3. oversized views and central-store maintainability;
 4. later security/toolchain, device, release, content, and secondary-loop work in dependency order.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and the new K-pop carrier plan is waiting for a decision.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 content slice while keeping later carriers separately gated.
 
 ## 2. Product Positioning
 
@@ -46,7 +46,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Settings / Network / backup | `Usable, persistence architecture active` | complete-backup/recovery acceptance is frozen; current whole-snapshot code still awaits IndexedDB-first schema and reference-migration approval |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
-| Book / WorldBook | `Integrated V1` | long text and activation are correctly split; phone hardening and K-pop migration remain |
+| Book / WorldBook | `Integrated V1, K-pop carrier partial` | long text and activation are correctly split; the independent K-pop 2 + 6 catalog is promoted without Pack binding, while phone hardening and later non-Book carriers remain |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; broader hardening is pending |
 | Map / Calendar / Reminders / Phone | `Stable MVP` | product boundaries and cross-module handoffs are real; visual/depth polish remains |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
@@ -182,23 +182,29 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 3. exercise existing source-notification plans before adding another service family;
 4. choose another archetype only after the current four paths are understood.
 
-### Decision: K-pop Carrier Governance
+### P1: K-pop Book / WorldBook Carrier Slice
 
-The 2026-06-24 planning draft correctly identifies a carrier problem, but it is not approved implementation work.
+The 2026-06-24 planning draft remains historical evidence rather than an executable work package. The dedicated `modern_seoul_kpop` World Pack proposal for pure Book/encyclopedia content is withdrawn.
 
-Decision required:
+Confirmed and promoted:
 
-- keep long world context in Book/WorldBook;
-- put concrete people in Contacts templates;
-- put schedules in Calendar types, places in Map context, messages in service templates, capabilities in World Pack, and dynamic behavior in Event Runtime seeds;
-- choose one first migration slice before any broad P1-P4 execution.
+- keep the two core texts and six merged encyclopedia manuscripts as independent built-in Book assets;
+- let WorldBook persist only explicit per-manuscript choices, including arbitrary encyclopedia subsets or zero selections;
+- do not auto-select encyclopedias from a core text and do not wrap pure content in a World Pack;
+- preserve retired built-in IDs only as hidden compatibility lookups for existing links;
+- keep built-in real-person authoring policy separate from user-authored/imported content and add no global filter or sensitive-content default.
+
+Still separately gated:
+
+- Contacts profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds;
+- any future World Pack requires concrete grouped capabilities and its own approval.
 
 ## 7. PM Decisions Still Needed
 
 1. first reference domain for the later IndexedDB-first migration;
 2. production intent for the push relay versus a real authenticated backend;
 3. whether CI must gate E2E and security audit;
-4. K-pop content carrier split and first migration slice;
+4. which later non-Book K-pop carrier, if any, should be promoted after the 2 + 6 Book/WorldBook slice review;
 5. next World Pack archetype after marketplace, dispatch, reservation, and transit;
 6. whether closed-page autonomy is worth its identity/privacy/server complexity;
 7. when Cheats should become a real product surface, if ever.

@@ -171,11 +171,12 @@ describe('WorldBook setting text picker', () => {
   })
 
   test.each([
-    ['built_in_modern_seoul_kpop_industry_mechanisms', 'encyclopedia', 'K-pop 行业机制'],
-    ['built_in_modern_seoul_kpop_chinese_fandom_terms', 'encyclopedia', '中文饭圈术语'],
-    ['built_in_modern_seoul_youth_lifestyle', 'encyclopedia', '首尔年轻人生活方式'],
-    ['built_in_modern_seoul_kpop_real_entity_coordinate', 'encyclopedia', 'K-pop 公司、团体与节目'],
-    ['built_in_modern_seoul_kpop_representative_members', 'encyclopedia', 'K-pop 代表成员资料'],
+    ['built_in_modern_seoul_kpop_industry_career_operation', 'encyclopedia', 'K-pop 行业与事业'],
+    ['built_in_modern_seoul_kpop_production_stage_live', 'encyclopedia', 'K-pop 作品、舞台与通告'],
+    ['built_in_modern_seoul_kpop_fandom_platform_public_opinion', 'encyclopedia', 'K-pop 粉丝、平台与舆情'],
+    ['built_in_modern_seoul_kpop_city_life_state_relationship', 'encyclopedia', '首尔艺人日常与关系网络'],
+    ['built_in_modern_seoul_kpop_real_entity_member_coordinate', 'encyclopedia', 'K-pop 实体与成员坐标'],
+    ['built_in_modern_seoul_kpop_industry_celebrity_functional_role', 'encyclopedia', 'K-pop 行业名人与功能角色'],
   ])('selects built-in encyclopedia Book asset %s with role %s', async (assetId, expectedRole, expectedTitle) => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()
@@ -225,7 +226,7 @@ describe('WorldBook setting text picker', () => {
 
     await wrapper
       .get(
-        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_industry_mechanisms"]',
+        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_industry_career_operation"]',
       )
       .trigger('click')
     await nextTick()
@@ -234,13 +235,13 @@ describe('WorldBook setting text picker', () => {
     await nextTick()
 
     expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
-      assetId: 'built_in_modern_seoul_kpop_industry_mechanisms',
+      assetId: 'built_in_modern_seoul_kpop_industry_career_operation',
       role: 'encyclopedia',
       enabled: true,
     })
     expect(bookStore.assetCount).toBe(0)
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
-      'K-pop 行业机制',
+      'K-pop 行业与事业',
     )
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
       'Not set',
