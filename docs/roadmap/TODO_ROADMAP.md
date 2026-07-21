@@ -238,13 +238,21 @@ First promoted slice:
 
 - Book keeps the two independent K-pop core texts and now publishes the six merged encyclopedia manuscripts as six independent built-in assets;
 - WorldBook uses the existing per-manuscript source-link contract, which supports explicit single selection, arbitrary subsets, removal back to zero, and persisted restoration;
-- retired small-draft asset IDs remain hidden compatibility lookups for existing persisted links, while the public Book/WorldBook catalog exposes only the current 2 + 6 set;
+- retired small-draft asset IDs remain hidden compatibility lookups for existing persisted links, while the public Book/WorldBook catalog exposes the current 2 + 6 encyclopedia baseline plus one independent focused world rule;
 - regression coverage protects clean markdown extraction, exact source registration, individual WorldBook selection, arbitrary-subset persistence, and zero selection;
 - this slice creates no World Pack, app binding, service template, schedule type, map location, event seed, global sensitive-content default, or store-schema change.
 
+First focused schedule-scene content slice:
+
+- the 2 + 6 content audit found broad music-show context across world rules and the industry, production, fandom, city, entity, and functional-role encyclopedias, but no independently selectable rule for one confirmed schedule scene;
+- the public catalog now follows a `2 + 6 + 1` shape: two core texts, six independent encyclopedia manuscripts, and one independent `K-pop 音乐节目打歌日小剧场规则` world-rule asset;
+- the focused rule is an optional candidate under WorldBook Setting Text -> Rules and creates no source link until the user explicitly enables it; the six encyclopedias remain independently optional and zero encyclopedia selection remains valid;
+- the rule defines applicability, required inputs, ordered scene beats, participating roles, public/private boundaries, time/place continuity, optional variants, facts that must not be invented, and semantic expectations for a future structured mini_scene result;
+- no module trigger, HTML/dialog renderer, mini_scene transport, Calendar/Map/Event Runtime schema, World Pack binding, sensitive default, or global input restriction is implemented by this content slice.
+
 Remaining governance:
 
-1. this 2 + 6 slice does not include a separate debuted-artist schedule encyclopedia; whether one is needed later, and whether its material belongs in a static encyclopedia or a Calendar schedule carrier, requires separate evaluation and approval;
+1. the current 2 + 6 + 1 catalog does not include a separate debuted-artist schedule encyclopedia; whether one is needed later, and whether its material belongs in a static encyclopedia or a Calendar schedule carrier, requires separate evaluation and approval;
 2. profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds remain independent future decisions and must not be inferred from the historical planning draft;
 3. `docs/superpowers/**` K-pop plans and content remain historical planning/content evidence, not an executable P1-P4 backlog.
 
@@ -284,7 +292,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 2. `P0` 4.5 security/toolchain maintenance after the persistence contract is clear.
 3. `P1` 4.5 CI/release gating and one named architecture seam.
 4. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-5. `P1` 4.7 K-pop Book/WorldBook 2 + 6 carrier slice control review; later carriers remain separately gated.
+5. `P1` 4.7 K-pop Book/WorldBook 2 + 6 + 1 content-carrier control review; later triggers, renderers, and carriers remain separately gated.
 6. `P2` secondary-module deepening only after one of the above is explicitly selected.
 
 ## 7. Validation Rule

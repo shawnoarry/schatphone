@@ -5,6 +5,7 @@ import { useBookStore } from '../src/stores/book'
 const BUILT_IN_KPOP_BOOK_ASSET_IDS = [
   'built_in_modern_seoul_kpop_main_worldview',
   'built_in_modern_seoul_kpop_world_rules',
+  'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
   'built_in_modern_seoul_kpop_industry_career_operation',
   'built_in_modern_seoul_kpop_production_stage_live',
   'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
@@ -188,6 +189,42 @@ describe('book store', () => {
       expect(asset?.content).not.toContain('## 正文')
       expect(asset?.content).not.toContain('## 内部校订备注')
     })
+  })
+
+  test('publishes the music-show-day mini-scene rule as an independent optional world rule', () => {
+    const store = useBookStore()
+    const rule = store.findAssetById(
+      'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
+    )
+
+    expect(rule).toMatchObject({
+      id: 'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
+      title: 'K-pop 音乐节目打歌日小剧场规则',
+      category: 'world_rule',
+      locked: true,
+      status: 'draft',
+      source: {
+        kind: 'built_in',
+        sourceId: 'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
+        sourcePath:
+          'docs/superpowers/content/2026-07-21-modern-seoul-kpop-music-show-day-mini-scene-rule.md',
+      },
+    })
+    expect(rule).not.toHaveProperty('enabled')
+    expect(rule?.content).toContain('本规则只处理一个已经成立的音乐节目打歌日')
+    expect(rule?.content).toContain('### 3. 必要输入')
+    expect(rule?.content).toContain('### 10. 未来 mini_scene 产物的语义要求')
+    expect(rule?.content).not.toContain('Updated:')
+    expect(rule?.content).not.toContain('Status:')
+    expect(rule?.content).not.toContain('资产类型：')
+    expect(rule?.content).not.toContain('用途：')
+    expect(rule?.content).not.toContain('## 正文')
+    expect(rule?.content).not.toContain('## 内部校订备注')
+    expect(store.listAssets({ category: 'world_rule' }).map((asset) => asset.id)).toEqual([
+      'built_in_modern_seoul_kpop_world_rules',
+      'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
+    ])
+    expect(store.createBackupSnapshot()).toEqual({ assets: [], categories: [] })
   })
 
   test('creates, updates, filters, and deletes assets', () => {

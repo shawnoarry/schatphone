@@ -24,7 +24,7 @@ The current work is concentrated in four areas:
 3. oversized views and central-store maintainability;
 4. later security/toolchain, device, release, content, and secondary-loop work in dependency order.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 content slice while keeping later carriers separately gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice while keeping later triggers, renderers, and carriers separately gated.
 
 ## 2. Product Positioning
 
@@ -46,7 +46,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Settings / Network / backup | `Usable, persistence architecture active` | complete-backup/recovery acceptance is frozen; current whole-snapshot code still awaits IndexedDB-first schema and reference-migration approval |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
-| Book / WorldBook | `Integrated V1, K-pop carrier partial` | long text and activation are correctly split; the independent K-pop 2 + 6 catalog is promoted without Pack binding, while phone hardening and later non-Book carriers remain |
+| Book / WorldBook | `Integrated V1, K-pop carrier partial` | long text and activation are correctly split; the independent K-pop 2 + 6 + 1 catalog adds one optional music-show-day rule without Pack binding, while phone hardening and later trigger/render/carrier work remain |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; broader hardening is pending |
 | Map / Calendar / Reminders / Phone | `Stable MVP` | product boundaries and cross-module handoffs are real; visual/depth polish remains |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
@@ -189,6 +189,7 @@ The 2026-06-24 planning draft remains historical evidence rather than an executa
 Confirmed and promoted:
 
 - keep the two core texts and six merged encyclopedia manuscripts as independent built-in Book assets;
+- add one independently selectable music-show-day mini-scene world rule without implementing a trigger, renderer, or module schema;
 - let WorldBook persist only explicit per-manuscript choices, including arbitrary encyclopedia subsets or zero selections;
 - do not auto-select encyclopedias from a core text and do not wrap pure content in a World Pack;
 - preserve retired built-in IDs only as hidden compatibility lookups for existing links;
@@ -204,7 +205,7 @@ Still separately gated:
 1. first reference domain for the later IndexedDB-first migration;
 2. production intent for the push relay versus a real authenticated backend;
 3. whether CI must gate E2E and security audit;
-4. which later non-Book K-pop carrier, if any, should be promoted after the 2 + 6 Book/WorldBook slice review;
+4. which later K-pop trigger, renderer, or non-Book carrier, if any, should be promoted after the 2 + 6 + 1 Book/WorldBook slice review;
 5. next World Pack archetype after marketplace, dispatch, reservation, and transit;
 6. whether closed-page autonomy is worth its identity/privacy/server complexity;
 7. when Cheats should become a real product surface, if ever.

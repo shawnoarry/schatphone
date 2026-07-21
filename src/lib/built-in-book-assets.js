@@ -1,5 +1,6 @@
 import kpopMainWorldview from '../../docs/superpowers/content/2026-06-07-modern-seoul-kpop-main-worldview-draft.md?raw'
 import kpopWorldRules from '../../docs/superpowers/content/2026-06-07-modern-seoul-kpop-world-rules-draft.md?raw'
+import kpopMusicShowDayMiniSceneRule from '../../docs/superpowers/content/2026-07-21-modern-seoul-kpop-music-show-day-mini-scene-rule.md?raw'
 import kpopIndustryCareerOperation from '../../docs/superpowers/content/2026-06-20-modern-seoul-kpop-industry-career-operation-merged-encyclopedia-draft.md?raw'
 import kpopProductionStageLive from '../../docs/superpowers/content/2026-06-21-modern-seoul-kpop-production-stage-live-merged-encyclopedia-draft.md?raw'
 import kpopFandomPlatformPublicOpinion from '../../docs/superpowers/content/2026-06-20-modern-seoul-kpop-fandom-platform-public-opinion-merged-encyclopedia-draft.md?raw'
@@ -16,6 +17,7 @@ import { normalizeBookTextAsset } from './book-text-schema'
 export const BUILT_IN_BOOK_ASSET_IDS = Object.freeze({
   modernSeoulKpopMainWorldview: 'built_in_modern_seoul_kpop_main_worldview',
   modernSeoulKpopWorldRules: 'built_in_modern_seoul_kpop_world_rules',
+  modernSeoulKpopMusicShowDayMiniSceneRule: 'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
   modernSeoulKpopIndustryCareerOperation: 'built_in_modern_seoul_kpop_industry_career_operation',
   modernSeoulKpopProductionStageLive: 'built_in_modern_seoul_kpop_production_stage_live',
   modernSeoulKpopFandomPlatformPublicOpinion: 'built_in_modern_seoul_kpop_fandom_platform_public_opinion',
@@ -196,6 +198,21 @@ const BUILT_IN_BOOK_TEXT_ASSETS = Object.freeze([
       tags: ['行业名人', '功能角色', 'MC', 'PD', '制作人', '工作人员'],
     },
     7,
+  ),
+  createBuiltInBookAsset(
+    {
+      id: BUILT_IN_BOOK_ASSET_IDS.modernSeoulKpopMusicShowDayMiniSceneRule,
+      title: 'K-pop 音乐节目打歌日小剧场规则',
+      category: 'world_rule',
+      tags: ['内置', 'K-pop', '世界规则', '音乐节目', '打歌', '小剧场'],
+      content: extractPublishedMarkdownBody(kpopMusicShowDayMiniSceneRule, {
+        title: 'K-pop 音乐节目打歌日小剧场规则',
+        startHeading: '正文',
+        endHeading: '内部校订备注',
+      }),
+      sourcePath: 'docs/superpowers/content/2026-07-21-modern-seoul-kpop-music-show-day-mini-scene-rule.md',
+    },
+    14,
   ),
 ])
 

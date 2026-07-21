@@ -170,6 +170,45 @@ describe('WorldBook setting text picker', () => {
     wrapper.unmount()
   })
 
+  test('links the music-show-day rule only after explicit selection without enabling encyclopedias', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const { wrapper } = await mountWorldBook()
+
+    expect(systemStore.listWorldBookSourceLinks()).toHaveLength(0)
+
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+
+    await wrapper
+      .get(
+        '[data-testid="worldbook-source-picker-card-built_in_modern_seoul_kpop_music_show_day_mini_scene_rule"]',
+      )
+      .trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()).toHaveLength(0)
+    expect(wrapper.get('[data-testid="worldbook-source-picker-usage"]').element.value).toBe(
+      'world_rule',
+    )
+
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await nextTick()
+
+    const links = systemStore.listWorldBookSourceLinks()
+    expect(links).toHaveLength(1)
+    expect(links[0]).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_music_show_day_mini_scene_rule',
+      role: 'world_rule',
+      enabled: true,
+    })
+    expect(links[0].sourceSnapshotText).toContain('音乐节目打歌日')
+    expect(links.some((link) => link.role === 'encyclopedia')).toBe(false)
+    expect(bookStore.assetCount).toBe(0)
+
+    wrapper.unmount()
+  })
+
   test.each([
     ['built_in_modern_seoul_kpop_industry_career_operation', 'encyclopedia', 'K-pop 行业与事业'],
     ['built_in_modern_seoul_kpop_production_stage_live', 'encyclopedia', 'K-pop 作品、舞台与通告'],

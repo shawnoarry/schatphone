@@ -15,7 +15,7 @@ Current routing note:
 
 - roadmap 4.5 security/toolchain/architecture work belongs to `module-architecture-governance`;
 - roadmap 4.6 World Pack hardening can span visual/IA, Chat/service accounts, commerce, and map/date packages, but the live roadmap owns priority;
-- roadmap 4.7 Modern Seoul K-pop carrier governance is `PARTIAL_DONE`: the independent Book/WorldBook 2 + 6 content slice belongs to `visual-and-ia-governance`; every later non-Book carrier must be routed to its own package and promoted separately.
+- roadmap 4.7 Modern Seoul K-pop carrier governance is `PARTIAL_DONE`: the independent Book/WorldBook 2 + 6 + 1 content slice belongs to `visual-and-ia-governance`; every later trigger, renderer, or non-Book carrier must be routed to its own package and promoted separately.
 
 ## 1. Standard Package Structure
 
