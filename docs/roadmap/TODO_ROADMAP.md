@@ -34,6 +34,7 @@ Roadmap interpretation:
 - 4.6 has an integrated V1 but still needs product hardening;
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
 - 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
+- 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
 
 ## 3. Completed Baselines
 
@@ -130,7 +131,7 @@ Completed in the 2026-07-16 workflow-layering round:
 3. kept specialist skill routing in event/runtime, visual/IA, and tooling workflow documents;
 4. added governance coverage that prevents task-specific workflow detail from returning to the cross-task contract.
 
-Open slices, in order:
+4.5 maintenance inventory follows. Section 6 owns the cross-lane execution order:
 
 1. `P0 Local persistence, backup, and data-lifecycle architecture` - `IN_PROGRESS`
    - confirmed product boundary: ordinary browsers and installable PWAs remain complete first-class clients;
@@ -199,7 +200,7 @@ Acceptance for 4.5:
 
 - active docs describe the same current priorities;
 - the browser/PWA-first persistence target, data classes, accepted backup/recovery contract, IndexedDB-first schema, and first reference migration acceptance are explicit before storage code changes;
-- the decision ledger preserves confirmed and withdrawn behavior, and backup implementation does not begin until the separately unapproved persistence schema and reference-migration gates close;
+- the decision ledger preserves confirmed and withdrawn behavior, and each backup or persistence implementation slice stays inside its separately approved schema, owner, migration, and rollback boundary;
 - high-severity development-tool advisories have an explicit remediation path;
 - complete migration backup sensitivity has a documented product contract and later implementation receives regression coverage;
 - each cleanup slice reduces a measured hotspot or direct coupling without changing user-visible semantics accidentally.
@@ -319,6 +320,59 @@ Secondary packages are engaged only when their owned stage begins:
 - `map-calendar-reminders` for Calendar/Map source truth and request Adapters;
 - `chat-and-chat-directory` for Chat source truth and legacy/new Mini Scene message compatibility.
 
+### 4.9 Usable Product Preview
+
+Status: `IN_PROGRESS`
+
+Product outcome:
+
+- a new user can open the phone, configure a user-owned AI provider, receive the first successful role reply, and return to the same conversation without learning the internal module architecture;
+- blank/custom worlds and the optional built-in K-pop content both remain valid; Book text, encyclopedia selection, World Pack capability, and role creation are never mandatory prerequisites for the first reply;
+- the user can later create or select a world and role, complete one believable daily-life flow, and see its Chat, schedule, finance, or relationship continuity consequences;
+- the current save reports failed writes instead of silently claiming success, prevents later tabs from overwriting after the safe wait expires, and can be exported and restored as a complete local recovery point;
+- the exact release commit is proven through remote gates, the deployed `/schatphone/` base path, install/relaunch behavior, representative mobile use, and one hosted-provider Chat journey.
+
+Delivery stages:
+
+1. `P0 First successful Chat activation` - `TODO`
+   - on fresh storage, Chat turns missing provider configuration into an explicit `Network & API` recovery action rather than a dead-end error;
+   - preserve the originating thread and typed content, keep provider configuration owned by Network, and return to the same Chat after save plus successful connection test;
+   - prove one manual AI reply across desktop and simulated mobile without adding a broad onboarding wizard, duplicated provider form, automatic automation, or mandatory world setup.
+2. `P0 Current-save safety and complete local recovery` - `TODO`, parallel architecture lane
+   - return structured persistence write results, surface quota/carrier failure, and reconcile the newest valid local/mirror envelope;
+   - extend the accepted same-container read-only timeout behavior beyond Book without introducing force takeover or last-write-wins;
+   - close complete-package coverage, including required Chat identity/avatar state and default-on retained Gallery material, then prove integrity, staged activation, rollback, and reopen;
+   - personal R2/Worker transport remains post-release because it cannot repair an unsafe or incomplete local recovery point.
+3. `P1 Core personal-life vertical slice` - `TODO`
+   - prove one explicit world/role -> Chat journey without changing the valid zero-Book/zero-encyclopedia/zero-Pack boundary;
+   - prove one ordinary Food Delivery or Shopping action through its existing Wallet, Calendar, Chat service-notification, and relationship-memory consequences;
+   - curate the default Home release surface so partial utilities do not appear equally mature; hiding or demoting an entry changes discoverability and requires a focused product review.
+4. `P1 Hosted product proof` - `TODO`
+   - observe the remote CI and Pages jobs for the exact release commit and verify external required-check/environment policy;
+   - add deployed base-path, manifest/install, controlled online-to-offline relaunch, hosted-provider Chat, and complete backup export/import smoke evidence;
+   - run a named true-device matrix for safe areas, browser chrome, keyboard/composer, touch, back navigation, file save/import, and PWA relaunch.
+5. `P2 Post-preview depth` - `ON_HOLD`
+   - Mini Scene Text Presenter and the first Calendar Adapter may resume only after the product-preview P0 gates; interactive HTML remains a later security stage;
+   - personal R2, production push, Gallery schema, non-Book Repository migrations, World Setting W2, hotspot decomposition, broad typing, and secondary-app depth do not block the first usable product preview.
+
+Acceptance for 4.9:
+
+- a fresh-storage user reaches one successful AI reply through an automated browser journey;
+- write, conflict, backup, restore, and reopen failure paths never silently report success or destroy the previous readable save;
+- one world/role path and one daily-life cross-module consequence are browser-proven;
+- the deployed PWA and representative true-device paths are verified before the project claims a public release;
+- every stage yields a user-verifiable increment and avoids unrelated refactors or new platform infrastructure.
+
+Primary package:
+
+- `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
+
+Secondary packages:
+
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` for current-save safety, recovery, and release proof;
+- `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` for first-reply and Chat continuity;
+- `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`, `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md`, and `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` only when the named life vertical slice starts.
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -347,11 +401,13 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P1` 4.5 CI/release gating; workflow definitions are implemented, while remote run proof, external required checks/environment protection, and a deployed base-path smoke remain the only active 4.5 gate.
-2. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-3. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.
-4. `P1` 4.7 K-pop content follow-up through the 4.8 first Calendar integration stage, not through a dedicated World Pack or prose-only renderer.
-5. `P2` secondary-module deepening only after one of the above is explicitly selected.
+1. `P0` 4.9 first successful Chat activation loop; this is the next user-visible implementation slice.
+2. `P0` 4.9 current-save write/conflict safety followed by complete local recovery; architecture work may proceed in parallel only as separately reviewable slices.
+3. `P1` 4.9 explicit world/role -> Chat and one ordinary life-consequence vertical slice, with default Home release curation reviewed as a product choice.
+4. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
+5. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
+6. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+7. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
 
 ## 7. Validation Rule
 

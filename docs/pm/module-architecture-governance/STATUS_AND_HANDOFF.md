@@ -332,6 +332,26 @@ Do not describe it as a production backend or closed-page simulation engine.
 
 Use the live roadmap order.
 
+The 2026-07-22 product-release audit changes that order through roadmap 4.9:
+
+1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
+2. the first architecture deliverable is a current-save safety vertical slice: structured write results, visible quota/carrier failure, newest-valid local/mirror reconciliation, and product-wide same-container read-only enforcement;
+3. the next release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
+4. remote CI/Pages, deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence close the public-release gate;
+5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
+
+### P0: Current Save Safety And Complete Local Recovery
+
+Status: `TODO`; this replaces R2 onboarding as the immediate architecture implementation priority.
+
+First coherent slice:
+
+- make persistence writes return structured `ok/error/carrier/retryable` results and preserve the last confirmed durable state;
+- expose one product-level save-failed/read-only state with retry, refresh-current-save, and emergency complete-backup actions;
+- select the newest valid local/mirror envelope rather than always preferring a present but stale local value;
+- extend WriteCoordinator protection so a later same-container page cannot mutate any durable owner after timeout;
+- add failure-injection unit coverage and focused two-page Chromium coverage without beginning R2, Gallery schema, dual write, or a non-Book Repository migration.
+
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
 Status: `IN_PROGRESS`; the non-active foundation and separately approved Book-only application cutover are complete, while every non-Book migration/cutover remains unapproved.
@@ -341,7 +361,7 @@ Status: `IN_PROGRESS`; the non-active foundation and separately approved Book-on
 3. `DONE 2026-07-18`: translate complete-package, explicit R2 retention, backup-size/quota, creation/delivery failure, integrity, staged restore, legacy degraded recovery, local-material reuse, migration, crash recovery, and rollback into testable acceptance;
 4. `ARCHITECTURE_ACCEPTED 2026-07-21`: the owner-aware Repository Interface, exact separate IndexedDB v1 stores/keyPaths/indexes, immutable record versions and generation membership, atomic pointer/journal, localStorage hints, contextual persistent-storage request, read-only multi-tab conflict behavior, and rollback gates are accepted;
 5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
-6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
+6. preserve the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance as post-release architecture work under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
 7. `DONE 2026-07-22`: implemented the exact non-active Batch 2B Adapter/schema/fixture/test list, including `e2e/persistence-repository-foundation.spec.js`, without Store import, cutover, dual write, or activation;
 8. `DONE 2026-07-22`: implemented the separately approved Book-only runtime cutover with explicit in-context permission flow, fenced atomic activation, normal-Adapter reopen verification, automatic first-cutover rollback, Repository-only later writes, byte-identical retained legacy data, awaited backup-restore persistence, and focused Chromium coverage; the section-6/10 activation, reopen, rollback, backup, and product-equivalence gates pass, while Mini Scene persistence/policy remains a separate roadmap 4.8 decision.
 

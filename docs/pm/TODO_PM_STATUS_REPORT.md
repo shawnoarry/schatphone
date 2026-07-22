@@ -15,16 +15,18 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current repository baseline is green across lint, 185 unit-test files / 1170 tests, build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; the broader product E2E suite remains outside CI as a separate release gate.
+- the current repository baseline is green across lint, 185 unit-test files / 1170 tests, build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; CI and Pages definitions include the full suite, but remote execution and deployed-artifact proof remain open.
 
 The current work is concentrated in four areas:
 
-1. local persistence, backup, data-lifecycle, and state-ownership architecture;
-2. core product definition and module depth;
-3. oversized views and central-store maintainability;
-4. later security/toolchain, device, release, content, and secondary-loop work in dependency order.
+1. first-value activation from a clean browser to the first successful Chat reply;
+2. current-save write/conflict safety and a complete local recovery point;
+3. one world/role journey and one ordinary daily-life cross-module loop;
+4. deployed PWA, hosted-provider, backup, and true-device release proof.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, and 4.8 has a pure Mini Scene foundation with runtime still staged.
+The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
+
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, and 4.9 now owns the usable-product-preview sequence.
 
 ## 2. Product Positioning
 
@@ -155,12 +157,22 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ## 6. Current Priorities
 
+### P0: Usable Product Preview
+
+1. close the first successful Chat activation loop: missing provider configuration opens the existing Network flow, preserves the originating thread and typed content, and returns after a successful connection test for the first manual AI reply;
+2. in parallel, make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
+3. then prove one explicit world/role -> Chat path and one ordinary Food Delivery or Shopping consequence through existing Calendar, Wallet, Chat, and relationship continuity;
+4. finish with remote CI/Pages, deployed PWA/install/relaunch, hosted-provider, backup round-trip, and named true-device evidence.
+
+This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
+
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-1. preserve the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, migration, crash recovery, and rollback contract;
-2. `DONE 2026-07-22`: implement only the approved non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice and its focused real-Chromium IndexedDB/coordination gate;
-3. finish the provider-neutral remote-backup and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
-4. preserve the active Book-only Repository path, and keep R2, Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration separately approved.
+1. make local and mirror writes return visible, actionable failure rather than silently swallowing quota, security, or unavailable-carrier errors;
+2. preserve the newest valid envelope and extend the accepted read-only conflict boundary beyond Book without force takeover or last-write-wins;
+3. implement the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, crash recovery, and rollback boundary;
+4. `DONE 2026-07-22`: the non-active Batch 2B Repository foundation and active Book-only cutover remain the reference pilot;
+5. move provider-neutral R2/Worker onboarding after the first usable local release; keep Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book Repository migration separately approved.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 
@@ -171,10 +183,10 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P1: Release And Architecture Confidence
 
-1. prove the new full-product CI E2E/audit and Pages build dependency remotely, confirm external required checks/environment protection, and add a later deployed base-path smoke;
-2. take one named large-view or `systemStore` seam at a time;
-3. deepen one cross-store adapter without changing product ownership;
-4. keep docs synchronized in the same round.
+1. prove the full-product CI E2E/audit and Pages build dependency remotely, confirm external required checks/environment protection, and run the deployed base-path/PWA smoke;
+2. prove one hosted-origin provider setup -> connection test -> Chat reply path and complete local backup export/import/reopen;
+3. run the named true-device release matrix before claiming mobile/PWA completion;
+4. defer large-view seams, `systemStore` facades, cross-store cleanup, and incremental typing unless a selected product slice is blocked by them.
 
 ### P1: World Pack Hardening
 
@@ -220,7 +232,7 @@ Stage 1 landed on 2026-07-21 with five pure library modules and 22 focused tests
 
 1. first reference domain for the later IndexedDB-first migration;
 2. production intent for the push relay versus a real authenticated backend;
-3. whether CI must gate E2E and security audit;
+3. the exact first-release device matrix and which immature Home entries should be demoted from the default shipping surface;
 4. next World Pack archetype after marketplace, dispatch, reservation, and transit;
 5. whether closed-page autonomy is worth its identity/privacy/server complexity;
 6. when Cheats should become a real product surface, if ever.

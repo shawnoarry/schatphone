@@ -141,16 +141,15 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The active roadmap priority is local persistence, backup, and data-lifecycle architecture, followed by security/toolchain maintenance, not a broad visual pass. The portfolio audit does not change that priority. Current visual decisions and candidates are:
+The 2026-07-22 product-finish review promotes roadmap 4.9 and makes the first successful Chat activation loop the next visual/IA slice. This is a product-journey correction, not a broad visual pass.
 
-1. decide whether wide desktop viewports should show a centered device frame or a deliberately adaptive phone workspace; do not patch individual pages before this shell contract is clear;
-2. true-device test WorldBook -> App Store -> Shopping/Food Delivery/Calendar/Map paths before another archetype;
-3. when a rebuild slice is explicitly promoted, prefer Gallery's Photos-first initial surface because the target is clear and its cross-module asset contracts can remain intact;
-4. treat Calendar/Reminders schedule identity and Shopping platform identity as later separate candidates, not one combined redesign;
-5. test global Appearance pack import/export knowing that app-owned layers are intentionally excluded;
-6. extend `test:visual` only when a touched surface has a repeated regression risk; do not build a second visual toolchain;
-7. promote one focused visual scope at a time after the active 4.5 risk work.
-8. when roadmap 4.8 reaches user-visible work, design the dynamic module policy/profile controls with the Text Presenter first; treat interactive HTML as a later security-gated surface rather than one combined visual slice.
+1. on fresh storage, turn Chat's missing provider state into a clear `Network & API` action rather than `NO_API_KEY` plus Retry only;
+2. preserve the originating thread and typed content, keep endpoint/key/model setup inside Network, and offer an explicit return to the same Chat after save plus successful smoke test;
+3. prove the first manual AI reply with a focused desktop and simulated-mobile browser journey, including error, overflow, accessibility, and sensitive-artifact guards;
+4. do not introduce a global onboarding wizard, duplicate provider fields in Chat, require world/role personalization, or automatically enable AI automation;
+5. after activation, prove one explicit world/role -> Chat journey and one daily-life cross-module consequence before returning to Gallery, Calendar, Shopping, or wide-shell polish;
+6. fold World Pack true-device coverage into the named release matrix rather than treating another archetype as progress;
+7. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 P0 gates are complete.
 
 ## 3. Do Not Do
 
