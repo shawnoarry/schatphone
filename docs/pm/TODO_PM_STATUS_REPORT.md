@@ -55,7 +55,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline, partial release gate` | CI now gates focused visual-quality Playwright checks; full E2E, dependency audit, and true-device QA remain outside the gate |
+| QA / release | `Strong local baseline, workflow gate pending remote proof` | PR and Pages definitions now gate full E2E plus both audit scopes; external checks, deployed base-path smoke, and true-device QA remain open |
 
 ## 4. What Users Can Do Now
 
@@ -116,7 +116,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
 - production and full dependency audits both report 0 after a compatible transitive lock refresh with no direct, override/resolution, or major changes;
-- CI runs the focused visual-quality Playwright suite, but not the full product E2E suite or dependency audit; the Pages build workflow is not a full quality gate;
+- PR CI and main Pages build definitions now fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote execution, external protections, and a deployed base-path smoke are still pending;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
 ### Persistence And Recovery
@@ -171,7 +171,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P1: Release And Architecture Confidence
 
-1. decide full-product CI E2E/audit gating and Pages deployment dependency after the focused visual gate stabilizes;
+1. prove the new full-product CI E2E/audit and Pages build dependency remotely, confirm external required checks/environment protection, and add a later deployed base-path smoke;
 2. take one named large-view or `systemStore` seam at a time;
 3. deepen one cross-store adapter without changing product ownership;
 4. keep docs synchronized in the same round.
@@ -265,6 +265,12 @@ Compatible transitive advisory refresh validation on 2026-07-22:
 - `npm.cmd run build`: pass, Vite 7.3.6 / 277 modules;
 - `npm.cmd run test:e2e`: 60 collected, 56 passed, 4 existing project-specific skips;
 - `package.json` and all direct dependency versions remain unchanged; no override/resolution or major migration was added.
+
+CI/release workflow first-slice validation on 2026-07-22:
+
+- both workflow files parse through the existing `js-yaml` dependency and retain explicit triggers, permissions, concurrency/timeout, failure artifacts, and `deploy.needs: build`;
+- local CI-mode full E2E simulation on strict port 5181 collected 60 cases: 56 expected, 4 skipped, 0 unexpected, and 0 flaky; the inline JSON guard passed;
+- remote GitHub execution, branch/environment protection, and deployed `dist` base-path behavior were not tested and remain release blockers.
 
 ## 9. Read Next
 

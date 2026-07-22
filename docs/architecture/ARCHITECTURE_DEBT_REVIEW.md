@@ -39,7 +39,7 @@ Additional debt remains real:
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
 - backup export currently includes `settings.api.key` through the full settings snapshot;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
-- CI runs the focused visual-quality Playwright suite, but not full product E2E or dependency audit, and the Pages workflow is build-only.
+- PR and main Pages workflow definitions now include full E2E plus separate production/full audits, but remote execution, external protection, and deployed base-path behavior remain unverified.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -206,8 +206,8 @@ Verified on 2026-07-22:
 - the later compatible transitive lock refresh used normal npm resolution, changed no direct dependency or major line, and added no override/resolution;
 - Settings backup serializes `settings` directly, including the configured AI API key;
 - the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
-- CI runs lint, unit tests, build, and the focused visual-quality Playwright suite, but not full product E2E or dependency audit;
-- GitHub Pages deployment runs build only and does not deploy the push relay;
+- PR CI and main Pages build definitions run lint, unit, build, separate production/full audits, and one full Playwright collection that includes the focused visual suite;
+- GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
 These findings do not mean the built static client has vulnerable production dependencies. They mean development-server/test tooling and exported/local secrets need an explicit hardening lane before the project is described as production ready.
@@ -271,7 +271,7 @@ Better direction:
 - every complete local JSON export now warns before payload construction/download and cancellation has no export/report side effects;
 - local browser state and exported JSON are not encrypted;
 - the push relay is a local/single-operator delivery helper, not a production security boundary;
-- the root Vite/Vitest migrations and compatible transitive advisory remediation are complete; CI still does not enforce the audit baseline.
+- the root Vite/Vitest migrations and compatible transitive advisory remediation are complete; workflow definitions now include production/full audit gates, while remote execution and external enforcement remain unverified.
 
 Why it matters:
 
@@ -279,17 +279,17 @@ Why it matters:
 - exposing a development server or Vitest UI beyond a trusted machine increases risk;
 - a clean production audit can hide development and CI exposure if the two results are not reported separately.
 
-### 4.6 [Release] CI Does Not Exercise The Full Acceptance Baseline
+### 4.6 [Release] CI Workflow Proof And Deployed Artifact Validation Remain Incomplete
 
-- local full-product Playwright passes, while CI runs only the focused visual-quality Playwright suite;
-- dependency audit is not a CI gate;
-- the Pages workflow can complete its build without itself running lint or tests;
+- the workflow definitions now exercise full product E2E and both audit scopes before PR acceptance or Pages artifact upload;
+- neither workflow has run remotely yet, and branch/environment required checks remain external unverified settings;
+- the first slice has no deployed `dist`/Vite base-path smoke;
 - no code-coverage floor exists.
 
 Why it matters:
 
-- a route/mobile regression can reach `main` without the browser suite being exercised;
-- a successful Pages job is not equivalent to the project's stated Definition of Done;
+- a locally valid workflow can still be misconfigured remotely or bypassed by external repository settings;
+- a successful source-mode E2E run does not prove the deployed Pages base path and static artifact are correct;
 - test-count growth does not prove important branches are covered.
 
 ### 4.7 [Preserve] What Is Working Well
@@ -316,7 +316,7 @@ Before another broad feature family:
 5. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
 6. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
 7. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
-8. decide whether full product E2E and dependency audit gate pull requests and Pages deployment.
+8. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build definitions with full E2E and separate production/full audits; still require remote/external proof and a later deployed base-path smoke.
 
 Do not mix these changes with product behavior or a large view refactor.
 

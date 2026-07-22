@@ -82,16 +82,16 @@ Current evidence:
 - full audit: clean after a normal-resolver compatible transitive lock refresh; no direct dependency, `package.json`, override/resolution, or major line changed;
 - Vite 7.3.6 and its compatible root esbuild/Rollup refresh are complete;
 - Vitest 4.1.10 now reuses root Vite 7.3.6, with the old nested Vite 5/esbuild chain removed;
-- CI runs the focused visual-quality Playwright suite but omits full product E2E and dependency audit;
-- Pages deployment is build-only.
+- PR and main Pages workflow definitions now fail closed on full product E2E and separate production/full audits; the full suite contains the focused visual cases and is not run twice;
+- Pages configure/upload/deploy requires the verified build job, while remote run proof, external protections, and a deployed base-path smoke remain pending.
 
 Safe sequence:
 
 1. `DONE`: compatible Vite/transitive update;
 2. `DONE`: isolated Vitest 4 migration plus full lint/unit/build/E2E validation;
 3. `DONE 2026-07-22`: compatible transitive advisory refresh through normal npm resolution, with production/full audit at 0/0;
-4. decide whether the existing focused visual-quality Playwright gate expands to full product E2E and add an audit policy;
-5. gate deployment through repository/workflow policy.
+4. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build with audits plus one full E2E run, flaky rejection, skip ceiling, and failure diagnostics;
+5. prove the workflows remotely, confirm external required checks/environment policy, and add a later deployed base-path smoke.
 
 ## 5. Candidate C: One Named Hotspot Seam
 

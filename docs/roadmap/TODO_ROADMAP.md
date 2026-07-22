@@ -177,8 +177,10 @@ Open slices, in order:
    - `DONE 2026-07-22`: normal npm resolution refreshed only the approved compatible transitive advisory nodes and required `hasown` child closure; production and full audits are both 0, with `package.json`, direct dependency versions, overrides/resolutions, and major versions unchanged;
    - current validation passes 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
-   - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
-   - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
+   - `WORKFLOW_IMPLEMENTED 2026-07-22`: PR/manual CI and main-only Pages release definitions now fail closed on separate production/full audits, lint, unit, build, and one full Playwright collection that already includes the focused visual-quality cases;
+   - both paths reject flaky recovery, cap intentional skips at four, retain failure-only Playwright diagnostics for seven days, and avoid a duplicate `test:visual` run;
+   - Pages config/upload/deploy now follows the verified build job, but remote GitHub execution, external required-check/environment protection, and a deployed `dist` base-path smoke remain unverified;
+   - keep this slice `PARTIAL_DONE` until those remote/external checks pass; do not treat the local workflow definition as release proof.
 4. `P1 Unified world-setting identity` - `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`
    - `DONE 2026-07-22`: the shared World Setting Interface exposes stable `legacy_single_world` compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
    - WorldBook and Contacts consume the Interface; Pack switching cannot change displayed identity, Book/encyclopedia/template selection, or create new Pack-shaped template/contact scope values;
@@ -345,7 +347,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P1` 4.5 CI/release gating; compatible advisory remediation is complete, and full-product E2E/audit plus Pages policy remain the only active 4.5 gate.
+1. `P1` 4.5 CI/release gating; workflow definitions are implemented, while remote run proof, external required checks/environment protection, and a deployed base-path smoke remain the only active 4.5 gate.
 2. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
 3. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.
 4. `P1` 4.7 K-pop content follow-up through the 4.8 first Calendar integration stage, not through a dedicated World Pack or prose-only renderer.

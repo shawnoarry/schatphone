@@ -34,7 +34,8 @@ Current state:
 - the isolated Vitest migration is complete at 4.1.10: it reuses root Vite 7.3.6 and removes the nested Vite 5/esbuild advisory chain and the prior critical finding;
 - every complete local JSON export now presents one fixed danger warning before payload construction, keeps configured credentials and private local data intact, and exits without export/report side effects when cancelled;
 - normal npm resolution refreshed only compatible transitive advisory nodes, kept `package.json` and all direct versions unchanged, used no override/resolution or major migration, and leaves production/full audits at 0/0 with a 185-file / 1170-test and 56-pass / 4-existing-skip Playwright baseline;
-- the active 4.5 lane now retains only CI/release gating; advisory remediation is complete but 4.5 remains in progress;
+- the CI/release workflow first slice now defines fail-closed production/full audits, lint, unit, build, and one full E2E run for PR verification and main Pages release; the full run includes the focused visual suite and enforces the four-skip/flaky baseline;
+- the active 4.5 lane remains in progress until the workflows run remotely, external required checks/environment protection are confirmed, and a deployed `dist` base-path smoke is added in a later slice;
 - the root bootstrap points to a thin cross-task execution contract, while task packages and specialist workflows own their execution detail;
 - project-local skill inventory and workflow layering are guarded by automated governance tests;
 - framework replacement or a broad TypeScript migration is not recommended.

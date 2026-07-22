@@ -142,27 +142,89 @@ describe('workflow governance', () => {
     expect(protocol).toContain('Remote push is a separate action.')
   })
 
-  test('keeps the focused visual check wired through package scripts and CI', () => {
+  test('keeps focused visual testing local while CI runs the full E2E gate once', () => {
     const packageJson = JSON.parse(readProjectFile('package.json'))
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml')
-    const visualQualityStep = getNamedWorkflowStep(ciWorkflow, 'Visual quality gate')
+    const fullE2EStep = getNamedWorkflowStep(ciWorkflow, 'Full product E2E')
 
     expect(packageJson.scripts['test:visual']).toBe(
       'playwright test e2e/visual-quality.spec.js',
     )
-    expect(visualQualityStep).toContain('        id: visual-quality')
-    expect(visualQualityStep).toContain('        run: npm run test:visual')
+    expect(ciWorkflow).not.toContain('        run: npm run test:visual')
+    expect(ciWorkflow.match(/npm run test:e2e/g)).toHaveLength(1)
+    expect(fullE2EStep).toContain('        id: full-e2e')
+    expect(fullE2EStep).toContain(
+      '          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5181',
+    )
+    expect(fullE2EStep).toContain(
+      '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json',
+    )
+    expect(fullE2EStep).toContain(
+      '        run: npm run test:e2e -- --fail-on-flaky-tests --reporter=line,html,json',
+    )
   })
 
-  test('keeps the Playwright report upload on visual gate failures', () => {
+  test('keeps CI and Pages verification fail-closed with Playwright diagnostics', () => {
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml')
-    const uploadStep = getNamedWorkflowStep(ciWorkflow, 'Upload Playwright report')
+    const deployWorkflow = readProjectFile('.github/workflows/deploy.yml')
 
-    expect(uploadStep).toContain(
-      "        if: ${{ failure() && steps.visual-quality.outcome == 'failure' }}",
+    ;[
+      [ciWorkflow, 'http://127.0.0.1:5181'],
+      [deployWorkflow, 'http://127.0.0.1:5182'],
+    ].forEach(([workflow, baseURL]) => {
+      const productionAuditStep = getNamedWorkflowStep(
+        workflow,
+        'Audit production dependencies',
+      )
+      const fullAuditStep = getNamedWorkflowStep(workflow, 'Audit all dependencies')
+      const fullE2EStep = getNamedWorkflowStep(workflow, 'Full product E2E')
+      const summaryStep = getNamedWorkflowStep(workflow, 'Verify Playwright summary')
+      const uploadStep = getNamedWorkflowStep(workflow, 'Upload Playwright report')
+
+      expect(productionAuditStep).toContain(
+        '        run: npm audit --omit=dev --registry=https://registry.npmjs.org/',
+      )
+      expect(fullAuditStep).toContain(
+        '        run: npm audit --registry=https://registry.npmjs.org/',
+      )
+      expect(workflow.match(/npm run test:e2e/g)).toHaveLength(1)
+      expect(workflow).not.toContain('        run: npm run test:visual')
+      expect(fullE2EStep).toContain(`          PLAYWRIGHT_BASE_URL: ${baseURL}`)
+      expect(fullE2EStep).toContain(
+        '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json',
+      )
+      expect(fullE2EStep).toContain('        id: full-e2e')
+      expect(fullE2EStep).toContain(
+        '        run: npm run test:e2e -- --fail-on-flaky-tests --reporter=line,html,json',
+      )
+      expect(summaryStep).toContain('        id: playwright-summary')
+      expect(summaryStep.join('\n')).toContain('skipped > 4')
+      expect(summaryStep.join('\n')).toContain('unexpected !== 0')
+      expect(summaryStep.join('\n')).toContain('flaky !== 0')
+      expect(uploadStep).toContain(
+        "        if: ${{ failure() && (steps.full-e2e.outcome == 'failure' || steps.playwright-summary.outcome == 'failure') }}",
+      )
+      expect(uploadStep).toContain('        uses: actions/upload-artifact@v4')
+      expect(uploadStep).toContain('            playwright-report/')
+      expect(uploadStep).toContain('            test-results/')
+      expect(uploadStep).toContain('            test-results/playwright-results.json')
+      expect(uploadStep).toContain('          if-no-files-found: ignore')
+      expect(uploadStep).toContain('          retention-days: 7')
+    })
+
+    const manualGuardStep = getNamedWorkflowStep(
+      deployWorkflow,
+      'Require main for manual deploy',
     )
-    expect(uploadStep).toContain('        uses: actions/upload-artifact@v4')
-    expect(uploadStep).toContain('          path: playwright-report/')
+    expect(manualGuardStep.join('\n')).toContain("github.ref != 'refs/heads/main'")
+    expect(manualGuardStep).toContain('          exit 1')
+    const deployLines = deployWorkflow.split(/\r?\n/)
+    const deployJobIndex = deployLines.indexOf('  deploy:')
+    expect(deployJobIndex).toBeGreaterThan(-1)
+    expect(deployLines[deployJobIndex + 1]).toBe('    needs: build')
+    expect(deployWorkflow.indexOf('      - name: Configure Pages')).toBeGreaterThan(
+      deployWorkflow.indexOf('      - name: Verify Playwright summary'),
+    )
   })
 
   test('keeps the root bootstrap independent from skills under review', () => {

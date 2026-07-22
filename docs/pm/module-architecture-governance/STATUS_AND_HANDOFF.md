@@ -270,11 +270,13 @@ Do not describe it as a production backend or closed-page simulation engine.
 
 ### CI And Deployment
 
-- CI runs lint, unit tests, and build;
-- CI also runs the focused visual-quality Playwright suite, but not full product E2E or dependency audit;
+- the PR/manual CI workflow definition runs Node 20, `npm ci`, separate official-registry production/full audits, lint, unit, build, one Chromium install, and one full product E2E collection;
+- the full E2E collection already includes the focused visual-quality cases, uses a dedicated strict port, fails on flaky recovery, and enforces no more than the four existing intentional skips;
+- the main/manual-main Pages build definition runs the same gates on a separate strict port before configure/upload, and `deploy` still requires that verified build job;
+- E2E/summary failures upload HTML, test-results, and JSON diagnostics for seven days without retaining download or storage-state data;
 - no coverage threshold exists;
-- Pages deployment performs a build-only workflow;
 - local validation uses Node 24 while CI uses Node 20.
+- remote GitHub execution, external branch/environment required checks, and a deployed `dist` base-path smoke are not yet proven; this release slice remains partial.
 
 ## 5. Completed Governance Rounds
 
@@ -357,12 +359,13 @@ Cross-package dependencies:
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 patch and required root transitive dependencies;
 3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10 and remove the nested Vite 5/esbuild advisory chain without reducing test coverage;
 4. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0 without direct, override, or major changes;
-5. decide the later full-product E2E and dependency-audit CI policy independently from completed dependency remediation.
+5. `DONE 2026-07-22`: define the full-product E2E and separate production/full dependency-audit workflow policy independently from completed dependency remediation.
 
 ### P1: Release Gate
 
-1. add or explicitly defer full product E2E and dependency-audit CI gates while preserving the existing focused visual-quality gate;
-2. align Pages release policy with the Definition of Done.
+1. `WORKFLOW_IMPLEMENTED 2026-07-22`: PR verification and main Pages build now define the same full fail-closed gate while preserving focused visual coverage inside the full E2E suite;
+2. verify both workflows on GitHub and confirm the external main required check plus `github-pages` environment protection after an authorized push;
+3. add a later deployed `dist`/Vite base-path smoke before marking release gating complete.
 
 ### P1: Cross-Module Mini Scene Foundation
 

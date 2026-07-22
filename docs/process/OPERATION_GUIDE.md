@@ -258,7 +258,7 @@ git push origin main
 
 Previous push approval does not cover future commits. Always report whether local `main` is ahead of `origin/main`.
 
-Deployment is handled by GitHub Actions. The current Pages workflow runs a build-only job, while CI runs lint/unit/build separately. Repository/workflow protection must therefore enforce the intended quality gate; a successful Pages build alone is not the full Definition of Done. The optional push relay is not deployed by the Pages workflow.
+Deployment is handled by GitHub Actions. The PR/manual CI workflow and main/manual-main Pages build now define the same fail-closed production/full audits, lint, unit, build, Chromium, and full-E2E gate. Each path runs the full Playwright collection once, so the included focused visual-quality cases are not repeated through a second `test:visual` step. Pages configure/upload/deploy follows the verified build job, but the workflow still needs an authorized remote run plus external required-check/environment verification before this is treated as release proof. A deployed `dist`/Vite base-path smoke remains a later slice. The optional push relay is not deployed by the Pages workflow.
 
 ## 14. Quick Troubleshooting
 

@@ -428,6 +428,14 @@ Audit posture:
 
 Dependency updates must remain isolated from product behavior and must run lint, unit, build, E2E, and both audit commands.
 
+CI/release workflow posture:
+
+- PR/manual CI and main/manual-main Pages build use Node 20 and fail closed on separate official-registry production/full audits, lint, unit, build, and one full Chromium E2E collection;
+- CI and Pages use dedicated strict ports `5181` and `5182`; the full E2E collection already includes the focused visual-quality cases, while `npm.cmd run test:visual` remains available as a local focused command;
+- CI retries once for diagnostics but `--fail-on-flaky-tests` prevents a recovered retry from passing, and the JSON summary allows at most the four existing intentional skips with zero unexpected or flaky results;
+- failure-only artifacts retain the HTML report, `test-results`, and JSON summary for seven days; no browser cache, download directory, or storage state is added;
+- the workflow definitions are locally parsed and simulated, but remote GitHub execution, external required checks/environment protection, and deployed base-path behavior remain unverified.
+
 ## 11. Ownership Rule
 
 This file is for shared tooling and skill inventory only.

@@ -382,20 +382,19 @@ Its boundary is important:
 
 ### CI
 
-`.github/workflows/ci.yml` runs Node 20, `npm ci`, lint, unit tests, and build.
+`.github/workflows/ci.yml` runs for pull requests and manual dispatch with Node 20, `npm ci`, separate official-registry production/full audits, lint, unit tests, build, one Chromium install, and one full product E2E collection. The full collection includes the focused visual-quality cases and rejects flaky recovery or more than four intentional skips.
 
 Gaps:
 
-- CI runs the focused visual-quality Playwright suite, but not the full product E2E collection;
-- no dependency-audit job;
+- the new workflow definition has not yet run on GitHub and its external required-check setting is unverified;
 - no coverage threshold;
 - local validation uses Node 24 while CI uses Node 20, so both supported environments should remain tested intentionally.
 
 ### Deployment
 
-`.github/workflows/deploy.yml` builds and deploys `dist` to GitHub Pages on `main`.
+`.github/workflows/deploy.yml` runs the same hard gates on main push or main-only manual dispatch before configuring and uploading `dist`; the deploy job requires that verified build job.
 
-It does not deploy the push relay. The deploy job also runs only build, so workflow/repository protections must ensure failed quality checks cannot be interpreted as a validated release.
+It does not deploy the push relay. Remote execution, external `github-pages` protection, and a deployed `dist`/Vite base-path smoke remain unverified, so the release gate is still partial.
 
 ## 11. Current Debt And Direction
 
@@ -417,7 +416,7 @@ Other debt:
 
 Recommended order:
 
-1. CI/release-gate decisions now that compatible development-tool advisory remediation is complete;
+1. remote CI/release proof, external protection checks, and a deployed base-path smoke now that the workflow first slice is implemented;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;

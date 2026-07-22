@@ -60,7 +60,7 @@ Priority meanings:
 | Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
-| QA / CI | strong local tests | no E2E/audit gate or coverage floor | build-only release confidence | add explicit gate policy | P0 |
+| QA / CI | strong local tests and workflow-defined full gates | remote/external gate proof, base-path smoke, and coverage floor remain | treating local YAML as deployed release confidence | prove GitHub checks and deployed artifact behavior | P0 |
 
 ## 3. Cross-Cutting Candidates
 
@@ -70,8 +70,8 @@ Priority meanings:
 - `DONE 2026-07-21`: compatible Vite/transitive update;
 - `DONE 2026-07-22`: isolated Vitest 4 migration, nested Vite 5/esbuild removal, and critical-advisory closure;
 - `DONE 2026-07-22`: normal-resolver compatible transitive lock refresh, with production/full audit at 0/0 and no direct, override/resolution, or major change;
-- Playwright/audit CI policy;
-- Pages release gating.
+- `WORKFLOW_IMPLEMENTED 2026-07-22`: one full Playwright run plus separate production/full audits for PR and main Pages build;
+- remote required-check/environment proof and a later deployed `dist` base-path smoke.
 
 ### Persistence And Recovery
 
@@ -123,7 +123,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. CI/release confidence now that compatible development-tool advisory remediation is complete;
+3. remote CI/release proof and deployed base-path confidence now that the workflow first slice is implemented;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 
