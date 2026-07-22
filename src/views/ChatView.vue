@@ -317,7 +317,10 @@ const {
   t,
 })
 
-const activeMessageSenderName = () => activeChat.value?.name || t('对方', 'Contact')
+const activeMessageSenderName = () => {
+  const name = typeof activeChat.value?.name === 'string' ? activeChat.value.name.trim() : ''
+  return name || t('对方', 'Contact')
+}
 
 const {
   serviceRouteFeedback,
@@ -3901,7 +3904,8 @@ onBeforeUnmount(() => {
           @click="toggleThreadMenu"
           class="chat-ink px-2 w-16 text-right"
           data-testid="chat-thread-menu-toggle"
-          :aria-label="t('会话菜单', 'Conversation menu')"
+          :aria-label="t('打开会话菜单', 'Open conversation menu')"
+          :title="t('打开会话菜单', 'Open conversation menu')"
         ><i class="fas fa-bars"></i></button>
       </div>
 
@@ -4662,7 +4666,8 @@ onBeforeUnmount(() => {
             <button
               data-testid="chat-user-action-toggle"
               @click="toggleUserActionPanel"
-              :aria-label="t('更多操作', 'More actions')"
+              :aria-label="showUserActionPanel ? t('关闭更多操作', 'Close more actions') : t('打开更多操作', 'Open more actions')"
+              :title="showUserActionPanel ? t('关闭更多操作', 'Close more actions') : t('打开更多操作', 'Open more actions')"
               class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition border"
               :class="
                 !canActiveChatCommunicate
@@ -4699,7 +4704,8 @@ onBeforeUnmount(() => {
 
             <button
               @click="sendTextMessage"
-              :aria-label="t('发送消息', 'Send message')"
+              :aria-label="t(`发送消息给 ${activeMessageSenderName()}`, `Send message to ${activeMessageSenderName()}`)"
+              :title="t(`发送消息给 ${activeMessageSenderName()}`, `Send message to ${activeMessageSenderName()}`)"
               class="w-8 h-8 shrink-0 chat-send rounded-full flex items-center justify-center disabled:opacity-40"
               :disabled="!canActiveChatCommunicate"
             >
