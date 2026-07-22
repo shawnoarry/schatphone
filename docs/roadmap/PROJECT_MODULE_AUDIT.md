@@ -69,7 +69,7 @@ Priority meanings:
 - `DONE 2026-07-22`: complete-backup sensitive-file warning with unchanged credential-bearing payload;
 - `DONE 2026-07-21`: compatible Vite/transitive update;
 - `DONE 2026-07-22`: isolated Vitest 4 migration, nested Vite 5/esbuild removal, and critical-advisory closure;
-- remaining development-tool advisory review;
+- `DONE 2026-07-22`: normal-resolver compatible transitive lock refresh, with production/full audit at 0/0 and no direct, override/resolution, or major change;
 - Playwright/audit CI policy;
 - Pages release gating.
 
@@ -123,7 +123,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. remaining development-tool advisory review and CI/release confidence;
+3. CI/release confidence now that compatible development-tool advisory remediation is complete;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 

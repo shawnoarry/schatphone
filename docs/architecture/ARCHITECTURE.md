@@ -375,9 +375,10 @@ Its boundary is important:
 ### Local Baseline
 
 - ESLint;
-- 182 Vitest files / 1132 tests;
+- 185 Vitest files / 1170 tests;
 - Vite production build;
-- 35 product Playwright scenarios across desktop and mobile emulation plus 3 focused Chromium Repository-foundation tests.
+- 60 collected Playwright cases across desktop/mobile projects: 56 pass and 4 existing project-specific cases remain intentionally skipped;
+- production and full npm audits both report 0 after a normal-resolver compatible transitive lock refresh with no direct, override/resolution, or major changes.
 
 ### CI
 
@@ -385,10 +386,10 @@ Its boundary is important:
 
 Gaps:
 
-- no Playwright job;
+- CI runs the focused visual-quality Playwright suite, but not the full product E2E collection;
 - no dependency-audit job;
 - no coverage threshold;
-- local audit used Node 22 while CI uses Node 20, so both supported environments should remain tested intentionally.
+- local validation uses Node 24 while CI uses Node 20, so both supported environments should remain tested intentionally.
 
 ### Deployment
 
@@ -411,13 +412,12 @@ Other debt:
 
 - direct store-to-store coupling across some ownership boundaries;
 - no compile-time contract layer;
-- development dependency advisories;
 - CI/release gaps;
 - incomplete true-device and push/provider QA.
 
 Recommended order:
 
-1. remaining development-tool advisory and release-gate decisions;
+1. CI/release-gate decisions now that compatible development-tool advisory remediation is complete;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;

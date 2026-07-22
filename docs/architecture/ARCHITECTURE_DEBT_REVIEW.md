@@ -38,8 +38,8 @@ Additional debt remains real:
 - the relationship-fact adapter seam exists, but some stores still have to pass concrete store instances into it;
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
 - backup export currently includes `settings.api.key` through the full settings snapshot;
-- the full dependency audit reports 15 development/tooling advisories even though production dependencies audit clean;
-- CI does not run Playwright or dependency audit, and the Pages workflow is build-only.
+- production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
+- CI runs the focused visual-quality Playwright suite, but not full product E2E or dependency audit, and the Pages workflow is build-only.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -201,11 +201,12 @@ TypeScript is present in devDependencies, but current application source is stil
 Verified on 2026-07-22:
 
 - `npm.cmd audit --omit=dev`: 0 production vulnerabilities;
-- full `npm.cmd audit`: 0 critical, 9 high, and 1 moderate development/tooling advisories;
+- full `npm.cmd audit`: 0 vulnerabilities;
 - Vite 7.3.6 and the isolated Vitest 4.1.10 migration are complete; Vitest now reuses root Vite and no longer brings nested Vite 5.4.21/esbuild 0.21.5;
+- the later compatible transitive lock refresh used normal npm resolution, changed no direct dependency or major line, and added no override/resolution;
 - Settings backup serializes `settings` directly, including the configured AI API key;
 - the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
-- CI runs lint, unit tests, and build, but not Playwright or audit;
+- CI runs lint, unit tests, build, and the focused visual-quality Playwright suite, but not full product E2E or dependency audit;
 - GitHub Pages deployment runs build only and does not deploy the push relay;
 - the repository has no coverage threshold.
 
@@ -270,7 +271,7 @@ Better direction:
 - every complete local JSON export now warns before payload construction/download and cancellation has no export/report side effects;
 - local browser state and exported JSON are not encrypted;
 - the push relay is a local/single-operator delivery helper, not a production security boundary;
-- the root Vite/Vitest migrations are complete, while other transitive development dependencies still have active advisories.
+- the root Vite/Vitest migrations and compatible transitive advisory remediation are complete; CI still does not enforce the audit baseline.
 
 Why it matters:
 
@@ -280,7 +281,7 @@ Why it matters:
 
 ### 4.6 [Release] CI Does Not Exercise The Full Acceptance Baseline
 
-- local Playwright passes, but CI does not run it;
+- local full-product Playwright passes, while CI runs only the focused visual-quality Playwright suite;
 - dependency audit is not a CI gate;
 - the Pages workflow can complete its build without itself running lint or tests;
 - no code-coverage floor exists.
@@ -314,7 +315,8 @@ Before another broad feature family:
 4. `DONE 2026-07-22`: preserve complete migration backup contents, including configured credentials, and add the confirmed pre-download sensitive-file warning plus export regression coverage;
 5. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
 6. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
-7. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
+7. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
+8. decide whether full product E2E and dependency audit gate pull requests and Pages deployment.
 
 Do not mix these changes with product behavior or a large view refactor.
 
@@ -401,7 +403,6 @@ Goal:
 - It does not change roadmap order by itself.
 - It argues that future `4.6 World Pack` broadening should be paired with cleanup around world-context ownership and `systemStore`, otherwise new World Pack complexity will continue to land in the same hot modules.
 - The strongest near-term code-level contributions to ownership closure are:
-  - remaining development-tool advisories and CI/release policy;
   - CI/release gating that matches the local Definition of Done;
   - a stable interface around `systemStore`;
   - composables for the largest views;

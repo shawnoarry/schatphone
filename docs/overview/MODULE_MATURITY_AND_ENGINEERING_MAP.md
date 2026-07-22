@@ -121,10 +121,10 @@ Strongly defended areas:
 Gaps:
 
 - no coverage threshold;
-- CI omits Playwright and dependency audit;
+- CI runs the focused visual-quality Playwright suite but omits full product E2E and dependency audit;
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
-- full dependency audit reports 10 remaining development-tool advisories, with production audit clean and no critical advisory.
+- production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; CI does not yet enforce that baseline.
 - the complete-backup/recovery contract is accepted but not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
 
 ## 5. Module Engineering Guidance
@@ -168,11 +168,10 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
-4. separate review of the remaining development-tool advisories; the sensitive complete-backup warning is implemented;
-5. CI/release gating alignment;
-6. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
-7. one named view/store hotspot seam or deeper cross-store adapter;
-8. later device findings and incremental typing only where dependencies justify them.
+4. CI/release gating alignment now that the sensitive-backup warning and compatible development-tool advisory remediation are complete;
+5. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
+6. one named view/store hotspot seam or deeper cross-store adapter;
+7. later device findings and incremental typing only where dependencies justify them.
 
 ## 7. Work To Avoid
 

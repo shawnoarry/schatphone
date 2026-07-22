@@ -96,11 +96,10 @@ Verified baseline:
 
 - 30 route views, 16 Pinia stores, 36 components, 36 composables;
 - about 104k source lines;
-- 184 Vitest files / 1163 tests pass;
-- 35 product Playwright desktop/mobile scenarios plus 3 focused Chromium Repository-foundation tests pass;
+- 185 Vitest files / 1170 tests pass;
+- the full Playwright collection has 60 cases: 56 pass and 4 existing project-specific cases remain intentionally skipped;
 - lint and production build pass;
-- production dependency audit is clean;
-- full dependency audit reports development/tooling advisories.
+- production and full dependency audits both report 0 vulnerabilities.
 
 ## 2. Landed Architecture Baselines
 
@@ -247,13 +246,13 @@ Implemented 2026-07-22:
 
 ### Dependency Audit
 
-2026-07-22 isolated Vitest migration results:
+2026-07-22 dependency-maintenance results:
 
 - direct Vite is 7.3.6, with compatible root esbuild 0.28.1 and Rollup 4.62.2; Vue 3.5.27 and plugin-vue 6.0.4 remain unchanged;
 - Vitest is 4.1.10 and reuses root Vite 7.3.6; the previous nested Vite 5.4.21, vite-node 1.6.1, and esbuild 0.21.5 packages are removed;
-- production audit: 0 vulnerabilities;
-- full audit: 10 advisories (0 critical, 9 high, 1 moderate), down from 14 (1 critical, 10 high, 3 moderate);
-- the removed critical and Vite/esbuild findings belonged to the old Vitest chain; the remaining advisories come from other development-tool transitive dependencies and require a separate scoped review.
+- the isolated Vitest migration first reduced full audit from 14 advisories to 10 and removed the old nested Vite/esbuild critical path;
+- normal npm resolution then refreshed only compatible transitive advisory nodes and the required `hasown` child closure, without changing `package.json`, any direct dependency version, override/resolution policy, or major line;
+- production audit: 0 vulnerabilities; full audit: 0 vulnerabilities.
 
 Do not report only the production audit when describing developer/CI safety.
 
@@ -272,19 +271,26 @@ Do not describe it as a production backend or closed-page simulation engine.
 ### CI And Deployment
 
 - CI runs lint, unit tests, and build;
-- CI does not run Playwright or dependency audit;
+- CI also runs the focused visual-quality Playwright suite, but not full product E2E or dependency audit;
 - no coverage threshold exists;
 - Pages deployment performs a build-only workflow;
 - local validation uses Node 24 while CI uses Node 20.
 
 ## 5. Completed Governance Rounds
 
+### 2026-07-22 Compatible Transitive Advisory Refresh
+
+1. refreshed only the approved advisory nodes and required `hasown` child closure through normal npm resolution;
+2. kept `package.json`, Vite 7.3.6, Vitest 4.1.10, plugin-vue 6.0.4, Playwright 1.60.0, jsdom 24.1.3, ESLint 9.39.2, Vue Test Utils 2.4.6, and eslint-plugin-vue 9.33.0 unchanged;
+3. used no override/resolution or direct/major dependency migration and left production/full audit at 0/0;
+4. passed lint, 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips.
+
 ### 2026-07-22 Vitest 4 Isolated Migration
 
 1. confirmed through the official npm registry that Vitest 4.1.10 is the current stable 4.x release, supports Node 20/22/24, and peers with Vite 7;
 2. updated only Vitest and its required lockfile dependency tree, leaving Vue, plugin-vue, root Vite 7.3.6, esbuild 0.28.1, and Rollup 4.62.2 unchanged;
 3. replaced the old test-body `vi.stubEnv` module-reload assumption with a test-mode-only Vite define so the same environment-default assertions remain valid under Vitest 4/Vite 7;
-4. preserved all 184 test files / 1163 tests, passed lint, production build, and the full 56-case Playwright collection with 52 passed and 4 existing project-specific skips;
+4. preserved the then-current complete unit and Playwright baselines and passed lint plus production build;
 5. kept production audit clean and reduced full development audit from 14 advisories to 10, with no critical advisory remaining.
 
 ### 2026-07-21 Vite 7 Compatible Patch
@@ -350,11 +356,12 @@ Cross-package dependencies:
 1. `DONE 2026-07-22`: add the confirmed sensitive-file warning before every complete JSON export without changing complete-migration contents or adding a shareable variant;
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 patch and required root transitive dependencies;
 3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10 and remove the nested Vite 5/esbuild advisory chain without reducing test coverage;
-4. decide the later CI audit policy independently from dependency remediation.
+4. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0 without direct, override, or major changes;
+5. decide the later full-product E2E and dependency-audit CI policy independently from completed dependency remediation.
 
 ### P1: Release Gate
 
-1. add or explicitly defer Playwright/audit CI gates;
+1. add or explicitly defer full product E2E and dependency-audit CI gates while preserving the existing focused visual-quality gate;
 2. align Pages release policy with the Definition of Done.
 
 ### P1: Cross-Module Mini Scene Foundation

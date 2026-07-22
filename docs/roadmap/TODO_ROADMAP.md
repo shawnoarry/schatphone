@@ -171,10 +171,11 @@ Open slices, in order:
 2. `P0 Security/toolchain maintenance` - `PARTIAL_DONE`
    - `DONE 2026-07-21`: updated the direct Vite 7 line to 7.3.6 and refreshed only its compatible root transitive toolchain to esbuild 0.28.1, Rollup 4.62.2, and required lockfile metadata;
    - `DONE 2026-07-22`: migrated Vitest 1.6.1 to the official-registry current stable 4.1.10 line; Vitest now reuses root Vite 7.3.6 and the nested Vite 5.4.21/esbuild 0.21.5 chain is removed;
-   - `DONE 2026-07-22`: preserved the complete 184-file / 1163-test unit baseline, production build, and full Playwright suite; production audit remains 0 while full audit falls from 14 advisories (3 moderate, 10 high, 1 critical) to 10 (1 moderate, 9 high, 0 critical);
+   - `DONE 2026-07-22`: the isolated Vitest migration reduced full audit from 14 advisories (3 moderate, 10 high, 1 critical) to 10 (1 moderate, 9 high, 0 critical) without changing the direct Vite line;
    - `DONE 2026-07-22`: every complete local JSON export now requires an explicit danger confirmation before payload construction or download; the warning names configured API credentials plus private chat/role/world data, cancellation has no export/report side effects, and the full credential-bearing payload remains unchanged;
    - any redacted/shareable export remains a separate future contract and cannot silently replace the complete migration backup;
-   - `TODO`: assess the remaining 10 development-tool advisories separately from product behavior and CI policy; do not describe full audit as clean.
+   - `DONE 2026-07-22`: normal npm resolution refreshed only the approved compatible transitive advisory nodes and required `hasown` child closure; production and full audits are both 0, with `package.json`, direct dependency versions, overrides/resolutions, and major versions unchanged;
+   - current validation passes 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
@@ -344,12 +345,11 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0` 4.5 security/toolchain maintenance, led by separate review of the remaining development-tool advisories now that the complete-backup warning is implemented.
-2. `P1` 4.5 CI/release gating; the named World Setting Interface seam is complete, so architecture capacity should return to visible product modules after this gate.
-3. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-4. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.
-5. `P1` 4.7 K-pop content follow-up through the 4.8 first Calendar integration stage, not through a dedicated World Pack or prose-only renderer.
-6. `P2` secondary-module deepening only after one of the above is explicitly selected.
+1. `P1` 4.5 CI/release gating; compatible advisory remediation is complete, and full-product E2E/audit plus Pages policy remain the only active 4.5 gate.
+2. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
+3. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.
+4. `P1` 4.7 K-pop content follow-up through the 4.8 first Calendar integration stage, not through a dedicated World Pack or prose-only renderer.
+5. `P2` secondary-module deepening only after one of the above is explicitly selected.
 
 ## 7. Validation Rule
 

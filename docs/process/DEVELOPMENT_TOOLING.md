@@ -416,15 +416,15 @@ Verified on 2026-07-22:
 - Vite: 7.3.6, with root esbuild 0.28.1 and Rollup 4.62.2;
 - Vitest: 4.1.10, reusing root Vite 7.3.6 with no nested Vite 5/vite-node 1 chain;
 - Playwright: 1.60.0;
-- lint, 184-file / 1163-test unit suite, build, and the full 56-case Playwright collection pass (52 passed, 4 existing project-specific skips).
+- lint, 185-file / 1170-test unit suite, build, and the full 60-case Playwright collection pass (56 passed, 4 existing project-specific skips).
 
 Audit posture:
 
 - `npm.cmd audit --omit=dev` reports zero production vulnerabilities;
-- full `npm.cmd audit` reports 10 development/tooling advisories: 1 moderate, 9 high, and 0 critical;
-- the direct Vite 7 compatible patch and isolated Vitest 4 migration are complete;
-- Vitest 4.1.10 removed the nested Vite 5.4.21/esbuild 0.21.5 chain and the prior critical finding; remaining advisories belong to other development-tool transitive dependencies;
-- keep development servers and Vitest UI inside a trusted development environment while those development-tool advisories remain.
+- full `npm.cmd audit` also reports zero vulnerabilities;
+- the direct Vite 7 compatible patch, isolated Vitest 4 migration, and normal-resolver compatible transitive advisory refresh are complete;
+- the transitive refresh changed no direct dependency, `package.json`, override/resolution policy, or major line;
+- keep development servers and Vitest UI inside a trusted development environment even with the clean audit baseline.
 
 Dependency updates must remain isolated from product behavior and must run lint, unit, build, E2E, and both audit commands.
 

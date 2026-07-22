@@ -15,7 +15,7 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current repository baseline is green across lint, 184 unit-test files / 1163 tests, build, 3 focused Chromium Repository-foundation tests, 3 focused Book-cutover tests, and 6 focused WorldBook desktop/mobile checks; the broader product E2E suite remains a separate release gate.
+- the current repository baseline is green across lint, 185 unit-test files / 1170 tests, build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; the broader product E2E suite remains outside CI as a separate release gate.
 
 The current work is concentrated in four areas:
 
@@ -115,7 +115,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
-- full dependency audit reports development/tool advisories even though production dependencies are clean;
+- production and full dependency audits both report 0 after a compatible transitive lock refresh with no direct, override/resolution, or major changes;
 - CI runs the focused visual-quality Playwright suite, but not the full product E2E suite or dependency audit; the Pages build workflow is not a full quality gate;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
@@ -166,8 +166,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 1. `DONE 2026-07-22`: require a clear pre-download warning for every complete local backup while preserving all migration contents, including configured credentials; cancellation creates no file or report;
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 line and its required root transitive dependencies;
-3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10, remove its nested Vite 5/esbuild chain, and preserve all 1163 unit tests;
-4. keep production audit 0 and full development audit 10 (1 moderate, 9 high, 0 critical) reported separately.
+3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10 and remove its nested Vite 5/esbuild chain;
+4. `DONE 2026-07-22`: use normal npm resolution to refresh only compatible transitive advisory nodes, keeping `package.json`, direct versions, overrides/resolutions, and major lines unchanged while closing production/full audit at 0/0.
 
 ### P1: Release And Architecture Confidence
 
@@ -255,6 +255,16 @@ Repository / Book Batch 2B validation on 2026-07-22:
 - `npm.cmd run build`: pass, Vite 7.3.6 / 266 modules;
 - `npm.cmd run governance:check`: 2 files / 11 tests, pass;
 - no Store, View, route, application entry, dependency, active pointer, legacy Book write, or user-visible behavior changed.
+
+Compatible transitive advisory refresh validation on 2026-07-22:
+
+- `npm.cmd audit --omit=dev`: 0 vulnerabilities;
+- full `npm.cmd audit`: 0 vulnerabilities;
+- `npm.cmd run lint`: pass;
+- `npm.cmd run test`: 185 files / 1170 tests, pass;
+- `npm.cmd run build`: pass, Vite 7.3.6 / 277 modules;
+- `npm.cmd run test:e2e`: 60 collected, 56 passed, 4 existing project-specific skips;
+- `package.json` and all direct dependency versions remain unchanged; no override/resolution or major migration was added.
 
 ## 9. Read Next
 
