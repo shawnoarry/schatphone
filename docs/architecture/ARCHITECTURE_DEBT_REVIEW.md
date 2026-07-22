@@ -267,9 +267,10 @@ Better direction:
 ### 4.5 [Security] Credential And Development-Tool Boundaries
 
 - backup export includes the locally configured AI API key;
+- every complete local JSON export now warns before payload construction/download and cancellation has no export/report side effects;
 - local browser state and exported JSON are not encrypted;
 - the push relay is a local/single-operator delivery helper, not a production security boundary;
-- Vite/Vitest and transitive development dependencies have active advisories.
+- the root Vite/Vitest migrations are complete, while other transitive development dependencies still have active advisories.
 
 Why it matters:
 
@@ -310,7 +311,7 @@ Before another broad feature family:
 1. preserve the accepted `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`, including standalone manifests, integrity, capacity/failure states, staged activation, legacy degraded recovery, exact local-material reuse, crash recovery, and rollback;
 2. preserve the architecture-accepted IndexedDB v1 schema, record/generation model, persistent-storage timing, isolated-container rule, and fail-closed multi-tab contract;
 3. `DONE 2026-07-22`: the approved non-active Book foundation/fixture/staging pilot and the later separately approved Book-only application cutover/runtime activation now have targeted real-Chromium IndexedDB, same-container coordination, reopen, and rollback coverage; every non-Book migration remains behind a later gate;
-4. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
+4. `DONE 2026-07-22`: preserve complete migration backup contents, including configured credentials, and add the confirmed pre-download sensitive-file warning plus export regression coverage;
 5. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
 6. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
 7. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
@@ -400,7 +401,7 @@ Goal:
 - It does not change roadmap order by itself.
 - It argues that future `4.6 World Pack` broadening should be paired with cleanup around world-context ownership and `systemStore`, otherwise new World Pack complexity will continue to land in the same hot modules.
 - The strongest near-term code-level contributions to ownership closure are:
-  - explicit backup credential handling and safe toolchain updates;
+  - remaining development-tool advisories and CI/release policy;
   - CI/release gating that matches the local Definition of Done;
   - a stable interface around `systemStore`;
   - composables for the largest views;

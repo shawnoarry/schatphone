@@ -55,7 +55,7 @@ Confirmed product boundary:
 - committed content is durable whenever its owner publishes/confirms/applies it into revisitable or continuity-bearing history, including future social/forum/offline/narrative/performance/state records regardless of user/AI/system origin;
 - complete AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical content, authoritative state/facts, references, structured outcomes, and minimum provenance persist;
 - IndexedDB-first structured persistence is the target direction;
-- complete migration backup includes configured credentials and must be presented as a sensitive local file;
+- complete migration backup includes configured credentials and now presents a fixed danger warning before every local JSON export; cancellation creates no payload, download, or storage report;
 - Gallery is the reusable local material library; generated image/media results require explicit user retention before durability, and `keep` never uploads or automatically enrolls material in backup;
 - core data is always complete, while one default-on whole-Gallery choice includes all retained local binaries without per-item reselection; URL-backed items always preserve their original URL and minimum metadata rather than exact bytes;
 - backup is for rollback/recovery rather than sync or local-space offload; manual backup is always available, automatic backup defaults off, and successful remote backup never releases local originals;

@@ -481,10 +481,25 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     }
   }
 
+  const confirmSensitiveBackupExport = () =>
+    confirmDialog({
+      title: t('导出敏感备份文件', 'Export sensitive backup file'),
+      message: t(
+        '这份完整备份文件包含已配置的 API 凭据，以及聊天、角色、世界等私密本地数据。只应保存到可信位置，不应直接分享。',
+        'This complete backup file contains configured API credentials and private local data such as chats, roles, and world content. Save it only to a trusted location and do not share it directly.',
+      ),
+      confirmText: t('我已了解，继续下载', 'I understand, continue download'),
+      cancelText: t('取消下载', 'Cancel download'),
+      tone: 'danger',
+    })
+
   const exportData = async () => {
     if (backupExporting.value) return
     backupExporting.value = true
     try {
+      const confirmed = await confirmSensitiveBackupExport()
+      if (!confirmed) return
+
       const payload = await buildBackupPayload()
       const data = JSON.stringify(payload)
 

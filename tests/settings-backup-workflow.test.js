@@ -6,6 +6,38 @@ import { useSystemStore } from '../src/stores/system'
 
 const t = (zh, en) => en || zh
 
+const installDownloadHarness = () => {
+  const blobConstructor = vi.fn()
+  const createObjectURL = vi.fn(() => 'blob:settings-backup')
+  const revokeObjectURL = vi.fn()
+  vi.stubGlobal(
+    'Blob',
+    class TestBlob {
+      constructor(parts = [], options = {}) {
+        blobConstructor(parts, options)
+        this.parts = parts
+        this.type = options.type || ''
+      }
+    },
+  )
+  Object.defineProperty(window.URL, 'createObjectURL', {
+    value: createObjectURL,
+    configurable: true,
+  })
+  Object.defineProperty(window.URL, 'revokeObjectURL', {
+    value: revokeObjectURL,
+    configurable: true,
+  })
+  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+  return {
+    blobConstructor,
+    createObjectURL,
+    revokeObjectURL,
+    clickSpy,
+  }
+}
+
 describe('Settings backup workflow interface', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -24,6 +56,7 @@ describe('Settings backup workflow interface', () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.settings.api.key = 'seeded-api-key'
     systemStore.addApiReport({
       level: 'error',
       module: 'storage',
@@ -38,32 +71,14 @@ describe('Settings backup workflow interface', () => {
       role: 'Archivist',
     })
 
-    const createObjectURL = vi.fn(() => 'blob:settings-backup')
-    const revokeObjectURL = vi.fn()
-    vi.stubGlobal(
-      'Blob',
-      class TestBlob {
-        constructor(parts = [], options = {}) {
-          this.parts = parts
-          this.type = options.type || ''
-        }
-      },
-    )
-    Object.defineProperty(window.URL, 'createObjectURL', {
-      value: createObjectURL,
-      configurable: true,
-    })
-    Object.defineProperty(window.URL, 'revokeObjectURL', {
-      value: revokeObjectURL,
-      configurable: true,
-    })
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { createObjectURL, revokeObjectURL, clickSpy } = installDownloadHarness()
+    const confirmDialog = vi.fn(async () => true)
 
     const workflow = useSettingsBackupWorkflow({
       systemStore,
       chatStore,
       t,
-      confirmDialog: vi.fn(async () => true),
+      confirmDialog,
     })
 
     expect(workflow.backupExportModeLabel.value).toContain('metadata only')
@@ -108,6 +123,7 @@ describe('Settings backup workflow interface', () => {
       requested: false,
       included: false,
     })
+    expect(exported.settings.api.key).toBe('seeded-api-key')
     expect(exported.roleProfiles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -135,8 +151,134 @@ describe('Settings backup workflow interface', () => {
     expect(systemStore.apiReports[1]).toMatchObject({
       code: 'PRE_EXISTING_REPORT',
     })
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(confirmDialog).toHaveBeenCalledWith({
+      title: 'Export sensitive backup file',
+      message:
+        'This complete backup file contains configured API credentials and private local data such as chats, roles, and world content. Save it only to a trusted location and do not share it directly.',
+      confirmText: 'I understand, continue download',
+      cancelText: 'Cancel download',
+      tone: 'danger',
+    })
+    expect(confirmDialog.mock.invocationCallOrder[0]).toBeLessThan(
+      createObjectURL.mock.invocationCallOrder[0],
+    )
 
     clickSpy.mockRestore()
+  })
+
+  test('cancels a sensitive export before payload, Blob, download, reports, or success state', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const createBackupSnapshotAsync = vi.fn()
+    const markBackupExported = vi.spyOn(systemStore, 'markBackupExported')
+    const saveNow = vi.spyOn(systemStore, 'saveNow')
+    const { blobConstructor, createObjectURL, revokeObjectURL, clickSpy } =
+      installDownloadHarness()
+    const confirmDialog = vi.fn(async () => false)
+    const workflow = useSettingsBackupWorkflow({
+      systemStore,
+      chatStore,
+      galleryStore: { createBackupSnapshotAsync },
+      t,
+      confirmDialog,
+    })
+
+    await workflow.exportData()
+
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(createBackupSnapshotAsync).not.toHaveBeenCalled()
+    expect(blobConstructor).not.toHaveBeenCalled()
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(revokeObjectURL).not.toHaveBeenCalled()
+    expect(clickSpy).not.toHaveBeenCalled()
+    expect(markBackupExported).not.toHaveBeenCalled()
+    expect(saveNow).not.toHaveBeenCalled()
+    expect(systemStore.apiReports).toEqual([])
+    expect(workflow.backupFeedbackType.value).toBe('')
+    expect(workflow.backupFeedbackMessage.value).toBe('')
+    expect(workflow.backupExporting.value).toBe(false)
+  })
+
+  test('uses the same sensitive warning for direct and immersive copy tones', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const confirmDialog = vi.fn(async () => false)
+    const workflow = useSettingsBackupWorkflow({ systemStore, chatStore, t, confirmDialog })
+
+    workflow.setBackupCopyTone('direct')
+    await workflow.exportData()
+    const directWarning = confirmDialog.mock.calls[0][0]
+
+    workflow.setBackupCopyTone('immersive')
+    await workflow.exportData()
+    const immersiveWarning = confirmDialog.mock.calls[1][0]
+
+    expect(immersiveWarning).toEqual(directWarning)
+    expect(directWarning.title).toContain('sensitive')
+    expect(directWarning.message).toContain('configured API credentials')
+    expect(directWarning.message).toContain('chats, roles, and world content')
+    expect(directWarning.message).toContain('trusted location')
+    expect(directWarning.message).toContain('do not share it directly')
+    expect(directWarning.confirmText).toBe('I understand, continue download')
+    expect(directWarning.cancelText).toBe('Cancel download')
+    expect(directWarning.tone).toBe('danger')
+  })
+
+  test('keeps one confirmation in flight when export is triggered twice', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    let resolveConfirmation = () => {}
+    const confirmDialog = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveConfirmation = resolve
+        }),
+    )
+    const workflow = useSettingsBackupWorkflow({ systemStore, chatStore, t, confirmDialog })
+
+    const firstExport = workflow.exportData()
+    const duplicateExport = workflow.exportData()
+
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(workflow.backupExporting.value).toBe(true)
+
+    resolveConfirmation(false)
+    await Promise.all([firstExport, duplicateExport])
+
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(workflow.backupExporting.value).toBe(false)
+  })
+
+  test('preserves confirmed whole-asset-package export metadata and reporting', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const { createObjectURL } = installDownloadHarness()
+    const workflow = useSettingsBackupWorkflow({
+      systemStore,
+      chatStore,
+      t,
+      confirmDialog: vi.fn(async () => true),
+    })
+    workflow.setBackupIncludeAssetPackage(true)
+
+    await workflow.exportData()
+
+    const exportedBlob = createObjectURL.mock.calls[0][0]
+    const exported = JSON.parse(exportedBlob.parts.join(''))
+    expect(exported.backupMeta).toMatchObject({
+      schemaVersion: 2,
+      exportMode: 'metadata_with_asset_package',
+    })
+    expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
+      requested: true,
+      included: true,
+    })
+    expect(systemStore.apiReports[0]).toMatchObject({
+      action: 'export_backup',
+      code: 'BACKUP_EXPORT_WITH_ASSET_PACKAGE',
+      model: 'metadata_with_asset_package',
+    })
   })
 
   test('blocks export when a required legacy v2 shape section is missing', async () => {
@@ -148,19 +290,25 @@ describe('Settings backup workflow interface', () => {
       configurable: true,
     })
 
+    const confirmDialog = vi.fn(async () => true)
+    const createBackupSnapshot = vi.fn(() => undefined)
     const workflow = useSettingsBackupWorkflow({
       systemStore,
       chatStore,
       bookStore: {
-        createBackupSnapshot: () => undefined,
+        createBackupSnapshot,
       },
       t,
-      confirmDialog: vi.fn(async () => true),
+      confirmDialog,
     })
 
     await workflow.exportData()
 
     expect(createObjectURL).not.toHaveBeenCalled()
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(confirmDialog.mock.invocationCallOrder[0]).toBeLessThan(
+      createBackupSnapshot.mock.invocationCallOrder[0],
+    )
     expect(workflow.backupFeedbackType.value).toBe('error')
     expect(workflow.backupFeedbackMessage.value).toContain(
       'Legacy v2 backup payload shape is missing or invalid',

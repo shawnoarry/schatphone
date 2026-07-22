@@ -238,6 +238,13 @@ Confirmed product contract:
 - a future redacted/shareable export may exclude credentials, but it must not silently replace the migration backup;
 - encryption remains optional future work and requires an explicit key-management and recovery contract.
 
+Implemented 2026-07-22:
+
+- every complete local backup JSON export asks for explicit danger confirmation before building the payload, Blob, object URL, or download;
+- the fixed warning names configured API credentials and private chat, role, and world data, and does not weaken under immersive copy tone;
+- cancellation resets the busy state and creates no payload, download, success/failure feedback, backup timestamp, or storage report;
+- confirmed metadata-only and whole-asset-package exports retain the v2 shape and configured API key unchanged.
+
 ### Dependency Audit
 
 2026-07-22 isolated Vitest migration results:
@@ -340,7 +347,7 @@ Cross-package dependencies:
 
 ### P0: Security/Toolchain After The Storage Contract
 
-1. add the confirmed sensitive-file warning without changing complete-migration contents;
+1. `DONE 2026-07-22`: add the confirmed sensitive-file warning before every complete JSON export without changing complete-migration contents or adding a shareable variant;
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 patch and required root transitive dependencies;
 3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10 and remove the nested Vite 5/esbuild advisory chain without reducing test coverage;
 4. decide the later CI audit policy independently from dependency remediation.

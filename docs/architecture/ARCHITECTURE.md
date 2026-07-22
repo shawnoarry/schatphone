@@ -267,8 +267,9 @@ Current security gap:
 
 - backup payload includes `settings` directly;
 - `settings.api.key` is therefore exported in plaintext JSON;
-- backup files must be treated as secrets until policy and code change;
-- complete local migration backup is confirmed to retain configured credentials and therefore requires an explicit sensitive-file warning; a redacted/shareable export and encrypted personal remote backup are separate future contracts.
+- backup files must be treated as secrets;
+- every complete local JSON export now requires an explicit danger confirmation before payload construction or download, while keeping configured credentials and private local data unchanged;
+- a redacted/shareable export and encrypted personal remote backup remain separate future contracts.
 
 Target engineering contract, not current behavior:
 
@@ -416,7 +417,7 @@ Other debt:
 
 Recommended order:
 
-1. credential/toolchain and release-gate decisions;
+1. remaining development-tool advisory and release-gate decisions;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;

@@ -32,7 +32,7 @@ Priority meanings:
 | --- | --- | --- | --- | --- | --- |
 | Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
 | Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
-| Settings | usable system hub | whole-snapshot runtime persistence while the completed Repository foundation remains unconnected | owning domain records or becoming the database | keep runtime cutover separate; add sensitive-file warning later | P0 |
+| Settings | usable system hub | whole-snapshot runtime persistence while the completed Repository foundation remains unconnected | owning domain records or becoming the database | keep runtime cutover separate; sensitive-file warning is complete | P0 |
 | Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
 | Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
 | Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
@@ -66,7 +66,7 @@ Priority meanings:
 
 ### Security And Release
 
-- backup secret treatment;
+- `DONE 2026-07-22`: complete-backup sensitive-file warning with unchanged credential-bearing payload;
 - `DONE 2026-07-21`: compatible Vite/transitive update;
 - `DONE 2026-07-22`: isolated Vitest 4 migration, nested Vite 5/esbuild removal, and critical-advisory closure;
 - remaining development-tool advisory review;
@@ -123,7 +123,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. backup warning, remaining development-tool advisory review, and CI/release confidence;
+3. remaining development-tool advisory review and CI/release confidence;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 

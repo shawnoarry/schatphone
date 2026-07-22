@@ -168,7 +168,7 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
-4. sensitive-backup warning and separate review of the remaining development-tool advisories;
+4. separate review of the remaining development-tool advisories; the sensitive complete-backup warning is implemented;
 5. CI/release gating alignment;
 6. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
 7. one named view/store hotspot seam or deeper cross-store adapter;

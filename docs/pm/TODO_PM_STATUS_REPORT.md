@@ -164,7 +164,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 
-1. add a clear sensitive-file warning while preserving complete migration backup contents, including credentials;
+1. `DONE 2026-07-22`: require a clear pre-download warning for every complete local backup while preserving all migration contents, including configured credentials; cancellation creates no file or report;
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 line and its required root transitive dependencies;
 3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10, remove its nested Vite 5/esbuild chain, and preserve all 1163 unit tests;
 4. keep production audit 0 and full development audit 10 (1 moderate, 9 high, 0 critical) reported separately.
