@@ -409,21 +409,21 @@ git status --short
 
 ## 10. Current Project Toolchain Baseline
 
-Verified on 2026-07-21:
+Verified on 2026-07-22:
 
 - local Node: 24.13.0; CI Node: 20;
 - npm: 11.6.2;
 - Vite: 7.3.6, with root esbuild 0.28.1 and Rollup 4.62.2;
-- Vitest: 1.6.1;
+- Vitest: 4.1.10, reusing root Vite 7.3.6 with no nested Vite 5/vite-node 1 chain;
 - Playwright: 1.60.0;
-- lint, 173-file / 1071-test unit suite, build, and 34-scenario E2E all pass.
+- lint, 184-file / 1163-test unit suite, build, and the full 56-case Playwright collection pass (52 passed, 4 existing project-specific skips).
 
 Audit posture:
 
 - `npm.cmd audit --omit=dev` reports zero production vulnerabilities;
-- full `npm.cmd audit` reports 14 development/tooling advisories: 3 moderate, 10 high, and 1 critical;
-- the direct Vite 7 compatible patch is complete and removed the Rollup-related high advisory;
-- Vitest 1.6.1 and its nested Vite 5.4.21/esbuild 0.21.5 chain remain; the reported remediation requires a separately planned Vitest 4.x major upgrade;
+- full `npm.cmd audit` reports 10 development/tooling advisories: 1 moderate, 9 high, and 0 critical;
+- the direct Vite 7 compatible patch and isolated Vitest 4 migration are complete;
+- Vitest 4.1.10 removed the nested Vite 5.4.21/esbuild 0.21.5 chain and the prior critical finding; remaining advisories belong to other development-tool transitive dependencies;
 - keep development servers and Vitest UI inside a trusted development environment while those development-tool advisories remain.
 
 Dependency updates must remain isolated from product behavior and must run lint, unit, build, E2E, and both audit commands.

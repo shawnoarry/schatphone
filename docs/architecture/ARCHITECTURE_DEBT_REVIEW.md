@@ -198,11 +198,11 @@ TypeScript is present in devDependencies, but current application source is stil
 
 ### 3.6 Security, Quality, And Release Evidence
 
-Verified on 2026-07-10:
+Verified on 2026-07-22:
 
 - `npm.cmd audit --omit=dev`: 0 production vulnerabilities;
-- full `npm.cmd audit`: 1 critical, 9 high, and 5 moderate development/tooling advisories;
-- direct affected tools include Vite 7.3.1 and Vitest 1.6.1; the audit's Vitest remediation is a major upgrade and must be isolated;
+- full `npm.cmd audit`: 0 critical, 9 high, and 1 moderate development/tooling advisories;
+- Vite 7.3.6 and the isolated Vitest 4.1.10 migration are complete; Vitest now reuses root Vite and no longer brings nested Vite 5.4.21/esbuild 0.21.5;
 - Settings backup serializes `settings` directly, including the configured AI API key;
 - the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
 - CI runs lint, unit tests, and build, but not Playwright or audit;
@@ -311,8 +311,8 @@ Before another broad feature family:
 2. preserve the architecture-accepted IndexedDB v1 schema, record/generation model, persistent-storage timing, isolated-container rule, and fail-closed multi-tab contract;
 3. `DONE 2026-07-22`: the approved non-active Book foundation/fixture/staging pilot and the later separately approved Book-only application cutover/runtime activation now have targeted real-Chromium IndexedDB, same-container coordination, reopen, and rollback coverage; every non-Book migration remains behind a later gate;
 4. preserve complete migration backup contents, including configured credentials, and add the confirmed sensitive-file warning plus export/import regression coverage;
-5. update the compatible Vite patch line and safe transitive dependencies;
-6. plan Vitest's major upgrade as an isolated migration;
+5. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
+6. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
 7. decide whether Playwright and dependency audit gate pull requests and Pages deployment.
 
 Do not mix these changes with product behavior or a large view refactor.

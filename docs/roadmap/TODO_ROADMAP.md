@@ -170,9 +170,10 @@ Open slices, in order:
    - `Other-owner storage runtime implementation/activation = NOT_APPROVED`: no R2, Gallery schema, non-Book migration, dual write, garbage collection, or legacy Book deletion follows from the Book cutover.
 2. `P0 Security/toolchain maintenance` - `PARTIAL_DONE`
    - `DONE 2026-07-21`: updated the direct Vite 7 line to 7.3.6 and refreshed only its compatible root transitive toolchain to esbuild 0.28.1, Rollup 4.62.2, and required lockfile metadata;
-   - `DONE 2026-07-21`: production audit remains 0; full audit is 14 advisories (3 moderate, 10 high, 1 critical), one fewer high advisory after removing the Rollup-related finding;
+   - `DONE 2026-07-22`: migrated Vitest 1.6.1 to the official-registry current stable 4.1.10 line; Vitest now reuses root Vite 7.3.6 and the nested Vite 5.4.21/esbuild 0.21.5 chain is removed;
+   - `DONE 2026-07-22`: preserved the complete 184-file / 1163-test unit baseline, production build, and full Playwright suite; production audit remains 0 while full audit falls from 14 advisories (3 moderate, 10 high, 1 critical) to 10 (1 moderate, 9 high, 0 critical);
    - `TODO`: preserve complete local migration backups, including configured credentials, while adding an explicit sensitive-file warning; any redacted/shareable export is a separate future contract;
-   - `TODO`: plan the Vitest 1 major migration separately; Vitest 1.6.1 and its nested Vite 5.4.21/esbuild 0.21.5 advisory chain remain and the reported remediation crosses the approved batch boundary.
+   - `TODO`: assess the remaining 10 development-tool advisories separately from product behavior and CI policy; do not describe full audit as clean.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
@@ -342,7 +343,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0` 4.5 security/toolchain maintenance, including the isolated Vitest major migration.
+1. `P0` 4.5 security/toolchain maintenance, led by the sensitive-backup warning and separate review of the remaining development-tool advisories.
 2. `P1` 4.5 CI/release gating; the named World Setting Interface seam is complete, so architecture capacity should return to visible product modules after this gate.
 3. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
 4. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.

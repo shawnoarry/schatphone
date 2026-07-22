@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The browser/PWA-first persistence foundation and Book-only reference cutover are complete, while broader backup/data-lifecycle work remains active. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The browser/PWA-first persistence foundation, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while broader backup/data-lifecycle work remains active. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -124,7 +124,7 @@ Gaps:
 - CI omits Playwright and dependency audit;
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
-- full dependency audit reports development-tool advisories.
+- full dependency audit reports 10 remaining development-tool advisories, with production audit clean and no critical advisory.
 - the complete-backup/recovery contract is accepted but not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
 
 ## 5. Module Engineering Guidance
@@ -168,7 +168,7 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
-4. sensitive-backup warning and safe toolchain update;
+4. sensitive-backup warning and separate review of the remaining development-tool advisories;
 5. CI/release gating alignment;
 6. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
 7. one named view/store hotspot seam or deeper cross-store adapter;

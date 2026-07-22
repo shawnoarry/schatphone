@@ -31,7 +31,8 @@ Current state:
 - Mini Scene was not added to persistence Batch 2B. Its future artifact/profile-binding/policy data classes still require a separate persistence and complete-backup approval after the completed Book foundation pilot;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
-- the active 4.5 lane also includes complete-backup sensitivity, development dependency advisories, and CI/release gating;
+- the isolated Vitest migration is complete at 4.1.10: it reuses root Vite 7.3.6, removes the nested Vite 5/esbuild advisory chain and the prior critical finding, and preserves the 184-file / 1163-test baseline;
+- the active 4.5 lane still includes complete-backup sensitivity, 10 non-production development dependency advisories, and CI/release gating;
 - the root bootstrap points to a thin cross-task execution contract, while task packages and specialist workflows own their execution detail;
 - project-local skill inventory and workflow layering are guarded by automated governance tests;
 - framework replacement or a broad TypeScript migration is not recommended.

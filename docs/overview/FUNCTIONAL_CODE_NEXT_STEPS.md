@@ -79,17 +79,17 @@ Do not start broad migration from this candidate. Its exact non-active Batch 2B 
 Current evidence:
 
 - production audit: clean;
-- full audit: development/tool advisories, including direct Vite/Vitest findings;
-- Vite has a compatible 7.x update available;
-- Vitest remediation is a major migration;
+- full audit: 10 development/tool advisories (1 moderate, 9 high, 0 critical), down from 14 before the isolated Vitest migration;
+- Vite 7.3.6 and its compatible root esbuild/Rollup refresh are complete;
+- Vitest 4.1.10 now reuses root Vite 7.3.6, with the old nested Vite 5/esbuild chain removed;
 - CI omits Playwright and audit;
 - Pages deployment is build-only.
 
 Safe sequence:
 
-1. compatible Vite/transitive update;
-2. full validation;
-3. isolated Vitest migration plan;
+1. `DONE`: compatible Vite/transitive update;
+2. `DONE`: isolated Vitest 4 migration plus full lint/unit/build/E2E validation;
+3. review the remaining development-tool advisories as a separate bounded batch;
 4. add a Playwright browser job and audit policy;
 5. gate deployment through repository/workflow policy.
 

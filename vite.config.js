@@ -3,9 +3,19 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [vue(), tailwindcss()],
   base: '/schatphone/',
+  define:
+    mode === 'test'
+      ? {
+          'import.meta.env.VITE_API_URL': JSON.stringify(
+            'https://generativelanguage.googleapis.com/v1beta/models',
+          ),
+          'import.meta.env.VITE_API_KEY': JSON.stringify('env-key-123'),
+          'import.meta.env.VITE_API_MODEL': JSON.stringify('gemini-2.5-flash'),
+        }
+      : {},
   build: {
     rollupOptions: {
       output: {
@@ -31,4 +41,4 @@ export default defineConfig({
       'e2e/**',
     ],
   },
-})
+}))

@@ -54,10 +54,10 @@ The application uses Vue Router hash history and Vite base `/schatphone/`, so st
 | UI | Vue 3.5.27, Composition API, `<script setup>` |
 | Router | Vue Router 5.0.2, hash history |
 | State | Pinia 3.0.4 |
-| Build | Vite 7.3.1, plugin-vue 6.0.4 |
+| Build | Vite 7.3.6, plugin-vue 6.0.4 |
 | Styling | Tailwind CSS 4.1.18, shared CSS tokens, Font Awesome 7.1.0 |
 | Long text | Marked 17.0.1 |
-| Unit tests | Vitest 1.6.1, jsdom, Vue Test Utils |
+| Unit tests | Vitest 4.1.10, jsdom, Vue Test Utils |
 | E2E | Playwright 1.60.0 |
 | Quality | ESLint 9, Prettier 3 |
 | Push | Node HTTP, `web-push` 3.6.7, service worker |

@@ -166,8 +166,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 1. add a clear sensitive-file warning while preserving complete migration backup contents, including credentials;
 2. `DONE 2026-07-21`: update the compatible direct Vite 7 line and its required root transitive dependencies;
-3. plan the remaining Vitest major migration separately;
-4. keep production and full development audit results reported separately.
+3. `DONE 2026-07-22`: migrate Vitest independently to 4.1.10, remove its nested Vite 5/esbuild chain, and preserve all 1163 unit tests;
+4. keep production audit 0 and full development audit 10 (1 moderate, 9 high, 0 critical) reported separately.
 
 ### P1: Release And Architecture Confidence
 

@@ -67,8 +67,9 @@ Priority meanings:
 ### Security And Release
 
 - backup secret treatment;
-- compatible Vite/transitive update;
-- isolated Vitest migration;
+- `DONE 2026-07-21`: compatible Vite/transitive update;
+- `DONE 2026-07-22`: isolated Vitest 4 migration, nested Vite 5/esbuild removal, and critical-advisory closure;
+- remaining development-tool advisory review;
 - Playwright/audit CI policy;
 - Pages release gating.
 
@@ -122,7 +123,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. backup warning/toolchain security and CI/release confidence;
+3. backup warning, remaining development-tool advisory review, and CI/release confidence;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 
