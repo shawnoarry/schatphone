@@ -2,6 +2,8 @@ const STORAGE_NAMESPACE = 'schatphone'
 const INDEXED_DB_NAME = 'schatphone-layered-storage'
 const INDEXED_DB_STORE = 'state'
 const INDEXED_DB_VERSION = 1
+const INDEXED_DB_OPEN_TIMEOUT_MS = 750
+const BOOK_STORAGE_KEY = 'store:book'
 
 const envMirrorRaw =
   typeof import.meta !== 'undefined' &&
@@ -22,6 +24,26 @@ const ENABLE_INDEXEDDB_MIRROR = parseBooleanFlag(envMirrorRaw, true)
 
 const buildStorageKey = (key) => `${STORAGE_NAMESPACE}:${key}`
 
+const createLineageId = () => {
+  const randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)
+  if (randomUUID) return randomUUID()
+  return `lineage-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+const canonicalize = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize(value[key])]),
+    )
+  }
+  return value
+}
+
+const canonicalStringify = (value) => JSON.stringify(canonicalize(value))
+
 const canUseStorage = () => {
   try {
     return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
@@ -30,8 +52,13 @@ const canUseStorage = () => {
   }
 }
 
-const canUseIndexedDb = () =>
-  typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined'
+const canUseIndexedDb = () => {
+  try {
+    return typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined'
+  } catch {
+    return false
+  }
+}
 
 const canUseLayeredPersistence = () => ENABLE_INDEXEDDB_MIRROR && canUseIndexedDb()
 
@@ -40,6 +67,7 @@ let indexedDbUnavailable = false
 let indexedDbUnavailableError = null
 let indexedDbWarned = false
 const pendingIndexedDbOps = new Map()
+const persistedHeadStates = new Map()
 let indexedDbFlushTimerId = null
 
 const normalizeSavedAt = (value, fallback = 0) => {
@@ -105,20 +133,77 @@ const createSkippedWrite = (carrier, error, retryable = false) => ({
   attempted: false,
 })
 
-const serializePersistedState = (data, version) => {
+const createReconciliationFailure = (includeChildren = false, error = 'reconciliation_required') => {
+  const result = {
+    ok: false,
+    error,
+    carrier: 'reconciliation',
+    retryable: true,
+    attempted: false,
+  }
+  if (!includeChildren) return result
+  return {
+    ...result,
+    local: createSkippedWrite('localStorage', error, true),
+    mirror: createSkippedWrite('indexeddb', error, true),
+  }
+}
+
+const createGenerationFailure = () => ({
+  ok: false,
+  error: 'generation_exhausted',
+  carrier: 'generation',
+  retryable: false,
+  attempted: false,
+})
+
+const normalizeGeneration = (generation, present = generation !== undefined) => {
+  if (!present) {
+    return { order: 'unordered', orderingValid: true, generation: null, issueCode: '' }
+  }
+  const lineage = generation?.lineage
+  const sequence = generation?.sequence
+  if (
+    !generation ||
+    typeof generation !== 'object' ||
+    typeof lineage !== 'string' ||
+    !lineage.trim() ||
+    lineage !== lineage.trim() ||
+    !Number.isSafeInteger(sequence) ||
+    sequence < 1
+  ) {
+    return {
+      order: 'unordered',
+      orderingValid: false,
+      generation: null,
+      issueCode: 'generation_invalid',
+    }
+  }
+  return {
+    order: 'ordered',
+    orderingValid: true,
+    generation: { lineage, sequence },
+    issueCode: '',
+  }
+}
+
+const serializePersistedState = (data, version, generation = null) => {
   try {
-    const envelope = encodePersistedEnvelope(data, { version })
+    const envelope = encodePersistedEnvelope(data, { version, generation })
     return { ok: true, rawPayload: JSON.stringify(envelope) }
   } catch {
     return createSerializationFailure()
   }
 }
 
-export const encodePersistedEnvelope = (data, { version = 1, savedAt = Date.now() } = {}) => ({
-  version,
-  savedAt,
+export const encodePersistedEnvelope = (
   data,
-})
+  { version = 1, savedAt = Date.now(), generation = null } = {},
+) => {
+  const envelope = { version, savedAt, data }
+  if (generation != null) envelope.generation = generation
+  return envelope
+}
 
 export const decodePersistedEnvelope = (parsed, { version, migrate } = {}) => {
   if (!parsed || typeof parsed !== 'object') return null
@@ -157,14 +242,25 @@ const readPersistedStateFromLocal = (key, options = {}) => {
   }
 }
 
-const readPersistedRawFromLocal = (fullKey) => {
-  if (!canUseStorage()) return null
-  if (typeof fullKey !== 'string' || !fullKey.trim()) return null
+const readLocalLayer = (fullKey) => {
+  if (typeof fullKey !== 'string' || !fullKey.trim()) {
+    return { applicable: true, available: true, present: false, rawPayload: null, error: null }
+  }
   try {
-    return window.localStorage.getItem(fullKey)
+    const storage = typeof window !== 'undefined' ? window.localStorage : null
+    if (!storage || typeof storage.getItem !== 'function') {
+      return { applicable: true, available: false, present: false, rawPayload: null, error: null }
+    }
+    const rawPayload = storage.getItem(fullKey)
+    return {
+      available: true,
+      applicable: true,
+      present: rawPayload !== null,
+      rawPayload,
+      error: null,
+    }
   } catch (error) {
-    console.warn(`[persistence] raw-read failed for "${fullKey}"`, error)
-    return null
+    return { applicable: true, available: false, present: false, rawPayload: null, error }
   }
 }
 
@@ -177,18 +273,6 @@ const writePersistedRawToLocal = (fullKey, rawPayload) => {
     return true
   } catch (error) {
     console.warn(`[persistence] raw-write failed for "${fullKey}"`, error)
-    return false
-  }
-}
-
-const clearPersistedRawFromLocal = (fullKey) => {
-  if (!canUseStorage()) return false
-  if (typeof fullKey !== 'string' || !fullKey.trim()) return false
-  try {
-    window.localStorage.removeItem(fullKey)
-    return true
-  } catch (error) {
-    console.warn(`[persistence] raw-clear failed for "${fullKey}"`, error)
     return false
   }
 }
@@ -217,6 +301,24 @@ const openIndexedDb = async () => {
   if (indexedDbOpenPromise) return indexedDbOpenPromise
 
   indexedDbOpenPromise = new Promise((resolve) => {
+    let settled = false
+    const finish = (value) => {
+      if (settled) {
+        value?.close?.()
+        return
+      }
+      settled = true
+      clearTimeout(timeoutId)
+      resolve(value)
+    }
+    const timeoutId = setTimeout(() => {
+      const error = new Error('indexeddb_open_timed_out')
+      error.name = 'TimeoutError'
+      indexedDbUnavailable = true
+      indexedDbUnavailableError = error
+      warnIndexedDb(error)
+      finish(null)
+    }, INDEXED_DB_OPEN_TIMEOUT_MS)
     try {
       const request = window.indexedDB.open(INDEXED_DB_NAME, INDEXED_DB_VERSION)
 
@@ -230,14 +332,14 @@ const openIndexedDb = async () => {
       request.onsuccess = () => {
         const db = request.result
         db.onversionchange = () => db.close()
-        resolve(db)
+        finish(db)
       }
 
       request.onerror = () => {
         indexedDbUnavailable = true
         indexedDbUnavailableError = request.error
         warnIndexedDb(request.error)
-        resolve(null)
+        finish(null)
       }
 
       request.onblocked = () => {
@@ -248,18 +350,50 @@ const openIndexedDb = async () => {
       indexedDbUnavailable = true
       indexedDbUnavailableError = error
       warnIndexedDb(error)
-      resolve(null)
+      finish(null)
     }
   })
 
   return indexedDbOpenPromise
 }
 
-const readFromIndexedDb = async (fullKey) => {
+const readIndexedDbLayer = async (fullKey) => {
+  if (!ENABLE_INDEXEDDB_MIRROR) {
+    return {
+      applicable: false,
+      available: false,
+      present: false,
+      rawPayload: null,
+      error: null,
+    }
+  }
+  if (!canUseIndexedDb()) {
+    return {
+      applicable: true,
+      available: false,
+      present: false,
+      rawPayload: null,
+      error: null,
+    }
+  }
   const db = await openIndexedDb()
-  if (!db) return null
+  if (!db) {
+    return {
+      available: false,
+      applicable: true,
+      present: false,
+      rawPayload: null,
+      error: indexedDbUnavailableError,
+    }
+  }
 
   return new Promise((resolve) => {
+    let settled = false
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
     try {
       const tx = db.transaction(INDEXED_DB_STORE, 'readonly')
       const store = tx.objectStore(INDEXED_DB_STORE)
@@ -267,17 +401,44 @@ const readFromIndexedDb = async (fullKey) => {
 
       request.onsuccess = () => {
         const item = request.result
-        resolve(item && typeof item.payload === 'string' ? item.payload : null)
+        finish({
+          available: true,
+          applicable: true,
+          present: item != null,
+          rawPayload: item && typeof item.payload === 'string' ? item.payload : null,
+          updatedAt: normalizeSavedAt(item?.updatedAt, 0),
+          error: null,
+        })
       }
-      request.onerror = () => resolve(null)
-      tx.onabort = () => resolve(null)
-    } catch {
-      resolve(null)
+      request.onerror = () =>
+        finish({
+          applicable: true,
+          available: false,
+          present: false,
+          rawPayload: null,
+          error: request.error,
+        })
+      tx.onabort = () =>
+        finish({
+          applicable: true,
+          available: false,
+          present: false,
+          rawPayload: null,
+          error: tx.error,
+        })
+    } catch (error) {
+      finish({ applicable: true, available: false, present: false, rawPayload: null, error })
     }
   })
 }
 
-const writeToIndexedDbWithResult = async (fullKey, rawPayload) => {
+const readFromIndexedDb = async (fullKey) => (await readIndexedDbLayer(fullKey)).rawPayload
+
+const writeToIndexedDbWithResult = async (
+  fullKey,
+  rawPayload,
+  { version, allowReconciliation = false, skipFreshnessCheck = false } = {},
+) => {
   const db = await openIndexedDb()
   if (!db) return createWriteFailure('indexeddb', indexedDbUnavailableError)
 
@@ -291,18 +452,44 @@ const writeToIndexedDbWithResult = async (fullKey, rawPayload) => {
     try {
       const tx = db.transaction(INDEXED_DB_STORE, 'readwrite')
       const store = tx.objectStore(INDEXED_DB_STORE)
-      const request = store.put({ key: fullKey, payload: rawPayload, updatedAt: Date.now() })
+      let request = null
       tx.oncomplete = () => finish(createWriteSuccess('indexeddb'))
       tx.onerror = () => finish(createWriteFailure('indexeddb', tx.error || request?.error))
       tx.onabort = () => finish(createWriteFailure('indexeddb', tx.error || request?.error))
+
+      const write = () => {
+        request = store.put({ key: fullKey, payload: rawPayload, updatedAt: Date.now() })
+      }
+      if (allowReconciliation || skipFreshnessCheck) {
+        write()
+        return
+      }
+
+      const readRequest = store.get(fullKey)
+      readRequest.onerror = () =>
+        finish(createWriteFailure('indexeddb', readRequest.error || tx.error))
+      readRequest.onsuccess = () => {
+        const existingRaw =
+          readRequest.result && typeof readRequest.result.payload === 'string'
+            ? readRequest.result.payload
+            : null
+        const precondition = checkMirrorWritePrecondition(existingRaw, rawPayload, { version })
+        if (!precondition.ok) {
+          finish(createReconciliationFailure(false, precondition.error))
+          try {
+            tx.abort()
+          } catch {
+            // The transaction may already be inactive.
+          }
+          return
+        }
+        write()
+      }
     } catch (error) {
       finish(createWriteFailure('indexeddb', error))
     }
   })
 }
-
-const writeToIndexedDb = async (fullKey, rawPayload) =>
-  (await writeToIndexedDbWithResult(fullKey, rawPayload)).ok
 
 const deleteFromIndexedDb = async (fullKey) => {
   const db = await openIndexedDb()
@@ -322,20 +509,42 @@ const deleteFromIndexedDb = async (fullKey) => {
   })
 }
 
-const inspectRawPayload = (rawPayload, options = {}, includeRaw = false) => {
+const inspectRawPayload = (rawPayload, options = {}) => {
+  const applicable = options.applicable !== false
+  const available = applicable && options.available !== false
   const result = {
+    applicable,
+    available,
+    availability: !applicable ? 'not_applicable' : available ? 'available' : 'unavailable',
+    present: options.present === true,
+    presence: options.present === true ? 'present' : 'absent',
     exists: false,
     rawSize: 0,
+    rawPayload: typeof rawPayload === 'string' ? rawPayload : null,
     parseOk: false,
     decodedOk: false,
+    payloadValid: false,
+    valid: false,
     envelope: false,
     envelopeVersion: 0,
     savedAt: 0,
+    updatedAt: normalizeSavedAt(options.updatedAt, 0),
+    order: 'none',
+    orderingValid: true,
+    generation: null,
+    canonicalData: null,
+    decodedData: null,
     issueCode: '',
+  }
+  if (!result.available) {
+    if (result.applicable) result.issueCode = 'carrier_unavailable'
+    return result
   }
   if (typeof rawPayload !== 'string' || !rawPayload.trim()) return result
 
   result.exists = true
+  result.present = true
+  result.presence = 'present'
   result.rawSize = rawPayload.length
 
   let parsed = null
@@ -344,7 +553,6 @@ const inspectRawPayload = (rawPayload, options = {}, includeRaw = false) => {
     result.parseOk = true
   } catch {
     result.issueCode = 'json_parse_failed'
-    if (includeRaw) result.rawPayload = rawPayload
     return result
   }
 
@@ -364,45 +572,120 @@ const inspectRawPayload = (rawPayload, options = {}, includeRaw = false) => {
       ? normalizeSavedAt(parsed.savedAt, 0)
       : 0
 
+  const hasGeneration =
+    isEnvelope && Object.prototype.hasOwnProperty.call(parsed, 'generation')
+  const generation = normalizeGeneration(parsed?.generation, hasGeneration)
+  result.order = generation.order
+  result.orderingValid = generation.orderingValid
+  result.generation = generation.generation
+  if (generation.issueCode) result.issueCode = generation.issueCode
+
   const decoded = decodePersistedEnvelope(parsed, options)
   result.decodedOk = decoded != null
   if (!result.decodedOk) {
     result.issueCode = result.envelope ? 'decode_failed' : 'legacy_payload_invalid'
+    return result
   }
-  if (includeRaw) result.rawPayload = rawPayload
+  result.decodedData = decoded
+  result.canonicalData = canonicalStringify(decoded)
+  result.payloadValid = true
+  result.valid = result.payloadValid
   return result
 }
 
-const selectReconcileSource = (localInspect, indexedInspect, strategy = 'newest_valid') => {
-  const normalizedStrategy = typeof strategy === 'string' ? strategy.trim() : 'newest_valid'
-  const hasInspectablePayload = (layerInspect) =>
-    typeof layerInspect?.rawPayload === 'string' || layerInspect?.exists === true
+const inspectLayerRead = (read, options = {}) =>
+  inspectRawPayload(read.rawPayload, {
+    ...options,
+    applicable: read.applicable !== false,
+    available: read.available,
+    present: read.present,
+    updatedAt: read.updatedAt,
+  })
 
-  const isLocalValid =
-    localInspect?.decodedOk === true && hasInspectablePayload(localInspect)
-  const isIndexedValid =
-    indexedInspect?.decodedOk === true && hasInspectablePayload(indexedInspect)
+const selectReconcilePlan = (local, indexeddb) => {
+  const localValid = local.valid === true
+  const mirrorValid = indexeddb.valid === true
 
-  if (normalizedStrategy === 'local') {
-    if (isLocalValid) return 'local'
-    if (isIndexedValid) return 'indexeddb'
-    return 'none'
+  if (localValid && mirrorValid && local.rawPayload === indexeddb.rawPayload) {
+    return { type: 'winner', winner: 'local', reason: 'equivalent', rawPayload: local.rawPayload }
   }
-  if (normalizedStrategy === 'indexeddb') {
-    if (isIndexedValid) return 'indexeddb'
-    if (isLocalValid) return 'local'
-    return 'none'
+  if (localValid !== mirrorValid) {
+    const winner = localValid ? 'local' : 'indexeddb'
+    return {
+      type: 'winner',
+      winner,
+      reason: 'sole_valid',
+      rawPayload: winner === 'local' ? local.rawPayload : indexeddb.rawPayload,
+    }
+  }
+  if (!localValid && !mirrorValid) {
+    return { type: 'none', winner: 'none', reason: 'no_valid_source' }
   }
 
-  if (!isLocalValid && !isIndexedValid) return 'none'
-  if (isLocalValid && !isIndexedValid) return 'local'
-  if (!isLocalValid && isIndexedValid) return 'indexeddb'
+  if (local.order === 'ordered' && indexeddb.order === 'ordered') {
+    if (local.generation.lineage !== indexeddb.generation.lineage) {
+      if (local.canonicalData === indexeddb.canonicalData) {
+        return { type: 'adopt', winner: 'local', reason: 'equal_data_new_lineage' }
+      }
+      return { type: 'conflict', winner: 'none', reason: 'lineage_conflict' }
+    }
+    if (local.generation.sequence === indexeddb.generation.sequence) {
+      return { type: 'conflict', winner: 'none', reason: 'generation_conflict' }
+    }
+    const winner =
+      local.generation.sequence > indexeddb.generation.sequence ? 'local' : 'indexeddb'
+    return {
+      type: 'winner',
+      winner,
+      reason: 'higher_sequence',
+      rawPayload: winner === 'local' ? local.rawPayload : indexeddb.rawPayload,
+    }
+  }
 
-  const localSavedAt = normalizeSavedAt(localInspect.savedAt, 0)
-  const indexedSavedAt = normalizeSavedAt(indexedInspect.savedAt, 0)
-  if (localSavedAt > indexedSavedAt) return 'local'
-  if (indexedSavedAt > localSavedAt) return 'indexeddb'
-  return 'local'
+  if (local.order === 'ordered' || indexeddb.order === 'ordered') {
+    if (local.canonicalData !== indexeddb.canonicalData) {
+      return { type: 'conflict', winner: 'none', reason: 'legacy_freshness_unknown' }
+    }
+    const winner = local.order === 'ordered' ? 'local' : 'indexeddb'
+    return {
+      type: 'winner',
+      winner,
+      reason: 'ordered_adopted',
+      rawPayload: winner === 'local' ? local.rawPayload : indexeddb.rawPayload,
+    }
+  }
+
+  if (local.canonicalData === indexeddb.canonicalData) {
+    return { type: 'adopt', winner: 'local', reason: 'equal_legacy_data' }
+  }
+  return { type: 'conflict', winner: 'none', reason: 'legacy_freshness_unknown' }
+}
+
+const checkMirrorWritePrecondition = (existingRaw, incomingRaw, options = {}) => {
+  if (existingRaw == null || existingRaw === incomingRaw) return { ok: true }
+  const existing = inspectRawPayload(existingRaw, { ...options, available: true, present: true })
+  const incoming = inspectRawPayload(incomingRaw, { ...options, available: true, present: true })
+  if (!incoming.valid || incoming.order !== 'ordered') {
+    return { ok: false, error: 'reconciliation_required' }
+  }
+  if (!existing.valid) return { ok: false, error: 'reconciliation_required' }
+  if (existing.order === 'ordered') {
+    if (existing.generation.lineage !== incoming.generation.lineage) {
+      return existing.canonicalData === incoming.canonicalData
+        ? { ok: true }
+        : { ok: false, error: 'lineage_conflict' }
+    }
+    if (incoming.generation.sequence < existing.generation.sequence) {
+      return { ok: false, error: 'mirror_regression' }
+    }
+    if (incoming.generation.sequence === existing.generation.sequence) {
+      return { ok: false, error: 'generation_conflict' }
+    }
+    return { ok: true }
+  }
+  return existing.canonicalData === incoming.canonicalData
+    ? { ok: true }
+    : { ok: false, error: 'legacy_freshness_unknown' }
 }
 
 const flushIndexedDbOps = async () => {
@@ -417,46 +700,146 @@ const flushIndexedDbOps = async () => {
       await deleteFromIndexedDb(fullKey)
       continue
     }
-    const result = await writeToIndexedDbWithResult(fullKey, op.payload)
-    if (!result.ok) warnIndexedDb(new Error(result.error))
+    const result = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
+    if (!result.ok) {
+      if (result.carrier === 'reconciliation') {
+        const previous = persistedHeadStates.get(fullKey)
+        setPersistedHeadState(fullKey, {
+          ...previous,
+          blocked: true,
+          reason: result.error,
+        })
+      }
+      warnIndexedDb(new Error(result.error))
+    }
   }
 }
 
-const queueIndexedDbWrite = (fullKey, rawPayload) => {
+const queueIndexedDbWrite = (fullKey, rawPayload, options = {}) => {
   if (!canUseLayeredPersistence()) return
-  pendingIndexedDbOps.set(fullKey, { type: 'write', payload: rawPayload })
+  pendingIndexedDbOps.set(fullKey, { type: 'write', payload: rawPayload, options })
   if (indexedDbFlushTimerId) return
   indexedDbFlushTimerId = setTimeout(() => {
     void flushIndexedDbOps()
   }, 16)
 }
 
-export const readPersistedState = (key, options = {}) =>
-  readPersistedStateFromLocal(key, options)
+const readLayerPair = async (fullKey) => {
+  const local = readLocalLayer(fullKey)
+  const indexeddb = await readIndexedDbLayer(fullKey)
+  return { local, indexeddb }
+}
+
+const inspectLayerPair = (pair, options = {}) => ({
+  local: inspectLayerRead(pair.local, options),
+  indexeddb: inspectLayerRead(pair.indexeddb, options),
+})
+
+const pairHeadsEqual = (left, right) =>
+  left.local.available === right.local.available &&
+  left.local.present === right.local.present &&
+  left.local.rawPayload === right.local.rawPayload &&
+  left.indexeddb.available === right.indexeddb.available &&
+  left.indexeddb.present === right.indexeddb.present &&
+  left.indexeddb.rawPayload === right.indexeddb.rawPayload
+
+const setPersistedHeadState = (fullKey, state) => {
+  persistedHeadStates.set(fullKey, state)
+  return state
+}
+
+const createWritePlan = (key, version) => {
+  if (key === BOOK_STORAGE_KEY) return { ok: true, generation: null, excluded: true }
+  const fullKey = buildStorageKey(key)
+  const state = persistedHeadStates.get(fullKey)
+  if (state?.blocked) return createReconciliationFailure()
+
+  const local = readLocalLayer(fullKey)
+  if (state?.localAvailable && local.available && local.rawPayload !== state.localRaw) {
+    return createReconciliationFailure()
+  }
+
+  let generation = null
+  if (state?.generation && !state.forceFork) {
+    generation = state.generation
+  } else if (!state) {
+    const current = inspectLayerRead(local, { version })
+    if (current.valid && current.order === 'ordered') generation = current.generation
+  }
+
+  if (generation?.sequence === Number.MAX_SAFE_INTEGER) return createGenerationFailure()
+  return {
+    ok: true,
+    generation: generation
+      ? { lineage: generation.lineage, sequence: generation.sequence + 1 }
+      : { lineage: createLineageId(), sequence: 1 },
+    excluded: false,
+  }
+}
+
+const rememberLocalCommit = (key, rawPayload, generation) => {
+  if (key === BOOK_STORAGE_KEY || !generation) return
+  const fullKey = buildStorageKey(key)
+  const previous = persistedHeadStates.get(fullKey)
+  if (!previous) return
+  setPersistedHeadState(fullKey, {
+    blocked: false,
+    serveLayer: 'local',
+    generation,
+    forceFork: false,
+    localAvailable: true,
+    localRaw: rawPayload,
+    mirrorAvailable: previous?.mirrorAvailable === true,
+    mirrorRaw: previous?.mirrorRaw ?? null,
+  })
+}
+
+const decodeRawPayload = (rawPayload, options = {}) => {
+  if (typeof rawPayload !== 'string' || !rawPayload.trim()) return null
+  try {
+    return decodePersistedEnvelope(JSON.parse(rawPayload), options)
+  } catch {
+    return null
+  }
+}
+
+export const readPersistedState = (key, options = {}) => {
+  const state = persistedHeadStates.get(buildStorageKey(key))
+  if (state?.blocked || state?.serveLayer === 'indexeddb') return null
+  return readPersistedStateFromLocal(key, options)
+}
 
 export const writePersistedState = (key, data, { version = 1 } = {}) => {
   const fullKey = buildStorageKey(key)
-  const serialized = serializePersistedState(data, version)
+  const plan = createWritePlan(key, version)
+  if (!plan.ok) return plan
+  const serialized = serializePersistedState(data, version, plan.generation)
   if (!serialized.ok) return serialized
 
   const local = writePersistedStateToLocal(key, serialized.rawPayload)
-  if (local.ok) queueIndexedDbWrite(fullKey, serialized.rawPayload)
+  if (local.ok) {
+    rememberLocalCommit(key, serialized.rawPayload, plan.generation)
+    queueIndexedDbWrite(fullKey, serialized.rawPayload, {
+      version,
+      skipFreshnessCheck: plan.excluded,
+    })
+  }
   return local
 }
 
 export const readPersistedStateAsync = async (key, options = {}) => {
   const fullKey = buildStorageKey(key)
+  const state = persistedHeadStates.get(fullKey)
+  if (state?.blocked) return null
+
+  if (state?.serveLayer === 'local') {
+    const local = readPersistedStateFromLocal(key, options)
+    if (local != null) return local
+  }
   if (canUseLayeredPersistence()) {
     const raw = await readFromIndexedDb(fullKey)
-    if (typeof raw === 'string' && raw.trim()) {
-      try {
-        const parsed = JSON.parse(raw)
-        const decoded = decodePersistedEnvelope(parsed, options)
-        if (decoded != null) return decoded
-      } catch {
-        // Fallback below.
-      }
-    }
+    const decoded = decodeRawPayload(raw, options)
+    if (decoded != null) return decoded
   }
   return readPersistedStateFromLocal(key, options)
 }
@@ -467,24 +850,49 @@ export const readPersistedRawLayers = async (key) => {
   }
   const normalizedKey = key.trim()
   const fullKey = buildStorageKey(normalizedKey)
-  const mirrorApplicable = canUseLayeredPersistence()
+  const pair = await readLayerPair(fullKey)
   return {
     key: normalizedKey,
     fullKey,
-    localRaw: readPersistedRawFromLocal(fullKey),
-    mirrorRaw: mirrorApplicable ? await readFromIndexedDb(fullKey) : null,
-    mirrorApplicable,
+    localRaw: pair.local.rawPayload,
+    mirrorRaw: pair.indexeddb.rawPayload,
+    localAvailable: pair.local.available,
+    mirrorAvailable: pair.indexeddb.available,
+    mirrorApplicable: pair.indexeddb.applicable,
   }
 }
 
 export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) => {
   const fullKey = buildStorageKey(key)
-  const serialized = serializePersistedState(data, version)
+  const plan = createWritePlan(key, version)
+  if (!plan.ok) {
+    if (plan.error === 'generation_exhausted') {
+      return {
+        ...plan,
+        local: createSkippedWrite('localStorage', plan.error, plan.retryable),
+        mirror: createSkippedWrite('indexeddb', plan.error, plan.retryable),
+      }
+    }
+    return createReconciliationFailure(true, plan.error)
+  }
+  const serialized = serializePersistedState(data, version, plan.generation)
   if (!serialized.ok) {
     return {
       ...serialized,
       local: createSkippedWrite('localStorage', serialized.error),
       mirror: createSkippedWrite('indexeddb', serialized.error),
+    }
+  }
+
+  if (!plan.excluded && canUseLayeredPersistence()) {
+    const mirrorHead = await readIndexedDbLayer(fullKey)
+    if (mirrorHead.available) {
+      const precondition = checkMirrorWritePrecondition(
+        mirrorHead.rawPayload,
+        serialized.rawPayload,
+        { version },
+      )
+      if (!precondition.ok) return createReconciliationFailure(true)
     }
   }
 
@@ -496,16 +904,27 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       mirror: createSkippedWrite('indexeddb', 'primary_write_failed', local.retryable),
     }
   }
+  rememberLocalCommit(key, serialized.rawPayload, plan.generation)
 
   if (!canUseLayeredPersistence()) {
+    const mirror = ENABLE_INDEXEDDB_MIRROR
+      ? createWriteFailure('indexeddb', indexedDbUnavailableError, false)
+      : createWriteSuccess('indexeddb', false)
     return {
-      ...local,
+      ok: local.ok && mirror.ok,
+      error: mirror.ok ? null : mirror.error,
+      carrier: mirror.ok ? local.carrier : mirror.carrier,
+      retryable: mirror.ok ? false : mirror.retryable,
+      attempted: local.attempted,
       local,
-      mirror: createWriteSuccess('indexeddb', false),
+      mirror,
     }
   }
 
-  const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload)
+  const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload, {
+    version,
+    skipFreshnessCheck: plan.excluded,
+  })
   return {
     ok: local.ok && mirror.ok,
     error: mirror.ok ? null : mirror.error,
@@ -522,118 +941,235 @@ export const inspectPersistedStateLayers = async (key, options = {}) => {
     return {
       key,
       fullKey: '',
-      mirrorApplicable: canUseLayeredPersistence(),
-      mirrorInSync: true,
+      mirrorApplicable: false,
+      mirrorInSync: false,
       recommendedSource: 'none',
-      local: inspectRawPayload(null, options),
-      indexeddb: inspectRawPayload(null, options),
+      local: inspectRawPayload(null, { ...options, available: true, present: false }),
+      indexeddb: inspectRawPayload(null, { ...options, available: false, present: false }),
       issueCode: 'invalid_key',
     }
   }
 
   const normalizedKey = key.trim()
   const fullKey = buildStorageKey(normalizedKey)
-  const localRaw = readPersistedRawFromLocal(fullKey)
-  const localInspect = inspectRawPayload(localRaw, options)
-
-  const mirrorApplicable = canUseLayeredPersistence()
-  const indexedRaw = mirrorApplicable ? await readFromIndexedDb(fullKey) : null
-  const indexedInspect = inspectRawPayload(indexedRaw, options)
-
-  const mirrorInSync = mirrorApplicable ? localRaw === indexedRaw : true
-  const recommendedSource = selectReconcileSource(localInspect, indexedInspect, 'newest_valid')
-
-  let issueCode = ''
-  if (mirrorApplicable && !mirrorInSync) issueCode = 'mirror_drift'
-  else if (localInspect.exists && !localInspect.decodedOk) issueCode = localInspect.issueCode || 'local_invalid'
-  else if (indexedInspect.exists && !indexedInspect.decodedOk) issueCode = indexedInspect.issueCode || 'indexeddb_invalid'
+  const pair = await readLayerPair(fullKey)
+  const inspected = inspectLayerPair(pair, options)
+  const plan = selectReconcilePlan(inspected.local, inspected.indexeddb)
+  const mirrorInSync =
+    pair.indexeddb.applicable &&
+    pair.local.available &&
+    pair.indexeddb.available &&
+    pair.local.rawPayload === pair.indexeddb.rawPayload
+  const layersEmpty =
+    pair.local.available &&
+    !inspected.local.present &&
+    (!pair.indexeddb.applicable ||
+      (pair.indexeddb.available && !inspected.indexeddb.present))
+  const equivalentValidCandidate =
+    inspected.local.valid &&
+    (!pair.indexeddb.applicable ||
+      (pair.indexeddb.available && inspected.indexeddb.valid && mirrorInSync))
+  const fullyReconciled =
+    pair.local.available && (layersEmpty || equivalentValidCandidate)
 
   return {
     key: normalizedKey,
     fullKey,
-    mirrorApplicable,
+    mirrorApplicable: pair.indexeddb.applicable,
     mirrorInSync,
-    recommendedSource,
-    local: localInspect,
-    indexeddb: indexedInspect,
-    issueCode,
+    fullyReconciled,
+    recommendedSource: plan.winner,
+    local: inspected.local,
+    indexeddb: inspected.indexeddb,
+    issueCode: fullyReconciled ? '' : plan.reason,
   }
 }
 
 export const reconcilePersistedStateLayers = async (key, options = {}) => {
-  const strategy = typeof options.strategy === 'string' ? options.strategy : 'newest_valid'
-  const allowClearOnInvalid = options.allowClearOnInvalid === true
-  const inspection = await inspectPersistedStateLayers(key, options)
+  const normalizedKey = typeof key === 'string' ? key.trim() : ''
+  if (!normalizedKey) return { ok: false, action: 'skipped', reason: 'invalid_key', key }
+  const fullKey = buildStorageKey(normalizedKey)
+  const initialPair = await readLayerPair(fullKey)
+  const initial = inspectLayerPair(initialPair, options)
+  const plan = selectReconcilePlan(initial.local, initial.indexeddb)
+  const baseReport = {
+    key: normalizedKey,
+    fullKey,
+    sourceLayer: plan.winner,
+    recommendedSource: plan.winner,
+    local: initial.local,
+    indexeddb: initial.indexeddb,
+    mirrorApplicable: initialPair.indexeddb.applicable,
+    mirrorInSync:
+      initialPair.local.available &&
+      initialPair.indexeddb.available &&
+      initialPair.local.rawPayload === initialPair.indexeddb.rawPayload,
+  }
 
-  if (!inspection.fullKey) {
+  if (options.inspectOnly === true || normalizedKey === BOOK_STORAGE_KEY) {
+    return { ok: true, action: 'inspect_only', reason: 'repository_owned_exclusion', ...baseReport }
+  }
+
+  if (plan.type === 'conflict') {
+    setPersistedHeadState(fullKey, { blocked: true, reason: plan.reason })
+    return { ok: false, action: 'skipped', reason: plan.reason, ...baseReport }
+  }
+
+  if (plan.type === 'none') {
+    const empty = !initial.local.present && !initial.indexeddb.present
+    setPersistedHeadState(fullKey, {
+      blocked: !empty,
+      reason: plan.reason,
+      serveLayer: 'none',
+      generation: null,
+      forceFork: true,
+      localAvailable: initial.local.available,
+      localRaw: initial.local.rawPayload,
+      mirrorAvailable: initial.indexeddb.available,
+      mirrorRaw: initial.indexeddb.rawPayload,
+    })
     return {
-      ok: false,
-      action: 'skipped',
-      reason: 'invalid_key',
-      ...inspection,
+      ok: empty,
+      action: empty
+        ? initial.local.available &&
+          (!initial.indexeddb.applicable || initial.indexeddb.available)
+          ? 'noop'
+          : 'degraded'
+        : 'skipped',
+      reason: empty ? 'empty' : plan.reason,
+      ...baseReport,
     }
   }
 
-  const fullKey = inspection.fullKey
-  const localRaw = readPersistedRawFromLocal(fullKey)
-  const indexedRaw = inspection.mirrorApplicable ? await readFromIndexedDb(fullKey) : null
-  const localInspect = inspectRawPayload(localRaw, options, true)
-  const indexedInspect = inspectRawPayload(indexedRaw, options, true)
-  const sourceLayer = selectReconcileSource(localInspect, indexedInspect, strategy)
+  let desiredRaw = plan.rawPayload
+  if (plan.type === 'adopt') {
+    const source = initial.local.valid ? initial.local : initial.indexeddb
+    const version = options.version ?? (source.envelopeVersion || 1)
+    const adopted = serializePersistedState(source.decodedData, version, {
+      lineage: createLineageId(),
+      sequence: 1,
+    })
+    if (!adopted.ok) return { ...adopted, action: 'skipped', reason: adopted.error, ...baseReport }
+    desiredRaw = adopted.rawPayload
+  }
 
-  if (sourceLayer === 'none') {
-    if (!allowClearOnInvalid) {
-      return {
+  const writes = []
+  if (initial.local.available && initial.local.rawPayload !== desiredRaw) writes.push('local')
+  if (initial.indexeddb.available && initial.indexeddb.rawPayload !== desiredRaw) {
+    writes.push('indexeddb')
+  }
+
+  if (writes.length > 0) {
+    const currentPair = await readLayerPair(fullKey)
+    if (!pairHeadsEqual(initialPair, currentPair)) {
+      setPersistedHeadState(fullKey, { blocked: true, reason: 'source_changed' })
+      return { ok: false, action: 'skipped', reason: 'source_changed', ...baseReport }
+    }
+  }
+
+  const writeResults = {}
+  if (writes.includes('local')) {
+    writeResults.local = writePersistedRawToLocal(fullKey, desiredRaw)
+  }
+  if (writes.includes('indexeddb')) {
+    writeResults.indexeddb = await writeToIndexedDbWithResult(fullKey, desiredRaw, {
+      version: options.version,
+      allowReconciliation: true,
+    })
+  }
+
+  const finalPair = writes.length > 0 ? await readLayerPair(fullKey) : initialPair
+  const final = inspectLayerPair(finalPair, options)
+  const localWriteOk = !writes.includes('local') || writeResults.local === true
+  const mirrorWriteOk = !writes.includes('indexeddb') || writeResults.indexeddb?.ok === true
+  const localVerified = !writes.includes('local') || finalPair.local.rawPayload === desiredRaw
+  const mirrorVerified =
+    !writes.includes('indexeddb') || finalPair.indexeddb.rawPayload === desiredRaw
+  const writesOk = localWriteOk && mirrorWriteOk && localVerified && mirrorVerified
+  const fullyReconciled =
+    finalPair.local.available &&
+    finalPair.local.rawPayload === desiredRaw &&
+    (!finalPair.indexeddb.applicable ||
+      (finalPair.indexeddb.available && finalPair.indexeddb.rawPayload === desiredRaw))
+  const desiredInspect = inspectRawPayload(desiredRaw, {
+    ...options,
+    available: true,
+    present: true,
+  })
+  const serveLayer =
+    finalPair.local.rawPayload === desiredRaw
+      ? 'local'
+      : finalPair.indexeddb.rawPayload === desiredRaw
+        ? 'indexeddb'
+        : plan.winner
+  setPersistedHeadState(fullKey, {
+    blocked: false,
+    reason: writesOk ? '' : 'write_failed',
+    serveLayer,
+    generation: desiredInspect.generation,
+    forceFork: !fullyReconciled || desiredInspect.order !== 'ordered',
+    localAvailable: finalPair.local.available,
+    localRaw: finalPair.local.rawPayload,
+    mirrorAvailable: finalPair.indexeddb.available,
+    mirrorApplicable: finalPair.indexeddb.applicable,
+    mirrorRaw: finalPair.indexeddb.rawPayload,
+  })
+
+  const degraded =
+    !finalPair.local.available ||
+    (finalPair.indexeddb.applicable && !finalPair.indexeddb.available)
+  return {
+    ...baseReport,
+    ok: writesOk,
+    action: writesOk
+      ? writes.length === 0
+        ? degraded
+          ? 'degraded'
+          : 'noop'
+        : plan.type === 'adopt'
+          ? 'adopted'
+          : degraded
+            ? 'degraded'
+            : 'repaired'
+      : 'partial',
+    reason: writesOk ? (fullyReconciled ? plan.reason : 'degraded') : 'write_failed',
+    winner: plan.winner,
+    winnerRaw: desiredRaw,
+    fullyReconciled,
+    writeResults,
+    before: baseReport,
+    local: final.local,
+    indexeddb: final.indexeddb,
+  }
+}
+
+export const preparePersistedStateLayers = async (targets = []) => {
+  const results = []
+  for (const target of Array.isArray(targets) ? targets : []) {
+    const inspectOnly = target?.inspectOnly === true || target?.key === BOOK_STORAGE_KEY
+    try {
+      results.push(
+        await reconcilePersistedStateLayers(target?.key, {
+          version: target?.version,
+          inspectOnly,
+        }),
+      )
+    } catch (error) {
+      results.push({
         ok: false,
         action: 'skipped',
-        reason: 'no_valid_source',
-        ...inspection,
-      }
-    }
-
-    const localCleared = clearPersistedRawFromLocal(fullKey)
-    const indexeddbCleared = inspection.mirrorApplicable ? await deleteFromIndexedDb(fullKey) : true
-    return {
-      ok: localCleared && indexeddbCleared,
-      action: 'cleared',
-      reason: 'cleared_invalid_layers',
-      sourceLayer: 'none',
-      ...inspection,
+        reason: 'prepare_failed',
+        key: target?.key,
+        error: error?.name || 'Error',
+      })
     }
   }
-
-  const sourceRaw =
-    sourceLayer === 'indexeddb' ? indexedInspect.rawPayload : localInspect.rawPayload
-  if (typeof sourceRaw !== 'string') {
-    return {
-      ok: false,
-      action: 'skipped',
-      reason: 'source_payload_missing',
-      sourceLayer,
-      ...inspection,
-    }
-  }
-
-  const alreadySynced = inspection.mirrorInSync && localRaw === sourceRaw
-  if (alreadySynced) {
-    return {
-      ok: true,
-      action: 'noop',
-      reason: 'already_synced',
-      sourceLayer,
-      ...inspection,
-    }
-  }
-
-  const localWriteOk = writePersistedRawToLocal(fullKey, sourceRaw)
-  const indexeddbWriteOk = inspection.mirrorApplicable ? await writeToIndexedDb(fullKey, sourceRaw) : true
-
   return {
-    ok: localWriteOk && indexeddbWriteOk,
-    action: localWriteOk && indexeddbWriteOk ? 'repaired' : 'partial',
-    reason: localWriteOk && indexeddbWriteOk ? 'reconciled' : 'write_failed',
-    sourceLayer,
-    ...inspection,
+    ok: results.every((result) => result.ok),
+    total: results.length,
+    mutable: results.filter((result) => result.reason !== 'repository_owned_exclusion').length,
+    inspectOnly: results.filter((result) => result.reason === 'repository_owned_exclusion').length,
+    results,
   }
 }
 
@@ -646,4 +1182,5 @@ export const getPersistenceCapabilities = () => ({
   indexedDbMirrorFlushScheduled: Boolean(indexedDbFlushTimerId),
   indexedDbDatabaseName: INDEXED_DB_NAME,
   indexedDbStoreName: INDEXED_DB_STORE,
+  indexedDbOpenTimeoutMs: INDEXED_DB_OPEN_TIMEOUT_MS,
 })

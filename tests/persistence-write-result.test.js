@@ -25,6 +25,16 @@ const installIndexedDbWriteMock = () => {
         onabort: null,
         objectStore() {
           return {
+            get(key) {
+              const request = { result: undefined, error: null, onsuccess: null, onerror: null }
+              setTimeout(() => {
+                if (payloadByKey.has(key)) {
+                  request.result = { key, payload: payloadByKey.get(key), updatedAt: Date.now() }
+                }
+                request.onsuccess?.()
+              }, 0)
+              return request
+            },
             put(record) {
               const request = { error: null }
               setTimeout(() => {
@@ -264,5 +274,181 @@ describe('persistence write results', () => {
     })
     expect(indexedDb.payloadByKey.get('schatphone:store:chat')).toBe(previousMirrorRaw)
     expect(localStorage.getItem('schatphone:store:chat')).not.toBe(previousMirrorRaw)
+  })
+
+  test('blocks mirror regression before either async carrier is attempted', async () => {
+    const indexedDb = installIndexedDbWriteMock()
+    const localRaw = JSON.stringify({
+      version: 2,
+      savedAt: 999,
+      generation: { lineage: 'shared', sequence: 2 },
+      data: { marker: 'local' },
+    })
+    const mirrorRaw = JSON.stringify({
+      version: 2,
+      savedAt: 1,
+      generation: { lineage: 'shared', sequence: 5 },
+      data: { marker: 'mirror-newer' },
+    })
+    localStorage.setItem('schatphone:store:chat', localRaw)
+    indexedDb.payloadByKey.set('schatphone:store:chat', mirrorRaw)
+    const { writePersistedStateAsync } = await import('../src/lib/persistence')
+
+    const result = await writePersistedStateAsync('store:chat', { marker: 'rejected' }, { version: 2 })
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'reconciliation_required',
+      carrier: 'reconciliation',
+      retryable: true,
+      attempted: false,
+      local: {
+        ok: false,
+        error: 'reconciliation_required',
+        carrier: 'localStorage',
+        retryable: true,
+        attempted: false,
+      },
+      mirror: {
+        ok: false,
+        error: 'reconciliation_required',
+        carrier: 'indexeddb',
+        retryable: true,
+        attempted: false,
+      },
+    })
+    expect(localStorage.getItem('schatphone:store:chat')).toBe(localRaw)
+    expect(indexedDb.payloadByKey.get('schatphone:store:chat')).toBe(mirrorRaw)
+  })
+
+  test('blocks writes after reconciliation conflict with the frozen result shape', async () => {
+    const indexedDb = installIndexedDbWriteMock()
+    const localRaw = JSON.stringify({
+      version: 1,
+      savedAt: 1,
+      generation: { lineage: 'same', sequence: 2 },
+      data: { marker: 'local' },
+    })
+    const mirrorRaw = JSON.stringify({
+      version: 1,
+      savedAt: 2,
+      generation: { lineage: 'same', sequence: 2 },
+      data: { marker: 'mirror' },
+    })
+    localStorage.setItem('schatphone:store:system', localRaw)
+    indexedDb.payloadByKey.set('schatphone:store:system', mirrorRaw)
+    const { reconcilePersistedStateLayers, writePersistedState, writePersistedStateAsync } =
+      await import('../src/lib/persistence')
+    await reconcilePersistedStateLayers('store:system', { version: 1 })
+
+    expect(writePersistedState('store:system', { marker: 'blocked' })).toEqual({
+      ok: false,
+      error: 'reconciliation_required',
+      carrier: 'reconciliation',
+      retryable: true,
+      attempted: false,
+    })
+    expect(await writePersistedStateAsync('store:system', { marker: 'blocked' })).toMatchObject({
+      ok: false,
+      error: 'reconciliation_required',
+      carrier: 'reconciliation',
+      attempted: false,
+      local: { attempted: false },
+      mirror: { attempted: false },
+    })
+  })
+
+  test('blocks later writes after a deferred mirror flush detects a semantic race', async () => {
+    const indexedDb = installIndexedDbWriteMock()
+    const initialRaw = JSON.stringify({
+      version: 1,
+      savedAt: 1,
+      generation: { lineage: 'shared', sequence: 1 },
+      data: { marker: 'initial' },
+    })
+    localStorage.setItem('schatphone:store:system', initialRaw)
+    indexedDb.payloadByKey.set('schatphone:store:system', initialRaw)
+    const {
+      reconcilePersistedStateLayers,
+      writePersistedState,
+      writePersistedStateAsync,
+    } = await import('../src/lib/persistence')
+    await reconcilePersistedStateLayers('store:system', { version: 1 })
+
+    expect(writePersistedState('store:system', { marker: 'local-commit' })).toMatchObject({
+      ok: true,
+      carrier: 'localStorage',
+    })
+    const localCommit = localStorage.getItem('schatphone:store:system')
+    const localGeneration = JSON.parse(localCommit).generation
+    const conflictingMirror = JSON.stringify({
+      version: 1,
+      savedAt: 999,
+      generation: localGeneration,
+      data: { marker: 'racing-mirror' },
+    })
+    indexedDb.payloadByKey.set('schatphone:store:system', conflictingMirror)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(writePersistedState('store:system', { marker: 'blocked-sync' })).toEqual({
+      ok: false,
+      error: 'reconciliation_required',
+      carrier: 'reconciliation',
+      retryable: true,
+      attempted: false,
+    })
+    expect(await writePersistedStateAsync('store:system', { marker: 'blocked-async' })).toMatchObject({
+      ok: false,
+      error: 'reconciliation_required',
+      carrier: 'reconciliation',
+      retryable: true,
+      attempted: false,
+      local: { attempted: false },
+      mirror: { attempted: false },
+    })
+    expect(localStorage.getItem('schatphone:store:system')).toBe(localCommit)
+    expect(indexedDb.payloadByKey.get('schatphone:store:system')).toBe(conflictingMirror)
+  })
+
+  test('reports generation_exhausted without replacing the current bytes', async () => {
+    const raw = JSON.stringify({
+      version: 1,
+      savedAt: 1,
+      generation: { lineage: 'exhausted', sequence: Number.MAX_SAFE_INTEGER },
+      data: { marker: 'confirmed' },
+    })
+    localStorage.setItem('schatphone:store:system', raw)
+    const { writePersistedState, writePersistedStateAsync } =
+      await import('../src/lib/persistence')
+
+    expect(writePersistedState('store:system', { marker: 'rejected' })).toEqual({
+      ok: false,
+      error: 'generation_exhausted',
+      carrier: 'generation',
+      retryable: false,
+      attempted: false,
+    })
+    expect(await writePersistedStateAsync('store:system', { marker: 'also-rejected' })).toEqual({
+      ok: false,
+      error: 'generation_exhausted',
+      carrier: 'generation',
+      retryable: false,
+      attempted: false,
+      local: {
+        ok: false,
+        error: 'generation_exhausted',
+        carrier: 'localStorage',
+        retryable: false,
+        attempted: false,
+      },
+      mirror: {
+        ok: false,
+        error: 'generation_exhausted',
+        carrier: 'indexeddb',
+        retryable: false,
+        attempted: false,
+      },
+    })
+    expect(localStorage.getItem('schatphone:store:system')).toBe(raw)
   })
 })

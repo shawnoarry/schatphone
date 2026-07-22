@@ -339,8 +339,10 @@ Delivery stages:
    - preserve the originating thread and typed content, keep provider configuration owned by Network, and return to the same Chat after save plus successful connection test;
    - prove one manual AI reply across desktop and simulated mobile without adding a broad onboarding wizard, duplicated provider form, automatic automation, or mandatory world setup.
    - focused Playwright now proves the complete fresh-storage journey in desktop and simulated Pixel 5 Chromium, including bounded return context, preserved draft/thread, fake-provider smoke plus first reply, no page errors or horizontal overflow, no critical axe violations, and no rendered fake credential; true-device and hosted-provider proof remain in stage 4.
-2. `P0 Current-save safety and complete local recovery` - `TODO`, parallel architecture lane
-   - return structured persistence write results, surface quota/carrier failure, and reconcile the newest valid local/mirror envelope;
+2. `P0 Current-save safety and complete local recovery` - `IN_PROGRESS`, parallel architecture lane
+   - `DONE 2026-07-22`: return structured persistence write results without breaking existing callers; local primary and mirror outcomes are independently observable;
+   - `DONE 2026-07-22`: reconcile local/mirror freshness by lineage and sequence before Store mount, with bounded unavailable-IndexedDB startup, conflict zero-write behavior, verified repair, and the repository-owned legacy Book carrier explicitly inspect-only;
+   - still TODO: surface quota/carrier failure at product level and connect unresolved reconciliation to user-visible recovery actions;
    - extend the accepted same-container read-only timeout behavior beyond Book without introducing force takeover or last-write-wins;
    - close complete-package coverage, including required Chat identity/avatar state and default-on retained Gallery material, then prove integrity, staged activation, rollback, and reopen;
    - personal R2/Worker transport remains post-release because it cannot repair an unsafe or incomplete local recovery point.

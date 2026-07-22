@@ -70,6 +70,7 @@ The application uses Vue Router hash history and Vite base `/schatphone/`, so st
 Owns:
 
 - Vue/Pinia/router bootstrap;
+- bounded local/mirror preparation before Pinia Store creation and application mount;
 - CSS and deferred icon loading;
 - mobile viewport/gesture guards;
 - deferred push service-worker registration.
@@ -215,8 +216,14 @@ Global Appearance packs export only global portable fields. They exclude:
 
 1. namespaced `localStorage` as the synchronous primary layer;
 2. IndexedDB as an asynchronous serialized mirror by default;
-3. versioned envelopes with `version`, `savedAt`, and `data`;
-4. inspection/reconciliation that selects the newest valid layer and repairs drift.
+3. versioned envelopes with `version`, `savedAt`, `data`, and optional ordered `generation` metadata;
+4. generation-based inspection/reconciliation before Store hydration, with `savedAt` and IndexedDB timestamps retained only for diagnostics.
+
+Ordered envelopes use a stable non-empty lineage plus a positive safe-integer sequence. Same-lineage heads compare sequence without consulting clocks; same-generation byte differences and different-lineage data differences block reconciliation with zero writes. Malformed generation metadata is rejected as ordering evidence while a decodable owner payload remains an unordered recovery candidate. Equal canonical owner data may adopt or converge onto a fresh lineage, while divergent unordered legacy data remains `legacy_freshness_unknown`. Repair re-reads both heads before writing, verifies repaired bytes afterward, and keeps the selected readable winner when a repair is partial or fails; synchronous hydration returns no stale local value when that operational winner is the asynchronous mirror.
+
+A disabled mirror is `not_applicable` and does not cause degraded/fork behavior. When the mirror feature is enabled, a missing, inaccessible, blocked, or failed IndexedDB carrier is applicable but `unavailable`: bounded degraded local service is allowed, the state is not fully reconciled, asynchronous writes report the failed mirror separately, and the next local write forks a fresh lineage. `fullyReconciled` requires empty applicable layers or a valid equivalent operational candidate; byte-identical corrupt heads are not sufficient. Deferred mirror precondition conflicts block later writes until reconciliation rather than being reduced to carrier warnings.
+
+`src/main.js` prepares the independent 16-store audit inventory before any Pinia Store is instantiated or mounted. The legacy `store:book` carrier is explicitly repository-owned inspect-only, so its local and mirror bytes are never re-encoded or repaired; only the other 15 layered legacy owners are mutable in this bootstrap pass.
 
 Each store supplies its own normalization, hydration, migration, and snapshot logic. This keeps legacy data handling close to the domain owner.
 
@@ -247,6 +254,7 @@ Confirmed target direction and current non-active foundation:
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
 - Batch 2B completed as the non-active foundation, followed by a separately approved Book-only runtime cutover on 2026-07-22. Book now activates verified generations through the fenced pointer/journal flow, preserves the byte-identical legacy carrier for rollback, and performs no dual write; Gallery/R2 and every other owner migration remain unapproved.
+- the current layered-persistence foundation reports local and mirror write outcomes separately, blocks writes after unresolved reconciliation/precondition conflicts, rejects mirror generation regression, and preserves the last readable durable bytes; product-level save-failed UI, broader same-container read-only enforcement, and complete staged recovery remain separate work.
 
 ### Gallery Binaries
 
@@ -375,9 +383,9 @@ Its boundary is important:
 ### Local Baseline
 
 - ESLint;
-- 185 Vitest files / 1170 tests;
+- 187 Vitest files / 1217 tests;
 - Vite production build;
-- 60 collected Playwright cases across desktop/mobile projects: 56 pass and 4 existing project-specific cases remain intentionally skipped;
+- the prior full Playwright baseline collected 60 desktop/mobile cases: 56 passed and 4 project-specific cases were intentionally skipped; this foundation adds 4 focused Chromium reconciliation cases, all passing, without requiring a full E2E rerun;
 - production and full npm audits both report 0 after a normal-resolver compatible transitive lock refresh with no direct, override/resolution, or major changes.
 
 ### CI

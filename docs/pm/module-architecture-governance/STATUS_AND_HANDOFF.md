@@ -342,7 +342,7 @@ The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
 ### P0: Current Save Safety And Complete Local Recovery
 
-Status: `TODO`; this replaces R2 onboarding as the immediate architecture implementation priority.
+Status: `IN_PROGRESS`; write-result and local/mirror freshness foundations are implemented, while product-level failure recovery, broader same-container read-only enforcement, and complete local recovery remain open.
 
 First coherent slice:
 
@@ -353,6 +353,8 @@ First coherent slice:
 - add failure-injection unit coverage and focused two-page Chromium coverage without beginning R2, Gallery schema, dual write, or a non-Book Repository migration.
 
 `READY_FOR_INTEGRATION_REVIEW 2026-07-22`: the approved write-result primitive now returns stable structured results from the existing synchronous and asynchronous persistence entrypoints. Serialization, quota, security, unavailable-carrier, and IndexedDB mirror failures are classified; failed writes retain the last confirmed bytes; asynchronous results expose local primary and mirror outcomes separately. Focused failure-injection coverage and the full lint/unit/build baseline pass. Existing Store callers may continue ignoring the return value. Store/UI adoption, read-path reconciliation, broader WriteCoordinator coverage, complete recovery, and local/mirror authority decisions remain separate slices.
+
+`DONE 2026-07-22`: the approved local/mirror freshness foundation adds optional lineage/sequence envelope metadata, applies clock-independent frozen winner/conflict rules, re-reads heads before repair, verifies repaired bytes, rejects mirror regression and sequence overflow, and blocks later writes when reconciliation is unresolved, including a semantic conflict detected by deferred mirror flush. Inspection separates payload validity from ordering validity and carrier applicability from availability: malformed generation remains readable-unordered, a disabled mirror is not applicable, and an enabled but unavailable mirror degrades/forks and reports async failure. Partial local-repair failure keeps the proven mirror winner available through Store fallback, while unresolved conflicts return null and remain write-blocked; sync and async generation exhaustion retain the non-retryable generation result. `main.js` performs a bounded preparation before Pinia Store creation/mount from the independent 16-target inventory; `store:book` is repository-owned inspect-only and remains byte-identical, while the other 15 layered legacy owners may reconcile. Focused Vitest and real-Chromium coverage prove reversed-clock mirror recovery, stable reopen, corrupt/absent/unavailable handling, zero-write conflicts and legacy ambiguity, source-change/partial-repair behavior, bootstrap ordering, and blocked-IndexedDB timeout. This foundation adds no Store/UI/WriteCoordinator/backup/Repository migration, and does not complete product-level current-save safety.
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
