@@ -1346,7 +1346,10 @@ onBeforeUnmount(() => {
               aria-label="Home"
               @click="goHome"
             >
-              <h1 class="truncate text-[1.72rem] font-black leading-none text-gray-950" data-testid="food-delivery-hero-title">
+              <h1
+                class="max-w-full break-words text-[1.72rem] font-black leading-tight text-gray-950 [overflow-wrap:anywhere]"
+                data-testid="food-delivery-hero-title"
+              >
                 {{ foodDeliveryTitle }}
               </h1>
             </button>

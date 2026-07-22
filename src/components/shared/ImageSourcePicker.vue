@@ -120,6 +120,7 @@ const updateGalleryAssetId = (value) => {
       :value="sourceType"
       :class="inputClass"
       :data-testid="`${testIdPrefix}-image-source`"
+      :aria-label="t('图片来源', 'Image source')"
       @change="updateSourceType"
     >
       <option
@@ -143,6 +144,7 @@ const updateGalleryAssetId = (value) => {
       :value="galleryAssetId"
       :class="inputClass"
       :data-testid="`${testIdPrefix}-gallery-asset`"
+      :aria-label="t('Gallery 素材', 'Gallery asset')"
       @change="updateGalleryAssetId($event.target.value)"
     >
       <option value="">{{ t(galleryPlaceholderZh, galleryPlaceholderEn) }}</option>

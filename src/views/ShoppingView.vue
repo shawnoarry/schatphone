@@ -1173,6 +1173,7 @@ onBeforeUnmount(() => {
           <select
             v-model="productDraft.category"
             data-testid="shopping-custom-category"
+            :aria-label="t('商品分类', 'Product category')"
             class="rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none"
           >
             <option v-for="category in productCategoryCards" :key="category.key" :value="category.key">
@@ -1195,6 +1196,7 @@ onBeforeUnmount(() => {
           <select
             v-model="productDraft.serviceKey"
             data-testid="shopping-custom-service"
+            :aria-label="t('服务预设', 'Service preset')"
             class="col-span-2 rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2 text-xs outline-none"
           >
             <option value="">{{ t('Auto service preset', 'Auto service preset') }}</option>

@@ -1114,17 +1114,19 @@ onBeforeUnmount(() => {
           type="button"
           class="map-layer-button"
           data-testid="map-open-layers"
+          :aria-label="t('地图图层', 'Map layers')"
           @click="openMapDrawer('visual')"
         >
-          <i class="fas fa-layer-group"></i>
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
         </button>
         <button
           type="button"
           class="map-current-location-button"
           data-testid="map-open-places"
+          :aria-label="t('地点列表', 'Places')"
           @click="openMapDrawer('places')"
         >
-          <i class="fas fa-location-arrow"></i>
+          <i class="fas fa-location-arrow" aria-hidden="true"></i>
         </button>
 
         <div
