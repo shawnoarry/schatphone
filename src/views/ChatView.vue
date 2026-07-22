@@ -38,7 +38,12 @@ import {
 } from '../lib/media-policy'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { resolveWorldContextForConsumer } from '../lib/world-interface'
-import { pushReturnTarget } from '../lib/navigation-return'
+import {
+  buildChatReturnSourceQuery,
+  buildReturnSourceQuery,
+  pushReturnTarget,
+} from '../lib/navigation-return'
+import { buildNetworkSetupState } from '../lib/network-guidance'
 import {
   SHAREABLE_OBJECT_TYPES,
   createProductLinkShareObject,
@@ -381,6 +386,30 @@ const messageInputPlaceholder = computed(() => {
 const triggerReplyButtonLabel = computed(() =>
   isActiveServiceChat.value ? t('服务号回复', 'Service Reply') : t('触发回复', 'Trigger Reply'),
 )
+
+const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
+const showAiNetworkReadiness = computed(() =>
+  Boolean(activeChat.value && !networkSetupState.value.readyToTest),
+)
+const aiNetworkReadinessDetail = computed(() => {
+  const nextStep = networkSetupState.value.nextStep
+  if (nextStep === 'url') {
+    return t(
+      '请先在 Network & API 中填写接口地址。当前草稿会留在这个会话中。',
+      'Add an endpoint in Network & API first. Your current draft stays in this conversation.',
+    )
+  }
+  if (nextStep === 'key') {
+    return t(
+      '当前接口需要 API Key。请在 Network & API 中完成配置；当前草稿会保留。',
+      'This endpoint needs an API key. Finish setup in Network & API; your current draft is preserved.',
+    )
+  }
+  return t(
+    '请在 Network & API 中选择或填写模型。当前草稿会留在这个会话中。',
+    'Choose or enter a model in Network & API. Your current draft stays in this conversation.',
+  )
+})
 
 const createEmptyProfileAssetPack = () => ({
   wallpaperAssetIds: [],
@@ -986,6 +1015,18 @@ const buildActiveServiceDirectoryQuery = (extra = {}) => {
 }
 
 const goHome = () => pushReturnTarget(router, route, '/home')
+
+const openNetworkSetup = () => {
+  const chatId = activeChat.value?.id
+  if (!chatId) return
+
+  chatStore.setConversationDraft(chatId, inputMessage.value)
+  router.push({
+    path: '/network',
+    query: buildChatReturnSourceQuery(route, chatId),
+  })
+}
+
 const leaveChat = () => {
   closeMessageEditModal()
   if (isActiveServiceChat.value && route.query.chatReturn === 'services') {
@@ -1023,7 +1064,11 @@ const contactById = (contactId) =>
 
 const enterChat = (contact) => {
   chatStore.ensureConversationForContact(contact.id)
-  router.push(`/chat/${contact.id}`)
+  const fromHome = route.query.from === 'home'
+  router.push({
+    path: `/chat/${contact.id}`,
+    ...(fromHome ? { query: buildReturnSourceQuery('home', route) } : {}),
+  })
 }
 
 const applyThreadSettingsDraft = () => {
@@ -3856,6 +3901,7 @@ onBeforeUnmount(() => {
           @click="toggleThreadMenu"
           class="chat-ink px-2 w-16 text-right"
           data-testid="chat-thread-menu-toggle"
+          :aria-label="t('会话菜单', 'Conversation menu')"
         ><i class="fas fa-bars"></i></button>
       </div>
 
@@ -4508,6 +4554,39 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
+          <section
+            v-if="showAiNetworkReadiness"
+            class="flex items-start gap-3 rounded-2xl border px-3 py-2.5 text-[11px]"
+            style="border-color: var(--chat-suggest-border); background: var(--chat-input-field-bg); color: var(--chat-ink)"
+            data-testid="chat-network-readiness"
+            aria-labelledby="chat-network-readiness-title"
+          >
+            <span
+              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+              style="background: var(--chat-send-bg); color: var(--chat-send-text)"
+              aria-hidden="true"
+            >
+              <i class="fas fa-plug text-xs"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p id="chat-network-readiness-title" class="font-semibold">
+                {{ t('AI 回复需要完成 Network & API', 'AI replies need Network & API') }}
+              </p>
+              <p class="mt-0.5 break-words leading-4 opacity-75">
+                {{ aiNetworkReadinessDetail }}
+              </p>
+              <button
+                type="button"
+                class="mt-2 min-h-11 w-full rounded-xl border px-3 py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
+                style="border-color: var(--chat-suggest-border); background: var(--chat-input-bg); color: var(--chat-ink)"
+                data-testid="chat-open-network-setup"
+                @click="openNetworkSetup"
+              >
+                {{ t('配置 Network & API', 'Configure Network & API') }}
+              </button>
+            </div>
+          </section>
+
           <div
             v-if="aiErrorMessage"
             class="flex items-center justify-between gap-2 rounded-2xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700"
@@ -4583,6 +4662,7 @@ onBeforeUnmount(() => {
             <button
               data-testid="chat-user-action-toggle"
               @click="toggleUserActionPanel"
+              :aria-label="t('更多操作', 'More actions')"
               class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition border"
               :class="
                 !canActiveChatCommunicate
@@ -4619,6 +4699,7 @@ onBeforeUnmount(() => {
 
             <button
               @click="sendTextMessage"
+              :aria-label="t('发送消息', 'Send message')"
               class="w-8 h-8 shrink-0 chat-send rounded-full flex items-center justify-center disabled:opacity-40"
               :disabled="!canActiveChatCommunicate"
             >

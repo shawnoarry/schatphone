@@ -323,6 +323,7 @@ const metaClasses = computed(() => [
       <img
         v-if="activeContactAvatar"
         :src="activeContactAvatar"
+        :alt="senderName"
         class="w-full h-full object-cover"
         data-testid="chat-active-contact-avatar"
       />

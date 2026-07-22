@@ -32,6 +32,18 @@ export const normalizeHomePageQuery = (value) => {
   return String(page)
 }
 
+export const normalizeChatThreadIdQuery = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string' && typeof raw !== 'number') return ''
+
+  const text = String(raw).trim()
+  if (!/^\d+$/.test(text)) return ''
+
+  const threadId = Number(text)
+  if (!Number.isSafeInteger(threadId) || threadId <= 0) return ''
+  return String(threadId)
+}
+
 const buildHomeReturnTarget = (route) => {
   const homePage = normalizeHomePageQuery(route?.query?.homePage)
   if (!homePage) return HOME_RETURN_ROUTE
@@ -47,6 +59,21 @@ const buildSettingsReturnTarget = (route) => {
   return {
     path: SETTINGS_RETURN_ROUTE,
     query: { from: 'home', homePage },
+  }
+}
+
+export const resolveChatReturnTarget = (route) => {
+  const routeSource =
+    typeof route?.query?.source === 'string' ? route.query.source.trim().toLowerCase() : ''
+  if (routeSource !== 'chat') return null
+
+  const chatId = normalizeChatThreadIdQuery(route?.query?.chatId)
+  if (!chatId) return null
+
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  return {
+    path: `/chat/${chatId}`,
+    ...(homePage ? { query: { from: 'home', homePage } } : {}),
   }
 }
 
@@ -68,6 +95,20 @@ export const buildHomeSourceQuery = (pageIndex = 0, query = {}) => {
   return {
     ...query,
     from: 'home',
+    ...(homePage ? { homePage } : {}),
+  }
+}
+
+export const buildChatReturnSourceQuery = (route, chatId, query = {}) => {
+  const normalizedChatId = normalizeChatThreadIdQuery(chatId)
+  const nextQuery = { ...query }
+  if (!normalizedChatId) return nextQuery
+
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  return {
+    ...nextQuery,
+    source: 'chat',
+    chatId: normalizedChatId,
     ...(homePage ? { homePage } : {}),
   }
 }
@@ -96,6 +137,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   if (source === 'home') return buildHomeReturnTarget(route)
   const routeSource =
     typeof route?.query?.source === 'string' ? route.query.source.trim().toLowerCase() : ''
+  if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]
   return fallback
 }

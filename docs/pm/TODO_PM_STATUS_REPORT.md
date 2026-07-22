@@ -45,7 +45,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Usable, Book Repository active` | complete-backup/recovery contracts are accepted and Book is the first active Repository owner with explicit cutover, reopen verification, rollback, and unchanged legacy fallback; all other owner migrations remain unapproved |
+| Settings / Network / backup | `Activation loop usable, recovery incomplete` | Chat now reaches the existing Network flow and returns after save plus smoke success for the first manual reply; complete-backup/recovery contracts are accepted and Book is the first active Repository owner, while product-wide current-save safety and complete recovery remain open |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
@@ -159,8 +159,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### P0: Usable Product Preview
 
-1. close the first successful Chat activation loop: missing provider configuration opens the existing Network flow, preserves the originating thread and typed content, and returns after a successful connection test for the first manual AI reply;
-2. in parallel, make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
+1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
+2. make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
 3. then prove one explicit world/role -> Chat path and one ordinary Food Delivery or Shopping consequence through existing Calendar, Wallet, Chat, and relationship continuity;
 4. finish with remote CI/Pages, deployed PWA/install/relaunch, hosted-provider, backup round-trip, and named true-device evidence.
 

@@ -334,10 +334,11 @@ Product outcome:
 
 Delivery stages:
 
-1. `P0 First successful Chat activation` - `TODO`
+1. `P0 First successful Chat activation` - `DONE 2026-07-22`
    - on fresh storage, Chat turns missing provider configuration into an explicit `Network & API` recovery action rather than a dead-end error;
    - preserve the originating thread and typed content, keep provider configuration owned by Network, and return to the same Chat after save plus successful connection test;
    - prove one manual AI reply across desktop and simulated mobile without adding a broad onboarding wizard, duplicated provider form, automatic automation, or mandatory world setup.
+   - focused Playwright now proves the complete fresh-storage journey in desktop and simulated Pixel 5 Chromium, including bounded return context, preserved draft/thread, fake-provider smoke plus first reply, no page errors or horizontal overflow, no critical axe violations, and no rendered fake credential; true-device and hosted-provider proof remain in stage 4.
 2. `P0 Current-save safety and complete local recovery` - `TODO`, parallel architecture lane
    - return structured persistence write results, surface quota/carrier failure, and reconcile the newest valid local/mirror envelope;
    - extend the accepted same-container read-only timeout behavior beyond Book without introducing force takeover or last-write-wins;
@@ -401,8 +402,8 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0` 4.9 first successful Chat activation loop; this is the next user-visible implementation slice.
-2. `P0` 4.9 current-save write/conflict safety followed by complete local recovery; architecture work may proceed in parallel only as separately reviewable slices.
+1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
+2. `P0 CURRENT`: 4.9 current-save write/conflict safety followed by complete local recovery; architecture work proceeds only as separately reviewable slices.
 3. `P1` 4.9 explicit world/role -> Chat and one ordinary life-consequence vertical slice, with default Home release curation reviewed as a product choice.
 4. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
 5. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.

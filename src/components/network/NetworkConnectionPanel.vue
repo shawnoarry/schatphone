@@ -91,6 +91,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  showChatContinuation: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -100,6 +104,7 @@ const emit = defineEmits([
   'test-models',
   'run-chat-smoke-test',
   'save-settings',
+  'continue-chat',
   'update:apiUrl',
   'update:apiKey',
   'update:modelValue',
@@ -391,10 +396,22 @@ const toggleApiKeyVisibility = () => {
       class="network-result-strip network-state-good mt-3"
       data-testid="network-chat-smoke-success"
     >
-      <p class="text-xs font-semibold">{{ t('连接可用', 'Connection works') }}</p>
-      <p class="mt-1 text-[11px]">
-        {{ t('返回预览', 'Reply preview') }}: {{ smokeTestResult.preview }}
-      </p>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold">{{ t('连接可用', 'Connection works') }}</p>
+        <p class="mt-1 break-words text-[11px]">
+          {{ t('返回预览', 'Reply preview') }}: {{ smokeTestResult.preview }}
+        </p>
+      </div>
+      <button
+        v-if="showChatContinuation"
+        type="button"
+        class="network-continue-chat"
+        data-testid="network-continue-chat"
+        @click="emit('continue-chat')"
+      >
+        {{ t('继续聊天', 'Continue Chat') }}
+        <i class="fas fa-chevron-right text-[10px]" aria-hidden="true"></i>
+      </button>
     </div>
 
     <div
@@ -657,6 +674,26 @@ const toggleApiKeyVisibility = () => {
   color: var(--system-danger);
 }
 
+.network-continue-chat {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.network-continue-chat:focus-visible {
+  outline: 2px solid var(--system-accent);
+  outline-offset: 2px;
+}
+
 .network-secondary-danger:disabled {
   color: var(--system-text-soft);
   background: var(--system-surface-muted);
@@ -673,6 +710,14 @@ const toggleApiKeyVisibility = () => {
   .network-action-row {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .network-result-strip {
+    flex-direction: column;
+  }
+
+  .network-continue-chat {
+    width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -680,7 +725,8 @@ const toggleApiKeyVisibility = () => {
   .network-test-button,
   .network-save-button,
   .network-secondary-button,
-  .network-secondary-danger {
+  .network-secondary-danger,
+  .network-continue-chat {
     transition: none;
   }
 }

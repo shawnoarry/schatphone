@@ -100,6 +100,7 @@ What is already landed:
 84. Roadmap 4.8 now has an architecture-accepted shared Mini Scene UI direction. Settings will eventually expose explicit registered-module off/text/interactive choices and world-profile binding; Book will edit separate structured transform profiles; Text and sandboxed HTML Presenter Adapters will share accessible modal/fallback behavior. The current K-pop prose rule remains content only, and no Settings/popup/editor/presenter implementation is landed.
 85. Book and WorldBook now complete the first unified world-setting-workflow slice. WorldBook exposes stable world identity, active text, the full Book catalog count, review issues, and parallel optional setting layers, then hands writing/import work to Book with an explicit return path. Book exports each manuscript as strict versioned/lossless `.worldbook.json`, editable/re-importable `.md`, or portable body-only `.txt`; export never changes WorldBook activation.
 86. The existing World Pack closed loop now has focused Playwright evidence across desktop and simulated-phone Chromium. `e2e/world-pack-loop-validation.spec.js` starts with zero enabled Packs and zero selected Book/encyclopedia content, explicitly activates a reviewed capability Pack in WorldBook, verifies App Store World entries, places four existing target archetypes through Home, refreshes persisted placement, launches and returns from Shopping, Food Delivery, Calendar, and Map, then disables the Pack and verifies safe fallback. The same journey covers long Chinese/English labels, horizontal overflow, page errors, and critical axe failures; the evidence produced focused Shopping/ImageSourcePicker/Map accessible-name fixes and Food Delivery long-title wrapping. No real phone or remote-debug device was available, so true-device acceptance remains incomplete.
+87. Roadmap 4.9's first successful Chat activation loop is complete at automated desktop and simulated-phone acceptance. Chat now turns incomplete provider setup into an explicit Network & API action while preserving the originating thread and draft; Network offers Continue Chat only after the current settings are saved and the same configuration passes its smoke test. Focused Playwright proves the first manual reply, bounded return context, responsive overflow, page-error, critical accessibility, and fake-credential visibility guards. Hosted-provider and true-device proof remain separate release gates.
 
 ### 2026-07-16 Visual Portfolio Audit
 
@@ -141,15 +142,12 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The 2026-07-22 product-finish review promotes roadmap 4.9 and makes the first successful Chat activation loop the next visual/IA slice. This is a product-journey correction, not a broad visual pass.
+The first successful Chat activation loop is complete. No additional visual slice is active while roadmap 4.9 current-save safety and complete local recovery are the P0 execution lane.
 
-1. on fresh storage, turn Chat's missing provider state into a clear `Network & API` action rather than `NO_API_KEY` plus Retry only;
-2. preserve the originating thread and typed content, keep endpoint/key/model setup inside Network, and offer an explicit return to the same Chat after save plus successful smoke test;
-3. prove the first manual AI reply with a focused desktop and simulated-mobile browser journey, including error, overflow, accessibility, and sensitive-artifact guards;
-4. do not introduce a global onboarding wizard, duplicate provider fields in Chat, require world/role personalization, or automatically enable AI automation;
-5. after activation, prove one explicit world/role -> Chat journey and one daily-life cross-module consequence before returning to Gallery, Calendar, Shopping, or wide-shell polish;
-6. fold World Pack true-device coverage into the named release matrix rather than treating another archetype as progress;
-7. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 P0 gates are complete.
+1. after the persistence P0 gates, prove one explicit world/role -> Chat journey and one ordinary daily-life consequence before returning to page-local polish;
+2. curate the default Home release surface only through a focused product decision so partial utilities do not appear equally mature;
+3. fold World Pack and Chat true-device coverage into the named release matrix rather than treating another archetype as progress;
+4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 P0 gates are complete.
 
 ## 3. Do Not Do
 

@@ -48,6 +48,8 @@ const createTestRouter = () =>
       { path: '/network', component: NetworkView },
       { path: '/home', component: DummyView },
       { path: '/settings', component: DummyView },
+      { path: '/chat', component: DummyView },
+      { path: '/chat/:id', component: DummyView },
     ],
   })
 
@@ -57,9 +59,9 @@ const flushUi = async () => {
   await flushPromises()
 }
 
-const mountNetworkView = async () => {
+const mountNetworkView = async (initialRoute = '/network') => {
   const router = createTestRouter()
-  await router.push('/network')
+  await router.push(initialRoute)
   await router.isReady()
 
   const wrapper = mount(NetworkView, {
@@ -353,6 +355,58 @@ describe('NetworkView Chat smoke controls', () => {
       code: 'CHAT_SMOKE_OK',
       model: 'gpt-4o-mini',
     })
+
+    wrapper.unmount()
+  })
+
+  test('returns to the validated Chat thread only after save and smoke success', async () => {
+    const store = useSystemStore()
+    configureReadyApi(store)
+    aiMockState.nextResult = 'OK from mocked provider'
+
+    const { wrapper, router } = await mountNetworkView(
+      '/network?source=chat&chatId=1&homePage=2',
+    )
+
+    expect(wrapper.get('.network-nav-button').text()).toMatch(/Chat|聊天/)
+    expect(wrapper.find('[data-testid="network-continue-chat"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="network-save-settings"]').trigger('click')
+    await flushUi()
+    expect(wrapper.find('[data-testid="network-continue-chat"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="network-chat-smoke-run"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="network-continue-chat"]').text()).toMatch(
+      /Continue Chat|继续聊天/,
+    )
+
+    await wrapper.get('[data-testid="network-continue-chat"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/chat/1')
+    expect(router.currentRoute.value.query).toEqual({ from: 'home', homePage: '2' })
+
+    wrapper.unmount()
+  })
+
+  test('does not expose a Chat continuation for an invalid return context', async () => {
+    const store = useSystemStore()
+    configureReadyApi(store)
+
+    const { wrapper, router } = await mountNetworkView(
+      '/network?source=chat&chatId=https%3A%2F%2Fexample.test%2Fsteal',
+    )
+
+    await wrapper.get('[data-testid="network-save-settings"]').trigger('click')
+    await wrapper.get('[data-testid="network-chat-smoke-run"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.find('[data-testid="network-continue-chat"]').exists()).toBe(false)
+
+    await wrapper.get('.network-nav-button').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.path).toBe('/chat')
 
     wrapper.unmount()
   })

@@ -55,6 +55,7 @@ Current visual pass:
 - `网络与 API / Network & API` now treats endpoint entry as the primary setup path: users paste or type a URL, the app auto-detects Gemini native, OpenAI-compatible, OpenAI Responses, Anthropic Messages, and Azure OpenAI transport, and saved API configurations appear as the loadable dropdown. Common base/model/chat URLs, native responses/messages/deployment URLs, and local/server-auth compatible gateways should be handled through URL affordances; provider-brand templates should not return as first-level choice buttons on this system settings page.
 
 - Network & API's current compact IA keeps URL, key, model input/selection, model-list refresh, connection test, and save-current-settings in one primary connection panel. Saved-configuration management and diagnostics remain available behind secondary disclosures instead of becoming default stacked page blocks.
+- The first-use Chat activation loop is now complete at desktop and simulated-mobile browser acceptance: missing provider setup opens the existing Network & API flow, the originating thread and draft remain intact, and save plus a successful smoke test exposes an explicit return for the first manual AI reply. Hosted-provider and true-device evidence remain release-stage work.
 
 ## 2026-07-16 Portfolio Audit Baseline
 

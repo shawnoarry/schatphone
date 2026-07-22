@@ -26,7 +26,12 @@ import { useI18n } from '../composables/useI18n'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import NetworkDiagnosticsPanel from '../components/network/NetworkDiagnosticsPanel.vue'
 import NetworkConnectionPanel from '../components/network/NetworkConnectionPanel.vue'
-import { buildReturnSourceQuery, pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
+import {
+  buildReturnSourceQuery,
+  pushReturnTarget,
+  resolveChatReturnTarget,
+  resolveReturnLabel,
+} from '../lib/navigation-return'
 
 const router = useRouter()
 const route = useRoute()
@@ -51,6 +56,7 @@ const connectionGuidance = ref(null)
 const smokeTestLoading = ref(false)
 const smokeTestResult = ref(null)
 const smokeTestError = ref('')
+const hasSavedCurrentSettings = ref(false)
 
 let modelFetchTimerId = null
 let modelFetchToken = 0
@@ -117,8 +123,14 @@ const networkReports = computed(() =>
 )
 const reportSummary = systemApiReports.reportSummary
 const returnLabelKey = computed(() => resolveReturnLabel(route, 'Home'))
-const returnButtonLabel = computed(() =>
-  returnLabelKey.value === 'Settings' ? t('设置', 'Settings') : t('主页', 'Home'),
+const returnButtonLabel = computed(() => {
+  if (returnLabelKey.value === 'Settings') return t('设置', 'Settings')
+  if (returnLabelKey.value === 'Chat') return t('聊天', 'Chat')
+  return t('主页', 'Home')
+})
+const chatReturnTarget = computed(() => resolveChatReturnTarget(route))
+const showChatContinuation = computed(() =>
+  Boolean(chatReturnTarget.value && hasSavedCurrentSettings.value && smokeTestResult.value),
 )
 
 const copyReport = async (item) => {
@@ -303,11 +315,17 @@ const openPushSettings = () => {
 
 const saveNetworkSettings = () => {
   systemStore.saveNow()
+  hasSavedCurrentSettings.value = true
   saved.value = true
   if (savedTimerId) clearTimeout(savedTimerId)
   savedTimerId = setTimeout(() => {
     saved.value = false
   }, 1200)
+}
+
+const continueChat = () => {
+  if (!chatReturnTarget.value) return
+  router.push(chatReturnTarget.value)
 }
 
 const clearApiReportHistory = async () => {
@@ -589,11 +607,23 @@ watch(
   () => [settings.value.api.url, settings.value.api.key],
   () => {
     clearModelState()
+    hasSavedCurrentSettings.value = false
     smokeTestToken += 1
     smokeTestLoading.value = false
     smokeTestResult.value = null
     smokeTestError.value = ''
     scheduleAutoLoadModels()
+  },
+)
+
+watch(
+  () => settings.value.api.model,
+  () => {
+    hasSavedCurrentSettings.value = false
+    smokeTestToken += 1
+    smokeTestLoading.value = false
+    smokeTestResult.value = null
+    smokeTestError.value = ''
   },
 )
 
@@ -659,12 +689,14 @@ ensurePresetState()
         :smoke-test-error="smokeTestError"
         :model-options="modelOptions"
         :saved="saved"
+        :show-chat-continuation="showChatContinuation"
         @save-preset="savePreset"
         @remove-active-preset="removeActivePreset"
         @clear-all-presets="clearAllPresets"
         @test-models="loadModels({ manual: true })"
         @run-chat-smoke-test="runChatSmokeTest"
         @save-settings="saveNetworkSettings"
+        @continue-chat="continueChat"
       />
 
       <details class="network-diagnostics-disclosure bg-white rounded-xl p-4">
