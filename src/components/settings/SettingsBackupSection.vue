@@ -125,6 +125,37 @@ const { t } = useI18n()
       <p class="text-[10px] text-gray-400">{{ backupPackageLimitHint }}</p>
     </div>
 
+    <section
+      class="backup-sensitive-notice"
+      role="note"
+      aria-labelledby="settings-backup-sensitive-title"
+      data-testid="settings-backup-sensitive-notice"
+    >
+      <span class="backup-sensitive-notice__icon">
+        <i class="fas fa-shield-heart" aria-hidden="true"></i>
+      </span>
+      <div class="backup-sensitive-notice__copy">
+        <p
+          id="settings-backup-sensitive-title"
+          class="backup-sensitive-notice__title"
+          data-testid="settings-backup-sensitive-title"
+        >
+          {{ t('完整备份包含敏感数据', 'Complete backups contain sensitive data') }}
+        </p>
+        <p
+          class="backup-sensitive-notice__body"
+          data-testid="settings-backup-sensitive-body"
+        >
+          {{
+            t(
+              '完整备份会包含已配置的 API 密钥和其他凭据，以及聊天、角色、世界等私密本地数据。请仅保存到可信位置，不要直接分享备份文件。',
+              'A complete backup includes configured API keys and other credentials, plus private local data such as chats, characters, and worlds. Save it only to a trusted location, and do not share the backup file directly.',
+            )
+          }}
+        </p>
+      </div>
+    </section>
+
     <button
       class="w-full p-3.5 flex items-center gap-3 border-b border-gray-100 active:bg-gray-50 transition text-left"
       :disabled="backupExporting || backupImporting"
@@ -202,3 +233,52 @@ const { t } = useI18n()
     {{ backupFeedbackMessage }}
   </p>
 </template>
+
+<style scoped>
+.backup-sensitive-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-bottom: 1px solid var(--system-subtle-border);
+  padding: 12px 14px;
+  background: var(--system-warning-soft);
+  color: var(--system-text);
+}
+
+.backup-sensitive-notice__icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--system-radius-sm);
+  background: var(--system-panel-bg);
+  color: var(--system-warning);
+  font-size: 12px;
+}
+
+.backup-sensitive-notice__copy {
+  min-width: 0;
+}
+
+.backup-sensitive-notice__title,
+.backup-sensitive-notice__body {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.backup-sensitive-notice__title {
+  color: var(--system-text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.backup-sensitive-notice__body {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+</style>
