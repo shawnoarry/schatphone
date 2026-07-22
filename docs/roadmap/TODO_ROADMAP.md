@@ -346,9 +346,10 @@ Delivery stages:
    - extend the accepted same-container read-only timeout behavior beyond Book without introducing force takeover or last-write-wins;
    - close complete-package coverage, including required Chat identity/avatar state and default-on retained Gallery material, then prove integrity, staged activation, rollback, and reopen;
    - personal R2/Worker transport remains post-release because it cannot repair an unsafe or incomplete local recovery point.
-3. `P1 Core personal-life vertical slice` - `TODO`
-   - prove one explicit world/role -> Chat journey without changing the valid zero-Book/zero-encyclopedia/zero-Pack boundary;
-   - prove one ordinary Food Delivery or Shopping action through its existing Wallet, Calendar, Chat service-notification, and relationship-memory consequences;
+3. `P1 Core personal-life vertical slice` - `IN_PROGRESS`
+   - `DONE 2026-07-22`: prove one explicit custom role -> Chat journey without changing the valid zero-Book/zero-encyclopedia/zero-Pack boundary; Contacts starts the explicit action, Chat owns idempotent binding/conversation execution, and Chat Directory remains the management surface;
+   - focused Playwright proves create/select -> Start Chat -> missing-provider recovery -> first manual reply -> return to the same Contacts profile in desktop and simulated Pixel 5 Chromium, while an explicit empty custom-role fixture leaves seeded fresh-storage roles unchanged;
+   - still TODO: prove one ordinary Food Delivery or Shopping action through its existing Wallet, Calendar, Chat service-notification, and relationship-memory consequences;
    - curate the default Home release surface so partial utilities do not appear equally mature; hiding or demoting an entry changes discoverability and requires a focused product review.
 4. `P1 Hosted product proof` - `TODO`
    - observe the remote CI and Pages jobs for the exact release commit and verify external required-check/environment policy;
@@ -406,7 +407,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 2. `P0 CURRENT`: 4.9 current-save write/conflict safety followed by complete local recovery; architecture work proceeds only as separately reviewable slices.
-3. `P1` 4.9 explicit world/role -> Chat and one ordinary life-consequence vertical slice, with default Home release curation reviewed as a product choice.
+3. `P1 IN_PROGRESS`: the explicit custom role -> Chat half is done; next prove one ordinary life-consequence flow, with default Home release curation reviewed as a product choice.
 4. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
 5. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 6. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.

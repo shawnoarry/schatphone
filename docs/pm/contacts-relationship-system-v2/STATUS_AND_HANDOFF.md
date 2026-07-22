@@ -70,6 +70,7 @@ What is already landed:
 52. Contacts detail-section display read-model governance is extracted. `src/composables/useContactsDetailSectionModel.js` now owns Preferences / Life Pattern / Social Graph section metadata, manual/event-attached grouping, detail counts, shared policy copy, and source chip labels/hints. This is architecture cleanup only: manual detail add/edit/delete actions, event-attached item lock behavior, selected-memory navigation, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior stay unchanged.
 53. Contacts profile-header display read-model governance is extracted. `src/composables/useContactsProfileHeaderModel.js` now owns selected-profile header avatar URL, eyebrow/name/meta/bio copy, empty state, NPC detection, and NPC upgrade hint copy. This is architecture cleanup only: profile editing, NPC upgrade execution, Chat Directory binding ownership, avatar asset resolution, relationship-runtime truth/write APIs, and visible UI behavior stay unchanged.
 54. Contacts profile-template editor display read-model governance is extracted. `src/composables/useContactsProfileTemplateEditorModel.js` now owns profile-template editor draft template reads, applicable field rows, save-review facts, preserved custom-field rows, empty copy, helper/placeholder/type/icon copy, and tag previews. This is architecture cleanup only: profile-template saves, AI draft/adaptation actions, profile-value serialization, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior stay unchanged.
+55. Contacts now closes the explicit custom role -> Chat handoff. Eligible Main Role/NPC profiles expose `Start Chat`, while bound profiles reuse the existing contact and conversation. Contacts delegates creation to the Chat-owned idempotent seam, Self and disabled unbound profiles remain ineligible, and validated return context restores the same Contacts profile after Network recovery and Chat.
 
 Still incomplete:
 
@@ -82,6 +83,8 @@ Still incomplete:
 ## 2. Recommended Next Slice
 
 Contacts V2 and memory 4.2 are complete at current acceptance. Do not restart them from older plans.
+
+The roadmap 4.9 custom role -> Chat journey is also complete; the remaining personal-life vertical work belongs to the named Food Delivery or Shopping consequence slice, not another Contacts binding redesign.
 
 Current safe candidates:
 

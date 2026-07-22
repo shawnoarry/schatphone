@@ -95,8 +95,8 @@ export function useContactsRoleHubModel({
       )
     }
     return t(
-      '需要聊天时到 Chat Directory 绑定；Contacts 仍可先维护完整档案。',
-      'Bind in Chat Directory when this role should enter Chat; Contacts can maintain the profile first.',
+      '需要聊天时可从 Contacts 档案直接开始；Chat Directory 继续管理已绑定对象。',
+      'Start Chat from this Contacts profile when the role should enter a conversation; Chat Directory continues to manage bound targets.',
     )
   })
 
@@ -107,8 +107,8 @@ export function useContactsRoleHubModel({
         exists: false,
         label: t('没有 Chat 绑定', 'No Chat binding'),
         detail: t(
-          'Contacts 保留角色档案；Chat Directory 决定这个角色是否能进入聊天。',
-          'Contacts keeps the role profile. Chat Directory decides whether this role can chat.',
+          'Contacts 保留角色档案，需要时可从这里开始 Chat。',
+          'Contacts keeps the role profile. Start Chat here when this role should enter a conversation.',
         ),
         note: '',
         updatedAtLabel: '',

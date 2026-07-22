@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-06-01
+Updated: 2026-07-22
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -30,6 +30,7 @@ Chat owns:
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
 - Chat Me as the Chat-local user identity, anonymity, and recent social-presence surface
 - confirmed Chat social/channel state once the social shell lands, such as whether a role can message, is pending friend confirmation, is blocked by the user, or has blocked the user
+- the idempotent role-binding and conversation-creation seam used by Chat Directory or an explicit Contacts `Start Chat` action
 
 Chat does not own:
 
@@ -52,9 +53,8 @@ A future Chat Mini Scene Adapter may submit canonical thread/message/role facts 
 
 Chat Directory owns:
 
-- who can enter Chat
 - service-account create/edit/delete
-- role binding and unbinding for Chat
+- bound-target review, unbinding, and Chat-local binding metadata
 - group-chat target creation, member selection, and reply-mode metadata
 - Chat-local binding annotations such as legacy `relationshipLevel` / `relationshipNote`, when clearly labeled as Chat tuning/note only
 
@@ -71,6 +71,7 @@ Contacts owns:
 - the global role archive
 - visible role ID
 - role-centered destructive actions
+- an explicit `Start Chat` entry for an eligible Main Role or NPC that delegates binding and conversation creation to Chat without copying those rules
 
 ## 3. Social Events
 

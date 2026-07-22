@@ -58,7 +58,7 @@ describe('Contacts role hub model interface', () => {
     expect(model.selectedChatSocialSnapshot.value).toEqual({
       exists: false,
       label: 'No Chat binding',
-      detail: 'Contacts keeps the role profile. Chat Directory decides whether this role can chat.',
+      detail: 'Contacts keeps the role profile. Start Chat here when this role should enter a conversation.',
       note: '',
       updatedAtLabel: '',
     })
@@ -84,7 +84,7 @@ describe('Contacts role hub model interface', () => {
       chatBound: false,
     })
     expect(model.selectedRoleHubCards.value.map((card) => [card.key, card.value, card.detail])).toEqual([
-      ['entity', 'Main Role', 'Bind in Chat Directory when this role should enter Chat; Contacts can maintain the profile first.'],
+      ['entity', 'Main Role', 'Start Chat from this Contacts profile when the role should enter a conversation; Chat Directory continues to manage bound targets.'],
       ['chat', 'Contacts only', 'No chat entry yet'],
       ['manual', '6', 'User-maintained stable facts'],
       ['event', '3', 'Cleared with memory or relationship reset'],

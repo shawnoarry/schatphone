@@ -16,6 +16,7 @@ const createTestRouter = () =>
       { path: '/chat/:id', component: ChatView },
       { path: '/network', component: DummyView },
       { path: '/home', component: DummyView },
+      { path: '/contacts', component: DummyView },
     ],
   })
 
@@ -87,6 +88,52 @@ describe('Chat first-use activation entry', () => {
     await flushUi()
 
     expect(wrapper.find('[data-testid="chat-network-readiness"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('preserves a validated Contacts ancestor through Network and Chat Back', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    systemStore.settings.api.url = 'https://api.openai.com/v1/chat/completions'
+    systemStore.settings.api.key = ''
+    systemStore.settings.api.model = 'gpt-4o-mini'
+
+    await router.push('/chat/1?source=contacts&profileId=27')
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-message-input"]').setValue('Contacts ancestor draft')
+    await wrapper.get('[data-testid="chat-open-network-setup"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/network',
+      query: {
+        source: 'chat',
+        chatId: '1',
+        from: 'contacts',
+        profileId: '27',
+      },
+    })
+    expect(chatStore.getConversationByContactId(1).draft).toBe('Contacts ancestor draft')
+
+    await router.push('/chat/1?source=contacts&profileId=27')
+    await flushUi()
+    await wrapper.get('[data-testid="chat-thread-back"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/contacts',
+      query: { profileId: '27' },
+    })
 
     wrapper.unmount()
   })

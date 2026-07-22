@@ -44,6 +44,23 @@ export const normalizeChatThreadIdQuery = (value) => {
   return String(threadId)
 }
 
+export const normalizeContactsProfileIdQuery = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string' && typeof raw !== 'number') return ''
+
+  const text = String(raw).trim()
+  if (!/^\d+$/.test(text)) return ''
+
+  const profileId = Number(text)
+  if (!Number.isSafeInteger(profileId) || profileId <= 0) return ''
+  return String(profileId)
+}
+
+const normalizeCrossModuleSource = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  return typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+}
+
 const buildHomeReturnTarget = (route) => {
   const homePage = normalizeHomePageQuery(route?.query?.homePage)
   if (!homePage) return HOME_RETURN_ROUTE
@@ -63,12 +80,23 @@ const buildSettingsReturnTarget = (route) => {
 }
 
 export const resolveChatReturnTarget = (route) => {
-  const routeSource =
-    typeof route?.query?.source === 'string' ? route.query.source.trim().toLowerCase() : ''
+  const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource !== 'chat') return null
 
   const chatId = normalizeChatThreadIdQuery(route?.query?.chatId)
   if (!chatId) return null
+
+  const ancestorSource = normalizeCrossModuleSource(route?.query?.from)
+  const profileId = normalizeContactsProfileIdQuery(route?.query?.profileId)
+  if (ancestorSource === 'contacts' && profileId) {
+    return {
+      path: `/chat/${chatId}`,
+      query: {
+        source: 'contacts',
+        profileId,
+      },
+    }
+  }
 
   const homePage = normalizeHomePageQuery(route?.query?.homePage)
   return {
@@ -104,12 +132,39 @@ export const buildChatReturnSourceQuery = (route, chatId, query = {}) => {
   const nextQuery = { ...query }
   if (!normalizedChatId) return nextQuery
 
+  const source = normalizeCrossModuleSource(route?.query?.source)
+  const profileId = normalizeContactsProfileIdQuery(route?.query?.profileId)
+  const contactsAncestor = source === 'contacts' && profileId
   const homePage = normalizeHomePageQuery(route?.query?.homePage)
   return {
     ...nextQuery,
     source: 'chat',
     chatId: normalizedChatId,
+    ...(contactsAncestor ? { from: 'contacts', profileId } : {}),
     ...(homePage ? { homePage } : {}),
+  }
+}
+
+export const buildContactsChatSourceQuery = (profileId, query = {}) => {
+  const normalizedProfileId = normalizeContactsProfileIdQuery(profileId)
+  const nextQuery = { ...query }
+  if (!normalizedProfileId) return nextQuery
+  return {
+    ...nextQuery,
+    source: 'contacts',
+    profileId: normalizedProfileId,
+  }
+}
+
+export const resolveContactsReturnTarget = (route) => {
+  const source = normalizeCrossModuleSource(route?.query?.source)
+  if (source !== 'contacts') return null
+
+  const profileId = normalizeContactsProfileIdQuery(route?.query?.profileId)
+  if (!profileId) return null
+  return {
+    path: '/contacts',
+    query: { profileId },
   }
 }
 
@@ -135,8 +190,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   const source = normalizeReturnSource(route?.query?.from)
   if (source === 'settings') return buildSettingsReturnTarget(route)
   if (source === 'home') return buildHomeReturnTarget(route)
-  const routeSource =
-    typeof route?.query?.source === 'string' ? route.query.source.trim().toLowerCase() : ''
+  const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]
   return fallback
@@ -151,8 +205,7 @@ export const resolveReturnLabel = (route, fallback = 'Home') => {
   const source = normalizeReturnSource(route?.query?.from)
   if (source === 'settings') return 'Settings'
   if (source === 'home') return 'Home'
-  const routeSource =
-    typeof route?.query?.source === 'string' ? route.query.source.trim().toLowerCase() : ''
+  const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (SOURCE_RETURN_LABELS[routeSource]) return SOURCE_RETURN_LABELS[routeSource]
   return fallback
 }

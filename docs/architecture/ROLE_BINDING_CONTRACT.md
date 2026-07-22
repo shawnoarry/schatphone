@@ -1,6 +1,6 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated: 2026-07-14
+Updated: 2026-07-22
 
 ## 1. Purpose
 
@@ -17,6 +17,7 @@ Primary API in `src/stores/chat.js`:
 
 1. `getRoleBindingContract(contactId, { moduleKey })`
 2. `listRoleBindingContracts(contactIds?, { moduleKey })`
+3. `bindRoleProfile(profileId, options?)` for idempotent Chat-target creation or reuse
 
 Compatibility API kept for existing chat asset flow:
 
@@ -90,6 +91,9 @@ Rules:
 
 - Self Profile must not be bound as a Chat target.
 - NPC may be bound as a Chat target before being upgraded to Main Role.
+- Contacts may invoke `bindRoleProfile()` only from an explicit eligible-role `Start Chat` action; Contacts must not duplicate binding rules or Chat-local metadata.
+- Chat Directory remains the review, unbind, and Chat-local metadata management surface, but it is not a mandatory navigation hop for that explicit Contacts action.
+- An already-bound non-Self role reuses its existing contact and conversation; a disabled unbound role must not create a new target.
 - Chat binding does not prove that an entity is a Main Role.
 - NPC -> Main Role upgrade must preserve existing Chat binding and history.
 - Capacity management may page or reversibly cold-archive Chat history, but cannot silently or irreversibly delete authoritative role-thread history; lifecycle ownership remains in Contacts rather than this binding contract.

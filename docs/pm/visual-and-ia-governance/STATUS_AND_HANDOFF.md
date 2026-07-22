@@ -101,6 +101,7 @@ What is already landed:
 85. Book and WorldBook now complete the first unified world-setting-workflow slice. WorldBook exposes stable world identity, active text, the full Book catalog count, review issues, and parallel optional setting layers, then hands writing/import work to Book with an explicit return path. Book exports each manuscript as strict versioned/lossless `.worldbook.json`, editable/re-importable `.md`, or portable body-only `.txt`; export never changes WorldBook activation.
 86. The existing World Pack closed loop now has focused Playwright evidence across desktop and simulated-phone Chromium. `e2e/world-pack-loop-validation.spec.js` starts with zero enabled Packs and zero selected Book/encyclopedia content, explicitly activates a reviewed capability Pack in WorldBook, verifies App Store World entries, places four existing target archetypes through Home, refreshes persisted placement, launches and returns from Shopping, Food Delivery, Calendar, and Map, then disables the Pack and verifies safe fallback. The same journey covers long Chinese/English labels, horizontal overflow, page errors, and critical axe failures; the evidence produced focused Shopping/ImageSourcePicker/Map accessible-name fixes and Food Delivery long-title wrapping. No real phone or remote-debug device was available, so true-device acceptance remains incomplete.
 87. Roadmap 4.9's first successful Chat activation loop is complete at automated desktop and simulated-phone acceptance. Chat now turns incomplete provider setup into an explicit Network & API action while preserving the originating thread and draft; Network offers Continue Chat only after the current settings are saved and the same configuration passes its smoke test. Focused Playwright proves the first manual reply, bounded return context, responsive overflow, page-error, critical accessibility, and fake-credential visibility guards. Hosted-provider and true-device proof remain separate release gates.
+88. Roadmap 4.9's explicit custom role -> Chat journey is complete at desktop and simulated-phone Chromium acceptance. Contacts now offers a direct `Start Chat` action for eligible Main Role/NPC profiles, reuses existing targets, preserves bounded Contacts context through Network recovery, and returns to the same profile after the first manual reply. The focused fixture intentionally starts from an explicit empty custom-role snapshot and does not redefine or remove the seeded fresh-storage roles; zero Book sources, encyclopedia entries, and extra World Packs remain valid.
 
 ### 2026-07-16 Visual Portfolio Audit
 
@@ -142,9 +143,9 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The first successful Chat activation loop is complete. No additional visual slice is active while roadmap 4.9 current-save safety and complete local recovery are the P0 execution lane.
+The first successful Chat activation loop and explicit custom role -> Chat journey are complete. No additional page-local visual slice is active while roadmap 4.9 current-save safety and complete local recovery are the P0 execution lane.
 
-1. after the persistence P0 gates, prove one explicit world/role -> Chat journey and one ordinary daily-life consequence before returning to page-local polish;
+1. after the persistence P0 gates, prove one ordinary Food Delivery or Shopping consequence flow before returning to page-local polish;
 2. curate the default Home release surface only through a focused product decision so partial utilities do not appear equally mature;
 3. fold World Pack and Chat true-device coverage into the named release matrix rather than treating another archetype as progress;
 4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 P0 gates are complete.

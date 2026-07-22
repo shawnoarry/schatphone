@@ -42,6 +42,7 @@ import {
   buildChatReturnSourceQuery,
   buildReturnSourceQuery,
   pushReturnTarget,
+  resolveContactsReturnTarget,
 } from '../lib/navigation-return'
 import { buildNetworkSetupState } from '../lib/network-guidance'
 import {
@@ -1037,6 +1038,11 @@ const leaveChat = () => {
       path: '/chat-contacts',
       query: buildActiveServiceDirectoryQuery({ serviceReturn: 'thread' }),
     })
+    return
+  }
+  const contactsReturnTarget = resolveContactsReturnTarget(route)
+  if (contactsReturnTarget) {
+    router.push(contactsReturnTarget)
     return
   }
   router.push('/chat')

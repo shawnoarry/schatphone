@@ -68,7 +68,11 @@ import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
-import { pushReturnTarget } from '../lib/navigation-return'
+import {
+  buildContactsChatSourceQuery,
+  normalizeContactsProfileIdQuery,
+  pushReturnTarget,
+} from '../lib/navigation-return'
 import { resolveCurrentWorldContext } from '../lib/world-interface'
 
 const route = useRoute()
@@ -643,6 +647,11 @@ const selectedRoleChatContact = computed(() => {
   if (!profileId) return null
   return chatStore.contacts.find((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId)) || null
 })
+const selectedProfileCanStartChat = computed(() => {
+  const profile = selectedProfile.value
+  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return false
+  return profile.capabilities?.canAppearInChatDirectory !== false
+})
 const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
 const currentWorldProfileTemplates = computed(() =>
   Array.isArray(currentContactsWorldContext.value.profiles?.enabledTemplates)
@@ -846,12 +855,37 @@ const {
 })
 
 const openSelectedChatTarget = () => {
-  const contact = selectedRoleChatContact.value
-  if (contact?.id) router.push(`/chat/${contact.id}`)
-}
+  const profile = selectedProfile.value
+  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+    setUiNotice(
+      'warning',
+      t('这个档案不能作为 Chat 对象。', 'This profile cannot be used as a Chat target.'),
+    )
+    return
+  }
 
-const openChatDirectory = () => {
-  router.push('/chat-contacts')
+  const existingContact = selectedRoleChatContact.value
+  if (!existingContact && !selectedProfileCanStartChat.value) {
+    setUiNotice(
+      'warning',
+      t('这个档案不能作为 Chat 对象。', 'This profile cannot be used as a Chat target.'),
+    )
+    return
+  }
+
+  const contact = existingContact || chatStore.bindRoleProfile(profile.id)
+  if (!contact?.id) {
+    setUiNotice(
+      'warning',
+      t('暂时无法开始聊天，请稍后重试。', 'Chat could not be started. Try again shortly.'),
+    )
+    return
+  }
+
+  router.push({
+    path: `/chat/${contact.id}`,
+    query: buildContactsChatSourceQuery(profile.id),
+  })
 }
 
 const goHome = () => {
@@ -1900,8 +1934,16 @@ const autoGenerateProfile = async () => {
 }
 
 watch(
-  roleProfiles,
-  (profiles) => {
+  [roleProfiles, () => route.query.profileId],
+  ([profiles, routeProfileId]) => {
+    const normalizedRouteProfileId = normalizeContactsProfileIdQuery(routeProfileId)
+    const requestedProfile = normalizedRouteProfileId
+      ? profiles.find((profile) => Number(profile.id) === Number(normalizedRouteProfileId))
+      : null
+    if (requestedProfile) {
+      selectedProfileId.value = Number(requestedProfile.id)
+      return
+    }
     if (profiles.some((profile) => Number(profile.id) === Number(selectedProfileId.value))) return
     selectedProfileId.value = profiles[0]?.id || 0
   },
@@ -1948,7 +1990,16 @@ onBeforeUnmount(() => {
         <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
       <span class="font-bold">{{ t('联系人', 'Contacts') }}</span>
-      <button @click="openCreateProfile" class="contacts-add-button text-blue-500 text-xl"><i class="fas fa-plus"></i></button>
+      <button
+        type="button"
+        class="contacts-add-button text-blue-500 text-xl"
+        data-testid="contacts-add-profile"
+        :aria-label="t('新建角色档案', 'Create role profile')"
+        :title="t('新建角色档案', 'Create role profile')"
+        @click="openCreateProfile"
+      >
+        <i class="fas fa-plus" aria-hidden="true"></i>
+      </button>
     </div>
 
     <p
@@ -1976,7 +2027,12 @@ onBeforeUnmount(() => {
         <span class="font-bold">
           {{ profileModalMode === 'create' ? t('新建角色档案', 'Create Role Profile') : t('编辑角色档案', 'Edit Role Profile') }}
         </span>
-        <button @click="saveProfile" class="text-blue-500 font-bold">
+        <button
+          type="button"
+          class="text-blue-500 font-bold"
+          data-testid="contacts-profile-submit"
+          @click="saveProfile"
+        >
           {{ profileModalMode === 'create' ? t('创建', 'Create') : t('保存', 'Save') }}
         </button>
       </div>
@@ -1986,6 +2042,7 @@ onBeforeUnmount(() => {
           <img
             v-if="draftAvatarPreviewUrl"
             :src="draftAvatarPreviewUrl"
+            :alt="t('角色头像预览', 'Role avatar preview')"
             class="w-full h-full object-cover"
           />
           <i v-else class="fas fa-camera"></i>
@@ -2002,6 +2059,7 @@ onBeforeUnmount(() => {
         />
 
         <input
+          data-testid="contacts-profile-name"
           v-model="profileDraft.name"
           :placeholder="t('名字 / 昵称', 'Name / Display Name')"
           class="w-full border-b py-2 outline-none"
@@ -2497,6 +2555,7 @@ onBeforeUnmount(() => {
             <div class="contacts-avatar contacts-avatar-large">
               <img
                 :src="user.avatar || fallbackAvatarUrl(user.name)"
+                :alt="user.name || t('当前用户', 'Current user')"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -2520,6 +2579,7 @@ onBeforeUnmount(() => {
             <div class="contacts-avatar">
               <img
                 :src="contactAvatarUrl(contact)"
+                :alt="contact.name"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -2551,7 +2611,11 @@ onBeforeUnmount(() => {
               @click="selectProfile(item.profile)"
             >
               <span class="contacts-avatar contacts-recent-avatar">
-                <img :src="contactAvatarUrl(item.profile)" class="w-full h-full object-cover" />
+                <img
+                  :src="contactAvatarUrl(item.profile)"
+                  :alt="item.profile.name"
+                  class="w-full h-full object-cover"
+                />
               </span>
               <span class="contacts-recent-name">{{ item.profile.name }}</span>
               <span class="contacts-recent-source">{{ contactRecentSourceLabel(item.profile) }}</span>
@@ -2578,6 +2642,7 @@ onBeforeUnmount(() => {
             <div class="contacts-avatar">
               <img
                 :src="contactAvatarUrl(contact)"
+                :alt="contact.name"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -2616,6 +2681,7 @@ onBeforeUnmount(() => {
             <div class="contacts-avatar">
               <img
                 :src="contactAvatarUrl(contact)"
+                :alt="contact.name"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -2645,8 +2711,8 @@ onBeforeUnmount(() => {
         <p class="contacts-boundary-copy" data-testid="contacts-boundary-copy">
           {{
             t(
-              'Contacts 是角色档案库与角色中枢。角色可以只存在于这里，不一定成为 Chat 会话；需要进入聊天时再到 Chat Directory 绑定。',
-              'Contacts is the role archive and role hub. A role can live here without becoming a Chat thread; bind it in Chat Directory when it should enter Chat.',
+              'Contacts 是角色档案库与角色中枢。角色可以只存在于这里；需要聊天时可从档案直接开始，已绑定对象与 Chat 内资料仍在 Chat Directory 管理。',
+              'Contacts is the role archive and role hub. A role can live here without a Chat thread; start chatting from its profile, while Chat Directory manages existing targets and Chat-local details.',
             )
           }}
         </p>
@@ -2659,7 +2725,11 @@ onBeforeUnmount(() => {
           <section class="contacts-detail-section">
             <div class="flex items-start gap-3">
               <div class="w-14 h-14 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                <img :src="selectedProfileHeader.avatarUrl" class="w-full h-full object-cover" />
+                <img
+                  :src="selectedProfileHeader.avatarUrl"
+                  :alt="selectedProfileHeader.name"
+                  class="w-full h-full object-cover"
+                />
               </div>
               <div class="min-w-0 flex-1">
                 <p class="text-[11px] uppercase text-gray-400 font-bold">{{ selectedProfileHeader.eyebrow }}</p>
@@ -2702,20 +2772,22 @@ onBeforeUnmount(() => {
               </div>
               <div class="contacts-chat-actions">
                 <button
-                  v-if="selectedRoleChatContact"
+                  v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
                   type="button"
                   class="contacts-small-action"
+                  data-testid="contacts-open-chat"
                   @click="openSelectedChatTarget"
                 >
                   {{ t('打开 Chat', 'Open Chat') }}
                 </button>
                 <button
-                  v-else-if="selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
+                  v-else-if="selectedProfileCanStartChat"
                   type="button"
                   class="contacts-small-action"
-                  @click="openChatDirectory"
+                  data-testid="contacts-start-chat"
+                  @click="openSelectedChatTarget"
                 >
-                  {{ t('管理绑定', 'Manage Binding') }}
+                  {{ t('开始聊天', 'Start Chat') }}
                 </button>
               </div>
             </div>
@@ -4261,6 +4333,10 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.contacts-chat-actions .contacts-small-action {
+  min-height: 44px;
 }
 
 .contacts-role-hub-grid,

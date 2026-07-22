@@ -2533,8 +2533,8 @@ onBeforeUnmount(() => {
       <p class="mt-2 text-xs text-gray-500" data-testid="chat-directory-boundary-copy">
         {{
           t(
-            'Chat Directory 决定谁能进入 Chat：角色档案来自 Contacts；一个角色可以先只保存在 Contacts，绑定后才成为会话对象。服务号可在此新建/编辑/删除。',
-            'Chat Directory decides who can enter Chat: role profiles come from Contacts; a role may remain only in Contacts until it is bound as a chat target. Service accounts are managed here.',
+            'Chat Directory 管理已进入 Chat 的对象与 Chat 内资料：角色档案来自 Contacts，也可从 Contacts 直接开始聊天；绑定查看、解绑和服务号管理仍在这里完成。',
+            'Chat Directory manages existing Chat targets and Chat-local details. Role profiles come from Contacts and can start Chat there; review, unbind, and service-account management stay here.',
           )
         }}
       </p>

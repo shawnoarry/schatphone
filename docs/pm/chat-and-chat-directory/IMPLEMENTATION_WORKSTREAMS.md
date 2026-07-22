@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-06-01
+Updated: 2026-07-22
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -17,9 +17,10 @@ Updated: 2026-06-01
 - source-owned `share_card` rendering, message context, and Shopping share send paths for product links, gift cards, and virtual gifts
 - preserve legacy `mini_scene.htmlSnippet` as inert Chat history; a later Chat request Adapter uses the shared Mini Scene Interface and stores only an artifact reference/display snapshot where required
 
-## 2. Workstream B: Chat Directory And Binding
+## 2. Workstream B: Chat Role Binding And Directory Management
 
-- role binding into Chat
+- Chat-owned idempotent role binding into Chat, callable from Chat Directory or an explicit eligible Contacts `Start Chat` action
+- Chat Directory review, unbind, and Chat-local metadata management for existing targets
 - group-chat target management
 - service-account management
 - chat-target lifecycle

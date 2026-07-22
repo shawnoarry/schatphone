@@ -2,11 +2,14 @@ import { describe, expect, test } from 'vitest'
 import { buildWorldBookRouteQuery } from '../src/lib/worldbook-navigation'
 import {
   buildChatReturnSourceQuery,
+  buildContactsChatSourceQuery,
   buildHomeSourceQuery,
   buildReturnSourceQuery,
   buildRouteWithReturnSource,
   normalizeChatThreadIdQuery,
+  normalizeContactsProfileIdQuery,
   normalizeHomePageQuery,
+  resolveContactsReturnTarget,
   resolveReturnLabel,
   resolveReturnTarget,
 } from '../src/lib/navigation-return'
@@ -118,5 +121,64 @@ describe('navigation return helpers', () => {
         '/home',
       ),
     ).toBe('/chat')
+  })
+
+  test('keeps Contacts profile context bounded across Chat and Network', () => {
+    expect(normalizeContactsProfileIdQuery(' 17 ')).toBe('17')
+    expect(normalizeContactsProfileIdQuery(['22', '23'])).toBe('22')
+    expect(normalizeContactsProfileIdQuery(0)).toBe('')
+    expect(normalizeContactsProfileIdQuery('../settings')).toBe('')
+    expect(normalizeContactsProfileIdQuery(Number.MAX_SAFE_INTEGER + 1)).toBe('')
+
+    expect(buildContactsChatSourceQuery(17)).toEqual({
+      source: 'contacts',
+      profileId: '17',
+    })
+    expect(
+      resolveContactsReturnTarget({ query: { source: 'contacts', profileId: '17' } }),
+    ).toEqual({
+      path: '/contacts',
+      query: { profileId: '17' },
+    })
+
+    expect(
+      buildChatReturnSourceQuery(
+        { query: { source: 'contacts', profileId: '17' } },
+        31,
+      ),
+    ).toEqual({
+      source: 'chat',
+      chatId: '31',
+      from: 'contacts',
+      profileId: '17',
+    })
+    expect(
+      resolveReturnTarget({
+        query: { source: 'chat', chatId: '31', from: 'contacts', profileId: '17' },
+      }),
+    ).toEqual({
+      path: '/chat/31',
+      query: { source: 'contacts', profileId: '17' },
+    })
+  })
+
+  test('discards invalid Contacts context instead of accepting a redirect value', () => {
+    expect(buildContactsChatSourceQuery('https://example.test/steal')).toEqual({})
+    expect(
+      resolveContactsReturnTarget({
+        query: { source: 'contacts', profileId: 'javascript:alert(1)' },
+      }),
+    ).toBeNull()
+    expect(
+      buildChatReturnSourceQuery(
+        { query: { source: 'contacts', profileId: '../settings' } },
+        31,
+      ),
+    ).toEqual({ source: 'chat', chatId: '31' })
+    expect(
+      resolveReturnTarget({
+        query: { source: 'chat', chatId: '31', from: 'contacts', profileId: '/settings' },
+      }),
+    ).toEqual({ path: '/chat/31' })
   })
 })
