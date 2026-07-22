@@ -2,7 +2,11 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
-test.use({ trace: 'off' })
+test.use({
+  trace: 'off',
+  screenshot: 'off',
+  video: 'off',
+})
 
 const copy = {
   en: {
