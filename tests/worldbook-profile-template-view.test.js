@@ -36,6 +36,7 @@ describe('WorldBookView profile templates', () => {
       },
     })
     const store = useSystemStore()
+    expect(store.activateWorldPack('survival_city').ok).toBe(true)
 
     expect(wrapper.text()).toContain('Role profile templates')
     expect(wrapper.text()).toContain('ABO Profile')
@@ -46,7 +47,8 @@ describe('WorldBookView profile templates', () => {
     await wrapper.get('[data-testid="worldbook-template-copy-preset_abo"]').trigger('click')
     await nextTick()
 
-    expect(store.listWorldProfileTemplates('default_world')).toHaveLength(1)
+    expect(store.listWorldProfileTemplates('legacy_single_world')).toHaveLength(1)
+    expect(store.listWorldProfileTemplates('survival_city')).toHaveLength(0)
     expect(wrapper.text()).toContain('Current-world enabled templates')
 
     wrapper.unmount()

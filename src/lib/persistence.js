@@ -371,6 +371,22 @@ export const readPersistedStateAsync = async (key, options = {}) => {
   return readPersistedStateFromLocal(key, options)
 }
 
+export const readPersistedRawLayers = async (key) => {
+  if (typeof key !== 'string' || !key.trim()) {
+    return { key: '', fullKey: '', localRaw: null, mirrorRaw: null, mirrorApplicable: false }
+  }
+  const normalizedKey = key.trim()
+  const fullKey = buildStorageKey(normalizedKey)
+  const mirrorApplicable = canUseLayeredPersistence()
+  return {
+    key: normalizedKey,
+    fullKey,
+    localRaw: readPersistedRawFromLocal(fullKey),
+    mirrorRaw: mirrorApplicable ? await readFromIndexedDb(fullKey) : null,
+    mirrorApplicable,
+  }
+}
+
 export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) => {
   const fullKey = buildStorageKey(key)
   const envelope = encodePersistedEnvelope(data, { version })

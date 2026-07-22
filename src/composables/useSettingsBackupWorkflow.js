@@ -116,8 +116,16 @@ const restoreOptionalBackupSection = (store, section) => {
   return store.restoreFromBackup(section)
 }
 
-const saveStores = (stores = []) => {
-  stores.forEach((store) => store.saveNow())
+const saveStores = async (stores = []) => {
+  const results = await Promise.allSettled(
+    stores.map((store) => Promise.resolve().then(() => store.saveNow())),
+  )
+  const failed = results.find(
+    (result) =>
+      result.status === 'rejected' ||
+      (result.status === 'fulfilled' && result.value?.ok === false),
+  )
+  return { ok: !failed, results }
 }
 
 export const useSettingsBackupWorkflow = (options = {}) => {
@@ -581,23 +589,56 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     event.target.value = ''
   }
 
-  const restoreRollbackSnapshot = (rollback) => {
-    systemStore.restoreFromBackup(rollback.system)
-    chatStore.restoreFromBackup(rollback.chat)
-    mapStore.restoreFromBackup(rollback.map)
-    calendarStore.restoreFromBackup(rollback.calendar)
-    remindersStore.restoreFromBackup(rollback.reminders)
-    galleryStore.restoreFromBackup(rollback.gallery)
-    filesStore.restoreFromBackup(rollback.files)
-    bookStore.restoreFromBackup(rollback.book)
-    shoppingStore.restoreFromBackup(rollback.shopping)
-    foodDeliveryStore.restoreFromBackup(rollback.foodDelivery)
-    simulationStore.restoreFromBackup(rollback.simulation)
-    assetsStore.restoreFromBackup(rollback.assets)
-    walletStore.restoreFromBackup(rollback.wallet)
-    phoneStore.restoreFromBackup(rollback.phone)
-    stockStore.restoreFromBackup(rollback.stock)
-    relationshipRuntimeStore.restoreFromBackup(rollback.relationshipRuntime)
+  const restoreRollbackSnapshot = async (rollback) => {
+    const operations = [
+      ['system', systemStore, rollback.system],
+      ['chat', chatStore, rollback.chat],
+      ['map', mapStore, rollback.map],
+      ['calendar', calendarStore, rollback.calendar],
+      ['reminders', remindersStore, rollback.reminders],
+      ['gallery', galleryStore, rollback.gallery],
+      ['files', filesStore, rollback.files],
+      ['book', bookStore, rollback.book],
+      ['shopping', shoppingStore, rollback.shopping],
+      ['foodDelivery', foodDeliveryStore, rollback.foodDelivery],
+      ['simulation', simulationStore, rollback.simulation],
+      ['assets', assetsStore, rollback.assets],
+      ['wallet', walletStore, rollback.wallet],
+      ['phone', phoneStore, rollback.phone],
+      ['stock', stockStore, rollback.stock],
+      ['relationshipRuntime', relationshipRuntimeStore, rollback.relationshipRuntime],
+    ]
+    const results = []
+
+    for (const [owner, store, snapshot] of operations) {
+      try {
+        const restored = await Promise.resolve(store.restoreFromBackup(snapshot))
+        if (restored !== false) {
+          results.push({ owner, ok: true, exact: true, store })
+          continue
+        }
+        if (owner === 'book' && typeof store.refreshBookStorage === 'function') {
+          const refreshed = await store.refreshBookStorage()
+          if (refreshed?.ok) {
+            results.push({ owner, ok: true, exact: false, refreshed: true, store })
+            continue
+          }
+        }
+        results.push({ owner, ok: false, exact: false, store })
+      } catch (error) {
+        results.push({ owner, ok: false, exact: false, error, store })
+      }
+    }
+
+    return {
+      ok: results.every((result) => result.ok),
+      exact: results.every((result) => result.ok && result.exact),
+      refreshedOwners: results.filter((result) => result.refreshed).map((result) => result.owner),
+      storesToSave: results
+        .filter((result) => result.ok && result.exact)
+        .map((result) => result.store),
+      results,
+    }
   }
 
   const backupStoresInSaveOrder = [
@@ -638,6 +679,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
 
     backupImporting.value = true
     const rollback = createRollbackSnapshot()
+    let restoreStarted = false
 
     try {
       const text = await file.text()
@@ -655,7 +697,14 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       if (!preflight.ok) {
         throw createBackupImportError(preflight.code, preflight.message)
       }
+      if (parsed.book && bookStore.storageReadOnly === true) {
+        throw createBackupImportError(
+          'BACKUP_IMPORT_STORAGE_READ_ONLY',
+          t('Book 当前为只读状态，请先刷新当前存档后再导入。', 'Book is read-only. Refresh the current save before importing.'),
+        )
+      }
 
+      restoreStarted = true
       const systemOk = systemStore.restoreFromBackup(parsed)
       const chatOk = chatStore.restoreFromBackup(parsed)
       const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
@@ -703,7 +752,13 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         )
       }
 
-      saveStores(backupStoresInSaveOrder)
+      const storeSave = await saveStores(backupStoresInSaveOrder)
+      if (!storeSave.ok) {
+        throw createBackupImportError(
+          'BACKUP_IMPORT_STORAGE_WRITE_FAILED',
+          t('备份内容已读取，但未能安全写入当前存储。', 'Backup data was read but could not be committed safely.'),
+        )
+      }
 
       const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
       const failedCount = Number(galleryRestoreResult.failedPackageCount || 0)
@@ -730,11 +785,29 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         model: parsed?.backupMeta?.exportMode || '',
       })
     } catch (error) {
-      restoreRollbackSnapshot(rollback)
-      saveStores(backupStoresInSaveOrder)
+      const rollbackRestore = restoreStarted
+        ? await restoreRollbackSnapshot(rollback)
+        : { ok: true, exact: true, refreshedOwners: [], storesToSave: [] }
+      const rollbackSave = restoreStarted
+        ? await saveStores(rollbackRestore.storesToSave)
+        : { ok: true, results: [] }
+      const rollbackSafe = rollbackRestore.ok && rollbackSave.ok
       const resolved = resolveBackupImportFailure(error)
       const detail = resolved.detail ? ` ${resolved.detail}` : ''
-      const message = `${t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')}${detail}`
+      const rollbackMessage = !restoreStarted
+        ? t('导入在修改数据前失败。', 'Import failed before any data was changed.')
+        : !rollbackSafe
+          ? t(
+              '导入失败，且自动恢复未能安全完成。请刷新当前存档或重新打开应用后检查数据。',
+              'Import failed, and automatic recovery could not be completed safely. Refresh the current save or reopen the app and review the data.',
+            )
+          : rollbackRestore.exact
+            ? t('导入失败，已自动回滚。', 'Import failed and rolled back automatically.')
+            : t(
+                '导入失败；其他数据已回滚，Book 已在存储冲突后刷新为当前权威存档。',
+                'Import failed. Other data was rolled back, and Book refreshed from the authoritative current save after a storage conflict.',
+              )
+      const message = `${rollbackMessage}${detail}`
       setBackupFeedback(
         'error',
         message,
@@ -743,7 +816,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       writeBackupStorageReport({
         level: 'error',
         action: 'import_backup',
-        code: resolved.code || 'BACKUP_IMPORT_FAILED',
+        code: rollbackSafe
+          ? resolved.code || 'BACKUP_IMPORT_FAILED'
+          : 'BACKUP_IMPORT_ROLLBACK_INCOMPLETE',
         message,
         model: typeof file?.name === 'string' ? file.name : '',
       })

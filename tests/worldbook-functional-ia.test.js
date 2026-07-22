@@ -1,6 +1,6 @@
 ﻿import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WorldBookView from '../src/views/WorldBookView.vue'
@@ -17,6 +17,7 @@ const createTestRouter = () =>
     history: createMemoryHistory(),
     routes: [
       { path: '/worldbook', component: WorldBookView },
+      { path: '/book', component: DummyView },
       { path: '/settings', component: DummyView },
       { path: '/app-store', component: DummyView },
       { path: '/chat-contacts', component: DummyView },
@@ -44,7 +45,7 @@ describe('WorldBook functional IA', () => {
     setActivePinia(createPinia())
   })
 
-  test('leads with active world overview and current pack before editing controls', async () => {
+  test('leads with the current world overview and keeps capability Packs separate', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     const worldview = 'This city is built on night etiquette and stable relationship networks.'
@@ -71,8 +72,8 @@ describe('WorldBook functional IA', () => {
     const currentPack = wrapper.get('[data-testid="worldbook-current-pack"]')
     const worldKernel = wrapper.get('[data-testid="worldbook-world-kernel"]')
 
-    expect(overview.text()).toContain('Active world')
-    expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
+    expect(overview.text()).toContain('World setting')
+    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
     expect(overview.get('[data-testid="worldbook-overview-context-total"]').text()).toContain(
       String(worldview.length),
     )
@@ -90,9 +91,9 @@ describe('WorldBook functional IA', () => {
       'Event Runtime',
     )
 
-    expect(currentPack.text()).toContain('Current World Pack')
+    expect(currentPack.text()).toContain('Optional capability Packs')
     expect(currentPack.get('[data-testid="worldbook-current-pack-state"]').text()).toContain(
-      'Default active',
+      'No extra Pack',
     )
     expect(currentPack.get('[data-testid="worldbook-current-pack-effects"]').text()).toContain(
       '1 enabled, 1 disabled',
@@ -146,7 +147,7 @@ describe('WorldBook functional IA', () => {
     wrapper.unmount()
   })
 
-  test('uses English pack and consumer labels when system language is English', async () => {
+  test('uses English world, pack, and consumer labels when system language is English', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.setGlobalWorldview('Quiet daily city.')
@@ -154,33 +155,47 @@ describe('WorldBook functional IA', () => {
     const wrapper = await mountWorldBook()
     const overview = wrapper.get('[data-testid="worldbook-overview"]')
 
-    expect(overview.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
+    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
-    expect(wrapper.get('[data-testid="worldbook-current-pack-name"]').text()).toContain('Default world')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-name"]').text()).toContain('No extra capability Pack')
 
     wrapper.unmount()
   })
 
-  test('focuses source activation first and lets users switch management panels', async () => {
+  test('presents parallel world-setting layers and lets users switch management panels', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
 
     const wrapper = await mountWorldBook()
 
-    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('World settings')
-    expect(wrapper.get('[data-testid="worldbook-control-deck"]').text()).toContain('Setting text')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World setup path')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('World pack')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Profile templates')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Encyclopedia')
-    expect(wrapper.get('[data-testid="worldbook-setup-path"]').text()).toContain('Advanced fallback')
+    const workspace = wrapper.get('[data-testid="world-setting-workspace"]')
+    expect(workspace.text()).toContain('World setting workspace')
+    expect(workspace.text()).toContain('Book owns writing and storage')
+    expect(workspace.text()).toContain('every setting layer is independent and optional')
+    expect(workspace.text()).toContain('Setting texts')
+    expect(workspace.text()).toContain('Structured encyclopedia')
+    expect(workspace.text()).toContain('Profile templates')
+    expect(workspace.text()).toContain('Capabilities and apps')
+    expect(workspace.text()).toContain('Compatibility fallback')
+    expect(workspace.text()).toContain('never contains or auto-binds Book text')
+    expect(wrapper.get('[data-testid="world-setting-workspace-metric-active-texts"]').text()).toContain('0')
+    expect(wrapper.get('[data-testid="world-setting-workspace-metric-book-catalog"]').text()).not.toContain('0')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
       'none',
     )
     expect(wrapper.get('[data-testid="worldbook-source-stats"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="worldbook-panel-pack"]').element.style.display).toBe('none')
+    const layerNavigation = workspace.get('[data-testid="world-setting-workspace-layers"]')
+    expect(layerNavigation.element.tagName).toBe('NAV')
+    expect(layerNavigation.attributes('role')).toBeUndefined()
+    expect(
+      wrapper.get('[data-testid="worldbook-panel-tab-sources"]').attributes('role'),
+    ).toBeUndefined()
+    expect(
+      wrapper.get('[data-testid="worldbook-panel-tab-sources"]').attributes('aria-pressed'),
+    ).toBe('true')
 
-    await wrapper.get('[data-testid="worldbook-setup-step-kernel"]').trigger('click')
+    await wrapper.get('[data-testid="worldbook-panel-tab-kernel"]').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="worldbook-world-kernel"]').element.style.display).not.toBe(
@@ -190,7 +205,7 @@ describe('WorldBook functional IA', () => {
       'Advanced compatibility',
     )
 
-    await wrapper.get('[data-testid="worldbook-setup-step-sources"]').trigger('click')
+    await wrapper.get('[data-testid="worldbook-panel-tab-sources"]').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
@@ -206,6 +221,12 @@ describe('WorldBook functional IA', () => {
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).toBe(
       'none',
     )
+    expect(
+      wrapper.get('[data-testid="worldbook-panel-tab-pack"]').attributes('aria-pressed'),
+    ).toBe('true')
+    expect(
+      wrapper.get('[data-testid="worldbook-panel-tab-sources"]').attributes('aria-pressed'),
+    ).toBe('false')
 
     await wrapper.get('[data-testid="worldbook-panel-tab-knowledge"]').trigger('click')
     await nextTick()
@@ -214,6 +235,14 @@ describe('WorldBook functional IA', () => {
       'none',
     )
 
+    await wrapper.get('[data-testid="world-setting-workspace-open-book"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.$router.currentRoute.value).toMatchObject({
+      path: '/book',
+      query: { source: 'worldbook' },
+    })
+
     wrapper.unmount()
   })
 
@@ -221,13 +250,16 @@ describe('WorldBook functional IA', () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
     systemStore.settings.system.language = 'en-US'
+    const worldTemplate = systemStore.createWorldProfileTemplateFromPreset('preset_abo', {
+      worldId: 'default_world',
+    })
 
     const wrapper = await mountWorldBook()
 
     await wrapper.get('[data-testid="worldbook-current-pack-select"]').setValue('survival_city')
     await nextTick()
 
-    expect(wrapper.get('[data-testid="worldbook-current-pack-active-summary"]').text()).toContain('Default world')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-active-summary"]').text()).toContain('No extra capability Pack')
     expect(wrapper.get('[data-testid="worldbook-current-pack-candidate-preview"]').text()).toContain(
       'Post-disaster survival city',
     )
@@ -243,8 +275,11 @@ describe('WorldBook functional IA', () => {
     await nextTick()
 
     expect(systemStore.user.activeWorldPackId).toBe('survival_city')
-    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Post-disaster survival city')
+    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
     expect(wrapper.get('[data-testid="worldbook-current-pack-state"]').text()).toContain('Active')
+    expect(
+      wrapper.find(`[data-testid="worldbook-template-toggle-${worldTemplate.id}"]`).exists(),
+    ).toBe(true)
 
     const activeSummary = wrapper.get('[data-testid="worldbook-current-pack-active-summary"]')
     expect(activeSummary.text()).toContain('Post-disaster survival city')
@@ -268,11 +303,39 @@ describe('WorldBook functional IA', () => {
 
     expect(systemStore.user.activeWorldPackId).toBe('default_world')
     expect(systemStore.user.enabledWorldPackIds).toEqual([])
-    expect(wrapper.get('[data-testid="worldbook-overview-pack"]').text()).toContain('Default world')
+    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
     expect(wrapper.get('[data-testid="worldbook-current-pack-reset-default"]').text()).toContain(
-      'Default world active',
+      'No extra capability Pack enabled',
     )
 
+    wrapper.unmount()
+  })
+
+  test('shows missing optional content references without blocking a capability Pack', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.upsertWorldPack({
+      id: 'optional_reference_pack',
+      title: 'Optional reference Pack',
+      bookSourceLinkIds: ['missing_source'],
+      encyclopediaEntryIds: ['missing_entry'],
+      profileTemplateIds: ['missing_template'],
+      appBindings: [{ id: 'optional_app', title: 'Optional app', moduleKey: 'shopping' }],
+    })
+
+    const wrapper = await mountWorldBook()
+    await wrapper.get('[data-testid="worldbook-current-pack-select"]').setValue('optional_reference_pack')
+    await nextTick()
+
+    const notices = wrapper.get('[data-testid="worldbook-current-pack-reference-notices"]')
+    expect(notices.text()).toContain('capability activation is unaffected')
+    expect(notices.text()).toContain('missing_source')
+    expect(wrapper.get('[data-testid="worldbook-current-pack-activate"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('[data-testid="worldbook-current-pack-activate"]').trigger('click')
+    await nextTick()
+
+    expect(systemStore.user.activeWorldPackId).toBe('optional_reference_pack')
     wrapper.unmount()
   })
 
@@ -347,7 +410,7 @@ describe('WorldBook functional IA', () => {
     expect(systemStore.user.activeWorldPackId).toBe('default_world')
     expect(systemStore.user.enabledWorldPackIds).toEqual([])
     expect(wrapper.get('[data-testid="worldbook-enabled-expansions"]').text()).toContain(
-      'No expansion packs are enabled yet',
+      'No extra capability Pack is enabled',
     )
 
     wrapper.unmount()
@@ -356,6 +419,7 @@ describe('WorldBook functional IA', () => {
   test('reviews pasted nonstandard app proposals before adding a world app binding', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('modern_parallel')
 
     const wrapper = await mountWorldBook()
 
@@ -395,7 +459,7 @@ describe('WorldBook functional IA', () => {
       '1 entries need confirmation',
     )
     expect(
-      wrapper.get('[data-testid="worldbook-current-pack-template-confirmable-default_world_transit_pass"]').text(),
+      wrapper.get('[data-testid="worldbook-current-pack-template-confirmable-modern_parallel_transit_pass"]').text(),
     ).toContain('Metro Pass')
     expect(
       wrapper.get('[data-testid="worldbook-current-pack-template-rejected-made_up_console"]').text(),
@@ -406,25 +470,25 @@ describe('WorldBook functional IA', () => {
         .attributes('data-rejection-reason'),
     ).toBe('unknown_template')
     expect(
-      wrapper.get('[data-testid="worldbook-current-pack-template-rejected-default_world_clinic_dispatch"]').text(),
+      wrapper.get('[data-testid="worldbook-current-pack-template-rejected-modern_parallel_clinic_dispatch"]').text(),
     ).toContain('Low confidence')
 
     await wrapper
-      .get('[data-testid="worldbook-current-pack-template-confirm-default_world_transit_pass"]')
+      .get('[data-testid="worldbook-current-pack-template-confirm-modern_parallel_transit_pass"]')
       .trigger('click')
     await nextTick()
 
-    expect(systemStore.getWorldPackById('default_world').appBindings).toEqual(
+    expect(systemStore.getWorldPackById('modern_parallel').appBindings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'default_world_transit_pass',
+          id: 'modern_parallel_transit_pass',
           title: 'Metro Pass',
           moduleKey: 'map',
           route: '/map',
         }),
       ]),
     )
-    expect(wrapper.get('[data-testid="worldbook-current-pack-app-binding-default_world_transit_pass"]').text()).toContain(
+    expect(wrapper.get('[data-testid="worldbook-current-pack-app-binding-modern_parallel_transit_pass"]').text()).toContain(
       'Metro Pass',
     )
 
@@ -515,7 +579,7 @@ describe('WorldBook functional IA', () => {
     wrapper.unmount()
   })
 
-  test('injects current world pack currency into Wallet finance options', async () => {
+  test('injects an active capability Pack currency into Wallet finance options', async () => {
     const systemStore = useSystemStore()
     const walletStore = useWalletStore()
     systemStore.settings.system.language = 'en-US'

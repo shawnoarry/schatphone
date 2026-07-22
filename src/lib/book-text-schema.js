@@ -13,6 +13,16 @@ export const BOOK_TEXT_FORMATS = Object.freeze(['plain', 'markdown', 'structured
 
 export const BOOK_TEXT_STATUSES = Object.freeze(['draft', 'active_source', 'archived'])
 
+export const BOOK_TEXT_EXPORT_FORMATS = Object.freeze([
+  'worldbook_json',
+  'markdown',
+  'text',
+])
+
+const BOOK_TEXT_EXPORT_TYPE = 'schatphone.bookTextAsset'
+const BOOK_TEXT_EXPORT_VERSION = 1
+const PORTABLE_MARKDOWN_MARKER = 'schatphoneBookText'
+
 export const WORLDBOOK_SOURCE_USAGES = WORLDBOOK_SOURCE_ROLES
 
 export const WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT = 12000
@@ -130,21 +140,113 @@ const normalizeSnapshotText = (value = '') => {
   return text.slice(0, WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT)
 }
 
-const normalizeFrontMatter = (content = '') => {
+const splitMarkdownFrontMatter = (content = '') => {
   const text = typeof content === 'string' ? content : ''
-  if (!text.startsWith('---')) return {}
-  const lines = text.split(/\r?\n/)
-  const endIndex = lines.findIndex((line, index) => index > 0 && line.trim() === '---')
-  if (endIndex <= 0) return {}
-  const frontMatter = {}
-  lines.slice(1, endIndex).forEach((line) => {
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
+  if (!match) return { attributes: {}, body: text }
+
+  const rawAttributes = {}
+  match[1].split(/\r?\n/).forEach((line) => {
     const colonIndex = line.indexOf(':')
     if (colonIndex <= 0) return
-    const key = normalizeInlineText(line.slice(0, colonIndex), '', 40)
-    const value = normalizeInlineText(line.slice(colonIndex + 1), '', 300)
-    if (key && value) frontMatter[key] = value
+    const key = line.slice(0, colonIndex).trim()
+    const value = line.slice(colonIndex + 1).trim()
+    if (key && value) rawAttributes[key] = value
   })
-  return frontMatter
+
+  if (rawAttributes[PORTABLE_MARKDOWN_MARKER] !== String(BOOK_TEXT_EXPORT_VERSION)) {
+    return { attributes: {}, body: text }
+  }
+
+  const readJsonAttribute = (key, fallback) => {
+    if (!hasOwn(rawAttributes, key)) return fallback
+    try {
+      return JSON.parse(rawAttributes[key])
+    } catch {
+      return fallback
+    }
+  }
+
+  return {
+    attributes: {
+      title: readJsonAttribute('title', ''),
+      category: readJsonAttribute('category', ''),
+      categoryId: readJsonAttribute('categoryId', ''),
+      tags: readJsonAttribute('tags', []),
+    },
+    body: text.slice(match[0].length),
+  }
+}
+
+const normalizePortableFileStem = (value = '') => {
+  const visibleTitle = [...normalizeInlineText(value, 'book-source', 120)]
+    .filter((character) => character.charCodeAt(0) >= 32)
+    .join('')
+  const stem = visibleTitle
+    .replace(/[<>:"/\\|?*]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[.\s-]+|[.\s-]+$/g, '')
+  return stem || 'book-source'
+}
+
+const buildPortableMarkdown = (asset = {}) => {
+  const normalized = normalizeBookTextAsset(asset)
+  const lines = [
+    '---',
+    `${PORTABLE_MARKDOWN_MARKER}: ${BOOK_TEXT_EXPORT_VERSION}`,
+    `title: ${JSON.stringify(normalized.title)}`,
+    `category: ${JSON.stringify(normalized.category)}`,
+    `categoryId: ${JSON.stringify(normalized.categoryId)}`,
+    `tags: ${JSON.stringify(normalized.tags)}`,
+    '---',
+  ]
+  return `${lines.join('\n')}\n${normalized.content}`
+}
+
+const isPlainObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
+const validateWorldBookExportEnvelope = (parsed) => {
+  if (
+    !isPlainObject(parsed) ||
+    parsed.type !== BOOK_TEXT_EXPORT_TYPE ||
+    !hasOwn(parsed, 'version') ||
+    !hasOwn(parsed, 'asset')
+  ) {
+    return {
+      ok: false,
+      reason: 'invalid_worldbook_envelope',
+      message: 'The selected .worldbook.json file is not a SchatPhone Book export.',
+    }
+  }
+
+  if (parsed.version !== BOOK_TEXT_EXPORT_VERSION) {
+    return {
+      ok: false,
+      reason: 'unsupported_worldbook_version',
+      message: `This .worldbook.json version is not supported (expected ${BOOK_TEXT_EXPORT_VERSION}).`,
+    }
+  }
+
+  const asset = parsed.asset
+  const hasRequiredAssetShape =
+    isPlainObject(asset) &&
+    typeof asset.id === 'string' && asset.id.trim().length > 0 &&
+    typeof asset.title === 'string' && asset.title.trim().length > 0 &&
+    BOOK_TEXT_CATEGORIES.includes(asset.category) &&
+    BOOK_TEXT_FORMATS.includes(asset.format) &&
+    typeof asset.content === 'string'
+
+  if (!hasRequiredAssetShape) {
+    return {
+      ok: false,
+      reason: 'invalid_worldbook_asset',
+      message: 'The selected .worldbook.json file does not contain a valid Book asset.',
+    }
+  }
+
+  return { ok: true, asset }
 }
 
 export const computeBookContentFingerprint = (value = '') => {
@@ -483,19 +585,16 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
   const importedAt = Date.now()
 
   if (extension === 'md' || extension === 'markdown') {
-    const frontMatter = normalizeFrontMatter(rawContent)
-    const tags = frontMatter.tags
-      ? frontMatter.tags.split(',').map((item) => item.trim())
-      : []
+    const { attributes: frontMatter, body } = splitMarkdownFrontMatter(rawContent)
     return {
       ok: true,
       asset: normalizeBookTextAsset({
-        title,
-        category: 'worldview',
+        title: frontMatter.title || title,
+        category: frontMatter.category || 'worldview',
         format: 'markdown',
-        categoryId: frontMatter.category || '',
-        tags,
-        content: rawContent,
+        categoryId: frontMatter.categoryId || '',
+        tags: Array.isArray(frontMatter.tags) ? frontMatter.tags : [],
+        content: body,
         status: 'draft',
         source: {
           kind: 'imported_file',
@@ -530,13 +629,12 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
     }
   }
 
-  if (extension === 'json' || extension === 'worldbook.json') {
+  if (extension === 'worldbook.json') {
     try {
       const parsed = JSON.parse(rawContent)
-      const assetSource =
-        parsed && typeof parsed === 'object' && parsed.asset && typeof parsed.asset === 'object'
-          ? parsed.asset
-          : parsed
+      const validation = validateWorldBookExportEnvelope(parsed)
+      if (!validation.ok) return validation
+      const assetSource = validation.asset
       return {
         ok: true,
         asset: normalizeBookTextAsset({
@@ -563,6 +661,36 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
     }
   }
 
+  if (extension === 'json') {
+    try {
+      const parsed = JSON.parse(rawContent)
+      const assetSource = isPlainObject(parsed?.asset) ? parsed.asset : parsed
+      return {
+        ok: true,
+        asset: normalizeBookTextAsset({
+          ...assetSource,
+          title: assetSource?.title || title,
+          format: normalizeFormat(assetSource?.format, 'structured_json'),
+          source: {
+            ...(isPlainObject(assetSource?.source) ? assetSource.source : {}),
+            kind: 'imported_file',
+            fileName: normalizeInlineText(fileName, title, 200),
+            mimeType: normalizeInlineText(mimeType, '', 120),
+            importedAt,
+          },
+          createdAt: assetSource?.createdAt || importedAt,
+          updatedAt: assetSource?.updatedAt || importedAt,
+        }),
+      }
+    } catch {
+      return {
+        ok: false,
+        reason: 'malformed_json',
+        message: 'The selected JSON file could not be parsed.',
+      }
+    }
+  }
+
   return {
     ok: false,
     reason: 'unsupported_extension',
@@ -571,8 +699,39 @@ export const buildBookAssetFromImportedText = ({ fileName, content, mimeType } =
 }
 
 export const buildBookAssetExportPayload = (asset) => ({
-  type: 'schatphone.bookTextAsset',
-  version: 1,
+  type: BOOK_TEXT_EXPORT_TYPE,
+  version: BOOK_TEXT_EXPORT_VERSION,
   exportedAt: Date.now(),
   asset: normalizeBookTextAsset(asset),
 })
+
+export const buildBookAssetPortableExport = (asset, format = 'worldbook_json') => {
+  if (!BOOK_TEXT_EXPORT_FORMATS.includes(format)) return null
+  const normalized = normalizeBookTextAsset(asset)
+  const stem = normalizePortableFileStem(normalized.title)
+
+  if (format === 'markdown') {
+    return {
+      format,
+      fileName: `${stem}.md`,
+      mimeType: 'text/markdown;charset=utf-8',
+      content: buildPortableMarkdown(normalized),
+    }
+  }
+
+  if (format === 'text') {
+    return {
+      format,
+      fileName: `${stem}.txt`,
+      mimeType: 'text/plain;charset=utf-8',
+      content: normalized.content,
+    }
+  }
+
+  return {
+    format,
+    fileName: `${stem}.worldbook.json`,
+    mimeType: 'application/json;charset=utf-8',
+    content: JSON.stringify(buildBookAssetExportPayload(normalized), null, 2),
+  }
+}

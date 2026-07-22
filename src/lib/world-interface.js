@@ -7,6 +7,30 @@ import { DEFAULT_WORLD_PACK_ID } from './world-pack-schema'
 export const WORLD_CONTEXT_PROMPT_KNOWLEDGE_LIMIT = 8
 export const WORLD_CONTEXT_BOOK_SOURCE_CHAR_LIMIT = 2400
 export const WORLD_CONTEXT_BOOK_SOURCE_ITEM_CHAR_LIMIT = 1200
+export const LEGACY_SINGLE_WORLD_ID = 'legacy_single_world'
+
+const createImmutableSnapshot = (value) => {
+  const copies = new WeakMap()
+
+  const clone = (current) => {
+    if (current === null || typeof current !== 'object') return current
+    if (copies.has(current)) return copies.get(current)
+
+    const copy = Array.isArray(current) ? [] : {}
+    copies.set(current, copy)
+    Reflect.ownKeys(current).forEach((key) => {
+      copy[key] = clone(current[key])
+    })
+    return Object.freeze(copy)
+  }
+
+  return clone(value)
+}
+
+export const LEGACY_SINGLE_WORLD_IDENTITY = createImmutableSnapshot({
+  worldId: LEGACY_SINGLE_WORLD_ID,
+  title: 'Current world',
+})
 
 export const DEFAULT_WORLD_PACK = Object.freeze({
   id: DEFAULT_WORLD_PACK_ID,
@@ -16,7 +40,7 @@ export const DEFAULT_WORLD_PACK = Object.freeze({
   source: 'worldbook',
 })
 
-export const WORLD_INTERFACE_CONSUMERS = Object.freeze([
+export const WORLD_INTERFACE_CONSUMERS = createImmutableSnapshot([
   { key: 'chat', label: 'Chat', title: '聊天', consumesPromptContext: true },
   { key: 'contacts', label: 'Contacts', title: '联系人', consumesPromptContext: false },
   { key: 'map', label: 'Map', title: '地图', consumesPromptContext: true },
@@ -69,17 +93,15 @@ const listEncyclopediaEntriesFromStore = (systemStore) => {
 
 const listKnowledgePointsFromStore = listEncyclopediaEntriesFromStore
 
-const listWorldProfileTemplatesFromStore = (systemStore, worldId = DEFAULT_WORLD_PACK.id) => {
-  if (typeof systemStore?.listWorldProfileTemplates === 'function') {
-    return systemStore.listWorldProfileTemplates(worldId, { enabledOnly: true })
-  }
-  const templates = Array.isArray(systemStore?.user?.profileTemplates)
-    ? systemStore.user.profileTemplates
-    : []
+const listCurrentWorldProfileTemplatesFromStore = (systemStore) => {
+  const templates = typeof systemStore?.listProfileTemplates === 'function'
+    ? systemStore.listProfileTemplates()
+    : Array.isArray(systemStore?.user?.profileTemplates)
+      ? systemStore.user.profileTemplates
+      : []
   return templates.filter(
     (template) =>
       template?.scope === 'world' &&
-      template?.worldId === worldId &&
       template?.enabled !== false,
   )
 }
@@ -105,7 +127,10 @@ const resolveActiveWorldPack = (systemStore) => {
 
 const listEnabledWorldPacksFromStore = (systemStore) => {
   if (typeof systemStore?.listEnabledWorldPacks === 'function') {
-    return systemStore.listEnabledWorldPacks()
+    const packs = systemStore.listEnabledWorldPacks()
+    return Array.isArray(packs)
+      ? packs.filter((pack) => pack?.id !== DEFAULT_WORLD_PACK_ID)
+      : []
   }
   const active = resolveActiveWorldPack(systemStore)
   return active && active.id !== DEFAULT_WORLD_PACK_ID ? [active] : []
@@ -224,6 +249,76 @@ export const resolveWorldviewText = (systemStore, options = {}) => {
   return [bookSources.promptText, fallback].filter(Boolean).join('\n\n')
 }
 
+const buildWorldSettingProjection = ({
+  activePack,
+  enabledWorldPacks,
+  worldview,
+  fallbackText,
+  bookSources,
+  encyclopediaEntries,
+  worldProfileTemplates,
+  roleKnowledge = {},
+} = {}) => {
+  const projectCapabilityPack = (pack) => {
+    if (!pack || pack.id === DEFAULT_WORLD_PACK_ID) return null
+    const projected = { ...pack }
+    delete projected.bookSourceLinkIds
+    delete projected.encyclopediaEntryIds
+    delete projected.knowledgePointIds
+    delete projected.profileTemplateIds
+    return projected
+  }
+  const capabilityActivePack = projectCapabilityPack(activePack)
+  const capabilityPacks = enabledWorldPacks.map(projectCapabilityPack).filter(Boolean)
+  const appBindings = enabledWorldPacks.flatMap((pack) =>
+    Array.isArray(pack?.appBindings) ? pack.appBindings : [],
+  )
+  const serviceTemplates = enabledWorldPacks.flatMap((pack) =>
+    Array.isArray(pack?.serviceAccountTemplates) ? pack.serviceAccountTemplates : [],
+  )
+
+  return {
+    identity: LEGACY_SINGLE_WORLD_IDENTITY,
+    narrative: {
+      activeSources: bookSources.resolved,
+      promptText: worldview,
+      fallbackText,
+    },
+    encyclopedia: {
+      selectedEntries: encyclopediaEntries.filter((entry) => entry.enabled !== false),
+      roleBoundEntries: Array.isArray(roleKnowledge.enabledEntries)
+        ? roleKnowledge.enabledEntries
+        : [],
+    },
+    profiles: {
+      enabledTemplates: worldProfileTemplates.map((template) => {
+        const projected = { ...template }
+        delete projected.worldId
+        return projected
+      }),
+    },
+    capabilities: {
+      activePack: capabilityActivePack,
+      enabledPacks: capabilityPacks,
+      appBindings,
+      serviceTemplates,
+      terminology: capabilityActivePack?.terminology || {},
+      economy: capabilityActivePack?.economy || {},
+    },
+    diagnostics: {
+      missingSourceIds: bookSources.resolved
+        .filter((source) => source.missing)
+        .map((source) => source.assetId),
+      changedSourceIds: bookSources.resolved
+        .filter((source) => source.changed)
+        .map((source) => source.assetId),
+      unresolvedReferenceIds: bookSources.resolved
+        .filter((source) => source.missing)
+        .map((source) => source.assetId),
+    },
+  }
+}
+
 export const formatWorldKnowledgePointForPrompt = (point = {}) => {
   const normalized = normalizeKnowledgePoint(point)
   const tags = normalized.tags.length > 0 ? ` [tags: ${normalized.tags.join(', ')}]` : ''
@@ -316,7 +411,7 @@ export const resolveRoleKnowledgeState = ({
   }
 }
 
-export const resolveWorldContextForConsumer = ({
+export const resolveCurrentWorldContext = ({
   systemStore,
   chatStore,
   bookStore,
@@ -328,6 +423,12 @@ export const resolveWorldContextForConsumer = ({
   const activePack = resolveActiveWorldPack(systemStore)
   const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
+  const fallbackText = normalizeText(systemStore?.user?.globalWorldview) ||
+    normalizeText(systemStore?.user?.worldBook)
+  const encyclopediaEntries = listEncyclopediaEntriesFromStore(systemStore).map(
+    normalizeEncyclopediaEntry,
+  )
+  const worldProfileTemplates = listCurrentWorldProfileTemplatesFromStore(systemStore)
   const roleKnowledge = resolveRoleKnowledgeState({
     systemStore,
     chatStore,
@@ -338,7 +439,18 @@ export const resolveWorldContextForConsumer = ({
     WORLD_INTERFACE_CONSUMERS.find((item) => item.key === consumer) ||
     WORLD_INTERFACE_CONSUMERS[0]
 
-  return {
+  const projection = buildWorldSettingProjection({
+    activePack,
+    enabledWorldPacks,
+    worldview,
+    fallbackText,
+    bookSources,
+    encyclopediaEntries,
+    worldProfileTemplates,
+    roleKnowledge,
+  })
+
+  return createImmutableSnapshot({
     consumer: consumerConfig.key,
     consumerLabel: consumerConfig.label,
     consumerTitle: consumerConfig.title,
@@ -348,12 +460,8 @@ export const resolveWorldContextForConsumer = ({
     worldPackActivationState: resolveWorldPackActivationState(systemStore, activePack),
     worldPackAppBindingCount: countPackItems(enabledWorldPacks, 'appBindings'),
     worldPackServiceTemplateCount: countPackItems(enabledWorldPacks, 'serviceAccountTemplates'),
-    worldPackAppBindings: enabledWorldPacks.flatMap((pack) =>
-      Array.isArray(pack?.appBindings) ? pack.appBindings : [],
-    ),
-    worldPackServiceAccountTemplates: enabledWorldPacks.flatMap((pack) =>
-      Array.isArray(pack?.serviceAccountTemplates) ? pack.serviceAccountTemplates : [],
-    ),
+    worldPackAppBindings: projection.capabilities.appBindings,
+    worldPackServiceAccountTemplates: projection.capabilities.serviceTemplates,
     worldview,
     worldviewPreview: normalizePreview(worldview, 120),
     worldviewCharCount: worldview.length,
@@ -364,9 +472,13 @@ export const resolveWorldContextForConsumer = ({
     missingBookSourceCount: bookSources.missingSourceCount,
     changedBookSourceCount: bookSources.changedSourceCount,
     consumers: WORLD_INTERFACE_CONSUMERS,
+    ...projection,
     ...roleKnowledge,
-  }
+  })
 }
+
+export const resolveWorldContextForConsumer = (options = {}) =>
+  resolveCurrentWorldContext(options)
 
 export const buildWorldPromptBlock = (worldContext = {}) => {
   const worldview = normalizeText(worldContext.worldview, 'none')
@@ -391,24 +503,31 @@ export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
   const activePack = resolveActiveWorldPack(systemStore)
   const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
-  const points = listKnowledgePointsFromStore(systemStore)
+  const points = listKnowledgePointsFromStore(systemStore).map(normalizeKnowledgePoint)
   const enabledKnowledgeCount = points.filter((point) => point?.enabled !== false).length
   const disabledKnowledgeCount = Math.max(0, points.length - enabledKnowledgeCount)
-  const worldProfileTemplates = listWorldProfileTemplatesFromStore(systemStore, activePack.id)
+  const worldProfileTemplates = listCurrentWorldProfileTemplatesFromStore(systemStore)
+  const fallbackText = normalizeText(systemStore?.user?.globalWorldview) ||
+    normalizeText(systemStore?.user?.worldBook)
+  const projection = buildWorldSettingProjection({
+    activePack,
+    enabledWorldPacks,
+    worldview,
+    fallbackText,
+    bookSources,
+    encyclopediaEntries: points,
+    worldProfileTemplates,
+  })
 
-  return {
+  return createImmutableSnapshot({
     activePack,
     enabledWorldPacks,
     enabledWorldPackCount: enabledWorldPacks.length,
     worldPackActivationState: resolveWorldPackActivationState(systemStore, activePack),
     worldPackAppBindingCount: countPackItems(enabledWorldPacks, 'appBindings'),
     worldPackServiceTemplateCount: countPackItems(enabledWorldPacks, 'serviceAccountTemplates'),
-    worldPackAppBindings: enabledWorldPacks.flatMap((pack) =>
-      Array.isArray(pack?.appBindings) ? pack.appBindings : [],
-    ),
-    worldPackServiceAccountTemplates: enabledWorldPacks.flatMap((pack) =>
-      Array.isArray(pack?.serviceAccountTemplates) ? pack.serviceAccountTemplates : [],
-    ),
+    worldPackAppBindings: projection.capabilities.appBindings,
+    worldPackServiceAccountTemplates: projection.capabilities.serviceTemplates,
     worldview,
     worldviewPreview: normalizePreview(worldview, 120),
     worldviewCharCount: worldview.length,
@@ -427,5 +546,6 @@ export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
     bookSources: bookSources.resolved,
     consumers: WORLD_INTERFACE_CONSUMERS,
     promptConsumerCount: WORLD_INTERFACE_CONSUMERS.filter((item) => item.consumesPromptContext).length,
-  }
+    ...projection,
+  })
 }

@@ -13,7 +13,7 @@ This is the short acceptance checklist for the current WorldBook baseline. It is
    - enabled knowledge count;
    - current-world role template count;
    - modules that consume the world context.
-3. Confirm `Current World Pack / 当前设定包` appears before editing controls.
+3. Open `Optional capability Packs / 可选能力包` and confirm it is separate from the current world setting and all Book/WorldBook content choices.
 4. Edit the global worldview and save.
 5. Open `Book`, create or import a worldbook text source, then return to `Settings -> WorldBook`.
 6. Link the Book source as a whole document or selected section, then confirm it appears in the active-world summary.

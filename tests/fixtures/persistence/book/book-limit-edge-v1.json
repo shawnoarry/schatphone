@@ -1,0 +1,19 @@
+{
+  "fixtureId": "book-limit-edge-v1",
+  "sourceKind": "generated_local_envelope",
+  "generator": {
+    "assetCount": 300,
+    "longTextLength": 65536,
+    "savedAt": 1784678400000,
+    "createdAt": 1784505600000,
+    "updatedAt": 1784678400000
+  },
+  "expected": {
+    "firstAssetId": "limit_asset_001",
+    "lastAssetId": "limit_asset_300",
+    "assetCount": 300,
+    "longTextLength": 65536,
+    "categoryIds": [],
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

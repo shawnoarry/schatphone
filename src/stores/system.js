@@ -759,6 +759,20 @@ const normalizeWorldPackEnablements = (value = {}) => {
 
 const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAULT_GLOBAL_WORLDVIEW) => {
   const source = rawUser && typeof rawUser === 'object' ? rawUser : {}
+  const legacyActiveWorldPackId = typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
+    ? source.activeWorldPackId.trim()
+    : DEFAULT_WORLD_PACK_ID
+  const hasExplicitEnabledWorldPackIds = Array.isArray(source.enabledWorldPackIds)
+  const enabledWorldPackIds = hasExplicitEnabledWorldPackIds
+    ? normalizeWorldPackIdList(source.enabledWorldPackIds)
+    : legacyActiveWorldPackId === DEFAULT_WORLD_PACK_ID
+      ? []
+      : [legacyActiveWorldPackId]
+  const activeWorldPackId = enabledWorldPackIds.length === 0
+    ? DEFAULT_WORLD_PACK_ID
+    : enabledWorldPackIds.includes(legacyActiveWorldPackId)
+      ? legacyActiveWorldPackId
+      : enabledWorldPackIds[0]
   const rawGlobalWorldview =
     typeof source.globalWorldview === 'string'
       ? source.globalWorldview
@@ -779,16 +793,17 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
     ),
     worldPacks: normalizeWorldPacks(source.worldPacks),
     worldProfileAnalysis: normalizeWorldProfile(source.worldProfileAnalysis),
-    enabledWorldPackIds: normalizeWorldPackIdList(source.enabledWorldPackIds),
+    enabledWorldPackIds,
     worldPackEnablements: normalizeWorldPackEnablements(source.worldPackEnablements),
-    activeWorldPackId: typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
-      ? source.activeWorldPackId.trim()
-      : DEFAULT_WORLD_PACK_ID,
+    activeWorldPackId,
     worldPackActivation: normalizeWorldPackActivation(
-      source.worldPackActivation,
-      typeof source.activeWorldPackId === 'string' && source.activeWorldPackId.trim()
-        ? source.activeWorldPackId.trim()
-        : DEFAULT_WORLD_PACK_ID,
+      {
+        ...(source.worldPackActivation && typeof source.worldPackActivation === 'object'
+          ? source.worldPackActivation
+          : {}),
+        activePackId: activeWorldPackId,
+      },
+      activeWorldPackId,
     ),
   }
 }
@@ -2647,9 +2662,6 @@ export const useSystemStore = defineStore('system', () => {
 
   const listEnabledWorldPacks = () => {
     const ids = normalizeWorldPackIdList(user.enabledWorldPackIds)
-    if (ids.length === 0 && user.activeWorldPackId) {
-      return [getWorldPackById(user.activeWorldPackId)].filter(Boolean)
-    }
     return ids.map((id) => getWorldPackById(id)).filter(Boolean)
   }
 
@@ -2737,6 +2749,22 @@ export const useSystemStore = defineStore('system', () => {
     const nextEnablements = { ...normalizeWorldPackEnablements(user.worldPackEnablements) }
     delete nextEnablements[id]
     user.worldPackEnablements = nextEnablements
+    if (user.activeWorldPackId === id) {
+      const nextActivePackId = user.enabledWorldPackIds[0] || DEFAULT_WORLD_PACK_ID
+      user.activeWorldPackId = nextActivePackId
+      user.worldPackActivation = normalizeWorldPackActivation({
+        activePackId: nextActivePackId,
+        state: 'active',
+        reviewedAt: Date.now(),
+        activatedAt: Date.now(),
+      }, nextActivePackId)
+      user.worldPacks = normalizeWorldPacks(
+        user.worldPacks.map((pack) => ({
+          ...pack,
+          state: pack.id === nextActivePackId ? 'active' : 'available',
+        })),
+      )
+    }
     normalizeCurrentHomeWidgetPages()
     return { ok: before.includes(id), reason: before.includes(id) ? 'disabled' : 'not_enabled' }
   }
@@ -2812,6 +2840,9 @@ export const useSystemStore = defineStore('system', () => {
   const updateWorldPackEconomy = (packId = '', economyPatch = {}) => {
     const pack = getWorldPackById(packId)
     if (!pack) return { ok: false, reason: 'pack_not_found', pack: null }
+    if (pack.id === DEFAULT_WORLD_PACK_ID) {
+      return { ok: false, reason: 'capability_pack_required', pack }
+    }
     const nextPack = upsertWorldPack({
       ...pack,
       economy: {
@@ -2881,16 +2912,31 @@ export const useSystemStore = defineStore('system', () => {
       : input && typeof input === 'object'
         ? { payload: input }
         : { proposals: [] }
-    return buildWorldAppTemplateExtractionReviewPayload({
+    const review = buildWorldAppTemplateExtractionReviewPayload({
       ...reviewInput,
       worldPackId: pack?.id || packId || '',
       existingBindings: pack?.appBindings || [],
     })
+    if (pack?.id !== DEFAULT_WORLD_PACK_ID) return review
+    return {
+      ...review,
+      rejectedProposals: [
+        ...review.rejectedProposals,
+        ...review.confirmableProposals.map((proposal) => ({
+          ...proposal,
+          rejectionReason: 'capability_pack_required',
+        })),
+      ],
+      confirmableProposals: [],
+    }
   }
 
   const confirmWorldAppTemplateProposal = (proposal = {}, packId = user.activeWorldPackId) => {
     const pack = getWorldPackById(packId)
     if (!pack) return { ok: false, reason: 'pack_not_found', binding: null, pack: null }
+    if (pack.id === DEFAULT_WORLD_PACK_ID) {
+      return { ok: false, reason: 'capability_pack_required', binding: null, pack }
+    }
     const review = buildWorldAppTemplateExtractionReview([proposal], pack.id)
     const confirmable = review.confirmableProposals[0]
     if (!confirmable) {
@@ -2926,16 +2972,31 @@ export const useSystemStore = defineStore('system', () => {
       : input && typeof input === 'object'
         ? { payload: input }
         : { proposals: [] }
-    return buildWorldServiceTemplateProposalReviewPayload({
+    const review = buildWorldServiceTemplateProposalReviewPayload({
       ...reviewInput,
       worldPack: pack || {},
       worldPackId: pack?.id || packId || '',
     })
+    if (pack?.id !== DEFAULT_WORLD_PACK_ID) return review
+    return {
+      ...review,
+      rejectedProposals: [
+        ...review.rejectedProposals,
+        ...review.confirmableProposals.map((proposal) => ({
+          ...proposal,
+          rejectionReason: 'capability_pack_required',
+        })),
+      ],
+      confirmableProposals: [],
+    }
   }
 
   const confirmWorldServiceTemplateProposal = (proposal = {}, packId = user.activeWorldPackId) => {
     const pack = getWorldPackById(packId)
     if (!pack) return { ok: false, reason: 'pack_not_found', template: null, pack: null }
+    if (pack.id === DEFAULT_WORLD_PACK_ID) {
+      return { ok: false, reason: 'capability_pack_required', template: null, pack }
+    }
     const review = buildWorldServiceTemplateProposalReview([proposal], pack.id)
     const confirmable = review.confirmableProposals[0]
     if (!confirmable) {

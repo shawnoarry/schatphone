@@ -49,7 +49,14 @@ Current landed guardrail:
 - stronger override surface
 - explicit safety boundary
 
-## 5. Semantic Guardrails
+## 5. Workstream E: Mini Scene Trigger Collaboration
+
+- begin only when a concrete runtime event family is separately promoted under `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
+- keep eligibility, cooldown/cap, review, and provenance in Event Runtime
+- call the shared Mini Scene Interface with canonical source facts; do not copy world-profile, regex, artifact, or presenter logic into runtime adapters
+- treat interaction commands as requests that still pass the owning module's validation and any required runtime review
+
+## 6. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -61,3 +68,4 @@ Treat these as bugs:
 6. high-risk gate rules are duplicated in module adapters instead of using the preset seam
 7. generated friend/block/refusal social events directly mutate Chat, Contacts, or relationship runtime without the event-runtime audit/review path
 8. World Pack app proposal review creates event rules or runtime mutations instead of confirmed appBindings
+9. Event Runtime starts owning Mini Scene artifacts/presenters or lets a scene interaction bypass source-module validation/review

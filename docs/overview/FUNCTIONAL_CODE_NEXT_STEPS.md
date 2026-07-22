@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-07-18
+Updated: 2026-07-22
 
 > **Frozen execution status / 非执行看板**
 >
@@ -12,11 +12,12 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. finish the promoted IndexedDB-first repository/schema and data-lifecycle architecture around the now-accepted complete-backup/recovery contract;
-2. approve one reference migration separately;
+1. review the completed non-active IndexedDB/Book Batch 2B repository foundation and preserve its browser evidence;
+2. keep Book runtime import/cutover/activation and later reference migrations separately approved;
 3. security/toolchain hardening;
 4. release-gate alignment and one measured architecture seam;
-5. later product/device/content work in dependency order.
+5. the roadmap 4.8 Mini Scene persistence/policy contract after its completed pure foundation, followed by separately approved presenter and source-Adapter stages;
+6. later product/device/content work in dependency order.
 
 ## 2. Completed Enough To Stop Re-Listing
 
@@ -39,7 +40,8 @@ Current contract status:
 
 - `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` is accepted at architecture level;
 - it freezes standalone package/manifest integrity, capacity and failure states, staged atomic activation, crash recovery, legacy degraded restore, exact local binary reuse, non-destructive Gallery preservation, migration, rollback, and the test matrix;
-- it does not approve IndexedDB, R2, Gallery schema, or reference-migration implementation.
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is architecture-accepted, and its exact non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice plus focused real-Chromium coverage completed on 2026-07-22;
+- neither contract approves application Repository import, Book cutover/active-pointer activation, dual write, R2, Gallery schema, or later-owner migration.
 
 Problem:
 
@@ -66,11 +68,11 @@ Confirmed product boundary:
 Remaining planning before implementation:
 
 - classify authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport data under the confirmed retention boundaries;
-- define repository boundaries, record/index shape, transactions, idempotency, quota/persistence UX, and multi-tab coordination;
-- preserve the accepted backup-size/quota, creation-failure, standalone package, integrity, staged restore, binary completeness, local delivery, legacy import, and rollback acceptance rather than reopening it during schema work;
-- select one small reference migration only after acceptance is frozen.
+- implement the exact accepted repository stores/indexes, transactions, fixtures, staging, quota/persistence policy, and multi-tab coordination behind unreferenced/test Adapters only;
+- preserve the accepted backup-size/quota, creation-failure, standalone package, integrity, staged restore, binary completeness, local delivery, legacy import, and rollback acceptance;
+- stop before application import, Book cutover/activation, dual write, or another owner.
 
-Do not start broad migration from this candidate. It is already promoted as an architecture decision, not as migration implementation.
+Do not start broad migration from this candidate. Its exact non-active Batch 2B foundation is complete, but application import/cutover/activation is still not approved.
 
 ## 4. Candidate B: Toolchain And CI Hardening
 
@@ -95,7 +97,7 @@ Safe sequence:
 
 Choose one, not several:
 
-- Current World Pack review/display state from `WorldBookView.vue` / `CurrentWorldPackPanel.vue`;
+- Optional capability Pack review/display state from `WorldBookView.vue` / the legacy-named `CurrentWorldPackPanel.vue` implementation;
 - one Home edit/library state seam from `HomeView.vue`;
 - one Chat Directory service/template management seam;
 - one `systemStore` facade for API settings, Home placement, appearance, or automation;
@@ -137,20 +139,22 @@ Run the real product loop:
 
 Promote only the concrete failures found during testing. Do not broaden archetypes first.
 
-## 8. Candidate F: K-pop Built-In Content Migration
+## 8. Candidate F: Cross-Module Mini Scene Next Gate
 
-The 2026-06-24 K-pop system plan is a planning draft. Current built-in Book assets still import older small drafts.
+Current contract status:
 
-If the carrier decision is approved, the recommended first code slice is:
+- `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` is architecture-accepted and Stage 1 is done;
+- the K-pop 2 + 6 + 1 Book/WorldBook content slice is already landed, and its music-show-day prose rule remains narrative input rather than executable configuration;
+- pure request/draft/artifact/policy schemas, an empty-by-default module registry, Book structured-profile/regex validation, deterministic world/profile resolution, and 22 focused tests are landed;
+- no shared runtime, popup, safe regex execution engine, built-in structured transform profile, persistence, or source Adapter is implemented.
 
-- point built-in Book assets to reviewed merged content;
-- keep user-facing titles free of `draft`, date, and coordinate terminology;
-- fix world-rule body extraction;
-- preserve section-level activation and context budgets;
-- update Book/WorldBook regression tests;
-- archive old source drafts only after code no longer imports them.
+The Book Repository foundation prerequisite is complete. The next Mini Scene gate remains a separately approved persistence and policy architecture slice:
 
-Do not implement profile templates, schedule types, locations, service accounts, app bindings, and event seeds in the same slice.
+- add `mini_scene.artifact`, profile binding, content-dimension choice, and registered-module policy ownership to persistence/backup contracts;
+- freeze compatibility, restore order, migration default, and repository fixture requirements;
+- keep the caller registry empty and do not create a Store or runtime import in the contract round.
+
+Do not add regex execution, a Store, route, Settings UI, popup, iframe, AI call, or Calendar/Map/Chat trigger in the persistence/policy contract slice. Those remain separate stages.
 
 ## 9. Later Product Candidates
 

@@ -18,6 +18,7 @@ What is already landed:
 6. Map-derived Calendar follow-ups preserve `sourceTripId` when available, so Calendar can attach as supporting context to the originating shared-route memory;
 7. Calendar can show active World Pack `reservation -> Calendar` context, currently `fandom_parallel` / `fandom_schedule_board`, as title/boundary UX without changing event, reminder, relationship-fact, or push ownership. Confirmed nonstandard `reservation_board` proposals now reach the same Calendar context path after App Store launch.
 8. Map can show active World Pack `transit -> Map` context, currently `survival_city` / `survival_safe_route_pass`, as title/context/boundary UX without changing route, trip, location, ETA, shared-route fact, or Map-derived Calendar handoff ownership.
+9. Roadmap 4.8 accepts a future shared Mini Scene Interface. Calendar and Map remain source owners and may later add separate request Adapters; no popup mode, profile binding, regex execution, artifact persistence, or presenter is implemented in this package.
 
 Still incomplete:
 
@@ -26,6 +27,7 @@ Still incomplete:
 3. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
 4. Calendar and Map world-app presentation contexts need true-device testing together with WorldBook/App Store/Home entry flows;
 5. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
+6. the first planned Mini Scene source integration is a separately gated confirmed K-pop Calendar music-show-day Adapter; Map follows only through its own later slice.
 
 ## 2. Recommended Next Slice
 
@@ -37,6 +39,7 @@ Current safe candidates:
 2. deepen the confirmed-event relationship adapter without changing Calendar, Chat, or relationship-runtime ownership;
 3. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family;
 4. if roadmap 4.7 approves K-pop carriers, introduce schedule types and location context in separate Calendar/Map slices rather than one cross-owner data model.
+5. after roadmap 4.8 shared foundation and persistence/presenter prerequisites are complete, add only one Calendar request Adapter for the confirmed music-show-day scene; do not combine Map or new schedule schema in that slice.
 
 ## 3. Do Not Do
 
@@ -44,6 +47,7 @@ Current safe candidates:
 2. Do not let Reminders write relationship facts directly from raw cues.
 3. Do not let Map absorb order, ledger, or schedule ownership just because it can show route context.
 4. Do not let World Pack reservation or transit labels turn Calendar/Map into world-rule/event owners.
+5. Do not execute Mini Scene regex/rendering in Calendar or Map, and do not let scene failure or interaction bypass source-record validation.
 
 ## 4. Must Sync When Working Here
 
@@ -55,3 +59,4 @@ At the end of a meaningful round, check and update:
 4. `IMPLEMENTATION_WORKSTREAMS.md`
 5. `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 6. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` when relationship-fact semantics changed
+7. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` when Calendar/Map Mini Scene request meaning changes

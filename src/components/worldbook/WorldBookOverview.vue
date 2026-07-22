@@ -31,12 +31,15 @@ const promptConsumers = computed(() =>
     : [],
 )
 
-const displayPackName = computed(() =>
-  t(
-    props.overview.activePack?.title || '默认世界',
-    props.overview.activePack?.name || 'Default world',
-  ),
-)
+const displayWorldName = computed(() => {
+  const title = typeof props.overview.identity?.title === 'string'
+    ? props.overview.identity.title.trim()
+    : ''
+  if (!title || title === 'Current world') {
+    return t('当前世界设定', 'Current world setting')
+  }
+  return title
+})
 
 const textCategories = computed(() =>
   Array.isArray(props.textCategories) ? props.textCategories : [],
@@ -51,13 +54,13 @@ const textCategories = computed(() =>
     <div class="worldbook-overview__hero">
       <div class="min-w-0">
         <p class="worldbook-overview__eyebrow">
-          {{ t('当前生效世界', 'Active world') }}
+          {{ t('当前世界设定', 'World setting') }}
         </p>
         <h2
           class="worldbook-overview__title"
-          data-testid="worldbook-overview-pack"
+          data-testid="worldbook-overview-world"
         >
-          {{ displayPackName }}
+          {{ displayWorldName }}
         </h2>
         <p class="worldbook-overview__description">
           {{

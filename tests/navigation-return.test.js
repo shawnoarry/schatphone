@@ -76,5 +76,7 @@ describe('navigation return helpers', () => {
     expect(resolveReturnLabel({ query: { source: 'chat' } }, 'Settings')).toBe('Chat')
     expect(resolveReturnTarget({ query: { source: ' Map ' } }, '/settings')).toBe('/map')
     expect(resolveReturnLabel({ query: { source: 'calendar' } }, 'Settings')).toBe('Calendar')
+    expect(resolveReturnTarget({ query: { source: 'worldbook' } }, '/home')).toBe('/worldbook')
+    expect(resolveReturnLabel({ query: { source: 'worldbook' } }, 'Home')).toBe('WorldBook')
   })
 })

@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 ## 1. Core Rule
 
@@ -40,16 +40,28 @@ It also owns:
   - `WorldBook` remains the Settings-owned activation/review surface;
   - active World Pack effects must be visible outside Settings when they change an app's UI/UX;
   - world-specific app bindings now have a first global app-entry seam available to Home/App Store/App Library rules;
-  - Current World Pack may summarize enabled world entries and service-account availability, but App Store owns browse/place/open for world app entries and Chat will own service-account add flows;
-  - nonstandard-app proposals must be reviewed inside Current World Pack before they become appBindings, with loading, empty, error, and rejected states staying readable and rejected suggestions staying invisible outside the review surface;
+  - Optional capability Packs may summarize enabled world entries and service-account availability, but App Store owns browse/place/open for world app entries and Chat will own service-account add flows;
+  - nonstandard-app proposals must be reviewed inside Optional capability Packs before they become appBindings, with loading, empty, error, and rejected states staying readable and rejected suggestions staying invisible outside the review surface;
   - source apps still keep their own visual owner after launch, with the World Pack providing labels, terminology, accents, default context, and safe UX variants through target-app UX context seams.
 - how Book and WorldBook content selection should behave:
+  - Book and WorldBook form one user workflow but remain separate data owners: Book writes, imports, stores, and exports manuscripts; WorldBook explicitly activates manuscripts for the current world;
+  - the WorldBook overview must present Setting Text, structured encyclopedia entries, profile templates, optional capabilities/apps, and compatibility fallback as parallel layers, not mandatory setup steps;
   - Book owns each core text and encyclopedia manuscript as an independent asset;
   - WorldBook owns explicit per-manuscript activation and must allow the user to choose any encyclopedia subset from the catalog, including zero;
   - choosing a core text must not auto-select, force-enable, or silently bind encyclopedia manuscripts;
   - pure Book/encyclopedia content must not be wrapped in a World Pack; a future pack requires separately approved grouped capabilities such as app bindings, service templates, or runtime seeds;
   - built-in content is optional example content and must not limit user-authored or imported worlds;
   - real-person built-in authoring policy must not become a global input filter or a preselected sensitive-content state.
+  - every Book manuscript can leave the app as strict versioned/lossless `.worldbook.json`, editable/re-importable `.md`, or portable body-only `.txt`; exporting cannot enable, disable, or rebind WorldBook state.
+- how the future shared Mini Scene surface should behave:
+  - Settings shows one registered-module policy choice with unconfigured/off, plain text, and interactive HTML states; new modules do not popup until the user chooses;
+  - a caller may show the same canonical control in its own settings, but central Settings and module-local entry points must not create two conflicting values;
+  - Book owns editing separate narrative rules and structured transform-profile assets, while Mini Scene Settings owns explicit world/profile binding and validation/preview status;
+  - WorldBook narrative activation, World Pack activation, profile binding, and popup mode remain visibly separate choices;
+  - profile-declared sensitive/content dimensions show an explicit unconfigured/include/exclude choice per world/profile; no built-in profile or UI default chooses for the user;
+  - the Text Presenter and sandboxed HTML Presenter share modal hierarchy, close/return actions, focus containment, mobile safe areas, reduced-motion handling, and a visible interactive-to-text fallback;
+  - interactive content cannot visually imitate trusted system permission, credential, payment, destructive, or navigation controls outside its sandbox;
+  - the K-pop music-show day is the first planned example, not the product default or the only visual style.
 - how Network setup should be interpreted:
   - `Network & API` is a native-system configuration surface;
   - the primary user action is entering or loading an API endpoint configuration, not choosing a provider brand;
@@ -62,6 +74,7 @@ It also owns:
 - roadmap execution status
 - feature requirement ownership
 - source-module business records or event truth
+- Mini Scene generation, artifact persistence, regex execution, or source-module trigger eligibility
 
 World Pack global UX effects must not become a decorative overlay that hides the owning app's workflow. If Shopping is opened as a survival-world supply board, Shopping still owns browsing, cart, checkout, and order UI. If Food Delivery is opened as survival-world rescue dispatch, Food Delivery still owns restaurants, menus, carts, food orders, and delivery events. If Calendar is opened as a world schedule board, Calendar still owns confirmed events, time edits, reminder promotion, and push scheduling. The world package only changes the appropriate entry label, copy, accent, banner context, and safe contextual defaults.
 

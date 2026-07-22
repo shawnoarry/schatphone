@@ -114,6 +114,21 @@ describe('system world pack store', () => {
     expect(store.listEnabledWorldPacks().map((pack) => pack.id)).toEqual(['survival_city'])
   })
 
+  test('disabling the sole active capability Pack returns to an explicit zero-Pack state', () => {
+    const store = useSystemStore()
+
+    expect(store.activateWorldPack('survival_city').ok).toBe(true)
+    expect(store.disableWorldPack('survival_city')).toMatchObject({
+      ok: true,
+      reason: 'disabled',
+    })
+
+    expect(store.user.enabledWorldPackIds).toEqual([])
+    expect(store.user.activeWorldPackId).toBe('default_world')
+    expect(store.user.worldPackActivation.activePackId).toBe('default_world')
+    expect(store.listEnabledWorldPacks()).toEqual([])
+  })
+
   test('removes inactive world app Home entries when active pack changes', () => {
     const store = useSystemStore()
     const survivalWorldAppId = 'world_app_survival_city_survival_supply_board'
@@ -128,22 +143,22 @@ describe('system world pack store', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain(survivalWorldAppId)
   })
 
-  test('blocks activation when a pack references missing material', () => {
+  test('keeps missing optional content references non-blocking for capability activation', () => {
     const store = useSystemStore()
     store.upsertWorldPack({
-      id: 'blocked_pack',
-      title: 'Blocked',
+      id: 'optional_reference_pack',
+      title: 'Optional references',
       knowledgePointIds: ['kp_missing'],
     })
 
-    const result = store.activateWorldPack('blocked_pack')
+    const result = store.activateWorldPack('optional_reference_pack')
 
-    expect(result.ok).toBe(false)
-    expect(result.reason).toBe('blocked')
-    expect(result.review.blockers).toEqual([
+    expect(result.ok).toBe(true)
+    expect(result.review.blockers).toEqual([])
+    expect(result.review.referenceDiagnostics).toEqual([
       { type: 'missing_encyclopedia_entry', id: 'kp_missing' },
     ])
-    expect(store.user.activeWorldPackId).toBe('default_world')
+    expect(store.user.activeWorldPackId).toBe('optional_reference_pack')
   })
 
   test('restores world pack state from backup payload', () => {
@@ -172,6 +187,29 @@ describe('system world pack store', () => {
       activePackId: 'modern_parallel',
       activatedAt: 456,
     })
+    expect(store.user.enabledWorldPackIds).toEqual(['modern_parallel'])
+  })
+
+  test('normalizes a legacy hidden-active and explicit-empty Pack state back to zero capabilities', () => {
+    const store = useSystemStore()
+    const ok = store.restoreFromBackup({
+      system: {
+        user: {
+          activeWorldPackId: 'survival_city',
+          enabledWorldPackIds: [],
+          worldPackActivation: {
+            activePackId: 'survival_city',
+            state: 'active',
+          },
+        },
+      },
+    })
+
+    expect(ok).toBe(true)
+    expect(store.user.activeWorldPackId).toBe('default_world')
+    expect(store.user.enabledWorldPackIds).toEqual([])
+    expect(store.user.worldPackActivation.activePackId).toBe('default_world')
+    expect(store.listEnabledWorldPacks()).toEqual([])
   })
 
   test('confirms reviewed nonstandard app templates into world app bindings', () => {
@@ -205,6 +243,55 @@ describe('system world pack store', () => {
         }),
       ]),
     )
+  })
+
+  test('keeps the default zero-Pack state free of user-added capabilities', () => {
+    const store = useSystemStore()
+    const appReview = store.buildWorldAppTemplateExtractionReview([{
+      templateId: 'transit_pass',
+      title: 'Metro Pass',
+      confidence: 'high',
+    }], 'default_world')
+    const serviceReview = store.buildWorldServiceTemplateProposalReview([{
+      id: 'default_bulletin',
+      title: 'Default Bulletin',
+      category: 'publication',
+      confidence: 'high',
+    }], 'default_world')
+
+    expect(appReview.confirmableProposals).toEqual([])
+    expect(appReview.rejectedProposals).toEqual([
+      expect.objectContaining({ rejectionReason: 'capability_pack_required' }),
+    ])
+    expect(serviceReview.confirmableProposals).toEqual([])
+    expect(serviceReview.rejectedProposals).toEqual([
+      expect.objectContaining({ rejectionReason: 'capability_pack_required' }),
+    ])
+    expect(store.updateWorldPackEconomy('default_world', {
+      currencies: [{ code: 'CRD', labelEn: 'Credits' }],
+    })).toMatchObject({ ok: false, reason: 'capability_pack_required' })
+    expect(store.confirmWorldAppTemplateProposal({
+      templateId: 'transit_pass',
+      title: 'Metro Pass',
+      confidence: 'high',
+    }, 'default_world')).toMatchObject({
+      ok: false,
+      reason: 'capability_pack_required',
+    })
+    expect(store.confirmWorldServiceTemplateProposal({
+      id: 'default_bulletin',
+      title: 'Default Bulletin',
+      category: 'publication',
+      confidence: 'high',
+    }, 'default_world')).toMatchObject({
+      ok: false,
+      reason: 'capability_pack_required',
+    })
+    expect(store.getWorldPackById('default_world')).toMatchObject({
+      appBindings: [],
+      serviceAccountTemplates: [],
+      economy: { currencies: [] },
+    })
   })
 
   test('updates and resets built-in world service account templates as user overrides', () => {

@@ -1,0 +1,11 @@
+{
+  "fixtureId": "book-empty-v1",
+  "sourceKind": "local",
+  "sourceRaw": "{\"version\":1,\"savedAt\":1784678400000,\"data\":{\"assets\":[],\"categories\":[]}}",
+  "expected": {
+    "assetIds": [],
+    "categoryIds": [],
+    "warnings": [],
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

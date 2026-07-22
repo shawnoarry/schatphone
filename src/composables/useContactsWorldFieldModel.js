@@ -157,12 +157,16 @@ export function useContactsWorldFieldModel({
   })
 
   const selectedProfileTemplateAdaptationReview = computed(() =>
-    buildProfileTemplateAdaptationReview({
-      profile: readValue(selectedProfile) || {},
-      currentTemplate: selectedProfileTemplate.value,
-      currentWorldTemplates: readArray(currentWorldProfileTemplates),
-      currentWorldId: readValue(currentContactsWorldId),
-    }),
+    {
+      const currentTemplates = readArray(currentWorldProfileTemplates)
+      return buildProfileTemplateAdaptationReview({
+        profile: readValue(selectedProfile) || {},
+        currentTemplate: selectedProfileTemplate.value,
+        currentWorldTemplates: currentTemplates,
+        currentWorldTemplateIds: currentTemplates.map((template) => template?.id).filter(Boolean),
+        currentWorldId: readValue(currentContactsWorldId),
+      })
+    },
   )
 
   const fieldMatchesSelectedProfileEntity = (field = {}) =>

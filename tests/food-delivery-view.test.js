@@ -191,20 +191,21 @@ describe('FoodDeliveryView', () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('modern_parallel')
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       {
         templateId: 'dispatch_board',
         title: 'Rescue Desk',
         confidence: 'high',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
 
     await router.push({
       path: '/food-delivery',
       query: {
-        worldPack: 'default_world',
+        worldPack: 'modern_parallel',
         worldApp: confirmed.binding.id,
       },
     })

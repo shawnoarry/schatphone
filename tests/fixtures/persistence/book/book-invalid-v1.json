@@ -1,0 +1,28 @@
+{
+  "fixtureId": "book-invalid-v1",
+  "cases": [
+    {
+      "id": "malformed-id",
+      "sourceRaw": "{\"version\":1,\"data\":{\"assets\":[{\"id\":null,\"title\":\"Missing ID\"}],\"categories\":[]}}",
+      "expectedCode": "invalid_stable_id"
+    },
+    {
+      "id": "duplicate-id",
+      "sourceRaw": "{\"version\":1,\"data\":{\"assets\":[{\"id\":\"duplicate\",\"title\":\"First\"},{\"id\":\"DUPLICATE\",\"title\":\"Second\"}],\"categories\":[]}}",
+      "expectedCode": "duplicate_stable_id"
+    },
+    {
+      "id": "invalid-category-link",
+      "sourceRaw": "{\"version\":1,\"data\":{\"assets\":[{\"id\":\"orphan\",\"title\":\"Orphan\",\"category\":\"custom_lore\",\"categoryId\":\"missing_category\"}],\"categories\":[]}}",
+      "expectedCode": "invalid_category_link"
+    },
+    {
+      "id": "unsupported-version",
+      "sourceRaw": "{\"version\":99,\"data\":{\"assets\":[],\"categories\":[]}}",
+      "expectedCode": "legacy_version_unsupported"
+    }
+  ],
+  "expected": {
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "fixtureId": "book-multi-category-v1",
+  "sourceKind": "local",
+  "sourceRaw": "{\"version\":1,\"savedAt\":1784678400000,\"data\":{\"assets\":[{\"id\":\"asset_older\",\"title\":\"Older\",\"category\":\"encyclopedia\",\"format\":\"plain\",\"content\":\"Older entry.\",\"status\":\"draft\",\"version\":1,\"createdAt\":1784505600000,\"updatedAt\":1784505600000},{\"id\":\"asset_alpha\",\"title\":\"Alpha\",\"category\":\"worldview\",\"format\":\"plain\",\"content\":\"Alpha world.\",\"status\":\"active_source\",\"version\":2,\"createdAt\":1784505600000,\"updatedAt\":1784678400000},{\"id\":\"asset_beta\",\"title\":\"Beta\",\"category\":\"world_rule\",\"format\":\"plain\",\"content\":\"Beta rule.\",\"status\":\"draft\",\"version\":1,\"createdAt\":1784505600000,\"updatedAt\":1784678400000}],\"categories\":[{\"id\":\"world_notes\",\"title\":\"World Notes\",\"color\":\"green\"},{\"id\":\"scene_rules\",\"title\":\"Scene Rules\",\"color\":\"blue\"}]}}",
+  "expected": {
+    "assetIds": ["asset_alpha", "asset_beta", "asset_older"],
+    "categoryIds": ["world_notes", "scene_rules"],
+    "warnings": [],
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

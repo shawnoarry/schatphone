@@ -63,20 +63,21 @@ describe('Calendar world app UX package', () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     const calendarStore = useCalendarStore()
+    systemStore.activateWorldPack('modern_parallel')
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       {
         templateId: 'reservation_board',
         title: 'Ritual Calendar',
         confidence: 'high',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
 
     await router.push({
       path: '/calendar',
       query: {
-        worldPack: 'default_world',
+        worldPack: 'modern_parallel',
         worldApp: confirmed.binding.id,
       },
     })
@@ -90,7 +91,7 @@ describe('Calendar world app UX package', () => {
     await flushPromises()
 
     const contextBanner = wrapper.get('[data-testid="calendar-world-app-context"]')
-    expect(contextBanner.attributes('data-world-pack')).toBe('default_world')
+    expect(contextBanner.attributes('data-world-pack')).toBe('modern_parallel')
     expect(contextBanner.attributes('data-world-app')).toBe(confirmed.binding.id)
     expect(wrapper.get('[data-testid="calendar-schedule-overview"]').text()).toContain(
       'Ritual Calendar',

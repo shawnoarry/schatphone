@@ -1,0 +1,24 @@
+{
+  "fixtureId": "book-worldbook-links-v1",
+  "sourceKind": "local",
+  "sourceRaw": "{\"version\":1,\"savedAt\":1784678400000,\"data\":{\"assets\":[{\"id\":\"linked_user_asset\",\"title\":\"Linked User Asset\",\"category\":\"worldview\",\"format\":\"plain\",\"content\":\"Linked content.\",\"status\":\"active_source\",\"version\":1,\"createdAt\":1784678400000,\"updatedAt\":1784678400000}],\"categories\":[]}}",
+  "worldBookSourceLinks": [
+    { "id": "link_user", "assetId": "linked_user_asset" },
+    { "id": "link_builtin", "assetId": "built_in_fixture" },
+    { "id": "link_missing", "assetId": "missing_asset" }
+  ],
+  "expected": {
+    "assetIds": ["linked_user_asset"],
+    "categoryIds": [],
+    "referenceReport": {
+      "valid": [
+        { "linkId": "link_user", "assetId": "linked_user_asset" },
+        { "linkId": "link_builtin", "assetId": "built_in_fixture" }
+      ],
+      "missing": [
+        { "linkId": "link_missing", "assetId": "missing_asset" }
+      ]
+    },
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

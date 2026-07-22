@@ -36,24 +36,34 @@ const scoreTemplateForValues = ({ template = {}, profile = {} } = {}) => {
   return overlap * 10 + fields.length
 }
 
+const createTemplateIdSet = (templateIds = []) =>
+  new Set((Array.isArray(templateIds) ? templateIds : []).filter(Boolean))
+
 const chooseRecommendedTemplate = ({
   profile = {},
   currentTemplate = null,
   currentWorldTemplates = [],
+  currentWorldTemplateIds = [],
   currentWorldId = 'default_world',
   preferCurrentTemplate = false,
 } = {}) => {
+  const currentTemplateIdSet = createTemplateIdSet(currentWorldTemplateIds)
+  const belongsToCurrentWorld = (template = {}) =>
+    currentTemplateIdSet.size > 0
+      ? currentTemplateIdSet.has(template.id)
+      : template.worldId === currentWorldId
+
   if (
     preferCurrentTemplate &&
     currentTemplate?.scope === PROFILE_TEMPLATE_SCOPES.WORLD &&
-    currentTemplate.worldId === currentWorldId
+    belongsToCurrentWorld(currentTemplate)
   ) {
     return currentTemplate
   }
 
   const candidates = currentWorldTemplates
     .filter((template) => template?.scope === PROFILE_TEMPLATE_SCOPES.WORLD)
-    .filter((template) => template.worldId === currentWorldId)
+    .filter(belongsToCurrentWorld)
     .filter((template) => listTemplateFieldsForEntity(template, profile.entityType).length > 0)
 
   if (candidates.length <= 0) return null
@@ -95,9 +105,16 @@ export const buildProfileTemplateAdaptationReview = ({
   profile = {},
   currentTemplate = null,
   currentWorldTemplates = [],
+  currentWorldTemplateIds = [],
   currentWorldId = 'default_world',
 } = {}) => {
   const worldId = normalizeWorldId(currentWorldId)
+  const currentTemplateIdSet = createTemplateIdSet(currentWorldTemplateIds)
+  const currentTemplateBelongsToWorld =
+    currentTemplate?.scope !== PROFILE_TEMPLATE_SCOPES.WORLD ||
+    (currentTemplateIdSet.size > 0
+      ? currentTemplateIdSet.has(currentTemplate.id)
+      : currentTemplate?.worldId === worldId)
   const link = profile?.templateLink || {}
   const linkedTemplateId = normalizeText(link.profileTemplateId, '', 80)
   const linkedVersion = Number(link.profileTemplateVersion) || 0
@@ -112,7 +129,7 @@ export const buildProfileTemplateAdaptationReview = ({
     needsAttention = true
   } else if (
     currentTemplate.scope === PROFILE_TEMPLATE_SCOPES.WORLD &&
-    currentTemplate.worldId !== worldId
+    !currentTemplateBelongsToWorld
   ) {
     reason = 'outside_current_world'
     needsAttention = true
@@ -125,6 +142,7 @@ export const buildProfileTemplateAdaptationReview = ({
     profile,
     currentTemplate,
     currentWorldTemplates,
+    currentWorldTemplateIds,
     currentWorldId: worldId,
     preferCurrentTemplate: reason === 'outdated_template',
   })

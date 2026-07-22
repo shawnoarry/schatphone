@@ -105,6 +105,29 @@ describe('profile template adaptation assistant', () => {
     expect(review.recommendedTemplateVersion).toBe(2)
   })
 
+  test('uses current template membership instead of a legacy Pack-shaped worldId', () => {
+    const review = buildProfileTemplateAdaptationReview({
+      profile: {
+        ...profile,
+        templateLink: {
+          primaryWorldId: currentTemplate.worldId,
+          profileTemplateId: currentTemplate.id,
+          profileTemplateVersion: currentTemplate.version,
+        },
+      },
+      currentTemplate,
+      currentWorldTemplates: [currentTemplate],
+      currentWorldTemplateIds: [currentTemplate.id],
+      currentWorldId: 'legacy_single_world',
+    })
+
+    expect(review).toMatchObject({
+      needsAttention: false,
+      reason: 'compatible',
+      currentWorldId: 'legacy_single_world',
+    })
+  })
+
   test('builds a draft-only adaptation prompt with source values and target fields', () => {
     const prompt = buildProfileTemplateAdaptationPrompt({
       sourceTemplate: legacyTemplate,

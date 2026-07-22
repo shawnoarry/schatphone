@@ -1,6 +1,6 @@
 # SchatPhone Storage Strategy
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 Purpose: summarize how SchatPhone should store settings, saves, chat records, world state, runtime truth, and AI-related data without making browser storage too large, too fragile, or too semantically muddy.
 
@@ -36,6 +36,7 @@ Current implementation evidence:
 - 16 domain stores write whole JSON snapshots to `localStorage` and asynchronously mirror them into one IndexedDB state store;
 - normal startup reads valid `localStorage` first and consults the IndexedDB mirror only when the local snapshot is unavailable;
 - Gallery file binaries use a separate IndexedDB database, while Gallery metadata remains in the snapshot system;
+- the separate `schatphone-repository` version-1 database is now active for Book only: explicit cutover stages/verifies/activates a generation, later Book writes create new generations, and the unchanged legacy Book carrier remains rollback-only; no other Store reads or writes through it;
 - Chat message counts, Gallery total asset count/bytes, and several role/world collections do not have one durable archive budget;
 - one-off Chat images/GIFs can be stored as base64 inside the Chat snapshot;
 - storage diagnostics checks mirror readability/drift, not actual quota, persistent-storage status, total backup completeness, or every store.
@@ -286,13 +287,13 @@ Repository contract accepted state:
 - shape validation reports `shapeOk` separately from `completePackageEligible`; the current omission of Chat `moduleIdentity` and `moduleAvatarOverrides` is an explicit required known-gap audit, so a structurally valid legacy v2 payload remains ineligible for a future complete-package claim;
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual persistent-storage policy, fail-closed WriteCoordinator, and Book Adapter/fixture/rollback gates;
 - each isolated storage container remains one independent current save; same-container conflicts time out to read-only retry/refresh, while cross-container sync, silent merge, force takeover, and last-write-wins are excluded;
-- Batch 2B is approved only within its exact non-active Adapter/fixture/test list, including a focused real-Chromium IndexedDB and same-context multi-page coordination spec. Gallery binary schema, R2, other owners, application import, Book cutover, dual write, garbage collection, and runtime generation activation remain unapproved.
+- Batch 2B completed within its exact non-active boundary, then the separately approved Book-only cutover completed on 2026-07-22 with explicit UI confirmation and real-Chromium cutover/reopen/rollback evidence. Gallery binary schema, R2, other owners, dual write, garbage collection, and non-Book runtime activation remain unapproved.
 
 ## 7. Practical Migration Posture
 
 Current practical posture:
 
-1. preserve the accepted complete-backup/recovery and Repository contracts; the next approved slice is only the exact non-active Batch 2B IndexedDB foundation plus Book fixture/staging pilot, and this documentation round does not begin it;
+1. preserve the accepted complete-backup/recovery contract, completed Batch 2B foundation, and active Book-only Repository path; do not extend the pointer path to another owner without a separate reviewed slice;
 2. keep settings and lightweight recovery metadata small and hot;
 3. move one approved reference domain from legacy snapshots to IndexedDB-first repositories, with compatibility import and focused tests;
 4. validate the reference migration before selecting later domains such as Chat history, relationship audit, or binary assets;

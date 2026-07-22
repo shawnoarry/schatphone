@@ -20,6 +20,9 @@ Map does not own:
 - wallet ledgers
 - confirmed schedule meaning
 - relationship truth
+- Mini Scene world-profile resolution, regex execution, artifacts, or presenters
+
+Map may later request a Mini Scene from a confirmed trip/location event using canonical Map facts. Its per-module popup mode remains a user setting, and any interaction that requests a route/location change returns to Map validation.
 
 ## 2. Calendar
 
@@ -38,6 +41,9 @@ Calendar does not own:
 - callback backlog
 - runtime-control semantics
 - World Pack reservation rules or event judgment
+- Mini Scene world-profile resolution, regex execution, artifacts, or presenters
+
+Calendar may later request a Mini Scene from a confirmed event using canonical schedule, time, place, participant, and push-state facts. Generation or presentation failure cannot change the confirmed event, and an interaction that requests an event edit returns to Calendar validation.
 
 ## 3. Reminders
 
@@ -74,3 +80,4 @@ Phone does not own:
 - Map-derived cues should pass explicit trip lineage into Calendar when available, while Calendar remains the owner of the confirmed event.
 - Phone can generate callback context, but callback scheduling belongs to Reminders until it becomes a real Calendar item.
 - World Pack can provide `reservation -> Calendar` labels/context for Calendar, including confirmed `reservation_board` appBindings, but it cannot move schedule records or push decisions out of Calendar.
+- Mini Scene request Adapters may hand canonical Map/Calendar facts to the shared Module, but popup presentation never becomes schedule/route truth and cannot bypass existing confirmation or edit rules.

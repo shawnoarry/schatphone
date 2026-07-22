@@ -612,15 +612,16 @@ export const buildWorldPackActivationReview = ({
   const templateMap = buildReferenceMap(profileTemplates)
   const sourceLinkMap = buildReferenceMap(bookSourceLinks)
   const blockers = []
+  const referenceDiagnostics = []
 
   normalizedPack.encyclopediaEntryIds.forEach((id) => {
-    if (!encyclopediaMap.has(id)) blockers.push({ type: 'missing_encyclopedia_entry', id })
+    if (!encyclopediaMap.has(id)) referenceDiagnostics.push({ type: 'missing_encyclopedia_entry', id })
   })
   normalizedPack.profileTemplateIds.forEach((id) => {
-    if (!templateMap.has(id)) blockers.push({ type: 'missing_profile_template', id })
+    if (!templateMap.has(id)) referenceDiagnostics.push({ type: 'missing_profile_template', id })
   })
   normalizedPack.bookSourceLinkIds.forEach((id) => {
-    if (!sourceLinkMap.has(id)) blockers.push({ type: 'missing_book_source', id })
+    if (!sourceLinkMap.has(id)) referenceDiagnostics.push({ type: 'missing_book_source', id })
   })
 
   const effectRows = [
@@ -628,16 +629,19 @@ export const buildWorldPackActivationReview = ({
       key: 'book_sources',
       label: 'Book sources',
       count: normalizedPack.bookSourceLinkIds.length || (Array.isArray(bookSourceLinks) ? bookSourceLinks.length : 0),
+      optionalReference: true,
     },
     {
       key: 'encyclopedia',
       label: 'Encyclopedia',
       count: normalizedPack.encyclopediaEntryIds.length,
+      optionalReference: true,
     },
     {
       key: 'templates',
       label: 'Role templates',
       count: normalizedPack.profileTemplateIds.length,
+      optionalReference: true,
     },
     {
       key: 'app_bindings',
@@ -657,6 +661,7 @@ export const buildWorldPackActivationReview = ({
     packName: normalizedPack.name,
     blocked: blockers.length > 0,
     blockers,
+    referenceDiagnostics,
     effectRows,
     appBindings: normalizedPack.appBindings,
     serviceAccountTemplates: normalizedPack.serviceAccountTemplates,

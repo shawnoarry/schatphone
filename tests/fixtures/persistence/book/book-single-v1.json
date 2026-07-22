@@ -1,0 +1,11 @@
+{
+  "fixtureId": "book-single-v1",
+  "sourceKind": "local",
+  "sourceRaw": "{\"version\":1,\"savedAt\":1784678400000,\"data\":{\"assets\":[{\"id\":\"book_single\",\"title\":\"Single World Rule\",\"category\":\"world_rule\",\"assetType\":\"world_rule\",\"format\":\"markdown\",\"categoryId\":\"\",\"tags\":[\"rule\",\"fixture\"],\"content\":\"# Rule\\n\\nKeep continuity.\",\"sections\":[{\"id\":\"rule\",\"title\":\"Rule\",\"content\":\"Keep continuity.\",\"level\":1,\"order\":0}],\"status\":\"active_source\",\"locked\":false,\"favorite\":true,\"source\":{\"kind\":\"user\"},\"version\":3,\"createdAt\":1784505600000,\"updatedAt\":1784678400000,\"contentFingerprint\":\"single-fixture\"}],\"categories\":[{\"id\":\"fixture_rules\",\"title\":\"Fixture Rules\",\"color\":\"#336699\"}]}}",
+  "expected": {
+    "assetIds": ["book_single"],
+    "categoryIds": ["fixture_rules"],
+    "warnings": [],
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

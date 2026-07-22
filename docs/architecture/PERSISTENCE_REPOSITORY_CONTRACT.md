@@ -2,13 +2,13 @@
 
 Status: `ARCHITECTURE_ACCEPTED`
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 Owner: Module Architecture / Technical Governance
 
-Purpose: freeze the architecture-accepted container, IndexedDB-first schema, Repository Interface, generation, capacity, coordination, and Book reference-pilot contract before any application write path is changed.
+Purpose: define and record the architecture-accepted container, IndexedDB-first Repository Interface, generation, capacity, coordination, and Book reference cutover.
 
-This document is the accepted technical contract for the non-active Batch 2B foundation/fixture/staging pilot. It does not authorize a storage migration or application runtime activation.
+This document records both the completed non-active Batch 2B foundation and the separately user-approved Book runtime cutover completed on 2026-07-22. Approval remains limited to Book; no other owner migration follows from it.
 
 ## 1. Decision State
 
@@ -18,24 +18,24 @@ Confirmed product direction and proposed technical closure:
 2. each isolated browser profile/site-data container or separately isolated desktop Web App container owns exactly one current save; different containers remain independent and never auto-sync, silently merge, or expose internal save slots;
 3. tabs that share one storage container share one current save; after a bounded safe wait, a competing later tab remains read-only and exposes only retry and refresh/reload-current-save actions, never last-write-wins or force takeover;
 4. persistent-storage permission is never requested on first launch; it is requested contextually before the first qualifying high-volume durable action, while Settings exposes current status and an explicit retry;
-5. the future Repository uses a hybrid physical model: immutable generic record versions plus generation membership for structured owner records, with specialized stores only where correctness requires them;
+5. the Repository uses a hybrid physical model: immutable generic record versions plus generation membership for structured owner records, with specialized stores only where correctness requires them;
 6. restore and migration activation use a staged generation plus one atomic active-generation pointer and crash journal;
-7. Book is the approved first low-risk storage pilot; this contract defines its exact schema, Adapter Interface, immutable fixtures, failure acceptance, legacy reader, and rollback boundary without approving cutover;
+7. Book is the first active Repository owner; its schema, Adapter Interface, immutable fixtures, explicit cutover, legacy fallback, and rollback behavior are implemented and tested;
 8. `system.truthState` remains required legacy compatibility data until immutable fixtures prove it can be reconstructed without continuity loss;
 9. Calendar reminder cues remain legacy import compatibility, while Reminders is the canonical reminder owner.
 
 Explicit status:
 
-- `Storage runtime implementation/activation = NOT_APPROVED`;
+- `Book Repository runtime implementation/activation = IMPLEMENTED`;
 - `IndexedDB-first schema and Book foundation contract = ARCHITECTURE_ACCEPTED`;
 - `Batch 2B non-active foundation/fixture/staging pilot = APPROVED`;
 - `Gallery binary schema = NOT_APPROVED`;
 - `R2 Adapter or Worker implementation = NOT_APPROVED`;
-- `Book migration/cutover = NOT_APPROVED`;
-- `dual write = NOT_APPROVED`;
-- `runtime generation activation = NOT_APPROVED`.
+- `Book migration/cutover = IMPLEMENTED`;
+- `dual write = FORBIDDEN_AND_NOT_USED`;
+- `other-owner runtime generation activation = NOT_APPROVED`.
 
-Architecture acceptance authorizes only the separately named Batch 2B files and tests in section 11. It does not authorize an application runtime import, Book cutover, or active-pointer activation, and this documentation round does not begin Batch 2B.
+Batch 2B remains the historical non-active foundation boundary in section 11. Section 12 records the later, separately approved Book-only runtime slice and does not broaden approval to Gallery, R2, or any other owner.
 
 ### 1.1 Storage-Container Invariant
 
@@ -402,7 +402,7 @@ The future migration flow is:
 
 ### 10.2 Later Cutover And Rollback Gate
 
-A later Book cutover cannot begin until all gates pass:
+Before the completed Book runtime cutover began, all of these gates were required to pass:
 
 1. canonical inventory and future complete-backup coverage independently include the Repository database, both Book classes, active pointer, and migration evidence;
 2. current and legacy backup fixtures preserve Book stable IDs, category order, long text, and WorldBook reference outcomes;
@@ -418,7 +418,7 @@ A later Book cutover cannot begin until all gates pass:
 
 No dual-write period is assumed. If later proposed, it requires a separate consistency, precedence, conflict, telemetry, and removal contract; it cannot be introduced as a temporary shortcut.
 
-## 11. Batch 2A Acceptance And Approved Batch 2B
+## 11. Batch 2A Acceptance And Completed Batch 2B
 
 ### 11.1 Batch 2A Technical-Acceptance Checklist
 
@@ -430,13 +430,13 @@ This contract is `ARCHITECTURE_ACCEPTED` because:
 4. legacy localStorage and mirror precedence, immutable source evidence, inactive staging, verification, cutover, and rollback are separated;
 5. multi-tab wait/read-only/retry/refresh behavior is confirmed and force takeover/last-write-wins is prohibited;
 6. persistent-storage timing, qualifying actions, status states, and Settings retry behavior are confirmed without prompting on startup;
-7. Gallery schema, R2, other owner migrations, Book cutover, dual write, garbage collection, and runtime activation remain explicitly excluded.
+7. Gallery schema, R2, other owner migrations, Book cutover, dual write, garbage collection, and runtime activation were explicitly excluded from Batch 2B; section 12 records the later Book-only approval.
 
-Architecture acceptance closes the technical design gate and approves the non-active Batch 2B scope below. Application storage runtime import, Book cutover, active-pointer activation, Gallery/R2, and other owners remain `NOT_APPROVED`. This workgroup still stops after documentation and waits for a separate instruction to start Batch 2B.
+Architecture acceptance closed the technical design gate for the non-active Batch 2B scope below. Batch 2B completed on 2026-07-22 without an application import or active-pointer write. At that point, application storage runtime import, Book cutover, active-pointer activation, Gallery/R2, and other owners remained `NOT_APPROVED`; section 12 records the later separately reviewed Book-only slice.
 
-### 11.2 Approved Batch 2B Exact Files
+### 11.2 Completed Batch 2B Exact Files
 
-Batch 2B is the non-active IndexedDB foundation plus Book fixture/staging pilot. Its exact allowed files are:
+Batch 2B is the completed non-active IndexedDB foundation plus Book fixture/staging pilot. Its exact implementation files are:
 
 New runtime modules, not imported by application stores or entrypoints:
 
@@ -502,3 +502,33 @@ Stop and return to control review if implementation would require:
 - prompting for persistent storage on startup or adding unreviewed Settings/UI copy;
 - introducing a dependency or changing a file outside the exact list;
 - failing fixture immutability, stable-ID/reference equivalence, capacity preflight, schema drift, rollback, or supported-browser tests.
+
+### 11.5 Batch 2B Implementation Evidence
+
+Completed on 2026-07-22:
+
+1. the six unreferenced Repository/Book/policy/coordinator modules and seven immutable fixtures were added without any Store, View, route, entrypoint, backup workflow, dependency, or current `persistence.js` change;
+2. the physical-carrier inventory now registers `schatphone-repository` version 1, all six stores, and the direct legacy Book source while retaining the current 16-store diagnostics projection;
+3. focused Vitest passes 6 files / 35 tests, including exact schema descriptors, canonical digests, fixture immutability, local-first legacy precedence, mirror recovery-candidate handling, Book round-trip/reference outcomes, capacity stops, pointer staleness, platform-failure classification, and read-only conflict behavior;
+4. focused Playwright passes 3 Chromium tests and proves exact stores/keyPaths/indexes, commit/abort/reopen, schema-drift rejection, transaction-level rollback after a middle-record digest conflict, cleanup deletion, Web Locks plus BroadcastChannel, and the forced real-IndexedDB lease/fencing/recovery path;
+5. full validation passes lint, 182 Vitest files / 1129 tests, Vite 7.3.6 production build with 266 modules, governance 11/11, and `git diff --check`;
+6. no code path writes `repository_meta/active-generation`, imports the Repository into the application, rewrites `schatphone:store:book`, or changes Book/WorldBook product behavior.
+
+Completion of this foundation did not itself approve cutover. The later Book-only runtime slice below returned to and passed the activation, reopen, rollback, backup, and product-equivalence gates in sections 6 and 10.
+
+## 12. Completed Book Runtime Cutover
+
+Completed on 2026-07-22 after explicit user approval:
+
+1. `src/stores/book.js` now opens the authoritative active pointer at startup. A missing pointer keeps the unchanged legacy Book carrier active; startup never creates or activates a Repository generation.
+2. `src/views/BookView.vue` exposes one explicit in-context upgrade action. Persistent storage is checked/requested only after confirmation; denial or unsupported status requires a second best-effort confirmation, while insufficient or unknown capacity stops the cutover.
+3. `src/lib/book-repository-runtime.js` acquires `repository-write`, stages and verifies a complete generation, rechecks the pointer, activates it atomically, reopens through the Book Adapter, and completes the journal only after exact snapshot verification.
+4. Activation or reopen failure rolls back to the previous generation or, for the first cutover, removes the Repository route and keeps `schatphone:store:book` authoritative. Hard rollback failure retains a `hard_failure` journal for manual recovery.
+5. Valid local legacy bytes always win. A mirror-only valid source remains `legacy_recovery_candidate` and requires a separate user confirmation. Startup and cutover never rewrite or delete either legacy layer.
+6. After cutover, Book mutations create new immutable Repository generations and never write the legacy carrier. The legacy bytes remain available as the first-cutover recovery source; no dual write or timestamp arbitration exists.
+7. Same-container conflicts enter `read_only_conflict` and expose only retry and refresh-current-save. Refresh discards only that page's uncommitted in-memory mutation; no force takeover, merge, or last-write-wins path exists.
+8. Book's `{ assets, categories }` backup shape, 300-user-asset limit, built-in resolution, WorldBook source links, imports/exports, lock/delete rules, and canonical order remain unchanged. Complete-backup restore now waits for the Repository save result before reporting success.
+9. Focused Vitest protects Store/View/Adapter/migration/coordinator behavior. `e2e/book-repository-cutover.spec.js` proves real-Chromium explicit cutover, reopen, Repository-only later writes with byte-identical legacy fallback, and automatic first-activation rollback after injected reopen failure.
+10. Final validation passes lint, 182 Vitest files / 1132 tests, Vite 7.3.6 production build with 273 modules, governance 11/11, the 3 focused Chromium foundation cases, and the 5 desktop/mobile cutover/recovery cases.
+
+Still not approved: Gallery binary Repository schema, R2/provider runtime, another owner migration, garbage collection, cross-container sync/merge, or deletion of the legacy Book fallback.

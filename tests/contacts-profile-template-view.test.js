@@ -241,7 +241,7 @@ describe('Contacts profile template entity UI', () => {
 
     const updated = chatStore.getRoleProfileById(profile.id)
     expect(updated.templateLink).toMatchObject({
-      primaryWorldId: 'default_world',
+      primaryWorldId: 'legacy_single_world',
       profileTemplateId: template.id,
       profileTemplateVersion: template.version,
     })
@@ -574,6 +574,7 @@ describe('Contacts profile template entity UI', () => {
       scope: PROFILE_TEMPLATE_SCOPES.WORLD,
       worldId: 'legacy_world',
       version: 1,
+      enabled: false,
       fields: [
         {
           id: 'shared_identity',

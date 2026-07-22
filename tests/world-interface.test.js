@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildWorldPromptBlock,
+  LEGACY_SINGLE_WORLD_ID,
   resolveActiveWorldOverview,
+  resolveCurrentWorldContext,
   resolveRoleKnowledgeState,
   resolveWorldContextForConsumer,
   resolveWorldviewText,
@@ -101,7 +103,15 @@ describe('world interface', () => {
     })
 
     expect(resolveActiveWorldOverview({ systemStore })).toMatchObject({
+      identity: {
+        worldId: LEGACY_SINGLE_WORLD_ID,
+        title: 'Current world',
+      },
       activePack: { id: 'default_world', state: 'active' },
+      capabilities: {
+        activePack: null,
+        enabledPacks: [],
+      },
       worldPackActivationState: 'active',
       worldPackAppBindingCount: 0,
       worldPackServiceTemplateCount: 0,
@@ -109,9 +119,131 @@ describe('world interface', () => {
       knowledgeCount: 2,
       enabledKnowledgeCount: 1,
       disabledKnowledgeCount: 1,
-      profileTemplateCount: 1,
+      profileTemplateCount: 2,
       promptConsumerCount: 4,
     })
+  })
+
+  test('keeps canonical identity and setting activation stable when the active Pack changes', () => {
+    const sourceAsset = {
+      id: 'shared_world_source',
+      title: 'Shared world source',
+      content: 'The same current-world narrative.',
+      contentFingerprint: 'fp_shared',
+      version: 1,
+      sections: [],
+    }
+    const sharedState = {
+      globalWorldview: 'Shared fallback.',
+      worldBookSourceLinks: [{
+        id: 'link_shared',
+        assetId: sourceAsset.id,
+        role: 'main_worldview',
+        enabled: true,
+        sourceFingerprint: sourceAsset.contentFingerprint,
+        createdAt: 1,
+      }],
+      encyclopediaEntries: [{
+        id: 'entry_shared',
+        title: 'Shared entry',
+        content: 'Selected independently.',
+        enabled: true,
+      }],
+      profileTemplates: [{
+        id: 'template_legacy_pack_scope',
+        scope: 'world',
+        worldId: 'pack_alpha',
+        enabled: true,
+      }],
+    }
+    const packAlpha = {
+      id: 'pack_alpha',
+      title: 'Pack Alpha',
+      appBindings: [{ id: 'alpha_app' }],
+      serviceAccountTemplates: [],
+    }
+    const packBeta = {
+      id: 'pack_beta',
+      title: 'Pack Beta',
+      appBindings: [{ id: 'beta_app' }],
+      serviceAccountTemplates: [],
+    }
+    const bookStore = createBookStore([sourceAsset])
+
+    const alpha = resolveCurrentWorldContext({
+      systemStore: createSystemStore({ ...sharedState, activePack: packAlpha }),
+      bookStore,
+      consumer: 'runtime',
+    })
+    const beta = resolveCurrentWorldContext({
+      systemStore: createSystemStore({ ...sharedState, activePack: packBeta }),
+      bookStore,
+      consumer: 'runtime',
+    })
+
+    expect(alpha.identity).toEqual({ worldId: LEGACY_SINGLE_WORLD_ID, title: 'Current world' })
+    expect(beta.identity).toEqual(alpha.identity)
+    expect(beta.narrative).toEqual(alpha.narrative)
+    expect(beta.encyclopedia).toEqual(alpha.encyclopedia)
+    expect(beta.profiles).toEqual(alpha.profiles)
+    expect(alpha.profiles.enabledTemplates).toEqual([expect.objectContaining({
+      id: 'template_legacy_pack_scope',
+      enabled: true,
+    })])
+    expect(alpha.profiles.enabledTemplates[0]).not.toHaveProperty('worldId')
+    expect(alpha.capabilities.activePack.id).toBe('pack_alpha')
+    expect(beta.capabilities.activePack.id).toBe('pack_beta')
+    expect(alpha.capabilities.appBindings).toEqual([{ id: 'alpha_app' }])
+    expect(beta.capabilities.appBindings).toEqual([{ id: 'beta_app' }])
+    expect(alpha).not.toHaveProperty('legacyScopeKey')
+    expect(alpha.identity.worldId).not.toBe(packAlpha.id)
+  })
+
+  test('projects the built-in default Pack as zero optional capabilities', () => {
+    const systemStore = createSystemStore()
+    systemStore.listEnabledWorldPacks = () => [systemStore.getActiveWorldPack()]
+
+    const context = resolveCurrentWorldContext({ systemStore, consumer: 'runtime' })
+
+    expect(context.identity.worldId).toBe(LEGACY_SINGLE_WORLD_ID)
+    expect(context.capabilities).toMatchObject({
+      activePack: null,
+      enabledPacks: [],
+      appBindings: [],
+      serviceTemplates: [],
+    })
+    expect(context.enabledWorldPackCount).toBe(0)
+  })
+
+  test('returns defensive immutable snapshots without changing owner state', () => {
+    const pack = {
+      id: 'capability_pack',
+      title: 'Capability Pack',
+      appBindings: [{ id: 'original_app' }],
+      serviceAccountTemplates: [],
+    }
+    const systemStore = createSystemStore({
+      activePack: pack,
+      profileTemplates: [{
+        id: 'template_original',
+        scope: 'world',
+        worldId: pack.id,
+        enabled: true,
+      }],
+    })
+    const context = resolveCurrentWorldContext({ systemStore })
+
+    expect(Object.isFrozen(context)).toBe(true)
+    expect(Object.isFrozen(context.identity)).toBe(true)
+    expect(Object.isFrozen(context.capabilities.enabledPacks[0].appBindings)).toBe(true)
+    expect(() => {
+      context.identity.worldId = 'mutated_world'
+    }).toThrow(TypeError)
+    expect(() => {
+      context.capabilities.enabledPacks[0].appBindings[0].id = 'mutated_app'
+    }).toThrow(TypeError)
+    expect(pack.appBindings[0].id).toBe('original_app')
+    expect(systemStore.user.profileTemplates[0].id).toBe('template_original')
   })
 
   test('exposes active world pack bindings to consumers', () => {

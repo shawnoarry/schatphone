@@ -1,0 +1,12 @@
+{
+  "fixtureId": "book-legacy-unwrapped-v0",
+  "sourceKind": "local",
+  "sourceRaw": "{\"assets\":[{\"id\":\"legacy_unwrapped\",\"title\":\"Legacy Unwrapped\",\"category\":\"encyclopedia\",\"content\":\"Legacy body.\",\"status\":\"draft\",\"version\":1,\"createdAt\":1784505600000,\"updatedAt\":1784505600000}],\"categories\":[{\"id\":\"legacy_category\",\"title\":\"Legacy Category\",\"color\":\"gray\"}]}",
+  "expected": {
+    "envelopeVersion": 0,
+    "assetIds": ["legacy_unwrapped"],
+    "categoryIds": ["legacy_category"],
+    "warnings": [],
+    "rollbackState": "legacy_source_unchanged"
+  }
+}

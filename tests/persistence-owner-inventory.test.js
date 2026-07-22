@@ -60,6 +60,11 @@ const parseIndexedDbDefinitions = (source, sourceFile = 'inline') => {
     constants.set(match[1], match[4] == null ? match[3] : Number(match[4]))
   }
 
+  const defaultParameterPattern = /\b([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\b/g
+  for (const match of source.matchAll(defaultParameterPattern)) {
+    if (constants.has(match[2])) constants.set(match[1], constants.get(match[2]))
+  }
+
   const objectStoreNames = [
     ...source.matchAll(/createObjectStore\(\s*([^,\s)]+)/g),
   ]

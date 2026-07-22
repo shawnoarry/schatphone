@@ -40,6 +40,13 @@ Chat does not own:
 - event eligibility for generated social events
 - Shopping checkout, order truth, Wallet suggestions, or Assets transfer suggestions
 - product, voucher, delivery, route, calendar, media, or asset source truth represented by a `share_card`
+- shared Mini Scene world-profile resolution, Book regex execution, artifact truth, or HTML Presenter security
+
+### Mini Scene Compatibility
+
+The current Chat `mini_scene` rich block is a Chat-owned historical message shape. Its `htmlSnippet` is displayed as inert code and must remain non-executable.
+
+A future Chat Mini Scene Adapter may submit canonical thread/message/role facts to the shared Mini Scene Module after the user's Chat popup mode allows it. The shared Module owns the artifact, transform, presenter, fallback, and interaction audit. Chat may retain an artifact reference and compact display snapshot in message history, but any requested Chat action returns to Chat validation and normal event-review rules.
 
 ### Chat Directory
 
@@ -142,5 +149,6 @@ They must not create, delete, or rewrite global Contacts role profiles. A future
 6. Chat Me must not become the primary place for appearance, diagnostics, or default conversation settings
 7. Chat Settings must not duplicate the Chat Me identity/social surface
 8. social-channel state must not become relationship runtime truth or event eligibility by itself
+9. legacy `htmlSnippet` or new generated HTML must not execute inside Chat, and Chat must not copy the shared Mini Scene regex/profile/presenter implementation
 
 When `relationshipLevel` or `relationshipNote` appears in Chat Directory UI, label it as Chat-local tuning/note. Do not use "Affinity" or other copy that implies current relationship progress.

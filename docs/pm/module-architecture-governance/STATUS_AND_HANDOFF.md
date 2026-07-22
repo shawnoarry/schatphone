@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -42,7 +42,15 @@ Current active architecture slice:
 - Settings diagnostics consumes the inventory's stable 16-store projection and includes Book; legacy v2 backup export consumes a separate schema/section shape registry before download without changing payload fields, Gallery defaults/limits, or import ordering;
 - legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED`: it fixes the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual quota/persist policy, fail-closed WriteCoordinator, and Book Adapter/fixture/legacy-reader/rollback contract;
-- Batch 2B is approved as the exact non-active IndexedDB foundation plus Book Adapter/fixture/staging slice, with a focused Playwright spec for real Chromium IndexedDB and same-context multi-page coordination; Book store import/cutover, dual write, runtime activation, Gallery/R2, and other owners remain unapproved;
+- Batch 2B completed as the exact non-active foundation, followed on 2026-07-22 by the separately approved Book-only runtime cutover: explicit Book UI confirmation, contextual persistent-storage request, atomic activation/reopen, Repository-only later writes, unchanged legacy rollback bytes, and real-Chromium rollback evidence are implemented; dual write, legacy deletion, Gallery/R2, and other owners remain unapproved;
+- `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` is `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`: `legacy_single_world` is stable compatibility identity/scope, Pack capability is separate, Book/WorldBook/Pack/template ownership is frozen, and zero-Pack/zero-encyclopedia/zero-text worlds remain valid;
+- WorldBook and Contacts now read immutable identity/narrative/encyclopedia/profile/capability/diagnostic projections through `world-interface.js`; Pack switching does not change world identity or setting selection, and new template/contact writes do not record active Pack IDs;
+- legacy Pack content references remain reviewable compatibility evidence, but missing Book, encyclopedia, or template references no longer block capability Pack activation;
+- `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` is architecture-accepted as a later staged feature: one shared Module owns request validation, world/profile resolution, structured artifacts, safe transforms, presenter selection, fallback, and interaction audit while source modules retain trigger and record truth;
+- Mini Scene per-module modes are explicit user choices (`unconfigured/off`, `text`, or `interactive_html`), Book narrative rules and structured transform profiles are separate assets, World Pack references remain optional, and raw AI/legacy Chat HTML is never executed;
+- Mini Scene content dimensions, including sensitive dimensions, begin unconfigured and require an explicit per-world/profile include/exclude choice; they do not become a global filter;
+- Mini Scene Stage 1 pure foundation is landed in five unreferenced `src/lib` modules with four focused test files: the caller registry starts empty, Book profile/regex handling validates without executing, and world/profile resolution fails closed to neutral;
+- Mini Scene persistence, Settings controls, popup UI, regex execution, Text/HTML Presenters, and Calendar/Map/Chat triggers are not implemented and are not part of Batch 2B;
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
@@ -56,7 +64,7 @@ Current active architecture slice:
 | Isolated entry containers | `CONFIRMED` | Each isolated browser profile/site-data or separately isolated desktop Web App container is an independent current save. There is no internal slot, automatic sync, cross-container discovery, or silent merge; transfer uses a user-selected complete backup. |
 | Same-container tabs | `CONFIRMED` | Writes wait behind one coordinator. After timeout the later tab remains read-only and offers retry/refresh-current-save only; last-write-wins and force takeover are excluded. |
 | Persistent-storage timing | `CONFIRMED` | Do not ask at first launch. Ask in context before the first qualifying high-volume durable action, and expose browser status plus explicit retry in Settings. |
-| IndexedDB / Book pilot | `CONFIRMED` | IndexedDB foundation and Book are the first storage pilot. Batch 2A is architecture-accepted and the exact non-active Batch 2B foundation/fixture/staging slice is approved; Book runtime import/cutover remains excluded. |
+| IndexedDB / Book pilot | `BOOK_CUTOVER_DONE` | Batch 2B foundation and the separately approved Book runtime cutover are implemented and browser-tested; the unchanged legacy carrier remains rollback-only. |
 | Durable records | `CONFIRMED` | Committed user/AI/system content and authoritative/audit truth remain durable under their owning modules; raw transport and rebuildable material do not. |
 | Personal cloud | `CONFIRMED` | No shared project/workgroup archive. Each user owns a separate Cloudflare R2 destination behind a provider-neutral contract. |
 | Remote security | `CONFIRMED` | A personal Worker gateway uses a revocable scoped device token; the app never stores the R2 API Secret. Backups are client-encrypted with recovery-password or recovery-file restore. |
@@ -78,15 +86,18 @@ Current active architecture slice:
 | Same-device material preservation | `CONFIRMED` | A restore first reuses exact matching local binaries and does not delete or hide current-only retained Gallery material merely because an older or binary-excluded backup lacks it. |
 | Legacy incomplete media | `CONFIRMED` | Valid legacy core data may restore after a clear missing-material summary. Unresolved media remains as a typed placeholder with stored descriptive text where available rather than corrupting or removing the owning record. |
 | Backup/recovery engineering contract | `ARCHITECTURE_ACCEPTED` | Complete package, integrity, capacity, staged restore, migration, failure, crash recovery, rollback, and acceptance-test boundaries are frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`. |
-| Persistence inventory and Repository contract | `ARCHITECTURE_ACCEPTED` | Canonical inventory and legacy shape-gap audit remain active; exact IndexedDB v1 schema, generation/pointer/journal, permission, tab coordination, and Book foundation/fixture contract are accepted, with targeted real-browser coverage required in Batch 2B. |
-| Storage runtime implementation | `NOT_APPROVED` | No application Repository import, Book cutover/active-pointer switch, Cloudflare connector, media offload, Gallery schema, or other-owner migration begins from Batch 2B approval. |
+| Persistence inventory and Repository contract | `BOOK_ACTIVE` | Canonical inventory includes the active Book Repository database/six stores and direct legacy fallback; exact schema, staging, policy, coordination, activation, reopen, and rollback gates pass. |
+| Storage runtime implementation | `BOOK_ONLY_DONE` | Book is the sole active Repository owner. Cloudflare connector, media offload, Gallery schema, legacy deletion, garbage collection, and every other owner migration remain unapproved. |
+| Unified world-setting architecture | `STAGE_W1_DONE` | `worldId` is distinct from `packId` and save identity. Book owns text, WorldBook owns activation/current-world context, Packs own optional capabilities, and consumers read an immutable shared projection. Persisted world definitions, W2 migration, and switching remain unapproved. |
+| Cross-module Mini Scene | `FOUNDATION_DONE` | Pure request/draft/artifact/policy schemas, empty-by-default caller registry, Book structured-profile/regex validation, and deterministic profile resolution are landed and tested. No caller or runtime path imports them yet. |
+| Mini Scene persistence/runtime | `NOT_STARTED / SEPARATE_APPROVAL` | Artifact/profile-binding/policy data classes, popup UI, safe regex engine, HTML sandbox, and each source Adapter remain staged work outside persistence Batch 2B. |
 
 Verified baseline:
 
 - 30 route views, 16 Pinia stores, 36 components, 36 composables;
 - about 104k source lines;
-- 172 Vitest files / 1054 tests pass;
-- 30 Playwright desktop/mobile scenarios pass;
+- 184 Vitest files / 1163 tests pass;
+- 35 product Playwright desktop/mobile scenarios plus 3 focused Chromium Repository-foundation tests pass;
 - lint and production build pass;
 - production dependency audit is clean;
 - full dependency audit reports development/tooling advisories.
@@ -97,6 +108,7 @@ Verified baseline:
 
 - Contacts, Chat Directory, Chat, and relationship runtime have distinct owners;
 - Book, WorldBook, World Pack, and Files have distinct owners;
+- WorldBook owns current-world identity and activation while Book owns reusable text assets and the World Pack Module owns optional capability definitions; Pack activation is not world selection or content binding;
 - Calendar, Reminders, and Map have distinct owners;
 - Shopping/Food Delivery, Logistics, Wallet, Assets, and Chat notification references have distinct owners;
 - World Hub reviews runtime state without becoming an ordinary record owner.
@@ -104,7 +116,8 @@ Verified baseline:
 ### Shared Interfaces
 
 - `src/lib/ai.js` is the only provider transport entry;
-- `src/lib/world-interface.js` centralizes active world context;
+- `src/lib/world-interface.js` now exposes stable compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
+- `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` defines the accepted Interface and the separately gated W2 migration from compatibility scope to persisted WorldBook-owned identity;
 - relationship facts, role bindings, source cleanup, app bindings, service templates, shareable objects, image sources, and persistence use named helper contracts;
 - notification and API report access has focused `systemStore` facades;
 - Settings backup, storage diagnostics, and push orchestration has focused workflow composables.
@@ -193,6 +206,18 @@ stock         -> Calendar
 ```
 
 Calendar's relationship-fact path is the best first adapter-depth candidate because Calendar still passes concrete Chat and relationship-runtime stores into the shared adapter.
+
+### Current-World Identity Compatibility
+
+Stage W1 is complete, while the single-world baseline still has no WorldBook-owned persisted world definition:
+
+- `WorldBookView.vue` and `ContactsView.vue` read stable `legacy_single_world` identity and current templates through the shared Interface;
+- WorldBook displays the stable world setting separately from the Pack capability panel;
+- WorldBook source links and structured encyclopedia enablement are one current-save global set;
+- historical profile templates can retain Pack-shaped aliases, while new explicit saves use the stable compatibility scope sentinel;
+- Pack schemas retain legacy Book/encyclopedia/template reference fields only as non-blocking diagnostics.
+
+Preferred response: preserve Stage W1 and do not start W2 until the persisted world-definition schema, complete-backup manifest, deterministic legacy-scope migration, atomic activation, and rollback are separately approved. A world selector or partial per-record migration remains prohibited.
 
 ### Type Coverage
 
@@ -286,7 +311,7 @@ Use the live roadmap order.
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-Status: `IN_PROGRESS` planning; no migration implementation is approved.
+Status: `IN_PROGRESS`; the non-active foundation is complete, while application migration/cutover remains unapproved.
 
 1. `READY_FOR_CONTROL_REVIEW 2026-07-21`: independently classify authoritative, auditable, rebuildable, binary, hint, and transient data and connect the 16-store diagnostic projection;
 2. `DONE 2026-07-18`: translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
@@ -294,7 +319,9 @@ Status: `IN_PROGRESS` planning; no migration implementation is approved.
 4. `ARCHITECTURE_ACCEPTED 2026-07-21`: the owner-aware Repository Interface, exact separate IndexedDB v1 stores/keyPaths/indexes, immutable record versions and generation membership, atomic pointer/journal, localStorage hints, contextual persistent-storage request, read-only multi-tab conflict behavior, and rollback gates are accepted;
 5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
 6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
-7. `APPROVED`: the next safe slice is only the exact non-active Batch 2B Adapter/schema/fixture/test list, including `e2e/persistence-repository-foundation.spec.js`; no Store import, cutover, dual write, or activation.
+7. `DONE 2026-07-22`: implemented the exact non-active Batch 2B Adapter/schema/fixture/test list, including `e2e/persistence-repository-foundation.spec.js`, without Store import, cutover, dual write, or activation;
+8. `DONE 2026-07-22`: implemented the separately approved Book-only runtime cutover with explicit in-context permission flow, fenced atomic activation, normal-Adapter reopen verification, automatic first-cutover rollback, Repository-only later writes, byte-identical retained legacy data, awaited backup-restore persistence, and focused Chromium coverage.
+8. `DONE 2026-07-22`: the Book application import/cutover passed the section-6/10 activation, reopen, rollback, backup, and product-equivalence gates; Mini Scene persistence/policy remains a separate roadmap 4.8 decision.
 
 Cross-package dependencies:
 
@@ -316,12 +343,32 @@ Cross-package dependencies:
 1. add or explicitly defer Playwright/audit CI gates;
 2. align Pages release policy with the Definition of Done.
 
+### P1: Cross-Module Mini Scene Foundation
+
+Status: `STAGE_1_DONE / STAGE_2_SEPARATE_APPROVAL`.
+
+1. `DONE 2026-07-21`: pure Stage 1 request/draft/artifact/profile/module-policy schemas, dynamic caller registry, world/profile resolver, Book structured-profile validator, and 22 focused tests;
+2. preserve the empty caller registry and absence of regex execution, Settings UI, persistence, popup runtime, iframe rendering, AI calls, and source-module triggers;
+3. approve persistence ownership and complete-backup coverage separately after the Book Repository foundation before storing `mini_scene.artifact`, profile bindings, or module policies;
+4. add Text and HTML Presenter Adapters in separate stages, with interactive HTML blocked until sandbox/CSP/message-bridge/malicious-input tests pass;
+5. make the K-pop Calendar music-show day the first optional world-specific integration only after the shared Module is ready; Map, Chat, and future streaming each require a later focused Adapter slice.
+
+### P1: Unified World Setting Identity
+
+Status: `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`.
+
+1. `DONE 2026-07-22`: accept `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` without widening it into persisted world definitions or multi-world switching;
+2. `DONE 2026-07-22`: deepen the current world Interface so `legacy_single_world` identity is stable and Pack capability state is a separate projection;
+3. `DONE 2026-07-22`: route WorldBook and Contacts reads through the Interface; new template/contact writes use the stable compatibility sentinel instead of Pack IDs;
+4. `DONE 2026-07-22`: prove Pack changes cannot change identity, Book links, encyclopedia selection, or profile-template selection, and make missing legacy content references non-blocking;
+5. preserve unchanged System/Book schema and complete-backup bytes from Stage W1;
+6. require a separate Stage W2 schema/migration/rollback review before persisting WorldBook-owned world definitions.
+
 ### P1: One Architecture Seam
 
-Choose one:
+With Stage W1 complete, choose one:
 
 - a `systemStore` facade;
-- Current World Pack display/review state;
 - one Home edit/library seam;
 - one Chat Directory management seam;
 - the Calendar relationship adapter.
@@ -355,6 +402,14 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 23. do not let an older restore delete or hide current-only retained Gallery material, and do not attach a local binary by filename, label, prompt, or URL without exact identity/digest evidence.
 24. do not label a missing-media placeholder as a recovered original or discard the owning message/record because its binary is unavailable.
 25. do not treat acceptance of `BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` as approval for IndexedDB, R2, Gallery schema, or reference-migration implementation.
+26. do not add Mini Scene runtime, persistence, Settings fields, regex execution, or popup UI to the approved persistence Batch 2B file set.
+27. do not execute raw AI HTML, Book/profile HTML, or legacy Chat `htmlSnippet`, and do not run unbounded native regex on the UI thread.
+28. do not let Book/WorldBook/World Pack activation or a caller hint silently override an explicit per-module Mini Scene mode.
+29. do not make a K-pop profile, a sensitive-content choice, or World Pack membership a prerequisite for custom-world Mini Scenes.
+30. do not persist `activeWorldPackId`, `default_world`, or another Pack ID as canonical `worldId`.
+31. do not let Pack activation switch world identity or bind Book sources, encyclopedia entries, profile templates, sensitive choices, or Mini Scene policy.
+32. do not implement future world definitions as internal save slots, workspace switching, cross-container discovery, sync, or merge.
+33. do not begin a partial persisted-world migration before every world-sensitive owner has an explicit global/world-scoped/portable classification and rollback path.
 
 ## 8. Validation
 
@@ -378,3 +433,5 @@ Required for every meaningful 4.5 slice:
 6. `docs/architecture/ARCHITECTURE.md` and debt review when evidence/semantics change;
 7. `docs/pm/TODO_PM_STATUS_REPORT.md` when priority or release posture changes.
 8. `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` when complete-package, integrity, capacity, restore, migration, or rollback acceptance changes.
+9. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` and the relevant source/presentation/runtime package handoff when Mini Scene Interfaces, world resolution, Book transforms, presenters, persistence, or calling-module meaning changes.
+10. `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` when world identity, Book/WorldBook ownership, Pack capability meaning, consumer projections, complete-backup references, or migration gates change.

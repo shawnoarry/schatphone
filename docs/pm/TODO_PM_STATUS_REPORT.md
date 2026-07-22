@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -15,7 +15,7 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the verified repository baseline is green across lint, 1050 unit tests, build, and 18 desktop/mobile E2E scenarios.
+- the current repository baseline is green across lint, 184 unit-test files / 1163 tests, build, 3 focused Chromium Repository-foundation tests, 3 focused Book-cutover tests, and 6 focused WorldBook desktop/mobile checks; the broader product E2E suite remains a separate release gate.
 
 The current work is concentrated in four areas:
 
@@ -24,7 +24,7 @@ The current work is concentrated in four areas:
 3. oversized views and central-store maintainability;
 4. later security/toolchain, device, release, content, and secondary-loop work in dependency order.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active, 4.6 World Pack is partial, and 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice while keeping later triggers, renderers, and carriers separately gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, and 4.8 has a pure Mini Scene foundation with runtime still staged.
 
 ## 2. Product Positioning
 
@@ -43,11 +43,12 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Usable, persistence architecture active` | complete-backup/recovery acceptance is frozen; current whole-snapshot code still awaits IndexedDB-first schema and reference-migration approval |
+| Settings / Network / backup | `Usable, Book Repository active` | complete-backup/recovery contracts are accepted and Book is the first active Repository owner with explicit cutover, reopen verification, rollback, and unchanged legacy fallback; all other owner migrations remain unapproved |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
-| Book / WorldBook | `Integrated V1, K-pop carrier partial` | long text and activation are correctly split; the independent K-pop 2 + 6 + 1 catalog adds one optional music-show-day rule without Pack binding, while phone hardening and later trigger/render/carrier work remain |
-| World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; broader hardening is pending |
+| Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
+| World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
+| Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
 | Map / Calendar / Reminders / Phone | `Stable MVP` | product boundaries and cross-module handoffs are real; visual/depth polish remains |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
 | Wallet / Gallery | `Stable support platforms` | useful shared owners; deeper economy/Photos ambitions remain controlled |
@@ -142,7 +143,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - SchatPhone never rotates or deletes cloud backups automatically; each version remains until explicit user-confirmed deletion, and capacity pressure may warn or block another backup but cannot silently remove a recovery point;
 - restoring a binary-excluded or legacy backup reuses exact matching local binaries and does not delete or hide current-only Gallery material the user already kept;
 - valid legacy core data may restore after a missing-material summary; unavailable media keeps the owning record readable through a typed placeholder and stored descriptive text where available;
-- the complete-backup/recovery engineering contract is accepted, while IndexedDB, R2, Gallery schema, and reference-migration implementation remain unapproved;
+- the complete-backup/recovery engineering contract is accepted and the non-active IndexedDB/Book foundation is implemented; R2, Gallery schema, application Repository import, Book cutover/activation, and later reference migrations remain unapproved;
 - the earlier fixed `8 GB`, per-result local/cloud choice, per-backup item picker, and incremental-version chain proposals are not approved.
 
 ### Engineering
@@ -157,16 +158,16 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
 1. preserve the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, migration, crash recovery, and rollback contract;
-2. finish IndexedDB-first repository, transaction, hot/cold placement, quota, persistent-storage, and multi-tab contracts;
+2. `DONE 2026-07-22`: implement only the approved non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice and its focused real-Chromium IndexedDB/coordination gate;
 3. finish the provider-neutral remote-backup and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
-4. approve one reference migration separately with compatibility fixtures and rollback proof; do not begin broad migration from architecture planning alone.
+4. keep application Repository import, Book cutover/activation, dual write, and every later owner migration separately approved.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 
 1. add a clear sensitive-file warning while preserving complete migration backup contents, including credentials;
-2. update compatible Vite/transitive dependencies;
-3. plan the Vitest major migration separately;
-4. re-run audit, lint, unit, build, and E2E.
+2. `DONE 2026-07-21`: update the compatible direct Vite 7 line and its required root transitive dependencies;
+3. plan the remaining Vitest major migration separately;
+4. keep production and full development audit results reported separately.
 
 ### P1: Release And Architecture Confidence
 
@@ -198,17 +199,33 @@ Confirmed and promoted:
 Still separately gated:
 
 - Contacts profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds;
-- any future World Pack requires concrete grouped capabilities and its own approval.
+- any future World Pack requires concrete grouped capabilities and its own approval;
+- K-pop popup behavior now follows roadmap 4.8 and `MINI_SCENE_MODULE_CONTRACT.md`; the current prose rule is content input, not regex configuration or an implemented renderer.
+
+### P1: Cross-Module Mini Scene
+
+Product direction is accepted; pure Stage 1 foundation is complete and user-visible implementation has not started.
+
+- use one shared Mini Scene Module for registered callers rather than module-specific popup implementations;
+- expose an explicit per-module user choice for off, plain text, or interactive HTML, with unconfigured modules behaving as off;
+- keep Book narrative rules separate from structured world-specific transform-profile assets, and keep WorldBook activation separate from profile binding;
+- keep profile-declared sensitive/content dimensions unconfigured until the user explicitly includes or excludes them for that world/profile; do not create a global filter;
+- allow World Pack to reference a reviewed profile only as an optional capability; custom worlds work without a Pack;
+- render interactive scenes from validated structured documents in a sandboxed Presenter Adapter and retain a plain-text fallback;
+- implement in stages: pure contracts, persistence/policy approval, text runtime, HTML security, first K-pop Calendar Adapter, then separate Map/Chat/future streaming Adapters.
+
+Stage 1 landed on 2026-07-21 with five pure library modules and 22 focused tests. The registry intentionally contains no default caller and the regex layer validates but does not execute.
 
 ## 7. PM Decisions Still Needed
 
 1. first reference domain for the later IndexedDB-first migration;
 2. production intent for the push relay versus a real authenticated backend;
 3. whether CI must gate E2E and security audit;
-4. which later K-pop trigger, renderer, or non-Book carrier, if any, should be promoted after the 2 + 6 + 1 Book/WorldBook slice review;
-5. next World Pack archetype after marketplace, dispatch, reservation, and transit;
-6. whether closed-page autonomy is worth its identity/privacy/server complexity;
-7. when Cheats should become a real product surface, if ever.
+4. next World Pack archetype after marketplace, dispatch, reservation, and transit;
+5. whether closed-page autonomy is worth its identity/privacy/server complexity;
+6. when Cheats should become a real product surface, if ever.
+
+Mini Scene Stage 1 is complete. Later persistence, safe-regex dependency, HTML security, and each source-module Adapter require their named technical/implementation gates, not a return to the rejected prose-only or mandatory-World-Pack design.
 
 ## 8. Verified Quality Baseline
 
@@ -220,6 +237,24 @@ Run on 2026-07-10:
 - `npm.cmd run test:e2e`: 30 tests, pass across desktop and mobile projects;
 - `npm.cmd audit --omit=dev`: 0 vulnerabilities;
 - full `npm.cmd audit`: 15 development/tooling advisories.
+
+Mini Scene Stage 1 validation on 2026-07-21:
+
+- focused Mini Scene tests: 4 files / 22 tests, pass;
+- `npm.cmd run lint`: pass;
+- `npm.cmd run test`: 177 files / 1103 tests, pass at that stage;
+- `npm.cmd run build`: pass, Vite 7.3.6 / 266 modules;
+- no E2E run because no Store, View, route, browser storage, popup, or user flow imports the new pure modules.
+
+Repository / Book Batch 2B validation on 2026-07-22:
+
+- focused persistence tests: 6 files / 35 tests, pass;
+- focused real-browser foundation: 3 Chromium tests pass, with 3 mobile-project cases explicitly skipped because the contract targets one real Chromium desktop environment;
+- `npm.cmd run lint`: pass;
+- `npm.cmd run test`: 182 files / 1129 tests, pass;
+- `npm.cmd run build`: pass, Vite 7.3.6 / 266 modules;
+- `npm.cmd run governance:check`: 2 files / 11 tests, pass;
+- no Store, View, route, application entry, dependency, active pointer, legacy Book write, or user-visible behavior changed.
 
 ## 9. Read Next
 

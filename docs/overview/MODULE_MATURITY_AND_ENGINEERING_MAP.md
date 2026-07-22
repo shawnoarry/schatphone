@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-18
+Updated: 2026-07-22
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention starts with the promoted browser/PWA-first persistence, backup, and data-lifecycle architecture slice before selecting a reference migration or returning to toolchain, release, hotspot, and device work.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention starts with the promoted browser/PWA-first persistence, backup, and data-lifecycle architecture slice. The later cross-module Mini Scene direction is architecture-accepted but remains behind that foundation and its own staged security/persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -27,13 +27,13 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
-| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contract accepted but unimplemented | preserve one-container/one-save, standalone complete versions, default-off automation, platform-owned local files, direct in-app personal-R2 restore, explicit-only cloud deletion, no automatic cleanup, committed-content durability, and transient raw-AI-payload semantics while finishing IndexedDB-first schema and reference-migration acceptance |
+| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; exact non-active Book foundation implemented and browser-tested | keep one-container/one-save, complete versions, no sync/merge, and all runtime cutover/activation gates; any Book application import is a separate slice |
 
 ### Tier B: Integrated V1
 
 | Area | Judgment | Main remaining work |
 | --- | --- | --- |
-| Book / WorldBook | integrated V1 | phone hardening and K-pop built-in content migration decision |
+| Book / WorldBook | integrated V1, K-pop 2 + 6 + 1 content landed | phone hardening and later separate Mini Scene transform-profile authoring |
 | World Pack / App Store | integrated V1, partial acceptance | true-device loop, target-app hardening, next archetype decision |
 | Map / Calendar / Reminders | stable MVP | visual/detail polish and broader real-life handoff coverage |
 | Shopping / Food Delivery / Logistics | integrated V1 | responsive/detail/checkout/tracking polish |
@@ -46,6 +46,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Area | Judgment | Constraint |
 | --- | --- | --- |
 | Event Runtime | guarded foreground baseline | conservative event families only |
+| Mini Scene | pure foundation landed, no runtime | persistence/policy, Text Presenter, HTML sandbox, and source Adapters remain staged; caller registry is empty |
 | World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
 | Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
 | Phone | working support loop | not a main fantasy lane |
@@ -75,7 +76,7 @@ Verified on 2026-07-10:
 - 133 JavaScript files and 67 Vue files under `src`;
 - zero TypeScript source files;
 - about 104k source lines;
-- 172 unit-test files / 1054 tests;
+- 182 unit-test files / 1129 tests;
 - 30 Playwright scenarios across desktop/mobile projects.
 
 ### Largest Views
@@ -134,7 +135,7 @@ Preserve app entry recovery and lock/notification semantics. A future Home clean
 
 ### Settings / System
 
-The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. The browser/PWA-first complete-backup/recovery contract is now frozen; current work must finish the IndexedDB-first logical schema and reference-migration acceptance. Preserve existing storage keys and shapes until one reference migration is explicitly approved; later facade work must not pre-empt that contract.
+The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. The browser/PWA-first complete-backup/recovery contracts are accepted, and the exact non-active Repository/Book foundation is implemented and tested. Preserve existing application storage keys and shapes until Book runtime import/cutover/activation is separately approved.
 
 ### Chat / Chat Directory
 
@@ -146,11 +147,13 @@ Ten Contacts read-model seams already exist. Contacts 4.1 and relationship-memor
 
 ### Book / WorldBook / World Pack
 
-Three WorldBook display models already exist. Current risks are Current World Pack panel density, end-to-end phone comprehension, and content-carrier governance. The K-pop plan should first promote a small built-in Book registration/migration slice if approved.
+Three WorldBook display models already exist. Current risks are Optional capability Packs panel density, end-to-end phone comprehension, and content-carrier governance. The K-pop 2 + 6 + 1 Book/WorldBook content slice is landed; its prose rule remains separate from the future structured Mini Scene transform profile.
 
 ### Map / Calendar / Reminders
 
 Preserve confirmed-event versus raw-cue ownership. The best architecture candidate is a deeper Calendar relationship-fact interface that hides concrete Chat/relationship store coordination.
+
+Calendar and Map are also future Mini Scene callers, but each must use a focused request Adapter after the shared Module exists. They retain source truth and never copy world-profile, regex, artifact, or presenter logic.
 
 ### Commerce / Finance
 
@@ -163,12 +166,13 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 ## 6. Current Engineering Order
 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
-2. finish IndexedDB-first repository/schema, reversible hot/cold retention, persistent-storage, quota, and multi-tab contracts;
-3. one separately approved reference migration after the remaining persistence architecture acceptance;
+2. review the completed non-active IndexedDB/Book Batch 2B foundation and keep any application import/cutover/activation separately approved;
+3. keep Book runtime import/cutover/activation and every later owner migration separately approved;
 4. sensitive-backup warning and safe toolchain update;
 5. CI/release gating alignment;
-6. one named view/store hotspot seam or deeper cross-store adapter;
-7. later device findings and incremental typing only where dependencies justify them.
+6. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
+7. one named view/store hotspot seam or deeper cross-store adapter;
+8. later device findings and incremental typing only where dependencies justify them.
 
 ## 7. Work To Avoid
 
@@ -187,3 +191,4 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 3. `docs/architecture/ARCHITECTURE.md`
 4. `docs/architecture/ARCHITECTURE_DEBT_REVIEW.md`
 5. matching task package handoff
+6. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` for roadmap 4.8 work

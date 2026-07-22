@@ -5,7 +5,7 @@ import { useBookStore } from '../stores/book'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
-import { pushReturnTarget } from '../lib/navigation-return'
+import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { BOOK_TEXT_ASSET_TYPES } from '../lib/book-text-schema'
 import { getBookTextCategoryLabel } from '../lib/world-taxonomy'
 import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
@@ -28,11 +28,98 @@ const importFeedbackTone = ref('info')
 const importInput = ref(null)
 const aiToolsOpen = ref(false)
 const aiToolMode = ref('summary')
+const exportSheetOpen = ref(false)
 const draft = ref({
   title: '',
   category: 'worldview',
   tags: '',
   content: '',
+})
+
+const returnButtonLabel = computed(() =>
+  resolveReturnLabel(route, 'Home') === 'WorldBook'
+    ? t('世界书', 'WorldBook')
+    : t('返回', 'Back'),
+)
+
+const exportFormatOptions = computed(() => [
+  {
+    id: 'worldbook_json',
+    icon: 'fas fa-box-archive',
+    extension: '.worldbook.json',
+    title: t('完整数据文件', 'Lossless data file'),
+    detail: t(
+      '保留分类、标签、段落与版本信息，适合在其他设备重新导入 Book。',
+      'Preserves category, tags, sections, and version metadata for re-importing into Book.',
+    ),
+  },
+  {
+    id: 'markdown',
+    icon: 'fas fa-file-code',
+    extension: '.md',
+    title: t('Markdown 文稿', 'Markdown manuscript'),
+    detail: t(
+      '适合在外部编辑器中改写、扩写；重新导入时可恢复分类与标签。',
+      'Best for editing and expanding elsewhere; category and tags can be restored on import.',
+    ),
+  },
+  {
+    id: 'text',
+    icon: 'fas fa-file-lines',
+    extension: '.txt',
+    title: t('纯文本文稿', 'Plain text manuscript'),
+    detail: t(
+      '只导出正文，便于复制和通用阅读，不保留 Book 元数据。',
+      'Exports body text only for universal reading and copying, without Book metadata.',
+    ),
+  },
+])
+
+const storageBusy = computed(() =>
+  ['checking', 'upgrading', 'saving'].includes(bookStore.storageState),
+)
+
+const storageStatusCopy = computed(() => {
+  if (bookStore.storageState === 'checking') {
+    return {
+      title: t('正在检查存储', 'Checking storage'),
+      detail: t('正在确认当前 Book 数据来源。', 'Confirming the current Book data source.'),
+    }
+  }
+  if (bookStore.storageState === 'upgrading') {
+    return {
+      title: t('正在升级 Book 存储', 'Upgrading Book storage'),
+      detail: t('旧数据会保留到验证完成。', 'Legacy data stays in place until verification completes.'),
+    }
+  }
+  if (bookStore.storageState === 'saving') {
+    return {
+      title: t('正在保存', 'Saving'),
+      detail: t('正在写入新的 Repository 版本。', 'Writing a new Repository version.'),
+    }
+  }
+  if (bookStore.storageState === 'read_only_conflict') {
+    return {
+      title: t('当前页面为只读', 'This page is read-only'),
+      detail: t('另一个页面正在写入同一存档。', 'Another page is writing to this save.'),
+    }
+  }
+  if (bookStore.storageState === 'error') {
+    return {
+      title: t('Book 存储需要恢复', 'Book storage needs recovery'),
+      detail: t('当前数据保持只读，避免产生两个存档来源。', 'Data remains read-only to avoid creating two save sources.'),
+    }
+  }
+  if (bookStore.storageMode === 'repository') {
+    return {
+      title: t('Repository 已启用', 'Repository active'),
+      detail: t('旧 Book 存储已保留，可用于故障回退。', 'Legacy Book storage is retained for recovery.'),
+    }
+  }
+  return {
+    title: t('使用旧版 Book 存储', 'Using legacy Book storage'),
+    detail: t('可升级到经过验证的 IndexedDB 存储。', 'Upgrade to verified IndexedDB storage.'),
+  }
 })
 
 const typeLabels = Object.fromEntries(
@@ -231,12 +318,14 @@ const hydrateDraft = () => {
 watch(selectedAsset, hydrateDraft, { immediate: true })
 
 const createBlankAsset = () => {
+  if (bookStore.storageReadOnly) return
   const asset = bookStore.createAsset({
     title: t('新的文本来源', 'New text source'),
     category: 'worldview',
     format: 'markdown',
     content: '# New Source\n\n',
   })
+  if (!asset) return
   selectAsset(asset.id)
   editMode.value = true
   shelfOpen.value = false
@@ -336,7 +425,112 @@ const saveEdit = () => {
 }
 
 const triggerImport = () => {
+  if (bookStore.storageReadOnly) return
   importInput.value?.click()
+}
+
+const showStorageFeedback = (tone, message) => {
+  importFeedbackTone.value = tone
+  importFeedback.value = message
+}
+
+const upgradeBookStorage = async () => {
+  if (storageBusy.value || bookStore.storageMode === 'repository') return
+  const confirmed = await confirmDialog({
+    title: t('升级 Book 存储', 'Upgrade Book storage'),
+    message: t(
+      'Book 数据会先完整复制并验证，再切换到新存储。旧存储不会删除，WorldBook 选择也不会改变。',
+      'Book data will be copied and verified before switching. Legacy storage stays intact and WorldBook selections do not change.',
+    ),
+    confirmText: t('检查并升级', 'Check and upgrade'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'accent',
+  })
+  if (!confirmed) return
+
+  const persistence = await bookStore.requestBookPersistentStorage()
+  if (persistence.capacity?.status === 'insufficient') {
+    showStorageFeedback(
+      'error',
+      t('浏览器可用空间不足，Book 存储没有切换。', 'Browser storage is too full. Book storage was not switched.'),
+    )
+    return
+  }
+  if (persistence.capacity?.status === 'unknown') {
+    showStorageFeedback(
+      'error',
+      t('无法确认可用空间，Book 存储没有切换。', 'Available capacity could not be verified. Book storage was not switched.'),
+    )
+    return
+  }
+
+  let allowBestEffort = persistence.state === 'persistent'
+  if (!allowBestEffort) {
+    allowBestEffort = await confirmDialog({
+      title: t('持久存储未获确认', 'Persistent storage not confirmed'),
+      message: t(
+        '浏览器没有授予持久存储保护。仍可继续使用普通 IndexedDB，但系统清理站点数据时风险更高。',
+        'The browser did not grant persistent protection. You can continue with regular IndexedDB, with a higher risk if site data is cleared.',
+      ),
+      confirmText: t('仍然继续', 'Continue anyway'),
+      cancelText: t('暂不升级', 'Not now'),
+      tone: 'warning',
+    })
+    if (!allowBestEffort) return
+  }
+
+  const worldBookSourceLinks = systemStore.listWorldBookSourceLinks()
+  let result = await bookStore.upgradeBookStorage({ allowBestEffort, worldBookSourceLinks })
+  if (result.code === 'legacy_recovery_candidate') {
+    const useMirror = await confirmDialog({
+      title: t('发现可恢复的 Book 副本', 'Recoverable Book copy found'),
+      message: t(
+        '本地旧数据不可用，但浏览器镜像中有可读取副本。是否明确使用该副本完成升级？',
+        'The local legacy data is unavailable, but a readable browser mirror exists. Use that copy for this upgrade?',
+      ),
+      confirmText: t('使用镜像副本', 'Use mirror copy'),
+      cancelText: t('取消', 'Cancel'),
+      tone: 'warning',
+    })
+    if (!useMirror) return
+    result = await bookStore.upgradeBookStorage({
+      allowBestEffort,
+      allowRecoveryCandidate: true,
+      worldBookSourceLinks,
+    })
+  }
+
+  if (result.ok) {
+    showStorageFeedback(
+      'success',
+      t('Book 已切换到 Repository，旧存储仍保留。', 'Book now uses Repository. Legacy storage is still retained.'),
+    )
+    return
+  }
+  showStorageFeedback(
+    'error',
+    t(`Book 存储升级失败：${result.code}`, `Book storage upgrade failed: ${result.code}`),
+  )
+}
+
+const retryBookStorageWrite = async () => {
+  const result = await bookStore.retryBookStorageWrite()
+  showStorageFeedback(
+    result.ok ? 'success' : 'error',
+    result.ok
+      ? t('Book 已保存。', 'Book saved.')
+      : t(`重试失败：${result.code}`, `Retry failed: ${result.code}`),
+  )
+}
+
+const refreshBookStorage = async () => {
+  const result = await bookStore.refreshBookStorage()
+  showStorageFeedback(
+    result.ok ? 'success' : 'error',
+    result.ok
+      ? t('已刷新为当前存档。', 'Refreshed to the current save.')
+      : t(`刷新失败：${result.code}`, `Refresh failed: ${result.code}`),
+  )
 }
 
 const importFile = async (event) => {
@@ -379,18 +573,9 @@ const importFile = async (event) => {
   importFeedback.value = t('已导入文本来源。', 'Text source imported.')
 }
 
-const buildExportFileName = (asset) => {
-  const safeTitle = String(asset?.title || 'book-source')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64)
-  return `${safeTitle || 'book-source'}.worldbook.json`
-}
-
-const downloadExportPayload = (asset, payload) => {
+const downloadExportFile = (file) => {
   if (
+    !file ||
     typeof Blob === 'undefined' ||
     typeof document === 'undefined' ||
     typeof URL === 'undefined' ||
@@ -398,13 +583,13 @@ const downloadExportPayload = (asset, payload) => {
   ) {
     return false
   }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: 'application/json;charset=utf-8',
+  const blob = new Blob([file.content], {
+    type: file.mimeType,
   })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = buildExportFileName(asset)
+  anchor.download = file.fileName
   anchor.rel = 'noopener'
   document.body.appendChild(anchor)
   anchor.click()
@@ -413,33 +598,22 @@ const downloadExportPayload = (asset, payload) => {
   return true
 }
 
-const exportSelected = async () => {
+const openExportSheet = () => {
+  if (!selectedAsset.value) return
+  exportSheetOpen.value = true
+}
+
+const exportSelected = (format = 'worldbook_json') => {
   const asset = selectedAsset.value
   if (!asset) return
-  const confirmed = await confirmDialog({
-    title: t('导出文本来源', 'Export text source'),
-    message: t(
-      '确认导出当前文本来源吗？导出的文件可在其他设备导入 Book。',
-      'Export this text source? The file can be imported into Book on another device.',
-    ),
-    details: [
-      `${t('标题', 'Title')}: ${asset.title}`,
-      `${t('字数', 'Chars')}: ${asset.content.length}`,
-      `${t('格式', 'Format')}: .worldbook.json`,
-    ],
-    confirmText: t('导出', 'Export'),
-    cancelText: t('取消', 'Cancel'),
-    tone: 'accent',
-  })
-  if (!confirmed) return
-
-  const payload = bookStore.exportAsset(asset.id)
-  if (!payload) return
-  const downloaded = downloadExportPayload(asset, payload)
+  const file = bookStore.exportAssetFile(asset.id, format)
+  if (!file) return
+  const downloaded = downloadExportFile(file)
+  exportSheetOpen.value = false
   importFeedbackTone.value = 'success'
-  importFeedback.value = t('已生成导出数据。', 'Export data prepared.')
+  importFeedback.value = t(`已生成 ${file.fileName}。`, `${file.fileName} prepared.`)
   if (downloaded) {
-    importFeedback.value = t('已下载文本库导出文件。', 'Book export downloaded.')
+    importFeedback.value = t(`已下载 ${file.fileName}。`, `${file.fileName} downloaded.`)
   }
 }
 </script>
@@ -452,9 +626,9 @@ const exportSelected = async () => {
       <span class="book-ambient-grid"></span>
     </div>
     <header class="book-topbar">
-      <button type="button" class="book-back" @click="goBack">
+      <button type="button" class="book-back" data-testid="book-back" @click="goBack">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        <span>{{ t('返回', 'Back') }}</span>
+        <span>{{ returnButtonLabel }}</span>
       </button>
       <div class="book-title-lockup">
         <span class="book-brand-mark" aria-hidden="true">
@@ -485,7 +659,7 @@ const exportSelected = async () => {
         >
           <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
         </button>
-        <button type="button" class="book-icon-button" :aria-label="t('新建', 'New')" @click="createBlankAsset" data-testid="book-create">
+        <button type="button" class="book-icon-button" :aria-label="t('新建', 'New')" :disabled="bookStore.storageReadOnly || storageBusy" @click="createBlankAsset" data-testid="book-create">
           <i class="fas fa-plus" aria-hidden="true"></i>
         </button>
       </div>
@@ -528,7 +702,41 @@ const exportSelected = async () => {
           </button>
         </div>
 
-        <button type="button" class="book-import-button" @click="triggerImport" data-testid="book-import-trigger">
+        <section
+          :class="['book-storage-status', `is-${bookStore.storageState}`]"
+          data-testid="book-storage-status"
+          :data-storage-mode="bookStore.storageMode"
+          :data-storage-state="bookStore.storageState"
+          aria-live="polite"
+        >
+          <span class="book-storage-icon" aria-hidden="true">
+            <i :class="bookStore.storageMode === 'repository' ? 'fas fa-database' : 'fas fa-hard-drive'"></i>
+          </span>
+          <div>
+            <strong>{{ storageStatusCopy.title }}</strong>
+            <small>{{ storageStatusCopy.detail }}</small>
+          </div>
+          <button
+            v-if="bookStore.storageMode === 'legacy' && bookStore.storageState !== 'read_only_conflict'"
+            type="button"
+            class="book-storage-action"
+            :disabled="storageBusy"
+            data-testid="book-storage-upgrade"
+            @click="upgradeBookStorage"
+          >
+            {{ t('升级', 'Upgrade') }}
+          </button>
+          <div v-else-if="bookStore.storageState === 'read_only_conflict'" class="book-storage-conflict-actions">
+            <button type="button" class="book-storage-action" data-testid="book-storage-retry" @click="retryBookStorageWrite">
+              {{ t('重试', 'Retry') }}
+            </button>
+            <button type="button" class="book-storage-action is-secondary" data-testid="book-storage-refresh" @click="refreshBookStorage">
+              {{ t('刷新', 'Refresh') }}
+            </button>
+          </div>
+        </section>
+
+        <button type="button" class="book-import-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="triggerImport" data-testid="book-import-trigger">
           <i class="fas fa-file-import" aria-hidden="true"></i>
           <span>{{ t('导入文本', 'Import text') }}</span>
         </button>
@@ -589,11 +797,11 @@ const exportSelected = async () => {
               <i class="fas fa-layer-group" aria-hidden="true"></i>
               <span>{{ t('资料架', 'Shelf') }}</span>
             </button>
-            <button type="button" class="book-secondary-button" @click="exportSelected" data-testid="book-export">
+            <button type="button" class="book-secondary-button" @click="openExportSheet" data-testid="book-export">
               <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
               <span>{{ t('导出', 'Export') }}</span>
             </button>
-            <button v-if="!editMode" type="button" class="book-primary-button" @click="beginEdit" data-testid="book-edit">
+            <button v-if="!editMode" type="button" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="beginEdit" data-testid="book-edit">
               <i class="fas fa-pen" aria-hidden="true"></i>
               <span>{{ t('编辑', 'Edit') }}</span>
             </button>
@@ -655,7 +863,7 @@ const exportSelected = async () => {
                 : t('编辑前请确认：保存后可能改变之后的世界书上下文。', 'Confirm before editing: saving may change future WorldBook context.')
             }}
           </p>
-          <button type="button" class="book-primary-button" @click="confirmGuardedEdit" data-testid="book-edit-guard-confirm">
+          <button type="button" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="confirmGuardedEdit" data-testid="book-edit-guard-confirm">
             {{ selectedAssetIsBuiltIn ? t('复制后编辑', 'Copy and edit') : t('继续编辑', 'Continue editing') }}
           </button>
         </div>
@@ -671,6 +879,53 @@ const exportSelected = async () => {
         </div>
       </section>
     </main>
+
+    <div v-if="exportSheetOpen" class="book-export-backdrop" @click="exportSheetOpen = false"></div>
+    <section
+      v-if="selectedAsset && exportSheetOpen"
+      class="book-export-sheet"
+      data-testid="book-export-sheet"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('导出文稿', 'Export manuscript')"
+    >
+      <div class="book-export-sheet__head">
+        <div>
+          <p>{{ t('导出文稿', 'Export manuscript') }}</p>
+          <h3>{{ selectedAsset.title }}</h3>
+        </div>
+        <button
+          type="button"
+          class="book-icon-button is-quiet"
+          :aria-label="t('关闭', 'Close')"
+          data-testid="book-export-close"
+          @click="exportSheetOpen = false"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="book-export-sheet__intro">
+        {{ t('选择这一次需要的文件；不会改变 Book 文稿或 WorldBook 启用状态。', 'Choose the file you need. Exporting never changes Book text or WorldBook activation.') }}
+      </p>
+      <div class="book-export-options">
+        <button
+          v-for="option in exportFormatOptions"
+          :key="option.id"
+          type="button"
+          :data-testid="`book-export-format-${option.id}`"
+          @click="exportSelected(option.id)"
+        >
+          <span class="book-export-options__icon" aria-hidden="true">
+            <i :class="option.icon"></i>
+          </span>
+          <span>
+            <strong>{{ option.title }}</strong>
+            <small>{{ option.detail }}</small>
+          </span>
+          <em>{{ option.extension }}</em>
+        </button>
+      </div>
+    </section>
 
     <div v-if="editMode" class="book-editor-backdrop" @click="cancelEdit"></div>
     <form
@@ -714,7 +969,7 @@ const exportSelected = async () => {
         <button type="button" class="book-secondary-button" @click="cancelEdit" data-testid="book-cancel">
           {{ t('取消', 'Cancel') }}
         </button>
-        <button type="submit" class="book-primary-button" data-testid="book-save">
+        <button type="submit" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" data-testid="book-save">
           {{ t('保存', 'Save') }}
         </button>
       </div>
@@ -2219,6 +2474,131 @@ const exportSelected = async () => {
   font-weight: 800;
 }
 
+.book-export-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 76;
+  background: rgba(70, 53, 29, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.book-export-sheet {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 77;
+  display: grid;
+  gap: 12px;
+  width: min(620px, calc(100% - 36px));
+  max-height: min(680px, calc(100dvh - 36px));
+  margin: 0 auto;
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid rgba(70, 53, 29, 0.16);
+  border-radius: 8px;
+  color: var(--book-ink);
+  background:
+    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(236, 242, 226, 0.98)),
+    var(--book-paper);
+  box-shadow: 0 28px 80px rgba(70, 53, 29, 0.28);
+}
+
+.book-export-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.book-export-sheet__head > div {
+  min-width: 0;
+}
+
+.book-export-sheet__head p,
+.book-export-sheet__head h3,
+.book-export-sheet__intro {
+  margin: 0;
+}
+
+.book-export-sheet__head p {
+  color: var(--book-ink-soft);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.book-export-sheet__head h3 {
+  margin-top: 3px;
+  font-size: 19px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.book-export-sheet__intro {
+  color: var(--book-ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.book-export-options {
+  display: grid;
+  gap: 8px;
+}
+
+.book-export-options > button {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  padding: 11px;
+  border: 1px solid rgba(70, 53, 29, 0.14);
+  border-radius: 8px;
+  color: var(--book-ink);
+  background: rgba(251, 252, 244, 0.78);
+  text-align: left;
+}
+
+.book-export-options > button:focus-visible {
+  outline: 2px solid var(--book-ink);
+  outline-offset: 2px;
+}
+
+.book-export-options__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: var(--book-ink);
+  background: rgba(202, 226, 188, 0.58);
+}
+
+.book-export-options > button > span:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.book-export-options strong {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.book-export-options small {
+  color: var(--book-ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.book-export-options em {
+  color: var(--book-ink-soft);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .book-editor-backdrop {
   position: fixed;
   inset: 0;
@@ -2283,6 +2663,92 @@ const exportSelected = async () => {
   resize: vertical;
 }
 
+.book-storage-status {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(70, 53, 29, 0.16);
+  border-radius: 8px;
+  background: rgba(251, 252, 246, 0.7);
+}
+
+.book-storage-status.is-read_only_conflict,
+.book-storage-status.is-error {
+  border-color: rgba(151, 61, 45, 0.42);
+  background: rgba(253, 231, 225, 0.76);
+}
+
+.book-storage-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--book-leaf);
+  background: var(--book-ink);
+}
+
+.book-storage-status > div:not(.book-storage-conflict-actions) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.book-storage-status strong,
+.book-storage-status small {
+  overflow-wrap: anywhere;
+}
+
+.book-storage-status strong {
+  color: var(--book-ink);
+  font-size: 12px;
+}
+
+.book-storage-status small {
+  color: var(--book-ink-soft);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.book-storage-action {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--book-leaf);
+  background: var(--book-ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.book-storage-action.is-secondary {
+  color: var(--book-ink);
+  background: var(--book-stone);
+}
+
+.book-storage-action:disabled,
+.book-import-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.book-storage-action:focus-visible {
+  outline: 2px solid var(--system-accent);
+  outline-offset: 2px;
+}
+
+.book-storage-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 @media (max-width: 720px) {
   .book-topbar-actions {
     gap: 8px;
@@ -2333,6 +2799,20 @@ const exportSelected = async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .book-storage-status {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .book-storage-status > .book-storage-action,
+  .book-storage-conflict-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .book-storage-conflict-actions .book-storage-action {
+    flex: 1 1 120px;
+  }
+
   .book-editor-sheet {
     top: calc(58px + env(safe-area-inset-top));
     left: 0;
@@ -2342,6 +2822,24 @@ const exportSelected = async () => {
     max-height: none;
     padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
     border-radius: 28px 28px 0 0;
+  }
+
+  .book-export-sheet {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: calc(100dvh - 62px - env(safe-area-inset-top));
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 8px 8px 0 0;
+  }
+
+  .book-export-options > button {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .book-export-options em {
+    grid-column: 2;
   }
 }
 </style>

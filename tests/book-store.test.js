@@ -137,6 +137,34 @@ describe('book store', () => {
     })
   })
 
+  test('hydrates legacy Book data without rewriting its original bytes', async () => {
+    const raw = JSON.stringify({
+      version: 1,
+      savedAt: 123,
+      data: {
+        assets: [{
+          id: 'legacy_exact_bytes',
+          title: 'Legacy exact bytes',
+          category: 'world_rule',
+          content: 'Keep the carrier unchanged.',
+          status: 'draft',
+          version: 1,
+          createdAt: 1,
+          updatedAt: 2,
+        }],
+        categories: [],
+      },
+    })
+    localStorage.setItem('schatphone:store:book', raw)
+
+    const store = useBookStore()
+    await vi.waitFor(() => expect(store.hasFinishedStorageHydration).toBe(true))
+
+    expect(store.findAssetById('legacy_exact_bytes')?.content).toBe('Keep the carrier unchanged.')
+    expect(localStorage.getItem('schatphone:store:book')).toBe(raw)
+    expect(store.storageMode).toBe('legacy')
+  })
+
   test.each(BUILT_IN_KPOP_ENCYCLOPEDIA_ASSETS)(
     'publishes $title as an independent optional built-in encyclopedia',
     ({ id, title, sourcePath, bodyText }) => {
@@ -316,6 +344,47 @@ describe('book store', () => {
     expect(result.asset.format).toBe('markdown')
     expect(result.asset.sections.map((section) => section.title)).toEqual(['City', 'Transit'])
     expect(store.assetCount).toBe(1)
+  })
+
+  test('imports colliding user and built-in ids as new assets without replacing existing records', () => {
+    const store = useBookStore()
+    store.createAsset({
+      id: 'asset_existing',
+      title: 'Existing source',
+      content: 'Keep this linked content.',
+    })
+
+    const importWorldBookAsset = (asset) => store.importTextAsset({
+      fileName: `${asset.id}.worldbook.json`,
+      mimeType: 'application/json',
+      content: JSON.stringify({
+        type: 'schatphone.bookTextAsset',
+        version: 1,
+        asset,
+      }),
+    })
+    const userCollision = importWorldBookAsset({
+      ...store.findAssetById('asset_existing'),
+      title: 'Imported replacement attempt',
+      content: 'Must receive a different id.',
+    })
+    const builtInId = 'built_in_modern_seoul_kpop_main_worldview'
+    const builtInBefore = store.findAssetById(builtInId)
+    const builtInCollision = importWorldBookAsset({
+      ...builtInBefore,
+      title: 'Built-in replacement attempt',
+      content: 'Must not shadow the built-in source.',
+    })
+
+    expect(userCollision.ok).toBe(true)
+    expect(userCollision.asset.id).not.toBe('asset_existing')
+    expect(store.findAssetById('asset_existing')).toMatchObject({
+      title: 'Existing source',
+      content: 'Keep this linked content.',
+    })
+    expect(builtInCollision.ok).toBe(true)
+    expect(builtInCollision.asset.id).not.toBe(builtInId)
+    expect(store.findAssetById(builtInId)).toEqual(builtInBefore)
   })
 
   test('backup and restore preserves assets', () => {

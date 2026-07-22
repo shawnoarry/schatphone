@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 ## 1. Architecture Goals
 
@@ -165,6 +165,19 @@ Full assembled prompts, raw provider responses, headers, and transport payloads 
 - `world-pack-schema.js`, compatibility helpers, app bindings, service templates, and proposal registries normalize reviewed capability data;
 - target apps receive route/context metadata and retain business ownership.
 
+### Mini Scene
+
+`docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` defines an architecture-accepted shared Module whose pure Stage 1 foundation is now landed:
+
+- registered callers such as Calendar, Map, Chat, and future streaming modules submit bounded source facts through one request Interface and retain source-record/trigger truth;
+- Settings owns an explicit per-module unconfigured/off, text, or interactive-HTML choice; world/profile/caller suggestions cannot override it;
+- Book narrative rules remain independent from separate `structured_json` Mini Scene transform profiles, and WorldBook narrative activation remains independent from Mini Scene profile binding;
+- World Pack may reference a reviewed profile as an optional grouped capability but is not required for custom worlds and cannot auto-enable Book content;
+- the Module owns world/profile resolution, structured artifact validation, bounded safe transforms, presenter selection, text fallback, and interaction audit;
+- Text and sandboxed HTML Presenter Adapters form the presentation seam. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
+- `mini-scene-contract.js`, `mini-scene-schema.js`, `mini-scene-module-registry.js`, `mini-scene-transform-profile.js`, and `mini-scene-profile-resolver.js` provide unreferenced/test-only contracts; the caller registry is empty and the regex layer validates without executing;
+- no Mini Scene runtime or persistence is implemented yet, and its future owner/data classes are outside the approved Book Repository foundation pilot.
+
 ### Role And Relationship
 
 - `role-binding-contract.js` normalizes Contacts-to-Chat role context;
@@ -207,7 +220,7 @@ Global Appearance packs export only global portable fields. They exclude:
 
 Each store supplies its own normalization, hydration, migration, and snapshot logic. This keeps legacy data handling close to the domain owner.
 
-Confirmed target direction, not current implementation:
+Confirmed target direction and current non-active foundation:
 
 - browsers and installable PWAs remain complete first-class clients;
 - IndexedDB becomes the primary structured store behind domain repository contracts, while `localStorage` becomes small hot state and recovery metadata;
@@ -228,12 +241,12 @@ Confirmed target direction, not current implementation:
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: required-section manifests, integrity evidence, capacity preflight, staged generations, atomic activation, crash journals, migration, failure taxonomy, and metadata/binary rollback are frozen before implementation;
-- `src/lib/persistence-owner-inventory.js` now independently classifies the 16 persisted stores, serialized mirror, Gallery binary carrier, Home local hint, Chat session feedback, and logical-owner/data-class ownership; Settings diagnostics consume its stable 16-store audit projection, including Book;
+- `src/lib/persistence-owner-inventory.js` now independently classifies the 16 persisted stores, serialized mirror, Gallery binary carrier, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 16-store audit projection, including Book;
 - `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap without changing the v2 payload; a shape-valid legacy file is still ineligible for a future complete-package claim while that gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is now `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
-- Batch 2A starts no persistence implementation. The exact non-active Batch 2B schema/Adapter/fixture files and focused real-browser foundation spec are approved for a later instructed round; Gallery/R2/other owners, application import, Book cutover, dual write, and runtime activation remain unapproved.
+- Batch 2B completed as the non-active foundation, followed by a separately approved Book-only runtime cutover on 2026-07-22. Book now activates verified generations through the fenced pointer/journal flow, preserves the byte-identical legacy carrier for rollback, and performs no dual write; Gallery/R2 and every other owner migration remain unapproved.
 
 ### Gallery Binaries
 
@@ -314,6 +327,21 @@ WorldBook reviewed World Pack
   -> target store remains record owner
 ```
 
+### Mini Scene Request
+
+```text
+Calendar / Map / Chat / future registered caller
+  -> source-owned eligibility and canonical facts
+  -> optional Event Runtime trigger policy/provenance
+  -> Mini Scene request Interface
+  -> explicit Settings mode + world/profile resolver
+  -> structured draft + optional bounded Book transform profile
+  -> committed Mini Scene artifact
+  -> Text Presenter or sandboxed HTML Presenter Adapter
+  -> allowlisted interaction request
+  -> owning source module validates any source action
+```
+
 ## 9. Event Runtime And Push
 
 ### Foreground Runtime
@@ -346,9 +374,9 @@ Its boundary is important:
 ### Local Baseline
 
 - ESLint;
-- 172 Vitest files / 1054 tests;
+- 182 Vitest files / 1132 tests;
 - Vite production build;
-- 30 Playwright scenarios across desktop and mobile emulation.
+- 35 product Playwright scenarios across desktop and mobile emulation plus 3 focused Chromium Repository-foundation tests.
 
 ### CI
 
@@ -402,3 +430,4 @@ Recommended order:
 - `docs/architecture/ROLE_BINDING_CONTRACT.md`
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`

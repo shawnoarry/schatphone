@@ -1,14 +1,19 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { readPersistedRawLayers, readPersistedState, writePersistedState } from '../lib/persistence'
 import {
   buildBookAssetExportPayload,
+  buildBookAssetPortableExport,
   buildBookAssetFromImportedText,
   normalizeBookTextAsset,
   normalizeBookTextAssets,
 } from '../lib/book-text-schema'
 import { findBuiltInBookTextAssetById, listBuiltInBookTextAssets } from '../lib/built-in-book-assets'
 import { normalizeBookTextCategory } from '../lib/world-taxonomy'
+import {
+  createBookRepositoryRuntime,
+  estimateBookRepositoryPeakBytes,
+} from '../lib/book-repository-runtime'
 
 const BOOK_STORAGE_KEY = 'store:book'
 const BOOK_STORAGE_VERSION = 1
@@ -52,6 +57,14 @@ const cloneCategory = (category) => ({ ...category })
 
 const createDuplicatedId = (assetId) => `${assetId || 'book_asset'}_copy_${Date.now()}`
 
+const createAvailableAssetId = (assetId, occupiedIds = new Set()) => {
+  const baseId = typeof assetId === 'string' && assetId.trim() ? assetId.trim() : 'book_asset'
+  if (!occupiedIds.has(baseId)) return baseId
+  let suffix = 2
+  while (occupiedIds.has(`${baseId}_copy_${suffix}`)) suffix += 1
+  return `${baseId}_copy_${suffix}`
+}
+
 const mergeBuiltInAssets = (userAssets = []) => {
   const userAssetList = Array.isArray(userAssets) ? userAssets : []
   const userIds = new Set(userAssetList.map((asset) => asset?.id).filter(Boolean))
@@ -78,6 +91,18 @@ export const useBookStore = defineStore('book', () => {
   const assets = ref([])
   const categories = ref([])
   const hasFinishedStorageHydration = ref(false)
+  const storageMode = ref('checking')
+  const storageState = ref('checking')
+  const storageErrorCode = ref('')
+  const storageReadOnly = ref(false)
+  const persistentStorageState = ref('not_persistent')
+  const activeGenerationId = ref('')
+  const runtime = createBookRepositoryRuntime()
+  let repositoryWriteQueue = Promise.resolve({ ok: true, code: 'idle' })
+  let lastPersistenceEvidence = null
+  let pendingConflictResult = null
+  let skipNextWatchedWrite = false
+  let internalSnapshotApplyDepth = 0
 
   const assetCount = computed(() => assets.value.length)
   const libraryAssets = computed(() => mergeBuiltInAssets(assets.value))
@@ -129,18 +154,29 @@ export const useBookStore = defineStore('book', () => {
   }
 
   const createAsset = (input = {}) => {
+    if (storageReadOnly.value) return null
     const now = Date.now()
-    const asset = normalizeBookTextAsset({
+    const normalized = normalizeBookTextAsset({
       ...input,
       createdAt: input.createdAt || now,
       updatedAt: input.updatedAt || now,
     }, assets.value.length)
+    const occupiedIds = new Set(libraryAssets.value.map((asset) => asset?.id).filter(Boolean))
+    const availableId = createAvailableAssetId(normalized.id, occupiedIds)
+    const asset = normalized.id === availableId
+      ? normalized
+      : normalizeBookTextAsset({
+          ...normalized,
+          id: availableId,
+          contentFingerprint: undefined,
+        }, assets.value.length)
     assets.value.unshift(asset)
     sortAssets()
     return cloneAsset(asset)
   }
 
   const updateAsset = (assetId, patch = {}, options = {}) => {
+    if (storageReadOnly.value) return { ok: false, reason: 'read_only_conflict' }
     const asset = findAssetById(assetId)
     if (!asset) return { ok: false, reason: 'not_found' }
     const index = assets.value.findIndex((item) => item.id === asset.id)
@@ -166,6 +202,7 @@ export const useBookStore = defineStore('book', () => {
   }
 
   const deleteAsset = (assetId, options = {}) => {
+    if (storageReadOnly.value) return { ok: false, reason: 'read_only_conflict' }
     const asset = findAssetById(assetId)
     if (!asset) return { ok: false, reason: 'not_found' }
     if (!assets.value.some((item) => item.id === asset.id)) {
@@ -198,9 +235,13 @@ export const useBookStore = defineStore('book', () => {
   }
 
   const importTextAsset = (payload = {}) => {
+    if (storageReadOnly.value) {
+      return { ok: false, code: 'read_only_conflict', message: 'Book storage is read-only.' }
+    }
     const result = buildBookAssetFromImportedText(payload)
     if (!result.ok || !result.asset) return result
     const asset = createAsset(result.asset)
+    if (!asset) return { ok: false, code: 'read_only_conflict', message: 'Book storage is read-only.' }
     return { ok: true, asset }
   }
 
@@ -210,15 +251,28 @@ export const useBookStore = defineStore('book', () => {
     return buildBookAssetExportPayload(asset)
   }
 
-  const applyPersistedSource = (source) => {
+  const exportAssetFile = (assetId, format = 'worldbook_json') => {
+    const asset = findAssetById(assetId)
+    if (!asset) return null
+    return buildBookAssetPortableExport(asset, format)
+  }
+
+  const applyPersistedSource = (source, options = {}) => {
     const payload =
       source && typeof source.book === 'object' && source.book
         ? source.book
         : source
     if (!payload || typeof payload !== 'object') return false
+    const suppressWatchedPersistence = options.suppressWatchedPersistence === true
+    if (suppressWatchedPersistence) internalSnapshotApplyDepth += 1
     const sourceAssets = Array.isArray(payload.assets) ? payload.assets : []
     assets.value = normalizeBookTextAssets(sourceAssets).slice(0, BOOK_ASSET_LIMIT)
     categories.value = normalizeCategories(payload.categories)
+    if (suppressWatchedPersistence) {
+      queueMicrotask(() => {
+        internalSnapshotApplyDepth = Math.max(0, internalSnapshotApplyDepth - 1)
+      })
+    }
     return true
   }
 
@@ -227,9 +281,15 @@ export const useBookStore = defineStore('book', () => {
     categories: categories.value.map(cloneCategory),
   })
 
-  const createBackupSnapshotAsync = async () => createBackupSnapshot()
+  const createBackupSnapshotAsync = async () => {
+    await repositoryWriteQueue
+    return createBackupSnapshot()
+  }
 
-  const restoreFromBackup = (snapshot = {}) => applyPersistedSource(snapshot)
+  const restoreFromBackup = (snapshot = {}) => {
+    if (storageReadOnly.value) return false
+    return applyPersistedSource(snapshot)
+  }
 
   const persistToStorage = () => {
     writePersistedState(BOOK_STORAGE_KEY, createBackupSnapshot(), {
@@ -237,19 +297,54 @@ export const useBookStore = defineStore('book', () => {
     })
   }
 
+  const applyRepositoryResult = (result) => {
+    if (result?.ok) {
+      storageState.value = 'active'
+      storageErrorCode.value = ''
+      storageReadOnly.value = false
+      activeGenerationId.value = result.pointer?.generationId || activeGenerationId.value
+      pendingConflictResult = null
+      return result
+    }
+    storageErrorCode.value = result?.code || 'repository_write_failed'
+    if (result?.recoveryRequired) {
+      storageState.value = 'error'
+      storageReadOnly.value = true
+      pendingConflictResult = null
+    } else if (result?.readOnly || ['read_only_conflict', 'stale_generation'].includes(result?.code)) {
+      storageState.value = 'read_only_conflict'
+      storageReadOnly.value = true
+      pendingConflictResult = result
+    } else {
+      storageState.value = 'error'
+      storageReadOnly.value = true
+    }
+    return result
+  }
+
+  const persistToRepository = (snapshot = createBackupSnapshot()) => {
+    storageState.value = 'saving'
+    repositoryWriteQueue = repositoryWriteQueue
+      .catch(() => ({ ok: false }))
+      .then(() => runtime.persistSnapshot({ snapshot }))
+      .then(applyRepositoryResult)
+    return repositoryWriteQueue
+  }
+
   const saveNow = () => {
+    if (storageMode.value === 'repository') {
+      skipNextWatchedWrite = true
+      queueMicrotask(() => {
+        skipNextWatchedWrite = false
+      })
+      return persistToRepository()
+    }
     persistToStorage()
+    return { ok: true, code: 'legacy_saved' }
   }
 
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(BOOK_STORAGE_KEY, {
-      version: BOOK_STORAGE_VERSION,
-    })
-    return applyPersistedSource(persisted)
-  }
-
-  const hydrateFromStorageAsync = async () => {
-    const persisted = await readPersistedStateAsync(BOOK_STORAGE_KEY, {
       version: BOOK_STORAGE_VERSION,
     })
     return applyPersistedSource(persisted)
@@ -260,19 +355,115 @@ export const useBookStore = defineStore('book', () => {
     categories.value = []
   }
 
+  const requestBookPersistentStorage = async () => {
+    const snapshot = createBackupSnapshot()
+    const sourceBytes = new TextEncoder().encode(JSON.stringify(snapshot)).byteLength
+    lastPersistenceEvidence = await runtime.requestPersistentStorage({
+      requiredPeakBytes: estimateBookRepositoryPeakBytes(snapshot, sourceBytes),
+    })
+    persistentStorageState.value = lastPersistenceEvidence.state
+    return lastPersistenceEvidence
+  }
+
+  const upgradeBookStorage = async ({
+    allowBestEffort = false,
+    allowRecoveryCandidate = false,
+    worldBookSourceLinks = [],
+  } = {}) => {
+    await storageInitializationPromise
+    if (storageMode.value === 'repository') {
+      return { ok: true, code: 'already_upgraded', generationId: activeGenerationId.value }
+    }
+    storageState.value = 'upgrading'
+    storageErrorCode.value = ''
+    const result = await runtime.upgradeFromLegacy({
+      worldBookSourceLinks,
+      persistenceEvidence: lastPersistenceEvidence,
+      allowBestEffort,
+      allowRecoveryCandidate,
+    })
+    if (result.ok) {
+      if (result.snapshot) applyPersistedSource(result.snapshot, { suppressWatchedPersistence: true })
+      storageMode.value = 'repository'
+      storageState.value = 'active'
+      storageReadOnly.value = false
+      activeGenerationId.value = result.pointer?.generationId || ''
+      return result
+    }
+    storageMode.value = 'legacy'
+    storageReadOnly.value = result.readOnly === true || ['read_only_conflict', 'stale_generation'].includes(result.code)
+    storageState.value = storageReadOnly.value ? 'read_only_conflict' : 'legacy'
+    pendingConflictResult = storageReadOnly.value ? result : null
+    storageErrorCode.value = result.code || 'upgrade_failed'
+    return result
+  }
+
+  const refreshBookStorage = async () => {
+    const result = pendingConflictResult?.refreshCurrentSave
+      ? await pendingConflictResult.refreshCurrentSave()
+      : await runtime.initialize()
+    if (result.ok && result.code === 'repository_active' && result.snapshot) {
+      applyPersistedSource(result.snapshot, { suppressWatchedPersistence: true })
+      storageMode.value = 'repository'
+      storageState.value = 'active'
+      storageReadOnly.value = false
+      storageErrorCode.value = ''
+      activeGenerationId.value = result.pointer?.generationId || ''
+      pendingConflictResult = null
+    }
+    return result
+  }
+
+  const retryBookStorageWrite = async () => {
+    if (!pendingConflictResult?.retry) return { ok: false, code: 'nothing_to_retry' }
+    storageState.value = 'saving'
+    const result = await pendingConflictResult.retry()
+    if (result.ok && storageMode.value === 'legacy') {
+      if (result.snapshot) applyPersistedSource(result.snapshot, { suppressWatchedPersistence: true })
+      storageMode.value = 'repository'
+    }
+    return applyRepositoryResult(result)
+  }
+
   const hydratedFromLocal = hydrateFromStorage()
-  void (async () => {
-    if (!hydratedFromLocal) {
-      await hydrateFromStorageAsync()
+  const storageInitializationPromise = (async () => {
+    const repositoryResult = await runtime.initialize()
+    if (repositoryResult.ok && repositoryResult.code === 'repository_active') {
+      applyPersistedSource(repositoryResult.snapshot, { suppressWatchedPersistence: true })
+      storageMode.value = 'repository'
+      storageState.value = 'active'
+      activeGenerationId.value = repositoryResult.pointer?.generationId || ''
+    } else if (repositoryResult.readOnly || repositoryResult.recoveryRequired) {
+      storageMode.value = 'repository'
+      storageState.value = 'error'
+      storageReadOnly.value = true
+      storageErrorCode.value = repositoryResult.code || 'manual_recovery_required'
+      activeGenerationId.value = repositoryResult.pointer?.generationId || ''
+    } else {
+      storageMode.value = 'legacy'
+      storageState.value = 'legacy'
+      if (!hydratedFromLocal) {
+        const layers = await readPersistedRawLayers(BOOK_STORAGE_KEY)
+        if (!layers.localRaw && !layers.mirrorRaw) persistToStorage()
+      }
     }
     hasFinishedStorageHydration.value = true
-    persistToStorage()
+    return repositoryResult
   })()
 
   watch(
     [assets, categories],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextWatchedWrite || internalSnapshotApplyDepth > 0) {
+        skipNextWatchedWrite = false
+        return
+      }
+      if (storageReadOnly.value) return
+      if (storageMode.value === 'repository') {
+        persistToRepository(createBackupSnapshot())
+        return
+      }
       persistToStorage()
     },
     { deep: true },
@@ -282,6 +473,12 @@ export const useBookStore = defineStore('book', () => {
     assets,
     categories,
     hasFinishedStorageHydration,
+    storageMode,
+    storageState,
+    storageErrorCode,
+    storageReadOnly,
+    persistentStorageState,
+    activeGenerationId,
     assetCount,
     libraryAssets,
     worldbookSourceAssets,
@@ -295,10 +492,15 @@ export const useBookStore = defineStore('book', () => {
     duplicateAsset,
     importTextAsset,
     exportAsset,
+    exportAssetFile,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,
     saveNow,
+    requestBookPersistentStorage,
+    upgradeBookStorage,
+    refreshBookStorage,
+    retryBookStorageWrite,
     resetForTesting,
   }
 })

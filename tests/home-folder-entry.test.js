@@ -183,6 +183,7 @@ describe('Home folder entries', () => {
     store.settings.system.language = 'en-US'
     store.setHomeWidgetPages([[], [], [], [], []])
     store.setHomeLayoutTemplate(2, 'layout-b')
+    store.activateWorldPack('modern_parallel')
 
     const confirmed = store.confirmWorldAppTemplateProposal(
       {
@@ -190,11 +191,11 @@ describe('Home folder entries', () => {
         title: 'Metro Pass',
         confidence: 'medium',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
     const worldAppId = buildWorldAppHomeTileId({
-      packId: 'default_world',
+      packId: 'modern_parallel',
       bindingId: confirmed.binding.id,
     })
 
@@ -241,7 +242,7 @@ describe('Home folder entries', () => {
 
     expect(router.currentRoute.value.path).toBe('/map')
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'default_world',
+      worldPack: 'modern_parallel',
       worldApp: confirmed.binding.id,
       from: 'home',
       homePage: '2',

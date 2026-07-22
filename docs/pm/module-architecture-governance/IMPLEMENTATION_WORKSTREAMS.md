@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 ## 1. Workstream A: Ownership Closure
 
@@ -25,8 +25,9 @@ Updated: 2026-07-21
 - preserve immutable source packages, staged version-to-version migration, separate-generation activation, metadata/binary rollback unity, and crash-journal recovery
 - reuse exact local Gallery binaries and retain current-only kept material during older restores; never match by filename, label, prompt, or URL alone
 - classify legacy missing media as unresolved references with type-appropriate derived placeholders, not fabricated recovered assets
-- treat the exact IndexedDB v1/Book foundation contract as architecture-accepted and Batch 2B as an approved non-active Adapter/fixture/staging slice with focused real-browser IndexedDB/coordination coverage; keep application runtime wiring, Gallery schema, provider code, other owners, Book cutover, dual write, and activation separately unapproved
+- treat Batch 2B as the completed foundation and the 2026-07-22 Book-only cutover as the first active reference migration; preserve explicit user initiation, legacy rollback bytes, atomic pointer/journal verification, and fail-closed conflicts, while keeping Gallery schema, provider code, other owners, dual write, and legacy deletion separately unapproved
 - preserve one save per isolated storage container; same-container write coordination cannot become cross-container sync, silent merge, force takeover, or last-write-wins
+- stage and verify Book assets plus WorldBook identity/activation references as one complete-backup graph; a failed or unresolved owner section cannot leave a partially activated world setting
 
 ## 4. Workstream D: Cleanup Debt
 
@@ -52,7 +53,31 @@ Updated: 2026-07-21
 - add coverage thresholds only after selecting meaningful critical-path metrics
 - test supported Node versions intentionally
 
-## 7. Semantic Guardrails
+## 7. Workstream G: Cross-Module Mini Scene
+
+- use `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` as the architecture-accepted Interface and security contract
+- keep one deep Mini Scene Module behind a registered-caller Interface; source modules own trigger intent and source truth
+- keep per-module user modes explicit: unconfigured/off, text, or interactive HTML, with user choice above caller/world suggestions
+- keep Book narrative rules separate from structured `structured_json` transform profiles and keep WorldBook narrative activation separate from Mini Scene profile binding
+- let World Pack reference a reviewed profile only as an optional grouped capability; custom worlds must work without a Pack
+- require a bounded safe regex engine and a validated structured draft before transforms
+- require both Text and sandboxed HTML Presenter Adapters, with a text fallback for every interactive artifact
+- stage pure schemas first, persistence/backup ownership second, text runtime third, HTML security fourth, and source-module Adapters one at a time
+- keep the first K-pop Calendar music-show-day integration an optional example rather than a global rule
+
+## 8. Workstream H: World Setting Identity And Interface
+
+- use `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` as the world identity, ownership, consumer, backup, and migration contract
+- keep one current world context inside one current save; do not create a save-slot or workspace-switching interpretation
+- preserve the completed Stage W1 Interface with separate identity, narrative, structured encyclopedia, profile-template, Pack-capability, and diagnostic projections
+- preserve stable `legacy_single_world` compatibility identity/scope independently from `activeWorldPackId`
+- keep WorldBook and Contacts current-world reads on the shared Interface before adding persisted world definitions
+- keep Book assets reusable and WorldBook source links explicit; any Book encyclopedia subset, including zero, remains valid
+- keep Pack definitions capability-only for activation purposes; legacy content references are review evidence, not ownership or automatic binding
+- require complete-backup cross-reference verification and atomic rollback before any persisted identity migration
+- audit every world-sensitive owner before proposing multiple world definitions or runtime switching
+
+## 9. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -64,3 +89,11 @@ Treat these as bugs:
 6. backup files are described as ordinary portable data while they contain credentials
 7. a build-only deployment is described as fully validated
 8. a production-only audit result is used to hide development-tool advisories
+9. calling modules copy Mini Scene regex, world-profile resolution, HTML rendering, or fallback behavior into their own implementations
+10. Book/WorldBook activation, World Pack activation, or catalog presence silently enables a Mini Scene popup
+11. raw AI HTML or legacy Chat `htmlSnippet` is executed, or unbounded native regex runs on the UI thread
+12. Mini Scene artifacts, profile bindings, or Settings policy are added to persistence Batch 2B without separate owner/backup approval
+13. `activeWorldPackId` or the built-in `default_world` Pack is treated as canonical world identity
+14. Pack activation changes Book source links, encyclopedia selection, profile-template selection, sensitive-content choices, or Mini Scene policy
+15. a future world definition is implemented as an internal save slot, workspace switcher, cross-container discovery, sync, or merge feature
+16. a consumer independently assembles world context or reads mutable owner arrays instead of using the shared World Setting Interface

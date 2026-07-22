@@ -69,6 +69,7 @@ import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { resolveCurrentWorldContext } from '../lib/world-interface'
 
 const route = useRoute()
 const router = useRouter()
@@ -454,10 +455,14 @@ const activeWorldRelationshipRegistry = computed(() => {
 })
 const relationshipCategoryOptions = computed(() => activeWorldRelationshipRegistry.value.categories)
 const relationshipModifierOptions = computed(() => activeWorldRelationshipRegistry.value.modifiers)
-const currentContactsWorldId = computed(() =>
-  typeof user.value.activeWorldPackId === 'string' && user.value.activeWorldPackId.trim()
-    ? user.value.activeWorldPackId.trim()
-    : CONTACTS_FALLBACK_WORLD_ID,
+const currentContactsWorldContext = computed(() =>
+  resolveCurrentWorldContext({
+    systemStore,
+    consumer: 'contacts',
+  }),
+)
+const currentContactsWorldId = computed(
+  () => currentContactsWorldContext.value.identity?.worldId || CONTACTS_FALLBACK_WORLD_ID,
 )
 
 const resetRelationshipPremiseDraft = (profile = selectedProfile.value) => {
@@ -640,7 +645,9 @@ const selectedRoleChatContact = computed(() => {
 })
 const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
 const currentWorldProfileTemplates = computed(() =>
-  systemStore.listWorldProfileTemplates(currentContactsWorldId.value, { enabledOnly: true }),
+  Array.isArray(currentContactsWorldContext.value.profiles?.enabledTemplates)
+    ? currentContactsWorldContext.value.profiles.enabledTemplates
+    : [],
 )
 const {
   contactsProfileTemplateOptions,
@@ -1195,7 +1202,7 @@ const saveProfileTemplateValues = () => {
     templateLink: {
       primaryWorldId:
         template.scope === PROFILE_TEMPLATE_SCOPES.WORLD
-          ? template.worldId || currentContactsWorldId.value
+          ? currentContactsWorldId.value
           : '',
       profileTemplateId: template.id,
       profileTemplateVersion: template.version || 1,

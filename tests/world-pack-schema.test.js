@@ -54,7 +54,7 @@ describe('world pack schema', () => {
     })
   })
 
-  test('builds activation review summaries and blockers', () => {
+  test('keeps optional content references reviewable without blocking capability activation', () => {
     const pack = normalizeWorldPack({
       id: 'review_pack',
       title: 'Review Pack',
@@ -81,8 +81,12 @@ describe('world pack schema', () => {
       serviceTemplateCount: 1,
     })
     expect(review.summary.knowledgeCount).toBe(2)
-    expect(review.blocked).toBe(true)
-    expect(review.blockers).toEqual([{ type: 'missing_encyclopedia_entry', id: 'kp_missing' }])
+    expect(review.blocked).toBe(false)
+    expect(review.blockers).toEqual([])
+    expect(review.referenceDiagnostics).toEqual([
+      { type: 'missing_encyclopedia_entry', id: 'kp_missing' },
+    ])
+    expect(review.effectRows.filter((row) => row.optionalReference)).toHaveLength(3)
   })
 
   test('normalizes world pack compatibility metadata', () => {

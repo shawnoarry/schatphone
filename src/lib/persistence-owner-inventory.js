@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 1
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 2
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -41,6 +41,67 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     durability: 'durable-primary',
   },
   {
+    id: 'idb:repository-record-versions',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'record_versions',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-repository-primary',
+  },
+  {
+    id: 'idb:repository-generation-records',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'generation_records',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-repository-primary',
+  },
+  {
+    id: 'idb:repository-generations',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'generations',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-repository-primary',
+  },
+  {
+    id: 'idb:repository-meta',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'repository_meta',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-repository-primary',
+  },
+  {
+    id: 'idb:repository-operation-journal',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'operation_journal',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-recovery-metadata',
+  },
+  {
+    id: 'idb:repository-write-leases',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-repository',
+    databaseVersion: 1,
+    objectStoreName: 'write_leases',
+    sourceFile: 'src/lib/persistence-repository-schema.js',
+    durability: 'durable-coordination-metadata',
+  },
+  {
+    id: 'local:book-legacy-source',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:store:book',
+    sourceFile: 'src/lib/book-legacy-migration.js',
+    durability: 'durable-legacy-fallback',
+  },
+  {
     id: 'local:home-layout-edit-flag',
     carrierType: 'localStorage',
     fullKey: 'schatphone:layout_edit_enabled',
@@ -76,6 +137,15 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
 ])
 
 const layeredStoreCarriers = ['local:persisted-state', 'idb:persisted-state-mirror']
+const repositoryBookCarriers = [
+  'local:book-legacy-source',
+  'idb:repository-record-versions',
+  'idb:repository-generation-records',
+  'idb:repository-generations',
+  'idb:repository-meta',
+  'idb:repository-operation-journal',
+  'idb:repository-write-leases',
+]
 
 export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   {
@@ -290,7 +360,7 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     id: 'book.long-form-library',
     logicalOwner: 'Book',
     dataClass: 'Long-form text assets, categories, and WorldBook source links',
-    physicalCarrierIds: layeredStoreCarriers,
+    physicalCarrierIds: [...layeredStoreCarriers, ...repositoryBookCarriers],
     storageKeys: ['store:book'],
     durability: 'durable-authoritative',
     growthClass: 'unbounded-user-content',

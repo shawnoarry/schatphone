@@ -110,12 +110,13 @@ const emit = defineEmits([
 
 const { t } = useI18n()
 
-const packName = computed(() =>
-  t(
-    props.overview.activePack?.title || '默认世界',
-    props.overview.activePack?.name || 'Default world',
-  ),
-)
+const isDefaultCapabilityPack = (pack = {}) => !pack?.id || pack.id === 'default_world'
+const capabilityPackName = (pack = {}) =>
+  isDefaultCapabilityPack(pack)
+    ? t('未启用额外能力包', 'No extra capability Pack')
+    : t(pack.title || pack.name || '', pack.name || pack.title || 'Capability Pack')
+
+const packName = computed(() => capabilityPackName(props.overview.activePack))
 
 const selectedPack = computed(() =>
   props.packs.find((pack) => pack.id === props.selectedPackId) ||
@@ -123,12 +124,7 @@ const selectedPack = computed(() =>
   props.overview.activePack,
 )
 
-const selectedPackName = computed(() =>
-  t(
-    selectedPack.value?.title || '默认世界',
-    selectedPack.value?.name || 'Default world',
-  ),
-)
+const selectedPackName = computed(() => capabilityPackName(selectedPack.value))
 const isSelectedPackActive = computed(() => selectedPack.value?.id === props.overview.activePack?.id)
 const visibleEnabledPacks = computed(() => props.enabledPacks.filter((pack) => pack?.id !== 'default_world'))
 const canResetWorldPack = computed(
@@ -137,7 +133,7 @@ const canResetWorldPack = computed(
 
 const activationStateLabel = computed(() =>
   props.overview.activePack?.id === 'default_world'
-    ? t('默认启用', 'Default active')
+    ? t('未启用额外能力包', 'No extra Pack')
     : t('当前启用', 'Active'),
 )
 
@@ -148,13 +144,18 @@ const recommendedRows = computed(() => props.recommendationReview?.grouped?.reco
 const browseableRows = computed(() => props.recommendationReview?.grouped?.browseable || [])
 const unsupportedRows = computed(() => props.recommendationReview?.grouped?.unsupported || [])
 
-const packDisplayName = (pack = {}) => t(pack.title || pack.packTitle || pack.name || pack.packName || '', pack.name || pack.packName || pack.title || pack.packTitle || 'World Pack')
+const packDisplayName = (pack = {}) => capabilityPackName({
+  ...pack,
+  id: pack.id || pack.packId,
+  title: pack.title || pack.packTitle,
+  name: pack.name || pack.packName,
+})
 const packDisplayDescription = (pack = {}) => {
   const id = pack.id || pack.packId || ''
   const descriptionMap = {
     default_world: [
-      '使用当前 Book 与世界书材料，不叠加额外世界默认值。',
-      'Use current Book and WorldBook material without extra world defaults.',
+      '不启用额外应用、服务、术语或经济能力；Book 与 WorldBook 选择保持独立。',
+      'No extra app, service, terminology, or economy capabilities; Book and WorldBook choices remain independent.',
     ],
     modern_parallel: [
       '现实感现代世界，适合媒体、外卖、社交系统等日常设定。',
@@ -314,10 +315,10 @@ const effectRows = computed(() => [
 const reviewRows = computed(() => {
   if (!props.activationReview || !Array.isArray(props.activationReview.effectRows)) return []
   const labelMap = {
-    book_sources: t('设定文本', 'Setting text'),
-    encyclopedia: t('百科', 'Encyclopedia'),
-    knowledge: t('百科', 'Encyclopedia'),
-    templates: t('角色模板', 'Role templates'),
+    book_sources: t('可选设定文本引用', 'Optional setting references'),
+    encyclopedia: t('可选百科引用', 'Optional encyclopedia references'),
+    knowledge: t('可选百科引用', 'Optional encyclopedia references'),
+    templates: t('可选角色模板引用', 'Optional role-template references'),
     app_bindings: t('世界应用', 'World apps'),
     service_templates: t('服务号模板', 'Service templates'),
   }
@@ -373,7 +374,8 @@ const confidenceLabel = (value) => {
 const rejectionReasonLabel = (value) => {
   const labelMap = {
     low_confidence: t('低置信度，需要人工重新提交', 'Low confidence; revise manually before confirming'),
-    duplicate_binding: t('当前世界包已有同名入口', 'Already exists in the current world pack'),
+    duplicate_binding: t('当前能力包已有同名入口', 'Already exists in the current capability Pack'),
+    capability_pack_required: t('请先启用一个具体能力包', 'Enable a specific capability Pack first'),
     unknown_template: t('不在内置模板白名单中', 'Not in the built-in template whitelist'),
     needs_dedicated_app: t('需要专属 App 壳，不映射到 Shopping', 'Needs a dedicated app shell; not mapped onto Shopping'),
   }
@@ -429,7 +431,7 @@ const updateCurrencyDraft = (key, value) => {
         <div class="current-world-pack__header">
           <div class="min-w-0">
             <p class="current-world-pack__eyebrow">
-              {{ t('当前设定包', 'Current World Pack') }}
+              {{ t('可选能力包', 'Optional capability Packs') }}
             </p>
             <h2
               class="current-world-pack__title"
@@ -449,8 +451,8 @@ const updateCurrencyDraft = (key, value) => {
         <p class="current-world-pack__copy">
           {{
             t(
-              '这一版先把世界书作为默认设定包使用：它不会模拟下载或解锁，只负责把当前世界材料稳定交给 Chat 与运行时。',
-              'This version uses WorldBook as the default pack: no simulated downloads or unlocks, just stable world material for Chat and runtime.',
+              '能力包只添加经审核的应用、服务、术语或经济能力，不承载或自动启用 Book 与 WorldBook 内容。',
+              'Capability Packs add reviewed apps, services, terminology, or economy behavior. They never contain or activate Book and WorldBook content.',
             )
           }}
         </p>
@@ -463,7 +465,9 @@ const updateCurrencyDraft = (key, value) => {
     >
       <span>
         <strong>{{ packName }}</strong>
-        {{ t('已启用', 'active') }}
+        <template v-if="!isDefaultCapabilityPack(overview.activePack)">
+          {{ t('已启用', 'active') }}
+        </template>
       </span>
       <span>
         {{ t('App Store 世界分区', 'App Store World section') }}:
@@ -498,7 +502,7 @@ const updateCurrencyDraft = (key, value) => {
     <div class="current-world-pack__enabled" data-testid="worldbook-enabled-expansions">
       <div class="current-world-pack__expansion-head">
         <div>
-          <p>{{ t('已启用拓展包', 'Enabled Expansions') }}</p>
+          <p>{{ t('已启用能力包', 'Enabled capability Packs') }}</p>
           <strong>{{ visibleEnabledPacks.length }}</strong>
         </div>
       </div>
@@ -520,13 +524,13 @@ const updateCurrencyDraft = (key, value) => {
           </button>
         </div>
       </div>
-      <p v-else>{{ t('还没有启用拓展包。', 'No expansion packs are enabled yet.') }}</p>
+      <p v-else>{{ t('未启用额外能力包。', 'No extra capability Pack is enabled.') }}</p>
     </div>
 
     <div class="current-world-pack__recommendations" data-testid="worldbook-pack-recommendations">
       <div class="current-world-pack__expansion-head">
         <div>
-          <p>{{ t('推荐拓展包', 'Recommended Expansions') }}</p>
+          <p>{{ t('推荐能力包', 'Recommended capability Packs') }}</p>
           <strong>{{ recommendedRows.length }}</strong>
         </div>
       </div>
@@ -552,7 +556,7 @@ const updateCurrencyDraft = (key, value) => {
     </div>
 
     <details class="current-world-pack__all-packs" data-testid="worldbook-pack-all" open>
-      <summary>{{ t('全部拓展包', 'All Packs') }}</summary>
+      <summary>{{ t('全部能力包', 'All capability Packs') }}</summary>
       <div class="current-world-pack__pack-list">
         <div
           v-for="row in browseableRows"
@@ -601,7 +605,7 @@ const updateCurrencyDraft = (key, value) => {
 
     <div class="current-world-pack__selector-row">
       <label class="current-world-pack__selector">
-        <span>{{ t('选择要启用的世界包', 'Choose a world pack') }}</span>
+        <span>{{ t('选择可选能力包', 'Choose an optional capability Pack') }}</span>
         <select
           :value="selectedPack?.id"
           data-testid="worldbook-current-pack-select"
@@ -612,7 +616,7 @@ const updateCurrencyDraft = (key, value) => {
             :key="pack.id"
             :value="pack.id"
           >
-            {{ t(pack.title, pack.name) }}
+            {{ capabilityPackName(pack) }}
           </option>
         </select>
       </label>
@@ -623,7 +627,7 @@ const updateCurrencyDraft = (key, value) => {
         data-testid="worldbook-current-pack-reset-default"
         @click="emit('reset-pack')"
       >
-        {{ canResetWorldPack ? t('恢复默认世界', 'Restore default world') : t('默认世界已启用', 'Default world active') }}
+        {{ canResetWorldPack ? t('停用额外能力包', 'Disable extra capability Packs') : t('未启用额外能力包', 'No extra capability Pack enabled') }}
       </button>
     </div>
 
@@ -765,7 +769,7 @@ const updateCurrencyDraft = (key, value) => {
           <strong>{{ selectedPackName }}</strong>
         </div>
         <span :class="{ 'is-blocked': activationReview.blocked }">
-          {{ activationReview.blocked ? t('有缺失引用', 'Blocked') : t('可以激活', 'Ready') }}
+          {{ activationReview.blocked ? t('当前不可用', 'Unavailable') : t('可以启用', 'Ready') }}
         </span>
       </div>
 
@@ -781,6 +785,20 @@ const updateCurrencyDraft = (key, value) => {
           <span>{{ row.label }}</span>
           <strong>{{ row.value }}</strong>
         </div>
+      </div>
+
+      <div
+        v-if="activationReview.referenceDiagnostics?.length"
+        class="current-world-pack__reference-notices"
+        data-testid="worldbook-current-pack-reference-notices"
+      >
+        <p
+          v-for="diagnostic in activationReview.referenceDiagnostics"
+          :key="`${diagnostic.type}-${diagnostic.id}`"
+        >
+          {{ t('可选内容引用当前不可用，不影响能力包启用', 'Optional content reference unavailable; capability activation is unaffected') }}:
+          {{ diagnostic.id }}
+        </p>
       </div>
 
       <div
@@ -805,8 +823,10 @@ const updateCurrencyDraft = (key, value) => {
       >
         {{
           isSelectedPackActive
-            ? t('已是当前世界', 'Already active')
-            : t('确认激活这个世界包', 'Activate this pack')
+            ? isDefaultCapabilityPack(selectedPack)
+              ? t('未启用额外能力包', 'No extra capability Pack enabled')
+              : t('此能力包已启用', 'This capability Pack is active')
+            : t('启用这个能力包', 'Enable this capability Pack')
         }}
       </button>
     </div>
@@ -825,7 +845,7 @@ const updateCurrencyDraft = (key, value) => {
             {{
               appBindingRows.length > 0
                 ? t(`${appBindingRows.length} 个已启用世界入口`, `${appBindingRows.length} enabled world entries`)
-                : t('当前世界包没有应用绑定', 'No app bindings in the active pack')
+                : t('当前能力包没有应用绑定', 'No app bindings in the active capability Pack')
             }}
           </strong>
         </div>
@@ -853,7 +873,7 @@ const updateCurrencyDraft = (key, value) => {
           <div class="current-world-pack__app-main">
             <span>{{ appBindingKindLabel(row) }}</span>
             <strong>{{ row.title }}</strong>
-            <p>{{ row.description || t('来自当前世界包的应用入口。', 'Generated from the active World Pack app binding.') }}</p>
+            <p>{{ row.description || t('来自当前能力包的应用入口。', 'Generated from the active capability Pack app binding.') }}</p>
             <small>
               {{ t('目标模块', 'Target module') }}: {{ row.targetLabel }}
             </small>
@@ -895,8 +915,8 @@ const updateCurrencyDraft = (key, value) => {
       <p class="current-world-pack__templates-copy">
         {{
           t(
-            '这里只审查世界观是否适合启用内置 App 外观入口；确认后只写入当前世界包 appBinding，不创建新模块、不写事件判定、不绕过 App Store 白名单。',
-            'This only reviews whether the world should expose a whitelisted app-style entry; confirmation writes an appBinding to the current pack without creating modules, event rules, or unlisted App Store entries.',
+            '这里只审查世界观是否适合启用内置 App 外观入口；确认后只写入当前能力包 appBinding，不创建新模块、不写事件判定、不绕过 App Store 白名单。',
+            'This only reviews whether the world should expose a whitelisted app-style entry; confirmation writes an appBinding to the current capability Pack without creating modules, event rules, or unlisted App Store entries.',
           )
         }}
       </p>
@@ -1054,7 +1074,7 @@ const updateCurrencyDraft = (key, value) => {
               :data-testid="`worldbook-current-pack-template-confirm-${proposal.bindingId || proposal.templateId}`"
               @click="emit('confirm-template-proposal', proposal)"
             >
-              {{ t('加入当前世界包', 'Add to current pack') }}
+              {{ t('加入当前能力包', 'Add to current capability Pack') }}
             </button>
           </div>
         </div>
@@ -1101,7 +1121,7 @@ const updateCurrencyDraft = (key, value) => {
             {{
               serviceTemplateRows.length > 0
                 ? t(`${serviceTemplateRows.length} 个可在 Chat 添加`, `${serviceTemplateRows.length} available in Chat`)
-                : t('当前世界包没有服务号模板', 'No service templates in the active pack')
+                : t('当前能力包没有服务号模板', 'No service templates in the active capability Pack')
             }}
           </strong>
         </div>
@@ -1124,8 +1144,8 @@ const updateCurrencyDraft = (key, value) => {
         <span>
           {{
             t(
-              `${activeServiceCount} 个服务号模板已随当前世界包启用，可稍后在 Chat app 内添加。`,
-              `${activeServiceCount} service account templates are enabled for this world pack and can be managed in Chat Services.`,
+              `${activeServiceCount} 个服务号模板已随当前能力包启用，可稍后在 Chat app 内添加。`,
+              `${activeServiceCount} service account templates are enabled for this capability Pack and can be managed in Chat Services.`,
             )
           }}
         </span>
@@ -1144,7 +1164,7 @@ const updateCurrencyDraft = (key, value) => {
           <div class="current-world-pack__service-main">
             <span>{{ serviceTemplateKindLabel(row) }}</span>
             <strong>{{ row.title }}</strong>
-            <p>{{ row.description || t('来自当前世界包的服务号模板。', 'Generated from the active World Pack template.') }}</p>
+            <p>{{ row.description || t('来自当前能力包的服务号模板。', 'Generated from the active capability Pack template.') }}</p>
             <small v-if="row.linkedAppLabel">
               {{ t('世界应用', 'World app') }}: {{ row.linkedAppLabel }}
             </small>
@@ -1542,6 +1562,13 @@ const updateCurrencyDraft = (key, value) => {
   display: grid;
   gap: 4px;
   color: var(--system-danger);
+  font-size: 12px;
+}
+
+.current-world-pack__reference-notices {
+  display: grid;
+  gap: 4px;
+  color: var(--system-warning);
   font-size: 12px;
 }
 

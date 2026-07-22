@@ -13,7 +13,7 @@ import { formatApiErrorForUi } from '../lib/ai'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { BOOK_ROUTE } from '../lib/planned-module-registry'
-import { resolveActiveWorldOverview } from '../lib/world-interface'
+import { LEGACY_SINGLE_WORLD_ID, resolveActiveWorldOverview } from '../lib/world-interface'
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
 import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
@@ -22,8 +22,10 @@ import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
 import { useWorldBookKnowledgeModel } from '../composables/useWorldBookKnowledgeModel'
 import { useWorldBookProfileTemplateModel } from '../composables/useWorldBookProfileTemplateModel'
 import { useWorldBookSourceModel } from '../composables/useWorldBookSourceModel'
+import { useWorldSettingWorkspaceModel } from '../composables/useWorldSettingWorkspaceModel'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
+import WorldSettingWorkspace from '../components/worldbook/WorldSettingWorkspace.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,20 +52,19 @@ const globalWorldview = computed({
 const worldBookCount = computed(() => (globalWorldview.value || '').length)
 const knowledgePoints = computed(() => systemStore.listKnowledgePoints())
 const profileTemplatePresets = computed(() => systemStore.listProfileTemplatePresets())
-const currentWorldId = computed(() =>
-  typeof user.value.activeWorldPackId === 'string' && user.value.activeWorldPackId.trim()
-    ? user.value.activeWorldPackId.trim()
-    : 'default_world',
-)
-const worldProfileTemplates = computed(() => systemStore.listWorldProfileTemplates(currentWorldId.value))
-const enabledWorldProfileTemplates = computed(() =>
-  systemStore.listWorldProfileTemplates(currentWorldId.value, { enabledOnly: true }),
-)
 const worldOverview = computed(() =>
   resolveActiveWorldOverview({
     systemStore,
     bookStore,
   }),
+)
+const worldProfileTemplates = computed(() =>
+  systemStore.listProfileTemplates().filter((template) => template.scope === 'world'),
+)
+const enabledWorldProfileTemplates = computed(() =>
+  Array.isArray(worldOverview.value.profiles?.enabledTemplates)
+    ? worldOverview.value.profiles.enabledTemplates
+    : [],
 )
 const worldPackCandidates = computed(() => systemStore.listWorldPacks())
 const selectedWorldPackId = ref('')
@@ -308,146 +309,36 @@ const openContactsForProfileTemplates = () => {
   })
 }
 
+const openBookWorkspace = () => {
+  router.push({
+    path: BOOK_ROUTE,
+    query: {
+      source: 'worldbook',
+    },
+  })
+}
+
 const openBookLibrary = () => {
   openBookSourcePicker()
 }
 
-const worldbookPanelTabs = computed(() => [
-  {
-    id: 'sources',
-    icon: 'fas fa-book-open',
-    label: t('设定文本', 'Setting text'),
-    summary:
-      bookSourceIssueCount.value > 0
-        ? t(`${bookSourceIssueCount.value} 份需确认`, `${bookSourceIssueCount.value} to confirm`)
-        : activeBookSourceCount.value > 0
-          ? t(`${activeBookSourceCount.value} 份正在使用`, `${activeBookSourceCount.value} in use`)
-          : t('从 Book 添加', 'Add from Book'),
-  },
-  {
-    id: 'pack',
-    icon: 'fas fa-cube',
-    label: t('设定包', 'Pack'),
-    summary: t(
-      worldOverview.value.activePack?.title || '默认世界',
-      worldOverview.value.activePack?.name || 'Default world',
-    ),
-  },
-  {
-    id: 'templates',
-    icon: 'fas fa-id-card',
-    label: t('档案模板', 'Templates'),
-    summary: t(`${worldProfileTemplates.value.length} 个`, `${worldProfileTemplates.value.length} items`),
-  },
-  {
-    id: 'knowledge',
-    icon: 'fas fa-sitemap',
-    label: t('百科', 'Encyclopedia'),
-    summary: t(
-      `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
-      `${worldOverview.value.enabledKnowledgeCount} / ${worldOverview.value.knowledgeCount}`,
-    ),
-  },
-  {
-    id: 'kernel',
-    icon: 'fas fa-sliders-h',
-    label: t('高级兼容', 'Advanced'),
-    summary:
-      worldBookCount.value > 0
-        ? t(`${worldBookCount.value} 字兜底`, `${worldBookCount.value} fallback chars`)
-        : t('无兜底', 'No fallback'),
-  },
-])
-
-const worldbookSetupSteps = computed(() => {
-  const activePackTitle = t(
-    worldOverview.value.activePack?.title || '默认世界',
-    worldOverview.value.activePack?.name || 'Default world',
-  )
-  const enabledExpansionPackCount = Array.isArray(user.value.enabledWorldPackIds)
-    ? user.value.enabledWorldPackIds.filter((id) => id && id !== 'default_world').length
-    : 0
-  const templateCount = worldProfileTemplates.value.length
-  const enabledKnowledgeCount = worldOverview.value.enabledKnowledgeCount || 0
-  const knowledgeCount = worldOverview.value.knowledgeCount || 0
-
-  return [
-    {
-      id: 'sources',
-      panelId: 'sources',
-      icon: 'fas fa-book-open',
-      index: '1',
-      title: t('设定文本', 'Setting text'),
-      detail:
-        activeBookSourceCount.value > 0
-          ? t(`${activeBookSourceCount.value} 份正在使用`, `${activeBookSourceCount.value} in use`)
-          : t('从 Book 选择世界书文本', 'Choose worldbook text from Book'),
-      state: activeBookSourceCount.value > 0 ? 'done' : 'todo',
-      status: activeBookSourceCount.value > 0 ? t('正在读取', 'In use') : t('待选择', 'To choose'),
-    },
-    {
-      id: 'pack',
-      panelId: 'pack',
-      icon: 'fas fa-cube',
-      index: '2',
-      title: t('设定包', 'World pack'),
-      detail:
-        enabledExpansionPackCount > 0
-          ? t(`${enabledExpansionPackCount} 个拓展包已启用`, `${enabledExpansionPackCount} expansion(s) enabled`)
-          : t(`当前：${activePackTitle}`, `Current: ${activePackTitle}`),
-      state: 'done',
-      status: enabledExpansionPackCount > 0 ? t('已拓展', 'Expanded') : t('默认可用', 'Ready'),
-    },
-    {
-      id: 'templates',
-      panelId: 'templates',
-      icon: 'fas fa-id-card',
-      index: '3',
-      title: t('档案模板', 'Profile templates'),
-      detail:
-        templateCount > 0
-          ? t(`${templateCount} 个模板`, `${templateCount} template(s)`)
-          : t('为角色档案准备世界专属栏位', 'Prepare world-specific profile fields'),
-      state: templateCount > 0 ? 'done' : 'optional',
-      status: templateCount > 0 ? t('已准备', 'Ready') : t('可选', 'Optional'),
-    },
-    {
-      id: 'knowledge',
-      panelId: 'knowledge',
-      icon: 'fas fa-sitemap',
-      index: '4',
-      title: t('百科', 'Encyclopedia'),
-      detail:
-        knowledgeCount > 0
-          ? t(`${enabledKnowledgeCount} / ${knowledgeCount} 条启用`, `${enabledKnowledgeCount} / ${knowledgeCount} enabled`)
-          : t('补充组织、术语、规则和额外设定', 'Add organizations, terms, rules, and extra lore'),
-      state: enabledKnowledgeCount > 0 ? 'done' : 'optional',
-      status: enabledKnowledgeCount > 0 ? t('已启用', 'Enabled') : t('可选', 'Optional'),
-    },
-    {
-      id: 'kernel',
-      panelId: 'kernel',
-      icon: 'fas fa-sliders-h',
-      index: '5',
-      title: t('高级兼容', 'Advanced fallback'),
-      detail:
-        worldBookCount.value > 0
-          ? t(`${worldBookCount.value} 字兼容说明`, `${worldBookCount.value} fallback chars`)
-          : t('无 Book 文本时才使用', 'Only used when no Book text is active'),
-      state: worldBookCount.value > 0 ? 'done' : 'optional',
-      status: worldBookCount.value > 0 ? t('有兜底', 'Fallback set') : t('可选', 'Optional'),
-    },
-  ]
-})
-
-const activeWorldbookPanelLabel = computed(
-  () =>
-    worldbookPanelTabs.value.find((panel) => panel.id === activeWorldbookPanel.value)?.label ||
-    t('设定文本', 'Setting text'),
+const enabledExpansionPackIds = computed(() =>
+  Array.isArray(user.value.enabledWorldPackIds) ? user.value.enabledWorldPackIds : [],
 )
 
+const { worldSettingWorkspace } = useWorldSettingWorkspaceModel({
+  worldOverview,
+  activeBookSourceCount,
+  sourcePickerAssets,
+  bookSourceIssueCount,
+  worldProfileTemplates,
+  enabledExpansionPackIds,
+  fallbackWorldview: globalWorldview,
+  t,
+})
+
 const setWorldbookPanel = (panelId = 'sources') => {
-  if (!worldbookPanelTabs.value.some((panel) => panel.id === panelId)) return
+  if (!worldSettingWorkspace.value.layers.some((panel) => panel.id === panelId)) return
   activeWorldbookPanel.value = panelId
 }
 
@@ -494,24 +385,24 @@ const selectWorldPack = (packId = '') => {
 const activateSelectedWorldPack = () => {
   const result = systemStore.activateWorldPack(selectedWorldPackId.value)
   if (!result?.ok) {
-    uiNotice.value = t('这个世界包还有缺失引用，处理后才能激活。', 'This pack has missing references. Fix them before activation.')
+    uiNotice.value = t('能力包启用失败，请检查当前的支持状态后重试。', 'Capability Pack activation failed. Check its support state and try again.')
     return
   }
   systemStore.saveNow()
-  pulseSaved(t('世界包已激活。', 'World pack activated.'))
+  pulseSaved(t('能力包已启用。', 'Capability Pack enabled.'))
 }
 
 const resetWorldPackToDefault = () => {
   const result = systemStore.activateWorldPack('default_world')
   if (!result?.ok) {
-    uiNotice.value = t('默认世界恢复失败，请稍后再试。', 'Default world reset failed. Try again later.')
+    uiNotice.value = t('停用额外能力包失败，请稍后再试。', 'Extra capability Packs could not be disabled. Try again later.')
     return
   }
   selectedWorldPackId.value = 'default_world'
   worldAppTemplateProposalReview.value = null
   worldAppTemplateProposalNotice.value = ''
   systemStore.saveNow()
-  pulseSaved(t('已恢复默认世界。', 'Default world restored.'))
+  pulseSaved(t('已停用额外能力包。', 'Extra capability Packs disabled.'))
 }
 
 const analyzeWorldForExpansions = async () => {
@@ -540,19 +431,19 @@ const enableWorldPackExpansion = (packId = '') => {
   const result = systemStore.enableWorldPack(packId)
   if (!result?.ok) {
     uiNotice.value = result?.reason === 'unsupported'
-      ? t('这个包需要专门 App，当前版本不能启用。', 'This pack needs a dedicated app and cannot be enabled yet.')
-      : t('这个包还有缺失引用，处理后才能启用。', 'This pack has missing references. Fix them before enabling.')
+      ? t('这个能力包需要专门 App，当前版本不能启用。', 'This capability Pack needs a dedicated app and cannot be enabled yet.')
+      : t('能力包启用失败，请检查当前的支持状态后重试。', 'Capability Pack enablement failed. Check its support state and try again.')
     return
   }
   systemStore.saveNow()
-  pulseSaved(t('拓展包已启用。', 'Expansion pack enabled.'))
+  pulseSaved(t('能力包已启用。', 'Capability Pack enabled.'))
 }
 
 const disableWorldPackExpansion = (packId = '') => {
   const result = systemStore.disableWorldPack(packId)
   if (!result?.ok) return
   systemStore.saveNow()
-  pulseSaved(t('拓展包已停用。', 'Expansion pack disabled.'))
+  pulseSaved(t('能力包已停用。', 'Capability Pack disabled.'))
 }
 
 const resetWorldCurrencyDraft = () => {
@@ -779,7 +670,7 @@ const confirmWorldAppTemplateProposalEntry = (proposal) => {
     result.pack?.id || packId,
   )
   worldAppTemplateProposalNoticeTone.value = 'success'
-  pulseSaved(t('世界 App 入口已加入当前世界包。', 'World app entry added to the current pack.'))
+  pulseSaved(t('世界 App 入口已加入当前能力包。', 'World app entry added to the current capability Pack.'))
 }
 
 const clearWorldAppTemplateProposalReview = () => {
@@ -1064,7 +955,7 @@ const acceptReviewedBookSource = () => {
 
 const copyProfileTemplatePreset = (presetId) => {
   const created = systemStore.createWorldProfileTemplateFromPreset(presetId, {
-    worldId: currentWorldId.value,
+    worldId: LEGACY_SINGLE_WORLD_ID,
   })
   if (!created) {
     uiNotice.value = t('模板复制失败。', 'Template copy failed.')
@@ -1445,64 +1336,12 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <section class="worldbook-control-deck" data-testid="worldbook-control-deck">
-        <div class="worldbook-control-deck__head">
-          <div>
-            <p>{{ t('世界设定管理', 'World settings') }}</p>
-            <h2>{{ activeWorldbookPanelLabel }}</h2>
-          </div>
-          <span>
-            {{
-              activeBookSourceCount > 0
-                ? t(`${activeBookSourceCount} 份设定正在使用`, `${activeBookSourceCount} setting text(s) in use`)
-                : t('等待 Book 设定文本', 'Waiting for Book setting text')
-            }}
-          </span>
-        </div>
-        <div class="worldbook-setup-path" data-testid="worldbook-setup-path">
-          <div class="worldbook-setup-path__head">
-            <p>{{ t('世界建立路径', 'World setup path') }}</p>
-            <span>{{ t('从世界前提到可运行材料', 'From premise to runnable material') }}</span>
-          </div>
-          <div class="worldbook-setup-steps">
-            <button
-              v-for="step in worldbookSetupSteps"
-              :key="step.id"
-              type="button"
-              :class="[
-                'worldbook-setup-step',
-                `is-${step.state}`,
-                { 'is-active': activeWorldbookPanel === step.panelId },
-              ]"
-              :data-testid="`worldbook-setup-step-${step.id}`"
-              @click="setWorldbookPanel(step.panelId)"
-            >
-              <span class="worldbook-setup-step__index">{{ step.index }}</span>
-              <span class="worldbook-setup-step__copy">
-                <strong><i :class="step.icon" aria-hidden="true"></i>{{ step.title }}</strong>
-                <small>{{ step.detail }}</small>
-              </span>
-              <em>{{ step.status }}</em>
-            </button>
-          </div>
-        </div>
-        <div class="worldbook-panel-tabs" role="tablist" :aria-label="t('WorldBook 面板', 'WorldBook panels')">
-          <button
-            v-for="panel in worldbookPanelTabs"
-            :key="panel.id"
-            type="button"
-            role="tab"
-            :aria-selected="activeWorldbookPanel === panel.id"
-            :class="['worldbook-panel-tab', { 'is-active': activeWorldbookPanel === panel.id }]"
-            :data-testid="`worldbook-panel-tab-${panel.id}`"
-            @click="setWorldbookPanel(panel.id)"
-          >
-            <i :class="panel.icon" aria-hidden="true"></i>
-            <span>{{ panel.label }}</span>
-            <small>{{ panel.summary }}</small>
-          </button>
-        </div>
-      </section>
+      <WorldSettingWorkspace
+        :workspace="worldSettingWorkspace"
+        :active-panel="activeWorldbookPanel"
+        @select-panel="setWorldbookPanel"
+        @open-book="openBookWorkspace"
+      />
 
       <div
         v-show="activeWorldbookPanel === 'pack'"
@@ -1558,7 +1397,7 @@ onBeforeUnmount(() => {
           data-testid="worldbook-onboarding-card"
         >
         <div>
-          <p>{{ t('第一步', 'First step') }}</p>
+          <p>{{ t('设定文本', 'Setting texts') }}</p>
           <h2>{{ t('从 Book 选择世界书文本', 'Choose worldbook text from Book') }}</h2>
           <span>
             {{
@@ -1620,8 +1459,8 @@ onBeforeUnmount(() => {
             <small>
               {{
                 t(
-                  '需要可编辑世界书时，请先在 Book 写好文本，再在这里启用。',
-                  'Write or edit worldbook text in Book, then enable it here.',
+                  'Book 文稿可以按需添加到当前世界；不添加也不影响其他设定层。',
+                  'Add Book manuscripts to the current world when needed; every other setting layer remains available without one.',
                 )
               }}
             </small>
@@ -1803,7 +1642,7 @@ onBeforeUnmount(() => {
         <div v-if="linkedBookSources.length === 0" class="worldbook-source-empty" data-testid="worldbook-book-source-empty">
           <span><i class="fas fa-link-slash"></i></span>
           <strong>{{ t('还没有添加设定文本', 'No setting text added yet') }}</strong>
-          <p>{{ t('请先在 Book 写好世界书文本，再回到这里加入当前世界背景。', 'Write worldbook text in Book first, then add it to the current world context here.') }}</p>
+          <p>{{ t('可在 Book 写作或导入文稿，再按需添加到当前世界；不添加也可以继续使用其他设定层。', 'Write or import manuscripts in Book and add any of them here when needed; the other setting layers remain usable without one.') }}</p>
         </div>
 
         <div v-else-if="activeBookSources.length > 0" class="worldbook-source-list" data-testid="worldbook-active-source-list">
@@ -2500,247 +2339,12 @@ onBeforeUnmount(() => {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
-.worldbook-control-deck,
 .worldbook-scroll > .rounded-2xl,
 .worldbook-panel > .rounded-2xl {
   border: 1px solid var(--system-card-border);
   border-radius: var(--system-radius-lg);
   background: var(--system-panel-bg);
   box-shadow: var(--system-shadow-card);
-}
-
-.worldbook-control-deck {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-}
-
-.worldbook-control-deck__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.worldbook-control-deck__head p {
-  margin: 0;
-  color: var(--system-text-muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.worldbook-control-deck__head h2 {
-  margin: 2px 0 0;
-  color: var(--system-text);
-  font-size: 18px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.worldbook-control-deck__head > span {
-  flex-shrink: 0;
-  border: 1px solid var(--system-control-border);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: var(--system-success);
-  background: var(--system-success-soft);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.worldbook-setup-path {
-  display: grid;
-  gap: 8px;
-  border: 1px solid var(--system-control-border);
-  border-radius: var(--system-radius-md);
-  padding: 10px;
-  background: var(--system-surface-muted);
-}
-
-.worldbook-setup-path__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.worldbook-setup-path__head p,
-.worldbook-setup-path__head span {
-  margin: 0;
-}
-
-.worldbook-setup-path__head p {
-  color: var(--system-text);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.worldbook-setup-path__head span {
-  color: var(--system-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-align: right;
-}
-
-.worldbook-setup-steps {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.worldbook-setup-step {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 7px;
-  align-items: start;
-  border: 1px solid var(--system-control-border);
-  border-radius: var(--system-radius-sm);
-  padding: 8px;
-  color: var(--system-text-muted);
-  background: var(--system-control-bg);
-  text-align: left;
-  font: inherit;
-  transition:
-    transform var(--system-motion-fast),
-    border-color var(--system-motion-fast),
-    background var(--system-motion-fast);
-}
-
-.worldbook-setup-step:active {
-  transform: scale(0.985);
-}
-
-.worldbook-setup-step.is-active {
-  border-color: color-mix(in srgb, var(--system-accent) 45%, var(--system-control-border));
-  background: var(--system-control-bg-strong);
-}
-
-.worldbook-setup-step.is-done .worldbook-setup-step__index,
-.worldbook-setup-step.is-done em {
-  color: var(--system-success);
-  background: var(--system-success-soft);
-}
-
-.worldbook-setup-step.is-todo .worldbook-setup-step__index,
-.worldbook-setup-step.is-todo em {
-  color: var(--system-warning);
-  background: var(--system-warning-soft);
-}
-
-.worldbook-setup-step.is-optional .worldbook-setup-step__index,
-.worldbook-setup-step.is-optional em {
-  color: var(--system-text-muted);
-  background: var(--system-surface-muted);
-}
-
-.worldbook-setup-step__index {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.worldbook-setup-step__copy {
-  display: grid;
-  min-width: 0;
-  gap: 3px;
-}
-
-.worldbook-setup-step strong {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 5px;
-  color: var(--system-text);
-  font-size: 12px;
-  line-height: 1.25;
-  font-weight: 850;
-}
-
-.worldbook-setup-step strong i {
-  flex-shrink: 0;
-  color: var(--system-accent);
-  font-size: 11px;
-}
-
-.worldbook-setup-step small {
-  overflow: hidden;
-  color: var(--system-text-soft);
-  font-size: 10px;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.worldbook-setup-step em {
-  grid-column: 1 / -1;
-  justify-self: start;
-  border-radius: 999px;
-  padding: 3px 7px;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 850;
-}
-
-.worldbook-panel-tabs {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.worldbook-panel-tab {
-  display: grid;
-  justify-items: start;
-  gap: 4px;
-  min-height: 76px;
-  border: 1px solid var(--system-control-border);
-  border-radius: var(--system-radius-md);
-  padding: 10px;
-  color: var(--system-text-muted);
-  background: var(--system-control-bg);
-  text-align: left;
-  font: inherit;
-  transition:
-    transform var(--system-motion-fast),
-    border-color var(--system-motion-fast),
-    background var(--system-motion-fast),
-    color var(--system-motion-fast);
-}
-
-.worldbook-panel-tab i {
-  font-size: 14px;
-}
-
-.worldbook-panel-tab span {
-  color: var(--system-text);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.worldbook-panel-tab small {
-  overflow: hidden;
-  max-width: 100%;
-  color: var(--system-text-soft);
-  font-size: 10px;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.worldbook-panel-tab.is-active {
-  border-color: color-mix(in srgb, var(--system-accent) 42%, var(--system-control-border));
-  color: var(--system-accent);
-  background:
-    linear-gradient(180deg, var(--system-info-soft), transparent),
-    var(--system-control-bg-strong);
-  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
-}
-
-.worldbook-panel-tab:active {
-  transform: scale(0.985);
 }
 
 .worldbook-panel {
@@ -4391,69 +3995,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
-  .worldbook-control-deck {
-    padding: 12px;
-  }
-
-  .worldbook-control-deck__head {
-    display: grid;
-  }
-
-  .worldbook-control-deck__head > span {
-    justify-self: start;
-  }
-
-  .worldbook-setup-path__head {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .worldbook-setup-path__head span {
-    text-align: left;
-  }
-
-  .worldbook-setup-steps {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .worldbook-setup-step {
-    grid-template-columns: 26px minmax(0, 1fr) auto;
-    align-items: center;
-    min-height: 54px;
-  }
-
-  .worldbook-setup-step small {
-    white-space: normal;
-  }
-
-  .worldbook-setup-step em {
-    grid-column: auto;
-    justify-self: end;
-    white-space: nowrap;
-  }
-
-  .worldbook-panel-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0;
-    overflow: visible;
-    padding: 0;
-  }
-
-  .worldbook-panel-tab {
-    min-height: 64px;
-  }
-
-  .worldbook-panel-tab:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .worldbook-panel-tab span {
-    white-space: normal;
-  }
-
   .worldbook-source-head {
     display: grid;
   }

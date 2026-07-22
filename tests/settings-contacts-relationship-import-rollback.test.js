@@ -242,4 +242,79 @@ describe('Settings Contacts relationship import rollback', () => {
     wrapper.unmount()
     restoreSpy.mockRestore()
   })
+
+  test('refreshes authoritative Book state and does not claim an exact rollback after a write conflict', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const bookStore = useBookStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    systemStore.settings.system.language = 'en-US'
+    const originalBookAsset = bookStore.createAsset({
+      id: 'asset_authoritative_book',
+      title: 'Authoritative Book Source',
+      content: 'Keep the current authoritative content.',
+    })
+    const authoritativeBookSnapshot = clone(bookStore.createBackupSnapshot())
+
+    const payload = {
+      backupMeta: { schemaVersion: 2 },
+      settings: clone(systemStore.settings),
+      user: clone(systemStore.user),
+      notifications: [],
+      apiReports: [],
+      roleProfiles: clone(chatStore.roleProfiles),
+      contacts: clone(chatStore.contacts),
+      chatHistory: clone(chatStore.chatHistory),
+      conversations: clone(chatStore.conversations),
+      messagesByConversation: clone(chatStore.messagesByConversation),
+      ...createValidModuleSnapshots(),
+      book: {
+        assets: [{
+          id: 'asset_imported_during_conflict',
+          title: 'Imported during conflict',
+          content: 'This must not remain in memory.',
+        }],
+        categories: [],
+      },
+      relationshipRuntime: clone(relationshipRuntimeStore.createBackupSnapshot()),
+    }
+
+    const wrapper = await mountSettingsView()
+    const realBookRestore = bookStore.restoreFromBackup.bind(bookStore)
+    const bookSaveSpy = vi.spyOn(bookStore, 'saveNow').mockImplementationOnce(async () => {
+      bookStore.storageReadOnly = true
+      return { ok: false, code: 'read_only_conflict', readOnly: true }
+    })
+    const refreshSpy = vi.spyOn(bookStore, 'refreshBookStorage').mockImplementation(async () => {
+      bookStore.storageReadOnly = false
+      realBookRestore(authoritativeBookSnapshot)
+      return { ok: true, code: 'repository_active' }
+    })
+    const file = {
+      name: 'book-write-conflict-import.json',
+      text: vi.fn(async () => JSON.stringify(payload)),
+    }
+    const fileInput = wrapper.get('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+
+    await fileInput.trigger('change')
+    await flushUi()
+    useDialog().submitDialog()
+    await flushUi()
+
+    expect(bookSaveSpy).toHaveBeenCalledTimes(1)
+    expect(refreshSpy).toHaveBeenCalledTimes(1)
+    expect(bookStore.findAssetById(originalBookAsset.id)).toMatchObject({
+      title: 'Authoritative Book Source',
+      content: 'Keep the current authoritative content.',
+    })
+    expect(bookStore.findAssetById('asset_imported_during_conflict')).toBeNull()
+    expect(wrapper.text()).toContain('Book refreshed from the authoritative current save')
+    expect(wrapper.text()).not.toContain('Import failed and rolled back automatically')
+
+    wrapper.unmount()
+  })
 })

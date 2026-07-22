@@ -20,9 +20,9 @@ const createTestRouter = () =>
     ],
   })
 
-const mountBookView = async () => {
+const mountBookView = async (route = '/book') => {
   const router = createTestRouter()
-  await router.push('/book')
+  await router.push(route)
   await router.isReady()
   const wrapper = mount(BookView, {
     global: {
@@ -53,6 +53,16 @@ describe('BookView', () => {
     expect(wrapper.get('[data-testid="book-library"]').text()).toContain('现代首尔 K-pop 娱乐圈')
     expect(wrapper.get('[data-testid="book-detail"]').text()).toContain('现代首尔 K-pop 娱乐圈：主世界观')
     expect(wrapper.find('[data-testid="book-empty"]').exists()).toBe(false)
+  })
+
+  test('returns to WorldBook when opened from the world setting workspace', async () => {
+    const { wrapper, router } = await mountBookView('/book?source=worldbook')
+
+    expect(wrapper.get('.book-back').text()).toContain('WorldBook')
+    await wrapper.get('.book-back').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/worldbook')
   })
 
   test('copies a built-in source before editing', async () => {
@@ -217,7 +227,7 @@ describe('BookView', () => {
     expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('.txt')
   })
 
-  test('export downloads a structured worldbook JSON file when supported', async () => {
+  test('export offers lossless JSON plus editable Markdown and text downloads', async () => {
     const store = useBookStore()
     store.createAsset({
       id: 'asset_export',
@@ -234,21 +244,38 @@ describe('BookView', () => {
       value: revokeObjectURL,
       configurable: true,
     })
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const downloadedNames = []
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      downloadedNames.push(this.download)
+    })
 
     const { wrapper } = await mountBookView()
 
     await wrapper.get('[data-testid="book-export"]').trigger('click')
 
-    expect(dialogState.visible).toBe(true)
-    expect(dialogState.title).toContain('Export')
+    const exportSheet = wrapper.get('[data-testid="book-export-sheet"]')
+    expect(exportSheet.text()).toContain('Lossless data file')
+    expect(exportSheet.text()).toContain('Markdown manuscript')
+    expect(exportSheet.text()).toContain('Plain text manuscript')
     expect(createObjectURL).not.toHaveBeenCalled()
 
-    useDialog().submitDialog()
-    await flushPromises()
+    await wrapper.get('[data-testid="book-export-format-worldbook_json"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="book-export"]').trigger('click')
+    await wrapper.get('[data-testid="book-export-format-markdown"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="book-export"]').trigger('click')
+    await wrapper.get('[data-testid="book-export-format-text"]').trigger('click')
+    await nextTick()
 
-    expect(createObjectURL).toHaveBeenCalledTimes(1)
-    expect(clickSpy).toHaveBeenCalledTimes(1)
+    expect(createObjectURL).toHaveBeenCalledTimes(3)
+    expect(clickSpy).toHaveBeenCalledTimes(3)
+    expect(downloadedNames).toEqual([
+      'Export-Source.worldbook.json',
+      'Export-Source.md',
+      'Export-Source.txt',
+    ])
+    expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('.txt downloaded')
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:book-export')
 
     clickSpy.mockRestore()
@@ -294,5 +321,57 @@ describe('BookView', () => {
 
     await wrapper.get('[data-testid="book-ai-tool-tags"]').trigger('click')
     expect(wrapper.get('[data-testid="book-ai-result"]').text()).toContain('rules')
+  })
+
+  test('upgrades Book storage only after explicit confirmation and reports success', async () => {
+    const bookStore = useBookStore()
+    const requestPersistence = vi
+      .spyOn(bookStore, 'requestBookPersistentStorage')
+      .mockResolvedValue({ state: 'persistent', capacity: { status: 'available' } })
+    const upgradeStorage = vi.spyOn(bookStore, 'upgradeBookStorage').mockImplementation(async () => {
+      bookStore.storageMode = 'repository'
+      bookStore.storageState = 'active'
+      return { ok: true, code: 'book_storage_upgraded', pointer: { generationId: 'generation-one' } }
+    })
+    const systemStore = useSystemStore()
+    const { wrapper } = await mountBookView()
+
+    expect(wrapper.get('[data-testid="book-storage-status"]').attributes('data-storage-mode')).toBe('legacy')
+    await wrapper.get('[data-testid="book-storage-upgrade"]').trigger('click')
+    expect(dialogState.visible).toBe(true)
+    expect(requestPersistence).not.toHaveBeenCalled()
+
+    useDialog().submitDialog()
+    await flushPromises()
+    await nextTick()
+
+    expect(requestPersistence).toHaveBeenCalledTimes(1)
+    expect(upgradeStorage).toHaveBeenCalledWith({
+      allowBestEffort: true,
+      worldBookSourceLinks: systemStore.listWorldBookSourceLinks(),
+    })
+    expect(wrapper.get('[data-testid="book-storage-status"]').attributes('data-storage-mode')).toBe('repository')
+    expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('Repository')
+  })
+
+  test('does not cut over after persistence denial when best-effort continuation is canceled', async () => {
+    const bookStore = useBookStore()
+    vi.spyOn(bookStore, 'requestBookPersistentStorage').mockResolvedValue({
+      state: 'denied',
+      capacity: { status: 'available' },
+    })
+    const upgradeStorage = vi.spyOn(bookStore, 'upgradeBookStorage')
+    const { wrapper } = await mountBookView()
+
+    await wrapper.get('[data-testid="book-storage-upgrade"]').trigger('click')
+    useDialog().submitDialog()
+    await flushPromises()
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Persistent storage')
+
+    useDialog().cancelDialog()
+    await flushPromises()
+    expect(upgradeStorage).not.toHaveBeenCalled()
+    expect(bookStore.storageMode).toBe('legacy')
   })
 })

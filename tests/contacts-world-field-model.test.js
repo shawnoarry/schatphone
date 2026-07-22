@@ -81,7 +81,7 @@ const createModel = ({
   profileValues = [],
   currentWorldTemplates = [currentTemplate],
   universalTemplates = [universalTemplate],
-  currentWorldId = 'default_world',
+  currentWorldId = 'legacy_single_world',
   templatesById = {},
 } = {}) =>
   useContactsWorldFieldModel({

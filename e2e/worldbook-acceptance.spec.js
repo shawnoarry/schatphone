@@ -92,7 +92,7 @@ test.beforeEach(async ({ page }) => {
   await seedWorldBookSnapshot(page)
 })
 
-test('Settings entry opens readable WorldBook V1 overview and current pack shell', async ({ page }) => {
+test('Settings entry separates the WorldBook overview from optional capability Packs', async ({ page }) => {
   await unlockToHome(page)
 
   await navigateInsideUnlockedApp(page, '/settings')
@@ -100,23 +100,26 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
   await expect(page).toHaveURL(/#\/worldbook/)
 
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
-  await expect(page.getByTestId('worldbook-overview-pack')).toContainText('默认世界')
+  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
   await expect(page.getByTestId('worldbook-overview-context-total')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-worldview')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-rules')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-encyclopedia')).toBeVisible()
   await expect(page.getByTestId('worldbook-panel-tab-templates')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-consumer-chat')).toContainText('聊天')
+  await expect(page.getByTestId('world-setting-workspace')).toContainText('世界设定工作台')
+  await expect(page.getByTestId('world-setting-workspace')).toContainText('功能与应用')
+  await expect(page.getByTestId('world-setting-workspace')).toContainText('不承载或自动绑定 Book 文稿')
 
   await page.getByTestId('worldbook-panel-tab-pack').click()
   await expect(page.getByTestId('worldbook-current-pack')).toBeVisible()
-  await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('默认启用')
+  await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('未启用额外能力包')
   await page.getByTestId('worldbook-current-pack-select').selectOption('survival_city')
   await expect(page.getByTestId('worldbook-current-pack-review')).toContainText('灾后生存都市')
   await expect(page.getByTestId('worldbook-current-pack-review')).toContainText('世界应用')
   await expect(page.getByTestId('worldbook-current-pack-review')).toContainText('服务号模板')
   await page.getByTestId('worldbook-current-pack-activate').click()
-  await expect(page.getByTestId('worldbook-overview-pack')).toContainText('灾后生存都市')
+  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
   await expect(page.getByTestId('worldbook-current-pack-app-bindings')).toContainText('补给站')
   await expect(page.getByTestId('worldbook-current-pack')).toContainText('App Store')
   await navigateInsideUnlockedApp(page, '/app-store?section=world&from=worldbook')
@@ -148,6 +151,15 @@ test('Settings entry opens readable WorldBook V1 overview and current pack shell
   await page.getByTestId('worldbook-panel-tab-knowledge').click()
   await expect(page.getByTestId('knowledge-point-card')).toHaveCount(2)
 
+  await page.getByTestId('worldbook-panel-tab-pack').click()
+  await page.getByTestId('worldbook-disable-pack-survival_city').click()
+  await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('未启用额外能力包')
+  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
+  await page.getByTestId('worldbook-panel-tab-knowledge').click()
+  await expect(page.getByTestId('knowledge-point-card')).toHaveCount(2)
+  await navigateInsideUnlockedApp(page, '/app-store?section=world&from=worldbook')
+  await expect(page.getByTestId('app-store-item-world_app_survival_city_survival_supply_board')).toHaveCount(0)
+
   await expectNoMojibake(page)
   await expectNoHorizontalOverflow(page)
 })
@@ -165,5 +177,36 @@ test('WorldBook overview stays readable on mobile viewport', async ({ page }) =>
   await expect(page.getByTestId('worldbook-world-kernel')).toBeVisible()
 
   await expectNoMojibake(page)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('world setting workspace hands writing to Book and exports an editable manuscript', async ({ page }, testInfo) => {
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/worldbook')
+
+  await testInfo.attach('world-setting-workspace.png', {
+    body: await page.getByTestId('world-setting-workspace').screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('world-setting-workspace-open-book').click()
+  await expect(page).toHaveURL(/#\/book\?source=worldbook/)
+  await expect(page.getByTestId('book-back')).toContainText('世界书')
+
+  await page.getByTestId('book-asset-built_in_modern_seoul_kpop_main_worldview').click()
+  await page.getByTestId('book-export').click()
+  await expect(page.getByTestId('book-export-sheet')).toContainText('Markdown 文稿')
+  await testInfo.attach('book-portable-export.png', {
+    body: await page.screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByTestId('book-export-format-markdown').click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/\.md$/)
+
+  await page.getByTestId('book-back').click()
+  await expect(page).toHaveURL(/#\/worldbook/)
+  await expect(page.getByTestId('world-setting-workspace')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })

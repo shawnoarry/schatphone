@@ -60,7 +60,13 @@ Current high-risk gate presets are contracts only. They do not trigger events, m
 
 Friend/block/refusal social events use the same boundary: event runtime records and reviews generated proposals; World Hub approves or dismisses high-risk proposals; Chat applies confirmed channel state; Contacts displays snapshots; relationship runtime records confirmed relationship continuity only after the event is accepted.
 
-World Pack nonstandard-app template extraction is outside runtime ownership in the current baseline. Its WorldBook Current World Pack UI can propose and confirm reviewed appBindings only; it must not create event rules, mutate module records, or turn World Hub into the editing surface.
+World Pack nonstandard-app template extraction is outside runtime ownership in the current baseline. WorldBook's Optional capability Packs UI can propose and confirm reviewed appBindings only; it must not create event rules, mutate module records, or turn World Hub into the editing surface.
+
+### Mini Scene Collaboration
+
+Event Runtime may decide that a reviewed/eligible runtime event can request a Mini Scene and may retain trigger, cooldown/cap, review, and provenance evidence. It submits canonical source references and facts through the shared Mini Scene Interface.
+
+Event Runtime does not own the Mini Scene artifact, Book transform profile, regex execution, text/HTML Presenter Adapter, per-module user mode, or the source record. A Mini Scene interaction cannot bypass normal Event Runtime review or directly mutate Chat, Calendar, Map, relationship, or future streaming truth.
 
 ### Cheats / 金手指
 

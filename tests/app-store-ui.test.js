@@ -876,6 +876,7 @@ describe('App Store entry management UI', () => {
     await router.isReady()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('modern_parallel')
 
     const review = systemStore.buildWorldAppTemplateExtractionReview(
       {
@@ -884,11 +885,11 @@ describe('App Store entry management UI', () => {
           { templateId: 'made_up_console', title: 'Made Up Console', confidence: 'high' },
         ],
       },
-      'default_world',
+      'modern_parallel',
     )
 
     const worldAppId = buildWorldAppHomeTileId({
-      packId: 'default_world',
+      packId: 'modern_parallel',
       bindingId: review.confirmableProposals[0].bindingId,
     })
 
@@ -903,7 +904,7 @@ describe('App Store entry management UI', () => {
 
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       review.confirmableProposals[0],
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
     await flushPromises()
@@ -917,7 +918,7 @@ describe('App Store entry management UI', () => {
     await worldAppItem.trigger('click')
     expect(wrapper.find('[data-testid="app-store-detail"]').text()).toContain('World App')
     const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
-    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Modern parallel')
     expect(worldMeta).toContain('Map')
     expect(worldMeta).toContain(confirmed.binding.id)
 
@@ -926,7 +927,7 @@ describe('App Store entry management UI', () => {
 
     expect(router.currentRoute.value.path).toBe('/map')
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'default_world',
+      worldPack: 'modern_parallel',
       worldApp: confirmed.binding.id,
       from: 'home',
       homePage: '1',
@@ -941,6 +942,7 @@ describe('App Store entry management UI', () => {
     await router.isReady()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('modern_parallel')
 
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       {
@@ -948,11 +950,11 @@ describe('App Store entry management UI', () => {
         title: 'Ritual Calendar',
         confidence: 'high',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
     const worldAppId = buildWorldAppHomeTileId({
-      packId: 'default_world',
+      packId: 'modern_parallel',
       bindingId: confirmed.binding.id,
     })
 
@@ -968,7 +970,7 @@ describe('App Store entry management UI', () => {
 
     await worldAppItem.trigger('click')
     const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
-    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Modern parallel')
     expect(worldMeta).toContain('Calendar')
     expect(worldMeta).toContain(confirmed.binding.id)
 
@@ -977,7 +979,7 @@ describe('App Store entry management UI', () => {
 
     expect(router.currentRoute.value.path).toBe('/calendar')
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'default_world',
+      worldPack: 'modern_parallel',
       worldApp: confirmed.binding.id,
       from: 'home',
       homePage: '1',
@@ -992,6 +994,7 @@ describe('App Store entry management UI', () => {
     await router.isReady()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('modern_parallel')
 
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       {
@@ -999,11 +1002,11 @@ describe('App Store entry management UI', () => {
         title: 'Rescue Desk',
         confidence: 'high',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
     const worldAppId = buildWorldAppHomeTileId({
-      packId: 'default_world',
+      packId: 'modern_parallel',
       bindingId: confirmed.binding.id,
     })
 
@@ -1019,7 +1022,7 @@ describe('App Store entry management UI', () => {
 
     await worldAppItem.trigger('click')
     const worldMeta = wrapper.get('[data-testid="app-store-world-app-meta"]').text()
-    expect(worldMeta).toContain('Default world')
+    expect(worldMeta).toContain('Modern parallel')
     expect(worldMeta).toContain('Food Delivery')
     expect(worldMeta).toContain(confirmed.binding.id)
 
@@ -1028,7 +1031,7 @@ describe('App Store entry management UI', () => {
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'default_world',
+      worldPack: 'modern_parallel',
       worldApp: confirmed.binding.id,
       from: 'home',
       homePage: '1',

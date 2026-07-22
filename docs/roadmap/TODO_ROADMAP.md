@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 This is the only live execution board for implementation order.
 
@@ -32,7 +32,8 @@ Roadmap interpretation:
 - four delivery lanes, 4.1 through 4.4, have reached current acceptance;
 - 4.5 is the active maintenance/governance lane;
 - 4.6 has an integrated V1 but still needs product hardening;
-- 4.7 has a promoted Book/WorldBook content-carrier slice; later K-pop carriers still require separate promotion.
+- 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
+- 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
 
 ## 3. Completed Baselines
 
@@ -143,7 +144,8 @@ Open slices, in order:
    - classify authoritative records, append-only audit evidence, rebuildable projections, binary assets, caches, and diagnostic logs before defining retention or compaction;
    - complete-package and recovery acceptance is now frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: versioned manifests, required sections, integrity verification, capacity/quota states, creation self-check, staged/atomic restore, legacy migration, crash recovery, rollback, provider failure handling, and a focused test matrix are `ARCHITECTURE_ACCEPTED`;
    - `ARCHITECTURE_ACCEPTED 2026-07-21`: Batch 2A defines the exact `schatphone-repository` version-1 object stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, WriteCoordinator behavior, persistent-storage policy, Book Adapter/fixtures, legacy reader, and rollback gates;
-   - `APPROVED`: Batch 2B is the exact non-active IndexedDB foundation plus Book Adapter/fixture/staging slice, including a focused real-Chromium IndexedDB and same-container coordination Playwright gate; Book application import/cutover/runtime activation remain unapproved;
+   - `DONE 2026-07-22`: Batch 2B implements the exact non-active IndexedDB foundation plus Book Adapter/fixture/staging slice, including focused Vitest and real-Chromium IndexedDB/same-container coordination gates;
+   - `DONE 2026-07-22`: the separately approved Book-only runtime cutover adds an explicit Book upgrade action, contextual persistent-storage request, fenced atomic activation/reopen, automatic rollback, Repository-only later writes, read-only conflict retry/refresh, and byte-identical retained legacy fallback; backup restore waits for Repository commit before success;
    - confirmed optional remote-backup boundary: do not create one project- or workgroup-owned cloud archive; each participating user configures and owns a separate Cloudflare account and R2 destination, while the internal remote-backup contract remains provider-neutral;
    - treat Cloudflare R2 as the first officially guided personal BYOS target, require a complete self-checking setup/recovery guide, keep the local save authoritative, and do not turn remote backup into live server storage, automatic merge, or cross-device sync;
    - confirmed remote-authentication boundary: each user deploys a personal Cloudflare Worker gateway bound to that user's R2 destination; SchatPhone may retain only a revocable, scoped device token and must not retain an R2 API Secret;
@@ -164,8 +166,8 @@ Open slices, in order:
    - confirmed same-device restore boundary: binary-excluded and legacy backups first reuse exact matching local binaries, and an older restore does not delete or hide current-only retained Gallery material;
    - confirmed missing-media boundary: valid legacy core data may restore after a missing-material summary; unresolved media keeps its owner record and uses a type-appropriate placeholder plus stored caption/alternative/generation-description text when available;
    - withdrawn proposals: do not require a fixed `8 GB` budget now, and do not ask users to choose `discard / local only / cloud protected` for every generated result; neither proposal is an approved requirement;
-   - the Gallery/backup product gate, complete-backup/recovery contract, and Batch 2A Repository technical gate are closed; only the exact approved Batch 2B non-active foundation/fixture file list may begin in a separately instructed round;
-   - `Storage runtime implementation/activation = NOT_APPROVED`: no application Repository import, R2, Gallery schema, Book cutover, dual write, or active-generation switch begins from Batch 2B approval.
+   - the Gallery/backup product gate, complete-backup/recovery contract, Batch 2A Repository technical gate, Batch 2B foundation, and Book reference cutover are complete;
+   - `Other-owner storage runtime implementation/activation = NOT_APPROVED`: no R2, Gallery schema, non-Book migration, dual write, garbage collection, or legacy Book deletion follows from the Book cutover.
 2. `P0 Security/toolchain maintenance` - `PARTIAL_DONE`
    - `DONE 2026-07-21`: updated the direct Vite 7 line to 7.3.6 and refreshed only its compatible root transitive toolchain to esbuild 0.28.1, Rollup 4.62.2, and required lockfile metadata;
    - `DONE 2026-07-21`: production audit remains 0; full audit is 14 advisories (3 moderate, 10 high, 1 critical), one fewer high advisory after removing the Rollup-related finding;
@@ -174,13 +176,18 @@ Open slices, in order:
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - the focused visual-quality Playwright suite now gates pull requests; decide separately whether the full product E2E suite and dependency audit should also gate;
    - ensure GitHub Pages deployment cannot be treated as validated merely because its build-only workflow passed.
-4. `P1 Hotspot decomposition` - `TODO`
+4. `P1 Unified world-setting identity` - `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`
+   - `DONE 2026-07-22`: the shared World Setting Interface exposes stable `legacy_single_world` compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
+   - WorldBook and Contacts consume the Interface; Pack switching cannot change displayed identity, Book/encyclopedia/template selection, or create new Pack-shaped template/contact scope values;
+   - legacy Pack content references are optional review diagnostics and no longer block capability Pack activation;
+   - persisted WorldBook-owned world definitions, backup migration, multiple worlds, and switching remain separate W2/W3 decisions.
+5. `P1 Hotspot decomposition` - `TODO`
    - select one named seam from `ContactsView.vue`, `ChatView.vue`, `WorldBookView.vue`, `HomeView.vue`, `ChatDirectoryView.vue`, or `systemStore`;
    - preserve storage shapes and product behavior;
    - add focused regression coverage instead of mixing decomposition with feature redesign.
-5. `P1 Cross-store adapter depth` - `TODO`
+6. `P1 Cross-store adapter depth` - `TODO`
    - deepen one ownership-sensitive path, starting with Calendar relationship-fact submission, so domain stores pass domain events rather than concrete cross-owner store instances where practical.
-6. `P2 Incremental contract typing` - `TODO`
+7. `P2 Incremental contract typing` - `TODO`
    - add JSDoc or TypeScript only around high-value shared payload contracts; do not start a whole-app migration.
 
 Acceptance for 4.5:
@@ -203,6 +210,8 @@ Status: `PARTIAL_DONE`
 Integrated V1 already landed:
 
 - Book owns long text; WorldBook owns activation; World Pack owns reviewed world capability bundles;
+- the first unified world-setting workspace now presents Book manuscripts, WorldBook activation, structured encyclopedia entries, profile templates, optional capabilities/apps, and compatibility fallback as parallel layers rather than a required sequence;
+- Book manuscripts can be exported as strict versioned/lossless `.worldbook.json`, editable/re-importable `.md`, or portable body-only `.txt`, and export never changes activation state;
 - compatible expansion packs can be enabled additively;
 - app bindings become App Store/Home entries and open target apps with world context;
 - Shopping marketplace, Food Delivery dispatch, Calendar reservation, and Map transit are concrete target-app paths;
@@ -212,7 +221,7 @@ Integrated V1 already landed:
 
 Remaining acceptance work:
 
-1. run true phone-device testing for Book import/export, WorldBook activation/diff, multi-pack enablement, App Store placement, target-app launch, and Chat Services opt-in;
+1. run true phone-device testing for Book JSON/Markdown/TXT import/export, WorldBook activation/diff, multi-pack enablement, App Store placement, target-app launch, and Chat Services opt-in;
 2. harden target-app labels, context, safe defaults, and visual variants only where testing shows confusion;
 3. exercise ready source-notification plans from concrete source modules without automatic subscription creation;
 4. select the next archetype only after the current marketplace/dispatch/reservation/transit paths are understood;
@@ -256,12 +265,54 @@ First focused schedule-scene content slice:
 Remaining governance:
 
 1. the current 2 + 6 + 1 catalog does not include a separate debuted-artist schedule encyclopedia; whether one is needed later, and whether its material belongs in a static encyclopedia or a Calendar schedule carrier, requires separate evaluation and approval;
-2. profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds remain independent future decisions and must not be inferred from the historical planning draft;
-3. `docs/superpowers/**` K-pop plans and content remain historical planning/content evidence, not an executable P1-P4 backlog.
+2. the existing K-pop music-show-day prose rule may later provide optional narrative context to roadmap 4.8, but it is not the shared Mini Scene Module, a structured transform profile, a popup trigger, or executable HTML;
+3. a later K-pop Calendar integration must add a separate structured Book transform-profile asset and use the shared Mini Scene Interface; it must not convert the prose rule into executable configuration or create a dedicated K-pop World Pack;
+4. profile templates, Calendar types, Map locations, Chat service accounts, app bindings, and Event Runtime seeds remain independent future decisions and must not be inferred from the historical planning draft;
+5. `docs/superpowers/**` K-pop plans and content remain historical planning/content evidence, not an executable P1-P4 backlog.
 
 Primary package for the promoted Book/WorldBook slice:
 
 - `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
+
+### 4.8 Cross-Module Mini Scene / 小剧场
+
+Status: `TODO`
+
+Architecture accepted on 2026-07-21:
+
+1. one shared Mini Scene Module will serve explicitly registered callers such as Calendar, Map, Chat, and future streaming modules;
+2. each registered module has an explicit user mode: unconfigured/off, plain text, or interactive HTML; unconfigured behaves as off, and no Book, WorldBook, World Pack, caller, or world profile may silently change the user's choice;
+3. calling modules and Event Runtime own trigger intent, source truth, eligibility, and provenance; the Mini Scene Module owns request validation, world-profile resolution, artifact creation, transforms, presentation, fallback, and interaction audit;
+4. Book will keep narrative rules and separate `structured_json` Mini Scene transform-profile assets. WorldBook narrative activation and Mini Scene profile binding remain separate choices;
+5. World Pack may reference a reviewed profile as one optional grouped capability, but pure content is not repackaged, Book assets are not auto-enabled, and custom worlds do not require a World Pack;
+6. regex is a bounded optional transform over validated structured fields, not a full-response parser, sanitizer, trigger engine, or code-execution path;
+7. interactive output is a validated declarative document rendered by a sandboxed HTML Presenter Adapter with restrictive CSP and allowlisted interaction commands. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
+8. every interactive artifact carries a plain-text fallback, and any validation, transform, asset, or renderer failure downgrades visibly without changing source-module truth;
+9. profile-declared content dimensions, including sensitive dimensions, begin unconfigured and require an explicit per-world/profile include/exclude choice; they never become a global filter or restrict user-authored/imported content;
+10. committed Mini Scene artifacts and interaction state are future durable owner records, while prompts, raw provider responses, rendered iframe HTML, and failed drafts remain transient;
+11. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` owns the exact Interfaces, Book profile shape, world resolution, regex limits, presenter security, persistence prerequisites, delivery stages, tests, and stop conditions.
+
+Delivery order:
+
+1. `DONE`: architecture contract and cross-package routing only;
+2. `DONE 2026-07-21`: pure request/draft/artifact/profile/module-policy schemas, empty-by-default dynamic module registry, deterministic profile resolver, Book structured-profile/regex validator, and 22 focused tests, with no runtime or UI;
+3. `TODO / SEPARATE_APPROVAL_REQUIRED`: the Book Repository foundation prerequisite is complete; persistence-owner/backup contract and Settings policy foundation still require a separate approved Mini Scene slice;
+4. `TODO`: shared Module, Text Presenter Adapter, and per-module/profile Settings controls;
+5. `TODO / SECURITY_REVIEW_REQUIRED`: sandboxed HTML Presenter Adapter and Book transform-profile editor/preview;
+6. `TODO`: first K-pop Calendar music-show-day Adapter and structured Book transform profile;
+7. `TODO`: separately reviewed Map and Chat Adapters;
+8. `ON_HOLD`: streaming Adapters until a streaming module has an approved product contract and source-record model.
+
+Primary package:
+
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
+
+Secondary packages are engaged only when their owned stage begins:
+
+- `visual-and-ia-governance` for Settings, Book/WorldBook authoring, and presenter interaction quality;
+- `event-runtime-and-world-hub` for runtime-trigger eligibility, cooldown/cap policy, provenance, and review;
+- `map-calendar-reminders` for Calendar/Map source truth and request Adapters;
+- `chat-and-chat-directory` for Chat source truth and legacy/new Mini Scene message compatibility.
 
 ## 5. Guarded Or Deferred Directions
 
@@ -291,11 +342,11 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0` 4.5 local persistence, backup, and data-lifecycle architecture decision.
-2. `P0` 4.5 security/toolchain maintenance after the persistence contract is clear.
-3. `P1` 4.5 CI/release gating and one named architecture seam.
-4. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
-5. `P1` 4.7 K-pop Book/WorldBook 2 + 6 + 1 content-carrier control review; later triggers, renderers, and carriers remain separately gated.
+1. `P0` 4.5 security/toolchain maintenance, including the isolated Vitest major migration.
+2. `P1` 4.5 CI/release gating; the named World Setting Interface seam is complete, so architecture capacity should return to visible product modules after this gate.
+3. `P1` 4.6 true-device World Pack loop validation and resulting focused fixes.
+4. `P1` 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book Repository pilot is complete; runtime/UI/HTML/source-module stages remain separate approvals.
+5. `P1` 4.7 K-pop content follow-up through the 4.8 first Calendar integration stage, not through a dedicated World Pack or prose-only renderer.
 6. `P2` secondary-module deepening only after one of the above is explicitly selected.
 
 ## 7. Validation Rule

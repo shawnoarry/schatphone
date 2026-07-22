@@ -63,13 +63,14 @@ describe('Map world app UX package', () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     const mapStore = useMapStore()
+    systemStore.activateWorldPack('modern_parallel')
     const confirmed = systemStore.confirmWorldAppTemplateProposal(
       {
         templateId: 'transit_pass',
         title: 'Metro Pass',
         confidence: 'medium',
       },
-      'default_world',
+      'modern_parallel',
     )
     expect(confirmed.ok).toBe(true)
     const originalTripHistoryLength = mapStore.tripHistory.length
@@ -77,7 +78,7 @@ describe('Map world app UX package', () => {
     await router.push({
       path: '/map',
       query: {
-        worldPack: 'default_world',
+        worldPack: 'modern_parallel',
         worldApp: confirmed.binding.id,
       },
     })
@@ -91,7 +92,7 @@ describe('Map world app UX package', () => {
     await flushPromises()
 
     const contextBanner = wrapper.get('[data-testid="map-world-app-context"]')
-    expect(contextBanner.attributes('data-world-pack')).toBe('default_world')
+    expect(contextBanner.attributes('data-world-pack')).toBe('modern_parallel')
     expect(contextBanner.attributes('data-world-app')).toBe(confirmed.binding.id)
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toContain('Metro Pass')
     expect(contextBanner.text()).toContain('Map keeps its own records')

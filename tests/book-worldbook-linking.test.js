@@ -128,6 +128,52 @@ describe('Book and WorldBook source linking', () => {
     })
   })
 
+  test('importing a colliding asset id never changes an existing WorldBook link target', () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const linked = bookStore.createAsset({
+      id: 'asset_linked_collision',
+      title: 'Linked original',
+      category: 'worldview',
+      content: 'Original linked world text.',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: linked.id,
+      role: 'main_worldview',
+      sourceVersion: linked.version,
+      sourceFingerprint: linked.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(linked.content),
+    })
+
+    const imported = bookStore.importTextAsset({
+      fileName: 'collision.worldbook.json',
+      mimeType: 'application/json',
+      content: JSON.stringify({
+        type: 'schatphone.bookTextAsset',
+        version: 1,
+        asset: {
+          ...linked,
+          title: 'Imported collision',
+          content: 'Imported text must remain inactive.',
+        },
+      }),
+    })
+    const context = resolveWorldContextForConsumer({
+      systemStore,
+      bookStore,
+      consumer: 'chat',
+    })
+
+    expect(imported.ok).toBe(true)
+    expect(imported.asset.id).not.toBe(linked.id)
+    expect(systemStore.listWorldBookSourceLinks()).toEqual([
+      expect.objectContaining({ assetId: linked.id }),
+    ])
+    expect(bookStore.findAssetById(linked.id)?.content).toBe('Original linked world text.')
+    expect(context.worldview).toContain('Original linked world text.')
+    expect(context.worldview).not.toContain('Imported text must remain inactive.')
+  })
+
   test('unchanged selected sections do not create changed-source warnings', () => {
     const systemStore = useSystemStore()
     const bookStore = useBookStore()
