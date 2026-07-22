@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. Current engineering attention starts with the promoted browser/PWA-first persistence, backup, and data-lifecycle architecture slice. The later cross-module Mini Scene direction is architecture-accepted but remains behind that foundation and its own staged security/persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The browser/PWA-first persistence foundation and Book-only reference cutover are complete, while broader backup/data-lifecycle work remains active. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -27,7 +27,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
-| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; exact non-active Book foundation implemented and browser-tested | keep one-container/one-save, complete versions, no sync/merge, and all runtime cutover/activation gates; any Book application import is a separate slice |
+| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; non-active foundation and Book-only Repository cutover implemented and browser-tested | keep one-container/one-save, complete versions, no sync/merge, and all non-Book runtime cutover/activation gates; preserve the unchanged legacy Book fallback |
 
 ### Tier B: Integrated V1
 
@@ -135,7 +135,7 @@ Preserve app entry recovery and lock/notification semantics. A future Home clean
 
 ### Settings / System
 
-The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. The browser/PWA-first complete-backup/recovery contracts are accepted, and the exact non-active Repository/Book foundation is implemented and tested. Preserve existing application storage keys and shapes until Book runtime import/cutover/activation is separately approved.
+The Settings view is smaller after workflow extraction, but `systemStore` remains the central hotspot. The browser/PWA-first complete-backup/recovery contracts are accepted, the exact non-active Repository/Book foundation is implemented and tested, and the separately approved Book-only runtime cutover is active. Preserve every non-Book application storage key and shape until that owner receives its own migration/cutover approval.
 
 ### Chat / Chat Directory
 
@@ -166,8 +166,8 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 ## 6. Current Engineering Order
 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
-2. review the completed non-active IndexedDB/Book Batch 2B foundation and keep any application import/cutover/activation separately approved;
-3. keep Book runtime import/cutover/activation and every later owner migration separately approved;
+2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
+3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
 4. sensitive-backup warning and safe toolchain update;
 5. CI/release gating alignment;
 6. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;

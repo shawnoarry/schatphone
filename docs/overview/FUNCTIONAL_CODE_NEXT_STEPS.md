@@ -12,8 +12,8 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. review the completed non-active IndexedDB/Book Batch 2B repository foundation and preserve its browser evidence;
-2. keep Book runtime import/cutover/activation and later reference migrations separately approved;
+1. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
+2. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration separately approved;
 3. security/toolchain hardening;
 4. release-gate alignment and one measured architecture seam;
 5. the roadmap 4.8 Mini Scene persistence/policy contract after its completed pure foundation, followed by separately approved presenter and source-Adapter stages;
@@ -40,12 +40,12 @@ Current contract status:
 
 - `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md` is accepted at architecture level;
 - it freezes standalone package/manifest integrity, capacity and failure states, staged atomic activation, crash recovery, legacy degraded restore, exact local binary reuse, non-destructive Gallery preservation, migration, rollback, and the test matrix;
-- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is architecture-accepted, and its exact non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice plus focused real-Chromium coverage completed on 2026-07-22;
-- neither contract approves application Repository import, Book cutover/active-pointer activation, dual write, R2, Gallery schema, or later-owner migration.
+- `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is architecture-accepted; its exact non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice and the separately approved Book-only cutover plus focused real-Chromium coverage completed on 2026-07-22;
+- Book is the sole active Repository owner; neither contract approves dual write, R2, Gallery schema, legacy Book deletion, garbage collection, or any non-Book owner migration/activation.
 
 Problem:
 
-Current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Long Chat history, inline base64 media, Gallery binaries, Book text, and future archived-role continuity need explicit long-term storage contracts.
+Most current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Their normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Book is now the first active Repository exception; long Chat history, inline base64 media, Gallery binaries, and future archived-role continuity still need separately approved long-term storage contracts.
 
 Confirmed product boundary:
 
@@ -65,14 +65,14 @@ Confirmed product boundary:
 - never rotate or delete a cloud backup automatically; quota pressure may warn or block a new backup but every existing version remains until explicit user-confirmed deletion;
 - a redacted/shareable export, native SQLite adapter, server sync, or encryption requires a separate contract.
 
-Remaining planning before implementation:
+Remaining planning before broader implementation:
 
-- classify authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport data under the confirmed retention boundaries;
-- implement the exact accepted repository stores/indexes, transactions, fixtures, staging, quota/persistence policy, and multi-tab coordination behind unreferenced/test Adapters only;
+- preserve the completed authoritative, audit, projection, binary, cache, diagnostic, and transient AI transport classification under the confirmed retention boundaries;
+- preserve the implemented Repository stores/indexes, transactions, fixtures, staging, quota/persistence policy, multi-tab coordination, and active Book-only reference path;
 - preserve the accepted backup-size/quota, creation-failure, standalone package, integrity, staged restore, binary completeness, local delivery, legacy import, and rollback acceptance;
-- stop before application import, Book cutover/activation, dual write, or another owner.
+- stop before dual write, legacy Book deletion, garbage collection, R2/Gallery schema work, or another owner migration/activation.
 
-Do not start broad migration from this candidate. Its exact non-active Batch 2B foundation is complete, but application import/cutover/activation is still not approved.
+Do not start broad migration from this candidate. Its exact non-active Batch 2B foundation and separately approved Book-only cutover are complete, but every non-Book application import/cutover/activation remains unapproved.
 
 ## 4. Candidate B: Toolchain And CI Hardening
 

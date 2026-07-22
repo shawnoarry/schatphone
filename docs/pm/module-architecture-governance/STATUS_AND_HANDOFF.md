@@ -54,7 +54,7 @@ Current active architecture slice:
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
-- this is a promoted architecture-decision slice, not approval to migrate application storage yet.
+- this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -311,7 +311,7 @@ Use the live roadmap order.
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-Status: `IN_PROGRESS`; the non-active foundation is complete, while application migration/cutover remains unapproved.
+Status: `IN_PROGRESS`; the non-active foundation and separately approved Book-only application cutover are complete, while every non-Book migration/cutover remains unapproved.
 
 1. `READY_FOR_CONTROL_REVIEW 2026-07-21`: independently classify authoritative, auditable, rebuildable, binary, hint, and transient data and connect the 16-store diagnostic projection;
 2. `DONE 2026-07-18`: translate the confirmed local-keep, whole-Gallery option, URL-only backup, recovery-only R2 role, default-off automation, platform save/share behavior, and direct in-app R2 restore view into testable implementation acceptance;
@@ -320,8 +320,7 @@ Status: `IN_PROGRESS`; the non-active foundation is complete, while application 
 5. `DONE 2026-07-18`: freeze complete standalone backup objects, manifest/integrity checks, non-destructive Gallery resolution, local save/share delivery states, staged atomic activation, rollback, and legacy snapshot migration in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`;
 6. finish the provider-neutral remote-backup and Cloudflare R2 onboarding acceptance under the confirmed Worker, encryption, recovery, and browser-scheduling boundaries;
 7. `DONE 2026-07-22`: implemented the exact non-active Batch 2B Adapter/schema/fixture/test list, including `e2e/persistence-repository-foundation.spec.js`, without Store import, cutover, dual write, or activation;
-8. `DONE 2026-07-22`: implemented the separately approved Book-only runtime cutover with explicit in-context permission flow, fenced atomic activation, normal-Adapter reopen verification, automatic first-cutover rollback, Repository-only later writes, byte-identical retained legacy data, awaited backup-restore persistence, and focused Chromium coverage.
-8. `DONE 2026-07-22`: the Book application import/cutover passed the section-6/10 activation, reopen, rollback, backup, and product-equivalence gates; Mini Scene persistence/policy remains a separate roadmap 4.8 decision.
+8. `DONE 2026-07-22`: implemented the separately approved Book-only runtime cutover with explicit in-context permission flow, fenced atomic activation, normal-Adapter reopen verification, automatic first-cutover rollback, Repository-only later writes, byte-identical retained legacy data, awaited backup-restore persistence, and focused Chromium coverage; the section-6/10 activation, reopen, rollback, backup, and product-equivalence gates pass, while Mini Scene persistence/policy remains a separate roadmap 4.8 decision.
 
 Cross-package dependencies:
 

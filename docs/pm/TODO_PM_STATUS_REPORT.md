@@ -126,8 +126,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - authoritative user-visible records and relationship evidence cannot be silently or irreversibly deleted; capacity management must preserve reversible review/restore semantics;
 - any content formally published, confirmed, applied, or admitted into an owning module's history becomes durable when it can be revisited, referenced, or affect continuity, including future social/forum/offline/narrative/performance/state-history records regardless of user/AI/system origin;
 - full AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical committed content, authoritative state/facts, references, structured outcomes, and minimum provenance remain durable;
-- current structured stores still use whole `localStorage` snapshots with an IndexedDB mirror rather than an IndexedDB-first database;
-- Chat history, Gallery total binary usage, Book text, and several role/world collections need explicit growth and retention contracts;
+- non-Book structured stores still use whole `localStorage` snapshots with an IndexedDB mirror rather than an IndexedDB-first database;
+- Chat history, Gallery total binary usage, and several role/world collections need explicit growth and retention contracts;
 - backup/restore is usable but current code does not yet implement the accepted complete-package manifest, integrity, capacity preflight, staged atomic activation, crash recovery, or unified metadata/binary rollback contract;
 - optional cloud backup is confirmed as personal BYOS rather than one shared workgroup archive: each user owns a separate Cloudflare account and R2 destination, with R2 as the first officially guided target;
 - each user connects through a personal Cloudflare Worker gateway; SchatPhone may store a revocable, scoped device token but never the R2 API Secret;
@@ -143,7 +143,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - SchatPhone never rotates or deletes cloud backups automatically; each version remains until explicit user-confirmed deletion, and capacity pressure may warn or block another backup but cannot silently remove a recovery point;
 - restoring a binary-excluded or legacy backup reuses exact matching local binaries and does not delete or hide current-only Gallery material the user already kept;
 - valid legacy core data may restore after a missing-material summary; unavailable media keeps the owning record readable through a typed placeholder and stored descriptive text where available;
-- the complete-backup/recovery engineering contract is accepted and the non-active IndexedDB/Book foundation is implemented; R2, Gallery schema, application Repository import, Book cutover/activation, and later reference migrations remain unapproved;
+- the complete-backup/recovery engineering contract is accepted, the non-active IndexedDB/Book foundation is implemented, and the separately approved Book-only Repository import/cutover is active; R2, Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book reference migration remain unapproved;
 - the earlier fixed `8 GB`, per-result local/cloud choice, per-backup item picker, and incremental-version chain proposals are not approved.
 
 ### Engineering
@@ -160,7 +160,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 1. preserve the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, migration, crash recovery, and rollback contract;
 2. `DONE 2026-07-22`: implement only the approved non-active Batch 2B Repository schema/Adapter/Book fixture/staging slice and its focused real-Chromium IndexedDB/coordination gate;
 3. finish the provider-neutral remote-backup and complete self-checking Cloudflare R2 personal-setup/recovery guidance;
-4. keep application Repository import, Book cutover/activation, dual write, and every later owner migration separately approved.
+4. preserve the active Book-only Repository path, and keep R2, Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration separately approved.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 

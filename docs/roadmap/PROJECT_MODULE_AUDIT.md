@@ -120,8 +120,8 @@ Priority meanings:
 
 ## 4. Recommended Candidate Order
 
-1. preserve the accepted complete-backup/recovery contract and completed non-active IndexedDB Repository/Book foundation while keeping runtime cutover and later data-lifecycle work separately gated;
-2. freeze one reference migration with fixtures and rollback proof;
+1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
+2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
 3. backup warning/toolchain security and CI/release confidence;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
