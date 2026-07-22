@@ -22,8 +22,13 @@ const ENABLE_INDEXEDDB_MIRROR = parseBooleanFlag(envMirrorRaw, true)
 
 const buildStorageKey = (key) => `${STORAGE_NAMESPACE}:${key}`
 
-const canUseStorage = () =>
-  typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+const canUseStorage = () => {
+  try {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  } catch {
+    return false
+  }
+}
 
 const canUseIndexedDb = () =>
   typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined'
@@ -32,6 +37,7 @@ const canUseLayeredPersistence = () => ENABLE_INDEXEDDB_MIRROR && canUseIndexedD
 
 let indexedDbOpenPromise = null
 let indexedDbUnavailable = false
+let indexedDbUnavailableError = null
 let indexedDbWarned = false
 const pendingIndexedDbOps = new Map()
 let indexedDbFlushTimerId = null
@@ -45,7 +51,67 @@ const normalizeSavedAt = (value, fallback = 0) => {
 const warnIndexedDb = (error) => {
   if (indexedDbWarned) return
   indexedDbWarned = true
-  console.warn('[persistence] indexeddb mirror is unavailable, fallback to localStorage only.', error)
+  console.warn(
+    '[persistence] indexeddb mirror is unavailable, fallback to localStorage only.',
+    error,
+  )
+}
+
+const classifyWriteError = (error) => {
+  const name = typeof error?.name === 'string' ? error.name : ''
+  const code = Number(error?.code)
+  if (
+    name === 'QuotaExceededError' ||
+    name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+    code === 22 ||
+    code === 1014
+  ) {
+    return { error: 'quota_exceeded', retryable: true }
+  }
+  if (name === 'SecurityError' || name === 'NotAllowedError') {
+    return { error: 'security_error', retryable: false }
+  }
+  return { error: 'carrier_unavailable', retryable: true }
+}
+
+const createWriteSuccess = (carrier, attempted = true) => ({
+  ok: true,
+  error: null,
+  carrier,
+  retryable: false,
+  attempted,
+})
+
+const createWriteFailure = (carrier, error, attempted = true) => ({
+  ok: false,
+  carrier,
+  ...classifyWriteError(error),
+  attempted,
+})
+
+const createSerializationFailure = () => ({
+  ok: false,
+  error: 'serialization_failed',
+  carrier: 'serialization',
+  retryable: false,
+  attempted: true,
+})
+
+const createSkippedWrite = (carrier, error, retryable = false) => ({
+  ok: false,
+  error,
+  carrier,
+  retryable,
+  attempted: false,
+})
+
+const serializePersistedState = (data, version) => {
+  try {
+    const envelope = encodePersistedEnvelope(data, { version })
+    return { ok: true, rawPayload: JSON.stringify(envelope) }
+  } catch {
+    return createSerializationFailure()
+  }
 }
 
 export const encodePersistedEnvelope = (data, { version = 1, savedAt = Date.now() } = {}) => ({
@@ -128,11 +194,21 @@ const clearPersistedRawFromLocal = (fullKey) => {
 }
 
 const writePersistedStateToLocal = (key, rawPayload) => {
-  if (!canUseStorage()) return
+  let storage
   try {
-    window.localStorage.setItem(buildStorageKey(key), rawPayload)
+    storage = typeof window !== 'undefined' ? window.localStorage : null
+  } catch (error) {
+    return createWriteFailure('localStorage', error)
+  }
+  if (!storage || typeof storage.setItem !== 'function') {
+    return createWriteFailure('localStorage', null, false)
+  }
+  try {
+    storage.setItem(buildStorageKey(key), rawPayload)
+    return createWriteSuccess('localStorage')
   } catch (error) {
     console.warn(`[persistence] write failed for "${key}"`, error)
+    return createWriteFailure('localStorage', error)
   }
 }
 
@@ -159,6 +235,7 @@ const openIndexedDb = async () => {
 
       request.onerror = () => {
         indexedDbUnavailable = true
+        indexedDbUnavailableError = request.error
         warnIndexedDb(request.error)
         resolve(null)
       }
@@ -169,6 +246,7 @@ const openIndexedDb = async () => {
       }
     } catch (error) {
       indexedDbUnavailable = true
+      indexedDbUnavailableError = error
       warnIndexedDb(error)
       resolve(null)
     }
@@ -199,23 +277,32 @@ const readFromIndexedDb = async (fullKey) => {
   })
 }
 
-const writeToIndexedDb = async (fullKey, rawPayload) => {
+const writeToIndexedDbWithResult = async (fullKey, rawPayload) => {
   const db = await openIndexedDb()
-  if (!db) return false
+  if (!db) return createWriteFailure('indexeddb', indexedDbUnavailableError)
 
   return new Promise((resolve) => {
+    let settled = false
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
     try {
       const tx = db.transaction(INDEXED_DB_STORE, 'readwrite')
       const store = tx.objectStore(INDEXED_DB_STORE)
-      store.put({ key: fullKey, payload: rawPayload, updatedAt: Date.now() })
-      tx.oncomplete = () => resolve(true)
-      tx.onerror = () => resolve(false)
-      tx.onabort = () => resolve(false)
-    } catch {
-      resolve(false)
+      const request = store.put({ key: fullKey, payload: rawPayload, updatedAt: Date.now() })
+      tx.oncomplete = () => finish(createWriteSuccess('indexeddb'))
+      tx.onerror = () => finish(createWriteFailure('indexeddb', tx.error || request?.error))
+      tx.onabort = () => finish(createWriteFailure('indexeddb', tx.error || request?.error))
+    } catch (error) {
+      finish(createWriteFailure('indexeddb', error))
     }
   })
 }
+
+const writeToIndexedDb = async (fullKey, rawPayload) =>
+  (await writeToIndexedDbWithResult(fullKey, rawPayload)).ok
 
 const deleteFromIndexedDb = async (fullKey) => {
   const db = await openIndexedDb()
@@ -330,7 +417,8 @@ const flushIndexedDbOps = async () => {
       await deleteFromIndexedDb(fullKey)
       continue
     }
-    await writeToIndexedDb(fullKey, op.payload)
+    const result = await writeToIndexedDbWithResult(fullKey, op.payload)
+    if (!result.ok) warnIndexedDb(new Error(result.error))
   }
 }
 
@@ -348,10 +436,12 @@ export const readPersistedState = (key, options = {}) =>
 
 export const writePersistedState = (key, data, { version = 1 } = {}) => {
   const fullKey = buildStorageKey(key)
-  const envelope = encodePersistedEnvelope(data, { version })
-  const rawPayload = JSON.stringify(envelope)
-  writePersistedStateToLocal(key, rawPayload)
-  queueIndexedDbWrite(fullKey, rawPayload)
+  const serialized = serializePersistedState(data, version)
+  if (!serialized.ok) return serialized
+
+  const local = writePersistedStateToLocal(key, serialized.rawPayload)
+  if (local.ok) queueIndexedDbWrite(fullKey, serialized.rawPayload)
+  return local
 }
 
 export const readPersistedStateAsync = async (key, options = {}) => {
@@ -389,11 +479,42 @@ export const readPersistedRawLayers = async (key) => {
 
 export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) => {
   const fullKey = buildStorageKey(key)
-  const envelope = encodePersistedEnvelope(data, { version })
-  const rawPayload = JSON.stringify(envelope)
-  writePersistedStateToLocal(key, rawPayload)
-  if (!canUseLayeredPersistence()) return
-  await writeToIndexedDb(fullKey, rawPayload)
+  const serialized = serializePersistedState(data, version)
+  if (!serialized.ok) {
+    return {
+      ...serialized,
+      local: createSkippedWrite('localStorage', serialized.error),
+      mirror: createSkippedWrite('indexeddb', serialized.error),
+    }
+  }
+
+  const local = writePersistedStateToLocal(key, serialized.rawPayload)
+  if (!local.ok) {
+    return {
+      ...local,
+      local,
+      mirror: createSkippedWrite('indexeddb', 'primary_write_failed', local.retryable),
+    }
+  }
+
+  if (!canUseLayeredPersistence()) {
+    return {
+      ...local,
+      local,
+      mirror: createWriteSuccess('indexeddb', false),
+    }
+  }
+
+  const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload)
+  return {
+    ok: local.ok && mirror.ok,
+    error: mirror.ok ? null : mirror.error,
+    carrier: mirror.ok ? local.carrier : mirror.carrier,
+    retryable: mirror.ok ? false : mirror.retryable,
+    attempted: true,
+    local,
+    mirror,
+  }
 }
 
 export const inspectPersistedStateLayers = async (key, options = {}) => {

@@ -352,6 +352,8 @@ First coherent slice:
 - extend WriteCoordinator protection so a later same-container page cannot mutate any durable owner after timeout;
 - add failure-injection unit coverage and focused two-page Chromium coverage without beginning R2, Gallery schema, dual write, or a non-Book Repository migration.
 
+`READY_FOR_INTEGRATION_REVIEW 2026-07-22`: the approved write-result primitive now returns stable structured results from the existing synchronous and asynchronous persistence entrypoints. Serialization, quota, security, unavailable-carrier, and IndexedDB mirror failures are classified; failed writes retain the last confirmed bytes; asynchronous results expose local primary and mirror outcomes separately. Focused failure-injection coverage and the full lint/unit/build baseline pass. Existing Store callers may continue ignoring the return value. Store/UI adoption, read-path reconciliation, broader WriteCoordinator coverage, complete recovery, and local/mirror authority decisions remain separate slices.
+
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
 Status: `IN_PROGRESS`; the non-active foundation and separately approved Book-only application cutover are complete, while every non-Book migration/cutover remains unapproved.
