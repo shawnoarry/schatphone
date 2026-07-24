@@ -55,7 +55,7 @@ Food Delivery owns:
 - world-app context display and route context when Food Delivery is the target module
 - business truth for `food_delivery`-bound shop entries surfaced by App Store
 
-Within the Food Delivery pseudo-folder, Food Platform and shop mini apps are peer user-facing entries. Food Platform may provide discovery, filters, and creation handoff, but each shop mini app should present its own cart, checkout confirmation, order status, delivery events, and Wallet expense suggestions.
+Within the Food Delivery pseudo-folder, Food Platform and shop mini apps are peer user-facing entries. Food Platform may provide discovery, filters, creation handoff, and a Food Platform-scoped cart/order flow for merchants that exist only inside the platform. Independent shop mini apps should present their own cart, checkout confirmation, order status, delivery events, and Wallet expense suggestions; Food Platform must not aggregate those peer shop-app orders.
 
 Food Delivery does not own:
 

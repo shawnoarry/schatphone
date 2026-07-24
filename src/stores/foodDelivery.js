@@ -121,6 +121,8 @@ const normalizeQuantity = (value, fallback = 1) => clamp(toInt(value, fallback),
 const createRestaurantId = () => `food_restaurant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createMenuItemId = () => `food_menu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createFoodOrderId = () => `food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createPlatformOrderId = () =>
+  `platform_food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createFoodOrderEventId = () => `food_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const normalizeRestaurant = (rawRestaurant, index = 0) => {
@@ -256,6 +258,139 @@ const normalizeCartItems = (rawItems, menuItemIds) => {
   return [...byMenuItemId.values()]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, FOOD_CART_LINE_LIMIT)
+}
+
+const normalizePlatformCartItem = (rawItem, index = 0) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const merchantId = normalizeFoodId(rawItem.merchantId)
+  const itemId = normalizeFoodId(rawItem.itemId || rawItem.menuItemId || rawItem.id)
+  const merchantName = normalizeText(rawItem.merchantName, '', 90)
+  const title = normalizeText(rawItem.title || rawItem.name, '', 90)
+  const unitPriceCents =
+    Number.isFinite(Number(rawItem.unitPriceCents)) && Number(rawItem.unitPriceCents) > 0
+      ? Math.floor(Number(rawItem.unitPriceCents))
+      : normalizeAmountCents(rawItem.price)
+  if (!merchantId || !itemId || !merchantName || !title || unitPriceCents <= 0) return null
+  const now = Date.now()
+  const addedAt = Math.max(0, toInt(rawItem.addedAt || rawItem.createdAt, now + index))
+
+  return {
+    merchantId,
+    merchantName,
+    itemId,
+    title,
+    unitPriceCents,
+    quantity: normalizeQuantity(rawItem.quantity),
+    sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_platform_cart', 60),
+    sourceId: normalizeText(rawItem.sourceId, merchantId, 140),
+    addedAt,
+    updatedAt: Math.max(0, toInt(rawItem.updatedAt, addedAt)),
+  }
+}
+
+const normalizePlatformCartItems = (rawItems) => {
+  if (!Array.isArray(rawItems)) return []
+  const byItemId = new Map()
+  rawItems.forEach((item, index) => {
+    const cartItem = normalizePlatformCartItem(item, index)
+    if (!cartItem) return
+    const existing = byItemId.get(cartItem.itemId)
+    if (existing && existing.merchantId === cartItem.merchantId) {
+      existing.quantity = Math.min(99, existing.quantity + cartItem.quantity)
+      existing.updatedAt = Math.max(existing.updatedAt, cartItem.updatedAt)
+      return
+    }
+    byItemId.set(cartItem.itemId, cartItem)
+  })
+  const normalizedItems = [...byItemId.values()].sort((a, b) => b.updatedAt - a.updatedAt)
+  const activeMerchantId = normalizedItems[0]?.merchantId || ''
+  return normalizedItems
+    .filter((item) => item.merchantId === activeMerchantId)
+    .slice(0, FOOD_CART_LINE_LIMIT)
+}
+
+const normalizePlatformOrderItem = (rawItem, index = 0) => {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const itemId = normalizeFoodId(rawItem.itemId || rawItem.menuItemId || rawItem.id)
+  const title = normalizeText(rawItem.title || rawItem.name, '', 90)
+  const unitPriceCents =
+    Number.isFinite(Number(rawItem.unitPriceCents)) && Number(rawItem.unitPriceCents) > 0
+      ? Math.floor(Number(rawItem.unitPriceCents))
+      : normalizeAmountCents(rawItem.price)
+  if (!itemId || !title || unitPriceCents <= 0) return null
+
+  return {
+    id: normalizeText(rawItem.id, `${itemId}_${index}`, 140),
+    itemId,
+    title,
+    quantity: normalizeQuantity(rawItem.quantity),
+    unitPriceCents,
+    currency: normalizeCurrency(rawItem.currency),
+  }
+}
+
+const normalizePlatformOrder = (rawOrder, index = 0) => {
+  if (!rawOrder || typeof rawOrder !== 'object') return null
+  const merchantId = normalizeFoodId(rawOrder.merchantId)
+  const merchantName = normalizeText(rawOrder.merchantName, '', 90)
+  const items = Array.isArray(rawOrder.items)
+    ? rawOrder.items
+        .map((item, itemIndex) => normalizePlatformOrderItem(item, itemIndex))
+        .filter(Boolean)
+    : []
+  if (!merchantId || !merchantName || items.length === 0) return null
+
+  const now = Date.now()
+  const createdAt = Math.max(0, toInt(rawOrder.createdAt, now + index))
+  const currency = normalizeCurrency(rawOrder.currency || items[0]?.currency)
+  const itemsTotalCents = items.reduce(
+    (sum, item) => sum + item.unitPriceCents * item.quantity,
+    0,
+  )
+  const deliveryFeeCents =
+    Number.isFinite(Number(rawOrder.deliveryFeeCents)) && Number(rawOrder.deliveryFeeCents) >= 0
+      ? Math.floor(Number(rawOrder.deliveryFeeCents))
+      : normalizeAmountCents(rawOrder.deliveryFee)
+  const totalCents = itemsTotalCents + deliveryFeeCents
+
+  return {
+    id: normalizeText(rawOrder.id, `platform_food_order_legacy_${now}_${index}`, 140),
+    status: normalizeStatus(rawOrder.status),
+    merchantId,
+    merchantName,
+    items,
+    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    itemsTotalCents,
+    itemsTotal: formatAmount(itemsTotalCents),
+    deliveryFeeCents,
+    deliveryFee: formatAmount(deliveryFeeCents),
+    totalCents,
+    total: formatAmount(totalCents),
+    currency,
+    deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
+    note: normalizeText(rawOrder.note, '', 240),
+    paymentMethod: normalizeText(rawOrder.paymentMethod, 'app_pay', 40),
+    etaMinutes: clamp(toInt(rawOrder.etaMinutes, 35), 5, 180),
+    sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_platform_checkout', 60),
+    sourceId: normalizeText(rawOrder.sourceId, merchantId, 140),
+    createdAt,
+    updatedAt: Math.max(0, toInt(rawOrder.updatedAt, createdAt)),
+  }
+}
+
+const normalizePlatformOrders = (rawOrders) => {
+  if (!Array.isArray(rawOrders)) return []
+  const seen = new Set()
+  const normalized = []
+  rawOrders.forEach((item, index) => {
+    const order = normalizePlatformOrder(item, index)
+    if (!order || seen.has(order.id)) return
+    seen.add(order.id)
+    normalized.push(order)
+  })
+  return normalized
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, FOOD_ORDER_LIMIT)
 }
 
 const normalizeOrderItem = (rawItem, index = 0) => {
@@ -734,6 +869,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const restaurants = ref([])
   const menuItems = ref([])
   const cartItems = ref([])
+  const platformCartItems = ref([])
+  const platformOrders = ref([])
   const orders = ref([])
   const hasFinishedStorageHydration = ref(false)
 
@@ -744,6 +881,22 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const cartQuantity = computed(() =>
     cartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
   )
+  const platformCartQuantity = computed(() =>
+    platformCartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
+  )
+  const platformCartPrimaryTotal = computed(() => {
+    const amountCents = platformCartItems.value.reduce(
+      (sum, item) => sum + item.unitPriceCents * item.quantity,
+      0,
+    )
+    return {
+      currency: primaryCurrency.value,
+      amountCents,
+      amount: formatAmount(amountCents),
+    }
+  })
+  const platformOrderCount = computed(() => platformOrders.value.length)
+  const recentPlatformOrders = computed(() => platformOrders.value.slice(0, 20))
   const orderCount = computed(() => orders.value.length)
   const recentOrders = computed(() => orders.value.slice(0, 5))
   const presentRestaurant = (restaurant = {}) => ({
@@ -958,6 +1111,99 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const removed = cartItems.value.length
     cartItems.value = []
     return removed
+  }
+
+  const addPlatformCartItem = (input = {}, quantity = 1) => {
+    const cartItem = normalizePlatformCartItem({
+      ...input,
+      quantity,
+      addedAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+    if (!cartItem) return null
+    const currentMerchantId = platformCartItems.value[0]?.merchantId || ''
+    if (currentMerchantId && currentMerchantId !== cartItem.merchantId) {
+      platformCartItems.value = []
+    }
+    const existing = platformCartItems.value.find((item) => item.itemId === cartItem.itemId)
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + cartItem.quantity)
+      existing.updatedAt = Date.now()
+      return existing
+    }
+    platformCartItems.value.unshift(cartItem)
+    if (platformCartItems.value.length > FOOD_CART_LINE_LIMIT) {
+      platformCartItems.value.splice(FOOD_CART_LINE_LIMIT)
+    }
+    return cartItem
+  }
+
+  const updatePlatformCartQuantity = (itemId, quantity = 1) => {
+    const id = normalizeFoodId(itemId)
+    const item = platformCartItems.value.find((line) => line.itemId === id)
+    if (!item) return false
+    const nextQuantity = toInt(quantity, item.quantity)
+    if (nextQuantity <= 0) {
+      platformCartItems.value = platformCartItems.value.filter((line) => line.itemId !== id)
+      return true
+    }
+    item.quantity = normalizeQuantity(nextQuantity)
+    item.updatedAt = Date.now()
+    return true
+  }
+
+  const clearPlatformCart = () => {
+    const removed = platformCartItems.value.length
+    platformCartItems.value = []
+    return removed
+  }
+
+  const findPlatformOrderById = (orderId) => {
+    const id = normalizeText(orderId, '', 140)
+    return id ? platformOrders.value.find((order) => order.id === id) || null : null
+  }
+
+  const checkoutPlatformCart = ({
+    deliveryAddress = '',
+    note = '',
+    paymentMethod = 'app_pay',
+    deliveryFee = '0.00',
+    etaMinutes = 35,
+  } = {}) => {
+    if (platformCartItems.value.length === 0) return null
+    const firstItem = platformCartItems.value[0]
+    const now = Date.now()
+    const order = normalizePlatformOrder({
+      id: createPlatformOrderId(),
+      status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
+      merchantId: firstItem.merchantId,
+      merchantName: firstItem.merchantName,
+      items: platformCartItems.value.map((item) => ({
+        id: `${item.itemId}_${item.addedAt}`,
+        itemId: item.itemId,
+        title: item.title,
+        quantity: item.quantity,
+        unitPriceCents: item.unitPriceCents,
+        currency: primaryCurrency.value,
+      })),
+      deliveryAddress,
+      note,
+      paymentMethod,
+      deliveryFee,
+      etaMinutes,
+      currency: primaryCurrency.value,
+      sourceModule: 'food_delivery_platform_checkout',
+      sourceId: firstItem.merchantId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    if (!order) return null
+    platformOrders.value.unshift(order)
+    if (platformOrders.value.length > FOOD_ORDER_LIMIT) {
+      platformOrders.value.splice(FOOD_ORDER_LIMIT)
+    }
+    clearPlatformCart()
+    return order
   }
 
   const pushFoodDeliveryOrderServiceMessage = (order = {}) => {
@@ -1191,6 +1437,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants.value = nextRestaurants
     menuItems.value = nextMenuItems
     cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemIds)
+    platformCartItems.value = normalizePlatformCartItems(rawSource.platformCartItems)
+    platformOrders.value = normalizePlatformOrders(rawSource.platformOrders)
     orders.value = normalizeFoodOrders(rawSource.orders)
     primaryCurrency.value = normalizeCurrency(
       rawSource.primaryCurrency || rawSource.defaultCurrency || rawSource.settings?.primaryCurrency,
@@ -1219,6 +1467,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants: restaurants.value.map((restaurant) => ({ ...restaurant })),
     menuItems: menuItems.value.map((item) => ({ ...item })),
     cartItems: cartItems.value.map((item) => ({ ...item })),
+    platformCartItems: platformCartItems.value.map((item) => ({ ...item })),
+    platformOrders: platformOrders.value.map((order) => ({
+      ...order,
+      items: order.items.map((item) => ({ ...item })),
+    })),
     orders: orders.value.map((order) => ({
       ...order,
       items: order.items.map((item) => ({ ...item })),
@@ -1252,6 +1505,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants.value = []
     menuItems.value = []
     cartItems.value = []
+    platformCartItems.value = []
+    platformOrders.value = []
     orders.value = []
   }
 
@@ -1277,7 +1532,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   })()
 
   watch(
-    [restaurants, menuItems, cartItems, orders, primaryCurrency],
+    [restaurants, menuItems, cartItems, platformCartItems, platformOrders, orders, primaryCurrency],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1289,11 +1544,17 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants,
     menuItems,
     cartItems,
+    platformCartItems,
+    platformOrders,
     orders,
     primaryCurrency,
     restaurantCount,
     menuItemCount,
     cartQuantity,
+    platformCartQuantity,
+    platformCartPrimaryTotal,
+    platformOrderCount,
+    recentPlatformOrders,
     orderCount,
     recentOrders,
     categorySummaries,
@@ -1312,6 +1573,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     addToCart,
     updateCartQuantity,
     clearCart,
+    addPlatformCartItem,
+    updatePlatformCartQuantity,
+    clearPlatformCart,
+    checkoutPlatformCart,
+    findPlatformOrderById,
     checkoutCart,
     updateOrderStatus,
     addOrderEvent,

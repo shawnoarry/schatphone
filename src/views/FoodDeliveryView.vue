@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
@@ -113,9 +113,42 @@ const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
+const platformMerchantListExpanded = ref(false)
+const platformUtilitySheetKey = ref('')
+const platformSavedMerchantIds = ref([])
+const platformBenefitClaimed = ref(false)
+const platformCampaignPrizeId = ref('')
+const platformBannerRailRef = ref(null)
+const platformActiveBannerIndex = ref(0)
+const platformBannerAutoplayPaused = ref(false)
+const platformAddressMenuOpen = ref(false)
+const selectedPlatformDeliveryAddress = ref('')
+const platformCartFeedback = ref('')
+const platformCheckoutNote = ref('')
+const platformCheckoutPaymentMethod = ref('app_pay')
+const platformCheckoutFeedback = ref('')
+const platformOrderCopyFeedback = ref('')
+const platformPageKey = computed(() => {
+  const key = typeof route.query.platformView === 'string' ? route.query.platformView : ''
+  return ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key) ? key : 'home'
+})
+const platformCampaignKey = computed(() =>
+  typeof route.query.platformCampaign === 'string' ? route.query.platformCampaign.trim() : '',
+)
+const platformOrderId = computed(() =>
+  typeof route.query.platformOrderId === 'string' ? route.query.platformOrderId.trim() : '',
+)
+const PLATFORM_BANNER_AUTOPLAY_MS = 5200
+const PLATFORM_BANNER_INTERACTION_PAUSE_MS = 9000
+let platformBannerAutoplayTimerId = null
+let platformBannerInteractionPauseUntil = 0
+let platformBannerProgrammaticScrollUntil = 0
 const activeStoreMenuSectionKey = ref('all')
 const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
 const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
+const platformMissingAssetPlaceholderUrl = foodDeliveryUiAsset(
+  'platform/diagnostics/missing-asset-placeholder.svg',
+)
 const displayMoney = (amount = '0.00', currency = '') => `${amount} ${currency || activeCurrency.value}`
 const platformRiderImageUrl = foodDeliveryUiAsset(
   'platform/decorations/mascot/delivery-rider-mascot-01.png',
@@ -198,9 +231,6 @@ const sourcePlan = computed(() => [
 const activeCategoryLabel = computed(() =>
   languageBase.value === 'zh' ? activeCategory.value.zh : activeCategory.value.en,
 )
-const platformActiveCategoryLabel = computed(() =>
-  activeCategory.value?.key === 'nearby' ? t('全部', 'All') : activeCategoryLabel.value,
-)
 const activeCategoryDesc = computed(() =>
   languageBase.value === 'zh' ? activeCategory.value.descZh : activeCategory.value.descEn,
 )
@@ -250,9 +280,6 @@ const activeRestaurants = computed(() => {
 })
 const platformRestaurantCount = computed(() => foodDeliveryStore.restaurantCount)
 const platformMenuItemCount = computed(() => foodDeliveryStore.menuItemCount)
-const categorySummaryByKey = computed(
-  () => new Map(foodDeliveryStore.categorySummaries.map((summary) => [summary.key, summary])),
-)
 const FOOD_PLATFORM_CATEGORY_VISUALS = Object.freeze({
   all: {
     icon: 'fas fa-magnifying-glass',
@@ -290,14 +317,46 @@ const FOOD_PLATFORM_CATEGORY_VISUALS = Object.freeze({
     icon: 'fas fa-basket-shopping',
     className: 'from-lime-50 to-white text-lime-600',
   },
-  more: {
-    icon: 'fas fa-table-cells-large',
-    className: 'from-slate-50 to-white text-slate-600',
+  noodles: {
+    icon: 'fas fa-bowl-food',
+    className: 'from-red-50 to-white text-red-600',
   },
+  sushi: {
+    icon: 'fas fa-fish',
+    className: 'from-sky-50 to-white text-sky-600',
+  },
+})
+const FOOD_PLATFORM_CATEGORY_DEFINITIONS = Object.freeze([
+  { key: 'all', categoryKey: 'nearby', labelZh: '全部', labelEn: 'All', requiredAsset: 'platform/categories/icons/category-all-01.png' },
+  { key: 'restaurants', categoryKey: 'restaurants', labelZh: '正餐', labelEn: 'Restaurants', requiredAsset: 'platform/categories/icons/category-meal-01.png' },
+  { key: 'fast_food', categoryKey: 'fast_food', labelZh: '快餐', labelEn: 'Fast', requiredAsset: 'platform/categories/icons/category-fast-food-01.png' },
+  { key: 'chicken', categoryKey: 'fast_food', labelZh: '炸鸡', labelEn: 'Chicken', requiredAsset: 'platform/categories/icons/category-fried-chicken-01.png' },
+  { key: 'pizza', categoryKey: 'fast_food', labelZh: '披萨', labelEn: 'Pizza', requiredAsset: 'platform/categories/icons/category-pizza-01.png' },
+  { key: 'cafe', categoryKey: 'cafe', labelZh: '咖啡轻食', labelEn: 'Cafe', requiredAsset: 'platform/categories/icons/category-cafe-01.png' },
+  { key: 'dessert', categoryKey: 'dessert', labelZh: '甜品', labelEn: 'Dessert', requiredAsset: 'platform/categories/icons/category-dessert-01.png' },
+  { key: 'grocery_delivery', categoryKey: 'grocery_delivery', labelZh: '生鲜', labelEn: 'Grocery', requiredAsset: 'platform/categories/icons/category-grocery-01.png' },
+  { key: 'noodles', categoryKey: 'restaurants', labelZh: '面食', labelEn: 'Noodles', requiredAsset: 'platform/categories/icons/category-noodles-01.png' },
+  { key: 'sushi', categoryKey: 'restaurants', labelZh: '寿司', labelEn: 'Sushi', requiredAsset: 'platform/categories/icons/category-sushi-01.png' },
+])
+const FOOD_PLATFORM_CATEGORY_KEYS = new Set(
+  FOOD_PLATFORM_CATEGORY_DEFINITIONS.map((category) => category.key),
+)
+const activePlatformFilterKey = computed(() => {
+  const queryKey = typeof route.query.platformFilter === 'string' ? route.query.platformFilter.trim() : ''
+  if (FOOD_PLATFORM_CATEGORY_KEYS.has(queryKey)) return queryKey
+  return activeCategory.value?.key === 'nearby' ? 'all' : activeCategory.value?.key || 'all'
+})
+const platformActiveCategoryLabel = computed(() => {
+  const category = FOOD_PLATFORM_CATEGORY_DEFINITIONS.find(
+    (entry) => entry.key === activePlatformFilterKey.value,
+  )
+  if (!category) return activeCategoryLabel.value
+  return languageBase.value === 'zh' ? category.labelZh : category.labelEn
 })
 const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
   {
     id: 'club_free_delivery',
+    kind: 'membership',
     eyebrowZh: '外卖平台会员',
     eyebrowEn: 'Platform club',
     titleZh: '免配送权益，本周可领',
@@ -310,24 +369,62 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-member-delivery-01.png'),
     className: 'from-white/95 via-white/75 to-white/10 text-gray-950',
     chipClass: 'bg-white/85 text-[#078d87]',
+    pageDescZh: '本周平台会员可领取一次免配送权益，适用于下方标注免配送的小店。',
+    pageDescEn: 'Claim one free-delivery perk this week for the eligible platform shops below.',
+    primaryZh: '领取本周权益',
+    primaryEn: 'Claim this week\'s perk',
+    claimedPrimaryZh: '挑一家免配送小店',
+    claimedPrimaryEn: 'Choose an eligible shop',
+    targetCategory: 'nearby',
+    merchantIds: ['platform_hanwoo_gukbap', 'platform_chicken_crisp', 'platform_green_basket'],
+    highlights: [
+      { icon: 'fas fa-truck-fast', titleZh: '配送费减免', titleEn: 'Free delivery', descZh: '符合条件的小店自动使用', descEn: 'Applied at eligible shops' },
+      { icon: 'fas fa-calendar-check', titleZh: '本周有效', titleEn: 'Valid this week', descZh: '领取后即可开始选餐', descEn: 'Ready after claiming' },
+      { icon: 'fas fa-heart', titleZh: '常点优先', titleEn: 'Favorites first', descZh: '收藏小店更容易找到', descEn: 'Saved shops stay close' },
+    ],
   },
   {
     id: 'weekend_food_map',
+    kind: 'lottery',
     eyebrowZh: '周末精选',
     eyebrowEn: 'Weekend picks',
-    titleZh: '热饭、寿司、披萨一次看',
-    titleEn: 'Soup, sushi, and pizza in one pass',
-    descZh: '不用先决定店名，先从想吃的类型开始。',
-    descEn: 'Start from what sounds good before choosing a shop.',
-    ctaZh: '去发现',
-    ctaEn: 'Browse',
-    icon: 'fas fa-bowl-food',
+    titleZh: '周末好运，开袋有礼',
+    titleEn: 'Unpack a little weekend luck',
+    descZh: '下单前先抽一次，把今天的惊喜装进外卖袋。',
+    descEn: 'Draw once before ordering and add a surprise to today\'s delivery bag.',
+    ctaZh: '去抽福利',
+    ctaEn: 'Draw a perk',
+    icon: 'fas fa-gift',
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-weekend-food-01.png'),
     className: 'from-white/90 via-white/60 to-white/5 text-gray-950',
     chipClass: 'bg-white/85 text-orange-700',
+    posterImageUrl: foodDeliveryUiAsset('platform/campaigns/weekend-lucky-draw-poster-01.png'),
+    posterRequiredAsset: 'platform/campaigns/weekend-lucky-draw-poster-01.png',
+    posterEyebrowZh: '周末好运放送中',
+    posterEyebrowEn: 'Weekend luck is live',
+    pageDescZh: '每次活动可抽一次站内周末福利。抽奖结果只用于这次平台体验，不会改动钱包或资产。',
+    pageDescEn: 'Draw one in-app weekend perk per event. Results stay inside this platform experience and do not affect Wallet or Assets.',
+    primaryZh: '抽一次周末福利',
+    primaryEn: 'Draw a weekend perk',
+    drawnPrimaryZh: '本次福利已揭晓',
+    drawnPrimaryEn: 'Your perk is revealed',
+    targetCategory: 'nearby',
+    scheduleZh: '7 月周末限定 · 每次活动 1 次机会',
+    scheduleEn: 'July weekends · One draw per event',
+    benefits: [
+      { icon: 'fas fa-ticket', titleZh: '满 49 减 8', titleEn: '8 off 49', descZh: '适合一人份正餐', descEn: 'Made for a solo meal' },
+      { icon: 'fas fa-motorcycle', titleZh: '0 元配送', titleEn: 'Free delivery', descZh: '本次平台订单可用', descEn: 'For this platform order' },
+      { icon: 'fas fa-ice-cream', titleZh: '甜品加赠', titleEn: 'Dessert treat', descZh: '为周末加一份甜', descEn: 'A sweet weekend extra' },
+    ],
+    prizes: [
+      { id: 'discount_8', icon: 'fas fa-ticket', titleZh: '满 49 减 8', titleEn: '8 off 49', descZh: '今天的周末餐更轻松一点', descEn: 'A lighter total for today\'s weekend meal' },
+      { id: 'free_delivery', icon: 'fas fa-motorcycle', titleZh: '0 元配送券', titleEn: 'Free delivery', descZh: '这一单把配送费留给平台', descEn: 'Delivery is on the platform this time' },
+      { id: 'dessert_treat', icon: 'fas fa-ice-cream', titleZh: '甜品加赠签', titleEn: 'Dessert treat', descZh: '为本次外卖添一份随机甜品', descEn: 'Add one surprise dessert to this delivery' },
+    ],
   },
   {
     id: 'quick_lunch',
+    kind: 'menu',
     eyebrowZh: '午餐快选',
     eyebrowEn: 'Lunch shortcut',
     titleZh: '少刷一点，也能点得顺手',
@@ -340,11 +437,31 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-lunch-express-01.png'),
     className: 'from-white/95 via-white/60 to-white/5 text-gray-950',
     chipClass: 'bg-white/85 text-sky-700',
+    pageDescZh: '筛出适合工作日午餐的轻食、咖啡和快手主食，减少来回翻找。',
+    pageDescEn: 'A shorter workday lunch list with light meals, coffee, and quick mains.',
+    primaryZh: '进入午餐快捷分类',
+    primaryEn: 'Open quick lunch picks',
+    targetCategory: 'fast_food',
+    merchantIds: ['platform_salad_day', 'platform_golden_chicken', 'platform_nori_table', 'platform_hanwoo_gukbap'],
+    editorZh: '平台午餐编辑部 · 本周 4 选',
+    editorEn: 'Platform lunch desk · Four picks this week',
+    menuPicks: [
+      { merchantId: 'platform_salad_day', itemIndex: 0, tagZh: '清爽工作餐', tagEn: 'Fresh desk lunch' },
+      { merchantId: 'platform_golden_chicken', itemIndex: 0, tagZh: '早餐也能当午餐', tagEn: 'Brunch-ready' },
+      { merchantId: 'platform_nori_table', itemIndex: 1, tagZh: '热乎快手', tagEn: 'Hot and quick' },
+      { merchantId: 'platform_hanwoo_gukbap', itemIndex: 0, tagZh: '稳妥正餐', tagEn: 'Hearty classic' },
+    ],
+    highlights: [
+      { icon: 'fas fa-bolt', titleZh: '选择更快', titleEn: 'Faster choice', descZh: '精简到午餐常点类型', descEn: 'Focused lunch categories' },
+      { icon: 'fas fa-leaf', titleZh: '轻重都有', titleEn: 'Light or hearty', descZh: '轻食与热饭同页可选', descEn: 'Light bites and hot meals' },
+      { icon: 'fas fa-mug-hot', titleZh: '咖啡顺带', titleEn: 'Coffee included', descZh: '午后饮品不用再搜索', descEn: 'Drinks stay within reach' },
+    ],
   },
 ])
 const FOOD_PLATFORM_MERCHANTS = Object.freeze([
   {
     id: 'platform_hanwoo_gukbap',
+    assetKey: 'hanwoo-gukbap',
     name: '逆站洞韩牛汤饭',
     category: 'restaurants',
     cuisine: '韩式',
@@ -360,14 +477,18 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     imageAlt: 'Korean beef soup bowl',
     icon: 'fas fa-bowl-rice',
     fallbackClass: 'from-[#fff2cf] via-[#f6c34d] to-[#e66d4d] text-[#78350f]',
-    desc: '热汤饭、牛肉锅、泡菜小菜，适合想吃一份稳妥正餐的时候。',
+    desc: '逆站洞老派汤饭铺，主打慢熬牛骨汤、韩牛与一桌热乎小菜。',
     menu: [
-      { title: '韩牛汤饭套餐', price: '58.00', desc: '热汤饭 + 小菜 + 饮品' },
-      { title: '泡菜牛肉锅', price: '64.00', desc: '酸辣汤底，适合两人分食' },
+      { title: '逆站洞一号韩牛汤饭', price: '58.00', desc: '24 小时牛骨汤、薄切韩牛、白饭与三样小菜' },
+      { title: '泡菜红锅·双人份', price: '64.00', desc: '熟成泡菜、牛肉片与豆腐，酸辣浓郁适合分享' },
+      { title: '清晨雪浓汤定食', price: '46.00', desc: '清亮牛骨汤、手撕牛肉、米饭与萝卜泡菜' },
+      { title: '逆站洞醒酒辣汤', price: '52.00', desc: '牛肉丝、豆芽和蕨菜，辣香汤底醒胃不发腻' },
+      { title: '海风泡菜煎饼', price: '32.00', desc: '虾仁与鱿鱼铺满薄脆饼边，配店制蘸酱' },
     ],
   },
   {
     id: 'platform_sushi_hana',
+    assetKey: 'sushi-hana',
     name: '寿司花',
     category: 'restaurants',
     cuisine: '日料',
@@ -383,14 +504,18 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     imageAlt: 'Sushi platter',
     icon: 'fas fa-fish',
     fallbackClass: 'from-[#eaf7ff] via-[#b6e4f8] to-[#f7b7c5] text-[#0f5f72]',
-    desc: '寿司拼盘、炸物和清爽便当，平台内可点的轻食日料。',
+    desc: '花见系手握、散寿司与夜间卷物，口味清楚、份量轻盈。',
     menu: [
-      { title: '花见寿司拼盘', price: '72.00', desc: '三文鱼、虾、玉子与卷物' },
-      { title: '炸猪排便当', price: '46.00', desc: '炸猪排、米饭、卷心菜沙拉' },
+      { title: '花见十二贯', price: '72.00', desc: '三文鱼、甜虾、玉子与当日白身鱼的招牌十二贯' },
+      { title: '小町炸猪排便当', price: '46.00', desc: '厚切猪排、山椒米饭、卷心菜与柚香酱' },
+      { title: '海风亲子散寿司', price: '58.00', desc: '三文鱼、鲑鱼籽、玉子和紫苏铺在温醋饭上' },
+      { title: '暮色炙鳗牛油果卷', price: '49.00', desc: '炙烤鳗鱼、牛油果与黄瓜，刷寿司花照烧汁' },
+      { title: '赤味噌蛤蜊汤', price: '18.00', desc: '现煮蛤蜊、海带芽与豆腐，收尾温润' },
     ],
   },
   {
     id: 'platform_hwadeok_pizza',
+    assetKey: 'hwadeok-pizza',
     name: '花德披萨味店',
     category: 'fast_food',
     cuisine: '披萨',
@@ -406,14 +531,18 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     imageAlt: 'Pizza',
     icon: 'fas fa-pizza-slice',
     fallbackClass: 'from-[#fff1e6] via-[#ffb86b] to-[#f24f35] text-[#7f1d1d]',
-    desc: '薄底披萨、炸鸡翅和家庭分享装，适合周末随手点。',
+    desc: '花德炉边薄底披萨与分享小食，饼边焦香、酱料大胆。',
     menu: [
-      { title: '蜂蜜芝士披萨', price: '68.00', desc: '芝士、蜂蜜、坚果碎' },
-      { title: '炸鸡翅拼盘', price: '42.00', desc: '原味与甜辣双拼' },
+      { title: '花德蜂蜜双芝士', price: '68.00', desc: '马苏里拉与蓝纹双芝士，出炉后淋蜂蜜和坚果碎' },
+      { title: '周五半半鸡翅篮', price: '42.00', desc: '海盐原味与韩式甜辣各半，配酸黄瓜' },
+      { title: '炉边番茄罗勒', price: '62.00', desc: '店制番茄酱、新鲜罗勒与焦边薄底' },
+      { title: '红椒烟熏辣肠', price: '72.00', desc: '意式辣肠、烤彩椒与烟熏芝士，微辣有层次' },
+      { title: '花德玉米焗薯', price: '28.00', desc: '烤薯角、甜玉米、帕玛森与热芝士酱' },
     ],
   },
   {
     id: 'platform_salad_day',
+    assetKey: 'salad-day',
     name: '沙拉日记',
     category: 'cafe',
     cuisine: '轻食',
@@ -429,14 +558,18 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     imageAlt: 'Fresh salad bowl',
     icon: 'fas fa-seedling',
     fallbackClass: 'from-[#ecfff4] via-[#9ae6b4] to-[#34c2a1] text-[#064e3b]',
-    desc: '沙拉、三明治和低负担饮品，适合午后轻食。',
+    desc: '把每日状态写进一只碗里，主打谷物、蔬菜与不甜腻饮品。',
     menu: [
-      { title: '牛油果鸡胸沙拉', price: '39.00', desc: '鸡胸、牛油果、藜麦' },
-      { title: '莓果酸奶杯', price: '24.00', desc: '酸奶、莓果、坚果麦片' },
+      { title: '日记 No.1 牛油果鸡胸碗', price: '39.00', desc: '香草鸡胸、牛油果、藜麦和柚香油醋汁' },
+      { title: '今日莓果酸奶罐', price: '24.00', desc: '无糖酸奶、当日莓果与海盐坚果麦片' },
+      { title: '海岸线三文鱼谷物碗', price: '46.00', desc: '烟熏三文鱼、糙米、羽衣甘蓝与溏心蛋' },
+      { title: '烤南瓜暖汤午餐组', price: '29.00', desc: '烤南瓜浓汤、全麦小餐包与一份嫩叶菜' },
+      { title: '青柠冰摇气泡美式', price: '18.00', desc: '双份浓缩、鲜青柠与无糖气泡，清爽收口' },
     ],
   },
   {
     id: 'platform_chicken_crisp',
+    assetKey: 'chicken-crisp',
     name: '脆脆炸鸡屋',
     category: 'fast_food',
     cuisine: '炸鸡',
@@ -452,13 +585,226 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     imageAlt: 'Fried chicken',
     icon: 'fas fa-drumstick-bite',
     fallbackClass: 'from-[#fff7d6] via-[#f6bf55] to-[#d95f35] text-[#78350f]',
-    desc: '炸鸡、薯条、年糕串，适合想要快乐碳水的时候。',
+    desc: '以脆度和酱料编号的街区炸鸡店，适合夜宵与多人分享。',
     menu: [
-      { title: '半半炸鸡', price: '66.00', desc: '原味半只 + 甜辣半只' },
-      { title: '芝士薯条', price: '26.00', desc: '厚切薯条与芝士酱' },
+      { title: '脆脆 50/50 半半鸡', price: '66.00', desc: '海盐原味与 2 号甜辣酱各半，附双份腌萝卜' },
+      { title: '金瀑芝士厚切薯', price: '26.00', desc: '现炸厚薯条淋切达芝士与香葱碎' },
+      { title: '黑蒜无骨鸡块', price: '48.00', desc: '去骨鸡腿裹黑蒜酱，咸甜焦香不黏腻' },
+      { title: '辣年糕串串', price: '22.00', desc: '米年糕、鱼饼和脆肠刷 3 号甜辣酱' },
+      { title: '蜂蜜黄油脆薯角', price: '24.00', desc: '双炸薯角、蜂蜜黄油粉与冷乳酪蘸酱' },
+    ],
+  },
+  {
+    id: 'platform_berry_morning',
+    assetKey: 'berry-morning',
+    name: '莓果晨光',
+    category: 'dessert',
+    cuisine: '酸奶甜品',
+    rating: 4.7,
+    reviewCount: 526,
+    deliveryEtaMinutes: 22,
+    deliveryFee: '2.00',
+    currency: 'CNY',
+    minimumOrder: '20.00',
+    distanceKm: 0.8,
+    badge: '清爽甜品',
+    visualType: 'logo',
+    logoMark: '莓果\n晨光',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-berry-morning-01.png'),
+    requiredAsset: 'platform/merchants/logos/merchant-logo-berry-morning-01.png',
+    imageAlt: 'Berry Morning brand mark',
+    icon: 'fas fa-ice-cream',
+    fallbackClass: 'from-[#fff1f5] via-[#fecdd3] to-[#a7f3d0] text-[#9f1239]',
+    desc: '莓果晨光的甜品像清晨一样轻，酸奶、鲜果与烘焙各有自己的名字。',
+    menu: [
+      { title: '晨光莓莓云朵杯', price: '28.00', desc: '厚酸奶叠草莓、蓝莓与烤燕麦，酸甜轻盈' },
+      { title: '绿野牛油果鲜果碗', price: '32.00', desc: '牛油果、时令鲜果与蜂蜜坚果脆' },
+      { title: '开心果晨曦巴斯克', price: '36.00', desc: '半熟巴斯克、开心果奶油与一笔莓果酱' },
+      { title: '南岛芒果椰露', price: '26.00', desc: '芒果、椰奶、西米与清香柚子粒' },
+      { title: '草莓初光可颂', price: '30.00', desc: '黄油可颂夹鲜草莓与低糖香草奶油' },
+    ],
+  },
+  {
+    id: 'platform_green_basket',
+    assetKey: 'green-basket',
+    name: '青禾鲜食补给站',
+    category: 'grocery_delivery',
+    cuisine: '生鲜便利',
+    rating: 4.8,
+    reviewCount: 453,
+    deliveryEtaMinutes: 18,
+    deliveryFee: '0.00',
+    currency: 'CNY',
+    minimumOrder: '25.00',
+    distanceKm: 0.6,
+    badge: '18 分钟达',
+    visualType: 'logo',
+    logoMark: '青禾',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-green-basket-01.png'),
+    requiredAsset: 'platform/merchants/logos/merchant-logo-green-basket-01.png',
+    imageAlt: 'Green Basket brand mark',
+    icon: 'fas fa-basket-shopping',
+    fallbackClass: 'from-[#f7fee7] via-[#bef264] to-[#5eead4] text-[#365314]',
+    desc: '社区即时补给站，按时间和生活场景打包蔬果、早餐与厨房救急品。',
+    menu: [
+      { title: '青禾今日蔬果箱', price: '35.00', desc: '按成熟度搭配时令水果、叶菜与两份即食沙拉' },
+      { title: '06:30 早餐补给', price: '29.00', desc: '鲜奶、鸡蛋、吐司和酸奶，适合两人早餐' },
+      { title: '绿能一日轻食箱', price: '42.00', desc: '即食鸡胸、谷物碗、冷压果汁与坚果包' },
+      { title: '深夜灯火补给包', price: '34.00', desc: '饭团、关东煮、脆片与两瓶无糖饮料' },
+      { title: '厨房 SOS 调味组', price: '26.00', desc: '海盐、黑胡椒、小瓶食用油与三种基础酱料' },
+    ],
+  },
+  {
+    id: 'platform_neighborhood_soup',
+    assetKey: 'camellia-noodles',
+    name: '山茶牛肉面馆',
+    category: 'restaurants',
+    cuisine: '手工面食',
+    rating: 4.9,
+    reviewCount: 764,
+    deliveryEtaMinutes: 26,
+    deliveryFee: '0.00',
+    currency: 'CNY',
+    minimumOrder: '30.00',
+    distanceKm: 1.1,
+    badge: '面馆新客',
+    imageUrl: '',
+    requiredAsset: 'platform/merchants/merchant-noodle-house-01.png',
+    imageAlt: 'Hand-pulled beef noodles',
+    icon: 'fas fa-bowl-food',
+    fallbackClass: 'from-[#fff7ed] via-[#fdba74] to-[#dc2626] text-[#7c2d12]',
+    desc: '山茶面馆按汤、面和辣度命名，一碗主食也保留手工面的脾气。',
+    menu: [
+      { title: '山茶一号红烧宽面', price: '42.00', desc: '手擀宽面、慢炖牛腩、青菜与山茶辣油' },
+      { title: '桂香番茄鸡蛋拌面', price: '31.00', desc: '慢炒番茄蛋酱、细面、脆黄瓜与一滴桂花醋' },
+      { title: '老街豌杂细面', price: '35.00', desc: '软糯豌豆、肉臊、芽菜与红油细面' },
+      { title: '山茶酸汤肥牛米线', price: '44.00', desc: '肥牛、金针菇与米线浸在番茄酸汤中' },
+      { title: '秘制红油抄手', price: '28.00', desc: '十二只鲜肉抄手，拌花生碎与店制红油' },
+    ],
+  },
+  {
+    id: 'platform_golden_chicken',
+    assetKey: 'morning-bagel',
+    name: '早安贝果咖啡',
+    category: 'cafe',
+    cuisine: '早餐咖啡',
+    rating: 4.6,
+    reviewCount: 1188,
+    deliveryEtaMinutes: 25,
+    deliveryFee: '1.00',
+    currency: 'CNY',
+    minimumOrder: '28.00',
+    distanceKm: 1.3,
+    badge: '早餐组合',
+    visualType: 'logo',
+    logoMark: 'GOOD\nAM',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-morning-bagel-01.png'),
+    requiredAsset: 'platform/merchants/logos/merchant-logo-morning-bagel-01.png',
+    imageAlt: 'Good Morning Bagel brand mark',
+    icon: 'fas fa-mug-hot',
+    fallbackClass: 'from-[#eff6ff] via-[#7dd3fc] to-[#fbbf24] text-[#0c4a6e]',
+    desc: 'GOOD AM 系列贝果与咖啡，以一天中的光线和时刻为菜单命名。',
+    menu: [
+      { title: 'GOOD AM 烟熏鸡贝果', price: '33.00', desc: '现烤芝麻贝果、烟熏鸡肉、奶油奶酪与芝麻菜' },
+      { title: '晨盐焦糖拿铁', price: '24.00', desc: '双份浓缩、鲜奶与自制海盐焦糖' },
+      { title: '绿意煎蛋贝果', price: '35.00', desc: '牛油果、流心煎蛋、芝麻菜与原味贝果' },
+      { title: '早安苹果肉桂司康', price: '22.00', desc: '苹果丁、肉桂糖与当天现烤黄油司康' },
+      { title: '柚光冰摇美式', price: '21.00', desc: '浓缩咖啡、柚子汁与冰摇气泡，午后更轻快' },
+    ],
+  },
+  {
+    id: 'platform_nori_table',
+    assetKey: 'elm-dim-sum',
+    name: '榆树里蒸点铺',
+    category: 'fast_food',
+    cuisine: '中式蒸点',
+    rating: 4.8,
+    reviewCount: 839,
+    deliveryEtaMinutes: 32,
+    deliveryFee: '3.00',
+    currency: 'CNY',
+    minimumOrder: '38.00',
+    distanceKm: 2.1,
+    badge: '清晨开蒸',
+    visualType: 'logo',
+    logoMark: '榆树里',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-elm-dim-sum-01.png'),
+    requiredAsset: 'platform/merchants/logos/merchant-logo-elm-dim-sum-01.png',
+    imageAlt: 'Elm Lane Dim Sum brand mark',
+    icon: 'fas fa-bowl-rice',
+    fallbackClass: 'from-[#fefce8] via-[#fde68a] to-[#fb7185] text-[#854d0e]',
+    desc: '街坊蒸点铺，用褶数、蒸笼和出炉时段讲每一笼点心。',
+    menu: [
+      { title: '榆树里虾仁三拼', price: '36.00', desc: '虾仁烧卖、荷香糯米鸡和一杯现磨热豆浆' },
+      { title: '十八褶鲜肉小笼', price: '32.00', desc: '六只十八褶小笼、姜丝醋碟与小米粥' },
+      { title: '金沙流心奶黄包', price: '24.00', desc: '四只咸蛋黄流心包，配桂花乌龙' },
+      { title: '荷香腊味糯米鸡', price: '26.00', desc: '荷叶包糯米、香菇、鸡腿肉与广式腊味' },
+      { title: '巷口咸豆浆油条', price: '23.00', desc: '榨菜虾皮咸豆浆、现炸油条与茶叶蛋' },
+    ],
+  },
+  {
+    id: 'platform_corner_pizza',
+    assetKey: 'coconut-curry',
+    name: '南风椰香咖喱',
+    category: 'restaurants',
+    cuisine: '东南亚咖喱',
+    rating: 4.7,
+    reviewCount: 932,
+    deliveryEtaMinutes: 29,
+    deliveryFee: '2.00',
+    currency: 'CNY',
+    minimumOrder: '35.00',
+    distanceKm: 2.0,
+    badge: '下饭推荐',
+    imageUrl: '',
+    requiredAsset: 'platform/merchants/merchant-coconut-curry-01.png',
+    imageAlt: 'Coconut curry rice set',
+    icon: 'fas fa-pepper-hot',
+    fallbackClass: 'from-[#fefce8] via-[#facc15] to-[#22c55e] text-[#713f12]',
+    desc: '南风把东南亚城市和香料写进菜单，咖喱可选柔和、标准或热辣。',
+    menu: [
+      { title: '南风一号椰香鸡', price: '45.00', desc: '嫩鸡腿、椰奶黄咖喱与茉莉香米，默认柔和辣度' },
+      { title: '槟城咖喱虾饭', price: '52.00', desc: '鲜虾、秋葵、豆卜与浓香咖喱汁' },
+      { title: '青罗勒绿咖喱牛', price: '49.00', desc: '牛肉片、泰茄、青罗勒与椰香绿咖喱' },
+      { title: '南风冬阴功海鲜汤', price: '38.00', desc: '鲜虾、鱿鱼、菌菇与香茅酸辣汤，辣度偏高' },
+      { title: '斑斓椰奶小布丁', price: '22.00', desc: '斑斓叶椰奶布丁与薄脆焦糖片' },
     ],
   },
 ])
+const FOOD_PLATFORM_RECOMMENDATION_COUNT = 3
+const platformRecommendedMerchantIds = Object.freeze((() => {
+  const merchantIds = FOOD_PLATFORM_MERCHANTS.map((merchant) => merchant.id)
+  for (let index = merchantIds.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1))
+    ;[merchantIds[index], merchantIds[randomIndex]] = [merchantIds[randomIndex], merchantIds[index]]
+  }
+  return merchantIds.slice(0, FOOD_PLATFORM_RECOMMENDATION_COUNT)
+})())
+const activePlatformCampaign = computed(() =>
+  FOOD_PLATFORM_AD_BANNERS.find((campaign) => campaign.id === platformCampaignKey.value) || null,
+)
+const platformCampaignMerchants = computed(() => {
+  const merchantIds = new Set(activePlatformCampaign.value?.merchantIds || [])
+  return FOOD_PLATFORM_MERCHANTS.filter((merchant) => merchantIds.has(merchant.id))
+})
+const platformCampaignMenuPicks = computed(() =>
+  (activePlatformCampaign.value?.menuPicks || []).map((pick) => {
+    const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === pick.merchantId)
+    const item = merchant?.menu?.[pick.itemIndex]
+    return merchant && item ? { ...pick, merchant, item } : null
+  }).filter(Boolean),
+)
+const platformCampaignPrize = computed(() =>
+  (activePlatformCampaign.value?.prizes || []).find((prize) => prize.id === platformCampaignPrizeId.value) || null,
+)
+const platformMerchantMatchesFilter = (merchant = {}, filterKey = 'all') => {
+  if (filterKey === 'all') return true
+  if (filterKey === 'chicken') return merchant.id === 'platform_chicken_crisp'
+  if (filterKey === 'pizza') return merchant.id === 'platform_hwadeok_pizza'
+  if (filterKey === 'noodles') return merchant.id === 'platform_neighborhood_soup'
+  if (filterKey === 'sushi') return merchant.id === 'platform_sushi_hana'
+  return merchant.category === filterKey
+}
 const STORE_MENU_SECTION_ORDER = Object.freeze([
   'signature',
   'warm_soup',
@@ -480,27 +826,19 @@ const STORE_MENU_SECTION_META = Object.freeze({
   dessert: { zh: '甜品', en: 'Dessert', shortZh: '甜品', shortEn: 'Sweet', icon: 'fas fa-ice-cream' },
 })
 const platformCategoryTiles = computed(() =>
-  [
-    { key: 'all', categoryKey: 'nearby', label: t('全部', 'All') },
-    { key: 'restaurants', categoryKey: 'restaurants', label: t('正餐', 'Restaurants') },
-    { key: 'fast_food', categoryKey: 'fast_food', label: t('快餐', 'Fast') },
-    { key: 'cafe', categoryKey: 'cafe', label: t('咖啡轻食', 'Cafe') },
-    { key: 'dessert', categoryKey: 'dessert', label: t('甜品', 'Dessert') },
-  ].map((category) => {
+  FOOD_PLATFORM_CATEGORY_DEFINITIONS.map((category) => {
     const categoryKey = category.categoryKey || category.key
-    const summary = categorySummaryByKey.value.get(categoryKey)
-    const restaurantCount =
-      category.key === 'all' || category.key === 'more' || categoryKey === 'nearby'
-        ? foodDeliveryStore.restaurantCount
-        : summary?.restaurantCount || category.restaurantCount || 0
     const visual = FOOD_PLATFORM_CATEGORY_VISUALS[category.key] || FOOD_PLATFORM_CATEGORY_VISUALS[categoryKey] || FOOD_PLATFORM_CATEGORY_VISUALS.all
     return {
       ...category,
       categoryKey,
+      label: languageBase.value === 'zh' ? category.labelZh : category.labelEn,
       icon: visual.icon || category.icon,
       className: visual.className,
-      restaurantCount,
-      active: category.categoryKey === activeCategory.value?.key || (category.key === 'all' && activeCategory.value?.key === 'nearby'),
+      restaurantCount: FOOD_PLATFORM_MERCHANTS.filter((merchant) =>
+        platformMerchantMatchesFilter(merchant, category.key),
+      ).length,
+      active: category.key === activePlatformFilterKey.value,
     }
   }),
 )
@@ -518,13 +856,12 @@ const shopAppEntries = computed(() =>
 )
 const normalizedPlatformSearchQuery = computed(() => platformSearchQuery.value.trim().toLowerCase())
 const platformMerchantsByCategory = computed(() => {
-  const categoryKey = activeCategory.value?.key || 'nearby'
-  const merchants = FOOD_PLATFORM_MERCHANTS.filter((merchant) => {
-    if (categoryKey === 'nearby' || categoryKey === 'all') return true
-    if (categoryKey === 'grocery_delivery') return merchant.category === 'restaurants'
-    return merchant.category === categoryKey
-  })
-  return merchants.length ? merchants : FOOD_PLATFORM_MERCHANTS
+  if (platformPageKey.value === 'search' || platformPageKey.value === 'saved') {
+    return FOOD_PLATFORM_MERCHANTS
+  }
+  return FOOD_PLATFORM_MERCHANTS.filter((merchant) =>
+    platformMerchantMatchesFilter(merchant, activePlatformFilterKey.value),
+  )
 })
 const merchantMatchesPlatformSearch = (merchant = {}) => {
   const query = normalizedPlatformSearchQuery.value
@@ -539,23 +876,209 @@ const merchantMatchesPlatformSearch = (merchant = {}) => {
     menuText,
   ].some((value) => String(value || '').toLowerCase().includes(query))
 }
-const platformFeaturedMerchants = computed(() =>
-  platformMerchantsByCategory.value.filter((merchant) => merchantMatchesPlatformSearch(merchant)).slice(0, 8),
+const platformMatchingMerchants = computed(() => {
+  const merchants = platformPageKey.value === 'saved'
+    ? platformMerchantsByCategory.value
+    : platformMerchantsByCategory.value.filter((merchant) => merchantMatchesPlatformSearch(merchant))
+  return platformPageKey.value === 'saved'
+    ? merchants.filter((merchant) => platformSavedMerchantIds.value.includes(merchant.id))
+    : merchants
+})
+const platformRecommendationMode = computed(() =>
+  platformPageKey.value === 'home'
+  && activePlatformFilterKey.value === 'all'
+  && !platformMerchantListExpanded.value,
 )
+const platformFeaturedMerchants = computed(() => {
+  if (!platformRecommendationMode.value) return platformMatchingMerchants.value
+  return platformRecommendedMerchantIds
+    .map((merchantId) => platformMatchingMerchants.value.find((merchant) => merchant.id === merchantId))
+    .filter(Boolean)
+})
+const platformMerchantSectionTitle = computed(() =>
+  platformPageKey.value === 'saved'
+    ? t('收藏小店', 'Saved shops')
+    : platformRecommendationMode.value
+      ? t('为你推荐', 'Recommended for you')
+      : t('附近营业小店', 'Open near you'),
+)
+const platformMerchantSectionMeta = computed(() =>
+  platformRecommendationMode.value
+    ? t(
+      `随机推荐 ${platformFeaturedMerchants.value.length} 家 · 共 ${platformMatchingMerchants.value.length} 家`,
+      `${platformFeaturedMerchants.value.length} random picks · ${platformMatchingMerchants.value.length} shops total`,
+    )
+    : `${platformActiveCategoryLabel.value} · ${platformMatchingMerchants.value.length} ${t('家平台小店', 'platform shops')}`,
+)
+const platformMerchantEmptyLabel = computed(() =>
+  platformPageKey.value === 'saved'
+    ? t('还没有收藏平台小店，点卡片右上角的爱心即可加入。', 'No saved platform shops yet. Use the heart on a shop card to add one.')
+    : t('平台内暂时没有匹配的小店。', 'No matching platform merchants right now.'),
+)
+const platformDeliveryFeeLabel = (merchant = {}) =>
+  Number(merchant.deliveryFee) <= 0
+    ? t('免配送费', 'Free')
+    : displayMoney(merchant.deliveryFee, merchant.currency)
 const selectedPlatformMerchant = computed(() => {
   const selectedMerchant = FOOD_PLATFORM_MERCHANTS.find((merchant) => merchant.id === selectedPlatformMerchantId.value)
   return selectedMerchant || platformFeaturedMerchants.value[0] || null
 })
+const isPlatformLogoMerchant = (merchant = {}) => merchant.visualType === 'logo'
+const platformMerchantLogoMark = (merchant = {}) => merchant.logoMark || String(merchant.name || '').slice(0, 3)
+const platformMerchantIdentityAssetPath = (merchantId = '') => {
+  const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === merchantId)
+  if (merchant?.visualType === 'logo' && merchant.requiredAsset) return merchant.requiredAsset
+  return `platform/orders/merchant-marks/${platformMerchantMarkFileName(merchantId)}`
+}
 const platformHeroImageUrl = computed(() => selectedPlatformMerchant.value?.imageUrl || '')
-const platformMerchantMenuItemCount = computed(() =>
-  platformMerchantsByCategory.value.reduce((sum, merchant) => sum + (merchant.menu?.length || 0), 0),
-)
 const platformHeroRestaurant = selectedPlatformMerchant
 const platformHeroMenuItem = computed(() => selectedPlatformMerchant.value?.menu?.[0] || null)
 const platformFeaturedRestaurants = platformFeaturedMerchants
-const platformLocationLabel = computed(() =>
-  activeMapHandoff.value?.deliveryAddress || t('当前配送地址', 'Current delivery address'),
+const defaultPlatformLocationLabel = computed(() =>
+  activeMapHandoff.value?.deliveryAddress ||
+  t('首尔市江南区清潭洞 88-1', '88-1 Cheongdam-dong, Gangnam-gu, Seoul'),
 )
+const platformLocationLabel = computed(() =>
+  selectedPlatformDeliveryAddress.value || defaultPlatformLocationLabel.value,
+)
+const platformDeliveryAddressOptions = computed(() => [
+  defaultPlatformLocationLabel.value,
+  t('首尔市麻浦区延南洞 223-14', '223-14 Yeonnam-dong, Mapo-gu, Seoul'),
+  t('公司 · 首尔市中区乙支路 100', 'Work · 100 Eulji-ro, Jung-gu, Seoul'),
+])
+const platformCartMerchant = computed(() => {
+  const merchantId = foodDeliveryStore.platformCartItems[0]?.merchantId || ''
+  return FOOD_PLATFORM_MERCHANTS.find((merchant) => merchant.id === merchantId) || null
+})
+const platformCheckoutDeliveryFeeCents = computed(() =>
+  Math.max(0, Math.round(Number(platformCartMerchant.value?.deliveryFee || 0) * 100)),
+)
+const platformCheckoutTotal = computed(() => {
+  const amountCents =
+    foodDeliveryStore.platformCartPrimaryTotal.amountCents + platformCheckoutDeliveryFeeCents.value
+  return {
+    amountCents,
+    amount: (amountCents / 100).toFixed(2),
+    currency: foodDeliveryStore.platformCartPrimaryTotal.currency,
+  }
+})
+const platformCheckoutPaymentOptions = computed(() => [
+  {
+    key: 'app_pay',
+    icon: 'fas fa-mobile-screen-button',
+    label: t('平台支付', 'Platform pay'),
+    desc: t('快捷确认本次订单，提交后可随时查看进度。', 'Confirm quickly and follow the order after placing it.'),
+  },
+  {
+    key: 'pay_on_delivery',
+    icon: 'fas fa-money-bill-wave',
+    label: t('送达后支付', 'Pay on delivery'),
+    desc: t('骑手送达时再完成虚拟支付。', 'Complete the virtual payment when the rider arrives.'),
+  },
+])
+const activePlatformOrder = computed(() =>
+  platformOrderId.value ? foodDeliveryStore.findPlatformOrderById(platformOrderId.value) : null,
+)
+const platformMerchantMarkFileName = (merchantId = '') => ({
+  platform_hanwoo_gukbap: 'platform-merchant-mark-hanwoo-01.png',
+  platform_sushi_hana: 'platform-merchant-mark-sushi-hana-01.png',
+  platform_hwadeok_pizza: 'platform-merchant-mark-hwadeok-pizza-01.png',
+  platform_salad_day: 'platform-merchant-mark-salad-day-01.png',
+  platform_chicken_crisp: 'platform-merchant-mark-chicken-crisp-01.png',
+  platform_neighborhood_soup: 'platform-merchant-mark-camellia-noodles-01.png',
+  platform_corner_pizza: 'platform-merchant-mark-coconut-curry-01.png',
+}[merchantId] || 'platform-merchant-mark-pending.png')
+const platformOrderNumber = (order = {}) => {
+  const createdAtPart = String(order.createdAt || '').slice(-6).padStart(6, '0')
+  const idPart = String(order.id || '').split('_').pop().slice(-4).toUpperCase().padStart(4, '0')
+  return `FD${createdAtPart}-${idPart}`
+}
+const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) => {
+  const statusMeta = {
+    [FOOD_DELIVERY_ORDER_STATUS.PLACED]: {
+      key: 'placed',
+      assetKey: 'placed',
+      label: t('已下单', 'Placed'),
+      eyebrow: t('商家确认中', 'Awaiting confirmation'),
+      title: t('下单成功', 'Order placed'),
+      desc: t('小店已收到订单，正在确认餐品。', 'The shop received your order and is checking the items.'),
+      icon: 'fas fa-receipt',
+      stepIndex: 0,
+      badgeClass: 'bg-[#e5fbfa] text-[#128e89]',
+      heroClass: 'bg-[#24bcb7] shadow-[0_18px_42px_rgba(20,184,166,0.22)]',
+    },
+    [FOOD_DELIVERY_ORDER_STATUS.ACCEPTED]: {
+      key: 'accepted',
+      assetKey: 'preparing',
+      label: t('已接单', 'Accepted'),
+      eyebrow: t('小店已确认', 'Shop confirmed'),
+      title: t('小店已接单', 'Order accepted'),
+      desc: t('餐品已经进入制作队列，请稍等片刻。', 'Your meal is now in the preparation queue.'),
+      icon: 'fas fa-circle-check',
+      stepIndex: 1,
+      badgeClass: 'bg-[#e5fbfa] text-[#128e89]',
+      heroClass: 'bg-[#24bcb7] shadow-[0_18px_42px_rgba(20,184,166,0.22)]',
+    },
+    [FOOD_DELIVERY_ORDER_STATUS.COOKING]: {
+      key: 'cooking',
+      assetKey: 'preparing',
+      label: t('制作中', 'Preparing'),
+      eyebrow: t('厨房进行中', 'In the kitchen'),
+      title: t('餐点制作中', 'Meal in preparation'),
+      desc: t('小店正在准备餐品，完成后会交给骑手。', 'The shop is preparing your meal before rider pickup.'),
+      icon: 'fas fa-fire-burner',
+      stepIndex: 1,
+      badgeClass: 'bg-amber-50 text-amber-700',
+      heroClass: 'bg-[#159f9a] shadow-[0_18px_42px_rgba(15,159,154,0.22)]',
+    },
+    [FOOD_DELIVERY_ORDER_STATUS.RIDER_PICKUP]: {
+      key: 'rider_pickup',
+      assetKey: 'delivering',
+      label: t('配送中', 'Delivering'),
+      eyebrow: t('骑手已取餐', 'Picked up by rider'),
+      title: t('正在送往你这里', 'On the way to you'),
+      desc: t('餐品已经离店，请留意预计送达时间。', 'Your meal has left the shop. Keep an eye on the ETA.'),
+      icon: 'fas fa-motorcycle',
+      stepIndex: 2,
+      badgeClass: 'bg-sky-50 text-sky-700',
+      heroClass: 'bg-sky-600 shadow-[0_18px_42px_rgba(2,132,199,0.22)]',
+    },
+    [FOOD_DELIVERY_ORDER_STATUS.DELIVERED]: {
+      key: 'delivered',
+      assetKey: 'delivered',
+      label: t('已送达', 'Delivered'),
+      eyebrow: t('本次配送完成', 'Delivery complete'),
+      title: t('餐点已经送达', 'Your meal has arrived'),
+      desc: t('订单已完成，愿这一餐正合心意。', 'The order is complete. Hope the meal hits the spot.'),
+      icon: 'fas fa-house-circle-check',
+      stepIndex: 3,
+      badgeClass: 'bg-gray-100 text-gray-700',
+      heroClass: 'bg-gray-950 shadow-[0_18px_42px_rgba(15,23,42,0.2)]',
+    },
+    [FOOD_DELIVERY_ORDER_STATUS.CANCELLED]: {
+      key: 'cancelled',
+      assetKey: 'cancelled',
+      label: t('已取消', 'Cancelled'),
+      eyebrow: t('订单已结束', 'Order closed'),
+      title: t('订单已取消', 'Order cancelled'),
+      desc: t('这笔订单没有继续配送，可返回首页重新选择。', 'This order will not be delivered. Return home to choose again.'),
+      icon: 'fas fa-circle-xmark',
+      stepIndex: -1,
+      badgeClass: 'bg-rose-50 text-rose-700',
+      heroClass: 'bg-rose-600 shadow-[0_18px_42px_rgba(225,29,72,0.18)]',
+    },
+  }
+  return statusMeta[status] || statusMeta[FOOD_DELIVERY_ORDER_STATUS.PLACED]
+}
+const activePlatformOrderStatus = computed(() =>
+  resolvePlatformOrderStatus(activePlatformOrder.value?.status),
+)
+const platformOrderSteps = computed(() => [
+  { key: 'placed', label: t('已下单', 'Placed'), icon: 'fas fa-receipt' },
+  { key: 'preparing', label: t('制作中', 'Preparing'), icon: 'fas fa-fire-burner' },
+  { key: 'delivering', label: t('配送中', 'Delivering'), icon: 'fas fa-motorcycle' },
+  { key: 'delivered', label: t('已送达', 'Delivered'), icon: 'fas fa-house-circle-check' },
+])
 const platformBenefitCards = computed(() => [
   {
     key: 'club',
@@ -574,18 +1097,42 @@ const platformBenefitCards = computed(() => [
   {
     key: 'gift',
     title: t('送给关系人', 'Send a meal'),
-    desc: t('小店下单后再记录共享用餐，不归平台总控。', 'Shared-meal records stay after shop checkout, not in a platform controller.'),
+    desc: t('为重要的人选一顿合口味的餐，分享这次用餐心意。', 'Choose a fitting meal for someone important and share the moment.'),
     icon: 'fas fa-gift',
     className: 'from-violet-50 to-white text-violet-900',
   },
 ])
+const activePlatformNavItemKey = computed(() =>
+  platformPageKey.value === 'order' || platformPageKey.value === 'orders'
+    ? 'orders'
+    : platformPageKey.value === 'campaign'
+      ? 'home'
+      : platformPageKey.value,
+)
 const platformBottomNavItems = computed(() => [
-  { key: 'home', label: t('首页', 'Home'), icon: 'fas fa-house', active: true },
-  { key: 'search', label: t('搜索', 'Search'), icon: 'fas fa-magnifying-glass', active: false },
-  { key: 'orders', label: t('订单', 'Orders'), icon: 'fas fa-receipt', active: false },
-  { key: 'saved', label: t('收藏', 'Saved'), icon: 'fas fa-heart', active: false },
-  { key: 'profile', label: t('我的', 'Mine'), icon: 'fas fa-face-smile', active: false },
+  { key: 'home', label: t('首页', 'Home'), icon: 'fas fa-house', active: activePlatformNavItemKey.value === 'home' },
+  { key: 'search', label: t('搜索', 'Search'), icon: 'fas fa-magnifying-glass', active: activePlatformNavItemKey.value === 'search' },
+  { key: 'orders', label: t('订单', 'Orders'), icon: 'fas fa-receipt', active: activePlatformNavItemKey.value === 'orders' },
+  { key: 'saved', label: t('收藏', 'Saved'), icon: 'fas fa-heart', active: activePlatformNavItemKey.value === 'saved' },
+  { key: 'profile', label: t('我的', 'Mine'), icon: 'fas fa-face-smile', active: activePlatformNavItemKey.value === 'profile' },
 ])
+const platformUtilitySheetContent = computed(() => {
+  if (platformUtilitySheetKey.value === 'notifications') {
+    return {
+      icon: 'fas fa-bell',
+      title: t('平台消息', 'Platform updates'),
+      desc: t('优惠、营业状态和配送提醒会出现在这里。', 'Offers, opening updates, and delivery notices appear here.'),
+    }
+  }
+  if (platformUtilitySheetKey.value === 'cart') {
+    return {
+      icon: 'fas fa-cart-shopping',
+      title: t('平台小店购物车', 'Platform shop cart'),
+      desc: t('先进入一家小店选择菜品，同一家店的餐品可以一起结算。', 'Choose a shop first, then review its items together at checkout.'),
+    }
+  }
+  return null
+})
 const selectedRestaurantId = computed(() =>
   typeof route.query.restaurantId === 'string' ? route.query.restaurantId.trim() : '',
 )
@@ -1040,6 +1587,215 @@ const closePlatformMerchantSheet = () => {
   platformMerchantSheetOpen.value = false
 }
 
+const isPlatformMerchantSaved = (merchantId) => platformSavedMerchantIds.value.includes(merchantId)
+
+const togglePlatformMerchantSaved = (merchant) => {
+  if (!merchant?.id) return
+  platformSavedMerchantIds.value = isPlatformMerchantSaved(merchant.id)
+    ? platformSavedMerchantIds.value.filter((merchantId) => merchantId !== merchant.id)
+    : [...platformSavedMerchantIds.value, merchant.id]
+}
+
+const openPlatformUtilitySheet = (key) => {
+  platformUtilitySheetKey.value = key
+}
+
+const closePlatformUtilitySheet = () => {
+  platformUtilitySheetKey.value = ''
+}
+
+const browsePlatformMerchantsFromUtilitySheet = () => {
+  closePlatformUtilitySheet()
+  platformMerchantListExpanded.value = true
+  openPlatformPage('home')
+}
+
+const openPlatformCampaign = (campaignId) => {
+  const id = String(campaignId || '').trim()
+  if (!FOOD_PLATFORM_AD_BANNERS.some((campaign) => campaign.id === id)) return
+  platformAddressMenuOpen.value = false
+  closePlatformUtilitySheet()
+  return router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: activeCategory.value?.key || 'nearby',
+      platformView: 'campaign',
+      platformCampaign: id,
+    },
+  })
+}
+
+const handlePlatformBanner = (banner) => {
+  pausePlatformBannerAutoplay()
+  openPlatformCampaign(banner?.id)
+}
+
+const handlePlatformCampaignPrimary = () => {
+  const campaign = activePlatformCampaign.value
+  if (!campaign) return
+  if (campaign.id === 'club_free_delivery' && !platformBenefitClaimed.value) {
+    platformBenefitClaimed.value = true
+    return
+  }
+  if (campaign.id === 'club_free_delivery' && platformCampaignMerchants.value[0]) {
+    selectPlatformMerchant(platformCampaignMerchants.value[0])
+    return
+  }
+  if (campaign.kind === 'lottery') {
+    if (platformCampaignPrize.value) return
+    const prizes = campaign.prizes || []
+    const prize = prizes[Math.floor(Math.random() * prizes.length)]
+    if (prize) platformCampaignPrizeId.value = prize.id
+    return
+  }
+  if (campaign.kind === 'menu' && platformCampaignMenuPicks.value[0]?.merchant) {
+    selectPlatformMerchant(platformCampaignMenuPicks.value[0].merchant)
+    return
+  }
+  openCategory(campaign.targetCategory || 'nearby')
+}
+
+const handlePlatformCampaignPosterImageError = (event) => {
+  const image = event?.currentTarget
+  if (!image) return
+  image.onerror = null
+  image.src = activePlatformCampaign.value?.imageUrl || platformMissingAssetPlaceholderUrl
+}
+
+const platformBannerSlides = () => {
+  const rail = platformBannerRailRef.value
+  return rail ? Array.from(rail.querySelectorAll('[data-platform-banner-slide]')) : []
+}
+
+const pausePlatformBannerAutoplay = (duration = PLATFORM_BANNER_INTERACTION_PAUSE_MS) => {
+  platformBannerInteractionPauseUntil = Date.now() + duration
+  platformBannerProgrammaticScrollUntil = 0
+}
+
+const scrollPlatformBannerTo = (index, { behavior = 'smooth', pause = false } = {}) => {
+  const rail = platformBannerRailRef.value
+  const slides = platformBannerSlides()
+  if (!rail || slides.length === 0) return false
+  const normalizedIndex = ((Number(index) || 0) % slides.length + slides.length) % slides.length
+  const firstOffset = slides[0]?.offsetLeft || 0
+  const targetLeft = Math.max(0, (slides[normalizedIndex]?.offsetLeft || 0) - firstOffset)
+  platformActiveBannerIndex.value = normalizedIndex
+  if (pause) pausePlatformBannerAutoplay()
+  platformBannerProgrammaticScrollUntil = behavior === 'smooth' ? Date.now() + 700 : 0
+  if (typeof rail.scrollTo === 'function') {
+    rail.scrollTo({ left: targetLeft, behavior })
+  } else {
+    rail.scrollLeft = targetLeft
+  }
+  return true
+}
+
+const handlePlatformBannerRailScroll = () => {
+  if (Date.now() < platformBannerProgrammaticScrollUntil) return
+  const rail = platformBannerRailRef.value
+  const slides = platformBannerSlides()
+  if (!rail || slides.length === 0) return
+  const firstOffset = slides[0]?.offsetLeft || 0
+  let closestIndex = 0
+  let closestDistance = Number.POSITIVE_INFINITY
+  slides.forEach((slide, index) => {
+    const distance = Math.abs(rail.scrollLeft - ((slide.offsetLeft || 0) - firstOffset))
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestIndex = index
+    }
+  })
+  platformActiveBannerIndex.value = closestIndex
+}
+
+const holdPlatformBannerAutoplay = () => {
+  platformBannerAutoplayPaused.value = true
+}
+
+const releasePlatformBannerAutoplay = (event) => {
+  if (event?.currentTarget?.contains?.(event.relatedTarget)) return
+  platformBannerAutoplayPaused.value = false
+}
+
+const advancePlatformBanner = () => {
+  if (platformPageKey.value !== 'home' || isStoreMode.value) return
+  if (platformBannerAutoplayPaused.value || Date.now() < platformBannerInteractionPauseUntil) return
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  scrollPlatformBannerTo(platformActiveBannerIndex.value + 1)
+}
+
+const startPlatformBannerAutoplay = () => {
+  if (platformBannerAutoplayTimerId || typeof window === 'undefined') return
+  platformBannerAutoplayTimerId = window.setInterval(advancePlatformBanner, PLATFORM_BANNER_AUTOPLAY_MS)
+}
+
+const stopPlatformBannerAutoplay = () => {
+  if (!platformBannerAutoplayTimerId || typeof window === 'undefined') return
+  window.clearInterval(platformBannerAutoplayTimerId)
+  platformBannerAutoplayTimerId = null
+}
+
+const handleFoodDeliveryAssetError = (event) => {
+  const image = event?.target
+  if (!image || image.tagName !== 'IMG' || image.dataset.assetFallbackApplied === 'true') return
+  image.dataset.assetFallbackApplied = 'true'
+  image.dataset.assetMissing = 'true'
+  image.style.objectFit = 'contain'
+  image.style.backgroundColor = 'rgba(255,255,255,0.92)'
+  image.style.padding = '6px'
+  image.src = platformMissingAssetPlaceholderUrl
+}
+
+const togglePlatformAddressMenu = () => {
+  platformAddressMenuOpen.value = !platformAddressMenuOpen.value
+}
+
+const selectPlatformDeliveryAddress = (address) => {
+  selectedPlatformDeliveryAddress.value = address
+  platformAddressMenuOpen.value = false
+}
+
+const platformMenuItemId = (merchantId, itemIndex) => `${merchantId}_menu_${itemIndex + 1}`
+const platformMenuItemAssetPath = (merchant = {}, itemIndex = 0) =>
+  `platform/menus/${merchant.assetKey || merchant.id || 'merchant'}/menu-item-${String(itemIndex + 1).padStart(2, '0')}.png`
+const platformMenuItemImageUrl = (merchant = {}, item = {}, itemIndex = 0) =>
+  item.imageUrl || foodDeliveryUiAsset(platformMenuItemAssetPath(merchant, itemIndex))
+
+const platformCartItemQuantity = (merchantId, itemIndex) => {
+  const itemId = platformMenuItemId(merchantId, itemIndex)
+  return foodDeliveryStore.platformCartItems.find((item) => item.itemId === itemId)?.quantity || 0
+}
+
+const addPlatformMenuItemToCart = (item, itemIndex) => {
+  const merchant = selectedPlatformMerchant.value
+  if (!merchant || !item) return
+  const addedItem = foodDeliveryStore.addPlatformCartItem({
+    merchantId: merchant.id,
+    merchantName: merchant.name,
+    itemId: platformMenuItemId(merchant.id, itemIndex),
+    title: item.title,
+    price: item.price,
+    sourceModule: 'food_delivery_platform_cart',
+    sourceId: merchant.id,
+  })
+  if (!addedItem) return
+  platformCartFeedback.value = t(`${item.title} 已加入购物车。`, `${item.title} was added to cart.`)
+}
+
+const updatePlatformCartItemQuantity = (itemId, quantity) => {
+  foodDeliveryStore.updatePlatformCartQuantity(itemId, quantity)
+}
+
+const platformCartLineTotal = (item = {}) =>
+  displayMoney(((Number(item.unitPriceCents) * Number(item.quantity)) / 100).toFixed(2))
+
+const openPlatformCartFromMerchant = () => {
+  closePlatformMerchantSheet()
+  openPlatformUtilitySheet('cart')
+}
+
 const openMenuItemDetail = (menuItemId) => {
   const item = foodDeliveryStore.findMenuItemById(menuItemId)
   if (!item) return
@@ -1114,8 +1870,56 @@ const openCategory = (key) => {
   })
 }
 
+const openPlatformPage = (key) => {
+  const pageKey = ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key) ? key : 'home'
+  platformAddressMenuOpen.value = false
+  closePlatformUtilitySheet()
+  if (pageKey === 'home') {
+    platformSearchQuery.value = ''
+  }
+  return router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: pageKey === 'home' && key === 'home' ? 'nearby' : activeCategory.value?.key || 'nearby',
+      ...(pageKey === 'home' ? {} : { platformView: pageKey }),
+      ...(pageKey === 'campaign' && platformCampaignKey.value ? { platformCampaign: platformCampaignKey.value } : {}),
+      ...(pageKey === 'order' && platformOrderId.value ? { platformOrderId: platformOrderId.value } : {}),
+    },
+  })
+}
+
+const returnToPlatformCart = async () => {
+  await openPlatformPage('home')
+  openPlatformUtilitySheet('cart')
+}
+
+const openPlatformOrder = (orderId) => {
+  const id = String(orderId || '').trim()
+  if (!id) return
+  platformAddressMenuOpen.value = false
+  closePlatformUtilitySheet()
+  router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: activeCategory.value?.key || 'nearby',
+      platformView: 'order',
+      platformOrderId: id,
+    },
+  })
+}
+
 const openPlatformCategory = (category) => {
-  openCategory(category?.categoryKey || category?.key || 'nearby')
+  const filterKey = FOOD_PLATFORM_CATEGORY_KEYS.has(category?.key) ? category.key : 'all'
+  router.push({
+    path: '/food-delivery',
+    query: {
+      ...worldAppRouteQuery.value,
+      category: category?.categoryKey || 'nearby',
+      platformFilter: filterKey,
+    },
+  })
 }
 
 const focusPlatformSearch = () => {
@@ -1123,12 +1927,74 @@ const focusPlatformSearch = () => {
 }
 
 const handlePlatformNavItem = (item) => {
+  closePlatformUtilitySheet()
+  if (item.key === 'home') {
+    platformSearchQuery.value = ''
+    platformMerchantListExpanded.value = false
+    openPlatformPage('home')
+    return
+  }
   if (item.key === 'search') {
-    focusPlatformSearch()
+    openPlatformPage('search')
+    return
+  }
+  if (item.key === 'saved') {
+    openPlatformPage('saved')
     return
   }
   if (item.key === 'orders') {
-    openCategory(activeCategory.value?.key || 'nearby')
+    openPlatformPage('orders')
+    return
+  }
+  if (item.key === 'profile') {
+    openPlatformPage('profile')
+  }
+}
+
+const openPlatformCheckout = () => {
+  platformCheckoutFeedback.value = ''
+  if (foodDeliveryStore.platformCartItems.length === 0) {
+    platformCartFeedback.value = t('购物车还是空的，先选择菜品。', 'Your cart is empty. Choose an item first.')
+    return
+  }
+  closePlatformUtilitySheet()
+  openPlatformPage('checkout')
+}
+
+const submitPlatformOrder = () => {
+  platformCheckoutFeedback.value = ''
+  const merchant = platformCartMerchant.value
+  if (!merchant || foodDeliveryStore.platformCartItems.length === 0) {
+    platformCheckoutFeedback.value = t('购物车已清空，请返回小店重新选择。', 'The cart is empty. Return to the shop and choose items again.')
+    return
+  }
+  const order = foodDeliveryStore.checkoutPlatformCart({
+    deliveryAddress: platformLocationLabel.value,
+    note: platformCheckoutNote.value,
+    paymentMethod: platformCheckoutPaymentMethod.value,
+    deliveryFee: merchant.deliveryFee,
+    etaMinutes: merchant.deliveryEtaMinutes,
+  })
+  if (!order) {
+    platformCheckoutFeedback.value = t('订单没有提交，请检查购物车。', 'The order was not placed. Check the cart.')
+    return
+  }
+  platformCheckoutNote.value = ''
+  openPlatformOrder(order.id)
+}
+
+const platformPaymentMethodLabel = (paymentMethod) =>
+  platformCheckoutPaymentOptions.value.find((option) => option.key === paymentMethod)?.label ||
+  t('平台支付', 'Platform pay')
+
+const copyPlatformOrderNumber = async (order = {}) => {
+  platformOrderCopyFeedback.value = ''
+  try {
+    if (!navigator?.clipboard?.writeText) throw new Error('Clipboard unavailable')
+    await navigator.clipboard.writeText(platformOrderNumber(order))
+    platformOrderCopyFeedback.value = t('订单号已复制', 'Order number copied')
+  } catch {
+    platformOrderCopyFeedback.value = t('复制失败，请稍后重试', 'Copy failed. Please retry')
   }
 }
 
@@ -1295,6 +2161,13 @@ watch(
   { immediate: true },
 )
 
+watch(platformPageKey, () => {
+  platformActiveBannerIndex.value = 0
+  platformBannerAutoplayPaused.value = false
+  platformBannerInteractionPauseUntil = 0
+  platformBannerProgrammaticScrollUntil = 0
+})
+
 watch(
   () => [
     activeStorePresentation.value?.coverGalleryAssetId || '',
@@ -1321,7 +2194,12 @@ watch(
   { immediate: true },
 )
 
+onMounted(() => {
+  startPlatformBannerAutoplay()
+})
+
 onBeforeUnmount(() => {
+  stopPlatformBannerAutoplay()
   galleryStore.releaseAssetPreviewScope(FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID)
   Object.keys(foodImagePreviewMap).forEach((assetId) => {
     delete foodImagePreviewMap[assetId]
@@ -1331,12 +2209,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="h-screen min-h-screen overflow-y-auto overscroll-contain p-4 text-gray-950"
+    class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain p-4 text-gray-950"
     :class="[foodDeliveryShellClass, isStoreMode ? 'pb-6' : '']"
     :style="foodDeliveryShellStyle"
+    @error.capture="handleFoodDeliveryAssetError"
   >
     <div class="mx-auto max-w-md space-y-4">
-      <section v-if="!isStoreMode" class="space-y-5 pt-1" data-testid="food-delivery-platform-top">
+      <section v-if="!isStoreMode && platformPageKey === 'home'" class="space-y-5 pt-1" data-testid="food-delivery-platform-top">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <button
@@ -1353,50 +2232,98 @@ onBeforeUnmount(() => {
                 {{ foodDeliveryTitle }}
               </h1>
             </button>
-            <button
-              type="button"
-              class="mt-4 inline-flex max-w-full items-center gap-2 text-[0.94rem] font-black text-gray-950"
-              data-testid="food-delivery-platform-location"
-              @click="focusPlatformSearch"
-            >
-              <i class="fas fa-location-dot text-[#24bcb7]"></i>
-              <span class="truncate">{{ platformLocationLabel }}</span>
-              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
-            </button>
+            <div class="relative mt-3">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-2.5 text-left"
+                data-testid="food-delivery-platform-location"
+                :aria-expanded="platformAddressMenuOpen"
+                @click="togglePlatformAddressMenu"
+              >
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]">
+                  <i class="fas fa-location-dot text-sm"></i>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[0.62rem] font-black uppercase text-[#159f9a]">{{
+                    t('配送到', 'Deliver to')
+                  }}</span>
+                  <span class="block truncate text-[0.82rem] font-black text-gray-950">{{
+                    platformLocationLabel
+                  }}</span>
+                </span>
+                <i
+                  class="fas shrink-0 text-xs text-gray-500"
+                  :class="platformAddressMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"
+                ></i>
+              </button>
+              <div
+                v-if="platformAddressMenuOpen"
+                class="absolute left-0 top-[calc(100%+0.55rem)] z-40 w-[min(19rem,calc(100vw-2rem))] space-y-1 rounded-[1rem] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
+                data-testid="food-delivery-platform-address-menu"
+              >
+                <button
+                  v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+                  :key="address"
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
+                  :class="platformLocationLabel === address ? 'bg-[#e5fbfa] text-[#128e89]' : 'text-gray-700 hover:bg-gray-50'"
+                  :aria-pressed="platformLocationLabel === address"
+                  :data-testid="`food-delivery-platform-address-${addressIndex}`"
+                  @click="selectPlatformDeliveryAddress(address)"
+                >
+                  <i class="fas fa-location-dot w-4 text-center"></i>
+                  <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
+                  <i v-if="platformLocationLabel === address" class="fas fa-check text-[10px]"></i>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="flex shrink-0 items-center gap-3">
             <button
               type="button"
               class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
               aria-label="Notifications"
+              data-testid="food-delivery-platform-notifications"
+              @click="openPlatformUtilitySheet('notifications')"
             >
               <i class="fas fa-bell text-lg"></i>
             </button>
             <button
               type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
+              class="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
               aria-label="Cart"
-              @click="openCategory(activeCategory.key)"
+              data-testid="food-delivery-platform-cart"
+              @click="openPlatformUtilitySheet('cart')"
             >
               <i class="fas fa-cart-shopping text-lg"></i>
+              <span
+                v-if="foodDeliveryStore.platformCartQuantity > 0"
+                class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
+                data-testid="food-delivery-platform-cart-count"
+              >
+                {{ foodDeliveryStore.platformCartQuantity }}
+              </span>
             </button>
           </div>
         </div>
 
-        <div class="relative pt-7">
-          <div
+        <p
+          class="text-[1.02rem] font-semibold leading-6 text-gray-800"
+          data-testid="food-delivery-platform-greeting"
+        >
+          {{ t('嗨，今天想吃点什么？', 'Hey, what sounds good today?') }}
+        </p>
+
+        <div class="relative pt-5">
+          <button
+            type="button"
             class="relative z-10 flex min-h-[3.45rem] items-center gap-3 rounded-[1.15rem] bg-white px-4 pr-[7.25rem] text-sm font-semibold text-gray-500 shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
             data-testid="food-delivery-platform-search"
+            @click="openPlatformPage('search')"
           >
             <i class="fas fa-magnifying-glass text-xl text-gray-400"></i>
-            <input
-              ref="platformSearchInputRef"
-              v-model="platformSearchQuery"
-              class="min-w-0 flex-1 bg-transparent text-sm font-semibold text-gray-900 outline-none placeholder:text-gray-400"
-              data-testid="food-delivery-platform-search-input"
-              :placeholder="t('搜索美食、菜单、小店名', 'Search food, menu, shop name')"
-            />
-          </div>
+            <span>{{ t('搜索美食、菜单、小店名', 'Search food, menu, shop name') }}</span>
+          </button>
           <div
             class="pointer-events-none absolute right-[-1.45rem] top-[-3.05rem] z-20 h-[8.65rem] w-[10.75rem]"
             aria-hidden="true"
@@ -1467,14 +2394,35 @@ onBeforeUnmount(() => {
       </section>
 
       <div v-if="!isStoreMode" class="space-y-5" data-testid="food-delivery-platform">
-      <section class="space-y-5 food-delivery-platform-redesign" data-testid="food-delivery-pseudo-folder-home">
-        <section class="-mx-4 overflow-hidden" data-testid="food-delivery-platform-banner-rail">
-          <div class="flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+      <section
+        v-if="platformPageKey === 'home'"
+        class="space-y-5 food-delivery-platform-redesign"
+        data-testid="food-delivery-pseudo-folder-home"
+      >
+        <section
+          class="-mx-4 overflow-hidden"
+          :data-active-banner-index="platformActiveBannerIndex"
+          data-testid="food-delivery-platform-banner-rail"
+        >
+          <div
+            ref="platformBannerRailRef"
+            class="flex snap-x gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-testid="food-delivery-platform-banner-scroller"
+            @scroll.passive="handlePlatformBannerRailScroll"
+            @pointerdown="pausePlatformBannerAutoplay"
+            @touchstart.passive="pausePlatformBannerAutoplay"
+            @wheel.passive="pausePlatformBannerAutoplay"
+            @mouseenter="holdPlatformBannerAutoplay"
+            @mouseleave="releasePlatformBannerAutoplay"
+            @focusin="holdPlatformBannerAutoplay"
+            @focusout="releasePlatformBannerAutoplay"
+          >
             <article
               v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
               :key="banner.id"
               class="relative h-[7.8rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] p-4 shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
               :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-entry' : `food-delivery-platform-banner-${banner.id}`"
+              data-platform-banner-slide
             >
               <img
                 v-if="banner.imageUrl"
@@ -1489,8 +2437,13 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 class="absolute inset-0 z-20"
-                :aria-label="languageBase === 'zh' ? banner.ctaZh : banner.ctaEn"
-                @click="openCategory('nearby')"
+                :aria-label="
+                  banner.id === 'club_free_delivery' && platformBenefitClaimed
+                    ? t('权益已领取', 'Perk claimed')
+                    : languageBase === 'zh' ? banner.ctaZh : banner.ctaEn
+                "
+                :data-testid="`food-delivery-platform-banner-action-${banner.id}`"
+                @click="handlePlatformBanner(banner)"
               ></button>
               <div class="relative z-10 max-w-[61%]">
                 <p class="text-[0.68rem] font-black text-gray-950/65">
@@ -1506,8 +2459,15 @@ onBeforeUnmount(() => {
                   class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.66rem] font-black shadow-sm"
                   :class="banner.chipClass"
                 >
-                  {{ languageBase === 'zh' ? banner.ctaZh : banner.ctaEn }}
-                  <i class="fas fa-chevron-right text-[0.55rem]"></i>
+                  {{
+                    banner.id === 'club_free_delivery' && platformBenefitClaimed
+                      ? t('已领取', 'Claimed')
+                      : languageBase === 'zh' ? banner.ctaZh : banner.ctaEn
+                  }}
+                  <i
+                    class="fas text-[0.55rem]"
+                    :class="banner.id === 'club_free_delivery' && platformBenefitClaimed ? 'fa-check' : 'fa-chevron-right'"
+                  ></i>
                 </span>
               </div>
               <div
@@ -1535,36 +2495,71 @@ onBeforeUnmount(() => {
               </div>
               <span class="absolute bottom-3 right-3 z-30 rounded-full bg-gray-950/70 px-2.5 py-1 text-[0.66rem] font-black text-white backdrop-blur">
                 {{ index + 1 }} / {{ FOOD_PLATFORM_AD_BANNERS.length }}
-                <i class="fas fa-pause ml-1.5 text-[0.52rem]"></i>
               </span>
             </article>
           </div>
+          <div
+            class="mt-1.5 flex h-5 items-center justify-center gap-1"
+            role="group"
+            :aria-label="t('横幅切换', 'Banner navigation')"
+            data-testid="food-delivery-platform-banner-pagination"
+          >
+            <button
+              v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
+              :key="`banner-dot-${banner.id}`"
+              type="button"
+              class="inline-flex h-5 w-6 items-center justify-center"
+              :aria-label="t(`查看第 ${index + 1} 张横幅`, `View banner ${index + 1}`)"
+              :aria-current="platformActiveBannerIndex === index ? 'true' : undefined"
+              :data-testid="`food-delivery-platform-banner-dot-${index}`"
+              @click="scrollPlatformBannerTo(index, { pause: true })"
+            >
+              <span
+                class="h-1.5 rounded-full transition-[width,background-color] duration-200"
+                :class="platformActiveBannerIndex === index ? 'w-4 bg-[#24bcb7]' : 'w-1.5 bg-gray-300'"
+              ></span>
+            </button>
+          </div>
+          <p
+            v-if="platformBenefitClaimed"
+            class="px-4 pt-2 text-xs font-black text-[#128e89]"
+            data-testid="food-delivery-platform-benefit-feedback"
+            aria-live="polite"
+          >
+            {{ t('免配送权益已加入本周平台优惠。', 'Free-delivery perks were added to this week’s platform offers.') }}
+          </p>
         </section>
 
-        <section
-          class="rounded-[1.35rem] bg-white p-3 shadow-[0_18px_42px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
-          data-testid="food-delivery-category-panel"
-        >
-          <span class="sr-only">{{ platformActiveCategoryLabel }}</span>
-          <div class="grid grid-cols-5 gap-2">
+        <section class="space-y-2.5" data-testid="food-delivery-category-panel">
+          <div class="flex items-center justify-between gap-3 px-0.5">
+            <p class="text-xs font-black uppercase text-gray-500">{{ t('快速分类', 'Quick picks') }}</p>
+            <span class="truncate text-[0.68rem] font-bold text-[#159f9a]">{{ platformActiveCategoryLabel }}</span>
+          </div>
+          <div class="grid grid-cols-5 gap-2 px-0.5" data-testid="food-delivery-category-grid">
             <button
               v-for="category in platformCategoryTiles"
               :key="category.key"
               type="button"
-              class="min-h-[4.95rem] rounded-[1rem] bg-gradient-to-br p-1.5 text-center shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.98]"
-              :class="[
-                category.className,
-                category.active ? 'ring-[#22c4bf]/45 shadow-[0_10px_22px_rgba(34,196,191,0.16)]' : '',
-              ]"
+              class="flex min-w-0 flex-col items-center gap-2 text-center transition active:scale-[0.97]"
+              :aria-pressed="category.active"
               :data-testid="`food-delivery-category-${category.key}`"
               @click="openPlatformCategory(category)"
             >
               <span
-                class="mx-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-[1.05rem] shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]"
+                class="inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
+                :class="category.active
+                  ? 'bg-none bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.24)] ring-[#24bcb7]/20'
+                  : `${category.className} ring-black/[0.04]`"
+                :data-asset-slot="`platform-category-icon-${category.key}`"
+                :data-required-asset="category.requiredAsset"
+                :data-testid="`food-delivery-category-icon-${category.key}`"
               >
                 <i :class="category.icon"></i>
               </span>
-              <span class="mt-1.5 block truncate text-[0.64rem] font-black text-gray-950">{{ category.label }}</span>
+              <span
+                class="w-full break-words text-[0.68rem] font-black leading-4"
+                :class="category.active ? 'text-[#128e89]' : 'text-gray-600'"
+              >{{ category.label }}</span>
             </button>
           </div>
         </section>
@@ -1573,69 +2568,111 @@ onBeforeUnmount(() => {
           <div class="flex items-end justify-between gap-3">
             <div>
               <p class="text-[1.45rem] font-black leading-tight text-gray-950">
-                {{ t('今天吃什么？', 'What to eat today?') }}
+                {{ platformMerchantSectionTitle }}
               </p>
               <span class="hidden">Local data</span>
-              <p class="mt-1 text-xs font-semibold text-gray-500">
-                {{ platformActiveCategoryLabel }} · {{ platformMerchantMenuItemCount }} {{ t('个平台菜品', 'platform dishes') }}
+              <p
+                class="mt-1 text-xs font-semibold text-gray-500"
+                data-testid="food-delivery-platform-merchant-summary"
+                aria-live="polite"
+              >
+                {{ platformMerchantSectionMeta }}
               </p>
             </div>
             <button
               type="button"
               class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
-              @click="openCategory(activeCategory.key)"
+              :aria-expanded="platformMerchantListExpanded"
+              data-testid="food-delivery-platform-view-all"
+              @click="platformMerchantListExpanded = !platformMerchantListExpanded"
             >
-              {{ t('全部查看', 'View all') }}
-              <i class="fas fa-chevron-right text-[0.62rem]"></i>
+              {{ platformMerchantListExpanded ? t('收起', 'Show less') : t('全部查看', 'View all') }}
+              <i
+                class="fas text-[0.62rem]"
+                :class="platformMerchantListExpanded ? 'fa-chevron-up' : 'fa-chevron-right'"
+              ></i>
             </button>
           </div>
 
-          <div class="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3" data-testid="food-delivery-shop-app-list">
+          <div
+            class="-mx-4 px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            :class="
+              platformMerchantListExpanded
+                ? 'grid grid-cols-1 gap-3'
+                : 'flex snap-x gap-3 overflow-x-auto'
+            "
+            data-testid="food-delivery-shop-app-list"
+            :data-recommendation-mode="platformRecommendationMode ? 'random-three' : 'full-results'"
+          >
             <article
               v-for="merchant in platformFeaturedMerchants"
               :key="merchant.id"
-              class="w-[12.6rem] shrink-0"
+              class="relative transition"
+              :class="platformMerchantListExpanded ? 'w-full' : 'w-[17rem] shrink-0 snap-start'"
               :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
               :data-platform-category="merchant.category"
             >
               <button
                 type="button"
-                class="group block w-full text-left"
+                class="group block w-full rounded-[1.1rem] bg-white p-2.5 text-left shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
                 :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
                 @click="selectPlatformMerchant(merchant)"
               >
                 <div
-                  class="relative h-28 overflow-hidden rounded-[1rem] bg-gray-100 shadow-[0_14px_28px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03]"
+                  class="relative h-32 overflow-hidden rounded-[0.85rem] bg-gray-100"
+                  :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
+                  :data-required-asset="merchant.requiredAsset || undefined"
                   :data-testid="`food-delivery-platform-merchant-card-${merchant.id}`"
+                  :data-merchant-visual-type="merchant.visualType || 'food-photo'"
                 >
                   <img
                     v-if="merchant.imageUrl"
                     :src="merchant.imageUrl"
                     :alt="merchant.imageAlt || merchant.name"
-                    class="relative z-10 h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
+                    class="relative z-10 h-full w-full transition duration-300"
+                    :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-5' : 'object-cover group-active:scale-[1.03]'"
                     @error="$event.currentTarget.style.display = 'none'"
                   />
                   <div
                     class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br text-4xl"
                     :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
                   >
-                    <i :class="merchant.icon || 'fas fa-store'"></i>
+                    <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-xl font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
+                    <i v-else :class="merchant.icon || 'fas fa-store'"></i>
                   </div>
                   <span class="absolute left-2 top-2 z-20 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white shadow-sm">
                     {{ merchant.badge }}
                   </span>
-                  <span class="absolute bottom-2 right-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur">
-                    <i class="fas fa-heart text-[0.74rem]"></i>
+                </div>
+                <p class="mt-3 truncate text-[0.98rem] font-black leading-tight text-gray-950">{{ merchant.name }}</p>
+                <p class="mt-1 truncate text-xs font-semibold text-gray-500">
+                  {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-black text-gray-600">
+                  <span class="inline-flex items-center gap-1.5">
+                    <i class="fas fa-star text-amber-500"></i>
+                    {{ merchant.rating.toFixed(1) }}
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <i class="fas fa-motorcycle text-[#24bcb7]"></i>
+                    {{ platformDeliveryFeeLabel(merchant) }}
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <i class="far fa-clock text-[#ff7a37]"></i>
+                    {{ merchant.deliveryEtaMinutes }} min
                   </span>
                 </div>
-                <p class="mt-3 truncate text-base font-black leading-tight text-gray-950">{{ merchant.name }}</p>
-                <p class="mt-1 text-sm font-semibold text-gray-600">
-                  <span class="text-amber-500">★</span>
-                  {{ merchant.rating.toFixed(1) }} · {{ merchant.deliveryEtaMinutes }} min
-                </p>
-                <p class="mt-1 truncate text-sm font-semibold text-gray-500">
-                  {{ displayMoney(merchant.deliveryFee) }} · {{ merchant.cuisine }}
-                </p>
+              </button>
+              <button
+                type="button"
+                class="absolute right-4 top-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur transition active:scale-95"
+                :class="isPlatformMerchantSaved(merchant.id) ? 'bg-rose-500 text-white' : 'bg-black/35 text-white'"
+                :aria-label="isPlatformMerchantSaved(merchant.id) ? t('取消收藏', 'Remove saved shop') : t('收藏小店', 'Save shop')"
+                :aria-pressed="isPlatformMerchantSaved(merchant.id)"
+                :data-testid="`food-delivery-platform-save-${merchant.id}`"
+                @click="togglePlatformMerchantSaved(merchant)"
+              >
+                <i class="fas fa-heart text-xs"></i>
               </button>
             </article>
             <div
@@ -1643,12 +2680,1047 @@ onBeforeUnmount(() => {
               class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
               data-testid="food-delivery-shop-app-empty"
             >
-              {{ t('平台内暂时没有匹配的小店。', 'No matching platform merchants right now.') }}
+              {{ platformMerchantEmptyLabel }}
             </div>
           </div>
         </section>
 
-        <nav class="rounded-[1.4rem] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)] ring-1 ring-black/5 backdrop-blur">
+      </section>
+
+      <section
+        v-else-if="platformPageKey === 'campaign'"
+        class="space-y-5"
+        data-testid="food-delivery-platform-campaign-page"
+        :data-campaign-id="activePlatformCampaign?.id || platformCampaignKey"
+      >
+        <header class="flex items-center justify-between gap-3 pt-1">
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-campaign-back"
+              :aria-label="t('返回首页', 'Back home')"
+              @click="openPlatformPage('home')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台活动', 'Platform campaign') }}</p>
+              <h2 class="truncate text-2xl font-black text-gray-950">
+                {{ activePlatformCampaign ? (languageBase === 'zh' ? activePlatformCampaign.eyebrowZh : activePlatformCampaign.eyebrowEn) : t('活动', 'Campaign') }}
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+            :aria-label="t('购物车', 'Cart')"
+            @click="openPlatformUtilitySheet('cart')"
+          >
+            <i class="fas fa-cart-shopping"></i>
+            <span
+              v-if="foodDeliveryStore.platformCartQuantity > 0"
+              class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
+            >
+              {{ foodDeliveryStore.platformCartQuantity }}
+            </span>
+          </button>
+        </header>
+
+        <template v-if="activePlatformCampaign">
+          <section
+            class="relative overflow-hidden rounded-[1.35rem] bg-[#5edbd5] p-5 shadow-[0_18px_38px_rgba(15,118,110,0.16)] ring-1 ring-black/5"
+            :class="activePlatformCampaign.kind === 'lottery' ? 'min-h-[24rem]' : 'min-h-[10.5rem]'"
+            data-testid="food-delivery-platform-campaign-hero"
+            :data-required-asset="activePlatformCampaign.posterRequiredAsset || undefined"
+          >
+            <img
+              :src="activePlatformCampaign.kind === 'lottery' ? activePlatformCampaign.posterImageUrl : activePlatformCampaign.imageUrl"
+              alt=""
+              class="absolute inset-0 h-full w-full object-cover"
+              draggable="false"
+              @error="handlePlatformCampaignPosterImageError"
+            />
+            <div class="absolute inset-0 bg-gradient-to-r" :class="activePlatformCampaign.className"></div>
+            <div
+              class="absolute inset-0"
+              :class="activePlatformCampaign.kind === 'lottery' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.5))]' : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(15,23,42,0.1))]'"
+            ></div>
+            <div
+              class="relative z-10"
+              :class="activePlatformCampaign.kind === 'lottery' ? 'max-w-[78%] pt-44' : 'max-w-[64%]'"
+            >
+              <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#128e89] shadow-sm">
+                <i :class="activePlatformCampaign.icon"></i>
+              </span>
+              <p v-if="activePlatformCampaign.kind === 'lottery'" class="mt-3 text-[10px] font-black uppercase text-white/75">
+                {{ languageBase === 'zh' ? activePlatformCampaign.posterEyebrowZh : activePlatformCampaign.posterEyebrowEn }}
+              </p>
+              <h3
+                class="font-black leading-tight"
+                :class="activePlatformCampaign.kind === 'lottery' ? 'mt-1 text-[1.8rem] text-white' : 'mt-3 text-[1.35rem] text-gray-950'"
+              >
+                {{ languageBase === 'zh' ? activePlatformCampaign.titleZh : activePlatformCampaign.titleEn }}
+              </h3>
+              <p
+                class="mt-2 text-[0.72rem] font-bold leading-4"
+                :class="activePlatformCampaign.kind === 'lottery' ? 'text-white/75' : 'text-gray-950/65'"
+              >
+                {{ languageBase === 'zh' ? activePlatformCampaign.descZh : activePlatformCampaign.descEn }}
+              </p>
+            </div>
+          </section>
+
+          <section v-if="activePlatformCampaign.kind === 'membership'" class="space-y-4" data-testid="food-delivery-platform-campaign-membership">
+            <div class="overflow-hidden rounded-[1.15rem] bg-gray-950 p-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.18)]">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('SchatPhone 外卖会员', 'SchatPhone Delivery Club') }}</p>
+                  <p class="mt-2 text-xl font-black">{{ t('本周免配送通行证', 'Weekly free-delivery pass') }}</p>
+                </div>
+                <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-white"><i class="fas fa-ticket"></i></span>
+              </div>
+              <p class="mt-4 max-w-[19rem] text-xs font-semibold leading-5 text-white/65">
+                {{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}
+              </p>
+              <div class="mt-4 grid grid-cols-3 gap-2" data-testid="food-delivery-platform-campaign-highlights">
+                <div v-for="highlight in activePlatformCampaign.highlights" :key="highlight.titleEn" class="border-l border-white/15 pl-2 first:border-l-0 first:pl-0">
+                  <i :class="highlight.icon" class="text-xs text-[#74e4de]"></i>
+                  <p class="mt-1 text-[11px] font-black leading-4">{{ languageBase === 'zh' ? highlight.titleZh : highlight.titleEn }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2" data-testid="food-delivery-platform-campaign-merchants">
+              <div class="flex items-center justify-between gap-3 px-0.5">
+                <p class="text-base font-black text-gray-950">{{ t('本周适用小店', 'Eligible this week') }}</p>
+                <span class="text-[0.68rem] font-black text-[#159f9a]">{{ platformCampaignMerchants.length }} {{ t('家', 'shops') }}</span>
+              </div>
+              <button
+                v-for="merchant in platformCampaignMerchants"
+                :key="merchant.id"
+                type="button"
+                class="flex w-full items-center gap-3 rounded-[1rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                :data-testid="`food-delivery-platform-campaign-merchant-${merchant.id}`"
+                @click="selectPlatformMerchant(merchant)"
+              >
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-[#e5fbfa] text-[#159f9a]"><i :class="merchant.icon"></i></span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
+                  <span class="mt-0.5 block text-[0.68rem] font-bold text-gray-500">{{ platformDeliveryFeeLabel(merchant) }} · {{ merchant.deliveryEtaMinutes }} min</span>
+                </span>
+                <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+              </button>
+            </div>
+
+            <button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-[#24bcb7] px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(36,188,183,0.2)] active:scale-[0.99]" data-testid="food-delivery-platform-campaign-primary" @click="handlePlatformCampaignPrimary">
+              <i :class="platformBenefitClaimed ? 'fas fa-store' : 'fas fa-ticket'"></i>
+              {{ platformBenefitClaimed ? (languageBase === 'zh' ? activePlatformCampaign.claimedPrimaryZh : activePlatformCampaign.claimedPrimaryEn) : (languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn) }}
+            </button>
+            <p v-if="platformBenefitClaimed" class="text-center text-xs font-black leading-5 text-[#128e89]" data-testid="food-delivery-platform-benefit-feedback" aria-live="polite">
+              {{ t('免配送权益已加入本周平台优惠，可以开始选店。', 'The free-delivery perk is ready. Choose an eligible shop.') }}
+            </p>
+          </section>
+
+          <section v-else-if="activePlatformCampaign.kind === 'lottery'" class="space-y-5" data-testid="food-delivery-platform-campaign-lottery">
+            <div class="flex items-center justify-between gap-3 border-y border-orange-200 py-3">
+              <span class="text-xs font-black text-orange-700">{{ languageBase === 'zh' ? activePlatformCampaign.scheduleZh : activePlatformCampaign.scheduleEn }}</span>
+              <span class="inline-flex items-center gap-1 text-[10px] font-black text-gray-500"><i class="fas fa-gift text-rose-500"></i>{{ t('周末福利', 'Weekend rewards') }}</span>
+            </div>
+
+            <div data-testid="food-delivery-platform-campaign-benefits">
+              <div class="flex items-end justify-between gap-3 pb-2">
+                <div>
+                  <p class="text-[10px] font-black uppercase text-orange-600">{{ t('本期福利池', 'Reward pool') }}</p>
+                  <h3 class="mt-1 text-lg font-black text-gray-950">{{ t('三种好运，随机掉落一种', 'One of three perks will drop') }}</h3>
+                </div>
+                <span class="text-2xl font-black text-orange-200">03</span>
+              </div>
+              <div
+                v-for="benefit in activePlatformCampaign.benefits"
+                :key="benefit.titleEn"
+                class="flex items-center gap-3 border-b border-gray-200 py-3 last:border-b-0"
+              >
+                <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600 ring-1 ring-orange-100">
+                  <i :class="benefit.icon"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-black text-gray-950">{{ languageBase === 'zh' ? benefit.titleZh : benefit.titleEn }}</span>
+                  <span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ languageBase === 'zh' ? benefit.descZh : benefit.descEn }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="-mx-4 bg-gray-950 px-4 py-6 text-center text-white" data-testid="food-delivery-platform-campaign-draw-zone">
+              <p class="mx-auto max-w-[19rem] text-xs font-semibold leading-5 text-white/60">
+                {{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}
+              </p>
+              <button
+                type="button"
+                class="mx-auto mt-5 flex h-32 w-32 flex-col items-center justify-center rounded-full border-[6px] border-white/15 text-white shadow-[0_18px_42px_rgba(249,115,22,0.36)] transition active:scale-95 disabled:cursor-default disabled:active:scale-100"
+                :class="platformCampaignPrize ? 'bg-[#159f9a]' : 'bg-[#f97316]'"
+                :disabled="!!platformCampaignPrize"
+                data-testid="food-delivery-platform-campaign-primary"
+                @click="handlePlatformCampaignPrimary"
+              >
+                <i :class="platformCampaignPrize?.icon || 'fas fa-gift'" class="text-2xl"></i>
+                <span class="mt-2 px-3 text-xs font-black leading-4">
+                  {{ platformCampaignPrize ? (languageBase === 'zh' ? activePlatformCampaign.drawnPrimaryZh : activePlatformCampaign.drawnPrimaryEn) : (languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn) }}
+                </span>
+              </button>
+              <div v-if="platformCampaignPrize" class="mt-5" data-testid="food-delivery-platform-campaign-prize" aria-live="polite">
+                <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('你的周末签', 'Your weekend perk') }}</p>
+                <p class="mt-1 text-2xl font-black">{{ languageBase === 'zh' ? platformCampaignPrize.titleZh : platformCampaignPrize.titleEn }}</p>
+                <p class="mt-2 text-xs font-semibold text-white/65">{{ languageBase === 'zh' ? platformCampaignPrize.descZh : platformCampaignPrize.descEn }}</p>
+              </div>
+              <p v-else class="mt-4 text-[10px] font-bold text-white/45">{{ t('点击抽取后即锁定本次结果', 'Tap once to lock this event result') }}</p>
+            </div>
+          </section>
+
+          <section v-else class="space-y-4" data-testid="food-delivery-platform-campaign-menu-guide">
+            <div class="flex items-end justify-between gap-3 border-b-2 border-gray-950 pb-3">
+              <div>
+                <p class="text-[10px] font-black uppercase text-sky-700">{{ languageBase === 'zh' ? activePlatformCampaign.editorZh : activePlatformCampaign.editorEn }}</p>
+                <p class="mt-1 text-lg font-black text-gray-950">{{ t('不是店铺榜，是今天值得点的菜', 'Dishes worth ordering today') }}</p>
+              </div>
+              <i class="fas fa-utensils text-xl text-sky-600"></i>
+            </div>
+            <p class="text-sm font-semibold leading-6 text-gray-600">{{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}</p>
+            <div class="space-y-2" data-testid="food-delivery-platform-campaign-menu-picks">
+              <button
+                v-for="(pick, pickIndex) in platformCampaignMenuPicks"
+                :key="`${pick.merchantId}-${pick.itemIndex}`"
+                type="button"
+                class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white p-2.5 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                :data-testid="`food-delivery-platform-campaign-menu-${pick.merchantId}-${pick.itemIndex}`"
+                @click="selectPlatformMerchant(pick.merchant)"
+              >
+                <span class="relative h-16 w-16 shrink-0 overflow-hidden rounded-[0.75rem] bg-gray-100" :data-required-asset="platformMenuItemAssetPath(pick.merchant, pick.itemIndex)">
+                  <img :src="platformMenuItemImageUrl(pick.merchant, pick.item, pick.itemIndex)" :alt="pick.item.title" class="h-full w-full object-cover" @error="handlePlatformMenuImageError" />
+                  <span class="absolute left-1.5 top-1.5 rounded bg-gray-950/75 px-1.5 py-0.5 text-[9px] font-black text-white">0{{ pickIndex + 1 }}</span>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-[10px] font-black text-sky-700">{{ languageBase === 'zh' ? pick.tagZh : pick.tagEn }}</span>
+                  <span class="mt-1 block truncate text-sm font-black text-gray-950">{{ pick.item.title }}</span>
+                  <span class="mt-1 block truncate text-[0.68rem] font-semibold text-gray-500">{{ pick.merchant.name }} · {{ displayMoney(pick.item.price, pick.merchant.currency) }}</span>
+                </span>
+                <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+              </button>
+            </div>
+            <button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(15,23,42,0.16)] active:scale-[0.99]" data-testid="food-delivery-platform-campaign-primary" @click="handlePlatformCampaignPrimary">
+              <i class="fas fa-bowl-food"></i>{{ languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn }}
+            </button>
+          </section>
+        </template>
+
+        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-campaign-missing">
+          <i class="fas fa-ticket text-2xl text-gray-300"></i>
+          <p class="mt-3 text-sm font-black text-gray-900">{{ t('这个活动暂时不可用', 'This campaign is unavailable') }}</p>
+          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
+            {{ t('返回首页', 'Back home') }}
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-else-if="platformPageKey === 'search'"
+        class="space-y-5"
+        data-testid="food-delivery-platform-search-page"
+      >
+        <header class="flex items-center justify-between gap-3 pt-1">
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-page-back"
+              :aria-label="t('返回首页', 'Back home')"
+              @click="openPlatformPage('home')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('全平台查找', 'Platform search') }}</p>
+              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('搜索', 'Search') }}</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-cart"
+            :aria-label="t('购物车', 'Cart')"
+            @click="openPlatformUtilitySheet('cart')"
+          >
+            <i class="fas fa-cart-shopping"></i>
+            <span
+              v-if="foodDeliveryStore.platformCartQuantity > 0"
+              class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
+            >
+              {{ foodDeliveryStore.platformCartQuantity }}
+            </span>
+          </button>
+        </header>
+
+        <div class="rounded-[1.35rem] bg-[#24bcb7] p-4 text-white shadow-[0_16px_36px_rgba(36,188,183,0.2)]">
+          <label class="text-xs font-black" for="food-delivery-platform-search-page-input">
+            {{ t('今天想找什么？', 'What are you looking for?') }}
+          </label>
+          <div class="mt-3 flex min-h-12 items-center gap-3 rounded-[1rem] bg-white px-4 text-gray-900 shadow-sm">
+            <i class="fas fa-magnifying-glass text-gray-400"></i>
+            <input
+              id="food-delivery-platform-search-page-input"
+              ref="platformSearchInputRef"
+              v-model="platformSearchQuery"
+              class="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400"
+              data-testid="food-delivery-platform-search-input"
+              :placeholder="t('店名、菜系或菜品', 'Shop, cuisine, or dish')"
+              @click="focusPlatformSearch"
+            />
+            <button
+              v-if="platformSearchQuery"
+              type="button"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              data-testid="food-delivery-platform-search-clear"
+              :aria-label="t('清空搜索', 'Clear search')"
+              @click="platformSearchQuery = ''"
+            >
+              <i class="fas fa-xmark text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2" data-testid="food-delivery-platform-search-suggestions">
+          <button
+            v-for="suggestion in [t('面馆', 'Noodles'), t('咖啡', 'Coffee'), t('蒸点', 'Dim sum'), t('咖喱', 'Curry')]"
+            :key="suggestion"
+            type="button"
+            class="rounded-full bg-white px-3 py-2 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+            @click="platformSearchQuery = suggestion"
+          >
+            {{ suggestion }}
+          </button>
+        </div>
+
+        <section class="space-y-3" data-testid="food-delivery-platform-search-results">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <p class="text-lg font-black text-gray-950">{{ t('搜索结果', 'Results') }}</p>
+              <p class="mt-1 text-xs font-semibold text-gray-500">
+                {{ platformMatchingMerchants.length }} {{ t('家匹配小店', 'matching shops') }}
+              </p>
+            </div>
+          </div>
+          <article
+            v-for="merchant in platformFeaturedMerchants"
+            :key="merchant.id"
+            class="flex items-center gap-3 rounded-[1.1rem] bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
+            :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
+          >
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 items-center gap-3 text-left"
+              :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
+              @click="selectPlatformMerchant(merchant)"
+            >
+              <span
+                class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gradient-to-br text-2xl"
+                :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+                :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
+                :data-required-asset="merchant.requiredAsset || undefined"
+                :data-merchant-visual-type="merchant.visualType || 'food-photo'"
+              >
+                <img
+                  v-if="merchant.imageUrl"
+                  :src="merchant.imageUrl"
+                  :alt="merchant.imageAlt || merchant.name"
+                  class="absolute inset-0 z-10 h-full w-full"
+                  :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-3' : 'object-cover'"
+                  @error="$event.currentTarget.style.display = 'none'"
+                />
+                <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-sm font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
+                <i v-else :class="merchant.icon || 'fas fa-store'"></i>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
+                <span class="mt-1 block truncate text-xs font-semibold text-gray-500">
+                  {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
+                </span>
+                <span class="mt-2 flex items-center gap-3 text-[0.68rem] font-black text-gray-600">
+                  <span><i class="fas fa-star mr-1 text-amber-500"></i>{{ merchant.rating.toFixed(1) }}</span>
+                  <span><i class="far fa-clock mr-1 text-[#ff7a37]"></i>{{ merchant.deliveryEtaMinutes }} min</span>
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+              :class="isPlatformMerchantSaved(merchant.id) ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-500'"
+              :aria-label="isPlatformMerchantSaved(merchant.id) ? t('取消收藏', 'Remove saved shop') : t('收藏小店', 'Save shop')"
+              :aria-pressed="isPlatformMerchantSaved(merchant.id)"
+              :data-testid="`food-delivery-platform-save-${merchant.id}`"
+              @click="togglePlatformMerchantSaved(merchant)"
+            >
+              <i class="fas fa-heart text-xs"></i>
+            </button>
+          </article>
+          <div
+            v-if="platformFeaturedMerchants.length === 0"
+            class="rounded-[1.2rem] border border-dashed border-teal-200 bg-white p-6 text-center text-xs font-bold leading-5 text-teal-700"
+          >
+            {{ t('没有找到匹配的小店，换个关键词试试。', 'No shops matched. Try another search.') }}
+          </div>
+        </section>
+      </section>
+
+      <section v-else-if="platformPageKey === 'saved'" class="space-y-5" data-testid="food-delivery-platform-saved-page">
+        <header class="flex items-center justify-between gap-3 pt-1">
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-page-back"
+              :aria-label="t('返回首页', 'Back home')"
+              @click="openPlatformPage('home')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-rose-500">{{ t('你的口味清单', 'Your shortlist') }}</p>
+              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('收藏小店', 'Saved shops') }}</h2>
+            </div>
+          </div>
+          <span class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-rose-50 px-3 text-sm font-black text-rose-500">
+            {{ platformSavedMerchantIds.length }}
+          </span>
+        </header>
+
+        <div class="flex items-center gap-4 rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
+          <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
+            <i class="fas fa-heart"></i>
+          </span>
+          <div>
+            <p class="text-sm font-black">{{ t('想吃时不用重新找', 'Ready when cravings return') }}</p>
+            <p class="mt-1 text-xs font-semibold leading-5 text-white/65">
+              {{ t('收藏后会整齐留在这里，想吃时一眼就能找到。', 'Saved shops stay neatly within reach whenever cravings return.') }}
+            </p>
+          </div>
+        </div>
+
+        <div v-if="platformFeaturedMerchants.length > 0" class="grid grid-cols-2 gap-3" data-testid="food-delivery-platform-saved-grid">
+          <article
+            v-for="merchant in platformFeaturedMerchants"
+            :key="merchant.id"
+            class="relative min-w-0 rounded-[1rem] bg-white p-2 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
+            :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
+          >
+            <button
+              type="button"
+              class="block w-full text-left"
+              :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
+              @click="selectPlatformMerchant(merchant)"
+            >
+              <span
+                class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[0.75rem] bg-gradient-to-br text-3xl"
+                :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+                :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
+                :data-required-asset="merchant.requiredAsset || undefined"
+                :data-merchant-visual-type="merchant.visualType || 'food-photo'"
+              >
+                <img
+                  v-if="merchant.imageUrl"
+                  :src="merchant.imageUrl"
+                  :alt="merchant.imageAlt || merchant.name"
+                  class="absolute inset-0 z-10 h-full w-full"
+                  :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-4' : 'object-cover'"
+                  @error="$event.currentTarget.style.display = 'none'"
+                />
+                <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-lg font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
+                <i v-else :class="merchant.icon || 'fas fa-store'"></i>
+              </span>
+              <span class="mt-2 block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
+              <span class="mt-1 block truncate text-[0.68rem] font-bold text-gray-500">
+                {{ merchant.cuisine }} · {{ merchant.deliveryEtaMinutes }} min
+              </span>
+            </button>
+            <button
+              type="button"
+              class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm"
+              :aria-label="t('取消收藏', 'Remove saved shop')"
+              aria-pressed="true"
+              :data-testid="`food-delivery-platform-save-${merchant.id}`"
+              @click="togglePlatformMerchantSaved(merchant)"
+            >
+              <i class="fas fa-heart text-[10px]"></i>
+            </button>
+          </article>
+        </div>
+        <div
+          v-else
+          class="rounded-[1.3rem] border border-dashed border-rose-200 bg-white p-7 text-center"
+          data-testid="food-delivery-saved-empty"
+        >
+          <i class="far fa-heart text-2xl text-rose-300"></i>
+          <p class="mt-3 text-sm font-black text-gray-800">{{ t('还没有收藏小店', 'No saved shops yet') }}</p>
+          <button
+            type="button"
+            class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+            data-testid="food-delivery-saved-browse"
+            @click="openPlatformPage('home')"
+          >
+            {{ t('返回首页发现', 'Discover shops') }}
+          </button>
+        </div>
+      </section>
+
+      <section v-else-if="platformPageKey === 'profile'" class="space-y-5" data-testid="food-delivery-platform-profile-page">
+        <header class="flex items-center justify-between gap-3 pt-1">
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-profile-back"
+              :aria-label="t('返回首页', 'Back home')"
+              @click="openPlatformPage('home')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台账户', 'Platform account') }}</p>
+              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('我的外卖', 'My delivery') }}</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-profile-notifications"
+            :aria-label="t('平台消息', 'Platform updates')"
+            @click="openPlatformUtilitySheet('notifications')"
+          >
+            <i class="fas fa-bell"></i>
+          </button>
+        </header>
+
+        <section class="overflow-hidden rounded-[1.25rem] bg-gray-950 p-5 text-white shadow-[0_18px_38px_rgba(15,23,42,0.2)]" data-testid="food-delivery-platform-profile-summary">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('尝鲜会员', 'Taster member') }}</p>
+              <h3 class="mt-2 text-xl font-black">{{ t('今天也要好好吃饭', 'Make today a good meal') }}</h3>
+              <p class="mt-2 text-xs font-semibold leading-5 text-white/60">{{ t('订单、收藏、地址与配送服务都从这里进入。', 'Orders, saved shops, addresses, and delivery help all start here.') }}</p>
+            </div>
+            <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-xl"><i class="fas fa-face-smile"></i></span>
+          </div>
+          <div class="mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-4">
+            <div>
+              <p class="text-xl font-black">{{ foodDeliveryStore.platformOrderCount }}</p>
+              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('平台订单', 'Orders') }}</p>
+            </div>
+            <div>
+              <p class="text-xl font-black">{{ platformSavedMerchantIds.length }}</p>
+              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('收藏小店', 'Saved') }}</p>
+            </div>
+            <div>
+              <p class="text-xl font-black">1</p>
+              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('本周权益', 'Weekly perk') }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-3" data-testid="food-delivery-platform-profile-activity">
+          <div class="flex items-center justify-between gap-3 px-0.5">
+            <h3 class="text-base font-black text-gray-950">{{ t('我的活动', 'My activity') }}</h3>
+            <span class="text-[0.68rem] font-bold text-gray-400">{{ t('平台内记录', 'Platform only') }}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" class="min-h-[6.8rem] rounded-[1rem] bg-[#e8fbfa] p-4 text-left text-[#117f7b] shadow-sm ring-1 ring-[#24bcb7]/10 transition active:scale-[0.98]" data-testid="food-delivery-platform-profile-orders" @click="openPlatformPage('orders')">
+              <i class="fas fa-receipt text-lg"></i>
+              <p class="mt-4 text-sm font-black">{{ t('过往订单', 'Past orders') }}</p>
+              <p class="mt-1 text-[10px] font-bold opacity-65">{{ t('查看进度与再次点单', 'Track and reorder') }}</p>
+            </button>
+            <button type="button" class="min-h-[6.8rem] rounded-[1rem] bg-rose-50 p-4 text-left text-rose-700 shadow-sm ring-1 ring-rose-100 transition active:scale-[0.98]" data-testid="food-delivery-platform-profile-saved" @click="openPlatformPage('saved')">
+              <i class="fas fa-heart text-lg"></i>
+              <p class="mt-4 text-sm font-black">{{ t('收藏小店', 'Saved shops') }}</p>
+              <p class="mt-1 text-[10px] font-bold opacity-65">{{ t('回到常点与想吃清单', 'Return to favorites') }}</p>
+            </button>
+          </div>
+        </section>
+
+        <section class="space-y-3" data-testid="food-delivery-platform-profile-addresses">
+          <div class="px-0.5">
+            <h3 class="text-base font-black text-gray-950">{{ t('常用配送地址', 'Delivery addresses') }}</h3>
+            <p class="mt-1 text-xs font-semibold text-gray-500">{{ platformLocationLabel }}</p>
+          </div>
+          <div class="space-y-2">
+            <button
+              v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+              :key="address"
+              type="button"
+              class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+              :class="platformLocationLabel === address ? 'text-[#128e89]' : 'text-gray-700'"
+              :aria-pressed="platformLocationLabel === address"
+              :data-testid="`food-delivery-platform-profile-address-${addressIndex}`"
+              @click="selectPlatformDeliveryAddress(address)"
+            >
+              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full" :class="platformLocationLabel === address ? 'bg-[#e5fbfa]' : 'bg-gray-100'"><i class="fas fa-location-dot text-xs"></i></span>
+              <span class="min-w-0 flex-1 text-xs font-black leading-5">{{ address }}</span>
+              <i :class="platformLocationLabel === address ? 'fas fa-check' : 'fas fa-chevron-right'" class="text-[10px]"></i>
+            </button>
+          </div>
+        </section>
+
+        <section class="space-y-2" data-testid="food-delivery-platform-profile-services">
+          <h3 class="px-0.5 text-base font-black text-gray-950">{{ t('会员与服务', 'Membership and service') }}</h3>
+          <button type="button" class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left" data-testid="food-delivery-platform-profile-membership" @click="openPlatformCampaign('club_free_delivery')">
+            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-amber-50 text-amber-700"><i class="fas fa-crown"></i></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('平台会员', 'Platform membership') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('查看免配送权益和适用小店', 'See free-delivery perks and eligible shops') }}</span></span>
+            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+          </button>
+          <button type="button" class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left" data-testid="food-delivery-platform-profile-delivery-support" @click="openPlatformPage('orders')">
+            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-sky-50 text-sky-700"><i class="fas fa-headset"></i></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('配送与沟通', 'Delivery and contact') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('从配送中的订单联系骑手或小店', 'Contact the rider or shop from an active order') }}</span></span>
+            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+          </button>
+          <button type="button" class="flex w-full items-center gap-3 py-3 text-left" data-testid="food-delivery-platform-profile-updates" @click="openPlatformUtilitySheet('notifications')">
+            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-violet-50 text-violet-700"><i class="fas fa-bell"></i></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('消息与优惠', 'Updates and offers') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('查看权益、营业和配送提醒', 'Review perks, openings, and delivery updates') }}</span></span>
+            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+          </button>
+        </section>
+      </section>
+
+      <section
+        v-else-if="platformPageKey === 'checkout'"
+        class="space-y-4"
+        data-testid="food-delivery-platform-checkout-page"
+      >
+        <header class="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-checkout-back"
+            :aria-label="t('返回购物车', 'Back to cart')"
+            @click="returnToPlatformCart"
+          >
+            <i class="fas fa-chevron-left text-sm"></i>
+          </button>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('确认后下单', 'Review and place') }}</p>
+            <h2 class="truncate text-2xl font-black text-gray-950">{{ t('确认订单', 'Review order') }}</h2>
+          </div>
+        </header>
+
+        <template v-if="foodDeliveryStore.platformCartItems.length > 0 && platformCartMerchant">
+          <section class="overflow-hidden rounded-[1.35rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
+            <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#71d9d5]">{{ t('本次用餐', 'Your order') }}</p>
+                <h3 class="mt-1 truncate text-xl font-black">{{ platformCartMerchant.name }}</h3>
+                <p class="mt-2 text-xs font-semibold leading-5 text-white/60">
+                  {{ t(`共 ${foodDeliveryStore.platformCartQuantity} 件，预计 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`, `${foodDeliveryStore.platformCartQuantity} items · about ${platformCartMerchant.deliveryEtaMinutes} min`) }}
+                </p>
+              </div>
+              <div
+                class="flex h-[6.5rem] w-[6.5rem] items-center justify-center overflow-hidden"
+                data-asset-slot="platform-checkout-takeout-bag"
+                data-required-asset="platform/orders/platform-checkout-takeout-bag-01.png"
+              >
+                <img
+                  :src="platformMissingAssetPlaceholderUrl"
+                  :alt="t('待补结算页素材', 'Checkout artwork pending')"
+                  class="h-[5.5rem] w-[5.5rem] object-contain"
+                  data-asset-placeholder
+                />
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('配送地址', 'Delivery address') }}</p>
+                <p class="mt-1 text-sm font-black leading-5 text-gray-950" data-testid="food-delivery-platform-checkout-address">
+                  {{ platformLocationLabel }}
+                </p>
+              </div>
+              <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]">
+                <i class="fas fa-location-dot"></i>
+              </span>
+            </div>
+            <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button
+                v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+                :key="address"
+                type="button"
+                class="shrink-0 rounded-full px-3 py-2 text-[11px] font-black ring-1 ring-inset"
+                :class="platformLocationLabel === address ? 'bg-[#24bcb7] text-white ring-[#24bcb7]' : 'bg-gray-50 text-gray-600 ring-gray-200'"
+                :aria-pressed="platformLocationLabel === address"
+                :data-testid="`food-delivery-platform-checkout-address-${addressIndex}`"
+                @click="selectPlatformDeliveryAddress(address)"
+              >
+                {{ addressIndex === 0 ? t('当前地址', 'Current') : addressIndex === 1 ? t('常用地址', 'Saved') : t('公司', 'Work') }}
+              </button>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-checkout-items">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('餐品明细', 'Order items') }}</p>
+                <h3 class="mt-1 truncate text-lg font-black text-gray-950">{{ platformCartMerchant.name }}</h3>
+              </div>
+              <span class="rounded-full bg-[#e5fbfa] px-3 py-1.5 text-[11px] font-black text-[#128e89]">
+                {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
+              </span>
+            </div>
+            <div class="mt-3 space-y-2">
+              <div
+                v-for="item in foodDeliveryStore.platformCartItems"
+                :key="item.itemId"
+                class="flex items-center justify-between gap-3 rounded-[0.9rem] bg-gray-50 px-3 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-black text-gray-900">{{ item.title }}</p>
+                  <p class="mt-1 text-[11px] font-bold text-gray-500">× {{ item.quantity }}</p>
+                </div>
+                <span class="shrink-0 text-xs font-black text-gray-900">{{ platformCartLineTotal(item) }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <label for="food-delivery-platform-order-note" class="text-xs font-black text-gray-900">
+              {{ t('订单备注', 'Order note') }}
+            </label>
+            <textarea
+              id="food-delivery-platform-order-note"
+              v-model="platformCheckoutNote"
+              rows="3"
+              maxlength="240"
+              class="mt-2 w-full resize-none rounded-[1rem] bg-gray-50 px-3 py-3 text-sm font-semibold text-gray-800 outline-none ring-1 ring-inset ring-gray-100 focus:ring-[#24bcb7]"
+              :placeholder="t('例如：少辣，放门口即可', 'For example: mild spice, leave at the door')"
+              data-testid="food-delivery-platform-checkout-note"
+            ></textarea>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <p class="text-xs font-black text-gray-900">{{ t('支付方式', 'Payment method') }}</p>
+            <div class="mt-3 space-y-2">
+              <label
+                v-for="option in platformCheckoutPaymentOptions"
+                :key="option.key"
+                class="flex cursor-pointer items-center gap-3 rounded-[1rem] p-3 ring-1 ring-inset"
+                :class="platformCheckoutPaymentMethod === option.key ? 'bg-[#e5fbfa] ring-[#24bcb7]' : 'bg-gray-50 ring-gray-100'"
+                :data-testid="`food-delivery-platform-payment-${option.key}`"
+              >
+                <input
+                  v-model="platformCheckoutPaymentMethod"
+                  type="radio"
+                  name="food-delivery-platform-payment"
+                  :value="option.key"
+                  class="sr-only"
+                />
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#159f9a] shadow-sm">
+                  <i :class="option.icon"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-black text-gray-950">{{ option.label }}</span>
+                  <span class="mt-0.5 block text-[10px] font-semibold leading-4 text-gray-500">{{ option.desc }}</span>
+                </span>
+                <i v-if="platformCheckoutPaymentMethod === option.key" class="fas fa-circle-check text-[#159f9a]"></i>
+              </label>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
+            <dl class="space-y-2 text-xs font-semibold text-white/70">
+              <div class="flex items-center justify-between gap-3">
+                <dt>{{ t('商品金额', 'Items') }}</dt>
+                <dd>{{ displayMoney(foodDeliveryStore.platformCartPrimaryTotal.amount, foodDeliveryStore.platformCartPrimaryTotal.currency) }}</dd>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <dt>{{ t('配送费', 'Delivery fee') }}</dt>
+                <dd>{{ displayMoney(platformCartMerchant.deliveryFee) }}</dd>
+              </div>
+            </dl>
+            <div class="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
+              <div>
+                <p class="text-[10px] font-black uppercase text-white/45">{{ t('应付合计', 'Order total') }}</p>
+                <p class="mt-1 text-2xl font-black" data-testid="food-delivery-platform-checkout-total">
+                  {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
+                </p>
+              </div>
+              <span class="text-right text-[10px] font-bold leading-4 text-white/55">
+                {{ t(`约 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`, `About ${platformCartMerchant.deliveryEtaMinutes} min`) }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99]"
+              data-testid="food-delivery-platform-checkout-submit"
+              @click="submitPlatformOrder"
+            >
+              {{ t('提交订单', 'Place order') }}
+              <i class="fas fa-arrow-right text-xs"></i>
+            </button>
+            <p v-if="platformCheckoutFeedback" class="mt-2 text-center text-xs font-bold text-rose-300" aria-live="polite">
+              {{ platformCheckoutFeedback }}
+            </p>
+          </section>
+        </template>
+
+        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5">
+          <i class="fas fa-cart-shopping text-2xl text-[#24bcb7]"></i>
+          <p class="mt-3 text-sm font-black text-gray-900">{{ t('购物车已经空了', 'Your cart is empty') }}</p>
+          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
+            {{ t('返回首页选餐', 'Browse shops') }}
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-else-if="platformPageKey === 'orders'"
+        class="space-y-4"
+        data-testid="food-delivery-platform-orders-page"
+      >
+        <header class="flex items-center justify-between gap-3 pt-1">
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-orders-back"
+              :aria-label="t('返回首页', 'Back home')"
+              @click="openPlatformPage('home')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('最近点过', 'Recent orders') }}</p>
+              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('我的订单', 'My orders') }}</h2>
+            </div>
+          </div>
+          <span class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-[#e5fbfa] px-3 text-sm font-black text-[#128e89]">
+            {{ foodDeliveryStore.platformOrderCount }}
+          </span>
+        </header>
+
+        <div v-if="foodDeliveryStore.recentPlatformOrders.length > 0" class="space-y-3" data-testid="food-delivery-platform-order-list">
+          <button
+            v-for="order in foodDeliveryStore.recentPlatformOrders"
+            :key="order.id"
+            type="button"
+            class="block w-full rounded-[1.2rem] bg-white p-4 text-left shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+            :data-testid="`food-delivery-platform-order-card-${order.id}`"
+            @click="openPlatformOrder(order.id)"
+          >
+            <span class="flex items-start gap-3">
+              <span
+                class="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gray-100 text-[#159f9a] ring-1 ring-black/5"
+                :data-asset-slot="`platform-merchant-mark-${order.merchantId}`"
+                :data-required-asset="platformMerchantIdentityAssetPath(order.merchantId)"
+              >
+                <img
+                  :src="platformMissingAssetPlaceholderUrl"
+                  :alt="t('待补商家身份素材', 'Merchant mark pending')"
+                  class="h-full w-full object-contain p-1"
+                  data-asset-placeholder
+                />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-base font-black text-gray-950">{{ order.merchantName }}</span>
+                <span class="mt-1 block text-[11px] font-semibold text-gray-500">
+                  {{ formatFoodDeliveryEventTime(order.createdAt) }} · {{ platformOrderNumber(order) }}
+                </span>
+              </span>
+              <span
+                class="shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black"
+                :class="resolvePlatformOrderStatus(order.status).badgeClass"
+              >
+                {{ resolvePlatformOrderStatus(order.status).label }}
+              </span>
+            </span>
+            <span class="mt-3 block truncate text-xs font-semibold text-gray-600">
+              {{ order.items.map((item) => `${item.title} × ${item.quantity}`).join(' · ') }}
+            </span>
+            <span class="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+              <span class="text-[11px] font-bold text-gray-500">{{ order.itemCount }} {{ t('件', 'items') }} · {{ order.etaMinutes }} min</span>
+              <span class="text-sm font-black text-gray-950">{{ displayMoney(order.total, order.currency) }}</span>
+            </span>
+          </button>
+        </div>
+
+        <div v-else class="rounded-[1.3rem] border border-dashed border-teal-200 bg-white p-7 text-center" data-testid="food-delivery-platform-orders-empty">
+          <div
+            class="mx-auto flex h-28 w-32 items-center justify-center"
+            data-asset-slot="platform-orders-empty-receipt"
+            data-required-asset="platform/orders/platform-orders-empty-receipt-01.png"
+          >
+            <img
+              :src="platformMissingAssetPlaceholderUrl"
+              :alt="t('待补空订单素材', 'Empty orders artwork pending')"
+              class="h-full w-full object-contain p-1"
+              data-asset-placeholder
+            />
+          </div>
+          <p class="mt-2 text-sm font-black text-gray-900">{{ t('还没有订单', 'No orders yet') }}</p>
+          <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">{{ t('第一笔订单提交后，可以在这里查看进度和详情。', 'Place your first order to follow its progress and details here.') }}</p>
+          <button type="button" class="mt-4 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
+            {{ t('去选小店', 'Browse shops') }}
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-else-if="platformPageKey === 'order'"
+        class="space-y-4"
+        data-testid="food-delivery-platform-order-page"
+      >
+        <header class="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-order-back"
+            :aria-label="t('返回订单列表', 'Back to orders')"
+            @click="openPlatformPage('orders')"
+          >
+            <i class="fas fa-chevron-left text-sm"></i>
+          </button>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台订单', 'Platform order') }}</p>
+            <h2 class="truncate text-2xl font-black text-gray-950">{{ t('订单详情', 'Order details') }}</h2>
+          </div>
+        </header>
+
+        <template v-if="activePlatformOrder">
+          <section
+            class="overflow-hidden rounded-[1.35rem] p-5 text-white"
+            :class="activePlatformOrderStatus.heroClass"
+            :data-order-status="activePlatformOrderStatus.key"
+            data-testid="food-delivery-platform-order-success"
+          >
+            <div class="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-white/65">{{ activePlatformOrderStatus.eyebrow }}</p>
+                <h3 class="mt-1 text-2xl font-black leading-tight">{{ activePlatformOrderStatus.title }}</h3>
+                <p class="mt-2 text-xs font-semibold leading-5 text-white/75">{{ activePlatformOrderStatus.desc }}</p>
+                <span
+                  v-if="activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED && activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED"
+                  class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-950/18 px-3 py-1.5 text-[10px] font-black"
+                >
+                  <i class="far fa-clock"></i>
+                  {{ t(`约 ${activePlatformOrder.etaMinutes} 分钟`, `About ${activePlatformOrder.etaMinutes} min`) }}
+                </span>
+              </div>
+              <div
+                class="flex h-28 w-28 items-center justify-center"
+                :data-asset-slot="`platform-order-status-${activePlatformOrderStatus.assetKey}`"
+                :data-required-asset="`platform/orders/platform-order-status-${activePlatformOrderStatus.assetKey}-01.png`"
+              >
+                <img
+                  :src="platformMissingAssetPlaceholderUrl"
+                  :alt="t('待补订单状态素材', 'Order status artwork pending')"
+                  class="h-24 w-24 object-contain"
+                  data-asset-placeholder
+                />
+              </div>
+            </div>
+            <div class="mt-5 grid grid-cols-4 gap-1.5 text-center">
+              <div
+                v-for="(step, stepIndex) in platformOrderSteps"
+                :key="step.key"
+                class="rounded-[0.8rem] px-1 py-2.5"
+                :class="activePlatformOrderStatus.stepIndex >= stepIndex ? 'bg-white/16 text-white' : 'bg-white/7 text-white/45'"
+              >
+                <i :class="step.icon" class="text-xs"></i>
+                <p class="mt-1 truncate text-[9px] font-black">{{ step.label }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('订单号', 'Order number') }}</p>
+                <p
+                  class="mt-1 text-sm font-black text-gray-800"
+                  :data-order-id="activePlatformOrder.id"
+                  data-testid="food-delivery-platform-order-id"
+                >
+                  {{ platformOrderNumber(activePlatformOrder) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-gray-50 px-3 text-[10px] font-black text-gray-600 ring-1 ring-inset ring-gray-100 transition active:bg-gray-100"
+                data-testid="food-delivery-platform-order-copy"
+                @click="copyPlatformOrderNumber(activePlatformOrder)"
+              >
+                <i class="far fa-copy"></i>
+                {{ platformOrderCopyFeedback || t('复制', 'Copy') }}
+              </button>
+            </div>
+            <p class="mt-1 text-[10px] font-bold text-gray-400">{{ formatFoodDeliveryEventTime(activePlatformOrder.createdAt) }}</p>
+            <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+              <div class="flex gap-3">
+                <i class="fas fa-location-dot mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                <div>
+                  <p class="text-[10px] font-black text-gray-400">{{ t('配送到', 'Deliver to') }}</p>
+                  <p class="mt-1 text-xs font-bold leading-5 text-gray-800">{{ activePlatformOrder.deliveryAddress }}</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <i class="fas fa-credit-card mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                <div>
+                  <p class="text-[10px] font-black text-gray-400">{{ t('支付方式', 'Payment') }}</p>
+                  <p class="mt-1 text-xs font-bold text-gray-800">{{ platformPaymentMethodLabel(activePlatformOrder.paymentMethod) }}</p>
+                </div>
+              </div>
+              <div v-if="activePlatformOrder.note" class="flex gap-3">
+                <i class="fas fa-note-sticky mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                <div>
+                  <p class="text-[10px] font-black text-gray-400">{{ t('备注', 'Note') }}</p>
+                  <p class="mt-1 text-xs font-bold leading-5 text-gray-800">{{ activePlatformOrder.note }}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-order-summary">
+            <h3 class="text-base font-black text-gray-950">{{ activePlatformOrder.merchantName }}</h3>
+            <div class="mt-3 space-y-2">
+              <div v-for="item in activePlatformOrder.items" :key="item.id" class="flex items-center justify-between gap-3 text-xs">
+                <span class="min-w-0 truncate font-bold text-gray-700">{{ item.title }} × {{ item.quantity }}</span>
+                <span class="shrink-0 font-black text-gray-900">{{ displayMoney((item.unitPriceCents * item.quantity / 100).toFixed(2), item.currency) }}</span>
+              </div>
+            </div>
+            <dl class="mt-4 space-y-2 border-t border-gray-100 pt-3 text-xs font-semibold text-gray-500">
+              <div class="flex justify-between gap-3"><dt>{{ t('商品金额', 'Items') }}</dt><dd>{{ displayMoney(activePlatformOrder.itemsTotal, activePlatformOrder.currency) }}</dd></div>
+              <div class="flex justify-between gap-3"><dt>{{ t('配送费', 'Delivery fee') }}</dt><dd>{{ displayMoney(activePlatformOrder.deliveryFee, activePlatformOrder.currency) }}</dd></div>
+              <div class="flex items-end justify-between gap-3 pt-1 text-gray-950"><dt class="font-black">{{ t('合计', 'Total') }}</dt><dd class="text-xl font-black">{{ displayMoney(activePlatformOrder.total, activePlatformOrder.currency) }}</dd></div>
+            </dl>
+          </section>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="min-h-11 rounded-[1rem] bg-white text-xs font-black text-gray-700 shadow-sm ring-1 ring-black/5" @click="openPlatformPage('home')">
+              {{ t('返回首页', 'Back home') }}
+            </button>
+            <button type="button" class="min-h-11 rounded-[1rem] bg-gray-950 text-xs font-black text-white" data-testid="food-delivery-platform-view-orders" @click="openPlatformPage('orders')">
+              {{ t('查看全部订单', 'View all orders') }}
+            </button>
+          </div>
+        </template>
+
+        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-order-missing">
+          <i class="fas fa-receipt text-2xl text-gray-300"></i>
+          <p class="mt-3 text-sm font-black text-gray-900">{{ t('没有找到这笔订单', 'Order not found') }}</p>
+          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('orders')">
+            {{ t('返回订单列表', 'Back to orders') }}
+          </button>
+        </div>
+      </section>
+
+        <nav
+          v-if="platformPageKey !== 'checkout' && platformPageKey !== 'order'"
+          class="rounded-[1.4rem] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)] ring-1 ring-black/5 backdrop-blur"
+          data-testid="food-delivery-platform-bottom-nav"
+        >
           <div class="grid grid-cols-5 gap-1">
             <button
               v-for="item in platformBottomNavItems"
@@ -1656,6 +3728,8 @@ onBeforeUnmount(() => {
               type="button"
               class="flex min-h-[3.65rem] flex-col items-center justify-center gap-1 rounded-[1rem] text-[0.68rem] font-black transition active:scale-[0.98]"
               :class="item.active ? 'bg-[#e5fbfa] text-[#13aaa5]' : 'text-gray-500'"
+              :aria-current="item.active ? 'page' : undefined"
+              :data-testid="`food-delivery-platform-nav-${item.key}`"
               @click="handlePlatformNavItem(item)"
             >
               <i :class="item.icon" class="text-lg"></i>
@@ -1663,7 +3737,6 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </nav>
-      </section>
       <div
         v-if="platformMerchantSheetOpen && selectedPlatformMerchant"
         class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
@@ -1694,18 +3767,23 @@ onBeforeUnmount(() => {
           <div
             class="relative mt-4 h-36 overflow-hidden rounded-[1.2rem] bg-gradient-to-br"
             :class="selectedPlatformMerchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+            :data-asset-slot="`platform-merchant-cover-${selectedPlatformMerchant.id}`"
+            :data-required-asset="selectedPlatformMerchant.requiredAsset || undefined"
+            :data-merchant-visual-type="selectedPlatformMerchant.visualType || 'food-photo'"
           >
             <img
               v-if="selectedPlatformMerchant.imageUrl"
               :src="selectedPlatformMerchant.imageUrl"
               :alt="selectedPlatformMerchant.imageAlt || selectedPlatformMerchant.name"
-              class="relative z-10 h-full w-full object-cover"
+              class="relative z-10 h-full w-full"
+              :class="isPlatformLogoMerchant(selectedPlatformMerchant) ? 'object-contain p-7' : 'object-cover'"
               @error="$event.currentTarget.style.display = 'none'"
             />
-            <i
-              :class="selectedPlatformMerchant.icon || 'fas fa-store'"
-              class="absolute inset-0 m-auto h-12 w-12 text-5xl opacity-80"
-            ></i>
+            <span
+              v-if="isPlatformLogoMerchant(selectedPlatformMerchant)"
+              class="absolute inset-0 m-auto flex h-24 w-32 items-center justify-center whitespace-pre-line text-center text-2xl font-black leading-tight opacity-80"
+            >{{ platformMerchantLogoMark(selectedPlatformMerchant) }}</span>
+            <i v-else :class="selectedPlatformMerchant.icon || 'fas fa-store'" class="absolute inset-0 m-auto h-12 w-12 text-5xl opacity-80"></i>
             <span class="absolute left-3 top-3 z-20 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#128e89] shadow-sm">
               {{ selectedPlatformMerchant.badge }}
             </span>
@@ -1736,18 +3814,239 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <article
-              v-for="item in selectedPlatformMerchant.menu"
+              v-for="(item, itemIndex) in selectedPlatformMerchant.menu"
               :key="`${selectedPlatformMerchant.id}-${item.title}`"
-              class="flex items-center justify-between gap-3 rounded-[1rem] bg-[#f7fbfb] px-3 py-3"
+              class="flex items-center gap-3 rounded-[1rem] bg-[#f7fbfb] p-2.5"
+              :data-testid="`food-delivery-platform-menu-item-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
             >
-              <div class="min-w-0">
-                <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
-                <p class="mt-0.5 truncate text-[11px] font-semibold text-gray-500">{{ item.desc }}</p>
+              <div
+                class="h-16 w-16 shrink-0 overflow-hidden rounded-[0.8rem] bg-white ring-1 ring-black/[0.04]"
+                data-platform-menu-image
+                :data-asset-slot="`platform-menu-image-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                :data-required-asset="platformMenuItemAssetPath(selectedPlatformMerchant, itemIndex)"
+              >
+                <img
+                  :src="platformMenuItemImageUrl(selectedPlatformMerchant, item, itemIndex)"
+                  :alt="item.title"
+                  class="h-full w-full object-cover"
+                />
               </div>
-              <span class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-gray-950 shadow-sm">
-                {{ item.price }}
-              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
+                <p class="mt-0.5 line-clamp-2 text-[11px] font-semibold leading-4 text-gray-500">{{ item.desc }}</p>
+              </div>
+              <div class="flex shrink-0 flex-col items-end gap-2">
+                <span class="text-xs font-black text-gray-950">{{ displayMoney(item.price) }}</span>
+                <button
+                  v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
+                  type="button"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#24bcb7] text-white shadow-sm transition active:scale-95"
+                  :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
+                  :data-testid="`food-delivery-platform-menu-add-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                  @click="addPlatformMenuItemToCart(item, itemIndex)"
+                >
+                  <i class="fas fa-plus text-[10px]"></i>
+                </button>
+                <div
+                  v-else
+                  class="flex h-8 items-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5"
+                >
+                  <button
+                    type="button"
+                    class="inline-flex h-8 w-8 items-center justify-center text-gray-500 transition active:bg-gray-100"
+                    :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
+                    :data-testid="`food-delivery-platform-menu-decrease-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                    @click="updatePlatformCartItemQuantity(
+                      platformMenuItemId(selectedPlatformMerchant.id, itemIndex),
+                      platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) - 1,
+                    )"
+                  >
+                    <i class="fas fa-minus text-[9px]"></i>
+                  </button>
+                  <span
+                    class="min-w-5 text-center text-xs font-black text-gray-950"
+                    :data-testid="`food-delivery-platform-menu-quantity-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                  >
+                    {{ platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) }}
+                  </span>
+                  <button
+                    type="button"
+                    class="inline-flex h-8 w-8 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
+                    :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
+                    :data-testid="`food-delivery-platform-menu-increase-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                    @click="addPlatformMenuItemToCart(item, itemIndex)"
+                  >
+                    <i class="fas fa-plus text-[9px]"></i>
+                  </button>
+                </div>
+              </div>
             </article>
+            <p class="sr-only" aria-live="polite" data-testid="food-delivery-platform-cart-feedback">
+              {{ platformCartFeedback }}
+            </p>
+            <button
+              v-if="foodDeliveryStore.platformCartQuantity > 0"
+              type="button"
+              class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)]"
+              data-testid="food-delivery-platform-menu-view-cart"
+              @click="openPlatformCartFromMerchant"
+            >
+              <span>{{ t('查看购物车', 'View cart') }}</span>
+              <span class="flex items-center gap-2">
+                {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
+                <i class="fas fa-chevron-right text-[10px]"></i>
+              </span>
+            </button>
+          </div>
+        </section>
+      </div>
+      <div
+        v-if="platformUtilitySheetContent"
+        class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
+        data-testid="food-delivery-platform-utility-dialog"
+        @click.self="closePlatformUtilitySheet"
+      >
+        <section
+          class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
+          :data-utility-key="platformUtilitySheetKey"
+          data-testid="food-delivery-platform-utility-sheet"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]">
+                <i :class="platformUtilitySheetContent.icon"></i>
+              </span>
+              <div class="min-w-0">
+                <h3 class="truncate text-lg font-black text-gray-950">{{ platformUtilitySheetContent.title }}</h3>
+                <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">{{ platformUtilitySheetContent.desc }}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
+              data-testid="food-delivery-platform-utility-close"
+              :aria-label="t('关闭', 'Close')"
+              @click="closePlatformUtilitySheet"
+            >
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+
+          <div v-if="platformUtilitySheetKey === 'notifications'" class="mt-4 space-y-2">
+            <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
+              <i class="fas fa-ticket text-[#24bcb7]"></i>
+              <p class="text-xs font-bold text-gray-700">{{ t('本周免配送权益可领取。', 'Free-delivery perks are ready this week.') }}</p>
+            </div>
+            <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
+              <i class="fas fa-store text-[#ff7a37]"></i>
+              <p class="text-xs font-bold text-gray-700">{{ t('附近 11 家平台小店正在营业。', 'Eleven nearby platform shops are open.') }}</p>
+            </div>
+          </div>
+
+          <div
+            v-else-if="platformUtilitySheetKey === 'cart' && foodDeliveryStore.platformCartItems.length > 0"
+            class="mt-4 space-y-3"
+            data-testid="food-delivery-platform-cart-content"
+          >
+            <div class="flex items-center justify-between gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('当前小店', 'Current shop') }}</p>
+                <p class="mt-1 truncate text-sm font-black text-gray-950">
+                  {{ foodDeliveryStore.platformCartItems[0]?.merchantName }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm"
+                data-testid="food-delivery-platform-cart-clear"
+                :aria-label="t('清空购物车', 'Clear cart')"
+                @click="foodDeliveryStore.clearPlatformCart()"
+              >
+                <i class="fas fa-trash-can text-xs"></i>
+              </button>
+            </div>
+
+            <article
+              v-for="item in foodDeliveryStore.platformCartItems"
+              :key="item.itemId"
+              class="flex items-center justify-between gap-3 rounded-[1rem] border border-gray-100 px-3 py-3"
+              :data-testid="`food-delivery-platform-cart-line-${item.itemId}`"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
+                <p class="mt-1 text-xs font-bold text-gray-500">{{ platformCartLineTotal(item) }}</p>
+              </div>
+              <div class="flex h-9 shrink-0 items-center overflow-hidden rounded-full bg-gray-100">
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center text-gray-500 transition active:bg-gray-200"
+                  :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
+                  :data-testid="`food-delivery-platform-cart-decrease-${item.itemId}`"
+                  @click="updatePlatformCartItemQuantity(item.itemId, item.quantity - 1)"
+                >
+                  <i class="fas fa-minus text-[9px]"></i>
+                </button>
+                <span
+                  class="min-w-6 text-center text-xs font-black text-gray-950"
+                  :data-testid="`food-delivery-platform-cart-quantity-${item.itemId}`"
+                >
+                  {{ item.quantity }}
+                </span>
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
+                  :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
+                  :data-testid="`food-delivery-platform-cart-increase-${item.itemId}`"
+                  @click="updatePlatformCartItemQuantity(item.itemId, item.quantity + 1)"
+                >
+                  <i class="fas fa-plus text-[9px]"></i>
+                </button>
+              </div>
+            </article>
+
+            <div class="flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
+              <div>
+                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('商品合计', 'Items total') }}</p>
+                <p class="mt-1 text-lg font-black text-gray-950" data-testid="food-delivery-platform-cart-total">
+                  {{ displayMoney(foodDeliveryStore.platformCartPrimaryTotal.amount, foodDeliveryStore.platformCartPrimaryTotal.currency) }}
+                </p>
+              </div>
+              <p class="max-w-[11rem] text-right text-[10px] font-semibold leading-4 text-gray-400">
+                {{ t('下单后可在订单页查看制作和配送进度。', 'Follow preparation and delivery progress after placing the order.') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)] transition active:scale-[0.99]"
+              data-testid="food-delivery-platform-cart-checkout"
+              @click="openPlatformCheckout"
+            >
+              <span>{{ t('去结算', 'Checkout') }}</span>
+              <span class="flex items-center gap-2">
+                {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
+                <i class="fas fa-chevron-right text-[10px]"></i>
+              </span>
+            </button>
+          </div>
+
+          <div v-else class="mt-4 rounded-[1rem] bg-[#f3fbfb] p-4 text-center">
+            <i class="fas fa-store text-xl text-[#24bcb7]"></i>
+            <p class="mt-2 text-xs font-bold leading-5 text-gray-600">
+              {{
+                platformUtilitySheetKey === 'orders'
+                  ? t('还没有平台内小店订单。进入小店下单后再回到这里查看。', 'No platform-shop orders yet. Place an order in a shop, then return here.')
+                  : t('购物车还是空的，先选择一家平台小店。', 'Your cart is empty. Choose a platform shop first.')
+              }}
+            </p>
+            <button
+              type="button"
+              class="mt-3 inline-flex items-center gap-2 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white"
+              data-testid="food-delivery-platform-utility-browse"
+              @click="browsePlatformMerchantsFromUtilitySheet"
+            >
+              {{ t('去选小店', 'Browse shops') }}
+              <i class="fas fa-chevron-right text-[10px]"></i>
+            </button>
           </div>
         </section>
       </div>

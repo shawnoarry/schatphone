@@ -461,4 +461,113 @@ describe('food delivery store', () => {
       summary: 'Rider is delayed.',
     })
   })
+
+  test('keeps a persistent single-merchant platform cart separate from restaurant carts', () => {
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+
+    store.addPlatformCartItem(
+      {
+        merchantId: 'platform_shop_one',
+        merchantName: 'Platform Shop One',
+        itemId: 'platform_shop_one_meal',
+        title: 'Platform Meal',
+        price: '18.50',
+      },
+      2,
+    )
+    store.addPlatformCartItem({
+      merchantId: 'platform_shop_one',
+      merchantName: 'Platform Shop One',
+      itemId: 'platform_shop_one_drink',
+      title: 'Platform Drink',
+      price: '12.00',
+    })
+
+    expect(store.platformCartQuantity).toBe(3)
+    expect(store.platformCartPrimaryTotal).toMatchObject({ amount: '49.00', currency: 'CNY' })
+    expect(store.cartQuantity).toBe(0)
+
+    expect(store.updatePlatformCartQuantity('platform_shop_one_meal', 1)).toBe(true)
+    expect(store.platformCartQuantity).toBe(2)
+    expect(store.platformCartPrimaryTotal.amount).toBe('30.50')
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.platformCartItems).toHaveLength(2)
+
+    store.addPlatformCartItem({
+      merchantId: 'platform_shop_two',
+      merchantName: 'Platform Shop Two',
+      itemId: 'platform_shop_two_meal',
+      title: 'Another Meal',
+      price: '9.00',
+    })
+    expect(store.platformCartItems).toHaveLength(1)
+    expect(store.platformCartItems[0]).toMatchObject({ merchantId: 'platform_shop_two' })
+
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.platformCartQuantity).toBe(2)
+    expect(store.platformCartPrimaryTotal.amount).toBe('30.50')
+  })
+
+  test('checks out a platform cart into an isolated backup-compatible platform order', () => {
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+
+    store.addPlatformCartItem(
+      {
+        merchantId: 'platform_shop_one',
+        merchantName: 'Platform Shop One',
+        itemId: 'platform_shop_one_meal',
+        title: 'Platform Meal',
+        price: '18.50',
+      },
+      2,
+    )
+    store.addPlatformCartItem({
+      merchantId: 'platform_shop_one',
+      merchantName: 'Platform Shop One',
+      itemId: 'platform_shop_one_drink',
+      title: 'Platform Drink',
+      price: '12.00',
+    })
+
+    const order = store.checkoutPlatformCart({
+      deliveryAddress: 'Platform Test Address',
+      note: 'Leave at the door',
+      paymentMethod: 'pay_on_delivery',
+      deliveryFee: '3.00',
+      etaMinutes: 28,
+    })
+
+    expect(order).toMatchObject({
+      merchantId: 'platform_shop_one',
+      merchantName: 'Platform Shop One',
+      itemCount: 3,
+      itemsTotal: '49.00',
+      deliveryFee: '3.00',
+      total: '52.00',
+      currency: 'CNY',
+      deliveryAddress: 'Platform Test Address',
+      note: 'Leave at the door',
+      paymentMethod: 'pay_on_delivery',
+      etaMinutes: 28,
+      sourceModule: 'food_delivery_platform_checkout',
+    })
+    expect(store.platformCartQuantity).toBe(0)
+    expect(store.platformOrderCount).toBe(1)
+    expect(store.orders).toHaveLength(0)
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.platformOrders[0]).toMatchObject({ id: order.id, total: '52.00' })
+
+    store.resetForTesting()
+    expect(store.platformOrderCount).toBe(0)
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findPlatformOrderById(order.id)).toMatchObject({
+      merchantId: 'platform_shop_one',
+      total: '52.00',
+    })
+    expect(store.orders).toHaveLength(0)
+  })
 })

@@ -48,18 +48,40 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-pseudo-folder-home"]').text()).toMatch(/Platform|平台/)
     expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').text()).toMatch(/Platform|平台/)
     expect(wrapper.get('[data-testid="food-delivery-platform-search"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-location"]').text()).toContain('配送到')
+    expect(wrapper.get('[data-testid="food-delivery-platform-greeting"]').text()).toContain('今天想吃点什么')
     expect(wrapper.get('[data-testid="food-delivery-platform-rider"] img').attributes('src')).toContain(
       'delivery-rider-mascot-01.png',
     )
     expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').text()).toContain('免配送权益')
     expect(wrapper.find('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-platform-hero-image"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('逆站洞韩牛汤饭')
+    const recommendedMerchantIds = wrapper
+      .get('[data-testid="food-delivery-shop-app-list"]')
+      .findAll('[data-platform-category]')
+      .map((merchant) => merchant.attributes('data-testid'))
+    expect(recommendedMerchantIds).toHaveLength(3)
+    expect(new Set(recommendedMerchantIds).size).toBe(3)
+    expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toContain('为你推荐')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-summary"]').text()).toContain(
+      '随机推荐 3 家 · 共 11 家',
+    )
     expect(wrapper.find('[data-testid="food-delivery-shop-app-food_seed_moon_bistro"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-category-panel"]').text()).toContain('全部')
+    const categoryGrid = wrapper.get('[data-testid="food-delivery-category-grid"]')
+    expect(categoryGrid.classes()).toContain('grid-cols-5')
+    expect(categoryGrid.findAll('button')).toHaveLength(10)
+    expect(wrapper.get('[data-testid="food-delivery-category-all"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-testid="food-delivery-category-icon-all"]').classes()).toContain('h-12')
+    expect(wrapper.get('[data-testid="food-delivery-category-icon-pizza"]').attributes('data-required-asset')).toBe(
+      'platform/categories/icons/category-pizza-01.png',
+    )
     expect(wrapper.find('[data-testid="food-delivery-category-nearby"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="food-delivery-category-grocery_delivery"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toMatch(/本地数据|Local data/)
+    expect(wrapper.find('[data-testid="food-delivery-category-grocery_delivery"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="food-delivery-category-noodles"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="food-delivery-category-sushi"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-data-baseline"]').text()).toContain('为你推荐')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toMatch(/km.*\d\.\d.*min/s)
     expect(wrapper.find('[data-testid="food-delivery-cart-panel"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-orders-panel"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-wallet-suggestions"]').exists()).toBe(false)
@@ -68,11 +90,18 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.find('[data-testid="food-delivery-custom-form"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-category-cafe"]').exists()).toBe(true)
 
+    await wrapper.get('[data-testid="food-delivery-platform-search"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.platformView).toBe('search')
+    expect(wrapper.get('[data-testid="food-delivery-platform-search-page"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="food-delivery-platform-banner-rail"]').exists()).toBe(false)
+
     await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('寿司')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('寿司花')
-    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('逆站洞韩牛汤饭')
+    expect(wrapper.get('[data-testid="food-delivery-platform-search-results"]').text()).toContain('寿司花')
+    expect(wrapper.get('[data-testid="food-delivery-platform-search-results"]').text()).not.toContain('逆站洞韩牛汤饭')
 
     await wrapper.get('[data-testid="food-delivery-select-platform-merchant-platform_sushi_hana"]').trigger('click')
     await flushPromises()
@@ -80,16 +109,526 @@ describe('FoodDeliveryView', () => {
     expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
     expect(wrapper.get('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain('寿司花')
-    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain('花见寿司拼盘')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain('花见十二贯')
 
     await wrapper.get('[data-testid="food-delivery-platform-merchant-close"]').trigger('click')
-    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('')
+    await wrapper.get('[data-testid="food-delivery-platform-page-back"]').trigger('click')
     await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBeUndefined()
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-shop-app-list"]')
+        .findAll('[data-platform-category]')
+        .map((merchant) => merchant.attributes('data-testid')),
+    ).toEqual(recommendedMerchantIds)
+
+    await wrapper.get('[data-testid="food-delivery-category-chicken"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      category: 'fast_food',
+      platformFilter: 'chicken',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).toContain('脆脆炸鸡屋')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').text()).not.toContain('花德披萨味店')
+
     await wrapper.get('[data-testid="food-delivery-category-cafe"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query.category).toBe('cafe')
+    expect(router.currentRoute.value.query.platformFilter).toBe('cafe')
+    wrapper.unmount()
+  })
+
+  test('expands and collapses the full platform merchant list', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const viewAllButton = wrapper.get('[data-testid="food-delivery-platform-view-all"]')
+    const merchantList = wrapper.get('[data-testid="food-delivery-shop-app-list"]')
+    expect(viewAllButton.attributes('aria-expanded')).toBe('false')
+    expect(viewAllButton.text()).toContain('全部查看')
+    expect(merchantList.classes()).toContain('flex')
+    const initialRecommendations = merchantList
+      .findAll('[data-platform-category]')
+      .map((merchant) => merchant.attributes('data-testid'))
+    expect(initialRecommendations).toHaveLength(3)
+    expect(merchantList.attributes('data-recommendation-mode')).toBe('random-three')
+
+    await viewAllButton.trigger('click')
+
+    expect(viewAllButton.attributes('aria-expanded')).toBe('true')
+    expect(viewAllButton.text()).toContain('收起')
+    expect(merchantList.classes()).toContain('grid')
+    expect(merchantList.findAll('[data-platform-category]')).toHaveLength(11)
+    expect(merchantList.text()).toContain('莓果晨光')
+    expect(merchantList.text()).toContain('青禾鲜食补给站')
+    expect(merchantList.text()).toContain('山茶牛肉面馆')
+    expect(merchantList.text()).toContain('早安贝果咖啡')
+    expect(merchantList.text()).toContain('榆树里蒸点铺')
+    expect(merchantList.text()).toContain('南风椰香咖喱')
+    expect(merchantList.text()).not.toContain('白浪手握寿司')
+    const bagelCover = wrapper.get(
+      '[data-testid="food-delivery-platform-merchant-card-platform_golden_chicken"]',
+    )
+    expect(bagelCover.attributes('data-required-asset')).toContain('merchant-logo-morning-bagel-01.png')
+    expect(bagelCover.attributes('data-merchant-visual-type')).toBe('logo')
+    expect(bagelCover.get('img').attributes('src')).toContain('merchant-logo-morning-bagel-01.png')
+    const logoMerchantContracts = [
+      ['platform_berry_morning', 'merchant-logo-berry-morning-01.png'],
+      ['platform_green_basket', 'merchant-logo-green-basket-01.png'],
+      ['platform_golden_chicken', 'merchant-logo-morning-bagel-01.png'],
+      ['platform_nori_table', 'merchant-logo-elm-dim-sum-01.png'],
+    ]
+    for (const [merchantId, fileName] of logoMerchantContracts) {
+      const cover = wrapper.get(`[data-testid="food-delivery-platform-merchant-card-${merchantId}"]`)
+      expect(cover.attributes('data-merchant-visual-type')).toBe('logo')
+      expect(cover.attributes('data-required-asset')).toContain(fileName)
+    }
+
+    await viewAllButton.trigger('click')
+    expect(viewAllButton.attributes('aria-expanded')).toBe('false')
+    expect(merchantList.classes()).toContain('flex')
+    expect(merchantList.attributes('data-recommendation-mode')).toBe('random-three')
+    expect(
+      merchantList.findAll('[data-platform-category]').map((merchant) => merchant.attributes('data-testid')),
+    ).toEqual(initialRecommendations)
+    wrapper.unmount()
+  })
+
+  test('filters and orders from newly added platform-only merchants', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-summary"]').text()).toContain(
+      '随机推荐 3 家 · 共 11 家',
+    )
+    await wrapper.get('[data-testid="food-delivery-category-dessert"]').trigger('click')
+    await flushPromises()
+
+    const merchantList = wrapper.get('[data-testid="food-delivery-shop-app-list"]')
+    expect(router.currentRoute.value.query.category).toBe('dessert')
+    expect(merchantList.text()).toContain('莓果晨光')
+    expect(merchantList.text()).not.toContain('逆站洞韩牛汤饭')
+
+    await wrapper
+      .get('[data-testid="food-delivery-select-platform-merchant-platform_berry_morning"]')
+      .trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain('晨光莓莓云朵杯')
+    await wrapper
+      .get('[data-testid="food-delivery-platform-menu-add-platform_berry_morning_menu_1"]')
+      .trigger('click')
+
+    expect(store.platformCartItems[0]).toMatchObject({
+      merchantId: 'platform_berry_morning',
+      title: '晨光莓莓云朵杯',
+    })
+    wrapper.unmount()
+  })
+
+  test('gives every platform merchant five dishes with stable product-image slots', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const merchants = [
+      ['platform_hanwoo_gukbap', 'hanwoo-gukbap'],
+      ['platform_sushi_hana', 'sushi-hana'],
+      ['platform_hwadeok_pizza', 'hwadeok-pizza'],
+      ['platform_salad_day', 'salad-day'],
+      ['platform_chicken_crisp', 'chicken-crisp'],
+      ['platform_berry_morning', 'berry-morning'],
+      ['platform_green_basket', 'green-basket'],
+      ['platform_neighborhood_soup', 'camellia-noodles'],
+      ['platform_golden_chicken', 'morning-bagel'],
+      ['platform_nori_table', 'elm-dim-sum'],
+      ['platform_corner_pizza', 'coconut-curry'],
+    ]
+
+    await wrapper.get('[data-testid="food-delivery-platform-view-all"]').trigger('click')
+    for (const [merchantId, assetKey] of merchants) {
+      await wrapper
+        .get(`[data-testid="food-delivery-select-platform-merchant-${merchantId}"]`)
+        .trigger('click')
+      const menu = wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]')
+      const imageSlots = menu.findAll('[data-platform-menu-image]')
+      expect(imageSlots).toHaveLength(5)
+      expect(imageSlots[0].attributes('data-required-asset')).toBe(
+        `platform/menus/${assetKey}/menu-item-01.png`,
+      )
+      expect(imageSlots[4].attributes('data-required-asset')).toBe(
+        `platform/menus/${assetKey}/menu-item-05.png`,
+      )
+      await wrapper.get('[data-testid="food-delivery-platform-merchant-close"]').trigger('click')
+    }
+
+    wrapper.unmount()
+  })
+
+  test('auto-advances the platform banner rail and pauses after manual selection', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const bannerRail = wrapper.get('[data-testid="food-delivery-platform-banner-rail"]')
+    const bannerScroller = wrapper.get('[data-testid="food-delivery-platform-banner-scroller"]')
+    const scrollTo = vi.fn()
+    bannerScroller.element.scrollTo = scrollTo
+
+    expect(bannerRail.attributes('data-active-banner-index')).toBe('0')
+    expect(wrapper.get('[data-testid="food-delivery-platform-banner-dot-0"]').attributes('aria-current')).toBe(
+      'true',
+    )
+
+    await vi.advanceTimersByTimeAsync(5200)
+    await flushPromises()
+
+    expect(bannerRail.attributes('data-active-banner-index')).toBe('1')
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, behavior: 'smooth' })
+    expect(wrapper.get('[data-testid="food-delivery-platform-banner-dot-1"]').attributes('aria-current')).toBe(
+      'true',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-platform-banner-dot-2"]').trigger('click')
+    expect(bannerRail.attributes('data-active-banner-index')).toBe('2')
+
+    await vi.advanceTimersByTimeAsync(5200)
+    await flushPromises()
+    expect(bannerRail.attributes('data-active-banner-index')).toBe('2')
+    wrapper.unmount()
+  })
+
+  test('gives platform header and banner actions visible outcomes', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-notifications"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-utility-sheet"]').attributes('data-utility-key')).toBe(
+      'notifications',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-utility-sheet"]').text()).toContain('平台消息')
+    await wrapper.get('[data-testid="food-delivery-platform-utility-close"]').trigger('click')
+
+    await wrapper.get('[data-testid="food-delivery-platform-cart"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-utility-sheet"]').attributes('data-utility-key')).toBe(
+      'cart',
+    )
+    await wrapper.get('[data-testid="food-delivery-platform-utility-browse"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-shop-app-list"]').classes()).toContain('grid')
+
+    await wrapper.get('[data-testid="food-delivery-platform-banner-action-club_free_delivery"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'campaign',
+      platformCampaign: 'club_free_delivery',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-page"]').attributes('data-campaign-id')).toBe(
+      'club_free_delivery',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-membership"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-merchants"]').text()).toContain('逆站洞韩牛汤饭')
+    expect(wrapper.find('[data-testid="food-delivery-platform-benefit-feedback"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="food-delivery-platform-campaign-primary"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-benefit-feedback"]').text()).toContain('权益已加入')
+    await wrapper.get('[data-testid="food-delivery-platform-campaign-back"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="food-delivery-platform-banner-action-weekend_food_map"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'campaign',
+      platformCampaign: 'weekend_food_map',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-lottery"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-hero"]').attributes('data-required-asset')).toBe(
+      'platform/campaigns/weekend-lucky-draw-poster-01.png',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-benefits"]').text()).toContain('三种好运')
+    expect(wrapper.find('[data-testid="food-delivery-platform-campaign-prize"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="food-delivery-platform-campaign-primary"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-prize"]').text()).toMatch(
+      /满 49 减 8|0 元配送券|甜品加赠签/,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-primary"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="food-delivery-platform-campaign-back"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="food-delivery-platform-banner-action-quick_lunch"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'campaign',
+      platformCampaign: 'quick_lunch',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-menu-guide"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-menu-picks"]').text()).toContain('GOOD AM 烟熏鸡贝果')
+    await wrapper.get('[data-testid="food-delivery-platform-campaign-primary"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformCampaign).toBe('quick_lunch')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain('沙拉日记')
+    wrapper.unmount()
+  })
+
+  test('supports merchant favorites and functional platform navigation', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-view-all"]').trigger('click')
+    const saveButton = wrapper.get('[data-testid="food-delivery-platform-save-platform_hanwoo_gukbap"]')
+    expect(saveButton.attributes('aria-pressed')).toBe('false')
+    await saveButton.trigger('click')
+    expect(saveButton.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="food-delivery-platform-nav-saved"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('saved')
+    expect(wrapper.get('[data-testid="food-delivery-platform-nav-saved"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.get('[data-testid="food-delivery-platform-saved-page"]').text()).toContain('收藏小店')
+    expect(wrapper.get('[data-testid="food-delivery-platform-saved-grid"]').text()).toContain('逆站洞韩牛汤饭')
+    expect(wrapper.get('[data-testid="food-delivery-platform-saved-grid"]').text()).not.toContain('寿司花')
+
+    await wrapper.get('[data-testid="food-delivery-platform-page-back"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="food-delivery-platform-nav-profile"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('profile')
+    expect(wrapper.get('[data-testid="food-delivery-platform-profile-page"]').text()).toContain('过往订单')
+    expect(wrapper.get('[data-testid="food-delivery-platform-profile-services"]').text()).toContain('配送与沟通')
+    expect(wrapper.get('[data-testid="food-delivery-platform-nav-profile"]').attributes('aria-current')).toBe('page')
+
+    await wrapper.get('[data-testid="food-delivery-platform-nav-orders"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('orders')
+    expect(wrapper.get('[data-testid="food-delivery-platform-orders-page"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-orders-empty"]').text()).toContain('还没有订单')
+    expect(wrapper.get('[data-asset-slot="platform-orders-empty-receipt"]').exists()).toBe(true)
+    expect(wrapper.get('[data-asset-slot="platform-orders-empty-receipt"] img').attributes('src')).toContain(
+      'missing-asset-placeholder.svg',
+    )
+    wrapper.unmount()
+  })
+
+  test('selects a delivery address from the homepage dropdown', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    const locationButton = wrapper.get('[data-testid="food-delivery-platform-location"]')
+    expect(locationButton.attributes('aria-expanded')).toBe('false')
+
+    await locationButton.trigger('click')
+    expect(locationButton.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="food-delivery-platform-address-menu"]').exists()).toBe(true)
+
+    const alternateAddress = wrapper.get('[data-testid="food-delivery-platform-address-1"]')
+    const addressLabel = alternateAddress.text()
+    await alternateAddress.trigger('click')
+
+    expect(locationButton.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-testid="food-delivery-platform-address-menu"]').exists()).toBe(false)
+    expect(locationButton.text()).toContain(addressLabel)
+    wrapper.unmount()
+  })
+
+  test('adds platform merchant menu items to the platform-only cart', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    await wrapper.get('[data-testid="food-delivery-platform-view-all"]').trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-select-platform-merchant-platform_hanwoo_gukbap"]')
+      .trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain('海风泡菜煎饼')
+    expect(wrapper.findAll('[data-platform-menu-image]')).toHaveLength(5)
+    const addButton = wrapper.get(
+      '[data-testid="food-delivery-platform-menu-add-platform_hanwoo_gukbap_menu_1"]',
+    )
+    await addButton.trigger('click')
+
+    expect(store.platformCartQuantity).toBe(1)
+    expect(wrapper.get('[data-testid="food-delivery-platform-cart-feedback"]').text()).toContain('已加入购物车')
+    expect(
+      wrapper.get('[data-testid="food-delivery-platform-menu-quantity-platform_hanwoo_gukbap_menu_1"]').text(),
+    ).toBe('1')
+
+    await wrapper
+      .get('[data-testid="food-delivery-platform-menu-increase-platform_hanwoo_gukbap_menu_1"]')
+      .trigger('click')
+    expect(store.platformCartQuantity).toBe(2)
+
+    await wrapper.get('[data-testid="food-delivery-platform-menu-view-cart"]').trigger('click')
+    expect(wrapper.find('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-platform-utility-sheet"]').attributes('data-utility-key')).toBe(
+      'cart',
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-platform-cart-line-platform_hanwoo_gukbap_menu_1"]').text(),
+    ).toContain('逆站洞一号韩牛汤饭')
+    expect(wrapper.get('[data-testid="food-delivery-platform-cart-total"]').text()).toContain('116.00')
+
+    await wrapper
+      .get('[data-testid="food-delivery-platform-cart-decrease-platform_hanwoo_gukbap_menu_1"]')
+      .trigger('click')
+    expect(store.platformCartQuantity).toBe(1)
+    expect(
+      wrapper.get('[data-testid="food-delivery-platform-cart-quantity-platform_hanwoo_gukbap_menu_1"]').text(),
+    ).toBe('1')
+    expect(wrapper.get('[data-testid="food-delivery-platform-cart-count"]').text()).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('places a platform order through checkout and reopens it from the platform order list', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    await wrapper.get('[data-testid="food-delivery-platform-view-all"]').trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-select-platform-merchant-platform_hanwoo_gukbap"]')
+      .trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-platform-menu-add-platform_hanwoo_gukbap_menu_1"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-menu-view-cart"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-cart-checkout"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.platformView).toBe('checkout')
+    expect(wrapper.get('[data-testid="food-delivery-platform-checkout-page"]').text()).toContain('确认订单')
+    expect(wrapper.get('[data-testid="food-delivery-platform-checkout-total"]').text()).toContain('58.00')
+    expect(wrapper.get('[data-asset-slot="platform-checkout-takeout-bag"]').exists()).toBe(true)
+    expect(wrapper.get('[data-asset-slot="platform-checkout-takeout-bag"] img').attributes('src')).toContain(
+      'missing-asset-placeholder.svg',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="food-delivery-platform-checkout-address-1"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-checkout-note"]').setValue('少辣，放门口')
+    await wrapper
+      .get('[data-testid="food-delivery-platform-payment-pay_on_delivery"] input')
+      .setValue()
+    await wrapper.get('[data-testid="food-delivery-platform-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const order = store.platformOrders[0]
+    expect(order).toMatchObject({
+      merchantId: 'platform_hanwoo_gukbap',
+      note: '少辣，放门口',
+      paymentMethod: 'pay_on_delivery',
+      deliveryAddress: '首尔市麻浦区延南洞 223-14',
+      total: '58.00',
+    })
+    expect(store.platformCartQuantity).toBe(0)
+    expect(store.orders).toHaveLength(0)
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'order',
+      platformOrderId: order.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-success"]').text()).toContain('下单成功')
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-summary"]').text()).toContain('逆站洞一号韩牛汤饭')
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-success"]').attributes('data-order-status')).toBe(
+      'placed',
+    )
+    expect(wrapper.get('[data-asset-slot="platform-order-status-placed"]').exists()).toBe(true)
+    expect(wrapper.get('[data-asset-slot="platform-order-status-placed"] img').attributes('src')).toContain(
+      'missing-asset-placeholder.svg',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(false)
+
+    order.status = FOOD_DELIVERY_ORDER_STATUS.COOKING
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-success"]').attributes('data-order-status')).toBe(
+      'cooking',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-success"]').text()).toContain('餐点制作中')
+    expect(wrapper.get('[data-asset-slot="platform-order-status-preparing"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="food-delivery-platform-view-orders"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('orders')
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-list"]').text()).toContain('逆站洞韩牛汤饭')
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-list"]').text()).toContain('制作中')
+    expect(wrapper.get('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(true)
+    expect(wrapper.get('[data-asset-slot="platform-merchant-mark-platform_hanwoo_gukbap"]').exists()).toBe(true)
+
+    await wrapper.get(`[data-testid="food-delivery-platform-order-card-${order.id}"]`).trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformOrderId).toBe(order.id)
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-id"]').attributes('data-order-id')).toBe(order.id)
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-id"]').text()).toMatch(/^FD\d{6}-[A-Z0-9]{4}$/)
+    const clipboardWriteText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWriteText },
+    })
+    await wrapper.get('[data-testid="food-delivery-platform-order-copy"]').trigger('click')
+    await flushPromises()
+    expect(clipboardWriteText).toHaveBeenCalledWith(wrapper.get('[data-testid="food-delivery-platform-order-id"]').text())
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-copy"]').text()).toContain('订单号已复制')
     wrapper.unmount()
   })
 

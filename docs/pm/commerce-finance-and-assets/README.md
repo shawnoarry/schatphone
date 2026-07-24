@@ -12,7 +12,7 @@ Current share-card note: Shopping now has a source-owned Chat share path through
 
 Optional capability Pack note: `survival_city` can open Shopping as `补给站` through `marketplace -> Shopping`, and Food Delivery as `救援调度` through `dispatch -> Food Delivery`. Confirmed nonstandard `dispatch_board` entries use the same Food Delivery context path. These change entry wording, world context, banners, and safe view/route defaults only; Shopping/Food Delivery still own products, restaurants, menus, carts, checkout, orders, delivery events, logistics review, Wallet suggestions, and Assets suggestions.
 
-Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform should remain a discovery/filter/create-handoff surface; shop mini apps should present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions.
+Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform may own discovery plus checkout and order history for its own platform-internal merchants, while independent shop mini apps present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions. Platform orders must never aggregate peer shop-app orders.
 
 Current Wallet currency note: WorldBook's optional capability Packs can declare and inject custom world currencies. Wallet owns the user-facing primary currency, the USD/CNY reference coordinate, and editable exchange rates; Chat transfers and Food Delivery prices should consume Wallet currency settings instead of owning separate currency rules.
 
@@ -25,4 +25,5 @@ Current Wallet currency note: WorldBook's optional capability Packs can declare 
 
 Also read when needed:
 
+- `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` when a later architecture or execution slice promotes Food Platform order integration; it is a deferred coordination reference, not the active roadmap
 - `docs/product-decisions/HOME_FOLDER_SHOPPING_ASSETS_DIRECTION.md`
