@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-07-21
+Updated: 2026-07-25
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -397,7 +397,8 @@ Use this checklist before another device takes over development:
 6. Confirm the vendored project-local skills from `.agents\skills` and `skills-lock.json`; do not reinstall them from moving upstream branches during ordinary setup.
 7. If visual work is in scope, follow `docs/process/VISUAL_WORKFLOW.md` for visual skill setup.
 8. If visual reference assets are in scope, confirm the external asset library path documented in `docs/references/VISUAL_ASSET_LIBRARY.md`.
-9. Run verification commands:
+9. If Figma design-to-code or raster generation is in scope, follow `docs/process/FIGMA_IMAGEGEN_CROSS_PC_SETUP.md` for plugin OAuth, exact-node verification, the ljqclub-compatible ImageGen CLI, proxy setup, secure Key entry, and live smoke tests.
+10. Run verification commands:
 
 ```powershell
 node --version
