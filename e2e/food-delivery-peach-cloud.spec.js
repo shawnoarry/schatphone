@@ -10,7 +10,7 @@ const expectNoHorizontalOverflow = async (page) => {
 
 test('Peach Cloud keeps its own visual identity through browse, cart, checkout, and order review', async ({
   page,
-}) => {
+}, testInfo) => {
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -24,6 +24,22 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
 
   const storeShell = page.getByTestId('food-delivery-store-shell')
   await expect(storeShell).toHaveAttribute('data-store-template', 'dessert_window')
+  await expect(page.getByTestId('food-delivery-view')).toHaveCSS(
+    'background-color',
+    'rgb(242, 251, 224)',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-nav')).toHaveCSS(
+    'background-color',
+    'rgb(43, 48, 58)',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toHaveCSS(
+    'background-color',
+    'rgb(253, 108, 147)',
+  )
+  await testInfo.attach('peach-cloud-palette-home', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
   await expect(storeShell).toContainText('Peach Cloud')
   await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toContainText(
     'Golden Hour Pairing',
@@ -34,9 +50,20 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-peach-cloud-nav-cart').click()
-  await expect(page.getByTestId('food-delivery-store-nav-feedback')).toContainText(
-    /bag is empty|购物袋还是空的/,
+  await expect(page).toHaveURL(/shopView=bag/)
+  await expect(page.getByTestId('food-delivery-peach-cloud-bag-page')).toContainText(
+    /购物袋轻飘飘的|Your bag feels light/,
   )
+  await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toHaveCount(0)
+
+  await page.getByTestId('food-delivery-peach-cloud-nav-menu').click()
+  await expect(page).toHaveURL(/shopView=search/)
+  await expect(page.getByTestId('food-delivery-peach-cloud-search-page')).toBeVisible()
+  await page.getByTestId('food-delivery-peach-cloud-nav-seasonal').click()
+  await expect(page).toHaveURL(/shopView=new/)
+  await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toBeVisible()
+  await page.getByTestId('food-delivery-peach-cloud-nav-home').click()
+  await expect(page).not.toHaveURL(/shopView=/)
 
   await page.getByTestId('food-delivery-store-menu-section-cloud_tea').click()
   await expect(page.getByTestId('food-delivery-store-menu-items')).toHaveAttribute(
@@ -56,6 +83,8 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-menu-detail-add').click()
   await page.getByTestId('food-delivery-menu-detail-close').click()
 
+  await page.getByTestId('food-delivery-peach-cloud-nav-cart').click()
+  await expect(page).toHaveURL(/shopView=bag/)
   await expect(page.getByTestId('food-delivery-cart-panel')).toContainText('Peach Oolong Cloud')
   await expect(page.getByTestId('food-delivery-peach-cloud-nav')).toBeVisible()
   await page.getByTestId('food-delivery-checkout').click()
@@ -63,10 +92,14 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText('Peach Oolong Cloud')
   await page.getByTestId('food-delivery-checkout-submit').click()
 
-  const supportDrawer = page.getByTestId('food-delivery-store-support-drawer')
-  await expect(supportDrawer).toBeVisible()
-  await supportDrawer.locator('summary').click()
-  await expect(page.getByTestId('food-delivery-orders-panel')).toContainText('Peach Cloud')
+  await expect(page).toHaveURL(/shopView=order/)
+  await expect(page).toHaveURL(/shopOrderId=/)
+  await expect(page.getByTestId('food-delivery-peach-cloud-order-page')).toContainText(
+    /本次点单|Your order/,
+  )
+  await page.getByTestId('food-delivery-peach-cloud-nav-orders').click()
+  await expect(page).toHaveURL(/shopView=orders/)
+  await expect(page.getByTestId('food-delivery-orders-panel')).toContainText('Peach Oolong Cloud')
   await expectNoHorizontalOverflow(page)
 
   expect(pageErrors).toEqual([])

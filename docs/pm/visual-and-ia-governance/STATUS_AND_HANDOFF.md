@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-22
+Updated: 2026-07-25
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -102,6 +102,7 @@ What is already landed:
 86. The existing World Pack closed loop now has focused Playwright evidence across desktop and simulated-phone Chromium. `e2e/world-pack-loop-validation.spec.js` starts with zero enabled Packs and zero selected Book/encyclopedia content, explicitly activates a reviewed capability Pack in WorldBook, verifies App Store World entries, places four existing target archetypes through Home, refreshes persisted placement, launches and returns from Shopping, Food Delivery, Calendar, and Map, then disables the Pack and verifies safe fallback. The same journey covers long Chinese/English labels, horizontal overflow, page errors, and critical axe failures; the evidence produced focused Shopping/ImageSourcePicker/Map accessible-name fixes and Food Delivery long-title wrapping. No real phone or remote-debug device was available, so true-device acceptance remains incomplete.
 87. Roadmap 4.9's first successful Chat activation loop is complete at automated desktop and simulated-phone acceptance. Chat now turns incomplete provider setup into an explicit Network & API action while preserving the originating thread and draft; Network offers Continue Chat only after the current settings are saved and the same configuration passes its smoke test. Focused Playwright proves the first manual reply, bounded return context, responsive overflow, page-error, critical accessibility, and fake-credential visibility guards. Hosted-provider and true-device proof remain separate release gates.
 88. Roadmap 4.9's explicit custom role -> Chat journey is complete at desktop and simulated-phone Chromium acceptance. Contacts now offers a direct `Start Chat` action for eligible Main Role/NPC profiles, reuses existing targets, preserves bounded Contacts context through Network recovery, and returns to the same profile after the first manual reply. The focused fixture intentionally starts from an explicit empty custom-role snapshot and does not redefine or remove the seeded fresh-storage roles; zero Book sources, encyclopedia entries, and extra World Packs remain valid.
+89. Peach Cloud's installed-app navigation now has consistent page depth: its fixed Home, Search, New, Bag, and Orders entries switch mutually exclusive `shopView` pages, submitted orders open a dedicated progress detail, and empty Bag/Orders states remain real pages. The generic Food Delivery cart and support blocks no longer extend the Peach Cloud home, while Food Delivery continues to own the shared cart, checkout, order, and event state.
 
 ### 2026-07-16 Visual Portfolio Audit
 

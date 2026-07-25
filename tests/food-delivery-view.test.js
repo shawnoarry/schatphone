@@ -1380,10 +1380,16 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
     const teaItem = peachCloudMenu.find((item) => item.menuSection === 'cloud_tea')
+    const peachCloudView = wrapper.get('[data-testid="food-delivery-view"]')
 
     expect(
       wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
     ).toBe('dessert_window')
+    expect(peachCloudView.element.style.getPropertyValue('--peach-cloud-iron')).toBe('#444545')
+    expect(peachCloudView.element.style.getPropertyValue('--peach-cloud-ink')).toBe('#2b303a')
+    expect(peachCloudView.element.style.getPropertyValue('--peach-cloud-canvas')).toBe('#f2fbe0')
+    expect(peachCloudView.element.style.getPropertyValue('--peach-cloud-accent')).toBe('#fd6c93')
+    expect(peachCloudView.element.style.getPropertyValue('--peach-cloud-mist')).toBe('#fda1b8')
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
       'food-delivery-store-peach-cloud',
     )
@@ -1406,20 +1412,35 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
-    expect(wrapper.get('[data-testid="food-delivery-store-nav-feedback"]').text()).toContain(
-      'bag is empty',
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      'Your bag feels light',
     )
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-featured"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('search')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-search-page"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-search-input"]').exists()).toBe(
+      true,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').exists()).toBe(true)
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-featured-action"]').trigger('click')
     await flushPromises()
-    expect(
-      wrapper
-        .get('[data-testid="food-delivery-store-menu-items"]')
-        .attributes('data-active-section'),
-    ).toBe('seasonal_drop')
-    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
-      1,
+    expect(router.currentRoute.value.query.shopView).toBe('new')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
+      'Fresh arrivals',
     )
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
+    await flushPromises()
 
     await wrapper.get('[data-testid="food-delivery-store-menu-section-cloud_tea"]').trigger('click')
     await flushPromises()
@@ -1436,7 +1457,14 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
 
     expect(store.cartQuantity).toBe(2)
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
     expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain(teaItem.title)
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-search-page"]').exists()).toBe(
+      false,
+    )
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
     wrapper.unmount()
   })

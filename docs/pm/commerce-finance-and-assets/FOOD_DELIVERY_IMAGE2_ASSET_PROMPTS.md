@@ -449,7 +449,7 @@ platform-merchant-mark-coconut-curry-01.png
 
 ## 5. Peach Cloud Independent App / Peach Cloud 独立店 App
 
-Peach Cloud 使用暖橙、珊瑚红、奶油黄和明亮白色建立独立品牌感。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 的素材已落到下列 `19` 个本地文件：`13` 张 PNG 和 `6` 个 SVG。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 的素材已落到下列 `19` 个本地文件：`13` 张 PNG 和 `6` 个 SVG。现有 PNG 在本轮保持不变，页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
 
 ### Asset Contract / 素材合同
 
@@ -482,7 +482,7 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 | --- | --- | --- |
 | `cover/peach-cloud-hero-01.png` | 三杯奶昔摄影，用于 Figma 风格 `30% OFF` 促销 | 横向摄影，右侧主体清晰，适合促销位裁切 |
 | `brand/peach-cloud-mark-01.svg` | Figma 甜点线稿，用作顶部品牌/资料入口 | 矢量，适合 `20px` 到 `48px` 显示 |
-| `categories/*.svg` | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用设计原始珊瑚橙描边 |
+| `categories/*.svg` | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用 Jet Black `#2B303A` 描边；Snacks 底色使用 Pink Mist `#FDA1B8` |
 | `products/peach-cloud-item-01.png` | Peach Oolong Cloud | `768x768` |
 | `products/peach-cloud-item-02.png` | Brown Sugar Creme No. 7 | `768x768` |
 | `products/peach-cloud-item-03.png` | Cocoa Cloud Brownie | Figma 产品摄影 |
@@ -499,27 +499,27 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 ### Hero Prompt / 主图提示词
 
 ```text
-中文：用于虚拟手机外卖独立甜饮 App 的品牌主图，明亮真实的商业饮品与甜点摄影，白桃乌龙奶盖、橙红渐层鲜果气泡饮、芒果牛奶冰、巴斯克芝士蛋糕和一份黄油华夫饼陈列在清爽的现代甜饮柜台上，珊瑚橙、暖黄色、奶油白配色，阳光般明快但不过度儿童化，食物清晰诱人，主体集中在画面右侧和中部，左侧保留稳定的深浅对比区域给代码渲染标题，适合横向 8:5 裁切，不要可读文字，不要 logo，不要价格，不要 UI，不要手机边框，不要水印，PNG。
+中文：用于虚拟手机外卖独立甜饮 App 的品牌主图，明亮真实的商业饮品与甜点摄影，白桃乌龙奶盖、粉红渐层鲜果气泡饮、芒果牛奶冰、巴斯克芝士蛋糕和一份黄油华夫饼陈列在清爽的现代甜饮柜台上，Petal Rouge `#FD6C93`、Pink Mist `#FDA1B8`、浅绿 `#F2FBE0` 与少量 Jet Black `#2B303A` 配色，明快但不过度儿童化，食物清晰诱人，主体集中在画面右侧和中部，左侧保留稳定的深浅对比区域给代码渲染标题，适合横向 8:5 裁切，不要可读文字，不要 logo，不要价格，不要 UI，不要手机边框，不要水印，PNG。
 
-English: Brand hero for an independent dessert-and-drinks delivery app inside a virtual phone, bright realistic commercial food photography of white-peach oolong milk tea, coral-orange layered fruit fizz, mango milk snow, Basque cheesecake, and a butter waffle on a clean contemporary dessert counter, coral orange, warm yellow, and creamy white palette, sunny and polished without looking childish, crisp appetizing food, subjects concentrated in the center and right with stable contrast-safe space on the left for code-rendered copy, composed for a horizontal 8:5 crop, no readable text, no logo, no price, no UI, no phone frame, no watermark, PNG.
+English: Brand hero for an independent dessert-and-drinks delivery app inside a virtual phone, bright realistic commercial food photography of white-peach oolong milk tea, pink layered fruit fizz, mango milk snow, Basque cheesecake, and a butter waffle on a clean contemporary dessert counter, Petal Rouge #FD6C93, Pink Mist #FDA1B8, pale green #F2FBE0, and small Jet Black #2B303A accents, bright and polished without looking childish, crisp appetizing food, subjects concentrated in the center and right with stable contrast-safe space on the left for code-rendered copy, composed for a horizontal 8:5 crop, no readable text, no logo, no price, no UI, no phone frame, no watermark, PNG.
 ```
 
 ### Product Pack Prompt / 产品图组提示词
 
-每张图只生成表格中对应的一项产品，保持同一套浅珊瑚背景、奶油白台面、柔和短投影和明亮自然光。
+每张图只生成表格中对应的一项产品，保持同一套 Pink Mist 到浅绿背景、清爽浅色台面、柔和短投影和明亮自然光。
 
 ```text
-中文：Peach Cloud 虚拟甜饮品牌的方形产品摄影，用于手机外卖 App 双列商品卡片。单份指定饮品或甜点清晰居中，占画面约 78%，浅珊瑚色到奶油白的干净背景，明亮自然的甜品店光线，真实食物质感，柔和短投影，边缘保留裁切安全区，整体精致、轻快、有品牌一致性，适合在 150px 卡片和大图详情中显示，不要可读文字，不要价格，不要 logo，不要 UI 卡片，不要餐具杂物，不要人物，不要水印，768x768 PNG。
+中文：Peach Cloud 虚拟甜饮品牌的方形产品摄影，用于手机外卖 App 双列商品卡片。单份指定饮品或甜点清晰居中，占画面约 78%，Pink Mist `#FDA1B8` 到浅绿 `#F2FBE0` 的干净背景，允许极少量 Petal Rouge `#FD6C93` 点缀，明亮自然的甜品店光线，真实食物质感，柔和短投影，边缘保留裁切安全区，整体精致、轻快、有品牌一致性，适合在 150px 卡片和大图详情中显示，不要可读文字，不要价格，不要 logo，不要 UI 卡片，不要餐具杂物，不要人物，不要水印，768x768 PNG。
 
-English: Square product photography for the virtual Peach Cloud drinks-and-desserts brand, used in a two-column mobile delivery menu. Show only the specified drink or dessert, clearly centered and filling about 78% of the frame, clean pale-coral to creamy-white backdrop, bright natural dessert-counter lighting, realistic appetizing texture, soft compact shadow, safe crop padding, polished cheerful and consistent across the set, readable both in a 150px card and a large detail view, no readable text, no price, no logo, no UI card, no cluttered tableware, no people, no watermark, 768x768 PNG.
+English: Square product photography for the virtual Peach Cloud drinks-and-desserts brand, used in a two-column mobile delivery menu. Show only the specified drink or dessert, clearly centered and filling about 78% of the frame, clean Pink Mist #FDA1B8 to pale green #F2FBE0 backdrop with only small Petal Rouge #FD6C93 accents, bright natural dessert-counter lighting, realistic appetizing texture, soft compact shadow, safe crop padding, polished cheerful and consistent across the set, readable both in a 150px card and a large detail view, no readable text, no price, no logo, no UI card, no cluttered tableware, no people, no watermark, 768x768 PNG.
 ```
 
 ### Brand Mark Prompt / 品牌图形提示词
 
 ```text
-中文：Peach Cloud 甜饮品牌的独立图形标志，不含文字，将简化白桃轮廓、柔软云朵和一只带吸管的冷饮杯组合成一个清晰轮廓，珊瑚橙与暖黄色为主，少量奶油白高光，友好但不过度卡通，适合在 48px 仍可识别，透明背景，无投影或仅极短柔和投影，不要字母，不要店名，不要价格，不要 UI 卡片，不要水印，带 alpha 通道的 768x768 PNG。
+中文：Peach Cloud 甜饮品牌的独立图形标志，不含文字，将简化白桃轮廓、柔软云朵和一只带吸管的冷饮杯组合成一个清晰轮廓，以 Petal Rouge `#FD6C93` 为主，搭配 Jet Black `#2B303A` 结构线和少量浅绿 `#F2FBE0` 高光，友好但不过度卡通，适合在 48px 仍可识别，透明背景，无投影或仅极短柔和投影，不要字母，不要店名，不要价格，不要 UI 卡片，不要水印，带 alpha 通道的 768x768 PNG。
 
-English: Standalone symbol for the Peach Cloud dessert-drinks brand with no text, combining a simplified white-peach outline, soft cloud, and cold drink cup with straw into one clear silhouette, coral orange and warm yellow with small creamy-white highlights, friendly without becoming overly cartoonish, recognizable at 48px, transparent background, no shadow or only a very compact soft shadow, no letters, no shop name, no price, no UI card, no watermark, 768x768 PNG with alpha.
+English: Standalone symbol for the Peach Cloud dessert-drinks brand with no text, combining a simplified white-peach outline, soft cloud, and cold drink cup with straw into one clear silhouette, primarily Petal Rouge #FD6C93 with Jet Black #2B303A structure and small pale-green #F2FBE0 highlights, friendly without becoming overly cartoonish, recognizable at 48px, transparent background, no shadow or only a very compact soft shadow, no letters, no shop name, no price, no UI card, no watermark, 768x768 PNG with alpha.
 ```
 
 ## Naming Suggestion / 文件命名建议
